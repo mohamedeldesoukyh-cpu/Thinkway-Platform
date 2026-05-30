@@ -1,12 +1,13 @@
 import type { ID } from './common'
 
+// 6 confirmed roles per §6.1 of the system reference
 export type UserRole =
-  | 'super_admin'
   | 'admin'
+  | 'director'
   | 'manager'
   | 'account_manager'
   | 'finance'
-  | 'viewer'
+  | 'data_entry'
 
 export type UserStatus = 'active' | 'inactive' | 'invited' | 'suspended'
 
@@ -20,9 +21,10 @@ export interface User {
   lastName: string
   avatar?: string
   role: UserRole
+  team: string | null
+  reportsToId: string | null
   status: UserStatus
-  organizationId: ID
-  lastLoginAt?: string
+  organizationId: ID | null
   createdAt: string
   updatedAt: string
 }

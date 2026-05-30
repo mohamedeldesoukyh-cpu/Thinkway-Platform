@@ -1,9 +1,6 @@
-export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-3xl font-bold">
-        Thinkway Platform Connected
-      </h1>
-    </main>
-  );
+import { redirect } from 'next/navigation'
+import { ROUTES } from '@/lib/constants/routes'
+
+export default function RootPage() {
+  redirect(ROUTES.AUTH.LOGIN)
 }

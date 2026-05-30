@@ -12,10 +12,9 @@ export type PermissionAction =
 
 export type PermissionResource =
   | 'campaigns'
-  | 'influencers'
   | 'clients'
-  | 'deliverables'
-  | 'approvals'
+  | 'vendors'
+  | 'billing'
   | 'finance'
   | 'invoices'
   | 'payments'
@@ -24,12 +23,18 @@ export type PermissionResource =
   | 'settings'
   | 'users'
   | 'organization'
+  | 'approvals'
+  | 'deliverables'
+  | 'reports'
+  | 'budget'
+  | 'team'
 
 export type Permission = `${PermissionResource}:${PermissionAction}`
 
 export type RolePermissionMap = Record<UserRole, Permission[]>
 
 export interface PermissionGuardProps {
+  role: UserRole
   permission: Permission | Permission[]
   requireAll?: boolean
   fallback?: React.ReactNode
