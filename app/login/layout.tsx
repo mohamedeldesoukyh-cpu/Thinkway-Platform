@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-import { PLATFORM } from '@/config/platform'
 
 export const metadata: Metadata = {
-  title: `Sign In — ${PLATFORM.name}`,
+  title: 'Sign In',
 }
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
