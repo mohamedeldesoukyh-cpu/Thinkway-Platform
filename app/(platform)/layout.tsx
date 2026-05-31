@@ -14,15 +14,46 @@ export const metadata: Metadata = {
   description: `${PLATFORM.name} ${PLATFORM.tagline}`,
 }
 
-const SEED_SQL = `INSERT INTO public.profiles (id, email, full_name, role)
+function buildSeedSql(email: string): string {
+  return `-- Step 1: Create required enum types (safe if they already exist)
+DO $$ BEGIN
+  CREATE TYPE public.user_role AS ENUM (
+    'admin', 'director', 'manager', 'account_manager', 'finance', 'data_entry'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.user_status AS ENUM (
+    'active', 'inactive', 'suspended', 'pending'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Step 2: Add missing columns to the profiles table
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS full_name  TEXT,
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+  ADD COLUMN IF NOT EXISTS role       public.user_role   DEFAULT 'data_entry',
+  ADD COLUMN IF NOT EXISTS status     public.user_status DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS team       TEXT,
+  ADD COLUMN IF NOT EXISTS reports_to_id UUID;
+
+-- Step 3: Insert your admin profile
+INSERT INTO public.profiles (id, email, full_name, role, status)
 SELECT
   id,
   email,
   COALESCE(raw_user_meta_data->>'full_name', split_part(email, '@', 1)),
-  'admin'
+  'admin',
+  'active'
 FROM auth.users
-WHERE email = '<your-email-here>'
-ON CONFLICT (id) DO NOTHING;`
+WHERE email = '${email}'
+ON CONFLICT (id) DO UPDATE
+  SET role      = 'admin',
+      status    = 'active',
+      full_name = EXCLUDED.full_name;`
+}
 
 export default async function PlatformLayout({
   children,
@@ -58,7 +89,7 @@ export default async function PlatformLayout({
             Run this SQL in the Supabase SQL Editor, then refresh:
           </p>
           <pre className="text-left text-xs bg-muted rounded-xl p-4 text-foreground overflow-x-auto mb-4 border border-border">
-            {SEED_SQL}
+            {buildSeedSql(user.email ?? '')}
           </pre>
           <p className="text-xs text-muted-foreground">
             Authenticated as: <span className="font-mono">{user.email}</span>
