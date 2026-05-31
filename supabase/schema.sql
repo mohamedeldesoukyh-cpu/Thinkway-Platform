@@ -1,5 +1,6 @@
 -- =============================================================================
--- Thinkway Platform — Database Schema
+-- Thinkway Platform — Database Schema (idempotent)
+-- Safe to re-run on Supabase without errors (existing production data is preserved).
 -- Run in Supabase SQL Editor (or via migration) BEFORE policies.sql and seed.sql
 -- =============================================================================
 
@@ -12,11 +13,42 @@ CREATE EXTENSION IF NOT EXISTS "citext";
 -- -----------------------------------------------------------------------------
 -- Enumerations
 -- -----------------------------------------------------------------------------
-CREATE TYPE public.user_status AS ENUM ('active', 'inactive', 'invited', 'suspended');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'user_status'
+  ) THEN
+    CREATE TYPE public.user_status AS ENUM ('active', 'inactive', 'invited', 'suspended');
+  END IF;
+END $$;
 
-CREATE TYPE public.client_status AS ENUM ('prospect', 'active', 'inactive', 'archived');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'client_status'
+  ) THEN
+    CREATE TYPE public.client_status AS ENUM ('prospect', 'active', 'inactive', 'archived');
+  END IF;
+END $$;
 
-CREATE TYPE public.campaign_status AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'campaign_status'
+  ) THEN
+    CREATE TYPE public.campaign_status AS ENUM (
   'draft',
   'planning',
   'active',
@@ -24,10 +56,32 @@ CREATE TYPE public.campaign_status AS ENUM (
   'completed',
   'cancelled'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.influencer_status AS ENUM ('prospect', 'active', 'inactive', 'blacklisted');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'influencer_status'
+  ) THEN
+    CREATE TYPE public.influencer_status AS ENUM ('prospect', 'active', 'inactive', 'blacklisted');
+  END IF;
+END $$;
 
-CREATE TYPE public.campaign_influencer_status AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'campaign_influencer_status'
+  ) THEN
+    CREATE TYPE public.campaign_influencer_status AS ENUM (
   'invited',
   'negotiating',
   'confirmed',
@@ -35,8 +89,19 @@ CREATE TYPE public.campaign_influencer_status AS ENUM (
   'completed',
   'cancelled'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.deliverable_type AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'deliverable_type'
+  ) THEN
+    CREATE TYPE public.deliverable_type AS ENUM (
   'instagram_post',
   'instagram_story',
   'instagram_reel',
@@ -49,8 +114,19 @@ CREATE TYPE public.deliverable_type AS ENUM (
   'live_stream',
   'other'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.deliverable_status AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'deliverable_status'
+  ) THEN
+    CREATE TYPE public.deliverable_status AS ENUM (
   'pending',
   'in_progress',
   'submitted',
@@ -60,8 +136,19 @@ CREATE TYPE public.deliverable_status AS ENUM (
   'published',
   'cancelled'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.invoice_status AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'invoice_status'
+  ) THEN
+    CREATE TYPE public.invoice_status AS ENUM (
   'draft',
   'sent',
   'partial',
@@ -69,8 +156,19 @@ CREATE TYPE public.invoice_status AS ENUM (
   'overdue',
   'void'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.payment_status AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'payment_status'
+  ) THEN
+    CREATE TYPE public.payment_status AS ENUM (
   'pending',
   'processing',
   'completed',
@@ -78,8 +176,19 @@ CREATE TYPE public.payment_status AS ENUM (
   'refunded',
   'cancelled'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.payment_method AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'payment_method'
+  ) THEN
+    CREATE TYPE public.payment_method AS ENUM (
   'bank_transfer',
   'credit_card',
   'debit_card',
@@ -88,16 +197,38 @@ CREATE TYPE public.payment_method AS ENUM (
   'check',
   'other'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.approval_entity_type AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'approval_entity_type'
+  ) THEN
+    CREATE TYPE public.approval_entity_type AS ENUM (
   'campaign',
   'deliverable',
   'invoice',
   'payment',
   'campaign_influencer'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.approval_status AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'approval_status'
+  ) THEN
+    CREATE TYPE public.approval_status AS ENUM (
   'pending',
   'in_review',
   'approved',
@@ -105,8 +236,19 @@ CREATE TYPE public.approval_status AS ENUM (
   'cancelled',
   'expired'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.audit_action AS ENUM (
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'audit_action'
+  ) THEN
+    CREATE TYPE public.audit_action AS ENUM (
   'create',
   'update',
   'delete',
@@ -119,8 +261,21 @@ CREATE TYPE public.audit_action AS ENUM (
   'void',
   'export'
 );
+  END IF;
+END $$;
 
-CREATE TYPE public.campaign_member_role AS ENUM ('lead', 'coordinator', 'viewer');
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'campaign_member_role'
+  ) THEN
+    CREATE TYPE public.campaign_member_role AS ENUM ('lead', 'coordinator', 'viewer');
+  END IF;
+END $$;
 
 -- -----------------------------------------------------------------------------
 -- Shared utility functions
@@ -361,7 +516,7 @@ $$;
 -- -----------------------------------------------------------------------------
 -- Authorization (roles & permissions)
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.roles (
+CREATE TABLE IF NOT EXISTS public.roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text NOT NULL UNIQUE,
   name text NOT NULL,
@@ -371,7 +526,7 @@ CREATE TABLE public.roles (
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE TABLE public.permissions (
+CREATE TABLE IF NOT EXISTS public.permissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text NOT NULL UNIQUE,
   resource text NOT NULL,
@@ -382,7 +537,7 @@ CREATE TABLE public.permissions (
   CONSTRAINT permissions_resource_action_unique UNIQUE (resource, action)
 );
 
-CREATE TABLE public.role_permissions (
+CREATE TABLE IF NOT EXISTS public.role_permissions (
   role_id uuid NOT NULL REFERENCES public.roles (id) ON DELETE CASCADE,
   permission_id uuid NOT NULL REFERENCES public.permissions (id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
@@ -392,7 +547,7 @@ CREATE TABLE public.role_permissions (
 -- -----------------------------------------------------------------------------
 -- Profiles (extends auth.users)
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
   email citext NOT NULL,
   full_name text,
@@ -408,14 +563,14 @@ CREATE TABLE public.profiles (
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX profiles_role_id_idx ON public.profiles (role_id);
-CREATE INDEX profiles_email_idx ON public.profiles (email);
-CREATE INDEX profiles_status_idx ON public.profiles (status);
+CREATE INDEX IF NOT EXISTS profiles_role_id_idx ON public.profiles (role_id);
+CREATE INDEX IF NOT EXISTS profiles_email_idx ON public.profiles (email);
+CREATE INDEX IF NOT EXISTS profiles_status_idx ON public.profiles (status);
 
 -- -----------------------------------------------------------------------------
 -- Clients
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.clients (
+CREATE TABLE IF NOT EXISTS public.clients (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   document_number text NOT NULL UNIQUE,
   name text NOT NULL,
@@ -438,11 +593,11 @@ CREATE TABLE public.clients (
   CONSTRAINT clients_currency_check CHECK (char_length(currency) = 3)
 );
 
-CREATE INDEX clients_status_idx ON public.clients (status);
-CREATE INDEX clients_account_manager_id_idx ON public.clients (account_manager_id);
-CREATE INDEX clients_name_idx ON public.clients (name);
+CREATE INDEX IF NOT EXISTS clients_status_idx ON public.clients (status);
+CREATE INDEX IF NOT EXISTS clients_account_manager_id_idx ON public.clients (account_manager_id);
+CREATE INDEX IF NOT EXISTS clients_name_idx ON public.clients (name);
 
-CREATE TABLE public.client_contacts (
+CREATE TABLE IF NOT EXISTS public.client_contacts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id uuid NOT NULL REFERENCES public.clients (id) ON DELETE CASCADE,
   full_name text NOT NULL,
@@ -455,9 +610,9 @@ CREATE TABLE public.client_contacts (
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX client_contacts_client_id_idx ON public.client_contacts (client_id);
+CREATE INDEX IF NOT EXISTS client_contacts_client_id_idx ON public.client_contacts (client_id);
 
-CREATE TABLE public.client_users (
+CREATE TABLE IF NOT EXISTS public.client_users (
   client_id uuid NOT NULL REFERENCES public.clients (id) ON DELETE CASCADE,
   profile_id uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
   is_primary boolean NOT NULL DEFAULT false,
@@ -465,12 +620,12 @@ CREATE TABLE public.client_users (
   PRIMARY KEY (client_id, profile_id)
 );
 
-CREATE INDEX client_users_profile_id_idx ON public.client_users (profile_id);
+CREATE INDEX IF NOT EXISTS client_users_profile_id_idx ON public.client_users (profile_id);
 
 -- -----------------------------------------------------------------------------
 -- Campaigns
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.campaigns (
+CREATE TABLE IF NOT EXISTS public.campaigns (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   document_number text NOT NULL UNIQUE,
   client_id uuid NOT NULL REFERENCES public.clients (id) ON DELETE RESTRICT,
@@ -497,12 +652,12 @@ CREATE TABLE public.campaigns (
   )
 );
 
-CREATE INDEX campaigns_client_id_idx ON public.campaigns (client_id);
-CREATE INDEX campaigns_status_idx ON public.campaigns (status);
-CREATE INDEX campaigns_account_manager_id_idx ON public.campaigns (account_manager_id);
-CREATE INDEX campaigns_start_date_idx ON public.campaigns (start_date);
+CREATE INDEX IF NOT EXISTS campaigns_client_id_idx ON public.campaigns (client_id);
+CREATE INDEX IF NOT EXISTS campaigns_status_idx ON public.campaigns (status);
+CREATE INDEX IF NOT EXISTS campaigns_account_manager_id_idx ON public.campaigns (account_manager_id);
+CREATE INDEX IF NOT EXISTS campaigns_start_date_idx ON public.campaigns (start_date);
 
-CREATE TABLE public.campaign_members (
+CREATE TABLE IF NOT EXISTS public.campaign_members (
   campaign_id uuid NOT NULL REFERENCES public.campaigns (id) ON DELETE CASCADE,
   profile_id uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
   member_role public.campaign_member_role NOT NULL DEFAULT 'coordinator',
@@ -510,12 +665,12 @@ CREATE TABLE public.campaign_members (
   PRIMARY KEY (campaign_id, profile_id)
 );
 
-CREATE INDEX campaign_members_profile_id_idx ON public.campaign_members (profile_id);
+CREATE INDEX IF NOT EXISTS campaign_members_profile_id_idx ON public.campaign_members (profile_id);
 
 -- -----------------------------------------------------------------------------
 -- Influencers
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.influencers (
+CREATE TABLE IF NOT EXISTS public.influencers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   document_number text NOT NULL UNIQUE,
   profile_id uuid UNIQUE REFERENCES public.profiles (id) ON DELETE SET NULL,
@@ -536,11 +691,11 @@ CREATE TABLE public.influencers (
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX influencers_status_idx ON public.influencers (status);
-CREATE INDEX influencers_profile_id_idx ON public.influencers (profile_id);
-CREATE INDEX influencers_display_name_idx ON public.influencers (display_name);
+CREATE INDEX IF NOT EXISTS influencers_status_idx ON public.influencers (status);
+CREATE INDEX IF NOT EXISTS influencers_profile_id_idx ON public.influencers (profile_id);
+CREATE INDEX IF NOT EXISTS influencers_display_name_idx ON public.influencers (display_name);
 
-CREATE TABLE public.influencer_platform_accounts (
+CREATE TABLE IF NOT EXISTS public.influencer_platform_accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   influencer_id uuid NOT NULL REFERENCES public.influencers (id) ON DELETE CASCADE,
   platform text NOT NULL,
@@ -556,10 +711,10 @@ CREATE TABLE public.influencer_platform_accounts (
   CONSTRAINT influencer_platform_accounts_unique UNIQUE (influencer_id, platform, handle)
 );
 
-CREATE INDEX influencer_platform_accounts_influencer_id_idx
+CREATE INDEX IF NOT EXISTS influencer_platform_accounts_influencer_id_idx
   ON public.influencer_platform_accounts (influencer_id);
 
-CREATE TABLE public.campaign_influencers (
+CREATE TABLE IF NOT EXISTS public.campaign_influencers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   campaign_id uuid NOT NULL REFERENCES public.campaigns (id) ON DELETE CASCADE,
   influencer_id uuid NOT NULL REFERENCES public.influencers (id) ON DELETE RESTRICT,
@@ -580,14 +735,14 @@ CREATE TABLE public.campaign_influencers (
   CONSTRAINT campaign_influencers_deliverable_count_non_negative CHECK (deliverable_count >= 0)
 );
 
-CREATE INDEX campaign_influencers_campaign_id_idx ON public.campaign_influencers (campaign_id);
-CREATE INDEX campaign_influencers_influencer_id_idx ON public.campaign_influencers (influencer_id);
-CREATE INDEX campaign_influencers_status_idx ON public.campaign_influencers (status);
+CREATE INDEX IF NOT EXISTS campaign_influencers_campaign_id_idx ON public.campaign_influencers (campaign_id);
+CREATE INDEX IF NOT EXISTS campaign_influencers_influencer_id_idx ON public.campaign_influencers (influencer_id);
+CREATE INDEX IF NOT EXISTS campaign_influencers_status_idx ON public.campaign_influencers (status);
 
 -- -----------------------------------------------------------------------------
 -- Deliverables
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.deliverables (
+CREATE TABLE IF NOT EXISTS public.deliverables (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   document_number text NOT NULL UNIQUE,
   campaign_id uuid NOT NULL REFERENCES public.campaigns (id) ON DELETE CASCADE,
@@ -612,15 +767,15 @@ CREATE TABLE public.deliverables (
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX deliverables_campaign_id_idx ON public.deliverables (campaign_id);
-CREATE INDEX deliverables_influencer_id_idx ON public.deliverables (influencer_id);
-CREATE INDEX deliverables_status_idx ON public.deliverables (status);
-CREATE INDEX deliverables_due_date_idx ON public.deliverables (due_date);
+CREATE INDEX IF NOT EXISTS deliverables_campaign_id_idx ON public.deliverables (campaign_id);
+CREATE INDEX IF NOT EXISTS deliverables_influencer_id_idx ON public.deliverables (influencer_id);
+CREATE INDEX IF NOT EXISTS deliverables_status_idx ON public.deliverables (status);
+CREATE INDEX IF NOT EXISTS deliverables_due_date_idx ON public.deliverables (due_date);
 
 -- -----------------------------------------------------------------------------
 -- Finance
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.invoices (
+CREATE TABLE IF NOT EXISTS public.invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   document_number text NOT NULL UNIQUE,
   client_id uuid NOT NULL REFERENCES public.clients (id) ON DELETE RESTRICT,
@@ -644,12 +799,12 @@ CREATE TABLE public.invoices (
   )
 );
 
-CREATE INDEX invoices_client_id_idx ON public.invoices (client_id);
-CREATE INDEX invoices_campaign_id_idx ON public.invoices (campaign_id);
-CREATE INDEX invoices_status_idx ON public.invoices (status);
-CREATE INDEX invoices_due_date_idx ON public.invoices (due_date);
+CREATE INDEX IF NOT EXISTS invoices_client_id_idx ON public.invoices (client_id);
+CREATE INDEX IF NOT EXISTS invoices_campaign_id_idx ON public.invoices (campaign_id);
+CREATE INDEX IF NOT EXISTS invoices_status_idx ON public.invoices (status);
+CREATE INDEX IF NOT EXISTS invoices_due_date_idx ON public.invoices (due_date);
 
-CREATE TABLE public.invoice_line_items (
+CREATE TABLE IF NOT EXISTS public.invoice_line_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   invoice_id uuid NOT NULL REFERENCES public.invoices (id) ON DELETE CASCADE,
   sort_order integer NOT NULL DEFAULT 0,
@@ -666,9 +821,9 @@ CREATE TABLE public.invoice_line_items (
   CONSTRAINT invoice_line_items_unit_price_non_negative CHECK (unit_price >= 0)
 );
 
-CREATE INDEX invoice_line_items_invoice_id_idx ON public.invoice_line_items (invoice_id);
+CREATE INDEX IF NOT EXISTS invoice_line_items_invoice_id_idx ON public.invoice_line_items (invoice_id);
 
-CREATE TABLE public.payments (
+CREATE TABLE IF NOT EXISTS public.payments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   document_number text NOT NULL UNIQUE,
   invoice_id uuid NOT NULL REFERENCES public.invoices (id) ON DELETE RESTRICT,
@@ -688,15 +843,15 @@ CREATE TABLE public.payments (
   CONSTRAINT payments_amount_positive CHECK (amount > 0)
 );
 
-CREATE INDEX payments_invoice_id_idx ON public.payments (invoice_id);
-CREATE INDEX payments_client_id_idx ON public.payments (client_id);
-CREATE INDEX payments_status_idx ON public.payments (status);
-CREATE INDEX payments_paid_at_idx ON public.payments (paid_at);
+CREATE INDEX IF NOT EXISTS payments_invoice_id_idx ON public.payments (invoice_id);
+CREATE INDEX IF NOT EXISTS payments_client_id_idx ON public.payments (client_id);
+CREATE INDEX IF NOT EXISTS payments_status_idx ON public.payments (status);
+CREATE INDEX IF NOT EXISTS payments_paid_at_idx ON public.payments (paid_at);
 
 -- -----------------------------------------------------------------------------
 -- Approvals
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.approvals (
+CREATE TABLE IF NOT EXISTS public.approvals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   document_number text NOT NULL UNIQUE,
   entity_type public.approval_entity_type NOT NULL,
@@ -715,12 +870,12 @@ CREATE TABLE public.approvals (
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX approvals_entity_idx ON public.approvals (entity_type, entity_id);
-CREATE INDEX approvals_status_idx ON public.approvals (status);
-CREATE INDEX approvals_assigned_to_idx ON public.approvals (assigned_to);
-CREATE INDEX approvals_requested_by_idx ON public.approvals (requested_by);
+CREATE INDEX IF NOT EXISTS approvals_entity_idx ON public.approvals (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS approvals_status_idx ON public.approvals (status);
+CREATE INDEX IF NOT EXISTS approvals_assigned_to_idx ON public.approvals (assigned_to);
+CREATE INDEX IF NOT EXISTS approvals_requested_by_idx ON public.approvals (requested_by);
 
-CREATE TABLE public.approval_steps (
+CREATE TABLE IF NOT EXISTS public.approval_steps (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   approval_id uuid NOT NULL REFERENCES public.approvals (id) ON DELETE CASCADE,
   step_order integer NOT NULL,
@@ -733,13 +888,13 @@ CREATE TABLE public.approval_steps (
   CONSTRAINT approval_steps_unique_order UNIQUE (approval_id, step_order)
 );
 
-CREATE INDEX approval_steps_approval_id_idx ON public.approval_steps (approval_id);
-CREATE INDEX approval_steps_approver_id_idx ON public.approval_steps (approver_id);
+CREATE INDEX IF NOT EXISTS approval_steps_approval_id_idx ON public.approval_steps (approval_id);
+CREATE INDEX IF NOT EXISTS approval_steps_approver_id_idx ON public.approval_steps (approver_id);
 
 -- -----------------------------------------------------------------------------
 -- Audit logs
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.audit_logs (
+CREATE TABLE IF NOT EXISTS public.audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id uuid REFERENCES public.profiles (id) ON DELETE SET NULL,
   action public.audit_action NOT NULL,
@@ -753,15 +908,15 @@ CREATE TABLE public.audit_logs (
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now())
 );
 
-CREATE INDEX audit_logs_actor_id_idx ON public.audit_logs (actor_id);
-CREATE INDEX audit_logs_entity_idx ON public.audit_logs (entity_type, entity_id);
-CREATE INDEX audit_logs_created_at_idx ON public.audit_logs (created_at DESC);
-CREATE INDEX audit_logs_action_idx ON public.audit_logs (action);
+CREATE INDEX IF NOT EXISTS audit_logs_actor_id_idx ON public.audit_logs (actor_id);
+CREATE INDEX IF NOT EXISTS audit_logs_entity_idx ON public.audit_logs (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON public.audit_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS audit_logs_action_idx ON public.audit_logs (action);
 
 -- -----------------------------------------------------------------------------
 -- Document numbering registry
 -- -----------------------------------------------------------------------------
-CREATE TABLE public.document_sequences (
+CREATE TABLE IF NOT EXISTS public.document_sequences (
   prefix text PRIMARY KEY,
   last_value bigint NOT NULL DEFAULT 0,
   updated_at timestamptz NOT NULL DEFAULT timezone('utc', now())
@@ -918,62 +1073,77 @@ $$;
 -- -----------------------------------------------------------------------------
 -- updated_at triggers
 -- -----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS set_roles_updated_at ON public.roles;
 CREATE TRIGGER set_roles_updated_at
   BEFORE UPDATE ON public.roles
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_permissions_updated_at ON public.permissions;
 CREATE TRIGGER set_permissions_updated_at
   BEFORE UPDATE ON public.permissions
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_profiles_updated_at ON public.profiles;
 CREATE TRIGGER set_profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_clients_updated_at ON public.clients;
 CREATE TRIGGER set_clients_updated_at
   BEFORE UPDATE ON public.clients
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_client_contacts_updated_at ON public.client_contacts;
 CREATE TRIGGER set_client_contacts_updated_at
   BEFORE UPDATE ON public.client_contacts
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_campaigns_updated_at ON public.campaigns;
 CREATE TRIGGER set_campaigns_updated_at
   BEFORE UPDATE ON public.campaigns
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_influencers_updated_at ON public.influencers;
 CREATE TRIGGER set_influencers_updated_at
   BEFORE UPDATE ON public.influencers
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_influencer_platform_accounts_updated_at ON public.influencer_platform_accounts;
 CREATE TRIGGER set_influencer_platform_accounts_updated_at
   BEFORE UPDATE ON public.influencer_platform_accounts
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_campaign_influencers_updated_at ON public.campaign_influencers;
 CREATE TRIGGER set_campaign_influencers_updated_at
   BEFORE UPDATE ON public.campaign_influencers
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_deliverables_updated_at ON public.deliverables;
 CREATE TRIGGER set_deliverables_updated_at
   BEFORE UPDATE ON public.deliverables
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_invoices_updated_at ON public.invoices;
 CREATE TRIGGER set_invoices_updated_at
   BEFORE UPDATE ON public.invoices
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_invoice_line_items_updated_at ON public.invoice_line_items;
 CREATE TRIGGER set_invoice_line_items_updated_at
   BEFORE UPDATE ON public.invoice_line_items
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_payments_updated_at ON public.payments;
 CREATE TRIGGER set_payments_updated_at
   BEFORE UPDATE ON public.payments
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_approvals_updated_at ON public.approvals;
 CREATE TRIGGER set_approvals_updated_at
   BEFORE UPDATE ON public.approvals
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_approval_steps_updated_at ON public.approval_steps;
 CREATE TRIGGER set_approval_steps_updated_at
   BEFORE UPDATE ON public.approval_steps
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -981,30 +1151,37 @@ CREATE TRIGGER set_approval_steps_updated_at
 -- -----------------------------------------------------------------------------
 -- Auto-numbering triggers
 -- -----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS assign_clients_document_number ON public.clients;
 CREATE TRIGGER assign_clients_document_number
   BEFORE INSERT ON public.clients
   FOR EACH ROW EXECUTE FUNCTION public.assign_document_number('CLT');
 
+DROP TRIGGER IF EXISTS assign_campaigns_document_number ON public.campaigns;
 CREATE TRIGGER assign_campaigns_document_number
   BEFORE INSERT ON public.campaigns
   FOR EACH ROW EXECUTE FUNCTION public.assign_document_number('CMP');
 
+DROP TRIGGER IF EXISTS assign_influencers_document_number ON public.influencers;
 CREATE TRIGGER assign_influencers_document_number
   BEFORE INSERT ON public.influencers
   FOR EACH ROW EXECUTE FUNCTION public.assign_document_number('INF');
 
+DROP TRIGGER IF EXISTS assign_deliverables_document_number ON public.deliverables;
 CREATE TRIGGER assign_deliverables_document_number
   BEFORE INSERT ON public.deliverables
   FOR EACH ROW EXECUTE FUNCTION public.assign_document_number('DLV');
 
+DROP TRIGGER IF EXISTS assign_invoices_document_number ON public.invoices;
 CREATE TRIGGER assign_invoices_document_number
   BEFORE INSERT ON public.invoices
   FOR EACH ROW EXECUTE FUNCTION public.assign_document_number('INV');
 
+DROP TRIGGER IF EXISTS assign_payments_document_number ON public.payments;
 CREATE TRIGGER assign_payments_document_number
   BEFORE INSERT ON public.payments
   FOR EACH ROW EXECUTE FUNCTION public.assign_document_number('PAY');
 
+DROP TRIGGER IF EXISTS assign_approvals_document_number ON public.approvals;
 CREATE TRIGGER assign_approvals_document_number
   BEFORE INSERT ON public.approvals
   FOR EACH ROW EXECUTE FUNCTION public.assign_document_number('APR');
@@ -1012,14 +1189,17 @@ CREATE TRIGGER assign_approvals_document_number
 -- -----------------------------------------------------------------------------
 -- Business logic triggers
 -- -----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS refresh_invoice_line_total ON public.invoice_line_items;
 CREATE TRIGGER refresh_invoice_line_total
   BEFORE INSERT OR UPDATE ON public.invoice_line_items
   FOR EACH ROW EXECUTE FUNCTION public.refresh_invoice_line_total();
 
+DROP TRIGGER IF EXISTS after_invoice_line_item_change ON public.invoice_line_items;
 CREATE TRIGGER after_invoice_line_item_change
   AFTER INSERT OR UPDATE OR DELETE ON public.invoice_line_items
   FOR EACH ROW EXECUTE FUNCTION public.after_invoice_line_item_change();
 
+DROP TRIGGER IF EXISTS sync_invoice_payment_status ON public.payments;
 CREATE TRIGGER sync_invoice_payment_status
   AFTER INSERT OR UPDATE OR DELETE ON public.payments
   FOR EACH ROW EXECUTE FUNCTION public.sync_invoice_payment_status();
@@ -1027,6 +1207,7 @@ CREATE TRIGGER sync_invoice_payment_status
 -- -----------------------------------------------------------------------------
 -- Profile auto-create on auth signup
 -- -----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -1034,33 +1215,48 @@ CREATE TRIGGER on_auth_user_created
 -- -----------------------------------------------------------------------------
 -- Audit triggers (mutable business entities)
 -- -----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS audit_clients ON public.clients;
 CREATE TRIGGER audit_clients
   AFTER INSERT OR UPDATE OR DELETE ON public.clients
   FOR EACH ROW EXECUTE FUNCTION public.audit_log_changes();
 
+DROP TRIGGER IF EXISTS audit_campaigns ON public.campaigns;
 CREATE TRIGGER audit_campaigns
   AFTER INSERT OR UPDATE OR DELETE ON public.campaigns
   FOR EACH ROW EXECUTE FUNCTION public.audit_log_changes();
 
+DROP TRIGGER IF EXISTS audit_influencers ON public.influencers;
 CREATE TRIGGER audit_influencers
   AFTER INSERT OR UPDATE OR DELETE ON public.influencers
   FOR EACH ROW EXECUTE FUNCTION public.audit_log_changes();
 
+DROP TRIGGER IF EXISTS audit_deliverables ON public.deliverables;
 CREATE TRIGGER audit_deliverables
   AFTER INSERT OR UPDATE OR DELETE ON public.deliverables
   FOR EACH ROW EXECUTE FUNCTION public.audit_log_changes();
 
+DROP TRIGGER IF EXISTS audit_invoices ON public.invoices;
 CREATE TRIGGER audit_invoices
   AFTER INSERT OR UPDATE OR DELETE ON public.invoices
   FOR EACH ROW EXECUTE FUNCTION public.audit_log_changes();
 
+DROP TRIGGER IF EXISTS audit_payments ON public.payments;
 CREATE TRIGGER audit_payments
   AFTER INSERT OR UPDATE OR DELETE ON public.payments
   FOR EACH ROW EXECUTE FUNCTION public.audit_log_changes();
 
+DROP TRIGGER IF EXISTS audit_approvals ON public.approvals;
 CREATE TRIGGER audit_approvals
   AFTER INSERT OR UPDATE OR DELETE ON public.approvals
   FOR EACH ROW EXECUTE FUNCTION public.audit_log_changes();
+
+
+-- -----------------------------------------------------------------------------
+-- Schema evolution (idempotent column additions)
+-- Use ADD COLUMN IF NOT EXISTS when extending existing tables in production.
+-- Example:
+--   ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS external_ref text;
+-- -----------------------------------------------------------------------------
 
 -- -----------------------------------------------------------------------------
 -- Grants (Supabase authenticated / service roles)
