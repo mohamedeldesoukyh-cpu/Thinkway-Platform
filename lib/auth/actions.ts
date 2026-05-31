@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { AUTH_CONFIG } from './config'
 import { ROUTES } from '@/lib/constants/routes'
@@ -52,5 +53,7 @@ export async function signIn(
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  // Bust the RSC cache so no stale authenticated page is served after sign-out.
+  revalidatePath('/', 'layout')
   redirect(ROUTES.AUTH.LOGIN)
 }
