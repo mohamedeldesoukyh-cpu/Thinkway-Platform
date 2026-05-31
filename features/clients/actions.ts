@@ -47,7 +47,16 @@ export async function createClientAction(
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+
+  if (authError) {
+    return { ok: false, message: authError.message };
+  }
+
+  if (!user) {
+    return { ok: false, message: "You must be signed in to create clients." };
+  }
 
   const { error } = await supabase.from("clients").insert({
     name: parsed.data.name,
@@ -58,7 +67,7 @@ export async function createClientAction(
     billing_email: emptyToNull(parsed.data.billing_email),
     currency: parsed.data.currency,
     notes: emptyToNull(parsed.data.notes),
-    created_by: user?.id ?? null,
+    created_by: user.id,
   });
 
   if (error) {

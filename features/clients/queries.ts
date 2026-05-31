@@ -26,6 +26,19 @@ export async function getClientsList(params: {
 
   const supabase = await createSupabaseServerClient();
 
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    throw new Error(authError.message);
+  }
+
+  if (!user) {
+    throw new Error("You must be signed in to view clients.");
+  }
+
   let query = supabase
     .from("clients")
     .select("*", { count: "exact" })
