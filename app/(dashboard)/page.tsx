@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightIcon, Building2Icon } from "lucide-react";
+import { ArrowRightIcon, Building2Icon, MegaphoneIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,25 @@ export default function DashboardPage() {
             <Button asChild>
               <Link href="/clients">
                 Open clients
+                <ArrowRightIcon data-icon="inline-end" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MegaphoneIcon className="size-4" />
+              Campaigns
+            </CardTitle>
+            <CardDescription>
+              Plan budgets, timelines, and platform strategy for client campaigns.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/campaigns">
+                Open campaigns
                 <ArrowRightIcon data-icon="inline-end" />
               </Link>
             </Button>
