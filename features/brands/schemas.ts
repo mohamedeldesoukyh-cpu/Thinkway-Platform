@@ -18,5 +18,10 @@ export const createBrandSchema = z.object({
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
+export const updateBrandSchema = createBrandSchema.extend({
+  brand_id: z.string().uuid(),
+  status: z.enum(["prospect", "active", "inactive", "archived"]).default("active"),
+});
+
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;
 export type CreateBrandInput = z.infer<typeof createBrandSchema>;

@@ -55,9 +55,18 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
               {result.groups.map((group) => (
                 <TableRow key={group.id}>
                   <TableCell className="font-mono text-xs">
-                    {group.document_number}
+                    <Link
+                      href={`/groups/${group.id}`}
+                      className="hover:underline"
+                    >
+                      {group.document_number}
+                    </Link>
                   </TableCell>
-                  <TableCell className="font-medium">{group.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/groups/${group.id}`} className="hover:underline">
+                      {group.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="capitalize">
                       {group.status}

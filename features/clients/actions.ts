@@ -98,6 +98,7 @@ export async function createClientAction(
   }
 
   revalidatePath("/clients");
+  revalidatePath(`/groups/${parsed.data.group_id}`);
 
   return {
     ok: true,

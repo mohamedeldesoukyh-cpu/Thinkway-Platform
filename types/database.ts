@@ -12,14 +12,37 @@ export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted
 
 export type AgencyOrDirect = "agency" | "direct" | "hybrid";
 
+export type GroupDocumentType =
+  | "nda"
+  | "agreement"
+  | "tax_document"
+  | "group_contract";
+
 export type GroupRow = {
   id: string;
   document_number: string;
   name: string;
+  region: string | null;
+  account_director_id: string | null;
   status: ClientStatus;
   notes: string | null;
   metadata: Record<string, unknown>;
   created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GroupDocumentRow = {
+  id: string;
+  group_id: string;
+  document_type: GroupDocumentType;
+  file_name: string;
+  storage_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  expires_at: string | null;
+  notes: string | null;
+  uploaded_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -460,11 +483,29 @@ export type Database = {
         Row: GroupRow;
         Insert: {
           name: string;
+          region?: string | null;
+          account_director_id?: string | null;
           status?: ClientStatus;
           notes?: string | null;
           created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["groups"]["Insert"]>;
+        Relationships: [];
+      };
+      group_documents: {
+        Row: GroupDocumentRow;
+        Insert: {
+          group_id: string;
+          document_type: GroupDocumentType;
+          file_name: string;
+          storage_path: string;
+          mime_type?: string | null;
+          file_size?: number | null;
+          expires_at?: string | null;
+          notes?: string | null;
+          uploaded_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["group_documents"]["Insert"]>;
         Relationships: [];
       };
       brands: {
@@ -473,6 +514,7 @@ export type Database = {
           client_id: string;
           group_id?: string;
           name: string;
+          status?: ClientStatus;
           category_id?: string | null;
           subcategory_id?: string | null;
           agency_or_direct?: AgencyOrDirect | null;
@@ -552,6 +594,43 @@ export type Database = {
         Row: CampaignRow;
         Insert: never;
         Update: never;
+        Relationships: [];
+      };
+      invoices: {
+        Row: {
+          id: string;
+          client_id: string;
+          total: number;
+          amount_paid: number;
+          status: string;
+        };
+        Insert: {
+          client_id: string;
+          total?: number;
+          amount_paid?: number;
+          status?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]>;
+        Relationships: [];
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          actor_id: string | null;
+          new_data: Record<string, unknown> | null;
+          created_at: string;
+        };
+        Insert: {
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          actor_id?: string | null;
+          new_data?: Record<string, unknown> | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["audit_logs"]["Insert"]>;
         Relationships: [];
       };
       profiles: {

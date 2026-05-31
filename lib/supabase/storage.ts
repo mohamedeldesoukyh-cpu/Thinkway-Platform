@@ -15,7 +15,10 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 
-export type DocumentBucket = "client-documents" | "influencer-documents";
+export type DocumentBucket =
+  | "client-documents"
+  | "influencer-documents"
+  | "group-documents";
 
 export function buildDocumentStoragePath(
   entityId: string,
