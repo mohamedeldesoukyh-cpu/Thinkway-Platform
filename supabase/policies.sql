@@ -1,63 +1,64 @@
 -- =============================================================================
--- Thinkway Platform — Row Level Security Policies
--- Run AFTER schema.sql and seed.sql
+-- Thinkway Platform — Row Level Security Policies (idempotent)
+-- Safe to re-run without errors. Run AFTER schema.sql and seed.sql
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- Enable RLS on all application tables
+-- Enable RLS on all application tables (idempotent)
 -- -----------------------------------------------------------------------------
-ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.client_contacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.client_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.campaigns ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.campaign_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.influencers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.influencer_platform_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.campaign_influencers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.deliverables ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.invoice_line_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.approvals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.approval_steps ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.document_sequences ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['roles', 'permissions', 'role_permissions', 'profiles', 'clients', 'client_contacts', 'client_users', 'campaigns', 'campaign_members', 'influencers', 'influencer_platform_accounts', 'campaign_influencers', 'deliverables', 'invoices', 'invoice_line_items', 'payments', 'approvals', 'approval_steps', 'audit_logs', 'document_sequences']
+  LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relname = t
+        AND c.relkind IN ('r', 'p')
+        AND NOT c.relrowsecurity
+    ) THEN
+      EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
+    END IF;
+  END LOOP;
+END $$;
 
--- Force RLS for table owners (Supabase best practice)
-ALTER TABLE public.roles FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.permissions FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.role_permissions FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.profiles FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.clients FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.client_contacts FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.client_users FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.campaigns FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.campaign_members FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.influencers FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.influencer_platform_accounts FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.campaign_influencers FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.deliverables FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.invoices FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.invoice_line_items FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.payments FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.approvals FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.approval_steps FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.document_sequences FORCE ROW LEVEL SECURITY;
+-- Force RLS for table owners (Supabase best practice, idempotent)
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['roles', 'permissions', 'role_permissions', 'profiles', 'clients', 'client_contacts', 'client_users', 'campaigns', 'campaign_members', 'influencers', 'influencer_platform_accounts', 'campaign_influencers', 'deliverables', 'invoices', 'invoice_line_items', 'payments', 'approvals', 'approval_steps', 'audit_logs', 'document_sequences']
+  LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relname = t
+        AND c.relkind IN ('r', 'p')
+        AND c.relrowsecurity
+        AND NOT c.relforcerowsecurity
+    ) THEN
+      EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', t);
+    END IF;
+  END LOOP;
+END $$;
 
 -- -----------------------------------------------------------------------------
 -- Roles & permissions (reference data)
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS roles_select_authenticated ON public.roles;
 CREATE POLICY roles_select_authenticated
   ON public.roles
   FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS roles_manage_admin ON public.roles;
 CREATE POLICY roles_manage_admin
   ON public.roles
   FOR ALL
@@ -65,12 +66,14 @@ CREATE POLICY roles_manage_admin
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
+DROP POLICY IF EXISTS permissions_select_authenticated ON public.permissions;
 CREATE POLICY permissions_select_authenticated
   ON public.permissions
   FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS permissions_manage_admin ON public.permissions;
 CREATE POLICY permissions_manage_admin
   ON public.permissions
   FOR ALL
@@ -78,12 +81,14 @@ CREATE POLICY permissions_manage_admin
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
+DROP POLICY IF EXISTS role_permissions_select_authenticated ON public.role_permissions;
 CREATE POLICY role_permissions_select_authenticated
   ON public.role_permissions
   FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS role_permissions_manage_admin ON public.role_permissions;
 CREATE POLICY role_permissions_manage_admin
   ON public.role_permissions
   FOR ALL
@@ -94,6 +99,7 @@ CREATE POLICY role_permissions_manage_admin
 -- -----------------------------------------------------------------------------
 -- Profiles
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS profiles_select_self_or_internal ON public.profiles;
 CREATE POLICY profiles_select_self_or_internal
   ON public.profiles
   FOR SELECT
@@ -104,6 +110,7 @@ CREATE POLICY profiles_select_self_or_internal
     OR public.has_permission('users.read')
   );
 
+DROP POLICY IF EXISTS profiles_update_self_or_admin ON public.profiles;
 CREATE POLICY profiles_update_self_or_admin
   ON public.profiles
   FOR UPDATE
@@ -119,12 +126,14 @@ CREATE POLICY profiles_update_self_or_admin
     OR public.is_admin()
   );
 
+DROP POLICY IF EXISTS profiles_insert_admin ON public.profiles;
 CREATE POLICY profiles_insert_admin
   ON public.profiles
   FOR INSERT
   TO authenticated
   WITH CHECK (public.has_permission('users.write') OR public.is_admin());
 
+DROP POLICY IF EXISTS profiles_delete_admin ON public.profiles;
 CREATE POLICY profiles_delete_admin
   ON public.profiles
   FOR DELETE
@@ -134,6 +143,7 @@ CREATE POLICY profiles_delete_admin
 -- -----------------------------------------------------------------------------
 -- Clients
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS clients_select ON public.clients;
 CREATE POLICY clients_select
   ON public.clients
   FOR SELECT
@@ -143,6 +153,7 @@ CREATE POLICY clients_select
     AND public.can_access_client(id)
   );
 
+DROP POLICY IF EXISTS clients_insert ON public.clients;
 CREATE POLICY clients_insert
   ON public.clients
   FOR INSERT
@@ -152,6 +163,7 @@ CREATE POLICY clients_insert
     AND public.is_internal_user()
   );
 
+DROP POLICY IF EXISTS clients_update ON public.clients;
 CREATE POLICY clients_update
   ON public.clients
   FOR UPDATE
@@ -165,6 +177,7 @@ CREATE POLICY clients_update
     AND public.can_access_client(id)
   );
 
+DROP POLICY IF EXISTS clients_delete ON public.clients;
 CREATE POLICY clients_delete
   ON public.clients
   FOR DELETE
@@ -177,6 +190,7 @@ CREATE POLICY clients_delete
 -- -----------------------------------------------------------------------------
 -- Client contacts
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS client_contacts_select ON public.client_contacts;
 CREATE POLICY client_contacts_select
   ON public.client_contacts
   FOR SELECT
@@ -186,6 +200,7 @@ CREATE POLICY client_contacts_select
     AND public.can_access_client(client_id)
   );
 
+DROP POLICY IF EXISTS client_contacts_write ON public.client_contacts;
 CREATE POLICY client_contacts_write
   ON public.client_contacts
   FOR ALL
@@ -202,6 +217,7 @@ CREATE POLICY client_contacts_write
 -- -----------------------------------------------------------------------------
 -- Client users (portal assignments)
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS client_users_select ON public.client_users;
 CREATE POLICY client_users_select
   ON public.client_users
   FOR SELECT
@@ -212,6 +228,7 @@ CREATE POLICY client_users_select
     OR public.has_permission('users.read')
   );
 
+DROP POLICY IF EXISTS client_users_write ON public.client_users;
 CREATE POLICY client_users_write
   ON public.client_users
   FOR ALL
@@ -228,6 +245,7 @@ CREATE POLICY client_users_write
 -- -----------------------------------------------------------------------------
 -- Campaigns
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS campaigns_select ON public.campaigns;
 CREATE POLICY campaigns_select
   ON public.campaigns
   FOR SELECT
@@ -237,6 +255,7 @@ CREATE POLICY campaigns_select
     AND public.can_access_campaign(id)
   );
 
+DROP POLICY IF EXISTS campaigns_insert ON public.campaigns;
 CREATE POLICY campaigns_insert
   ON public.campaigns
   FOR INSERT
@@ -247,6 +266,7 @@ CREATE POLICY campaigns_insert
     AND public.can_access_client(client_id)
   );
 
+DROP POLICY IF EXISTS campaigns_update ON public.campaigns;
 CREATE POLICY campaigns_update
   ON public.campaigns
   FOR UPDATE
@@ -260,6 +280,7 @@ CREATE POLICY campaigns_update
     AND public.can_access_campaign(id)
   );
 
+DROP POLICY IF EXISTS campaigns_delete ON public.campaigns;
 CREATE POLICY campaigns_delete
   ON public.campaigns
   FOR DELETE
@@ -272,12 +293,14 @@ CREATE POLICY campaigns_delete
 -- -----------------------------------------------------------------------------
 -- Campaign members
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS campaign_members_select ON public.campaign_members;
 CREATE POLICY campaign_members_select
   ON public.campaign_members
   FOR SELECT
   TO authenticated
   USING (public.can_access_campaign(campaign_id));
 
+DROP POLICY IF EXISTS campaign_members_write ON public.campaign_members;
 CREATE POLICY campaign_members_write
   ON public.campaign_members
   FOR ALL
@@ -294,6 +317,7 @@ CREATE POLICY campaign_members_write
 -- -----------------------------------------------------------------------------
 -- Influencers
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS influencers_select ON public.influencers;
 CREATE POLICY influencers_select
   ON public.influencers
   FOR SELECT
@@ -303,6 +327,7 @@ CREATE POLICY influencers_select
     AND public.can_access_influencer(id)
   );
 
+DROP POLICY IF EXISTS influencers_insert ON public.influencers;
 CREATE POLICY influencers_insert
   ON public.influencers
   FOR INSERT
@@ -312,6 +337,7 @@ CREATE POLICY influencers_insert
     AND public.is_internal_user()
   );
 
+DROP POLICY IF EXISTS influencers_update ON public.influencers;
 CREATE POLICY influencers_update
   ON public.influencers
   FOR UPDATE
@@ -325,6 +351,7 @@ CREATE POLICY influencers_update
     AND public.can_access_influencer(id)
   );
 
+DROP POLICY IF EXISTS influencers_delete ON public.influencers;
 CREATE POLICY influencers_delete
   ON public.influencers
   FOR DELETE
@@ -337,6 +364,7 @@ CREATE POLICY influencers_delete
 -- -----------------------------------------------------------------------------
 -- Influencer platform accounts
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS influencer_platform_accounts_select ON public.influencer_platform_accounts;
 CREATE POLICY influencer_platform_accounts_select
   ON public.influencer_platform_accounts
   FOR SELECT
@@ -346,6 +374,7 @@ CREATE POLICY influencer_platform_accounts_select
     AND public.can_access_influencer(influencer_id)
   );
 
+DROP POLICY IF EXISTS influencer_platform_accounts_write ON public.influencer_platform_accounts;
 CREATE POLICY influencer_platform_accounts_write
   ON public.influencer_platform_accounts
   FOR ALL
@@ -362,6 +391,7 @@ CREATE POLICY influencer_platform_accounts_write
 -- -----------------------------------------------------------------------------
 -- Campaign influencers
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS campaign_influencers_select ON public.campaign_influencers;
 CREATE POLICY campaign_influencers_select
   ON public.campaign_influencers
   FOR SELECT
@@ -371,6 +401,7 @@ CREATE POLICY campaign_influencers_select
     AND public.can_access_campaign(campaign_id)
   );
 
+DROP POLICY IF EXISTS campaign_influencers_write ON public.campaign_influencers;
 CREATE POLICY campaign_influencers_write
   ON public.campaign_influencers
   FOR ALL
@@ -387,6 +418,7 @@ CREATE POLICY campaign_influencers_write
 -- -----------------------------------------------------------------------------
 -- Deliverables
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS deliverables_select ON public.deliverables;
 CREATE POLICY deliverables_select
   ON public.deliverables
   FOR SELECT
@@ -396,6 +428,7 @@ CREATE POLICY deliverables_select
     AND public.can_access_campaign(campaign_id)
   );
 
+DROP POLICY IF EXISTS deliverables_insert ON public.deliverables;
 CREATE POLICY deliverables_insert
   ON public.deliverables
   FOR INSERT
@@ -405,6 +438,7 @@ CREATE POLICY deliverables_insert
     AND public.can_access_campaign(campaign_id)
   );
 
+DROP POLICY IF EXISTS deliverables_update ON public.deliverables;
 CREATE POLICY deliverables_update
   ON public.deliverables
   FOR UPDATE
@@ -418,6 +452,7 @@ CREATE POLICY deliverables_update
     AND public.can_access_campaign(campaign_id)
   );
 
+DROP POLICY IF EXISTS deliverables_delete ON public.deliverables;
 CREATE POLICY deliverables_delete
   ON public.deliverables
   FOR DELETE
@@ -431,6 +466,7 @@ CREATE POLICY deliverables_delete
 -- -----------------------------------------------------------------------------
 -- Invoices
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS invoices_select ON public.invoices;
 CREATE POLICY invoices_select
   ON public.invoices
   FOR SELECT
@@ -440,6 +476,7 @@ CREATE POLICY invoices_select
     AND public.can_access_client(client_id)
   );
 
+DROP POLICY IF EXISTS invoices_insert ON public.invoices;
 CREATE POLICY invoices_insert
   ON public.invoices
   FOR INSERT
@@ -453,6 +490,7 @@ CREATE POLICY invoices_insert
     )
   );
 
+DROP POLICY IF EXISTS invoices_update ON public.invoices;
 CREATE POLICY invoices_update
   ON public.invoices
   FOR UPDATE
@@ -466,6 +504,7 @@ CREATE POLICY invoices_update
     AND public.can_access_client(client_id)
   );
 
+DROP POLICY IF EXISTS invoices_delete ON public.invoices;
 CREATE POLICY invoices_delete
   ON public.invoices
   FOR DELETE
@@ -478,6 +517,7 @@ CREATE POLICY invoices_delete
 -- -----------------------------------------------------------------------------
 -- Invoice line items
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS invoice_line_items_select ON public.invoice_line_items;
 CREATE POLICY invoice_line_items_select
   ON public.invoice_line_items
   FOR SELECT
@@ -492,6 +532,7 @@ CREATE POLICY invoice_line_items_select
     )
   );
 
+DROP POLICY IF EXISTS invoice_line_items_write ON public.invoice_line_items;
 CREATE POLICY invoice_line_items_write
   ON public.invoice_line_items
   FOR ALL
@@ -518,6 +559,7 @@ CREATE POLICY invoice_line_items_write
 -- -----------------------------------------------------------------------------
 -- Payments
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS payments_select ON public.payments;
 CREATE POLICY payments_select
   ON public.payments
   FOR SELECT
@@ -527,6 +569,7 @@ CREATE POLICY payments_select
     AND public.can_access_client(client_id)
   );
 
+DROP POLICY IF EXISTS payments_insert ON public.payments;
 CREATE POLICY payments_insert
   ON public.payments
   FOR INSERT
@@ -536,6 +579,7 @@ CREATE POLICY payments_insert
     AND public.can_access_client(client_id)
   );
 
+DROP POLICY IF EXISTS payments_update ON public.payments;
 CREATE POLICY payments_update
   ON public.payments
   FOR UPDATE
@@ -549,6 +593,7 @@ CREATE POLICY payments_update
     AND public.can_access_client(client_id)
   );
 
+DROP POLICY IF EXISTS payments_delete ON public.payments;
 CREATE POLICY payments_delete
   ON public.payments
   FOR DELETE
@@ -561,6 +606,7 @@ CREATE POLICY payments_delete
 -- -----------------------------------------------------------------------------
 -- Approvals
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS approvals_select ON public.approvals;
 CREATE POLICY approvals_select
   ON public.approvals
   FOR SELECT
@@ -574,6 +620,7 @@ CREATE POLICY approvals_select
     )
   );
 
+DROP POLICY IF EXISTS approvals_insert ON public.approvals;
 CREATE POLICY approvals_insert
   ON public.approvals
   FOR INSERT
@@ -586,6 +633,7 @@ CREATE POLICY approvals_insert
     )
   );
 
+DROP POLICY IF EXISTS approvals_update ON public.approvals;
 CREATE POLICY approvals_update
   ON public.approvals
   FOR UPDATE
@@ -609,6 +657,7 @@ CREATE POLICY approvals_update
     )
   );
 
+DROP POLICY IF EXISTS approvals_delete ON public.approvals;
 CREATE POLICY approvals_delete
   ON public.approvals
   FOR DELETE
@@ -621,6 +670,7 @@ CREATE POLICY approvals_delete
 -- -----------------------------------------------------------------------------
 -- Approval steps
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS approval_steps_select ON public.approval_steps;
 CREATE POLICY approval_steps_select
   ON public.approval_steps
   FOR SELECT
@@ -640,6 +690,7 @@ CREATE POLICY approval_steps_select
     )
   );
 
+DROP POLICY IF EXISTS approval_steps_write ON public.approval_steps;
 CREATE POLICY approval_steps_write
   ON public.approval_steps
   FOR ALL
@@ -664,6 +715,7 @@ CREATE POLICY approval_steps_write
 -- -----------------------------------------------------------------------------
 -- Audit logs (read-only for privileged users)
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS audit_logs_select ON public.audit_logs;
 CREATE POLICY audit_logs_select
   ON public.audit_logs
   FOR SELECT
@@ -673,6 +725,7 @@ CREATE POLICY audit_logs_select
     OR public.is_admin()
   );
 
+DROP POLICY IF EXISTS audit_logs_insert_system ON public.audit_logs;
 CREATE POLICY audit_logs_insert_system
   ON public.audit_logs
   FOR INSERT
@@ -682,12 +735,14 @@ CREATE POLICY audit_logs_insert_system
     OR public.is_admin()
   );
 
+DROP POLICY IF EXISTS audit_logs_no_update ON public.audit_logs;
 CREATE POLICY audit_logs_no_update
   ON public.audit_logs
   FOR UPDATE
   TO authenticated
   USING (false);
 
+DROP POLICY IF EXISTS audit_logs_no_delete ON public.audit_logs;
 CREATE POLICY audit_logs_no_delete
   ON public.audit_logs
   FOR DELETE
@@ -697,6 +752,7 @@ CREATE POLICY audit_logs_no_delete
 -- -----------------------------------------------------------------------------
 -- Document sequences (internal numbering — no direct client access)
 -- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS document_sequences_deny_all ON public.document_sequences;
 CREATE POLICY document_sequences_deny_all
   ON public.document_sequences
   FOR ALL
