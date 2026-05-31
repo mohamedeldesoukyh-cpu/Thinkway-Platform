@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { Building2Icon, LayoutDashboardIcon, MegaphoneIcon } from "lucide-react";
+import {
+  Building2Icon,
+  LayoutDashboardIcon,
+  MegaphoneIcon,
+  UsersIcon,
+} from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { UserAccount } from "@/components/layout/user-account";
@@ -10,6 +15,7 @@ const mobileNavItems = [
   { href: "/", label: "Home", icon: LayoutDashboardIcon },
   { href: "/clients", label: "Clients", icon: Building2Icon },
   { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+  { href: "/vendors", label: "Vendors", icon: UsersIcon },
 ] as const;
 
 type DashboardShellProps = {

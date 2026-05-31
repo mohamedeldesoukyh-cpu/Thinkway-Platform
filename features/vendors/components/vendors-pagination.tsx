@@ -1,0 +1,123 @@
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+type VendorsPaginationProps = {
+  page: number;
+  totalPages: number;
+  search?: string;
+  status?: string;
+  platform?: string;
+};
+
+function buildHref(
+  page: number,
+  filters: { search?: string; status?: string; platform?: string }
+) {
+  const params = new URLSearchParams();
+
+  if (filters.search?.trim()) {
+    params.set("q", filters.search.trim());
+  }
+
+  if (filters.status?.trim()) {
+    params.set("status", filters.status.trim());
+  }
+
+  if (filters.platform?.trim()) {
+    params.set("platform", filters.platform.trim());
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const query = params.toString();
+  return query ? `/vendors?${query}` : "/vendors";
+}
+
+function getPageNumbers(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index + 1);
+  }
+
+  const pages: (number | "ellipsis")[] = [1];
+
+  if (current > 3) {
+    pages.push("ellipsis");
+  }
+
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page);
+  }
+
+  if (current < total - 2) {
+    pages.push("ellipsis");
+  }
+
+  pages.push(total);
+  return pages;
+}
+
+export function VendorsPagination({
+  page,
+  totalPages,
+  search,
+  status,
+  platform,
+}: VendorsPaginationProps) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  const pages = getPageNumbers(page, totalPages);
+  const filters = { search, status, platform };
+
+  return (
+    <Pagination className="justify-end">
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            href={buildHref(Math.max(1, page - 1), filters)}
+            aria-disabled={page <= 1}
+            className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
+          />
+        </PaginationItem>
+        {pages.map((item, index) =>
+          item === "ellipsis" ? (
+            <PaginationItem key={`ellipsis-${index}`}>
+              <PaginationEllipsis />
+            </PaginationItem>
+          ) : (
+            <PaginationItem key={item}>
+              <PaginationLink
+                href={buildHref(item, filters)}
+                isActive={item === page}
+              >
+                {item}
+              </PaginationLink>
+            </PaginationItem>
+          )
+        )}
+        <PaginationItem>
+          <PaginationNext
+            href={buildHref(Math.min(totalPages, page + 1), filters)}
+            aria-disabled={page >= totalPages}
+            className={
+              page >= totalPages ? "pointer-events-none opacity-50" : undefined
+            }
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
+  );
+}

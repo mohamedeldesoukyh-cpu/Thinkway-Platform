@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2Icon, LayoutDashboardIcon, MegaphoneIcon } from "lucide-react";
+import {
+  Building2Icon,
+  LayoutDashboardIcon,
+  MegaphoneIcon,
+  UsersIcon,
+} from "lucide-react";
 
 import { UserAccount } from "@/components/layout/user-account";
 import { cn } from "@/lib/utils";
@@ -22,6 +27,11 @@ const navItems = [
     href: "/campaigns",
     label: "Campaigns",
     icon: MegaphoneIcon,
+  },
+  {
+    href: "/vendors",
+    label: "Vendors",
+    icon: UsersIcon,
   },
 ] as const;
 
