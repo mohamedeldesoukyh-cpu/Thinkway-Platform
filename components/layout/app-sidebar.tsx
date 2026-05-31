@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2Icon, LayoutDashboardIcon } from "lucide-react";
 
+import { UserAccount } from "@/components/layout/user-account";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -19,7 +20,11 @@ const navItems = [
   },
 ] as const;
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  userEmail?: string | null;
+};
+
+export function AppSidebar({ userEmail }: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -54,6 +59,9 @@ export function AppSidebar() {
           );
         })}
       </nav>
+      <div className="border-t border-sidebar-border p-4">
+        <UserAccount email={userEmail} />
+      </div>
     </aside>
   );
 }

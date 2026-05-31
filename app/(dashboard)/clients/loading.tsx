@@ -1,7 +1,7 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ClientsTableSkeleton } from "@/features/clients/components/clients-table-skeleton";
 
-export default function ClientsLoading() {
+export default async function ClientsLoading() {
   return (
     <DashboardShell
       title="Clients"

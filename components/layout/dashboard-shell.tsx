@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Building2Icon, LayoutDashboardIcon } from "lucide-react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { UserAccount } from "@/components/layout/user-account";
+import { getAuthUser } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 const mobileNavItems = [
@@ -16,17 +18,20 @@ type DashboardShellProps = {
   actions?: React.ReactNode;
 };
 
-export function DashboardShell({
+export async function DashboardShell({
   children,
   title,
   description,
   actions,
 }: DashboardShellProps) {
+  const { user } = await getAuthUser();
+  const userEmail = user?.email ?? null;
+
   return (
     <div className="flex min-h-screen bg-background">
-      <AppSidebar />
+      <AppSidebar userEmail={userEmail} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
           <Link href="/" className="font-heading text-lg font-semibold">
             Thinkway
           </Link>
@@ -48,6 +53,7 @@ export function DashboardShell({
               );
             })}
           </nav>
+          <UserAccount email={userEmail} compact />
         </div>
         <header className="flex flex-col gap-4 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
           <div className="space-y-0.5">
