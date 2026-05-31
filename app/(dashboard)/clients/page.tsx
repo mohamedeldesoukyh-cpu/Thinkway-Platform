@@ -8,6 +8,7 @@ import { ClientsSearch } from "@/features/clients/components/clients-search";
 import { ClientsTable } from "@/features/clients/components/clients-table";
 import { NewClientDialog } from "@/features/clients/components/new-client-dialog";
 import { getClientsList } from "@/features/clients/queries";
+import { getGroupsForSelect } from "@/lib/master-data/queries";
 
 type ClientsPageProps = {
   searchParams: Promise<{
@@ -22,10 +23,14 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   const search = params.q?.trim() ?? "";
 
   let list;
+  let groups: Awaited<ReturnType<typeof getGroupsForSelect>> = [];
   let errorMessage: string | null = null;
 
   try {
-    list = await getClientsList({ page, search });
+    [list, groups] = await Promise.all([
+      getClientsList({ page, search }),
+      getGroupsForSelect(),
+    ]);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load clients.";
@@ -44,8 +49,8 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   return (
     <DashboardShell
       title="Clients"
-      description="Manage brand accounts, billing details, and client relationships."
-      actions={<NewClientDialog />}
+      description="Legal entities within groups. Brands and campaigns hang off each entity."
+      actions={<NewClientDialog groups={groups} />}
     >
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -1,10 +1,11 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getBrandsByClientId } from "@/features/brands/queries";
 import type { ClientDetail, ClientRow } from "@/types/database";
 
 import { CLIENTS_PAGE_SIZE } from "./constants";
 
 export type ClientsListResult = {
-  clients: ClientRow[];
+  clients: (ClientRow & { group: { id: string; name: string } | null })[];
   total: number;
   page: number;
   pageSize: number;
@@ -46,7 +47,7 @@ export async function getClientsList(params: {
 
   let query = supabase
     .from("clients")
-    .select("*", { count: "exact" })
+    .select("*, group:groups(id, name)", { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -56,8 +57,6 @@ export async function getClientsList(params: {
         `name.ilike.${pattern}`,
         `legal_name.ilike.${pattern}`,
         `document_number.ilike.${pattern}`,
-        `industry.ilike.${pattern}`,
-        `vat_number.ilike.${pattern}`,
       ].join(",")
     );
   }
@@ -69,14 +68,13 @@ export async function getClientsList(params: {
   }
 
   const total = count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / CLIENTS_PAGE_SIZE));
 
   return {
-    clients: (data ?? []) as ClientRow[],
+    clients: (data ?? []) as ClientsListResult["clients"],
     total,
     page,
     pageSize: CLIENTS_PAGE_SIZE,
-    totalPages,
+    totalPages: Math.max(1, Math.ceil(total / CLIENTS_PAGE_SIZE)),
   };
 }
 
@@ -85,7 +83,7 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
 
   const { data: client, error } = await supabase
     .from("clients")
-    .select("*")
+    .select("*, group:groups(id, name, document_number)")
     .eq("id", id)
     .maybeSingle();
 
@@ -97,31 +95,38 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
     return null;
   }
 
-  const { data: documents, error: documentsError } = await supabase
-    .from("client_documents")
-    .select("*")
-    .eq("client_id", id)
-    .order("created_at", { ascending: false });
+  const clientRow = client as ClientRow & {
+    group: ClientDetail["group"];
+  };
 
-  if (documentsError) {
-    throw new Error(documentsError.message);
+  const [documentsResult, campaignsResult, brands] = await Promise.all([
+    supabase
+      .from("client_documents")
+      .select("*")
+      .eq("client_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("campaign_headers")
+      .select(
+        "id, name, document_number, status, currency_code, start_date, end_date, brand:brands(id, name)"
+      )
+      .eq("client_id", id)
+      .order("created_at", { ascending: false }),
+    getBrandsByClientId(id),
+  ]);
+
+  if (documentsResult.error) {
+    throw new Error(documentsResult.error.message);
   }
-
-  const { data: campaigns, error: campaignsError } = await supabase
-    .from("campaigns")
-    .select(
-      "id, name, document_number, status, budget, currency, start_date, end_date"
-    )
-    .eq("client_id", id)
-    .order("created_at", { ascending: false });
-
-  if (campaignsError) {
-    throw new Error(campaignsError.message);
+  if (campaignsResult.error) {
+    throw new Error(campaignsResult.error.message);
   }
 
   return {
-    ...(client as ClientRow),
-    documents: documents ?? [],
-    campaigns: campaigns ?? [],
+    ...clientRow,
+    group: clientRow.group,
+    documents: documentsResult.data ?? [],
+    campaigns: (campaignsResult.data ?? []) as ClientDetail["campaigns"],
+    brands,
   };
 }

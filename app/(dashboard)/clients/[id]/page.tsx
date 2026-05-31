@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ClientProfile } from "@/features/clients/components/client-profile";
 import { getClientById } from "@/features/clients/queries";
+import { getGroupsForSelect, getMasterDataOptions } from "@/lib/master-data/queries";
 
 type ClientProfilePageProps = {
   params: Promise<{ id: string }>;
@@ -14,10 +15,16 @@ export default async function ClientProfilePage({
   const { id } = await params;
 
   let client;
+  let groups: Awaited<ReturnType<typeof getGroupsForSelect>> = [];
+  let masterData: Awaited<ReturnType<typeof getMasterDataOptions>> | null = null;
   let errorMessage: string | null = null;
 
   try {
-    client = await getClientById(id);
+    [client, groups, masterData] = await Promise.all([
+      getClientById(id),
+      getGroupsForSelect(),
+      getMasterDataOptions(),
+    ]);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load client.";
@@ -36,8 +43,8 @@ export default async function ClientProfilePage({
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
-      ) : client ? (
-        <ClientProfile client={client} />
+      ) : client && masterData ? (
+        <ClientProfile client={client} groups={groups} masterData={masterData} />
       ) : null}
     </DashboardShell>
   );

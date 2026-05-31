@@ -241,7 +241,7 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
       currency,
       invited_at,
       confirmed_at,
-      campaign:campaigns(id, name, document_number, status)
+      campaign:campaign_headers(id, name, document_number, status)
     `
     )
     .eq("influencer_id", id)

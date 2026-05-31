@@ -1,4 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  getBrandsForCampaignForm,
+  getMasterDataOptions,
+} from "@/lib/master-data/queries";
+import type { BrandFormOption } from "@/features/campaigns/types";
 import type { CampaignListItem } from "@/types/database";
 
 import { CAMPAIGNS_PAGE_SIZE } from "./constants";
@@ -12,12 +17,13 @@ export type CampaignsListResult = {
 };
 
 export type CampaignFormOptions = {
-  clients: { id: string; name: string }[];
+  brands: BrandFormOption[];
   accountManagers: {
     id: string;
     full_name: string | null;
     email: string;
   }[];
+  masterData: Awaited<ReturnType<typeof getMasterDataOptions>>;
 };
 
 function escapeIlikePattern(value: string): string {
@@ -54,12 +60,15 @@ export async function getCampaignsList(params: {
   const { supabase } = await requireUser();
 
   let query = supabase
-    .from("campaigns")
+    .from("campaign_headers")
     .select(
       `
       *,
-      client:clients(id, name, document_number),
-      account_manager:profiles!campaigns_account_manager_id_fkey(id, full_name, email)
+      brand:brands(id, name),
+      client:clients(id, name, document_number, legal_name),
+      group:groups(id, name),
+      account_manager:profiles!campaign_headers_account_manager_id_fkey(id, full_name, email),
+      lines:campaign_lines(id, document_number, name, po_amount, revenue, cost, profit)
     `,
       { count: "exact" }
     )
@@ -67,23 +76,9 @@ export async function getCampaignsList(params: {
 
   if (search) {
     const pattern = `%${escapeIlikePattern(search)}%`;
-
-    const { data: matchingClients } = await supabase
-      .from("clients")
-      .select("id")
-      .ilike("name", pattern);
-
-    const clientIds = matchingClients?.map((client) => client.id) ?? [];
-    const orFilters = [
-      `name.ilike.${pattern}`,
-      `document_number.ilike.${pattern}`,
-    ];
-
-    if (clientIds.length > 0) {
-      orFilters.push(`client_id.in.(${clientIds.join(",")})`);
-    }
-
-    query = query.or(orFilters.join(","));
+    query = query.or(
+      [`name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(",")
+    );
   }
 
   const { data, error, count } = await query.range(from, to);
@@ -107,11 +102,9 @@ export async function getCampaignsList(params: {
 export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
   const { supabase } = await requireUser();
 
-  const [clientsResult, managersResult] = await Promise.all([
-    supabase
-      .from("clients")
-      .select("id, name")
-      .order("name", { ascending: true }),
+  const [brands, masterData, managersResult] = await Promise.all([
+    getBrandsForCampaignForm(),
+    getMasterDataOptions(),
     supabase
       .from("profiles")
       .select("id, full_name, email")
@@ -119,16 +112,15 @@ export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
       .order("full_name", { ascending: true }),
   ]);
 
-  if (clientsResult.error) {
-    throw new Error(clientsResult.error.message);
-  }
-
   if (managersResult.error) {
     throw new Error(managersResult.error.message);
   }
 
   return {
-    clients: clientsResult.data ?? [],
+    brands: brands as BrandFormOption[],
+    masterData,
     accountManagers: managersResult.data ?? [],
   };
 }
+
+export { getBrandHierarchySnapshot } from "@/lib/master-data/queries";

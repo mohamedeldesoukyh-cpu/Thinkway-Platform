@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Building2Icon,
   LayoutDashboardIcon,
+  LayersIcon,
   MegaphoneIcon,
   UsersIcon,
 } from "lucide-react";
@@ -19,8 +20,13 @@ const navItems = [
     icon: LayoutDashboardIcon,
   },
   {
+    href: "/groups",
+    label: "Groups",
+    icon: LayersIcon,
+  },
+  {
     href: "/clients",
-    label: "Clients",
+    label: "Legal Entities",
     icon: Building2Icon,
   },
   {

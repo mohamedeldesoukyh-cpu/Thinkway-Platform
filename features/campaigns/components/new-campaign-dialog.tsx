@@ -1,9 +1,10 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,27 +34,30 @@ import {
   PLATFORM_OPTIONS,
 } from "@/features/campaigns/constants";
 import type { CampaignFormOptions } from "@/features/campaigns/queries";
+import type { BrandFormOption } from "@/features/campaigns/types";
+import { labelForOption } from "@/lib/master-data/constants";
+import { AGENCY_OR_DIRECT_OPTIONS } from "@/features/clients/constants";
 
 const initialState: CreateCampaignFormState = { ok: false };
-
 const NONE_VALUE = "__none__";
 
 function FieldError({ messages }: { messages?: string[] }) {
   if (!messages?.length) {
     return null;
   }
-
   return <p className="text-xs text-destructive">{messages[0]}</p>;
 }
+
+type BrandOption = BrandFormOption;
 
 type NewCampaignDialogProps = CampaignFormOptions;
 
 export function NewCampaignDialog({
-  clients,
+  brands,
   accountManagers,
 }: NewCampaignDialogProps) {
   const [open, setOpen] = useState(false);
-  const [clientId, setClientId] = useState("");
+  const [brandId, setBrandId] = useState("");
   const [platform, setPlatform] = useState("");
   const [status, setStatus] = useState("draft");
   const [currency, setCurrency] = useState("USD");
@@ -63,14 +67,24 @@ export function NewCampaignDialog({
     initialState
   );
 
+  const selectedBrand = useMemo(
+    () => brands.find((b) => b.id === brandId),
+    [brands, brandId]
+  );
+
+  useEffect(() => {
+    if (selectedBrand?.currency_code) {
+      setCurrency(selectedBrand.currency_code);
+    }
+  }, [selectedBrand]);
+
   useEffect(() => {
     if (!state.message) {
       return;
     }
-
     if (state.ok) {
       toast.success(state.message);
-      setClientId("");
+      setBrandId("");
       setPlatform("");
       setStatus("draft");
       setCurrency("USD");
@@ -78,16 +92,20 @@ export function NewCampaignDialog({
       setOpen(false);
       return;
     }
-
     toast.error(state.message);
   }, [state]);
 
-  const hasClients = clients.length > 0;
+  const brandOptions = brands.map((b) => ({
+    value: b.id,
+    label: `${b.name} · ${(b.client as { name: string } | null)?.name ?? "Client"}`,
+  }));
+
+  const hasBrands = brands.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={!hasClients}>
+        <Button disabled={!hasBrands}>
           <PlusIcon data-icon="inline-start" />
           New Campaign
         </Button>
@@ -96,205 +114,216 @@ export function NewCampaignDialog({
         <DialogHeader>
           <DialogTitle>New campaign</DialogTitle>
           <DialogDescription>
-            Plan a client campaign. A campaign number is assigned automatically.
+            Select a brand to auto-fill hierarchy and commercial terms. Header
+            and line A are created together.
           </DialogDescription>
         </DialogHeader>
-        {!hasClients ? (
+        {!hasBrands ? (
           <p className="text-sm text-muted-foreground">
-            Create a client first before adding campaigns.
+            Create a group, legal entity, and brand before adding campaigns.
           </p>
         ) : (
           <form action={formAction} className="grid gap-4">
-            <input type="hidden" name="client_id" value={clientId} />
+            <input type="hidden" name="brand_id" value={brandId} />
             <input type="hidden" name="platform" value={platform} />
             <input type="hidden" name="status" value={status} />
-            <input type="hidden" name="currency" value={currency} />
+            <input type="hidden" name="currency_code" value={currency} />
             <input
               type="hidden"
               name="account_manager_id"
               value={accountManagerId === NONE_VALUE ? "" : accountManagerId}
             />
 
+            <div className="grid gap-2">
+              <Label>Brand</Label>
+              <SearchableSelect
+                value={brandId}
+                onValueChange={setBrandId}
+                options={brandOptions}
+                disabled={isPending}
+                placeholder="Select brand"
+              />
+              <FieldError messages={state.fieldErrors?.brand_id} />
+            </div>
+
+            {selectedBrand ? (
+              <div className="grid gap-3 rounded-3xl border border-border bg-muted/30 p-4 text-sm sm:grid-cols-2">
+                <ReadonlyField
+                  label="Group"
+                  value={(selectedBrand.group as { name: string } | null)?.name}
+                />
+                <ReadonlyField
+                  label="Legal entity"
+                  value={(selectedBrand.client as { legal_name: string | null; name: string } | null)?.legal_name ??
+                    (selectedBrand.client as { name: string } | null)?.name}
+                />
+                <ReadonlyField
+                  label="Category"
+                  value={(selectedBrand.category as { name: string } | null)?.name}
+                />
+                <ReadonlyField
+                  label="Subcategory"
+                  value={(selectedBrand.subcategory as { name: string } | null)?.name}
+                />
+                <ReadonlyField
+                  label="Agency / Direct"
+                  value={labelForOption(
+                    AGENCY_OR_DIRECT_OPTIONS,
+                    selectedBrand.agency_or_direct
+                  )}
+                />
+                <ReadonlyField
+                  label="VR%"
+                  value={
+                    selectedBrand.vr_rate
+                      ? `${(selectedBrand.vr_rate as { rate_percent: number }).rate_percent}%`
+                      : "—"
+                  }
+                />
+              </div>
+            ) : null}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2 sm:col-span-2">
-                <Label htmlFor="client_id_select">Client</Label>
-                <Select
-                  value={clientId}
-                  onValueChange={setClientId}
-                  disabled={isPending}
-                  required
-                >
-                  <SelectTrigger id="client_id_select" className="w-full">
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FieldError messages={state.fieldErrors?.client_id} />
-              </div>
-
-              <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor="name">Campaign name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Summer Glow Launch"
-                  required
-                  disabled={isPending}
-                />
+                <Input id="name" name="name" required disabled={isPending} />
                 <FieldError messages={state.fieldErrors?.name} />
               </div>
-
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="line_name">Line A name (optional)</Label>
+                <Input id="line_name" name="line_name" disabled={isPending} />
+              </div>
               <div className="grid gap-2">
-                <Label htmlFor="platform_select">Platform</Label>
+                <Label>Platform</Label>
                 <Select
                   value={platform || NONE_VALUE}
-                  onValueChange={(value) =>
-                    setPlatform(value === NONE_VALUE ? "" : value)
-                  }
+                  onValueChange={(v) => setPlatform(v === NONE_VALUE ? "" : v)}
                   disabled={isPending}
                 >
-                  <SelectTrigger id="platform_select" className="w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select platform" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NONE_VALUE}>Not specified</SelectItem>
-                    {PLATFORM_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {PLATFORM_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FieldError messages={state.fieldErrors?.platform} />
               </div>
-
               <div className="grid gap-2">
-                <Label htmlFor="status_select">Status</Label>
-                <Select
-                  value={status}
-                  onValueChange={setStatus}
-                  disabled={isPending}
-                >
-                  <SelectTrigger id="status_select" className="w-full">
-                    <SelectValue placeholder="Select status" />
+                <Label>Status</Label>
+                <Select value={status} onValueChange={setStatus} disabled={isPending}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CAMPAIGN_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {CAMPAIGN_STATUS_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FieldError messages={state.fieldErrors?.status} />
               </div>
-
               <div className="grid gap-2">
-                <Label htmlFor="budget">Budget</Label>
+                <Label htmlFor="po_amount">PO amount</Label>
                 <Input
-                  id="budget"
-                  name="budget"
+                  id="po_amount"
+                  name="po_amount"
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="50000"
                   required
                   disabled={isPending}
                 />
-                <FieldError messages={state.fieldErrors?.budget} />
+                <FieldError messages={state.fieldErrors?.po_amount} />
               </div>
-
               <div className="grid gap-2">
-                <Label htmlFor="currency_select">Currency</Label>
-                <Select
-                  value={currency}
-                  onValueChange={setCurrency}
-                  disabled={isPending}
-                >
-                  <SelectTrigger id="currency_select" className="w-full">
-                    <SelectValue placeholder="Select currency" />
+                <Label>Currency</Label>
+                <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CURRENCY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {CURRENCY_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FieldError messages={state.fieldErrors?.currency} />
               </div>
-
+              <div className="grid gap-2">
+                <Label htmlFor="fx_rate">FX rate (to USD)</Label>
+                <Input
+                  id="fx_rate"
+                  name="fx_rate"
+                  type="number"
+                  min="0.000001"
+                  step="0.000001"
+                  defaultValue="1"
+                  disabled={isPending}
+                />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="start_date">Start date</Label>
-                <Input
-                  id="start_date"
-                  name="start_date"
-                  type="date"
-                  disabled={isPending}
-                />
-                <FieldError messages={state.fieldErrors?.start_date} />
+                <Input id="start_date" name="start_date" type="date" disabled={isPending} />
               </div>
-
               <div className="grid gap-2">
                 <Label htmlFor="end_date">End date</Label>
-                <Input
-                  id="end_date"
-                  name="end_date"
-                  type="date"
-                  disabled={isPending}
-                />
-                <FieldError messages={state.fieldErrors?.end_date} />
+                <Input id="end_date" name="end_date" type="date" disabled={isPending} />
               </div>
-
               <div className="grid gap-2 sm:col-span-2">
-                <Label htmlFor="account_manager_select">Account manager</Label>
+                <Label>Account manager</Label>
                 <Select
                   value={accountManagerId}
                   onValueChange={setAccountManagerId}
                   disabled={isPending}
                 >
-                  <SelectTrigger
-                    id="account_manager_select"
-                    className="w-full"
-                  >
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Assign account manager" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NONE_VALUE}>Unassigned</SelectItem>
-                    {accountManagers.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>
-                        {manager.full_name ?? manager.email}
+                    {accountManagers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.full_name ?? m.email}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FieldError messages={state.fieldErrors?.account_manager_id} />
               </div>
             </div>
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isPending}
-              >
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || !clientId}>
-                {isPending ? "Creating..." : "Create campaign"}
+              <Button type="submit" disabled={isPending || !brandId}>
+                {isPending ? "Creating…" : "Create campaign"}
               </Button>
             </DialogFooter>
           </form>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ReadonlyField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-0.5">{value || "—"}</p>
+    </div>
   );
 }

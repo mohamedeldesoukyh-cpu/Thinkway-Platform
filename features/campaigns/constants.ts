@@ -1,4 +1,5 @@
 import type { CampaignStatus } from "@/types/database";
+import { SUPPORTED_CURRENCIES } from "@/lib/master-data/constants";
 
 export const CAMPAIGNS_PAGE_SIZE = 10;
 
@@ -14,13 +15,7 @@ export const CAMPAIGN_STATUS_OPTIONS: {
   { value: "cancelled", label: "Cancelled" },
 ];
 
-export const CURRENCY_OPTIONS = [
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "GBP", label: "GBP" },
-  { value: "AED", label: "AED" },
-  { value: "SAR", label: "SAR" },
-] as const;
+export const CURRENCY_OPTIONS = SUPPORTED_CURRENCIES;
 
 export const PLATFORM_OPTIONS = [
   { value: "instagram", label: "Instagram" },

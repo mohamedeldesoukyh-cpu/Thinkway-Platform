@@ -49,10 +49,11 @@ const optionalNumber = z.preprocess((value) => {
 }, z.number().min(0).nullable().optional());
 
 export const createClientSchema = z.object({
+  group_id: z.string().uuid("Select a group"),
   name: z
     .string()
     .trim()
-    .min(1, "Client name is required")
+    .min(1, "Legal entity name is required")
     .max(200, "Name is too long"),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
   industry: z.string().trim().max(120).optional().or(z.literal("")),
@@ -74,16 +75,13 @@ export const createClientSchema = z.object({
       "Enter a valid email"
     ),
   currency: currencySchema.default("USD"),
-  client_category: z
-    .union([clientCategorySchema, z.literal("")])
-    .optional()
-    .transform((v) => (v === "" ? undefined : v)),
   country: z.string().trim().max(2).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
 export const updateClientOverviewSchema = z.object({
   client_id: z.string().uuid(),
+  group_id: z.string().uuid(),
   name: z.string().trim().min(1).max(200),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
   industry: z.string().trim().max(120).optional().or(z.literal("")),
@@ -105,12 +103,6 @@ export const updateClientOverviewSchema = z.object({
       "Enter a valid email"
     ),
   billing_phone: z.string().trim().max(40).optional().or(z.literal("")),
-  client_category: z
-    .union([clientCategorySchema, z.literal("")])
-    .optional()
-    .transform((v) => (v === "" ? undefined : v)),
-  client_subcategory: z.string().trim().max(120).optional().or(z.literal("")),
-  agency_or_direct: agencyOrDirectSchema.optional().or(z.literal("")),
   country: z.string().trim().max(2).optional().or(z.literal("")),
   city: z.string().trim().max(120).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),

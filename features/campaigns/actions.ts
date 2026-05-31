@@ -11,6 +11,7 @@ export type CreateCampaignFormState = {
   ok: boolean;
   message?: string;
   fieldErrors?: Record<string, string[]>;
+  campaignId?: string;
 };
 
 function emptyToNull(value: string | undefined): string | null {
@@ -24,18 +25,7 @@ export async function createCampaignAction(
   _prevState: CreateCampaignFormState,
   formData: FormData
 ): Promise<CreateCampaignFormState> {
-  const raw = {
-    client_id: formData.get("client_id"),
-    name: formData.get("name"),
-    platform: formData.get("platform"),
-    budget: formData.get("budget"),
-    currency: formData.get("currency"),
-    start_date: formData.get("start_date"),
-    end_date: formData.get("end_date"),
-    status: formData.get("status"),
-    account_manager_id: formData.get("account_manager_id"),
-  };
-
+  const raw = Object.fromEntries(formData.entries());
   const parsed = createCampaignSchema.safeParse(raw);
 
   if (!parsed.success) {
@@ -60,33 +50,80 @@ export async function createCampaignAction(
     return { ok: false, message: "You must be signed in to create campaigns." };
   }
 
+  const { data: brand, error: brandError } = await supabase
+    .from("brands")
+    .select(
+      "id, client_id, group_id, category_id, subcategory_id, agency_or_direct, vr_rate_id, currency_code"
+    )
+    .eq("id", parsed.data.brand_id)
+    .maybeSingle();
+
+  if (brandError || !brand) {
+    return { ok: false, message: brandError?.message ?? "Brand not found." };
+  }
+
   const platform = emptyToNull(parsed.data.platform);
   const metadata = platform ? { [METADATA_PLATFORM_KEY]: platform } : {};
 
-  const { error } = await supabase.from("campaigns").insert({
-    client_id: parsed.data.client_id,
-    name: parsed.data.name,
+  const { data: header, error: headerError } = await supabase
+    .from("campaign_headers")
+    .insert({
+      name: parsed.data.name,
+      brand_id: brand.id,
+      client_id: brand.client_id,
+      group_id: brand.group_id,
+      status: parsed.data.status,
+      currency_code: parsed.data.currency_code || brand.currency_code,
+      category_id: brand.category_id,
+      subcategory_id: brand.subcategory_id,
+      agency_or_direct: brand.agency_or_direct,
+      vr_rate_id: brand.vr_rate_id,
+      start_date: parsed.data.start_date,
+      end_date: parsed.data.end_date,
+      account_manager_id: emptyToNull(parsed.data.account_manager_id),
+      metadata,
+      created_by: user.id,
+    })
+    .select("id, document_number")
+    .single();
+
+  if (headerError) {
+    return { ok: false, message: headerError.message };
+  }
+
+  const lineName =
+    parsed.data.line_name?.trim() || `${parsed.data.name} — Line A`;
+  const revenue = parsed.data.revenue ?? parsed.data.po_amount;
+  const cost = parsed.data.cost ?? 0;
+
+  const { error: lineError } = await supabase.from("campaign_lines").insert({
+    campaign_header_id: header.id,
+    name: lineName,
     status: parsed.data.status,
-    budget: parsed.data.budget,
-    currency: parsed.data.currency,
+    platform,
+    po_amount: parsed.data.po_amount,
+    revenue,
+    cost,
+    currency_code: parsed.data.currency_code || brand.currency_code,
+    base_currency: "USD",
+    fx_rate: parsed.data.fx_rate,
     start_date: parsed.data.start_date,
     end_date: parsed.data.end_date,
-    account_manager_id: emptyToNull(parsed.data.account_manager_id),
     metadata,
     created_by: user.id,
   });
 
-  if (error) {
-    return {
-      ok: false,
-      message: error.message,
-    };
+  if (lineError) {
+    await supabase.from("campaign_headers").delete().eq("id", header.id);
+    return { ok: false, message: lineError.message };
   }
 
   revalidatePath("/campaigns");
+  revalidatePath(`/clients/${brand.client_id}`);
 
   return {
     ok: true,
-    message: "Campaign created successfully.",
+    message: `Campaign ${header.document_number} created with line A.`,
+    campaignId: header.id,
   };
 }

@@ -22,25 +22,19 @@ import {
   type FormActionState,
 } from "@/features/clients/actions";
 import {
-  AGENCY_OR_DIRECT_OPTIONS,
-  CLIENT_CATEGORY_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
-  getClientSubcategoryOptions,
 } from "@/features/clients/constants";
 import type { ClientDetail, ClientStatus } from "@/types/database";
 
 type ClientOverviewTabProps = {
   client: ClientDetail;
+  groups: { id: string; name: string; document_number: string }[];
 };
 
-export function ClientOverviewTab({ client }: ClientOverviewTabProps) {
+export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
   const [status, setStatus] = useState(client.status);
-  const [category, setCategory] = useState(client.client_category ?? "");
-  const [subcategory, setSubcategory] = useState(client.client_subcategory ?? "");
-  const [agencyOrDirect, setAgencyOrDirect] = useState(
-    client.agency_or_direct ?? ""
-  );
+  const [groupId, setGroupId] = useState(client.group_id ?? "");
   const [country, setCountry] = useState(client.country ?? "");
 
   const [state, formAction, isPending] = useActionState(
@@ -59,25 +53,61 @@ export function ClientOverviewTab({ client }: ClientOverviewTabProps) {
     toast.error(state.message);
   }, [state]);
 
-  const subcategoryOptions = getClientSubcategoryOptions(category);
+  const groupOptions = groups.map((g) => ({
+    value: g.id,
+    label: g.name,
+  }));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Overview</CardTitle>
+        <CardTitle>Legal entity overview</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Commercial category, VR%, and agency/direct settings live on brands.
+        </p>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="grid gap-4">
           <input type="hidden" name="client_id" value={client.id} />
           <input type="hidden" name="status" value={status} />
-          <input type="hidden" name="client_category" value={category} />
-          <input type="hidden" name="client_subcategory" value={subcategory} />
-          <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
+          <input type="hidden" name="group_id" value={groupId} />
           <input type="hidden" name="country" value={country} />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="name">Client name</Label>
+              <Label>Group</Label>
+              <SearchableSelect
+                value={groupId}
+                onValueChange={setGroupId}
+                options={groupOptions}
+                disabled={isPending}
+              />
+              <FieldError messages={state.fieldErrors?.group_id} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as ClientStatus)}
+                disabled={isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLIENT_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Display name</Label>
               <Input
                 id="name"
                 name="name"
@@ -85,7 +115,6 @@ export function ClientOverviewTab({ client }: ClientOverviewTabProps) {
                 required
                 disabled={isPending}
               />
-              <FieldError messages={state.fieldErrors?.name} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="legal_name">Legal name</Label>
@@ -117,93 +146,10 @@ export function ClientOverviewTab({ client }: ClientOverviewTabProps) {
                 defaultValue={client.website ?? ""}
                 disabled={isPending}
               />
-              <FieldError messages={state.fieldErrors?.website} />
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="grid gap-2">
-              <Label>Status</Label>
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as ClientStatus)}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLIENT_STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Category</Label>
-              <Select
-                value={category}
-                onValueChange={(v) => {
-                  setCategory(v);
-                  setSubcategory("");
-                }}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLIENT_CATEGORY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Subcategory</Label>
-              <Select
-                value={subcategory}
-                onValueChange={setSubcategory}
-                disabled={isPending || !category}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select subcategory" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subcategoryOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="grid gap-2">
-              <Label>Agency or direct</Label>
-              <Select
-                value={agencyOrDirect}
-                onValueChange={setAgencyOrDirect}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Country</Label>
               <SearchableSelect
@@ -234,7 +180,6 @@ export function ClientOverviewTab({ client }: ClientOverviewTabProps) {
                 defaultValue={client.billing_email ?? ""}
                 disabled={isPending}
               />
-              <FieldError messages={state.fieldErrors?.billing_email} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="billing_phone">Billing phone</Label>

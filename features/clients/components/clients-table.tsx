@@ -9,12 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ClientRow } from "@/types/database";
+import type { ClientsListResult } from "@/features/clients/queries";
 
 import { ClientStatusBadge } from "./client-status-badge";
 
 type ClientsTableProps = {
-  clients: ClientRow[];
+  clients: ClientsListResult["clients"];
 };
 
 export function ClientsTable({ clients }: ClientsTableProps) {
@@ -23,8 +23,8 @@ export function ClientsTable({ clients }: ClientsTableProps) {
       <TableHeader>
         <TableRow>
           <TableHead>Client #</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Industry</TableHead>
+          <TableHead>Legal entity</TableHead>
+          <TableHead>Group</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Billing email</TableHead>
           <TableHead>Created</TableHead>
@@ -51,7 +51,7 @@ export function ClientsTable({ clients }: ClientsTableProps) {
                 ) : null}
               </div>
             </TableCell>
-            <TableCell>{client.industry ?? "—"}</TableCell>
+            <TableCell>{client.group?.name ?? "—"}</TableCell>
             <TableCell>
               <ClientStatusBadge status={client.status} />
             </TableCell>

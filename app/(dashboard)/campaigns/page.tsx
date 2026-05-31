@@ -43,7 +43,20 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
       pageSize: 10,
       totalPages: 1,
     };
-    formOptions = { clients: [], accountManagers: [] };
+    formOptions = {
+      brands: [],
+      accountManagers: [],
+      masterData: {
+        categories: [],
+        subcategories: [],
+        currencies: [],
+        countries: [],
+        teams: [],
+        reportTypes: [],
+        paymentTerms: [],
+        vrRates: [],
+      },
+    };
   }
 
   const { campaigns, total, totalPages } = list;
@@ -52,7 +65,7 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
   return (
     <DashboardShell
       title="Campaigns"
-      description="Plan and manage influencer campaigns across clients and platforms."
+      description="Plan and manage campaign headers and lines across the brand hierarchy."
       actions={<NewCampaignDialog {...formOptions} />}
     >
       <Card>

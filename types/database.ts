@@ -8,6 +8,134 @@ export type CampaignStatus =
   | "completed"
   | "cancelled";
 
+export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted";
+
+export type AgencyOrDirect = "agency" | "direct" | "hybrid";
+
+export type GroupRow = {
+  id: string;
+  document_number: string;
+  name: string;
+  status: ClientStatus;
+  notes: string | null;
+  metadata: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BrandRow = {
+  id: string;
+  document_number: string;
+  client_id: string;
+  group_id: string;
+  name: string;
+  status: ClientStatus;
+  category_id: string | null;
+  subcategory_id: string | null;
+  agency_or_direct: AgencyOrDirect | null;
+  vr_rate_id: string | null;
+  currency_code: string;
+  payment_term_id: string | null;
+  country_code: string | null;
+  notes: string | null;
+  metadata: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BrandListItem = BrandRow & {
+  category?: { id: string; name: string } | null;
+  subcategory?: { id: string; name: string } | null;
+  vr_rate?: { id: string; name: string; rate_percent: number } | null;
+};
+
+export type AgencyRow = {
+  id: string;
+  document_number: string;
+  name: string;
+  legal_name: string | null;
+  email: string | null;
+  phone: string | null;
+  country_code: string | null;
+  status: InfluencerStatus;
+  notes: string | null;
+  metadata: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampaignHeaderRow = {
+  id: string;
+  document_number: string;
+  name: string;
+  description: string | null;
+  brief: string | null;
+  status: CampaignStatus;
+  group_id: string;
+  client_id: string;
+  brand_id: string;
+  team_id: string | null;
+  report_type_id: string | null;
+  currency_code: string;
+  vr_rate_id: string | null;
+  agency_or_direct: AgencyOrDirect | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  account_manager_id: string | null;
+  objectives: unknown[];
+  metadata: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampaignLineRow = {
+  id: string;
+  document_number: string;
+  campaign_header_id: string;
+  name: string;
+  description: string | null;
+  status: CampaignStatus;
+  platform: string | null;
+  revenue: number;
+  cost: number;
+  profit: number;
+  profit_margin: number;
+  markup_margin: number;
+  po_amount: number;
+  remaining_po: number;
+  currency_code: string;
+  base_currency: string;
+  fx_rate: number;
+  revenue_base: number;
+  cost_base: number;
+  profit_base: number;
+  start_date: string | null;
+  end_date: string | null;
+  metadata: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampaignListItem = CampaignHeaderRow & {
+  brand: { id: string; name: string } | null;
+  client: { id: string; name: string; document_number: string; legal_name: string | null } | null;
+  group: { id: string; name: string } | null;
+  account_manager: {
+    id: string;
+    full_name: string | null;
+    email: string;
+  } | null;
+  lines: Pick<CampaignLineRow, "id" | "document_number" | "name" | "po_amount" | "revenue" | "cost" | "profit">[];
+};
+
+/** Legacy campaigns view row shape */
 export type CampaignRow = {
   id: string;
   document_number: string;
@@ -29,23 +157,12 @@ export type CampaignRow = {
   updated_at: string;
 };
 
-export type CampaignListItem = CampaignRow & {
-  client: { id: string; name: string; document_number: string } | null;
-  account_manager: {
-    id: string;
-    full_name: string | null;
-    email: string;
-  } | null;
-};
-
 export type ProfileRow = {
   id: string;
   email: string;
   full_name: string | null;
   is_active: boolean;
 };
-
-export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted";
 
 export type PaymentTerms =
   | "due_on_receipt"
@@ -108,6 +225,7 @@ export type InfluencerRow = {
   gender: InfluencerGender | null;
   influencer_url: string | null;
   management_agency: string | null;
+  agency_id: string | null;
   languages: string[];
   categories: string[];
   rate_card: Record<string, unknown>;
@@ -201,20 +319,23 @@ export type ClientCampaignSummary = {
   name: string;
   document_number: string;
   status: CampaignStatus;
-  budget: number;
-  currency: string;
+  currency_code: string;
   start_date: string | null;
   end_date: string | null;
+  brand: { id: string; name: string } | null;
 };
 
 export type ClientDetail = ClientRow & {
   documents: ClientDocumentRow[];
   campaigns: ClientCampaignSummary[];
+  brands: BrandListItem[];
+  group: { id: string; name: string; document_number: string } | null;
 };
 
 export type ClientRow = {
   id: string;
   document_number: string;
+  group_id: string | null;
   name: string;
   legal_name: string | null;
   industry: string | null;
@@ -253,6 +374,7 @@ export type Database = {
         Insert: {
           id?: string;
           document_number?: string;
+          group_id?: string | null;
           name: string;
           legal_name?: string | null;
           industry?: string | null;
@@ -283,27 +405,153 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
         Relationships: [];
       };
-      campaigns: {
-        Row: CampaignRow;
+      campaign_headers: {
+        Row: CampaignHeaderRow;
         Insert: {
           id?: string;
           document_number?: string;
-          client_id: string;
           name: string;
-          description?: string | null;
-          brief?: string | null;
+          brand_id: string;
+          group_id?: string;
+          client_id?: string;
           status?: CampaignStatus;
-          budget?: number;
-          spent?: number;
-          currency?: string;
+          currency_code?: string;
+          category_id?: string | null;
+          subcategory_id?: string | null;
+          agency_or_direct?: AgencyOrDirect | null;
+          vr_rate_id?: string | null;
           start_date?: string | null;
           end_date?: string | null;
           account_manager_id?: string | null;
-          objectives?: unknown[];
           metadata?: Record<string, unknown>;
           created_by?: string | null;
         };
-        Update: Partial<Database["public"]["Tables"]["campaigns"]["Insert"]>;
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_headers"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      campaign_lines: {
+        Row: CampaignLineRow;
+        Insert: {
+          id?: string;
+          document_number?: string;
+          campaign_header_id: string;
+          name: string;
+          status?: CampaignStatus;
+          platform?: string | null;
+          revenue?: number;
+          cost?: number;
+          po_amount?: number;
+          currency_code?: string;
+          base_currency?: string;
+          fx_rate?: number;
+          start_date?: string | null;
+          end_date?: string | null;
+          metadata?: Record<string, unknown>;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_lines"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      groups: {
+        Row: GroupRow;
+        Insert: {
+          name: string;
+          status?: ClientStatus;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["groups"]["Insert"]>;
+        Relationships: [];
+      };
+      brands: {
+        Row: BrandRow;
+        Insert: {
+          client_id: string;
+          group_id?: string;
+          name: string;
+          category_id?: string | null;
+          subcategory_id?: string | null;
+          agency_or_direct?: AgencyOrDirect | null;
+          vr_rate_id?: string | null;
+          currency_code?: string;
+          country_code?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["brands"]["Insert"]>;
+        Relationships: [];
+      };
+      agencies: {
+        Row: AgencyRow;
+        Insert: {
+          name: string;
+          legal_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          country_code?: string | null;
+          status?: InfluencerStatus;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["agencies"]["Insert"]>;
+        Relationships: [];
+      };
+      md_categories: {
+        Row: { id: string; code: string; name: string; is_active: boolean };
+        Insert: { code: string; name: string };
+        Update: Partial<{ code: string; name: string; is_active: boolean }>;
+        Relationships: [];
+      };
+      md_subcategories: {
+        Row: { id: string; category_id: string; code: string; name: string; is_active: boolean };
+        Insert: { category_id: string; code: string; name: string };
+        Update: Partial<{ code: string; name: string; is_active: boolean }>;
+        Relationships: [];
+      };
+      md_currencies: {
+        Row: { code: string; name: string; symbol: string | null; is_active: boolean };
+        Insert: { code: string; name: string };
+        Update: Partial<{ name: string; symbol: string | null; is_active: boolean }>;
+        Relationships: [];
+      };
+      md_countries: {
+        Row: { code: string; name: string; is_active: boolean };
+        Insert: { code: string; name: string };
+        Update: Partial<{ name: string; is_active: boolean }>;
+        Relationships: [];
+      };
+      md_teams: {
+        Row: { id: string; code: string; name: string; is_active: boolean };
+        Insert: { code: string; name: string };
+        Update: Partial<{ name: string; is_active: boolean }>;
+        Relationships: [];
+      };
+      md_report_types: {
+        Row: { id: string; code: string; name: string; is_active: boolean };
+        Insert: { code: string; name: string };
+        Update: Partial<{ name: string; is_active: boolean }>;
+        Relationships: [];
+      };
+      md_payment_terms: {
+        Row: { id: string; code: string; name: string; days_due: number | null; is_active: boolean };
+        Insert: { code: string; name: string; days_due?: number | null };
+        Update: Partial<{ name: string; days_due: number | null; is_active: boolean }>;
+        Relationships: [];
+      };
+      md_vr_rates: {
+        Row: { id: string; code: string; name: string; rate_percent: number; is_active: boolean };
+        Insert: { code: string; name: string; rate_percent: number };
+        Update: Partial<{ name: string; rate_percent: number; is_active: boolean }>;
+        Relationships: [];
+      };
+      campaigns: {
+        Row: CampaignRow;
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       profiles: {
@@ -336,6 +584,7 @@ export type Database = {
           exclusivity?: ExclusivityType | null;
           gender?: InfluencerGender | null;
           influencer_url?: string | null;
+          agency_id?: string | null;
           management_agency?: string | null;
           languages?: string[];
           categories?: string[];

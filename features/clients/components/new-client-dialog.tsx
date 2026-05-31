@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,9 +30,7 @@ import {
   createClientAction,
   type CreateClientFormState,
 } from "@/features/clients/actions";
-import { SearchableSelect } from "@/components/forms/searchable-select";
 import {
-  CLIENT_CATEGORY_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
   CURRENCY_OPTIONS,
@@ -43,16 +42,19 @@ function FieldError({ messages }: { messages?: string[] }) {
   if (!messages?.length) {
     return null;
   }
-
   return <p className="text-xs text-destructive">{messages[0]}</p>;
 }
 
-export function NewClientDialog() {
+type NewClientDialogProps = {
+  groups: { id: string; name: string }[];
+};
+
+export function NewClientDialog({ groups }: NewClientDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [groupId, setGroupId] = useState("");
   const [status, setStatus] = useState("prospect");
   const [currency, setCurrency] = useState("USD");
-  const [category, setCategory] = useState("");
   const [country, setCountry] = useState("");
   const [state, formAction, isPending] = useActionState(
     createClientAction,
@@ -63,12 +65,11 @@ export function NewClientDialog() {
     if (!state.message) {
       return;
     }
-
     if (state.ok) {
       toast.success(state.message);
+      setGroupId("");
       setStatus("prospect");
       setCurrency("USD");
-      setCategory("");
       setCountry("");
       setOpen(false);
       if (state.clientId) {
@@ -76,190 +77,102 @@ export function NewClientDialog() {
       }
       return;
     }
-
     toast.error(state.message);
-  }, [state]);
+  }, [state, router]);
+
+  const hasGroups = groups.length > 0;
+  const groupOptions = groups.map((g) => ({ value: g.id, label: g.name }));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button disabled={!hasGroups}>
           <PlusIcon data-icon="inline-start" />
-          New Client
+          New Legal Entity
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New client</DialogTitle>
+          <DialogTitle>New legal entity</DialogTitle>
           <DialogDescription>
-            Add a client record. A client number is assigned automatically.
+            Add a client legal entity under a group. Add brands on the profile
+            page.
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction} className="grid gap-4">
-          <input type="hidden" name="status" value={status} />
-          <input type="hidden" name="currency" value={currency} />
-          <input type="hidden" name="client_category" value={category} />
-          <input type="hidden" name="country" value={country} />
-          <div className="grid gap-2">
-            <Label htmlFor="name">Client name</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="Acme Beauty Co."
-              required
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.name} />
-          </div>
+        {!hasGroups ? (
+          <p className="text-sm text-muted-foreground">
+            Create a group first, then add legal entities.
+          </p>
+        ) : (
+          <form action={formAction} className="grid gap-4">
+            <input type="hidden" name="group_id" value={groupId} />
+            <input type="hidden" name="status" value={status} />
+            <input type="hidden" name="currency" value={currency} />
+            <input type="hidden" name="country" value={country} />
 
-          <div className="grid gap-2">
-            <Label htmlFor="legal_name">Legal name</Label>
-            <Input
-              id="legal_name"
-              name="legal_name"
-              placeholder="Acme Beauty Co. Ltd."
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.legal_name} />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="industry">Industry</Label>
-              <Input
-                id="industry"
-                name="industry"
-                placeholder="Beauty & Cosmetics"
-                disabled={isPending}
-              />
-              <FieldError messages={state.fieldErrors?.industry} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                name="website"
-                type="url"
-                placeholder="https://example.com"
-                disabled={isPending}
-              />
-              <FieldError messages={state.fieldErrors?.website} />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Category</Label>
-              <Select
-                value={category}
-                onValueChange={setCategory}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Optional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLIENT_CATEGORY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Country</Label>
+              <Label>Group</Label>
               <SearchableSelect
-                value={country}
-                onValueChange={setCountry}
-                options={COUNTRY_OPTIONS}
+                value={groupId}
+                onValueChange={setGroupId}
+                options={groupOptions}
                 disabled={isPending}
-                placeholder="Optional"
+                placeholder="Select group"
               />
+              <FieldError messages={state.fieldErrors?.group_id} />
             </div>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={status}
-                onValueChange={setStatus}
-                disabled={isPending}
-              >
-                <SelectTrigger id="status" className="w-full">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLIENT_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError messages={state.fieldErrors?.status} />
+              <Label htmlFor="name">Entity name</Label>
+              <Input id="name" name="name" required disabled={isPending} />
+              <FieldError messages={state.fieldErrors?.name} />
             </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Select
-                value={currency}
-                onValueChange={setCurrency}
-                disabled={isPending}
-              >
-                <SelectTrigger id="currency" className="w-full">
-                  <SelectValue placeholder="Select currency" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError messages={state.fieldErrors?.currency} />
+              <Label htmlFor="legal_name">Legal name</Label>
+              <Input id="legal_name" name="legal_name" disabled={isPending} />
             </div>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="billing_email">Billing email</Label>
-            <Input
-              id="billing_email"
-              name="billing_email"
-              type="email"
-              placeholder="billing@example.com"
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.billing_email} />
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Country</Label>
+                <SearchableSelect
+                  value={country}
+                  onValueChange={setCountry}
+                  options={COUNTRY_OPTIONS}
+                  disabled={isPending}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Currency</Label>
+                <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              placeholder="Internal notes about this client"
-              rows={3}
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.notes} />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea id="notes" name="notes" rows={2} disabled={isPending} />
+            </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Creating..." : "Create client"}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="submit" disabled={isPending || !groupId}>
+                {isPending ? "Creating…" : "Create entity"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

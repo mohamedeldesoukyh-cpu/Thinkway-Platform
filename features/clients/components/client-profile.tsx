@@ -5,9 +5,11 @@ import { ArrowLeftIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { MasterDataOptions } from "@/lib/master-data/queries";
 import type { ClientDetail } from "@/types/database";
 
 import { ClientStatusBadge } from "./client-status-badge";
+import { ClientBrandsTab } from "./tabs/client-brands-tab";
 import { ClientCampaignsTab } from "./tabs/client-campaigns-tab";
 import { ClientDocumentsTab } from "./tabs/client-documents-tab";
 import { ClientFinanceTab } from "./tabs/client-finance-tab";
@@ -16,9 +18,11 @@ import { ClientOverviewTab } from "./tabs/client-overview-tab";
 
 type ClientProfileProps = {
   client: ClientDetail;
+  groups: { id: string; name: string; document_number: string }[];
+  masterData: MasterDataOptions;
 };
 
-export function ClientProfile({ client }: ClientProfileProps) {
+export function ClientProfile({ client, groups, masterData }: ClientProfileProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -36,12 +40,14 @@ export function ClientProfile({ client }: ClientProfileProps) {
         </div>
         <p className="font-mono text-sm text-muted-foreground">
           {client.document_number}
+          {client.group ? ` · ${client.group.name}` : null}
         </p>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="brands">Brands</TabsTrigger>
           <TabsTrigger value="legal">Legal</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -49,7 +55,10 @@ export function ClientProfile({ client }: ClientProfileProps) {
         </TabsList>
 
         <TabsContent value="overview">
-          <ClientOverviewTab client={client} />
+          <ClientOverviewTab client={client} groups={groups} />
+        </TabsContent>
+        <TabsContent value="brands">
+          <ClientBrandsTab client={client} masterData={masterData} />
         </TabsContent>
         <TabsContent value="legal">
           <ClientLegalTab client={client} />
