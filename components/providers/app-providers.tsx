@@ -1,8 +1,8 @@
 "use client";
 
-import { ThemeProvider } from "next-themes";
-
 import { Toaster } from "@/components/ui/sonner";
+
+import { ThemeProvider } from "./theme-provider";
 
 type AppProvidersProps = {
   children: React.ReactNode;
@@ -10,7 +10,7 @@ type AppProvidersProps = {
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider>
       {children}
       <Toaster richColors closeButton position="top-right" />
     </ThemeProvider>

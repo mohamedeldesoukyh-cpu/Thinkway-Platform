@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { ClientRow } from "@/types/database";
+import type { ClientDetail, ClientRow } from "@/types/database";
 
 import { CLIENTS_PAGE_SIZE } from "./constants";
 
@@ -15,6 +15,24 @@ function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
 }
 
+async function requireUser() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!user) {
+    throw new Error("You must be signed in to continue.");
+  }
+
+  return { supabase, user };
+}
+
 export async function getClientsList(params: {
   page?: number;
   search?: string;
@@ -24,20 +42,7 @@ export async function getClientsList(params: {
   const from = (page - 1) * CLIENTS_PAGE_SIZE;
   const to = from + CLIENTS_PAGE_SIZE - 1;
 
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError) {
-    throw new Error(authError.message);
-  }
-
-  if (!user) {
-    throw new Error("You must be signed in to view clients.");
-  }
+  const { supabase } = await requireUser();
 
   let query = supabase
     .from("clients")
@@ -52,6 +57,7 @@ export async function getClientsList(params: {
         `legal_name.ilike.${pattern}`,
         `document_number.ilike.${pattern}`,
         `industry.ilike.${pattern}`,
+        `vat_number.ilike.${pattern}`,
       ].join(",")
     );
   }
@@ -66,10 +72,56 @@ export async function getClientsList(params: {
   const totalPages = Math.max(1, Math.ceil(total / CLIENTS_PAGE_SIZE));
 
   return {
-    clients: data ?? [],
+    clients: (data ?? []) as ClientRow[],
     total,
     page,
     pageSize: CLIENTS_PAGE_SIZE,
     totalPages,
+  };
+}
+
+export async function getClientById(id: string): Promise<ClientDetail | null> {
+  const { supabase } = await requireUser();
+
+  const { data: client, error } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!client) {
+    return null;
+  }
+
+  const { data: documents, error: documentsError } = await supabase
+    .from("client_documents")
+    .select("*")
+    .eq("client_id", id)
+    .order("created_at", { ascending: false });
+
+  if (documentsError) {
+    throw new Error(documentsError.message);
+  }
+
+  const { data: campaigns, error: campaignsError } = await supabase
+    .from("campaigns")
+    .select(
+      "id, name, document_number, status, budget, currency, start_date, end_date"
+    )
+    .eq("client_id", id)
+    .order("created_at", { ascending: false });
+
+  if (campaignsError) {
+    throw new Error(campaignsError.message);
+  }
+
+  return {
+    ...(client as ClientRow),
+    documents: documents ?? [],
+    campaigns: campaigns ?? [],
   };
 }

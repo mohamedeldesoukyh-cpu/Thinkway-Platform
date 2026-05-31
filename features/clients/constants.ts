@@ -1,4 +1,15 @@
 import type { ClientStatus } from "@/types/database";
+import {
+  AGENCY_OR_DIRECT_OPTIONS,
+  CLIENT_CATEGORY_OPTIONS,
+  CLIENT_DOCUMENT_TYPE_OPTIONS,
+  CLIENT_SUBCATEGORY_BY_CATEGORY,
+  COUNTRY_OPTIONS,
+  PAYMENT_TERMS_OPTIONS,
+  SUPPORTED_CURRENCIES,
+  getClientSubcategoryOptions,
+  labelForOption,
+} from "@/lib/master-data/constants";
 
 export const CLIENTS_PAGE_SIZE = 10;
 
@@ -12,10 +23,15 @@ export const CLIENT_STATUS_OPTIONS: {
   { value: "archived", label: "Archived" },
 ];
 
-export const CURRENCY_OPTIONS = [
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "GBP", label: "GBP" },
-  { value: "AED", label: "AED" },
-  { value: "SAR", label: "SAR" },
-] as const;
+export const CURRENCY_OPTIONS = SUPPORTED_CURRENCIES;
+
+export {
+  AGENCY_OR_DIRECT_OPTIONS,
+  CLIENT_CATEGORY_OPTIONS,
+  CLIENT_DOCUMENT_TYPE_OPTIONS,
+  CLIENT_SUBCATEGORY_BY_CATEGORY,
+  COUNTRY_OPTIONS,
+  PAYMENT_TERMS_OPTIONS,
+  getClientSubcategoryOptions,
+  labelForOption,
+};

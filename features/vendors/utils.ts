@@ -30,6 +30,21 @@ export function parseCategoriesInput(value: string): string[] {
     .filter(Boolean);
 }
 
+export function parseLanguagesInput(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function formatLanguagesList(languages: string[] | null | undefined) {
+  if (!languages?.length) {
+    return "—";
+  }
+
+  return languages.join(", ");
+}
+
 export function formatCategoriesList(categories: string[] | null | undefined) {
   if (!categories?.length) {
     return "—";

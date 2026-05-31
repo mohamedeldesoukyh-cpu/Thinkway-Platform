@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { format } from "date-fns";
 
 import {
@@ -37,7 +38,12 @@ export function ClientsTable({ clients }: ClientsTableProps) {
             </TableCell>
             <TableCell>
               <div className="flex flex-col">
-                <span className="font-medium">{client.name}</span>
+                <Link
+                  href={`/clients/${client.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {client.name}
+                </Link>
                 {client.legal_name ? (
                   <span className="text-xs text-muted-foreground">
                     {client.legal_name}

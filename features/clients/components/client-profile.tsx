@@ -5,38 +5,37 @@ import { ArrowLeftIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { VendorDetail } from "@/types/database";
+import type { ClientDetail } from "@/types/database";
 
-import { VendorStatusBadge } from "./vendor-status-badge";
-import { VendorCampaignsTab } from "./tabs/vendor-campaigns-tab";
-import { VendorDocumentsTab } from "./tabs/vendor-documents-tab";
-import { VendorFinanceTab } from "./tabs/vendor-finance-tab";
-import { VendorLegalTab } from "./tabs/vendor-legal-tab";
-import { VendorOverviewTab } from "./tabs/vendor-overview-tab";
-import { VendorPlatformsTab } from "./tabs/vendor-platforms-tab";
+import { ClientStatusBadge } from "./client-status-badge";
+import { ClientCampaignsTab } from "./tabs/client-campaigns-tab";
+import { ClientDocumentsTab } from "./tabs/client-documents-tab";
+import { ClientFinanceTab } from "./tabs/client-finance-tab";
+import { ClientLegalTab } from "./tabs/client-legal-tab";
+import { ClientOverviewTab } from "./tabs/client-overview-tab";
 
-type VendorProfileProps = {
-  vendor: VendorDetail;
+type ClientProfileProps = {
+  client: ClientDetail;
 };
 
-export function VendorProfile({ vendor }: VendorProfileProps) {
+export function ClientProfile({ client }: ClientProfileProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <Button variant="ghost" size="sm" asChild className="-ml-2 w-fit">
-          <Link href="/vendors">
+          <Link href="/clients">
             <ArrowLeftIcon data-icon="inline-start" />
-            Back to vendors
+            Back to clients
           </Link>
         </Button>
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="font-heading text-2xl font-semibold tracking-tight">
-            {vendor.display_name}
+            {client.name}
           </h2>
-          <VendorStatusBadge status={vendor.status} />
+          <ClientStatusBadge status={client.status} />
         </div>
         <p className="font-mono text-sm text-muted-foreground">
-          {vendor.document_number}
+          {client.document_number}
         </p>
       </div>
 
@@ -46,27 +45,23 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
           <TabsTrigger value="legal">Legal</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="platforms">Platforms</TabsTrigger>
           <TabsTrigger value="campaigns">Campaign History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
-          <VendorOverviewTab vendor={vendor} />
+          <ClientOverviewTab client={client} />
         </TabsContent>
         <TabsContent value="legal">
-          <VendorLegalTab vendor={vendor} />
+          <ClientLegalTab client={client} />
         </TabsContent>
         <TabsContent value="finance">
-          <VendorFinanceTab vendor={vendor} />
+          <ClientFinanceTab client={client} />
         </TabsContent>
         <TabsContent value="documents">
-          <VendorDocumentsTab vendor={vendor} />
-        </TabsContent>
-        <TabsContent value="platforms">
-          <VendorPlatformsTab vendor={vendor} />
+          <ClientDocumentsTab client={client} />
         </TabsContent>
         <TabsContent value="campaigns">
-          <VendorCampaignsTab vendor={vendor} />
+          <ClientCampaignsTab client={client} />
         </TabsContent>
       </Tabs>
     </div>

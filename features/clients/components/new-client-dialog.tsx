@@ -1,6 +1,7 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -28,8 +29,11 @@ import {
   createClientAction,
   type CreateClientFormState,
 } from "@/features/clients/actions";
+import { SearchableSelect } from "@/components/forms/searchable-select";
 import {
+  CLIENT_CATEGORY_OPTIONS,
   CLIENT_STATUS_OPTIONS,
+  COUNTRY_OPTIONS,
   CURRENCY_OPTIONS,
 } from "@/features/clients/constants";
 
@@ -44,9 +48,12 @@ function FieldError({ messages }: { messages?: string[] }) {
 }
 
 export function NewClientDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("prospect");
   const [currency, setCurrency] = useState("USD");
+  const [category, setCategory] = useState("");
+  const [country, setCountry] = useState("");
   const [state, formAction, isPending] = useActionState(
     createClientAction,
     initialState
@@ -61,7 +68,12 @@ export function NewClientDialog() {
       toast.success(state.message);
       setStatus("prospect");
       setCurrency("USD");
+      setCategory("");
+      setCountry("");
       setOpen(false);
+      if (state.clientId) {
+        router.push(`/clients/${state.clientId}`);
+      }
       return;
     }
 
@@ -86,6 +98,8 @@ export function NewClientDialog() {
         <form action={formAction} className="grid gap-4">
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="currency" value={currency} />
+          <input type="hidden" name="client_category" value={category} />
+          <input type="hidden" name="country" value={country} />
           <div className="grid gap-2">
             <Label htmlFor="name">Client name</Label>
             <Input
@@ -130,6 +144,38 @@ export function NewClientDialog() {
                 disabled={isPending}
               />
               <FieldError messages={state.fieldErrors?.website} />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>Category</Label>
+              <Select
+                value={category}
+                onValueChange={setCategory}
+                disabled={isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLIENT_CATEGORY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Country</Label>
+              <SearchableSelect
+                value={country}
+                onValueChange={setCountry}
+                options={COUNTRY_OPTIONS}
+                disabled={isPending}
+                placeholder="Optional"
+              />
             </div>
           </div>
 

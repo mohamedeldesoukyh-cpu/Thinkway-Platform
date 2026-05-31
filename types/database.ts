@@ -47,6 +47,48 @@ export type ProfileRow = {
 
 export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted";
 
+export type PaymentTerms =
+  | "due_on_receipt"
+  | "net_15"
+  | "net_30"
+  | "net_45"
+  | "net_60"
+  | "net_90"
+  | "custom";
+
+export type ContractStatus =
+  | "none"
+  | "draft"
+  | "sent"
+  | "signed"
+  | "expired"
+  | "terminated";
+
+export type ExclusivityType = "none" | "category" | "brand" | "full";
+
+export type InfluencerGender =
+  | "female"
+  | "male"
+  | "non_binary"
+  | "prefer_not_to_say"
+  | "other";
+
+export type ClientDocumentType =
+  | "trade_license"
+  | "vat_certificate"
+  | "tax_certificate"
+  | "nda"
+  | "msa_contract"
+  | "sow";
+
+export type InfluencerDocumentType =
+  | "passport"
+  | "national_id"
+  | "signed_contract"
+  | "media_kit"
+  | "tax_document"
+  | "rate_card";
+
 export type InfluencerRow = {
   id: string;
   document_number: string;
@@ -57,6 +99,15 @@ export type InfluencerRow = {
   phone: string | null;
   status: InfluencerStatus;
   country_code: string | null;
+  nationality: string | null;
+  city: string | null;
+  contract_status: ContractStatus | null;
+  contract_expiry: string | null;
+  payment_terms: PaymentTerms | null;
+  exclusivity: ExclusivityType | null;
+  gender: InfluencerGender | null;
+  influencer_url: string | null;
+  management_agency: string | null;
   languages: string[];
   categories: string[];
   rate_card: Record<string, unknown>;
@@ -73,12 +124,46 @@ export type InfluencerPlatformAccountRow = {
   influencer_id: string;
   platform: string;
   handle: string;
+  username: string | null;
   profile_url: string | null;
   follower_count: number;
   engagement_rate: number | null;
+  avg_views: number;
+  audience_country: string | null;
+  audience_gender_split: Record<string, unknown>;
   is_verified: boolean;
   is_primary: boolean;
   metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClientDocumentRow = {
+  id: string;
+  client_id: string;
+  document_type: ClientDocumentType;
+  file_name: string;
+  storage_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  expires_at: string | null;
+  notes: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InfluencerDocumentRow = {
+  id: string;
+  influencer_id: string;
+  document_type: InfluencerDocumentType;
+  file_name: string;
+  storage_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  expires_at: string | null;
+  notes: string | null;
+  uploaded_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -108,6 +193,23 @@ export type VendorCampaignAssignment = {
 export type VendorDetail = InfluencerRow & {
   platform_accounts: InfluencerPlatformAccountRow[];
   campaign_assignments: VendorCampaignAssignment[];
+  documents: InfluencerDocumentRow[];
+};
+
+export type ClientCampaignSummary = {
+  id: string;
+  name: string;
+  document_number: string;
+  status: CampaignStatus;
+  budget: number;
+  currency: string;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+export type ClientDetail = ClientRow & {
+  documents: ClientDocumentRow[];
+  campaigns: ClientCampaignSummary[];
 };
 
 export type ClientRow = {
@@ -123,6 +225,17 @@ export type ClientRow = {
   billing_phone: string | null;
   billing_address: Record<string, unknown>;
   tax_id: string | null;
+  trade_license_number: string | null;
+  vat_number: string | null;
+  legal_address: Record<string, unknown>;
+  country: string | null;
+  city: string | null;
+  payment_terms: PaymentTerms | null;
+  credit_limit: number | null;
+  client_category: string | null;
+  client_subcategory: string | null;
+  agency_or_direct: string | null;
+  trade_license_expiry: string | null;
   currency: string;
   account_manager_id: string | null;
   notes: string | null;
@@ -150,6 +263,17 @@ export type Database = {
           billing_phone?: string | null;
           billing_address?: Record<string, unknown>;
           tax_id?: string | null;
+          trade_license_number?: string | null;
+          vat_number?: string | null;
+          legal_address?: Record<string, unknown>;
+          country?: string | null;
+          city?: string | null;
+          payment_terms?: PaymentTerms | null;
+          credit_limit?: number | null;
+          client_category?: string | null;
+          client_subcategory?: string | null;
+          agency_or_direct?: string | null;
+          trade_license_expiry?: string | null;
           currency?: string;
           account_manager_id?: string | null;
           notes?: string | null;
@@ -204,8 +328,19 @@ export type Database = {
           phone?: string | null;
           status?: InfluencerStatus;
           country_code?: string | null;
+          nationality?: string | null;
+          city?: string | null;
+          contract_status?: ContractStatus | null;
+          contract_expiry?: string | null;
+          payment_terms?: PaymentTerms | null;
+          exclusivity?: ExclusivityType | null;
+          gender?: InfluencerGender | null;
+          influencer_url?: string | null;
+          management_agency?: string | null;
+          languages?: string[];
           categories?: string[];
           rate_card?: Record<string, unknown>;
+          payment_details?: Record<string, unknown>;
           notes?: string | null;
           created_by?: string | null;
         };
@@ -219,8 +354,16 @@ export type Database = {
           influencer_id: string;
           platform: string;
           handle: string;
+          username?: string | null;
+          profile_url?: string | null;
           follower_count?: number;
+          engagement_rate?: number | null;
+          avg_views?: number;
+          audience_country?: string | null;
+          audience_gender_split?: Record<string, unknown>;
+          is_verified?: boolean;
           is_primary?: boolean;
+          metadata?: Record<string, unknown>;
         };
         Update: Partial<
           Database["public"]["Tables"]["influencer_platform_accounts"]["Insert"]
@@ -247,6 +390,44 @@ export type Database = {
         };
         Update: Partial<
           Database["public"]["Tables"]["campaign_influencers"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      client_documents: {
+        Row: ClientDocumentRow;
+        Insert: {
+          id?: string;
+          client_id: string;
+          document_type: ClientDocumentType;
+          file_name: string;
+          storage_path: string;
+          mime_type?: string | null;
+          file_size?: number | null;
+          expires_at?: string | null;
+          notes?: string | null;
+          uploaded_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["client_documents"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      influencer_documents: {
+        Row: InfluencerDocumentRow;
+        Insert: {
+          id?: string;
+          influencer_id: string;
+          document_type: InfluencerDocumentType;
+          file_name: string;
+          storage_path: string;
+          mime_type?: string | null;
+          file_size?: number | null;
+          expires_at?: string | null;
+          notes?: string | null;
+          uploaded_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["influencer_documents"]["Insert"]
         >;
         Relationships: [];
       };

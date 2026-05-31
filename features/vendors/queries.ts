@@ -196,12 +196,17 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
         id,
         platform,
         handle,
+        username,
         profile_url,
         follower_count,
         engagement_rate,
+        avg_views,
+        audience_country,
+        audience_gender_split,
         is_verified,
         is_primary,
-        created_at
+        created_at,
+        updated_at
       )
     `
     )
@@ -214,6 +219,16 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
 
   if (!vendor) {
     return null;
+  }
+
+  const { data: documents, error: documentsError } = await supabase
+    .from("influencer_documents")
+    .select("*")
+    .eq("influencer_id", id)
+    .order("created_at", { ascending: false });
+
+  if (documentsError) {
+    throw new Error(documentsError.message);
   }
 
   const { data: assignments, error: assignmentsError } = await supabase
@@ -244,5 +259,6 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
     ...vendorRow,
     platform_accounts: vendorRow.platform_accounts ?? [],
     campaign_assignments: (assignments ?? []) as VendorCampaignAssignment[],
+    documents: documents ?? [],
   };
 }
