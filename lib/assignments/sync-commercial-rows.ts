@@ -77,6 +77,8 @@ export async function syncAssignmentCommercialRows(
         schedule_mode: row.schedule_mode,
         notes: row.notes,
         metadata: { client_row_id: row.id },
+        revenue_vat_exempt: input.revenueVatExempt,
+        cost_vat_exempt: input.costVatExempt,
         billable_amount: revenueBeforeVat,
         remaining_amount: revenueBeforeVat,
         billing_status: "draft",

@@ -2,6 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
 import {
+  assignmentDeliverableBillingSelect,
+  queryAssignmentDeliverables,
+  resolveDeliverableVatExempt,
+} from "@/lib/billing/assignment-deliverable-queries";
+import {
   deliverableDisplayLabel,
   deriveLineBillingStatusFromDeliverables,
   type DeliverableBillingRow,
@@ -34,17 +39,21 @@ type DeliverableRecord = {
   locked_at: string | null;
   revenue_before_vat: number;
   revenue_vat_percent: number;
-  revenue_vat_exempt: boolean;
+  revenue_vat_exempt?: boolean | null;
   campaign_line: {
     id: string;
     document_number: string;
     name: string;
     billing_status: string;
     invoice_id: string | null;
+    revenue_vat_exempt?: boolean | null;
   } | null;
 };
 
-export function mapDeliverableRecord(row: DeliverableRecord): DeliverableBillingRow {
+export function mapDeliverableRecord(
+  row: DeliverableRecord,
+  includesVatExempt = true
+): DeliverableBillingRow {
   return {
     id: row.id,
     campaign_line_id: row.campaign_line_id,
@@ -63,7 +72,9 @@ export function mapDeliverableRecord(row: DeliverableRecord): DeliverableBilling
     locked_at: row.locked_at,
     revenue_before_vat: Number(row.revenue_before_vat),
     revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
-    revenue_vat_exempt: row.revenue_vat_exempt ?? false,
+    revenue_vat_exempt:
+      resolveDeliverableVatExempt(row, includesVatExempt) ||
+      (row.campaign_line?.revenue_vat_exempt ?? false),
     label: deliverableDisplayLabel(row),
   };
 }
@@ -131,28 +142,36 @@ export async function fetchDeliverablesForInvoicing(
   campaignId: string,
   deliverableIds: string[]
 ): Promise<{ deliverables: DeliverableRecord[]; error?: string }> {
-  const { data, error } = await supabase
-    .from("assignment_deliverables")
-    .select(
-      `
-      id, campaign_line_id, sort_order, platform, deliverable_type, quantity, live_date,
-      billable_amount, invoiced_amount, collected_amount, disputed_amount, remaining_amount,
-      billing_status, invoice_line_item_id, locked_at,
-      revenue_before_vat, revenue_vat_percent, revenue_vat_exempt,
-      campaign_line:campaign_lines!inner(
-        id, document_number, name, billing_status, invoice_id, campaign_header_id
-      )
-    `
-    )
-    .eq("campaign_header_id", campaignId)
-    .in("id", deliverableIds)
-    .order("sort_order");
+  const campaignLineEmbed =
+    "campaign_line:campaign_lines!inner(id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue_vat_exempt)";
+
+  const { data, error, includesVatExempt } = await queryAssignmentDeliverables<
+    DeliverableRecord
+  >(async (select) => {
+    const result = await supabase
+      .from("assignment_deliverables")
+      .select(`${select}, ${campaignLineEmbed}`)
+      .eq("campaign_header_id", campaignId)
+      .in("id", deliverableIds)
+      .order("sort_order");
+    return {
+      data: (result.data ?? null) as DeliverableRecord[] | null,
+      error: result.error,
+    };
+  });
 
   if (error) {
-    return { deliverables: [], error: error.message };
+    return { deliverables: [], error };
   }
 
-  return { deliverables: (data ?? []) as unknown as DeliverableRecord[] };
+  return {
+    deliverables: (data ?? []).map((row) => ({
+      ...row,
+      revenue_vat_exempt:
+        resolveDeliverableVatExempt(row, includesVatExempt) ||
+        (row.campaign_line?.revenue_vat_exempt ?? false),
+    })),
+  };
 }
 
 export function validateDeliverablesForInvoice(
@@ -236,9 +255,7 @@ export async function lockDeliverablesOnInvoice(
 
     const { data: allRows } = await supabase
       .from("assignment_deliverables")
-      .select(
-        "id, campaign_line_id, sort_order, platform, deliverable_type, quantity, live_date, billable_amount, invoiced_amount, collected_amount, disputed_amount, remaining_amount, billing_status, invoice_line_item_id, locked_at, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt"
-      )
+      .select(assignmentDeliverableBillingSelect(false))
       .eq("campaign_line_id", lineId)
       .order("sort_order");
 

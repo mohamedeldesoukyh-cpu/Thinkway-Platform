@@ -755,10 +755,12 @@ export type Database = {
           revenue_vat_percent: number;
           revenue_vat_amount: number;
           revenue_after_vat: number;
+          revenue_vat_exempt: boolean;
           cost_before_vat: number;
           cost_vat_percent: number;
           cost_vat_amount: number;
           cost_after_vat: number;
+          cost_vat_exempt: boolean;
           live_date: string | null;
           schedule_mode: string;
           notes: string | null;
@@ -789,10 +791,12 @@ export type Database = {
           revenue_vat_percent?: number;
           revenue_vat_amount?: number;
           revenue_after_vat?: number;
+          revenue_vat_exempt?: boolean;
           cost_before_vat?: number;
           cost_vat_percent?: number;
           cost_vat_amount?: number;
           cost_after_vat?: number;
+          cost_vat_exempt?: boolean;
           live_date?: string | null;
           schedule_mode?: string;
           notes?: string | null;

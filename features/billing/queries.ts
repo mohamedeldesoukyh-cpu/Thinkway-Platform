@@ -3,6 +3,11 @@ import { REL } from "@/lib/supabase/relation-hints";
 import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
 import type { PoStatus } from "@/lib/finance/po/status";
 import {
+  assignmentDeliverableBillingSelect,
+  queryAssignmentDeliverables,
+  resolveDeliverableVatExempt,
+} from "@/lib/billing/assignment-deliverable-queries";
+import {
   deliverableDisplayLabel,
   rollupAssignmentBilling,
   type DeliverableBillingRow,
@@ -685,20 +690,27 @@ export async function getCampaignBillingGroups(
   const lineIds = lines.map((l) => l.id);
   if (lineIds.length === 0) return [];
 
-  const { data: deliverableRows, error: deliverableError } = await supabase
-    .from("assignment_deliverables")
-    .select(
-      `
-      id, campaign_line_id, sort_order, platform, deliverable_type, quantity, live_date,
-      billable_amount, invoiced_amount, collected_amount, disputed_amount, remaining_amount,
-      billing_status, invoice_line_item_id, locked_at,
-      revenue_before_vat, revenue_vat_percent, revenue_vat_exempt
-    `
-    )
-    .in("campaign_line_id", lineIds)
-    .order("sort_order");
+  const {
+    data: deliverableRows,
+    error: deliverableError,
+    includesVatExempt,
+  } = await queryAssignmentDeliverables<
+    Omit<DeliverableBillingRow, "label"> & { revenue_vat_exempt?: boolean | null }
+  >(async (select) => {
+    const result = await supabase
+      .from("assignment_deliverables")
+      .select(select)
+      .in("campaign_line_id", lineIds)
+      .order("sort_order");
+    return {
+      data: (result.data ?? null) as Array<
+        Omit<DeliverableBillingRow, "label"> & { revenue_vat_exempt?: boolean | null }
+      > | null,
+      error: result.error,
+    };
+  });
 
-  if (deliverableError) throw new Error(deliverableError.message);
+  if (deliverableError) throw new Error(deliverableError);
 
   const deliverablesByLine = new Map<string, DeliverableBillingRow[]>();
   for (const row of deliverableRows ?? []) {
@@ -712,6 +724,7 @@ export async function getCampaignBillingGroups(
       remaining_amount: Number(typed.remaining_amount),
       revenue_before_vat: Number(typed.revenue_before_vat),
       revenue_vat_percent: Number(typed.revenue_vat_percent ?? 0),
+      revenue_vat_exempt: resolveDeliverableVatExempt(typed, includesVatExempt),
       label: deliverableDisplayLabel(typed),
     };
     const list = deliverablesByLine.get(typed.campaign_line_id) ?? [];

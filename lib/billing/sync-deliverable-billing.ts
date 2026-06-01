@@ -2,6 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
 import {
+  assignmentDeliverableBillingSelect,
+  queryAssignmentDeliverables,
+  resolveDeliverableVatExempt,
+} from "@/lib/billing/assignment-deliverable-queries";
+import {
   deriveLineBillingStatusFromDeliverables,
   type DeliverableBillingRow,
 } from "@/lib/billing/deliverable-billing";
@@ -97,15 +102,26 @@ export async function syncLineBillingFromDeliverables(
   lineId: string,
   currentLineStatus: string
 ): Promise<void> {
-  const { data: rows } = await supabase
-    .from("assignment_deliverables")
-    .select(
-      "id, campaign_line_id, sort_order, platform, deliverable_type, quantity, live_date, billable_amount, invoiced_amount, collected_amount, disputed_amount, remaining_amount, billing_status, invoice_line_item_id, locked_at, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt"
-    )
-    .eq("campaign_line_id", lineId)
-    .order("sort_order");
+  const { data: rows, includesVatExempt } = await queryAssignmentDeliverables<
+    Omit<DeliverableBillingRow, "label"> & { revenue_vat_exempt?: boolean | null }
+  >(async (select) => {
+    const result = await supabase
+      .from("assignment_deliverables")
+      .select(select)
+      .eq("campaign_line_id", lineId)
+      .order("sort_order");
+    return {
+      data: (result.data ?? null) as Array<
+        Omit<DeliverableBillingRow, "label"> & { revenue_vat_exempt?: boolean | null }
+      > | null,
+      error: result.error,
+    };
+  });
 
-  const deliverables = (rows ?? []) as unknown as DeliverableBillingRow[];
+  const deliverables = (rows ?? []).map((row) => ({
+    ...row,
+    revenue_vat_exempt: resolveDeliverableVatExempt(row, includesVatExempt),
+  })) as DeliverableBillingRow[];
   const nextStatus = deriveLineBillingStatusFromDeliverables(
     deliverables,
     currentLineStatus
