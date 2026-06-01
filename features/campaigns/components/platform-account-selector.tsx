@@ -19,7 +19,7 @@ export type PlatformSelectionState = {
   platform: string;
   handle: string;
   profile_url: string | null;
-  follower_count: number;
+  follower_count: number | null;
   engagement_rate: number | null;
   audience_country: string | null;
   deliverables: string[];
@@ -49,7 +49,8 @@ function PlatformIcon({ platform }: { platform: string }) {
   );
 }
 
-function formatFollowers(count: number): string {
+function formatFollowers(count: number | null): string {
+  if (count == null) return "N/A";
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
   return String(count);

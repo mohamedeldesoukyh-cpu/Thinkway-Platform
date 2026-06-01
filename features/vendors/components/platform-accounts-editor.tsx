@@ -10,7 +10,9 @@ import {
 } from "react";
 import { toast } from "sonner";
 
+import { EnrichmentStatusBadge } from "@/components/forms/enrichment-status-badge";
 import { FieldError } from "@/components/forms/field-error";
+import { PlatformMetricsSection } from "@/components/forms/platform-metrics-section";
 import {
   ProfileUrlEnrichInput,
   type ProfileEnrichmentPayload,
@@ -33,8 +35,13 @@ import {
   type FormActionState,
 } from "@/features/vendors/actions";
 import { COUNTRY_OPTIONS, PLATFORM_OPTIONS } from "@/features/vendors/constants";
-import type { InfluencerPlatformAccountRow, VendorDetail } from "@/types/database";
+import { applyProfileEnrichment } from "@/lib/social/apply-profile-enrichment";
+import {
+  metricValueToInput,
+  type MetricsSource,
+} from "@/lib/social/enrichment/metrics-status";
 import { PLATFORM_LABELS, type SocialPlatform } from "@/lib/social/platforms";
+import type { InfluencerPlatformAccountRow, VendorDetail } from "@/types/database";
 
 type EditableAccount = {
   key: string;
@@ -58,6 +65,14 @@ type EditableAccount = {
   sync_source: string;
   sync_error: string;
   last_synced_at: string;
+  metrics_source: MetricsSource;
+  metrics_last_synced_at: string;
+  metrics_is_manual_override: boolean;
+  metric_field_sources: {
+    followers: MetricsSource;
+    engagement: MetricsSource;
+    avg_views: MetricsSource;
+  };
   duplicate_warning: string;
 };
 
@@ -72,23 +87,35 @@ function readGenderSplit(
   return "";
 }
 
-function formatSyncLabel(status: string): string {
-  switch (status) {
-    case "synced":
-      return "Synced";
-    case "partial":
-      return "Partial sync";
-    case "failed":
-      return "Sync failed";
-    case "pending":
-      return "Syncing…";
-    default:
-      return "Manual entry";
-  }
+function resolveFieldSources(
+  account: InfluencerPlatformAccountRow
+): EditableAccount["metric_field_sources"] {
+  const base = account.metrics_source ?? "unavailable";
+  const manual = account.metrics_is_manual_override;
+
+  return {
+    followers:
+      account.follower_count != null
+        ? manual
+          ? "manual"
+          : "synced"
+        : base,
+    engagement:
+      account.engagement_rate != null
+        ? manual
+          ? "manual"
+          : "synced"
+        : base,
+    avg_views:
+      account.avg_views != null ? (manual ? "manual" : "synced") : base,
+  };
 }
 
 function toEditable(account: InfluencerPlatformAccountRow): EditableAccount {
   const split = account.audience_gender_split ?? {};
+  const metricsSource = account.metrics_source ?? "unavailable";
+  const manualOverride = account.metrics_is_manual_override ?? false;
+
   return {
     key: account.id,
     id: account.id,
@@ -98,11 +125,19 @@ function toEditable(account: InfluencerPlatformAccountRow): EditableAccount {
     profile_display_name: account.profile_display_name ?? "",
     profile_bio: account.profile_bio ?? "",
     profile_picture_url: account.profile_picture_url ?? "",
-    follower_count: String(account.follower_count ?? 0),
-    following_count: String(account.following_count ?? 0),
+    follower_count: metricValueToInput(
+      account.follower_count,
+      metricsSource,
+      manualOverride
+    ),
+    following_count: metricValueToInput(
+      account.following_count,
+      metricsSource,
+      manualOverride
+    ),
     engagement_rate:
       account.engagement_rate != null ? String(account.engagement_rate) : "",
-    avg_views: String(account.avg_views ?? 0),
+    avg_views: metricValueToInput(account.avg_views, metricsSource, manualOverride),
     audience_country: account.audience_country ?? "",
     audience_male_pct: readGenderSplit(split, "male"),
     audience_female_pct: readGenderSplit(split, "female"),
@@ -112,6 +147,10 @@ function toEditable(account: InfluencerPlatformAccountRow): EditableAccount {
     sync_source: account.sync_source ?? "",
     sync_error: account.sync_error ?? "",
     last_synced_at: account.last_synced_at ?? "",
+    metrics_source: metricsSource,
+    metrics_last_synced_at: account.metrics_last_synced_at ?? "",
+    metrics_is_manual_override: manualOverride,
+    metric_field_sources: resolveFieldSources(account),
     duplicate_warning: "",
   };
 }
@@ -128,10 +167,10 @@ function emptyAccount(): EditableAccount {
     profile_display_name: "",
     profile_bio: "",
     profile_picture_url: "",
-    follower_count: "0",
-    following_count: "0",
+    follower_count: "",
+    following_count: "",
     engagement_rate: "",
-    avg_views: "0",
+    avg_views: "",
     audience_country: "",
     audience_male_pct: "",
     audience_female_pct: "",
@@ -141,73 +180,32 @@ function emptyAccount(): EditableAccount {
     sync_source: "",
     sync_error: "",
     last_synced_at: "",
+    metrics_source: "unavailable",
+    metrics_last_synced_at: "",
+    metrics_is_manual_override: false,
+    metric_field_sources: {
+      followers: "unavailable",
+      engagement: "unavailable",
+      avg_views: "unavailable",
+    },
     duplicate_warning: "",
   };
 }
 
-function applyEnrichment(
+function markMetricManual(
   account: EditableAccount,
-  payload: ProfileEnrichmentPayload
+  field: keyof EditableAccount["metric_field_sources"],
+  value: string
 ): EditableAccount {
-  const { parsed, enrichment, duplicates } = payload;
-  const next: EditableAccount = {
+  return {
     ...account,
-    platform: parsed.platform,
-    username: parsed.username,
-    profile_url: parsed.profile_url,
-    duplicate_warning:
-      duplicates.length > 0
-        ? `Already linked to ${duplicates[0].influencer_name}`
-        : "",
+    metrics_is_manual_override: true,
+    metrics_source: "manual",
+    metric_field_sources: {
+      ...account.metric_field_sources,
+      [field]: value.trim() ? "manual" : account.metric_field_sources[field],
+    },
   };
-
-  if (!enrichment) {
-    next.sync_status = "partial";
-    next.sync_source = "url_parse";
-    next.last_synced_at = new Date().toISOString();
-    return next;
-  }
-
-  if (enrichment.display_name && !account.profile_display_name.trim()) {
-    next.profile_display_name = enrichment.display_name;
-  }
-  if (enrichment.bio && !account.profile_bio.trim()) {
-    next.profile_bio = enrichment.bio;
-  }
-  if (enrichment.profile_picture_url && !account.profile_picture_url.trim()) {
-    next.profile_picture_url = enrichment.profile_picture_url;
-  }
-  if (
-    enrichment.follower_count != null &&
-    (account.follower_count === "0" || !account.follower_count.trim())
-  ) {
-    next.follower_count = String(enrichment.follower_count);
-  }
-  if (
-    enrichment.following_count != null &&
-    (account.following_count === "0" || !account.following_count.trim())
-  ) {
-    next.following_count = String(enrichment.following_count);
-  }
-  if (
-    enrichment.engagement_rate != null &&
-    !account.engagement_rate.trim()
-  ) {
-    next.engagement_rate = String(enrichment.engagement_rate);
-  }
-  if (enrichment.is_verified != null) {
-    next.is_verified = enrichment.is_verified;
-  }
-  if (enrichment.audience_country && !account.audience_country.trim()) {
-    next.audience_country = enrichment.audience_country;
-  }
-
-  next.sync_status = enrichment.sync_status;
-  next.sync_source = enrichment.sync_source;
-  next.sync_error = enrichment.sync_error ?? "";
-  next.last_synced_at = new Date().toISOString();
-
-  return next;
 }
 
 type PlatformAccountsEditorProps = {
@@ -245,7 +243,22 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
     (key: string) => (payload: ProfileEnrichmentPayload) => {
       setAccounts((prev) =>
         prev.map((row) =>
-          row.key === key ? applyEnrichment(row, payload) : row
+          row.key === key ? applyProfileEnrichment(row, payload) : row
+        )
+      );
+    },
+    []
+  );
+
+  const handleRefreshEnrichment = useCallback(
+    (key: string) => (payload: ProfileEnrichmentPayload) => {
+      setAccounts((prev) =>
+        prev.map((row) =>
+          row.key === key
+            ? applyProfileEnrichment(row, payload, {
+                preserveManualMetrics: row.metrics_is_manual_override,
+              })
+            : row
         )
       );
     },
@@ -274,6 +287,9 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
       sync_source: account.sync_source,
       sync_error: account.sync_error,
       last_synced_at: account.last_synced_at,
+      metrics_source: account.metrics_source,
+      metrics_last_synced_at: account.metrics_last_synced_at,
+      metrics_is_manual_override: account.metrics_is_manual_override,
     }))
   );
 
@@ -283,8 +299,8 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
         <div>
           <CardTitle>Platform accounts</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Paste a profile URL to auto-detect platform, username, and public
-            stats. All fields remain editable.
+            Paste a profile URL to auto-detect platform and public stats. Empty
+            metrics mean data was unavailable — not zero followers.
           </p>
         </div>
         <Button
@@ -308,7 +324,7 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
               className="space-y-4 rounded-3xl border border-border p-4"
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium">Platform {index + 1}</p>
                   {account.platform ? (
                     <Badge variant="secondary">
@@ -316,7 +332,7 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
                         account.platform}
                     </Badge>
                   ) : null}
-                  <Badge variant="outline">{formatSyncLabel(account.sync_status)}</Badge>
+                  <EnrichmentStatusBadge status={account.sync_status} />
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -478,30 +494,65 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="grid gap-2">
-                  <Label>Followers</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={account.follower_count}
-                    onChange={(e) =>
-                      setAccounts((prev) =>
-                        prev.map((row) =>
-                          row.key === account.key
-                            ? { ...row, follower_count: e.target.value }
-                            : row
-                        )
-                      )
-                    }
-                  />
-                </div>
+              <PlatformMetricsSection
+                platform={account.platform}
+                profileUrl={account.profile_url}
+                influencerId={vendor.id}
+                accountId={account.id}
+                followerCount={account.follower_count}
+                engagementRate={account.engagement_rate}
+                avgViews={account.avg_views}
+                metricsSource={account.metrics_source}
+                metricsIsManualOverride={account.metrics_is_manual_override}
+                metricFieldSources={account.metric_field_sources}
+                fieldIdPrefix={account.key}
+                onFollowersChange={(value) =>
+                  setAccounts((prev) =>
+                    prev.map((row) =>
+                      row.key === account.key
+                        ? {
+                            ...markMetricManual(row, "followers", value),
+                            follower_count: value,
+                          }
+                        : row
+                    )
+                  )
+                }
+                onEngagementChange={(value) =>
+                  setAccounts((prev) =>
+                    prev.map((row) =>
+                      row.key === account.key
+                        ? {
+                            ...markMetricManual(row, "engagement", value),
+                            engagement_rate: value,
+                          }
+                        : row
+                    )
+                  )
+                }
+                onAvgViewsChange={(value) =>
+                  setAccounts((prev) =>
+                    prev.map((row) =>
+                      row.key === account.key
+                        ? {
+                            ...markMetricManual(row, "avg_views", value),
+                            avg_views: value,
+                          }
+                        : row
+                    )
+                  )
+                }
+                onRefreshEnrichment={handleRefreshEnrichment(account.key)}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="grid gap-2">
                   <Label>Following</Label>
                   <Input
                     type="number"
                     min={0}
                     value={account.following_count}
+                    placeholder="Not available"
                     onChange={(e) =>
                       setAccounts((prev) =>
                         prev.map((row) =>
@@ -511,47 +562,9 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
                         )
                       )
                     }
+                    className="border-dashed"
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label>Engagement %</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step="0.01"
-                    value={account.engagement_rate}
-                    onChange={(e) =>
-                      setAccounts((prev) =>
-                        prev.map((row) =>
-                          row.key === account.key
-                            ? { ...row, engagement_rate: e.target.value }
-                            : row
-                        )
-                      )
-                    }
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Avg views</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={account.avg_views}
-                    onChange={(e) =>
-                      setAccounts((prev) =>
-                        prev.map((row) =>
-                          row.key === account.key
-                            ? { ...row, avg_views: e.target.value }
-                            : row
-                        )
-                      )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="grid gap-2">
                   <Label>Audience country</Label>
                   <SearchableSelect
@@ -569,6 +582,9 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
                     placeholder="Optional"
                   />
                 </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Audience male %</Label>
                   <Input

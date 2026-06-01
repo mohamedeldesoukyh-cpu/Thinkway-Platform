@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { EnrichmentMetricField } from "@/components/forms/enrichment-metric-field";
 import {
   ProfileUrlEnrichInput,
   type ProfileEnrichmentPayload,
@@ -38,6 +39,11 @@ import {
   PRICING_CURRENCY_OPTIONS,
   VENDOR_STATUS_OPTIONS,
 } from "@/features/vendors/constants";
+import {
+  getPlatformMetricsHelper,
+  resolveMetricsSourceForEnrichment,
+  type MetricsSource,
+} from "@/lib/social/enrichment/metrics-status";
 
 const initialState: CreateVendorFormState = { ok: false };
 const NONE_VALUE = "__none__";
@@ -60,6 +66,9 @@ export function NewVendorDialog() {
   const [platform, setPlatform] = useState("");
   const [handle, setHandle] = useState("");
   const [followerCount, setFollowerCount] = useState("");
+  const [followersSource, setFollowersSource] =
+    useState<MetricsSource>("unavailable");
+  const [followersManual, setFollowersManual] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState("");
   const [state, formAction, isPending] = useActionState(
     createVendorAction,
@@ -74,6 +83,8 @@ export function NewVendorDialog() {
     setPlatform("");
     setHandle("");
     setFollowerCount("");
+    setFollowersSource("unavailable");
+    setFollowersManual(false);
     setDuplicateWarning("");
   }, []);
 
@@ -88,13 +99,24 @@ export function NewVendorDialog() {
         : ""
     );
 
-    if (
-      enrichment?.follower_count != null &&
-      !followerCount.trim()
-    ) {
+    if (!enrichment) {
+      setFollowersSource("unavailable");
+      return;
+    }
+
+    const source = resolveMetricsSourceForEnrichment({
+      platform: parsed.platform,
+      follower_count: enrichment.follower_count,
+      engagement_rate: enrichment.engagement_rate,
+      avg_views: enrichment.avg_views,
+      sync_status: enrichment.sync_status,
+    });
+    setFollowersSource(source);
+
+    if (enrichment.follower_count != null && !followersManual) {
       setFollowerCount(String(enrichment.follower_count));
     }
-  }, [followerCount]);
+  }, [followersManual]);
 
   useEffect(() => {
     if (!state.message) {
@@ -151,7 +173,7 @@ export function NewVendorDialog() {
           <input
             type="hidden"
             name="follower_count"
-            value={followerCount || "0"}
+            value={followerCount}
           />
           <input type="hidden" name="pricing_currency" value={pricingCurrency} />
 
@@ -289,17 +311,27 @@ export function NewVendorDialog() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="follower_count_display">Followers (override)</Label>
-              <Input
+              <EnrichmentMetricField
                 id="follower_count_display"
-                type="number"
-                min="0"
-                step="1"
+                label="Followers (override)"
                 value={followerCount}
-                onChange={(e) => setFollowerCount(e.target.value)}
-                placeholder="250000"
-                disabled={isPending}
+                fieldSource={
+                  followersManual && followerCount.trim()
+                    ? "manual"
+                    : followersSource
+                }
+                isManualOverride={followersManual}
+                onChange={(value) => {
+                  setFollowerCount(value);
+                  setFollowersManual(true);
+                  setFollowersSource("manual");
+                }}
               />
+              {getPlatformMetricsHelper(platform) ? (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  {getPlatformMetricsHelper(platform)}
+                </p>
+              ) : null}
               <FieldError messages={state.fieldErrors?.follower_count} />
             </div>
 

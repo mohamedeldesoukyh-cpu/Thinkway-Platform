@@ -25,6 +25,13 @@ export type EnrichPlatformAccountResponse = {
   error?: string;
 };
 
+export type ProfileEnrichmentPayload = Omit<
+  EnrichPlatformAccountResponse,
+  "error"
+> & {
+  parsed: ParsedProfile;
+};
+
 export async function enrichPlatformAccount(
   input: EnrichPlatformAccountInput
 ): Promise<EnrichPlatformAccountResponse> {

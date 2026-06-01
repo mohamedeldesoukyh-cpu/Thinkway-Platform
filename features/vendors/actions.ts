@@ -32,6 +32,7 @@ import { getVendorDependencies } from "@/lib/operations/vendor-dependencies";
 import { findDuplicatePlatformAccounts } from "@/lib/social/duplicate-check";
 import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
 import { enrichCreatorProfile } from "@/lib/social/enrichment/providers/open-graph";
+import { resolveMetricsSourceForEnrichment } from "@/lib/social/enrichment/metrics-status";
 import { resolvePlatformAccountFields } from "@/lib/social/parse-profile-url";
 
 export type FormActionState = {
@@ -152,16 +153,25 @@ export async function createVendorAction(
       }
     }
 
+    const metricsSource = parsed.data.follower_count != null
+      ? "manual"
+      : resolveMetricsSourceForEnrichment({
+          platform: accountPlatform,
+          follower_count: enrichment?.follower_count ?? null,
+          engagement_rate: enrichment?.engagement_rate ?? null,
+          avg_views: enrichment?.avg_views ?? null,
+          sync_status: enrichment?.sync_status ?? (resolved ? "partial" : "manual"),
+        });
+
     const normalized = buildNormalizedPlatformAccount({
       platform: accountPlatform,
       username: accountUsername,
       profile_url: resolved?.profile_url ?? profileUrl,
       follower_count:
-        parsed.data.follower_count > 0
-          ? parsed.data.follower_count
-          : (enrichment?.follower_count ?? 0),
-      following_count: enrichment?.following_count ?? 0,
+        parsed.data.follower_count ?? enrichment?.follower_count ?? null,
+      following_count: enrichment?.following_count ?? null,
       engagement_rate: enrichment?.engagement_rate ?? null,
+      avg_views: enrichment?.avg_views ?? null,
       profile_display_name: enrichment?.display_name ?? null,
       profile_bio: enrichment?.bio ?? null,
       profile_picture_url: enrichment?.profile_picture_url ?? null,
@@ -170,6 +180,9 @@ export async function createVendorAction(
       sync_source: enrichment?.sync_source ?? (resolved ? "url_parse" : "manual"),
       sync_error: enrichment?.sync_error ?? null,
       last_synced_at: enrichment ? new Date().toISOString() : null,
+      metrics_source: metricsSource,
+      metrics_last_synced_at: enrichment ? new Date().toISOString() : null,
+      metrics_is_manual_override: parsed.data.follower_count != null,
     });
 
     const { error: platformError } = await supabase
@@ -188,11 +201,15 @@ export async function createVendorAction(
         follower_count: normalized.follower_count,
         following_count: normalized.following_count,
         engagement_rate: normalized.engagement_rate,
+        avg_views: normalized.avg_views,
         is_verified: normalized.is_verified,
         sync_status: normalized.sync_status,
         sync_source: normalized.sync_source,
         sync_error: normalized.sync_error,
         last_synced_at: normalized.last_synced_at,
+        metrics_source: normalized.metrics_source,
+        metrics_last_synced_at: normalized.metrics_last_synced_at,
+        metrics_is_manual_override: normalized.metrics_is_manual_override,
         is_primary: true,
       });
 
@@ -439,6 +456,9 @@ export async function savePlatformAccountsAction(
       sync_source: emptyToNull(account.sync_source),
       sync_error: emptyToNull(account.sync_error),
       last_synced_at: emptyToNull(account.last_synced_at),
+      metrics_source: account.metrics_source ?? "unavailable",
+      metrics_last_synced_at: emptyToNull(account.metrics_last_synced_at),
+      metrics_is_manual_override: account.metrics_is_manual_override ?? false,
     });
 
     const duplicates = await findDuplicatePlatformAccounts(supabase, {
@@ -479,6 +499,9 @@ export async function savePlatformAccountsAction(
       sync_source: normalized.sync_source,
       last_synced_at: normalized.last_synced_at,
       sync_error: normalized.sync_error,
+      metrics_source: normalized.metrics_source,
+      metrics_last_synced_at: normalized.metrics_last_synced_at,
+      metrics_is_manual_override: normalized.metrics_is_manual_override,
     };
 
     if (account.id) {

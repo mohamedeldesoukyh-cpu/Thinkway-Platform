@@ -1,3 +1,5 @@
+import type { MetricsSource } from "./enrichment/metrics-status";
+import type { PlatformSyncStatus } from "./enrichment/types";
 import {
   buildCanonicalProfileUrl,
   normalizeProfileUrl,
@@ -5,7 +7,6 @@ import {
   type SocialPlatform,
 } from "./platforms";
 import { resolvePlatformAccountFields } from "./parse-profile-url";
-import type { PlatformSyncStatus } from "./enrichment/types";
 
 export type NormalizedPlatformAccount = {
   platform: SocialPlatform;
@@ -17,25 +18,28 @@ export type NormalizedPlatformAccount = {
   profile_display_name: string | null;
   profile_bio: string | null;
   profile_picture_url: string | null;
-  follower_count: number;
-  following_count: number;
+  follower_count: number | null;
+  following_count: number | null;
   engagement_rate: number | null;
-  avg_views: number;
+  avg_views: number | null;
   is_verified: boolean;
   sync_status: PlatformSyncStatus;
   sync_source: string | null;
   last_synced_at: string | null;
   sync_error: string | null;
+  metrics_source: MetricsSource;
+  metrics_last_synced_at: string | null;
+  metrics_is_manual_override: boolean;
 };
 
 export function buildNormalizedPlatformAccount(input: {
   platform: string;
   username: string;
   profile_url?: string | null;
-  follower_count?: number;
-  following_count?: number;
+  follower_count?: number | null;
+  following_count?: number | null;
   engagement_rate?: number | null;
-  avg_views?: number;
+  avg_views?: number | null;
   is_verified?: boolean;
   profile_display_name?: string | null;
   profile_bio?: string | null;
@@ -44,6 +48,9 @@ export function buildNormalizedPlatformAccount(input: {
   sync_source?: string | null;
   last_synced_at?: string | null;
   sync_error?: string | null;
+  metrics_source?: MetricsSource;
+  metrics_last_synced_at?: string | null;
+  metrics_is_manual_override?: boolean;
 }): NormalizedPlatformAccount {
   const resolved =
     resolvePlatformAccountFields({
@@ -72,14 +79,17 @@ export function buildNormalizedPlatformAccount(input: {
     profile_display_name: input.profile_display_name ?? null,
     profile_bio: input.profile_bio ?? null,
     profile_picture_url: input.profile_picture_url ?? null,
-    follower_count: input.follower_count ?? 0,
-    following_count: input.following_count ?? 0,
+    follower_count: input.follower_count ?? null,
+    following_count: input.following_count ?? null,
     engagement_rate: input.engagement_rate ?? null,
-    avg_views: input.avg_views ?? 0,
+    avg_views: input.avg_views ?? null,
     is_verified: input.is_verified ?? false,
     sync_status: input.sync_status ?? "manual",
     sync_source: input.sync_source ?? null,
     last_synced_at: input.last_synced_at ?? null,
     sync_error: input.sync_error ?? null,
+    metrics_source: input.metrics_source ?? "unavailable",
+    metrics_last_synced_at: input.metrics_last_synced_at ?? null,
+    metrics_is_manual_override: input.metrics_is_manual_override ?? false,
   };
 }

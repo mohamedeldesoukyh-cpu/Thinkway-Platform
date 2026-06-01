@@ -56,6 +56,21 @@ const optionalDate = z
   .or(z.literal(""))
   .transform((v) => (v ? v : null));
 
+const nullableMetric = z.preprocess((value) => {
+  if (value === "" || value == null) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}, z.number().int().min(0).nullable().optional());
+
+const metricsSourceSchema = z.enum([
+  "synced",
+  "manual",
+  "unavailable",
+  "pending_api",
+]);
+
 export const createVendorSchema = z.object({
   display_name: z
     .string()
@@ -95,11 +110,7 @@ export const createVendorSchema = z.object({
     )
     .optional()
     .or(z.literal("")),
-  follower_count: z.coerce
-    .number()
-    .int("Followers must be a whole number")
-    .min(0, "Followers cannot be negative")
-    .default(0),
+  follower_count: nullableMetric,
   pricing_amount: z.preprocess((value) => {
     if (value === "" || value == null) {
       return undefined;
@@ -189,7 +200,7 @@ export const platformAccountInputSchema = z.object({
     )
     .optional()
     .or(z.literal("")),
-  follower_count: z.coerce.number().int().min(0).default(0),
+  follower_count: nullableMetric,
   engagement_rate: z.preprocess((value) => {
     if (value === "" || value == null) {
       return null;
@@ -197,7 +208,7 @@ export const platformAccountInputSchema = z.object({
     const parsed = Number(value);
     return Number.isNaN(parsed) ? null : parsed;
   }, z.number().min(0).max(100).nullable().optional()),
-  avg_views: z.coerce.number().int().min(0).default(0),
+  avg_views: nullableMetric,
   audience_country: z.string().trim().max(2).optional().or(z.literal("")),
   audience_male_pct: z.preprocess((value) => {
     if (value === "" || value == null) {
@@ -227,13 +238,16 @@ export const platformAccountInputSchema = z.object({
     )
     .optional()
     .or(z.literal("")),
-  following_count: z.coerce.number().int().min(0).default(0),
+  following_count: nullableMetric,
   sync_status: z
-    .enum(["pending", "synced", "partial", "failed", "manual"])
+    .enum(["pending", "synced", "partial", "failed", "manual", "pending_api"])
     .optional(),
   sync_source: z.string().trim().max(80).optional().or(z.literal("")),
   sync_error: z.string().trim().max(500).optional().or(z.literal("")),
   last_synced_at: z.string().trim().optional().or(z.literal("")),
+  metrics_source: metricsSourceSchema.optional(),
+  metrics_last_synced_at: z.string().trim().optional().or(z.literal("")),
+  metrics_is_manual_override: z.coerce.boolean().optional(),
 });
 
 export const savePlatformAccountsSchema = z.object({

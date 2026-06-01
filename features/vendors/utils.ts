@@ -3,7 +3,7 @@ import type { InfluencerStatus } from "@/types/database";
 export type PlatformAccountSummary = {
   platform: string;
   handle?: string;
-  follower_count?: number;
+  follower_count?: number | null;
   is_primary?: boolean;
 };
 
@@ -65,18 +65,27 @@ export function getPrimaryPlatformAccount(
 
 export function getTotalFollowers(
   accounts: PlatformAccountSummary[] | null | undefined
-): number {
+): number | null {
   if (!accounts?.length) {
-    return 0;
+    return null;
   }
 
-  return accounts.reduce(
-    (sum, account) => sum + Number(account.follower_count ?? 0),
-    0
-  );
+  const known = accounts
+    .map((account) => account.follower_count)
+    .filter((count): count is number => count != null);
+
+  if (known.length === 0) {
+    return null;
+  }
+
+  return known.reduce((sum, count) => sum + count, 0);
 }
 
-export function formatFollowers(count: number): string {
+export function formatFollowers(count: number | null): string {
+  if (count == null) {
+    return "—";
+  }
+
   if (count >= 1_000_000) {
     return `${(count / 1_000_000).toFixed(1)}M`;
   }

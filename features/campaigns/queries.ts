@@ -326,7 +326,7 @@ export async function getCampaignWorkspace(
     platform: string;
     handle: string;
     profile_url: string | null;
-    follower_count: number;
+    follower_count: number | null;
     engagement_rate: number | null;
   }[] = [];
 

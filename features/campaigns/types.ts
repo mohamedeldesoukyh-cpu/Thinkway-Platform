@@ -124,7 +124,7 @@ export type CampaignVendorAssignment = {
     platform: string;
     handle: string;
     profile_url: string | null;
-    follower_count: number;
+    follower_count: number | null;
     engagement_rate: number | null;
   }[];
   invited_at: string | null;
@@ -244,7 +244,7 @@ export type InfluencerSearchResult = {
     platform: string;
     handle: string;
     profile_url: string | null;
-    follower_count: number;
+    follower_count: number | null;
     engagement_rate: number | null;
     audience_country: string | null;
   }[];

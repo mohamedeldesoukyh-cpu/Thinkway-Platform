@@ -5,7 +5,8 @@ export type PlatformSyncStatus =
   | "synced"
   | "partial"
   | "failed"
-  | "manual";
+  | "manual"
+  | "pending_api";
 
 export type EnrichmentResult = {
   display_name: string | null;

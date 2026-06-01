@@ -10,24 +10,12 @@ import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { EnrichmentResult } from "@/lib/social/enrichment/types";
-import type { ParsedProfile } from "@/lib/social/parse-profile-url";
+import type { ProfileEnrichmentPayload } from "@/lib/social/enrich-platform-account";
+import { fetchProfileEnrichment } from "@/lib/social/fetch-profile-enrichment";
 import { PLATFORM_LABELS, type SocialPlatform } from "@/lib/social/platforms";
 import { cn } from "@/lib/utils";
 
-export type ProfileEnrichmentPayload = {
-  parsed: ParsedProfile;
-  enrichment: EnrichmentResult | null;
-  duplicates: {
-    account_id: string;
-    influencer_id: string;
-    influencer_name: string;
-    influencer_document_number: string;
-    platform: string;
-    username: string;
-    profile_url: string | null;
-  }[];
-};
+export type { ProfileEnrichmentPayload };
 
 type ProfileUrlEnrichInputProps = {
   id?: string;
@@ -83,22 +71,14 @@ export function ProfileUrlEnrichInput({
       setMessage("Detecting platform and syncing public profile…");
 
       try {
-        const response = await fetch("/api/vendors/platform-accounts/enrich", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            profile_url: trimmed,
-            platform: platformHint,
-            influencer_id: influencerId,
-            account_id: accountId,
-          }),
+        const data = await fetchProfileEnrichment({
+          profile_url: trimmed,
+          platform: platformHint,
+          influencer_id: influencerId,
+          account_id: accountId,
         });
 
-        const data = (await response.json()) as ProfileEnrichmentPayload & {
-          error?: string;
-        };
-
-        if (!response.ok || !data.parsed) {
+        if (data.error || !data.parsed) {
           setStatus("error");
           setMessage(data.error ?? "Could not parse this profile URL.");
           setDetectedPlatform(null);

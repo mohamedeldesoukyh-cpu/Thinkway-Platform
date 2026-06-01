@@ -1,4 +1,7 @@
 import {
+  API_METRICS_PLATFORMS,
+} from "../metrics-status";
+import {
   emptyEnrichment,
   mergeEnrichment,
   type EnrichmentContext,
@@ -138,6 +141,8 @@ export class OpenGraphEnrichmentProvider implements ProfileEnrichmentProvider {
     const hasStats =
       counts.follower_count != null || counts.following_count != null;
     const hasMeta = Boolean(title || description || image);
+    const needsApi =
+      !hasStats && API_METRICS_PLATFORMS.includes(context.platform);
 
     return {
       display_name: title,
@@ -145,7 +150,13 @@ export class OpenGraphEnrichmentProvider implements ProfileEnrichmentProvider {
       profile_picture_url: image,
       follower_count: counts.follower_count,
       following_count: counts.following_count,
-      sync_status: hasStats ? "synced" : hasMeta ? "partial" : "failed",
+      sync_status: hasStats
+        ? "synced"
+        : needsApi
+          ? "pending_api"
+          : hasMeta
+            ? "partial"
+            : "failed",
       sync_source: this.id,
       sync_error: hasStats || hasMeta ? null : "No public metadata found.",
       messages: hasStats
@@ -155,9 +166,14 @@ export class OpenGraphEnrichmentProvider implements ProfileEnrichmentProvider {
               ? `${formatCount(counts.follower_count)} followers synced`
               : "Profile metadata synced",
           ]
-        : hasMeta
-          ? [`${context.platform} profile detected`, "Some public metadata synced"]
-          : [`${context.platform} profile detected`, "Stats sync unavailable"],
+        : needsApi
+          ? [
+              `${context.platform} profile detected`,
+              "Public metrics unavailable — API connection required",
+            ]
+          : hasMeta
+            ? [`${context.platform} profile detected`, "Some public metadata synced"]
+            : [`${context.platform} profile detected`, "Stats sync unavailable"],
     };
   }
 }
