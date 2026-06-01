@@ -5,9 +5,9 @@ import {
 } from "@/lib/master-data/queries";
 import type { CampaignListItem } from "@/types/database";
 
+import type { CampaignLineBillingStatus } from "@/features/billing/types";
 import { CAMPAIGNS_PAGE_SIZE, METADATA_PLATFORM_KEY } from "./constants";
 import {
-  deriveLineBillingStatus,
   deriveLinePaymentStatus,
   deriveWorkflowStage,
   formatMarginPercent,
@@ -69,10 +69,16 @@ type LineRow = {
   profit: number;
   profit_margin: number;
   po_amount: number;
+  po_consumed: number;
   remaining_po: number;
   currency_code: string;
   start_date: string | null;
   end_date: string | null;
+  billing_status: CampaignLineBillingStatus;
+  revenue_locked: boolean;
+  cost_locked: boolean;
+  vendor_assignment_locked: boolean;
+  invoice_id: string | null;
 };
 
 function escapeIlikePattern(value: string): string {
@@ -392,11 +398,6 @@ export async function getCampaignWorkspace(
     };
   });
 
-  const hasCampaignInvoice = invoices.length > 0;
-  const allInvoicesPaid =
-    invoices.length > 0 &&
-    invoices.every((i) => i.status === "paid" || i.outstanding <= 0);
-
   let payments: CampaignWorkspace["payments"] = [];
   if (invoices.length > 0) {
     const invoiceIds = invoices.map((i) => i.id);
@@ -434,6 +435,7 @@ export async function getCampaignWorkspace(
     const cost = Number(line.cost);
     const gp = Number(line.profit);
     const poAmount = Number(line.po_amount);
+    const poConsumed = Number(line.po_consumed ?? cost);
     const vendorFees = vendorFeesByLine.get(line.id) ?? 0;
 
     return {
@@ -448,13 +450,14 @@ export async function getCampaignWorkspace(
       gp,
       margin_percent: formatMarginPercent(revenue, gp),
       po_amount: poAmount,
+      po_consumed: poConsumed,
       remaining_po: Number(line.remaining_po),
-      billing_status: deriveLineBillingStatus(
-        cost,
-        poAmount,
-        hasCampaignInvoice,
-        allInvoicesPaid
-      ),
+      po_over_consumed: poConsumed > poAmount && poAmount > 0,
+      billing_status: line.billing_status ?? "draft",
+      revenue_locked: line.revenue_locked ?? false,
+      cost_locked: line.cost_locked ?? false,
+      vendor_assignment_locked: line.vendor_assignment_locked ?? false,
+      invoice_id: line.invoice_id ?? null,
       payment_status: deriveLinePaymentStatus(cost, vendorFees),
       currency_code: line.currency_code,
       start_date: line.start_date,

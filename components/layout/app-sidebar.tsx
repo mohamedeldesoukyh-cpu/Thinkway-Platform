@@ -7,6 +7,7 @@ import {
   LayoutDashboardIcon,
   LayersIcon,
   MegaphoneIcon,
+  ReceiptIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -33,6 +34,11 @@ const navItems = [
     href: "/campaigns",
     label: "Campaigns",
     icon: MegaphoneIcon,
+  },
+  {
+    href: "/billing",
+    label: "Billing",
+    icon: ReceiptIcon,
   },
   {
     href: "/vendors",

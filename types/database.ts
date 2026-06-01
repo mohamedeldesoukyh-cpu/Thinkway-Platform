@@ -131,7 +131,13 @@ export type CampaignLineRow = {
   profit_margin: number;
   markup_margin: number;
   po_amount: number;
+  po_consumed: number;
   remaining_po: number;
+  billing_status: string;
+  revenue_locked: boolean;
+  cost_locked: boolean;
+  vendor_assignment_locked: boolean;
+  invoice_id: string | null;
   currency_code: string;
   base_currency: string;
   fx_rate: number;
@@ -469,6 +475,15 @@ export type Database = {
           revenue?: number;
           cost?: number;
           po_amount?: number;
+          po_consumed?: number;
+          billing_status?: string;
+          revenue_locked?: boolean;
+          cost_locked?: boolean;
+          vendor_assignment_locked?: boolean;
+          invoice_id?: string | null;
+          finance_override_until?: string | null;
+          billing_moved_at?: string | null;
+          billing_invoiced_at?: string | null;
           currency_code?: string;
           base_currency?: string;
           fx_rate?: number;
@@ -605,25 +620,123 @@ export type Database = {
           document_number: string;
           client_id: string;
           campaign_id: string | null;
+          campaign_header_id: string | null;
           total: number;
           amount_paid: number;
           status: string;
+          collection_status: string;
           issue_date: string;
           due_date: string | null;
           currency: string;
+          subtotal?: number;
+          tax_amount?: number;
+          notes?: string | null;
+          created_by?: string | null;
         };
         Insert: {
-          document_number: string;
+          document_number?: string;
           client_id: string;
           campaign_id?: string | null;
+          campaign_header_id?: string | null;
           total?: number;
           amount_paid?: number;
           status?: string;
+          collection_status?: string;
           issue_date?: string;
           due_date?: string | null;
           currency?: string;
+          notes?: string | null;
+          created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]>;
+        Relationships: [];
+      };
+      financial_approval_requests: {
+        Row: {
+          id: string;
+          document_number: string;
+          entity_type: string;
+          entity_id: string;
+          approval_stage: string;
+          chain_order: number;
+          status: string;
+          title: string;
+          description: string | null;
+          requested_by: string | null;
+          assigned_to: string | null;
+          decided_by: string | null;
+          decided_at: string | null;
+          decision_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          entity_type: string;
+          entity_id: string;
+          approval_stage: string;
+          chain_order: number;
+          title: string;
+          description?: string | null;
+          requested_by?: string | null;
+          status?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["financial_approval_requests"]["Insert"]> & {
+          decided_by?: string | null;
+          decided_at?: string | null;
+          decision_notes?: string | null;
+          status?: string;
+        };
+        Relationships: [];
+      };
+      vendor_payment_batches: {
+        Row: {
+          id: string;
+          document_number: string;
+          name: string;
+          status: string;
+          batch_date: string;
+          total_amount: number;
+          currency: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          name: string;
+          status?: string;
+          total_amount?: number;
+          currency?: string;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["vendor_payment_batches"]["Insert"]>;
+        Relationships: [];
+      };
+      invoice_line_items: {
+        Row: {
+          id: string;
+          invoice_id: string;
+          campaign_line_id: string | null;
+          campaign_header_id: string | null;
+          campaign_id: string | null;
+          sort_order: number;
+          description: string;
+          quantity: number;
+          unit_price: number;
+          line_total: number;
+        };
+        Insert: {
+          invoice_id: string;
+          campaign_line_id?: string | null;
+          campaign_header_id?: string | null;
+          campaign_id?: string | null;
+          sort_order?: number;
+          description: string;
+          quantity?: number;
+          unit_price: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["invoice_line_items"]["Insert"]>;
         Relationships: [];
       };
       payments: {
@@ -631,18 +744,28 @@ export type Database = {
           id: string;
           document_number: string;
           invoice_id: string;
+          client_id: string;
           amount: number;
           currency: string;
           status: string;
+          payment_method: string;
+          reference_number: string | null;
+          notes: string | null;
           paid_at: string | null;
+          recorded_by: string | null;
         };
         Insert: {
-          document_number: string;
+          document_number?: string;
           invoice_id: string;
           client_id: string;
           amount: number;
           currency?: string;
           status?: string;
+          payment_method?: string;
+          reference_number?: string | null;
+          notes?: string | null;
+          paid_at?: string | null;
+          recorded_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["payments"]["Insert"]>;
         Relationships: [];
@@ -800,6 +923,9 @@ export type Database = {
           deliverable_count: number;
           invited_at: string | null;
           confirmed_at: string | null;
+          vendor_payment_status: string;
+          vendor_paid_at: string | null;
+          payment_batch_id: string | null;
         };
         Insert: {
           campaign_id: string;
@@ -812,6 +938,9 @@ export type Database = {
           deliverable_count?: number;
           invited_at?: string | null;
           confirmed_at?: string | null;
+          vendor_payment_status?: string;
+          vendor_paid_at?: string | null;
+          payment_batch_id?: string | null;
           created_by?: string | null;
         };
         Update: Partial<

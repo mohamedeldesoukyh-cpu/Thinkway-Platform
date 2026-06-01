@@ -66,11 +66,16 @@ export const CAMPAIGN_VENDOR_STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ] as const;
 
+export { labelForBillingStatus } from "@/features/billing/constants";
+
 export const LINE_BILLING_STATUS_LABELS: Record<string, string> = {
-  not_billed: "Not billed",
+  draft: "Draft",
+  approved: "Approved",
+  moved_to_billing: "Moved to billing",
   invoiced: "Invoiced",
-  partial: "Partial",
+  partially_paid: "Partially paid",
   paid: "Paid",
+  closed: "Closed",
 };
 
 export const LINE_PAYMENT_STATUS_LABELS: Record<string, string> = {

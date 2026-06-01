@@ -22,11 +22,7 @@ export type WorkflowStage =
   | "invoicing"
   | "closed";
 
-export type LineBillingStatus =
-  | "not_billed"
-  | "invoiced"
-  | "partial"
-  | "paid";
+export type { CampaignLineBillingStatus as LineBillingStatus } from "@/features/billing/types";
 
 export type LinePaymentStatus =
   | "pending"
@@ -58,7 +54,13 @@ export type CampaignLineWorkspace = {
   margin_percent: number;
   po_amount: number;
   remaining_po: number;
-  billing_status: LineBillingStatus;
+  billing_status: import("@/features/billing/types").CampaignLineBillingStatus;
+  revenue_locked: boolean;
+  cost_locked: boolean;
+  vendor_assignment_locked: boolean;
+  invoice_id: string | null;
+  po_consumed: number;
+  po_over_consumed: boolean;
   payment_status: LinePaymentStatus;
   currency_code: string;
   start_date: string | null;
@@ -257,21 +259,6 @@ export function deriveWorkflowStage(input: {
     return "negotiation";
   }
   return "planning";
-}
-
-export function deriveLineBillingStatus(
-  cost: number,
-  poAmount: number,
-  hasInvoice: boolean,
-  invoicePaid: boolean
-): LineBillingStatus {
-  if (invoicePaid) {
-    return "paid";
-  }
-  if (hasInvoice) {
-    return cost > 0 && poAmount > cost ? "partial" : "invoiced";
-  }
-  return "not_billed";
 }
 
 export function deriveLinePaymentStatus(

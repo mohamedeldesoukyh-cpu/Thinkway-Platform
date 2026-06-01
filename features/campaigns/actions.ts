@@ -276,6 +276,37 @@ export async function updateCampaignLineAction(
     return { ok: false, message: authError };
   }
 
+  const { data: existingLine, error: lineError } = await supabase
+    .from("campaign_lines")
+    .select("revenue_locked, cost_locked, revenue, cost, document_number")
+    .eq("id", parsed.data.line_id)
+    .eq("campaign_header_id", parsed.data.campaign_id)
+    .maybeSingle();
+
+  if (lineError || !existingLine) {
+    return { ok: false, message: lineError?.message ?? "Line not found." };
+  }
+
+  if (
+    existingLine.revenue_locked &&
+    parsed.data.revenue !== Number(existingLine.revenue)
+  ) {
+    return {
+      ok: false,
+      message: `Revenue is locked on ${existingLine.document_number}. Request a finance override.`,
+    };
+  }
+
+  if (
+    existingLine.cost_locked &&
+    parsed.data.cost !== Number(existingLine.cost)
+  ) {
+    return {
+      ok: false,
+      message: `Cost is locked on ${existingLine.document_number}. Request a finance override.`,
+    };
+  }
+
   const { data: header } = await supabase
     .from("campaign_headers")
     .select("client_id")
@@ -325,6 +356,26 @@ export async function assignCampaignVendorAction(
   }
 
   const lineId = emptyToNull(parsed.data.campaign_line_id);
+
+  if (lineId) {
+    const { data: line, error: lineError } = await supabase
+      .from("campaign_lines")
+      .select("vendor_assignment_locked, document_number")
+      .eq("id", lineId)
+      .eq("campaign_header_id", parsed.data.campaign_id)
+      .maybeSingle();
+
+    if (lineError) {
+      return { ok: false, message: lineError.message };
+    }
+
+    if (line?.vendor_assignment_locked) {
+      return {
+        ok: false,
+        message: `Vendor assignments are locked on ${line.document_number}. Finance approval required.`,
+      };
+    }
+  }
 
   const { error } = await supabase.from("campaign_influencers").insert({
     campaign_id: parsed.data.campaign_id,

@@ -6,6 +6,7 @@ import {
   getCampaignFormOptions,
   getCampaignWorkspace,
 } from "@/features/campaigns/queries";
+import { getCampaignBillingLines } from "@/features/billing/queries";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 
 type CampaignWorkspacePageProps = {
@@ -22,13 +23,15 @@ export default async function CampaignWorkspacePage({
     null;
   let masterData: Awaited<ReturnType<typeof getMasterDataOptions>> | null =
     null;
+  let billingLines: Awaited<ReturnType<typeof getCampaignBillingLines>> = [];
   let errorMessage: string | null = null;
 
   try {
-    [workspace, formOptions, masterData] = await Promise.all([
+    [workspace, formOptions, masterData, billingLines] = await Promise.all([
       getCampaignWorkspace(id),
       getCampaignFormOptions(),
       getMasterDataOptions(),
+      getCampaignBillingLines(id),
     ]);
   } catch (error) {
     errorMessage =
@@ -55,6 +58,7 @@ export default async function CampaignWorkspacePage({
           workspace={workspace}
           accountManagers={formOptions.accountManagers}
           teams={teams}
+          billingLines={billingLines}
         />
       ) : null}
     </DashboardShell>

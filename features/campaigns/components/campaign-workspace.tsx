@@ -14,19 +14,21 @@ import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campai
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignVendorsTab } from "@/features/campaigns/components/tabs/campaign-vendors-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
-import type { CampaignWorkspace } from "@/features/campaigns/types";
+import type { BillingLineRow } from "@/features/billing/types";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
 
 type CampaignWorkspaceViewProps = {
-  workspace: CampaignWorkspace;
+  workspace: import("@/features/campaigns/types").CampaignWorkspace;
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
+  billingLines: BillingLineRow[];
 };
 
 export function CampaignWorkspaceView({
   workspace,
   accountManagers,
   teams,
+  billingLines,
 }: CampaignWorkspaceViewProps) {
   return (
     <div className="space-y-6">
@@ -85,7 +87,7 @@ export function CampaignWorkspaceView({
           <CampaignWorkflowTab workspace={workspace} />
         </TabsContent>
         <TabsContent value="billing">
-          <CampaignBillingTab workspace={workspace} />
+          <CampaignBillingTab workspace={workspace} billingLines={billingLines} />
         </TabsContent>
         <TabsContent value="timeline">
           <CampaignTimelineTab workspace={workspace} />
