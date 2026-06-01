@@ -2,13 +2,13 @@
 
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { memo, useTransition } from "react";
+import { memo, useEffect, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { createAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
-import { EditableDeliverableRow } from "@/features/campaigns/components/assignment-hierarchy/editable-deliverable-row";
-import { CHILD_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-hierarchy/deliverable-group-row";
+import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { cn } from "@/lib/utils";
@@ -51,31 +51,49 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
         revenue_vat_percent: line.revenue_vat_percent,
         cost_vat_percent: line.cost_vat_percent,
       });
-      if (result.ok) {
-        router.refresh();
-      }
+      if (result.ok) router.refresh();
     });
   }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.altKey && event.key.toLowerCase() === "n") {
+        const target = event.target as HTMLElement | null;
+        if (
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+        event.preventDefault();
+        if (!locked) addDeliverable();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [locked, campaignId, line.id]);
 
   return (
     <TableRow className="hover:bg-transparent">
       <TableCell colSpan={parentColSpan} className="p-0">
         <div
           className={cn(
-            "border-l-[3px] border-l-primary/40 bg-muted/30",
-            "mx-2 mb-2 mt-0 rounded-lg border border-border/50 shadow-inner"
+            "border-l-[3px] border-l-primary/40 bg-muted/25",
+            "mx-1 mb-2 mt-0 rounded-lg border border-border/50"
           )}
         >
-          <div className="flex items-center justify-between gap-2 border-b border-border/40 px-3 py-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Deliverables · {line.influencer_name ?? line.name}
+          <div className="flex items-center justify-between gap-2 border-b border-border/40 px-3 py-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Operational deliverables · {line.influencer_name ?? line.name}
             </p>
             {!locked ? (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 text-xs"
+                className="h-6 text-[10px]"
                 onClick={addDeliverable}
                 disabled={pending}
                 title="Add deliverable (Alt+N)"
@@ -86,47 +104,23 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
             ) : null}
           </div>
 
-          <div className="overflow-x-auto px-2 pb-2">
-            <table className="w-full min-w-[1100px] border-collapse text-xs">
+          <div className="overflow-x-auto px-1 pb-1.5">
+            <table className="w-full min-w-[1200px] border-collapse">
               <thead>
-                <tr className="border-b border-border/50 text-left text-[10px] uppercase tracking-wide text-muted-foreground">
-                  <th className="w-8 px-2 py-1.5">{CHILD_COLUMN_LABELS.select}</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.tag}</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.platform}</th>
-                  <th className="px-2 py-1.5">Type</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.postingDate}</th>
-                  <th className="px-2 py-1.5 text-right">{CHILD_COLUMN_LABELS.qty}</th>
-                  <th className="px-2 py-1.5 text-right">{CHILD_COLUMN_LABELS.unitRevenue}</th>
-                  <th className="px-2 py-1.5 text-right">{CHILD_COLUMN_LABELS.unitCost}</th>
-                  <th className="px-2 py-1.5 text-right">{CHILD_COLUMN_LABELS.revenue}</th>
-                  <th className="px-2 py-1.5 text-right">{CHILD_COLUMN_LABELS.cost}</th>
-                  <th className="px-2 py-1.5 text-right">{CHILD_COLUMN_LABELS.vat}</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.billing}</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.invoice}</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.collection}</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.payout}</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.workflow}</th>
-                  <th className="px-2 py-1.5">{CHILD_COLUMN_LABELS.notes}</th>
-                  <th className="px-2 py-1.5 text-right">{CHILD_COLUMN_LABELS.actions}</th>
-                </tr>
+                <OperationalGridHeader />
               </thead>
               <tbody>
-                {deliverables.map((deliverable, index) => (
-                  <EditableDeliverableRow
+                {deliverables.map((deliverable) => (
+                  <DeliverableGroupRow
                     key={deliverable.id}
                     campaignId={campaignId}
-                    campaignLineId={line.id}
                     deliverable={deliverable}
                     currency={currency}
                     selected={selectedIds.has(deliverable.id)}
                     onToggleSelect={() => onToggleDeliverable(deliverable.id)}
                     showSelection={showSelection}
-                    defaultRevenueVatPercent={line.revenue_vat_percent}
-                    defaultCostVatPercent={line.cost_vat_percent}
                     revenueVatExempt={line.revenue_vat_exempt}
-                    costVatExempt={line.cost_vat_exempt}
-                    onRequestAddSibling={addDeliverable}
-                    registerAddShortcut={index === 0}
+                    defaultRevenueVatPercent={line.revenue_vat_percent}
                   />
                 ))}
               </tbody>

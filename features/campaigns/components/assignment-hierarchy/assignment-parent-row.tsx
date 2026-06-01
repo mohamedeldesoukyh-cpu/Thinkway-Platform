@@ -36,12 +36,7 @@ type AssignmentParentRowProps = {
 
 function summarizePostingDates(group: AssignmentHierarchyGroup): string {
   const dates = group.deliverables
-    .flatMap((d) => {
-      if (d.schedules.length > 0) {
-        return d.schedules.map((s) => s.live_date).filter(Boolean) as string[];
-      }
-      return d.live_date ? [d.live_date] : [];
-    })
+    .flatMap((d) => d.posts.map((p) => p.live_date).filter(Boolean) as string[])
     .sort();
 
   if (dates.length === 0) return "—";

@@ -827,6 +827,13 @@ export type Database = {
           notes: string | null;
           proof_url: string | null;
           metadata: Record<string, unknown>;
+          revenue_before_vat: number;
+          cost_before_vat: number;
+          revenue_vat_percent: number;
+          revenue_vat_amount: number;
+          cost_vat_percent: number;
+          cost_vat_amount: number;
+          billing_status: string;
           created_at: string;
           updated_at: string;
         };
@@ -840,6 +847,13 @@ export type Database = {
           notes?: string | null;
           proof_url?: string | null;
           metadata?: Record<string, unknown>;
+          revenue_before_vat?: number;
+          cost_before_vat?: number;
+          revenue_vat_percent?: number;
+          revenue_vat_amount?: number;
+          cost_vat_percent?: number;
+          cost_vat_amount?: number;
+          billing_status?: string;
         };
         Update: Partial<
           Database["public"]["Tables"]["assignment_post_schedule"]["Insert"]

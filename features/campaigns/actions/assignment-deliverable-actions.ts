@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { FormActionState } from "@/features/campaigns/actions";
+import {
+  loadLineVatForDeliverable,
+  syncDeliverableRollupFromPosts,
+  syncPostSchedulesForDeliverable,
+} from "@/lib/assignments/sync-post-schedules";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeVatLine } from "@/lib/vat/calculations";
@@ -50,6 +55,16 @@ const updateScheduleSchema = z.object({
   schedule_id: z.string().uuid(),
   live_date: z.string().nullable(),
   status: z.string().trim().min(1).max(64),
+  revenue_per_post: z.coerce.number().min(0).optional(),
+  cost_per_post: z.coerce.number().min(0).optional(),
+  revenue_vat_percent: z.coerce.number().min(0).max(100).optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  billing_status: billingStatusSchema.optional(),
+});
+
+const addPostSchema = z.object({
+  campaign_id: z.string().uuid(),
+  deliverable_id: z.string().uuid(),
 });
 
 function roundMoney(value: number): number {
@@ -183,37 +198,65 @@ export async function createAssignmentDeliverableAction(
       cost_vat_exempt: line.cost_vat_exempt ?? false,
     });
 
-    const { error } = await supabase.from("assignment_deliverables").insert({
-      campaign_header_id: line.campaign_header_id,
-      campaign_line_id: line.id,
-      sort_order: sortOrder,
-      platform: parsed.data.platform,
-      deliverable_type: parsed.data.deliverable_type,
-      quantity: commercial.quantity,
-      unit_cost: commercial.unit_cost,
-      total_cost: commercial.total_cost,
-      revenue_before_vat: commercial.revenue_before_vat,
-      revenue_vat_percent: commercial.revenue_vat_percent,
-      revenue_vat_amount: commercial.revenue_vat_amount,
-      revenue_after_vat: commercial.revenue_after_vat,
-      revenue_vat_exempt: commercial.revenue_vat_exempt,
-      cost_before_vat: commercial.cost_before_vat,
-      cost_vat_percent: commercial.cost_vat_percent,
-      cost_vat_amount: commercial.cost_vat_amount,
-      cost_after_vat: commercial.cost_after_vat,
-      cost_vat_exempt: commercial.cost_vat_exempt,
-      live_date: parsed.data.live_date ?? null,
-      schedule_mode: "single",
-      notes: parsed.data.notes ?? null,
-      billable_amount: commercial.billable_amount,
-      remaining_amount: commercial.billable_amount,
-      billing_status: "draft",
-      metadata: {},
-    });
+    const { data: inserted, error } = await supabase
+      .from("assignment_deliverables")
+      .insert({
+        campaign_header_id: line.campaign_header_id,
+        campaign_line_id: line.id,
+        sort_order: sortOrder,
+        platform: parsed.data.platform,
+        deliverable_type: parsed.data.deliverable_type,
+        quantity: commercial.quantity,
+        unit_cost: commercial.unit_cost,
+        total_cost: commercial.total_cost,
+        revenue_before_vat: commercial.revenue_before_vat,
+        revenue_vat_percent: commercial.revenue_vat_percent,
+        revenue_vat_amount: commercial.revenue_vat_amount,
+        revenue_after_vat: commercial.revenue_after_vat,
+        revenue_vat_exempt: commercial.revenue_vat_exempt,
+        cost_before_vat: commercial.cost_before_vat,
+        cost_vat_percent: commercial.cost_vat_percent,
+        cost_vat_amount: commercial.cost_vat_amount,
+        cost_after_vat: commercial.cost_after_vat,
+        cost_vat_exempt: commercial.cost_vat_exempt,
+        live_date: parsed.data.live_date ?? null,
+        schedule_mode: commercial.quantity > 1 ? "expanded" : "single",
+        notes: parsed.data.notes ?? null,
+        billable_amount: commercial.billable_amount,
+        remaining_amount: commercial.billable_amount,
+        billing_status: "draft",
+        metadata: {},
+      })
+      .select("id, quantity, unit_cost, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_percent, cost_vat_amount, live_date, notes, billing_status, locked_at")
+      .single();
 
-    if (error) {
-      return { ok: false, message: error.message };
+    if (error || !inserted) {
+      return { ok: false, message: error?.message ?? "Failed to add deliverable." };
     }
+
+    const lineVat = await loadLineVatForDeliverable(supabase, line.id);
+    await syncPostSchedulesForDeliverable(
+      supabase,
+      {
+        id: inserted.id,
+        campaign_line_id: line.id,
+        quantity: inserted.quantity,
+        unit_cost: Number(inserted.unit_cost),
+        revenue_before_vat: Number(inserted.revenue_before_vat),
+        cost_before_vat: Number(inserted.cost_before_vat),
+        revenue_vat_percent: Number(inserted.revenue_vat_percent),
+        revenue_vat_amount: Number(inserted.revenue_vat_amount),
+        cost_vat_percent: Number(inserted.cost_vat_percent),
+        cost_vat_amount: Number(inserted.cost_vat_amount),
+        revenue_vat_exempt: line.revenue_vat_exempt,
+        cost_vat_exempt: line.cost_vat_exempt,
+        live_date: inserted.live_date,
+        notes: inserted.notes,
+        billing_status: inserted.billing_status,
+        locked_at: inserted.locked_at,
+      },
+      lineVat
+    );
 
     await syncLineCommercialRollupsFromDeliverables(supabase, line.id);
     revalidateCampaign(parsed.data.campaign_id);
@@ -308,6 +351,30 @@ export async function updateAssignmentDeliverableAction(
       return { ok: false, message: error.message };
     }
 
+    const lineVat = await loadLineVatForDeliverable(supabase, line.id);
+    await syncPostSchedulesForDeliverable(
+      supabase,
+      {
+        id: parsed.data.deliverable_id,
+        campaign_line_id: line.id,
+        quantity: commercial.quantity,
+        unit_cost: commercial.unit_cost,
+        revenue_before_vat: commercial.revenue_before_vat,
+        cost_before_vat: commercial.cost_before_vat,
+        revenue_vat_percent: commercial.revenue_vat_percent,
+        revenue_vat_amount: commercial.revenue_vat_amount,
+        cost_vat_percent: commercial.cost_vat_percent,
+        cost_vat_amount: commercial.cost_vat_amount,
+        revenue_vat_exempt: line.revenue_vat_exempt,
+        cost_vat_exempt: line.cost_vat_exempt,
+        live_date: parsed.data.live_date ?? null,
+        notes: parsed.data.notes ?? null,
+        billing_status: parsed.data.billing_status ?? existing.billing_status,
+        locked_at: existing.locked_at,
+      },
+      lineVat
+    );
+
     await syncLineCommercialRollupsFromDeliverables(supabase, line.id);
     revalidateCampaign(parsed.data.campaign_id);
     return { ok: true, message: "Deliverable updated." };
@@ -385,11 +452,50 @@ export async function updatePostScheduleAction(
   try {
     const supabase = await requireAuth();
 
+    const { data: post, error: fetchError } = await supabase
+      .from("assignment_post_schedule")
+      .select("id, assignment_deliverable_id, campaign_line_id, revenue_before_vat, cost_before_vat")
+      .eq("id", parsed.data.schedule_id)
+      .maybeSingle();
+
+    if (fetchError || !post) {
+      return { ok: false, message: fetchError?.message ?? "Post not found." };
+    }
+
+    const lineVat = await loadLineVatForDeliverable(supabase, post.campaign_line_id);
+
+    const revenuePerPost =
+      parsed.data.revenue_per_post ?? Number(post.revenue_before_vat ?? 0);
+    const costPerPost = parsed.data.cost_per_post ?? Number(post.cost_before_vat ?? 0);
+    const revenueVatPercent =
+      parsed.data.revenue_vat_percent ?? lineVat.revenue_vat_percent;
+
+    const revenue = computeVatLine({
+      beforeVat: revenuePerPost,
+      vatPercent: lineVat.revenue_vat_exempt ? 0 : revenueVatPercent,
+      exempt: lineVat.revenue_vat_exempt,
+    });
+    const cost = computeVatLine({
+      beforeVat: costPerPost,
+      vatPercent: lineVat.cost_vat_exempt ? 0 : lineVat.cost_vat_percent,
+      exempt: lineVat.cost_vat_exempt,
+    });
+
     const { error } = await supabase
       .from("assignment_post_schedule")
       .update({
         live_date: parsed.data.live_date,
         status: parsed.data.status,
+        notes: parsed.data.notes ?? undefined,
+        revenue_before_vat: revenue.beforeVat,
+        cost_before_vat: cost.beforeVat,
+        revenue_vat_percent: revenue.vatPercent,
+        revenue_vat_amount: revenue.vatAmount,
+        cost_vat_percent: cost.vatPercent,
+        cost_vat_amount: cost.vatAmount,
+        ...(parsed.data.billing_status
+          ? { billing_status: parsed.data.billing_status }
+          : {}),
       })
       .eq("id", parsed.data.schedule_id);
 
@@ -397,12 +503,90 @@ export async function updatePostScheduleAction(
       return { ok: false, message: error.message };
     }
 
+    await syncDeliverableRollupFromPosts(
+      supabase,
+      post.assignment_deliverable_id,
+      lineVat
+    );
     revalidateCampaign(parsed.data.campaign_id);
-    return { ok: true, message: "Schedule updated." };
+    return { ok: true, message: "Post updated." };
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Failed to update schedule.",
+      message: error instanceof Error ? error.message : "Failed to update post.",
+    };
+  }
+}
+
+export async function addPostToDeliverableAction(
+  input: z.infer<typeof addPostSchema>
+): Promise<FormActionState> {
+  const parsed = addPostSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid add post request." };
+  }
+
+  try {
+    const supabase = await requireAuth();
+
+    const { data: deliverable, error } = await supabase
+      .from("assignment_deliverables")
+      .select(
+        "id, campaign_line_id, quantity, unit_cost, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_percent, cost_vat_amount, live_date, notes, billing_status, locked_at"
+      )
+      .eq("id", parsed.data.deliverable_id)
+      .maybeSingle();
+
+    if (error || !deliverable) {
+      return { ok: false, message: error?.message ?? "Deliverable not found." };
+    }
+
+    if (deliverable.locked_at) {
+      return { ok: false, message: "Deliverable is locked." };
+    }
+
+    const lineVat = await loadLineVatForDeliverable(supabase, deliverable.campaign_line_id);
+    const nextQty = deliverable.quantity + 1;
+    const unitRevenue =
+      deliverable.quantity > 0
+        ? Number(deliverable.revenue_before_vat) / deliverable.quantity
+        : 0;
+    const unitCost = Number(deliverable.unit_cost ?? 0);
+
+    await supabase
+      .from("assignment_deliverables")
+      .update({ quantity: nextQty })
+      .eq("id", deliverable.id);
+
+    await syncPostSchedulesForDeliverable(
+      supabase,
+      {
+        id: deliverable.id,
+        campaign_line_id: deliverable.campaign_line_id,
+        quantity: nextQty,
+        unit_cost: unitCost,
+        revenue_before_vat: unitRevenue * nextQty,
+        cost_before_vat: unitCost * nextQty,
+        revenue_vat_percent: Number(deliverable.revenue_vat_percent),
+        revenue_vat_amount: Number(deliverable.revenue_vat_amount),
+        cost_vat_percent: Number(deliverable.cost_vat_percent),
+        cost_vat_amount: Number(deliverable.cost_vat_amount),
+        revenue_vat_exempt: lineVat.revenue_vat_exempt,
+        cost_vat_exempt: lineVat.cost_vat_exempt,
+        live_date: deliverable.live_date,
+        notes: deliverable.notes,
+        billing_status: deliverable.billing_status,
+        locked_at: deliverable.locked_at,
+      },
+      lineVat
+    );
+
+    revalidateCampaign(parsed.data.campaign_id);
+    return { ok: true, message: "Post added." };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Failed to add post.",
     };
   }
 }

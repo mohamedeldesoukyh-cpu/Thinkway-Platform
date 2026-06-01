@@ -1,19 +1,34 @@
 import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";
 import type {
-  CampaignLineAssignmentStatus,
   CampaignLineWorkspace,
   VendorPaymentStatus,
 } from "@/features/campaigns/types";
 
-export type AssignmentScheduleChip = {
-  id: string;
-  sequence_number: number;
-  live_date: string | null;
-  status: string;
-};
-
 export type DeliverableCollectionStatus = "pending" | "partial" | "collected" | null;
 
+/** Level 3 — individual operational post row (assignment_post_schedule). */
+export type AssignmentPostOperationalRow = {
+  id: string;
+  assignment_deliverable_id: string;
+  sequence_number: number;
+  label: string;
+  live_date: string | null;
+  workflow_status: string;
+  notes: string | null;
+  revenue_per_post: number;
+  cost_per_post: number;
+  revenue_vat_percent: number;
+  revenue_vat_amount: number;
+  cost_vat_amount: number;
+  billing_status: AssignmentDeliverableBillingStatus;
+  collection_status: DeliverableCollectionStatus;
+  invoice_id: string | null;
+  invoice_document_number: string | null;
+  payout_status: VendorPaymentStatus | null;
+  is_locked: boolean;
+};
+
+/** Level 2 — deliverable rollup row (assignment_deliverables). */
 export type AssignmentDeliverableHierarchyRow = {
   id: string;
   campaign_line_id: string;
@@ -39,7 +54,7 @@ export type AssignmentDeliverableHierarchyRow = {
   invoice_document_number: string | null;
   payout_status: VendorPaymentStatus | null;
   workflow_status: string;
-  schedules: AssignmentScheduleChip[];
+  posts: AssignmentPostOperationalRow[];
   remaining_amount: number;
   invoiced_amount: number;
   invoice_eligible: boolean;
@@ -67,4 +82,12 @@ export type AssignmentHierarchyGroup = {
 export type AssignmentHierarchy = {
   groups: AssignmentHierarchyGroup[];
   currency_code: string;
+};
+
+/** @deprecated Use AssignmentPostOperationalRow */
+export type AssignmentScheduleChip = {
+  id: string;
+  sequence_number: number;
+  live_date: string | null;
+  status: string;
 };

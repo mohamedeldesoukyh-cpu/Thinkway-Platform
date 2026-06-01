@@ -16,9 +16,10 @@ import type {
   AssignmentHierarchy,
   AssignmentHierarchyGroup,
   AssignmentHierarchyRollups,
-  AssignmentScheduleChip,
+  AssignmentPostOperationalRow,
   DeliverableCollectionStatus,
 } from "@/features/campaigns/types/assignment-hierarchy";
+import { deliverableTagLabel } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { formatMarginPercent } from "@/features/billing/types";
 
 async function requireUser() {
@@ -42,11 +43,11 @@ function deriveCollectionStatus(
   return null;
 }
 
-function deriveWorkflowStatus(
-  schedules: AssignmentScheduleChip[],
+function deriveWorkflowStatusFromPosts(
+  posts: AssignmentPostOperationalRow[],
   billingStatus: AssignmentDeliverableBillingStatus
 ): string {
-  if (schedules.length === 0) {
+  if (posts.length === 0) {
     if (billingStatus === "invoiced" || billingStatus === "collected") return "posted";
     return "draft";
   }
@@ -60,9 +61,51 @@ function deriveWorkflowStatus(
     "cancelled",
   ];
   for (const status of priority) {
-    if (schedules.some((s) => s.status === status)) return status;
+    if (posts.some((p) => p.workflow_status === status)) return status;
   }
-  return schedules[0]?.status ?? "draft";
+  return posts[0]?.workflow_status ?? "draft";
+}
+
+function buildVirtualPosts(input: {
+  deliverableId: string;
+  quantity: number;
+  platform: string;
+  deliverableType: string;
+  unitRevenue: number;
+  unitCost: number;
+  revenueVatPercent: number;
+  revenueVatPerPost: number;
+  costVatPerPost: number;
+  liveDate: string | null;
+  notes: string | null;
+  billingStatus: AssignmentDeliverableBillingStatus;
+  collectionStatus: DeliverableCollectionStatus;
+  invoiceId: string | null;
+  invoiceDocumentNumber: string | null;
+  payoutStatus: AssignmentDeliverableHierarchyRow["payout_status"];
+  isLocked: boolean;
+}): AssignmentPostOperationalRow[] {
+  const qty = Math.max(1, input.quantity);
+  return Array.from({ length: qty }, (_, index) => ({
+    id: `virtual-${input.deliverableId}-${index + 1}`,
+    assignment_deliverable_id: input.deliverableId,
+    sequence_number: index + 1,
+    label: `${deliverableTagLabel(input.deliverableType)} #${index + 1}`,
+    live_date: input.liveDate,
+    workflow_status: "draft",
+    notes: input.notes,
+    revenue_per_post: input.unitRevenue,
+    cost_per_post: input.unitCost,
+    revenue_vat_percent: input.revenueVatPercent,
+    revenue_vat_amount: input.revenueVatPerPost,
+    cost_vat_amount: input.costVatPerPost,
+    billing_status: input.billingStatus,
+    collection_status: input.collectionStatus,
+    invoice_id: input.invoiceId,
+    invoice_document_number: input.invoiceDocumentNumber,
+    payout_status: input.payoutStatus,
+    is_locked: input.isLocked,
+  }));
 }
 
 function buildSyntheticDeliverable(
@@ -84,6 +127,29 @@ function buildSyntheticDeliverable(
     billingStatus === "invoiced" || billingStatus === "partially_invoiced"
       ? revenueBeforeVat
       : 0;
+
+  const qty = line.deliverable_count || 1;
+  const unitRev = line.revenue_before_vat / Math.max(1, qty);
+  const unitCost = line.cost_before_vat / Math.max(1, qty);
+  const posts = buildVirtualPosts({
+    deliverableId: `synthetic-${line.id}`,
+    quantity: qty,
+    platform: line.platform ?? "other",
+    deliverableType: "other",
+    unitRevenue: unitRev,
+    unitCost,
+    revenueVatPercent: line.revenue_vat_percent,
+    revenueVatPerPost: line.revenue_vat_amount / Math.max(1, qty),
+    costVatPerPost: line.cost_vat_amount / Math.max(1, qty),
+    liveDate: line.start_date,
+    notes: null,
+    billingStatus,
+    collectionStatus: deriveCollectionStatus(billingStatus),
+    invoiceId: line.invoice_id,
+    invoiceDocumentNumber: null,
+    payoutStatus: line.vendor_payment_status,
+    isLocked: line.revenue_locked ?? false,
+  });
 
   return {
     id: `synthetic-${line.id}`,
@@ -109,8 +175,8 @@ function buildSyntheticDeliverable(
     invoice_id: line.invoice_id,
     invoice_document_number: null,
     payout_status: line.vendor_payment_status,
-    workflow_status: line.assignment_status,
-    schedules: [],
+    workflow_status: deriveWorkflowStatusFromPosts(posts, billingStatus),
+    posts,
     remaining_amount: Math.max(0, revenueBeforeVat - invoiced),
     invoiced_amount: invoiced,
     invoice_eligible: isDeliverableInvoiceEligible(
@@ -278,7 +344,9 @@ export async function getCampaignAssignmentHierarchy(
   const [schedulesResult, invoiceItemsResult] = await Promise.all([
     supabase
       .from("assignment_post_schedule")
-      .select("id, assignment_deliverable_id, sequence_number, live_date, status")
+      .select(
+        "id, assignment_deliverable_id, sequence_number, live_date, status, notes, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_amount, billing_status"
+      )
       .in("campaign_line_id", lineIds)
       .order("sequence_number"),
     deliverableIds.length > 0
@@ -312,16 +380,47 @@ export async function getCampaignAssignmentHierarchy(
     (invoiceRows ?? []).map((inv) => [inv.id, inv.document_number])
   );
 
-  const schedulesByDeliverable = new Map<string, AssignmentScheduleChip[]>();
-  for (const row of schedulesResult.data ?? []) {
-    const list = schedulesByDeliverable.get(row.assignment_deliverable_id) ?? [];
+  type ScheduleRow = {
+    id: string;
+    assignment_deliverable_id: string;
+    sequence_number: number;
+    live_date: string | null;
+    status: string;
+    notes: string | null;
+    revenue_before_vat?: number;
+    cost_before_vat?: number;
+    revenue_vat_percent?: number;
+    revenue_vat_amount?: number;
+    cost_vat_amount?: number;
+    billing_status?: string;
+  };
+
+  const postsByDeliverable = new Map<string, AssignmentPostOperationalRow[]>();
+  for (const row of (schedulesResult.data ?? []) as ScheduleRow[]) {
+    const list = postsByDeliverable.get(row.assignment_deliverable_id) ?? [];
     list.push({
       id: row.id,
+      assignment_deliverable_id: row.assignment_deliverable_id,
       sequence_number: row.sequence_number,
+      label: `#${row.sequence_number}`,
       live_date: row.live_date,
-      status: row.status,
+      workflow_status: row.status,
+      notes: row.notes,
+      revenue_per_post: Number(row.revenue_before_vat ?? 0),
+      cost_per_post: Number(row.cost_before_vat ?? 0),
+      revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
+      revenue_vat_amount: Number(row.revenue_vat_amount ?? 0),
+      cost_vat_amount: Number(row.cost_vat_amount ?? 0),
+      billing_status: (row.billing_status ?? "draft") as AssignmentDeliverableBillingStatus,
+      collection_status: deriveCollectionStatus(
+        (row.billing_status ?? "draft") as AssignmentDeliverableBillingStatus
+      ),
+      invoice_id: null,
+      invoice_document_number: null,
+      payout_status: null,
+      is_locked: false,
     });
-    schedulesByDeliverable.set(row.assignment_deliverable_id, list);
+    postsByDeliverable.set(row.assignment_deliverable_id, list);
   }
 
   const invoiceByDeliverable = new Map<
@@ -342,7 +441,7 @@ export async function getCampaignAssignmentHierarchy(
   const deliverablesByLine = new Map<string, AssignmentDeliverableHierarchyRow[]>();
 
   for (const row of deliverableRows ?? []) {
-    const schedules = schedulesByDeliverable.get(row.id) ?? [];
+    let posts = postsByDeliverable.get(row.id) ?? [];
     const invoiceLink = invoiceByDeliverable.get(row.id);
     const billingStatus = row.billing_status;
     const label = deliverableDisplayLabel({
@@ -354,6 +453,42 @@ export async function getCampaignAssignmentHierarchy(
 
     const line = workspace.lines.find((l) => l.id === row.campaign_line_id);
     const qty = Math.max(1, row.quantity);
+    const unitRevenue = Number(row.revenue_before_vat) / qty;
+    const unitCost = Number(row.unit_cost ?? 0);
+    const vatPerPost = Number(row.revenue_vat_amount ?? 0) / qty;
+    const costVatPerPost = Number(row.cost_vat_amount ?? 0) / qty;
+
+    if (posts.length === 0) {
+      posts = buildVirtualPosts({
+        deliverableId: row.id,
+        quantity: qty,
+        platform: row.platform,
+        deliverableType: row.deliverable_type,
+        unitRevenue,
+        unitCost,
+        revenueVatPercent: Number(row.revenue_vat_percent ?? 0),
+        revenueVatPerPost: vatPerPost,
+        costVatPerPost: costVatPerPost,
+        liveDate: row.live_date,
+        notes: row.notes ?? null,
+        billingStatus,
+        collectionStatus: deriveCollectionStatus(billingStatus),
+        invoiceId: invoiceLink?.invoice_id ?? null,
+        invoiceDocumentNumber: invoiceLink?.document_number ?? null,
+        payoutStatus: line?.vendor_payment_status ?? null,
+        isLocked: Boolean(row.locked_at),
+      });
+    } else {
+      posts = posts.map((post) => ({
+        ...post,
+        label: `${deliverableTagLabel(row.deliverable_type)} #${post.sequence_number}`,
+        invoice_id: invoiceLink?.invoice_id ?? null,
+        invoice_document_number: invoiceLink?.document_number ?? null,
+        payout_status: line?.vendor_payment_status ?? null,
+        is_locked: Boolean(row.locked_at),
+      }));
+    }
+
     const mapped: AssignmentDeliverableHierarchyRow = {
       id: row.id,
       campaign_line_id: row.campaign_line_id,
@@ -364,8 +499,8 @@ export async function getCampaignAssignmentHierarchy(
       deliverable_type_label: deliverableLabel(row.deliverable_type),
       quantity: row.quantity,
       unit_cost: Number(row.unit_cost ?? 0),
-      unit_revenue: Number(row.revenue_before_vat) / qty,
-      live_date: row.live_date ?? schedules[0]?.live_date ?? null,
+      unit_revenue: unitRevenue,
+      live_date: row.live_date ?? posts[0]?.live_date ?? null,
       notes: row.notes ?? null,
       revenue_before_vat: Number(row.revenue_before_vat),
       cost_before_vat: Number(row.cost_before_vat ?? 0),
@@ -378,8 +513,8 @@ export async function getCampaignAssignmentHierarchy(
       invoice_id: invoiceLink?.invoice_id ?? null,
       invoice_document_number: invoiceLink?.document_number ?? null,
       payout_status: line?.vendor_payment_status ?? null,
-      workflow_status: deriveWorkflowStatus(schedules, billingStatus),
-      schedules,
+      workflow_status: deriveWorkflowStatusFromPosts(posts, billingStatus),
+      posts,
       remaining_amount: Number(row.remaining_amount),
       invoiced_amount: Number(row.invoiced_amount),
       invoice_eligible: isDeliverableInvoiceEligible(
