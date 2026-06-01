@@ -32,6 +32,7 @@ type CreateInvoiceSheetProps = {
   currency: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialSelectedIds?: string[];
 };
 
 export function CreateInvoiceSheet({
@@ -40,9 +41,28 @@ export function CreateInvoiceSheet({
   currency,
   open,
   onOpenChange,
+  initialSelectedIds,
 }: CreateInvoiceSheetProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (open && initialSelectedIds?.length) {
+      setSelected(new Set(initialSelectedIds));
+      setExpanded(
+        new Set(
+          groups
+            .filter((g) =>
+              g.deliverables.some((d) => initialSelectedIds.includes(d.id))
+            )
+            .map((g) => g.line_id)
+        )
+      );
+    }
+    if (!open) {
+      setSelected(new Set());
+    }
+  }, [open, initialSelectedIds, groups]);
 
   const eligibleGroups = useMemo(
     () =>

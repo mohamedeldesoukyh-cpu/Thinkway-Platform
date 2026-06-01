@@ -7,6 +7,7 @@ import {
   getCampaignWorkspace,
 } from "@/features/campaigns/queries";
 import { getCampaignBillingGroups, getCampaignBillingLines } from "@/features/billing/queries";
+import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 
@@ -26,15 +27,21 @@ export default async function CampaignWorkspacePage({
     null;
   let billingLines: Awaited<ReturnType<typeof getCampaignBillingLines>> = [];
   let billingGroups: Awaited<ReturnType<typeof getCampaignBillingGroups>> = [];
+  let assignmentHierarchy: Awaited<ReturnType<typeof getCampaignAssignmentHierarchy>> = {
+    groups: [],
+    currency_code: "USD",
+  };
   let errorMessage: string | null = null;
 
   try {
-    [workspace, formOptions, masterData, billingLines, billingGroups] = await Promise.all([
+    [workspace, formOptions, masterData, billingLines, billingGroups, assignmentHierarchy] =
+      await Promise.all([
       getCampaignWorkspace(id),
       getCampaignFormOptions(),
       getMasterDataOptions(),
       getCampaignBillingLines(id),
       getCampaignBillingGroups(id),
+      getCampaignAssignmentHierarchy(id),
     ]);
   } catch (error) {
     errorMessage =
@@ -64,6 +71,7 @@ export default async function CampaignWorkspacePage({
           teams={teams}
           billingLines={billingLines}
           billingGroups={billingGroups}
+          assignmentHierarchy={assignmentHierarchy}
           currencyOptions={currencyOptions}
         />
       ) : null}

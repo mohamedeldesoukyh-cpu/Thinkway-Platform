@@ -19,6 +19,9 @@ export const ASSIGNMENT_DELIVERABLE_BILLING_CORE_SELECT = [
   "locked_at",
   "revenue_before_vat",
   "revenue_vat_percent",
+  "revenue_vat_amount",
+  "revenue_after_vat",
+  "cost_before_vat",
 ].join(", ");
 
 export const ASSIGNMENT_DELIVERABLE_VAT_EXEMPT_COLUMNS =

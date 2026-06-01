@@ -27,6 +27,7 @@ import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campai
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
 import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/types";
+import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
 
 type CampaignWorkspaceViewProps = {
@@ -35,6 +36,7 @@ type CampaignWorkspaceViewProps = {
   teams: { id: string; name: string }[];
   billingLines: BillingLineRow[];
   billingGroups: AssignmentBillingGroup[];
+  assignmentHierarchy: AssignmentHierarchy;
   currencyOptions: { value: string; label: string }[];
 };
 
@@ -44,6 +46,7 @@ export function CampaignWorkspaceView({
   teams,
   billingLines,
   billingGroups,
+  assignmentHierarchy,
   currencyOptions,
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
@@ -117,6 +120,8 @@ export function CampaignWorkspaceView({
             workspace={workspace}
             po={workspace.po}
             currencyOptions={currencyOptions}
+            assignmentHierarchy={assignmentHierarchy}
+            billingGroups={billingGroups}
           />
         </TabsContent>
         <TabsContent value="deliverables">
