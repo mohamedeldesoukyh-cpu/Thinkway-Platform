@@ -10,8 +10,10 @@ import { governanceDb } from "@/lib/supabase/governance-client";
 import {
   entityDependencySchema,
   executeMovementSchema,
+  executeVendorMovementSchema,
   previewMovementSchema,
 } from "./schemas";
+import { LINE_ASSIGNMENT_META_KEY } from "@/features/campaigns/line-assignment";
 import type { MovementPreview } from "./types";
 
 export type OperationsActionState = {
@@ -392,4 +394,168 @@ export async function getEntityDependenciesAction(
       message: e instanceof Error ? e.message : "Failed to load dependencies.",
     };
   }
+}
+
+function parseAssignmentIds(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export async function executeVendorMovementAction(
+  _prev: OperationsActionState,
+  formData: FormData
+): Promise<OperationsActionState> {
+  const parsed = executeVendorMovementSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Please fix the errors below.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  if (parsed.data.source_influencer_id === parsed.data.destination_influencer_id) {
+    return { ok: false, message: "Source and destination vendor must differ." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await requireOperationsAccess(supabase);
+  if ("error" in auth) {
+    return { ok: false, message: auth.error };
+  }
+
+  const assignmentIds = parseAssignmentIds(parsed.data.assignment_ids);
+  if (assignmentIds.length === 0) {
+    return { ok: false, message: "Select at least one assignment." };
+  }
+
+  const { data: destVendor } = await supabase
+    .from("influencers")
+    .select("id, display_name, document_number")
+    .eq("id", parsed.data.destination_influencer_id)
+    .maybeSingle();
+
+  if (!destVendor) {
+    return { ok: false, message: "Destination vendor not found." };
+  }
+
+  const { data: assignments } = await supabase
+    .from("campaign_influencers")
+    .select("id, campaign_line_id, campaign_header_id, campaign_id, agreed_fee")
+    .in("id", assignmentIds)
+    .eq("influencer_id", parsed.data.source_influencer_id);
+
+  if (!assignments?.length) {
+    return { ok: false, message: "No matching assignments found for source vendor." };
+  }
+
+  const totalRevenue = assignments.reduce(
+    (s, a) => s + Number((a as { agreed_fee: number }).agreed_fee),
+    0
+  );
+
+  const { data: batch, error: batchError } = await governanceDb(supabase)
+    .from("movement_batches")
+    .insert({
+      movement_type: "vendor_to_vendor",
+      status: "executing",
+      reason: parsed.data.reason,
+      source_influencer_id: parsed.data.source_influencer_id,
+      destination_influencer_id: parsed.data.destination_influencer_id,
+      campaign_count: assignments.length,
+      total_revenue: totalRevenue,
+      total_gp: 0,
+      preview_snapshot: { assignment_ids: assignmentIds },
+      created_by: auth.userId,
+    })
+    .select("id, document_number")
+    .single();
+
+  if (batchError || !batch) {
+    return { ok: false, message: batchError?.message ?? "Batch creation failed." };
+  }
+
+  for (const row of assignments) {
+    const a = row as {
+      id: string;
+      campaign_line_id: string | null;
+      campaign_header_id: string | null;
+      campaign_id: string | null;
+    };
+
+    const { error: updateError } = await supabase
+      .from("campaign_influencers")
+      .update({ influencer_id: parsed.data.destination_influencer_id })
+      .eq("id", a.id);
+
+    if (!updateError) {
+      await supabase
+        .from("deliverables")
+        .update({ influencer_id: parsed.data.destination_influencer_id })
+        .eq("campaign_influencer_id", a.id);
+
+      if (a.campaign_line_id) {
+        const { data: lineRow } = await supabase
+          .from("campaign_lines")
+          .select("metadata")
+          .eq("id", a.campaign_line_id)
+          .maybeSingle();
+
+        const metadata = (lineRow?.metadata as Record<string, unknown>) ?? {};
+        const assignment = metadata[LINE_ASSIGNMENT_META_KEY] as
+          | Record<string, unknown>
+          | undefined;
+
+        if (assignment) {
+          await supabase
+            .from("campaign_lines")
+            .update({
+              metadata: {
+                ...metadata,
+                [LINE_ASSIGNMENT_META_KEY]: {
+                  ...assignment,
+                  influencer_id: destVendor.id,
+                  influencer_name: destVendor.display_name,
+                  influencer_document_number: destVendor.document_number,
+                },
+              },
+            })
+            .eq("id", a.campaign_line_id);
+        }
+      }
+    }
+
+    await governanceDb(supabase).from("reassignment_logs").insert({
+      batch_id: batch.id,
+      entity_type: "campaign_influencer",
+      entity_id: a.id,
+      action: "vendor_reassigned",
+      moved_from: { influencer_id: parsed.data.source_influencer_id },
+      moved_to: { influencer_id: parsed.data.destination_influencer_id },
+      reason: parsed.data.reason,
+      affected_records: [a.campaign_line_id, a.campaign_id].filter(Boolean),
+      created_by: auth.userId,
+    });
+  }
+
+  await governanceDb(supabase)
+    .from("movement_batches")
+    .update({ status: "completed", executed_at: new Date().toISOString() })
+    .eq("id", batch.id);
+
+  revalidatePath("/operations/move");
+  revalidatePath("/operations/reassignment");
+  revalidatePath("/vendors");
+  revalidatePath(`/vendors/${parsed.data.source_influencer_id}`);
+  revalidatePath(`/vendors/${parsed.data.destination_influencer_id}`);
+
+  return {
+    ok: true,
+    message: `Reassigned ${assignments.length} assignment(s) to ${destVendor.display_name}.`,
+    batchId: batch.id,
+  };
 }

@@ -145,3 +145,15 @@ export function formatPlatformsSummary(
 
   return [...new Set(labels)].join(", ");
 }
+
+export function formatMoney(amount: number, currency = "USD"): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export function formatPercent(value: number): string {
+  return `${value.toFixed(1)}%`;
+}

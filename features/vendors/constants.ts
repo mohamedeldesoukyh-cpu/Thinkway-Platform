@@ -23,6 +23,7 @@ export const VENDOR_STATUS_OPTIONS: {
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
   { value: "blacklisted", label: "Blacklisted" },
+  { value: "archived", label: "Archived" },
 ];
 
 export const PLATFORM_OPTIONS = SOCIAL_PLATFORM_OPTIONS;

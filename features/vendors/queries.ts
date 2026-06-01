@@ -9,9 +9,20 @@ import type {
 } from "@/types/database";
 
 import { VENDORS_PAGE_SIZE } from "./constants";
+import type {
+  VendorActivityItem,
+  VendorAssignmentRow,
+  VendorDeliverableRow,
+  VendorFinancialSummary,
+  VendorPayoutRow,
+  VendorWorkspace,
+} from "./types";
 
 export type VendorsListResult = {
-  vendors: VendorListItem[];
+  vendors: (VendorListItem & {
+    assignment_count: number;
+    active_campaign_count: number;
+  })[];
   total: number;
   page: number;
   pageSize: number;
@@ -124,9 +135,13 @@ export async function getVendorsList(
     }
 
     const total = count ?? 0;
+    const vendors = await enrichVendorList(
+      supabase,
+      (data ?? []) as VendorListItem[]
+    );
 
     return {
-      vendors: (data ?? []) as VendorListItem[],
+      vendors,
       total,
       page,
       pageSize: VENDORS_PAGE_SIZE,
@@ -174,14 +189,41 @@ export async function getVendorsList(
   }
 
   const total = count ?? 0;
+  const vendors = await enrichVendorList(
+    supabase,
+    (data ?? []) as VendorListItem[]
+  );
 
   return {
-    vendors: (data ?? []) as VendorListItem[],
+    vendors,
     total,
     page,
     pageSize: VENDORS_PAGE_SIZE,
     totalPages: Math.max(1, Math.ceil(total / VENDORS_PAGE_SIZE)),
   };
+}
+
+async function enrichVendorList(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  vendorRows: VendorListItem[]
+) {
+  const influencerIds = vendorRows.map((v) => v.id);
+  const assignmentCounts = new Map<string, number>();
+  if (influencerIds.length > 0) {
+    const { data: assignRows } = await supabase
+      .from("campaign_influencers")
+      .select("influencer_id")
+      .in("influencer_id", influencerIds);
+    for (const row of assignRows ?? []) {
+      const id = (row as { influencer_id: string }).influencer_id;
+      assignmentCounts.set(id, (assignmentCounts.get(id) ?? 0) + 1);
+    }
+  }
+  return vendorRows.map((v) => ({
+    ...v,
+    assignment_count: assignmentCounts.get(v.id) ?? 0,
+    active_campaign_count: assignmentCounts.get(v.id) ?? 0,
+  }));
 }
 
 export async function getVendorById(id: string): Promise<VendorDetail | null> {
@@ -260,5 +302,225 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
     platform_accounts: vendorRow.platform_accounts ?? [],
     campaign_assignments: (assignments ?? []) as VendorCampaignAssignment[],
     documents: documents ?? [],
+  };
+}
+
+function formatMarginPercent(revenue: number, gp: number): number {
+  if (revenue <= 0) return 0;
+  return Math.round((gp / revenue) * 10000) / 100;
+}
+
+export async function getVendorWorkspace(
+  id: string
+): Promise<VendorWorkspace | null> {
+  const base = await getVendorById(id);
+  if (!base) return null;
+
+  const { supabase } = await requireUser();
+
+  const { data: assignmentRows, error: assignError } = await supabase
+    .from("campaign_influencers")
+    .select(
+      `
+      id, campaign_line_id, status, agreed_fee, currency, deliverable_count,
+      vendor_payment_status, vendor_paid_at, invited_at, confirmed_at,
+      campaign:campaign_headers(id, document_number, name, status),
+      line:campaign_lines(
+        id, document_number, name, revenue, cost, profit,
+        billing_status, assignment_status, metadata
+      )
+    `
+    )
+    .eq("influencer_id", id)
+    .order("created_at", { ascending: false });
+
+  if (assignError) throw new Error(assignError.message);
+
+  const assignments: VendorAssignmentRow[] = (assignmentRows ?? []).map((row) => {
+    const r = row as {
+      id: string;
+      campaign_line_id: string | null;
+      status: string;
+      agreed_fee: number;
+      currency: string;
+      deliverable_count: number;
+      vendor_payment_status: string | null;
+      invited_at: string | null;
+      confirmed_at: string | null;
+      campaign: { id: string; document_number: string; name: string; status: string } | null;
+      line: {
+        id: string;
+        document_number: string;
+        name: string;
+        revenue: number;
+        cost: number;
+        profit: number;
+        billing_status: string;
+        assignment_status: string;
+      } | null;
+    };
+    return {
+      id: r.id,
+      campaign_line_id: r.campaign_line_id,
+      line_document_number: r.line?.document_number ?? null,
+      line_name: r.line?.name ?? null,
+      assignment_status: r.line?.assignment_status ?? null,
+      billing_status: r.line?.billing_status ?? null,
+      campaign_id: r.campaign?.id ?? null,
+      campaign_document_number: r.campaign?.document_number ?? null,
+      campaign_name: r.campaign?.name ?? null,
+      campaign_status: r.campaign?.status ?? null,
+      status: r.status,
+      agreed_fee: Number(r.agreed_fee),
+      currency: r.currency,
+      deliverable_count: r.deliverable_count,
+      vendor_payment_status: r.vendor_payment_status,
+      revenue: Number(r.line?.revenue ?? r.agreed_fee),
+      cost: Number(r.line?.cost ?? r.agreed_fee),
+      gp: Number(r.line?.profit ?? 0),
+      invited_at: r.invited_at,
+      confirmed_at: r.confirmed_at,
+    };
+  });
+
+  const { data: deliverableRows } = await supabase
+    .from("deliverables")
+    .select(
+      `
+      id, document_number, title, deliverable_type, status, platform, due_date,
+      campaign:campaign_headers(name)
+    `
+    )
+    .eq("influencer_id", id)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  const deliverables: VendorDeliverableRow[] = (deliverableRows ?? []).map((d) => {
+    const row = d as {
+      id: string;
+      document_number: string;
+      title: string;
+      deliverable_type: string;
+      status: string;
+      platform: string | null;
+      due_date: string | null;
+      campaign: { name: string } | null;
+    };
+    return {
+      id: row.id,
+      document_number: row.document_number,
+      title: row.title,
+      deliverable_type: row.deliverable_type,
+      status: row.status,
+      platform: row.platform,
+      due_date: row.due_date,
+      campaign_name: row.campaign?.name ?? null,
+    };
+  });
+
+  const payouts: VendorPayoutRow[] = assignments.map((a) => ({
+    id: a.id,
+    assignment_id: a.id,
+    campaign_name: a.campaign_name,
+    amount: a.agreed_fee,
+    currency: a.currency,
+    status: a.vendor_payment_status ?? "unpaid",
+    paid_at: null,
+  }));
+
+  const totalRevenue = assignments.reduce((s, a) => s + a.revenue, 0);
+  const totalCost = assignments.reduce((s, a) => s + a.cost, 0);
+  const totalGp = assignments.reduce((s, a) => s + a.gp, 0);
+  const invoicedAmount = assignments
+    .filter((a) => a.billing_status && !["draft", "approved"].includes(a.billing_status))
+    .reduce((s, a) => s + a.revenue, 0);
+  const paidOut = payouts
+    .filter((p) => p.status === "paid")
+    .reduce((s, p) => s + p.amount, 0);
+  const pendingPayout = payouts
+    .filter((p) => p.status !== "paid" && p.status !== "cancelled")
+    .reduce((s, p) => s + p.amount, 0);
+
+  const financials: VendorFinancialSummary = {
+    total_revenue: totalRevenue,
+    total_cost: totalCost,
+    total_gp: totalGp,
+    margin_percent: formatMarginPercent(totalRevenue, totalGp),
+    invoiced_amount: invoicedAmount,
+    paid_out: paidOut,
+    pending_payout: pendingPayout,
+  };
+
+  const campaignIds = new Set(
+    assignments.map((a) => a.campaign_id).filter(Boolean) as string[]
+  );
+
+  const { data: auditRows } = await supabase
+    .from("audit_logs")
+    .select("id, action, entity_type, entity_id, created_at, actor_id, new_data")
+    .or(
+      `and(entity_type.eq.influencers,entity_id.eq.${id}),entity_type.eq.campaign_influencers`
+    )
+    .order("created_at", { ascending: false })
+    .limit(40);
+
+  const influencerAssignIds = new Set(assignments.map((a) => a.id));
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, email");
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  const activity: VendorActivityItem[] = (auditRows ?? [])
+    .filter((log) => {
+      const row = log as { entity_type: string; entity_id: string | null };
+      if (row.entity_type === "influencers" && row.entity_id === id) return true;
+      if (
+        row.entity_type === "campaign_influencers" &&
+        row.entity_id &&
+        influencerAssignIds.has(row.entity_id)
+      ) {
+        return true;
+      }
+      return false;
+    })
+    .map((log) => {
+      const row = log as {
+        id: string;
+        action: string;
+        entity_type: string;
+        created_at: string;
+        actor_id: string | null;
+      };
+      const actor = row.actor_id ? profileMap.get(row.actor_id) : null;
+      return {
+        id: row.id,
+        action: row.action,
+        entity_type: row.entity_type,
+        summary: `${row.action.replace(/_/g, " ")} · ${row.entity_type.replace(/_/g, " ")}`,
+        created_at: row.created_at,
+        actor: actor
+          ? {
+              id: actor.id,
+              full_name: actor.full_name,
+              email: actor.email,
+            }
+          : null,
+      };
+    });
+
+  return {
+    ...base,
+    financials,
+    counts: {
+      assignments: assignments.length,
+      campaigns: campaignIds.size,
+      deliverables: deliverables.length,
+      platforms: base.platform_accounts.length,
+    },
+    assignments,
+    deliverables,
+    payouts,
+    activity,
   };
 }

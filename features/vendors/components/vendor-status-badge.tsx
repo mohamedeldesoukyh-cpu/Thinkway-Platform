@@ -11,6 +11,7 @@ const statusVariant: Record<
   active: "default",
   inactive: "outline",
   blacklisted: "destructive",
+  archived: "ghost",
 };
 
 type VendorStatusBadgeProps = {

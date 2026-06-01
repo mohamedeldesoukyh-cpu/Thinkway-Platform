@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import {
@@ -8,8 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { VendorListItem } from "@/types/database";
-
+import type { VendorsListResult } from "@/features/vendors/queries";
+import {
+  VendorRowActions,
+  VendorStatusCell,
+} from "@/features/vendors/components/vendor-row-actions";
 import {
   formatCategoriesList,
   formatFollowers,
@@ -17,10 +22,9 @@ import {
   formatPricing,
   getTotalFollowers,
 } from "../utils";
-import { VendorStatusBadge } from "./vendor-status-badge";
 
 type VendorsTableProps = {
-  vendors: VendorListItem[];
+  vendors: VendorsListResult["vendors"];
 };
 
 export function VendorsTable({ vendors }: VendorsTableProps) {
@@ -34,10 +38,12 @@ export function VendorsTable({ vendors }: VendorsTableProps) {
             <TableHead>Agency</TableHead>
             <TableHead>Platforms</TableHead>
             <TableHead>Followers</TableHead>
+            <TableHead>Assignments</TableHead>
             <TableHead>Niche</TableHead>
             <TableHead>Pricing</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Country</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -61,14 +67,18 @@ export function VendorsTable({ vendors }: VendorsTableProps) {
               <TableCell>
                 {formatFollowers(getTotalFollowers(vendor.platform_accounts))}
               </TableCell>
+              <TableCell>{vendor.assignment_count}</TableCell>
               <TableCell className="max-w-[140px] truncate">
                 {formatCategoriesList(vendor.categories)}
               </TableCell>
               <TableCell>{formatPricing(vendor.rate_card)}</TableCell>
               <TableCell>
-                <VendorStatusBadge status={vendor.status} />
+                <VendorStatusCell vendor={vendor} />
               </TableCell>
               <TableCell>{vendor.country_code ?? "—"}</TableCell>
+              <TableCell className="text-right">
+                <VendorRowActions vendor={vendor} />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

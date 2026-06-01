@@ -4,6 +4,7 @@ export const movementTypeSchema = z.enum([
   "brand_to_brand",
   "client_to_client",
   "group_to_group",
+  "vendor_to_vendor",
 ]);
 
 export const previewMovementSchema = z.object({
@@ -23,6 +24,20 @@ export const executeMovementSchema = z.object({
   destination_client_id: z.string().uuid(),
   destination_brand_id: z.string().uuid(),
   campaign_ids: z.string().min(1),
+  reason: z.string().trim().min(3).max(2000),
+});
+
+export const previewVendorMovementSchema = z.object({
+  movement_type: z.literal("vendor_to_vendor"),
+  source_influencer_id: z.string().uuid(),
+  assignment_ids: z.string().min(1),
+});
+
+export const executeVendorMovementSchema = z.object({
+  movement_type: z.literal("vendor_to_vendor"),
+  source_influencer_id: z.string().uuid(),
+  destination_influencer_id: z.string().uuid(),
+  assignment_ids: z.string().min(1),
   reason: z.string().trim().min(3).max(2000),
 });
 

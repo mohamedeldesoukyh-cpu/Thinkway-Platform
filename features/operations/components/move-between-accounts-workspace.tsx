@@ -61,6 +61,7 @@ const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   brand_to_brand: "Brand → Brand",
   client_to_client: "Client → Client",
   group_to_group: "Group → Group",
+  vendor_to_vendor: "Vendor → Vendor",
 };
 
 export function MoveBetweenAccountsWorkspace({

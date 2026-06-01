@@ -315,9 +315,82 @@ export async function getInvoiceVersions(invoiceId: string) {
     `
     )
     .eq("invoice_id", invoiceId)
-    .order("version_number", { ascending: false });
-
   if (error) throw new Error(error.message);
 
   return data ?? [];
+}
+
+export async function getVendorsForMovement(): Promise<
+  import("./types").HierarchyOption[]
+> {
+  const { supabase } = await requireUser();
+  const { data, error } = await supabase
+    .from("influencers")
+    .select("id, display_name, document_number")
+    .neq("status", "archived")
+    .order("display_name");
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((v) => ({
+    id: v.id,
+    label: v.display_name,
+    sublabel: v.document_number,
+  }));
+}
+
+export async function getVendorAssignmentsForMovement(
+  influencerId: string
+): Promise<import("./types").VendorMovementAssignmentRow[]> {
+  const { supabase } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("campaign_influencers")
+    .select(
+      `
+      id, campaign_line_id, agreed_fee, currency, vendor_payment_status,
+      campaign:campaign_headers(id, document_number, name),
+      line:campaign_lines(
+        id, document_number, name, revenue, profit, billing_status
+      )
+    `
+    )
+    .eq("influencer_id", influencerId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => {
+    const r = row as {
+      id: string;
+      campaign_line_id: string | null;
+      agreed_fee: number;
+      currency: string;
+      vendor_payment_status: string | null;
+      campaign: { id: string; document_number: string; name: string } | null;
+      line: {
+        id: string;
+        document_number: string;
+        name: string;
+        revenue: number;
+        profit: number;
+        billing_status: string;
+      } | null;
+    };
+    return {
+      id: r.id,
+      campaign_line_id: r.campaign_line_id,
+      campaign_id: r.campaign?.id ?? null,
+      campaign_document_number: r.campaign?.document_number ?? null,
+      campaign_name: r.campaign?.name ?? null,
+      line_document_number: r.line?.document_number ?? null,
+      line_name: r.line?.name ?? null,
+      agreed_fee: Number(r.agreed_fee),
+      currency: r.currency,
+      billing_status: r.line?.billing_status ?? null,
+      vendor_payment_status: r.vendor_payment_status,
+      revenue: Number(r.line?.revenue ?? r.agreed_fee),
+      gp: Number(r.line?.profit ?? 0),
+    };
+  });
 }

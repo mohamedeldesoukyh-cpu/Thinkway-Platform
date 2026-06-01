@@ -8,7 +8,7 @@ export type CampaignStatus =
   | "completed"
   | "cancelled";
 
-export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted";
+export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted" | "archived";
 
 export type AgencyOrDirect = "agency" | "direct" | "hybrid";
 

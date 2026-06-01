@@ -1,4 +1,24 @@
-export type MovementType = "brand_to_brand" | "client_to_client" | "group_to_group";
+export type MovementType =
+  | "brand_to_brand"
+  | "client_to_client"
+  | "group_to_group"
+  | "vendor_to_vendor";
+
+export type VendorMovementAssignmentRow = {
+  id: string;
+  campaign_line_id: string | null;
+  campaign_id: string | null;
+  campaign_document_number: string | null;
+  campaign_name: string | null;
+  line_document_number: string | null;
+  line_name: string | null;
+  agreed_fee: number;
+  currency: string;
+  billing_status: string | null;
+  vendor_payment_status: string | null;
+  revenue: number;
+  gp: number;
+};
 
 export type MovementBatchStatus =
   | "draft"

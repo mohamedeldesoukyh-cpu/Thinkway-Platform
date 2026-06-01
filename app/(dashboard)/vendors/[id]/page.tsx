@@ -1,43 +1,46 @@
 import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { VendorProfile } from "@/features/vendors/components/vendor-profile";
-import { getVendorById } from "@/features/vendors/queries";
+import { VendorWorkspaceView } from "@/features/vendors/components/vendor-workspace";
+import { getVendorWorkspace } from "@/features/vendors/queries";
 
 type VendorProfilePageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 };
 
 export default async function VendorProfilePage({
   params,
+  searchParams,
 }: VendorProfilePageProps) {
   const { id } = await params;
+  const { tab } = await searchParams;
 
-  let vendor;
+  let workspace;
   let errorMessage: string | null = null;
 
   try {
-    vendor = await getVendorById(id);
+    workspace = await getVendorWorkspace(id);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load vendor.";
   }
 
-  if (!vendor && !errorMessage) {
+  if (!workspace && !errorMessage) {
     notFound();
   }
 
   return (
     <DashboardShell
-      title="Vendor profile"
-      description="Creator details, platforms, and campaign assignment history."
+      title="Creator workspace"
+      description="Enterprise creator profile — platforms, assignments, billing, and audit."
     >
       {errorMessage ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
-      ) : vendor ? (
-        <VendorProfile vendor={vendor} />
+      ) : workspace ? (
+        <VendorWorkspaceView workspace={workspace} defaultTab={tab ?? "overview"} />
       ) : null}
     </DashboardShell>
   );

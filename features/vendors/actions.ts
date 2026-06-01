@@ -17,14 +17,18 @@ import type {
 
 import { parseCategoriesInput, parseLanguagesInput } from "./utils";
 import {
+  archiveVendorSchema,
   createVendorSchema,
   platformAccountInputSchema,
   savePlatformAccountsSchema,
   updateVendorFinanceSchema,
   updateVendorLegalSchema,
   updateVendorOverviewSchema,
+  updateVendorStatusSchema,
   uploadInfluencerDocumentSchema,
+  vendorDependencySchema,
 } from "./schemas";
+import { getVendorDependencies } from "@/lib/operations/vendor-dependencies";
 
 export type FormActionState = {
   ok: boolean;
@@ -551,4 +555,107 @@ export async function getInfluencerDocumentDownloadUrlAction(
       error: e instanceof Error ? e.message : "Could not create download link.",
     };
   }
+}
+
+export type VendorDependencyState = FormActionState & {
+  dependencies?: Awaited<ReturnType<typeof getVendorDependencies>>;
+};
+
+export async function getVendorDependenciesAction(
+  _prev: VendorDependencyState,
+  formData: FormData
+): Promise<VendorDependencyState> {
+  const parsed = vendorDependencySchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid request." };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  try {
+    const dependencies = await getVendorDependencies(
+      supabase,
+      parsed.data.vendor_id
+    );
+    return { ok: true, dependencies };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Dependency check failed.",
+    };
+  }
+}
+
+export async function archiveVendorAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const parsed = archiveVendorSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid request." };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const deps = await getVendorDependencies(supabase, parsed.data.vendor_id);
+  if (!deps.can_archive) {
+    return {
+      ok: false,
+      message:
+        "Cannot archive — active campaign assignments exist. Reassign via Operations → Move first.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("influencers")
+    .update({ status: "archived" })
+    .eq("id", parsed.data.vendor_id);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/vendors");
+  revalidatePath(`/vendors/${parsed.data.vendor_id}`);
+  return { ok: true, message: "Vendor archived." };
+}
+
+export async function updateVendorStatusAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const parsed = updateVendorStatusSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid request." };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const { error } = await supabase
+    .from("influencers")
+    .update({ status: parsed.data.status })
+    .eq("id", parsed.data.vendor_id);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath("/vendors");
+  revalidatePath(`/vendors/${parsed.data.vendor_id}`);
+  return { ok: true, message: "Vendor status updated." };
 }

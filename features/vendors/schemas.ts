@@ -5,6 +5,7 @@ const influencerStatusSchema = z.enum([
   "active",
   "inactive",
   "blacklisted",
+  "archived",
 ]);
 
 const currencySchema = z.enum(["USD", "AED", "SAR", "EGP", "EUR"]);
@@ -218,3 +219,16 @@ export const uploadInfluencerDocumentSchema = z.object({
 });
 
 export type CreateVendorInput = z.infer<typeof createVendorSchema>;
+
+export const archiveVendorSchema = z.object({
+  vendor_id: z.string().uuid(),
+});
+
+export const updateVendorStatusSchema = z.object({
+  vendor_id: z.string().uuid(),
+  status: influencerStatusSchema,
+});
+
+export const vendorDependencySchema = z.object({
+  vendor_id: z.string().uuid(),
+});
