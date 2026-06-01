@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   METADATA_PLATFORM_KEY,
 } from "@/features/campaigns/constants";
+import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   buildLineVatPayload,
@@ -465,13 +466,11 @@ export async function createCampaignLineAction(
     cost_vat_exempt: vatPayload.cost_vat_exempt,
   });
 
-  const { data: vendorAssignment, error: vendorError } = await supabase
-    .from("campaign_influencers")
-    .insert({
-      campaign_id: parsed.data.campaign_id,
-      campaign_header_id: parsed.data.campaign_id,
-      campaign_line_id: line.id,
-      influencer_id: influencer.id,
+  const vendorSync = await syncCampaignInfluencerForLine(supabase, {
+    campaignId: parsed.data.campaign_id,
+    lineId: line.id,
+    influencerId: influencer.id,
+    payload: {
       status: "confirmed",
       ...vendorVatPayload,
       currency,
@@ -479,26 +478,30 @@ export async function createCampaignLineAction(
       invited_at: new Date().toISOString(),
       confirmed_at: new Date().toISOString(),
       created_by: user.id,
-    })
-    .select("id")
-    .single();
+    },
+  });
 
-  if (vendorError) {
+  if (vendorSync.error || !vendorSync.id) {
     await supabase.from("campaign_lines").delete().eq("id", line.id);
-    return { ok: false, message: vendorError.message };
+    return {
+      ok: false,
+      message: vendorSync.error ?? "Failed to link vendor assignment.",
+    };
   }
+
+  const vendorAssignmentId = vendorSync.id;
 
   try {
     await syncLineDeliverables(supabase, user.id, {
       campaignId: parsed.data.campaign_id,
       lineId: line.id,
       influencerId: influencer.id,
-      assignmentId: vendorAssignment?.id ?? null,
+      assignmentId: vendorAssignmentId,
       platforms,
       dueDate: parsed.data.end_date ?? parsed.data.start_date,
     });
   } catch (e) {
-    await supabase.from("campaign_influencers").delete().eq("id", vendorAssignment?.id);
+    await supabase.from("campaign_influencers").delete().eq("id", vendorAssignmentId);
     await supabase.from("campaign_lines").delete().eq("id", line.id);
     return {
       ok: false,
@@ -658,58 +661,36 @@ export async function updateCampaignLineAction(
     return { ok: false, message: error.message };
   }
 
-  const { data: vendorRow } = await supabase
-    .from("campaign_influencers")
-    .select("id")
-    .eq("campaign_line_id", parsed.data.line_id)
-    .maybeSingle();
+  let assignmentId: string | null = null;
 
-  if (vendorRow) {
+  if (!existingLineMeta?.vendor_assignment_locked) {
     const vendorVatPayload = buildVendorCostVatPayload({
       cost_before_vat: vatPayload.cost_before_vat,
       cost_vat_percent: vatPayload.cost_vat_percent,
       cost_vat_exempt: vatPayload.cost_vat_exempt,
     });
-    await supabase
-      .from("campaign_influencers")
-      .update({
-        influencer_id: influencer.id,
+
+    const vendorSync = await syncCampaignInfluencerForLine(supabase, {
+      campaignId: parsed.data.campaign_id,
+      lineId: parsed.data.line_id,
+      influencerId: influencer.id,
+      payload: {
+        status: "confirmed",
         ...vendorVatPayload,
         currency: parsed.data.currency_code,
         deliverable_count: deliverableCount,
-      })
-      .eq("id", vendorRow.id);
-  } else if (!existingLineMeta?.vendor_assignment_locked) {
-    const vendorVatPayload = buildVendorCostVatPayload({
-      cost_before_vat: vatPayload.cost_before_vat,
-      cost_vat_percent: vatPayload.cost_vat_percent,
-      cost_vat_exempt: vatPayload.cost_vat_exempt,
+        confirmed_at: new Date().toISOString(),
+      },
     });
-    await supabase.from("campaign_influencers").insert({
-      campaign_id: parsed.data.campaign_id,
-      campaign_header_id: parsed.data.campaign_id,
-      campaign_line_id: parsed.data.line_id,
-      influencer_id: influencer.id,
-      status: "confirmed",
-      ...vendorVatPayload,
-      currency: parsed.data.currency_code,
-      deliverable_count: deliverableCount,
-      confirmed_at: new Date().toISOString(),
-      created_by: user.id,
-    });
-  }
 
-  if (!existingLineMeta?.vendor_assignment_locked) {
-    const assignmentId =
-      vendorRow?.id ??
-      (
-        await supabase
-          .from("campaign_influencers")
-          .select("id")
-          .eq("campaign_line_id", parsed.data.line_id)
-          .maybeSingle()
-      ).data?.id ??
-      null;
+    if (vendorSync.error || !vendorSync.id) {
+      return {
+        ok: false,
+        message: vendorSync.error ?? "Failed to sync vendor assignment.",
+      };
+    }
+
+    assignmentId = vendorSync.id;
 
     await syncLineDeliverables(supabase, user.id, {
       campaignId: parsed.data.campaign_id,
@@ -1021,17 +1002,22 @@ export async function duplicateCampaignAction(
       const oldLineId = vendor.campaign_line_id;
       const newLineId = oldLineId ? lineIdMap.get(oldLineId) ?? null : null;
 
-      await supabase.from("campaign_influencers").insert({
-        campaign_id: newHeader.id,
-        campaign_header_id: newHeader.id,
-        campaign_line_id: newLineId,
-        influencer_id: vendor.influencer_id,
-        status: "invited",
-        agreed_fee: parsed.data.copy_pricing ? vendor.agreed_fee : 0,
-        currency: vendor.currency,
-        deliverable_count: parsed.data.copy_deliverables ? vendor.deliverable_count : 0,
-        invited_at: new Date().toISOString(),
-      });
+      await supabase.from("campaign_influencers").upsert(
+        {
+          campaign_id: newHeader.id,
+          campaign_header_id: newHeader.id,
+          campaign_line_id: newLineId,
+          influencer_id: vendor.influencer_id,
+          status: "invited",
+          agreed_fee: parsed.data.copy_pricing ? vendor.agreed_fee : 0,
+          currency: vendor.currency,
+          deliverable_count: parsed.data.copy_deliverables
+            ? vendor.deliverable_count
+            : 0,
+          invited_at: new Date().toISOString(),
+        },
+        { onConflict: "campaign_header_id,campaign_line_id,influencer_id" }
+      );
     }
   }
 

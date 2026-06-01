@@ -108,6 +108,8 @@ export function CampaignLineSheet({
   const [poDialogOpen, setPoDialogOpen] = useState(false);
   const [overrideApproved, setOverrideApproved] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const submitLockRef = useRef(false);
+  const overrideApprovedRef = useRef(false);
 
   const [createState, createAction, createPending] = useActionState(
     createCampaignLineAction,
@@ -156,6 +158,24 @@ export function CampaignLineSheet({
       setLineTitle(autoTitle);
     }
   }, [autoTitle, titleEdited]);
+
+  useEffect(() => {
+    overrideApprovedRef.current = overrideApproved;
+  }, [overrideApproved]);
+
+  useEffect(() => {
+    if (!isPending) {
+      submitLockRef.current = false;
+    }
+  }, [isPending]);
+
+  useEffect(() => {
+    if (!open) {
+      submitLockRef.current = false;
+      setOverrideApproved(false);
+      overrideApprovedRef.current = false;
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!state.message) return;
@@ -277,14 +297,22 @@ export function CampaignLineSheet({
           action={formAction}
           className="flex flex-1 flex-col gap-5 px-6 pb-6"
           onSubmit={(event) => {
+            if (submitLockRef.current || isPending) {
+              event.preventDefault();
+              return;
+            }
+
             if (
               poSnapshot.is_over_consumed &&
-              !overrideApproved &&
+              !overrideApprovedRef.current &&
               !po.po_override_approved
             ) {
               event.preventDefault();
               setPoDialogOpen(true);
+              return;
             }
+
+            submitLockRef.current = true;
           }}
         >
           <input type="hidden" name="campaign_id" value={campaignId} />
@@ -499,7 +527,11 @@ export function CampaignLineSheet({
           snapshot={poSnapshot}
           onCancel={() => setPoDialogOpen(false)}
           onConfirm={() => {
+            if (submitLockRef.current || isPending) return;
+            overrideApprovedRef.current = true;
             setOverrideApproved(true);
+            setPoDialogOpen(false);
+            submitLockRef.current = true;
             formRef.current?.requestSubmit();
           }}
         />
