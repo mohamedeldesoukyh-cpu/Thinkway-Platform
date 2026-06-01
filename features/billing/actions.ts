@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { FINANCIAL_APPROVAL_CHAIN } from "@/features/billing/constants";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { governanceDb } from "@/lib/supabase/governance-client";
 
 import {
   approveLineForBillingSchema,
@@ -13,8 +14,11 @@ import {
   moveLineToBillingSchema,
   recordCollectionPaymentSchema,
   recordVendorPaymentSchema,
+  regenerateInvoiceSchema,
   requestFinanceOverrideSchema,
+  ungenerateInvoiceSchema,
 } from "./schemas";
+import { requirePermission } from "@/lib/auth/permissions";
 
 export type BillingActionState = {
   ok: boolean;
@@ -568,4 +572,246 @@ export async function closeBillingLineAction(
 
   revalidateBilling({ campaignId: parsed.data.campaign_id });
   return { ok: true, message: "Billing line closed." };
+}
+
+export async function ungenerateInvoiceAction(
+  _prev: BillingActionState,
+  formData: FormData
+): Promise<BillingActionState> {
+  const parsed = ungenerateInvoiceSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return { ok: false, message: "Reason is required (min 3 characters)." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  const auth = await requirePermission(supabase, "finance.regenerate");
+  if ("error" in auth) {
+    return { ok: false, message: auth.error };
+  }
+
+  const { data: invoice, error: invError } = await supabase
+    .from("invoices")
+    .select(
+      "id, document_number, campaign_header_id, client_id, total, subtotal, tax_amount, version_number, regeneration_status"
+    )
+    .eq("id", parsed.data.invoice_id)
+    .maybeSingle();
+
+  if (invError || !invoice) {
+    return { ok: false, message: invError?.message ?? "Invoice not found." };
+  }
+
+  if (invoice.regeneration_status === "pending_regeneration") {
+    return { ok: false, message: "Invoice is already pending regeneration." };
+  }
+
+  const { data: lineItems } = await supabase
+    .from("invoice_line_items")
+    .select("*")
+    .eq("invoice_id", invoice.id)
+    .order("sort_order");
+
+  await governanceDb(supabase).from("invoice_versions").insert({
+    invoice_id: invoice.id,
+    version_number: invoice.version_number ?? 1,
+    snapshot: invoice as Record<string, unknown>,
+    line_items_snapshot: lineItems ?? [],
+    total: Number(invoice.total ?? 0),
+    subtotal: Number(invoice.subtotal ?? 0),
+    tax_amount: Number(invoice.tax_amount ?? 0),
+    regeneration_reason: parsed.data.reason,
+    regenerated_by: auth.userId,
+  });
+
+  const { data: linkedLines } = await supabase
+    .from("campaign_lines")
+    .select("id")
+    .eq("invoice_id", invoice.id);
+
+  const lineIds = (linkedLines ?? []).map((l) => (l as { id: string }).id);
+
+  if (lineIds.length > 0) {
+    const overrideUntil = new Date(Date.now() + 72 * 3600000).toISOString();
+    const { error: unlockError } = await supabase
+      .from("campaign_lines")
+      .update({
+        revenue_locked: false,
+        cost_locked: false,
+        vendor_assignment_locked: false,
+        finance_override_until: overrideUntil,
+        billing_status: "moved_to_billing",
+      })
+      .in("id", lineIds);
+
+    if (unlockError) {
+      return { ok: false, message: unlockError.message };
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("invoices")
+    .update({
+      regeneration_status: "pending_regeneration",
+      ungenerated_at: new Date().toISOString(),
+      ungenerated_by: auth.userId,
+      ungenerate_reason: parsed.data.reason,
+    })
+    .eq("id", invoice.id);
+
+  if (updateError) {
+    return { ok: false, message: updateError.message };
+  }
+
+  await governanceDb(supabase).from("finance_override_logs").insert({
+    entity_type: "invoice",
+    entity_id: invoice.id,
+    override_type: "ungenerate",
+    reason: parsed.data.reason,
+    granted_by: auth.userId,
+    granted_until: new Date(Date.now() + 72 * 3600000).toISOString(),
+  });
+
+  revalidateBilling({
+    invoiceId: invoice.id,
+    campaignId: invoice.campaign_header_id ?? undefined,
+  });
+
+  return {
+    ok: true,
+    message: `Invoice ${invoice.document_number} un-generated. Same number reserved — status: Pending Regeneration.`,
+  };
+}
+
+export async function regenerateInvoiceAction(
+  _prev: BillingActionState,
+  formData: FormData
+): Promise<BillingActionState> {
+  const parsed = regenerateInvoiceSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return { ok: false, message: "Reason is required (min 3 characters)." };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const auth = await requirePermission(supabase, "finance.regenerate");
+  if ("error" in auth) {
+    return { ok: false, message: auth.error };
+  }
+
+  const { data: invoice, error: invError } = await supabase
+    .from("invoices")
+    .select(
+      "id, document_number, campaign_header_id, version_number, regeneration_status"
+    )
+    .eq("id", parsed.data.invoice_id)
+    .maybeSingle();
+
+  if (invError || !invoice) {
+    return { ok: false, message: invError?.message ?? "Invoice not found." };
+  }
+
+  if (invoice.regeneration_status !== "pending_regeneration") {
+    return {
+      ok: false,
+      message: "Only invoices pending regeneration can be regenerated.",
+    };
+  }
+
+  const { data: linkedLines, error: linesError } = await supabase
+    .from("campaign_lines")
+    .select("id, document_number, name, revenue")
+    .eq("invoice_id", invoice.id);
+
+  if (linesError) {
+    return { ok: false, message: linesError.message };
+  }
+
+  const lines = linkedLines ?? [];
+  const subtotal = lines.reduce((s, l) => s + Number(l.revenue), 0);
+  const taxAmount = 0;
+  const total = subtotal + taxAmount;
+  const newVersion = (invoice.version_number ?? 1) + 1;
+
+  await supabase.from("invoice_line_items").delete().eq("invoice_id", invoice.id);
+
+  let sortOrder = 0;
+  for (const line of lines) {
+    sortOrder += 1;
+    const l = line as { id: string; document_number: string; name: string; revenue: number };
+    await supabase.from("invoice_line_items").insert({
+      invoice_id: invoice.id,
+      campaign_line_id: l.id,
+      campaign_header_id: invoice.campaign_header_id,
+      campaign_id: invoice.campaign_header_id,
+      sort_order: sortOrder,
+      description: `${l.document_number} — ${l.name}`,
+      quantity: 1,
+      unit_price: Number(l.revenue),
+    });
+  }
+
+  const { error: invoiceUpdateError } = await supabase
+    .from("invoices")
+    .update({
+      subtotal,
+      tax_amount: taxAmount,
+      total,
+      version_number: newVersion,
+      regeneration_status: "regenerated",
+      status: "sent",
+    })
+    .eq("id", invoice.id);
+
+  if (invoiceUpdateError) {
+    return { ok: false, message: invoiceUpdateError.message };
+  }
+
+  const lineIds = lines.map((l) => (l as { id: string }).id);
+  if (lineIds.length > 0) {
+    const now = new Date().toISOString();
+    await supabase
+      .from("campaign_lines")
+      .update({
+        billing_status: "invoiced",
+        revenue_locked: true,
+        cost_locked: true,
+        vendor_assignment_locked: true,
+        finance_override_until: null,
+        billing_invoiced_at: now,
+      })
+      .in("id", lineIds);
+  }
+
+  await governanceDb(supabase).from("invoice_versions").insert({
+    invoice_id: invoice.id,
+    version_number: newVersion,
+    snapshot: { total, subtotal, tax_amount: taxAmount },
+    line_items_snapshot: lines,
+    total,
+    subtotal,
+    tax_amount: taxAmount,
+    regeneration_reason: parsed.data.reason,
+    regenerated_by: auth.userId,
+  });
+
+  revalidateBilling({
+    invoiceId: invoice.id,
+    campaignId: invoice.campaign_header_id ?? undefined,
+  });
+
+  return {
+    ok: true,
+    message: `Invoice ${invoice.document_number} regenerated (v${newVersion}). Same invoice number preserved.`,
+  };
 }

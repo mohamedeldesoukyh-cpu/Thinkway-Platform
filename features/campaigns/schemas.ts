@@ -153,3 +153,33 @@ export const updateDeliverableStatusSchema = z.object({
 });
 
 export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;
+
+export const duplicateCampaignSchema = z.object({
+  source_campaign_id: z.string().uuid(),
+  name: z.string().trim().min(1).max(200),
+  start_date: z.string().trim().min(1),
+  end_date: optionalDate,
+  live_date: optionalDate,
+  budget_month: z.string().trim().max(20).optional().or(z.literal("")),
+  po_number: z.string().trim().max(120).optional().or(z.literal("")),
+  copy_influencers: z
+    .string()
+    .optional()
+    .transform((v) => v === "on" || v === "true"),
+  copy_deliverables: z
+    .string()
+    .optional()
+    .transform((v) => v === "on" || v === "true"),
+  copy_pricing: z
+    .string()
+    .optional()
+    .transform((v) => v !== "off" && v !== "false"),
+  copy_notes: z
+    .string()
+    .optional()
+    .transform((v) => v !== "off" && v !== "false"),
+  copy_workflow: z
+    .string()
+    .optional()
+    .transform((v) => v !== "off" && v !== "false"),
+});

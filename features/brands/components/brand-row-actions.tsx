@@ -113,6 +113,12 @@ export function BrandRowActions({ brand, onEdit, onArchive }: BrandRowActionsPro
             ? "Archive blocked (campaigns)"
             : "Archive brand"}
         </DropdownMenuItem>
+        {isArchived ? (
+          <DropdownMenuItem onClick={onEdit}>
+            <PowerIcon className="size-4" />
+            Restore via edit
+          </DropdownMenuItem>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

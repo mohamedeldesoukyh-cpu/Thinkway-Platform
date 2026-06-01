@@ -88,6 +88,9 @@ export type InvoiceWorkspace = {
   document_number: string;
   status: string;
   collection_status: CollectionStatus;
+  regeneration_status: "active" | "pending_regeneration" | "regenerated";
+  version_number: number;
+  ungenerate_reason: string | null;
   issue_date: string;
   due_date: string | null;
   subtotal: number;

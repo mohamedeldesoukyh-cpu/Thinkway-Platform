@@ -1,12 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowLeftIcon,
+  CopyIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
+import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
 import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/campaign-deliverables-tab";
 import { CampaignLinesTab } from "@/features/campaigns/components/tabs/campaign-lines-tab";
@@ -30,6 +43,8 @@ export function CampaignWorkspaceView({
   teams,
   billingLines,
 }: CampaignWorkspaceViewProps) {
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -39,11 +54,31 @@ export function CampaignWorkspaceView({
             Back to campaigns
           </Link>
         </Button>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="font-heading text-2xl font-semibold tracking-tight">
-            {workspace.name}
-          </h2>
-          <CampaignStatusBadge status={workspace.status} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="font-heading text-2xl font-semibold tracking-tight">
+              {workspace.name}
+            </h2>
+            <CampaignStatusBadge status={workspace.status} />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontalIcon className="size-4" />
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                <CopyIcon className="size-4" />
+                Duplicate campaign
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <PencilIcon className="size-4" />
+                Edit header (Overview tab)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <p className="font-mono text-sm text-muted-foreground">
           {workspace.document_number}
@@ -93,6 +128,12 @@ export function CampaignWorkspaceView({
           <CampaignTimelineTab workspace={workspace} />
         </TabsContent>
       </Tabs>
+
+      <DuplicateCampaignDialog
+        workspace={workspace}
+        open={duplicateOpen}
+        onOpenChange={setDuplicateOpen}
+      />
     </div>
   );
 }

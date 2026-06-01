@@ -326,6 +326,9 @@ export async function getInvoiceWorkspace(
     document_number: string;
     status: string;
     collection_status: InvoiceWorkspace["collection_status"];
+    regeneration_status: InvoiceWorkspace["regeneration_status"];
+    version_number: number;
+    ungenerate_reason: string | null;
     issue_date: string;
     due_date: string | null;
     subtotal: number;
@@ -389,6 +392,9 @@ export async function getInvoiceWorkspace(
     document_number: inv.document_number,
     status: inv.status,
     collection_status: inv.collection_status,
+    regeneration_status: inv.regeneration_status ?? "active",
+    version_number: inv.version_number ?? 1,
+    ungenerate_reason: inv.ungenerate_reason,
     issue_date: inv.issue_date,
     due_date: inv.due_date,
     subtotal: Number(inv.subtotal),

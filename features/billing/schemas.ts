@@ -76,4 +76,14 @@ export const closeBillingLineSchema = z.object({
   campaign_id: z.string().uuid(),
 });
 
+export const ungenerateInvoiceSchema = z.object({
+  invoice_id: z.string().uuid(),
+  reason: z.string().trim().min(3).max(2000),
+});
+
+export const regenerateInvoiceSchema = z.object({
+  invoice_id: z.string().uuid(),
+  reason: z.string().trim().min(3).max(2000),
+});
+
 export { billingStatusSchema };

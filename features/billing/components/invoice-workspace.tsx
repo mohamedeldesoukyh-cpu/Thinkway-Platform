@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CollectionStatusBadge,
 } from "@/features/billing/components/billing-status-badge";
+import { InvoiceRegenerationPanel } from "@/features/billing/components/invoice-regeneration-panel";
 import {
   recordCollectionPaymentAction,
   type BillingActionState,
@@ -77,6 +78,8 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
           {invoice.campaign ? ` · ${invoice.campaign.name}` : null}
         </p>
       </div>
+
+      <InvoiceRegenerationPanel invoice={invoice} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard label="Total" value={formatBillingMoney(invoice.total, invoice.currency)} />

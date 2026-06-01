@@ -13,6 +13,7 @@ import {
   createCampaignLineSchema,
   createCampaignSchema,
   createDeliverableSchema,
+  duplicateCampaignSchema,
   updateCampaignHeaderSchema,
   updateCampaignLineSchema,
   updateCampaignVendorSchema,
@@ -560,4 +561,221 @@ export async function searchInfluencersAction(
       error: e instanceof Error ? e.message : "Search failed.",
     };
   }
+}
+
+export async function duplicateCampaignAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const parsed = duplicateCampaignSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Please fix the errors below.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  const sourceId = parsed.data.source_campaign_id;
+
+  type SourceHeader = {
+    id: string;
+    brand_id: string;
+    client_id: string;
+    group_id: string;
+    description: string | null;
+    brief: string | null;
+    currency_code: string;
+    category_id: string | null;
+    subcategory_id: string | null;
+    agency_or_direct: AgencyOrDirect | null;
+    vr_rate_id: string | null;
+    team_id: string | null;
+    report_type_id: string | null;
+    account_manager_id: string | null;
+    objectives: string | null;
+    metadata: Record<string, unknown>;
+  };
+
+  type SourceLine = {
+    id: string;
+    name: string;
+    platform: string | null;
+    po_amount: number;
+    revenue: number;
+    cost: number;
+    currency_code: string;
+    base_currency: string;
+    fx_rate: number;
+    metadata: Record<string, unknown>;
+  };
+
+  type SourceVendor = {
+    campaign_line_id: string | null;
+    influencer_id: string;
+    agreed_fee: number;
+    currency: string;
+    deliverable_count: number;
+  };
+
+  type SourceDeliverable = {
+    influencer_id: string;
+    deliverable_type: string;
+    title: string;
+    platform: string | null;
+  };
+
+  const { data: source, error: sourceError } = await supabase
+    .from("campaign_headers")
+    .select("*")
+    .eq("id", sourceId)
+    .maybeSingle();
+
+  if (sourceError || !source) {
+    return { ok: false, message: sourceError?.message ?? "Source campaign not found." };
+  }
+
+  const src = source as unknown as SourceHeader;
+  const metadata = {
+    ...(src.metadata ?? {}),
+    ...(parsed.data.budget_month
+      ? { budget_month: parsed.data.budget_month }
+      : {}),
+    ...(parsed.data.po_number ? { po_number: parsed.data.po_number } : {}),
+    duplicated_from: sourceId,
+  };
+
+  const { data: newHeader, error: headerError } = await supabase
+    .from("campaign_headers")
+    .insert({
+      name: parsed.data.name,
+      description: parsed.data.copy_notes ? src.description : null,
+      brief: parsed.data.copy_notes ? src.brief : null,
+      brand_id: src.brand_id,
+      client_id: src.client_id,
+      group_id: src.group_id,
+      status: "draft",
+      currency_code: src.currency_code,
+      category_id: src.category_id,
+      subcategory_id: src.subcategory_id,
+      agency_or_direct: src.agency_or_direct,
+      vr_rate_id: src.vr_rate_id,
+      team_id: parsed.data.copy_workflow ? src.team_id : null,
+      report_type_id: parsed.data.copy_workflow ? src.report_type_id : null,
+      start_date: parsed.data.live_date ?? parsed.data.start_date,
+      end_date: parsed.data.end_date,
+      account_manager_id: parsed.data.copy_workflow ? src.account_manager_id : null,
+      objectives: parsed.data.copy_notes ? src.objectives : null,
+      metadata,
+      created_by: user.id,
+    })
+    .select("id, document_number")
+    .single();
+
+  if (headerError || !newHeader) {
+    return { ok: false, message: headerError?.message ?? "Failed to create campaign." };
+  }
+
+  const { data: sourceLines, error: linesError } = await supabase
+    .from("campaign_lines")
+    .select("*")
+    .eq("campaign_header_id", sourceId)
+    .order("document_number");
+
+  if (linesError) {
+    await supabase.from("campaign_headers").delete().eq("id", newHeader.id);
+    return { ok: false, message: linesError.message };
+  }
+
+  const lineIdMap = new Map<string, string>();
+
+  for (const line of (sourceLines ?? []) as SourceLine[]) {
+    const { data: newLine, error: lineError } = await supabase
+      .from("campaign_lines")
+      .insert({
+        campaign_header_id: newHeader.id,
+        name: line.name,
+        status: "draft",
+        platform: line.platform,
+        po_amount: parsed.data.copy_pricing ? line.po_amount : 0,
+        revenue: parsed.data.copy_pricing ? line.revenue : 0,
+        cost: parsed.data.copy_pricing ? line.cost : 0,
+        currency_code: line.currency_code,
+        base_currency: line.base_currency,
+        fx_rate: line.fx_rate,
+        start_date: parsed.data.start_date,
+        end_date: parsed.data.end_date,
+        metadata: line.metadata,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+
+    if (lineError || !newLine) {
+      await supabase.from("campaign_headers").delete().eq("id", newHeader.id);
+      return { ok: false, message: lineError?.message ?? "Failed to copy line." };
+    }
+
+    lineIdMap.set(line.id, newLine.id);
+  }
+
+  if (parsed.data.copy_influencers) {
+    const { data: vendors } = await supabase
+      .from("campaign_influencers")
+      .select("*")
+      .or(`campaign_header_id.eq.${sourceId},campaign_id.eq.${sourceId}`);
+
+    for (const vendor of (vendors ?? []) as SourceVendor[]) {
+      const oldLineId = vendor.campaign_line_id;
+      const newLineId = oldLineId ? lineIdMap.get(oldLineId) ?? null : null;
+
+      await supabase.from("campaign_influencers").insert({
+        campaign_id: newHeader.id,
+        campaign_header_id: newHeader.id,
+        campaign_line_id: newLineId,
+        influencer_id: vendor.influencer_id,
+        status: "invited",
+        agreed_fee: parsed.data.copy_pricing ? vendor.agreed_fee : 0,
+        currency: vendor.currency,
+        deliverable_count: parsed.data.copy_deliverables ? vendor.deliverable_count : 0,
+        invited_at: new Date().toISOString(),
+      });
+    }
+  }
+
+  if (parsed.data.copy_deliverables) {
+    const { data: deliverables } = await supabase
+      .from("deliverables")
+      .select("*")
+      .eq("campaign_id", sourceId);
+
+    for (const del of (deliverables ?? []) as SourceDeliverable[]) {
+      await supabase.from("deliverables").insert({
+        document_number: `DEL-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        campaign_id: newHeader.id,
+        influencer_id: del.influencer_id,
+        deliverable_type: del.deliverable_type,
+        title: del.title,
+        platform: del.platform,
+        due_date: parsed.data.start_date,
+        status: "pending",
+        created_by: user.id,
+      });
+    }
+  }
+
+  revalidateCampaign(newHeader.id, src.client_id);
+
+  return {
+    ok: true,
+    message: `Campaign duplicated as ${newHeader.document_number}.`,
+    campaignId: newHeader.id,
+  };
 }

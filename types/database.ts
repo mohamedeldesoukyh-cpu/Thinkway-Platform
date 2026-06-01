@@ -472,6 +472,8 @@ export type Database = {
           start_date?: string | null;
           end_date?: string | null;
           account_manager_id?: string | null;
+          report_type_id?: string | null;
+          objectives?: unknown;
           metadata?: Record<string, unknown>;
           created_by?: string | null;
         };
@@ -648,6 +650,11 @@ export type Database = {
           tax_amount?: number;
           notes?: string | null;
           created_by?: string | null;
+          regeneration_status?: string;
+          version_number?: number;
+          ungenerated_at?: string | null;
+          ungenerated_by?: string | null;
+          ungenerate_reason?: string | null;
         };
         Insert: {
           document_number?: string;
@@ -663,8 +670,19 @@ export type Database = {
           currency?: string;
           notes?: string | null;
           created_by?: string | null;
+          regeneration_status?: string;
+          version_number?: number;
+          ungenerated_at?: string | null;
+          ungenerated_by?: string | null;
+          ungenerate_reason?: string | null;
         };
-        Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]> & {
+          subtotal?: number;
+          tax_amount?: number;
+          total?: number;
+          version_number?: number;
+          regeneration_status?: string;
+        };
         Relationships: [];
       };
       financial_approval_requests: {
