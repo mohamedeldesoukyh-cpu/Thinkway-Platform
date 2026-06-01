@@ -26,6 +26,7 @@ import {
   formatPercent,
   formatPlatformLabel,
 } from "@/features/campaigns/utils";
+import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 
 type CampaignLinesTabProps = {
   workspace: CampaignWorkspace;
@@ -48,6 +49,15 @@ export function CampaignLinesTab({ workspace, po, currencyOptions }: CampaignLin
     setSheetOpen(true);
   }
 
+  useRegisterShortcut({
+    id: "campaign-add-assignment",
+    keys: "a",
+    label: "Add assignment",
+    group: "Campaign",
+    global: true,
+    handler: () => openCreate(),
+  });
+
   return (
     <>
       <Card>
@@ -59,7 +69,7 @@ export function CampaignLinesTab({ workspace, po, currencyOptions }: CampaignLin
               billing, and creator payout on one assignment line.
             </p>
           </div>
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" onClick={openCreate} title="Assign influencer (A)">
             <PlusIcon data-icon="inline-start" />
             Assign influencer
           </Button>

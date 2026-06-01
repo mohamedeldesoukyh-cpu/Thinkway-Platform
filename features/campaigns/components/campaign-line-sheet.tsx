@@ -30,6 +30,8 @@ import {
   updateCampaignLineAction,
   type FormActionState,
 } from "@/features/campaigns/actions";
+import { AssignmentStickyFooter } from "@/features/campaigns/components/assignment-sticky-footer";
+import { DeliverablePricingEditor } from "@/features/campaigns/components/deliverable-pricing-editor";
 import {
   buildInitialSelections,
   PlatformAccountSelector,
@@ -42,10 +44,18 @@ import {
   buildLineTitle,
   countLineDeliverables,
   suggestCostFromRateCard,
+  type AssignmentPricingMode,
 } from "@/features/campaigns/line-assignment";
 import { CampaignLinePoPanel } from "@/features/campaigns/components/campaign-line-po-panel";
 import { PoGovernanceDialog } from "@/features/campaigns/components/po-governance-dialog";
 import { calculatePoConsumption } from "@/lib/finance/po/calculations";
+import {
+  commercialRowsToPlatformSelections,
+  createEmptyCommercialRow,
+  summarizeCommercialRows,
+  type CommercialDeliverableRow,
+} from "@/lib/assignments/commercial-calculations";
+import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 import { computeOperationalGp } from "@/lib/vat/calculations";
 
 import type {
@@ -107,6 +117,12 @@ export function CampaignLineSheet({
   const [endDate, setEndDate] = useState(line?.end_date ?? "");
   const [poDialogOpen, setPoDialogOpen] = useState(false);
   const [overrideApproved, setOverrideApproved] = useState(false);
+  const [pricingMode, setPricingMode] = useState<AssignmentPricingMode>(
+    line?.assignment?.pricing_mode ?? "package"
+  );
+  const [commercialRows, setCommercialRows] = useState<CommercialDeliverableRow[]>(
+    line?.assignment?.commercial_rows ?? []
+  );
   const formRef = useRef<HTMLFormElement>(null);
   const submitLockRef = useRef(false);
   const overrideApprovedRef = useRef(false);
@@ -135,14 +151,37 @@ export function CampaignLineSheet({
     [selections]
   );
 
-  const assignmentJson = useMemo(
-    () =>
-      JSON.stringify({
-        platforms: activeSelections.map(
-          ({ selected: _s, ...rest }) => rest
-        ),
-      }),
-    [activeSelections]
+  const commercialSummary = useMemo(
+    () => summarizeCommercialRows(commercialRows),
+    [commercialRows]
+  );
+
+  const assignmentJson = useMemo(() => {
+    if (pricingMode === "per_deliverable" && commercialRows.length > 0 && profile) {
+      const accountLookup = new Map(
+        profile.platforms.map((p) => [
+          p.platform,
+          {
+            account_id: p.id,
+            handle: p.handle,
+            profile_url: p.profile_url,
+            follower_count: p.follower_count,
+            engagement_rate: p.engagement_rate,
+            audience_country: p.audience_country,
+          },
+        ])
+      );
+      const platforms = commercialRowsToPlatformSelections(commercialRows, accountLookup);
+      return JSON.stringify({ platforms });
+    }
+    return JSON.stringify({
+      platforms: activeSelections.map(({ selected: _s, ...rest }) => rest),
+    });
+  }, [pricingMode, commercialRows, profile, activeSelections]);
+
+  const commercialJson = useMemo(
+    () => JSON.stringify(commercialRows),
+    [commercialRows]
   );
 
   const autoTitle = useMemo(() => {
@@ -158,6 +197,62 @@ export function CampaignLineSheet({
       setLineTitle(autoTitle);
     }
   }, [autoTitle, titleEdited]);
+
+  useEffect(() => {
+    if (pricingMode !== "per_deliverable") return;
+    setRevenue(commercialSummary.total_revenue_before_vat);
+    setCost(commercialSummary.total_cost_before_vat);
+  }, [pricingMode, commercialSummary.total_revenue_before_vat, commercialSummary.total_cost_before_vat]);
+
+  useRegisterShortcut(
+    open
+      ? {
+          id: "assignment-add-row",
+          keys: "alt+n",
+          label: "Add deliverable row",
+          group: "Assignment",
+          handler: () =>
+            setCommercialRows((rows) => [...rows, createEmptyCommercialRow()]),
+        }
+      : null
+  );
+
+  useRegisterShortcut(
+    open
+      ? {
+          id: "assignment-pricing-mode",
+          keys: "alt+m",
+          label: "Switch pricing mode",
+          group: "Assignment",
+          handler: () =>
+            setPricingMode((m) => (m === "package" ? "per_deliverable" : "package")),
+        }
+      : null
+  );
+
+  useRegisterShortcut(
+    open
+      ? {
+          id: "assignment-toggle-vat",
+          keys: "alt+v",
+          label: "Toggle revenue VAT exempt",
+          group: "Assignment",
+          handler: () => setRevenueVatExempt((v) => !v),
+        }
+      : null
+  );
+
+  useRegisterShortcut(
+    open
+      ? {
+          id: "assignment-submit",
+          keys: "ctrl+enter",
+          label: "Save assignment",
+          group: "Assignment",
+          handler: () => formRef.current?.requestSubmit(),
+        }
+      : null
+  );
 
   useEffect(() => {
     overrideApprovedRef.current = overrideApproved;
@@ -236,6 +331,8 @@ export function CampaignLineSheet({
     setPoAmount(line?.po_amount ?? 0);
     setStartDate(line?.start_date ?? "");
     setEndDate(line?.end_date ?? "");
+    setPricingMode(line?.assignment?.pricing_mode ?? "package");
+    setCommercialRows(line?.assignment?.commercial_rows ?? []);
     setProfile(null);
     setSelections([]);
 
@@ -276,9 +373,31 @@ export function CampaignLineSheet({
 
   const canSubmit =
     Boolean(influencerId) &&
-    activeSelections.length > 0 &&
+    (pricingMode === "per_deliverable"
+      ? commercialRows.length > 0
+      : activeSelections.length > 0) &&
     !loadingProfile &&
     lineTitle.trim().length > 0;
+
+  const revenueVatAmount = revenueVatExempt
+    ? 0
+    : Math.round(revenue * revenueVatPercent) / 100;
+  const costVatAmount = costVatExempt
+    ? 0
+    : Math.round(cost * costVatPercent) / 100;
+
+  const footerSummary = useMemo(() => {
+    if (pricingMode === "per_deliverable") {
+      return commercialSummary;
+    }
+    return {
+      total_cost_before_vat: cost,
+      total_revenue_before_vat: revenue,
+      gp: gpPreview.gp,
+      margin_percent: gpPreview.marginPercent,
+      deliverable_units: countLineDeliverables(activeSelections),
+    };
+  }, [pricingMode, commercialSummary, cost, revenue, gpPreview, activeSelections]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -295,7 +414,8 @@ export function CampaignLineSheet({
         <form
           ref={formRef}
           action={formAction}
-          className="flex flex-1 flex-col gap-5 px-6 pb-6"
+          data-shortcut-save
+          className="flex flex-1 flex-col gap-5 px-6 pb-24"
           onSubmit={(event) => {
             if (submitLockRef.current || isPending) {
               event.preventDefault();
@@ -329,6 +449,8 @@ export function CampaignLineSheet({
           />
           <input type="hidden" name="start_date" value={startDate} />
           <input type="hidden" name="end_date" value={endDate} />
+          <input type="hidden" name="pricing_mode" value={pricingMode} />
+          <input type="hidden" name="commercial_json" value={commercialJson} />
 
           <InfluencerTypeahead
             value={influencerId}
@@ -338,13 +460,58 @@ export function CampaignLineSheet({
           />
           <FieldError messages={state.fieldErrors?.influencer_id} />
 
+          {profile ? (
+            <div className="rounded-2xl border bg-muted/20 p-3 text-sm">
+              <p className="font-medium">{profile.display_name}</p>
+              <p className="text-xs text-muted-foreground">
+                {profile.country_code ?? "—"}
+                {profile.vat_registered ? " · VAT registered" : " · Non-VAT creator"}
+                {profile.notes ? ` · ${profile.notes}` : ""}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {profile.platforms.map((p) => (
+                  <Badge key={p.id} variant="secondary" className="text-[10px]">
+                    {p.platform} · {p.follower_count?.toLocaleString() ?? "—"} followers
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid gap-2">
+            <Label>Pricing structure</Label>
+            <Select
+              value={pricingMode}
+              onValueChange={(v) => setPricingMode(v as AssignmentPricingMode)}
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="package">Package pricing</SelectItem>
+                <SelectItem value="per_deliverable">Per deliverable pricing</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Alt+M to switch mode · Package = single creator cost · Per deliverable = row-level commercial planning
+            </p>
+          </div>
+
           {loadingProfile ? (
             <p className="text-sm text-muted-foreground">Loading creator profile…</p>
-          ) : profile ? (
+          ) : profile && pricingMode === "package" ? (
             <PlatformAccountSelector
               profile={profile}
               selections={selections}
               onChange={setSelections}
+              disabled={isPending || Boolean(line?.vendor_assignment_locked)}
+            />
+          ) : profile && pricingMode === "per_deliverable" ? (
+            <DeliverablePricingEditor
+              rows={commercialRows}
+              onChange={setCommercialRows}
+              currency={currency}
               disabled={isPending || Boolean(line?.vendor_assignment_locked)}
             />
           ) : null}
@@ -517,6 +684,14 @@ export function CampaignLineSheet({
                   : "Create assignment"}
             </Button>
           </SheetFooter>
+
+          <AssignmentStickyFooter
+            currency={currency}
+            summary={footerSummary}
+            revenueVatAmount={revenueVatAmount}
+            costVatAmount={costVatAmount}
+            poExceeded={poSnapshot.is_over_consumed}
+          />
         </form>
         <PoGovernanceDialog
           open={poDialogOpen}

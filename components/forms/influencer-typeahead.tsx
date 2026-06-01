@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2Icon, SearchIcon, UserIcon } from "lucide-react";
+import { LayoutGridIcon, Loader2Icon, SearchIcon, UserIcon } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CreatorBrowserDialog } from "@/features/campaigns/components/creator-browser-dialog";
 import { cn } from "@/lib/utils";
 import type { InfluencerSearchResult } from "@/features/campaigns/types";
 
@@ -46,6 +48,7 @@ export function InfluencerTypeahead({
   const [results, setResults] = useState<InfluencerSearchResult[]>([]);
   const [recent, setRecent] = useState<InfluencerSearchResult[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [browserOpen, setBrowserOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -132,26 +135,43 @@ export function InfluencerTypeahead({
           </div>
         </div>
       ) : null}
-      <div className="relative">
-        <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          id="influencer_search"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={onKeyDown}
-          placeholder="Type to search creators… e.g. mo"
+      <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
+          <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="influencer_search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={onKeyDown}
+            placeholder="Type to search creators… e.g. mo"
+            disabled={disabled}
+            className="pl-9"
+            autoComplete="off"
+          />
+          {loading ? (
+            <Loader2Icon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0"
+          onClick={() => setBrowserOpen(true)}
           disabled={disabled}
-          className="pl-9"
-          autoComplete="off"
-        />
-        {loading ? (
-          <Loader2Icon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-        ) : null}
+        >
+          <LayoutGridIcon data-icon="inline-start" />
+          Browse
+        </Button>
       </div>
+      <CreatorBrowserDialog
+        open={browserOpen}
+        onOpenChange={setBrowserOpen}
+        onSelect={pick}
+      />
       {open && displayList.length > 0 ? (
         <ul
           className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-2xl border border-border bg-popover p-1 shadow-md"

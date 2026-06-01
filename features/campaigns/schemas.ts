@@ -141,6 +141,8 @@ export const createCampaignLineSchema = z.object({
   currency_code: currencyCodeSchema.default("USD"),
   start_date: optionalDate,
   end_date: optionalDate,
+  pricing_mode: z.enum(["package", "per_deliverable"]).default("package"),
+  commercial_json: z.string().optional().or(z.literal("")),
 });
 
 export const updateCampaignLineSchema = createCampaignLineSchema.extend({

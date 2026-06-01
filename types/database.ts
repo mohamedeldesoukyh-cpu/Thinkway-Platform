@@ -114,6 +114,8 @@ export type PoStatus =
   | "expired"
   | "closed";
 
+export type AssignmentPricingMode = "package" | "per_deliverable";
+
 export type CampaignHeaderRow = {
   id: string;
   document_number: string;
@@ -199,6 +201,7 @@ export type CampaignLineRow = {
   profit_base: number;
   start_date: string | null;
   end_date: string | null;
+  pricing_mode: AssignmentPricingMode;
   metadata: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
@@ -573,6 +576,7 @@ export type Database = {
           fx_rate?: number;
           start_date?: string | null;
           end_date?: string | null;
+          pricing_mode?: AssignmentPricingMode;
           metadata?: Record<string, unknown>;
           created_by?: string | null;
         };
@@ -732,6 +736,90 @@ export type Database = {
           changed_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["fx_rate_audit_logs"]["Insert"]>;
+        Relationships: [];
+      };
+      assignment_deliverables: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          campaign_line_id: string;
+          sort_order: number;
+          platform: string;
+          deliverable_type: string;
+          quantity: number;
+          unit_cost: number;
+          total_cost: number;
+          revenue_before_vat: number;
+          revenue_vat_percent: number;
+          revenue_vat_amount: number;
+          revenue_after_vat: number;
+          cost_before_vat: number;
+          cost_vat_percent: number;
+          cost_vat_amount: number;
+          cost_after_vat: number;
+          live_date: string | null;
+          schedule_mode: string;
+          notes: string | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          campaign_line_id: string;
+          sort_order?: number;
+          platform: string;
+          deliverable_type: string;
+          quantity?: number;
+          unit_cost?: number;
+          total_cost?: number;
+          revenue_before_vat?: number;
+          revenue_vat_percent?: number;
+          revenue_vat_amount?: number;
+          revenue_after_vat?: number;
+          cost_before_vat?: number;
+          cost_vat_percent?: number;
+          cost_vat_amount?: number;
+          cost_after_vat?: number;
+          live_date?: string | null;
+          schedule_mode?: string;
+          notes?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["assignment_deliverables"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      assignment_post_schedule: {
+        Row: {
+          id: string;
+          assignment_deliverable_id: string;
+          campaign_line_id: string;
+          sequence_number: number;
+          live_date: string | null;
+          status: string;
+          notes: string | null;
+          proof_url: string | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          assignment_deliverable_id: string;
+          campaign_line_id: string;
+          sequence_number?: number;
+          live_date?: string | null;
+          status?: string;
+          notes?: string | null;
+          proof_url?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["assignment_post_schedule"]["Insert"]
+        >;
         Relationships: [];
       };
       po_governance_logs: {
@@ -1331,6 +1419,7 @@ export type Database = {
       campaign_status: CampaignStatus;
       influencer_status: InfluencerStatus;
       po_status: PoStatus;
+      assignment_pricing_mode: AssignmentPricingMode;
     };
   };
 };

@@ -2,6 +2,8 @@ import { DELIVERABLE_TYPE_OPTIONS, PLATFORM_OPTIONS } from "./constants";
 
 export const LINE_ASSIGNMENT_META_KEY = "influencer_assignment";
 
+export type AssignmentPricingMode = "package" | "per_deliverable";
+
 export type LinePlatformSelection = {
   account_id: string;
   platform: string;
@@ -19,6 +21,9 @@ export type LineInfluencerAssignment = {
   influencer_document_number: string;
   platforms: LinePlatformSelection[];
   title_user_edited?: boolean;
+  /** Defaults to package for legacy assignments. */
+  pricing_mode?: AssignmentPricingMode;
+  commercial_rows?: import("@/lib/assignments/commercial-calculations").CommercialDeliverableRow[];
 };
 
 export const PLATFORM_DELIVERABLES: Record<string, string[]> = {

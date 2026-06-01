@@ -267,6 +267,8 @@ export type InfluencerSearchResult = {
   status: string;
   country_code: string | null;
   suggested_currency: string;
+  categories?: string[];
+  notes?: string | null;
   platforms: {
     id: string;
     platform: string;
@@ -275,7 +277,27 @@ export type InfluencerSearchResult = {
     follower_count: number | null;
     engagement_rate: number | null;
     audience_country: string | null;
+    is_verified?: boolean;
   }[];
+};
+
+export type CreatorBrowseFilters = {
+  search?: string;
+  platform?: string;
+  country?: string;
+  category?: string;
+  minFollowers?: number;
+  maxFollowers?: number;
+  minEngagement?: number;
+  page?: number;
+  pageSize?: number;
+};
+
+export type CreatorBrowseResult = {
+  creators: InfluencerSearchResult[];
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
 export type InfluencerAssignmentProfile = InfluencerSearchResult & {
@@ -286,6 +308,7 @@ export type InfluencerAssignmentProfile = InfluencerSearchResult & {
   default_vat_percent: number;
   tax_registration_number: string | null;
   suggested_cost_vat_percent: number;
+  notes?: string | null;
 };
 
 export function formatMarginPercent(revenue: number, gp: number): number {

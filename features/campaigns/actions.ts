@@ -6,6 +6,8 @@ import {
   METADATA_PLATFORM_KEY,
 } from "@/features/campaigns/constants";
 import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
+import { resolveLineCommercialInput } from "@/lib/assignments/resolve-line-commercial-input";
+import { syncAssignmentCommercialRows } from "@/lib/assignments/sync-commercial-rows";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   buildLineVatPayload,
@@ -369,7 +371,10 @@ export async function createCampaignLineAction(
   }
 
   const assignmentResult = parseAssignmentJson(parsed.data.assignment_json);
-  if (!assignmentResult.ok) {
+  if (
+    parsed.data.pricing_mode !== "per_deliverable" &&
+    !assignmentResult.ok
+  ) {
     return { ok: false, message: assignmentResult.message };
   }
 
@@ -396,6 +401,34 @@ export async function createCampaignLineAction(
     return { ok: false, message: "Influencer not found." };
   }
 
+  const { data: platformAccounts } = await supabase
+    .from("influencer_platform_accounts")
+    .select(
+      "id, platform, handle, profile_url, follower_count, engagement_rate, audience_country"
+    )
+    .eq("influencer_id", influencer.id);
+
+  const commercialResolved = resolveLineCommercialInput({
+    pricing_mode: parsed.data.pricing_mode,
+    assignment_json: parsed.data.assignment_json,
+    commercial_json: parsed.data.commercial_json,
+    platformAccounts: platformAccounts ?? [],
+    parseAssignmentJson,
+  });
+
+  if (!commercialResolved.ok) {
+    return { ok: false, message: commercialResolved.message };
+  }
+
+  const commercial = commercialResolved.value;
+  const lineInput = {
+    ...parsed.data,
+    revenue: commercial.revenue_before_vat || parsed.data.revenue,
+    cost: commercial.cost_before_vat || parsed.data.cost,
+    revenue_before_vat: commercial.revenue_before_vat || parsed.data.revenue_before_vat,
+    cost_before_vat: commercial.cost_before_vat || parsed.data.cost_before_vat,
+  };
+
   const { vatRate: clientVatRate } = await resolveCampaignBillingVatRate(
     supabase,
     parsed.data.campaign_id
@@ -410,20 +443,20 @@ export async function createCampaignLineAction(
     country_code: influencer.country_code,
     country_vat_rate: vendorCountryVatRate,
   });
-  const vatPayload = resolveLineVatInput(parsed.data, {
+  const vatPayload = resolveLineVatInput(lineInput, {
     clientVatRate,
     vendorVatRate,
     vendorVatRegistered: influencer.vat_registered ?? false,
   });
 
-  const platforms = assignmentResult.platforms;
+  const platforms = commercial.platforms;
   const lineTitle =
     parsed.data.name?.trim() ||
     buildLineTitle(influencer.display_name, platforms);
   const platformField =
     emptyToNull(parsed.data.platform) ??
     deriveLinePlatformField(platforms);
-  const deliverableCount = countLineDeliverables(platforms);
+  const deliverableCount = commercial.deliverable_count;
   const currency =
     parsed.data.currency_code || header?.currency_code || "USD";
 
@@ -433,6 +466,9 @@ export async function createCampaignLineAction(
     influencer_document_number: influencer.document_number,
     platforms,
     title_user_edited: parsed.data.title_user_edited ?? false,
+    pricing_mode: commercial.pricing_mode,
+    commercial_rows:
+      commercial.commercial_rows.length > 0 ? commercial.commercial_rows : undefined,
   };
 
   const { data: line, error: lineError } = await supabase
@@ -444,6 +480,7 @@ export async function createCampaignLineAction(
       assignment_status: parsed.data.assignment_status,
       platform: platformField,
       po_amount: parsed.data.po_amount,
+      pricing_mode: commercial.pricing_mode,
       ...vatPayload,
       currency_code: currency,
       base_currency: "USD",
@@ -500,6 +537,21 @@ export async function createCampaignLineAction(
       platforms,
       dueDate: parsed.data.end_date ?? parsed.data.start_date,
     });
+
+    if (
+      commercial.pricing_mode === "per_deliverable" &&
+      commercial.commercial_rows.length > 0
+    ) {
+      await syncAssignmentCommercialRows(supabase, {
+        campaignHeaderId: parsed.data.campaign_id,
+        campaignLineId: line.id,
+        rows: commercial.commercial_rows,
+        revenueVatPercent: vatPayload.revenue_vat_percent,
+        revenueVatExempt: vatPayload.revenue_vat_exempt,
+        costVatPercent: vatPayload.cost_vat_percent,
+        costVatExempt: vatPayload.cost_vat_exempt,
+      });
+    }
   } catch (e) {
     await supabase.from("campaign_influencers").delete().eq("id", vendorAssignmentId);
     await supabase.from("campaign_lines").delete().eq("id", line.id);
@@ -573,7 +625,10 @@ export async function updateCampaignLineAction(
   }
 
   const assignmentResult = parseAssignmentJson(parsed.data.assignment_json);
-  if (!assignmentResult.ok) {
+  if (
+    parsed.data.pricing_mode !== "per_deliverable" &&
+    !assignmentResult.ok
+  ) {
     return { ok: false, message: assignmentResult.message };
   }
 
@@ -589,6 +644,34 @@ export async function updateCampaignLineAction(
     return { ok: false, message: "Influencer not found." };
   }
 
+  const { data: platformAccounts } = await supabase
+    .from("influencer_platform_accounts")
+    .select(
+      "id, platform, handle, profile_url, follower_count, engagement_rate, audience_country"
+    )
+    .eq("influencer_id", influencer.id);
+
+  const commercialResolved = resolveLineCommercialInput({
+    pricing_mode: parsed.data.pricing_mode,
+    assignment_json: parsed.data.assignment_json,
+    commercial_json: parsed.data.commercial_json,
+    platformAccounts: platformAccounts ?? [],
+    parseAssignmentJson,
+  });
+
+  if (!commercialResolved.ok) {
+    return { ok: false, message: commercialResolved.message };
+  }
+
+  const commercial = commercialResolved.value;
+  const lineInput = {
+    ...parsed.data,
+    revenue: commercial.revenue_before_vat || parsed.data.revenue,
+    cost: commercial.cost_before_vat || parsed.data.cost,
+    revenue_before_vat: commercial.revenue_before_vat || parsed.data.revenue_before_vat,
+    cost_before_vat: commercial.cost_before_vat || parsed.data.cost_before_vat,
+  };
+
   const { vatRate: clientVatRate } = await resolveCampaignBillingVatRate(
     supabase,
     parsed.data.campaign_id
@@ -603,20 +686,20 @@ export async function updateCampaignLineAction(
     country_code: influencer.country_code,
     country_vat_rate: vendorCountryVatRate,
   });
-  const vatPayload = resolveLineVatInput(parsed.data, {
+  const vatPayload = resolveLineVatInput(lineInput, {
     clientVatRate,
     vendorVatRate,
     vendorVatRegistered: influencer.vat_registered ?? false,
   });
 
-  const platforms = assignmentResult.platforms;
+  const platforms = commercial.platforms;
   const lineTitle =
     parsed.data.name?.trim() ||
     buildLineTitle(influencer.display_name, platforms);
   const platformField =
     emptyToNull(parsed.data.platform) ??
     deriveLinePlatformField(platforms);
-  const deliverableCount = countLineDeliverables(platforms);
+  const deliverableCount = commercial.deliverable_count;
 
   const assignmentMeta: LineInfluencerAssignment = {
     influencer_id: influencer.id,
@@ -624,6 +707,9 @@ export async function updateCampaignLineAction(
     influencer_document_number: influencer.document_number,
     platforms,
     title_user_edited: parsed.data.title_user_edited ?? false,
+    pricing_mode: commercial.pricing_mode,
+    commercial_rows:
+      commercial.commercial_rows.length > 0 ? commercial.commercial_rows : undefined,
   };
 
   const { data: header } = await supabase
@@ -645,6 +731,7 @@ export async function updateCampaignLineAction(
       assignment_status: parsed.data.assignment_status,
       platform: platformField,
       po_amount: parsed.data.po_amount,
+      pricing_mode: commercial.pricing_mode,
       ...vatPayload,
       currency_code: parsed.data.currency_code,
       start_date: parsed.data.start_date,
@@ -700,6 +787,21 @@ export async function updateCampaignLineAction(
       platforms,
       dueDate: parsed.data.end_date ?? parsed.data.start_date,
     });
+
+    if (
+      commercial.pricing_mode === "per_deliverable" &&
+      commercial.commercial_rows.length > 0
+    ) {
+      await syncAssignmentCommercialRows(supabase, {
+        campaignHeaderId: parsed.data.campaign_id,
+        campaignLineId: parsed.data.line_id,
+        rows: commercial.commercial_rows,
+        revenueVatPercent: vatPayload.revenue_vat_percent,
+        revenueVatExempt: vatPayload.revenue_vat_exempt,
+        costVatPercent: vatPayload.cost_vat_percent,
+        costVatExempt: vatPayload.cost_vat_exempt,
+      });
+    }
   }
 
   revalidateCampaign(parsed.data.campaign_id, header?.client_id);
