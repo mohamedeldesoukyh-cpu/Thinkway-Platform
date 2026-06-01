@@ -7,6 +7,7 @@ import {
   rollupAssignmentBilling,
   type DeliverableBillingRow,
 } from "@/lib/billing/deliverable-billing";
+import { queryCampaignLinesWithDisplayOrder } from "@/lib/campaigns/line-ordering";
 import {
   parseLineAssignment,
   platformLabel,
@@ -640,23 +641,48 @@ export async function getCampaignBillingGroups(
 ): Promise<AssignmentBillingGroup[]> {
   const { supabase } = await requireUser();
 
-  const { data: lines, error: linesError } = await supabase
-    .from("campaign_lines")
-    .select(
-      `
-      id, document_number, name, billing_status, currency_code, pricing_mode,
-      revenue, cost, po_amount, po_consumed, remaining_po,
-      revenue_locked, cost_locked, vendor_assignment_locked,
-      invoice_id, metadata,
-      invoice:invoices(document_number)
-    `
-    )
-    .eq("campaign_header_id", campaignId)
-    .order("sort_order");
+  type CampaignLineBillingQueryRow = {
+    id: string;
+    document_number: string;
+    name: string;
+    billing_status: CampaignLineBillingStatus;
+    currency_code: string;
+    pricing_mode: string | null;
+    revenue: number;
+    po_amount: number;
+    po_consumed: number;
+    revenue_locked: boolean;
+    cost_locked: boolean;
+    vendor_assignment_locked: boolean;
+    invoice_id: string | null;
+    metadata: Record<string, unknown> | null;
+    invoice: { document_number: string } | null;
+  };
 
-  if (linesError) throw new Error(linesError.message);
+  const lineSelectWithSort =
+    "id, document_number, name, billing_status, currency_code, pricing_mode, revenue, cost, po_amount, po_consumed, remaining_po, revenue_locked, cost_locked, vendor_assignment_locked, invoice_id, metadata, sort_order, invoice:invoices(document_number)";
 
-  const lineIds = (lines ?? []).map((l) => l.id);
+  const lineSelectFallback =
+    "id, document_number, name, billing_status, currency_code, pricing_mode, revenue, cost, po_amount, po_consumed, remaining_po, revenue_locked, cost_locked, vendor_assignment_locked, invoice_id, metadata, invoice:invoices(document_number)";
+
+  const { data: lines, error: linesError } =
+    await queryCampaignLinesWithDisplayOrder<CampaignLineBillingQueryRow>(
+      async (orderColumn, includeSortOrderColumn) => {
+        const result = await supabase
+          .from("campaign_lines")
+          .select(includeSortOrderColumn ? lineSelectWithSort : lineSelectFallback)
+          .eq("campaign_header_id", campaignId)
+          .order(orderColumn, { ascending: true });
+        return {
+          data: (result.data ?? null) as CampaignLineBillingQueryRow[] | null,
+          error: result.error,
+        };
+      }
+    );
+
+  if (linesError) throw new Error(linesError);
+
+  const lineIds = lines.map((l) => l.id);
   if (lineIds.length === 0) return [];
 
   const { data: deliverableRows, error: deliverableError } = await supabase
@@ -693,24 +719,8 @@ export async function getCampaignBillingGroups(
     deliverablesByLine.set(typed.campaign_line_id, list);
   }
 
-  return (lines ?? []).map((line) => {
-    const row = line as unknown as {
-      id: string;
-      document_number: string;
-      name: string;
-      billing_status: CampaignLineBillingStatus;
-      currency_code: string;
-      pricing_mode: string | null;
-      revenue: number;
-      po_amount: number;
-      po_consumed: number;
-      revenue_locked: boolean;
-      cost_locked: boolean;
-      vendor_assignment_locked: boolean;
-      invoice_id: string | null;
-      metadata: Record<string, unknown> | null;
-      invoice: { document_number: string } | null;
-    };
+  return lines.map((line) => {
+    const row = line;
 
     const assignment = parseLineAssignment(row.metadata);
     const deliverables = deliverablesByLine.get(row.id) ?? [];

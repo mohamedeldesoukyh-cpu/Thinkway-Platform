@@ -201,6 +201,7 @@ export type CampaignLineRow = {
   profit_base: number;
   start_date: string | null;
   end_date: string | null;
+  sort_order: number;
   pricing_mode: AssignmentPricingMode;
   metadata: Record<string, unknown>;
   created_by: string | null;
@@ -576,6 +577,7 @@ export type Database = {
           fx_rate?: number;
           start_date?: string | null;
           end_date?: string | null;
+          sort_order?: number;
           pricing_mode?: AssignmentPricingMode;
           metadata?: Record<string, unknown>;
           created_by?: string | null;
