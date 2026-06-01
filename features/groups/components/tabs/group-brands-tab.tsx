@@ -1,11 +1,20 @@
 "use client";
 
-import { PencilIcon, PlusIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { PencilIcon, PlusIcon, ArchiveIcon } from "lucide-react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,12 +25,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { archiveBrandAction } from "@/features/brands/actions";
 import { ClientStatusBadge } from "@/features/clients/components/client-status-badge";
-import {
-  AGENCY_OR_DIRECT_OPTIONS,
-  CLIENT_STATUS_OPTIONS,
-  labelForOption,
-} from "@/features/clients/constants";
+import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import { BrandSheet } from "@/features/groups/components/brand-sheet";
 import type { GroupBrandRow, GroupWorkspace } from "@/features/groups/types";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
@@ -36,16 +42,28 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
   const [statusFilter, setStatusFilter] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupBrandRow | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<GroupBrandRow | null>(null);
+
+  const [archiveState, archiveAction, archivePending] = useActionState(
+    archiveBrandAction,
+    { ok: false }
+  );
+
+  useEffect(() => {
+    if (!archiveState.message) return;
+    if (archiveState.ok) {
+      toast.success(archiveState.message);
+      setArchiveTarget(null);
+      return;
+    }
+    toast.error(archiveState.message);
+  }, [archiveState]);
 
   const filteredBrands = useMemo(() => {
     const q = search.trim().toLowerCase();
     return workspace.brands.filter((brand) => {
-      if (statusFilter && brand.status !== statusFilter) {
-        return false;
-      }
-      if (!q) {
-        return true;
-      }
+      if (statusFilter && brand.status !== statusFilter) return false;
+      if (!q) return true;
       return (
         brand.name.toLowerCase().includes(q) ||
         brand.client_name.toLowerCase().includes(q) ||
@@ -59,16 +77,6 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
     label: o.label,
   }));
 
-  function openCreate() {
-    setEditing(null);
-    setSheetOpen(true);
-  }
-
-  function openEdit(brand: GroupBrandRow) {
-    setEditing(brand);
-    setSheetOpen(true);
-  }
-
   return (
     <>
       <Card>
@@ -81,7 +89,10 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
           </div>
           <Button
             size="sm"
-            onClick={openCreate}
+            onClick={() => {
+              setEditing(null);
+              setSheetOpen(true);
+            }}
             disabled={workspace.legal_entities.length === 0}
           >
             <PlusIcon data-icon="inline-start" />
@@ -115,9 +126,7 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
               Add a legal entity before creating brands.
             </p>
           ) : filteredBrands.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No brands match your filters.
-            </p>
+            <p className="text-sm text-muted-foreground">No brands match your filters.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -129,8 +138,7 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
                     <TableHead>Subcategory</TableHead>
                     <TableHead>VR%</TableHead>
                     <TableHead>Currency</TableHead>
-                    <TableHead>Direct / Agency</TableHead>
-                    <TableHead className="text-right">Active campaigns</TableHead>
+                    <TableHead className="text-right">Campaigns</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -155,30 +163,33 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
                           : "—"}
                       </TableCell>
                       <TableCell>{brand.currency_code}</TableCell>
-                      <TableCell>
-                        {brand.agency_or_direct
-                          ? labelForOption(
-                              AGENCY_OR_DIRECT_OPTIONS,
-                              brand.agency_or_direct
-                            )
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {brand.active_campaigns}
-                      </TableCell>
+                      <TableCell className="text-right">{brand.active_campaigns}</TableCell>
                       <TableCell>
                         <ClientStatusBadge status={brand.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(brand)}
-                        >
-                          <PencilIcon className="size-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditing(brand);
+                              setSheetOpen(true);
+                            }}
+                          >
+                            <PencilIcon className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setArchiveTarget(brand)}
+                            disabled={brand.status === "archived"}
+                          >
+                            <ArchiveIcon className="size-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -196,6 +207,37 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />
+
+      <Dialog open={archiveTarget !== null} onOpenChange={() => setArchiveTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Archive brand</DialogTitle>
+            <DialogDescription>
+              {archiveTarget?.active_campaigns
+                ? "This brand cannot be deleted because campaigns are linked to it. Archive will hide it from active lists."
+                : `Archive ${archiveTarget?.name}? This can be reversed by editing the brand status.`}
+            </DialogDescription>
+          </DialogHeader>
+          {archiveTarget ? (
+            <form action={archiveAction}>
+              <input type="hidden" name="brand_id" value={archiveTarget.id} />
+              <input type="hidden" name="client_id" value={archiveTarget.client_id} />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setArchiveTarget(null)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" variant="destructive" disabled={archivePending}>
+                  {archivePending ? "Archiving…" : "Archive brand"}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

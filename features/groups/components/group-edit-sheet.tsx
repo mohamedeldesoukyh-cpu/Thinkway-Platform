@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
+import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import {
   updateGroupAction,
   type FormActionState,
 } from "@/features/groups/actions";
+import { checkGroupNameAvailable } from "@/features/validation/actions";
 import {
   GROUP_REGION_OPTIONS,
   type GroupWorkspace,
@@ -49,9 +51,17 @@ export function GroupEditSheet({
   onOpenChange,
 }: GroupEditSheetProps) {
   const [status, setStatus] = useState<ClientStatus>(workspace.status);
+  const [groupName, setGroupName] = useState(workspace.name);
   const [region, setRegion] = useState(workspace.region ?? "");
   const [accountDirectorId, setAccountDirectorId] = useState(
     workspace.account_director?.id ?? ""
+  );
+
+  const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
+    groupName,
+    checkGroupNameAvailable,
+    [workspace.id],
+    open
   );
 
   const [state, formAction, isPending] = useActionState(updateGroupAction, {
@@ -73,6 +83,7 @@ export function GroupEditSheet({
   useEffect(() => {
     if (open) {
       setStatus(workspace.status);
+      setGroupName(workspace.name);
       setRegion(workspace.region ?? "");
       setAccountDirectorId(workspace.account_director?.id ?? "");
     }
@@ -108,11 +119,17 @@ export function GroupEditSheet({
             <Input
               id="group_name"
               name="name"
-              defaultValue={workspace.name}
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
               required
               disabled={isPending}
             />
             <FieldError messages={state.fieldErrors?.name} />
+            {duplicateMessage ? (
+              <p className="text-xs text-destructive">{duplicateMessage}</p>
+            ) : checking ? (
+              <p className="text-xs text-muted-foreground">Checking availability…</p>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -170,7 +187,7 @@ export function GroupEditSheet({
           </div>
 
           <SheetFooter className="px-0">
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || isDuplicate || checking}>
               {isPending ? "Saving…" : "Save changes"}
             </Button>
           </SheetFooter>

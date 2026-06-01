@@ -8,7 +8,9 @@ import {
   uploadEntityDocument,
 } from "@/lib/supabase/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { PaymentTerms } from "@/types/database";
+import { findDuplicateClient, findDuplicateGroup } from "@/lib/validation/checks";
+import { friendlyActionError } from "@/lib/validation/hierarchy";
+import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
 
 import {
   archiveLegalEntitySchema,
@@ -64,6 +66,18 @@ export async function createGroupAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
+  try {
+    const duplicate = await findDuplicateGroup(supabase, parsed.data.name);
+    if (duplicate) {
+      return { ok: false, message: duplicate, fieldErrors: { name: [duplicate] } };
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Validation failed.",
+    };
+  }
+
   const { data, error } = await supabase
     .from("groups")
     .insert({
@@ -77,7 +91,11 @@ export async function createGroupAction(
     .single();
 
   if (error) {
-    return { ok: false, message: error.message };
+    return {
+      ok: false,
+      message: friendlyActionError(error, "group", error.message),
+      fieldErrors: error.code === "23505" ? { name: [friendlyActionError(error, "group")] } : undefined,
+    };
   }
 
   revalidatePath("/groups");
@@ -102,6 +120,22 @@ export async function updateGroupAction(
     return { ok: false, message: authError };
   }
 
+  try {
+    const duplicate = await findDuplicateGroup(
+      supabase,
+      parsed.data.name,
+      parsed.data.group_id
+    );
+    if (duplicate) {
+      return { ok: false, message: duplicate, fieldErrors: { name: [duplicate] } };
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Validation failed.",
+    };
+  }
+
   const { error } = await supabase
     .from("groups")
     .update({
@@ -114,7 +148,11 @@ export async function updateGroupAction(
     .eq("id", parsed.data.group_id);
 
   if (error) {
-    return { ok: false, message: error.message };
+    return {
+      ok: false,
+      message: friendlyActionError(error, "group", error.message),
+      fieldErrors: error.code === "23505" ? { name: [friendlyActionError(error, "group")] } : undefined,
+    };
   }
 
   revalidatePath("/groups");
@@ -142,11 +180,29 @@ export async function updateGroupLegalEntityAction(
     return { ok: false, message: authError };
   }
 
+  try {
+    const duplicate = await findDuplicateClient(
+      supabase,
+      parsed.data.name,
+      parsed.data.agency_or_direct as AgencyOrDirect,
+      parsed.data.client_id
+    );
+    if (duplicate) {
+      return { ok: false, message: duplicate, fieldErrors: { name: [duplicate] } };
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Validation failed.",
+    };
+  }
+
   const { error } = await supabase
     .from("clients")
     .update({
       name: parsed.data.name,
       legal_name: emptyToNull(parsed.data.legal_name),
+      agency_or_direct: parsed.data.agency_or_direct as AgencyOrDirect,
       country: emptyToNull(parsed.data.country),
       currency: parsed.data.currency,
       payment_terms: (emptyToNull(parsed.data.payment_terms) ??
@@ -157,7 +213,11 @@ export async function updateGroupLegalEntityAction(
     .eq("group_id", parsed.data.group_id);
 
   if (error) {
-    return { ok: false, message: error.message };
+    return {
+      ok: false,
+      message: friendlyActionError(error, "client", error.message),
+      fieldErrors: error.code === "23505" ? { name: [friendlyActionError(error, "client")] } : undefined,
+    };
   }
 
   revalidatePath(`/groups/${parsed.data.group_id}`);

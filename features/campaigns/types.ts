@@ -6,9 +6,13 @@ export type BrandFormOption = {
   client_id: string;
   group_id: string;
   currency_code: string;
-  agency_or_direct: AgencyOrDirect | null;
   group: { id: string; name: string } | null;
-  client: { id: string; name: string; legal_name: string | null } | null;
+  client: {
+    id: string;
+    name: string;
+    legal_name: string | null;
+    agency_or_direct: AgencyOrDirect | null;
+  } | null;
   category: { id: string; name: string } | null;
   subcategory: { id: string; name: string } | null;
   vr_rate: { id: string; name: string; rate_percent: number } | null;

@@ -6,7 +6,7 @@ import {
   METADATA_PLATFORM_KEY,
 } from "@/features/campaigns/constants";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { CampaignStatus } from "@/types/database";
+import type { AgencyOrDirect, CampaignStatus } from "@/types/database";
 
 import {
   assignCampaignVendorSchema,
@@ -78,7 +78,7 @@ export async function createCampaignAction(
   const { data: brand, error: brandError } = await supabase
     .from("brands")
     .select(
-      "id, client_id, group_id, category_id, subcategory_id, agency_or_direct, vr_rate_id, currency_code"
+      "id, client_id, group_id, category_id, subcategory_id, vr_rate_id, currency_code, client:clients(agency_or_direct)"
     )
     .eq("id", parsed.data.brand_id)
     .maybeSingle();
@@ -87,6 +87,17 @@ export async function createCampaignAction(
     return { ok: false, message: brandError?.message ?? "Brand not found." };
   }
 
+  const brandRow = brand as {
+    id: string;
+    client_id: string;
+    group_id: string;
+    category_id: string | null;
+    subcategory_id: string | null;
+    vr_rate_id: string | null;
+    currency_code: string;
+    client: { agency_or_direct: AgencyOrDirect | null } | null;
+  };
+
   const platform = emptyToNull(parsed.data.platform);
   const metadata = platform ? { [METADATA_PLATFORM_KEY]: platform } : {};
 
@@ -94,15 +105,15 @@ export async function createCampaignAction(
     .from("campaign_headers")
     .insert({
       name: parsed.data.name,
-      brand_id: brand.id,
-      client_id: brand.client_id,
-      group_id: brand.group_id,
+      brand_id: brandRow.id,
+      client_id: brandRow.client_id,
+      group_id: brandRow.group_id,
       status: parsed.data.status,
-      currency_code: parsed.data.currency_code || brand.currency_code,
-      category_id: brand.category_id,
-      subcategory_id: brand.subcategory_id,
-      agency_or_direct: brand.agency_or_direct,
-      vr_rate_id: brand.vr_rate_id,
+      currency_code: parsed.data.currency_code || brandRow.currency_code,
+      category_id: brandRow.category_id,
+      subcategory_id: brandRow.subcategory_id,
+      agency_or_direct: brandRow.client?.agency_or_direct ?? null,
+      vr_rate_id: brandRow.vr_rate_id,
       start_date: parsed.data.start_date,
       end_date: parsed.data.end_date,
       account_manager_id: emptyToNull(parsed.data.account_manager_id),
@@ -129,7 +140,7 @@ export async function createCampaignAction(
     po_amount: parsed.data.po_amount,
     revenue,
     cost,
-    currency_code: parsed.data.currency_code || brand.currency_code,
+    currency_code: parsed.data.currency_code || brandRow.currency_code,
     base_currency: "USD",
     fx_rate: parsed.data.fx_rate,
     start_date: parsed.data.start_date,
@@ -143,7 +154,7 @@ export async function createCampaignAction(
     return { ok: false, message: lineError.message };
   }
 
-  revalidateCampaign(header.id, brand.client_id);
+  revalidateCampaign(header.id, brandRow.client_id);
 
   return {
     ok: true,

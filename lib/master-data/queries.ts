@@ -98,11 +98,10 @@ export async function getBrandHierarchySnapshot(
       client_id,
       category_id,
       subcategory_id,
-      agency_or_direct,
       vr_rate_id,
       currency_code,
       group:groups(id, name),
-      client:clients(id, name, legal_name),
+      client:clients(id, name, legal_name, agency_or_direct),
       category:md_categories(id, name),
       subcategory:md_subcategories(id, name),
       vr_rate:md_vr_rates(id, rate_percent)
@@ -148,7 +147,7 @@ export async function getBrandHierarchySnapshot(
     category_name: row.category?.name ?? null,
     subcategory_id: row.subcategory_id,
     subcategory_name: row.subcategory?.name ?? null,
-    agency_or_direct: row.agency_or_direct,
+    agency_or_direct: (row.client as { agency_or_direct: string | null } | null)?.agency_or_direct ?? null,
     vr_rate_id: row.vr_rate_id,
     vr_rate_percent: row.vr_rate?.rate_percent ?? null,
     currency_code: row.currency_code,
@@ -185,12 +184,11 @@ export async function getBrandsForCampaignForm() {
       client_id,
       group_id,
       currency_code,
-      agency_or_direct,
       category:md_categories(id, name),
       subcategory:md_subcategories(id, name),
       vr_rate:md_vr_rates(id, name, rate_percent),
       group:groups(id, name),
-      client:clients(id, name, legal_name)
+      client:clients(id, name, legal_name, agency_or_direct)
     `
     )
     .eq("status", "active")

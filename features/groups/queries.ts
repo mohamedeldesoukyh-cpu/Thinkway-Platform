@@ -112,7 +112,7 @@ export async function getGroupWorkspace(
     supabase
       .from("clients")
       .select(
-        "id, document_number, name, legal_name, country, currency, payment_terms, status"
+        "id, document_number, name, legal_name, country, currency, payment_terms, agency_or_direct, status"
       )
       .eq("group_id", groupId)
       .order("name"),
@@ -120,11 +120,12 @@ export async function getGroupWorkspace(
       .from("brands")
       .select(
         `
-        id, document_number, name, status, currency_code, agency_or_direct,
+        id, document_number, name, status, currency_code,
+        category_id, subcategory_id, vr_rate_id,
         category:md_categories(name),
         subcategory:md_subcategories(name),
         vr_rate:md_vr_rates(rate_percent),
-        client:clients(name)
+        client:clients(id, name)
       `
       )
       .eq("group_id", groupId)
@@ -306,6 +307,7 @@ export async function getGroupWorkspace(
       country: c.country,
       currency: c.currency,
       payment_terms: c.payment_terms,
+      agency_or_direct: c.agency_or_direct as GroupWorkspace["legal_entities"][number]["agency_or_direct"],
       status: c.status,
       active_campaigns: activeCampaignsByClient.get(c.id) ?? 0,
       revenue: revenueByClient.get(c.id) ?? 0,
@@ -317,11 +319,13 @@ export async function getGroupWorkspace(
         name: string;
         status: GroupWorkspace["brands"][number]["status"];
         currency_code: string;
-        agency_or_direct: GroupWorkspace["brands"][number]["agency_or_direct"];
+        category_id: string | null;
+        subcategory_id: string | null;
+        vr_rate_id: string | null;
         category: { name: string } | null;
         subcategory: { name: string } | null;
         vr_rate: { rate_percent: number } | null;
-        client: { name: string } | null;
+        client: { id: string; name: string } | null;
       };
       return {
         id: row.id,
@@ -329,11 +333,14 @@ export async function getGroupWorkspace(
         name: row.name,
         status: row.status,
         currency_code: row.currency_code,
-        agency_or_direct: row.agency_or_direct,
+        category_id: row.category_id,
+        subcategory_id: row.subcategory_id,
+        vr_rate_id: row.vr_rate_id,
         category_name: row.category?.name ?? null,
         subcategory_name: row.subcategory?.name ?? null,
         vr_rate_percent: row.vr_rate?.rate_percent ?? null,
         active_campaigns: activeCampaignsByBrand.get(row.id) ?? 0,
+        client_id: row.client?.id ?? "",
         client_name: row.client?.name ?? "",
       };
     }),

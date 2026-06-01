@@ -105,7 +105,7 @@ export function NewCampaignDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={!hasBrands}>
+        <Button disabled={!hasBrands} title={!hasBrands ? "Create a brand before creating campaigns." : undefined}>
           <PlusIcon data-icon="inline-start" />
           New Campaign
         </Button>
@@ -120,7 +120,7 @@ export function NewCampaignDialog({
         </DialogHeader>
         {!hasBrands ? (
           <p className="text-sm text-muted-foreground">
-            Create a group, legal entity, and brand before adding campaigns.
+            Create a brand before creating campaigns.
           </p>
         ) : (
           <form action={formAction} className="grid gap-4">
@@ -169,7 +169,7 @@ export function NewCampaignDialog({
                   label="Agency / Direct"
                   value={labelForOption(
                     AGENCY_OR_DIRECT_OPTIONS,
-                    selectedBrand.agency_or_direct
+                    selectedBrand.client?.agency_or_direct
                   )}
                 />
                 <ReadonlyField

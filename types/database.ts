@@ -22,6 +22,7 @@ export type GroupRow = {
   id: string;
   document_number: string;
   name: string;
+  name_normalized: string;
   region: string | null;
   account_director_id: string | null;
   status: ClientStatus;
@@ -53,13 +54,12 @@ export type BrandRow = {
   client_id: string;
   group_id: string;
   name: string;
+  name_normalized: string;
   status: ClientStatus;
   category_id: string | null;
   subcategory_id: string | null;
-  agency_or_direct: AgencyOrDirect | null;
   vr_rate_id: string | null;
   currency_code: string;
-  payment_term_id: string | null;
   country_code: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
@@ -366,6 +366,7 @@ export type ClientRow = {
   document_number: string;
   group_id: string | null;
   name: string;
+  name_normalized: string;
   legal_name: string | null;
   industry: string | null;
   website: string | null;
@@ -535,7 +536,6 @@ export type Database = {
           status?: ClientStatus;
           category_id?: string | null;
           subcategory_id?: string | null;
-          agency_or_direct?: AgencyOrDirect | null;
           vr_rate_id?: string | null;
           currency_code?: string;
           country_code?: string | null;

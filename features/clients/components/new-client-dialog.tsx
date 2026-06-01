@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { FieldError } from "@/components/forms/field-error";
+import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,19 +33,15 @@ import {
   type CreateClientFormState,
 } from "@/features/clients/actions";
 import {
+  AGENCY_OR_DIRECT_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
   CURRENCY_OPTIONS,
 } from "@/features/clients/constants";
+import { checkClientNameAvailable } from "@/features/validation/actions";
+import type { AgencyOrDirect } from "@/types/database";
 
 const initialState: CreateClientFormState = { ok: false };
-
-function FieldError({ messages }: { messages?: string[] }) {
-  if (!messages?.length) {
-    return null;
-  }
-  return <p className="text-xs text-destructive">{messages[0]}</p>;
-}
 
 type NewClientDialogProps = {
   groups: { id: string; name: string }[];
@@ -53,9 +51,18 @@ export function NewClientDialog({ groups }: NewClientDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [groupId, setGroupId] = useState("");
+  const [entityName, setEntityName] = useState("");
+  const [agencyOrDirect, setAgencyOrDirect] = useState<AgencyOrDirect>("agency");
   const [status, setStatus] = useState("prospect");
   const [currency, setCurrency] = useState("USD");
   const [country, setCountry] = useState("");
+
+  const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
+    entityName,
+    checkClientNameAvailable,
+    [agencyOrDirect],
+    open && Boolean(agencyOrDirect)
+  );
   const [state, formAction, isPending] = useActionState(
     createClientAction,
     initialState
@@ -107,6 +114,7 @@ export function NewClientDialog({ groups }: NewClientDialogProps) {
           <form action={formAction} className="grid gap-4">
             <input type="hidden" name="group_id" value={groupId} />
             <input type="hidden" name="status" value={status} />
+            <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
             <input type="hidden" name="currency" value={currency} />
             <input type="hidden" name="country" value={country} />
 
@@ -124,8 +132,40 @@ export function NewClientDialog({ groups }: NewClientDialogProps) {
 
             <div className="grid gap-2">
               <Label htmlFor="name">Entity name</Label>
-              <Input id="name" name="name" required disabled={isPending} />
+              <Input
+                id="name"
+                name="name"
+                value={entityName}
+                onChange={(e) => setEntityName(e.target.value)}
+                required
+                disabled={isPending}
+              />
               <FieldError messages={state.fieldErrors?.name} />
+              {duplicateMessage ? (
+                <p className="text-xs text-destructive">{duplicateMessage}</p>
+              ) : checking ? (
+                <p className="text-xs text-muted-foreground">Checking availability…</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Relationship type</Label>
+              <Select
+                value={agencyOrDirect}
+                onValueChange={(v) => setAgencyOrDirect(v as AgencyOrDirect)}
+                disabled={isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-2">
@@ -167,7 +207,10 @@ export function NewClientDialog({ groups }: NewClientDialogProps) {
             </div>
 
             <DialogFooter>
-              <Button type="submit" disabled={isPending || !groupId}>
+              <Button
+                type="submit"
+                disabled={isPending || !groupId || isDuplicate || checking}
+              >
                 {isPending ? "Creating…" : "Create entity"}
               </Button>
             </DialogFooter>

@@ -8,7 +8,9 @@ import {
   uploadEntityDocument,
 } from "@/lib/supabase/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { PaymentTerms } from "@/types/database";
+import { findDuplicateClient } from "@/lib/validation/checks";
+import { friendlyActionError } from "@/lib/validation/hierarchy";
+import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
 
 import {
   createClientSchema,
@@ -75,12 +77,29 @@ export async function createClientAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
+  try {
+    const duplicate = await findDuplicateClient(
+      supabase,
+      parsed.data.name,
+      parsed.data.agency_or_direct as AgencyOrDirect
+    );
+    if (duplicate) {
+      return { ok: false, message: duplicate, fieldErrors: { name: [duplicate] } };
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Validation failed.",
+    };
+  }
+
   const { data, error } = await supabase
     .from("clients")
     .insert({
       name: parsed.data.name,
       legal_name: emptyToNull(parsed.data.legal_name),
       group_id: parsed.data.group_id,
+      agency_or_direct: parsed.data.agency_or_direct as AgencyOrDirect,
       industry: emptyToNull(parsed.data.industry),
       website: emptyToNull(parsed.data.website),
       status: parsed.data.status,
@@ -94,7 +113,11 @@ export async function createClientAction(
     .single();
 
   if (error) {
-    return { ok: false, message: error.message };
+    return {
+      ok: false,
+      message: friendlyActionError(error, "client", error.message),
+      fieldErrors: error.code === "23505" ? { name: [friendlyActionError(error, "client")] } : undefined,
+    };
   }
 
   revalidatePath("/clients");
@@ -130,12 +153,30 @@ export async function updateClientOverviewAction(
 
   const { client_id, ...fields } = parsed.data;
 
+  try {
+    const duplicate = await findDuplicateClient(
+      supabase,
+      fields.name,
+      fields.agency_or_direct as AgencyOrDirect,
+      client_id
+    );
+    if (duplicate) {
+      return { ok: false, message: duplicate, fieldErrors: { name: [duplicate] } };
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Validation failed.",
+    };
+  }
+
   const { error } = await supabase
     .from("clients")
     .update({
       name: fields.name,
       legal_name: emptyToNull(fields.legal_name),
       group_id: fields.group_id,
+      agency_or_direct: fields.agency_or_direct as AgencyOrDirect,
       industry: emptyToNull(fields.industry),
       website: emptyToNull(fields.website),
       status: fields.status,
@@ -148,7 +189,11 @@ export async function updateClientOverviewAction(
     .eq("id", client_id);
 
   if (error) {
-    return { ok: false, message: error.message };
+    return {
+      ok: false,
+      message: friendlyActionError(error, "client", error.message),
+      fieldErrors: error.code === "23505" ? { name: [friendlyActionError(error, "client")] } : undefined,
+    };
   }
 
   revalidatePath("/clients");

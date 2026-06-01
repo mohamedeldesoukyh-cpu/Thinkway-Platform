@@ -56,6 +56,7 @@ export const createClientSchema = z.object({
     .min(1, "Legal entity name is required")
     .max(200, "Name is too long"),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
+  agency_or_direct: agencyOrDirectSchema,
   industry: z.string().trim().max(120).optional().or(z.literal("")),
   website: z
     .string()
@@ -84,6 +85,7 @@ export const updateClientOverviewSchema = z.object({
   group_id: z.string().uuid(),
   name: z.string().trim().min(1).max(200),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
+  agency_or_direct: agencyOrDirectSchema,
   industry: z.string().trim().max(120).optional().or(z.literal("")),
   website: z
     .string()

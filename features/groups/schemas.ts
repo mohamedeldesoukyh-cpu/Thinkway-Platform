@@ -37,6 +37,7 @@ export const updateGroupLegalEntitySchema = z.object({
   group_id: z.string().uuid(),
   name: z.string().trim().min(1).max(200),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
+  agency_or_direct: z.enum(["agency", "direct", "hybrid"]),
   country: z.string().trim().max(2).optional().or(z.literal("")),
   currency: z.enum(["USD", "AED", "SAR", "EGP", "EUR"]),
   payment_terms: z

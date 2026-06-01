@@ -4,6 +4,8 @@ import { PlusIcon } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { FieldError } from "@/components/forms/field-error";
+import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,22 +31,30 @@ import {
   createGroupAction,
   type CreateGroupFormState,
 } from "@/features/groups/actions";
+import { checkGroupNameAvailable } from "@/features/validation/actions";
 import type { ClientStatus } from "@/types/database";
 
 export function NewGroupDialog() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<ClientStatus>("active");
+  const [groupName, setGroupName] = useState("");
   const [state, formAction, isPending] = useActionState(createGroupAction, {
     ok: false,
   } satisfies CreateGroupFormState);
 
+  const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
+    groupName,
+    checkGroupNameAvailable,
+    [],
+    open
+  );
+
   useEffect(() => {
-    if (!state.message) {
-      return;
-    }
+    if (!state.message) return;
     if (state.ok) {
       toast.success(state.message);
       setOpen(false);
+      setGroupName("");
       return;
     }
     toast.error(state.message);
@@ -69,7 +79,20 @@ export function NewGroupDialog() {
           <input type="hidden" name="status" value={status} />
           <div className="grid gap-2">
             <Label htmlFor="name">Group name</Label>
-            <Input id="name" name="name" required disabled={isPending} />
+            <Input
+              id="name"
+              name="name"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              required
+              disabled={isPending}
+            />
+            <FieldError messages={state.fieldErrors?.name} />
+            {duplicateMessage ? (
+              <p className="text-xs text-destructive">{duplicateMessage}</p>
+            ) : checking ? (
+              <p className="text-xs text-muted-foreground">Checking availability…</p>
+            ) : null}
           </div>
           <div className="grid gap-2">
             <Label>Status</Label>
@@ -95,7 +118,7 @@ export function NewGroupDialog() {
             <Textarea id="notes" name="notes" rows={2} disabled={isPending} />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || isDuplicate || checking}>
               {isPending ? "Creating…" : "Create group"}
             </Button>
           </DialogFooter>

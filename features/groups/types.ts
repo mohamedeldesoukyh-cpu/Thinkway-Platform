@@ -28,6 +28,7 @@ export type GroupLegalEntityRow = {
   country: string | null;
   currency: string;
   payment_terms: PaymentTerms | null;
+  agency_or_direct: AgencyOrDirect | null;
   status: ClientStatus;
   active_campaigns: number;
   revenue: number;
@@ -39,11 +40,14 @@ export type GroupBrandRow = {
   name: string;
   status: ClientStatus;
   currency_code: string;
-  agency_or_direct: AgencyOrDirect | null;
   category_name: string | null;
   subcategory_name: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  vr_rate_id: string | null;
   vr_rate_percent: number | null;
   active_campaigns: number;
+  client_id: string;
   client_name: string;
 };
 
