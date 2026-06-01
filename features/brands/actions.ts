@@ -10,6 +10,7 @@ import {
   archiveBrandSchema,
   createBrandSchema,
   updateBrandSchema,
+  updateBrandStatusSchema,
 } from "./schemas";
 
 export type FormActionState = {
@@ -240,7 +241,7 @@ export async function archiveBrandAction(
     return {
       ok: false,
       message:
-        "This brand cannot be deleted because campaigns are linked to it. Archive instead.",
+        "This brand cannot be archived because campaigns are linked to it.",
     };
   }
 
@@ -256,4 +257,58 @@ export async function archiveBrandAction(
 
   revalidateBrandPaths(parsed.data.client_id, brand.group_id);
   return { ok: true, message: "Brand archived." };
+}
+
+export async function updateBrandStatusAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const parsed = updateBrandStatusSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid request." };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const { data: brand, error: brandError } = await supabase
+    .from("brands")
+    .select("group_id, status")
+    .eq("id", parsed.data.brand_id)
+    .eq("client_id", parsed.data.client_id)
+    .maybeSingle();
+
+  if (brandError || !brand) {
+    return { ok: false, message: brandError?.message ?? "Brand not found." };
+  }
+
+  if (brand.status === "archived") {
+    return {
+      ok: false,
+      message: "Archived brands cannot be toggled. Edit the brand to restore.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("brands")
+    .update({ status: parsed.data.status })
+    .eq("id", parsed.data.brand_id)
+    .eq("client_id", parsed.data.client_id);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidateBrandPaths(parsed.data.client_id, brand.group_id);
+  return {
+    ok: true,
+    message:
+      parsed.data.status === "active"
+        ? "Brand marked active."
+        : "Brand marked inactive.",
+  };
 }

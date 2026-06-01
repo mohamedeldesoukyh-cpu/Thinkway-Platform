@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon, PlusIcon, ArchiveIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -26,7 +26,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { archiveBrandAction } from "@/features/brands/actions";
-import { ClientStatusBadge } from "@/features/clients/components/client-status-badge";
+import {
+  BrandRowActions,
+  BrandStatusToggle,
+} from "@/features/brands/components/brand-row-actions";
 import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import { BrandSheet } from "@/features/groups/components/brand-sheet";
 import type { GroupBrandRow, GroupWorkspace } from "@/features/groups/types";
@@ -165,31 +168,17 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
                       <TableCell>{brand.currency_code}</TableCell>
                       <TableCell className="text-right">{brand.active_campaigns}</TableCell>
                       <TableCell>
-                        <ClientStatusBadge status={brand.status} />
+                        <BrandStatusToggle brand={brand} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditing(brand);
-                              setSheetOpen(true);
-                            }}
-                          >
-                            <PencilIcon className="size-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setArchiveTarget(brand)}
-                            disabled={brand.status === "archived"}
-                          >
-                            <ArchiveIcon className="size-4" />
-                          </Button>
-                        </div>
+                        <BrandRowActions
+                          brand={brand}
+                          onEdit={() => {
+                            setEditing(brand);
+                            setSheetOpen(true);
+                          }}
+                          onArchive={() => setArchiveTarget(brand)}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -208,14 +197,19 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
         onOpenChange={setSheetOpen}
       />
 
-      <Dialog open={archiveTarget !== null} onOpenChange={() => setArchiveTarget(null)}>
+      <Dialog
+        open={archiveTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setArchiveTarget(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Archive brand</DialogTitle>
             <DialogDescription>
               {archiveTarget?.active_campaigns
-                ? "This brand cannot be deleted because campaigns are linked to it. Archive will hide it from active lists."
-                : `Archive ${archiveTarget?.name}? This can be reversed by editing the brand status.`}
+                ? "This brand cannot be archived because campaigns are linked to it."
+                : `Archive ${archiveTarget?.name}? You can restore it later by editing the brand status.`}
             </DialogDescription>
           </DialogHeader>
           {archiveTarget ? (
@@ -230,7 +224,11 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" variant="destructive" disabled={archivePending}>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  disabled={archivePending || archiveTarget.active_campaigns > 0}
+                >
                   {archivePending ? "Archiving…" : "Archive brand"}
                 </Button>
               </DialogFooter>

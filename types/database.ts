@@ -74,6 +74,22 @@ export type BrandListItem = BrandRow & {
   vr_rate?: { id: string; name: string; rate_percent: number } | null;
 };
 
+export type ClientBrandRow = {
+  id: string;
+  document_number: string;
+  name: string;
+  client_id: string;
+  status: ClientStatus;
+  currency_code: string;
+  category_id: string | null;
+  subcategory_id: string | null;
+  vr_rate_id: string | null;
+  category_name: string | null;
+  subcategory_name: string | null;
+  vr_rate_percent: number | null;
+  active_campaigns: number;
+};
+
 export type AgencyRow = {
   id: string;
   document_number: string;
@@ -357,7 +373,7 @@ export type ClientCampaignSummary = {
 export type ClientDetail = ClientRow & {
   documents: ClientDocumentRow[];
   campaigns: ClientCampaignSummary[];
-  brands: BrandListItem[];
+  brands: ClientBrandRow[];
   group: { id: string; name: string; document_number: string } | null;
 };
 

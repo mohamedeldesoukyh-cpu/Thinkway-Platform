@@ -21,4 +21,10 @@ export const archiveBrandSchema = z.object({
   client_id: z.string().uuid(),
 });
 
+export const updateBrandStatusSchema = z.object({
+  brand_id: z.string().uuid(),
+  client_id: z.string().uuid(),
+  status: z.enum(["active", "inactive"]),
+});
+
 export type CreateBrandInput = z.infer<typeof createBrandSchema>;
