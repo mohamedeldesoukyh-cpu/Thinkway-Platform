@@ -169,6 +169,8 @@ export function CampaignLinesTab({ workspace }: CampaignLinesTabProps) {
       <CampaignLineSheet
         campaignId={workspace.id}
         currencyCode={workspace.currency_code}
+        defaultRevenueVatPercent={workspace.vat_context.default_revenue_vat_percent}
+        clientCountryCode={workspace.vat_context.client_country_code}
         line={editing}
         open={sheetOpen}
         onOpenChange={setSheetOpen}

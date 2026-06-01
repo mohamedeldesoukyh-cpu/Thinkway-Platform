@@ -157,6 +157,12 @@ export const updateVendorFinanceSchema = z.object({
     return Number.isNaN(parsed) ? undefined : parsed;
   }, z.number().min(0).optional()),
   pricing_currency: currencySchema.default("USD"),
+  vat_registered: z
+    .enum(["0", "1", "true", "false"])
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
+  default_vat_percent: z.coerce.number().min(0).max(100).default(0),
+  tax_registration_number: z.string().trim().max(80).optional().or(z.literal("")),
 });
 
 export const platformAccountInputSchema = z.object({

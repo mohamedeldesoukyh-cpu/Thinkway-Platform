@@ -6,6 +6,7 @@ import { FINANCIAL_APPROVAL_CHAIN } from "@/features/billing/constants";
 import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { governanceDb } from "@/lib/supabase/governance-client";
+import { resolveClientBillingVatRate } from "@/lib/vat/queries";
 
 import {
   approveLineForBillingSchema,
@@ -38,6 +39,43 @@ function lineBillingPatch(billingStatus: string) {
   return assignmentStatus
     ? { billing_status: billingStatus, assignment_status: assignmentStatus }
     : { billing_status: billingStatus };
+}
+
+type CampaignLineForInvoice = {
+  id: string;
+  document_number: string;
+  name: string;
+  revenue: number;
+  revenue_before_vat?: number | null;
+  revenue_vat_percent?: number | null;
+  revenue_vat_exempt?: boolean | null;
+  billing_status: string;
+  invoice_id: string | null;
+};
+
+function invoiceLinePayload(
+  invoiceId: string,
+  headerId: string,
+  line: CampaignLineForInvoice,
+  sortOrder: number
+) {
+  const beforeVat = Number(line.revenue_before_vat ?? line.revenue);
+  const vatExempt = line.revenue_vat_exempt ?? false;
+  const vatPercent = vatExempt ? 0 : Number(line.revenue_vat_percent ?? 0);
+
+  return {
+    invoice_id: invoiceId,
+    campaign_line_id: line.id,
+    campaign_header_id: headerId,
+    campaign_id: headerId,
+    sort_order: sortOrder,
+    description: `${line.document_number} — ${line.name}`,
+    quantity: 1,
+    unit_price: beforeVat,
+    revenue_before_vat: beforeVat,
+    revenue_vat_percent: vatPercent,
+    revenue_vat_exempt: vatExempt,
+  };
 }
 
 async function requireAuthUser() {
@@ -241,7 +279,9 @@ export async function createInvoiceFromLinesAction(
 
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
-    .select("id, document_number, name, revenue, billing_status, invoice_id")
+    .select(
+      "id, document_number, name, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt, billing_status, invoice_id"
+    )
     .eq("campaign_header_id", parsed.data.campaign_id)
     .in("id", lineIds);
 
@@ -260,6 +300,11 @@ export async function createInvoiceFromLinesAction(
     };
   }
 
+  const { countryCode } = await resolveClientBillingVatRate(
+    supabase,
+    header.client_id
+  );
+
   const { data: invoice, error: invoiceError } = await supabase
     .from("invoices")
     .insert({
@@ -270,6 +315,7 @@ export async function createInvoiceFromLinesAction(
       due_date: parsed.data.due_date,
       currency: header.currency_code,
       notes: emptyToNull(parsed.data.notes),
+      billing_country_code: countryCode,
       created_by: user.id,
     })
     .select("id, document_number")
@@ -282,16 +328,9 @@ export async function createInvoiceFromLinesAction(
   let sortOrder = 0;
   for (const line of lines) {
     sortOrder += 1;
-    const { error: itemError } = await supabase.from("invoice_line_items").insert({
-      invoice_id: invoice.id,
-      campaign_line_id: line.id,
-      campaign_header_id: header.id,
-      campaign_id: header.id,
-      sort_order: sortOrder,
-      description: `${line.document_number} — ${line.name}`,
-      quantity: 1,
-      unit_price: Number(line.revenue),
-    });
+    const { error: itemError } = await supabase.from("invoice_line_items").insert(
+      invoiceLinePayload(invoice.id, header.id, line as CampaignLineForInvoice, sortOrder)
+    );
 
     if (itemError) {
       await supabase.from("invoices").delete().eq("id", invoice.id);
@@ -308,6 +347,7 @@ export async function createInvoiceFromLinesAction(
       revenue_locked: true,
       cost_locked: true,
       vendor_assignment_locked: true,
+      vat_locked: true,
       billing_invoiced_at: now,
     })
     .in("id", lineIds);
@@ -652,6 +692,7 @@ export async function ungenerateInvoiceAction(
         revenue_locked: false,
         cost_locked: false,
         vendor_assignment_locked: false,
+        vat_locked: false,
         finance_override_until: overrideUntil,
         billing_status: "moved_to_billing",
       })
@@ -738,7 +779,9 @@ export async function regenerateInvoiceAction(
 
   const { data: linkedLines, error: linesError } = await supabase
     .from("campaign_lines")
-    .select("id, document_number, name, revenue")
+    .select(
+      "id, document_number, name, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt"
+    )
     .eq("invoice_id", invoice.id);
 
   if (linesError) {
@@ -746,35 +789,40 @@ export async function regenerateInvoiceAction(
   }
 
   const lines = linkedLines ?? [];
-  const subtotal = lines.reduce((s, l) => s + Number(l.revenue), 0);
-  const taxAmount = 0;
-  const total = subtotal + taxAmount;
-  const newVersion = (invoice.version_number ?? 1) + 1;
 
   await supabase.from("invoice_line_items").delete().eq("invoice_id", invoice.id);
 
   let sortOrder = 0;
   for (const line of lines) {
     sortOrder += 1;
-    const l = line as { id: string; document_number: string; name: string; revenue: number };
-    await supabase.from("invoice_line_items").insert({
-      invoice_id: invoice.id,
-      campaign_line_id: l.id,
-      campaign_header_id: invoice.campaign_header_id,
-      campaign_id: invoice.campaign_header_id,
-      sort_order: sortOrder,
-      description: `${l.document_number} — ${l.name}`,
-      quantity: 1,
-      unit_price: Number(l.revenue),
-    });
+    await supabase.from("invoice_line_items").insert(
+      invoiceLinePayload(
+        invoice.id,
+        invoice.campaign_header_id!,
+        line as CampaignLineForInvoice,
+        sortOrder
+      )
+    );
   }
+
+  const { data: refreshedInvoice, error: refreshError } = await supabase
+    .from("invoices")
+    .select("subtotal, tax_amount, total")
+    .eq("id", invoice.id)
+    .single();
+
+  if (refreshError || !refreshedInvoice) {
+    return { ok: false, message: refreshError?.message ?? "Failed to refresh invoice totals." };
+  }
+
+  const subtotal = Number(refreshedInvoice.subtotal);
+  const taxAmount = Number(refreshedInvoice.tax_amount);
+  const total = Number(refreshedInvoice.total);
+  const newVersion = (invoice.version_number ?? 1) + 1;
 
   const { error: invoiceUpdateError } = await supabase
     .from("invoices")
     .update({
-      subtotal,
-      tax_amount: taxAmount,
-      total,
       version_number: newVersion,
       regeneration_status: "regenerated",
       status: "sent",
@@ -795,6 +843,7 @@ export async function regenerateInvoiceAction(
         revenue_locked: true,
         cost_locked: true,
         vendor_assignment_locked: true,
+        vat_locked: true,
         finance_override_until: null,
         billing_invoiced_at: now,
       })

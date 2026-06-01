@@ -36,6 +36,8 @@ type LineQueryRow = {
   revenue: number;
   cost: number;
   profit: number;
+  revenue_vat_amount?: number;
+  cost_vat_amount?: number;
   po_amount: number;
   po_consumed: number;
   remaining_po: number;
@@ -70,6 +72,7 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
         `
         id, document_number, name, campaign_header_id, billing_status,
         revenue, cost, profit, po_amount, po_consumed, remaining_po,
+        revenue_vat_amount, cost_vat_amount,
         revenue_locked, cost_locked, vendor_assignment_locked,
         currency_code, invoice_id,
         header:campaign_headers(id, name, document_number,
@@ -227,11 +230,23 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     0
   );
 
+  const outputVat = (linesResult.data ?? []).reduce(
+    (s, l) => s + Number((l as { revenue_vat_amount?: number }).revenue_vat_amount ?? 0),
+    0
+  );
+  const inputVat = (linesResult.data ?? []).reduce(
+    (s, l) => s + Number((l as { cost_vat_amount?: number }).cost_vat_amount ?? 0),
+    0
+  );
+
   const kpis: BillingKpiSummary = {
     revenue,
     cost,
     gp,
     margin_percent: formatMarginPercent(revenue, gp),
+    output_vat: outputVat,
+    input_vat: inputVat,
+    net_vat_payable: outputVat - inputVat,
     billed_revenue: billedRevenue,
     collected_revenue: collected,
     outstanding_invoices: outstanding,
@@ -347,8 +362,9 @@ export async function getInvoiceWorkspace(
         .from("invoice_line_items")
         .select(
           `
-          id, campaign_line_id, description, quantity, unit_price, line_total,
-          line:campaign_lines(document_number)
+        id, campaign_line_id, description, quantity, unit_price, line_total,
+        revenue_before_vat, revenue_vat_percent, revenue_vat_amount, revenue_vat_exempt,
+        line:campaign_lines(document_number)
         `
         )
         .eq("invoice_id", invoiceId)
@@ -414,6 +430,10 @@ export async function getInvoiceWorkspace(
         quantity: number;
         unit_price: number;
         line_total: number;
+        revenue_before_vat: number;
+        revenue_vat_percent: number;
+        revenue_vat_amount: number;
+        revenue_vat_exempt: boolean;
         line: { document_number: string } | null;
       };
       return {
@@ -423,6 +443,10 @@ export async function getInvoiceWorkspace(
         quantity: Number(row.quantity),
         unit_price: Number(row.unit_price),
         line_total: Number(row.line_total),
+        revenue_before_vat: Number(row.revenue_before_vat ?? row.unit_price),
+        revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
+        revenue_vat_amount: Number(row.revenue_vat_amount ?? 0),
+        revenue_vat_exempt: row.revenue_vat_exempt ?? false,
         line_document_number: row.line?.document_number ?? null,
       };
     }),

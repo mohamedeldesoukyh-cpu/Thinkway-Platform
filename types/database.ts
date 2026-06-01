@@ -143,6 +143,17 @@ export type CampaignLineRow = {
   platform: string | null;
   revenue: number;
   cost: number;
+  revenue_before_vat: number;
+  revenue_vat_percent: number;
+  revenue_vat_amount: number;
+  revenue_after_vat: number;
+  revenue_vat_exempt: boolean;
+  cost_before_vat: number;
+  cost_vat_percent: number;
+  cost_vat_amount: number;
+  cost_after_vat: number;
+  cost_vat_exempt: boolean;
+  vat_locked: boolean;
   profit: number;
   profit_margin: number;
   markup_margin: number;
@@ -276,6 +287,9 @@ export type InfluencerRow = {
   categories: string[];
   rate_card: Record<string, unknown>;
   payment_details: Record<string, unknown>;
+  vat_registered: boolean;
+  default_vat_percent: number;
+  tax_registration_number: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
   created_by: string | null;
@@ -494,6 +508,17 @@ export type Database = {
           platform?: string | null;
           revenue?: number;
           cost?: number;
+          revenue_before_vat?: number;
+          revenue_vat_percent?: number;
+          revenue_vat_amount?: number;
+          revenue_after_vat?: number;
+          revenue_vat_exempt?: boolean;
+          cost_before_vat?: number;
+          cost_vat_percent?: number;
+          cost_vat_amount?: number;
+          cost_after_vat?: number;
+          cost_vat_exempt?: boolean;
+          vat_locked?: boolean;
           po_amount?: number;
           po_consumed?: number;
           billing_status?: string;
@@ -628,6 +653,28 @@ export type Database = {
         Update: Partial<{ name: string; rate_percent: number; is_active: boolean }>;
         Relationships: [];
       };
+      md_vat_rates: {
+        Row: {
+          id: string;
+          country_code: string;
+          vat_name: string;
+          vat_rate: number;
+          is_default: boolean;
+          effective_from: string;
+          effective_to: string | null;
+          created_at: string;
+        };
+        Insert: {
+          country_code: string;
+          vat_name?: string;
+          vat_rate: number;
+          is_default?: boolean;
+          effective_from?: string;
+          effective_to?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["md_vat_rates"]["Insert"]>;
+        Relationships: [];
+      };
       campaigns: {
         Row: CampaignRow;
         Insert: never;
@@ -650,6 +697,11 @@ export type Database = {
           currency: string;
           subtotal?: number;
           tax_amount?: number;
+          revenue_before_vat?: number;
+          revenue_vat_amount?: number;
+          revenue_after_vat?: number;
+          revenue_vat_exempt?: boolean;
+          billing_country_code?: string | null;
           notes?: string | null;
           created_by?: string | null;
           regeneration_status?: string;
@@ -670,6 +722,7 @@ export type Database = {
           issue_date?: string;
           due_date?: string | null;
           currency?: string;
+          billing_country_code?: string | null;
           notes?: string | null;
           created_by?: string | null;
           regeneration_status?: string;
@@ -761,6 +814,10 @@ export type Database = {
           quantity: number;
           unit_price: number;
           line_total: number;
+          revenue_before_vat?: number;
+          revenue_vat_percent?: number;
+          revenue_vat_amount?: number;
+          revenue_vat_exempt?: boolean;
         };
         Insert: {
           invoice_id: string;
@@ -771,6 +828,10 @@ export type Database = {
           description: string;
           quantity?: number;
           unit_price: number;
+          revenue_before_vat?: number;
+          revenue_vat_percent?: number;
+          revenue_vat_amount?: number;
+          revenue_vat_exempt?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["invoice_line_items"]["Insert"]>;
         Relationships: [];
@@ -917,6 +978,9 @@ export type Database = {
           categories?: string[];
           rate_card?: Record<string, unknown>;
           payment_details?: Record<string, unknown>;
+          vat_registered?: boolean;
+          default_vat_percent?: number;
+          tax_registration_number?: string | null;
           notes?: string | null;
           created_by?: string | null;
         };
@@ -957,6 +1021,10 @@ export type Database = {
           agreed_fee: number;
           currency: string;
           deliverable_count: number;
+          cost_before_vat: number;
+          cost_vat_percent: number;
+          cost_vat_amount: number;
+          cost_after_vat: number;
           invited_at: string | null;
           confirmed_at: string | null;
           vendor_payment_status: string;
@@ -972,6 +1040,10 @@ export type Database = {
           agreed_fee?: number;
           currency?: string;
           deliverable_count?: number;
+          cost_before_vat?: number;
+          cost_vat_percent?: number;
+          cost_vat_amount?: number;
+          cost_after_vat?: number;
           invited_at?: string | null;
           confirmed_at?: string | null;
           vendor_payment_status?: string;

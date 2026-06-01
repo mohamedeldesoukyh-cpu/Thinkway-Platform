@@ -28,6 +28,9 @@ export type BillingKpiSummary = {
   cost: number;
   gp: number;
   margin_percent: number;
+  output_vat: number;
+  input_vat: number;
+  net_vat_payable: number;
   billed_revenue: number;
   collected_revenue: number;
   outstanding_invoices: number;
@@ -113,6 +116,10 @@ export type InvoiceWorkspace = {
     quantity: number;
     unit_price: number;
     line_total: number;
+    revenue_before_vat: number;
+    revenue_vat_percent: number;
+    revenue_vat_amount: number;
+    revenue_vat_exempt: boolean;
     line_document_number: string | null;
   }[];
   payments: {

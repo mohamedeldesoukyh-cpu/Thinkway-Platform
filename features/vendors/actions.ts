@@ -272,6 +272,9 @@ export async function updateVendorFinanceAction(
       payment_terms: (emptyToNull(parsed.data.payment_terms) ??
         null) as PaymentTerms | null,
       rate_card: rateCard,
+      vat_registered: parsed.data.vat_registered ?? false,
+      default_vat_percent: parsed.data.default_vat_percent,
+      tax_registration_number: emptyToNull(parsed.data.tax_registration_number),
     })
     .eq("id", parsed.data.influencer_id);
 

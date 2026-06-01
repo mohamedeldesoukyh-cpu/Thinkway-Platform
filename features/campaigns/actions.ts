@@ -6,6 +6,15 @@ import {
   METADATA_PLATFORM_KEY,
 } from "@/features/campaigns/constants";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  buildLineVatPayload,
+  buildVendorCostVatPayload,
+  defaultCostVatPercentForVendor,
+} from "@/lib/vat/line-payload";
+import {
+  resolveCampaignBillingVatRate,
+  resolveVatRateForCountry,
+} from "@/lib/vat/queries";
 import type { AgencyOrDirect, CampaignStatus } from "@/types/database";
 
 import {
@@ -41,6 +50,52 @@ function emptyToNull(value: string | undefined): string | null {
     return null;
   }
   return value.trim();
+}
+
+function resolveLineVatInput(
+  parsed: {
+    revenue: number;
+    cost: number;
+    revenue_before_vat?: number;
+    cost_before_vat?: number;
+    revenue_vat_percent: number;
+    cost_vat_percent: number;
+    revenue_vat_exempt?: boolean;
+    cost_vat_exempt?: boolean;
+  },
+  defaults: {
+    clientVatRate: number;
+    vendorVatRate: number;
+    vendorVatRegistered: boolean;
+  }
+) {
+  const revenueBeforeVat = parsed.revenue_before_vat ?? parsed.revenue;
+  const costBeforeVat = parsed.cost_before_vat ?? parsed.cost;
+  const revenueExempt = parsed.revenue_vat_exempt ?? false;
+  const costExempt = parsed.cost_vat_exempt ?? false;
+
+  const revenueVatPercent = revenueExempt
+    ? 0
+    : parsed.revenue_vat_percent > 0
+      ? parsed.revenue_vat_percent
+      : defaults.clientVatRate;
+
+  const costVatPercent = costExempt
+    ? 0
+    : parsed.cost_vat_percent > 0
+      ? parsed.cost_vat_percent
+      : defaults.vendorVatRegistered
+        ? defaults.vendorVatRate
+        : 0;
+
+  return buildLineVatPayload({
+    revenue_before_vat: revenueBeforeVat,
+    revenue_vat_percent: revenueVatPercent,
+    revenue_vat_exempt: revenueExempt,
+    cost_before_vat: costBeforeVat,
+    cost_vat_percent: costVatPercent,
+    cost_vat_exempt: costExempt || !defaults.vendorVatRegistered,
+  });
 }
 
 function revalidateCampaign(campaignId: string, clientId?: string) {
@@ -330,13 +385,35 @@ export async function createCampaignLineAction(
 
   const { data: influencer, error: influencerError } = await supabase
     .from("influencers")
-    .select("id, document_number, display_name")
+    .select(
+      "id, document_number, display_name, vat_registered, default_vat_percent, country_code"
+    )
     .eq("id", parsed.data.influencer_id)
     .maybeSingle();
 
   if (influencerError || !influencer) {
     return { ok: false, message: "Influencer not found." };
   }
+
+  const { vatRate: clientVatRate } = await resolveCampaignBillingVatRate(
+    supabase,
+    parsed.data.campaign_id
+  );
+  const vendorCountryVatRate = await resolveVatRateForCountry(
+    supabase,
+    influencer.country_code
+  );
+  const vendorVatRate = defaultCostVatPercentForVendor({
+    vat_registered: influencer.vat_registered ?? false,
+    default_vat_percent: Number(influencer.default_vat_percent ?? 0),
+    country_code: influencer.country_code,
+    country_vat_rate: vendorCountryVatRate,
+  });
+  const vatPayload = resolveLineVatInput(parsed.data, {
+    clientVatRate,
+    vendorVatRate,
+    vendorVatRegistered: influencer.vat_registered ?? false,
+  });
 
   const platforms = assignmentResult.platforms;
   const lineTitle =
@@ -366,8 +443,7 @@ export async function createCampaignLineAction(
       assignment_status: parsed.data.assignment_status,
       platform: platformField,
       po_amount: parsed.data.po_amount,
-      revenue: parsed.data.revenue,
-      cost: parsed.data.cost,
+      ...vatPayload,
       currency_code: currency,
       base_currency: "USD",
       fx_rate: 1,
@@ -383,6 +459,12 @@ export async function createCampaignLineAction(
     return { ok: false, message: lineError?.message ?? "Failed to create line." };
   }
 
+  const vendorVatPayload = buildVendorCostVatPayload({
+    cost_before_vat: vatPayload.cost_before_vat,
+    cost_vat_percent: vatPayload.cost_vat_percent,
+    cost_vat_exempt: vatPayload.cost_vat_exempt,
+  });
+
   const { data: vendorAssignment, error: vendorError } = await supabase
     .from("campaign_influencers")
     .insert({
@@ -391,7 +473,7 @@ export async function createCampaignLineAction(
       campaign_line_id: line.id,
       influencer_id: influencer.id,
       status: "confirmed",
-      agreed_fee: parsed.data.cost,
+      ...vendorVatPayload,
       currency,
       deliverable_count: deliverableCount,
       invited_at: new Date().toISOString(),
@@ -453,7 +535,9 @@ export async function updateCampaignLineAction(
 
   const { data: existingLine, error: lineError } = await supabase
     .from("campaign_lines")
-    .select("revenue_locked, cost_locked, revenue, cost, document_number")
+    .select(
+      "revenue_locked, cost_locked, revenue, cost, revenue_before_vat, cost_before_vat, vat_locked, document_number"
+    )
     .eq("id", parsed.data.line_id)
     .eq("campaign_header_id", parsed.data.campaign_id)
     .maybeSingle();
@@ -462,9 +546,12 @@ export async function updateCampaignLineAction(
     return { ok: false, message: lineError?.message ?? "Line not found." };
   }
 
+  const revenueBeforeVat = parsed.data.revenue_before_vat ?? parsed.data.revenue;
+  const costBeforeVat = parsed.data.cost_before_vat ?? parsed.data.cost;
+
   if (
     existingLine.revenue_locked &&
-    parsed.data.revenue !== Number(existingLine.revenue)
+    revenueBeforeVat !== Number(existingLine.revenue_before_vat ?? existingLine.revenue)
   ) {
     return {
       ok: false,
@@ -474,7 +561,7 @@ export async function updateCampaignLineAction(
 
   if (
     existingLine.cost_locked &&
-    parsed.data.cost !== Number(existingLine.cost)
+    costBeforeVat !== Number(existingLine.cost_before_vat ?? existingLine.cost)
   ) {
     return {
       ok: false,
@@ -489,13 +576,35 @@ export async function updateCampaignLineAction(
 
   const { data: influencer } = await supabase
     .from("influencers")
-    .select("id, document_number, display_name")
+    .select(
+      "id, document_number, display_name, vat_registered, default_vat_percent, country_code"
+    )
     .eq("id", parsed.data.influencer_id)
     .maybeSingle();
 
   if (!influencer) {
     return { ok: false, message: "Influencer not found." };
   }
+
+  const { vatRate: clientVatRate } = await resolveCampaignBillingVatRate(
+    supabase,
+    parsed.data.campaign_id
+  );
+  const vendorCountryVatRate = await resolveVatRateForCountry(
+    supabase,
+    influencer.country_code
+  );
+  const vendorVatRate = defaultCostVatPercentForVendor({
+    vat_registered: influencer.vat_registered ?? false,
+    default_vat_percent: Number(influencer.default_vat_percent ?? 0),
+    country_code: influencer.country_code,
+    country_vat_rate: vendorCountryVatRate,
+  });
+  const vatPayload = resolveLineVatInput(parsed.data, {
+    clientVatRate,
+    vendorVatRate,
+    vendorVatRegistered: influencer.vat_registered ?? false,
+  });
 
   const platforms = assignmentResult.platforms;
   const lineTitle =
@@ -533,8 +642,7 @@ export async function updateCampaignLineAction(
       assignment_status: parsed.data.assignment_status,
       platform: platformField,
       po_amount: parsed.data.po_amount,
-      revenue: parsed.data.revenue,
-      cost: parsed.data.cost,
+      ...vatPayload,
       currency_code: parsed.data.currency_code,
       start_date: parsed.data.start_date,
       end_date: parsed.data.end_date,
@@ -557,23 +665,33 @@ export async function updateCampaignLineAction(
     .maybeSingle();
 
   if (vendorRow) {
+    const vendorVatPayload = buildVendorCostVatPayload({
+      cost_before_vat: vatPayload.cost_before_vat,
+      cost_vat_percent: vatPayload.cost_vat_percent,
+      cost_vat_exempt: vatPayload.cost_vat_exempt,
+    });
     await supabase
       .from("campaign_influencers")
       .update({
         influencer_id: influencer.id,
-        agreed_fee: parsed.data.cost,
+        ...vendorVatPayload,
         currency: parsed.data.currency_code,
         deliverable_count: deliverableCount,
       })
       .eq("id", vendorRow.id);
   } else if (!existingLineMeta?.vendor_assignment_locked) {
+    const vendorVatPayload = buildVendorCostVatPayload({
+      cost_before_vat: vatPayload.cost_before_vat,
+      cost_vat_percent: vatPayload.cost_vat_percent,
+      cost_vat_exempt: vatPayload.cost_vat_exempt,
+    });
     await supabase.from("campaign_influencers").insert({
       campaign_id: parsed.data.campaign_id,
       campaign_header_id: parsed.data.campaign_id,
       campaign_line_id: parsed.data.line_id,
       influencer_id: influencer.id,
       status: "confirmed",
-      agreed_fee: parsed.data.cost,
+      ...vendorVatPayload,
       currency: parsed.data.currency_code,
       deliverable_count: deliverableCount,
       confirmed_at: new Date().toISOString(),

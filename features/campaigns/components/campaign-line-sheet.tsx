@@ -4,7 +4,9 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { InfluencerTypeahead } from "@/components/forms/influencer-typeahead";
+import { VatAmountSection } from "@/components/forms/vat-amount-section";
 import { FieldError } from "@/components/forms/field-error";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +44,8 @@ import {
   countLineDeliverables,
   suggestCostFromRateCard,
 } from "@/features/campaigns/line-assignment";
+import { computeOperationalGp } from "@/lib/vat/calculations";
+
 import type {
   CampaignLineAssignmentStatus,
   CampaignLineWorkspace,
@@ -52,6 +56,8 @@ import type {
 type CampaignLineSheetProps = {
   campaignId: string;
   currencyCode: string;
+  defaultRevenueVatPercent: number;
+  clientCountryCode: string | null;
   line: CampaignLineWorkspace | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,6 +66,8 @@ type CampaignLineSheetProps = {
 export function CampaignLineSheet({
   campaignId,
   currencyCode,
+  defaultRevenueVatPercent,
+  clientCountryCode,
   line,
   open,
   onOpenChange,
@@ -77,8 +85,16 @@ export function CampaignLineSheet({
   const [lineTitle, setLineTitle] = useState(line?.name ?? "");
   const [titleEdited, setTitleEdited] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [cost, setCost] = useState(line?.cost ?? 0);
-  const [revenue, setRevenue] = useState(line?.revenue ?? 0);
+  const [cost, setCost] = useState(line?.cost_before_vat ?? line?.cost ?? 0);
+  const [revenue, setRevenue] = useState(line?.revenue_before_vat ?? line?.revenue ?? 0);
+  const [revenueVatPercent, setRevenueVatPercent] = useState(
+    line?.revenue_vat_percent ?? defaultRevenueVatPercent
+  );
+  const [revenueVatExempt, setRevenueVatExempt] = useState(
+    line?.revenue_vat_exempt ?? false
+  );
+  const [costVatPercent, setCostVatPercent] = useState(line?.cost_vat_percent ?? 0);
+  const [costVatExempt, setCostVatExempt] = useState(line?.cost_vat_exempt ?? true);
   const [poAmount, setPoAmount] = useState(line?.po_amount ?? 0);
   const [startDate, setStartDate] = useState(line?.start_date ?? "");
   const [endDate, setEndDate] = useState(line?.end_date ?? "");
@@ -95,6 +111,11 @@ export function CampaignLineSheet({
   const state = isEdit ? updateState : createState;
   const formAction = isEdit ? updateAction : createAction;
   const isPending = isEdit ? updatePending : createPending;
+
+  const gpPreview = useMemo(
+    () => computeOperationalGp(revenue, cost),
+    [revenue, cost]
+  );
 
   const activeSelections = useMemo(
     () =>
@@ -156,6 +177,13 @@ export function CampaignLineSheet({
       setSelections(buildInitialSelections(data.profile, existing));
       setCurrency(data.profile.suggested_currency || currencyCode);
       setCost((c) => (c > 0 ? c : data.profile!.suggested_cost));
+      if (data.profile.vat_registered) {
+        setCostVatPercent(data.profile.suggested_cost_vat_percent);
+        setCostVatExempt(false);
+      } else {
+        setCostVatPercent(0);
+        setCostVatExempt(true);
+      }
     } finally {
       setLoadingProfile(false);
     }
@@ -169,8 +197,12 @@ export function CampaignLineSheet({
     setInfluencerLabel(line?.influencer_name ?? null);
     setLineTitle(line?.name ?? "");
     setTitleEdited(line?.assignment?.title_user_edited ?? false);
-    setCost(line?.cost ?? 0);
-    setRevenue(line?.revenue ?? 0);
+    setCost(line?.cost_before_vat ?? line?.cost ?? 0);
+    setRevenue(line?.revenue_before_vat ?? line?.revenue ?? 0);
+    setRevenueVatPercent(line?.revenue_vat_percent ?? defaultRevenueVatPercent);
+    setRevenueVatExempt(line?.revenue_vat_exempt ?? false);
+    setCostVatPercent(line?.cost_vat_percent ?? 0);
+    setCostVatExempt(line?.cost_vat_exempt ?? true);
     setPoAmount(line?.po_amount ?? 0);
     setStartDate(line?.start_date ?? "");
     setEndDate(line?.end_date ?? "");
@@ -184,7 +216,7 @@ export function CampaignLineSheet({
       }));
       void loadProfile(line.influencer_id, existing);
     }
-  }, [open, line, currencyCode]);
+  }, [open, line, currencyCode, defaultRevenueVatPercent]);
 
   function onInfluencerPick(item: InfluencerSearchResult) {
     setInfluencerId(item.id);
@@ -335,8 +367,8 @@ export function CampaignLineSheet({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
+          <div className="grid gap-4">
+            <div className="grid gap-2 sm:max-w-xs">
               <Label htmlFor="po_amount">PO amount</Label>
               <Input
                 id="po_amount"
@@ -350,41 +382,70 @@ export function CampaignLineSheet({
                 disabled={isPending}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="revenue">Revenue</Label>
-              <Input
-                id="revenue"
-                name="revenue"
-                type="number"
-                min={0}
-                step="0.01"
-                value={revenue}
-                onChange={(e) => setRevenue(Number(e.target.value))}
-                disabled={isPending || Boolean(line?.revenue_locked)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="cost">Creator cost</Label>
-              <Input
-                id="cost"
-                name="cost"
-                type="number"
-                min={0}
-                step="0.01"
-                value={cost}
-                onChange={(e) => setCost(Number(e.target.value))}
-                disabled={isPending || Boolean(line?.cost_locked)}
-              />
-            </div>
-            <div className="grid gap-2 sm:col-span-2">
-              <p className="text-xs text-muted-foreground">
-                GP preview: {currency}{" "}
-                {(revenue - cost).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </p>
-            </div>
+
+            <VatAmountSection
+              title="Client revenue"
+              amountLabel="Revenue (ex-VAT)"
+              beforeVat={revenue}
+              vatPercent={revenueVatPercent}
+              exempt={revenueVatExempt}
+              currency={currency}
+              disabled={isPending || Boolean(line?.revenue_locked || line?.vat_locked)}
+              onBeforeVatChange={setRevenue}
+              onVatPercentChange={setRevenueVatPercent}
+              onExemptChange={setRevenueVatExempt}
+              badge={
+                revenueVatExempt ? (
+                  <Badge variant="outline">VAT Exempt</Badge>
+                ) : clientCountryCode ? (
+                  <Badge variant="secondary">
+                    Billing entity · {clientCountryCode} · default {defaultRevenueVatPercent}%
+                  </Badge>
+                ) : null
+              }
+            />
+
+            <VatAmountSection
+              title="Creator cost"
+              amountLabel="Cost (ex-VAT)"
+              beforeVat={cost}
+              vatPercent={costVatPercent}
+              exempt={costVatExempt}
+              currency={currency}
+              disabled={isPending || Boolean(line?.cost_locked || line?.vat_locked)}
+              onBeforeVatChange={setCost}
+              onVatPercentChange={setCostVatPercent}
+              onExemptChange={setCostVatExempt}
+              badge={
+                profile?.vat_registered ? (
+                  <Badge variant="secondary">VAT Registered</Badge>
+                ) : (
+                  <Badge variant="outline">Non-VAT creator</Badge>
+                )
+              }
+            />
+
+            <input type="hidden" name="revenue" value={revenue} />
+            <input type="hidden" name="cost" value={cost} />
+            <input type="hidden" name="revenue_before_vat" value={revenue} />
+            <input type="hidden" name="cost_before_vat" value={cost} />
+            <input type="hidden" name="revenue_vat_percent" value={revenueVatPercent} />
+            <input type="hidden" name="cost_vat_percent" value={costVatPercent} />
+            <input
+              type="hidden"
+              name="revenue_vat_exempt"
+              value={revenueVatExempt ? "1" : "0"}
+            />
+            <input type="hidden" name="cost_vat_exempt" value={costVatExempt ? "1" : "0"} />
+
+            <p className="text-xs text-muted-foreground">
+              Operational GP (ex-VAT): {currency}{" "}
+              {gpPreview.gp.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{" "}
+              · Margin {gpPreview.marginPercent}%
+            </p>
           </div>
 
           <SheetFooter className="px-0">

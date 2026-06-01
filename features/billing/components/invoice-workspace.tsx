@@ -82,14 +82,25 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
       <InvoiceRegenerationPanel invoice={invoice} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard label="Total" value={formatBillingMoney(invoice.total, invoice.currency)} />
         <SummaryCard
-          label="Collected"
-          value={formatBillingMoney(invoice.amount_paid, invoice.currency)}
+          label="Subtotal (ex-VAT)"
+          value={formatBillingMoney(invoice.subtotal, invoice.currency)}
         />
+        <SummaryCard
+          label="Output VAT"
+          value={formatBillingMoney(invoice.tax_amount, invoice.currency)}
+        />
+        <SummaryCard label="Grand total" value={formatBillingMoney(invoice.total, invoice.currency)} />
         <SummaryCard
           label="Outstanding"
           value={formatBillingMoney(invoice.outstanding, invoice.currency)}
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryCard
+          label="Collected"
+          value={formatBillingMoney(invoice.amount_paid, invoice.currency)}
         />
         <SummaryCard
           label="Due date"
@@ -124,8 +135,10 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
                     <TableHead>Campaign line</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit price</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Unit (ex-VAT)</TableHead>
+                    <TableHead className="text-right">VAT %</TableHead>
+                    <TableHead className="text-right">VAT</TableHead>
+                    <TableHead className="text-right">Line total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -137,7 +150,13 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
                       <TableCell>{line.description}</TableCell>
                       <TableCell className="text-right">{line.quantity}</TableCell>
                       <TableCell className="text-right">
-                        {formatBillingMoney(line.unit_price, invoice.currency)}
+                        {formatBillingMoney(line.revenue_before_vat, invoice.currency)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {line.revenue_vat_exempt ? "Exempt" : `${line.revenue_vat_percent}%`}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatBillingMoney(line.revenue_vat_amount, invoice.currency)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatBillingMoney(line.line_total, invoice.currency)}

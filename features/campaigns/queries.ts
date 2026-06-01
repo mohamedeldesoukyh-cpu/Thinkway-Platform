@@ -1,5 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  resolveVatRateForCountry,
+  resolveVendorDefaultVatPercent,
+} from "@/lib/vat/queries";
+import {
   getBrandsForCampaignForm,
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
@@ -76,6 +80,17 @@ type LineRow = {
   metadata: Record<string, unknown>;
   revenue: number;
   cost: number;
+  revenue_before_vat?: number;
+  revenue_vat_percent?: number;
+  revenue_vat_amount?: number;
+  revenue_after_vat?: number;
+  revenue_vat_exempt?: boolean;
+  cost_before_vat?: number;
+  cost_vat_percent?: number;
+  cost_vat_amount?: number;
+  cost_after_vat?: number;
+  cost_vat_exempt?: boolean;
+  vat_locked?: boolean;
   profit: number;
   profit_margin: number;
   po_amount: number;
@@ -200,7 +215,7 @@ export async function getCampaignWorkspace(
       `
       *,
       brand:brands(id, name, document_number),
-      client:clients(id, name, document_number, legal_name),
+      client:clients(id, name, document_number, legal_name, country),
       group:groups(id, name, document_number),
       team:md_teams(id, name),
       account_manager:profiles!campaign_headers_account_manager_id_fkey(id, full_name, email)
@@ -491,6 +506,17 @@ export async function getCampaignWorkspace(
         null,
       revenue,
       cost,
+      revenue_before_vat: Number(line.revenue_before_vat ?? revenue),
+      revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
+      revenue_vat_amount: Number(line.revenue_vat_amount ?? 0),
+      revenue_after_vat: Number(line.revenue_after_vat ?? revenue),
+      revenue_vat_exempt: line.revenue_vat_exempt ?? false,
+      cost_before_vat: Number(line.cost_before_vat ?? cost),
+      cost_vat_percent: Number(line.cost_vat_percent ?? 0),
+      cost_vat_amount: Number(line.cost_vat_amount ?? 0),
+      cost_after_vat: Number(line.cost_after_vat ?? cost),
+      cost_vat_exempt: line.cost_vat_exempt ?? false,
+      vat_locked: line.vat_locked ?? false,
       gp,
       margin_percent: formatMarginPercent(revenue, gp),
       po_amount: poAmount,
@@ -643,7 +669,14 @@ export async function getCampaignWorkspace(
     blockers.push("Creator payouts outstanding");
   }
 
-  const headerRow = header as HeaderWithRelations;
+  const headerRow = header as HeaderWithRelations & {
+    client: { country: string | null } | null;
+  };
+  const clientCountryCode = headerRow.client?.country?.trim().toUpperCase().slice(0, 2) ?? null;
+  const defaultRevenueVatPercent = await resolveVatRateForCountry(
+    supabase,
+    clientCountryCode
+  );
   const platform =
     typeof headerRow.metadata?.[METADATA_PLATFORM_KEY] === "string"
       ? headerRow.metadata[METADATA_PLATFORM_KEY]
@@ -715,6 +748,10 @@ export async function getCampaignWorkspace(
       };
     }),
     blockers,
+    vat_context: {
+      client_country_code: clientCountryCode,
+      default_revenue_vat_percent: defaultRevenueVatPercent,
+    },
   };
 }
 
@@ -836,7 +873,7 @@ export async function getInfluencerForAssignment(
   const { data: influencer, error } = await supabase
     .from("influencers")
     .select(
-      "id, document_number, display_name, status, country_code, rate_card, payment_details"
+      "id, document_number, display_name, status, country_code, rate_card, payment_details, vat_registered, default_vat_percent, tax_registration_number"
     )
     .eq("id", influencerId)
     .maybeSingle();
@@ -870,12 +907,22 @@ export async function getInfluencerForAssignment(
     country_code: string | null;
     rate_card: Record<string, unknown>;
     payment_details: Record<string, unknown>;
+    vat_registered: boolean;
+    default_vat_percent: number;
+    tax_registration_number: string | null;
   };
 
   const suggested_currency = suggestCurrencyFromPaymentDetails(
     inf.payment_details,
     "USD"
   );
+  const countryVatRate = await resolveVatRateForCountry(supabase, inf.country_code);
+  const suggested_cost_vat_percent = resolveVendorDefaultVatPercent({
+    vatRegistered: inf.vat_registered,
+    defaultVatPercent: Number(inf.default_vat_percent ?? 0),
+    countryCode: inf.country_code,
+    countryVatRate,
+  });
 
   return {
     id: inf.id,
@@ -888,6 +935,10 @@ export async function getInfluencerForAssignment(
     rate_card: inf.rate_card,
     payment_details: inf.payment_details,
     suggested_cost: suggestCostFromRateCard(inf.rate_card, []),
+    vat_registered: inf.vat_registered,
+    default_vat_percent: Number(inf.default_vat_percent ?? 0),
+    tax_registration_number: inf.tax_registration_number,
+    suggested_cost_vat_percent,
   };
 }
 

@@ -126,6 +126,18 @@ export const createCampaignLineSchema = z.object({
   po_amount: z.coerce.number().min(0),
   revenue: z.coerce.number().min(0).default(0),
   cost: z.coerce.number().min(0).default(0),
+  revenue_before_vat: z.coerce.number().min(0).optional(),
+  revenue_vat_percent: z.coerce.number().min(0).max(100).default(0),
+  revenue_vat_exempt: z
+    .enum(["0", "1", "true", "false"])
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
+  cost_before_vat: z.coerce.number().min(0).optional(),
+  cost_vat_percent: z.coerce.number().min(0).max(100).default(0),
+  cost_vat_exempt: z
+    .enum(["0", "1", "true", "false"])
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
   currency_code: currencySchema.default("USD"),
   start_date: optionalDate,
   end_date: optionalDate,

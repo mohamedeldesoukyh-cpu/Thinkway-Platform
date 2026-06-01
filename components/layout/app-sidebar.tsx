@@ -43,7 +43,10 @@ const navItems: NavItem[] = [
     href: "/finance",
     label: "Finance",
     icon: CalendarClockIcon,
-    children: [{ href: "/finance/periods", label: "Period management" }],
+    children: [
+      { href: "/finance/vat", label: "VAT & tax" },
+      { href: "/finance/periods", label: "Period management" },
+    ],
   },
   { href: "/vendors", label: "Vendors", icon: UsersIcon },
 ];

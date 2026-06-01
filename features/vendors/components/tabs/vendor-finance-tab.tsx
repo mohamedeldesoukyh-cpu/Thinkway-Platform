@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { FieldError } from "@/components/forms/field-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,9 @@ export function VendorFinanceTab({ vendor }: { vendor: VendorDetail }) {
   const rate = parseRateCard(vendor.rate_card);
   const [paymentTerms, setPaymentTerms] = useState(vendor.payment_terms ?? "");
   const [currency, setCurrency] = useState(rate.currency ?? "USD");
+  const [vatRegistered, setVatRegistered] = useState(
+    (vendor as { vat_registered?: boolean }).vat_registered ?? false
+  );
 
   const [state, formAction, isPending] = useActionState(
     updateVendorFinanceAction,
@@ -50,7 +54,14 @@ export function VendorFinanceTab({ vendor }: { vendor: VendorDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Finance</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle>Finance</CardTitle>
+            {vatRegistered ? (
+              <Badge variant="secondary">VAT Registered</Badge>
+            ) : (
+              <Badge variant="outline">Non-VAT</Badge>
+            )}
+          </div>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="grid gap-4">
@@ -111,6 +122,51 @@ export function VendorFinanceTab({ vendor }: { vendor: VendorDetail }) {
                 disabled={isPending}
               />
               <FieldError messages={state.fieldErrors?.pricing_amount} />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="flex items-center gap-2 text-sm sm:col-span-3">
+              <input
+                type="checkbox"
+                checked={vatRegistered}
+                onChange={(e) => setVatRegistered(e.target.checked)}
+                disabled={isPending}
+                className="size-4 rounded border border-input"
+              />
+              VAT registered vendor
+            </label>
+            <input
+              type="hidden"
+              name="vat_registered"
+              value={vatRegistered ? "1" : "0"}
+            />
+            <div className="grid gap-2">
+              <Label htmlFor="default_vat_percent">Default VAT %</Label>
+              <Input
+                id="default_vat_percent"
+                name="default_vat_percent"
+                type="number"
+                min={0}
+                max={100}
+                step="0.001"
+                defaultValue={String(
+                  (vendor as { default_vat_percent?: number }).default_vat_percent ?? 0
+                )}
+                disabled={isPending || !vatRegistered}
+              />
+            </div>
+            <div className="grid gap-2 sm:col-span-2">
+              <Label htmlFor="tax_registration_number">Tax registration number</Label>
+              <Input
+                id="tax_registration_number"
+                name="tax_registration_number"
+                defaultValue={
+                  (vendor as { tax_registration_number?: string | null })
+                    .tax_registration_number ?? ""
+                }
+                disabled={isPending || !vatRegistered}
+              />
             </div>
           </div>
 

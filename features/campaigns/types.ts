@@ -78,6 +78,17 @@ export type CampaignLineWorkspace = {
   vendor_payment_status: VendorPaymentStatus | null;
   revenue: number;
   cost: number;
+  revenue_before_vat: number;
+  revenue_vat_percent: number;
+  revenue_vat_amount: number;
+  revenue_after_vat: number;
+  revenue_vat_exempt: boolean;
+  cost_before_vat: number;
+  cost_vat_percent: number;
+  cost_vat_amount: number;
+  cost_after_vat: number;
+  cost_vat_exempt: boolean;
+  vat_locked: boolean;
   gp: number;
   margin_percent: number;
   po_amount: number;
@@ -215,6 +226,10 @@ export type CampaignWorkspace = {
   approvals: CampaignApprovalRow[];
   activity: CampaignActivityItem[];
   blockers: string[];
+  vat_context: {
+    client_country_code: string | null;
+    default_revenue_vat_percent: number;
+  };
 };
 
 export type InfluencerSearchResult = {
@@ -239,6 +254,10 @@ export type InfluencerAssignmentProfile = InfluencerSearchResult & {
   rate_card: Record<string, unknown>;
   payment_details: Record<string, unknown>;
   suggested_cost: number;
+  vat_registered: boolean;
+  default_vat_percent: number;
+  tax_registration_number: string | null;
+  suggested_cost_vat_percent: number;
 };
 
 export function formatMarginPercent(revenue: number, gp: number): number {
