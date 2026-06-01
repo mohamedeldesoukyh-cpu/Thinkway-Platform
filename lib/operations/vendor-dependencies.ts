@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { REL } from "@/lib/supabase/relation-hints";
+
 export type VendorDependencySummary = {
   assignments: number;
   campaigns: number;
@@ -35,9 +37,9 @@ export async function getVendorDependencies(
     .from("campaign_influencers")
     .select(
       `
-      id, agreed_fee, currency, vendor_payment_status, campaign_line_id,
-      campaign:campaign_headers(id, document_number, name),
-      line:campaign_lines(document_number, billing_status)
+      id, agreed_fee, currency, vendor_payment_status, campaign_line_id, campaign_header_id,
+      campaign:${REL.campaignInfluencers.campaignHeader}(id, document_number, name),
+      line:${REL.campaignInfluencers.campaignLine}(document_number, billing_status)
     `
     )
     .eq("influencer_id", influencerId)

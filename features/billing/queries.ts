@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { REL } from "@/lib/supabase/relation-hints";
 
 import { AGING_BUCKET_LABELS } from "./constants";
 import {
@@ -75,7 +76,7 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
         revenue_vat_amount, cost_vat_amount,
         revenue_locked, cost_locked, vendor_assignment_locked,
         currency_code, invoice_id,
-        header:campaign_headers(id, name, document_number,
+        header:${REL.campaignLines.campaignHeader}(id, name, document_number,
           client:clients(name),
           brand:brands(name)
         ),
@@ -91,7 +92,7 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
         id, document_number, client_id, campaign_header_id, status,
         collection_status, issue_date, due_date, total, amount_paid, currency,
         client:clients(name),
-        campaign:campaign_headers(name)
+        campaign:${REL.invoices.campaignHeader}(name)
       `
       )
       .not("status", "eq", "void")
@@ -327,7 +328,7 @@ export async function getInvoiceWorkspace(
       `
       *,
       client:clients(id, name, document_number),
-      campaign:campaign_headers(id, name, document_number)
+      campaign:${REL.invoices.campaignHeader}(id, name, document_number)
     `
     )
     .eq("id", invoiceId)
@@ -364,7 +365,7 @@ export async function getInvoiceWorkspace(
           `
         id, campaign_line_id, description, quantity, unit_price, line_total,
         revenue_before_vat, revenue_vat_percent, revenue_vat_amount, revenue_vat_exempt,
-        line:campaign_lines(document_number)
+        line:${REL.invoiceLineItems.campaignLine}(document_number)
         `
         )
         .eq("invoice_id", invoiceId)

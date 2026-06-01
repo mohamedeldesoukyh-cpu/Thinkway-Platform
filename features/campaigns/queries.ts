@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { REL } from "@/lib/supabase/relation-hints";
 import {
   resolveVatRateForCountry,
   resolveVendorDefaultVatPercent,
@@ -249,10 +250,10 @@ export async function getCampaignWorkspace(
       .from("campaign_influencers")
       .select(
         `
-        id, campaign_line_id, influencer_id, status, agreed_fee, currency,
+        id, campaign_line_id, campaign_header_id, influencer_id, status, agreed_fee, currency,
         deliverable_count, invited_at, confirmed_at, vendor_payment_status,
         influencer:influencers(id, document_number, display_name),
-        line:campaign_lines(document_number)
+        line:${REL.campaignInfluencers.campaignLine}(document_number)
       `
       )
       .or(`campaign_header_id.eq.${campaignId},campaign_id.eq.${campaignId}`),

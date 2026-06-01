@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { REL } from "@/lib/supabase/relation-hints";
 import { computeNetVatPayable } from "@/lib/vat/calculations";
 
 import type {
@@ -40,7 +41,7 @@ export async function getVatWorkspace(): Promise<VatWorkspaceData> {
       .select(
         `
         revenue_before_vat, revenue_vat_amount, cost_vat_amount,
-        header:campaign_headers(
+        header:${REL.campaignLines.campaignHeader}(
           client:clients(id, name, country)
         )
       `

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { REL } from "@/lib/supabase/relation-hints";
 import type {
   InfluencerPlatformAccountRow,
   InfluencerRow,
@@ -283,7 +284,7 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
       currency,
       invited_at,
       confirmed_at,
-      campaign:campaign_headers(id, name, document_number, status)
+      campaign:${REL.campaignInfluencers.campaignHeader}(id, name, document_number, status)
     `
     )
     .eq("influencer_id", id)
@@ -322,10 +323,10 @@ export async function getVendorWorkspace(
     .from("campaign_influencers")
     .select(
       `
-      id, campaign_line_id, status, agreed_fee, currency, deliverable_count,
+      id, campaign_line_id, campaign_header_id, status, agreed_fee, currency, deliverable_count,
       vendor_payment_status, vendor_paid_at, invited_at, confirmed_at,
-      campaign:campaign_headers(id, document_number, name, status),
-      line:campaign_lines(
+      campaign:${REL.campaignInfluencers.campaignHeader}(id, document_number, name, status),
+      line:${REL.campaignInfluencers.campaignLine}(
         id, document_number, name, revenue, cost, profit,
         billing_status, assignment_status, metadata
       )
@@ -340,6 +341,7 @@ export async function getVendorWorkspace(
     const r = row as {
       id: string;
       campaign_line_id: string | null;
+      campaign_header_id: string | null;
       status: string;
       agreed_fee: number;
       currency: string;
@@ -366,7 +368,7 @@ export async function getVendorWorkspace(
       line_name: r.line?.name ?? null,
       assignment_status: r.line?.assignment_status ?? null,
       billing_status: r.line?.billing_status ?? null,
-      campaign_id: r.campaign?.id ?? null,
+      campaign_id: r.campaign?.id ?? r.campaign_header_id ?? null,
       campaign_document_number: r.campaign?.document_number ?? null,
       campaign_name: r.campaign?.name ?? null,
       campaign_status: r.campaign?.status ?? null,
@@ -386,14 +388,30 @@ export async function getVendorWorkspace(
   const { data: deliverableRows } = await supabase
     .from("deliverables")
     .select(
-      `
-      id, document_number, title, deliverable_type, status, platform, due_date,
-      campaign:campaign_headers(name)
-    `
+      "id, document_number, title, deliverable_type, status, platform, due_date, campaign_id"
     )
     .eq("influencer_id", id)
     .order("created_at", { ascending: false })
     .limit(100);
+
+  const deliverableCampaignIds = [
+    ...new Set(
+      (deliverableRows ?? [])
+        .map((d) => (d as { campaign_id: string }).campaign_id)
+        .filter(Boolean)
+    ),
+  ];
+
+  const campaignNameById = new Map<string, string>();
+  if (deliverableCampaignIds.length > 0) {
+    const { data: headerRows } = await supabase
+      .from("campaign_headers")
+      .select("id, name")
+      .in("id", deliverableCampaignIds);
+    for (const row of headerRows ?? []) {
+      campaignNameById.set(row.id, row.name);
+    }
+  }
 
   const deliverables: VendorDeliverableRow[] = (deliverableRows ?? []).map((d) => {
     const row = d as {
@@ -404,7 +422,7 @@ export async function getVendorWorkspace(
       status: string;
       platform: string | null;
       due_date: string | null;
-      campaign: { name: string } | null;
+      campaign_id: string;
     };
     return {
       id: row.id,
@@ -414,7 +432,7 @@ export async function getVendorWorkspace(
       status: row.status,
       platform: row.platform,
       due_date: row.due_date,
-      campaign_name: row.campaign?.name ?? null,
+      campaign_name: campaignNameById.get(row.campaign_id) ?? null,
     };
   });
 

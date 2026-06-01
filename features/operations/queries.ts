@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { REL } from "@/lib/supabase/relation-hints";
 import { governanceDb } from "@/lib/supabase/governance-client";
 
 import type {
@@ -348,9 +349,9 @@ export async function getVendorAssignmentsForMovement(
     .from("campaign_influencers")
     .select(
       `
-      id, campaign_line_id, agreed_fee, currency, vendor_payment_status,
-      campaign:campaign_headers(id, document_number, name),
-      line:campaign_lines(
+      id, campaign_line_id, campaign_header_id, agreed_fee, currency, vendor_payment_status,
+      campaign:${REL.campaignInfluencers.campaignHeader}(id, document_number, name),
+      line:${REL.campaignInfluencers.campaignLine}(
         id, document_number, name, revenue, profit, billing_status
       )
     `
@@ -364,6 +365,7 @@ export async function getVendorAssignmentsForMovement(
     const r = row as {
       id: string;
       campaign_line_id: string | null;
+      campaign_header_id: string | null;
       agreed_fee: number;
       currency: string;
       vendor_payment_status: string | null;
@@ -380,7 +382,7 @@ export async function getVendorAssignmentsForMovement(
     return {
       id: r.id,
       campaign_line_id: r.campaign_line_id,
-      campaign_id: r.campaign?.id ?? null,
+      campaign_id: r.campaign?.id ?? r.campaign_header_id ?? null,
       campaign_document_number: r.campaign?.document_number ?? null,
       campaign_name: r.campaign?.name ?? null,
       line_document_number: r.line?.document_number ?? null,
