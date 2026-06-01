@@ -315,12 +315,15 @@ export async function getCampaignWorkspace(
   const lineIds = new Set(lines.map((l) => l.id));
   const lineDocMap = new Map(lines.map((l) => [l.id, l.document_number]));
 
+  const vendorInfluencerIds = (vendorsResult.data ?? []).map(
+    (v) => (v as { influencer_id: string }).influencer_id
+  );
+  const assignmentInfluencerIds = lines
+    .map((line) => parseLineAssignment(line.metadata as Record<string, unknown>)?.influencer_id)
+    .filter((id): id is string => Boolean(id));
+
   const influencerIds = [
-    ...new Set(
-      (vendorsResult.data ?? []).map(
-        (v) => (v as { influencer_id: string }).influencer_id
-      )
-    ),
+    ...new Set([...vendorInfluencerIds, ...assignmentInfluencerIds]),
   ];
 
   let platformAccounts: {
@@ -486,6 +489,10 @@ export async function getCampaignWorkspace(
       : null;
 
     const vendorLink = vendorByLine.get(line.id);
+    const influencerId = assignment?.influencer_id ?? null;
+    const creatorPlatformAccounts = influencerId
+      ? (accountsByInfluencer.get(influencerId) ?? [])
+      : [];
 
     return {
       id: line.id,
@@ -536,6 +543,7 @@ export async function getCampaignWorkspace(
       start_date: line.start_date,
       end_date: line.end_date,
       assignment,
+      creator_platform_accounts: creatorPlatformAccounts,
     };
   });
 

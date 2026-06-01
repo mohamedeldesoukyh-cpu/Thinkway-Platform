@@ -11,7 +11,7 @@ import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-import { getCreatorConnectedPlatformOptions } from "@/lib/campaigns/deliverable-taxonomy";
+import { getCreatorConnectedPlatformOptions, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
 import { cn } from "@/lib/utils";
 
 type AssignmentDeliverableRowsProps = {
@@ -38,15 +38,27 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const locked = line.vendor_assignment_locked ?? false;
-  const platformOptions = getCreatorConnectedPlatformOptions(line.assignment);
+  const platformOptions = getCreatorConnectedPlatformOptions({
+    creatorPlatformAccounts: line.creator_platform_accounts,
+    assignment: line.assignment,
+  });
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    console.log("Creator platforms", line.creator_platform_accounts);
+    console.log("Assignment platforms", line.assignment?.platforms);
+    console.log("Available platform options", platformOptions);
+  }, [line.creator_platform_accounts, line.assignment, platformOptions]);
 
   function addDeliverable() {
+    const defaultPlatform = platformOptions[0]?.value ?? "instagram";
+    const defaultTypes = getDeliverableTypeCodesForPlatform(defaultPlatform);
     startTransition(async () => {
       const result = await createAssignmentDeliverableAction({
         campaign_id: campaignId,
         campaign_line_id: line.id,
-        platform: "instagram",
-        deliverable_type: "instagram_reel",
+        platform: defaultPlatform,
+        deliverable_type: defaultTypes[0] ?? "other",
         quantity: 1,
         unit_cost: 0,
         unit_revenue: 0,

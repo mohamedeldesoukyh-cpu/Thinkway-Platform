@@ -89,6 +89,14 @@ export type CampaignFinancialSummary = {
   collected: number;
 };
 
+export type CreatorPlatformAccountSummary = {
+  platform: string;
+  handle: string;
+  profile_url: string | null;
+  follower_count: number | null;
+  engagement_rate: number | null;
+};
+
 export type CampaignLineWorkspace = {
   id: string;
   document_number: string;
@@ -132,6 +140,8 @@ export type CampaignLineWorkspace = {
   start_date: string | null;
   end_date: string | null;
   assignment: LineInfluencerAssignment | null;
+  /** All platforms linked on the creator profile (influencer_platform_accounts). */
+  creator_platform_accounts: CreatorPlatformAccountSummary[];
 };
 
 /** @deprecated Historical vendor rows — assignments are managed via campaign lines. */

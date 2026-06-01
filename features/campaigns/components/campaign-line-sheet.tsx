@@ -177,6 +177,14 @@ export function CampaignLineSheet({
     };
   }, [line?.assignment, profile, influencerId, influencerLabel]);
 
+  const creatorPlatformAccountsForPricing = useMemo(
+    () =>
+      profile?.platforms ??
+      line?.creator_platform_accounts ??
+      [],
+    [profile?.platforms, line?.creator_platform_accounts]
+  );
+
   const assignmentJson = useMemo(() => {
     if (pricingMode === "per_deliverable" && commercialRows.length > 0 && profile) {
       const accountLookup = new Map(
@@ -535,6 +543,7 @@ export function CampaignLineSheet({
               currency={currency}
               disabled={isPending || Boolean(line?.vendor_assignment_locked)}
               assignment={creatorAssignmentForPricing}
+              creatorPlatformAccounts={creatorPlatformAccountsForPricing}
             />
           ) : null}
 

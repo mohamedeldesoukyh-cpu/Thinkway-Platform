@@ -50,6 +50,7 @@ type DeliverablePricingEditorProps = {
   currency: string;
   disabled?: boolean;
   assignment?: LineInfluencerAssignment | null;
+  creatorPlatformAccounts?: readonly { platform: string }[];
 };
 
 export function DeliverablePricingEditor({
@@ -58,9 +59,13 @@ export function DeliverablePricingEditor({
   currency,
   disabled,
   assignment,
+  creatorPlatformAccounts,
 }: DeliverablePricingEditorProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const platformOptions = getCreatorConnectedPlatformOptions(assignment);
+  const platformOptions = getCreatorConnectedPlatformOptions({
+    creatorPlatformAccounts,
+    assignment,
+  });
 
   function updateRow(id: string, patch: Partial<CommercialDeliverableRow>) {
     onChange(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));

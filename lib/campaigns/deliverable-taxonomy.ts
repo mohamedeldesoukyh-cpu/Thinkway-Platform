@@ -1,5 +1,6 @@
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
 import type { LineInfluencerAssignment } from "@/features/campaigns/line-assignment";
+import { isSocialPlatform } from "@/lib/social/platforms";
 
 /** Master-data deliverable taxonomy keyed by social platform. */
 export const DELIVERABLE_TYPES_BY_PLATFORM: Record<
@@ -50,8 +51,22 @@ export const PLATFORM_DELIVERABLE_CODES: Record<string, string[]> = Object.fromE
   ])
 );
 
+export function canonicalPlatformKey(platform: string): string {
+  const normalized = platform.trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    ig: "instagram",
+    tt: "tiktok",
+    sc: "snapchat",
+    yt: "youtube",
+    fb: "facebook",
+    x: "twitter",
+  };
+  const key = aliases[normalized] ?? normalized;
+  return isSocialPlatform(key) ? key : normalized;
+}
+
 export function getDeliverableTypesForPlatform(platform: string) {
-  return DELIVERABLE_TYPES_BY_PLATFORM[platform] ?? DELIVERABLE_TYPES_BY_PLATFORM.other;
+  return DELIVERABLE_TYPES_BY_PLATFORM[canonicalPlatformKey(platform)] ?? DELIVERABLE_TYPES_BY_PLATFORM.other;
 }
 
 export function getDeliverableTypeCodesForPlatform(platform: string): string[] {
@@ -67,22 +82,67 @@ export function deliverableTypeShortLabel(code: string): string {
 }
 
 export function getPlatformOptionLabel(platform: string): string {
-  return SOCIAL_PLATFORM_OPTIONS.find((o) => o.value === platform)?.label ?? platform;
+  const key = canonicalPlatformKey(platform);
+  return SOCIAL_PLATFORM_OPTIONS.find((o) => o.value === key)?.label ?? platform;
 }
 
-/** Platforms connected to the creator on this assignment; falls back to all social platforms. */
+export type CreatorPlatformOptionsInput = {
+  /** Primary source: rows from influencer_platform_accounts. */
+  creatorPlatformAccounts?: readonly { platform: string }[] | null;
+  creatorPlatforms?: readonly string[] | null;
+  /** Legacy fallback when creator profile accounts are unavailable. */
+  assignment?: LineInfluencerAssignment | null;
+};
+
+function resolveCreatorPlatformOptionsInput(
+  source: LineInfluencerAssignment | null | undefined | CreatorPlatformOptionsInput
+): CreatorPlatformOptionsInput {
+  if (!source) return {};
+  if ("creatorPlatformAccounts" in source || "creatorPlatforms" in source) {
+    return source;
+  }
+  return { assignment: source as LineInfluencerAssignment };
+}
+
+/**
+ * Platforms available in hierarchy/planner dropdowns.
+ * Uses ALL creator-connected platforms from DB; assignment metadata is fallback only.
+ */
 export function getCreatorConnectedPlatformOptions(
-  assignment: LineInfluencerAssignment | null | undefined
+  source: LineInfluencerAssignment | null | undefined | CreatorPlatformOptionsInput
 ): { value: string; label: string }[] {
-  const connected = assignment?.platforms?.map((p) => p.platform) ?? [];
-  const unique = [...new Set(connected.filter(Boolean))];
-  if (unique.length === 0) {
+  const input = resolveCreatorPlatformOptionsInput(source);
+
+  const fromDb = (input.creatorPlatformAccounts ?? []).map((a) =>
+    canonicalPlatformKey(a.platform)
+  );
+  const fromExplicit = (input.creatorPlatforms ?? []).map(canonicalPlatformKey);
+  const fromAssignment = (input.assignment?.platforms ?? []).map((p) =>
+    canonicalPlatformKey(p.platform)
+  );
+
+  const connected = [
+    ...new Set(
+      fromDb.length > 0 || fromExplicit.length > 0
+        ? [...fromDb, ...fromExplicit]
+        : fromAssignment
+    ),
+  ].filter(Boolean);
+
+  if (connected.length === 0) {
     return SOCIAL_PLATFORM_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
   }
-  return SOCIAL_PLATFORM_OPTIONS.filter((o) => unique.includes(o.value)).map((o) => ({
-    value: o.value,
-    label: o.label,
-  }));
+
+  const optionByValue = new Map<string, { value: string; label: string }>(
+    SOCIAL_PLATFORM_OPTIONS.map((o) => [o.value, { value: o.value, label: o.label }])
+  );
+
+  const ordered: { value: string; label: string }[] = [];
+  for (const platform of connected) {
+    const option = optionByValue.get(platform);
+    if (option) ordered.push(option);
+  }
+  return ordered;
 }
 
 export const PLATFORM_BADGE_COLORS: Record<string, string> = {
