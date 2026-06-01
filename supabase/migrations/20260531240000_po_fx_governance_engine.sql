@@ -409,7 +409,15 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_action public.audit_action;
 BEGIN
+  v_action := CASE TG_OP
+    WHEN 'INSERT' THEN 'create'::public.audit_action
+    WHEN 'UPDATE' THEN 'update'::public.audit_action
+    WHEN 'DELETE' THEN 'delete'::public.audit_action
+  END;
+
   INSERT INTO public.audit_logs (
     actor_id,
     action,
@@ -420,7 +428,7 @@ BEGIN
   )
   VALUES (
     auth.uid(),
-    TG_OP::public.audit_action,
+    v_action,
     TG_TABLE_NAME,
     COALESCE(NEW.id, OLD.id),
     CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN to_jsonb(OLD) ELSE NULL END,

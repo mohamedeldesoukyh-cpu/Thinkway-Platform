@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { normalizeAuditAction, AUDIT_ACTIONS } from "@/lib/audit/audit-action";
 import { convertAmount } from "@/lib/finance/fx/conversion";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -126,7 +127,7 @@ export async function upsertExchangeRateAction(
   }
 
   await supabase.from("fx_rate_audit_logs").insert({
-    action: parsed.data.id ? "update" : "create",
+    action: normalizeAuditAction(parsed.data.id ? AUDIT_ACTIONS.UPDATE : AUDIT_ACTIONS.CREATE),
     old_data: oldData,
     new_data: payload,
     override_reason: emptyToNull(parsed.data.override_reason),

@@ -1138,7 +1138,9 @@ export type Database = {
           entity_type: string;
           entity_id?: string | null;
           actor_id?: string | null;
+          old_data?: Record<string, unknown> | null;
           new_data?: Record<string, unknown> | null;
+          metadata?: Record<string, unknown>;
         };
         Update: Partial<Database["public"]["Tables"]["audit_logs"]["Insert"]>;
         Relationships: [];
