@@ -194,7 +194,7 @@ export async function getGroupWorkspace(
     );
   }
 
-  const headers = (headersResult.data ?? []) as CampaignHeaderWithLines[];
+  const headers = (headersResult.data ?? []) as unknown as CampaignHeaderWithLines[];
   const headerIds = new Set(headers.map((h) => h.id));
 
   let totalRevenue = 0;
@@ -263,7 +263,7 @@ export async function getGroupWorkspace(
     return false;
   });
 
-  const groupRow = group as {
+  const groupRow = group as unknown as {
     id: string;
     document_number: string;
     name: string;
@@ -313,7 +313,7 @@ export async function getGroupWorkspace(
       revenue: revenueByClient.get(c.id) ?? 0,
     })),
     brands: (brandsResult.data ?? []).map((b) => {
-      const row = b as {
+      const row = b as unknown as {
         id: string;
         document_number: string;
         name: string;
@@ -344,7 +344,7 @@ export async function getGroupWorkspace(
         client_name: row.client?.name ?? "",
       };
     }),
-    documents: (documentsResult.data ?? []) as GroupWorkspace["documents"],
+    documents: (documentsResult.data ?? []) as unknown as GroupWorkspace["documents"],
     activity: filteredAudit.slice(0, 25).map((log) => {
       const actor = log.actor_id ? profileMap.get(log.actor_id) : null;
       return {

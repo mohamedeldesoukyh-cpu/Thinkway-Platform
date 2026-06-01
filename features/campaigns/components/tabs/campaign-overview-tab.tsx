@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
 import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { formatMoney, formatPercent, formatPlatformLabel } from "@/features/campaigns/utils";
@@ -17,12 +18,14 @@ type CampaignOverviewTabProps = {
   workspace: CampaignWorkspace;
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
+  currencyOptions: { value: string; label: string }[];
 };
 
 export function CampaignOverviewTab({
   workspace,
   accountManagers,
   teams,
+  currencyOptions,
 }: CampaignOverviewTabProps) {
   const [editOpen, setEditOpen] = useState(false);
   const currency = workspace.currency_code;
@@ -138,6 +141,13 @@ export function CampaignOverviewTab({
           </Card>
         </div>
 
+        <CampaignPoSection
+          campaignId={workspace.id}
+          campaignCurrency={currency}
+          po={workspace.po}
+          currencyOptions={currencyOptions}
+        />
+
         {workspace.brief ? (
           <Card>
             <CardHeader className="pb-2">
@@ -156,6 +166,7 @@ export function CampaignOverviewTab({
         workspace={workspace}
         accountManagers={accountManagers}
         teams={teams}
+        currencyOptions={currencyOptions}
         open={editOpen}
         onOpenChange={setEditOpen}
       />

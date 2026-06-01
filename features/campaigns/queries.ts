@@ -1,5 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
+import { calculatePoConsumption } from "@/lib/finance/po/calculations";
+import type { PoStatus } from "@/lib/finance/po/status";
 import {
   resolveVatRateForCountry,
   resolveVendorDefaultVatPercent,
@@ -173,7 +175,7 @@ export async function getCampaignsList(params: {
   const totalPages = Math.max(1, Math.ceil(total / CAMPAIGNS_PAGE_SIZE));
 
   return {
-    campaigns: (data ?? []) as CampaignListItem[],
+    campaigns: (data ?? []) as unknown as CampaignListItem[],
     total,
     page,
     pageSize: CAMPAIGNS_PAGE_SIZE,
@@ -199,7 +201,7 @@ export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
   }
 
   return {
-    brands: brands as BrandFormOption[],
+    brands: brands as unknown as BrandFormOption[],
     masterData,
     accountManagers: managersResult.data ?? [],
   };
@@ -309,7 +311,7 @@ export async function getCampaignWorkspace(
     throw new Error(vendorsResult.error.message);
   }
 
-  const lines = (linesResult.data ?? []) as LineRow[];
+  const lines = (linesResult.data ?? []) as unknown as LineRow[];
   const lineIds = new Set(lines.map((l) => l.id));
   const lineDocMap = new Map(lines.map((l) => [l.id, l.document_number]));
 
@@ -348,7 +350,7 @@ export async function getCampaignWorkspace(
   }
 
   const vendors = (vendorsResult.data ?? []).map((row) => {
-    const v = row as {
+    const v = row as unknown as {
       id: string;
       campaign_line_id: string | null;
       influencer_id: string;
@@ -412,7 +414,7 @@ export async function getCampaignWorkspace(
   }
 
   const invoices = (invoicesResult.data ?? []).map((inv) => {
-    const row = inv as {
+    const row = inv as unknown as {
       id: string;
       document_number: string;
       status: string;
@@ -448,7 +450,7 @@ export async function getCampaignWorkspace(
       .order("created_at", { ascending: false });
 
     payments = (paymentRows ?? []).map((p) => {
-      const row = p as {
+      const row = p as unknown as {
         id: string;
         document_number: string;
         invoice_id: string;
@@ -551,7 +553,7 @@ export async function getCampaignWorkspace(
   const vendorIds = new Set(vendors.map((v) => v.id));
 
   const deliverables = (deliverablesResult.data ?? []).map((row) => {
-    const d = row as {
+    const d = row as unknown as {
       id: string;
       document_number: string;
       deliverable_type: string;
@@ -585,7 +587,7 @@ export async function getCampaignWorkspace(
   });
 
   const filteredApprovals = (approvalsResult.data ?? []).filter((a) => {
-    const row = a as { entity_type: string; entity_id: string };
+    const row = a as unknown as { entity_type: string; entity_id: string };
     if (row.entity_type === "campaign" && row.entity_id === campaignId) {
       return true;
     }
@@ -602,7 +604,7 @@ export async function getCampaignWorkspace(
   });
 
   const approvals = filteredApprovals.map((row) => {
-    const a = row as {
+    const a = row as unknown as {
       id: string;
       document_number: string;
       entity_type: string;
@@ -629,7 +631,7 @@ export async function getCampaignWorkspace(
   );
 
   const filteredAudit = (auditResult.data ?? []).filter((log) => {
-    const row = log as { entity_type: string; entity_id: string | null };
+    const row = log as unknown as { entity_type: string; entity_id: string | null };
     if (row.entity_type === "campaign_headers" && row.entity_id === campaignId) {
       return true;
     }
@@ -670,8 +672,21 @@ export async function getCampaignWorkspace(
     blockers.push("Creator payouts outstanding");
   }
 
-  const headerRow = header as HeaderWithRelations & {
+  const headerRow = header as unknown as HeaderWithRelations & {
     client: { country: string | null } | null;
+    po_number?: string | null;
+    po_currency?: string | null;
+    po_exchange_rate?: number | null;
+    po_amount_original?: number;
+    po_amount_campaign_currency?: number;
+    po_consumed_amount?: number;
+    po_remaining_amount?: number;
+    po_remaining_percent?: number | null;
+    po_status?: PoStatus;
+    po_expiry_date?: string | null;
+    po_override_approved?: boolean;
+    po_override_reason?: string | null;
+    fx_snapshot_at?: string | null;
   };
   const clientCountryCode = headerRow.client?.country?.trim().toUpperCase().slice(0, 2) ?? null;
   const defaultRevenueVatPercent = await resolveVatRateForCountry(
@@ -690,6 +705,16 @@ export async function getCampaignWorkspace(
     invoices,
   });
 
+  const poAmountCampaign =
+    Number(headerRow.po_amount_campaign_currency ?? 0) || budget;
+  const poConsumed =
+    Number(headerRow.po_consumed_amount ?? 0) ||
+    workspaceLines.reduce((s, l) => s + l.revenue_before_vat, 0);
+  const poHealth = calculatePoConsumption({
+    po_amount: poAmountCampaign,
+    consumed: poConsumed,
+  }).health;
+
   return {
     id: headerRow.id,
     document_number: headerRow.document_number,
@@ -706,6 +731,32 @@ export async function getCampaignWorkspace(
     brand: headerRow.brand,
     team: headerRow.team,
     account_manager: headerRow.account_manager,
+    po: {
+      po_number: headerRow.po_number ?? null,
+      po_currency: headerRow.po_currency ?? headerRow.currency_code,
+      po_exchange_rate:
+        headerRow.po_exchange_rate != null
+          ? Number(headerRow.po_exchange_rate)
+          : null,
+      po_amount_original: Number(headerRow.po_amount_original ?? budget),
+      po_amount_campaign_currency: poAmountCampaign,
+      po_consumed_amount: poConsumed,
+      po_remaining_amount: Number(
+        headerRow.po_remaining_amount ?? poAmountCampaign - poConsumed
+      ),
+      po_remaining_percent:
+        headerRow.po_remaining_percent != null
+          ? Number(headerRow.po_remaining_percent)
+          : poAmountCampaign > 0
+            ? ((poAmountCampaign - poConsumed) / poAmountCampaign) * 100
+            : null,
+      po_status: headerRow.po_status ?? "draft",
+      po_expiry_date: headerRow.po_expiry_date ?? null,
+      po_override_approved: headerRow.po_override_approved ?? false,
+      po_override_reason: headerRow.po_override_reason ?? null,
+      fx_snapshot_at: headerRow.fx_snapshot_at ?? null,
+      health: poHealth,
+    },
     financials: {
       budget,
       revenue,
@@ -725,7 +776,7 @@ export async function getCampaignWorkspace(
     payments,
     approvals,
     activity: filteredAudit.slice(0, 30).map((log) => {
-      const row = log as {
+      const row = log as unknown as {
         id: string;
         action: string;
         entity_type: string;
@@ -842,7 +893,7 @@ export async function searchInfluencersForCampaign(params: {
   }
 
   return (data ?? []).map((row) => {
-    const r = row as {
+    const r = row as unknown as {
       id: string;
       document_number: string;
       display_name: string;
@@ -900,7 +951,7 @@ export async function getInfluencerForAssignment(
     audience_country: a.audience_country ?? null,
   }));
 
-  const inf = influencer as {
+  const inf = influencer as unknown as {
     id: string;
     document_number: string;
     display_name: string;

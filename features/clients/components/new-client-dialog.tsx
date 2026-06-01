@@ -36,7 +36,6 @@ import {
   AGENCY_OR_DIRECT_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
-  CURRENCY_OPTIONS,
 } from "@/features/clients/constants";
 import { checkClientNameAvailable } from "@/features/validation/actions";
 import type { AgencyOrDirect } from "@/types/database";
@@ -45,9 +44,10 @@ const initialState: CreateClientFormState = { ok: false };
 
 type NewClientDialogProps = {
   groups: { id: string; name: string }[];
+  currencyOptions: { value: string; label: string }[];
 };
 
-export function NewClientDialog({ groups }: NewClientDialogProps) {
+export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [groupId, setGroupId] = useState("");
@@ -191,7 +191,7 @@ export function NewClientDialog({ groups }: NewClientDialogProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CURRENCY_OPTIONS.map((o) => (
+                    {currencyOptions.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
                         {o.label}
                       </SelectItem>

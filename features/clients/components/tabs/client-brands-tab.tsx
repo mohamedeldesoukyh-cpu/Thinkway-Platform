@@ -46,7 +46,7 @@ import {
   brandTableRowToGroupBrandRow,
   clientToLegalEntityRow,
 } from "@/features/brands/utils";
-import { CURRENCY_OPTIONS } from "@/features/clients/constants";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { BrandSheet } from "@/features/groups/components/brand-sheet";
 import type { GroupBrandRow } from "@/features/groups/types";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
@@ -59,6 +59,7 @@ type ClientBrandsTabProps = {
 };
 
 export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
+  const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const [brandName, setBrandName] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
@@ -241,7 +242,7 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CURRENCY_OPTIONS.map((o) => (
+                      {currencyOptions.map((o) => (
                         <SelectItem key={o.value} value={o.value}>
                           {o.label}
                         </SelectItem>

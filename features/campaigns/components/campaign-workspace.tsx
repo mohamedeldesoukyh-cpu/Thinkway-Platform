@@ -34,6 +34,7 @@ type CampaignWorkspaceViewProps = {
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
   billingLines: BillingLineRow[];
+  currencyOptions: { value: string; label: string }[];
 };
 
 export function CampaignWorkspaceView({
@@ -41,6 +42,7 @@ export function CampaignWorkspaceView({
   accountManagers,
   teams,
   billingLines,
+  currencyOptions,
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
 
@@ -105,10 +107,15 @@ export function CampaignWorkspaceView({
             workspace={workspace}
             accountManagers={accountManagers}
             teams={teams}
+            currencyOptions={currencyOptions}
           />
         </TabsContent>
         <TabsContent value="lines">
-          <CampaignLinesTab workspace={workspace} />
+          <CampaignLinesTab
+            workspace={workspace}
+            po={workspace.po}
+            currencyOptions={currencyOptions}
+          />
         </TabsContent>
         <TabsContent value="deliverables">
           <CampaignDeliverablesTab workspace={workspace} />

@@ -70,7 +70,7 @@ export async function getClientsList(params: {
   const total = count ?? 0;
 
   return {
-    clients: (data ?? []) as ClientsListResult["clients"],
+    clients: (data ?? []) as unknown as ClientsListResult["clients"],
     total,
     page,
     pageSize: CLIENTS_PAGE_SIZE,
@@ -95,7 +95,7 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
     return null;
   }
 
-  const clientRow = client as ClientRow & {
+  const clientRow = client as unknown as ClientRow & {
     group: ClientDetail["group"];
   };
 
@@ -126,7 +126,7 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
     ...clientRow,
     group: clientRow.group,
     documents: documentsResult.data ?? [],
-    campaigns: (campaignsResult.data ?? []) as ClientDetail["campaigns"],
+    campaigns: (campaignsResult.data ?? []) as unknown as ClientDetail["campaigns"],
     brands,
   };
 }

@@ -20,7 +20,7 @@ import {
   LINE_BILLING_STATUS_LABELS,
   VENDOR_PAYMENT_STATUS_LABELS,
 } from "@/features/campaigns/constants";
-import type { CampaignLineWorkspace, CampaignWorkspace } from "@/features/campaigns/types";
+import type { CampaignLineWorkspace, CampaignPoSummary, CampaignWorkspace } from "@/features/campaigns/types";
 import {
   formatMoney,
   formatPercent,
@@ -29,9 +29,11 @@ import {
 
 type CampaignLinesTabProps = {
   workspace: CampaignWorkspace;
+  po: CampaignPoSummary;
+  currencyOptions: { value: string; label: string }[];
 };
 
-export function CampaignLinesTab({ workspace }: CampaignLinesTabProps) {
+export function CampaignLinesTab({ workspace, po, currencyOptions }: CampaignLinesTabProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<CampaignLineWorkspace | null>(null);
   const currency = workspace.currency_code;
@@ -171,6 +173,8 @@ export function CampaignLinesTab({ workspace }: CampaignLinesTabProps) {
         currencyCode={workspace.currency_code}
         defaultRevenueVatPercent={workspace.vat_context.default_revenue_vat_percent}
         clientCountryCode={workspace.vat_context.client_country_code}
+        po={po}
+        currencyOptions={currencyOptions}
         line={editing}
         open={sheetOpen}
         onOpenChange={setSheetOpen}

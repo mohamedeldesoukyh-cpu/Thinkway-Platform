@@ -1,13 +1,13 @@
 import { z } from "zod";
 
+import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
+
 const clientStatusSchema = z.enum([
   "prospect",
   "active",
   "inactive",
   "archived",
 ]);
-
-const currencySchema = z.enum(["USD", "AED", "SAR", "EGP", "EUR"]);
 
 const paymentTermsSchema = z.enum([
   "due_on_receipt",
@@ -75,7 +75,7 @@ export const createClientSchema = z.object({
       (value) => !value || z.string().email().safeParse(value).success,
       "Enter a valid email"
     ),
-  currency: currencySchema.default("USD"),
+  currency: currencyCodeSchema.default("USD"),
   country: z.string().trim().max(2).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
@@ -125,7 +125,7 @@ export const updateClientLegalSchema = z.object({
 
 export const updateClientFinanceSchema = z.object({
   client_id: z.string().uuid(),
-  currency: currencySchema,
+  currency: currencyCodeSchema,
   payment_terms: paymentTermsSchema.optional().or(z.literal("")),
   credit_limit: optionalNumber,
   billing_email: z

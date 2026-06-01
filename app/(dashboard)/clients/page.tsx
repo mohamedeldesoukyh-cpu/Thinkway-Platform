@@ -8,7 +8,8 @@ import { ClientsSearch } from "@/features/clients/components/clients-search";
 import { ClientsTable } from "@/features/clients/components/clients-table";
 import { NewClientDialog } from "@/features/clients/components/new-client-dialog";
 import { getClientsList } from "@/features/clients/queries";
-import { getGroupsForSelect } from "@/lib/master-data/queries";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import { getGroupsForSelect, getMasterDataOptions } from "@/lib/master-data/queries";
 
 type ClientsPageProps = {
   searchParams: Promise<{
@@ -24,13 +25,18 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
 
   let list;
   let groups: Awaited<ReturnType<typeof getGroupsForSelect>> = [];
+  let currencyOptions: { value: string; label: string }[] = [];
   let errorMessage: string | null = null;
 
   try {
-    [list, groups] = await Promise.all([
+    const [listResult, groupsResult, masterData] = await Promise.all([
       getClientsList({ page, search }),
       getGroupsForSelect(),
+      getMasterDataOptions(),
     ]);
+    list = listResult;
+    groups = groupsResult;
+    currencyOptions = buildCurrencyOptions(masterData.currencies);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load clients.";
@@ -50,7 +56,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
     <DashboardShell
       title="Clients"
       description="Legal entities within groups. Brands and campaigns hang off each entity."
-      actions={<NewClientDialog groups={groups} />}
+      actions={<NewClientDialog groups={groups} currencyOptions={currencyOptions} />}
     >
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

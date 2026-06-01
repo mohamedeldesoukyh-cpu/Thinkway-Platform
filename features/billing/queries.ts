@@ -124,7 +124,7 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
   if (linesResult.error) throw new Error(linesResult.error.message);
   if (invoicesResult.error) throw new Error(invoicesResult.error.message);
 
-  const lines = ((linesResult.data ?? []) as LineQueryRow[]).map((row) => {
+  const lines = ((linesResult.data ?? []) as unknown as LineQueryRow[]).map((row) => {
     const revenue = Number(row.revenue);
     const cost = Number(row.cost);
     const gp = Number(row.profit);
@@ -159,7 +159,7 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
 
   const invoices: BillingInvoiceRow[] = (invoicesResult.data ?? []).map(
     (inv) => {
-      const row = inv as {
+      const row = inv as unknown as {
         id: string;
         document_number: string;
         client_id: string;
@@ -261,7 +261,7 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
   const pending_approvals: FinancialApprovalRow[] = (
     approvalsResult.data ?? []
   ).map((a) => {
-    const row = a as {
+    const row = a as unknown as {
       id: string;
       document_number: string;
       entity_type: string;
@@ -337,7 +337,7 @@ export async function getInvoiceWorkspace(
   if (error) throw new Error(error.message);
   if (!invoice) return null;
 
-  const inv = invoice as {
+  const inv = invoice as unknown as {
     id: string;
     document_number: string;
     status: string;
@@ -424,7 +424,7 @@ export async function getInvoiceWorkspace(
     client: inv.client,
     campaign: inv.campaign,
     lines: (linesResult.data ?? []).map((l) => {
-      const row = l as {
+      const row = l as unknown as {
         id: string;
         campaign_line_id: string | null;
         description: string;
@@ -461,7 +461,7 @@ export async function getInvoiceWorkspace(
       payment_method: p.payment_method,
     })),
     approvals: (approvalsResult.data ?? []).map((a) => {
-      const row = a as {
+      const row = a as unknown as {
         id: string;
         document_number: string;
         entity_type: string;
@@ -487,7 +487,7 @@ export async function getInvoiceWorkspace(
       };
     }),
     activity: (auditResult.data ?? []).slice(0, 20).map((log) => {
-      const row = log as {
+      const row = log as unknown as {
         id: string;
         action: string;
         entity_type: string;

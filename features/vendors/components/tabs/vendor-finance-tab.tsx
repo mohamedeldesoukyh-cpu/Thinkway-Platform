@@ -22,12 +22,17 @@ import {
 } from "@/features/vendors/actions";
 import {
   PAYMENT_TERMS_OPTIONS,
-  PRICING_CURRENCY_OPTIONS,
 } from "@/features/vendors/constants";
 import { parseRateCard } from "@/features/vendors/utils";
 import type { VendorDetail } from "@/types/database";
 
-export function VendorFinanceTab({ vendor }: { vendor: VendorDetail }) {
+export function VendorFinanceTab({
+  vendor,
+  currencyOptions = [],
+}: {
+  vendor: VendorDetail;
+  currencyOptions?: { value: string; label: string }[];
+}) {
   const rate = parseRateCard(vendor.rate_card);
   const [paymentTerms, setPaymentTerms] = useState(vendor.payment_terms ?? "");
   const [currency, setCurrency] = useState(rate.currency ?? "USD");
@@ -100,7 +105,7 @@ export function VendorFinanceTab({ vendor }: { vendor: VendorDetail }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRICING_CURRENCY_OPTIONS.map((o) => (
+                  {currencyOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>

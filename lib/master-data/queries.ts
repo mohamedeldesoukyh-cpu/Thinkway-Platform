@@ -118,7 +118,7 @@ export async function getBrandHierarchySnapshot(
     return null;
   }
 
-  const row = data as {
+  const row = data as unknown as {
     id: string;
     name: string;
     group_id: string;

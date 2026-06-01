@@ -41,7 +41,7 @@ export async function getBrandsByClientId(
     campaignCountByBrand.set(brandId, (campaignCountByBrand.get(brandId) ?? 0) + 1);
   }
 
-  return ((brandsResult.data ?? []) as BrandListItem[]).map((brand) =>
+  return ((brandsResult.data ?? []) as unknown as BrandListItem[]).map((brand) =>
     brandListItemToTableRow(brand, campaignCountByBrand.get(brand.id) ?? 0)
   );
 }

@@ -30,7 +30,6 @@ import {
 } from "@/features/campaigns/actions";
 import {
   CAMPAIGN_STATUS_OPTIONS,
-  CURRENCY_OPTIONS,
   PLATFORM_OPTIONS,
 } from "@/features/campaigns/constants";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
@@ -40,6 +39,7 @@ type CampaignEditSheetProps = {
   workspace: CampaignWorkspace;
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
+  currencyOptions: { value: string; label: string }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -48,6 +48,7 @@ export function CampaignEditSheet({
   workspace,
   accountManagers,
   teams,
+  currencyOptions,
   open,
   onOpenChange,
 }: CampaignEditSheetProps) {
@@ -154,7 +155,7 @@ export function CampaignEditSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCY_OPTIONS.map((o) => (
+                  {currencyOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>

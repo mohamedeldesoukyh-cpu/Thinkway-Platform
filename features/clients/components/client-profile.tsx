@@ -6,6 +6,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import type { ClientDetail } from "@/types/database";
 
 import { ClientStatusBadge } from "./client-status-badge";
@@ -23,6 +24,7 @@ type ClientProfileProps = {
 };
 
 export function ClientProfile({ client, groups, masterData }: ClientProfileProps) {
+  const currencyOptions = buildCurrencyOptions(masterData.currencies);
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -64,7 +66,7 @@ export function ClientProfile({ client, groups, masterData }: ClientProfileProps
           <ClientLegalTab client={client} />
         </TabsContent>
         <TabsContent value="finance">
-          <ClientFinanceTab client={client} />
+          <ClientFinanceTab client={client} currencyOptions={currencyOptions} />
         </TabsContent>
         <TabsContent value="documents">
           <ClientDocumentsTab client={client} />

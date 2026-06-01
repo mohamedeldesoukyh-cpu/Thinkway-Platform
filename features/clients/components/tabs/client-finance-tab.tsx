@@ -20,12 +20,17 @@ import {
   type FormActionState,
 } from "@/features/clients/actions";
 import {
-  CURRENCY_OPTIONS,
   PAYMENT_TERMS_OPTIONS,
 } from "@/features/clients/constants";
 import type { ClientDetail } from "@/types/database";
 
-export function ClientFinanceTab({ client }: { client: ClientDetail }) {
+export function ClientFinanceTab({
+  client,
+  currencyOptions,
+}: {
+  client: ClientDetail;
+  currencyOptions: { value: string; label: string }[];
+}) {
   const [currency, setCurrency] = useState(client.currency);
   const [paymentTerms, setPaymentTerms] = useState(client.payment_terms ?? "");
 
@@ -68,7 +73,7 @@ export function ClientFinanceTab({ client }: { client: ClientDetail }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCY_OPTIONS.map((o) => (
+                  {currencyOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>

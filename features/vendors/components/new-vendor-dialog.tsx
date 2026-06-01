@@ -36,7 +36,6 @@ import {
 } from "@/features/vendors/actions";
 import {
   COUNTRY_OPTIONS,
-  PRICING_CURRENCY_OPTIONS,
   VENDOR_STATUS_OPTIONS,
 } from "@/features/vendors/constants";
 import {
@@ -48,6 +47,10 @@ import {
 const initialState: CreateVendorFormState = { ok: false };
 const NONE_VALUE = "__none__";
 
+type NewVendorDialogProps = {
+  currencyOptions: { value: string; label: string }[];
+};
+
 function FieldError({ messages }: { messages?: string[] }) {
   if (!messages?.length) {
     return null;
@@ -56,7 +59,7 @@ function FieldError({ messages }: { messages?: string[] }) {
   return <p className="text-xs text-destructive">{messages[0]}</p>;
 }
 
-export function NewVendorDialog() {
+export function NewVendorDialog({ currencyOptions }: NewVendorDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("prospect");
@@ -360,7 +363,7 @@ export function NewVendorDialog() {
                   <SelectValue placeholder="Currency" />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRICING_CURRENCY_OPTIONS.map((option) => (
+                  {currencyOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

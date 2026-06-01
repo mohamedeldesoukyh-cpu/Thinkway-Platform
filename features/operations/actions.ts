@@ -57,7 +57,7 @@ async function loadCampaignFinancials(
   const invoiceIds = new Set<string>();
 
   for (const header of headers ?? []) {
-    const lines = (header as { lines: { invoice_id: string | null }[] }).lines;
+    const lines = (header as unknown as { lines: { invoice_id: string | null }[] }).lines;
     for (const line of lines) {
       if (line.invoice_id) invoiceIds.add(line.invoice_id);
     }
@@ -74,7 +74,7 @@ async function loadCampaignFinancials(
   }
 
   const campaigns = (headers ?? []).map((row) => {
-    const r = row as {
+    const r = row as unknown as {
       id: string;
       document_number: string;
       name: string;

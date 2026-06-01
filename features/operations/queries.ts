@@ -143,7 +143,7 @@ export async function getCampaignsForMovement(params: {
   if (error) throw new Error(error.message);
 
   const campaigns: MovementCampaignRow[] = (data ?? []).map((row) => {
-    const r = row as {
+    const r = row as unknown as {
       id: string;
       document_number: string;
       name: string;
@@ -362,7 +362,7 @@ export async function getVendorAssignmentsForMovement(
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row) => {
-    const r = row as {
+    const r = row as unknown as {
       id: string;
       campaign_line_id: string | null;
       campaign_header_id: string | null;

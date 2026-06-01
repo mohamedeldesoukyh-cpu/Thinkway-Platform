@@ -29,7 +29,6 @@ import {
   AGENCY_OR_DIRECT_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
-  CURRENCY_OPTIONS,
   PAYMENT_TERMS_OPTIONS,
   labelForOption,
 } from "@/features/clients/constants";
@@ -44,6 +43,7 @@ import type { AgencyOrDirect, ClientStatus, PaymentTerms } from "@/types/databas
 type LegalEntitySheetProps = {
   groupId: string;
   entity: GroupLegalEntityRow | null;
+  currencyOptions: { value: string; label: string }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -51,6 +51,7 @@ type LegalEntitySheetProps = {
 export function LegalEntitySheet({
   groupId,
   entity,
+  currencyOptions,
   open,
   onOpenChange,
 }: LegalEntitySheetProps) {
@@ -206,7 +207,7 @@ export function LegalEntitySheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCY_OPTIONS.map((o) => (
+                  {currencyOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>

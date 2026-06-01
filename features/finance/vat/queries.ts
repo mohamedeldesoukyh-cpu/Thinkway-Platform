@@ -84,8 +84,8 @@ export async function getVatWorkspace(): Promise<VatWorkspaceData> {
     client?: { id: string; name: string; country: string | null } | null;
   };
 
-  const lines = (linesResult.data ?? []) as LineVatRow[];
-  const invoices = (invoicesResult.data ?? []) as InvoiceVatRow[];
+  const lines = (linesResult.data ?? []) as unknown as LineVatRow[];
+  const invoices = (invoicesResult.data ?? []) as unknown as InvoiceVatRow[];
 
   const revenueBeforeVat = lines.reduce(
     (sum, line) => sum + Number(line.revenue_before_vat ?? 0),

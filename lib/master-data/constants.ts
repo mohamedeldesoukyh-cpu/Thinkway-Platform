@@ -1,15 +1,5 @@
 /** Shared master-data dropdown options for clients and vendors. */
 
-export const SUPPORTED_CURRENCIES = [
-  { value: "USD", label: "USD — US Dollar" },
-  { value: "AED", label: "AED — UAE Dirham" },
-  { value: "SAR", label: "SAR — Saudi Riyal" },
-  { value: "EGP", label: "EGP — Egyptian Pound" },
-  { value: "EUR", label: "EUR — Euro" },
-] as const;
-
-export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number]["value"];
-
 export const PAYMENT_TERMS_OPTIONS = [
   { value: "due_on_receipt", label: "Due on receipt" },
   { value: "net_15", label: "Net 15" },

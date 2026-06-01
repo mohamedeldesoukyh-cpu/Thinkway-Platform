@@ -9,6 +9,8 @@ import { VendorsPagination } from "@/features/vendors/components/vendors-paginat
 import { VendorsSearch } from "@/features/vendors/components/vendors-search";
 import { VendorsTable } from "@/features/vendors/components/vendors-table";
 import { getVendorsList } from "@/features/vendors/queries";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import { getMasterDataOptions } from "@/lib/master-data/queries";
 import type { InfluencerStatus } from "@/types/database";
 
 type VendorsPageProps = {
@@ -45,15 +47,21 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
   const platform = params.platform?.trim() ?? "";
 
   let list;
+  let currencyOptions: { value: string; label: string }[] = [];
   let errorMessage: string | null = null;
 
   try {
-    list = await getVendorsList({
-      page,
-      search,
-      status: status || undefined,
-      platform: platform || undefined,
-    });
+    const [listResult, masterData] = await Promise.all([
+      getVendorsList({
+        page,
+        search,
+        status: status || undefined,
+        platform: platform || undefined,
+      }),
+      getMasterDataOptions(),
+    ]);
+    list = listResult;
+    currencyOptions = buildCurrencyOptions(masterData.currencies);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load vendors.";
@@ -73,7 +81,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
     <DashboardShell
       title="Vendors"
       description="Manage creators, agencies, and platform presence for campaign assignments."
-      actions={<NewVendorDialog />}
+      actions={<NewVendorDialog currencyOptions={currencyOptions} />}
     >
       <Card>
         <CardHeader className="flex flex-col gap-4">

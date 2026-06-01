@@ -1,4 +1,8 @@
 import type { AgencyOrDirect, CampaignStatus } from "@/types/database";
+import type { PoHealth } from "@/lib/finance/po/calculations";
+import type { PoStatus } from "@/lib/finance/po/status";
+
+import type { LineInfluencerAssignment } from "./line-assignment";
 
 export type BrandFormOption = {
   id: string;
@@ -48,6 +52,23 @@ export type CampaignLineAssignmentStatus =
 
 export type VendorPaymentStatus = "unpaid" | "pending" | "paid" | "cancelled";
 
+export type CampaignPoSummary = {
+  po_number: string | null;
+  po_currency: string | null;
+  po_exchange_rate: number | null;
+  po_amount_original: number;
+  po_amount_campaign_currency: number;
+  po_consumed_amount: number;
+  po_remaining_amount: number;
+  po_remaining_percent: number | null;
+  po_status: PoStatus;
+  po_expiry_date: string | null;
+  po_override_approved: boolean;
+  po_override_reason: string | null;
+  fx_snapshot_at: string | null;
+  health: PoHealth;
+};
+
 export type CampaignFinancialSummary = {
   budget: number;
   revenue: number;
@@ -59,8 +80,6 @@ export type CampaignFinancialSummary = {
   billing_outstanding: number;
   collected: number;
 };
-
-import type { LineInfluencerAssignment } from "./line-assignment";
 
 export type CampaignLineWorkspace = {
   id: string;
@@ -216,6 +235,7 @@ export type CampaignWorkspace = {
     email: string;
   } | null;
   financials: CampaignFinancialSummary;
+  po: CampaignPoSummary;
   workflow_stage: WorkflowStage;
   lines: CampaignLineWorkspace[];
   /** @deprecated Derived from line-linked campaign_influencers for historical records only. */

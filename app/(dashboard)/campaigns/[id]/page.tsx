@@ -7,6 +7,7 @@ import {
   getCampaignWorkspace,
 } from "@/features/campaigns/queries";
 import { getCampaignBillingLines } from "@/features/billing/queries";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 
 type CampaignWorkspacePageProps = {
@@ -43,6 +44,7 @@ export default async function CampaignWorkspacePage({
   }
 
   const teams = masterData?.teams ?? [];
+  const currencyOptions = buildCurrencyOptions(masterData?.currencies ?? []);
 
   return (
     <DashboardShell
@@ -59,6 +61,7 @@ export default async function CampaignWorkspacePage({
           accountManagers={formOptions.accountManagers}
           teams={teams}
           billingLines={billingLines}
+          currencyOptions={currencyOptions}
         />
       ) : null}
     </DashboardShell>

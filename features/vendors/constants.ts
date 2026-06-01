@@ -9,7 +9,6 @@ import {
   NATIONALITY_OPTIONS,
   PAYMENT_TERMS_OPTIONS,
   SOCIAL_PLATFORM_OPTIONS,
-  SUPPORTED_CURRENCIES,
   labelForOption,
 } from "@/lib/master-data/constants";
 
@@ -27,7 +26,6 @@ export const VENDOR_STATUS_OPTIONS: {
 ];
 
 export const PLATFORM_OPTIONS = SOCIAL_PLATFORM_OPTIONS;
-export const PRICING_CURRENCY_OPTIONS = SUPPORTED_CURRENCIES;
 
 export {
   COUNTRY_OPTIONS,

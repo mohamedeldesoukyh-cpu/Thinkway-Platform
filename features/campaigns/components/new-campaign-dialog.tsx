@@ -30,11 +30,11 @@ import {
 } from "@/features/campaigns/actions";
 import {
   CAMPAIGN_STATUS_OPTIONS,
-  CURRENCY_OPTIONS,
   PLATFORM_OPTIONS,
 } from "@/features/campaigns/constants";
 import type { CampaignFormOptions } from "@/features/campaigns/queries";
 import type { BrandFormOption } from "@/features/campaigns/types";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { labelForOption } from "@/lib/master-data/constants";
 import { AGENCY_OR_DIRECT_OPTIONS } from "@/features/clients/constants";
 
@@ -55,7 +55,9 @@ type NewCampaignDialogProps = CampaignFormOptions;
 export function NewCampaignDialog({
   brands,
   accountManagers,
+  masterData,
 }: NewCampaignDialogProps) {
+  const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const [open, setOpen] = useState(false);
   const [brandId, setBrandId] = useState("");
   const [platform, setPlatform] = useState("");
@@ -248,7 +250,7 @@ export function NewCampaignDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CURRENCY_OPTIONS.map((o) => (
+                    {currencyOptions.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
                         {o.label}
                       </SelectItem>

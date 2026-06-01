@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
+
 const influencerStatusSchema = z.enum([
   "prospect",
   "active",
@@ -7,8 +9,6 @@ const influencerStatusSchema = z.enum([
   "blacklisted",
   "archived",
 ]);
-
-const currencySchema = z.enum(["USD", "AED", "SAR", "EGP", "EUR"]);
 
 const paymentTermsSchema = z.enum([
   "due_on_receipt",
@@ -118,7 +118,7 @@ export const createVendorSchema = z.object({
     const parsed = Number(value);
     return Number.isNaN(parsed) ? undefined : parsed;
   }, z.number().min(0, "Pricing cannot be negative").optional()),
-  pricing_currency: currencySchema.default("USD"),
+  pricing_currency: currencyCodeSchema.default("USD"),
   status: influencerStatusSchema.default("prospect"),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
@@ -177,7 +177,7 @@ export const updateVendorFinanceSchema = z.object({
     const parsed = Number(value);
     return Number.isNaN(parsed) ? undefined : parsed;
   }, z.number().min(0).optional()),
-  pricing_currency: currencySchema.default("USD"),
+  pricing_currency: currencyCodeSchema.default("USD"),
   vat_registered: z
     .enum(["0", "1", "true", "false"])
     .optional()

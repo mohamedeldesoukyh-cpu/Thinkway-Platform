@@ -6,7 +6,6 @@ import {
   CLIENT_SUBCATEGORY_BY_CATEGORY,
   COUNTRY_OPTIONS,
   PAYMENT_TERMS_OPTIONS,
-  SUPPORTED_CURRENCIES,
   getClientSubcategoryOptions,
   labelForOption,
 } from "@/lib/master-data/constants";
@@ -22,8 +21,6 @@ export const CLIENT_STATUS_OPTIONS: {
   { value: "inactive", label: "Inactive" },
   { value: "archived", label: "Archived" },
 ];
-
-export const CURRENCY_OPTIONS = SUPPORTED_CURRENCIES;
 
 export {
   AGENCY_OR_DIRECT_OPTIONS,

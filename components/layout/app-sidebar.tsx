@@ -45,6 +45,8 @@ const navItems: NavItem[] = [
     icon: CalendarClockIcon,
     children: [
       { href: "/finance/vat", label: "VAT & tax" },
+      { href: "/finance/po-tracker", label: "PO tracker" },
+      { href: "/finance/exchange-rates", label: "Exchange rates" },
       { href: "/finance/periods", label: "Period management" },
     ],
   },

@@ -27,13 +27,17 @@ import {
 } from "@/features/groups/components/legal-entity-sheet";
 import type { GroupLegalEntityRow, GroupWorkspace } from "@/features/groups/types";
 import { formatGroupMoney } from "@/features/groups/utils";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
 
 type GroupLegalEntitiesTabProps = {
   workspace: GroupWorkspace;
+  masterData: MasterDataOptions;
 };
 
-export function GroupLegalEntitiesTab({ workspace }: GroupLegalEntitiesTabProps) {
+export function GroupLegalEntitiesTab({ workspace, masterData }: GroupLegalEntitiesTabProps) {
+  const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupLegalEntityRow | null>(null);
 
@@ -101,6 +105,7 @@ export function GroupLegalEntitiesTab({ workspace }: GroupLegalEntitiesTabProps)
       <LegalEntitySheet
         groupId={workspace.id}
         entity={editing}
+        currencyOptions={currencyOptions}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />

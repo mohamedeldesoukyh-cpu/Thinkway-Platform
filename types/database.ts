@@ -106,6 +106,14 @@ export type AgencyRow = {
   updated_at: string;
 };
 
+export type PoStatus =
+  | "draft"
+  | "active"
+  | "near_limit"
+  | "exceeded"
+  | "expired"
+  | "closed";
+
 export type CampaignHeaderRow = {
   id: string;
   document_number: string;
@@ -128,6 +136,19 @@ export type CampaignHeaderRow = {
   account_manager_id: string | null;
   objectives: unknown[];
   metadata: Record<string, unknown>;
+  po_number: string | null;
+  po_currency: string | null;
+  po_exchange_rate: number | null;
+  po_amount_original: number;
+  po_amount_campaign_currency: number;
+  po_consumed_amount: number;
+  po_remaining_amount: number;
+  po_remaining_percent: number | null;
+  po_status: PoStatus;
+  po_expiry_date: string | null;
+  po_override_approved: boolean;
+  po_override_reason: string | null;
+  fx_snapshot_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -169,6 +190,10 @@ export type CampaignLineRow = {
   currency_code: string;
   base_currency: string;
   fx_rate: number;
+  fx_from_currency: string | null;
+  fx_to_currency: string | null;
+  fx_snapshot_at: string | null;
+  po_override_flag: boolean;
   revenue_base: number;
   cost_base: number;
   profit_base: number;
@@ -631,9 +656,172 @@ export type Database = {
         Relationships: [];
       };
       md_currencies: {
-        Row: { code: string; name: string; symbol: string | null; is_active: boolean };
-        Insert: { code: string; name: string };
-        Update: Partial<{ name: string; symbol: string | null; is_active: boolean }>;
+        Row: {
+          code: string;
+          name: string;
+          symbol: string | null;
+          decimal_places: number;
+          country_code: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          code: string;
+          name: string;
+          symbol?: string | null;
+          decimal_places?: number;
+          country_code?: string | null;
+          is_active?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["md_currencies"]["Insert"]>;
+        Relationships: [];
+      };
+      md_exchange_rates: {
+        Row: {
+          id: string;
+          from_currency: string;
+          to_currency: string;
+          exchange_rate: number;
+          effective_start_date: string;
+          effective_end_date: string | null;
+          is_active: boolean;
+          source: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          from_currency: string;
+          to_currency: string;
+          exchange_rate: number;
+          effective_start_date: string;
+          effective_end_date?: string | null;
+          is_active?: boolean;
+          source?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["md_exchange_rates"]["Insert"]>;
+        Relationships: [];
+      };
+      fx_rate_audit_logs: {
+        Row: {
+          id: string;
+          exchange_rate_id: string | null;
+          action: string;
+          old_data: Record<string, unknown>;
+          new_data: Record<string, unknown>;
+          override_reason: string | null;
+          recalculation_scope: string | null;
+          impacted_record_count: number;
+          changed_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          exchange_rate_id?: string | null;
+          action: string;
+          old_data?: Record<string, unknown>;
+          new_data?: Record<string, unknown>;
+          override_reason?: string | null;
+          recalculation_scope?: string | null;
+          impacted_record_count?: number;
+          changed_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["fx_rate_audit_logs"]["Insert"]>;
+        Relationships: [];
+      };
+      po_governance_logs: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          action: string;
+          field_name: string | null;
+          old_value: Record<string, unknown> | null;
+          new_value: Record<string, unknown> | null;
+          override_reason: string | null;
+          changed_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          action: string;
+          field_name?: string | null;
+          old_value?: Record<string, unknown> | null;
+          new_value?: Record<string, unknown> | null;
+          override_reason?: string | null;
+          changed_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["po_governance_logs"]["Insert"]>;
+        Relationships: [];
+      };
+      finance_notifications: {
+        Row: {
+          id: string;
+          notification_type: string;
+          campaign_header_id: string | null;
+          title: string;
+          message: string;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          notification_type: string;
+          campaign_header_id?: string | null;
+          title: string;
+          message: string;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<Database["public"]["Tables"]["finance_notifications"]["Insert"]>;
+        Relationships: [];
+      };
+      campaign_purchase_orders: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          po_number: string;
+          po_currency: string;
+          po_exchange_rate: number;
+          po_amount_original: number;
+          po_amount_campaign_currency: number;
+          po_consumed_amount: number;
+          po_remaining_amount: number;
+          po_remaining_percent: number | null;
+          po_status: PoStatus;
+          po_expiry_date: string | null;
+          is_primary: boolean;
+          po_override_approved: boolean;
+          po_override_reason: string | null;
+          fx_snapshot_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          po_number: string;
+          po_currency: string;
+          po_exchange_rate?: number;
+          po_amount_original?: number;
+          po_amount_campaign_currency?: number;
+          po_consumed_amount?: number;
+          po_remaining_amount?: number;
+          po_remaining_percent?: number | null;
+          po_status?: PoStatus;
+          po_expiry_date?: string | null;
+          is_primary?: boolean;
+          po_override_approved?: boolean;
+          po_override_reason?: string | null;
+          fx_snapshot_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["campaign_purchase_orders"]["Insert"]>;
         Relationships: [];
       };
       md_countries: {
@@ -1122,11 +1310,25 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      resolve_effective_exchange_rate: {
+        Args: {
+          p_from_currency: string;
+          p_to_currency: string;
+          p_as_of?: string;
+        };
+        Returns: number;
+      };
+      sync_campaign_header_po_consumption: {
+        Args: { p_header_id: string };
+        Returns: undefined;
+      };
+    };
     Enums: {
       client_status: ClientStatus;
       campaign_status: CampaignStatus;
       influencer_status: InfluencerStatus;
+      po_status: PoStatus;
     };
   };
 };

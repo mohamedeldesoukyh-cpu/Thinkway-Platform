@@ -138,7 +138,7 @@ export async function getVendorsList(
     const total = count ?? 0;
     const vendors = await enrichVendorList(
       supabase,
-      (data ?? []) as VendorListItem[]
+      (data ?? []) as unknown as VendorListItem[]
     );
 
     return {
@@ -192,7 +192,7 @@ export async function getVendorsList(
   const total = count ?? 0;
   const vendors = await enrichVendorList(
     supabase,
-    (data ?? []) as VendorListItem[]
+    (data ?? []) as unknown as VendorListItem[]
   );
 
   return {
@@ -294,14 +294,14 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
     throw new Error(assignmentsError.message);
   }
 
-  const vendorRow = vendor as InfluencerRow & {
+  const vendorRow = vendor as unknown as InfluencerRow & {
     platform_accounts?: InfluencerPlatformAccountRow[];
   };
 
   return {
     ...vendorRow,
     platform_accounts: vendorRow.platform_accounts ?? [],
-    campaign_assignments: (assignments ?? []) as VendorCampaignAssignment[],
+    campaign_assignments: (assignments ?? []) as unknown as VendorCampaignAssignment[],
     documents: documents ?? [],
   };
 }
@@ -338,7 +338,7 @@ export async function getVendorWorkspace(
   if (assignError) throw new Error(assignError.message);
 
   const assignments: VendorAssignmentRow[] = (assignmentRows ?? []).map((row) => {
-    const r = row as {
+    const r = row as unknown as {
       id: string;
       campaign_line_id: string | null;
       campaign_header_id: string | null;
@@ -414,7 +414,7 @@ export async function getVendorWorkspace(
   }
 
   const deliverables: VendorDeliverableRow[] = (deliverableRows ?? []).map((d) => {
-    const row = d as {
+    const row = d as unknown as {
       id: string;
       document_number: string;
       title: string;
@@ -491,7 +491,7 @@ export async function getVendorWorkspace(
 
   const activity: VendorActivityItem[] = (auditRows ?? [])
     .filter((log) => {
-      const row = log as { entity_type: string; entity_id: string | null };
+      const row = log as unknown as { entity_type: string; entity_id: string | null };
       if (row.entity_type === "influencers" && row.entity_id === id) return true;
       if (
         row.entity_type === "campaign_influencers" &&
@@ -503,7 +503,7 @@ export async function getVendorWorkspace(
       return false;
     })
     .map((log) => {
-      const row = log as {
+      const row = log as unknown as {
         id: string;
         action: string;
         entity_type: string;

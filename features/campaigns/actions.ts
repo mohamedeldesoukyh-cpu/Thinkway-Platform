@@ -150,7 +150,7 @@ export async function createCampaignAction(
     return { ok: false, message: brandError?.message ?? "Brand not found." };
   }
 
-  const brandRow = brand as {
+  const brandRow = brand as unknown as {
     id: string;
     client_id: string;
     group_id: string;

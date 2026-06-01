@@ -26,9 +26,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { createBrandAction, updateBrandAction } from "@/features/brands/actions";
-import { CLIENT_STATUS_OPTIONS, CURRENCY_OPTIONS } from "@/features/clients/constants";
+import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import type { GroupBrandRow, GroupLegalEntityRow } from "@/features/groups/types";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import type { ClientStatus } from "@/types/database";
 
@@ -47,6 +48,7 @@ export function BrandSheet({
   open,
   onOpenChange,
 }: BrandSheetProps) {
+  const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const isEdit = brand !== null;
   const defaultClientId = brand?.client_id ?? legalEntities[0]?.id ?? "";
 
@@ -181,7 +183,7 @@ export function BrandSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCY_OPTIONS.map((o) => (
+                  {currencyOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>

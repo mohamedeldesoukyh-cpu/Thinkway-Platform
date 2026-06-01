@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
+
 const campaignStatusSchema = z.enum([
   "draft",
   "planning",
@@ -15,8 +17,6 @@ const optionalDate = z
   .optional()
   .or(z.literal(""))
   .transform((value) => (value ? value : null));
-
-const currencySchema = z.enum(["USD", "AED", "SAR", "EGP", "EUR"]);
 
 export const createCampaignSchema = z
   .object({
@@ -34,7 +34,7 @@ export const createCampaignSchema = z
     revenue: z.coerce.number().min(0).optional(),
     cost: z.coerce.number().min(0).optional(),
     fx_rate: z.coerce.number().positive("FX rate must be positive").default(1),
-    currency_code: currencySchema,
+    currency_code: currencyCodeSchema,
     start_date: optionalDate,
     end_date: optionalDate,
     status: campaignStatusSchema.default("draft"),
@@ -65,7 +65,7 @@ export const updateCampaignHeaderSchema = z
     brief: z.string().trim().max(5000).optional().or(z.literal("")),
     status: campaignStatusSchema,
     platform: z.string().trim().max(64).optional().or(z.literal("")),
-    currency_code: currencySchema,
+    currency_code: currencyCodeSchema,
     start_date: optionalDate,
     end_date: optionalDate,
     account_manager_id: z.string().uuid().optional().or(z.literal("")),
@@ -138,7 +138,7 @@ export const createCampaignLineSchema = z.object({
     .enum(["0", "1", "true", "false"])
     .optional()
     .transform((v) => v === "1" || v === "true"),
-  currency_code: currencySchema.default("USD"),
+  currency_code: currencyCodeSchema.default("USD"),
   start_date: optionalDate,
   end_date: optionalDate,
 });
@@ -153,7 +153,7 @@ export const assignCampaignVendorSchema = z.object({
   campaign_line_id: z.string().uuid().optional().or(z.literal("")),
   influencer_id: z.string().uuid(),
   agreed_fee: z.coerce.number().min(0).default(0),
-  currency: currencySchema.default("USD"),
+  currency: currencyCodeSchema.default("USD"),
   status: z
     .enum([
       "invited",

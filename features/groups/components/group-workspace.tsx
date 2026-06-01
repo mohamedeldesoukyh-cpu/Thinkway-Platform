@@ -67,7 +67,7 @@ export function GroupWorkspaceView({
           />
         </TabsContent>
         <TabsContent value="legal-entities">
-          <GroupLegalEntitiesTab workspace={workspace} />
+          <GroupLegalEntitiesTab workspace={workspace} masterData={masterData} />
         </TabsContent>
         <TabsContent value="brands">
           <GroupBrandsTab workspace={workspace} masterData={masterData} />

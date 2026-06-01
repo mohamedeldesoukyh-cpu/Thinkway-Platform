@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { InfluencerTypeahead } from "@/components/forms/influencer-typeahead";
@@ -37,18 +37,21 @@ import {
 } from "@/features/campaigns/components/platform-account-selector";
 import {
   ASSIGNMENT_STATUS_OPTIONS,
-  CURRENCY_OPTIONS,
 } from "@/features/campaigns/constants";
 import {
   buildLineTitle,
   countLineDeliverables,
   suggestCostFromRateCard,
 } from "@/features/campaigns/line-assignment";
+import { CampaignLinePoPanel } from "@/features/campaigns/components/campaign-line-po-panel";
+import { PoGovernanceDialog } from "@/features/campaigns/components/po-governance-dialog";
+import { calculatePoConsumption } from "@/lib/finance/po/calculations";
 import { computeOperationalGp } from "@/lib/vat/calculations";
 
 import type {
   CampaignLineAssignmentStatus,
   CampaignLineWorkspace,
+  CampaignPoSummary,
   InfluencerAssignmentProfile,
   InfluencerSearchResult,
 } from "@/features/campaigns/types";
@@ -58,6 +61,8 @@ type CampaignLineSheetProps = {
   currencyCode: string;
   defaultRevenueVatPercent: number;
   clientCountryCode: string | null;
+  po: CampaignPoSummary;
+  currencyOptions: { value: string; label: string }[];
   line: CampaignLineWorkspace | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -68,6 +73,8 @@ export function CampaignLineSheet({
   currencyCode,
   defaultRevenueVatPercent,
   clientCountryCode,
+  po,
+  currencyOptions,
   line,
   open,
   onOpenChange,
@@ -98,6 +105,9 @@ export function CampaignLineSheet({
   const [poAmount, setPoAmount] = useState(line?.po_amount ?? 0);
   const [startDate, setStartDate] = useState(line?.start_date ?? "");
   const [endDate, setEndDate] = useState(line?.end_date ?? "");
+  const [poDialogOpen, setPoDialogOpen] = useState(false);
+  const [overrideApproved, setOverrideApproved] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [createState, createAction, createPending] = useActionState(
     createCampaignLineAction,
@@ -233,6 +243,17 @@ export function CampaignLineSheet({
     }
   }, [profile, activeSelections, cost]);
 
+  const poSnapshot = useMemo(
+    () =>
+      calculatePoConsumption({
+        po_amount: po.po_amount_campaign_currency,
+        consumed: po.po_consumed_amount,
+        current_line_revenue: revenue,
+        exclude_line_revenue: line?.revenue_before_vat ?? 0,
+      }),
+    [po, revenue, line?.revenue_before_vat]
+  );
+
   const canSubmit =
     Boolean(influencerId) &&
     activeSelections.length > 0 &&
@@ -251,7 +272,21 @@ export function CampaignLineSheet({
             commercial terms. Line title is generated automatically.
           </SheetDescription>
         </SheetHeader>
-        <form action={formAction} className="flex flex-1 flex-col gap-5 px-6 pb-6">
+        <form
+          ref={formRef}
+          action={formAction}
+          className="flex flex-1 flex-col gap-5 px-6 pb-6"
+          onSubmit={(event) => {
+            if (
+              poSnapshot.is_over_consumed &&
+              !overrideApproved &&
+              !po.po_override_approved
+            ) {
+              event.preventDefault();
+              setPoDialogOpen(true);
+            }
+          }}
+        >
           <input type="hidden" name="campaign_id" value={campaignId} />
           {isEdit ? <input type="hidden" name="line_id" value={line.id} /> : null}
           <input type="hidden" name="influencer_id" value={influencerId} />
@@ -357,7 +392,7 @@ export function CampaignLineSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCY_OPTIONS.map((o) => (
+                  {currencyOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>
@@ -367,22 +402,19 @@ export function CampaignLineSheet({
             </div>
           </div>
 
-          <div className="grid gap-4">
-            <div className="grid gap-2 sm:max-w-xs">
-              <Label htmlFor="po_amount">PO amount</Label>
-              <Input
-                id="po_amount"
-                name="po_amount"
-                type="number"
-                min={0}
-                step="0.01"
-                value={poAmount}
-                onChange={(e) => setPoAmount(Number(e.target.value))}
-                required
-                disabled={isPending}
-              />
-            </div>
+          <CampaignLinePoPanel
+            currency={currencyCode}
+            poAmount={po.po_amount_campaign_currency}
+            consumed={po.po_consumed_amount}
+            currentLineRevenue={revenue}
+            excludeLineRevenue={line?.revenue_before_vat ?? 0}
+            poCurrency={po.po_currency}
+            exchangeRate={po.po_exchange_rate}
+            fxSnapshotAt={po.fx_snapshot_at}
+          />
 
+          <div className="grid gap-4">
+            <input type="hidden" name="po_amount" value={poAmount} />
             <VatAmountSection
               title="Client revenue"
               amountLabel="Revenue (ex-VAT)"
@@ -458,6 +490,19 @@ export function CampaignLineSheet({
             </Button>
           </SheetFooter>
         </form>
+        <PoGovernanceDialog
+          open={poDialogOpen}
+          onOpenChange={setPoDialogOpen}
+          campaignId={campaignId}
+          lineId={line?.id}
+          currency={currencyCode}
+          snapshot={poSnapshot}
+          onCancel={() => setPoDialogOpen(false)}
+          onConfirm={() => {
+            setOverrideApproved(true);
+            formRef.current?.requestSubmit();
+          }}
+        />
       </SheetContent>
     </Sheet>
   );

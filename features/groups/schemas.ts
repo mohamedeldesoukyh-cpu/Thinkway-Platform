@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
+
 export const createGroupSchema = z.object({
   name: z.string().trim().min(1, "Group name is required").max(200),
   region: z.string().trim().max(120).optional().or(z.literal("")),
@@ -39,7 +41,7 @@ export const updateGroupLegalEntitySchema = z.object({
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
   agency_or_direct: z.enum(["agency", "direct", "hybrid"]),
   country: z.string().trim().max(2).optional().or(z.literal("")),
-  currency: z.enum(["USD", "AED", "SAR", "EGP", "EUR"]),
+  currency: currencyCodeSchema,
   payment_terms: z
     .enum([
       "due_on_receipt",
