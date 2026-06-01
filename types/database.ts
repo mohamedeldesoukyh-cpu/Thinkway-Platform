@@ -761,6 +761,15 @@ export type Database = {
           schedule_mode: string;
           notes: string | null;
           metadata: Record<string, unknown>;
+          billable_amount: number;
+          invoiced_amount: number;
+          collected_amount: number;
+          disputed_amount: number;
+          remaining_amount: number;
+          billing_status: string;
+          invoice_line_item_id: string | null;
+          invoiced_at: string | null;
+          locked_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -786,6 +795,15 @@ export type Database = {
           schedule_mode?: string;
           notes?: string | null;
           metadata?: Record<string, unknown>;
+          billable_amount?: number;
+          invoiced_amount?: number;
+          collected_amount?: number;
+          disputed_amount?: number;
+          remaining_amount?: number;
+          billing_status?: string;
+          invoice_line_item_id?: string | null;
+          invoiced_at?: string | null;
+          locked_at?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["assignment_deliverables"]["Insert"]
@@ -1098,6 +1116,7 @@ export type Database = {
           campaign_line_id: string | null;
           campaign_header_id: string | null;
           campaign_id: string | null;
+          assignment_deliverable_id: string | null;
           sort_order: number;
           description: string;
           quantity: number;
@@ -1113,6 +1132,7 @@ export type Database = {
           campaign_line_id?: string | null;
           campaign_header_id?: string | null;
           campaign_id?: string | null;
+          assignment_deliverable_id?: string | null;
           sort_order?: number;
           description: string;
           quantity?: number;

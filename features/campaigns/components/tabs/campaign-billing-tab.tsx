@@ -6,7 +6,6 @@ import { format } from "date-fns";
 import {
   AlertTriangleIcon,
   FileTextIcon,
-  LockIcon,
   PlusIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
+import { AssignmentBillingGroupsTable } from "@/features/billing/components/assignment-billing-groups-table";
 import { CreateInvoiceSheet } from "@/features/billing/components/create-invoice-sheet";
 import {
   approveLineForBillingAction,
@@ -31,7 +30,7 @@ import {
   requestFinanceOverrideAction,
   type BillingActionState,
 } from "@/features/billing/actions";
-import type { BillingLineRow } from "@/features/billing/types";
+import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/types";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
@@ -39,11 +38,13 @@ import { cn } from "@/lib/utils";
 type CampaignBillingTabProps = {
   workspace: CampaignWorkspace;
   billingLines: BillingLineRow[];
+  billingGroups: AssignmentBillingGroup[];
 };
 
 export function CampaignBillingTab({
   workspace,
   billingLines,
+  billingGroups,
 }: CampaignBillingTabProps) {
   const { financials, po } = workspace;
   const currency = workspace.currency_code;
@@ -112,7 +113,7 @@ export function CampaignBillingTab({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          Billing lifecycle: draft → approved → moved to billing → invoiced → paid → closed
+          Billing lifecycle: draft → approved → moved to billing → partially invoiced → invoiced → paid → closed
         </p>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" asChild>
@@ -158,38 +159,18 @@ export function CampaignBillingTab({
 
       <Card>
         <CardHeader>
-          <CardTitle>Campaign line billing</CardTitle>
+          <CardTitle>Assignment billing</CardTitle>
         </CardHeader>
         <CardContent>
-          {billingLines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No campaign lines.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Line</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">PO consumed</TableHead>
-                    <TableHead>Locks</TableHead>
-                    <TableHead>Invoice</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {billingLines.map((line) => (
-                    <CampaignLineBillingRow
-                      key={line.id}
-                      line={line}
-                      campaignId={workspace.id}
-                      currency={currency}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <AssignmentBillingGroupsTable
+            groups={billingGroups}
+            billingLines={billingLines}
+            currency={currency}
+            campaignId={workspace.id}
+            renderActions={(line) => (
+              <LineBillingActions line={line} campaignId={workspace.id} />
+            )}
+          />
         </CardContent>
       </Card>
 
@@ -309,86 +290,11 @@ export function CampaignBillingTab({
 
       <CreateInvoiceSheet
         campaignId={workspace.id}
-        lines={billingLines}
+        groups={billingGroups}
         currency={currency}
         open={invoiceOpen}
         onOpenChange={setInvoiceOpen}
       />
-    </div>
-  );
-}
-
-function CampaignLineBillingRow({
-  line,
-  campaignId,
-  currency,
-}: {
-  line: BillingLineRow;
-  campaignId: string;
-  currency: string;
-}) {
-  const cur = line.currency_code || currency;
-
-  return (
-    <TableRow>
-      <TableCell>
-        <p className="font-medium">{line.name}</p>
-        <p className="font-mono text-xs text-muted-foreground">
-          {line.document_number}
-        </p>
-      </TableCell>
-      <TableCell>
-        <BillingStatusBadge status={line.billing_status} />
-      </TableCell>
-      <TableCell className="text-right">{formatMoney(line.revenue, cur)}</TableCell>
-      <TableCell className="text-right">
-        <div className="flex items-center justify-end gap-1">
-          {line.po_over_consumed ? (
-            <AlertTriangleIcon className="size-3.5 text-amber-500" />
-          ) : null}
-          <span>
-            {formatMoney(line.po_consumed, cur)} / {formatMoney(line.po_amount, cur)}
-          </span>
-        </div>
-      </TableCell>
-      <TableCell>
-        <LineLocks line={line} />
-      </TableCell>
-      <TableCell>
-        {line.invoice_id ? (
-          <Link
-            href={`/billing/invoices/${line.invoice_id}`}
-            className="font-mono text-xs hover:underline"
-          >
-            {line.invoice_document_number}
-          </Link>
-        ) : (
-          "—"
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        <LineBillingActions line={line} campaignId={campaignId} />
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function LineLocks({ line }: { line: BillingLineRow }) {
-  const locks: string[] = [];
-  if (line.revenue_locked) locks.push("Rev");
-  if (line.cost_locked) locks.push("Cost");
-  if (line.vendor_assignment_locked) locks.push("Vendor");
-
-  if (locks.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {locks.map((l) => (
-        <Badge key={l} variant="outline" className="gap-1 text-xs">
-          <LockIcon className="size-3" />
-          {l}
-        </Badge>
-      ))}
     </div>
   );
 }
@@ -436,7 +342,8 @@ function LineBillingActions({
           </Button>
         </form>
       ) : null}
-      {["approved", "draft"].includes(line.billing_status) && !line.invoice_id ? (
+      {["approved", "draft"].includes(line.billing_status) &&
+      !["invoiced", "paid", "closed"].includes(line.billing_status) ? (
         <form action={moveAction}>
           <input type="hidden" name="line_id" value={line.id} />
           <input type="hidden" name="campaign_id" value={campaignId} />

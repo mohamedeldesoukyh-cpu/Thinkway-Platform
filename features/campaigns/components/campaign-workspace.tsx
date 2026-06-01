@@ -26,7 +26,7 @@ import { CampaignLinesTab } from "@/features/campaigns/components/tabs/campaign-
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
-import type { BillingLineRow } from "@/features/billing/types";
+import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/types";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
 
 type CampaignWorkspaceViewProps = {
@@ -34,6 +34,7 @@ type CampaignWorkspaceViewProps = {
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
   billingLines: BillingLineRow[];
+  billingGroups: AssignmentBillingGroup[];
   currencyOptions: { value: string; label: string }[];
 };
 
@@ -42,6 +43,7 @@ export function CampaignWorkspaceView({
   accountManagers,
   teams,
   billingLines,
+  billingGroups,
   currencyOptions,
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
@@ -124,7 +126,11 @@ export function CampaignWorkspaceView({
           <CampaignWorkflowTab workspace={workspace} />
         </TabsContent>
         <TabsContent value="billing">
-          <CampaignBillingTab workspace={workspace} billingLines={billingLines} />
+          <CampaignBillingTab
+            workspace={workspace}
+            billingLines={billingLines}
+            billingGroups={billingGroups}
+          />
         </TabsContent>
         <TabsContent value="timeline">
           <CampaignTimelineTab workspace={workspace} />

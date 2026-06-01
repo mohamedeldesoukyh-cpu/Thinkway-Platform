@@ -8,6 +8,20 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
 import { governanceDb } from "@/lib/supabase/governance-client";
 import { resolveClientBillingVatRate } from "@/lib/vat/queries";
+import {
+  fetchDeliverablesForInvoicing,
+  lockDeliverablesOnInvoice,
+  regenerateInvoiceFromDeliverables,
+  resolveInvoiceDeliverableIds,
+  validateDeliverablesForInvoice,
+} from "@/lib/billing/invoice-from-deliverables";
+import {
+  ensureBillableDeliverablesForLine,
+  markDeliverablesReadyToInvoice,
+  syncLineBillingFromDeliverables,
+  unlockDeliverablesForInvoice,
+} from "@/lib/billing/sync-deliverable-billing";
+import { syncDeliverableCollectionsForInvoice } from "@/lib/billing/sync-deliverable-collections";
 
 import {
   approveLineForBillingSchema,
@@ -202,7 +216,9 @@ export async function moveLineToBillingAction(
     await Promise.all([
       supabase
         .from("campaign_lines")
-        .select("billing_status, document_number, po_amount, cost, revenue_before_vat, revenue")
+        .select(
+          "id, billing_status, document_number, po_amount, cost, revenue_before_vat, revenue, revenue_vat_percent, revenue_vat_amount, revenue_after_vat, revenue_vat_exempt, cost_before_vat, cost_vat_percent, cost_vat_amount, cost_after_vat, cost_vat_exempt, platform, campaign_header_id"
+        )
         .eq("id", parsed.data.line_id)
         .eq("campaign_header_id", parsed.data.campaign_id)
         .maybeSingle(),
@@ -290,6 +306,28 @@ export async function moveLineToBillingAction(
     return { ok: false, message: error.message };
   }
 
+  await ensureBillableDeliverablesForLine(supabase, {
+    id: line.id,
+    campaign_header_id: line.campaign_header_id,
+    document_number: line.document_number,
+    name: line.document_number,
+    platform: line.platform,
+    revenue: Number(line.revenue),
+    revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue),
+    revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
+    revenue_vat_amount: Number(line.revenue_vat_amount ?? 0),
+    revenue_after_vat: Number(line.revenue_after_vat ?? line.revenue),
+    revenue_vat_exempt: line.revenue_vat_exempt ?? false,
+    cost: Number(line.cost),
+    cost_before_vat: Number(line.cost_before_vat ?? line.cost),
+    cost_vat_percent: Number(line.cost_vat_percent ?? 0),
+    cost_vat_amount: Number(line.cost_vat_amount ?? 0),
+    cost_after_vat: Number(line.cost_after_vat ?? line.cost),
+    cost_vat_exempt: line.cost_vat_exempt ?? false,
+    billing_status: "moved_to_billing",
+  });
+  await markDeliverablesReadyToInvoice(supabase, parsed.data.line_id);
+
   revalidateBilling({ campaignId: parsed.data.campaign_id });
   return { ok: true, message: "Line moved to billing queue." };
 }
@@ -309,14 +347,14 @@ export async function createInvoiceFromLinesAction(
     };
   }
 
-  const lineIds = parsed.data.line_ids
+  const lineIds = (parsed.data.line_ids ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-
-  if (lineIds.length === 0) {
-    return { ok: false, message: "Select at least one campaign line." };
-  }
+  const requestedDeliverableIds = (parsed.data.deliverable_ids ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const { supabase, user, error: authError } = await requireAuthUser();
   if (authError || !user) {
@@ -333,27 +371,35 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: headerError?.message ?? "Campaign not found." };
   }
 
-  const { data: lines, error: linesError } = await supabase
-    .from("campaign_lines")
-    .select(
-      "id, document_number, name, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt, billing_status, invoice_id"
-    )
-    .eq("campaign_header_id", parsed.data.campaign_id)
-    .in("id", lineIds);
+  const { deliverableIds, error: resolveError } = await resolveInvoiceDeliverableIds(
+    supabase,
+    parsed.data.campaign_id,
+    requestedDeliverableIds,
+    lineIds
+  );
 
-  if (linesError || !lines?.length) {
-    return { ok: false, message: linesError?.message ?? "Lines not found." };
+  if (resolveError) {
+    return { ok: false, message: resolveError };
   }
 
-  const invalid = lines.filter(
-    (l) =>
-      !["moved_to_billing", "approved"].includes(l.billing_status) || l.invoice_id
-  );
-  if (invalid.length > 0) {
-    return {
-      ok: false,
-      message: "All selected lines must be in billing queue and not already invoiced.",
-    };
+  if (deliverableIds.length === 0) {
+    return { ok: false, message: "Select at least one billable deliverable." };
+  }
+
+  const { deliverables, error: deliverablesError } =
+    await fetchDeliverablesForInvoicing(
+      supabase,
+      parsed.data.campaign_id,
+      deliverableIds
+    );
+
+  if (deliverablesError) {
+    return { ok: false, message: deliverablesError };
+  }
+
+  const validationError = validateDeliverablesForInvoice(deliverables);
+  if (validationError) {
+    return { ok: false, message: validationError };
   }
 
   const { countryCode } = await resolveClientBillingVatRate(
@@ -381,35 +427,15 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: invoiceError?.message ?? "Invoice creation failed." };
   }
 
-  let sortOrder = 0;
-  for (const line of lines) {
-    sortOrder += 1;
-    const { error: itemError } = await supabase.from("invoice_line_items").insert(
-      invoiceLinePayload(invoice.id, header.id, line as CampaignLineForInvoice, sortOrder)
-    );
+  const lockResult = await lockDeliverablesOnInvoice(
+    supabase,
+    invoice.id,
+    header.id,
+    deliverables
+  );
 
-    if (itemError) {
-      await supabase.from("invoices").delete().eq("id", invoice.id);
-      return { ok: false, message: itemError.message };
-    }
-  }
-
-  const now = new Date().toISOString();
-  const { error: lockError } = await supabase
-    .from("campaign_lines")
-    .update({
-      ...lineBillingPatch("invoiced"),
-      invoice_id: invoice.id,
-      revenue_locked: true,
-      cost_locked: true,
-      vendor_assignment_locked: true,
-      vat_locked: true,
-      billing_invoiced_at: now,
-    })
-    .in("id", lineIds);
-
-  if (lockError) {
-    return { ok: false, message: lockError.message };
+  if (lockResult.error) {
+    return { ok: false, message: lockResult.error };
   }
 
   await createFinancialApprovalChain(supabase, user.id, {
@@ -427,7 +453,7 @@ export async function createInvoiceFromLinesAction(
 
   return {
     ok: true,
-    message: `Invoice ${invoice.document_number} created and lines locked.`,
+    message: `Invoice ${invoice.document_number} created for ${deliverables.length} deliverable(s).`,
     invoiceId: invoice.id,
   };
 }
@@ -478,6 +504,8 @@ export async function recordCollectionPaymentAction(
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  await syncDeliverableCollectionsForInvoice(supabase, invoice.id);
 
   revalidateBilling({
     invoiceId: invoice.id,
@@ -735,27 +763,48 @@ export async function ungenerateInvoiceAction(
 
   const { data: linkedLines } = await supabase
     .from("campaign_lines")
-    .select("id")
+    .select("id, billing_status")
     .eq("invoice_id", invoice.id);
 
-  const lineIds = (linkedLines ?? []).map((l) => (l as { id: string }).id);
+  const lineIdsFromInvoice = (linkedLines ?? []).map((l) => (l as { id: string }).id);
+  const unlockedLineIds = await unlockDeliverablesForInvoice(supabase, invoice.id);
+  const affectedLineIds = [...new Set([...lineIdsFromInvoice, ...unlockedLineIds])];
 
-  if (lineIds.length > 0) {
+  if (affectedLineIds.length > 0) {
     const overrideUntil = new Date(Date.now() + 72 * 3600000).toISOString();
-    const { error: unlockError } = await supabase
-      .from("campaign_lines")
-      .update({
-        revenue_locked: false,
-        cost_locked: false,
-        vendor_assignment_locked: false,
-        vat_locked: false,
-        finance_override_until: overrideUntil,
-        billing_status: "moved_to_billing",
-      })
-      .in("id", lineIds);
 
-    if (unlockError) {
-      return { ok: false, message: unlockError.message };
+    for (const lineId of affectedLineIds) {
+      const linked = linkedLines?.find((l) => (l as { id: string }).id === lineId) as
+        | { id: string; billing_status: string }
+        | undefined;
+
+      await syncLineBillingFromDeliverables(
+        supabase,
+        lineId,
+        linked?.billing_status ?? "moved_to_billing"
+      );
+
+      const { data: lineDeliverables } = await supabase
+        .from("assignment_deliverables")
+        .select("locked_at")
+        .eq("campaign_line_id", lineId);
+
+      const anyLocked = (lineDeliverables ?? []).some((d) => d.locked_at);
+      const allLocked =
+        (lineDeliverables ?? []).length > 0 &&
+        (lineDeliverables ?? []).every((d) => d.locked_at);
+
+      await supabase
+        .from("campaign_lines")
+        .update({
+          revenue_locked: allLocked,
+          cost_locked: allLocked,
+          vendor_assignment_locked: allLocked,
+          vat_locked: anyLocked,
+          finance_override_until: overrideUntil,
+          invoice_id: null,
+        })
+        .eq("id", lineId);
     }
   }
 
@@ -844,21 +893,31 @@ export async function regenerateInvoiceAction(
     return { ok: false, message: linesError.message };
   }
 
+  const deliverableRegen = await regenerateInvoiceFromDeliverables(
+    supabase,
+    invoice.id,
+    invoice.campaign_header_id!
+  );
+
+  if (deliverableRegen.error) {
+    return { ok: false, message: deliverableRegen.error };
+  }
+
   const lines = linkedLines ?? [];
 
-  await supabase.from("invoice_line_items").delete().eq("invoice_id", invoice.id);
-
-  let sortOrder = 0;
-  for (const line of lines) {
-    sortOrder += 1;
-    await supabase.from("invoice_line_items").insert(
-      invoiceLinePayload(
-        invoice.id,
-        invoice.campaign_header_id!,
-        line as CampaignLineForInvoice,
-        sortOrder
-      )
-    );
+  if (!deliverableRegen.usedDeliverables && lines.length > 0) {
+    let sortOrder = 0;
+    for (const line of lines) {
+      sortOrder += 1;
+      await supabase.from("invoice_line_items").insert(
+        invoiceLinePayload(
+          invoice.id,
+          invoice.campaign_header_id!,
+          line as CampaignLineForInvoice,
+          sortOrder
+        )
+      );
+    }
   }
 
   const { data: refreshedInvoice, error: refreshError } = await supabase

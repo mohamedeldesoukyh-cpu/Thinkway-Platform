@@ -22,13 +22,29 @@ export async function syncAssignmentCommercialRows(
     costVatExempt: boolean;
   }
 ) {
+  const { data: lockedRows } = await supabase
+    .from("assignment_deliverables")
+    .select("id, metadata")
+    .eq("campaign_line_id", input.campaignLineId)
+    .not("locked_at", "is", null);
+
+  const lockedClientIds = new Set(
+    (lockedRows ?? [])
+      .map((r) => (r.metadata as { client_row_id?: string })?.client_row_id)
+      .filter(Boolean)
+  );
+
   await supabase
     .from("assignment_deliverables")
     .delete()
-    .eq("campaign_line_id", input.campaignLineId);
+    .eq("campaign_line_id", input.campaignLineId)
+    .is("locked_at", null);
 
   for (let index = 0; index < input.rows.length; index++) {
     const row = input.rows[index];
+    if (lockedClientIds.has(row.id)) {
+      continue;
+    }
     const costBeforeVat = rowTotalCost(row);
     const revenueBeforeVat = rowTotalRevenue(row);
     const revenueVatAmount = input.revenueVatExempt
@@ -61,6 +77,9 @@ export async function syncAssignmentCommercialRows(
         schedule_mode: row.schedule_mode,
         notes: row.notes,
         metadata: { client_row_id: row.id },
+        billable_amount: revenueBeforeVat,
+        remaining_amount: revenueBeforeVat,
+        billing_status: "draft",
       })
       .select("id")
       .single();

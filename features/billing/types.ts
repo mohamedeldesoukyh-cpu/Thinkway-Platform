@@ -2,10 +2,68 @@ export type CampaignLineBillingStatus =
   | "draft"
   | "approved"
   | "moved_to_billing"
+  | "partially_invoiced"
   | "invoiced"
   | "partially_paid"
   | "paid"
   | "closed";
+
+export type AssignmentDeliverableBillingStatus =
+  | "draft"
+  | "ready_to_invoice"
+  | "partially_invoiced"
+  | "invoiced"
+  | "partially_collected"
+  | "collected"
+  | "disputed"
+  | "cancelled";
+
+export type DeliverableBillingRow = {
+  id: string;
+  campaign_line_id: string;
+  sort_order: number;
+  platform: string;
+  deliverable_type: string;
+  quantity: number;
+  live_date: string | null;
+  billable_amount: number;
+  invoiced_amount: number;
+  collected_amount: number;
+  disputed_amount: number;
+  remaining_amount: number;
+  billing_status: AssignmentDeliverableBillingStatus;
+  invoice_line_item_id: string | null;
+  locked_at: string | null;
+  revenue_before_vat: number;
+  revenue_vat_percent: number;
+  revenue_vat_exempt: boolean;
+  label: string;
+};
+
+export type AssignmentBillingGroup = {
+  line_id: string;
+  document_number: string;
+  name: string;
+  influencer_name: string | null;
+  platform_summary: string | null;
+  billing_status: CampaignLineBillingStatus;
+  currency_code: string;
+  pricing_mode: string;
+  total_value: number;
+  invoiced_value: number;
+  remaining_value: number;
+  collected_value: number;
+  disputed_value: number;
+  deliverables: DeliverableBillingRow[];
+  revenue_locked: boolean;
+  cost_locked: boolean;
+  vendor_assignment_locked: boolean;
+  invoice_id: string | null;
+  invoice_document_number: string | null;
+  po_over_consumed: boolean;
+  po_amount: number;
+  po_consumed: number;
+};
 
 export type CollectionStatus =
   | "pending"
@@ -112,6 +170,7 @@ export type InvoiceWorkspace = {
   lines: {
     id: string;
     campaign_line_id: string | null;
+    assignment_deliverable_id: string | null;
     description: string;
     quantity: number;
     unit_price: number;
@@ -121,6 +180,7 @@ export type InvoiceWorkspace = {
     revenue_vat_amount: number;
     revenue_vat_exempt: boolean;
     line_document_number: string | null;
+    deliverable_label: string | null;
   }[];
   payments: {
     id: string;

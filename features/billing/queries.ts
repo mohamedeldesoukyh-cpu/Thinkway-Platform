@@ -2,12 +2,22 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
 import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
 import type { PoStatus } from "@/lib/finance/po/status";
+import {
+  deliverableDisplayLabel,
+  rollupAssignmentBilling,
+  type DeliverableBillingRow,
+} from "@/lib/billing/deliverable-billing";
+import {
+  parseLineAssignment,
+  platformLabel,
+} from "@/features/campaigns/line-assignment";
 
 import { AGING_BUCKET_LABELS } from "./constants";
 import {
   computeAgingBucket,
   formatMarginPercent,
   type AgingBucket,
+  type AssignmentBillingGroup,
   type BillingDashboard,
   type BillingInvoiceRow,
   type BillingKpiSummary,
@@ -460,9 +470,10 @@ export async function getInvoiceWorkspace(
         .from("invoice_line_items")
         .select(
           `
-        id, campaign_line_id, description, quantity, unit_price, line_total,
+        id, campaign_line_id, assignment_deliverable_id, description, quantity, unit_price, line_total,
         revenue_before_vat, revenue_vat_percent, revenue_vat_amount, revenue_vat_exempt,
-        line:${REL.invoiceLineItems.campaignLine}(document_number)
+        line:${REL.invoiceLineItems.campaignLine}(document_number),
+        deliverable:assignment_deliverables(platform, deliverable_type, sort_order, quantity)
         `
         )
         .eq("invoice_id", invoiceId)
@@ -524,6 +535,7 @@ export async function getInvoiceWorkspace(
       const row = l as unknown as {
         id: string;
         campaign_line_id: string | null;
+        assignment_deliverable_id: string | null;
         description: string;
         quantity: number;
         unit_price: number;
@@ -533,10 +545,17 @@ export async function getInvoiceWorkspace(
         revenue_vat_amount: number;
         revenue_vat_exempt: boolean;
         line: { document_number: string } | null;
+        deliverable: {
+          platform: string;
+          deliverable_type: string;
+          sort_order: number;
+          quantity: number;
+        } | null;
       };
       return {
         id: row.id,
         campaign_line_id: row.campaign_line_id,
+        assignment_deliverable_id: row.assignment_deliverable_id,
         description: row.description,
         quantity: Number(row.quantity),
         unit_price: Number(row.unit_price),
@@ -546,6 +565,9 @@ export async function getInvoiceWorkspace(
         revenue_vat_amount: Number(row.revenue_vat_amount ?? 0),
         revenue_vat_exempt: row.revenue_vat_exempt ?? false,
         line_document_number: row.line?.document_number ?? null,
+        deliverable_label: row.deliverable
+          ? deliverableDisplayLabel(row.deliverable)
+          : null,
       };
     }),
     payments: (paymentsResult.data ?? []).map((p) => ({
@@ -611,4 +633,112 @@ export async function getCampaignBillingLines(
 ): Promise<BillingLineRow[]> {
   const dashboard = await getBillingDashboard();
   return dashboard.lines.filter((l) => l.campaign_header_id === campaignId);
+}
+
+export async function getCampaignBillingGroups(
+  campaignId: string
+): Promise<AssignmentBillingGroup[]> {
+  const { supabase } = await requireUser();
+
+  const { data: lines, error: linesError } = await supabase
+    .from("campaign_lines")
+    .select(
+      `
+      id, document_number, name, billing_status, currency_code, pricing_mode,
+      revenue, cost, po_amount, po_consumed, remaining_po,
+      revenue_locked, cost_locked, vendor_assignment_locked,
+      invoice_id, metadata,
+      invoice:invoices(document_number)
+    `
+    )
+    .eq("campaign_header_id", campaignId)
+    .order("sort_order");
+
+  if (linesError) throw new Error(linesError.message);
+
+  const lineIds = (lines ?? []).map((l) => l.id);
+  if (lineIds.length === 0) return [];
+
+  const { data: deliverableRows, error: deliverableError } = await supabase
+    .from("assignment_deliverables")
+    .select(
+      `
+      id, campaign_line_id, sort_order, platform, deliverable_type, quantity, live_date,
+      billable_amount, invoiced_amount, collected_amount, disputed_amount, remaining_amount,
+      billing_status, invoice_line_item_id, locked_at,
+      revenue_before_vat, revenue_vat_percent, revenue_vat_exempt
+    `
+    )
+    .in("campaign_line_id", lineIds)
+    .order("sort_order");
+
+  if (deliverableError) throw new Error(deliverableError.message);
+
+  const deliverablesByLine = new Map<string, DeliverableBillingRow[]>();
+  for (const row of deliverableRows ?? []) {
+    const typed = row as unknown as Omit<DeliverableBillingRow, "label">;
+    const mapped: DeliverableBillingRow = {
+      ...typed,
+      billable_amount: Number(typed.billable_amount),
+      invoiced_amount: Number(typed.invoiced_amount),
+      collected_amount: Number(typed.collected_amount),
+      disputed_amount: Number(typed.disputed_amount),
+      remaining_amount: Number(typed.remaining_amount),
+      revenue_before_vat: Number(typed.revenue_before_vat),
+      revenue_vat_percent: Number(typed.revenue_vat_percent ?? 0),
+      label: deliverableDisplayLabel(typed),
+    };
+    const list = deliverablesByLine.get(typed.campaign_line_id) ?? [];
+    list.push(mapped);
+    deliverablesByLine.set(typed.campaign_line_id, list);
+  }
+
+  return (lines ?? []).map((line) => {
+    const row = line as unknown as {
+      id: string;
+      document_number: string;
+      name: string;
+      billing_status: CampaignLineBillingStatus;
+      currency_code: string;
+      pricing_mode: string | null;
+      revenue: number;
+      po_amount: number;
+      po_consumed: number;
+      revenue_locked: boolean;
+      cost_locked: boolean;
+      vendor_assignment_locked: boolean;
+      invoice_id: string | null;
+      metadata: Record<string, unknown> | null;
+      invoice: { document_number: string } | null;
+    };
+
+    const assignment = parseLineAssignment(row.metadata);
+    const deliverables = deliverablesByLine.get(row.id) ?? [];
+    const rollups = rollupAssignmentBilling(deliverables);
+    const poAmount = Number(row.po_amount);
+    const poConsumed = Number(row.po_consumed);
+
+    return {
+      line_id: row.id,
+      document_number: row.document_number,
+      name: row.name,
+      influencer_name: assignment?.influencer_name ?? null,
+      platform_summary: assignment
+        ? assignment.platforms.map((p) => platformLabel(p.platform)).join(", ")
+        : null,
+      billing_status: row.billing_status,
+      currency_code: row.currency_code,
+      pricing_mode: row.pricing_mode ?? assignment?.pricing_mode ?? "package",
+      deliverables,
+      ...rollups,
+      revenue_locked: row.revenue_locked,
+      cost_locked: row.cost_locked,
+      vendor_assignment_locked: row.vendor_assignment_locked,
+      invoice_id: row.invoice_id,
+      invoice_document_number: row.invoice?.document_number ?? null,
+      po_over_consumed: poConsumed > poAmount && poAmount > 0,
+      po_amount: poAmount,
+      po_consumed: poConsumed,
+    } satisfies AssignmentBillingGroup;
+  });
 }

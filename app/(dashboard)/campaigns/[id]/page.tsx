@@ -6,7 +6,7 @@ import {
   getCampaignFormOptions,
   getCampaignWorkspace,
 } from "@/features/campaigns/queries";
-import { getCampaignBillingLines } from "@/features/billing/queries";
+import { getCampaignBillingGroups, getCampaignBillingLines } from "@/features/billing/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 
@@ -25,14 +25,16 @@ export default async function CampaignWorkspacePage({
   let masterData: Awaited<ReturnType<typeof getMasterDataOptions>> | null =
     null;
   let billingLines: Awaited<ReturnType<typeof getCampaignBillingLines>> = [];
+  let billingGroups: Awaited<ReturnType<typeof getCampaignBillingGroups>> = [];
   let errorMessage: string | null = null;
 
   try {
-    [workspace, formOptions, masterData, billingLines] = await Promise.all([
+    [workspace, formOptions, masterData, billingLines, billingGroups] = await Promise.all([
       getCampaignWorkspace(id),
       getCampaignFormOptions(),
       getMasterDataOptions(),
       getCampaignBillingLines(id),
+      getCampaignBillingGroups(id),
     ]);
   } catch (error) {
     errorMessage =
@@ -61,6 +63,7 @@ export default async function CampaignWorkspacePage({
           accountManagers={formOptions.accountManagers}
           teams={teams}
           billingLines={billingLines}
+          billingGroups={billingGroups}
           currencyOptions={currencyOptions}
         />
       ) : null}
