@@ -1,6 +1,5 @@
 "use client";
 
-import { FileTextIcon } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -11,7 +10,6 @@ import {
   type KeyboardEvent,
 } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -21,12 +19,15 @@ import {
 } from "@/components/ui/table";
 import { AssignmentDeliverableRows } from "@/features/campaigns/components/assignment-hierarchy/assignment-deliverable-rows";
 import { AssignmentParentRow } from "@/features/campaigns/components/assignment-hierarchy/assignment-parent-row";
+import { AssignmentTotalsFooter } from "@/features/campaigns/components/assignment-hierarchy/assignment-totals-footer";
+import { HIERARCHY_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-import { formatMoney } from "@/features/campaigns/utils";
-import { cn } from "@/lib/utils";
+
+const PARENT_COLUMN_COUNT = 15;
 
 type AssignmentHierarchyTableProps = {
+  campaignId: string;
   hierarchy: AssignmentHierarchy;
   onEditLine: (line: CampaignLineWorkspace) => void;
   onInvoiceSelected?: (deliverableIds: string[]) => void;
@@ -34,6 +35,7 @@ type AssignmentHierarchyTableProps = {
 };
 
 export function AssignmentHierarchyTable({
+  campaignId,
   hierarchy,
   onEditLine,
   onInvoiceSelected,
@@ -114,6 +116,7 @@ export function AssignmentHierarchyTable({
         target &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
           target.isContentEditable)
       ) {
         return;
@@ -155,24 +158,25 @@ export function AssignmentHierarchyTable({
 
   return (
     <div ref={tableRef} className="space-y-3">
-      <div className="overflow-x-auto rounded-3xl border">
+      <div className="overflow-x-auto rounded-xl border">
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur">
-            <TableRow>
-              <TableHead className="w-10" />
-              <TableHead className="w-10" />
-              <TableHead>Assignment</TableHead>
-              <TableHead>Influencer</TableHead>
-              <TableHead>Platforms</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Revenue</TableHead>
-              <TableHead className="text-right">Cost</TableHead>
-              <TableHead className="text-right">GP</TableHead>
-              <TableHead className="text-right">Margin</TableHead>
-              <TableHead>Billing</TableHead>
-              <TableHead>Payout</TableHead>
-              <TableHead>Ops</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="text-[10px] uppercase tracking-wide">
+              <TableHead className="w-8 px-2">{HIERARCHY_COLUMN_LABELS.expand}</TableHead>
+              <TableHead className="w-8 px-2">{HIERARCHY_COLUMN_LABELS.select}</TableHead>
+              <TableHead className="min-w-[140px] px-2">{HIERARCHY_COLUMN_LABELS.assignment}</TableHead>
+              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.creator}</TableHead>
+              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.platforms}</TableHead>
+              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.deliverables}</TableHead>
+              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.postingDates}</TableHead>
+              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.opsStatus}</TableHead>
+              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.billing}</TableHead>
+              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.revenue}</TableHead>
+              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.cost}</TableHead>
+              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.gp}</TableHead>
+              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.margin}</TableHead>
+              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.payout}</TableHead>
+              <TableHead className="w-10 px-2 text-right">{HIERARCHY_COLUMN_LABELS.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -203,11 +207,14 @@ export function AssignmentHierarchyTable({
                   />
                   {expanded ? (
                     <AssignmentDeliverableRows
+                      campaignId={campaignId}
+                      line={group.line}
                       deliverables={group.deliverables}
                       currency={currency}
                       selectedIds={selectedIds}
                       onToggleDeliverable={toggleDeliverable}
                       showSelection={showInvoiceSelection}
+                      parentColSpan={PARENT_COLUMN_COUNT}
                     />
                   ) : null}
                 </Fragment>
@@ -217,27 +224,13 @@ export function AssignmentHierarchyTable({
         </Table>
       </div>
 
-      {showInvoiceSelection && selectedIds.size > 0 ? (
-        <div
-          className={cn(
-            "sticky bottom-2 flex flex-wrap items-center justify-between gap-3",
-            "rounded-3xl border bg-background/95 px-4 py-3 shadow-sm backdrop-blur"
-          )}
-        >
-          <div className="text-sm">
-            <span className="font-medium">{selectedIds.size}</span> deliverable
-            {selectedIds.size === 1 ? "" : "s"} selected · Invoice{" "}
-            <span className="font-semibold">{formatMoney(selectedTotal, currency)}</span>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => onInvoiceSelected?.([...selectedIds])}
-          >
-            <FileTextIcon data-icon="inline-start" />
-            Create invoice from selection
-          </Button>
-        </div>
+      {showInvoiceSelection ? (
+        <AssignmentTotalsFooter
+          selectedCount={selectedIds.size}
+          selectedTotal={selectedTotal}
+          currency={currency}
+          onCreateInvoice={() => onInvoiceSelected?.([...selectedIds])}
+        />
       ) : null}
     </div>
   );

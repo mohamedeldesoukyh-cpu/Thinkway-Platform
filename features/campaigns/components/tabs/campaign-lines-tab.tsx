@@ -68,9 +68,9 @@ export function CampaignLinesTab({
           <div>
             <CardTitle>Creator assignments</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Expand each assignment to view deliverables, posting schedules, billing
-              status, and line-by-line invoicing. Use arrow keys to expand or collapse
-              focused rows.
+              Expand assignments to edit deliverables inline, manage posting schedules, and
+              invoice line-by-line. Alt+N adds a deliverable when expanded. Arrow keys expand
+              or collapse rows.
             </p>
           </div>
           <Button size="sm" onClick={openCreate} title="Assign influencer (A)">
@@ -80,6 +80,7 @@ export function CampaignLinesTab({
         </CardHeader>
         <CardContent>
           <AssignmentHierarchyTable
+            campaignId={workspace.id}
             hierarchy={assignmentHierarchy}
             onEditLine={openEdit}
             onInvoiceSelected={openInvoiceWithSelection}

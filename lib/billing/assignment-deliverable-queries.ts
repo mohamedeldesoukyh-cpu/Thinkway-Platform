@@ -22,6 +22,9 @@ export const ASSIGNMENT_DELIVERABLE_BILLING_CORE_SELECT = [
   "revenue_vat_amount",
   "revenue_after_vat",
   "cost_before_vat",
+  "cost_vat_amount",
+  "unit_cost",
+  "notes",
 ].join(", ");
 
 export const ASSIGNMENT_DELIVERABLE_VAT_EXEMPT_COLUMNS =

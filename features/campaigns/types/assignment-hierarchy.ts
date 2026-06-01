@@ -17,16 +17,22 @@ export type DeliverableCollectionStatus = "pending" | "partial" | "collected" | 
 export type AssignmentDeliverableHierarchyRow = {
   id: string;
   campaign_line_id: string;
+  sort_order: number;
   label: string;
   platform: string;
   deliverable_type: string;
   deliverable_type_label: string;
   quantity: number;
+  unit_cost: number;
+  unit_revenue: number;
   live_date: string | null;
+  notes: string | null;
   revenue_before_vat: number;
   cost_before_vat: number;
+  revenue_vat_percent: number;
   revenue_vat_amount: number;
   revenue_after_vat: number;
+  cost_vat_amount: number;
   billing_status: AssignmentDeliverableBillingStatus;
   collection_status: DeliverableCollectionStatus;
   invoice_id: string | null;
@@ -38,6 +44,7 @@ export type AssignmentDeliverableHierarchyRow = {
   invoiced_amount: number;
   invoice_eligible: boolean;
   is_synthetic: boolean;
+  is_locked: boolean;
 };
 
 export type AssignmentHierarchyRollups = {

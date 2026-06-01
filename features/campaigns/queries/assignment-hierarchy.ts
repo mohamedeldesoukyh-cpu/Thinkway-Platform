@@ -88,16 +88,22 @@ function buildSyntheticDeliverable(
   return {
     id: `synthetic-${line.id}`,
     campaign_line_id: line.id,
+    sort_order: 0,
     label: `${line.influencer_name ?? line.name} — Package`,
     platform: line.platform ?? "other",
     deliverable_type: "other",
     deliverable_type_label: "Package",
     quantity: line.deliverable_count || 1,
+    unit_cost: line.cost_before_vat / Math.max(1, line.deliverable_count || 1),
+    unit_revenue: line.revenue_before_vat / Math.max(1, line.deliverable_count || 1),
     live_date: line.start_date,
+    notes: null,
     revenue_before_vat: revenueBeforeVat,
     cost_before_vat: line.cost_before_vat,
+    revenue_vat_percent: line.revenue_vat_percent,
     revenue_vat_amount: line.revenue_vat_amount,
     revenue_after_vat: line.revenue_after_vat,
+    cost_vat_amount: line.cost_vat_amount,
     billing_status: billingStatus,
     collection_status: deriveCollectionStatus(billingStatus),
     invoice_id: line.invoice_id,
@@ -132,6 +138,7 @@ function buildSyntheticDeliverable(
       line.billing_status
     ),
     is_synthetic: true,
+    is_locked: line.revenue_locked ?? false,
   };
 }
 
@@ -221,9 +228,14 @@ export async function getCampaignAssignmentHierarchy(
       billing_status: AssignmentDeliverableBillingStatus;
       invoice_line_item_id: string | null;
       revenue_before_vat: number;
+      unit_cost: number;
       cost_before_vat: number;
+      cost_vat_amount: number;
+      revenue_vat_percent: number;
       revenue_vat_amount: number;
       revenue_after_vat: number;
+      notes: string | null;
+      locked_at: string | null;
       revenue_vat_exempt?: boolean | null;
     }>(async (select, _includeVatExempt) => {
       const result = await supabase
@@ -248,6 +260,11 @@ export async function getCampaignAssignmentHierarchy(
           invoice_line_item_id: string | null;
           revenue_before_vat: number;
           cost_before_vat: number;
+          cost_vat_amount: number;
+          revenue_vat_percent: number;
+          unit_cost: number;
+          notes: string | null;
+          locked_at: string | null;
           revenue_vat_amount: number;
           revenue_after_vat: number;
           revenue_vat_exempt?: boolean | null;
@@ -336,19 +353,26 @@ export async function getCampaignAssignmentHierarchy(
     });
 
     const line = workspace.lines.find((l) => l.id === row.campaign_line_id);
+    const qty = Math.max(1, row.quantity);
     const mapped: AssignmentDeliverableHierarchyRow = {
       id: row.id,
       campaign_line_id: row.campaign_line_id,
+      sort_order: row.sort_order,
       label,
       platform: row.platform,
       deliverable_type: row.deliverable_type,
       deliverable_type_label: deliverableLabel(row.deliverable_type),
       quantity: row.quantity,
+      unit_cost: Number(row.unit_cost ?? 0),
+      unit_revenue: Number(row.revenue_before_vat) / qty,
       live_date: row.live_date ?? schedules[0]?.live_date ?? null,
+      notes: row.notes ?? null,
       revenue_before_vat: Number(row.revenue_before_vat),
       cost_before_vat: Number(row.cost_before_vat ?? 0),
+      revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
       revenue_vat_amount: Number(row.revenue_vat_amount ?? 0),
       revenue_after_vat: Number(row.revenue_after_vat ?? row.revenue_before_vat),
+      cost_vat_amount: Number(row.cost_vat_amount ?? 0),
       billing_status: billingStatus,
       collection_status: deriveCollectionStatus(billingStatus),
       invoice_id: invoiceLink?.invoice_id ?? null,
@@ -383,6 +407,7 @@ export async function getCampaignAssignmentHierarchy(
         line?.billing_status ?? "draft"
       ),
       is_synthetic: false,
+      is_locked: Boolean(row.locked_at),
     };
 
     const list = deliverablesByLine.get(row.campaign_line_id) ?? [];
