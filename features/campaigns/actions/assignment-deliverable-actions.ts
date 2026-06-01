@@ -527,26 +527,6 @@ export async function updatePostScheduleAction(
       return { ok: false, message: error.message };
     }
 
-    if (parsed.data.platform || parsed.data.deliverable_type) {
-      const { data: deliverable } = await supabase
-        .from("assignment_deliverables")
-        .select("id, locked_at")
-        .eq("id", post.assignment_deliverable_id)
-        .maybeSingle();
-
-      if (deliverable && !deliverable.locked_at) {
-        await supabase
-          .from("assignment_deliverables")
-          .update({
-            ...(parsed.data.platform ? { platform: parsed.data.platform } : {}),
-            ...(parsed.data.deliverable_type
-              ? { deliverable_type: parsed.data.deliverable_type }
-              : {}),
-          })
-          .eq("id", post.assignment_deliverable_id);
-      }
-    }
-
     await syncDeliverableRollupFromPosts(
       supabase,
       post.assignment_deliverable_id,

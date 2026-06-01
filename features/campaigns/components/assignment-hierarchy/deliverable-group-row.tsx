@@ -229,8 +229,6 @@ export function DeliverableGroupRow({
             <EditablePostRow
               key={post.id}
               campaignId={campaignId}
-              campaignLineId={campaignLineId}
-              deliverableId={deliverable.id}
               post={post}
               currency={currency}
               readOnly={readOnly}

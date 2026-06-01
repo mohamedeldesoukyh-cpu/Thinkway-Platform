@@ -16,13 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  updateDeliverablePlatformTypeAction,
   updatePostScheduleAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import { DeliverableBillingBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-billing-badge";
 import { DeliverableTypeTag } from "@/features/campaigns/components/assignment-hierarchy/deliverable-type-tag";
 import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
-import { PlatformDeliverableSelects, PlatformSelect, DeliverableTypeSelect } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
+import { PlatformSelect, DeliverableTypeSelect } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
 import { SCHEDULE_STATUS_OPTIONS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import {
   GRID_CELL,
@@ -36,8 +35,6 @@ import { cn } from "@/lib/utils";
 
 type EditablePostRowProps = {
   campaignId: string;
-  campaignLineId: string;
-  deliverableId: string;
   post: AssignmentPostOperationalRow;
   currency: string;
   readOnly: boolean;
@@ -60,8 +57,6 @@ type Draft = {
 
 export function EditablePostRow({
   campaignId,
-  campaignLineId,
-  deliverableId,
   post,
   currency,
   readOnly,
@@ -121,44 +116,63 @@ export function EditablePostRow({
 
   const canEdit = !readOnly && !post.id.startsWith("virtual-");
 
-  function savePlatformType(platform: string, deliverableType: string) {
+  function buildSchedulePayload(overrides: Partial<Draft> = {}) {
+    const merged = {
+      platform: overrides.platform ?? (editing ? draft.platform : post.platform),
+      deliverable_type:
+        overrides.deliverable_type ??
+        (editing ? draft.deliverable_type : post.deliverable_type),
+      live_date: overrides.live_date ?? (editing ? draft.live_date : post.live_date ?? ""),
+      workflow_status:
+        overrides.workflow_status ??
+        (editing ? draft.workflow_status : post.workflow_status),
+      revenue_per_post:
+        overrides.revenue_per_post ??
+        (editing ? draft.revenue_per_post : post.revenue_per_post),
+      cost_per_post:
+        overrides.cost_per_post ?? (editing ? draft.cost_per_post : post.cost_per_post),
+      revenue_vat_percent:
+        overrides.revenue_vat_percent ??
+        (editing
+          ? draft.revenue_vat_percent
+          : post.revenue_vat_percent || defaultRevenueVatPercent),
+      billing_status:
+        overrides.billing_status ?? (editing ? draft.billing_status : post.billing_status),
+      notes: overrides.notes ?? (editing ? draft.notes : post.notes ?? ""),
+    };
+
+    return {
+      campaign_id: campaignId,
+      schedule_id: post.id,
+      live_date: merged.live_date || null,
+      status: merged.workflow_status,
+      revenue_per_post: merged.revenue_per_post,
+      cost_per_post: merged.cost_per_post,
+      revenue_vat_percent: merged.revenue_vat_percent,
+      notes: merged.notes || null,
+      billing_status: merged.billing_status as typeof post.billing_status,
+      platform: merged.platform,
+      deliverable_type: merged.deliverable_type,
+    };
+  }
+
+  function persistPostPatch(patch: Partial<Draft>, options?: { closeEdit?: boolean }) {
     if (!canEdit) return;
     startTransition(async () => {
-      const result = await updateDeliverablePlatformTypeAction({
-        campaign_id: campaignId,
-        campaign_line_id: campaignLineId,
-        deliverable_id: deliverableId,
-        platform,
-        deliverable_type: deliverableType,
-      });
-      if (!result.ok) setError(result.message ?? "Failed to update platform.");
-      else router.refresh();
+      const result = await updatePostScheduleAction(buildSchedulePayload(patch));
+      if (!result.ok) {
+        setError(result.message ?? "Failed to save.");
+        return;
+      }
+      if (options?.closeEdit) setEditing(false);
+      setError(null);
+      router.refresh();
     });
   }
 
   function save() {
     if (!canEdit) return;
-    startTransition(async () => {
-      const result = await updatePostScheduleAction({
-        campaign_id: campaignId,
-        schedule_id: post.id,
-        live_date: draft.live_date || null,
-        status: draft.workflow_status,
-        revenue_per_post: draft.revenue_per_post,
-        cost_per_post: draft.cost_per_post,
-        revenue_vat_percent: draft.revenue_vat_percent,
-        notes: draft.notes || null,
-        billing_status: draft.billing_status as typeof post.billing_status,
-        platform: draft.platform,
-        deliverable_type: draft.deliverable_type,
-      });
-      if (!result.ok) {
-        setError(result.message ?? "Failed to save.");
-        return;
-      }
-      setEditing(false);
-      router.refresh();
-    });
+    persistPostPatch({}, { closeEdit: true });
   }
 
   return (
@@ -181,14 +195,15 @@ export function EditablePostRow({
               disabled={pending && !editing}
               onPlatformChange={(platform) => {
                 const types = getDeliverableTypeCodesForPlatform(platform);
+                const deliverableType = types[0] ?? "other";
                 if (editing) {
                   setDraft((d) => ({
                     ...d,
                     platform,
-                    deliverable_type: types[0] ?? d.deliverable_type,
+                    deliverable_type: deliverableType,
                   }));
                 } else {
-                  savePlatformType(platform, types[0] ?? "other");
+                  persistPostPatch({ platform, deliverable_type: deliverableType });
                 }
               }}
             />
@@ -206,7 +221,7 @@ export function EditablePostRow({
                 if (editing) {
                   setDraft((d) => ({ ...d, deliverable_type: deliverableType }));
                 } else {
-                  savePlatformType(post.platform, deliverableType);
+                  persistPostPatch({ deliverable_type: deliverableType });
                 }
               }}
             />
