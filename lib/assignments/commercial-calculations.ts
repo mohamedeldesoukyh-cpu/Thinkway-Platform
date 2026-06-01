@@ -1,3 +1,7 @@
+import {
+  getDeliverableTypeCodesForPlatform,
+} from "@/lib/campaigns/deliverable-taxonomy";
+
 export type AssignmentPricingMode = "package" | "per_deliverable";
 
 export type PostScheduleEntry = {
@@ -5,6 +9,11 @@ export type PostScheduleEntry = {
   live_date: string | null;
   notes?: string | null;
   status?: string;
+  platform?: string;
+  deliverable_type?: string;
+  revenue_per_post?: number;
+  cost_per_post?: number;
+  revenue_vat_percent?: number;
 };
 
 export type CommercialDeliverableRow = {
@@ -59,10 +68,11 @@ export function summarizeCommercialRows(rows: CommercialDeliverableRow[]): Comme
 }
 
 export function createEmptyCommercialRow(platform = "instagram"): CommercialDeliverableRow {
+  const types = getDeliverableTypeCodesForPlatform(platform);
   return {
     id: crypto.randomUUID(),
     platform,
-    deliverable_type: "instagram_reel",
+    deliverable_type: types[0] ?? "other",
     quantity: 1,
     unit_cost: 0,
     revenue_before_vat: 0,

@@ -1,4 +1,8 @@
 import { DELIVERABLE_TYPE_OPTIONS, PLATFORM_OPTIONS } from "./constants";
+import {
+  PLATFORM_DELIVERABLE_CODES,
+  deliverableTypeLabel,
+} from "@/lib/campaigns/deliverable-taxonomy";
 
 export const LINE_ASSIGNMENT_META_KEY = "influencer_assignment";
 
@@ -26,18 +30,12 @@ export type LineInfluencerAssignment = {
   commercial_rows?: import("@/lib/assignments/commercial-calculations").CommercialDeliverableRow[];
 };
 
-export const PLATFORM_DELIVERABLES: Record<string, string[]> = {
-  instagram: ["instagram_post", "instagram_reel", "instagram_story"],
-  tiktok: ["tiktok_video"],
-  youtube: ["youtube_video", "youtube_short"],
-  twitter: ["other"],
-  snapchat: ["other"],
-  facebook: ["other"],
-  linkedin: ["other"],
-  other: ["other"],
-};
+/** @deprecated Use getDeliverableTypeCodesForPlatform from deliverable-taxonomy */
+export const PLATFORM_DELIVERABLES = PLATFORM_DELIVERABLE_CODES;
 
 export function deliverableLabel(value: string): string {
+  const fromTaxonomy = deliverableTypeLabel(value);
+  if (fromTaxonomy !== value.replace(/_/g, " ")) return fromTaxonomy;
   return (
     DELIVERABLE_TYPE_OPTIONS.find((o) => o.value === value)?.label ?? value
   );

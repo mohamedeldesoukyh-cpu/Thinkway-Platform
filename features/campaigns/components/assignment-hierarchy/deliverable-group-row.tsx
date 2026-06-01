@@ -9,25 +9,26 @@ import { Button } from "@/components/ui/button";
 import {
   addPostToDeliverableAction,
   deleteAssignmentDeliverableAction,
+  updateDeliverablePlatformTypeAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import { DeliverableBillingBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-billing-badge";
 import { DeliverableTypeTag } from "@/features/campaigns/components/assignment-hierarchy/deliverable-type-tag";
 import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
+import { EditablePostRow } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import {
-  EditablePostRow,
-} from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
-import {
-  platformShortLabel,
-} from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
-import {
-  GRID_CELL,
-} from "@/features/campaigns/components/assignment-hierarchy/operational-grid-columns";
+  DeliverableTypeSelect,
+  PlatformBadge,
+  PlatformSelect,
+} from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
+import { GRID_CELL } from "@/features/campaigns/components/assignment-hierarchy/operational-grid-columns";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import { formatMoney } from "@/features/campaigns/utils";
+import { getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
 import { cn } from "@/lib/utils";
 
 type DeliverableGroupRowProps = {
   campaignId: string;
+  campaignLineId: string;
   deliverable: AssignmentDeliverableHierarchyRow;
   currency: string;
   selected: boolean;
@@ -35,12 +36,12 @@ type DeliverableGroupRowProps = {
   showSelection: boolean;
   revenueVatExempt: boolean;
   defaultRevenueVatPercent: number;
-  onRequestAddSibling?: () => void;
-  registerAddShortcut?: boolean;
+  platformOptions: { value: string; label: string }[];
 };
 
 export function DeliverableGroupRow({
   campaignId,
+  campaignLineId,
   deliverable,
   currency,
   selected,
@@ -48,14 +49,12 @@ export function DeliverableGroupRow({
   showSelection,
   revenueVatExempt,
   defaultRevenueVatPercent,
-  onRequestAddSibling,
-  registerAddShortcut,
+  platformOptions,
 }: DeliverableGroupRowProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(true);
   const [pending, startTransition] = useTransition();
   const readOnly = deliverable.is_synthetic || deliverable.is_locked;
-  const platformLabel = platformShortLabel(deliverable.platform);
 
   const collectionLabel =
     deliverable.collection_status === "collected"
@@ -65,6 +64,20 @@ export function DeliverableGroupRow({
         : deliverable.collection_status === "pending"
           ? "Pend"
           : "—";
+
+  function updatePlatformType(platform: string, deliverableType: string) {
+    if (readOnly || deliverable.is_synthetic) return;
+    startTransition(async () => {
+      const result = await updateDeliverablePlatformTypeAction({
+        campaign_id: campaignId,
+        campaign_line_id: campaignLineId,
+        deliverable_id: deliverable.id,
+        platform,
+        deliverable_type: deliverableType,
+      });
+      if (result.ok) router.refresh();
+    });
+  }
 
   function addPost() {
     if (readOnly || deliverable.is_synthetic) return;
@@ -127,9 +140,34 @@ export function DeliverableGroupRow({
             deliverableType={deliverable.deliverable_type}
           />
         </td>
-        <td className={GRID_CELL.platform}>{platformLabel}</td>
-        <td className={cn(GRID_CELL.deliverableType, "text-muted-foreground")}>
-          {deliverable.deliverable_type_label}
+        <td className={GRID_CELL.platform}>
+          {!readOnly && !deliverable.is_synthetic ? (
+            <PlatformSelect
+              platform={deliverable.platform}
+              platformOptions={platformOptions}
+              disabled={pending}
+              onPlatformChange={(platform) => {
+                const types = getDeliverableTypeCodesForPlatform(platform);
+                updatePlatformType(platform, types[0] ?? "other");
+              }}
+            />
+          ) : (
+            <PlatformBadge platform={deliverable.platform} />
+          )}
+        </td>
+        <td className={GRID_CELL.deliverableType}>
+          {!readOnly && !deliverable.is_synthetic ? (
+            <DeliverableTypeSelect
+              platform={deliverable.platform}
+              deliverableType={deliverable.deliverable_type}
+              disabled={pending}
+              onDeliverableTypeChange={(type) =>
+                updatePlatformType(deliverable.platform, type)
+              }
+            />
+          ) : (
+            <span className="text-muted-foreground">{deliverable.deliverable_type_label}</span>
+          )}
         </td>
         <td className={cn(GRID_CELL.postDate, "text-muted-foreground")}>
           {deliverable.posts.length > 1
@@ -191,13 +229,14 @@ export function DeliverableGroupRow({
             <EditablePostRow
               key={post.id}
               campaignId={campaignId}
+              campaignLineId={campaignLineId}
+              deliverableId={deliverable.id}
               post={post}
               currency={currency}
               readOnly={readOnly}
               revenueVatExempt={revenueVatExempt}
               defaultRevenueVatPercent={defaultRevenueVatPercent}
-              platformLabel={platformLabel}
-              deliverableTypeLabel={deliverable.deliverable_type_label}
+              platformOptions={platformOptions}
             />
           ))
         : null}

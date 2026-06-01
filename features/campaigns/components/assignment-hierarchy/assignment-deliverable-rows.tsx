@@ -11,6 +11,7 @@ import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import { getCreatorConnectedPlatformOptions } from "@/lib/campaigns/deliverable-taxonomy";
 import { cn } from "@/lib/utils";
 
 type AssignmentDeliverableRowsProps = {
@@ -37,6 +38,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const locked = line.vendor_assignment_locked ?? false;
+  const platformOptions = getCreatorConnectedPlatformOptions(line.assignment);
 
   function addDeliverable() {
     startTransition(async () => {
@@ -114,6 +116,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                   <DeliverableGroupRow
                     key={deliverable.id}
                     campaignId={campaignId}
+                    campaignLineId={line.id}
                     deliverable={deliverable}
                     currency={currency}
                     selected={selectedIds.has(deliverable.id)}
@@ -121,6 +124,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                     showSelection={showSelection}
                     revenueVatExempt={line.revenue_vat_exempt}
                     defaultRevenueVatPercent={line.revenue_vat_percent}
+                    platformOptions={platformOptions}
                   />
                 ))}
               </tbody>

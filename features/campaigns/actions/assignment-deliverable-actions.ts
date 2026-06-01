@@ -10,6 +10,7 @@ import {
   syncPostSchedulesForDeliverable,
 } from "@/lib/assignments/sync-post-schedules";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
+import { syncAssignmentLineTitleFromDeliverables } from "@/lib/campaigns/sync-assignment-line-title";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeVatLine } from "@/lib/vat/calculations";
 
@@ -60,6 +61,16 @@ const updateScheduleSchema = z.object({
   revenue_vat_percent: z.coerce.number().min(0).max(100).optional(),
   notes: z.string().max(2000).nullable().optional(),
   billing_status: billingStatusSchema.optional(),
+  platform: platformSchema.optional(),
+  deliverable_type: deliverableTypeSchema.optional(),
+});
+
+const updateDeliverablePlatformSchema = z.object({
+  campaign_id: z.string().uuid(),
+  campaign_line_id: z.string().uuid(),
+  deliverable_id: z.string().uuid(),
+  platform: platformSchema,
+  deliverable_type: deliverableTypeSchema,
 });
 
 const addPostSchema = z.object({
@@ -259,6 +270,7 @@ export async function createAssignmentDeliverableAction(
     );
 
     await syncLineCommercialRollupsFromDeliverables(supabase, line.id);
+    await syncAssignmentLineTitleFromDeliverables(supabase, line.id);
     revalidateCampaign(parsed.data.campaign_id);
     return { ok: true, message: "Deliverable added." };
   } catch (error) {
@@ -376,6 +388,7 @@ export async function updateAssignmentDeliverableAction(
     );
 
     await syncLineCommercialRollupsFromDeliverables(supabase, line.id);
+    await syncAssignmentLineTitleFromDeliverables(supabase, line.id);
     revalidateCampaign(parsed.data.campaign_id);
     return { ok: true, message: "Deliverable updated." };
   } catch (error) {
@@ -454,7 +467,9 @@ export async function updatePostScheduleAction(
 
     const { data: post, error: fetchError } = await supabase
       .from("assignment_post_schedule")
-      .select("id, assignment_deliverable_id, campaign_line_id, revenue_before_vat, cost_before_vat")
+      .select(
+        "id, assignment_deliverable_id, campaign_line_id, revenue_before_vat, cost_before_vat, metadata"
+      )
       .eq("id", parsed.data.schedule_id)
       .maybeSingle();
 
@@ -481,6 +496,14 @@ export async function updatePostScheduleAction(
       exempt: lineVat.cost_vat_exempt,
     });
 
+    const metadata = {
+      ...((post.metadata as Record<string, unknown>) ?? {}),
+      ...(parsed.data.platform ? { platform: parsed.data.platform } : {}),
+      ...(parsed.data.deliverable_type
+        ? { deliverable_type: parsed.data.deliverable_type }
+        : {}),
+    };
+
     const { error } = await supabase
       .from("assignment_post_schedule")
       .update({
@@ -493,6 +516,7 @@ export async function updatePostScheduleAction(
         revenue_vat_amount: revenue.vatAmount,
         cost_vat_percent: cost.vatPercent,
         cost_vat_amount: cost.vatAmount,
+        metadata,
         ...(parsed.data.billing_status
           ? { billing_status: parsed.data.billing_status }
           : {}),
@@ -503,11 +527,32 @@ export async function updatePostScheduleAction(
       return { ok: false, message: error.message };
     }
 
+    if (parsed.data.platform || parsed.data.deliverable_type) {
+      const { data: deliverable } = await supabase
+        .from("assignment_deliverables")
+        .select("id, locked_at")
+        .eq("id", post.assignment_deliverable_id)
+        .maybeSingle();
+
+      if (deliverable && !deliverable.locked_at) {
+        await supabase
+          .from("assignment_deliverables")
+          .update({
+            ...(parsed.data.platform ? { platform: parsed.data.platform } : {}),
+            ...(parsed.data.deliverable_type
+              ? { deliverable_type: parsed.data.deliverable_type }
+              : {}),
+          })
+          .eq("id", post.assignment_deliverable_id);
+      }
+    }
+
     await syncDeliverableRollupFromPosts(
       supabase,
       post.assignment_deliverable_id,
       lineVat
     );
+    await syncAssignmentLineTitleFromDeliverables(supabase, post.campaign_line_id);
     revalidateCampaign(parsed.data.campaign_id);
     return { ok: true, message: "Post updated." };
   } catch (error) {
@@ -587,6 +632,60 @@ export async function addPostToDeliverableAction(
     return {
       ok: false,
       message: err instanceof Error ? err.message : "Failed to add post.",
+    };
+  }
+}
+
+export async function updateDeliverablePlatformTypeAction(
+  input: z.infer<typeof updateDeliverablePlatformSchema>
+): Promise<FormActionState> {
+  const parsed = updateDeliverablePlatformSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid platform or deliverable type." };
+  }
+
+  try {
+    const supabase = await requireAuth();
+    const line = await loadLineContext(supabase, parsed.data.campaign_line_id);
+
+    if (line.vendor_assignment_locked) {
+      return { ok: false, message: "Assignment is locked." };
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from("assignment_deliverables")
+      .select("id, locked_at")
+      .eq("id", parsed.data.deliverable_id)
+      .eq("campaign_line_id", line.id)
+      .maybeSingle();
+
+    if (fetchError || !existing) {
+      return { ok: false, message: fetchError?.message ?? "Deliverable not found." };
+    }
+
+    if (existing.locked_at) {
+      return { ok: false, message: "Deliverable is locked." };
+    }
+
+    const { error } = await supabase
+      .from("assignment_deliverables")
+      .update({
+        platform: parsed.data.platform,
+        deliverable_type: parsed.data.deliverable_type,
+      })
+      .eq("id", parsed.data.deliverable_id);
+
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+
+    await syncAssignmentLineTitleFromDeliverables(supabase, line.id);
+    revalidateCampaign(parsed.data.campaign_id);
+    return { ok: true, message: "Platform updated." };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Failed to update platform.",
     };
   }
 }

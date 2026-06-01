@@ -14,6 +14,7 @@ import {
   LINE_BILLING_STATUS_LABELS,
   VENDOR_PAYMENT_STATUS_LABELS,
 } from "@/features/campaigns/constants";
+import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
@@ -69,6 +70,17 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
   onFocus,
 }: AssignmentParentRowProps) {
   const { line, rollups } = group;
+  const displayName = useMemo(
+    () =>
+      buildAssignmentDisplayName(line.influencer_name ?? line.name.split(" — ")[0], [
+        ...group.deliverables.map((d) => ({
+          platform: d.platform,
+          deliverable_type: d.deliverable_type,
+          posts_count: d.posts.length,
+        })),
+      ]) || line.name,
+    [group.deliverables, line.influencer_name, line.name]
+  );
   const eligibleCount = group.deliverables.filter(
     (d) => d.invoice_eligible && !d.is_synthetic
   ).length;
@@ -114,7 +126,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       </TableCell>
       <TableCell className="min-w-[140px] px-2 py-2">
         <div>
-          <span className="font-medium">{line.name}</span>
+          <span className="font-medium">{displayName}</span>
           <p className="font-mono text-[10px] text-muted-foreground">{line.document_number}</p>
         </div>
       </TableCell>

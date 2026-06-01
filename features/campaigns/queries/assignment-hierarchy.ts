@@ -20,6 +20,7 @@ import type {
   DeliverableCollectionStatus,
 } from "@/features/campaigns/types/assignment-hierarchy";
 import { deliverableTagLabel } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { formatMarginPercent } from "@/features/billing/types";
 
 async function requireUser() {
@@ -91,6 +92,9 @@ function buildVirtualPosts(input: {
     assignment_deliverable_id: input.deliverableId,
     sequence_number: index + 1,
     label: `${deliverableTagLabel(input.deliverableType)} #${index + 1}`,
+    platform: input.platform,
+    deliverable_type: input.deliverableType,
+    deliverable_type_label: deliverableTypeLabel(input.deliverableType),
     live_date: input.liveDate,
     workflow_status: "draft",
     notes: input.notes,
@@ -345,7 +349,7 @@ export async function getCampaignAssignmentHierarchy(
     supabase
       .from("assignment_post_schedule")
       .select(
-        "id, assignment_deliverable_id, sequence_number, live_date, status, notes, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_amount, billing_status"
+        "id, assignment_deliverable_id, sequence_number, live_date, status, notes, metadata, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_amount, billing_status"
       )
       .in("campaign_line_id", lineIds)
       .order("sequence_number"),
@@ -387,6 +391,7 @@ export async function getCampaignAssignmentHierarchy(
     live_date: string | null;
     status: string;
     notes: string | null;
+    metadata?: Record<string, unknown>;
     revenue_before_vat?: number;
     cost_before_vat?: number;
     revenue_vat_percent?: number;
@@ -398,11 +403,15 @@ export async function getCampaignAssignmentHierarchy(
   const postsByDeliverable = new Map<string, AssignmentPostOperationalRow[]>();
   for (const row of (schedulesResult.data ?? []) as ScheduleRow[]) {
     const list = postsByDeliverable.get(row.assignment_deliverable_id) ?? [];
+    const meta = (row.metadata ?? {}) as { platform?: string; deliverable_type?: string };
     list.push({
       id: row.id,
       assignment_deliverable_id: row.assignment_deliverable_id,
       sequence_number: row.sequence_number,
       label: `#${row.sequence_number}`,
+      platform: meta.platform ?? "instagram",
+      deliverable_type: meta.deliverable_type ?? "other",
+      deliverable_type_label: deliverableTypeLabel(meta.deliverable_type ?? "other"),
       live_date: row.live_date,
       workflow_status: row.status,
       notes: row.notes,
@@ -479,14 +488,28 @@ export async function getCampaignAssignmentHierarchy(
         isLocked: Boolean(row.locked_at),
       });
     } else {
-      posts = posts.map((post) => ({
-        ...post,
-        label: `${deliverableTagLabel(row.deliverable_type)} #${post.sequence_number}`,
-        invoice_id: invoiceLink?.invoice_id ?? null,
-        invoice_document_number: invoiceLink?.document_number ?? null,
-        payout_status: line?.vendor_payment_status ?? null,
-        is_locked: Boolean(row.locked_at),
-      }));
+      posts = posts.map((post) => {
+        const scheduleRow = (schedulesResult.data ?? []).find(
+          (s) => s.id === post.id
+        ) as ScheduleRow | undefined;
+        const meta = (scheduleRow?.metadata ?? {}) as {
+          platform?: string;
+          deliverable_type?: string;
+        };
+        const platform = meta.platform ?? row.platform;
+        const deliverableType = meta.deliverable_type ?? row.deliverable_type;
+        return {
+          ...post,
+          platform,
+          deliverable_type: deliverableType,
+          deliverable_type_label: deliverableTypeLabel(deliverableType),
+          label: `${deliverableTagLabel(deliverableType)} #${post.sequence_number}`,
+          invoice_id: invoiceLink?.invoice_id ?? null,
+          invoice_document_number: invoiceLink?.document_number ?? null,
+          payout_status: line?.vendor_payment_status ?? null,
+          is_locked: Boolean(row.locked_at),
+        };
+      });
     }
 
     const mapped: AssignmentDeliverableHierarchyRow = {

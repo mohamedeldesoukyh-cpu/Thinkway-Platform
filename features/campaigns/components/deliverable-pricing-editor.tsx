@@ -22,15 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DeliverableTypeTag } from "@/features/campaigns/components/assignment-hierarchy/deliverable-type-tag";
 import {
-  DELIVERABLE_TYPE_OPTIONS,
-  PLATFORM_OPTIONS,
-} from "@/features/campaigns/constants";
-import {
-  PLATFORM_DELIVERABLES,
-  deliverableLabel,
-  platformLabel,
-} from "@/features/campaigns/line-assignment";
+  DeliverableTypeSelect,
+  PlatformBadge,
+  PlatformSelect,
+} from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
+import { SCHEDULE_STATUS_OPTIONS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import type { LineInfluencerAssignment } from "@/features/campaigns/line-assignment";
 import {
   createEmptyCommercialRow,
   duplicateCommercialRow,
@@ -38,6 +37,11 @@ import {
   rowTotalRevenue,
   type CommercialDeliverableRow,
 } from "@/lib/assignments/commercial-calculations";
+import {
+  getCreatorConnectedPlatformOptions,
+  getDeliverableTypeCodesForPlatform,
+  deliverableTypeShortLabel,
+} from "@/lib/campaigns/deliverable-taxonomy";
 import { cn } from "@/lib/utils";
 
 type DeliverablePricingEditorProps = {
@@ -45,6 +49,7 @@ type DeliverablePricingEditorProps = {
   onChange: (rows: CommercialDeliverableRow[]) => void;
   currency: string;
   disabled?: boolean;
+  assignment?: LineInfluencerAssignment | null;
 };
 
 export function DeliverablePricingEditor({
@@ -52,15 +57,18 @@ export function DeliverablePricingEditor({
   onChange,
   currency,
   disabled,
+  assignment,
 }: DeliverablePricingEditorProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const platformOptions = getCreatorConnectedPlatformOptions(assignment);
 
   function updateRow(id: string, patch: Partial<CommercialDeliverableRow>) {
     onChange(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
   function addRow() {
-    onChange([...rows, createEmptyCommercialRow()]);
+    const defaultPlatform = platformOptions[0]?.value ?? "instagram";
+    onChange([...rows, createEmptyCommercialRow(defaultPlatform)]);
   }
 
   function removeRow(id: string) {
@@ -83,6 +91,10 @@ export function DeliverablePricingEditor({
       live_date: row.live_date,
       notes: row.notes,
       status: "draft",
+      platform: row.platform,
+      deliverable_type: row.deliverable_type,
+      revenue_per_post: row.revenue_before_vat,
+      cost_per_post: row.unit_cost,
     }));
     updateRow(row.id, { schedule_mode: "expanded", post_schedules: schedules });
     setExpandedId(row.id);
@@ -94,8 +106,7 @@ export function DeliverablePricingEditor({
         <div>
           <p className="text-sm font-medium">Deliverable commercial rows</p>
           <p className="text-xs text-muted-foreground">
-            Per-deliverable pricing with optional expanded posting schedules.{" "}
-            <span className="hidden sm:inline">Press Alt+N to add a row.</span>
+            Per-deliverable pricing with optional expanded posting schedules. Alt+N to add.
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={addRow} disabled={disabled}>
@@ -112,16 +123,11 @@ export function DeliverablePricingEditor({
         rows.map((row, index) => {
           const totalCost = rowTotalCost(row);
           const totalRevenue = rowTotalRevenue(row);
-          const deliverableOptions =
-            PLATFORM_DELIVERABLES[row.platform] ?? PLATFORM_DELIVERABLES.other;
           const isExpanded = expandedId === row.id;
 
           return (
-            <div
-              key={row.id}
-              className="rounded-2xl border bg-card shadow-sm"
-            >
-              <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+            <div key={row.id} className="rounded-xl border bg-card shadow-sm">
+              <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5">
                 <button
                   type="button"
                   className="flex items-center gap-1 text-sm font-medium"
@@ -133,81 +139,96 @@ export function DeliverablePricingEditor({
                   ) : (
                     <ChevronRightIcon className="size-4" />
                   )}
-                  Row {index + 1}
+                  {deliverableTypeShortLabel(row.deliverable_type)}
                 </button>
-                <Badge variant="outline">{platformLabel(row.platform)}</Badge>
-                <Badge variant="secondary">{deliverableLabel(row.deliverable_type)}</Badge>
-                <Badge variant="outline">×{row.quantity}</Badge>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {currency} {totalCost.toLocaleString()} cost · {totalRevenue.toLocaleString()} rev
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => duplicateRow(row.id)}
-                  disabled={disabled}
-                  title="Duplicate row (Alt+D)"
-                >
-                  <CopyIcon className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeRow(row.id)}
-                  disabled={disabled}
-                >
-                  <Trash2Icon className="size-4" />
-                </Button>
+                <PlatformBadge platform={row.platform} />
+                <DeliverableTypeTag platform={row.platform} deliverableType={row.deliverable_type} />
+                <Badge variant="outline" className="text-[10px]">
+                  Qty {row.quantity}
+                </Badge>
+                <div className="ml-auto flex items-center gap-0.5">
+                  <span className="mr-2 hidden text-[11px] text-muted-foreground sm:inline">
+                    {currency} {totalCost.toLocaleString()} cost · {totalRevenue.toLocaleString()} rev
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => duplicateRow(row.id)}
+                    disabled={disabled}
+                    title="Duplicate row"
+                  >
+                    <CopyIcon className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => removeRow(row.id)}
+                    disabled={disabled}
+                  >
+                    <Trash2Icon className="size-4" />
+                  </Button>
+                </div>
               </div>
 
-              <div className={cn("grid gap-3 p-3", !isExpanded && "hidden")}>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <FieldSelect
-                    label="Platform"
-                    value={row.platform}
-                    onChange={(v) => {
-                      const types = PLATFORM_DELIVERABLES[v] ?? PLATFORM_DELIVERABLES.other;
-                      updateRow(row.id, {
-                        platform: v,
-                        deliverable_type: types[0] ?? "other",
-                      });
-                    }}
-                    options={PLATFORM_OPTIONS.filter((p) => p.value !== "multi")}
-                    disabled={disabled}
-                  />
-                  <FieldSelect
-                    label="Deliverable type"
-                    value={row.deliverable_type}
-                    onChange={(v) => updateRow(row.id, { deliverable_type: v })}
-                    options={deliverableOptions.map((d) => ({
-                      value: d,
-                      label: deliverableLabel(d),
-                    }))}
-                    disabled={disabled}
-                  />
+              <div className={cn("space-y-3 p-3", !isExpanded && "hidden")}>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Platform</Label>
+                    <PlatformSelect
+                      platform={row.platform}
+                      platformOptions={platformOptions}
+                      disabled={disabled}
+                      className="h-8 w-full max-w-none"
+                      onPlatformChange={(platform) => {
+                        const types = getDeliverableTypeCodesForPlatform(platform);
+                        updateRow(row.id, {
+                          platform,
+                          deliverable_type: types[0] ?? "other",
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Deliverable type</Label>
+                    <DeliverableTypeSelect
+                      platform={row.platform}
+                      deliverableType={row.deliverable_type}
+                      disabled={disabled}
+                      className="h-8 w-full max-w-none min-w-0"
+                      onDeliverableTypeChange={(deliverableType) =>
+                        updateRow(row.id, { deliverable_type: deliverableType })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-3">
                   <NumberField
-                    label="Quantity"
+                    label="Qty"
                     value={row.quantity}
                     onChange={(v) => updateRow(row.id, { quantity: Math.max(1, v) })}
                     disabled={disabled}
                     min={1}
                   />
                   <NumberField
-                    label="Unit cost"
-                    value={row.unit_cost}
-                    onChange={(v) => updateRow(row.id, { unit_cost: v })}
-                    disabled={disabled}
-                  />
-                  <NumberField
-                    label="Unit revenue"
+                    label="Rev/ad"
                     value={row.revenue_before_vat}
                     onChange={(v) => updateRow(row.id, { revenue_before_vat: v })}
                     disabled={disabled}
                   />
-                  <div className="grid gap-2">
-                    <Label>Live date</Label>
+                  <NumberField
+                    label="Cost/ad"
+                    value={row.unit_cost}
+                    onChange={(v) => updateRow(row.id, { unit_cost: v })}
+                    disabled={disabled}
+                  />
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Posting start date</Label>
                     <Input
                       type="date"
                       value={row.live_date ?? ""}
@@ -215,72 +236,217 @@ export function DeliverablePricingEditor({
                         updateRow(row.id, { live_date: e.target.value || null })
                       }
                       disabled={disabled}
+                      className="h-8"
                     />
                   </div>
-                  <div className="grid gap-2 sm:col-span-2">
-                    <Label>Notes</Label>
-                    <Textarea
-                      rows={2}
-                      value={row.notes ?? ""}
-                      onChange={(e) => updateRow(row.id, { notes: e.target.value || null })}
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">WF</Label>
+                    <Select
+                      value={row.post_schedules[0]?.status ?? "draft"}
+                      onValueChange={(status) => {
+                        const schedules =
+                          row.post_schedules.length > 0
+                            ? row.post_schedules.map((s) => ({ ...s, status }))
+                            : [{ sequence: 1, live_date: row.live_date, status, notes: row.notes }];
+                        updateRow(row.id, { post_schedules: schedules });
+                      }}
                       disabled={disabled}
-                    />
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SCHEDULE_STATUS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="grid gap-1.5">
+                  <Label className="text-xs">Notes</Label>
+                  <Textarea
+                    rows={2}
+                    value={row.notes ?? ""}
+                    onChange={(e) => updateRow(row.id, { notes: e.target.value || null })}
+                    disabled={disabled}
+                    className="text-sm"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 border-t pt-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="h-7 text-xs"
                     onClick={() => expandSchedule(row)}
                     disabled={disabled || row.quantity < 2}
                   >
-                    <CalendarIcon data-icon="inline-start" />
+                    <CalendarIcon data-icon="inline-start" className="size-3" />
                     Expand schedule ({row.quantity} posts)
                   </Button>
                   {row.schedule_mode === "expanded" && row.post_schedules.length > 0 ? (
-                    <Badge variant="secondary">Expanded schedule active</Badge>
+                    <Badge variant="secondary" className="text-[10px]">
+                      Expanded schedule active
+                    </Badge>
                   ) : null}
                 </div>
 
                 {row.schedule_mode === "expanded" && row.post_schedules.length > 0 ? (
-                  <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
-                    <p className="text-xs font-medium text-muted-foreground">
+                  <div className="space-y-2 rounded-lg border bg-muted/30 p-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Individual posting schedule
                     </p>
                     {row.post_schedules.map((slot) => (
                       <div
                         key={slot.sequence}
-                        className="grid gap-2 sm:grid-cols-[auto_1fr_1fr]"
+                        className="space-y-2 rounded-md border border-l-2 border-l-primary/20 bg-muted/50 p-2.5"
                       >
-                        <span className="pt-2 text-sm font-medium">#{slot.sequence}</span>
-                        <Input
-                          type="date"
-                          value={slot.live_date ?? ""}
-                          onChange={(e) => {
-                            const next = row.post_schedules.map((s) =>
-                              s.sequence === slot.sequence
-                                ? { ...s, live_date: e.target.value || null }
-                                : s
-                            );
-                            updateRow(row.id, { post_schedules: next });
-                          }}
-                          disabled={disabled}
-                        />
-                        <Input
-                          placeholder="Posting notes"
-                          value={slot.notes ?? ""}
-                          onChange={(e) => {
-                            const next = row.post_schedules.map((s) =>
-                              s.sequence === slot.sequence
-                                ? { ...s, notes: e.target.value || null }
-                                : s
-                            );
-                            updateRow(row.id, { post_schedules: next });
-                          }}
-                          disabled={disabled}
-                        />
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold">#{slot.sequence}</span>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="grid gap-1">
+                            <Label className="text-[10px]">Platform</Label>
+                            <PlatformSelect
+                              platform={slot.platform ?? row.platform}
+                              platformOptions={platformOptions}
+                              disabled={disabled}
+                              className="h-7 w-full max-w-none"
+                              onPlatformChange={(platform) => {
+                                const types = getDeliverableTypeCodesForPlatform(platform);
+                                const next = row.post_schedules.map((s) =>
+                                  s.sequence === slot.sequence
+                                    ? {
+                                        ...s,
+                                        platform,
+                                        deliverable_type: types[0] ?? s.deliverable_type,
+                                      }
+                                    : s
+                                );
+                                updateRow(row.id, { post_schedules: next });
+                              }}
+                            />
+                          </div>
+                          <div className="grid gap-1">
+                            <Label className="text-[10px]">Deliverable</Label>
+                            <DeliverableTypeSelect
+                              platform={slot.platform ?? row.platform}
+                              deliverableType={slot.deliverable_type ?? row.deliverable_type}
+                              disabled={disabled}
+                              className="h-7 w-full max-w-none min-w-0"
+                              onDeliverableTypeChange={(deliverableType) => {
+                                const next = row.post_schedules.map((s) =>
+                                  s.sequence === slot.sequence
+                                    ? { ...s, deliverable_type: deliverableType }
+                                    : s
+                                );
+                                updateRow(row.id, { post_schedules: next });
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <NumberField
+                            label="Rev/ad"
+                            value={slot.revenue_per_post ?? row.revenue_before_vat}
+                            onChange={(v) => {
+                              const next = row.post_schedules.map((s) =>
+                                s.sequence === slot.sequence ? { ...s, revenue_per_post: v } : s
+                              );
+                              updateRow(row.id, { post_schedules: next });
+                            }}
+                            disabled={disabled}
+                          />
+                          <NumberField
+                            label="Cost/ad"
+                            value={slot.cost_per_post ?? row.unit_cost}
+                            onChange={(v) => {
+                              const next = row.post_schedules.map((s) =>
+                                s.sequence === slot.sequence ? { ...s, cost_per_post: v } : s
+                              );
+                              updateRow(row.id, { post_schedules: next });
+                            }}
+                            disabled={disabled}
+                          />
+                          <NumberField
+                            label="VAT %"
+                            value={slot.revenue_vat_percent ?? 0}
+                            onChange={(v) => {
+                              const next = row.post_schedules.map((s) =>
+                                s.sequence === slot.sequence
+                                  ? { ...s, revenue_vat_percent: v }
+                                  : s
+                              );
+                              updateRow(row.id, { post_schedules: next });
+                            }}
+                            disabled={disabled}
+                          />
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="grid gap-1">
+                            <Label className="text-[10px]">Posting date</Label>
+                            <Input
+                              type="date"
+                              value={slot.live_date ?? ""}
+                              onChange={(e) => {
+                                const next = row.post_schedules.map((s) =>
+                                  s.sequence === slot.sequence
+                                    ? { ...s, live_date: e.target.value || null }
+                                    : s
+                                );
+                                updateRow(row.id, { post_schedules: next });
+                              }}
+                              disabled={disabled}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                          <div className="grid gap-1">
+                            <Label className="text-[10px]">WF</Label>
+                            <Select
+                              value={slot.status ?? "draft"}
+                              onValueChange={(status) => {
+                                const next = row.post_schedules.map((s) =>
+                                  s.sequence === slot.sequence ? { ...s, status } : s
+                                );
+                                updateRow(row.id, { post_schedules: next });
+                              }}
+                              disabled={disabled}
+                            >
+                              <SelectTrigger className="h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SCHEDULE_STATUS_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-[10px]">Notes</Label>
+                          <Input
+                            placeholder="Notes"
+                            value={slot.notes ?? ""}
+                            onChange={(e) => {
+                              const next = row.post_schedules.map((s) =>
+                                s.sequence === slot.sequence
+                                  ? { ...s, notes: e.target.value || null }
+                                  : s
+                              );
+                              updateRow(row.id, { post_schedules: next });
+                            }}
+                            disabled={disabled}
+                            className="h-7 text-xs"
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -290,38 +456,6 @@ export function DeliverablePricingEditor({
           );
         })
       )}
-    </div>
-  );
-}
-
-function FieldSelect({
-  label,
-  value,
-  onChange,
-  options,
-  disabled,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: readonly { value: string; label: string }[] | { value: string; label: string }[];
-  disabled?: boolean;
-}) {
-  return (
-    <div className="grid gap-2">
-      <Label>{label}</Label>
-      <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   );
 }
@@ -340,8 +474,8 @@ function NumberField({
   min?: number;
 }) {
   return (
-    <div className="grid gap-2">
-      <Label>{label}</Label>
+    <div className="grid gap-1.5">
+      <Label className="text-xs">{label}</Label>
       <Input
         type="number"
         min={min}
@@ -349,6 +483,7 @@ function NumberField({
         value={value}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
         disabled={disabled}
+        className="h-8"
       />
     </div>
   );

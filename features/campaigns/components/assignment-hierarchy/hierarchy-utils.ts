@@ -1,19 +1,9 @@
-import { deliverableLabel } from "@/features/campaigns/line-assignment";
+import { deliverableTypeShortLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import {
   PLATFORM_SHORT_LABELS,
   isSocialPlatform,
   type SocialPlatform,
 } from "@/lib/social/platforms";
-
-const DELIVERABLE_TAG_SHORT: Record<string, string> = {
-  instagram_post: "IG Post",
-  instagram_reel: "IG Reel",
-  instagram_story: "IG Story",
-  tiktok_video: "TT Video",
-  youtube_video: "YT Integration",
-  youtube_short: "YT Short",
-  other: "Other",
-};
 
 export function platformShortLabel(platform: string): string {
   if (isSocialPlatform(platform)) {
@@ -24,7 +14,7 @@ export function platformShortLabel(platform: string): string {
 }
 
 export function deliverableTagLabel(type: string): string {
-  return DELIVERABLE_TAG_SHORT[type] ?? deliverableLabel(type);
+  return deliverableTypeShortLabel(type);
 }
 
 export const HIERARCHY_COLUMN_LABELS = {

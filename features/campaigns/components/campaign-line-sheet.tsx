@@ -45,6 +45,7 @@ import {
   countLineDeliverables,
   suggestCostFromRateCard,
   type AssignmentPricingMode,
+  type LineInfluencerAssignment,
 } from "@/features/campaigns/line-assignment";
 import { CampaignLinePoPanel } from "@/features/campaigns/components/campaign-line-po-panel";
 import { PoGovernanceDialog } from "@/features/campaigns/components/po-governance-dialog";
@@ -155,6 +156,26 @@ export function CampaignLineSheet({
     () => summarizeCommercialRows(commercialRows),
     [commercialRows]
   );
+
+  const creatorAssignmentForPricing = useMemo((): LineInfluencerAssignment | null => {
+    if (line?.assignment) return line.assignment;
+    if (!profile || !influencerId) return null;
+    return {
+      influencer_id: influencerId,
+      influencer_name: influencerLabel ?? profile.display_name,
+      influencer_document_number: profile.document_number ?? "",
+      platforms: profile.platforms.map((p) => ({
+        account_id: p.id,
+        platform: p.platform,
+        handle: p.handle,
+        profile_url: p.profile_url,
+        follower_count: p.follower_count,
+        engagement_rate: p.engagement_rate,
+        audience_country: p.audience_country,
+        deliverables: [],
+      })),
+    };
+  }, [line?.assignment, profile, influencerId, influencerLabel]);
 
   const assignmentJson = useMemo(() => {
     if (pricingMode === "per_deliverable" && commercialRows.length > 0 && profile) {
@@ -513,6 +534,7 @@ export function CampaignLineSheet({
               onChange={setCommercialRows}
               currency={currency}
               disabled={isPending || Boolean(line?.vendor_assignment_locked)}
+              assignment={creatorAssignmentForPricing}
             />
           ) : null}
 

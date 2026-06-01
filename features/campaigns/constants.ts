@@ -41,9 +41,15 @@ export const DELIVERABLE_TYPE_OPTIONS = [
   { value: "instagram_post", label: "Instagram post" },
   { value: "instagram_reel", label: "Instagram reel" },
   { value: "instagram_story", label: "Instagram story" },
+  { value: "instagram_live", label: "Instagram live" },
   { value: "tiktok_video", label: "TikTok video" },
+  { value: "tiktok_story", label: "TikTok story" },
+  { value: "tiktok_live", label: "TikTok live" },
+  { value: "snapchat_story", label: "Snapchat story" },
+  { value: "snapchat_spotlight", label: "Snapchat Spotlight" },
   { value: "youtube_video", label: "YouTube integration" },
   { value: "youtube_short", label: "YouTube short" },
+  { value: "youtube_dedicated", label: "YouTube dedicated" },
   { value: "other", label: "Other" },
 ] as const;
 

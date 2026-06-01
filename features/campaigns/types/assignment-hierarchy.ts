@@ -12,6 +12,9 @@ export type AssignmentPostOperationalRow = {
   assignment_deliverable_id: string;
   sequence_number: number;
   label: string;
+  platform: string;
+  deliverable_type: string;
+  deliverable_type_label: string;
   live_date: string | null;
   workflow_status: string;
   notes: string | null;

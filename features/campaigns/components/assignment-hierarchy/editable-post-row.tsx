@@ -15,31 +15,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { updatePostScheduleAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
+import {
+  updateDeliverablePlatformTypeAction,
+  updatePostScheduleAction,
+} from "@/features/campaigns/actions/assignment-deliverable-actions";
 import { DeliverableBillingBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-billing-badge";
+import { DeliverableTypeTag } from "@/features/campaigns/components/assignment-hierarchy/deliverable-type-tag";
 import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
+import { PlatformDeliverableSelects, PlatformSelect, DeliverableTypeSelect } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
+import { SCHEDULE_STATUS_OPTIONS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import {
   GRID_CELL,
   OPERATIONAL_GRID_LABELS,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-grid-columns";
-import { SCHEDULE_STATUS_OPTIONS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import type { AssignmentPostOperationalRow } from "@/features/campaigns/types/assignment-hierarchy";
 import { formatMoney } from "@/features/campaigns/utils";
+import { getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
 import { computeVatLine } from "@/lib/vat/calculations";
 import { cn } from "@/lib/utils";
 
 type EditablePostRowProps = {
   campaignId: string;
+  campaignLineId: string;
+  deliverableId: string;
   post: AssignmentPostOperationalRow;
   currency: string;
   readOnly: boolean;
   revenueVatExempt: boolean;
   defaultRevenueVatPercent: number;
-  platformLabel: string;
-  deliverableTypeLabel: string;
+  platformOptions: { value: string; label: string }[];
 };
 
 type Draft = {
+  platform: string;
+  deliverable_type: string;
   live_date: string;
   revenue_per_post: number;
   cost_per_post: number;
@@ -51,19 +60,22 @@ type Draft = {
 
 export function EditablePostRow({
   campaignId,
+  campaignLineId,
+  deliverableId,
   post,
   currency,
   readOnly,
   revenueVatExempt,
   defaultRevenueVatPercent,
-  platformLabel,
-  deliverableTypeLabel,
+  platformOptions,
 }: EditablePostRowProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(() => ({
+    platform: post.platform,
+    deliverable_type: post.deliverable_type,
     live_date: post.live_date ?? "",
     revenue_per_post: post.revenue_per_post,
     cost_per_post: post.cost_per_post,
@@ -76,6 +88,8 @@ export function EditablePostRow({
   useEffect(() => {
     if (!editing) {
       setDraft({
+        platform: post.platform,
+        deliverable_type: post.deliverable_type,
         live_date: post.live_date ?? "",
         revenue_per_post: post.revenue_per_post,
         cost_per_post: post.cost_per_post,
@@ -105,8 +119,25 @@ export function EditablePostRow({
           ? "Pend"
           : "—";
 
+  const canEdit = !readOnly && !post.id.startsWith("virtual-");
+
+  function savePlatformType(platform: string, deliverableType: string) {
+    if (!canEdit) return;
+    startTransition(async () => {
+      const result = await updateDeliverablePlatformTypeAction({
+        campaign_id: campaignId,
+        campaign_line_id: campaignLineId,
+        deliverable_id: deliverableId,
+        platform,
+        deliverable_type: deliverableType,
+      });
+      if (!result.ok) setError(result.message ?? "Failed to update platform.");
+      else router.refresh();
+    });
+  }
+
   function save() {
-    if (readOnly || post.id.startsWith("virtual-")) return;
+    if (!canEdit) return;
     startTransition(async () => {
       const result = await updatePostScheduleAction({
         campaign_id: campaignId,
@@ -118,6 +149,8 @@ export function EditablePostRow({
         revenue_vat_percent: draft.revenue_vat_percent,
         notes: draft.notes || null,
         billing_status: draft.billing_status as typeof post.billing_status,
+        platform: draft.platform,
+        deliverable_type: draft.deliverable_type,
       });
       if (!result.ok) {
         setError(result.message ?? "Failed to save.");
@@ -132,7 +165,7 @@ export function EditablePostRow({
     <>
       <tr
         className={cn(
-          "border-b border-border/30 bg-background/70 text-[11px] last:border-0",
+          "border-b border-border/30 border-l-2 border-l-primary/20 bg-muted/50 text-[11px] last:border-0",
           editing && "bg-background ring-1 ring-inset ring-primary/20"
         )}
       >
@@ -140,9 +173,46 @@ export function EditablePostRow({
           <span className="text-muted-foreground">└</span>
         </td>
         <td className={cn(GRID_CELL.type, "font-medium")}>{post.label}</td>
-        <td className={GRID_CELL.platform}>{platformLabel}</td>
-        <td className={cn(GRID_CELL.deliverableType, "text-muted-foreground")}>
-          {deliverableTypeLabel}
+        <td className={GRID_CELL.platform}>
+          {canEdit ? (
+            <PlatformSelect
+              platform={editing ? draft.platform : post.platform}
+              platformOptions={platformOptions}
+              disabled={pending && !editing}
+              onPlatformChange={(platform) => {
+                const types = getDeliverableTypeCodesForPlatform(platform);
+                if (editing) {
+                  setDraft((d) => ({
+                    ...d,
+                    platform,
+                    deliverable_type: types[0] ?? d.deliverable_type,
+                  }));
+                } else {
+                  savePlatformType(platform, types[0] ?? "other");
+                }
+              }}
+            />
+          ) : (
+            <DeliverableTypeTag platform={post.platform} deliverableType={post.deliverable_type} />
+          )}
+        </td>
+        <td className={GRID_CELL.deliverableType}>
+          {canEdit ? (
+            <DeliverableTypeSelect
+              platform={editing ? draft.platform : post.platform}
+              deliverableType={editing ? draft.deliverable_type : post.deliverable_type}
+              disabled={pending && !editing}
+              onDeliverableTypeChange={(deliverableType) => {
+                if (editing) {
+                  setDraft((d) => ({ ...d, deliverable_type: deliverableType }));
+                } else {
+                  savePlatformType(post.platform, deliverableType);
+                }
+              }}
+            />
+          ) : (
+            <span className="text-muted-foreground">{post.deliverable_type_label}</span>
+          )}
         </td>
         <td className={GRID_CELL.postDate}>
           {editing ? (
@@ -193,10 +263,7 @@ export function EditablePostRow({
           )}
         </td>
         <td className={cn(GRID_CELL.money, "font-medium")}>
-          {formatMoney(
-            editing ? draft.revenue_per_post : post.revenue_per_post,
-            currency
-          )}
+          {formatMoney(editing ? draft.revenue_per_post : post.revenue_per_post, currency)}
         </td>
         <td className={GRID_CELL.money}>
           {formatMoney(editing ? draft.cost_per_post : post.cost_per_post, currency)}
@@ -243,10 +310,7 @@ export function EditablePostRow({
         </td>
         <td className={GRID_CELL.invoice}>
           {post.invoice_document_number ? (
-            <Link
-              href={`/billing/invoices/${post.invoice_id}`}
-              className="font-mono text-[10px] hover:underline"
-            >
+            <Link href={`/billing/invoices/${post.invoice_id}`} className="font-mono text-[10px] hover:underline">
               {post.invoice_document_number}
             </Link>
           ) : (
@@ -265,10 +329,7 @@ export function EditablePostRow({
         </td>
         <td className={GRID_CELL.workflow}>
           {editing ? (
-            <Select
-              value={draft.workflow_status}
-              onValueChange={(v) => setDraft((d) => ({ ...d, workflow_status: v }))}
-            >
+            <Select value={draft.workflow_status} onValueChange={(v) => setDraft((d) => ({ ...d, workflow_status: v }))}>
               <SelectTrigger className="h-6 text-[10px]">
                 <SelectValue />
               </SelectTrigger>
@@ -296,13 +357,11 @@ export function EditablePostRow({
               }}
             />
           ) : (
-            <span className="line-clamp-1 text-[10px] text-muted-foreground">
-              {post.notes ?? "—"}
-            </span>
+            <span className="line-clamp-1 text-[10px] text-muted-foreground">{post.notes ?? "—"}</span>
           )}
         </td>
         <td className={GRID_CELL.actions}>
-          {readOnly || post.id.startsWith("virtual-") ? (
+          {!canEdit ? (
             <span className="text-[9px] text-muted-foreground">—</span>
           ) : editing ? (
             <div className="flex justify-end gap-0.5">
