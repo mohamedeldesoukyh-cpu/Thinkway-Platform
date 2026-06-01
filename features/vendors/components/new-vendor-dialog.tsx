@@ -2,9 +2,13 @@
 
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  ProfileUrlEnrichInput,
+  type ProfileEnrichmentPayload,
+} from "@/components/forms/profile-url-enrich-input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,7 +35,6 @@ import {
 } from "@/features/vendors/actions";
 import {
   COUNTRY_OPTIONS,
-  PLATFORM_OPTIONS,
   PRICING_CURRENCY_OPTIONS,
   VENDOR_STATUS_OPTIONS,
 } from "@/features/vendors/constants";
@@ -52,12 +55,46 @@ export function NewVendorDialog() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("prospect");
   const [countryCode, setCountryCode] = useState(NONE_VALUE);
-  const [platform, setPlatform] = useState(NONE_VALUE);
   const [pricingCurrency, setPricingCurrency] = useState("USD");
+  const [profileUrl, setProfileUrl] = useState("");
+  const [platform, setPlatform] = useState("");
+  const [handle, setHandle] = useState("");
+  const [followerCount, setFollowerCount] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState("");
   const [state, formAction, isPending] = useActionState(
     createVendorAction,
     initialState
   );
+
+  const resetForm = useCallback(() => {
+    setStatus("prospect");
+    setCountryCode(NONE_VALUE);
+    setPricingCurrency("USD");
+    setProfileUrl("");
+    setPlatform("");
+    setHandle("");
+    setFollowerCount("");
+    setDuplicateWarning("");
+  }, []);
+
+  const handleEnriched = useCallback((payload: ProfileEnrichmentPayload) => {
+    const { parsed, enrichment, duplicates } = payload;
+    setPlatform(parsed.platform);
+    setHandle(parsed.username);
+    setProfileUrl(parsed.profile_url);
+    setDuplicateWarning(
+      duplicates.length > 0
+        ? `This account is already linked to ${duplicates[0].influencer_name}. You can still create the vendor.`
+        : ""
+    );
+
+    if (
+      enrichment?.follower_count != null &&
+      !followerCount.trim()
+    ) {
+      setFollowerCount(String(enrichment.follower_count));
+    }
+  }, [followerCount]);
 
   useEffect(() => {
     if (!state.message) {
@@ -66,10 +103,7 @@ export function NewVendorDialog() {
 
     if (state.ok) {
       toast.success(state.message);
-      setStatus("prospect");
-      setCountryCode(NONE_VALUE);
-      setPlatform(NONE_VALUE);
-      setPricingCurrency("USD");
+      resetForm();
       setOpen(false);
 
       if (state.vendorId) {
@@ -80,10 +114,16 @@ export function NewVendorDialog() {
     }
 
     toast.error(state.message);
-  }, [router, state]);
+  }, [router, state, resetForm]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) resetForm();
+      }}
+    >
       <DialogTrigger asChild>
         <Button>
           <PlusIcon data-icon="inline-start" />
@@ -94,7 +134,8 @@ export function NewVendorDialog() {
         <DialogHeader>
           <DialogTitle>New vendor</DialogTitle>
           <DialogDescription>
-            Add a creator or agency. A vendor number is assigned automatically.
+            Add a creator or agency. Paste a profile URL to auto-fill platform
+            details, or enter them manually.
           </DialogDescription>
         </DialogHeader>
         <form action={formAction} className="grid gap-4">
@@ -104,10 +145,13 @@ export function NewVendorDialog() {
             name="country_code"
             value={countryCode === NONE_VALUE ? "" : countryCode}
           />
+          <input type="hidden" name="platform" value={platform} />
+          <input type="hidden" name="handle" value={handle} />
+          <input type="hidden" name="profile_url" value={profileUrl} />
           <input
             type="hidden"
-            name="platform"
-            value={platform === NONE_VALUE ? "" : platform}
+            name="follower_count"
+            value={followerCount || "0"}
           />
           <input type="hidden" name="pricing_currency" value={pricingCurrency} />
 
@@ -122,6 +166,26 @@ export function NewVendorDialog() {
                 disabled={isPending}
               />
               <FieldError messages={state.fieldErrors?.display_name} />
+            </div>
+
+            <div className="grid gap-2 sm:col-span-2">
+              <ProfileUrlEnrichInput
+                id="profile_url"
+                label="Profile URL"
+                value={profileUrl}
+                disabled={isPending}
+                onValueChange={(value) => {
+                  setProfileUrl(value);
+                  setDuplicateWarning("");
+                }}
+                onEnriched={handleEnriched}
+              />
+              {duplicateWarning ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {duplicateWarning}
+                </p>
+              ) : null}
+              <FieldError messages={state.fieldErrors?.profile_url} />
             </div>
 
             <div className="grid gap-2">
@@ -213,45 +277,26 @@ export function NewVendorDialog() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="platform_select">Primary platform</Label>
-              <Select
-                value={platform}
-                onValueChange={setPlatform}
-                disabled={isPending}
-              >
-                <SelectTrigger id="platform_select" className="w-full">
-                  <SelectValue placeholder="Select platform" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE_VALUE}>Not specified</SelectItem>
-                  {PLATFORM_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="handle">Handle</Label>
+              <Label htmlFor="handle_display">Username (override)</Label>
               <Input
-                id="handle"
-                name="handle"
-                placeholder="@janecooper"
+                id="handle_display"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value.replace(/^@+/, ""))}
+                placeholder="janecooper"
                 disabled={isPending}
               />
               <FieldError messages={state.fieldErrors?.handle} />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="follower_count">Followers</Label>
+              <Label htmlFor="follower_count_display">Followers (override)</Label>
               <Input
-                id="follower_count"
-                name="follower_count"
+                id="follower_count_display"
                 type="number"
                 min="0"
                 step="1"
+                value={followerCount}
+                onChange={(e) => setFollowerCount(e.target.value)}
                 placeholder="250000"
                 disabled={isPending}
               />

@@ -85,6 +85,16 @@ export const createVendorSchema = z.object({
   categories: z.string().trim().max(500).optional().or(z.literal("")),
   platform: platformSchema.optional().or(z.literal("")),
   handle: z.string().trim().max(120).optional().or(z.literal("")),
+  profile_url: z
+    .string()
+    .trim()
+    .max(500)
+    .refine(
+      (value) => !value || z.string().url().safeParse(value).success,
+      "Enter a valid URL"
+    )
+    .optional()
+    .or(z.literal("")),
   follower_count: z.coerce
     .number()
     .int("Followers must be a whole number")
@@ -204,6 +214,26 @@ export const platformAccountInputSchema = z.object({
     return Number.isNaN(parsed) ? null : parsed;
   }, z.number().min(0).max(100).nullable().optional()),
   is_primary: z.coerce.boolean().optional(),
+  is_verified: z.coerce.boolean().optional(),
+  profile_display_name: z.string().trim().max(200).optional().or(z.literal("")),
+  profile_bio: z.string().trim().max(2000).optional().or(z.literal("")),
+  profile_picture_url: z
+    .string()
+    .trim()
+    .max(500)
+    .refine(
+      (value) => !value || z.string().url().safeParse(value).success,
+      "Enter a valid URL"
+    )
+    .optional()
+    .or(z.literal("")),
+  following_count: z.coerce.number().int().min(0).default(0),
+  sync_status: z
+    .enum(["pending", "synced", "partial", "failed", "manual"])
+    .optional(),
+  sync_source: z.string().trim().max(80).optional().or(z.literal("")),
+  sync_error: z.string().trim().max(500).optional().or(z.literal("")),
+  last_synced_at: z.string().trim().optional().or(z.literal("")),
 });
 
 export const savePlatformAccountsSchema = z.object({

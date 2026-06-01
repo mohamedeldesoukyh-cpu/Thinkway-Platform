@@ -29,6 +29,10 @@ import {
   vendorDependencySchema,
 } from "./schemas";
 import { getVendorDependencies } from "@/lib/operations/vendor-dependencies";
+import { findDuplicatePlatformAccounts } from "@/lib/social/duplicate-check";
+import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
+import { enrichCreatorProfile } from "@/lib/social/enrichment/providers/open-graph";
+import { resolvePlatformAccountFields } from "@/lib/social/parse-profile-url";
 
 export type FormActionState = {
   ok: boolean;
@@ -118,16 +122,77 @@ export async function createVendorAction(
 
   const platform = emptyToNull(parsed.data.platform);
   const handle = emptyToNull(parsed.data.handle);
+  const profileUrl = emptyToNull(parsed.data.profile_url);
 
-  if (platform && handle) {
+  const resolved =
+    resolvePlatformAccountFields({
+      profile_url: profileUrl ?? undefined,
+      username: handle ?? undefined,
+      platform: platform ?? undefined,
+    }) ?? null;
+
+  const accountPlatform = resolved?.platform ?? platform;
+  const accountUsername = resolved?.username ?? handle;
+
+  if (accountPlatform && accountUsername) {
+    let enrichment = null;
+    const enrichUrl = resolved?.profile_url ?? profileUrl ?? undefined;
+
+    if (enrichUrl) {
+      try {
+        enrichment = await enrichCreatorProfile({
+          platform: accountPlatform as Parameters<
+            typeof enrichCreatorProfile
+          >[0]["platform"],
+          username: accountUsername,
+          profile_url: enrichUrl,
+        });
+      } catch {
+        // Enrichment must not block vendor creation.
+      }
+    }
+
+    const normalized = buildNormalizedPlatformAccount({
+      platform: accountPlatform,
+      username: accountUsername,
+      profile_url: resolved?.profile_url ?? profileUrl,
+      follower_count:
+        parsed.data.follower_count > 0
+          ? parsed.data.follower_count
+          : (enrichment?.follower_count ?? 0),
+      following_count: enrichment?.following_count ?? 0,
+      engagement_rate: enrichment?.engagement_rate ?? null,
+      profile_display_name: enrichment?.display_name ?? null,
+      profile_bio: enrichment?.bio ?? null,
+      profile_picture_url: enrichment?.profile_picture_url ?? null,
+      is_verified: enrichment?.is_verified ?? false,
+      sync_status: enrichment?.sync_status ?? (resolved ? "partial" : "manual"),
+      sync_source: enrichment?.sync_source ?? (resolved ? "url_parse" : "manual"),
+      sync_error: enrichment?.sync_error ?? null,
+      last_synced_at: enrichment ? new Date().toISOString() : null,
+    });
+
     const { error: platformError } = await supabase
       .from("influencer_platform_accounts")
       .insert({
         influencer_id: vendor.id,
-        platform,
-        handle,
-        username: handle,
-        follower_count: parsed.data.follower_count ?? 0,
+        platform: normalized.platform,
+        handle: normalized.handle,
+        username: normalized.username,
+        profile_url: normalized.profile_url,
+        normalized_username: normalized.normalized_username,
+        normalized_profile_url: normalized.normalized_profile_url,
+        profile_display_name: normalized.profile_display_name,
+        profile_bio: normalized.profile_bio,
+        profile_picture_url: normalized.profile_picture_url,
+        follower_count: normalized.follower_count,
+        following_count: normalized.following_count,
+        engagement_rate: normalized.engagement_rate,
+        is_verified: normalized.is_verified,
+        sync_status: normalized.sync_status,
+        sync_source: normalized.sync_source,
+        sync_error: normalized.sync_error,
+        last_synced_at: normalized.last_synced_at,
         is_primary: true,
       });
 
@@ -358,18 +423,62 @@ export async function savePlatformAccountsAction(
       female: account.audience_female_pct,
     };
 
-    const payload = {
-      influencer_id: influencerId,
+    const normalized = buildNormalizedPlatformAccount({
       platform: account.platform,
-      handle: account.username,
       username: account.username,
-      profile_url: emptyToNull(account.profile_url),
+      profile_url: account.profile_url,
       follower_count: account.follower_count,
+      following_count: account.following_count,
       engagement_rate: account.engagement_rate,
       avg_views: account.avg_views,
+      is_verified: account.is_verified ?? false,
+      profile_display_name: emptyToNull(account.profile_display_name),
+      profile_bio: emptyToNull(account.profile_bio),
+      profile_picture_url: emptyToNull(account.profile_picture_url),
+      sync_status: account.sync_status ?? "manual",
+      sync_source: emptyToNull(account.sync_source),
+      sync_error: emptyToNull(account.sync_error),
+      last_synced_at: emptyToNull(account.last_synced_at),
+    });
+
+    const duplicates = await findDuplicatePlatformAccounts(supabase, {
+      platform: normalized.platform,
+      normalized_username: normalized.normalized_username,
+      normalized_profile_url: normalized.normalized_profile_url,
+      exclude_influencer_id: influencerId,
+      exclude_account_id: account.id ?? null,
+    });
+
+    if (duplicates.length > 0) {
+      return {
+        ok: false,
+        message: `${normalized.platform} @${normalized.username} already exists on ${duplicates[0].influencer_name}.`,
+      };
+    }
+
+    const payload = {
+      influencer_id: influencerId,
+      platform: normalized.platform,
+      handle: normalized.handle,
+      username: normalized.username,
+      profile_url: normalized.profile_url,
+      normalized_username: normalized.normalized_username,
+      normalized_profile_url: normalized.normalized_profile_url,
+      profile_display_name: normalized.profile_display_name,
+      profile_bio: normalized.profile_bio,
+      profile_picture_url: normalized.profile_picture_url,
+      follower_count: normalized.follower_count,
+      following_count: normalized.following_count,
+      engagement_rate: normalized.engagement_rate,
+      avg_views: normalized.avg_views,
       audience_country: emptyToNull(account.audience_country),
       audience_gender_split,
+      is_verified: normalized.is_verified,
       is_primary: account.is_primary ?? false,
+      sync_status: normalized.sync_status,
+      sync_source: normalized.sync_source,
+      last_synced_at: normalized.last_synced_at,
+      sync_error: normalized.sync_error,
     };
 
     if (account.id) {
