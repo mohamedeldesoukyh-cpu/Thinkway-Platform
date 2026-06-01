@@ -1,5 +1,11 @@
 # Thinkway Engineering Rules
 
+## Product reference (read first)
+
+- **`docs/THINKWAY_SYSTEM_REFERENCE.md`** — IConnect agreed spec (May 2026): modules, hierarchy, campaigns, billing, roles, roadmap.
+- **`docs/ARCHITECTURE_ALIGNMENT.md`** — codebase vs spec gaps; consult before new entities or modules.
+- **`.cursor/rules/thinkway-product-reference.mdc`** — persistent AI guardrails.
+
 ## Stack
 
 - Next.js App Router
@@ -54,20 +60,8 @@
 
 ## Project Goal
 
-Build an enterprise influencer marketing operations platform for:
+Build an enterprise influencer marketing **operations platform** (not CRUD):
 
-- clients
-
-- campaigns
-
-- influencers
-
-- deliverables
-
-- finance
-
-- analytics
-
-- approvals
-
-- workflows
+- **Hierarchy:** Group → Legal Entity → Brand → Campaign Header → Campaign Line
+- **Workspaces:** operational command centers at `/groups/[id]`, `/campaigns/[id]`, `/clients/[id]`, `/vendors/[id]`
+- clients · campaigns · influencers/vendors · deliverables · finance · analytics · approvals · workflows

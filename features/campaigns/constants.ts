@@ -29,3 +29,52 @@ export const PLATFORM_OPTIONS = [
 ] as const;
 
 export const METADATA_PLATFORM_KEY = "platform";
+
+export const WORKFLOW_STAGE_OPTIONS = [
+  { value: "planning", label: "Planning" },
+  { value: "negotiation", label: "Negotiation" },
+  { value: "live", label: "Live" },
+  { value: "completed", label: "Completed" },
+  { value: "invoicing", label: "Invoicing" },
+  { value: "closed", label: "Closed" },
+] as const;
+
+export const DELIVERABLE_TYPE_OPTIONS = [
+  { value: "instagram_post", label: "Instagram post" },
+  { value: "instagram_reel", label: "Instagram reel" },
+  { value: "instagram_story", label: "Instagram story" },
+  { value: "tiktok_video", label: "TikTok video" },
+  { value: "youtube_video", label: "YouTube integration" },
+  { value: "youtube_short", label: "YouTube short" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const DELIVERABLE_DISPLAY_STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "submitted", label: "Submitted" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "posted", label: "Posted" },
+] as const;
+
+export const CAMPAIGN_VENDOR_STATUS_OPTIONS = [
+  { value: "invited", label: "Invited" },
+  { value: "negotiating", label: "Negotiating" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "declined", label: "Declined" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+] as const;
+
+export const LINE_BILLING_STATUS_LABELS: Record<string, string> = {
+  not_billed: "Not billed",
+  invoiced: "Invoiced",
+  partial: "Partial",
+  paid: "Paid",
+};
+
+export const LINE_PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pending",
+  partial: "Partial",
+  paid: "Paid",
+};

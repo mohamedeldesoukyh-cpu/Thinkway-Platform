@@ -25,3 +25,7 @@ export function formatMoney(amount: number, currency: string): string {
     maximumFractionDigits: 2,
   }).format(amount);
 }
+
+export function formatPercent(value: number): string {
+  return `${value.toFixed(1)}%`;
+}

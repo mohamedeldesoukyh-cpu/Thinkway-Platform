@@ -1,0 +1,50 @@
+---
+description: Thinkway product reference — hierarchy, terminology, workflows, and implementation guardrails
+alwaysApply: true
+---
+
+# Thinkway Product Reference (Source of Truth)
+
+Before designing schema, UI, workflows, or new modules, read:
+
+- `docs/THINKWAY_SYSTEM_REFERENCE.md` — canonical product spec (from IConnect reference doc, May 2026)
+- `docs/ARCHITECTURE_ALIGNMENT.md` — current codebase vs spec gap analysis
+
+## Non-negotiable hierarchy (preserve)
+
+```
+Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
+```
+
+- **Brand-first** campaign creation: selecting a brand auto-fills group, legal entity, category, VR%, currency, direct/agency.
+- **Campaign numbering**: header `TW-YYYY-NNNN`; lines `{header}-A`, `-B`, `-C` (sequential, never manual, resets yearly).
+- Commercial fields (category, subcategory, VR%, direct/agency, currency) live on **brands**, not duplicated on clients or campaign headers (headers sync from brand via DB trigger).
+
+## Terminology (UI labels)
+
+| Reference doc | DB / code | UI label |
+|---------------|-----------|----------|
+| Client (legal entity) | `clients` | Legal entity |
+| Brand | `brands` | Brand |
+| Vendor | `influencers` (+ agencies) | Vendor / Influencer |
+| Level 1 campaign | `campaign_headers` | Campaign |
+| Level 2 line | `campaign_lines` | Campaign line |
+| Influencer assignment | `campaign_influencers` | Vendor assignment |
+
+## Implementation rules
+
+1. **Compare before building** — check `ARCHITECTURE_ALIGNMENT.md` for gaps; do not duplicate entities.
+2. **Operational workspaces, not CRUD** — profiles use tabs, KPI strips, sheets, filters, audit (see `/groups/[id]`, `/campaigns/[id]`).
+3. **Finance on lines** — revenue, cost, GP, margin, PO, remaining PO, billing states belong at line level; aggregate at header/group.
+4. **RLS + roles** — enforce Admin/Director/Manager/Account Manager/Finance/Data Entry matrix from reference §6.
+5. **Approvals** — use `approvals` / `approval_steps`; extend with workflow engine tables only when needed (§20).
+6. **Phased roadmap** — Phase 1: core ops; Phase 2: workflow/tasks/notifications/portals; Phase 3: AI; Phase 4: enterprise scale (reference §33).
+
+## Conflicts with reference doc (resolved in codebase)
+
+- Reference §3.2 lists category/VR%/direct-agency on **client**; codebase correctly places them on **brand** for multi-brand legal entities. Auto-fill campaigns from brand, not client.
+- Reference Level 2 = one influencer per line code; codebase uses `campaign_lines` (financial/PO) + `campaign_influencers` (vendor linkage). Treat lines as operational PO units; map influencer economics via assignments or consolidate when a line equals one creator.
+
+## Branding
+
+- Product: **Thinkway** · Client: **IConnect** · Prefix: **TW** · Primary: `#1D9E75`

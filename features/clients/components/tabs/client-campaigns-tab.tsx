@@ -43,7 +43,7 @@ export function ClientCampaignsTab({ client }: { client: ClientDetail }) {
                 {client.campaigns.map((campaign) => (
                   <TableRow key={campaign.id}>
                     <TableCell className="font-medium">
-                      <Link href="/campaigns" className="hover:underline">
+                      <Link href={`/campaigns/${campaign.id}`} className="hover:underline">
                         {campaign.name}
                       </Link>
                     </TableCell>

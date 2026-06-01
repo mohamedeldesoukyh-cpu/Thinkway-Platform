@@ -49,7 +49,10 @@ export function VendorCampaignsTab({ vendor }: { vendor: VendorDetail }) {
                   <TableRow key={assignment.id}>
                     <TableCell className="font-medium">
                       {assignment.campaign ? (
-                        <Link href="/campaigns" className="hover:underline">
+                        <Link
+                          href={`/campaigns/${assignment.campaign.id}`}
+                          className="hover:underline"
+                        >
                           {assignment.campaign.name}
                         </Link>
                       ) : (

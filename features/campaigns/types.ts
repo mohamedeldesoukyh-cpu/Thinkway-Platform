@@ -1,4 +1,4 @@
-import type { AgencyOrDirect } from "@/types/database";
+import type { AgencyOrDirect, CampaignStatus } from "@/types/database";
 
 export type BrandFormOption = {
   id: string;
@@ -13,3 +13,279 @@ export type BrandFormOption = {
   subcategory: { id: string; name: string } | null;
   vr_rate: { id: string; name: string; rate_percent: number } | null;
 };
+
+export type WorkflowStage =
+  | "planning"
+  | "negotiation"
+  | "live"
+  | "completed"
+  | "invoicing"
+  | "closed";
+
+export type LineBillingStatus =
+  | "not_billed"
+  | "invoiced"
+  | "partial"
+  | "paid";
+
+export type LinePaymentStatus =
+  | "pending"
+  | "partial"
+  | "paid";
+
+export type CampaignFinancialSummary = {
+  budget: number;
+  revenue: number;
+  cost: number;
+  gp: number;
+  margin_percent: number;
+  po_total: number;
+  remaining_po: number;
+  billing_outstanding: number;
+  collected: number;
+};
+
+export type CampaignLineWorkspace = {
+  id: string;
+  document_number: string;
+  name: string;
+  status: CampaignStatus;
+  platform: string | null;
+  influencer_count: number;
+  revenue: number;
+  cost: number;
+  gp: number;
+  margin_percent: number;
+  po_amount: number;
+  remaining_po: number;
+  billing_status: LineBillingStatus;
+  payment_status: LinePaymentStatus;
+  currency_code: string;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+export type CampaignVendorAssignment = {
+  id: string;
+  campaign_line_id: string | null;
+  line_document_number: string | null;
+  influencer_id: string;
+  influencer_name: string;
+  influencer_document_number: string;
+  status: string;
+  agreed_fee: number;
+  currency: string;
+  deliverable_count: number;
+  platforms: {
+    platform: string;
+    handle: string;
+    profile_url: string | null;
+    follower_count: number;
+    engagement_rate: number | null;
+  }[];
+  invited_at: string | null;
+  confirmed_at: string | null;
+};
+
+export type CampaignDeliverableRow = {
+  id: string;
+  document_number: string;
+  deliverable_type: string;
+  title: string;
+  status: string;
+  display_status: "pending" | "submitted" | "approved" | "rejected" | "posted";
+  influencer_name: string;
+  platform: string | null;
+  due_date: string | null;
+  submitted_at: string | null;
+  approved_at: string | null;
+  published_at: string | null;
+  content_url: string | null;
+  metrics: Record<string, unknown>;
+};
+
+export type CampaignInvoiceRow = {
+  id: string;
+  document_number: string;
+  status: string;
+  issue_date: string;
+  due_date: string | null;
+  total: number;
+  amount_paid: number;
+  outstanding: number;
+  currency: string;
+};
+
+export type CampaignPaymentRow = {
+  id: string;
+  document_number: string;
+  invoice_document_number: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paid_at: string | null;
+};
+
+export type CampaignApprovalRow = {
+  id: string;
+  document_number: string;
+  entity_type: string;
+  title: string;
+  status: string;
+  assigned_to_name: string | null;
+  due_at: string | null;
+  decided_at: string | null;
+};
+
+export type CampaignActivityItem = {
+  id: string;
+  action: string;
+  entity_type: string;
+  created_at: string;
+  actor: { id: string; full_name: string | null; email: string } | null;
+  summary: string;
+};
+
+export type CampaignWorkspace = {
+  id: string;
+  document_number: string;
+  name: string;
+  description: string | null;
+  brief: string | null;
+  status: CampaignStatus;
+  currency_code: string;
+  start_date: string | null;
+  end_date: string | null;
+  platform: string | null;
+  group: { id: string; name: string; document_number: string } | null;
+  client: {
+    id: string;
+    name: string;
+    document_number: string;
+    legal_name: string | null;
+  } | null;
+  brand: { id: string; name: string; document_number: string } | null;
+  team: { id: string; name: string } | null;
+  account_manager: {
+    id: string;
+    full_name: string | null;
+    email: string;
+  } | null;
+  financials: CampaignFinancialSummary;
+  workflow_stage: WorkflowStage;
+  lines: CampaignLineWorkspace[];
+  vendors: CampaignVendorAssignment[];
+  deliverables: CampaignDeliverableRow[];
+  invoices: CampaignInvoiceRow[];
+  payments: CampaignPaymentRow[];
+  approvals: CampaignApprovalRow[];
+  activity: CampaignActivityItem[];
+  blockers: string[];
+};
+
+export type InfluencerSearchResult = {
+  id: string;
+  document_number: string;
+  display_name: string;
+  status: string;
+  platforms: {
+    platform: string;
+    handle: string;
+    profile_url: string | null;
+    follower_count: number;
+    engagement_rate: number | null;
+  }[];
+};
+
+export function formatMarginPercent(revenue: number, gp: number): number {
+  if (revenue <= 0) {
+    return 0;
+  }
+  return Math.round((gp / revenue) * 10000) / 100;
+}
+
+export function mapDeliverableDisplayStatus(
+  status: string
+): CampaignDeliverableRow["display_status"] {
+  switch (status) {
+    case "submitted":
+    case "revision_requested":
+      return "submitted";
+    case "approved":
+      return "approved";
+    case "rejected":
+      return "rejected";
+    case "published":
+      return "posted";
+    default:
+      return "pending";
+  }
+}
+
+export function deriveWorkflowStage(input: {
+  status: CampaignStatus;
+  vendors: CampaignVendorAssignment[];
+  invoices: CampaignInvoiceRow[];
+}): WorkflowStage {
+  const { status, vendors, invoices } = input;
+  const negotiating = vendors.some((v) =>
+    ["invited", "negotiating"].includes(v.status)
+  );
+  const openInvoices = invoices.filter(
+    (i) =>
+      !["paid", "void", "draft"].includes(i.status) && i.outstanding > 0
+  );
+  const allInvoicesPaid =
+    invoices.length > 0 &&
+    invoices.every(
+      (i) => i.status === "paid" || i.outstanding <= 0
+    );
+
+  if (status === "completed" && allInvoicesPaid && invoices.length > 0) {
+    return "closed";
+  }
+  if (openInvoices.length > 0 && ["completed", "active"].includes(status)) {
+    return "invoicing";
+  }
+  if (status === "completed") {
+    return "completed";
+  }
+  if (status === "active") {
+    return "live";
+  }
+  if (negotiating) {
+    return "negotiation";
+  }
+  return "planning";
+}
+
+export function deriveLineBillingStatus(
+  cost: number,
+  poAmount: number,
+  hasInvoice: boolean,
+  invoicePaid: boolean
+): LineBillingStatus {
+  if (invoicePaid) {
+    return "paid";
+  }
+  if (hasInvoice) {
+    return cost > 0 && poAmount > cost ? "partial" : "invoiced";
+  }
+  return "not_billed";
+}
+
+export function deriveLinePaymentStatus(
+  cost: number,
+  vendorFeesOnLine: number
+): LinePaymentStatus {
+  if (vendorFeesOnLine <= 0) {
+    return "pending";
+  }
+  if (cost >= vendorFeesOnLine) {
+    return "paid";
+  }
+  if (cost > 0) {
+    return "partial";
+  }
+  return "pending";
+}

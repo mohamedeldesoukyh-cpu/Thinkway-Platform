@@ -434,9 +434,12 @@ export type Database = {
           id?: string;
           document_number?: string;
           name: string;
+          description?: string | null;
+          brief?: string | null;
           brand_id: string;
           group_id?: string;
           client_id?: string;
+          team_id?: string | null;
           status?: CampaignStatus;
           currency_code?: string;
           category_id?: string | null;
@@ -599,18 +602,104 @@ export type Database = {
       invoices: {
         Row: {
           id: string;
+          document_number: string;
           client_id: string;
+          campaign_id: string | null;
           total: number;
           amount_paid: number;
           status: string;
+          issue_date: string;
+          due_date: string | null;
+          currency: string;
         };
         Insert: {
+          document_number: string;
           client_id: string;
+          campaign_id?: string | null;
           total?: number;
           amount_paid?: number;
           status?: string;
+          issue_date?: string;
+          due_date?: string | null;
+          currency?: string;
         };
         Update: Partial<Database["public"]["Tables"]["invoices"]["Insert"]>;
+        Relationships: [];
+      };
+      payments: {
+        Row: {
+          id: string;
+          document_number: string;
+          invoice_id: string;
+          amount: number;
+          currency: string;
+          status: string;
+          paid_at: string | null;
+        };
+        Insert: {
+          document_number: string;
+          invoice_id: string;
+          client_id: string;
+          amount: number;
+          currency?: string;
+          status?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["payments"]["Insert"]>;
+        Relationships: [];
+      };
+      deliverables: {
+        Row: {
+          id: string;
+          document_number: string;
+          campaign_id: string;
+          influencer_id: string;
+          campaign_influencer_id: string | null;
+          deliverable_type: string;
+          title: string;
+          status: string;
+          platform: string | null;
+          due_date: string | null;
+          submitted_at: string | null;
+          approved_at: string | null;
+          published_at: string | null;
+          content_url: string | null;
+          metrics: Record<string, unknown>;
+        };
+        Insert: {
+          document_number: string;
+          campaign_id: string;
+          influencer_id: string;
+          campaign_influencer_id?: string | null;
+          deliverable_type: string;
+          title: string;
+          status?: string;
+          platform?: string | null;
+          due_date?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["deliverables"]["Insert"]>;
+        Relationships: [];
+      };
+      approvals: {
+        Row: {
+          id: string;
+          document_number: string;
+          entity_type: string;
+          entity_id: string;
+          title: string;
+          status: string;
+          due_at: string | null;
+          decided_at: string | null;
+          assigned_to: string | null;
+        };
+        Insert: {
+          document_number: string;
+          entity_type: string;
+          entity_id: string;
+          title: string;
+          status?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["approvals"]["Insert"]>;
         Relationships: [];
       };
       audit_logs: {
@@ -702,19 +791,28 @@ export type Database = {
         Row: {
           id: string;
           campaign_id: string;
+          campaign_header_id: string | null;
+          campaign_line_id: string | null;
           influencer_id: string;
           status: string;
           agreed_fee: number;
           currency: string;
+          deliverable_count: number;
           invited_at: string | null;
           confirmed_at: string | null;
         };
         Insert: {
           campaign_id: string;
+          campaign_header_id?: string | null;
+          campaign_line_id?: string | null;
           influencer_id: string;
           status?: string;
           agreed_fee?: number;
           currency?: string;
+          deliverable_count?: number;
+          invited_at?: string | null;
+          confirmed_at?: string | null;
+          created_by?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["campaign_influencers"]["Insert"]

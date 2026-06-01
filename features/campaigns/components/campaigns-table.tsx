@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { format } from "date-fns";
 
 import {
@@ -48,9 +49,21 @@ export function CampaignsTable({ campaigns }: CampaignsTableProps) {
           {campaigns.map((campaign) => (
             <TableRow key={campaign.id}>
               <TableCell className="font-mono text-xs">
-                {campaign.document_number}
+                <Link
+                  href={`/campaigns/${campaign.id}`}
+                  className="hover:underline"
+                >
+                  {campaign.document_number}
+                </Link>
               </TableCell>
-              <TableCell className="font-medium">{campaign.name}</TableCell>
+              <TableCell className="font-medium">
+                <Link
+                  href={`/campaigns/${campaign.id}`}
+                  className="hover:underline"
+                >
+                  {campaign.name}
+                </Link>
+              </TableCell>
               <TableCell>{campaign.brand?.name ?? "—"}</TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {campaign.group?.name ?? "—"}
