@@ -1,5 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
+import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
+import type { PoStatus } from "@/lib/finance/po/status";
 
 import { AGING_BUCKET_LABELS } from "./constants";
 import {
@@ -35,6 +37,7 @@ type LineQueryRow = {
   campaign_header_id: string;
   billing_status: CampaignLineBillingStatus;
   revenue: number;
+  revenue_before_vat?: number;
   cost: number;
   profit: number;
   revenue_vat_amount?: number;
@@ -51,11 +54,88 @@ type LineQueryRow = {
     id: string;
     name: string;
     document_number: string;
+    po_amount_campaign_currency?: number | null;
+    po_consumed_amount?: number | null;
+    po_remaining_amount?: number | null;
+    po_remaining_percent?: number | null;
+    po_status?: PoStatus | null;
+    po_expiry_date?: string | null;
     client: { name: string } | null;
     brand: { name: string } | null;
   } | null;
   invoice: { document_number: string } | null;
 };
+
+function aggregateOperationalPoKpis(
+  rawLines: {
+    campaign_header_id: string;
+    po_amount: number;
+    revenue_before_vat?: number;
+    revenue: number;
+    header: LineQueryRow["header"];
+  }[]
+) {
+  const headerMap = new Map<
+    string,
+    {
+      po_amount_campaign_currency: number | null;
+      po_consumed_amount: number | null;
+      po_remaining_amount: number | null;
+      po_remaining_percent: number | null;
+      po_status: PoStatus | null;
+      po_expiry_date: string | null;
+      legacy_budget: number;
+      legacy_consumed: number;
+    }
+  >();
+
+  for (const row of rawLines) {
+    const headerId = row.campaign_header_id;
+    let entry = headerMap.get(headerId);
+    if (!entry) {
+      entry = {
+        po_amount_campaign_currency:
+          row.header?.po_amount_campaign_currency ?? null,
+        po_consumed_amount: row.header?.po_consumed_amount ?? null,
+        po_remaining_amount: row.header?.po_remaining_amount ?? null,
+        po_remaining_percent: row.header?.po_remaining_percent ?? null,
+        po_status: row.header?.po_status ?? null,
+        po_expiry_date: row.header?.po_expiry_date ?? null,
+        legacy_budget: 0,
+        legacy_consumed: 0,
+      };
+      headerMap.set(headerId, entry);
+    }
+    entry.legacy_budget += row.po_amount;
+    entry.legacy_consumed += Number(row.revenue_before_vat ?? row.revenue);
+  }
+
+  let po_total = 0;
+  let po_consumed = 0;
+  let po_remaining = 0;
+  let po_over_consumed_count = 0;
+
+  for (const entry of headerMap.values()) {
+    const operational = resolveOperationalPo({
+      po_amount_campaign_currency: entry.po_amount_campaign_currency,
+      po_consumed_amount: entry.po_consumed_amount,
+      po_remaining_amount: entry.po_remaining_amount,
+      po_remaining_percent: entry.po_remaining_percent,
+      po_status: entry.po_status,
+      po_expiry_date: entry.po_expiry_date,
+      legacy_budget: entry.legacy_budget,
+      legacy_consumed: entry.legacy_consumed,
+    });
+    po_total += operational.po_amount;
+    po_consumed += operational.po_consumed;
+    po_remaining += operational.po_remaining;
+    if (operational.po_exceeded) {
+      po_over_consumed_count += 1;
+    }
+  }
+
+  return { po_total, po_consumed, po_remaining, po_over_consumed_count };
+}
 
 export async function getBillingDashboard(): Promise<BillingDashboard> {
   const { supabase } = await requireUser();
@@ -72,11 +152,13 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
       .select(
         `
         id, document_number, name, campaign_header_id, billing_status,
-        revenue, cost, profit, po_amount, po_consumed, remaining_po,
+        revenue, revenue_before_vat, cost, profit, po_amount, po_consumed, remaining_po,
         revenue_vat_amount, cost_vat_amount,
         revenue_locked, cost_locked, vendor_assignment_locked,
         currency_code, invoice_id,
         header:${REL.campaignLines.campaignHeader}(id, name, document_number,
+          po_amount_campaign_currency, po_consumed_amount, po_remaining_amount,
+          po_remaining_percent, po_status, po_expiry_date,
           client:clients(name),
           brand:brands(name)
         ),
@@ -240,6 +322,21 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     0
   );
 
+  const poKpis = aggregateOperationalPoKpis(
+    (linesResult.data ?? []).map((row) => {
+      const r = row as unknown as LineQueryRow;
+      return {
+        campaign_header_id: r.campaign_header_id,
+        po_amount: Number(r.po_amount),
+        revenue_before_vat: Number(
+          (r as { revenue_before_vat?: number }).revenue_before_vat ?? r.revenue
+        ),
+        revenue: Number(r.revenue),
+        header: r.header,
+      };
+    })
+  );
+
   const kpis: BillingKpiSummary = {
     revenue,
     cost,
@@ -252,10 +349,10 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     collected_revenue: collected,
     outstanding_invoices: outstanding,
     unpaid_vendor_cost: unpaidVendorCost,
-    po_total: lines.reduce((s, l) => s + l.po_amount, 0),
-    po_consumed: lines.reduce((s, l) => s + l.po_consumed, 0),
-    po_remaining: lines.reduce((s, l) => s + l.remaining_po, 0),
-    po_over_consumed_count: lines.filter((l) => l.po_over_consumed).length,
+    po_total: poKpis.po_total,
+    po_consumed: poKpis.po_consumed,
+    po_remaining: poKpis.po_remaining,
+    po_over_consumed_count: poKpis.po_over_consumed_count,
   };
 
   const pending_approvals: FinancialApprovalRow[] = (

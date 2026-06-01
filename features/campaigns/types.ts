@@ -70,13 +70,21 @@ export type CampaignPoSummary = {
 };
 
 export type CampaignFinancialSummary = {
+  /** Operational PO budget (po_amount_campaign_currency or legacy fallback). */
   budget: number;
   revenue: number;
   cost: number;
   gp: number;
   margin_percent: number;
+  /** Same as budget — operational PO total in campaign currency. */
   po_total: number;
+  /** Operational PO remaining (po_remaining_amount or computed). */
   remaining_po: number;
+  po_consumed: number;
+  po_remaining_percent: number | null;
+  po_status: PoStatus;
+  po_health: PoHealth;
+  po_exceeded: boolean;
   billing_outstanding: number;
   collected: number;
 };

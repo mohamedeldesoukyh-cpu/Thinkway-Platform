@@ -34,6 +34,7 @@ import {
 import type { BillingLineRow } from "@/features/billing/types";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { cn } from "@/lib/utils";
 
 type CampaignBillingTabProps = {
   workspace: CampaignWorkspace;
@@ -44,15 +45,32 @@ export function CampaignBillingTab({
   workspace,
   billingLines,
 }: CampaignBillingTabProps) {
-  const { financials } = workspace;
+  const { financials, po } = workspace;
   const currency = workspace.currency_code;
   const [invoiceOpen, setInvoiceOpen] = useState(false);
 
+  const poAlert =
+    financials.po_exceeded || po.po_status === "exceeded"
+      ? "danger"
+      : po.po_status === "near_limit"
+        ? "warning"
+        : null;
+
   const summary = [
-    { label: "PO total", value: formatMoney(financials.po_total, currency) },
+    {
+      label: "PO total",
+      value: formatMoney(financials.po_total, currency),
+      alert: poAlert,
+    },
+    {
+      label: "PO consumed",
+      value: formatMoney(financials.po_consumed, currency),
+      alert: poAlert,
+    },
     {
       label: "Remaining PO",
       value: formatMoney(financials.remaining_po, currency),
+      alert: poAlert,
     },
     { label: "Revenue", value: formatMoney(financials.revenue, currency) },
     { label: "Collected", value: formatMoney(financials.collected, currency) },
@@ -64,10 +82,22 @@ export function CampaignBillingTab({
   ];
 
   const poWarnings = billingLines.filter((l) => l.po_over_consumed);
+  const headerPoExceeded = financials.po_exceeded;
 
   return (
     <div className="space-y-4">
-      {poWarnings.length > 0 ? (
+      {headerPoExceeded ? (
+        <div className="flex items-start gap-2 rounded-3xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-800 dark:text-red-200">
+          <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="font-medium">Campaign PO exceeded</p>
+            <p>
+              Consumed {formatMoney(financials.po_consumed, currency)} exceeds approved PO{" "}
+              {formatMoney(financials.po_total, currency)}. Finance override may be required.
+            </p>
+          </div>
+        </div>
+      ) : poWarnings.length > 0 ? (
         <div className="flex items-start gap-2 rounded-3xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
           <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" />
           <div>
@@ -97,14 +127,28 @@ export function CampaignBillingTab({
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {summary.map((item) => (
-          <Card key={item.label}>
+          <Card
+            key={item.label}
+            className={cn(
+              item.alert === "danger" &&
+                "border-red-500/50 bg-red-500/5 dark:bg-red-500/10",
+              item.alert === "warning" &&
+                "border-amber-500/50 bg-amber-500/5 dark:bg-amber-500/10"
+            )}
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {item.label}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="font-heading text-2xl font-semibold tracking-tight">
+              <p
+                className={cn(
+                  "font-heading text-2xl font-semibold tracking-tight",
+                  item.alert === "danger" && "text-red-600 dark:text-red-400",
+                  item.alert === "warning" && "text-amber-700 dark:text-amber-300"
+                )}
+              >
                 {item.value}
               </p>
             </CardContent>

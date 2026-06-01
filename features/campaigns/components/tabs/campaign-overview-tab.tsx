@@ -6,6 +6,7 @@ import { PencilIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
@@ -13,6 +14,11 @@ import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { formatMoney, formatPercent, formatPlatformLabel } from "@/features/campaigns/utils";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import {
+  PO_STATUS_LABELS,
+  PO_STATUS_VARIANT,
+} from "@/lib/finance/po/status";
+import { cn } from "@/lib/utils";
 
 type CampaignOverviewTabProps = {
   workspace: CampaignWorkspace;
@@ -119,8 +125,30 @@ export function CampaignOverviewTab({
               />
               <Row
                 label="Budget (PO)"
-                value={formatMoney(workspace.financials.budget, currency)}
+                value={
+                  <span
+                    className={cn(
+                      workspace.financials.po_exceeded &&
+                        "font-medium text-red-600 dark:text-red-400"
+                    )}
+                  >
+                    {formatMoney(workspace.financials.budget, currency)}
+                  </span>
+                }
               />
+              {workspace.financials.po_exceeded ||
+              workspace.po.po_status === "near_limit" ? (
+                <Row
+                  label="PO utilization"
+                  value={
+                    <Badge variant={PO_STATUS_VARIANT[workspace.po.po_status]}>
+                      {PO_STATUS_LABELS[workspace.po.po_status]} ·{" "}
+                      {formatMoney(workspace.financials.po_consumed, currency)}{" "}
+                      / {formatMoney(workspace.financials.budget, currency)}
+                    </Badge>
+                  }
+                />
+              ) : null}
               <Row
                 label="Revenue"
                 value={formatMoney(workspace.financials.revenue, currency)}

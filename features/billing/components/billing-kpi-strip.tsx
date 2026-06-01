@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { BillingKpiSummary } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { formatPercent } from "@/features/campaigns/utils";
+import { cn } from "@/lib/utils";
 
 type BillingKpiStripProps = {
   kpis: BillingKpiSummary;
@@ -40,18 +41,33 @@ export function BillingKpiStrip({ kpis, currency = "USD" }: BillingKpiStripProps
   return (
     <div className="space-y-2">
       {kpis.po_over_consumed_count > 0 ? (
-        <div className="flex items-center gap-2 rounded-3xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
+        <div className="flex items-center gap-2 rounded-3xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-800 dark:text-red-200">
           <AlertTriangleIcon className="size-4 shrink-0" />
-          {kpis.po_over_consumed_count} campaign line
-          {kpis.po_over_consumed_count === 1 ? "" : "s"} exceed PO allocation — finance review required.
+          {kpis.po_over_consumed_count} campaign
+          {kpis.po_over_consumed_count === 1 ? "" : "s"} exceed approved PO — finance review required.
         </div>
       ) : null}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {KPI_ITEMS.map((item) => (
-          <Card key={item.key} className="shadow-sm">
+          <Card
+            key={item.key}
+            className={cn(
+              "shadow-sm",
+              item.key === "po_remaining" &&
+                kpis.po_over_consumed_count > 0 &&
+                "border-red-500/50 bg-red-500/5 dark:bg-red-500/10"
+            )}
+          >
             <CardContent className="p-3">
               <p className="text-xs text-muted-foreground">{item.label}</p>
-              <p className="font-heading text-lg font-semibold tracking-tight">
+              <p
+                className={cn(
+                  "font-heading text-lg font-semibold tracking-tight",
+                  item.key === "po_remaining" &&
+                    kpis.po_over_consumed_count > 0 &&
+                    "text-red-600 dark:text-red-400"
+                )}
+              >
                 {values[item.key]}
               </p>
             </CardContent>

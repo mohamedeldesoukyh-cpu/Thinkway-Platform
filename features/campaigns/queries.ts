@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
-import { calculatePoConsumption } from "@/lib/finance/po/calculations";
+import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
 import type { PoStatus } from "@/lib/finance/po/status";
 import {
   resolveVatRateForCountry,
@@ -539,11 +539,14 @@ export async function getCampaignWorkspace(
     };
   });
 
-  const budget = workspaceLines.reduce((s, l) => s + l.po_amount, 0);
+  const legacyBudget = workspaceLines.reduce((s, l) => s + l.po_amount, 0);
+  const legacyConsumed = workspaceLines.reduce(
+    (s, l) => s + l.revenue_before_vat,
+    0
+  );
   const revenue = workspaceLines.reduce((s, l) => s + l.revenue, 0);
   const cost = workspaceLines.reduce((s, l) => s + l.cost, 0);
   const gp = workspaceLines.reduce((s, l) => s + l.gp, 0);
-  const remainingPo = workspaceLines.reduce((s, l) => s + l.remaining_po, 0);
   const billingOutstanding = invoices.reduce((s, i) => s + i.outstanding, 0);
   const collected = invoices.reduce((s, i) => s + i.amount_paid, 0);
 
@@ -705,15 +708,16 @@ export async function getCampaignWorkspace(
     invoices,
   });
 
-  const poAmountCampaign =
-    Number(headerRow.po_amount_campaign_currency ?? 0) || budget;
-  const poConsumed =
-    Number(headerRow.po_consumed_amount ?? 0) ||
-    workspaceLines.reduce((s, l) => s + l.revenue_before_vat, 0);
-  const poHealth = calculatePoConsumption({
-    po_amount: poAmountCampaign,
-    consumed: poConsumed,
-  }).health;
+  const operationalPo = resolveOperationalPo({
+    po_amount_campaign_currency: headerRow.po_amount_campaign_currency,
+    po_consumed_amount: headerRow.po_consumed_amount,
+    po_remaining_amount: headerRow.po_remaining_amount,
+    po_remaining_percent: headerRow.po_remaining_percent,
+    po_status: headerRow.po_status,
+    po_expiry_date: headerRow.po_expiry_date,
+    legacy_budget: legacyBudget,
+    legacy_consumed: legacyConsumed,
+  });
 
   return {
     id: headerRow.id,
@@ -738,33 +742,34 @@ export async function getCampaignWorkspace(
         headerRow.po_exchange_rate != null
           ? Number(headerRow.po_exchange_rate)
           : null,
-      po_amount_original: Number(headerRow.po_amount_original ?? budget),
-      po_amount_campaign_currency: poAmountCampaign,
-      po_consumed_amount: poConsumed,
-      po_remaining_amount: Number(
-        headerRow.po_remaining_amount ?? poAmountCampaign - poConsumed
+      po_amount_original: Number(
+        headerRow.po_amount_original ??
+          (operationalPo.uses_governance ? operationalPo.po_amount : legacyBudget)
       ),
-      po_remaining_percent:
-        headerRow.po_remaining_percent != null
-          ? Number(headerRow.po_remaining_percent)
-          : poAmountCampaign > 0
-            ? ((poAmountCampaign - poConsumed) / poAmountCampaign) * 100
-            : null,
-      po_status: headerRow.po_status ?? "draft",
+      po_amount_campaign_currency: operationalPo.po_amount,
+      po_consumed_amount: operationalPo.po_consumed,
+      po_remaining_amount: operationalPo.po_remaining,
+      po_remaining_percent: operationalPo.po_remaining_percent,
+      po_status: operationalPo.po_status,
       po_expiry_date: headerRow.po_expiry_date ?? null,
       po_override_approved: headerRow.po_override_approved ?? false,
       po_override_reason: headerRow.po_override_reason ?? null,
       fx_snapshot_at: headerRow.fx_snapshot_at ?? null,
-      health: poHealth,
+      health: operationalPo.health,
     },
     financials: {
-      budget,
+      budget: operationalPo.po_amount,
       revenue,
       cost,
       gp,
       margin_percent: formatMarginPercent(revenue, gp),
-      po_total: budget,
-      remaining_po: remainingPo,
+      po_total: operationalPo.po_amount,
+      remaining_po: operationalPo.po_remaining,
+      po_consumed: operationalPo.po_consumed,
+      po_remaining_percent: operationalPo.po_remaining_percent,
+      po_status: operationalPo.po_status,
+      po_health: operationalPo.health,
+      po_exceeded: operationalPo.po_exceeded,
       billing_outstanding: billingOutstanding,
       collected,
     },

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { FINANCIAL_APPROVAL_CHAIN } from "@/features/billing/constants";
 import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
 import { governanceDb } from "@/lib/supabase/governance-client";
 import { resolveClientBillingVatRate } from "@/lib/vat/queries";
 
@@ -197,15 +198,29 @@ export async function moveLineToBillingAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
-  const { data: line, error: fetchError } = await supabase
-    .from("campaign_lines")
-    .select("billing_status, document_number, po_amount, cost")
-    .eq("id", parsed.data.line_id)
-    .eq("campaign_header_id", parsed.data.campaign_id)
-    .maybeSingle();
+  const [{ data: line, error: fetchError }, { data: header, error: headerError }] =
+    await Promise.all([
+      supabase
+        .from("campaign_lines")
+        .select("billing_status, document_number, po_amount, cost, revenue_before_vat, revenue")
+        .eq("id", parsed.data.line_id)
+        .eq("campaign_header_id", parsed.data.campaign_id)
+        .maybeSingle(),
+      supabase
+        .from("campaign_headers")
+        .select(
+          "po_amount_campaign_currency, po_consumed_amount, po_remaining_amount, po_remaining_percent, po_status, po_expiry_date, po_override_approved"
+        )
+        .eq("id", parsed.data.campaign_id)
+        .maybeSingle(),
+    ]);
 
   if (fetchError || !line) {
     return { ok: false, message: fetchError?.message ?? "Line not found." };
+  }
+
+  if (headerError || !header) {
+    return { ok: false, message: headerError?.message ?? "Campaign not found." };
   }
 
   if (!["approved", "draft"].includes(line.billing_status)) {
@@ -215,7 +230,48 @@ export async function moveLineToBillingAction(
     };
   }
 
-  if (Number(line.cost) > Number(line.po_amount) && Number(line.po_amount) > 0) {
+  const { data: siblingLines } = await supabase
+    .from("campaign_lines")
+    .select("po_amount, revenue_before_vat, revenue")
+    .eq("campaign_header_id", parsed.data.campaign_id);
+
+  const legacyBudget = (siblingLines ?? []).reduce(
+    (sum, row) => sum + Number(row.po_amount ?? 0),
+    0
+  );
+  const legacyConsumed = (siblingLines ?? []).reduce(
+    (sum, row) =>
+      sum + Number(row.revenue_before_vat ?? row.revenue ?? 0),
+    0
+  );
+
+  const operationalPo = resolveOperationalPo({
+    po_amount_campaign_currency: header.po_amount_campaign_currency,
+    po_consumed_amount: header.po_consumed_amount,
+    po_remaining_amount: header.po_remaining_amount,
+    po_remaining_percent: header.po_remaining_percent,
+    po_status: header.po_status,
+    po_expiry_date: header.po_expiry_date,
+    legacy_budget: legacyBudget,
+    legacy_consumed: legacyConsumed,
+  });
+
+  if (
+    operationalPo.po_exceeded &&
+    !header.po_override_approved
+  ) {
+    return {
+      ok: false,
+      message:
+        "Campaign PO exceeded. Finance override required before moving lines to billing.",
+    };
+  }
+
+  if (
+    !operationalPo.uses_governance &&
+    Number(line.cost) > Number(line.po_amount) &&
+    Number(line.po_amount) > 0
+  ) {
     return {
       ok: false,
       message: "PO over-consumption detected. Finance review required before billing.",
