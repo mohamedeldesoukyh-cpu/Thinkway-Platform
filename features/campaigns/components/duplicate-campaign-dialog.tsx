@@ -113,7 +113,7 @@ export function DuplicateCampaignDialog({
           <div className="grid gap-2 rounded-2xl border p-3">
             <p className="text-sm font-medium">Include in copy</p>
             {[
-              ["copy_influencers", "Influencers", true],
+              ["copy_influencers", "Creator assignments", true],
               ["copy_deliverables", "Deliverables", true],
               ["copy_pricing", "Pricing", true],
               ["copy_notes", "Notes", true],

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { FINANCIAL_APPROVAL_CHAIN } from "@/features/billing/constants";
+import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { governanceDb } from "@/lib/supabase/governance-client";
 
@@ -30,6 +31,13 @@ export type BillingActionState = {
 function emptyToNull(value: string | undefined): string | null {
   if (!value?.trim()) return null;
   return value.trim();
+}
+
+function lineBillingPatch(billingStatus: string) {
+  const assignmentStatus = assignmentStatusFromBilling(billingStatus);
+  return assignmentStatus
+    ? { billing_status: billingStatus, assignment_status: assignmentStatus }
+    : { billing_status: billingStatus };
 }
 
 async function requireAuthUser() {
@@ -295,7 +303,7 @@ export async function createInvoiceFromLinesAction(
   const { error: lockError } = await supabase
     .from("campaign_lines")
     .update({
-      billing_status: "invoiced",
+      ...lineBillingPatch("invoiced"),
       invoice_id: invoice.id,
       revenue_locked: true,
       cost_locked: true,
@@ -561,7 +569,7 @@ export async function closeBillingLineAction(
 
   const { error } = await supabase
     .from("campaign_lines")
-    .update({ billing_status: "closed" })
+    .update(lineBillingPatch("closed"))
     .eq("id", parsed.data.line_id)
     .eq("campaign_header_id", parsed.data.campaign_id)
     .in("billing_status", ["paid", "partially_paid"]);
@@ -783,7 +791,7 @@ export async function regenerateInvoiceAction(
     await supabase
       .from("campaign_lines")
       .update({
-        billing_status: "invoiced",
+        ...lineBillingPatch("invoiced"),
         revenue_locked: true,
         cost_locked: true,
         vendor_assignment_locked: true,

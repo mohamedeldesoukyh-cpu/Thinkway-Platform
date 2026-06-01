@@ -13,9 +13,18 @@ import {
   formatMarginPercent,
   mapDeliverableDisplayStatus,
   type BrandFormOption,
+  type CampaignLineWorkspace,
   type CampaignWorkspace,
+  type InfluencerAssignmentProfile,
   type InfluencerSearchResult,
 } from "./types";
+import {
+  countLineDeliverables,
+  parseLineAssignment,
+  platformLabel,
+  suggestCostFromRateCard,
+  suggestCurrencyFromPaymentDetails,
+} from "./line-assignment";
 
 export type CampaignsListResult = {
   campaigns: CampaignListItem[];
@@ -64,6 +73,7 @@ type LineRow = {
   name: string;
   status: CampaignWorkspace["status"];
   platform: string | null;
+  metadata: Record<string, unknown>;
   revenue: number;
   cost: number;
   profit: number;
@@ -75,6 +85,7 @@ type LineRow = {
   start_date: string | null;
   end_date: string | null;
   billing_status: CampaignLineBillingStatus;
+  assignment_status: import("@/features/campaigns/types").CampaignLineAssignmentStatus;
   revenue_locked: boolean;
   cost_locked: boolean;
   vendor_assignment_locked: boolean;
@@ -224,7 +235,7 @@ export async function getCampaignWorkspace(
       .select(
         `
         id, campaign_line_id, influencer_id, status, agreed_fee, currency,
-        deliverable_count, invited_at, confirmed_at,
+        deliverable_count, invited_at, confirmed_at, vendor_payment_status,
         influencer:influencers(id, document_number, display_name),
         line:campaign_lines(document_number)
       `
@@ -351,6 +362,8 @@ export async function getCampaignWorkspace(
       agreed_fee: Number(v.agreed_fee),
       currency: v.currency,
       deliverable_count: v.deliverable_count,
+      vendor_payment_status: (v as { vendor_payment_status?: string | null })
+        .vendor_payment_status ?? null,
       platforms: accountsByInfluencer.get(v.influencer_id) ?? [],
       invited_at: v.invited_at,
       confirmed_at: v.confirmed_at,
@@ -359,6 +372,10 @@ export async function getCampaignWorkspace(
 
   const influencersByLine = new Map<string, number>();
   const vendorFeesByLine = new Map<string, number>();
+  const vendorByLine = new Map<
+    string,
+    { id: string; vendor_payment_status: string | null }
+  >();
   for (const vendor of vendors) {
     if (vendor.campaign_line_id) {
       influencersByLine.set(
@@ -369,6 +386,12 @@ export async function getCampaignWorkspace(
         vendor.campaign_line_id,
         (vendorFeesByLine.get(vendor.campaign_line_id) ?? 0) + vendor.agreed_fee
       );
+      if (!vendorByLine.has(vendor.campaign_line_id)) {
+        vendorByLine.set(vendor.campaign_line_id, {
+          id: vendor.id,
+          vendor_payment_status: vendor.vendor_payment_status ?? null,
+        });
+      }
     }
   }
 
@@ -437,14 +460,35 @@ export async function getCampaignWorkspace(
     const poAmount = Number(line.po_amount);
     const poConsumed = Number(line.po_consumed ?? cost);
     const vendorFees = vendorFeesByLine.get(line.id) ?? 0;
+    const assignment = parseLineAssignment(line.metadata);
+    const platformSummary = assignment
+      ? assignment.platforms
+          .map((p) => platformLabel(p.platform))
+          .join(", ")
+      : null;
+
+    const vendorLink = vendorByLine.get(line.id);
 
     return {
       id: line.id,
       document_number: line.document_number,
       name: line.name,
       status: line.status,
+      assignment_status:
+        (line.assignment_status as CampaignLineWorkspace["assignment_status"]) ??
+        "draft",
       platform: line.platform,
+      influencer_id: assignment?.influencer_id ?? null,
+      influencer_name: assignment?.influencer_name ?? null,
+      platform_summary: platformSummary,
+      deliverable_count: assignment
+        ? countLineDeliverables(assignment.platforms)
+        : 0,
       influencer_count: influencersByLine.get(line.id) ?? 0,
+      campaign_influencer_id: vendorLink?.id ?? null,
+      vendor_payment_status:
+        (vendorLink?.vendor_payment_status as CampaignLineWorkspace["vendor_payment_status"]) ??
+        null,
       revenue,
       cost,
       gp,
@@ -462,6 +506,7 @@ export async function getCampaignWorkspace(
       currency_code: line.currency_code,
       start_date: line.start_date,
       end_date: line.end_date,
+      assignment,
     };
   });
 
@@ -591,8 +636,11 @@ export async function getCampaignWorkspace(
   if (billingOutstanding > 0) {
     blockers.push("Outstanding client billing");
   }
-  if (vendors.some((v) => v.status === "negotiating")) {
-    blockers.push("Vendor negotiations in progress");
+  if (workspaceLines.some((l) => l.assignment_status === "awaiting_content")) {
+    blockers.push("Creator content pending submission");
+  }
+  if (workspaceLines.some((l) => l.vendor_payment_status === "unpaid" && l.cost > 0)) {
+    blockers.push("Creator payouts outstanding");
   }
 
   const headerRow = header as HeaderWithRelations;
@@ -604,7 +652,7 @@ export async function getCampaignWorkspace(
   const workspaceVendors = vendors;
   const workflowStage = deriveWorkflowStage({
     status: headerRow.status,
-    vendors: workspaceVendors,
+    lines: workspaceLines,
     invoices,
   });
 
@@ -702,7 +750,7 @@ export async function searchInfluencersForCampaign(params: {
 
   let query = supabase
     .from("influencers")
-    .select("id, document_number, display_name, status")
+    .select("id, document_number, display_name, status, country_code, rate_card, payment_details")
     .eq("status", "active")
     .order("display_name")
     .limit(limit);
@@ -733,7 +781,7 @@ export async function searchInfluencersForCampaign(params: {
   const { data: accounts } = await supabase
     .from("influencer_platform_accounts")
     .select(
-      "influencer_id, platform, handle, profile_url, follower_count, engagement_rate"
+      "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, audience_country"
     )
     .in("influencer_id", ids);
 
@@ -744,22 +792,103 @@ export async function searchInfluencersForCampaign(params: {
   for (const account of accounts ?? []) {
     const list = accountsByInfluencer.get(account.influencer_id) ?? [];
     list.push({
+      id: account.id,
       platform: account.platform,
       handle: account.handle,
       profile_url: account.profile_url,
       follower_count: account.follower_count,
       engagement_rate: account.engagement_rate,
+      audience_country: account.audience_country ?? null,
     });
     accountsByInfluencer.set(account.influencer_id, list);
   }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    document_number: row.document_number,
-    display_name: row.display_name,
-    status: row.status,
-    platforms: accountsByInfluencer.get(row.id) ?? [],
+  return (data ?? []).map((row) => {
+    const r = row as {
+      id: string;
+      document_number: string;
+      display_name: string;
+      status: string;
+      country_code: string | null;
+      rate_card: Record<string, unknown>;
+      payment_details: Record<string, unknown>;
+    };
+    return {
+      id: r.id,
+      document_number: r.document_number,
+      display_name: r.display_name,
+      status: r.status,
+      country_code: r.country_code,
+      suggested_currency: suggestCurrencyFromPaymentDetails(
+        r.payment_details,
+        "USD"
+      ),
+      platforms: accountsByInfluencer.get(r.id) ?? [],
+    };
+  });
+}
+
+export async function getInfluencerForAssignment(
+  influencerId: string
+): Promise<InfluencerAssignmentProfile | null> {
+  const { supabase } = await requireUser();
+
+  const { data: influencer, error } = await supabase
+    .from("influencers")
+    .select(
+      "id, document_number, display_name, status, country_code, rate_card, payment_details"
+    )
+    .eq("id", influencerId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!influencer) return null;
+
+  const { data: accounts } = await supabase
+    .from("influencer_platform_accounts")
+    .select(
+      "id, platform, handle, profile_url, follower_count, engagement_rate, audience_country"
+    )
+    .eq("influencer_id", influencerId)
+    .order("is_primary", { ascending: false });
+
+  const platforms = (accounts ?? []).map((a) => ({
+    id: a.id,
+    platform: a.platform,
+    handle: a.handle,
+    profile_url: a.profile_url,
+    follower_count: a.follower_count,
+    engagement_rate: a.engagement_rate,
+    audience_country: a.audience_country ?? null,
   }));
+
+  const inf = influencer as {
+    id: string;
+    document_number: string;
+    display_name: string;
+    status: string;
+    country_code: string | null;
+    rate_card: Record<string, unknown>;
+    payment_details: Record<string, unknown>;
+  };
+
+  const suggested_currency = suggestCurrencyFromPaymentDetails(
+    inf.payment_details,
+    "USD"
+  );
+
+  return {
+    id: inf.id,
+    document_number: inf.document_number,
+    display_name: inf.display_name,
+    status: inf.status,
+    country_code: inf.country_code,
+    suggested_currency,
+    platforms,
+    rate_card: inf.rate_card,
+    payment_details: inf.payment_details,
+    suggested_cost: suggestCostFromRateCard(inf.rate_card, []),
+  };
 }
 
 export { getBrandHierarchySnapshot } from "@/lib/master-data/queries";

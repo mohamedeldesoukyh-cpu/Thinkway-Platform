@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon, PlusIcon } from "lucide-react";
+import { PencilIcon, PlusIcon, UserIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AssignmentStatusBadge } from "@/features/campaigns/components/assignment-status-badge";
 import { CampaignLineSheet } from "@/features/campaigns/components/campaign-line-sheet";
-import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import {
   LINE_BILLING_STATUS_LABELS,
-  LINE_PAYMENT_STATUS_LABELS,
+  VENDOR_PAYMENT_STATUS_LABELS,
 } from "@/features/campaigns/constants";
 import type { CampaignLineWorkspace, CampaignWorkspace } from "@/features/campaigns/types";
 import {
@@ -51,36 +51,39 @@ export function CampaignLinesTab({ workspace }: CampaignLinesTabProps) {
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle>Campaign lines</CardTitle>
+            <CardTitle>Creator assignments</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Multi-line PO tracking with platform, financials, and billing status.
+              Single operational workflow — influencer, platforms, deliverables,
+              billing, and creator payout on one assignment line.
             </p>
           </div>
           <Button size="sm" onClick={openCreate}>
             <PlusIcon data-icon="inline-start" />
-            Add line
+            Assign influencer
           </Button>
         </CardHeader>
         <CardContent>
           {workspace.lines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No lines yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No creator assignments yet. Search for an influencer to build the
+              first assignment package.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Line</TableHead>
-                    <TableHead>Platform</TableHead>
-                    <TableHead className="text-right">Influencers</TableHead>
+                    <TableHead>Assignment</TableHead>
+                    <TableHead>Influencer</TableHead>
+                    <TableHead>Platforms</TableHead>
+                    <TableHead className="text-right">Deliverables</TableHead>
+                    <TableHead>Ops status</TableHead>
                     <TableHead className="text-right">Revenue</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
                     <TableHead className="text-right">GP</TableHead>
                     <TableHead className="text-right">Margin</TableHead>
-                    <TableHead className="text-right">PO</TableHead>
-                    <TableHead className="text-right">Remaining PO</TableHead>
                     <TableHead>Billing</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Creator payout</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -95,9 +98,27 @@ export function CampaignLinesTab({ workspace }: CampaignLinesTabProps) {
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell>{formatPlatformLabel(line.platform)}</TableCell>
+                      <TableCell>
+                        {line.influencer_name ? (
+                          <div className="flex items-center gap-1.5">
+                            <UserIcon className="size-3.5 text-muted-foreground" />
+                            <span>{line.influencer_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {line.platform_summary ??
+                            formatPlatformLabel(line.platform)}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right">
-                        {line.influencer_count}
+                        {line.deliverable_count || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <AssignmentStatusBadge status={line.assignment_status} />
                       </TableCell>
                       <TableCell className="text-right">
                         {formatMoney(line.revenue, currency)}
@@ -111,24 +132,19 @@ export function CampaignLinesTab({ workspace }: CampaignLinesTabProps) {
                       <TableCell className="text-right">
                         {formatPercent(line.margin_percent)}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {formatMoney(line.po_amount, currency)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatMoney(line.remaining_po, currency)}
-                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">
                           {LINE_BILLING_STATUS_LABELS[line.billing_status]}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">
-                          {LINE_PAYMENT_STATUS_LABELS[line.payment_status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <CampaignStatusBadge status={line.status} />
+                        {line.vendor_payment_status ? (
+                          <Badge variant="secondary">
+                            {VENDOR_PAYMENT_STATUS_LABELS[line.vendor_payment_status]}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button

@@ -47,6 +47,10 @@ export function CampaignDeliverablesTab({ workspace }: CampaignDeliverablesTabPr
   const [statusFilter, setStatusFilter] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  const assignmentLines = workspace.lines.filter(
+    (l) => l.influencer_id && l.campaign_influencer_id
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return workspace.deliverables.filter((d) => {
@@ -72,7 +76,7 @@ export function CampaignDeliverablesTab({ workspace }: CampaignDeliverablesTabPr
           <Button
             size="sm"
             onClick={() => setSheetOpen(true)}
-            disabled={workspace.vendors.length === 0}
+            disabled={assignmentLines.length === 0}
           >
             <PlusIcon data-icon="inline-start" />
             Add deliverable
@@ -84,7 +88,7 @@ export function CampaignDeliverablesTab({ workspace }: CampaignDeliverablesTabPr
               <Label htmlFor="deliverable_search">Search</Label>
               <Input
                 id="deliverable_search"
-                placeholder="Title or vendor…"
+                placeholder="Title or creator…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -116,7 +120,7 @@ export function CampaignDeliverablesTab({ workspace }: CampaignDeliverablesTabPr
                   <TableRow>
                     <TableHead>Deliverable</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Vendor</TableHead>
+                    <TableHead>Creator</TableHead>
                     <TableHead>Platform</TableHead>
                     <TableHead>Due</TableHead>
                     <TableHead>Status</TableHead>
@@ -141,7 +145,7 @@ export function CampaignDeliverablesTab({ workspace }: CampaignDeliverablesTabPr
 
       <CampaignDeliverableSheet
         campaignId={workspace.id}
-        vendors={workspace.vendors}
+        assignments={assignmentLines}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />

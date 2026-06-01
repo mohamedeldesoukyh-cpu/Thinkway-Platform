@@ -25,7 +25,6 @@ import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/ca
 import { CampaignLinesTab } from "@/features/campaigns/components/tabs/campaign-lines-tab";
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
-import { CampaignVendorsTab } from "@/features/campaigns/components/tabs/campaign-vendors-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
 import type { BillingLineRow } from "@/features/billing/types";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
@@ -94,8 +93,7 @@ export function CampaignWorkspaceView({
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="lines">Campaign lines</TabsTrigger>
-          <TabsTrigger value="vendors">Vendors</TabsTrigger>
+          <TabsTrigger value="lines">Assignments</TabsTrigger>
           <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
@@ -111,9 +109,6 @@ export function CampaignWorkspaceView({
         </TabsContent>
         <TabsContent value="lines">
           <CampaignLinesTab workspace={workspace} />
-        </TabsContent>
-        <TabsContent value="vendors">
-          <CampaignVendorsTab workspace={workspace} />
         </TabsContent>
         <TabsContent value="deliverables">
           <CampaignDeliverablesTab workspace={workspace} />

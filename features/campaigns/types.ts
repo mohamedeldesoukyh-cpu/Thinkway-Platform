@@ -33,6 +33,21 @@ export type LinePaymentStatus =
   | "partial"
   | "paid";
 
+export type CampaignLineAssignmentStatus =
+  | "draft"
+  | "assigned"
+  | "awaiting_content"
+  | "submitted"
+  | "approved"
+  | "scheduled"
+  | "posted"
+  | "verified"
+  | "invoiced"
+  | "paid"
+  | "closed";
+
+export type VendorPaymentStatus = "unpaid" | "pending" | "paid" | "cancelled";
+
 export type CampaignFinancialSummary = {
   budget: number;
   revenue: number;
@@ -45,13 +60,22 @@ export type CampaignFinancialSummary = {
   collected: number;
 };
 
+import type { LineInfluencerAssignment } from "./line-assignment";
+
 export type CampaignLineWorkspace = {
   id: string;
   document_number: string;
   name: string;
   status: CampaignStatus;
+  assignment_status: CampaignLineAssignmentStatus;
   platform: string | null;
+  influencer_id: string | null;
+  influencer_name: string | null;
+  platform_summary: string | null;
+  deliverable_count: number;
   influencer_count: number;
+  campaign_influencer_id: string | null;
+  vendor_payment_status: VendorPaymentStatus | null;
   revenue: number;
   cost: number;
   gp: number;
@@ -69,8 +93,10 @@ export type CampaignLineWorkspace = {
   currency_code: string;
   start_date: string | null;
   end_date: string | null;
+  assignment: LineInfluencerAssignment | null;
 };
 
+/** @deprecated Historical vendor rows — assignments are managed via campaign lines. */
 export type CampaignVendorAssignment = {
   id: string;
   campaign_line_id: string | null;
@@ -82,6 +108,7 @@ export type CampaignVendorAssignment = {
   agreed_fee: number;
   currency: string;
   deliverable_count: number;
+  vendor_payment_status: string | null;
   platforms: {
     platform: string;
     handle: string;
@@ -180,6 +207,7 @@ export type CampaignWorkspace = {
   financials: CampaignFinancialSummary;
   workflow_stage: WorkflowStage;
   lines: CampaignLineWorkspace[];
+  /** @deprecated Derived from line-linked campaign_influencers for historical records only. */
   vendors: CampaignVendorAssignment[];
   deliverables: CampaignDeliverableRow[];
   invoices: CampaignInvoiceRow[];
@@ -194,13 +222,23 @@ export type InfluencerSearchResult = {
   document_number: string;
   display_name: string;
   status: string;
+  country_code: string | null;
+  suggested_currency: string;
   platforms: {
+    id: string;
     platform: string;
     handle: string;
     profile_url: string | null;
     follower_count: number;
     engagement_rate: number | null;
+    audience_country: string | null;
   }[];
+};
+
+export type InfluencerAssignmentProfile = InfluencerSearchResult & {
+  rate_card: Record<string, unknown>;
+  payment_details: Record<string, unknown>;
+  suggested_cost: number;
 };
 
 export function formatMarginPercent(revenue: number, gp: number): number {
@@ -230,12 +268,20 @@ export function mapDeliverableDisplayStatus(
 
 export function deriveWorkflowStage(input: {
   status: CampaignStatus;
-  vendors: CampaignVendorAssignment[];
+  lines: Pick<CampaignLineWorkspace, "assignment_status">[];
   invoices: CampaignInvoiceRow[];
 }): WorkflowStage {
-  const { status, vendors, invoices } = input;
-  const negotiating = vendors.some((v) =>
-    ["invited", "negotiating"].includes(v.status)
+  const { status, lines, invoices } = input;
+  const inExecution = lines.some((l) =>
+    [
+      "assigned",
+      "awaiting_content",
+      "submitted",
+      "approved",
+      "scheduled",
+      "posted",
+      "verified",
+    ].includes(l.assignment_status)
   );
   const openInvoices = invoices.filter(
     (i) =>
@@ -256,11 +302,11 @@ export function deriveWorkflowStage(input: {
   if (status === "completed") {
     return "completed";
   }
-  if (status === "active") {
+  if (status === "active" || inExecution) {
     return "live";
   }
-  if (negotiating) {
-    return "negotiation";
+  if (lines.some((l) => l.assignment_status === "draft")) {
+    return "planning";
   }
   return "planning";
 }

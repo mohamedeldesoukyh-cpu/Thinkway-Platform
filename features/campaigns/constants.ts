@@ -21,6 +21,7 @@ export const PLATFORM_OPTIONS = [
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
   { value: "youtube", label: "YouTube" },
+  { value: "snapchat", label: "Snapchat" },
   { value: "twitter", label: "X (Twitter)" },
   { value: "linkedin", label: "LinkedIn" },
   { value: "facebook", label: "Facebook" },
@@ -57,6 +58,7 @@ export const DELIVERABLE_DISPLAY_STATUS_OPTIONS = [
   { value: "posted", label: "Posted" },
 ] as const;
 
+/** @deprecated Legacy vendor negotiation — use assignment_status on campaign lines. */
 export const CAMPAIGN_VENDOR_STATUS_OPTIONS = [
   { value: "invited", label: "Invited" },
   { value: "negotiating", label: "Negotiating" },
@@ -82,4 +84,29 @@ export const LINE_PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
   partial: "Partial",
   paid: "Paid",
+};
+
+export const ASSIGNMENT_STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "assigned", label: "Assigned" },
+  { value: "awaiting_content", label: "Awaiting content" },
+  { value: "submitted", label: "Submitted" },
+  { value: "approved", label: "Approved" },
+  { value: "scheduled", label: "Scheduled" },
+  { value: "posted", label: "Posted" },
+  { value: "verified", label: "Verified" },
+  { value: "invoiced", label: "Invoiced" },
+  { value: "paid", label: "Paid" },
+  { value: "closed", label: "Closed" },
+] as const;
+
+export const ASSIGNMENT_STATUS_LABELS: Record<string, string> = Object.fromEntries(
+  ASSIGNMENT_STATUS_OPTIONS.map((o) => [o.value, o.label])
+);
+
+export const VENDOR_PAYMENT_STATUS_LABELS: Record<string, string> = {
+  unpaid: "Unpaid",
+  pending: "Pending payout",
+  paid: "Paid out",
+  cancelled: "Cancelled",
 };

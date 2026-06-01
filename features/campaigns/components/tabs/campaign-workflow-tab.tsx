@@ -31,7 +31,7 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
         <CardHeader>
           <CardTitle>Workflow stages</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Planning through closed — derived from campaign status, vendors, and billing.
+            Planning through closed — derived from assignment status and billing.
           </p>
         </CardHeader>
         <CardContent>

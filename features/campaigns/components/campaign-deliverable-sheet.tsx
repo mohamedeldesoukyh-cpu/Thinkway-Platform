@@ -21,21 +21,22 @@ import {
   type FormActionState,
 } from "@/features/campaigns/actions";
 import { DELIVERABLE_TYPE_OPTIONS, PLATFORM_OPTIONS } from "@/features/campaigns/constants";
-import type { CampaignVendorAssignment } from "@/features/campaigns/types";
+import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 
 type CampaignDeliverableSheetProps = {
   campaignId: string;
-  vendors: CampaignVendorAssignment[];
+  assignments: CampaignLineWorkspace[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 export function CampaignDeliverableSheet({
   campaignId,
-  vendors,
+  assignments,
   open,
   onOpenChange,
 }: CampaignDeliverableSheetProps) {
+  const [lineId, setLineId] = useState("");
   const [influencerId, setInfluencerId] = useState("");
   const [assignmentId, setAssignmentId] = useState("");
   const [deliverableType, setDeliverableType] = useState("instagram_post");
@@ -44,6 +45,10 @@ export function CampaignDeliverableSheet({
   const [state, formAction, isPending] = useActionState(createDeliverableAction, {
     ok: false,
   } satisfies FormActionState);
+
+  const linkedAssignments = assignments.filter(
+    (a) => a.influencer_id && a.campaign_influencer_id
+  );
 
   useEffect(() => {
     if (!state.message) return;
@@ -57,15 +62,16 @@ export function CampaignDeliverableSheet({
 
   useEffect(() => {
     if (!open) return;
+    setLineId("");
     setInfluencerId("");
     setAssignmentId("");
     setDeliverableType("instagram_post");
     setPlatform("");
   }, [open]);
 
-  const vendorOptions = vendors.map((v) => ({
-    value: v.influencer_id,
-    label: v.influencer_name,
+  const assignmentOptions = linkedAssignments.map((a) => ({
+    value: a.id,
+    label: `${a.influencer_name} — ${a.name}`,
   }));
 
   return (
@@ -74,7 +80,7 @@ export function CampaignDeliverableSheet({
         <SheetHeader>
           <SheetTitle>Add deliverable</SheetTitle>
           <SheetDescription>
-            Track posts, reels, stories, and video integrations.
+            Attach content to an existing creator assignment line.
           </SheetDescription>
         </SheetHeader>
         <form action={formAction} className="flex flex-1 flex-col gap-4 px-6 pb-6">
@@ -85,17 +91,18 @@ export function CampaignDeliverableSheet({
           <input type="hidden" name="platform" value={platform} />
 
           <div className="grid gap-2">
-            <Label>Vendor</Label>
+            <Label>Creator assignment</Label>
             <SearchableSelect
-              value={influencerId}
+              value={lineId}
               onValueChange={(v) => {
-                setInfluencerId(v);
-                const match = vendors.find((x) => x.influencer_id === v);
-                setAssignmentId(match?.id ?? "");
+                setLineId(v);
+                const match = linkedAssignments.find((a) => a.id === v);
+                setInfluencerId(match?.influencer_id ?? "");
+                setAssignmentId(match?.campaign_influencer_id ?? "");
               }}
-              options={vendorOptions}
-              placeholder="Select assigned vendor"
-              disabled={isPending || vendors.length === 0}
+              options={assignmentOptions}
+              placeholder="Select assignment line"
+              disabled={isPending || linkedAssignments.length === 0}
             />
             <FieldError messages={state.fieldErrors?.influencer_id} />
           </div>

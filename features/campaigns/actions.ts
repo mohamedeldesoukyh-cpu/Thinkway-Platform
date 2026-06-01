@@ -9,16 +9,23 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AgencyOrDirect, CampaignStatus } from "@/types/database";
 
 import {
-  assignCampaignVendorSchema,
   createCampaignLineSchema,
   createCampaignSchema,
   createDeliverableSchema,
   duplicateCampaignSchema,
+  lineAssignmentPayloadSchema,
   updateCampaignHeaderSchema,
   updateCampaignLineSchema,
-  updateCampaignVendorSchema,
   updateDeliverableStatusSchema,
 } from "./schemas";
+import {
+  buildLineTitle,
+  countLineDeliverables,
+  deriveLinePlatformField,
+  LINE_ASSIGNMENT_META_KEY,
+  type LineInfluencerAssignment,
+  type LinePlatformSelection,
+} from "./line-assignment";
 
 export type FormActionState = {
   ok: boolean;
@@ -220,6 +227,76 @@ export async function updateCampaignHeaderAction(
   return { ok: true, message: "Campaign updated." };
 }
 
+function parseAssignmentJson(raw: string):
+  | { ok: true; platforms: LinePlatformSelection[] }
+  | { ok: false; message: string } {
+  try {
+    const parsed = lineAssignmentPayloadSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success) {
+      return {
+        ok: false,
+        message: "Select at least one platform account and deliverable.",
+      };
+    }
+    return {
+      ok: true,
+      platforms: parsed.data.platforms.map((p) => ({
+        ...p,
+        profile_url: p.profile_url ?? null,
+        engagement_rate: p.engagement_rate ?? null,
+        audience_country: p.audience_country ?? null,
+      })),
+    };
+  } catch {
+    return { ok: false, message: "Invalid platform selection." };
+  }
+}
+
+async function syncLineDeliverables(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string,
+  input: {
+    campaignId: string;
+    lineId: string;
+    influencerId: string;
+    assignmentId: string | null;
+    platforms: LinePlatformSelection[];
+    dueDate: string | null;
+  }
+) {
+  if (input.assignmentId) {
+    await supabase
+      .from("deliverables")
+      .delete()
+      .eq("campaign_influencer_id", input.assignmentId);
+  } else {
+    await supabase
+      .from("deliverables")
+      .delete()
+      .eq("campaign_id", input.campaignId)
+      .eq("influencer_id", input.influencerId);
+  }
+
+  let sort = 0;
+  for (const platform of input.platforms) {
+    for (const deliverableType of platform.deliverables) {
+      sort += 1;
+      await supabase.from("deliverables").insert({
+        document_number: `DEL-${Date.now()}-${sort}`,
+        campaign_id: input.campaignId,
+        influencer_id: input.influencerId,
+        campaign_influencer_id: input.assignmentId,
+        deliverable_type: deliverableType,
+        title: `${platform.handle} — ${deliverableType.replace(/_/g, " ")}`,
+        platform: platform.platform,
+        due_date: input.dueDate,
+        status: "pending",
+        created_by: userId,
+      });
+    }
+  }
+}
+
 export async function createCampaignLineAction(
   _prev: FormActionState,
   formData: FormData
@@ -235,6 +312,11 @@ export async function createCampaignLineAction(
     };
   }
 
+  const assignmentResult = parseAssignmentJson(parsed.data.assignment_json);
+  if (!assignmentResult.ok) {
+    return { ok: false, message: assignmentResult.message };
+  }
+
   const { supabase, user, error: authError } = await requireAuthUser();
   if (authError || !user) {
     return { ok: false, message: authError ?? "Unauthorized" };
@@ -246,26 +328,107 @@ export async function createCampaignLineAction(
     .eq("id", parsed.data.campaign_id)
     .maybeSingle();
 
-  const { error } = await supabase.from("campaign_lines").insert({
-    campaign_header_id: parsed.data.campaign_id,
-    name: parsed.data.name,
-    status: parsed.data.status as CampaignStatus,
-    platform: emptyToNull(parsed.data.platform),
-    po_amount: parsed.data.po_amount,
-    revenue: parsed.data.revenue,
-    cost: parsed.data.cost,
-    currency_code: parsed.data.currency_code || header?.currency_code || "USD",
-    base_currency: "USD",
-    fx_rate: 1,
-    created_by: user.id,
-  });
+  const { data: influencer, error: influencerError } = await supabase
+    .from("influencers")
+    .select("id, document_number, display_name")
+    .eq("id", parsed.data.influencer_id)
+    .maybeSingle();
 
-  if (error) {
-    return { ok: false, message: error.message };
+  if (influencerError || !influencer) {
+    return { ok: false, message: "Influencer not found." };
+  }
+
+  const platforms = assignmentResult.platforms;
+  const lineTitle =
+    parsed.data.name?.trim() ||
+    buildLineTitle(influencer.display_name, platforms);
+  const platformField =
+    emptyToNull(parsed.data.platform) ??
+    deriveLinePlatformField(platforms);
+  const deliverableCount = countLineDeliverables(platforms);
+  const currency =
+    parsed.data.currency_code || header?.currency_code || "USD";
+
+  const assignmentMeta: LineInfluencerAssignment = {
+    influencer_id: influencer.id,
+    influencer_name: influencer.display_name,
+    influencer_document_number: influencer.document_number,
+    platforms,
+    title_user_edited: parsed.data.title_user_edited ?? false,
+  };
+
+  const { data: line, error: lineError } = await supabase
+    .from("campaign_lines")
+    .insert({
+      campaign_header_id: parsed.data.campaign_id,
+      name: lineTitle,
+      status: "draft",
+      assignment_status: parsed.data.assignment_status,
+      platform: platformField,
+      po_amount: parsed.data.po_amount,
+      revenue: parsed.data.revenue,
+      cost: parsed.data.cost,
+      currency_code: currency,
+      base_currency: "USD",
+      fx_rate: 1,
+      start_date: parsed.data.start_date,
+      end_date: parsed.data.end_date,
+      metadata: { [LINE_ASSIGNMENT_META_KEY]: assignmentMeta },
+      created_by: user.id,
+    })
+    .select("id, document_number")
+    .single();
+
+  if (lineError || !line) {
+    return { ok: false, message: lineError?.message ?? "Failed to create line." };
+  }
+
+  const { data: vendorAssignment, error: vendorError } = await supabase
+    .from("campaign_influencers")
+    .insert({
+      campaign_id: parsed.data.campaign_id,
+      campaign_header_id: parsed.data.campaign_id,
+      campaign_line_id: line.id,
+      influencer_id: influencer.id,
+      status: "confirmed",
+      agreed_fee: parsed.data.cost,
+      currency,
+      deliverable_count: deliverableCount,
+      invited_at: new Date().toISOString(),
+      confirmed_at: new Date().toISOString(),
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (vendorError) {
+    await supabase.from("campaign_lines").delete().eq("id", line.id);
+    return { ok: false, message: vendorError.message };
+  }
+
+  try {
+    await syncLineDeliverables(supabase, user.id, {
+      campaignId: parsed.data.campaign_id,
+      lineId: line.id,
+      influencerId: influencer.id,
+      assignmentId: vendorAssignment?.id ?? null,
+      platforms,
+      dueDate: parsed.data.end_date ?? parsed.data.start_date,
+    });
+  } catch (e) {
+    await supabase.from("campaign_influencers").delete().eq("id", vendorAssignment?.id);
+    await supabase.from("campaign_lines").delete().eq("id", line.id);
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Failed to create deliverables.",
+    };
   }
 
   revalidateCampaign(parsed.data.campaign_id, header?.client_id);
-  return { ok: true, message: "Campaign line added." };
+  return {
+    ok: true,
+    message: `Influencer assignment ${line.document_number} created.`,
+  };
 }
 
 export async function updateCampaignLineAction(
@@ -283,9 +446,9 @@ export async function updateCampaignLineAction(
     };
   }
 
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { ok: false, message: authError };
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
   }
 
   const { data: existingLine, error: lineError } = await supabase
@@ -319,22 +482,66 @@ export async function updateCampaignLineAction(
     };
   }
 
+  const assignmentResult = parseAssignmentJson(parsed.data.assignment_json);
+  if (!assignmentResult.ok) {
+    return { ok: false, message: assignmentResult.message };
+  }
+
+  const { data: influencer } = await supabase
+    .from("influencers")
+    .select("id, document_number, display_name")
+    .eq("id", parsed.data.influencer_id)
+    .maybeSingle();
+
+  if (!influencer) {
+    return { ok: false, message: "Influencer not found." };
+  }
+
+  const platforms = assignmentResult.platforms;
+  const lineTitle =
+    parsed.data.name?.trim() ||
+    buildLineTitle(influencer.display_name, platforms);
+  const platformField =
+    emptyToNull(parsed.data.platform) ??
+    deriveLinePlatformField(platforms);
+  const deliverableCount = countLineDeliverables(platforms);
+
+  const assignmentMeta: LineInfluencerAssignment = {
+    influencer_id: influencer.id,
+    influencer_name: influencer.display_name,
+    influencer_document_number: influencer.document_number,
+    platforms,
+    title_user_edited: parsed.data.title_user_edited ?? false,
+  };
+
   const { data: header } = await supabase
     .from("campaign_headers")
     .select("client_id")
     .eq("id", parsed.data.campaign_id)
     .maybeSingle();
 
+  const { data: existingLineMeta } = await supabase
+    .from("campaign_lines")
+    .select("metadata, vendor_assignment_locked")
+    .eq("id", parsed.data.line_id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("campaign_lines")
     .update({
-      name: parsed.data.name,
-      status: parsed.data.status as CampaignStatus,
-      platform: emptyToNull(parsed.data.platform),
+      name: lineTitle,
+      assignment_status: parsed.data.assignment_status,
+      platform: platformField,
       po_amount: parsed.data.po_amount,
       revenue: parsed.data.revenue,
       cost: parsed.data.cost,
       currency_code: parsed.data.currency_code,
+      start_date: parsed.data.start_date,
+      end_date: parsed.data.end_date,
+      metadata: {
+        ...((existingLineMeta?.metadata as Record<string, unknown>) ?? {}),
+        [LINE_ASSIGNMENT_META_KEY]: assignmentMeta,
+      },
     })
     .eq("id", parsed.data.line_id)
     .eq("campaign_header_id", parsed.data.campaign_id);
@@ -343,111 +550,83 @@ export async function updateCampaignLineAction(
     return { ok: false, message: error.message };
   }
 
+  const { data: vendorRow } = await supabase
+    .from("campaign_influencers")
+    .select("id")
+    .eq("campaign_line_id", parsed.data.line_id)
+    .maybeSingle();
+
+  if (vendorRow) {
+    await supabase
+      .from("campaign_influencers")
+      .update({
+        influencer_id: influencer.id,
+        agreed_fee: parsed.data.cost,
+        currency: parsed.data.currency_code,
+        deliverable_count: deliverableCount,
+      })
+      .eq("id", vendorRow.id);
+  } else if (!existingLineMeta?.vendor_assignment_locked) {
+    await supabase.from("campaign_influencers").insert({
+      campaign_id: parsed.data.campaign_id,
+      campaign_header_id: parsed.data.campaign_id,
+      campaign_line_id: parsed.data.line_id,
+      influencer_id: influencer.id,
+      status: "confirmed",
+      agreed_fee: parsed.data.cost,
+      currency: parsed.data.currency_code,
+      deliverable_count: deliverableCount,
+      confirmed_at: new Date().toISOString(),
+      created_by: user.id,
+    });
+  }
+
+  if (!existingLineMeta?.vendor_assignment_locked) {
+    const assignmentId =
+      vendorRow?.id ??
+      (
+        await supabase
+          .from("campaign_influencers")
+          .select("id")
+          .eq("campaign_line_id", parsed.data.line_id)
+          .maybeSingle()
+      ).data?.id ??
+      null;
+
+    await syncLineDeliverables(supabase, user.id, {
+      campaignId: parsed.data.campaign_id,
+      lineId: parsed.data.line_id,
+      influencerId: influencer.id,
+      assignmentId,
+      platforms,
+      dueDate: parsed.data.end_date ?? parsed.data.start_date,
+    });
+  }
+
   revalidateCampaign(parsed.data.campaign_id, header?.client_id);
-  return { ok: true, message: "Campaign line updated." };
+  return { ok: true, message: "Influencer assignment updated." };
 }
 
 export async function assignCampaignVendorAction(
   _prev: FormActionState,
-  formData: FormData
+  _formData: FormData
 ): Promise<FormActionState> {
-  const parsed = assignCampaignVendorSchema.safeParse(
-    Object.fromEntries(formData.entries())
-  );
-  if (!parsed.success) {
-    return {
-      ok: false,
-      message: "Please fix the errors below.",
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    };
-  }
-
-  const { supabase, user, error: authError } = await requireAuthUser();
-  if (authError || !user) {
-    return { ok: false, message: authError ?? "Unauthorized" };
-  }
-
-  const lineId = emptyToNull(parsed.data.campaign_line_id);
-
-  if (lineId) {
-    const { data: line, error: lineError } = await supabase
-      .from("campaign_lines")
-      .select("vendor_assignment_locked, document_number")
-      .eq("id", lineId)
-      .eq("campaign_header_id", parsed.data.campaign_id)
-      .maybeSingle();
-
-    if (lineError) {
-      return { ok: false, message: lineError.message };
-    }
-
-    if (line?.vendor_assignment_locked) {
-      return {
-        ok: false,
-        message: `Vendor assignments are locked on ${line.document_number}. Finance approval required.`,
-      };
-    }
-  }
-
-  const { error } = await supabase.from("campaign_influencers").insert({
-    campaign_id: parsed.data.campaign_id,
-    campaign_header_id: parsed.data.campaign_id,
-    campaign_line_id: lineId,
-    influencer_id: parsed.data.influencer_id,
-    status: parsed.data.status,
-    agreed_fee: parsed.data.agreed_fee,
-    currency: parsed.data.currency,
-    deliverable_count: parsed.data.deliverable_count,
-    invited_at: new Date().toISOString(),
-    created_by: user.id,
-  });
-
-  if (error) {
-    return { ok: false, message: error.message };
-  }
-
-  revalidateCampaign(parsed.data.campaign_id);
-  return { ok: true, message: "Vendor assigned to campaign." };
+  return {
+    ok: false,
+    message:
+      "Manual vendor assignment is deprecated. Use Assign influencer on the Assignments tab.",
+  };
 }
 
 export async function updateCampaignVendorAction(
   _prev: FormActionState,
-  formData: FormData
+  _formData: FormData
 ): Promise<FormActionState> {
-  const parsed = updateCampaignVendorSchema.safeParse(
-    Object.fromEntries(formData.entries())
-  );
-  if (!parsed.success) {
-    return { ok: false, message: "Please fix the errors below." };
-  }
-
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { ok: false, message: authError };
-  }
-
-  const lineId = emptyToNull(parsed.data.campaign_line_id);
-
-  const { error } = await supabase
-    .from("campaign_influencers")
-    .update({
-      campaign_line_id: lineId,
-      status: parsed.data.status,
-      agreed_fee: parsed.data.agreed_fee,
-      currency: parsed.data.currency,
-      deliverable_count: parsed.data.deliverable_count,
-      confirmed_at:
-        parsed.data.status === "confirmed" ? new Date().toISOString() : null,
-    })
-    .eq("id", parsed.data.assignment_id)
-    .eq("campaign_header_id", parsed.data.campaign_id);
-
-  if (error) {
-    return { ok: false, message: error.message };
-  }
-
-  revalidateCampaign(parsed.data.campaign_id);
-  return { ok: true, message: "Vendor assignment updated." };
+  return {
+    ok: false,
+    message:
+      "Manual vendor updates are deprecated. Edit the influencer assignment on the Assignments tab.",
+  };
 }
 
 export async function createDeliverableAction(
@@ -543,24 +722,12 @@ export type InfluencerSearchState = {
 
 export async function searchInfluencersAction(
   _prev: InfluencerSearchState,
-  formData: FormData
+  _formData: FormData
 ): Promise<InfluencerSearchState> {
-  const search = String(formData.get("search") ?? "");
-  const platform = String(formData.get("platform") ?? "");
-
-  try {
-    const { searchInfluencersForCampaign } = await import("./queries");
-    const results = await searchInfluencersForCampaign({
-      search,
-      platform: platform || undefined,
-    });
-    return { results };
-  } catch (e) {
-    return {
-      results: [],
-      error: e instanceof Error ? e.message : "Search failed.",
-    };
-  }
+  return {
+    results: [],
+    error: "Use the Assign influencer workflow on the Assignments tab.",
+  };
 }
 
 export async function duplicateCampaignAction(

@@ -150,6 +150,7 @@ export type CampaignLineRow = {
   po_consumed: number;
   remaining_po: number;
   billing_status: string;
+  assignment_status: string;
   revenue_locked: boolean;
   cost_locked: boolean;
   vendor_assignment_locked: boolean;
@@ -496,6 +497,7 @@ export type Database = {
           po_amount?: number;
           po_consumed?: number;
           billing_status?: string;
+          assignment_status?: string;
           revenue_locked?: boolean;
           cost_locked?: boolean;
           vendor_assignment_locked?: boolean;

@@ -9,8 +9,9 @@ type CampaignKpiStripProps = {
 };
 
 export function CampaignKpiStrip({ workspace }: CampaignKpiStripProps) {
-  const { financials, lines, vendors, deliverables } = workspace;
+  const { financials, lines, deliverables } = workspace;
   const currency = workspace.currency_code;
+  const assignedLines = lines.filter((l) => l.influencer_id);
 
   const items = [
     { label: "Budget (PO)", value: formatMoney(financials.budget, currency) },
@@ -18,9 +19,12 @@ export function CampaignKpiStrip({ workspace }: CampaignKpiStripProps) {
     { label: "Cost", value: formatMoney(financials.cost, currency) },
     { label: "GP", value: formatMoney(financials.gp, currency) },
     { label: "Margin", value: formatPercent(financials.margin_percent) },
-    { label: "Lines", value: String(lines.length) },
-    { label: "Vendors", value: String(vendors.length) },
+    { label: "Assignments", value: String(assignedLines.length) },
     { label: "Deliverables", value: String(deliverables.length) },
+    {
+      label: "Outstanding billing",
+      value: formatMoney(financials.billing_outstanding, currency),
+    },
   ];
 
   return (
