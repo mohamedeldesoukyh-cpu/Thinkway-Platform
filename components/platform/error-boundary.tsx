@@ -13,6 +13,8 @@ export type PlatformSurface =
   | "invoices"
   | "analytics"
   | "executive"
+  | "collections"
+  | "treasury"
   | "generic";
 
 const SURFACE_COPY: Record<
@@ -52,6 +54,16 @@ const SURFACE_COPY: Record<
     title: "Executive dashboard temporarily unavailable",
     description:
       "Finance monitoring charts are optional enrichment. Use Billing for operational control.",
+  },
+  collections: {
+    title: "Collections view temporarily unavailable",
+    description:
+      "Billing, invoicing, and campaigns are unaffected. Retry or record payments from Billing.",
+  },
+  treasury: {
+    title: "Treasury view temporarily unavailable",
+    description:
+      "Cashflow panels are optional enrichment. Collections and billing continue normally.",
   },
   generic: {
     title: "Something went wrong",

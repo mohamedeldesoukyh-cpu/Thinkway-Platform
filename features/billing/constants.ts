@@ -27,13 +27,7 @@ export const COLLECTION_STATUS_LABELS: Record<CollectionStatus, string> = {
   written_off: "Written off",
 };
 
-export const AGING_BUCKET_LABELS = {
-  current: "Current",
-  "1_30": "1–30 days",
-  "31_60": "31–60 days",
-  "61_90": "61–90 days",
-  "90_plus": "90+ days",
-} as const;
+export { AGING_BUCKET_LABELS } from "@/lib/collections/aging";
 
 export const FINANCIAL_APPROVAL_STAGE_LABELS: Record<
   FinancialApprovalStage,

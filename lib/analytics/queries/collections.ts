@@ -7,9 +7,11 @@ import {
 } from "@/lib/analytics/aggregations/memo";
 import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import { buildKpiStripFromMetrics } from "@/lib/analytics/queries/kpi-builder";
-import { computeAgingBucket } from "@/features/billing/types";
-import { AGING_BUCKET_LABELS } from "@/features/billing/constants";
-import type { AgingBucket } from "@/features/billing/types";
+import {
+  computeAgingBucket,
+  AGING_BUCKET_LABELS,
+  type AgingBucket,
+} from "@/lib/collections/aging";
 import { roundMoney } from "@/lib/analytics/aggregations/round";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import type { CollectionsAnalyticsOutput } from "@/lib/analytics/types/outputs";

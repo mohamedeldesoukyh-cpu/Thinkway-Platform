@@ -79,7 +79,8 @@ export type FinancialApprovalStage =
   | "finance"
   | "cfo_admin";
 
-export type AgingBucket = "current" | "1_30" | "31_60" | "61_90" | "90_plus";
+export type { AgingBucket } from "@/lib/collections/aging";
+import type { AgingBucket } from "@/lib/collections/aging";
 
 export type BillingKpiSummary = {
   revenue: number;
@@ -294,19 +295,4 @@ export function formatMarginPercent(revenue: number, gp: number): number {
   return Math.round((gp / revenue) * 10000) / 100;
 }
 
-export function computeAgingBucket(
-  dueDate: string | null,
-  outstanding: number
-): AgingBucket {
-  if (outstanding <= 0) return "current";
-  if (!dueDate) return "current";
-  const due = new Date(`${dueDate}T00:00:00`);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.floor((today.getTime() - due.getTime()) / 86400000);
-  if (days <= 0) return "current";
-  if (days <= 30) return "1_30";
-  if (days <= 60) return "31_60";
-  if (days <= 90) return "61_90";
-  return "90_plus";
-}
+export { computeAgingBucket } from "@/lib/collections/aging";
