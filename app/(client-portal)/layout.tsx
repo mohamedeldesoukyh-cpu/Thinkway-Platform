@@ -1,0 +1,57 @@
+import { redirect } from "next/navigation";
+
+import { PortalShell } from "@/components/layout/portal-shell";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireClientScope } from "@/features/portals/scope";
+
+const clientNavItems = [
+  { href: "/client-portal", label: "Dashboard" },
+  { href: "/client-portal/campaigns", label: "Campaigns" },
+  { href: "/client-portal/publications", label: "Publications" },
+  { href: "/client-portal/approvals", label: "Approvals" },
+  { href: "/client-portal/invoices", label: "Invoices" },
+  { href: "/client-portal/reports", label: "Reports" },
+  { href: "/client-portal/notifications", label: "Notifications" },
+  { href: "/client-portal/client-io", label: "Client IO" },
+] as const;
+
+export default async function ClientPortalLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?next=/client-portal");
+  }
+
+  let userLabel = user.email ?? "Client";
+  try {
+    const { supabase: scopedSupabase, scope } = await requireClientScope("client_portal.read");
+    if (scope.primaryClientId) {
+      const { data } = await scopedSupabase
+        .from("clients")
+        .select("name")
+        .eq("id", scope.primaryClientId)
+        .maybeSingle();
+      if (data?.name) {
+        userLabel = data.name;
+      }
+    }
+  } catch {
+    redirect("/");
+  }
+
+  return (
+    <PortalShell
+      title="Client Portal"
+      description="Operational campaign visibility with approvals, invoices, reports, and client IO."
+      userLabel={userLabel}
+      navItems={[...clientNavItems]}
+    >
+      {children}
+    </PortalShell>
+  );
+}
