@@ -91,7 +91,7 @@ export async function loadCampaignOperationalBilling(
     });
 
   if (linesError) {
-    return { groups: [], operational_rows: [], error: linesError.message };
+    return { groups: [], operational_rows: [], error: linesError };
   }
 
   const lineIds = lines.map((l) => l.id);

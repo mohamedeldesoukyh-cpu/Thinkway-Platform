@@ -31,6 +31,7 @@ import {
   type BillingLineRow,
   type CampaignLineBillingStatus,
   type CampaignOperationalBillingDetail,
+  type FinancialApprovalRow,
   type InvoiceWorkspace,
   type VendorPaymentBatchRow,
 } from "./types";
