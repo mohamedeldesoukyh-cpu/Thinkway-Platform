@@ -38,6 +38,7 @@ import {
   type OperationalSelectionPayload,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
+import { cn } from "@/lib/utils";
 
 type BillingCampaignDrilldownProps = {
   detail: CampaignOperationalBillingDetail;
@@ -48,6 +49,8 @@ type BillingCampaignDrilldownProps = {
   onSelectionChange?: (selection: OperationalSelectionState) => void;
   /** Approve / move to billing bulk actions (review panel). Default true. */
   showOperationalActions?: boolean;
+  /** Select all / Clear toolbar inside expanded hierarchy. Default true (review panel). */
+  showBulkSelectionControls?: boolean;
 };
 
 export function BillingCampaignDrilldown({
@@ -57,6 +60,7 @@ export function BillingCampaignDrilldown({
   selection: controlledSelection,
   onSelectionChange,
   showOperationalActions = true,
+  showBulkSelectionControls = true,
 }: BillingCampaignDrilldownProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [internalSelection, setInternalSelection] =
@@ -141,60 +145,65 @@ export function BillingCampaignDrilldown({
   }
 
   return (
-    <div className="space-y-3 border-t p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-5">
-          <span>
-            Total:{" "}
-            <strong className="text-foreground">
-              {formatBillingMoney(rollup.total_campaign_amount, detail.currency_code)}
-            </strong>
-          </span>
-          <span>
-            Achieved:{" "}
-            <strong className="text-foreground">
-              {formatBillingMoney(rollup.achieved_revenue, detail.currency_code)}
-            </strong>
-          </span>
-          <span>
-            Invoiced:{" "}
-            <strong className="text-foreground">
-              {formatBillingMoney(rollup.already_invoiced, detail.currency_code)}
-            </strong>
-          </span>
-          <span>
-            Remaining:{" "}
-            <strong className="text-foreground">
-              {formatBillingMoney(rollup.remaining_to_invoice, detail.currency_code)}
-            </strong>
-          </span>
-          <span>
-            Unachieved:{" "}
-            <strong className="text-foreground">
-              {formatBillingMoney(rollup.unachieved_revenue, detail.currency_code)}
-            </strong>
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 rounded-2xl border px-2 py-1">
-            <OperationalSelectionCheckbox
-              status={globalSelectionStatus}
-              onToggle={handleSelectAllToggle}
-              ariaLabel="Select all operational rows"
-            />
-            <Button type="button" size="sm" variant="ghost" onClick={handleSelectAllToggle}>
-              Select all
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={handleClearSelection}
-              disabled={selectedCount === 0}
-            >
-              Clear
-            </Button>
-          </div>
+    <div className={cn("space-y-3 border-t", showBulkSelectionControls ? "p-4" : "px-4 py-3")}>
+      {showBulkSelectionControls || showOperationalActions || onInvoice ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {showBulkSelectionControls ? (
+            <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-5">
+              <span>
+                Total:{" "}
+                <strong className="text-foreground">
+                  {formatBillingMoney(rollup.total_campaign_amount, detail.currency_code)}
+                </strong>
+              </span>
+              <span>
+                Achieved:{" "}
+                <strong className="text-foreground">
+                  {formatBillingMoney(rollup.achieved_revenue, detail.currency_code)}
+                </strong>
+              </span>
+              <span>
+                Invoiced:{" "}
+                <strong className="text-foreground">
+                  {formatBillingMoney(rollup.already_invoiced, detail.currency_code)}
+                </strong>
+              </span>
+              <span>
+                Remaining:{" "}
+                <strong className="text-foreground">
+                  {formatBillingMoney(rollup.remaining_to_invoice, detail.currency_code)}
+                </strong>
+              </span>
+              <span>
+                Unachieved:{" "}
+                <strong className="text-foreground">
+                  {formatBillingMoney(rollup.unachieved_revenue, detail.currency_code)}
+                </strong>
+              </span>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {showBulkSelectionControls ? (
+              <div className="flex items-center gap-2 rounded-2xl border px-2 py-1">
+                <OperationalSelectionCheckbox
+                  status={globalSelectionStatus}
+                  onToggle={handleSelectAllToggle}
+                  ariaLabel="Select all operational rows"
+                />
+                <Button type="button" size="sm" variant="ghost" onClick={handleSelectAllToggle}>
+                  Select all
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleClearSelection}
+                  disabled={selectedCount === 0}
+                >
+                  Clear
+                </Button>
+              </div>
+            ) : null}
           {showOperationalActions ? (
             <>
               <form action={approveAction}>
@@ -222,8 +231,9 @@ export function BillingCampaignDrilldown({
               Invoice selected
             </Button>
           ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {filteredRows.length === 0 ? (
         <p className="text-sm text-muted-foreground">No operational rows match this filter.</p>

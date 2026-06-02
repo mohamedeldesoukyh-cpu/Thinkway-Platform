@@ -21,6 +21,7 @@ import { BillingCampaignReviewPanel } from "@/features/billing/components/billin
 import { BillingFinanceFilterBar } from "@/features/billing/components/billing-finance-filter-bar";
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
+import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import { loadCampaignBillingDetailAction } from "@/features/billing/actions";
 import type {
   CampaignBillingQueueRow,
@@ -31,10 +32,12 @@ import {
   clearOperationalSelection,
   countSelection,
   createEmptySelection,
+  getGlobalSelectionStatus,
+  selectAllOperationalRows,
   selectionToPayload,
-  toggleGlobalOperationalSelection,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
+  type RowSelectionStatus,
 } from "@/lib/billing/operational-selection";
 import {
   filterOperationalBillingTree,
@@ -208,8 +211,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
     loadDetail(campaignId);
   }
 
-  async function toggleCampaignSelect(campaignId: string, event: React.MouseEvent) {
-    event.stopPropagation();
+  async function handleCampaignMasterSelect(campaignId: string) {
     const detail = await ensureDetailLoaded(campaignId);
     if (!detail) return;
 
@@ -218,17 +220,36 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
       operationalFilter
     );
     const current = getQueueSelection(campaignId);
-    const hasSelection = countSelection(current) > 0;
+    const status = getGlobalSelectionStatus(filteredRows, current);
 
-    if (hasSelection) {
+    if (status === "checked") {
       setQueueSelection(campaignId, clearOperationalSelection());
     } else {
-      setQueueSelection(
-        campaignId,
-        toggleGlobalOperationalSelection(filteredRows, createEmptySelection())
-      );
-      setExpandedCampaignIds((prev) => new Set(prev).add(campaignId));
+      setQueueSelection(campaignId, selectAllOperationalRows(filteredRows));
     }
+
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[hierarchical-selection] campaign master checkbox", {
+        campaignId,
+        status,
+        action: status === "checked" ? "clear" : "select_all",
+      });
+    }
+  }
+
+  function getCampaignMasterStatus(
+    campaignId: string,
+    detail: CampaignOperationalBillingDetail | undefined
+  ): RowSelectionStatus {
+    const current = getQueueSelection(campaignId);
+    if (!detail) {
+      return countSelection(current) > 0 ? "indeterminate" : "unchecked";
+    }
+    const filteredRows = filterOperationalBillingTree(
+      detail.operational_rows,
+      operationalFilter
+    );
+    return getGlobalSelectionStatus(filteredRows, current);
   }
 
   function handleQueueInvoiceSelected(mode: "new" | "append") {
@@ -277,8 +298,8 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
             <div>
               <CardTitle className="text-base">Billing queue</CardTitle>
               <p className="text-sm text-muted-foreground">
-                One row per campaign — expand to select assignments, deliverables, and posts for
-                partial invoicing.
+                One row per campaign — check a campaign to select all billable rows, or expand to
+                adjust individual lines.
               </p>
               {filter !== "all" && filtered.length > 0 ? (
                 <p className="mt-2 text-xs text-muted-foreground">
@@ -370,7 +391,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                     const expanded = expandedCampaignIds.has(campaignId);
                     const detail = detailCache[campaignId];
                     const cur = row.currency_code;
-                    const campaignSelectedCount = countSelection(getQueueSelection(campaignId));
+                    const masterStatus = getCampaignMasterStatus(campaignId, detail);
 
                     return (
                       <Fragment key={campaignId}>
@@ -396,14 +417,11 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                               )}
                             </button>
                           </TableCell>
-                          <TableCell onClick={(event) => toggleCampaignSelect(campaignId, event)}>
-                            <input
-                              type="checkbox"
-                              className="size-4 rounded border-border"
-                              checked={campaignSelectedCount > 0}
-                              onChange={() => undefined}
-                              onClick={(event) => toggleCampaignSelect(campaignId, event)}
-                              aria-label={`Select all billable rows for ${row.campaign_name}`}
+                          <TableCell onClick={(event) => event.stopPropagation()}>
+                            <OperationalSelectionCheckbox
+                              status={masterStatus}
+                              onToggle={() => handleCampaignMasterSelect(campaignId)}
+                              ariaLabel={`Select all billable rows for ${row.campaign_name}`}
                             />
                           </TableCell>
                           <TableCell className="font-mono text-xs">
@@ -485,6 +503,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                                     setQueueSelection(campaignId, selection)
                                   }
                                   showOperationalActions={false}
+                                  showBulkSelectionControls={false}
                                 />
                               ) : (
                                 <p className="p-4 text-sm text-muted-foreground">
