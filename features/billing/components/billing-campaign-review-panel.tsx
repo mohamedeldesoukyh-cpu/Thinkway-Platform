@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { memo, useMemo } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +76,7 @@ type BillingCampaignReviewPanelProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-export function BillingCampaignReviewPanel({
+function BillingCampaignReviewPanelInner({
   campaignName,
   campaignDocumentNumber,
   detail,
@@ -96,22 +96,11 @@ export function BillingCampaignReviewPanel({
   );
 
   const flatRows = useMemo(() => flattenReviewRows(filteredRows), [filteredRows]);
-  const totalOperationalRows = useMemo(
-    () => (detail ? flattenReviewRows(detail.operational_rows).length : 0),
-    [detail]
+  const unfilteredRowCount = useMemo(
+    () =>
+      detail && filter !== "all" ? flattenReviewRows(detail.operational_rows).length : 0,
+    [detail, filter]
   );
-
-  useEffect(() => {
-    if (!detail || !open) return;
-    if (process.env.NODE_ENV === "development") {
-      console.debug("[billing-review-table] review panel rendered", {
-        campaignId: detail.campaign_header_id,
-        filter,
-        operationalFilter,
-        rowCount: flatRows.length,
-      });
-    }
-  }, [detail, open, filter, operationalFilter, flatRows.length]);
 
   return (
     <Card
@@ -181,8 +170,8 @@ export function BillingCampaignReviewPanel({
             <>
               {flatRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {filter !== "all" && totalOperationalRows > 0
-                    ? `No lines match the "${filter.replace(/_/g, " ")}" filter. ${totalOperationalRows} line(s) hidden — switch to All to review the full campaign.`
+                  {filter !== "all" && unfilteredRowCount > 0
+                    ? `No lines match the "${filter.replace(/_/g, " ")}" filter. ${unfilteredRowCount} line(s) hidden — switch to All to review the full campaign.`
                     : "No operational billing lines found for this campaign."}
                 </p>
               ) : null}
@@ -290,3 +279,5 @@ export function BillingCampaignReviewPanel({
     </Card>
   );
 }
+
+export const BillingCampaignReviewPanel = memo(BillingCampaignReviewPanelInner);

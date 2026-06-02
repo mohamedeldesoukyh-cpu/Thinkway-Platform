@@ -1,11 +1,8 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,12 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BillingCampaignDrilldown } from "@/features/billing/components/billing-campaign-drilldown";
+import {
+  BillingQueueCampaignRow,
+  computeCampaignMasterStatus,
+} from "@/features/billing/components/billing-queue-campaign-row";
 import { BillingCampaignReviewPanel } from "@/features/billing/components/billing-campaign-review-panel";
 import { BillingFinanceFilterBar } from "@/features/billing/components/billing-finance-filter-bar";
-import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
-import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import { loadCampaignBillingDetailAction } from "@/features/billing/actions";
 import type {
   CampaignBillingQueueRow,
@@ -32,23 +30,22 @@ import {
   clearOperationalSelection,
   countSelection,
   createEmptySelection,
-  getGlobalSelectionStatus,
   selectAllOperationalRows,
   selectionToPayload,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
-  type RowSelectionStatus,
 } from "@/lib/billing/operational-selection";
 import {
   filterOperationalBillingTree,
   mapCampaignQueueFilterToOperational,
 } from "@/lib/billing/operational-row-filters";
+import { selectionStateEqual } from "@/lib/billing/selection-state";
 import { formatBillingMoneyCompact } from "@/features/billing/utils";
 import {
   filterCampaignQueueRows,
   type CampaignBillingQueueFilter,
 } from "@/lib/billing/campaign-billing-queue";
-import { cn } from "@/lib/utils";
+import { devLog } from "@/lib/dev-log";
 
 type BillingCampaignQueueTableProps = {
   campaigns: CampaignBillingQueueRow[];
@@ -70,6 +67,10 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
   const [invoiceInitialMode, setInvoiceInitialMode] = useState<"new" | "append">("new");
   const [pending, startTransition] = useTransition();
   const reviewPanelRef = useRef<HTMLDivElement>(null);
+  const detailCacheRef = useRef(detailCache);
+  detailCacheRef.current = detailCache;
+  const queueSelectionsRef = useRef(queueSelections);
+  queueSelectionsRef.current = queueSelections;
 
   const operationalFilter = mapCampaignQueueFilterToOperational(filter);
 
@@ -122,21 +123,10 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
     };
   }, [queueSelections, detailCache]);
 
-  const getQueueSelection = useCallback(
-    (campaignId: string) => queueSelections[campaignId] ?? createEmptySelection(),
-    [queueSelections]
-  );
-
-  const setQueueSelection = useCallback(
-    (campaignId: string, selection: OperationalSelectionState) => {
-      setQueueSelections((prev) => ({ ...prev, [campaignId]: selection }));
-    },
-    []
-  );
-
   const ensureDetailLoaded = useCallback(
     async (campaignId: string): Promise<CampaignOperationalBillingDetail | null> => {
-      if (detailCache[campaignId]) return detailCache[campaignId]!;
+      const cached = detailCacheRef.current[campaignId];
+      if (cached) return cached;
       const result = await loadCampaignBillingDetailAction(campaignId);
       if (result.ok && result.detail) {
         setDetailCache((prev) => ({ ...prev, [campaignId]: result.detail! }));
@@ -145,22 +135,18 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
       toast.error(result.ok ? "No detail returned." : result.message);
       return null;
     },
-    [detailCache]
+    []
   );
 
-  const loadDetail = useCallback(
+  const loadDetailIfNeeded = useCallback(
     (campaignId: string) => {
-      if (detailCache[campaignId]) return;
-      if (process.env.NODE_ENV === "development") {
-        console.debug("[queue-drilldown] loading campaign operational billing", {
-          campaignId,
-        });
-      }
+      if (detailCacheRef.current[campaignId]) return;
+      devLog("[queue-drilldown] loading campaign operational billing", { campaignId });
       startTransition(async () => {
         await ensureDetailLoaded(campaignId);
       });
     },
-    [detailCache, ensureDetailLoaded]
+    [ensureDetailLoaded]
   );
 
   const openInvoiceWorkflow = useCallback(
@@ -172,108 +158,100 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
       setInvoiceSelection(selection);
       setInvoiceInitialMode(mode);
       const detail = await ensureDetailLoaded(campaignId);
-      if (detail) {
-        setInvoiceCampaignId(campaignId);
-      }
+      if (detail) setInvoiceCampaignId(campaignId);
     },
     [ensureDetailLoaded]
   );
 
-  function selectCampaignForReview(campaignId: string) {
-    if (selectedCampaignId === campaignId) {
-      setReviewOpen((prev) => !prev);
-      if (process.env.NODE_ENV === "development") {
-        console.debug("[billing-review-table] toggled review panel", {
-          campaignId,
-          open: !reviewOpen,
-        });
-      }
-      return;
-    }
-
-    setSelectedCampaignId(campaignId);
-    setReviewOpen(true);
-    loadDetail(campaignId);
-
-    if (process.env.NODE_ENV === "development") {
-      console.debug("[billing-review-table] campaign selected for review", { campaignId });
-    }
-  }
-
-  function toggleExpand(campaignId: string, event: React.MouseEvent) {
-    event.stopPropagation();
-    setExpandedCampaignIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(campaignId)) next.delete(campaignId);
-      else next.add(campaignId);
-      return next;
-    });
-    loadDetail(campaignId);
-  }
-
-  async function handleCampaignMasterSelect(campaignId: string) {
-    const detail = await ensureDetailLoaded(campaignId);
-    if (!detail) return;
-
-    const filteredRows = filterOperationalBillingTree(
-      detail.operational_rows,
-      operationalFilter
-    );
-    const current = getQueueSelection(campaignId);
-    const status = getGlobalSelectionStatus(filteredRows, current);
-
-    if (status === "checked") {
-      setQueueSelection(campaignId, clearOperationalSelection());
-    } else {
-      setQueueSelection(campaignId, selectAllOperationalRows(filteredRows));
-    }
-
-    if (process.env.NODE_ENV === "development") {
-      console.debug("[hierarchical-selection] campaign master checkbox", {
-        campaignId,
-        status,
-        action: status === "checked" ? "clear" : "select_all",
+  const setQueueSelection = useCallback(
+    (campaignId: string, selection: OperationalSelectionState) => {
+      setQueueSelections((prev) => {
+        const existing = prev[campaignId];
+        if (existing && selectionStateEqual(existing, selection)) return prev;
+        return { ...prev, [campaignId]: selection };
       });
-    }
-  }
+    },
+    []
+  );
 
-  function getCampaignMasterStatus(
-    campaignId: string,
-    detail: CampaignOperationalBillingDetail | undefined
-  ): RowSelectionStatus {
-    const current = getQueueSelection(campaignId);
-    if (!detail) {
-      return countSelection(current) > 0 ? "indeterminate" : "unchecked";
-    }
-    const filteredRows = filterOperationalBillingTree(
-      detail.operational_rows,
-      operationalFilter
-    );
-    return getGlobalSelectionStatus(filteredRows, current);
-  }
+  const onToggleExpand = useCallback(
+    (campaignId: string) => {
+      setExpandedCampaignIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(campaignId)) next.delete(campaignId);
+        else next.add(campaignId);
+        return next;
+      });
+      loadDetailIfNeeded(campaignId);
+    },
+    [loadDetailIfNeeded]
+  );
 
-  function handleQueueInvoiceSelected(mode: "new" | "append") {
-    if (!invoiceContext) {
-      toast.error("Select operational rows within one campaign to invoice.");
-      return;
-    }
-    if (process.env.NODE_ENV === "development") {
-      console.debug("[queue-drilldown] invoice selected from billing queue", {
+  const onMasterSelect = useCallback(
+    async (campaignId: string) => {
+      const detail = await ensureDetailLoaded(campaignId);
+      if (!detail) return;
+
+      const filteredRows = filterOperationalBillingTree(
+        detail.operational_rows,
+        operationalFilter
+      );
+      const current = queueSelectionsRef.current[campaignId] ?? createEmptySelection();
+      const status = computeCampaignMasterStatus(detail, current, operationalFilter);
+
+      if (status === "checked") {
+        setQueueSelection(campaignId, clearOperationalSelection());
+      } else {
+        setQueueSelection(campaignId, selectAllOperationalRows(filteredRows));
+      }
+    },
+    [ensureDetailLoaded, operationalFilter, setQueueSelection]
+  );
+
+  const onSelectForReview = useCallback(
+    (campaignId: string) => {
+      if (selectedCampaignId === campaignId) {
+        setReviewOpen((prev) => !prev);
+        return;
+      }
+      setSelectedCampaignId(campaignId);
+      setReviewOpen(true);
+      loadDetailIfNeeded(campaignId);
+    },
+    [selectedCampaignId, loadDetailIfNeeded]
+  );
+
+  const onOpenInvoice = useCallback(
+    (campaignId: string) => {
+      const selection = queueSelectionsRef.current[campaignId] ?? createEmptySelection();
+      openInvoiceWorkflow(campaignId, selectionToPayload(selection));
+    },
+    [openInvoiceWorkflow]
+  );
+
+  const handleQueueInvoiceSelected = useCallback(
+    (mode: "new" | "append") => {
+      if (!invoiceContext) {
+        toast.error("Select operational rows within one campaign to invoice.");
+        return;
+      }
+      devLog("[queue-drilldown] invoice selected from billing queue", {
         campaignId: invoiceContext.campaignId,
         mode,
-        selection: invoiceContext.payload,
       });
-    }
-    openInvoiceWorkflow(invoiceContext.campaignId, invoiceContext.payload, mode);
-  }
+      openInvoiceWorkflow(invoiceContext.campaignId, invoiceContext.payload, mode);
+    },
+    [invoiceContext, openInvoiceWorkflow]
+  );
 
-  function handleClearQueueSelection() {
+  const handleClearQueueSelection = useCallback(() => {
     setQueueSelections({});
-  }
+  }, []);
 
   const invoiceDetail = invoiceCampaignId ? detailCache[invoiceCampaignId] : null;
   const reviewDetail = selectedCampaignId ? detailCache[selectedCampaignId] : null;
-  const reviewLoading = pending && selectedCampaignId !== null && !reviewDetail;
+  const reviewLoading =
+    pending && selectedCampaignId !== null && !detailCache[selectedCampaignId ?? ""];
 
   useEffect(() => {
     if (!selectedCampaignId || !reviewOpen) return;
@@ -286,9 +264,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
         value={filter}
         onChange={(value) => {
           setFilter(value);
-          if (process.env.NODE_ENV === "development") {
-            console.debug("[queue-filter] billing queue filter changed", { filter: value });
-          }
+          devLog("[queue-filter] billing queue filter changed", { filter: value });
         }}
       />
 
@@ -387,133 +363,26 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                 <TableBody>
                   {filtered.map((row) => {
                     const campaignId = row.campaign_header_id;
-                    const selected = selectedCampaignId === campaignId;
-                    const expanded = expandedCampaignIds.has(campaignId);
                     const detail = detailCache[campaignId];
-                    const cur = row.currency_code;
-                    const masterStatus = getCampaignMasterStatus(campaignId, detail);
+                    const selection =
+                      queueSelections[campaignId] ?? createEmptySelection();
 
                     return (
-                      <Fragment key={campaignId}>
-                        <TableRow
-                          className={cn(
-                            "cursor-pointer bg-muted/10 hover:bg-muted/20",
-                            selected && "bg-primary/5 ring-1 ring-primary/20"
-                          )}
-                          onClick={() => selectCampaignForReview(campaignId)}
-                          aria-selected={selected}
-                        >
-                          <TableCell onClick={(event) => toggleExpand(campaignId, event)}>
-                            <button
-                              type="button"
-                              className="rounded p-1 hover:bg-muted"
-                              aria-expanded={expanded}
-                              aria-label={`Expand ${row.campaign_name}`}
-                            >
-                              {expanded ? (
-                                <ChevronDownIcon className="size-4" />
-                              ) : (
-                                <ChevronRightIcon className="size-4" />
-                              )}
-                            </button>
-                          </TableCell>
-                          <TableCell onClick={(event) => event.stopPropagation()}>
-                            <OperationalSelectionCheckbox
-                              status={masterStatus}
-                              onToggle={() => handleCampaignMasterSelect(campaignId)}
-                              ariaLabel={`Select all billable rows for ${row.campaign_name}`}
-                            />
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {row.campaign_document_number}
-                          </TableCell>
-                          <TableCell>{row.client_name}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {row.brand_name ?? "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Link
-                              href={`/campaigns/${campaignId}?tab=billing`}
-                              className="font-medium hover:underline"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              {row.campaign_name}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{row.currency_code}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatBillingMoneyCompact(row.total_campaign_amount, cur)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(row.achieved_revenue, cur)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(row.already_invoiced, cur)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(row.remaining_to_invoice, cur)}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {formatBillingMoneyCompact(row.unachieved_revenue, cur)}
-                          </TableCell>
-                          <TableCell>
-                            <BillingStatusBadge status={row.billing_status} />
-                          </TableCell>
-                          <TableCell
-                            className="text-right"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  openInvoiceWorkflow(
-                                    campaignId,
-                                    selectionToPayload(getQueueSelection(campaignId))
-                                  )
-                                }
-                              >
-                                Invoice
-                              </Button>
-                              <Button size="sm" variant="ghost" asChild>
-                                <Link href={`/campaigns/${campaignId}?tab=billing`}>
-                                  <ExternalLinkIcon className="size-4" />
-                                </Link>
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {expanded ? (
-                          <TableRow>
-                            <TableCell colSpan={14} className="bg-background p-0">
-                              {pending && !detail ? (
-                                <p className="p-4 text-sm text-muted-foreground">
-                                  Loading operational billing…
-                                </p>
-                              ) : detail ? (
-                                <BillingCampaignDrilldown
-                                  detail={detail}
-                                  filter={operationalFilter}
-                                  selection={getQueueSelection(campaignId)}
-                                  onSelectionChange={(selection) =>
-                                    setQueueSelection(campaignId, selection)
-                                  }
-                                  showOperationalActions={false}
-                                  showBulkSelectionControls={false}
-                                />
-                              ) : (
-                                <p className="p-4 text-sm text-muted-foreground">
-                                  Unable to load operational rows.
-                                </p>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ) : null}
-                      </Fragment>
+                      <BillingQueueCampaignRow
+                        key={campaignId}
+                        row={row}
+                        operationalFilter={operationalFilter}
+                        expanded={expandedCampaignIds.has(campaignId)}
+                        selectedForReview={selectedCampaignId === campaignId}
+                        detail={detail}
+                        detailLoading={pending}
+                        selection={selection}
+                        onToggleExpand={onToggleExpand}
+                        onMasterSelect={onMasterSelect}
+                        onSelectForReview={onSelectForReview}
+                        onSelectionChange={setQueueSelection}
+                        onOpenInvoice={onOpenInvoice}
+                      />
                     );
                   })}
                 </TableBody>
@@ -546,7 +415,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           appendableInvoices={invoiceDetail.appendable_invoices}
           initialSelection={invoiceSelection}
           initialInvoiceMode={invoiceInitialMode}
-          open={Boolean(invoiceCampaignId)}
+          open
           onOpenChange={(open) => {
             if (!open) {
               setInvoiceCampaignId(null);

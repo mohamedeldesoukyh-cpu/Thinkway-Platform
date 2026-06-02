@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 
 import type { RowSelectionStatus } from "@/lib/billing/operational-selection";
 
@@ -11,7 +11,7 @@ type OperationalSelectionCheckboxProps = {
   ariaLabel?: string;
 };
 
-export function OperationalSelectionCheckbox({
+export const OperationalSelectionCheckbox = memo(function OperationalSelectionCheckbox({
   status,
   disabled,
   onToggle,
@@ -36,4 +36,4 @@ export function OperationalSelectionCheckbox({
       aria-label={ariaLabel}
     />
   );
-}
+});

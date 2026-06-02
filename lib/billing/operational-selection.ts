@@ -201,39 +201,15 @@ export function toggleOperationalRowSelection(
     pruneAncestorSelections(next, row, rootRows);
   }
 
-  if (process.env.NODE_ENV === "development") {
-    console.debug("[hierarchical-selection] parent-child selection synchronization", {
-      rowId: row.id,
-      kind: row.kind,
-      action: selecting ? "select" : "deselect",
-      descendantCount: getDescendantRows(row).length,
-      line_ids: [...next.line_ids],
-      deliverable_ids: [...next.deliverable_ids],
-      post_ids: [...next.post_ids],
-    });
-  }
-
   return next;
 }
 
 /** One invoice batch payload — preserves explicit ids for server resolution. */
 export function buildInvoiceSelectionBatch(
   selection: OperationalSelectionState,
-  rootRows: OperationalBillingRow[]
+  _rootRows?: OperationalBillingRow[]
 ): OperationalSelectionPayload {
-  const payload = selectionToPayload(selection);
-
-  if (process.env.NODE_ENV === "development") {
-    console.debug("[invoice-grouping] invoice grouping batch", {
-      assignmentCount: payload.line_ids.length,
-      deliverableCount: payload.deliverable_ids.length,
-      postCount: payload.post_ids.length,
-      totalSelected: countSelection(selection),
-      rootAssignmentCount: rootRows.length,
-    });
-  }
-
-  return payload;
+  return selectionToPayload(selection);
 }
 
 /** Select all operational rows in the provided tree (assignments, deliverables, posts). */
@@ -245,22 +221,10 @@ export function selectAllOperationalRows(
     applySelectionMutation(selection, collectSubtreeSelection(row), "add");
   }
 
-  if (process.env.NODE_ENV === "development") {
-    console.debug("[selection-sync] select all operational rows", {
-      assignmentCount: rows.length,
-      line_ids: [...selection.line_ids],
-      deliverable_ids: [...selection.deliverable_ids],
-      post_ids: [...selection.post_ids],
-    });
-  }
-
   return selection;
 }
 
 export function clearOperationalSelection(): OperationalSelectionState {
-  if (process.env.NODE_ENV === "development") {
-    console.debug("[selection-sync] cleared operational selection");
-  }
   return createEmptySelection();
 }
 

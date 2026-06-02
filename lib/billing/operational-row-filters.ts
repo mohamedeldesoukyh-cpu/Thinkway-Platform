@@ -97,6 +97,20 @@ function filterOperationalNode(
   return null;
 }
 
+const filterTreeCache = new WeakMap<
+  OperationalBillingRow[],
+  Map<OperationalBillingFilter, OperationalBillingRow[]>
+>();
+
+function filterOperationalBillingTreeUncached(
+  rows: OperationalBillingRow[],
+  filter: OperationalBillingFilter
+): OperationalBillingRow[] {
+  return rows
+    .map((row) => filterOperationalNode(row, filter))
+    .filter(Boolean) as OperationalBillingRow[];
+}
+
 /** Filters operational hierarchy while preserving assignment → deliverable → post structure. */
 export function filterOperationalBillingTree(
   rows: OperationalBillingRow[],
@@ -104,17 +118,16 @@ export function filterOperationalBillingTree(
 ): OperationalBillingRow[] {
   if (filter === "all") return rows;
 
-  const filtered = rows
-    .map((row) => filterOperationalNode(row, filter))
-    .filter(Boolean) as OperationalBillingRow[];
-
-  if (process.env.NODE_ENV === "development") {
-    console.debug("[billing-filter] applied operational filter", {
-      filter,
-      inputAssignments: rows.length,
-      outputAssignments: filtered.length,
-    });
+  let byFilter = filterTreeCache.get(rows);
+  if (!byFilter) {
+    byFilter = new Map();
+    filterTreeCache.set(rows, byFilter);
   }
 
+  const cached = byFilter.get(filter);
+  if (cached) return cached;
+
+  const filtered = filterOperationalBillingTreeUncached(rows, filter);
+  byFilter.set(filter, filtered);
   return filtered;
 }
