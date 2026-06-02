@@ -31,6 +31,7 @@ import type {
   CampaignBillingQueueRow,
   CampaignOperationalBillingDetail,
 } from "@/features/billing/types";
+import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import { formatBillingMoneyCompact } from "@/features/billing/utils";
 import {
   filterCampaignQueueRows,
@@ -61,6 +62,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
   >({});
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
   const [invoiceCampaignId, setInvoiceCampaignId] = useState<string | null>(null);
+  const [invoiceSelection, setInvoiceSelection] = useState<OperationalSelectionPayload | undefined>();
   const [pending, startTransition] = useTransition();
 
   const filtered = useMemo(
@@ -238,6 +240,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                                 variant="outline"
                                 onClick={() => {
                                   if (!detail) loadDetail(row.campaign_header_id);
+                                  setInvoiceSelection(undefined);
                                   setInvoiceCampaignId(row.campaign_header_id);
                                 }}
                               >
@@ -261,7 +264,10 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                               ) : detail ? (
                                 <BillingCampaignDrilldown
                                   detail={detail}
-                                  onInvoice={() => setInvoiceCampaignId(row.campaign_header_id)}
+                                  onInvoice={(selection) => {
+                                    setInvoiceSelection(selection);
+                                    setInvoiceCampaignId(row.campaign_header_id);
+                                  }}
                                 />
                               ) : (
                                 <p className="p-4 text-sm text-muted-foreground">
@@ -288,9 +294,13 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           rollup={invoiceDetail.rollup}
           operationalRows={invoiceDetail.operational_rows}
           appendableInvoices={invoiceDetail.appendable_invoices}
+          initialSelection={invoiceSelection}
           open={Boolean(invoiceCampaignId)}
           onOpenChange={(open) => {
-            if (!open) setInvoiceCampaignId(null);
+            if (!open) {
+              setInvoiceCampaignId(null);
+              setInvoiceSelection(undefined);
+            }
           }}
         />
       ) : null}

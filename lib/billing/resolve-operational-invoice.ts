@@ -120,7 +120,7 @@ export async function validateAppendableInvoice(
     })
   ) {
     if (process.env.NODE_ENV === "development") {
-      console.debug("[append-invoice] rejected — invoice locked or ineligible", {
+      console.debug("[locked-invoice-rejection] append rejected — invoice locked or ineligible", {
         invoiceId,
         status: row.status,
         regeneration_status: row.regeneration_status,

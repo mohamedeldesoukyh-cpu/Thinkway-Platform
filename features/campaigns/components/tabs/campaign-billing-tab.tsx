@@ -29,6 +29,7 @@ import type {
   BillingLineRow,
   CampaignOperationalBillingDetail,
 } from "@/features/billing/types";
+import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,9 @@ export function CampaignBillingTab({
   const currency = workspace.currency_code;
   const [legacyInvoiceOpen, setLegacyInvoiceOpen] = useState(false);
   const [operationalInvoiceOpen, setOperationalInvoiceOpen] = useState(false);
+  const [invoiceSelection, setInvoiceSelection] = useState<
+    OperationalSelectionPayload | undefined
+  >();
 
   const poAlert =
     financials.po_exceeded || po.po_status === "exceeded"
@@ -136,9 +140,14 @@ export function CampaignBillingTab({
           </Button>
           <Button
             size="sm"
-            onClick={() =>
-              operationalBilling ? setOperationalInvoiceOpen(true) : setLegacyInvoiceOpen(true)
-            }
+            onClick={() => {
+              if (operationalBilling) {
+                setInvoiceSelection(undefined);
+                setOperationalInvoiceOpen(true);
+              } else {
+                setLegacyInvoiceOpen(true);
+              }
+            }}
           >
             <PlusIcon data-icon="inline-start" />
             Create invoice
@@ -185,7 +194,10 @@ export function CampaignBillingTab({
           {operationalBilling ? (
             <BillingCampaignDrilldown
               detail={operationalBilling}
-              onInvoice={() => setOperationalInvoiceOpen(true)}
+              onInvoice={(selection) => {
+                setInvoiceSelection(selection);
+                setOperationalInvoiceOpen(true);
+              }}
             />
           ) : (
             <div className="p-4">
@@ -321,8 +333,12 @@ export function CampaignBillingTab({
           rollup={operationalBilling.rollup}
           operationalRows={operationalBilling.operational_rows}
           appendableInvoices={operationalBilling.appendable_invoices}
+          initialSelection={invoiceSelection}
           open={operationalInvoiceOpen}
-          onOpenChange={setOperationalInvoiceOpen}
+          onOpenChange={(open) => {
+            setOperationalInvoiceOpen(open);
+            if (!open) setInvoiceSelection(undefined);
+          }}
         />
       ) : null}
     </div>

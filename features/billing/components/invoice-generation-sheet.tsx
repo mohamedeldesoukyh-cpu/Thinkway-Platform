@@ -26,6 +26,7 @@ import {
   createInvoiceFromLinesAction,
   type BillingActionState,
 } from "@/features/billing/actions";
+import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import type { AppendableInvoiceOption } from "@/features/billing/types";
 import { formatBillingMoney, formatBillingMoneyCompact } from "@/features/billing/utils";
 import {
@@ -33,6 +34,18 @@ import {
   isOperationalRowInvoiceEligible,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
+import {
+  buildInvoiceSelectionBatch,
+  countSelection,
+  createEmptySelection,
+  getRowSelectionStatus,
+  isRowEffectivelySelected,
+  payloadToSelection,
+  selectionToPayload,
+  toggleOperationalRowSelection,
+  type OperationalSelectionPayload,
+  type OperationalSelectionState,
+} from "@/lib/billing/operational-selection";
 
 type InvoiceGenerationSheetProps = {
   campaignId: string;
@@ -48,11 +61,7 @@ type InvoiceGenerationSheetProps = {
   appendableInvoices: AppendableInvoiceOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialSelection?: {
-    line_ids?: string[];
-    deliverable_ids?: string[];
-    post_ids?: string[];
-  };
+  initialSelection?: OperationalSelectionPayload;
 };
 
 export function InvoiceGenerationSheet({
@@ -65,29 +74,44 @@ export function InvoiceGenerationSheet({
   onOpenChange,
   initialSelection,
 }: InvoiceGenerationSheetProps) {
-  const [selected, setSelected] = useState<{
-    line_ids: Set<string>;
-    deliverable_ids: Set<string>;
-    post_ids: Set<string>;
-  }>({ line_ids: new Set(), deliverable_ids: new Set(), post_ids: new Set() });
+  const [selected, setSelected] = useState<OperationalSelectionState>(createEmptySelection());
   const [invoiceMode, setInvoiceMode] = useState<"new" | "append">("new");
   const [existingInvoiceId, setExistingInvoiceId] = useState("");
 
+  const appendableOptions = useMemo(
+    () =>
+      appendableInvoices.filter(
+        (invoice) =>
+          !invoice.is_locked &&
+          invoice.status !== "void" &&
+          invoice.status !== "paid" &&
+          invoice.status !== "cancelled"
+      ),
+    [appendableInvoices]
+  );
+
   useEffect(() => {
     if (!open) {
-      setSelected({ line_ids: new Set(), deliverable_ids: new Set(), post_ids: new Set() });
+      setSelected(createEmptySelection());
       setInvoiceMode("new");
       setExistingInvoiceId("");
       return;
     }
+
     if (initialSelection) {
-      setSelected({
-        line_ids: new Set(initialSelection.line_ids ?? []),
-        deliverable_ids: new Set(initialSelection.deliverable_ids ?? []),
-        post_ids: new Set(initialSelection.post_ids ?? []),
-      });
+      setSelected(payloadToSelection(initialSelection));
+      buildInvoiceSelectionBatch(payloadToSelection(initialSelection), operationalRows);
     }
-  }, [open, initialSelection]);
+
+    if (appendableOptions.length > 0) {
+      if (process.env.NODE_ENV === "development") {
+        console.debug("[append-to-existing] appendable invoices available for selection", {
+          count: appendableOptions.length,
+          invoiceIds: appendableOptions.map((invoice) => invoice.id),
+        });
+      }
+    }
+  }, [open, initialSelection, appendableOptions, operationalRows]);
 
   const eligibleLeaves = useMemo(() => {
     return flattenOperationalLeaves(operationalRows).filter((row) =>
@@ -96,15 +120,10 @@ export function InvoiceGenerationSheet({
   }, [operationalRows]);
 
   const selectedTotal = useMemo(() => {
-    const leaves = flattenOperationalLeaves(operationalRows);
-    return leaves
-      .filter((row) => {
-        if (row.kind === "assignment") return selected.line_ids.has(row.id);
-        if (row.kind === "deliverable_group") return selected.deliverable_ids.has(row.id);
-        return selected.post_ids.has(row.id);
-      })
+    return eligibleLeaves
+      .filter((row) => isRowEffectivelySelected(row, selected, operationalRows))
       .reduce((sum, row) => sum + row.remaining_amount, 0);
-  }, [operationalRows, selected]);
+  }, [eligibleLeaves, operationalRows, selected]);
 
   const [state, formAction, pending] = useActionState(
     createInvoiceFromLinesAction,
@@ -121,36 +140,26 @@ export function InvoiceGenerationSheet({
     }
   }, [state, onOpenChange]);
 
-  function toggleRow(row: OperationalBillingRow) {
-    setSelected((prev) => {
-      const next = {
-        line_ids: new Set(prev.line_ids),
-        deliverable_ids: new Set(prev.deliverable_ids),
-        post_ids: new Set(prev.post_ids),
-      };
-      const set =
-        row.kind === "assignment"
-          ? next.line_ids
-          : row.kind === "deliverable_group"
-            ? next.deliverable_ids
-            : next.post_ids;
-      if (set.has(row.id)) set.delete(row.id);
-      else set.add(row.id);
-
-      if (process.env.NODE_ENV === "development") {
-        console.debug("[invoice-generation] selected operational row ids", {
-          line_ids: [...next.line_ids],
-          deliverable_ids: [...next.deliverable_ids],
-          post_ids: [...next.post_ids],
-        });
-      }
-
-      return next;
-    });
+  function toggleLeafRow(row: OperationalBillingRow) {
+    setSelected((prev) => toggleOperationalRowSelection(row, prev, operationalRows));
   }
 
-  const hasSelection =
-    selected.line_ids.size + selected.deliverable_ids.size + selected.post_ids.size > 0;
+  function handleInvoiceModeChange(mode: "new" | "append") {
+    setInvoiceMode(mode);
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[append-to-existing] invoice mode selected", {
+        mode,
+        appendableCount: appendableOptions.length,
+      });
+    }
+    if (mode === "new") {
+      setExistingInvoiceId("");
+    }
+  }
+
+  const payload = selectionToPayload(selected);
+  const hasSelection = countSelection(selected) > 0;
+  const requiresAppendChoice = appendableOptions.length > 0 && hasSelection;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -158,8 +167,8 @@ export function InvoiceGenerationSheet({
         <SheetHeader>
           <SheetTitle>Generate invoice</SheetTitle>
           <SheetDescription>
-            Select operational rows for partial billing. Create a new invoice or append to an
-            existing open invoice.
+            Selected operational rows are grouped into one invoice operation. Choose a new invoice
+            or append to an existing open invoice for this campaign.
           </SheetDescription>
         </SheetHeader>
 
@@ -169,15 +178,15 @@ export function InvoiceGenerationSheet({
           <SummaryRow label="Already invoiced" value={formatBillingMoneyCompact(rollup.already_invoiced, currency)} />
           <SummaryRow label="Remaining to invoice" value={formatBillingMoneyCompact(rollup.remaining_to_invoice, currency)} strong />
           {selectedTotal > 0 ? (
-            <SummaryRow label="This invoice" value={formatBillingMoney(selectedTotal, currency)} strong />
+            <SummaryRow label="This invoice batch" value={formatBillingMoney(selectedTotal, currency)} strong />
           ) : null}
         </div>
 
         <form action={formAction} className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           <input type="hidden" name="campaign_id" value={campaignId} />
-          <input type="hidden" name="line_ids" value={[...selected.line_ids].join(",")} />
-          <input type="hidden" name="deliverable_ids" value={[...selected.deliverable_ids].join(",")} />
-          <input type="hidden" name="post_ids" value={[...selected.post_ids].join(",")} />
+          <input type="hidden" name="line_ids" value={payload.line_ids.join(",")} />
+          <input type="hidden" name="deliverable_ids" value={payload.deliverable_ids.join(",")} />
+          <input type="hidden" name="post_ids" value={payload.post_ids.join(",")} />
           <input type="hidden" name="invoice_mode" value={invoiceMode} />
           <input type="hidden" name="existing_invoice_id" value={existingInvoiceId} />
 
@@ -188,33 +197,39 @@ export function InvoiceGenerationSheet({
                 first.
               </p>
             ) : (
-              eligibleLeaves.map((row) => (
-                <label
-                  key={`${row.kind}-${row.id}`}
-                  className="flex cursor-pointer items-start gap-3 rounded-2xl border p-2 hover:bg-muted/40"
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-1 size-4 rounded border-border"
-                    checked={
-                      row.kind === "assignment"
-                        ? selected.line_ids.has(row.id)
-                        : row.kind === "deliverable_group"
-                          ? selected.deliverable_ids.has(row.id)
-                          : selected.post_ids.has(row.id)
-                    }
-                    onChange={() => toggleRow(row)}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{row.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatBillingMoney(row.remaining_amount, currency)} uninvoiced
-                    </p>
-                  </div>
-                </label>
-              ))
+              eligibleLeaves.map((row) => {
+                const status = getRowSelectionStatus(row, selected);
+                const effectivelySelected =
+                  status === "checked" ||
+                  isRowEffectivelySelected(row, selected, operationalRows);
+
+                return (
+                  <label
+                    key={`${row.kind}-${row.id}`}
+                    className="flex cursor-pointer items-start gap-3 rounded-2xl border p-2 hover:bg-muted/40"
+                  >
+                    <OperationalSelectionCheckbox
+                      status={effectivelySelected ? "checked" : status}
+                      onToggle={() => toggleLeafRow(row)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{row.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatBillingMoney(row.remaining_amount, currency)} uninvoiced
+                      </p>
+                    </div>
+                  </label>
+                );
+              })
             )}
           </div>
+
+          {requiresAppendChoice ? (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+              Open invoices exist for this campaign. Choose whether to create a new invoice or append
+              selected rows to an existing one.
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label>Invoice target</Label>
@@ -224,7 +239,7 @@ export function InvoiceGenerationSheet({
                   type="radio"
                   name="invoice_mode_ui"
                   checked={invoiceMode === "new"}
-                  onChange={() => setInvoiceMode("new")}
+                  onChange={() => handleInvoiceModeChange("new")}
                 />
                 Create new invoice
               </label>
@@ -233,8 +248,8 @@ export function InvoiceGenerationSheet({
                   type="radio"
                   name="invoice_mode_ui"
                   checked={invoiceMode === "append"}
-                  disabled={appendableInvoices.length === 0}
-                  onChange={() => setInvoiceMode("append")}
+                  disabled={appendableOptions.length === 0}
+                  onChange={() => handleInvoiceModeChange("append")}
                 />
                 Add to existing invoice
               </label>
@@ -249,19 +264,26 @@ export function InvoiceGenerationSheet({
           ) : (
             <div className="space-y-2">
               <Label htmlFor="existing_invoice">Existing invoice</Label>
-              <Select value={existingInvoiceId} onValueChange={setExistingInvoiceId}>
-                <SelectTrigger id="existing_invoice">
-                  <SelectValue placeholder="Select open invoice" />
-                </SelectTrigger>
-                <SelectContent>
-                  {appendableInvoices.map((inv) => (
-                    <SelectItem key={inv.id} value={inv.id}>
-                      {inv.document_number} · {formatBillingMoney(inv.total, inv.currency)} ·{" "}
-                      {inv.status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {appendableOptions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No appendable invoices available. Locked, paid, cancelled, or exported invoices
+                  cannot receive additional rows.
+                </p>
+              ) : (
+                <Select value={existingInvoiceId} onValueChange={setExistingInvoiceId}>
+                  <SelectTrigger id="existing_invoice">
+                    <SelectValue placeholder="Select open invoice" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {appendableOptions.map((inv) => (
+                      <SelectItem key={inv.id} value={inv.id}>
+                        {inv.document_number} · {formatBillingMoney(inv.total, inv.currency)} ·{" "}
+                        {inv.status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
 
@@ -271,7 +293,14 @@ export function InvoiceGenerationSheet({
           </div>
 
           <SheetFooter className="px-0">
-            <Button type="submit" disabled={pending || !hasSelection}>
+            <Button
+              type="submit"
+              disabled={
+                pending ||
+                !hasSelection ||
+                (invoiceMode === "append" && !existingInvoiceId)
+              }
+            >
               {invoiceMode === "append" ? "Append to invoice" : "Create invoice"}
             </Button>
           </SheetFooter>

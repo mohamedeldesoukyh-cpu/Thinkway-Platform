@@ -13,23 +13,28 @@ import {
 } from "@/features/billing/actions";
 import { DeliverableBillingStatusBadge } from "@/features/billing/components/deliverable-billing-status-badge";
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
+import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import type { CampaignOperationalBillingDetail } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 import {
-  flattenOperationalLeaves,
   isOperationalRowActionEligible,
+  isOperationalRowInvoiceEligible,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
+import {
+  buildInvoiceSelectionBatch,
+  countSelection,
+  createEmptySelection,
+  getRowSelectionStatus,
+  selectionToPayload,
+  toggleOperationalRowSelection,
+  type OperationalSelectionPayload,
+  type OperationalSelectionState,
+} from "@/lib/billing/operational-selection";
 
 type BillingCampaignDrilldownProps = {
   detail: CampaignOperationalBillingDetail;
-  onInvoice?: () => void;
-};
-
-type SelectionState = {
-  line_ids: Set<string>;
-  deliverable_ids: Set<string>;
-  post_ids: Set<string>;
+  onInvoice?: (selection: OperationalSelectionPayload) => void;
 };
 
 export function BillingCampaignDrilldown({
@@ -37,11 +42,7 @@ export function BillingCampaignDrilldown({
   onInvoice,
 }: BillingCampaignDrilldownProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [selection, setSelection] = useState<SelectionState>({
-    line_ids: new Set(),
-    deliverable_ids: new Set(),
-    post_ids: new Set(),
-  });
+  const [selection, setSelection] = useState<OperationalSelectionState>(createEmptySelection());
 
   const [approveState, approveAction, approvePending] = useActionState(
     bulkApproveOperationalBillingAction,
@@ -60,10 +61,9 @@ export function BillingCampaignDrilldown({
     }
   }, [approveState, moveState]);
 
-  const selectedCount =
-    selection.line_ids.size + selection.deliverable_ids.size + selection.post_ids.size;
-
+  const selectedCount = countSelection(selection);
   const rollup = detail.rollup;
+  const rootRows = detail.operational_rows;
 
   function toggleExpanded(id: string) {
     setExpanded((prev) => {
@@ -75,48 +75,26 @@ export function BillingCampaignDrilldown({
   }
 
   function toggleRow(row: OperationalBillingRow) {
-    setSelection((prev) => {
-      const next = {
-        line_ids: new Set(prev.line_ids),
-        deliverable_ids: new Set(prev.deliverable_ids),
-        post_ids: new Set(prev.post_ids),
-      };
-      const set =
-        row.kind === "assignment"
-          ? next.line_ids
-          : row.kind === "deliverable_group"
-            ? next.deliverable_ids
-            : next.post_ids;
-      if (set.has(row.id)) set.delete(row.id);
-      else set.add(row.id);
-
-      if (process.env.NODE_ENV === "development") {
-        console.debug("[billing-drilldown] selection toggled", {
-          kind: row.kind,
-          id: row.id,
-          selected: set.has(row.id),
-        });
-      }
-
-      return next;
-    });
+    setSelection((prev) =>
+      toggleOperationalRowSelection(row, prev, rootRows)
+    );
   }
 
-  function isSelected(row: OperationalBillingRow): boolean {
-    if (row.kind === "assignment") return selection.line_ids.has(row.id);
-    if (row.kind === "deliverable_group") return selection.deliverable_ids.has(row.id);
-    return selection.post_ids.has(row.id);
-  }
-
-  const hiddenFormFields = useMemo(
-    () => ({
+  const hiddenFormFields = useMemo(() => {
+    const payload = selectionToPayload(selection);
+    return {
       campaign_id: detail.campaign_header_id,
-      line_ids: [...selection.line_ids].join(","),
-      deliverable_ids: [...selection.deliverable_ids].join(","),
-      post_ids: [...selection.post_ids].join(","),
-    }),
-    [detail.campaign_header_id, selection]
-  );
+      line_ids: payload.line_ids.join(","),
+      deliverable_ids: payload.deliverable_ids.join(","),
+      post_ids: payload.post_ids.join(","),
+    };
+  }, [detail.campaign_header_id, selection]);
+
+  function handleInvoiceSelected() {
+    if (!onInvoice || selectedCount === 0) return;
+    const batch = buildInvoiceSelectionBatch(selection, rootRows);
+    onInvoice(batch);
+  }
 
   return (
     <div className="space-y-3 border-t p-4">
@@ -173,7 +151,7 @@ export function BillingCampaignDrilldown({
             </Button>
           </form>
           {onInvoice ? (
-            <Button type="button" size="sm" onClick={onInvoice} disabled={selectedCount === 0}>
+            <Button type="button" size="sm" onClick={handleInvoiceSelected} disabled={selectedCount === 0}>
               Invoice selected
             </Button>
           ) : null}
@@ -181,15 +159,16 @@ export function BillingCampaignDrilldown({
       </div>
 
       <div className="space-y-1">
-        {detail.operational_rows.map((assignment) => (
+        {rootRows.map((assignment) => (
           <OperationalRowTree
             key={assignment.id}
             row={assignment}
             depth={0}
             currency={detail.currency_code}
+            rootRows={rootRows}
+            selection={selection}
             expanded={expanded}
             onToggleExpand={toggleExpanded}
-            isSelected={isSelected}
             onToggleSelect={toggleRow}
           />
         ))}
@@ -202,22 +181,26 @@ function OperationalRowTree({
   row,
   depth,
   currency,
+  rootRows,
+  selection,
   expanded,
   onToggleExpand,
-  isSelected,
   onToggleSelect,
 }: {
   row: OperationalBillingRow;
   depth: number;
   currency: string;
+  rootRows: OperationalBillingRow[];
+  selection: OperationalSelectionState;
   expanded: Set<string>;
   onToggleExpand: (id: string) => void;
-  isSelected: (row: OperationalBillingRow) => boolean;
   onToggleSelect: (row: OperationalBillingRow) => void;
 }) {
   const hasChildren = row.children.length > 0;
   const isOpen = expanded.has(row.id);
-  const eligible = isOperationalRowActionEligible(row);
+  const eligible =
+    isOperationalRowActionEligible(row) || isOperationalRowInvoiceEligible(row);
+  const selectionStatus = getRowSelectionStatus(row, selection);
   const indent = depth * 16;
 
   return (
@@ -231,6 +214,7 @@ function OperationalRowTree({
             type="button"
             className="rounded p-0.5 hover:bg-muted"
             onClick={() => onToggleExpand(row.id)}
+            aria-expanded={isOpen}
           >
             {isOpen ? (
               <ChevronDownIcon className="size-3.5" />
@@ -241,12 +225,11 @@ function OperationalRowTree({
         ) : (
           <span className="w-4" />
         )}
-        <input
-          type="checkbox"
-          className="size-4 rounded border-border"
-          checked={isSelected(row)}
-          onChange={() => onToggleSelect(row)}
-          disabled={!eligible}
+        <OperationalSelectionCheckbox
+          status={selectionStatus}
+          disabled={!eligible && selectionStatus === "unchecked"}
+          onToggle={() => onToggleSelect(row)}
+          ariaLabel={`Select ${row.label}`}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -281,9 +264,10 @@ function OperationalRowTree({
               row={child}
               depth={depth + 1}
               currency={currency}
+              rootRows={rootRows}
+              selection={selection}
               expanded={expanded}
               onToggleExpand={onToggleExpand}
-              isSelected={isSelected}
               onToggleSelect={onToggleSelect}
             />
           ))

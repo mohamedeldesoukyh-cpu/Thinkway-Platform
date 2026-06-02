@@ -544,6 +544,13 @@ export async function createInvoiceFromLinesAction(
   }
 
   if (process.env.NODE_ENV === "development") {
+    console.debug("[billing-invoice] invoice grouping batch", {
+      campaignId: parsed.data.campaign_id,
+      lineIds,
+      deliverableIds: requestedDeliverableIds,
+      postIds: requestedPostIds,
+      mode: parsed.data.invoice_mode,
+    });
     console.debug("[billing-invoice] selected operational row ids", {
       lineIds,
       deliverableIds,
