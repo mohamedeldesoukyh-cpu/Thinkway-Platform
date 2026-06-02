@@ -19,6 +19,7 @@ import {
 } from "@/features/campaigns/line-assignment";
 
 import { AGING_BUCKET_LABELS } from "./constants";
+import { loadBillingCampaignQueue, loadCampaignOperationalBilling } from "@/lib/billing/operational-billing-query";
 import {
   computeAgingBucket,
   formatMarginPercent,
@@ -29,7 +30,7 @@ import {
   type BillingKpiSummary,
   type BillingLineRow,
   type CampaignLineBillingStatus,
-  type FinancialApprovalRow,
+  type CampaignOperationalBillingDetail,
   type InvoiceWorkspace,
   type VendorPaymentBatchRow,
 } from "./types";
@@ -413,6 +414,8 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     assignment_count: 0,
   }));
 
+  const { campaigns: campaign_queue } = await loadBillingCampaignQueue(supabase);
+
   return {
     kpis,
     lines,
@@ -427,6 +430,7 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     ),
     vendor_batches,
     pending_approvals,
+    campaign_queue,
   };
 }
 
@@ -764,4 +768,98 @@ export async function getCampaignBillingGroups(
       po_consumed: poConsumed,
     } satisfies AssignmentBillingGroup;
   });
+}
+
+export async function getCampaignOperationalBillingDetail(
+  campaignId: string
+): Promise<CampaignOperationalBillingDetail | null> {
+  const { supabase } = await requireUser();
+
+  const { data: header, error: headerError } = await supabase
+    .from("campaign_headers")
+    .select("id, currency_code, client_id")
+    .eq("id", campaignId)
+    .maybeSingle();
+
+  if (headerError || !header) return null;
+
+  const { groups, operational_rows, error } = await loadCampaignOperationalBilling(
+    supabase,
+    campaignId
+  );
+
+  if (error) {
+    throw new Error(error);
+  }
+
+  const { aggregateRollupFromLeaves, flattenOperationalLeaves } = await import(
+    "@/lib/billing/operational-billing-rows"
+  );
+  const { isInvoiceAppendable } = await import("@/lib/billing/campaign-billing-queue");
+
+  const leaves = flattenOperationalLeaves(operational_rows);
+  const rollup = aggregateRollupFromLeaves(leaves);
+
+  const { data: invoiceRows } = await supabase
+    .from("invoices")
+    .select(
+      "id, document_number, status, regeneration_status, total, currency, client_id, campaign_header_id"
+    )
+    .eq("campaign_header_id", campaignId)
+    .not("status", "eq", "void");
+
+  const appendable_invoices = (invoiceRows ?? [])
+    .map((inv) => {
+      const row = inv as unknown as {
+        id: string;
+        document_number: string;
+        status: string;
+        regeneration_status: string | null;
+        total: number;
+        currency: string;
+        client_id: string;
+        campaign_header_id: string | null;
+      };
+      const appendable = isInvoiceAppendable({
+        status: row.status,
+        regeneration_status: row.regeneration_status,
+        currency: row.currency,
+        client_id: row.client_id,
+        campaign_header_id: row.campaign_header_id,
+        target_currency: header.currency_code,
+        target_client_id: header.client_id,
+        target_campaign_id: campaignId,
+      });
+      if (!appendable) return null;
+      return {
+        id: row.id,
+        document_number: row.document_number,
+        status: row.status,
+        regeneration_status: row.regeneration_status ?? "active",
+        total: Number(row.total),
+        currency: row.currency,
+        client_id: row.client_id,
+        campaign_header_id: row.campaign_header_id,
+        is_locked: row.regeneration_status === "pending_regeneration",
+      };
+    })
+    .filter(Boolean) as CampaignOperationalBillingDetail["appendable_invoices"];
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[billing-drilldown] loaded campaign detail", {
+      campaignId,
+      assignments: operational_rows.length,
+      appendableInvoices: appendable_invoices.length,
+      rollup,
+    });
+  }
+
+  return {
+    campaign_header_id: campaignId,
+    currency_code: header.currency_code,
+    groups,
+    operational_rows,
+    rollup,
+    appendable_invoices,
+  };
 }

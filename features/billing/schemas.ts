@@ -21,11 +21,32 @@ export const moveLineToBillingSchema = z.object({
   campaign_id: z.string().uuid(),
 });
 
+const csvUuidList = z
+  .string()
+  .optional()
+  .or(z.literal(""))
+  .transform((v) =>
+    (v ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+
+export const bulkOperationalBillingSchema = z.object({
+  campaign_id: z.string().uuid(),
+  line_ids: csvUuidList,
+  deliverable_ids: csvUuidList,
+  post_ids: csvUuidList,
+});
+
 export const createInvoiceFromLinesSchema = z
   .object({
     campaign_id: z.string().uuid(),
     line_ids: z.string().optional().or(z.literal("")),
     deliverable_ids: z.string().optional().or(z.literal("")),
+    post_ids: z.string().optional().or(z.literal("")),
+    invoice_mode: z.enum(["new", "append"]).default("new"),
+    existing_invoice_id: z.string().uuid().optional().or(z.literal("")),
     due_date: z
       .string()
       .trim()
@@ -38,9 +59,14 @@ export const createInvoiceFromLinesSchema = z
     (data) => {
       const lines = (data.line_ids ?? "").split(",").filter(Boolean);
       const deliverables = (data.deliverable_ids ?? "").split(",").filter(Boolean);
-      return lines.length > 0 || deliverables.length > 0;
+      const posts = (data.post_ids ?? "").split(",").filter(Boolean);
+      return lines.length > 0 || deliverables.length > 0 || posts.length > 0;
     },
-    { message: "Select at least one deliverable or assignment." }
+    { message: "Select at least one operational row." }
+  )
+  .refine(
+    (data) => data.invoice_mode !== "append" || Boolean(data.existing_invoice_id?.trim()),
+    { message: "Select an invoice to append to.", path: ["existing_invoice_id"] }
   );
 
 export const recordCollectionPaymentSchema = z.object({

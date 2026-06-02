@@ -18,8 +18,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { DeliverableBillingStatusBadge } from "@/features/billing/components/deliverable-billing-status-badge";
-import {
-  createInvoiceFromLinesAction,
+import { createInvoiceFromLinesAction,
   type BillingActionState,
 } from "@/features/billing/actions";
 import type { AssignmentBillingGroup } from "@/features/billing/types";
@@ -33,8 +32,17 @@ type CreateInvoiceSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSelectedIds?: string[];
+  appendableInvoices?: import("@/features/billing/types").AppendableInvoiceOption[];
+  rollup?: {
+    total_campaign_amount: number;
+    achieved_revenue: number;
+    already_invoiced: number;
+    remaining_to_invoice: number;
+    unachieved_revenue: number;
+  };
 };
 
+/** @deprecated Prefer InvoiceGenerationSheet for finance-first partial billing. */
 export function CreateInvoiceSheet({
   campaignId,
   groups,
@@ -161,6 +169,9 @@ export function CreateInvoiceSheet({
 
         <form action={formAction} className="flex min-h-0 flex-1 flex-col">
           <input type="hidden" name="campaign_id" value={campaignId} />
+          <input type="hidden" name="post_ids" value="" />
+          <input type="hidden" name="invoice_mode" value="new" />
+          <input type="hidden" name="existing_invoice_id" value="" />
           <input
             type="hidden"
             name="deliverable_ids"

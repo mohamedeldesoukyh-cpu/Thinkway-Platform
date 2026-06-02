@@ -22,9 +22,14 @@ import {
   unlockDeliverablesForInvoice,
 } from "@/lib/billing/sync-deliverable-billing";
 import { syncDeliverableCollectionsForInvoice } from "@/lib/billing/sync-deliverable-collections";
+import {
+  resolveOperationalInvoiceTargets,
+  validateAppendableInvoice,
+} from "@/lib/billing/resolve-operational-invoice";
 
 import {
   approveLineForBillingSchema,
+  bulkOperationalBillingSchema,
   closeBillingLineSchema,
   createInvoiceFromLinesSchema,
   decideFinancialApprovalSchema,
@@ -36,6 +41,7 @@ import {
   ungenerateInvoiceSchema,
 } from "./schemas";
 import { requirePermission } from "@/lib/auth/permissions";
+import { getCampaignOperationalBillingDetail } from "@/features/billing/queries";
 
 export type BillingActionState = {
   ok: boolean;
@@ -344,6 +350,126 @@ export async function moveLineToBillingAction(
   return { ok: true, message: "Line moved to billing queue." };
 }
 
+export async function bulkApproveOperationalBillingAction(
+  _prev: BillingActionState,
+  formData: FormData
+): Promise<BillingActionState> {
+  const parsed = bulkOperationalBillingSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid bulk approve request." };
+  }
+
+  const uniqueLines = new Set<string>(parsed.data.line_ids);
+  const { supabase } = await requireAuthUser();
+
+  if (parsed.data.deliverable_ids.length > 0) {
+    const { data } = await supabase
+      .from("assignment_deliverables")
+      .select("campaign_line_id")
+      .in("id", parsed.data.deliverable_ids);
+    for (const row of data ?? []) uniqueLines.add(row.campaign_line_id);
+  }
+  if (parsed.data.post_ids.length > 0) {
+    const { data } = await supabase
+      .from("assignment_post_schedule")
+      .select("campaign_line_id")
+      .in("id", parsed.data.post_ids);
+    for (const row of data ?? []) uniqueLines.add(row.campaign_line_id);
+  }
+
+  const lineIds = [...uniqueLines];
+  if (lineIds.length === 0) {
+    return { ok: false, message: "Select at least one assignment to approve." };
+  }
+
+  let approved = 0;
+  let skipped = 0;
+
+  for (const lineId of lineIds) {
+    const fd = new FormData();
+    fd.set("line_id", lineId);
+    fd.set("campaign_id", parsed.data.campaign_id);
+    const result = await approveLineForBillingAction({ ok: false }, fd);
+    if (result.ok) approved += 1;
+    else skipped += 1;
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[bulk-billing] approve", { approved, skipped, lineIds });
+  }
+
+  revalidateBilling({ campaignId: parsed.data.campaign_id });
+  return {
+    ok: approved > 0,
+    message:
+      approved > 0
+        ? `Approved ${approved} assignment${approved === 1 ? "" : "s"}${skipped ? ` (${skipped} skipped)` : ""}.`
+        : "No draft assignments were approved.",
+  };
+}
+
+export async function bulkMoveOperationalBillingAction(
+  _prev: BillingActionState,
+  formData: FormData
+): Promise<BillingActionState> {
+  const parsed = bulkOperationalBillingSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid bulk move request." };
+  }
+
+  const uniqueLines = new Set<string>(parsed.data.line_ids);
+
+  const { supabase } = await requireAuthUser();
+  if (parsed.data.deliverable_ids.length > 0) {
+    const { data } = await supabase
+      .from("assignment_deliverables")
+      .select("campaign_line_id")
+      .in("id", parsed.data.deliverable_ids);
+    for (const row of data ?? []) uniqueLines.add(row.campaign_line_id);
+  }
+  if (parsed.data.post_ids.length > 0) {
+    const { data } = await supabase
+      .from("assignment_post_schedule")
+      .select("campaign_line_id")
+      .in("id", parsed.data.post_ids);
+    for (const row of data ?? []) uniqueLines.add(row.campaign_line_id);
+  }
+
+  const lineIds = [...uniqueLines];
+  if (lineIds.length === 0) {
+    return { ok: false, message: "Select at least one assignment to move." };
+  }
+
+  let moved = 0;
+  let skipped = 0;
+
+  for (const lineId of lineIds) {
+    const fd = new FormData();
+    fd.set("line_id", lineId);
+    fd.set("campaign_id", parsed.data.campaign_id);
+    const result = await moveLineToBillingAction({ ok: false }, fd);
+    if (result.ok) moved += 1;
+    else skipped += 1;
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[bulk-billing] move to billing", { moved, skipped, lineIds });
+  }
+
+  revalidateBilling({ campaignId: parsed.data.campaign_id });
+  return {
+    ok: moved > 0,
+    message:
+      moved > 0
+        ? `Moved ${moved} assignment${moved === 1 ? "" : "s"} to billing${skipped ? ` (${skipped} skipped)` : ""}.`
+        : "No assignments were moved to billing.",
+  };
+}
+
 export async function createInvoiceFromLinesAction(
   _prev: BillingActionState,
   formData: FormData
@@ -367,6 +493,10 @@ export async function createInvoiceFromLinesAction(
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  const requestedPostIds = (parsed.data.post_ids ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const { supabase, user, error: authError } = await requireAuthUser();
   if (authError || !user) {
@@ -383,19 +513,24 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: headerError?.message ?? "Campaign not found." };
   }
 
-  const { deliverableIds, error: resolveError } = await resolveInvoiceDeliverableIds(
-    supabase,
-    parsed.data.campaign_id,
-    requestedDeliverableIds,
-    lineIds
-  );
+  const { deliverableIds, postIds, error: resolveError } =
+    await resolveOperationalInvoiceTargets(supabase, parsed.data.campaign_id, {
+      lineIds,
+      deliverableIds: requestedDeliverableIds,
+      postIds: requestedPostIds,
+    });
 
   if (resolveError) {
     return { ok: false, message: resolveError };
   }
 
-  if (deliverableIds.length === 0) {
-    return { ok: false, message: "Select at least one billable deliverable." };
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[billing-invoice] selected operational row ids", {
+      lineIds,
+      deliverableIds,
+      postIds,
+      mode: parsed.data.invoice_mode,
+    });
   }
 
   const { deliverables, error: deliverablesError } =
@@ -410,65 +545,103 @@ export async function createInvoiceFromLinesAction(
   }
 
   const validationError = validateDeliverablesForInvoice(deliverables);
-  if (validationError) {
+  if (validationError && postIds.length === 0) {
     return { ok: false, message: validationError };
   }
 
-  const { countryCode } = await resolveClientBillingVatRate(
-    supabase,
-    header.client_id
-  );
+  let invoiceId: string;
+  let invoiceDocumentNumber: string;
 
-  const { data: invoice, error: invoiceError } = await supabase
-    .from("invoices")
-    .insert({
-      client_id: header.client_id,
-      campaign_id: header.id,
-      campaign_header_id: header.id,
-      status: "sent",
-      due_date: parsed.data.due_date,
+  if (parsed.data.invoice_mode === "append") {
+    const existingId = parsed.data.existing_invoice_id?.trim();
+    if (!existingId) {
+      return { ok: false, message: "Select an invoice to append to." };
+    }
+
+    const appendCheck = await validateAppendableInvoice(supabase, existingId, {
+      campaignId: header.id,
+      clientId: header.client_id,
       currency: header.currency_code,
-      notes: emptyToNull(parsed.data.notes),
-      billing_country_code: countryCode,
-      created_by: user.id,
-    })
-    .select("id, document_number")
-    .single();
+    });
 
-  if (invoiceError || !invoice) {
-    return { ok: false, message: invoiceError?.message ?? "Invoice creation failed." };
+    if (!appendCheck.ok) {
+      return { ok: false, message: appendCheck.error };
+    }
+
+    invoiceId = appendCheck.invoice.id;
+    invoiceDocumentNumber = appendCheck.invoice.document_number;
+
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[billing-invoice] append action", { invoiceId, postIds, deliverableIds });
+    }
+  } else {
+    const { countryCode } = await resolveClientBillingVatRate(
+      supabase,
+      header.client_id
+    );
+
+    const { data: invoice, error: invoiceError } = await supabase
+      .from("invoices")
+      .insert({
+        client_id: header.client_id,
+        campaign_id: header.id,
+        campaign_header_id: header.id,
+        status: "sent",
+        due_date: parsed.data.due_date,
+        currency: header.currency_code,
+        notes: emptyToNull(parsed.data.notes),
+        billing_country_code: countryCode,
+        created_by: user.id,
+      })
+      .select("id, document_number")
+      .single();
+
+    if (invoiceError || !invoice) {
+      return { ok: false, message: invoiceError?.message ?? "Invoice creation failed." };
+    }
+
+    invoiceId = invoice.id;
+    invoiceDocumentNumber = invoice.document_number;
+
+    const approvalError = await createFinancialApprovalChain(supabase, user.id, {
+      entity_type: "invoice",
+      entity_id: invoiceId,
+      title: `Invoice ${invoiceDocumentNumber}`,
+      description: `Finance approval for ${header.name}`,
+      stages: ["finance", "cfo_admin"],
+    });
+
+    if (approvalError && process.env.NODE_ENV === "development") {
+      console.debug("[billing-invoice] approval chain skipped", approvalError);
+    }
   }
 
   const lockResult = await lockDeliverablesOnInvoice(
     supabase,
-    invoice.id,
+    invoiceId,
     header.id,
     deliverables
   );
 
   if (lockResult.error) {
+    if (parsed.data.invoice_mode === "new") {
+      await supabase.from("invoices").delete().eq("id", invoiceId);
+    }
     return { ok: false, message: lockResult.error };
   }
 
-  const approvalError = await createFinancialApprovalChain(supabase, user.id, {
-    entity_type: "invoice",
-    entity_id: invoice.id,
-    title: `Invoice ${invoice.document_number}`,
-    description: `Finance approval for ${header.name}`,
-    stages: ["finance", "cfo_admin"],
-  });
-
   revalidateBilling({
     campaignId: parsed.data.campaign_id,
-    invoiceId: invoice.id,
+    invoiceId,
   });
+
+  const actionLabel =
+    parsed.data.invoice_mode === "append" ? "Appended to" : "Created";
 
   return {
     ok: true,
-    message: approvalError
-      ? `Invoice ${invoice.document_number} created for ${deliverables.length} deliverable(s). Approval workflow could not be recorded.`
-      : `Invoice ${invoice.document_number} created for ${deliverables.length} deliverable(s).`,
-    invoiceId: invoice.id,
+    message: `${actionLabel} invoice ${invoiceDocumentNumber} for ${deliverables.length} deliverable(s)${postIds.length ? ` and ${postIds.length} post row(s)` : ""}.`,
+    invoiceId,
   };
 }
 
@@ -1005,4 +1178,20 @@ export async function regenerateInvoiceAction(
     ok: true,
     message: `Invoice ${invoice.document_number} regenerated (v${newVersion}). Same invoice number preserved.`,
   };
+}
+
+export async function loadCampaignBillingDetailAction(campaignId: string) {
+  try {
+    const detail = await getCampaignOperationalBillingDetail(campaignId);
+    if (process.env.NODE_ENV === "development" && detail) {
+      console.debug("[billing-drilldown] expansion loaded", {
+        campaignId,
+        rows: detail.operational_rows.length,
+      });
+    }
+    return { ok: true as const, detail };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to load drill-down.";
+    return { ok: false as const, message };
+  }
 }

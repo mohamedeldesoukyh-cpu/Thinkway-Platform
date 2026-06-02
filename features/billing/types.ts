@@ -235,6 +235,53 @@ export type BillingDashboard = {
   aging: { bucket: AgingBucket; label: string; count: number; amount: number }[];
   vendor_batches: VendorPaymentBatchRow[];
   pending_approvals: FinancialApprovalRow[];
+  campaign_queue: CampaignBillingQueueRow[];
+};
+
+export type CampaignBillingQueueRow = {
+  campaign_header_id: string;
+  campaign_document_number: string;
+  campaign_name: string;
+  client_id: string;
+  client_name: string;
+  brand_name: string | null;
+  legal_entity_name: string | null;
+  currency_code: string;
+  billing_status: CampaignLineBillingStatus;
+  total_campaign_amount: number;
+  achieved_revenue: number;
+  already_invoiced: number;
+  remaining_to_invoice: number;
+  unachieved_revenue: number;
+  assignment_count: number;
+  operational_row_count: number;
+};
+
+export type AppendableInvoiceOption = {
+  id: string;
+  document_number: string;
+  status: string;
+  regeneration_status: string;
+  total: number;
+  currency: string;
+  client_id: string;
+  campaign_header_id: string | null;
+  is_locked: boolean;
+};
+
+export type CampaignOperationalBillingDetail = {
+  campaign_header_id: string;
+  currency_code: string;
+  groups: AssignmentBillingGroup[];
+  operational_rows: import("@/lib/billing/operational-billing-rows").OperationalBillingRow[];
+  rollup: {
+    total_campaign_amount: number;
+    achieved_revenue: number;
+    already_invoiced: number;
+    remaining_to_invoice: number;
+    unachieved_revenue: number;
+  };
+  appendable_invoices: AppendableInvoiceOption[];
 };
 
 export type BillingWorkspace = BillingDashboard;

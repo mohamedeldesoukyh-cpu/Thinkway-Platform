@@ -1,4 +1,5 @@
 import { METADATA_PLATFORM_KEY } from "./constants";
+import { formatCurrencyAmount } from "@/lib/finance/currency-format";
 
 export function getCampaignPlatform(
   metadata: Record<string, unknown> | null | undefined
@@ -19,11 +20,12 @@ export function formatPlatformLabel(platform: string | null): string {
 }
 
 export function formatMoney(amount: number, currency: string): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatCurrencyAmount(amount, currency, { decimals: 2 });
+}
+
+/** KPI / queue display — whole units with symbol prefix. */
+export function formatMoneyCompact(amount: number, currency: string): string {
+  return formatCurrencyAmount(amount, currency, { decimals: 0 });
 }
 
 export function formatPercent(value: number): string {
