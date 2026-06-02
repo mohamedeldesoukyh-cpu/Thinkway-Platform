@@ -12,11 +12,9 @@ import {
   type LineFinancialInput,
 } from "@/lib/analytics/metrics/financial";
 import { roundMoney } from "@/lib/analytics/aggregations/round";
-import {
-  isMissingColumnError,
-  resolveFactCountryCode,
-} from "@/lib/analytics/schema-safe";
-import { devLog } from "@/lib/dev-log";
+import { resolveFactCountryCode } from "@/lib/analytics/schema-safe";
+import { devLog } from "@/lib/platform/logger";
+import { safeSelect } from "@/lib/platform/schema-validation";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import type { CampaignAnalyticsFact } from "@/lib/analytics/types/metrics";
 import type { CampaignLineBillingStatus } from "@/features/billing/types";
@@ -105,35 +103,25 @@ const HEADER_SELECT_CANDIDATES = [
 ] as const;
 
 async function fetchCampaignHeaders(supabase: SupabaseClient): Promise<HeaderRow[]> {
-  let lastError: string | null = null;
-
-  for (const headerSelect of HEADER_SELECT_CANDIDATES) {
-    const result = await supabase
-      .from("campaign_headers")
-      .select(headerSelect)
-      .not("status", "eq", "cancelled")
-      .limit(500);
-
-    if (!result.error) {
-      if (lastError && process.env.NODE_ENV === "development") {
-        devLog("[analytics-schema] header select recovered after fallback", {
-          previousError: lastError,
-        });
-      }
-      return (result.data ?? []) as unknown as HeaderRow[];
+  const { data } = await safeSelect<HeaderRow[]>(
+    "analytics-campaign-headers",
+    HEADER_SELECT_CANDIDATES.map((select, index) => ({
+      select,
+      label: `candidate-${index}`,
+    })),
+    async (select) => {
+      const result = await supabase
+        .from("campaign_headers")
+        .select(select)
+        .not("status", "eq", "cancelled")
+        .limit(500);
+      return {
+        data: (result.data ?? []) as unknown as HeaderRow[],
+        error: result.error,
+      };
     }
-
-    lastError = result.error.message;
-    if (!isMissingColumnError(lastError)) {
-      throw new Error(lastError);
-    }
-
-    if (process.env.NODE_ENV === "development") {
-      devLog("[analytics-schema] header select fallback", { error: lastError });
-    }
-  }
-
-  throw new Error(lastError ?? "Failed to load campaign headers for analytics");
+  );
+  return data;
 }
 
 function passesDateRange(
@@ -301,7 +289,7 @@ export async function safeLoadAnalyticsFacts(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (process.env.NODE_ENV === "development") {
-        devLog("[analytics-fallback] safeLoadAnalyticsFacts failed", { message });
+        devLog("analytics-fallback", "safeLoadAnalyticsFacts failed", { message });
       }
       return emptyAnalyticsFactsSnapshot();
     }

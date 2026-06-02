@@ -47,3 +47,15 @@ export function invalidateAnalyticsCache(namespace?: string): void {
     }
   }
 }
+
+export function getAnalyticsCacheStats(): {
+  entries: number;
+  namespaces: string[];
+} {
+  const namespaces = new Set<string>();
+  for (const key of analyticsCache.keys()) {
+    const ns = key.split(":")[0] ?? key;
+    namespaces.add(ns);
+  }
+  return { entries: analyticsCache.size, namespaces: [...namespaces] };
+}

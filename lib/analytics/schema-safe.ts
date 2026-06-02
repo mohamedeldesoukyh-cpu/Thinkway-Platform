@@ -1,4 +1,6 @@
-import { devLog } from "@/lib/dev-log";
+import { devLog } from "@/lib/platform/logger";
+
+export { isMissingColumnError } from "@/lib/platform/schema-validation";
 
 /** Loose row shape from Supabase embeds — only read fields that may exist. */
 export type CountryCarrier = Record<string, unknown>;
@@ -93,14 +95,6 @@ export function pickColumnFallback<T>(...candidates: (T | null | undefined)[]): 
 
 /** @deprecated Use pickColumnFallback — alias for task naming. */
 export const hasColumnFallback = pickColumnFallback;
-
-export function isMissingColumnError(message: string): boolean {
-  return (
-    message.includes("does not exist") ||
-    message.includes("Could not find") ||
-    /column\s+[\w.]+\s+does not exist/i.test(message)
-  );
-}
 
 export function countryCodeForRollup(country: string | null | undefined): string {
   return safeDimensionValue(country, "Unknown").toUpperCase();

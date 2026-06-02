@@ -1,5 +1,5 @@
 import { emptyFinancialMetrics } from "@/lib/analytics/metrics/financial";
-import { devLog } from "@/lib/dev-log";
+import { devLog } from "@/lib/platform/logger";
 import type { CampaignAnalyticsFact } from "@/lib/analytics/types/metrics";
 
 export function emptyAnalyticsKpiMetrics() {

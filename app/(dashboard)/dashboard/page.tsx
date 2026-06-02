@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { AnalyticsResilienceBoundary } from "@/components/analytics/analytics-resilience-boundary";
+import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ExecutiveDashboardView } from "@/features/executive-dashboard/components/executive-dashboard-view";
 import {
@@ -53,9 +53,9 @@ export default async function ExecutiveDashboardPage({ searchParams }: PageProps
             </div>
           }
         >
-          <AnalyticsResilienceBoundary title="Analytics temporarily unavailable">
+          <PlatformErrorBoundary surface="executive">
             <ExecutiveDashboardView data={payload} filterOptions={filterOptions} />
-          </AnalyticsResilienceBoundary>
+          </PlatformErrorBoundary>
         </Suspense>
       ) : null}
     </DashboardShell>

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { InvoiceWorkspaceView } from "@/features/billing/components/invoice-workspace";
 import { getInvoiceWorkspace } from "@/features/billing/queries";
@@ -35,7 +36,9 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
           {errorMessage}
         </div>
       ) : invoice ? (
-        <InvoiceWorkspaceView invoice={invoice} />
+        <PlatformErrorBoundary surface="invoices">
+          <InvoiceWorkspaceView invoice={invoice} />
+        </PlatformErrorBoundary>
       ) : null}
     </DashboardShell>
   );

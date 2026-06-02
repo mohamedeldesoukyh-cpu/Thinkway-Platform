@@ -45,3 +45,7 @@ export function invalidatePlanningCache(namespace?: string): void {
     }
   }
 }
+
+export function getPlanningCacheStats(): { entries: number } {
+  return { entries: planningCache.size };
+}

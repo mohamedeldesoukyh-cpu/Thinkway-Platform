@@ -18,13 +18,8 @@ import {
   platformLabel,
 } from "@/features/campaigns/line-assignment";
 
-import {
-  mapFinancialMetricsToBillingKpis,
-  rollupGlobal,
-  safeLoadAnalyticsFacts,
-} from "@/lib/analytics";
-import { buildBillingKpisFromOperationalRows } from "@/lib/analytics/billing-kpi-fallback";
-import { devLog } from "@/lib/dev-log";
+import { resolveBillingKpis } from "@/lib/billing/kpi-enrichment";
+import { devLog } from "@/lib/platform/logger";
 import { AGING_BUCKET_LABELS } from "./constants";
 import { buildCampaignQueueFromBillingLines } from "@/lib/billing/campaign-billing-queue";
 import {
@@ -354,40 +349,29 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     po_over_consumed_count: poKpis.po_over_consumed_count,
   };
 
-  let kpis: BillingKpiSummary;
-  const analyticsSnapshot = await safeLoadAnalyticsFacts(supabase);
-
-  if (analyticsSnapshot.facts.length > 0) {
-    const globalMetrics = rollupGlobal(analyticsSnapshot.facts).metrics;
-    kpis = mapFinancialMetricsToBillingKpis(globalMetrics, kpiExtras);
-  } else {
-    if (process.env.NODE_ENV === "development") {
-      devLog("[analytics-fallback] billing KPIs from operational rows only");
-    }
-    kpis = buildBillingKpisFromOperationalRows({
-      lines: lines.map((l) => ({
-        revenue: l.revenue,
-        cost: l.cost,
-        gp: l.gp,
-        billing_status: l.billing_status,
-      })),
-      invoices: invoices.map((i) => ({
-        amount_paid: i.amount_paid,
-        outstanding: i.outstanding,
-      })),
-      unpaid_vendor_cost: (vendorCostResult.data ?? []).reduce(
-        (s, v) =>
-          s +
-          (["unpaid", "pending"].includes(
-            (v as { vendor_payment_status: string }).vendor_payment_status
-          )
-            ? Number((v as { agreed_fee: number }).agreed_fee)
-            : 0),
-        0
-      ),
-      extras: kpiExtras,
-    });
-  }
+  const { kpis } = await resolveBillingKpis(supabase, {
+    lines: lines.map((l) => ({
+      revenue: l.revenue,
+      cost: l.cost,
+      gp: l.gp,
+      billing_status: l.billing_status,
+    })),
+    invoices: invoices.map((i) => ({
+      amount_paid: i.amount_paid,
+      outstanding: i.outstanding,
+    })),
+    unpaid_vendor_cost: (vendorCostResult.data ?? []).reduce(
+      (s, v) =>
+        s +
+        (["unpaid", "pending"].includes(
+          (v as { vendor_payment_status: string }).vendor_payment_status
+        )
+          ? Number((v as { agreed_fee: number }).agreed_fee)
+          : 0),
+      0
+    ),
+    extras: kpiExtras,
+  });
 
   const pending_approvals: FinancialApprovalRow[] = (
     approvalsResult.data ?? []
@@ -431,12 +415,22 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     assignment_count: 0,
   }));
 
-  let { campaigns: campaign_queue } = await loadBillingCampaignQueue(supabase);
+  let campaign_queue: BillingDashboard["campaign_queue"] = [];
+  try {
+    const queueResult = await loadBillingCampaignQueue(supabase);
+    campaign_queue = queueResult.campaigns;
+  } catch (error) {
+    devLog("operational-isolation", "billing queue load failed — using line fallback", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   if (campaign_queue.length === 0 && lines.length > 0) {
     campaign_queue = buildCampaignQueueFromBillingLines(lines);
     if (process.env.NODE_ENV === "development") {
-      console.debug("[billing-queue] used lines fallback", { count: campaign_queue.length });
+      devLog("operational-isolation", "billing queue line fallback", {
+        count: campaign_queue.length,
+      });
     }
   }
 

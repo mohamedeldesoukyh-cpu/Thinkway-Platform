@@ -1,6 +1,2 @@
-/** Development-only logging — no-op in production builds. */
-export function devLog(...args: unknown[]): void {
-  if (process.env.NODE_ENV === "development") {
-    console.debug(...args);
-  }
-}
+/** @deprecated Import from `@/lib/platform/logger` — kept for backward compatibility. */
+export { devLog } from "@/lib/platform/logger";

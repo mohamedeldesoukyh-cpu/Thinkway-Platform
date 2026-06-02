@@ -9,7 +9,7 @@ import {
 import { getCampaignBillingGroups, getCampaignBillingLines, getCampaignOperationalBillingDetail } from "@/features/billing/queries";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { getCampaignPublications } from "@/features/campaigns/queries/publications";
-import { AnalyticsResilienceBoundary } from "@/components/analytics/analytics-resilience-boundary";
+import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
@@ -132,7 +132,7 @@ export default async function CampaignWorkspacePage({
           {errorMessage}
         </div>
       ) : workspace ? (
-        <AnalyticsResilienceBoundary title="Analytics temporarily unavailable">
+        <PlatformErrorBoundary surface="campaigns">
           <CampaignWorkspaceView
             workspace={workspace}
             accountManagers={
@@ -147,7 +147,7 @@ export default async function CampaignWorkspacePage({
             publicationsLoadError={publicationsLoadError}
             currencyOptions={currencyOptions}
           />
-        </AnalyticsResilienceBoundary>
+        </PlatformErrorBoundary>
       ) : null}
     </DashboardShell>
   );

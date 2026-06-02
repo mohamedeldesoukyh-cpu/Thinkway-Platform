@@ -51,6 +51,7 @@ const navItems: NavItem[] = [
       { href: "/finance/po-tracker", label: "PO tracker" },
       { href: "/finance/exchange-rates", label: "Exchange rates" },
       { href: "/finance/periods", label: "Period management" },
+      { href: "/system/health", label: "System health" },
     ],
   },
   { href: "/vendors", label: "Vendors", icon: UsersIcon },
