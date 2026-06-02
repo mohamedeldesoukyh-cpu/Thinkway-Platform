@@ -1,20 +1,13 @@
 "use client";
 
-import { Fragment, useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -23,7 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BillingCampaignDrilldown } from "@/features/billing/components/billing-campaign-drilldown";
+import { BillingCampaignReviewPanel } from "@/features/billing/components/billing-campaign-review-panel";
+import { BillingFinanceFilterBar } from "@/features/billing/components/billing-finance-filter-bar";
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
 import { loadCampaignBillingDetailAction } from "@/features/billing/actions";
@@ -37,18 +31,7 @@ import {
   filterCampaignQueueRows,
   type CampaignBillingQueueFilter,
 } from "@/lib/billing/campaign-billing-queue";
-
-const FILTER_OPTIONS: { value: CampaignBillingQueueFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "not_invoiced", label: "Not invoiced" },
-  { value: "partially_invoiced", label: "Partially invoiced" },
-  { value: "invoiced", label: "Invoiced" },
-  { value: "fully_achieved", label: "Fully achieved" },
-  { value: "partially_achieved", label: "Partially achieved" },
-  { value: "draft", label: "Draft" },
-  { value: "approved", label: "Approved" },
-  { value: "moved_to_billing", label: "Moved to billing" },
-];
+import { cn } from "@/lib/utils";
 
 type BillingCampaignQueueTableProps = {
   campaigns: CampaignBillingQueueRow[];
@@ -56,7 +39,8 @@ type BillingCampaignQueueTableProps = {
 
 export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTableProps) {
   const [filter, setFilter] = useState<CampaignBillingQueueFilter>("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(true);
   const [detailCache, setDetailCache] = useState<
     Record<string, CampaignOperationalBillingDetail>
   >({});
@@ -70,18 +54,42 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
     [campaigns, filter]
   );
 
+  const filteredRollup = useMemo(() => {
+    return filtered.reduce(
+      (acc, row) => ({
+        total: acc.total + row.total_campaign_amount,
+        achieved: acc.achieved + row.achieved_revenue,
+        invoiced: acc.invoiced + row.already_invoiced,
+        remaining: acc.remaining + row.remaining_to_invoice,
+      }),
+      { total: 0, achieved: 0, invoiced: 0, remaining: 0 }
+    );
+  }, [filtered]);
+
+  const filteredRollupCurrency = useMemo(() => {
+    const codes = [...new Set(filtered.map((row) => row.currency_code))];
+    return codes.length === 1 ? codes[0] : null;
+  }, [filtered]);
+
+  const selectedCampaign = useMemo(
+    () => campaigns.find((row) => row.campaign_header_id === selectedCampaignId) ?? null,
+    [campaigns, selectedCampaignId]
+  );
+
   const loadDetail = useCallback(
     (campaignId: string) => {
       if (detailCache[campaignId]) return;
       if (process.env.NODE_ENV === "development") {
-        console.debug("[drilldown-load] loading campaign operational billing", { campaignId });
+        console.debug("[queue-drilldown] loading campaign operational billing", {
+          campaignId,
+        });
       }
       startTransition(async () => {
         const result = await loadCampaignBillingDetailAction(campaignId);
         if (result.ok && result.detail) {
           setDetailCache((prev) => ({ ...prev, [campaignId]: result.detail! }));
           if (process.env.NODE_ENV === "development") {
-            console.debug("[drilldown-load] campaign detail ready", {
+            console.debug("[queue-drilldown] campaign detail ready", {
               campaignId,
               assignments: result.detail!.operational_rows.length,
             });
@@ -99,7 +107,9 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
       setInvoiceSelection(selection);
       if (!detailCache[campaignId]) {
         if (process.env.NODE_ENV === "development") {
-          console.debug("[drilldown-load] loading detail for invoice workflow", { campaignId });
+          console.debug("[queue-drilldown] loading detail for invoice workflow", {
+            campaignId,
+          });
         }
         const result = await loadCampaignBillingDetailAction(campaignId);
         if (result.ok && result.detail) {
@@ -115,13 +125,25 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
     [detailCache]
   );
 
-  function toggleExpand(campaignId: string) {
-    if (expandedId === campaignId) {
-      setExpandedId(null);
+  function selectCampaignForReview(campaignId: string) {
+    if (selectedCampaignId === campaignId) {
+      setReviewOpen((prev) => !prev);
+      if (process.env.NODE_ENV === "development") {
+        console.debug("[billing-review-table] toggled review panel", {
+          campaignId,
+          open: !reviewOpen,
+        });
+      }
       return;
     }
-    setExpandedId(campaignId);
+
+    setSelectedCampaignId(campaignId);
+    setReviewOpen(true);
     loadDetail(campaignId);
+
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[billing-review-table] campaign selected for review", { campaignId });
+    }
   }
 
   function toggleCampaignSelect(campaignId: string) {
@@ -134,38 +156,48 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
   }
 
   const invoiceDetail = invoiceCampaignId ? detailCache[invoiceCampaignId] : null;
+  const reviewDetail = selectedCampaignId ? detailCache[selectedCampaignId] : null;
+  const reviewLoading = pending && selectedCampaignId !== null && !reviewDetail;
 
   return (
-    <>
+    <div className="space-y-4">
+      <BillingFinanceFilterBar
+        value={filter}
+        onChange={(value) => {
+          setFilter(value);
+          if (process.env.NODE_ENV === "development") {
+            console.debug("[queue-filter] billing queue filter changed", { filter: value });
+          }
+        }}
+      />
+
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-3">
           <div>
             <CardTitle className="text-base">Billing queue</CardTitle>
             <p className="text-sm text-muted-foreground">
-              One row per campaign — expand to review operational assignments, deliverables, and
-              post rows.
+              One row per campaign — select a row to review assignments, deliverables, and post
+              lines below.
             </p>
+            {filter !== "all" && filtered.length > 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Filtered rollup ({filtered.length} campaign{filtered.length === 1 ? "" : "s"}):{" "}
+                achieved{" "}
+                {filteredRollupCurrency
+                  ? formatBillingMoneyCompact(filteredRollup.achieved, filteredRollupCurrency)
+                  : filteredRollup.achieved.toLocaleString()}{" "}
+                · invoiced{" "}
+                {filteredRollupCurrency
+                  ? formatBillingMoneyCompact(filteredRollup.invoiced, filteredRollupCurrency)
+                  : filteredRollup.invoiced.toLocaleString()}{" "}
+                · remaining{" "}
+                {filteredRollupCurrency
+                  ? formatBillingMoneyCompact(filteredRollup.remaining, filteredRollupCurrency)
+                  : filteredRollup.remaining.toLocaleString()}
+                {!filteredRollupCurrency ? " (mixed currencies)" : null}
+              </p>
+            ) : null}
           </div>
-          <Select
-            value={filter}
-            onValueChange={(value) => {
-              setFilter(value as CampaignBillingQueueFilter);
-              if (process.env.NODE_ENV === "development") {
-                console.debug("[queue-filter] billing queue filter changed", { filter: value });
-              }
-            }}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filter" />
-            </SelectTrigger>
-            <SelectContent>
-              {FILTER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </CardHeader>
         <CardContent>
           {campaigns.length === 0 ? (
@@ -175,15 +207,13 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
             </p>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No campaigns match the &quot;{FILTER_OPTIONS.find((o) => o.value === filter)?.label ?? filter}&quot; filter.
-              {filter !== "all" ? " Try switching to All." : null}
+              No campaigns match this finance filter.
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-8" />
                     <TableHead className="w-8" />
                     <TableHead>Campaign No</TableHead>
                     <TableHead>Client</TableHead>
@@ -201,113 +231,83 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                 </TableHeader>
                 <TableBody>
                   {filtered.map((row) => {
-                    const expanded = expandedId === row.campaign_header_id;
-                    const detail = detailCache[row.campaign_header_id];
+                    const selected = selectedCampaignId === row.campaign_header_id;
                     const cur = row.currency_code;
 
                     return (
-                      <Fragment key={row.campaign_header_id}>
-                        <TableRow className="bg-muted/10">
-                          <TableCell>
-                            <button
+                      <TableRow
+                        key={row.campaign_header_id}
+                        className={cn(
+                          "cursor-pointer bg-muted/10 hover:bg-muted/20",
+                          selected && "bg-primary/5 ring-1 ring-primary/20"
+                        )}
+                        onClick={() => selectCampaignForReview(row.campaign_header_id)}
+                        aria-selected={selected}
+                      >
+                        <TableCell onClick={(event) => event.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="size-4 rounded border-border"
+                            checked={selectedCampaignIds.has(row.campaign_header_id)}
+                            onChange={() => toggleCampaignSelect(row.campaign_header_id)}
+                            aria-label={`Select ${row.campaign_name}`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {row.campaign_document_number}
+                        </TableCell>
+                        <TableCell>{row.client_name}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {row.brand_name ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/campaigns/${row.campaign_header_id}?tab=billing`}
+                            className="font-medium hover:underline"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {row.campaign_name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{row.currency_code}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatBillingMoneyCompact(row.total_campaign_amount, cur)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatBillingMoneyCompact(row.achieved_revenue, cur)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatBillingMoneyCompact(row.already_invoiced, cur)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatBillingMoneyCompact(row.remaining_to_invoice, cur)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {formatBillingMoneyCompact(row.unachieved_revenue, cur)}
+                        </TableCell>
+                        <TableCell>
+                          <BillingStatusBadge status={row.billing_status} />
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
+                          <div className="flex justify-end gap-1">
+                            <Button
                               type="button"
-                              className="rounded p-1 hover:bg-muted"
-                              onClick={() => toggleExpand(row.campaign_header_id)}
-                              aria-expanded={expanded}
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openInvoiceWorkflow(row.campaign_header_id)}
                             >
-                              {expanded ? (
-                                <ChevronDownIcon className="size-4" />
-                              ) : (
-                                <ChevronRightIcon className="size-4" />
-                              )}
-                            </button>
-                          </TableCell>
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              className="size-4 rounded border-border"
-                              checked={selectedCampaignIds.has(row.campaign_header_id)}
-                              onChange={() => toggleCampaignSelect(row.campaign_header_id)}
-                              aria-label={`Select ${row.campaign_name}`}
-                            />
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {row.campaign_document_number}
-                          </TableCell>
-                          <TableCell>{row.client_name}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {row.brand_name ?? "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Link
-                              href={`/campaigns/${row.campaign_header_id}?tab=billing`}
-                              className="font-medium hover:underline"
-                            >
-                              {row.campaign_name}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{row.currency_code}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatBillingMoneyCompact(row.total_campaign_amount, cur)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(row.achieved_revenue, cur)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(row.already_invoiced, cur)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(row.remaining_to_invoice, cur)}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {formatBillingMoneyCompact(row.unachieved_revenue, cur)}
-                          </TableCell>
-                          <TableCell>
-                            <BillingStatusBadge status={row.billing_status} />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openInvoiceWorkflow(row.campaign_header_id)}
-                              >
-                                Invoice
-                              </Button>
-                              <Button size="sm" variant="ghost" asChild>
-                                <Link href={`/campaigns/${row.campaign_header_id}?tab=billing`}>
-                                  <ExternalLinkIcon className="size-4" />
-                                </Link>
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {expanded ? (
-                          <TableRow>
-                            <TableCell colSpan={14} className="bg-background p-0">
-                              {pending && !detail ? (
-                                <p className="p-4 text-sm text-muted-foreground">
-                                  Loading operational billing…
-                                </p>
-                              ) : detail ? (
-                                <BillingCampaignDrilldown
-                                  detail={detail}
-                                  onInvoice={(selection) => {
-                                    openInvoiceWorkflow(row.campaign_header_id, selection);
-                                  }}
-                                />
-                              ) : (
-                                <p className="p-4 text-sm text-muted-foreground">
-                                  Unable to load drill-down.
-                                </p>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ) : null}
-                      </Fragment>
+                              Invoice
+                            </Button>
+                            <Button size="sm" variant="ghost" asChild>
+                              <Link href={`/campaigns/${row.campaign_header_id}?tab=billing`}>
+                                <ExternalLinkIcon className="size-4" />
+                              </Link>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
                 </TableBody>
@@ -316,6 +316,23 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           )}
         </CardContent>
       </Card>
+
+      {selectedCampaign ? (
+        <BillingCampaignReviewPanel
+          campaignName={selectedCampaign.campaign_name}
+          campaignDocumentNumber={selectedCampaign.campaign_document_number}
+          detail={reviewDetail}
+          loading={reviewLoading}
+          filter={filter}
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          onInvoice={(selection) => {
+            if (selectedCampaignId) {
+              openInvoiceWorkflow(selectedCampaignId, selection);
+            }
+          }}
+        />
+      ) : null}
 
       {invoiceCampaignId && invoiceDetail ? (
         <InvoiceGenerationSheet
@@ -334,6 +351,6 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           }}
         />
       ) : null}
-    </>
+    </div>
   );
 }

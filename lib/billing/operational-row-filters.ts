@@ -1,10 +1,17 @@
-import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
+import type { CampaignBillingQueueFilter } from "@/lib/billing/campaign-billing-queue";
+import {
+  isOperationalRowAchieved,
+  type OperationalBillingRow,
+} from "@/lib/billing/operational-billing-rows";
 
 export type OperationalBillingFilter =
   | "all"
   | "invoiced"
   | "not_invoiced"
   | "partially_invoiced"
+  | "fully_achieved"
+  | "partially_achieved"
+  | "draft"
   | "approved"
   | "moved_to_billing";
 
@@ -16,9 +23,19 @@ export const OPERATIONAL_BILLING_FILTER_OPTIONS: {
   { value: "invoiced", label: "Invoiced" },
   { value: "not_invoiced", label: "Not invoiced" },
   { value: "partially_invoiced", label: "Partially invoiced" },
+  { value: "fully_achieved", label: "Fully achieved" },
+  { value: "partially_achieved", label: "Partially achieved" },
+  { value: "draft", label: "Draft" },
   { value: "approved", label: "Approved" },
   { value: "moved_to_billing", label: "Moved to billing" },
 ];
+
+/** Maps campaign queue finance filters to operational row filters (1:1). */
+export function mapCampaignQueueFilterToOperational(
+  filter: CampaignBillingQueueFilter
+): OperationalBillingFilter {
+  return filter;
+}
 
 function rowMatchesOperationalFilter(
   row: OperationalBillingRow,
@@ -46,6 +63,12 @@ function rowMatchesOperationalFilter(
         lineStatus === "moved_to_billing" ||
         ["ready_to_invoice", "partially_invoiced"].includes(status)
       );
+    case "fully_achieved":
+      return row.billable_amount > 0 && isOperationalRowAchieved(row);
+    case "partially_achieved":
+      return row.billable_amount > 0 && !isOperationalRowAchieved(row);
+    case "draft":
+      return lineStatus === "draft" || status === "draft";
     default:
       return true;
   }
