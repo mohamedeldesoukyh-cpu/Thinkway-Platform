@@ -4,6 +4,7 @@ import {
   FileSignatureIcon,
   LayoutDashboardIcon,
   MegaphoneIcon,
+  Settings2Icon,
   UsersIcon,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ const mobileNavItems = [
   { href: "/clients", label: "Clients", icon: Building2Icon },
   { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
   { href: "/ios/client", label: "IOs", icon: FileSignatureIcon },
+  { href: "/settings/users", label: "Settings", icon: Settings2Icon },
   { href: "/vendors", label: "Vendors", icon: UsersIcon },
 ] as const;
 

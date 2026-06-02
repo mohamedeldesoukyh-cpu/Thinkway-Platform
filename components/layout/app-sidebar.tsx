@@ -12,6 +12,7 @@ import {
   LayersIcon,
   MegaphoneIcon,
   ReceiptIcon,
+  Settings2Icon,
   UsersIcon,
 } from "lucide-react";
 
@@ -63,6 +64,17 @@ const navItems: NavItem[] = [
       { href: "/finance/exchange-rates", label: "Exchange rates" },
       { href: "/finance/periods", label: "Period management" },
       { href: "/system/health", label: "System health" },
+    ],
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: Settings2Icon,
+    children: [
+      { href: "/settings/users", label: "Users" },
+      { href: "/settings/roles", label: "Roles" },
+      { href: "/settings/permissions", label: "Permissions" },
+      { href: "/settings/access-control", label: "Access Control" },
     ],
   },
   { href: "/vendors", label: "Vendors", icon: UsersIcon },
