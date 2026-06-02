@@ -368,6 +368,7 @@ export function CampaignBillingTab({
           rollup={operationalBilling.rollup}
           operationalRows={operationalBilling.operational_rows}
           appendableInvoices={operationalBilling.appendable_invoices}
+          defaultVatPercent={operationalBilling.default_vat_percent}
           initialSelection={invoiceSelection}
           open={operationalInvoiceOpen}
           onOpenChange={(open) => {

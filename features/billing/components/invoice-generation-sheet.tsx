@@ -26,9 +26,11 @@ import {
   createInvoiceFromLinesAction,
   type BillingActionState,
 } from "@/features/billing/actions";
+import { InvoiceFinancialSummaryCard } from "@/features/billing/components/invoice-financial-summary-card";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import type { AppendableInvoiceOption } from "@/features/billing/types";
 import { formatBillingMoney, formatBillingMoneyCompact } from "@/features/billing/utils";
+import { computeInvoiceBatchFinancialPreview } from "@/lib/billing/invoice-batch-preview";
 import {
   flattenOperationalLeaves,
   isOperationalRowInvoiceEligible,
@@ -59,6 +61,7 @@ type InvoiceGenerationSheetProps = {
   };
   operationalRows: OperationalBillingRow[];
   appendableInvoices: AppendableInvoiceOption[];
+  defaultVatPercent?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSelection?: OperationalSelectionPayload;
@@ -71,6 +74,7 @@ export function InvoiceGenerationSheet({
   rollup,
   operationalRows,
   appendableInvoices,
+  defaultVatPercent = 0,
   open,
   onOpenChange,
   initialSelection,
@@ -126,11 +130,40 @@ export function InvoiceGenerationSheet({
     );
   }, [operationalRows]);
 
-  const selectedTotal = useMemo(() => {
-    return eligibleLeaves
-      .filter((row) => isRowEffectivelySelected(row, selected, operationalRows))
-      .reduce((sum, row) => sum + row.remaining_amount, 0);
-  }, [eligibleLeaves, operationalRows, selected]);
+  const selectedAppendInvoice = useMemo(
+    () => appendableOptions.find((inv) => inv.id === existingInvoiceId) ?? null,
+    [appendableOptions, existingInvoiceId]
+  );
+
+  const financialPreview = useMemo(
+    () =>
+      computeInvoiceBatchFinancialPreview({
+        operationalRows,
+        selection: selected,
+        defaultVatPercent,
+        campaignRollup: {
+          already_invoiced: rollup.already_invoiced,
+          remaining_to_invoice: rollup.remaining_to_invoice,
+        },
+        appendInvoice:
+          invoiceMode === "append" && selectedAppendInvoice
+            ? { total: selectedAppendInvoice.total }
+            : null,
+      }),
+    [
+      operationalRows,
+      selected,
+      defaultVatPercent,
+      rollup.already_invoiced,
+      rollup.remaining_to_invoice,
+      invoiceMode,
+      selectedAppendInvoice,
+    ]
+  );
+
+  const showPartialContext =
+    rollup.already_invoiced > 0 ||
+    financialPreview.remainingAfterInvoice < rollup.remaining_to_invoice;
 
   const [state, formAction, pending] = useActionState(
     createInvoiceFromLinesAction,
@@ -184,10 +217,14 @@ export function InvoiceGenerationSheet({
           <SummaryRow label="Achieved revenue" value={formatBillingMoneyCompact(rollup.achieved_revenue, currency)} />
           <SummaryRow label="Already invoiced" value={formatBillingMoneyCompact(rollup.already_invoiced, currency)} />
           <SummaryRow label="Remaining to invoice" value={formatBillingMoneyCompact(rollup.remaining_to_invoice, currency)} strong />
-          {selectedTotal > 0 ? (
-            <SummaryRow label="This invoice batch" value={formatBillingMoney(selectedTotal, currency)} strong />
-          ) : null}
         </div>
+
+        <InvoiceFinancialSummaryCard
+          currency={currency}
+          preview={financialPreview}
+          invoiceMode={invoiceMode}
+          showPartialContext={showPartialContext}
+        />
 
         <form action={formAction} className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           <input type="hidden" name="campaign_id" value={campaignId} />

@@ -413,6 +413,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           rollup={invoiceDetail.rollup}
           operationalRows={invoiceDetail.operational_rows}
           appendableInvoices={invoiceDetail.appendable_invoices}
+          defaultVatPercent={invoiceDetail.default_vat_percent}
           initialSelection={invoiceSelection}
           initialInvoiceMode={invoiceInitialMode}
           open

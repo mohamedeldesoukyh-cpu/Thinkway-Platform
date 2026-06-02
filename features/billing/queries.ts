@@ -805,6 +805,11 @@ export async function getCampaignOperationalBillingDetail(
   const { computeCampaignFinancialRollup } = await import(
     "@/lib/billing/operational-financial-sync"
   );
+  const { resolveClientBillingVatRate } = await import("@/lib/vat/queries");
+  const { vatRate: default_vat_percent } = await resolveClientBillingVatRate(
+    supabase,
+    header.client_id
+  );
 
   const legacyRevenue = groups.reduce((sum, group) => sum + group.total_value, 0);
   const legacyInvoiced = groups.reduce((sum, group) => sum + group.invoiced_value, 0);
@@ -817,7 +822,7 @@ export async function getCampaignOperationalBillingDetail(
   const { data: invoiceRows } = await supabase
     .from("invoices")
     .select(
-      "id, document_number, status, regeneration_status, total, currency, client_id, campaign_header_id"
+      "id, document_number, status, regeneration_status, total, subtotal, tax_amount, currency, client_id, campaign_header_id"
     )
     .eq("campaign_header_id", campaignId)
     .not("status", "eq", "void");
@@ -830,6 +835,8 @@ export async function getCampaignOperationalBillingDetail(
         status: string;
         regeneration_status: string | null;
         total: number;
+        subtotal: number;
+        tax_amount: number;
         currency: string;
         client_id: string;
         campaign_header_id: string | null;
@@ -851,6 +858,8 @@ export async function getCampaignOperationalBillingDetail(
         status: row.status,
         regeneration_status: row.regeneration_status ?? "active",
         total: Number(row.total),
+        subtotal: Number(row.subtotal ?? 0),
+        tax_amount: Number(row.tax_amount ?? 0),
         currency: row.currency,
         client_id: row.client_id,
         campaign_header_id: row.campaign_header_id,
@@ -871,6 +880,7 @@ export async function getCampaignOperationalBillingDetail(
   return {
     campaign_header_id: campaignId,
     currency_code: header.currency_code,
+    default_vat_percent,
     groups,
     operational_rows,
     rollup,

@@ -31,6 +31,12 @@ export type OperationalBillingRow = {
   is_invoice_eligible: boolean;
   is_achieved: boolean;
   is_legacy_synthetic: boolean;
+  revenue_before_vat: number;
+  revenue_vat_percent: number;
+  revenue_vat_exempt: boolean;
+  /** Assignment-level VAT fallback (line / package). */
+  line_revenue_vat_percent?: number;
+  line_revenue_vat_exempt?: boolean;
   children: OperationalBillingRow[];
 };
 
@@ -250,12 +256,16 @@ export function buildPostOperationalRow(
     platform: string;
     deliverable_type: string;
     billing_status: AssignmentDeliverableBillingStatus;
+    revenue_vat_percent?: number;
+    revenue_vat_exempt?: boolean;
   },
   line: {
     campaign_header_id: string;
     billing_status: CampaignLineBillingStatus;
     invoice_id: string | null;
     invoice_document_number: string | null;
+    revenue_vat_percent?: number;
+    revenue_vat_exempt?: boolean;
   },
   label: string
 ): OperationalBillingRow {
@@ -293,6 +303,11 @@ export function buildPostOperationalRow(
     is_invoice_eligible: !locked && remaining > 0,
     is_achieved: ACHIEVED_DELIVERABLE_STATUSES.has(post.billing_status || deliverable.billing_status),
     is_legacy_synthetic: false,
+    revenue_before_vat: Number(post.revenue_before_vat ?? 0),
+    revenue_vat_percent: Number(deliverable.revenue_vat_percent ?? 0),
+    revenue_vat_exempt: Boolean(deliverable.revenue_vat_exempt),
+    line_revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
+    line_revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
     children: [],
   };
 }

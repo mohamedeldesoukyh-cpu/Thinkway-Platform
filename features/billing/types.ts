@@ -263,6 +263,8 @@ export type AppendableInvoiceOption = {
   status: string;
   regeneration_status: string;
   total: number;
+  subtotal: number;
+  tax_amount: number;
   currency: string;
   client_id: string;
   campaign_header_id: string | null;
@@ -272,6 +274,7 @@ export type AppendableInvoiceOption = {
 export type CampaignOperationalBillingDetail = {
   campaign_header_id: string;
   currency_code: string;
+  default_vat_percent: number;
   groups: AssignmentBillingGroup[];
   operational_rows: import("@/lib/billing/operational-billing-rows").OperationalBillingRow[];
   rollup: {

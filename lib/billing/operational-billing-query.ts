@@ -39,6 +39,8 @@ type LineRow = {
   currency_code: string;
   pricing_mode: string | null;
   revenue: number;
+  revenue_vat_percent?: number | null;
+  revenue_vat_exempt?: boolean | null;
   metadata: Record<string, unknown> | null;
   invoice_id: string | null;
   invoice: { document_number: string } | null;
@@ -81,9 +83,9 @@ export async function loadCampaignOperationalBilling(
   error?: string;
 }> {
   const lineSelectWithSort =
-    "id, document_number, name, campaign_header_id, billing_status, currency_code, pricing_mode, revenue, metadata, invoice_id, sort_order, invoice:invoices(document_number)";
+    "id, document_number, name, campaign_header_id, billing_status, currency_code, pricing_mode, revenue, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, sort_order, invoice:invoices(document_number)";
   const lineSelectFallback =
-    "id, document_number, name, campaign_header_id, billing_status, currency_code, pricing_mode, revenue, metadata, invoice_id, invoice:invoices(document_number)";
+    "id, document_number, name, campaign_header_id, billing_status, currency_code, pricing_mode, revenue, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, invoice:invoices(document_number)";
 
   const { data: lines, error: linesError } =
     await queryCampaignLinesWithDisplayOrder<LineRow>(async (orderColumn, includeSortOrderColumn) => {
@@ -238,12 +240,16 @@ export async function loadCampaignOperationalBilling(
             platform: deliverable.platform,
             deliverable_type: deliverable.deliverable_type,
             billing_status: deliverable.billing_status,
+            revenue_vat_percent: deliverable.revenue_vat_percent,
+            revenue_vat_exempt: deliverable.revenue_vat_exempt,
           },
           {
             campaign_header_id: campaignId,
             billing_status: line.billing_status,
             invoice_id: line.invoice_id,
             invoice_document_number: line.invoice?.document_number ?? null,
+            revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
+            revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
           },
           postLabel(deliverable.platform, deliverable.deliverable_type, post.sequence_number)
         );
@@ -291,9 +297,17 @@ export async function loadCampaignOperationalBilling(
           deliverable.billing_status
         ),
         is_legacy_synthetic: false,
+        revenue_before_vat: deliverable.revenue_before_vat,
+        revenue_vat_percent: deliverable.revenue_vat_percent,
+        revenue_vat_exempt: deliverable.revenue_vat_exempt,
+        line_revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
+        line_revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
         children: postChildren,
       });
     }
+
+    const lineVatPercent = Number(line.revenue_vat_percent ?? 0);
+    const lineVatExempt = Boolean(line.revenue_vat_exempt);
 
     operational_rows.push({
       id: line.id,
@@ -324,6 +338,11 @@ export async function loadCampaignOperationalBilling(
         line.billing_status
       ),
       is_legacy_synthetic: deliverables.length === 0,
+      revenue_before_vat: Number(line.revenue ?? 0),
+      revenue_vat_percent: lineVatPercent,
+      revenue_vat_exempt: lineVatExempt,
+      line_revenue_vat_percent: lineVatPercent,
+      line_revenue_vat_exempt: lineVatExempt,
       children: deliverableChildren,
     });
   }

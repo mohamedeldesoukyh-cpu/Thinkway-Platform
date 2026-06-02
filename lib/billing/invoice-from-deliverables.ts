@@ -80,7 +80,7 @@ export function mapDeliverableRecord(
   };
 }
 
-function resolveInvoiceLineBeforeVat(deliverable: DeliverableBillingRow): number {
+export function resolveInvoiceLineBeforeVat(deliverable: DeliverableBillingRow): number {
   if (deliverable.revenue_before_vat > 0) {
     return deliverable.revenue_before_vat;
   }
@@ -90,7 +90,7 @@ function resolveInvoiceLineBeforeVat(deliverable: DeliverableBillingRow): number
   return deliverable.billable_amount;
 }
 
-function resolveInvoiceLineVatPercent(
+export function resolveInvoiceLineVatPercent(
   deliverable: DeliverableBillingRow,
   line: { revenue_vat_percent?: number | null; revenue_vat_exempt?: boolean | null },
   defaultVatRate: number
