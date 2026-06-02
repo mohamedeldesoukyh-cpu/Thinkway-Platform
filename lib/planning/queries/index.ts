@@ -23,3 +23,16 @@ export {
   withPlanningCache,
   invalidatePlanningCache,
 } from "@/lib/planning/queries/planning-cache";
+export { loadBudgetAllocations } from "@/lib/planning/queries/load-budget-allocations";
+export {
+  loadPlanningDashboard,
+  type PlanningDashboardPayload,
+  type PlanningKpiCard,
+  type PlanningDashboardCharts,
+} from "@/lib/planning/queries/load-planning-dashboard";
+export {
+  buildVarianceTrendFromPeriods,
+  buildBudgetMetricTrend,
+  sortVariancesByMetric,
+  type PlanningTrendPoint,
+} from "@/lib/planning/queries/variance-series";

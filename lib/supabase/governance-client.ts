@@ -4,3 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export function governanceDb(supabase: SupabaseClient) {
   return supabase as SupabaseClient;
 }
+
+/** Planning tables (budget_versions, forecast_versions, etc.) pending Database codegen. */
+export function planningDb(supabase: SupabaseClient) {
+  return supabase as SupabaseClient;
+}
