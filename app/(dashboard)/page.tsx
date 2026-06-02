@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRightIcon,
   Building2Icon,
+  LineChartIcon,
   MegaphoneIcon,
   UsersIcon,
 } from "lucide-react";
@@ -17,6 +18,25 @@ export default function DashboardPage() {
       description="Influencer marketing operations at a glance."
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LineChartIcon className="size-4" />
+              Executive dashboard
+            </CardTitle>
+            <CardDescription>
+              CFO-grade KPIs, trends, profitability tables, and finance alerts.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/dashboard">
+                Open executive dashboard
+                <ArrowRightIcon data-icon="inline-end" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

@@ -18,6 +18,11 @@ import {
   platformLabel,
 } from "@/features/campaigns/line-assignment";
 
+import {
+  loadAnalyticsFacts,
+  mapFinancialMetricsToBillingKpis,
+  rollupGlobal,
+} from "@/lib/analytics";
 import { AGING_BUCKET_LABELS } from "./constants";
 import { buildCampaignQueueFromBillingLines } from "@/lib/billing/campaign-billing-queue";
 import {
@@ -314,28 +319,6 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     bucket.amount += inv.outstanding;
   }
 
-  const billedRevenue = lines
-    .filter((l) =>
-      ["invoiced", "partially_paid", "paid", "closed"].includes(l.billing_status)
-    )
-    .reduce((s, l) => s + l.revenue, 0);
-
-  const revenue = lines.reduce((s, l) => s + l.revenue, 0);
-  const cost = lines.reduce((s, l) => s + l.cost, 0);
-  const gp = lines.reduce((s, l) => s + l.gp, 0);
-  const collected = invoices.reduce((s, i) => s + i.amount_paid, 0);
-  const outstanding = invoices.reduce((s, i) => s + i.outstanding, 0);
-  const unpaidVendorCost = (vendorCostResult.data ?? []).reduce(
-    (s, v) =>
-      s +
-      (["unpaid", "pending"].includes(
-        (v as { vendor_payment_status: string }).vendor_payment_status
-      )
-        ? Number((v as { agreed_fee: number }).agreed_fee)
-        : 0),
-    0
-  );
-
   const outputVat = (linesResult.data ?? []).reduce(
     (s, l) => s + Number((l as { revenue_vat_amount?: number }).revenue_vat_amount ?? 0),
     0
@@ -360,23 +343,20 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     })
   );
 
-  const kpis: BillingKpiSummary = {
-    revenue,
-    cost,
-    gp,
-    margin_percent: formatMarginPercent(revenue, gp),
-    output_vat: outputVat,
-    input_vat: inputVat,
-    net_vat_payable: outputVat - inputVat,
-    billed_revenue: billedRevenue,
-    collected_revenue: collected,
-    outstanding_invoices: outstanding,
-    unpaid_vendor_cost: unpaidVendorCost,
-    po_total: poKpis.po_total,
-    po_consumed: poKpis.po_consumed,
-    po_remaining: poKpis.po_remaining,
-    po_over_consumed_count: poKpis.po_over_consumed_count,
-  };
+  const analyticsSnapshot = await loadAnalyticsFacts(supabase);
+  const globalMetrics = rollupGlobal(analyticsSnapshot.facts).metrics;
+
+  const kpis: BillingKpiSummary = mapFinancialMetricsToBillingKpis(
+    globalMetrics,
+    {
+      output_vat: outputVat,
+      input_vat: inputVat,
+      po_total: poKpis.po_total,
+      po_consumed: poKpis.po_consumed,
+      po_remaining: poKpis.po_remaining,
+      po_over_consumed_count: poKpis.po_over_consumed_count,
+    }
+  );
 
   const pending_approvals: FinancialApprovalRow[] = (
     approvalsResult.data ?? []
