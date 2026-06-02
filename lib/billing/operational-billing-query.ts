@@ -20,10 +20,19 @@ import {
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import {
+  loadCampaignInvoiceLineRollups,
+  reconcileCampaignRollupWithInvoiceLines,
+} from "@/lib/billing/invoice-operational-aggregation";
+import {
+  applyOperationalInvoiceLinkage,
+  loadOperationalInvoiceLinkage,
+} from "@/lib/billing/operational-invoice-linkage";
+import {
   buildOperationalBillingContext,
   normalizeOperationalBillingTree,
   resolvePostBillableAmount,
 } from "@/lib/billing/operational-financial-sync";
+import { devLog } from "@/lib/dev-log";
 import { queryCampaignLinesWithDisplayOrder } from "@/lib/campaigns/line-ordering";
 import {
   parseLineAssignment,
@@ -67,6 +76,55 @@ const POST_BILLING_SELECT =
 
 const POST_BILLING_FALLBACK =
   "id, assignment_deliverable_id, campaign_line_id, sequence_number, live_date, billing_status, revenue_before_vat";
+
+function resolveDeliverableGroupFinancials(
+  deliverable: DeliverableBillingRow,
+  postChildren: OperationalBillingRow[],
+  usePosts: boolean
+): Pick<
+  OperationalBillingRow,
+  "billable_amount" | "invoiced_amount" | "collected_amount" | "remaining_amount"
+> {
+  if (!usePosts) {
+    return {
+      billable_amount: deliverable.billable_amount,
+      invoiced_amount: deliverable.invoiced_amount,
+      collected_amount: deliverable.collected_amount,
+      remaining_amount: deliverable.remaining_amount,
+    };
+  }
+
+  const postTotals = postChildren.reduce(
+    (acc, post) => ({
+      billable: acc.billable + post.billable_amount,
+      invoiced: acc.invoiced + post.invoiced_amount,
+      collected: acc.collected + post.collected_amount,
+      remaining: acc.remaining + post.remaining_amount,
+    }),
+    { billable: 0, invoiced: 0, collected: 0, remaining: 0 }
+  );
+
+  const deliverableLocked =
+    Boolean(deliverable.locked_at) ||
+    Boolean(deliverable.invoice_line_item_id) ||
+    deliverable.invoiced_amount > 0;
+
+  if (deliverableLocked) {
+    return {
+      billable_amount: deliverable.billable_amount,
+      invoiced_amount: Math.max(deliverable.invoiced_amount, postTotals.invoiced),
+      collected_amount: Math.max(deliverable.collected_amount, postTotals.collected),
+      remaining_amount: deliverable.remaining_amount,
+    };
+  }
+
+  return {
+    billable_amount: postTotals.billable,
+    invoiced_amount: postTotals.invoiced,
+    collected_amount: postTotals.collected,
+    remaining_amount: postTotals.remaining,
+  };
+}
 
 function postLabel(platform: string, deliverableType: string, sequence: number): string {
   const typeLabel = deliverableType.replace(/_/g, " ");
@@ -257,15 +315,11 @@ export async function loadCampaignOperationalBilling(
 
       const postBillableTotal = postChildren.reduce((sum, post) => sum + post.billable_amount, 0);
       const usePosts = postChildren.length > 0 && postBillableTotal > 0;
-      const groupBillable = usePosts
-        ? postChildren.reduce((s, p) => s + p.billable_amount, 0)
-        : deliverable.billable_amount;
-      const groupInvoiced = usePosts
-        ? postChildren.reduce((s, p) => s + p.invoiced_amount, 0)
-        : deliverable.invoiced_amount;
-      const groupRemaining = usePosts
-        ? postChildren.reduce((s, p) => s + p.remaining_amount, 0)
-        : deliverable.remaining_amount;
+      const groupFinancials = resolveDeliverableGroupFinancials(
+        deliverable,
+        postChildren,
+        usePosts
+      );
 
       deliverableChildren.push({
         id: deliverable.id,
@@ -279,12 +333,10 @@ export async function loadCampaignOperationalBilling(
         influencer_name: assignment?.influencer_name ?? null,
         platform: deliverable.platform,
         deliverable_type: deliverable.deliverable_type,
-        billable_amount: groupBillable,
-        invoiced_amount: groupInvoiced,
-        collected_amount: usePosts
-          ? postChildren.reduce((s, p) => s + p.collected_amount, 0)
-          : deliverable.collected_amount,
-        remaining_amount: groupRemaining,
+        billable_amount: groupFinancials.billable_amount,
+        invoiced_amount: groupFinancials.invoiced_amount,
+        collected_amount: groupFinancials.collected_amount,
+        remaining_amount: groupFinancials.remaining_amount,
         billing_status: deliverable.billing_status,
         line_billing_status: line.billing_status,
         invoice_id: line.invoice_id,
@@ -292,7 +344,8 @@ export async function loadCampaignOperationalBilling(
         invoice_line_item_id: deliverable.invoice_line_item_id,
         locked_at: deliverable.locked_at,
         is_locked: Boolean(deliverable.locked_at),
-        is_invoice_eligible: groupRemaining > 0 && !deliverable.locked_at,
+        is_invoice_eligible:
+          groupFinancials.remaining_amount > 0 && !deliverable.locked_at,
         is_achieved: ["ready_to_invoice", "partially_invoiced", "invoiced"].includes(
           deliverable.billing_status
         ),
@@ -349,17 +402,20 @@ export async function loadCampaignOperationalBilling(
 
   const billingContext = buildOperationalBillingContext(lines, groups);
   const normalized_rows = normalizeOperationalBillingTree(operational_rows, billingContext);
+  const invoiceLinks = await loadOperationalInvoiceLinkage(supabase, campaignId);
+  const linked_rows = applyOperationalInvoiceLinkage(normalized_rows, invoiceLinks);
 
   if (process.env.NODE_ENV === "development") {
-    console.debug("[operational-billing-query] loaded", {
+    devLog("[operational-billing-query] loaded", {
       campaignId,
-      assignments: normalized_rows.length,
+      assignments: linked_rows.length,
       deliverables: deliverableIds.length,
       posts: [...postsByDeliverable.values()].flat().length,
+      invoiceLinks: invoiceLinks.length,
     });
   }
 
-  return { groups, operational_rows: normalized_rows };
+  return { groups, operational_rows: linked_rows };
 }
 
 export async function loadBillingCampaignQueue(
@@ -509,14 +565,58 @@ export async function loadBillingCampaignQueue(
     );
   }
 
+  const lineRollups = await loadCampaignInvoiceLineRollups(
+    supabase,
+    campaigns.map((row) => row.campaign_header_id)
+  );
+
+  const syncedCampaigns = campaigns.map((row) => {
+    const lineRollup = lineRollups.get(row.campaign_header_id);
+    if (!lineRollup || lineRollup.invoiced_subtotal <= 0) return row;
+
+    const reconciled = reconcileCampaignRollupWithInvoiceLines({
+      total_campaign_amount: row.total_campaign_amount,
+      achieved_revenue: row.achieved_revenue,
+      already_invoiced: row.already_invoiced,
+      remaining_to_invoice: row.remaining_to_invoice,
+      unachieved_revenue: row.unachieved_revenue,
+      invoice_line_invoiced: lineRollup.invoiced_subtotal,
+    });
+
+    const billing_status =
+      reconciled.already_invoiced >= row.achieved_revenue && row.achieved_revenue > 0
+        ? ("invoiced" as CampaignLineBillingStatus)
+        : reconciled.already_invoiced > 0
+          ? ("partially_invoiced" as CampaignLineBillingStatus)
+          : row.billing_status;
+
+    if (process.env.NODE_ENV === "development") {
+      devLog("[queue-refresh] reconciled queue row from invoice_line_items", {
+        campaignId: row.campaign_header_id,
+        operationalInvoiced: row.already_invoiced,
+        lineInvoiced: lineRollup.invoiced_subtotal,
+        reconciledInvoiced: reconciled.already_invoiced,
+        remaining: reconciled.remaining_to_invoice,
+      });
+    }
+
+    return {
+      ...row,
+      already_invoiced: reconciled.already_invoiced,
+      remaining_to_invoice: reconciled.remaining_to_invoice,
+      billing_status,
+    };
+  });
+
   if (process.env.NODE_ENV === "development") {
-    console.debug("[billing-queue] load complete", {
+    devLog("[billing-queue] load complete", {
       headerCount: headers.length,
-      queueCount: campaigns.length,
+      queueCount: syncedCampaigns.length,
       operationalErrors,
-      skippedDuplicates: headers.length - campaigns.length,
+      skippedDuplicates: headers.length - syncedCampaigns.length,
+      campaignsWithLineItems: lineRollups.size,
     });
   }
 
-  return { campaigns };
+  return { campaigns: syncedCampaigns };
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import Link from "next/link";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -72,6 +74,7 @@ export function CampaignBillingTab({
   billingGroups,
   operationalBilling,
 }: CampaignBillingTabProps) {
+  const router = useRouter();
   const { financials, po } = workspace;
   const currency = workspace.currency_code;
   const [legacyInvoiceOpen, setLegacyInvoiceOpen] = useState(false);
@@ -371,6 +374,7 @@ export function CampaignBillingTab({
           defaultVatPercent={operationalBilling.default_vat_percent}
           initialSelection={invoiceSelection}
           open={operationalInvoiceOpen}
+          onInvoiceComplete={() => router.refresh()}
           onOpenChange={(open) => {
             setOperationalInvoiceOpen(open);
             if (!open) setInvoiceSelection(undefined);

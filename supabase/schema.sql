@@ -1020,18 +1020,71 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.can_write_invoice_line_items(p_invoice_id uuid)
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.invoices i
-    WHERE i.id = p_invoice_id
-      AND public.has_permission('invoices.write')
-      AND public.can_access_client(i.client_id)
-  );
+DECLARE
+  v_client_id uuid;
+BEGIN
+  IF p_invoice_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  IF NOT (
+    public.is_admin()
+    OR public.has_permission('invoices.write')
+  ) THEN
+    RETURN false;
+  END IF;
+
+  SELECT i.client_id
+  INTO v_client_id
+  FROM public.invoices i
+  WHERE i.id = p_invoice_id;
+
+  IF v_client_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  RETURN public.can_access_client(v_client_id);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_read_invoice_line_items(p_invoice_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_client_id uuid;
+BEGIN
+  IF p_invoice_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  IF NOT (
+    public.is_admin()
+    OR public.has_permission('invoices.read')
+    OR public.has_permission('invoices.write')
+  ) THEN
+    RETURN false;
+  END IF;
+
+  SELECT i.client_id
+  INTO v_client_id
+  FROM public.invoices i
+  WHERE i.id = p_invoice_id;
+
+  IF v_client_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  RETURN public.can_access_client(v_client_id);
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.can_access_campaign(p_campaign_id uuid)

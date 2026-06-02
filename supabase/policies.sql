@@ -505,10 +505,26 @@ CREATE POLICY invoices_update
   USING (
     public.has_permission('invoices.write')
     AND public.can_access_client(client_id)
+    AND (
+      campaign_id IS NULL
+      OR public.can_access_campaign(campaign_id)
+    )
+    AND (
+      campaign_header_id IS NULL
+      OR public.can_access_campaign_header(campaign_header_id)
+    )
   )
   WITH CHECK (
     public.has_permission('invoices.write')
     AND public.can_access_client(client_id)
+    AND (
+      campaign_id IS NULL
+      OR public.can_access_campaign(campaign_id)
+    )
+    AND (
+      campaign_header_id IS NULL
+      OR public.can_access_campaign_header(campaign_header_id)
+    )
   );
 
 DROP POLICY IF EXISTS invoices_delete ON public.invoices;
@@ -529,15 +545,7 @@ CREATE POLICY invoice_line_items_select
   ON public.invoice_line_items
   FOR SELECT
   TO authenticated
-  USING (
-    public.has_permission('invoices.read')
-    AND EXISTS (
-      SELECT 1
-      FROM public.invoices i
-      WHERE i.id = invoice_id
-        AND public.can_access_client(i.client_id)
-    )
-  );
+  USING (public.can_read_invoice_line_items(invoice_id));
 
 DROP POLICY IF EXISTS invoice_line_items_write ON public.invoice_line_items;
 DROP POLICY IF EXISTS invoice_line_items_insert ON public.invoice_line_items;

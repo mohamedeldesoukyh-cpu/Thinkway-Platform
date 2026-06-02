@@ -54,6 +54,7 @@ export type BillingActionState = {
   message?: string;
   fieldErrors?: Record<string, string[]>;
   invoiceId?: string;
+  campaignId?: string;
 };
 
 function emptyToNull(value: string | undefined): string | null {
@@ -527,6 +528,18 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
+  const permission = await requirePermission(supabase, "invoices.write");
+  if ("error" in permission) {
+    return { ok: false, message: permission.error };
+  }
+  if (!permission.roleSlug) {
+    return {
+      ok: false,
+      message:
+        "Your account has no role assigned. Ask an administrator to assign a finance or admin role before creating invoices.",
+    };
+  }
+
   const { data: header, error: headerError } = await supabase
     .from("campaign_headers")
     .select("id, client_id, currency_code, name")
@@ -666,6 +679,14 @@ export async function createInvoiceFromLinesAction(
     invoiceId,
   });
 
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[queue-refresh] invoice created — billing paths revalidated", {
+      campaignId: parsed.data.campaign_id,
+      invoiceId,
+      deliverableCount: deliverables.length,
+    });
+  }
+
   const actionLabel =
     parsed.data.invoice_mode === "append" ? "Appended to" : "Created";
 
@@ -673,6 +694,7 @@ export async function createInvoiceFromLinesAction(
     ok: true,
     message: `${actionLabel} invoice ${invoiceDocumentNumber} for ${deliverables.length} deliverable(s)${postIds.length ? ` and ${postIds.length} post row(s)` : ""}.`,
     invoiceId,
+    campaignId: parsed.data.campaign_id,
   };
 }
 
@@ -1230,4 +1252,10 @@ export async function loadCampaignBillingDetailAction(campaignId: string) {
     const message = error instanceof Error ? error.message : "Failed to load drill-down.";
     return { ok: false as const, message };
   }
+}
+
+/** Revalidate billing routes and return fresh campaign operational detail. */
+export async function refreshBillingAfterInvoiceAction(campaignId: string) {
+  revalidateBilling({ campaignId });
+  return loadCampaignBillingDetailAction(campaignId);
 }

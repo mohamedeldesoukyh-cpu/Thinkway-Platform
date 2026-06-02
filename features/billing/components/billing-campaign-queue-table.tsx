@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -20,7 +21,10 @@ import {
 import { BillingCampaignReviewPanel } from "@/features/billing/components/billing-campaign-review-panel";
 import { BillingFinanceFilterBar } from "@/features/billing/components/billing-finance-filter-bar";
 import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
-import { loadCampaignBillingDetailAction } from "@/features/billing/actions";
+import {
+  loadCampaignBillingDetailAction,
+  refreshBillingAfterInvoiceAction,
+} from "@/features/billing/actions";
 import type {
   CampaignBillingQueueRow,
   CampaignOperationalBillingDetail,
@@ -52,6 +56,7 @@ type BillingCampaignQueueTableProps = {
 };
 
 export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTableProps) {
+  const router = useRouter();
   const [filter, setFilter] = useState<CampaignBillingQueueFilter>("all");
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(true);
@@ -185,6 +190,39 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
       loadDetailIfNeeded(campaignId);
     },
     [loadDetailIfNeeded]
+  );
+
+  const handleInvoiceComplete = useCallback(
+    async (completedCampaignId: string) => {
+      devLog("[queue-refresh] reloading billing data after invoice", {
+        campaignId: completedCampaignId,
+      });
+      setDetailCache((prev) => {
+        const next = { ...prev };
+        delete next[completedCampaignId];
+        return next;
+      });
+      setQueueSelections((prev) => {
+        const next = { ...prev };
+        delete next[completedCampaignId];
+        return next;
+      });
+      setExpandedCampaignIds((prev) => new Set(prev).add(completedCampaignId));
+      const result = await refreshBillingAfterInvoiceAction(completedCampaignId);
+      if (result.ok && result.detail) {
+        setDetailCache((prev) => ({
+          ...prev,
+          [completedCampaignId]: result.detail!,
+        }));
+        if (selectedCampaignId === completedCampaignId) {
+          devLog("[queue-refresh] review panel detail refreshed", {
+            campaignId: completedCampaignId,
+          });
+        }
+      }
+      router.refresh();
+    },
+    [router, selectedCampaignId]
   );
 
   const onMasterSelect = useCallback(
@@ -417,6 +455,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           initialSelection={invoiceSelection}
           initialInvoiceMode={invoiceInitialMode}
           open
+          onInvoiceComplete={handleInvoiceComplete}
           onOpenChange={(open) => {
             if (!open) {
               setInvoiceCampaignId(null);

@@ -20,6 +20,10 @@ import {
 
 import { AGING_BUCKET_LABELS } from "./constants";
 import { buildCampaignQueueFromBillingLines } from "@/lib/billing/campaign-billing-queue";
+import {
+  loadCampaignInvoiceLineRollups,
+  reconcileCampaignRollupWithInvoiceLines,
+} from "@/lib/billing/invoice-operational-aggregation";
 import { loadBillingCampaignQueue, loadCampaignOperationalBilling } from "@/lib/billing/operational-billing-query";
 import {
   computeAgingBucket,
@@ -813,11 +817,19 @@ export async function getCampaignOperationalBillingDetail(
 
   const legacyRevenue = groups.reduce((sum, group) => sum + group.total_value, 0);
   const legacyInvoiced = groups.reduce((sum, group) => sum + group.invoiced_value, 0);
-  const rollup = computeCampaignFinancialRollup({
+  const baseRollup = computeCampaignFinancialRollup({
     operational_rows,
     legacy_line_revenue: legacyRevenue,
     legacy_invoiced: legacyInvoiced,
   });
+
+  const lineRollups = await loadCampaignInvoiceLineRollups(supabase, [campaignId]);
+  const lineInvoiced = lineRollups.get(campaignId)?.invoiced_subtotal ?? 0;
+  const reconciled = reconcileCampaignRollupWithInvoiceLines({
+    ...baseRollup,
+    invoice_line_invoiced: lineInvoiced,
+  });
+  const rollup = { ...baseRollup, ...reconciled };
 
   const { data: invoiceRows } = await supabase
     .from("invoices")

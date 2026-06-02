@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -66,6 +67,7 @@ type InvoiceGenerationSheetProps = {
   onOpenChange: (open: boolean) => void;
   initialSelection?: OperationalSelectionPayload;
   initialInvoiceMode?: "new" | "append";
+  onInvoiceComplete?: (campaignId: string) => void | Promise<void>;
 };
 
 export function InvoiceGenerationSheet({
@@ -79,7 +81,9 @@ export function InvoiceGenerationSheet({
   onOpenChange,
   initialSelection,
   initialInvoiceMode = "new",
+  onInvoiceComplete,
 }: InvoiceGenerationSheetProps) {
+  const router = useRouter();
   const [selected, setSelected] = useState<OperationalSelectionState>(createEmptySelection());
   const [invoiceMode, setInvoiceMode] = useState<"new" | "append">("new");
   const [existingInvoiceId, setExistingInvoiceId] = useState("");
@@ -174,11 +178,18 @@ export function InvoiceGenerationSheet({
     if (!state.message) return;
     if (state.ok) {
       toast.success(state.message);
-      onOpenChange(false);
+      const completedCampaignId = state.campaignId ?? campaignId;
+      void (async () => {
+        if (completedCampaignId && onInvoiceComplete) {
+          await onInvoiceComplete(completedCampaignId);
+        }
+        router.refresh();
+        onOpenChange(false);
+      })();
     } else {
       toast.error(state.message);
     }
-  }, [state, onOpenChange]);
+  }, [state, onOpenChange, onInvoiceComplete, campaignId, router]);
 
   function toggleLeafRow(row: OperationalBillingRow) {
     setSelected((prev) => toggleOperationalRowSelection(row, prev, operationalRows));

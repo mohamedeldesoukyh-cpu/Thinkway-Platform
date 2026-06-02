@@ -13,6 +13,8 @@ import {
   shouldLockLineFully,
 } from "@/lib/billing/deliverable-billing";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
+import { syncPostScheduleOnDeliverableInvoiceLock } from "@/lib/billing/sync-post-invoice-lock";
+import { devLog } from "@/lib/dev-log";
 
 function lineBillingPatch(billingStatus: string) {
   const assignmentStatus = assignmentStatusFromBilling(billingStatus);
@@ -299,6 +301,26 @@ export async function lockDeliverablesOnInvoice(
     if (lockError) {
       await supabase.from("invoices").delete().eq("id", invoiceId);
       return { error: lockError.message };
+    }
+
+    const postSyncError = await syncPostScheduleOnDeliverableInvoiceLock(supabase, {
+      deliverableId: row.id,
+      invoiceLineItemId: item.id,
+      lockedAt: now,
+      deliverableBillable: billable,
+    });
+
+    if (postSyncError.error) {
+      await supabase.from("invoices").delete().eq("id", invoiceId);
+      return { error: postSyncError.error };
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      devLog("[billing-sync] deliverable locked on invoice", {
+        deliverableId: row.id,
+        invoiceId,
+        billable,
+      });
     }
   }
 
