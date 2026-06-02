@@ -35,6 +35,47 @@ async function requireUser() {
   return { supabase, user };
 }
 
+const POST_SCHEDULE_OPERATIONAL_SELECT =
+  "id, assignment_deliverable_id, sequence_number, live_date, status, notes, metadata, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_amount, billing_status";
+
+const POST_SCHEDULE_LEGACY_SELECT =
+  "id, assignment_deliverable_id, sequence_number, live_date, status, notes, metadata";
+
+async function queryPostSchedulesForLines(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  lineIds: string[]
+) {
+  const operational = await supabase
+    .from("assignment_post_schedule")
+    .select(POST_SCHEDULE_OPERATIONAL_SELECT)
+    .in("campaign_line_id", lineIds)
+    .order("sequence_number");
+
+  if (!operational.error) {
+    return { data: operational.data ?? [], error: null as string | null, operational: true };
+  }
+
+  console.warn("[assignment-hierarchy] operational post schedule select failed, falling back", {
+    message: operational.error.message,
+    lineCount: lineIds.length,
+  });
+
+  const legacy = await supabase
+    .from("assignment_post_schedule")
+    .select(POST_SCHEDULE_LEGACY_SELECT)
+    .in("campaign_line_id", lineIds)
+    .order("sequence_number");
+
+  if (legacy.error) {
+    console.error("[assignment-hierarchy] legacy post schedule select failed", {
+      message: legacy.error.message,
+    });
+    return { data: [], error: legacy.error.message, operational: false };
+  }
+
+  return { data: legacy.data ?? [], error: null, operational: false };
+}
+
 function deriveCollectionStatus(
   billingStatus: AssignmentDeliverableBillingStatus
 ): DeliverableCollectionStatus {
@@ -271,6 +312,19 @@ function buildRollups(
 export async function getCampaignAssignmentHierarchy(
   campaignId: string
 ): Promise<AssignmentHierarchy> {
+  try {
+    return await loadCampaignAssignmentHierarchy(campaignId);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to load assignment hierarchy.";
+    console.error("[assignment-hierarchy] load failed", { campaignId, message });
+    return { groups: [], currency_code: "USD", load_error: message };
+  }
+}
+
+async function loadCampaignAssignmentHierarchy(
+  campaignId: string
+): Promise<AssignmentHierarchy> {
   const workspace = await getCampaignWorkspace(campaignId);
   if (!workspace) {
     return { groups: [], currency_code: "USD" };
@@ -282,7 +336,7 @@ export async function getCampaignAssignmentHierarchy(
     return { groups: [], currency_code: workspace.currency_code };
   }
 
-  const { data: deliverableRows, includesVatExempt } =
+  const { data: deliverableRows, includesVatExempt, error: deliverableQueryError } =
     await queryAssignmentDeliverables<{
       id: string;
       campaign_line_id: string;
@@ -343,26 +397,36 @@ export async function getCampaignAssignmentHierarchy(
       };
     });
 
+  if (deliverableQueryError) {
+    console.warn("[assignment-hierarchy] assignment_deliverables query failed", {
+      campaignId,
+      message: deliverableQueryError,
+    });
+  }
+
   const deliverableIds = (deliverableRows ?? []).map((d) => d.id);
 
-  const [schedulesResult, invoiceItemsResult] = await Promise.all([
-    supabase
-      .from("assignment_post_schedule")
-      .select(
-        "id, assignment_deliverable_id, sequence_number, live_date, status, notes, metadata, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_amount, billing_status"
-      )
-      .in("campaign_line_id", lineIds)
-      .order("sequence_number"),
+  const schedulesResult = await queryPostSchedulesForLines(supabase, lineIds);
+
+  const invoiceItemsResult =
     deliverableIds.length > 0
-      ? supabase
+      ? await supabase
           .from("invoice_line_items")
           .select("assignment_deliverable_id, invoice_id")
           .in("assignment_deliverable_id", deliverableIds)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
+      : { data: [], error: null };
 
-  if (schedulesResult.error) throw new Error(schedulesResult.error.message);
-  if (invoiceItemsResult.error) throw new Error(invoiceItemsResult.error.message);
+  if (invoiceItemsResult.error) {
+    console.warn("[assignment-hierarchy] invoice_line_items query failed", {
+      message: invoiceItemsResult.error.message,
+    });
+  }
+
+  const loadWarnings = [
+    deliverableQueryError,
+    schedulesResult.error,
+    invoiceItemsResult.error?.message,
+  ].filter(Boolean) as string[];
 
   const invoiceIds = [
     ...new Set(
@@ -413,7 +477,7 @@ export async function getCampaignAssignmentHierarchy(
       deliverable_type: meta.deliverable_type ?? "other",
       deliverable_type_label: deliverableTypeLabel(meta.deliverable_type ?? "other"),
       live_date: row.live_date,
-      workflow_status: row.status,
+      workflow_status: row.status ?? "draft",
       notes: row.notes,
       revenue_per_post: Number(row.revenue_before_vat ?? 0),
       cost_per_post: Number(row.cost_before_vat ?? 0),
@@ -588,5 +652,6 @@ export async function getCampaignAssignmentHierarchy(
   return {
     groups,
     currency_code: workspace.currency_code,
+    load_error: loadWarnings.length > 0 ? loadWarnings.join(" · ") : null,
   };
 }

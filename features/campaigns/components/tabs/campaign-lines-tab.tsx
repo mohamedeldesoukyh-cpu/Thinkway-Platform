@@ -78,7 +78,13 @@ export function CampaignLinesTab({
             Assign influencer
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          {assignmentHierarchy.load_error ? (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+              Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}. Showing
+              available rows — apply pending migrations if commercial columns are missing.
+            </div>
+          ) : null}
           <AssignmentHierarchyTable
             campaignId={workspace.id}
             hierarchy={assignmentHierarchy}

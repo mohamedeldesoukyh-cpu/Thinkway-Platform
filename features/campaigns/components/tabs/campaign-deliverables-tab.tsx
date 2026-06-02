@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { PlusIcon } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -38,30 +38,45 @@ import type { CampaignDeliverableRow, CampaignWorkspace } from "@/features/campa
 import { formatPlatformLabel } from "@/features/campaigns/utils";
 import { labelForOption } from "@/lib/master-data/constants";
 
+const ALL_STATUSES = "all";
+
 type CampaignDeliverablesTabProps = {
   workspace: CampaignWorkspace;
 };
 
+function safeFormatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const parsed = parseISO(value.includes("T") ? value : `${value}T00:00:00`);
+  if (!isValid(parsed)) return "—";
+  try {
+    return format(parsed, "MMM d, yyyy");
+  } catch {
+    return "—";
+  }
+}
+
 export function CampaignDeliverablesTab({ workspace }: CampaignDeliverablesTabProps) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const assignmentLines = workspace.lines.filter(
+  const deliverables = workspace.deliverables ?? [];
+  const lines = workspace.lines ?? [];
+
+  const assignmentLines = lines.filter(
     (l) => l.influencer_id && l.campaign_influencer_id
   );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return workspace.deliverables.filter((d) => {
-      if (statusFilter && d.display_status !== statusFilter) return false;
+    return deliverables.filter((d) => {
+      if (statusFilter !== ALL_STATUSES && d.display_status !== statusFilter) return false;
       if (!q) return true;
-      return (
-        d.title.toLowerCase().includes(q) ||
-        d.influencer_name.toLowerCase().includes(q)
-      );
+      const title = (d.title ?? "").toLowerCase();
+      const creator = (d.influencer_name ?? "").toLowerCase();
+      return title.includes(q) || creator.includes(q);
     });
-  }, [workspace.deliverables, search, statusFilter]);
+  }, [deliverables, search, statusFilter]);
 
   return (
     <>
@@ -100,7 +115,7 @@ export function CampaignDeliverablesTab({ workspace }: CampaignDeliverablesTabPr
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
                   {DELIVERABLE_DISPLAY_STATUS_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
@@ -180,7 +195,7 @@ function DeliverableRow({
     <TableRow>
       <TableCell>
         <div className="space-y-0.5">
-          <span className="font-medium">{deliverable.title}</span>
+          <span className="font-medium">{deliverable.title ?? "Untitled"}</span>
           <p className="font-mono text-xs text-muted-foreground">
             {deliverable.document_number}
           </p>
@@ -189,12 +204,10 @@ function DeliverableRow({
       <TableCell>
         {labelForOption(DELIVERABLE_TYPE_OPTIONS, deliverable.deliverable_type)}
       </TableCell>
-      <TableCell>{deliverable.influencer_name}</TableCell>
+      <TableCell>{deliverable.influencer_name ?? "—"}</TableCell>
       <TableCell>{formatPlatformLabel(deliverable.platform)}</TableCell>
       <TableCell className="text-muted-foreground">
-        {deliverable.due_date
-          ? format(new Date(deliverable.due_date), "MMM d, yyyy")
-          : "—"}
+        {safeFormatDate(deliverable.due_date)}
       </TableCell>
       <TableCell>
         <Badge variant="outline">{displayLabel}</Badge>

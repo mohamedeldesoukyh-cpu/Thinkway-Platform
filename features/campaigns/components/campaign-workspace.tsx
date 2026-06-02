@@ -17,17 +17,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
 import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/campaign-deliverables-tab";
 import { CampaignLinesTab } from "@/features/campaigns/components/tabs/campaign-lines-tab";
+import { CampaignPublicationsTab } from "@/features/campaigns/components/tabs/campaign-publications-tab";
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
 import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
+import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
 
 type CampaignWorkspaceViewProps = {
@@ -37,6 +40,8 @@ type CampaignWorkspaceViewProps = {
   billingLines: BillingLineRow[];
   billingGroups: AssignmentBillingGroup[];
   assignmentHierarchy: AssignmentHierarchy;
+  publications: CampaignPublicationRow[];
+  publicationsLoadError?: string | null;
   currencyOptions: { value: string; label: string }[];
 };
 
@@ -47,6 +52,8 @@ export function CampaignWorkspaceView({
   billingLines,
   billingGroups,
   assignmentHierarchy,
+  publications,
+  publicationsLoadError,
   currencyOptions,
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
@@ -102,6 +109,7 @@ export function CampaignWorkspaceView({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="lines">Assignments</TabsTrigger>
           <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
+          <TabsTrigger value="publications">Publications</TabsTrigger>
           <TabsTrigger value="workflow">Workflow</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="timeline">Timeline & activity</TabsTrigger>
@@ -116,29 +124,48 @@ export function CampaignWorkspaceView({
           />
         </TabsContent>
         <TabsContent value="lines">
-          <CampaignLinesTab
-            workspace={workspace}
-            po={workspace.po}
-            currencyOptions={currencyOptions}
-            assignmentHierarchy={assignmentHierarchy}
-            billingGroups={billingGroups}
-          />
+          <TabErrorBoundary tabName="Assignments">
+            <CampaignLinesTab
+              workspace={workspace}
+              po={workspace.po}
+              currencyOptions={currencyOptions}
+              assignmentHierarchy={assignmentHierarchy}
+              billingGroups={billingGroups}
+            />
+          </TabErrorBoundary>
         </TabsContent>
         <TabsContent value="deliverables">
-          <CampaignDeliverablesTab workspace={workspace} />
+          <TabErrorBoundary tabName="Deliverables">
+            <CampaignDeliverablesTab workspace={workspace} />
+          </TabErrorBoundary>
+        </TabsContent>
+        <TabsContent value="publications">
+          <TabErrorBoundary tabName="Publications">
+            <CampaignPublicationsTab
+              workspace={workspace}
+              publications={publications}
+              loadError={publicationsLoadError}
+            />
+          </TabErrorBoundary>
         </TabsContent>
         <TabsContent value="workflow">
-          <CampaignWorkflowTab workspace={workspace} />
+          <TabErrorBoundary tabName="Workflow">
+            <CampaignWorkflowTab workspace={workspace} />
+          </TabErrorBoundary>
         </TabsContent>
         <TabsContent value="billing">
-          <CampaignBillingTab
-            workspace={workspace}
-            billingLines={billingLines}
-            billingGroups={billingGroups}
-          />
+          <TabErrorBoundary tabName="Billing">
+            <CampaignBillingTab
+              workspace={workspace}
+              billingLines={billingLines}
+              billingGroups={billingGroups}
+            />
+          </TabErrorBoundary>
         </TabsContent>
         <TabsContent value="timeline">
-          <CampaignTimelineTab workspace={workspace} />
+          <TabErrorBoundary tabName="Timeline">
+            <CampaignTimelineTab workspace={workspace} />
+          </TabErrorBoundary>
         </TabsContent>
       </Tabs>
 

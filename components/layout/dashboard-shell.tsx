@@ -6,7 +6,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
-import { AppSidebar } from "@/components/layout/app-sidebar";
+import { CollapsibleAppSidebar } from "@/components/layout/collapsible-app-sidebar";
 import { UserAccount } from "@/components/layout/user-account";
 import { getAuthUser } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,7 @@ export async function DashboardShell({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <AppSidebar userEmail={userEmail} />
+      <CollapsibleAppSidebar userEmail={userEmail} />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
           <Link href="/" className="font-heading text-lg font-semibold">

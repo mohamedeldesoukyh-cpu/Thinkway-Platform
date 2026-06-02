@@ -860,6 +860,96 @@ export type Database = {
         >;
         Relationships: [];
       };
+      campaign_publications: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          campaign_line_id: string | null;
+          assignment_deliverable_id: string | null;
+          assignment_post_schedule_id: string | null;
+          influencer_id: string | null;
+          platform: string;
+          publication_type: string;
+          content_url: string | null;
+          publication_date: string | null;
+          status: string;
+          assignee_id: string | null;
+          caption: string | null;
+          hashtags: string | null;
+          notes: string | null;
+          detected_by: string | null;
+          auto_detected: boolean;
+          detection_source: string | null;
+          external_media_id: string | null;
+          matched_hashtag: string | null;
+          api_sync_status: string | null;
+          last_synced_at: string | null;
+          engagement_views: number | null;
+          engagement_likes: number | null;
+          engagement_comments: number | null;
+          engagement_shares: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          campaign_line_id?: string | null;
+          assignment_deliverable_id?: string | null;
+          assignment_post_schedule_id?: string | null;
+          influencer_id?: string | null;
+          platform: string;
+          publication_type: string;
+          content_url?: string | null;
+          publication_date?: string | null;
+          status?: string;
+          assignee_id?: string | null;
+          caption?: string | null;
+          hashtags?: string | null;
+          notes?: string | null;
+          detected_by?: string | null;
+          auto_detected?: boolean;
+          detection_source?: string | null;
+          external_media_id?: string | null;
+          matched_hashtag?: string | null;
+          api_sync_status?: string | null;
+          last_synced_at?: string | null;
+          engagement_views?: number | null;
+          engagement_likes?: number | null;
+          engagement_comments?: number | null;
+          engagement_shares?: number | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_publications"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      md_platform_deliverable_types: {
+        Row: {
+          id: string;
+          platform: string;
+          code: string;
+          name: string;
+          short_name: string;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          platform: string;
+          code: string;
+          name: string;
+          short_name: string;
+          is_active?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["md_platform_deliverable_types"]["Insert"]
+        >;
+        Relationships: [];
+      };
       po_governance_logs: {
         Row: {
           id: string;

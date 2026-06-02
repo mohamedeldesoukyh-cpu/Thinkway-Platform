@@ -225,7 +225,7 @@ export function DeliverableGroupRow({
       </tr>
 
       {expanded
-        ? deliverable.posts.map((post) => (
+        ? (deliverable.posts ?? []).map((post) => (
             <EditablePostRow
               key={post.id}
               campaignId={campaignId}

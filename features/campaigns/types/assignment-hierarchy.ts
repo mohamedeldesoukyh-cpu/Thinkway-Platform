@@ -85,6 +85,8 @@ export type AssignmentHierarchyGroup = {
 export type AssignmentHierarchy = {
   groups: AssignmentHierarchyGroup[];
   currency_code: string;
+  /** Set when hierarchy query partially or fully failed — UI should show warning, not crash. */
+  load_error?: string | null;
 };
 
 /** @deprecated Use AssignmentPostOperationalRow */
