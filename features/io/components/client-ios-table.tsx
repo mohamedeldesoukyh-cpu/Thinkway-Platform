@@ -1,10 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
-
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
@@ -13,29 +9,22 @@ import type { ClientIoRow } from "@/features/io/types";
 type Props = {
   rows: ClientIoRow[];
   selectedId?: string | null;
+  onView: (ioId: string) => void;
+  isNavigating?: boolean;
 };
 
-export function ClientIosTable({ rows, selectedId = null }: Props) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-
+export function ClientIosTable({
+  rows,
+  selectedId = null,
+  onView,
+  isNavigating = false,
+}: Props) {
   if (rows.length === 0) {
     return <p className="text-sm text-muted-foreground">No client IO records found.</p>;
   }
 
-  function openIo(ioId: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("io", ioId);
-    startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`, { scroll: false });
-    });
-  }
-
   return (
     <div className="overflow-x-auto">
-      {isPending ? <Skeleton className="mb-3 h-9 w-56" /> : null}
       <Table>
         <TableHeader>
           <TableRow>
@@ -67,8 +56,8 @@ export function ClientIosTable({ rows, selectedId = null }: Props) {
                   <Button
                     size="sm"
                     variant={selectedId === row.id ? "default" : "outline"}
-                    onClick={() => openIo(row.id)}
-                    disabled={isPending}
+                    onClick={() => onView(row.id)}
+                    disabled={isNavigating}
                   >
                     View
                   </Button>

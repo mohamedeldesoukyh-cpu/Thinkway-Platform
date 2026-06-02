@@ -2,8 +2,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IoSearchFilters } from "@/features/io/components/io-search-filters";
-import { VendorIoForm } from "@/features/io/components/vendor-io-form";
-import { VendorIosTable } from "@/features/io/components/vendor-ios-table";
+import { VendorIosWorkspace } from "@/features/io/components/vendor-ios-workspace";
 import { getVendorIos } from "@/features/io/queries";
 
 type Props = {
@@ -36,11 +35,12 @@ export default async function VendorIosPage({ searchParams }: Props) {
               />
             </CardHeader>
             <CardContent>
-              <VendorIosTable rows={rows} selectedId={selected?.id ?? null} />
+              <VendorIosWorkspace
+                rows={rows}
+                initialSelectedId={selected?.id ?? null}
+              />
             </CardContent>
           </Card>
-
-          {selected ? <VendorIoForm key={selected.id} row={selected} /> : null}
         </div>
       </PlatformErrorBoundary>
     </DashboardShell>

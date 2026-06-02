@@ -1,8 +1,7 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClientIoForm } from "@/features/io/components/client-io-form";
-import { ClientIosTable } from "@/features/io/components/client-ios-table";
+import { ClientIosWorkspace } from "@/features/io/components/client-ios-workspace";
 import { IoSearchFilters } from "@/features/io/components/io-search-filters";
 import { getClientIos } from "@/features/io/queries";
 
@@ -35,11 +34,12 @@ export default async function ClientIosPage({ searchParams }: Props) {
               />
             </CardHeader>
             <CardContent>
-              <ClientIosTable rows={rows} selectedId={selected?.id ?? null} />
+              <ClientIosWorkspace
+                rows={rows}
+                initialSelectedId={selected?.id ?? null}
+              />
             </CardContent>
           </Card>
-
-          {selected ? <ClientIoForm key={selected.id} row={selected} /> : null}
         </div>
       </PlatformErrorBoundary>
     </DashboardShell>
