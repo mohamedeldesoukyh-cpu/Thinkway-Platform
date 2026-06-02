@@ -21,6 +21,13 @@ import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/
 import { formatBillingMoney } from "@/features/billing/utils";
 import { formatMoney } from "@/features/campaigns/utils";
 
+function formatLiveDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return format(date, "MMM d, yyyy");
+}
+
 type AssignmentBillingGroupsTableProps = {
   groups: AssignmentBillingGroup[];
   billingLines: BillingLineRow[];
@@ -172,7 +179,7 @@ function AssignmentBillingGroupRow({
               </div>
               {deliverable.live_date ? (
                 <p className="text-xs text-muted-foreground">
-                  Live {format(new Date(`${deliverable.live_date}T00:00:00`), "MMM d, yyyy")}
+                  Live {formatLiveDate(deliverable.live_date) ?? "—"}
                 </p>
               ) : null}
             </TableCell>

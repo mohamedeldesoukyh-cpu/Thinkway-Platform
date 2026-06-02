@@ -31,10 +31,13 @@ type BillingStatusBadgeProps = {
 };
 
 export function BillingStatusBadge({ status, className }: BillingStatusBadgeProps) {
+  const variant =
+    BILLING_VARIANTS[status] ?? "bg-muted text-muted-foreground";
+
   return (
     <Badge
       variant="outline"
-      className={cn("border-transparent font-medium", BILLING_VARIANTS[status], className)}
+      className={cn("border-transparent font-medium", variant, className)}
     >
       {labelForBillingStatus(status)}
     </Badge>

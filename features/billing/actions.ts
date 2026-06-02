@@ -125,7 +125,7 @@ async function createFinancialApprovalChain(
     description?: string;
     stages?: typeof FINANCIAL_APPROVAL_CHAIN;
   }
-) {
+): Promise<string | null> {
   const stages = input.stages ?? FINANCIAL_APPROVAL_CHAIN;
   for (let i = 0; i < stages.length; i++) {
     const { error } = await supabase.from("financial_approval_requests").insert({
@@ -136,12 +136,19 @@ async function createFinancialApprovalChain(
       title: `${input.title} — ${stages[i]}`,
       description: input.description ?? null,
       requested_by: userId,
-      status: i === 0 ? "pending" : "pending",
+      status: "pending",
     });
     if (error) {
-      throw new Error(error.message);
+      console.error("[billing] financial approval chain insert failed", {
+        entity_type: input.entity_type,
+        entity_id: input.entity_id,
+        stage: stages[i],
+        message: error.message,
+      });
+      return error.message;
     }
   }
+  return null;
 }
 
 export async function approveLineForBillingAction(
@@ -184,7 +191,7 @@ export async function approveLineForBillingAction(
     return { ok: false, message: error.message };
   }
 
-  await createFinancialApprovalChain(supabase, user.id, {
+  const approvalError = await createFinancialApprovalChain(supabase, user.id, {
     entity_type: "campaign_line",
     entity_id: parsed.data.line_id,
     title: `Billing approval — ${line.document_number}`,
@@ -193,7 +200,12 @@ export async function approveLineForBillingAction(
   });
 
   revalidateBilling({ campaignId: parsed.data.campaign_id });
-  return { ok: true, message: "Line approved for billing." };
+  return {
+    ok: true,
+    message: approvalError
+      ? "Line approved for billing. Approval workflow could not be recorded — apply billing migrations if needed."
+      : "Line approved for billing.",
+  };
 }
 
 export async function moveLineToBillingAction(
@@ -438,7 +450,7 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: lockResult.error };
   }
 
-  await createFinancialApprovalChain(supabase, user.id, {
+  const approvalError = await createFinancialApprovalChain(supabase, user.id, {
     entity_type: "invoice",
     entity_id: invoice.id,
     title: `Invoice ${invoice.document_number}`,
@@ -453,7 +465,9 @@ export async function createInvoiceFromLinesAction(
 
   return {
     ok: true,
-    message: `Invoice ${invoice.document_number} created for ${deliverables.length} deliverable(s).`,
+    message: approvalError
+      ? `Invoice ${invoice.document_number} created for ${deliverables.length} deliverable(s). Approval workflow could not be recorded.`
+      : `Invoice ${invoice.document_number} created for ${deliverables.length} deliverable(s).`,
     invoiceId: invoice.id,
   };
 }
@@ -629,7 +643,7 @@ export async function requestFinanceOverrideAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
-  await createFinancialApprovalChain(supabase, user.id, {
+  const approvalError = await createFinancialApprovalChain(supabase, user.id, {
     entity_type: "campaign_line_override",
     entity_id: parsed.data.line_id,
     title: "Finance override request",
@@ -638,7 +652,12 @@ export async function requestFinanceOverrideAction(
   });
 
   revalidateBilling({ campaignId: parsed.data.campaign_id });
-  return { ok: true, message: "Finance override request submitted." };
+  return {
+    ok: true,
+    message: approvalError
+      ? "Finance override request submitted. Approval workflow could not be recorded."
+      : "Finance override request submitted.",
+  };
 }
 
 export async function grantFinanceOverrideAction(

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
   AlertTriangleIcon,
@@ -34,6 +34,20 @@ import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
+
+function formatBillingDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "—";
+  return format(date, "MMM d, yyyy");
+}
+
+function formatBillingDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return format(date, "MMM d, yyyy");
+}
 
 type CampaignBillingTabProps = {
   workspace: CampaignWorkspace;
@@ -79,7 +93,7 @@ export function CampaignBillingTab({
       label: "Outstanding",
       value: formatMoney(financials.billing_outstanding, currency),
     },
-    { label: "Margin", value: formatPercent(financials.margin_percent) },
+    { label: "Margin", value: formatPercent(financials.margin_percent ?? 0) },
   ];
 
   const poWarnings = billingLines.filter((l) => l.po_over_consumed);
@@ -207,14 +221,8 @@ export function CampaignBillingTab({
                           {inv.document_number}
                         </Link>
                       </TableCell>
-                      <TableCell>
-                        {format(new Date(`${inv.issue_date}T00:00:00`), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        {inv.due_date
-                          ? format(new Date(`${inv.due_date}T00:00:00`), "MMM d, yyyy")
-                          : "—"}
-                      </TableCell>
+                      <TableCell>{formatBillingDate(inv.issue_date)}</TableCell>
+                      <TableCell>{formatBillingDate(inv.due_date)}</TableCell>
                       <TableCell className="text-right">
                         {formatMoney(inv.total, inv.currency)}
                       </TableCell>
@@ -275,9 +283,7 @@ export function CampaignBillingTab({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {p.paid_at
-                          ? format(new Date(p.paid_at), "MMM d, yyyy")
-                          : "—"}
+                        {formatBillingDateTime(p.paid_at)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -319,10 +325,14 @@ function LineBillingActions({
     { ok: false } satisfies BillingActionState
   );
   const [showOverride, setShowOverride] = useState(false);
+  const toastedRef = useRef(new Set<string>());
 
   useEffect(() => {
     for (const state of [approveState, moveState, overrideState]) {
       if (!state.message) continue;
+      const key = `${state.ok}:${state.message}`;
+      if (toastedRef.current.has(key)) continue;
+      toastedRef.current.add(key);
       if (state.ok) toast.success(state.message);
       else toast.error(state.message);
     }

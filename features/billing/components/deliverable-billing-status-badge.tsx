@@ -25,10 +25,12 @@ export function DeliverableBillingStatusBadge({
   status,
   className,
 }: DeliverableBillingStatusBadgeProps) {
+  const variant = VARIANTS[status] ?? "bg-muted text-muted-foreground";
+
   return (
     <Badge
       variant="outline"
-      className={cn("border-transparent font-medium", VARIANTS[status], className)}
+      className={cn("border-transparent font-medium", variant, className)}
     >
       {labelForDeliverableBillingStatus(status)}
     </Badge>
