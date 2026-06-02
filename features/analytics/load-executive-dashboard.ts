@@ -6,7 +6,7 @@ import {
   type ExecutiveDashboardCharts,
 } from "@/lib/analytics/queries/dashboard-charts";
 import { buildFinanceAlerts, type FinanceAlertsPayload } from "@/lib/analytics/queries/dashboard-alerts";
-import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
+import { safeLoadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import { buildKpiStripFromMetrics } from "@/lib/analytics/queries/kpi-builder";
 import {
   getCollectionsAnalytics,
@@ -69,15 +69,59 @@ export async function loadExecutiveDashboard(
 ): Promise<ExecutiveDashboardPayload> {
   const supabase = await requireSupabase();
 
-  const [executive, revenue, profitability, collections, operational, snapshot] =
-    await Promise.all([
-      getExecutiveKpis(supabase, filters),
-      getRevenueAnalytics(supabase, filters),
-      getProfitabilityAnalytics(supabase, filters),
-      getCollectionsAnalytics(supabase, filters),
-      getOperationalAnalytics(supabase, filters),
-      loadAnalyticsFacts(supabase, filters),
-    ]);
+  const settled = await Promise.allSettled([
+    getExecutiveKpis(supabase, filters),
+    getRevenueAnalytics(supabase, filters),
+    getProfitabilityAnalytics(supabase, filters),
+    getCollectionsAnalytics(supabase, filters),
+    getOperationalAnalytics(supabase, filters),
+    safeLoadAnalyticsFacts(supabase, filters),
+  ]);
+
+  const snapshot =
+    settled[5].status === "fulfilled"
+      ? settled[5].value
+      : { facts: [], invoices: [], loaded_at: new Date().toISOString() };
+
+  if (settled.some((r, i) => i < 5 && r.status === "rejected")) {
+    if (process.env.NODE_ENV === "development") {
+      devLog(
+        "[dashboard-resilience] partial executive analytics failure",
+        settled.map((r) => (r.status === "rejected" ? r.reason : null))
+      );
+    }
+  }
+
+  const executive =
+    settled[0].status === "fulfilled"
+      ? settled[0].value
+      : {
+          kpis: { cards: [], currency: { primary_currency: null, is_mixed_currency: false, currencies: [], mixed_label: null }, generated_at: new Date().toISOString() },
+          rollups: [],
+          charts: { time_series: [], bar_series: [], pie_series: [], ranking_table: [], aging_table: [] },
+          facts_count: 0,
+        };
+  const revenue =
+    settled[1].status === "fulfilled"
+      ? settled[1].value
+      : { kpis: executive.kpis, by_client: [], by_brand: [], time_series: [], ranking: [] };
+  const profitability =
+    settled[2].status === "fulfilled"
+      ? settled[2].value
+      : { kpis: executive.kpis, margin_by_client: [], gp_ranking: [], time_series: [] };
+  const collections =
+    settled[3].status === "fulfilled"
+      ? settled[3].value
+      : { kpis: executive.kpis, aging: [], outstanding_by_client: [], collection_time_series: [] };
+  const operational =
+    settled[4].status === "fulfilled"
+      ? settled[4].value
+      : {
+          kpis: executive.kpis,
+          achieved_vs_unachieved: [],
+          invoiced_vs_remaining: [],
+          by_campaign: [],
+        };
 
   const global = rollupGlobal(snapshot.facts);
   const currencies = snapshot.facts.map((f) => f.currency_code);
@@ -171,7 +215,7 @@ export async function loadDashboardFilterOptions(): Promise<DashboardFilterOptio
   if (clientsResult.error) throw new Error(clientsResult.error.message);
   if (brandsResult.error) throw new Error(brandsResult.error.message);
 
-  const snapshot = await loadAnalyticsFacts(supabase);
+  const snapshot = await safeLoadAnalyticsFacts(supabase);
   const countries = [
     ...new Set(
       snapshot.facts

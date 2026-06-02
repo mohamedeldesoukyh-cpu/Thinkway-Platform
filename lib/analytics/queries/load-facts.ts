@@ -12,6 +12,10 @@ import {
   type LineFinancialInput,
 } from "@/lib/analytics/metrics/financial";
 import { roundMoney } from "@/lib/analytics/aggregations/round";
+import {
+  isMissingColumnError,
+  resolveFactCountryCode,
+} from "@/lib/analytics/schema-safe";
 import { devLog } from "@/lib/dev-log";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import type { CampaignAnalyticsFact } from "@/lib/analytics/types/metrics";
@@ -26,8 +30,8 @@ type HeaderRow = {
   team_id: string | null;
   currency_code: string;
   start_date: string | null;
-  client: { id: string; name: string; country_code: string | null } | null;
-  brand: { id: string; name: string; country_code: string | null } | null;
+  client: Record<string, unknown> | null;
+  brand: Record<string, unknown> | null;
   team: { id: string; name: string } | null;
 };
 
@@ -66,6 +70,72 @@ export type AnalyticsFactsSnapshot = {
   loaded_at: string;
 };
 
+export function emptyAnalyticsFactsSnapshot(): AnalyticsFactsSnapshot {
+  return {
+    facts: [],
+    invoices: [],
+    loaded_at: new Date().toISOString(),
+  };
+}
+
+const HEADER_SELECT_CANDIDATES = [
+  `
+    id, document_number, name, client_id, brand_id, team_id, currency_code, start_date,
+    client:clients(id, name, country),
+    brand:brands(id, name, country_code),
+    team:md_teams(id, name)
+  `,
+  `
+    id, document_number, name, client_id, brand_id, team_id, currency_code, start_date,
+    client:clients(id, name, country),
+    brand:brands(id, name),
+    team:md_teams(id, name)
+  `,
+  `
+    id, document_number, name, client_id, brand_id, team_id, currency_code, start_date,
+    client:clients(id, name),
+    brand:brands(id, name),
+    team:md_teams(id, name)
+  `,
+  `
+    id, document_number, name, client_id, brand_id, team_id, currency_code, start_date,
+    client:clients(id, name),
+    brand:brands(id, name)
+  `,
+] as const;
+
+async function fetchCampaignHeaders(supabase: SupabaseClient): Promise<HeaderRow[]> {
+  let lastError: string | null = null;
+
+  for (const headerSelect of HEADER_SELECT_CANDIDATES) {
+    const result = await supabase
+      .from("campaign_headers")
+      .select(headerSelect)
+      .not("status", "eq", "cancelled")
+      .limit(500);
+
+    if (!result.error) {
+      if (lastError && process.env.NODE_ENV === "development") {
+        devLog("[analytics-schema] header select recovered after fallback", {
+          previousError: lastError,
+        });
+      }
+      return (result.data ?? []) as unknown as HeaderRow[];
+    }
+
+    lastError = result.error.message;
+    if (!isMissingColumnError(lastError)) {
+      throw new Error(lastError);
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      devLog("[analytics-schema] header select fallback", { error: lastError });
+    }
+  }
+
+  throw new Error(lastError ?? "Failed to load campaign headers for analytics");
+}
+
 function passesDateRange(
   issueDate: string | null,
   range?: AnalyticsQueryFilters["dateRange"]
@@ -78,23 +148,12 @@ function passesDateRange(
   return true;
 }
 
-async function loadAnalyticsFactsUncached(
+export async function loadAnalyticsFactsUncached(
   supabase: SupabaseClient,
   filters: AnalyticsQueryFilters
 ): Promise<AnalyticsFactsSnapshot> {
-  const headerSelect = `
-    id, document_number, name, client_id, brand_id, team_id, currency_code, start_date,
-    client:clients(id, name, country_code),
-    brand:brands(id, name, country_code),
-    team:md_teams(id, name)
-  `;
-
-  const [headersResult, linesResult, invoicesResult, vendorResult] = await Promise.all([
-    supabase
-      .from("campaign_headers")
-      .select(headerSelect)
-      .not("status", "eq", "cancelled")
-      .limit(500),
+  const [headers, linesResult, invoicesResult, vendorResult] = await Promise.all([
+    fetchCampaignHeaders(supabase),
     supabase
       .from("campaign_lines")
       .select(
@@ -115,11 +174,9 @@ async function loadAnalyticsFactsUncached(
       .limit(5000),
   ]);
 
-  if (headersResult.error) throw new Error(headersResult.error.message);
   if (linesResult.error) throw new Error(linesResult.error.message);
   if (invoicesResult.error) throw new Error(invoicesResult.error.message);
 
-  const headers = (headersResult.data ?? []) as unknown as HeaderRow[];
   const lines = (linesResult.data ?? []) as unknown as LineRow[];
   const invoices = ((invoicesResult.data ?? []) as unknown as InvoiceRow[]).filter(
     (inv) => passesDateRange(inv.issue_date, filters.dateRange)
@@ -149,9 +206,7 @@ async function loadAnalyticsFactsUncached(
   for (const inv of invoices) {
     if (!inv.campaign_header_id) continue;
     const paid = roundMoney(Number(inv.amount_paid));
-    const outstanding = roundMoney(
-      Math.max(0, Number(inv.total) - paid)
-    );
+    const outstanding = roundMoney(Math.max(0, Number(inv.total) - paid));
     collectedByCampaign.set(
       inv.campaign_header_id,
       roundMoney((collectedByCampaign.get(inv.campaign_header_id) ?? 0) + paid)
@@ -175,8 +230,7 @@ async function loadAnalyticsFactsUncached(
 
   for (const header of headers) {
     const campaignLines = linesByCampaign.get(header.id) ?? [];
-    const lineInvoiced =
-      lineRollups.get(header.id)?.invoiced_subtotal ?? 0;
+    const lineInvoiced = lineRollups.get(header.id)?.invoiced_subtotal ?? 0;
 
     let metrics = metricsFromCampaignLines(campaignLines, lineInvoiced);
     metrics = applyInvoiceCollectionMetrics(metrics, {
@@ -187,20 +241,22 @@ async function loadAnalyticsFactsUncached(
       vendor_payable: vendorByCampaign.get(header.id) ?? 0,
     });
 
+    const country_code = resolveFactCountryCode({
+      client: header.client,
+      brand: header.brand,
+    });
+
     facts.push({
       campaign_header_id: header.id,
       campaign_document_number: header.document_number,
       campaign_name: header.name,
       client_id: header.client_id,
-      client_name: header.client?.name ?? "",
+      client_name: String(header.client?.name ?? ""),
       brand_id: header.brand_id,
-      brand_name: header.brand?.name ?? null,
+      brand_name: header.brand?.name != null ? String(header.brand.name) : null,
       team_id: header.team_id,
       team_name: header.team?.name ?? null,
-      country_code:
-        header.client?.country_code ??
-        header.brand?.country_code ??
-        null,
+      country_code,
       currency_code: header.currency_code,
       line_count: campaignLines.length,
       period_month: header.start_date ? header.start_date.slice(0, 7) : null,
@@ -224,21 +280,37 @@ async function loadAnalyticsFactsUncached(
   };
 }
 
-export async function loadAnalyticsFacts(
+/**
+ * Never throws — returns empty snapshot when analytics cannot load.
+ */
+export async function safeLoadAnalyticsFacts(
   supabase: SupabaseClient,
   filters: AnalyticsQueryFilters = {}
 ): Promise<AnalyticsFactsSnapshot> {
-  const cacheKey = buildAnalyticsCacheKey("facts", {
+  const cacheKey = buildAnalyticsCacheKey("facts-safe", {
     billing: filters.billingFilter ?? "all",
     operational: filters.operationalFilter ?? "all",
     invoice: filters.invoiceFilter ?? "all",
     from: filters.dateRange?.from,
     to: filters.dateRange?.to,
-    client: filters.clientIds?.join(","),
-    currency: filters.currencyCode,
   });
 
-  return withAnalyticsCache(cacheKey, () =>
-    loadAnalyticsFactsUncached(supabase, filters)
-  );
+  return withAnalyticsCache(cacheKey, async () => {
+    try {
+      return await loadAnalyticsFactsUncached(supabase, filters);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (process.env.NODE_ENV === "development") {
+        devLog("[analytics-fallback] safeLoadAnalyticsFacts failed", { message });
+      }
+      return emptyAnalyticsFactsSnapshot();
+    }
+  });
+}
+
+export async function loadAnalyticsFacts(
+  supabase: SupabaseClient,
+  filters: AnalyticsQueryFilters = {}
+): Promise<AnalyticsFactsSnapshot> {
+  return safeLoadAnalyticsFacts(supabase, filters);
 }

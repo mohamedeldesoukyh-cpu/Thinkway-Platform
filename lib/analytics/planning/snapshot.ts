@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { rollupGlobal } from "@/lib/analytics/aggregations/rollup-engine";
-import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
+import { safeLoadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import {
   enrichMetricsWithPlanning,
   varianceToPlanningKpis,
@@ -34,7 +34,7 @@ export async function loadPlanningAnalyticsSnapshot(
   const fiscalYear = options.fiscalYear ?? new Date().getFullYear();
   const filters = options.filters ?? {};
 
-  const snapshot = await loadAnalyticsFacts(supabase, filters);
+  const snapshot = await safeLoadAnalyticsFacts(supabase, filters);
   let globalMetrics = rollupGlobal(snapshot.facts).metrics;
 
   const approved = await loadApprovedBudgetVersion(supabase, fiscalYear);

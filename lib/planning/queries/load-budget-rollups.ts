@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
+import { safeLoadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import { devLog } from "@/lib/dev-log";
 import {
@@ -37,7 +37,7 @@ export async function loadBudgetRollups(
   return withPlanningCache(cacheKey, async () => {
     const lines = await loadBudgetLines(supabase, budgetVersionId);
 
-    const snapshot = await loadAnalyticsFacts(supabase, analyticsFilters ?? {});
+    const snapshot = await safeLoadAnalyticsFacts(supabase, analyticsFilters ?? {});
     const labelByClient = new Map(
       snapshot.facts.map((f) => [f.client_id, f.client_name])
     );

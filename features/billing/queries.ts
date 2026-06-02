@@ -19,10 +19,12 @@ import {
 } from "@/features/campaigns/line-assignment";
 
 import {
-  loadAnalyticsFacts,
   mapFinancialMetricsToBillingKpis,
   rollupGlobal,
+  safeLoadAnalyticsFacts,
 } from "@/lib/analytics";
+import { buildBillingKpisFromOperationalRows } from "@/lib/analytics/billing-kpi-fallback";
+import { devLog } from "@/lib/dev-log";
 import { AGING_BUCKET_LABELS } from "./constants";
 import { buildCampaignQueueFromBillingLines } from "@/lib/billing/campaign-billing-queue";
 import {
@@ -343,20 +345,49 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     })
   );
 
-  const analyticsSnapshot = await loadAnalyticsFacts(supabase);
-  const globalMetrics = rollupGlobal(analyticsSnapshot.facts).metrics;
+  const kpiExtras = {
+    output_vat: outputVat,
+    input_vat: inputVat,
+    po_total: poKpis.po_total,
+    po_consumed: poKpis.po_consumed,
+    po_remaining: poKpis.po_remaining,
+    po_over_consumed_count: poKpis.po_over_consumed_count,
+  };
 
-  const kpis: BillingKpiSummary = mapFinancialMetricsToBillingKpis(
-    globalMetrics,
-    {
-      output_vat: outputVat,
-      input_vat: inputVat,
-      po_total: poKpis.po_total,
-      po_consumed: poKpis.po_consumed,
-      po_remaining: poKpis.po_remaining,
-      po_over_consumed_count: poKpis.po_over_consumed_count,
+  let kpis: BillingKpiSummary;
+  const analyticsSnapshot = await safeLoadAnalyticsFacts(supabase);
+
+  if (analyticsSnapshot.facts.length > 0) {
+    const globalMetrics = rollupGlobal(analyticsSnapshot.facts).metrics;
+    kpis = mapFinancialMetricsToBillingKpis(globalMetrics, kpiExtras);
+  } else {
+    if (process.env.NODE_ENV === "development") {
+      devLog("[analytics-fallback] billing KPIs from operational rows only");
     }
-  );
+    kpis = buildBillingKpisFromOperationalRows({
+      lines: lines.map((l) => ({
+        revenue: l.revenue,
+        cost: l.cost,
+        gp: l.gp,
+        billing_status: l.billing_status,
+      })),
+      invoices: invoices.map((i) => ({
+        amount_paid: i.amount_paid,
+        outstanding: i.outstanding,
+      })),
+      unpaid_vendor_cost: (vendorCostResult.data ?? []).reduce(
+        (s, v) =>
+          s +
+          (["unpaid", "pending"].includes(
+            (v as { vendor_payment_status: string }).vendor_payment_status
+          )
+            ? Number((v as { agreed_fee: number }).agreed_fee)
+            : 0),
+        0
+      ),
+      extras: kpiExtras,
+    });
+  }
 
   const pending_approvals: FinancialApprovalRow[] = (
     approvalsResult.data ?? []
@@ -634,8 +665,65 @@ export async function getInvoiceWorkspace(
 export async function getCampaignBillingLines(
   campaignId: string
 ): Promise<BillingLineRow[]> {
-  const dashboard = await getBillingDashboard();
-  return dashboard.lines.filter((l) => l.campaign_header_id === campaignId);
+  const { supabase } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("campaign_lines")
+    .select(
+      `
+        id, document_number, name, campaign_header_id, billing_status,
+        revenue, cost, profit, po_amount, po_consumed, remaining_po,
+        revenue_locked, cost_locked, vendor_assignment_locked,
+        currency_code, invoice_id,
+        header:${REL.campaignLines.campaignHeader}(id, name, document_number,
+          client:clients(name),
+          brand:brands(name)
+        ),
+        invoice:invoices(document_number)
+      `
+    )
+    .eq("campaign_header_id", campaignId)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    if (process.env.NODE_ENV === "development") {
+      devLog("[analytics-fallback] getCampaignBillingLines query failed", error.message);
+    }
+    return [];
+  }
+
+  return ((data ?? []) as unknown as LineQueryRow[]).map((row) => {
+    const revenue = Number(row.revenue);
+    const cost = Number(row.cost);
+    const gp = Number(row.profit);
+    const poAmount = Number(row.po_amount);
+    const poConsumed = Number(row.po_consumed ?? row.cost);
+    return {
+      id: row.id,
+      document_number: row.document_number,
+      name: row.name,
+      campaign_header_id: row.campaign_header_id,
+      campaign_name: row.header?.name ?? "",
+      campaign_document_number: row.header?.document_number ?? "",
+      client_name: row.header?.client?.name ?? "",
+      brand_name: row.header?.brand?.name ?? null,
+      billing_status: row.billing_status,
+      revenue,
+      cost,
+      gp,
+      margin_percent: formatMarginPercent(revenue, gp),
+      po_amount: poAmount,
+      po_consumed: poConsumed,
+      remaining_po: Number(row.remaining_po),
+      po_over_consumed: poConsumed > poAmount && poAmount > 0,
+      revenue_locked: row.revenue_locked,
+      cost_locked: row.cost_locked,
+      vendor_assignment_locked: row.vendor_assignment_locked,
+      currency_code: row.currency_code,
+      invoice_id: row.invoice_id,
+      invoice_document_number: row.invoice?.document_number ?? null,
+    } satisfies BillingLineRow;
+  });
 }
 
 export async function getCampaignBillingGroups(

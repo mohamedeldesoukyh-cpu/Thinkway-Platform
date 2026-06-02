@@ -1,3 +1,4 @@
+import { AnalyticsResilienceBoundary } from "@/components/analytics/analytics-resilience-boundary";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { BillingWorkspaceView } from "@/features/billing/components/billing-workspace";
 import { getBillingDashboard } from "@/features/billing/queries";
@@ -23,7 +24,9 @@ export default async function BillingPage() {
           {errorMessage}
         </div>
       ) : dashboard ? (
-        <BillingWorkspaceView dashboard={dashboard} />
+        <AnalyticsResilienceBoundary title="Analytics temporarily unavailable">
+          <BillingWorkspaceView dashboard={dashboard} />
+        </AnalyticsResilienceBoundary>
       ) : null}
     </DashboardShell>
   );

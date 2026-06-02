@@ -67,8 +67,33 @@ export {
   CURRENCY_SYMBOLS,
 } from "@/lib/analytics/currency/engine";
 
-export { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
+export {
+  loadAnalyticsFacts,
+  loadAnalyticsFactsUncached,
+  safeLoadAnalyticsFacts,
+  emptyAnalyticsFactsSnapshot,
+} from "@/lib/analytics/queries/load-facts";
 export type { AnalyticsFactsSnapshot } from "@/lib/analytics/queries/load-facts";
+
+export {
+  resolveClientCountry,
+  resolveBrandCountry,
+  resolveFactCountryCode,
+  safeDimensionValue,
+  pickColumnFallback,
+  hasColumnFallback,
+  isMissingColumnError,
+  countryCodeForRollup,
+} from "@/lib/analytics/schema-safe";
+
+export {
+  emptyAnalyticsKpiMetrics,
+  withAnalyticsFallback,
+  factsHaveData,
+  type SafeAnalyticsResult,
+} from "@/lib/analytics/resilience";
+
+export { buildBillingKpisFromOperationalRows } from "@/lib/analytics/billing-kpi-fallback";
 export { buildKpiStripFromMetrics } from "@/lib/analytics/queries/kpi-builder";
 export { mapFinancialMetricsToBillingKpis } from "@/lib/analytics/queries/billing-bridge";
 export type { BillingKpiExtras } from "@/lib/analytics/queries/billing-bridge";

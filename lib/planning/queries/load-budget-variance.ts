@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { rollupFacts } from "@/lib/analytics/aggregations/rollup-engine";
-import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
+import { safeLoadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import type { AnalyticsRollupLevel } from "@/lib/analytics/types/filters";
+import { countryCodeForRollup } from "@/lib/analytics/schema-safe";
 import { devLog } from "@/lib/dev-log";
 import { loadBudgetRollups } from "@/lib/planning/queries/load-budget-rollups";
 import type { PlanningRollupLevel } from "@/lib/planning/types/dimensions";
@@ -55,7 +56,7 @@ export async function loadBudgetVariance(
   return withPlanningCache(cacheKey, async () => {
     const [budgetRollups, snapshot] = await Promise.all([
       loadBudgetRollups(supabase, budgetVersionId, level, analyticsFilters),
-      loadAnalyticsFacts(supabase, analyticsFilters),
+      safeLoadAnalyticsFacts(supabase, analyticsFilters),
     ]);
 
     rollupFacts(snapshot.facts, analyticsLevelForPlanning(level), analyticsFilters);
@@ -74,7 +75,7 @@ export async function loadBudgetVariance(
           key = fact.brand_id ?? "unassigned";
           break;
         case "country":
-          key = (fact.country_code ?? "unknown").toUpperCase();
+          key = countryCodeForRollup(fact.country_code);
           break;
         case "team":
           key = fact.team_id ?? "unassigned";

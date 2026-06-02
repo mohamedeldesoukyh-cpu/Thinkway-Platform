@@ -1,5 +1,6 @@
 import { mergeFinancialMetrics, emptyFinancialMetrics } from "@/lib/analytics/metrics/financial";
 import { buildCurrencyContext } from "@/lib/analytics/currency/engine";
+import { countryCodeForRollup, safeDimensionValue } from "@/lib/analytics/schema-safe";
 import { devLog } from "@/lib/dev-log";
 import type {
   AnalyticsQueryFilters,
@@ -42,8 +43,8 @@ function groupKeyForFact(
     case "country":
       return {
         level,
-        key: (fact.country_code ?? "unknown").toUpperCase(),
-        label: fact.country_code ?? "Unknown",
+        key: countryCodeForRollup(fact.country_code),
+        label: safeDimensionValue(fact.country_code, "Unknown"),
       };
     case "team":
       return {

@@ -9,8 +9,11 @@ import {
 import { getCampaignBillingGroups, getCampaignBillingLines, getCampaignOperationalBillingDetail } from "@/features/billing/queries";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { getCampaignPublications } from "@/features/campaigns/queries/publications";
+import { AnalyticsResilienceBoundary } from "@/components/analytics/analytics-resilience-boundary";
+import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
+import { devLog } from "@/lib/dev-log";
 
 type CampaignWorkspacePageProps = {
   params: Promise<{ id: string }>;
@@ -51,15 +54,32 @@ export default async function CampaignWorkspacePage({
   }
 
   if (workspace) {
-    try {
-      [formOptions, masterData, billingLines, billingGroups] = await Promise.all([
-        getCampaignFormOptions(),
-        getMasterDataOptions(),
-        getCampaignBillingLines(id),
-        getCampaignBillingGroups(id),
-      ]);
-    } catch (error) {
-      console.error("[campaign-page] secondary data load failed", error);
+    const settled = await Promise.allSettled([
+      getCampaignFormOptions(),
+      getMasterDataOptions(),
+      getCampaignBillingLines(id),
+      getCampaignBillingGroups(id),
+    ]);
+
+    if (settled[0].status === "fulfilled") {
+      formOptions = settled[0].value;
+    } else {
+      formOptions = EMPTY_CAMPAIGN_FORM_OPTIONS;
+      if (process.env.NODE_ENV === "development") {
+        devLog("[dashboard-resilience] campaign form options fallback", settled[0].reason);
+      }
+    }
+
+    if (settled[1].status === "fulfilled") {
+      masterData = settled[1].value;
+    }
+    if (settled[2].status === "fulfilled") {
+      billingLines = settled[2].value;
+    } else if (process.env.NODE_ENV === "development") {
+      devLog("[dashboard-resilience] campaign billing lines fallback", settled[2].reason);
+    }
+    if (settled[3].status === "fulfilled") {
+      billingGroups = settled[3].value;
     }
 
     try {
@@ -111,19 +131,23 @@ export default async function CampaignWorkspacePage({
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
-      ) : workspace && formOptions ? (
-        <CampaignWorkspaceView
-          workspace={workspace}
-          accountManagers={formOptions.accountManagers}
-          teams={teams}
-          billingLines={billingLines}
-          billingGroups={billingGroups}
-          operationalBilling={operationalBilling}
-          assignmentHierarchy={assignmentHierarchy}
-          publications={publications}
-          publicationsLoadError={publicationsLoadError}
-          currencyOptions={currencyOptions}
-        />
+      ) : workspace ? (
+        <AnalyticsResilienceBoundary title="Analytics temporarily unavailable">
+          <CampaignWorkspaceView
+            workspace={workspace}
+            accountManagers={
+              (formOptions ?? EMPTY_CAMPAIGN_FORM_OPTIONS).accountManagers
+            }
+            teams={teams}
+            billingLines={billingLines}
+            billingGroups={billingGroups}
+            operationalBilling={operationalBilling}
+            assignmentHierarchy={assignmentHierarchy}
+            publications={publications}
+            publicationsLoadError={publicationsLoadError}
+            currencyOptions={currencyOptions}
+          />
+        </AnalyticsResilienceBoundary>
       ) : null}
     </DashboardShell>
   );
