@@ -131,8 +131,16 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           </Select>
         </CardHeader>
         <CardContent>
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No campaigns match this filter.</p>
+          {campaigns.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No campaigns in the billing queue yet. Campaigns appear here once they have billing
+              lines or operational revenue.
+            </p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No campaigns match the &quot;{FILTER_OPTIONS.find((o) => o.value === filter)?.label ?? filter}&quot; filter.
+              {filter !== "all" ? " Try switching to All." : null}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>

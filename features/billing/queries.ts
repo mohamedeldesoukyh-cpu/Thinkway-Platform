@@ -19,6 +19,7 @@ import {
 } from "@/features/campaigns/line-assignment";
 
 import { AGING_BUCKET_LABELS } from "./constants";
+import { buildCampaignQueueFromBillingLines } from "@/lib/billing/campaign-billing-queue";
 import { loadBillingCampaignQueue, loadCampaignOperationalBilling } from "@/lib/billing/operational-billing-query";
 import {
   computeAgingBucket,
@@ -415,7 +416,14 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     assignment_count: 0,
   }));
 
-  const { campaigns: campaign_queue } = await loadBillingCampaignQueue(supabase);
+  let { campaigns: campaign_queue } = await loadBillingCampaignQueue(supabase);
+
+  if (campaign_queue.length === 0 && lines.length > 0) {
+    campaign_queue = buildCampaignQueueFromBillingLines(lines);
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[billing-queue] used lines fallback", { count: campaign_queue.length });
+    }
+  }
 
   return {
     kpis,

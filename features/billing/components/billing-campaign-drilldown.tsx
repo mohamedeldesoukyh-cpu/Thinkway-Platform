@@ -17,7 +17,7 @@ import type { CampaignOperationalBillingDetail } from "@/features/billing/types"
 import { formatBillingMoney } from "@/features/billing/utils";
 import {
   flattenOperationalLeaves,
-  isOperationalRowInvoiceEligible,
+  isOperationalRowActionEligible,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 
@@ -217,7 +217,7 @@ function OperationalRowTree({
 }) {
   const hasChildren = row.children.length > 0;
   const isOpen = expanded.has(row.id);
-  const eligible = isOperationalRowInvoiceEligible(row);
+  const eligible = isOperationalRowActionEligible(row);
   const indent = depth * 16;
 
   return (
@@ -246,7 +246,7 @@ function OperationalRowTree({
           className="size-4 rounded border-border"
           checked={isSelected(row)}
           onChange={() => onToggleSelect(row)}
-          disabled={!eligible && row.kind !== "assignment"}
+          disabled={!eligible}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">

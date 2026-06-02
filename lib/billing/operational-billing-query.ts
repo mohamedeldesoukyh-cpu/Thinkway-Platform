@@ -325,60 +325,157 @@ export async function loadCampaignOperationalBilling(
 export async function loadBillingCampaignQueue(
   supabase: SupabaseClient
 ): Promise<{ campaigns: CampaignBillingQueueRow[]; error?: string }> {
-  const { data: headers, error: headerError } = await supabase
+  const headerSelectWithBrand = `
+    id, document_number, name, currency_code, status,
+    client:clients(id, name, legal_name),
+    brand:brands(name)
+  `;
+  const headerSelectFallback = `
+    id, document_number, name, currency_code, status,
+    client:clients(id, name, legal_name)
+  `;
+
+  const primaryHeaders = await supabase
     .from("campaign_headers")
-    .select(
-      `
-      id, document_number, name, currency_code,
-      client:clients(id, name, legal_name),
-      brand:brands(name)
-    `
-    )
-    .neq("status", "archived")
+    .select(headerSelectWithBrand)
+    .not("status", "eq", "cancelled")
     .order("updated_at", { ascending: false })
     .limit(100);
 
+  let headerError = primaryHeaders.error;
+  let headerData: unknown[] | null = primaryHeaders.data;
+
   if (headerError) {
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[billing-queue] header query with brand failed, retrying", {
+        error: headerError.message,
+      });
+    }
+    const fallbackHeaders = await supabase
+      .from("campaign_headers")
+      .select(headerSelectFallback)
+      .not("status", "eq", "cancelled")
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    headerError = fallbackHeaders.error;
+    headerData = fallbackHeaders.data;
+  }
+
+  if (headerError) {
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[billing-queue] header query failed", {
+        error: headerError.message,
+      });
+    }
     return { campaigns: [], error: headerError.message };
   }
 
+  type HeaderRow = {
+    id: string;
+    document_number: string;
+    name: string;
+    currency_code: string;
+    client: { id: string; name: string; legal_name: string | null } | null;
+    brand?: { name: string } | null;
+  };
+
+  const headers = (headerData ?? []) as unknown as HeaderRow[];
+  const headerIds = headers.map((h) => h.id);
+
+  if (headerIds.length === 0) {
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[billing-queue] no campaign headers returned");
+    }
+    return { campaigns: [] };
+  }
+
+  const { data: lineRows } = await supabase
+    .from("campaign_lines")
+    .select("id, campaign_header_id, billing_status, revenue, invoice_id")
+    .in("campaign_header_id", headerIds);
+
+  const linesByCampaign = new Map<
+    string,
+    Array<{ id: string; billing_status: string; revenue: number; invoice_id: string | null }>
+  >();
+  for (const line of lineRows ?? []) {
+    const list = linesByCampaign.get(line.campaign_header_id) ?? [];
+    list.push({
+      id: line.id,
+      billing_status: line.billing_status,
+      revenue: Number(line.revenue),
+      invoice_id: line.invoice_id,
+    });
+    linesByCampaign.set(line.campaign_header_id, list);
+  }
+
   const campaigns: CampaignBillingQueueRow[] = [];
+  const seenCampaignIds = new Set<string>();
+  let operationalErrors = 0;
 
-  for (const header of headers ?? []) {
-    const row = header as unknown as {
-      id: string;
-      document_number: string;
-      name: string;
-      currency_code: string;
-      client: { id: string; name: string; legal_name: string | null } | null;
-      brand: { name: string } | null;
-    };
+  for (const header of headers) {
+    if (seenCampaignIds.has(header.id)) continue;
+    seenCampaignIds.add(header.id);
 
+    const campaignLines = linesByCampaign.get(header.id) ?? [];
     const { operational_rows, groups, error } = await loadCampaignOperationalBilling(
       supabase,
-      row.id
+      header.id
     );
 
-    if (error) continue;
+    if (error) {
+      operationalErrors += 1;
+      if (process.env.NODE_ENV === "development") {
+        console.debug("[billing-queue] operational load failed — using legacy rollup", {
+          campaignId: header.id,
+          campaignName: header.name,
+          error,
+          lineCount: campaignLines.length,
+        });
+      }
+    }
 
-    const legacyRevenue = groups.reduce((s, g) => s + g.total_value, 0);
-    const legacyInvoiced = groups.reduce((s, g) => s + g.invoiced_value, 0);
+    const legacyRevenue = error
+      ? campaignLines.reduce((s, line) => s + line.revenue, 0)
+      : groups.reduce((s, g) => s + g.total_value, 0);
+    const legacyInvoiced = error
+      ? campaignLines.reduce((s, line) => {
+          if (line.invoice_id) return s + line.revenue;
+          if (
+            ["invoiced", "partially_invoiced", "partially_paid", "paid", "closed"].includes(
+              line.billing_status
+            )
+          ) {
+            return s + line.revenue;
+          }
+          return s;
+        }, 0)
+      : groups.reduce((s, g) => s + g.invoiced_value, 0);
 
     campaigns.push(
       buildCampaignQueueRow({
-        campaign_header_id: row.id,
-        campaign_document_number: row.document_number,
-        campaign_name: row.name,
-        client_id: row.client?.id ?? "",
-        client_name: row.client?.name ?? "",
-        brand_name: row.brand?.name ?? null,
-        legal_entity_name: row.client?.legal_name ?? null,
-        currency_code: row.currency_code,
-        operational_rows,
+        campaign_header_id: header.id,
+        campaign_document_number: header.document_number,
+        campaign_name: header.name,
+        client_id: header.client?.id ?? "",
+        client_name: header.client?.name ?? "",
+        brand_name: header.brand?.name ?? null,
+        legal_entity_name: header.client?.legal_name ?? null,
+        currency_code: header.currency_code,
+        operational_rows: error ? [] : operational_rows,
         legacy_line_revenue: legacyRevenue,
         legacy_invoiced: legacyInvoiced,
       })
     );
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[billing-queue] load complete", {
+      headerCount: headers.length,
+      queueCount: campaigns.length,
+      operationalErrors,
+      skippedDuplicates: headers.length - campaigns.length,
+    });
   }
 
   return { campaigns };

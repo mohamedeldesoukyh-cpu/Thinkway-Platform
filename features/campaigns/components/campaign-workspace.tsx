@@ -28,7 +28,7 @@ import { CampaignPublicationsTab } from "@/features/campaigns/components/tabs/ca
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
-import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/types";
+import type { AssignmentBillingGroup, BillingLineRow, CampaignOperationalBillingDetail } from "@/features/billing/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
@@ -40,6 +40,7 @@ type CampaignWorkspaceViewProps = {
   teams: { id: string; name: string }[];
   billingLines: BillingLineRow[];
   billingGroups: AssignmentBillingGroup[];
+  operationalBilling: CampaignOperationalBillingDetail | null;
   assignmentHierarchy: AssignmentHierarchy;
   publications: CampaignPublicationRow[];
   publicationsLoadError?: string | null;
@@ -52,6 +53,7 @@ export function CampaignWorkspaceView({
   teams,
   billingLines,
   billingGroups,
+  operationalBilling,
   assignmentHierarchy,
   publications,
   publicationsLoadError,
@@ -175,6 +177,7 @@ export function CampaignWorkspaceView({
               workspace={workspace}
               billingLines={billingLines}
               billingGroups={billingGroups}
+              operationalBilling={operationalBilling}
             />
           </TabErrorBoundary>
         </TabsContent>

@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import {
   AlertTriangleIcon,
   FileTextIcon,
   PlusIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,16 +20,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { AssignmentBillingGroupsTable } from "@/features/billing/components/assignment-billing-groups-table";
+import { BillingCampaignDrilldown } from "@/features/billing/components/billing-campaign-drilldown";
 import { CreateInvoiceSheet } from "@/features/billing/components/create-invoice-sheet";
-import {
-  approveLineForBillingAction,
-  moveLineToBillingAction,
-  requestFinanceOverrideAction,
-  type BillingActionState,
-} from "@/features/billing/actions";
-import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/types";
+import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
+import type {
+  AssignmentBillingGroup,
+  BillingLineRow,
+  CampaignOperationalBillingDetail,
+} from "@/features/billing/types";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
@@ -53,16 +51,19 @@ type CampaignBillingTabProps = {
   workspace: CampaignWorkspace;
   billingLines: BillingLineRow[];
   billingGroups: AssignmentBillingGroup[];
+  operationalBilling: CampaignOperationalBillingDetail | null;
 };
 
 export function CampaignBillingTab({
   workspace,
   billingLines,
   billingGroups,
+  operationalBilling,
 }: CampaignBillingTabProps) {
   const { financials, po } = workspace;
   const currency = workspace.currency_code;
-  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [legacyInvoiceOpen, setLegacyInvoiceOpen] = useState(false);
+  const [operationalInvoiceOpen, setOperationalInvoiceOpen] = useState(false);
 
   const poAlert =
     financials.po_exceeded || po.po_status === "exceeded"
@@ -133,7 +134,12 @@ export function CampaignBillingTab({
           <Button size="sm" variant="outline" asChild>
             <Link href="/billing">Finance workspace</Link>
           </Button>
-          <Button size="sm" onClick={() => setInvoiceOpen(true)}>
+          <Button
+            size="sm"
+            onClick={() =>
+              operationalBilling ? setOperationalInvoiceOpen(true) : setLegacyInvoiceOpen(true)
+            }
+          >
             <PlusIcon data-icon="inline-start" />
             Create invoice
           </Button>
@@ -173,18 +179,24 @@ export function CampaignBillingTab({
 
       <Card>
         <CardHeader>
-          <CardTitle>Assignment billing</CardTitle>
+          <CardTitle>Operational billing</CardTitle>
         </CardHeader>
-        <CardContent>
-          <AssignmentBillingGroupsTable
-            groups={billingGroups}
-            billingLines={billingLines}
-            currency={currency}
-            campaignId={workspace.id}
-            renderActions={(line) => (
-              <LineBillingActions line={line} campaignId={workspace.id} />
-            )}
-          />
+        <CardContent className="p-0">
+          {operationalBilling ? (
+            <BillingCampaignDrilldown
+              detail={operationalBilling}
+              onInvoice={() => setOperationalInvoiceOpen(true)}
+            />
+          ) : (
+            <div className="p-4">
+              <AssignmentBillingGroupsTable
+                groups={billingGroups}
+                billingLines={billingLines}
+                currency={currency}
+                campaignId={workspace.id}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -298,101 +310,20 @@ export function CampaignBillingTab({
         campaignId={workspace.id}
         groups={billingGroups}
         currency={currency}
-        open={invoiceOpen}
-        onOpenChange={setInvoiceOpen}
+        open={legacyInvoiceOpen}
+        onOpenChange={setLegacyInvoiceOpen}
       />
-    </div>
-  );
-}
 
-function LineBillingActions({
-  line,
-  campaignId,
-}: {
-  line: BillingLineRow;
-  campaignId: string;
-}) {
-  const [approveState, approveAction, approvePending] = useActionState(
-    approveLineForBillingAction,
-    { ok: false } satisfies BillingActionState
-  );
-  const [moveState, moveAction, movePending] = useActionState(
-    moveLineToBillingAction,
-    { ok: false } satisfies BillingActionState
-  );
-  const [overrideState, overrideAction, overridePending] = useActionState(
-    requestFinanceOverrideAction,
-    { ok: false } satisfies BillingActionState
-  );
-  const [showOverride, setShowOverride] = useState(false);
-  const toastedRef = useRef(new Set<string>());
-
-  useEffect(() => {
-    for (const state of [approveState, moveState, overrideState]) {
-      if (!state.message) continue;
-      const key = `${state.ok}:${state.message}`;
-      if (toastedRef.current.has(key)) continue;
-      toastedRef.current.add(key);
-      if (state.ok) toast.success(state.message);
-      else toast.error(state.message);
-    }
-  }, [approveState, moveState, overrideState]);
-
-  const isLocked =
-    line.revenue_locked || line.cost_locked || line.vendor_assignment_locked;
-
-  return (
-    <div className="flex flex-col items-end gap-1">
-      {line.billing_status === "draft" ? (
-        <form action={approveAction}>
-          <input type="hidden" name="line_id" value={line.id} />
-          <input type="hidden" name="campaign_id" value={campaignId} />
-          <Button type="submit" size="sm" variant="outline" disabled={approvePending}>
-            Approve
-          </Button>
-        </form>
-      ) : null}
-      {["approved", "draft"].includes(line.billing_status) &&
-      !["invoiced", "paid", "closed"].includes(line.billing_status) ? (
-        <form action={moveAction}>
-          <input type="hidden" name="line_id" value={line.id} />
-          <input type="hidden" name="campaign_id" value={campaignId} />
-          <Button
-            type="submit"
-            size="sm"
-            variant="outline"
-            disabled={movePending || line.po_over_consumed}
-          >
-            Move to billing
-          </Button>
-        </form>
-      ) : null}
-      {isLocked ? (
-        showOverride ? (
-          <form action={overrideAction} className="w-48 space-y-2 text-left">
-            <input type="hidden" name="line_id" value={line.id} />
-            <input type="hidden" name="campaign_id" value={campaignId} />
-            <Textarea
-              name="reason"
-              placeholder="Override reason…"
-              rows={2}
-              className="text-xs"
-              required
-            />
-            <Button type="submit" size="sm" variant="outline" disabled={overridePending}>
-              Request override
-            </Button>
-          </form>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowOverride(true)}
-          >
-            Request override
-          </Button>
-        )
+      {operationalBilling ? (
+        <InvoiceGenerationSheet
+          campaignId={workspace.id}
+          currency={operationalBilling.currency_code}
+          rollup={operationalBilling.rollup}
+          operationalRows={operationalBilling.operational_rows}
+          appendableInvoices={operationalBilling.appendable_invoices}
+          open={operationalInvoiceOpen}
+          onOpenChange={setOperationalInvoiceOpen}
+        />
       ) : null}
     </div>
   );

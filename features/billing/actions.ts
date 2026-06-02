@@ -26,6 +26,11 @@ import {
   resolveOperationalInvoiceTargets,
   validateAppendableInvoice,
 } from "@/lib/billing/resolve-operational-invoice";
+import {
+  approveOperationalRows,
+  markOperationalRowsReadyToInvoice,
+  resolveBulkBillingTargets,
+} from "@/lib/billing/sync-operational-row-billing";
 
 import {
   approveLineForBillingSchema,
@@ -361,33 +366,33 @@ export async function bulkApproveOperationalBillingAction(
     return { ok: false, message: "Invalid bulk approve request." };
   }
 
-  const uniqueLines = new Set<string>(parsed.data.line_ids);
+  const targets = resolveBulkBillingTargets(parsed.data);
   const { supabase } = await requireAuthUser();
 
-  if (parsed.data.deliverable_ids.length > 0) {
-    const { data } = await supabase
-      .from("assignment_deliverables")
-      .select("campaign_line_id")
-      .in("id", parsed.data.deliverable_ids);
-    for (const row of data ?? []) uniqueLines.add(row.campaign_line_id);
-  }
-  if (parsed.data.post_ids.length > 0) {
-    const { data } = await supabase
-      .from("assignment_post_schedule")
-      .select("campaign_line_id")
-      .in("id", parsed.data.post_ids);
-    for (const row of data ?? []) uniqueLines.add(row.campaign_line_id);
-  }
-
-  const lineIds = [...uniqueLines];
-  if (lineIds.length === 0) {
-    return { ok: false, message: "Select at least one assignment to approve." };
+  if (
+    targets.lineIds.length === 0 &&
+    targets.deliverableIds.length === 0 &&
+    targets.postIds.length === 0
+  ) {
+    return { ok: false, message: "Select at least one row to approve." };
   }
 
   let approved = 0;
   let skipped = 0;
 
-  for (const lineId of lineIds) {
+  if (targets.hasGranularSelection) {
+    const { updated, error } = await approveOperationalRows(
+      supabase,
+      parsed.data.campaign_id,
+      targets
+    );
+    if (error) {
+      return { ok: false, message: error };
+    }
+    approved += updated;
+  }
+
+  for (const lineId of targets.lineIds) {
     const fd = new FormData();
     fd.set("line_id", lineId);
     fd.set("campaign_id", parsed.data.campaign_id);
@@ -397,7 +402,14 @@ export async function bulkApproveOperationalBillingAction(
   }
 
   if (process.env.NODE_ENV === "development") {
-    console.debug("[bulk-billing] approve", { approved, skipped, lineIds });
+    console.debug("[bulk-billing] approve", {
+      approved,
+      skipped,
+      granular: targets.hasGranularSelection,
+      lineIds: targets.lineIds,
+      deliverableIds: targets.deliverableIds,
+      postIds: targets.postIds,
+    });
   }
 
   revalidateBilling({ campaignId: parsed.data.campaign_id });
@@ -405,8 +417,8 @@ export async function bulkApproveOperationalBillingAction(
     ok: approved > 0,
     message:
       approved > 0
-        ? `Approved ${approved} assignment${approved === 1 ? "" : "s"}${skipped ? ` (${skipped} skipped)` : ""}.`
-        : "No draft assignments were approved.",
+        ? `Approved ${approved} row${approved === 1 ? "" : "s"}${skipped ? ` (${skipped} skipped)` : ""}.`
+        : "No rows were approved.",
   };
 }
 
@@ -421,33 +433,33 @@ export async function bulkMoveOperationalBillingAction(
     return { ok: false, message: "Invalid bulk move request." };
   }
 
-  const uniqueLines = new Set<string>(parsed.data.line_ids);
-
+  const targets = resolveBulkBillingTargets(parsed.data);
   const { supabase } = await requireAuthUser();
-  if (parsed.data.deliverable_ids.length > 0) {
-    const { data } = await supabase
-      .from("assignment_deliverables")
-      .select("campaign_line_id")
-      .in("id", parsed.data.deliverable_ids);
-    for (const row of data ?? []) uniqueLines.add(row.campaign_line_id);
-  }
-  if (parsed.data.post_ids.length > 0) {
-    const { data } = await supabase
-      .from("assignment_post_schedule")
-      .select("campaign_line_id")
-      .in("id", parsed.data.post_ids);
-    for (const row of data ?? []) uniqueLines.add(row.campaign_line_id);
-  }
 
-  const lineIds = [...uniqueLines];
-  if (lineIds.length === 0) {
-    return { ok: false, message: "Select at least one assignment to move." };
+  if (
+    targets.lineIds.length === 0 &&
+    targets.deliverableIds.length === 0 &&
+    targets.postIds.length === 0
+  ) {
+    return { ok: false, message: "Select at least one row to move." };
   }
 
   let moved = 0;
   let skipped = 0;
 
-  for (const lineId of lineIds) {
+  if (targets.hasGranularSelection) {
+    const { updated, error } = await markOperationalRowsReadyToInvoice(
+      supabase,
+      parsed.data.campaign_id,
+      targets
+    );
+    if (error) {
+      return { ok: false, message: error };
+    }
+    moved += updated;
+  }
+
+  for (const lineId of targets.lineIds) {
     const fd = new FormData();
     fd.set("line_id", lineId);
     fd.set("campaign_id", parsed.data.campaign_id);
@@ -457,7 +469,14 @@ export async function bulkMoveOperationalBillingAction(
   }
 
   if (process.env.NODE_ENV === "development") {
-    console.debug("[bulk-billing] move to billing", { moved, skipped, lineIds });
+    console.debug("[bulk-billing] move to billing", {
+      moved,
+      skipped,
+      granular: targets.hasGranularSelection,
+      lineIds: targets.lineIds,
+      deliverableIds: targets.deliverableIds,
+      postIds: targets.postIds,
+    });
   }
 
   revalidateBilling({ campaignId: parsed.data.campaign_id });
@@ -465,8 +484,8 @@ export async function bulkMoveOperationalBillingAction(
     ok: moved > 0,
     message:
       moved > 0
-        ? `Moved ${moved} assignment${moved === 1 ? "" : "s"} to billing${skipped ? ` (${skipped} skipped)` : ""}.`
-        : "No assignments were moved to billing.",
+        ? `Moved ${moved} row${moved === 1 ? "" : "s"} to billing${skipped ? ` (${skipped} skipped)` : ""}.`
+        : "No rows were moved to billing.",
   };
 }
 

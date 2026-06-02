@@ -6,7 +6,7 @@ import {
   getCampaignFormOptions,
   getCampaignWorkspace,
 } from "@/features/campaigns/queries";
-import { getCampaignBillingGroups, getCampaignBillingLines } from "@/features/billing/queries";
+import { getCampaignBillingGroups, getCampaignBillingLines, getCampaignOperationalBillingDetail } from "@/features/billing/queries";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { getCampaignPublications } from "@/features/campaigns/queries/publications";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
@@ -28,6 +28,7 @@ export default async function CampaignWorkspacePage({
     null;
   let billingLines: Awaited<ReturnType<typeof getCampaignBillingLines>> = [];
   let billingGroups: Awaited<ReturnType<typeof getCampaignBillingGroups>> = [];
+  let operationalBilling: Awaited<ReturnType<typeof getCampaignOperationalBillingDetail>> = null;
   let assignmentHierarchy: Awaited<ReturnType<typeof getCampaignAssignmentHierarchy>> = {
     groups: [],
     currency_code: "USD",
@@ -59,6 +60,15 @@ export default async function CampaignWorkspacePage({
       ]);
     } catch (error) {
       console.error("[campaign-page] secondary data load failed", error);
+    }
+
+    try {
+      operationalBilling = await getCampaignOperationalBillingDetail(id);
+    } catch (error) {
+      console.error("[campaign-page] operational billing load failed", {
+        campaignId: id,
+        error: error instanceof Error ? error.message : error,
+      });
     }
 
     try {
@@ -108,6 +118,7 @@ export default async function CampaignWorkspacePage({
           teams={teams}
           billingLines={billingLines}
           billingGroups={billingGroups}
+          operationalBilling={operationalBilling}
           assignmentHierarchy={assignmentHierarchy}
           publications={publications}
           publicationsLoadError={publicationsLoadError}

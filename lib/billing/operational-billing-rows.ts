@@ -71,21 +71,49 @@ export function isOperationalRowAchieved(
   if (row.kind === "assignment") {
     return ACHIEVED_LINE_STATUSES.has(row.line_billing_status);
   }
-  return ACHIEVED_DELIVERABLE_STATUSES.has(row.billing_status);
+  if (ACHIEVED_DELIVERABLE_STATUSES.has(row.billing_status)) return true;
+  if (["disputed", "cancelled"].includes(row.billing_status)) return false;
+  // Deliverable/post rows inherit achievement once parent assignment is billing-ready.
+  if (
+    ["moved_to_billing", "partially_invoiced", "invoiced", "partially_paid", "paid", "closed"].includes(
+      row.line_billing_status
+    )
+  ) {
+    return true;
+  }
+  if (row.line_billing_status === "approved" && row.billing_status === "ready_to_invoice") {
+    return true;
+  }
+  return false;
 }
 
 export function isOperationalRowInvoiceEligible(
   row: Pick<
     OperationalBillingRow,
-    "is_locked" | "remaining_amount" | "billing_status" | "line_billing_status" | "is_invoice_eligible"
+    "kind" | "is_locked" | "remaining_amount" | "billing_status" | "line_billing_status" | "is_invoice_eligible"
   >
 ): boolean {
   if (row.is_invoice_eligible) return true;
   if (row.is_locked || row.remaining_amount <= 0) return false;
   if (row.billing_status === "disputed" || row.billing_status === "cancelled") return false;
-  return ["moved_to_billing", "approved", "partially_invoiced", "ready_to_invoice", "draft"].includes(
+  if (["invoiced", "collected"].includes(row.billing_status)) return false;
+  return ["moved_to_billing", "approved", "partially_invoiced", "ready_to_invoice"].includes(
     row.line_billing_status
-  ) && !["disputed", "cancelled", "invoiced", "collected"].includes(row.billing_status);
+  ) || row.billing_status === "ready_to_invoice";
+}
+
+export function isOperationalRowActionEligible(
+  row: Pick<
+    OperationalBillingRow,
+    "kind" | "is_locked" | "billing_status" | "line_billing_status"
+  >
+): boolean {
+  if (row.is_locked) return false;
+  if (row.billing_status === "disputed" || row.billing_status === "cancelled") return false;
+  if (row.kind === "assignment") {
+    return ["draft", "approved"].includes(row.line_billing_status);
+  }
+  return !["invoiced", "collected"].includes(row.billing_status);
 }
 
 export function rollupOperationalRows(rows: OperationalBillingRow[]): CampaignFinancialRollup | null {
@@ -289,11 +317,20 @@ export function aggregateRollupFromLeaves(
     already_invoiced += row.invoiced_amount;
   }
 
-  return {
+  const rollup = {
     total_campaign_amount,
     achieved_revenue,
     already_invoiced,
     remaining_to_invoice: Math.max(0, achieved_revenue - already_invoiced),
     unachieved_revenue: Math.max(0, total_campaign_amount - achieved_revenue),
   };
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[operational-billing] rollup from leaves", {
+      leafCount: leaves.length,
+      ...rollup,
+    });
+  }
+
+  return rollup;
 }

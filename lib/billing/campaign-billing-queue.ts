@@ -1,4 +1,4 @@
-import type { CampaignLineBillingStatus } from "@/features/billing/types";
+import type { BillingLineRow, CampaignLineBillingStatus } from "@/features/billing/types";
 import {
   aggregateRollupFromLeaves,
   deriveCampaignBillingStatus,
@@ -110,13 +110,92 @@ export function buildCampaignQueueRow(input: {
   return row;
 }
 
+/** Fallback queue builder from legacy billing line rows (one row per campaign). */
+export function buildCampaignQueueFromBillingLines(
+  lines: BillingLineRow[]
+): CampaignBillingQueueRow[] {
+  const byCampaign = new Map<
+    string,
+    {
+      campaign_header_id: string;
+      campaign_document_number: string;
+      campaign_name: string;
+      client_name: string;
+      brand_name: string | null;
+      currency_code: string;
+      total_revenue: number;
+      invoiced_revenue: number;
+      assignment_count: number;
+      billing_status: CampaignLineBillingStatus;
+    }
+  >();
+
+  for (const line of lines) {
+    const existing = byCampaign.get(line.campaign_header_id);
+    const invoiced =
+      ["invoiced", "partially_invoiced", "partially_paid", "paid", "closed"].includes(
+        line.billing_status
+      )
+        ? line.revenue
+        : 0;
+
+    if (!existing) {
+      byCampaign.set(line.campaign_header_id, {
+        campaign_header_id: line.campaign_header_id,
+        campaign_document_number: line.campaign_document_number,
+        campaign_name: line.campaign_name,
+        client_name: line.client_name,
+        brand_name: line.brand_name,
+        currency_code: line.currency_code,
+        total_revenue: line.revenue,
+        invoiced_revenue: invoiced,
+        assignment_count: 1,
+        billing_status: line.billing_status,
+      });
+      continue;
+    }
+
+    existing.total_revenue += line.revenue;
+    existing.invoiced_revenue += invoiced;
+    existing.assignment_count += 1;
+    if (line.billing_status !== existing.billing_status) {
+      existing.billing_status = "partially_invoiced";
+    }
+  }
+
+  const rows = [...byCampaign.values()].map((entry) =>
+    buildCampaignQueueRow({
+      campaign_header_id: entry.campaign_header_id,
+      campaign_document_number: entry.campaign_document_number,
+      campaign_name: entry.campaign_name,
+      client_id: "",
+      client_name: entry.client_name,
+      brand_name: entry.brand_name,
+      legal_entity_name: null,
+      currency_code: entry.currency_code,
+      operational_rows: [],
+      legacy_line_revenue: entry.total_revenue,
+      legacy_invoiced: entry.invoiced_revenue,
+    })
+  );
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[billing-queue] built from billing lines fallback", {
+      lineCount: lines.length,
+      campaignCount: rows.length,
+    });
+  }
+
+  return rows;
+}
+
 export function filterCampaignQueueRows(
   rows: CampaignBillingQueueRow[],
   filter: CampaignBillingQueueFilter
 ): CampaignBillingQueueRow[] {
   if (filter === "all") return rows;
 
-  return rows.filter((row) => {
+  const filtered = rows.filter((row) => {
     switch (filter) {
       case "invoiced":
         return row.already_invoiced >= row.achieved_revenue && row.achieved_revenue > 0;
@@ -138,6 +217,16 @@ export function filterCampaignQueueRows(
         return true;
     }
   });
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[billing-queue-filter]", {
+      filter,
+      inputCount: rows.length,
+      outputCount: filtered.length,
+    });
+  }
+
+  return filtered;
 }
 
 /** Appendable invoice statuses for row append flow. */
