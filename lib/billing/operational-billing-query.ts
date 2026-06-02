@@ -19,6 +19,11 @@ import {
   buildPostOperationalRow,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
+import {
+  buildOperationalBillingContext,
+  normalizeOperationalBillingTree,
+  resolvePostBillableAmount,
+} from "@/lib/billing/operational-financial-sync";
 import { queryCampaignLinesWithDisplayOrder } from "@/lib/campaigns/line-ordering";
 import {
   parseLineAssignment,
@@ -214,9 +219,21 @@ export async function loadCampaignOperationalBilling(
 
     for (const deliverable of deliverables) {
       const posts = postsByDeliverable.get(deliverable.id) ?? [];
-      const postChildren: OperationalBillingRow[] = posts.map((post) =>
-        buildPostOperationalRow(
-          post,
+      const postChildren: OperationalBillingRow[] = posts.map((post) => {
+        const fallbackPerPost =
+          posts.length > 0 && deliverable.billable_amount > 0
+            ? deliverable.billable_amount / posts.length
+            : 0;
+        const enrichedPost = {
+          ...post,
+          billable_amount: resolvePostBillableAmount({
+            billable_amount: post.billable_amount,
+            revenue_before_vat: post.revenue_before_vat,
+            fallback: fallbackPerPost,
+          }),
+        };
+        return buildPostOperationalRow(
+          enrichedPost,
           {
             platform: deliverable.platform,
             deliverable_type: deliverable.deliverable_type,
@@ -229,10 +246,11 @@ export async function loadCampaignOperationalBilling(
             invoice_document_number: line.invoice?.document_number ?? null,
           },
           postLabel(deliverable.platform, deliverable.deliverable_type, post.sequence_number)
-        )
-      );
+        );
+      });
 
-      const usePosts = postChildren.length > 0;
+      const postBillableTotal = postChildren.reduce((sum, post) => sum + post.billable_amount, 0);
+      const usePosts = postChildren.length > 0 && postBillableTotal > 0;
       const groupBillable = usePosts
         ? postChildren.reduce((s, p) => s + p.billable_amount, 0)
         : deliverable.billable_amount;
@@ -310,16 +328,19 @@ export async function loadCampaignOperationalBilling(
     });
   }
 
+  const billingContext = buildOperationalBillingContext(lines, groups);
+  const normalized_rows = normalizeOperationalBillingTree(operational_rows, billingContext);
+
   if (process.env.NODE_ENV === "development") {
     console.debug("[operational-billing-query] loaded", {
       campaignId,
-      assignments: operational_rows.length,
+      assignments: normalized_rows.length,
       deliverables: deliverableIds.length,
       posts: [...postsByDeliverable.values()].flat().length,
     });
   }
 
-  return { groups, operational_rows };
+  return { groups, operational_rows: normalized_rows };
 }
 
 export async function loadBillingCampaignQueue(

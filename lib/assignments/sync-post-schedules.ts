@@ -116,7 +116,7 @@ export async function syncDeliverableRollupFromPosts(
   const { data: posts, error: postsError } = await supabase
     .from("assignment_post_schedule")
     .select(
-      "revenue_before_vat, cost_before_vat, revenue_vat_amount, cost_vat_amount, billing_status"
+      "id, revenue_before_vat, cost_before_vat, revenue_vat_amount, cost_vat_amount, billing_status, billable_amount, invoiced_amount, collected_amount, remaining_amount, locked_at, invoice_line_item_id"
     )
     .eq("assignment_deliverable_id", deliverableId)
     .order("sequence_number");
@@ -127,6 +127,41 @@ export async function syncDeliverableRollupFromPosts(
 
   const rows = posts ?? [];
   if (rows.length === 0) return;
+
+  for (const post of rows) {
+    const billable = Number(post.billable_amount ?? 0) > 0
+      ? Number(post.billable_amount)
+      : Number(post.revenue_before_vat ?? 0);
+    const invoiced = Number(post.invoiced_amount ?? 0);
+    const collected = Number(post.collected_amount ?? 0);
+    const locked = Boolean(post.locked_at || post.invoice_line_item_id);
+    const remaining = locked
+      ? Math.max(0, Number(post.remaining_amount ?? 0))
+      : Math.max(0, billable - invoiced);
+
+    const needsSync =
+      Number(post.billable_amount ?? 0) !== billable ||
+      Number(post.remaining_amount ?? 0) !== remaining;
+
+    if (needsSync) {
+      await supabase
+        .from("assignment_post_schedule")
+        .update({
+          billable_amount: billable,
+          remaining_amount: remaining,
+          invoiced_amount: invoiced,
+          collected_amount: collected,
+        })
+        .eq("id", post.id);
+    }
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[operational-financial-sync] synced post billing shadow fields", {
+      deliverableId,
+      postCount: rows.length,
+    });
+  }
 
   const revenueBeforeVat = roundMoney(
     rows.reduce((sum, row) => sum + Number(row.revenue_before_vat), 0)

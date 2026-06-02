@@ -801,13 +801,18 @@ export async function getCampaignOperationalBillingDetail(
     throw new Error(error);
   }
 
-  const { aggregateRollupFromLeaves, flattenOperationalLeaves } = await import(
-    "@/lib/billing/operational-billing-rows"
-  );
   const { isInvoiceAppendable } = await import("@/lib/billing/campaign-billing-queue");
+  const { computeCampaignFinancialRollup } = await import(
+    "@/lib/billing/operational-financial-sync"
+  );
 
-  const leaves = flattenOperationalLeaves(operational_rows);
-  const rollup = aggregateRollupFromLeaves(leaves);
+  const legacyRevenue = groups.reduce((sum, group) => sum + group.total_value, 0);
+  const legacyInvoiced = groups.reduce((sum, group) => sum + group.invoiced_value, 0);
+  const rollup = computeCampaignFinancialRollup({
+    operational_rows,
+    legacy_line_revenue: legacyRevenue,
+    legacy_invoiced: legacyInvoiced,
+  });
 
   const { data: invoiceRows } = await supabase
     .from("invoices")

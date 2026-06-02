@@ -1,11 +1,10 @@
 import type { BillingLineRow, CampaignLineBillingStatus } from "@/features/billing/types";
 import {
-  aggregateRollupFromLeaves,
   deriveCampaignBillingStatus,
   flattenOperationalLeaves,
-  type CampaignFinancialRollup,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
+import { computeCampaignFinancialRollup } from "@/lib/billing/operational-financial-sync";
 
 export type CampaignBillingQueueFilter =
   | "all"
@@ -54,28 +53,11 @@ export function buildCampaignQueueRow(input: {
   const leaves = flattenOperationalLeaves(input.operational_rows);
   const assignment_count = input.operational_rows.filter((r) => r.kind === "assignment").length;
 
-  let rollup: Pick<
-    CampaignFinancialRollup,
-    | "total_campaign_amount"
-    | "achieved_revenue"
-    | "already_invoiced"
-    | "remaining_to_invoice"
-    | "unachieved_revenue"
-  >;
-
-  if (leaves.length > 0) {
-    rollup = aggregateRollupFromLeaves(leaves);
-  } else {
-    const total = input.legacy_line_revenue ?? 0;
-    const invoiced = input.legacy_invoiced ?? 0;
-    rollup = {
-      total_campaign_amount: total,
-      achieved_revenue: total,
-      already_invoiced: invoiced,
-      remaining_to_invoice: Math.max(0, total - invoiced),
-      unachieved_revenue: 0,
-    };
-  }
+  const rollup = computeCampaignFinancialRollup({
+    operational_rows: input.operational_rows,
+    legacy_line_revenue: input.legacy_line_revenue,
+    legacy_invoiced: input.legacy_invoiced,
+  });
 
   const billing_status =
     input.operational_rows.length > 0

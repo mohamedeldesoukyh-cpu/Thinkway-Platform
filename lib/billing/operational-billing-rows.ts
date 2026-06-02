@@ -330,6 +330,10 @@ export function aggregateRollupFromLeaves(
       leafCount: leaves.length,
       ...rollup,
     });
+    console.debug("[billing-rollup] leaf aggregation", {
+      leafCount: leaves.length,
+      ...rollup,
+    });
   }
 
   return rollup;
