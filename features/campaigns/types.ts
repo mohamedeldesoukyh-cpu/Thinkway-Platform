@@ -3,6 +3,7 @@ import type { PoHealth } from "@/lib/finance/po/calculations";
 import type { PoStatus } from "@/lib/finance/po/status";
 
 import type { LineInfluencerAssignment } from "./line-assignment";
+import type { ClientIoRow, VendorIoRow } from "@/features/io/types";
 
 export type BrandFormOption = {
   id: string;
@@ -264,6 +265,8 @@ export type CampaignWorkspace = {
   approvals: CampaignApprovalRow[];
   activity: CampaignActivityItem[];
   blockers: string[];
+  client_io: ClientIoRow | null;
+  vendor_ios: VendorIoRow[];
   vat_context: {
     client_country_code: string | null;
     default_revenue_vat_percent: number;

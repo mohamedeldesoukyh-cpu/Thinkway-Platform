@@ -10,6 +10,11 @@ import {
   getBrandsForCampaignForm,
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
+import {
+  ensureVendorIoFromAssignment,
+  getCampaignClientIo,
+  getCampaignVendorIos,
+} from "@/features/io/queries";
 import type { CampaignListItem } from "@/types/database";
 
 import type { CampaignLineBillingStatus } from "@/features/billing/types";
@@ -242,6 +247,8 @@ export async function getCampaignWorkspace(
     approvalsResult,
     auditResult,
     profilesResult,
+    clientIo,
+    vendorIos,
   ] = await Promise.all([
     supabase
       .from("campaign_lines")
@@ -302,6 +309,8 @@ export async function getCampaignWorkspace(
       .order("created_at", { ascending: false })
       .limit(50),
     supabase.from("profiles").select("id, full_name, email"),
+    getCampaignClientIo(campaignId),
+    getCampaignVendorIos(campaignId),
   ]);
 
   if (linesResult.error) {
@@ -390,6 +399,14 @@ export async function getCampaignWorkspace(
       confirmed_at: v.confirmed_at,
     };
   });
+
+  await Promise.all(
+    vendors
+      .filter((vendor) => vendor.status === "confirmed")
+      .map((vendor) =>
+        ensureVendorIoFromAssignment(vendor.id).catch(() => null)
+      )
+  );
 
   const influencersByLine = new Map<string, number>();
   const vendorFeesByLine = new Map<string, number>();
@@ -813,6 +830,8 @@ export async function getCampaignWorkspace(
       };
     }),
     blockers,
+    client_io: clientIo,
+    vendor_ios: vendorIos,
     vat_context: {
       client_country_code: clientCountryCode,
       default_revenue_vat_percent: defaultRevenueVatPercent,

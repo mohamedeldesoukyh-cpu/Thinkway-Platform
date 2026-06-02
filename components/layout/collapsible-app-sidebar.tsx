@@ -8,6 +8,7 @@ import {
   ArrowRightLeftIcon,
   Building2Icon,
   CalendarClockIcon,
+  FileSignatureIcon,
   LayoutDashboardIcon,
   LineChartIcon,
   LayersIcon,
@@ -32,6 +33,15 @@ const navItems: NavItem[] = [
   { href: "/groups", label: "Groups", icon: LayersIcon },
   { href: "/clients", label: "Legal Entities", icon: Building2Icon },
   { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+  {
+    href: "/ios",
+    label: "IOs",
+    icon: FileSignatureIcon,
+    children: [
+      { href: "/ios/client", label: "Client IOs" },
+      { href: "/ios/vendor", label: "Vendor IOs" },
+    ],
+  },
   { href: "/billing", label: "Billing", icon: ReceiptIcon },
   {
     href: "/operations",

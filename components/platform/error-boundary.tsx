@@ -9,6 +9,7 @@ export type PlatformSurface =
   | "dashboard"
   | "billing"
   | "campaigns"
+  | "ios"
   | "planning"
   | "invoices"
   | "analytics"
@@ -35,6 +36,11 @@ const SURFACE_COPY: Record<
     title: "Campaign workspace encountered an error",
     description:
       "Campaign data may still save. Retry or open another tab (Overview, Lines, Billing).",
+  },
+  ios: {
+    title: "IO workspace encountered an error",
+    description:
+      "Campaign execution is unaffected. Retry this IO panel or continue in campaign workspace.",
   },
   planning: {
     title: "Planning view temporarily unavailable",

@@ -28,6 +28,8 @@ import { CampaignPublicationsTab } from "@/features/campaigns/components/tabs/ca
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
+import { ClientIoHeaderControls } from "@/features/io/components/client-io-header-controls";
+import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { AssignmentBillingGroup, BillingLineRow, CampaignOperationalBillingDetail } from "@/features/billing/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
@@ -114,24 +116,33 @@ export function CampaignWorkspaceView({
                 </h2>
                 <CampaignStatusBadge status={workspace.status} />
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontalIcon className="size-4" />
-                    Actions
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
-                    <CopyIcon className="size-4" />
-                    Duplicate campaign
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <PencilIcon className="size-4" />
-                    Edit header (Overview tab)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {workspace.client_io ? (
+                  <ClientIoHeaderControls
+                    io={workspace.client_io}
+                    campaignId={workspace.id}
+                    viewHref={`/ios/client?io=${workspace.client_io.id}`}
+                  />
+                ) : null}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreHorizontalIcon className="size-4" />
+                      Actions
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                      <CopyIcon className="size-4" />
+                      Duplicate campaign
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled>
+                      <PencilIcon className="size-4" />
+                      Edit header (Overview tab)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             <p className="font-mono text-sm text-muted-foreground">
               {workspace.document_number}
@@ -150,6 +161,7 @@ export function CampaignWorkspaceView({
           <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="lines">Assignments</TabsTrigger>
+            <TabsTrigger value="vendor-io">Vendor IO</TabsTrigger>
             <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
             <TabsTrigger value="publications">Publications</TabsTrigger>
             <TabsTrigger value="workflow">Workflow</TabsTrigger>
@@ -184,6 +196,11 @@ export function CampaignWorkspaceView({
               assignmentHierarchy={assignmentHierarchy}
               publications={publications}
             />
+          </TabErrorBoundary>
+        </TabsContent>
+        <TabsContent value="vendor-io">
+          <TabErrorBoundary tabName="Vendor IO">
+            <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
           </TabErrorBoundary>
         </TabsContent>
         <TabsContent value="publications">

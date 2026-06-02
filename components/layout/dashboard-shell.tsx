@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Building2Icon,
+  FileSignatureIcon,
   LayoutDashboardIcon,
   MegaphoneIcon,
   UsersIcon,
@@ -15,6 +16,7 @@ const mobileNavItems = [
   { href: "/", label: "Home", icon: LayoutDashboardIcon },
   { href: "/clients", label: "Clients", icon: Building2Icon },
   { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+  { href: "/ios/client", label: "IOs", icon: FileSignatureIcon },
   { href: "/vendors", label: "Vendors", icon: UsersIcon },
 ] as const;
 
