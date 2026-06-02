@@ -13,6 +13,7 @@ export type {
   CampaignAnalyticsFact,
   AnalyticsRollupNode,
   AnalyticsCurrencyContext,
+  PlanningBudgetSlice,
 } from "@/lib/analytics/types/metrics";
 
 export type {
@@ -94,6 +95,18 @@ export {
   serializeDashboardFilters,
   type DashboardFilterState,
 } from "@/lib/analytics/dashboard-filters";
+
+export {
+  emptyPlanningBudgetSlice,
+  planningSliceFromBudgetFields,
+  enrichMetricsWithPlanning,
+  varianceToPlanningKpis,
+  type PlanningVarianceKpi,
+} from "@/lib/analytics/planning/budget-integration";
+export {
+  loadPlanningAnalyticsSnapshot,
+  type PlanningAnalyticsSnapshot,
+} from "@/lib/analytics/planning/snapshot";
 
 export {
   buildDashboardChartBundle,

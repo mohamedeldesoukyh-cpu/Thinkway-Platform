@@ -17,6 +17,21 @@ export type FinancialMetrics = {
   budget_amount: number;
   actual_amount: number;
   budget_variance: number;
+  /** Enterprise planning module budgets (Sprint 3A+). Distinct from operational PO budget_amount. */
+  planning?: PlanningBudgetSlice;
+};
+
+export type PlanningBudgetSlice = {
+  revenue_budget: number;
+  cost_budget: number;
+  gp_budget: number;
+  margin_budget: number;
+  collections_budget: number;
+  vendor_cost_budget: number;
+  po_budget: number;
+  revenue_variance: number;
+  gp_variance: number;
+  revenue_variance_percent: number;
 };
 
 export type AnalyticsCurrencyContext = {

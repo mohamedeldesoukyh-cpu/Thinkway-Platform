@@ -20,7 +20,9 @@ export const METRIC_DEFINITIONS = {
   remaining_to_invoice: "Achieved revenue not yet invoiced.",
   budget_amount: "Approved PO / budget envelope (future-ready).",
   actual_amount: "Consumed PO / actual spend (future-ready).",
-  budget_variance: "Budget − actual (future-ready).",
+  budget_variance: "Operational PO budget − consumed (distinct from planning budgets).",
+  planning_revenue_budget: "Approved planning revenue budget (budget_lines).",
+  planning_variance: "Actual revenue − planning revenue budget.",
 } as const;
 
 /** Line statuses treated as operationally achieved. */
