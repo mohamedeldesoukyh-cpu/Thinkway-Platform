@@ -40,7 +40,7 @@ export default async function VendorIosPage({ searchParams }: Props) {
             </CardContent>
           </Card>
 
-          {selected ? <VendorIoForm row={selected} /> : null}
+          {selected ? <VendorIoForm key={selected.id} row={selected} /> : null}
         </div>
       </PlatformErrorBoundary>
     </DashboardShell>

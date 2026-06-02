@@ -39,7 +39,7 @@ export default async function ClientIosPage({ searchParams }: Props) {
             </CardContent>
           </Card>
 
-          {selected ? <ClientIoForm row={selected} /> : null}
+          {selected ? <ClientIoForm key={selected.id} row={selected} /> : null}
         </div>
       </PlatformErrorBoundary>
     </DashboardShell>
