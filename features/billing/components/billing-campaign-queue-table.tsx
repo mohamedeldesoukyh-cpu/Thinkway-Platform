@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ExternalLinkIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -48,6 +48,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
   const [invoiceCampaignId, setInvoiceCampaignId] = useState<string | null>(null);
   const [invoiceSelection, setInvoiceSelection] = useState<OperationalSelectionPayload | undefined>();
   const [pending, startTransition] = useTransition();
+  const reviewPanelRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(
     () => filterCampaignQueueRows(campaigns, filter),
@@ -158,6 +159,11 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
   const invoiceDetail = invoiceCampaignId ? detailCache[invoiceCampaignId] : null;
   const reviewDetail = selectedCampaignId ? detailCache[selectedCampaignId] : null;
   const reviewLoading = pending && selectedCampaignId !== null && !reviewDetail;
+
+  useEffect(() => {
+    if (!selectedCampaignId || !reviewOpen) return;
+    reviewPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [selectedCampaignId, reviewOpen, reviewDetail]);
 
   return (
     <div className="space-y-4">
@@ -318,20 +324,22 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
       </Card>
 
       {selectedCampaign ? (
-        <BillingCampaignReviewPanel
-          campaignName={selectedCampaign.campaign_name}
-          campaignDocumentNumber={selectedCampaign.campaign_document_number}
-          detail={reviewDetail}
-          loading={reviewLoading}
-          filter={filter}
-          open={reviewOpen}
-          onOpenChange={setReviewOpen}
-          onInvoice={(selection) => {
-            if (selectedCampaignId) {
-              openInvoiceWorkflow(selectedCampaignId, selection);
-            }
-          }}
-        />
+        <div ref={reviewPanelRef}>
+          <BillingCampaignReviewPanel
+            campaignName={selectedCampaign.campaign_name}
+            campaignDocumentNumber={selectedCampaign.campaign_document_number}
+            detail={reviewDetail}
+            loading={reviewLoading}
+            filter={filter}
+            open={reviewOpen}
+            onOpenChange={setReviewOpen}
+            onInvoice={(selection) => {
+              if (selectedCampaignId) {
+                openInvoiceWorkflow(selectedCampaignId, selection);
+              }
+            }}
+          />
+        </div>
       ) : null}
 
       {invoiceCampaignId && invoiceDetail ? (

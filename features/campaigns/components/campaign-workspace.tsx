@@ -101,8 +101,8 @@ export function CampaignWorkspaceView({
       >
         <div
           className={cn(
-            "sticky top-0 z-30 -mx-4 space-y-6 border-b border-border/60 bg-background px-4 pb-4 pt-1",
-            "backdrop-blur supports-[backdrop-filter]:bg-background/95 md:-mx-8 md:px-8"
+            "sticky top-0 z-30 w-full -mx-4 space-y-6 border-b border-border/60 bg-background px-4 pb-4 pt-1 shadow-sm",
+            "md:-mx-8 md:px-8"
           )}
           data-sticky="campaign-workspace-header"
         >

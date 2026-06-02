@@ -29,6 +29,7 @@ import {
   mapCampaignQueueFilterToOperational,
 } from "@/lib/billing/operational-row-filters";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
+import { cn } from "@/lib/utils";
 
 type ReviewFlatRow = {
   row: OperationalBillingRow;
@@ -98,6 +99,10 @@ export function BillingCampaignReviewPanel({
   );
 
   const flatRows = useMemo(() => flattenReviewRows(filteredRows), [filteredRows]);
+  const totalOperationalRows = useMemo(
+    () => (detail ? flattenReviewRows(detail.operational_rows).length : 0),
+    [detail]
+  );
 
   useEffect(() => {
     if (!detail || !open) return;
@@ -112,7 +117,13 @@ export function BillingCampaignReviewPanel({
   }, [detail, open, filter, operationalFilter, flatRows.length]);
 
   return (
-    <Card>
+    <Card
+      id="billing-campaign-review"
+      className={cn(
+        "scroll-mt-4 border-primary/20 ring-1 ring-primary/10",
+        open && "shadow-sm"
+      )}
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
         <div className="space-y-1">
           <CardTitle className="text-base">Campaign lines review</CardTitle>
@@ -142,17 +153,43 @@ export function BillingCampaignReviewPanel({
       {open ? (
         <CardContent className="space-y-4 pt-0">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading campaign billing lines…</p>
+            <div className="overflow-x-auto rounded-2xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Line</TableHead>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead>Invoice status</TableHead>
+                    <TableHead className="text-right">Achieved</TableHead>
+                    <TableHead className="text-right">Invoiced</TableHead>
+                    <TableHead className="text-right">Remaining</TableHead>
+                    <TableHead>Billing status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                      Loading campaign billing lines…
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           ) : !detail ? (
             <p className="text-sm text-muted-foreground">
               Unable to load campaign billing detail.
             </p>
-          ) : flatRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No operational rows match the current finance filter.
-            </p>
           ) : (
             <>
+              {flatRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {filter !== "all" && totalOperationalRows > 0
+                    ? `No lines match the "${filter.replace(/_/g, " ")}" filter. ${totalOperationalRows} line(s) hidden — switch to All to review the full campaign.`
+                    : "No operational billing lines found for this campaign."}
+                </p>
+              ) : null}
+
               <div className="overflow-x-auto rounded-2xl border">
                 <Table>
                   <TableHeader>
@@ -168,73 +205,87 @@ export function BillingCampaignReviewPanel({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {flatRows.map(({ row, depth }) => {
-                      const cur = detail.currency_code;
-                      const invoiceStatus =
-                        row.invoiced_amount >= row.billable_amount && row.billable_amount > 0
-                          ? "Invoiced"
-                          : row.invoiced_amount > 0
-                            ? "Partially invoiced"
-                            : "Not invoiced";
+                    {flatRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="py-6 text-center text-sm text-muted-foreground"
+                        >
+                          No rows to display.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      flatRows.map(({ row, depth }) => {
+                        const cur = detail.currency_code;
+                        const invoiceStatus =
+                          row.invoiced_amount >= row.billable_amount &&
+                          row.billable_amount > 0
+                            ? "Invoiced"
+                            : row.invoiced_amount > 0
+                              ? "Partially invoiced"
+                              : "Not invoiced";
 
-                      return (
-                        <TableRow key={row.id}>
-                          <TableCell>
-                            <Badge variant="outline" className="text-[10px]">
-                              {rowKindLabel(row.kind)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div
-                              className="min-w-[12rem]"
-                              style={{ paddingLeft: depth * 16 }}
-                            >
-                              <p className="text-sm font-medium">{row.label}</p>
-                              {row.document_number ? (
-                                <p className="font-mono text-[10px] text-muted-foreground">
-                                  {row.document_number}
-                                </p>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {row.invoice_document_number ?? "—"}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {invoiceStatus}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(achievedAmount(row), cur)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(row.invoiced_amount, cur)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatBillingMoneyCompact(row.remaining_amount, cur)}
-                          </TableCell>
-                          <TableCell>
-                            {row.kind === "assignment" ? (
-                              <BillingStatusBadge status={row.line_billing_status} />
-                            ) : (
-                              <DeliverableBillingStatusBadge
-                                status={
-                                  row.billing_status as import("@/features/billing/types").AssignmentDeliverableBillingStatus
-                                }
-                              />
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                        return (
+                          <TableRow key={row.id}>
+                            <TableCell>
+                              <Badge variant="outline" className="text-[10px]">
+                                {rowKindLabel(row.kind)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div
+                                className="min-w-[12rem]"
+                                style={{ paddingLeft: depth * 16 }}
+                              >
+                                <p className="text-sm font-medium">{row.label}</p>
+                                {row.document_number ? (
+                                  <p className="font-mono text-[10px] text-muted-foreground">
+                                    {row.document_number}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {row.invoice_document_number ?? "—"}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {invoiceStatus}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatBillingMoneyCompact(achievedAmount(row), cur)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatBillingMoneyCompact(row.invoiced_amount, cur)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatBillingMoneyCompact(row.remaining_amount, cur)}
+                            </TableCell>
+                            <TableCell>
+                              {row.kind === "assignment" ? (
+                                <BillingStatusBadge status={row.line_billing_status} />
+                              ) : (
+                                <DeliverableBillingStatusBadge
+                                  status={
+                                    row.billing_status as import("@/features/billing/types").AssignmentDeliverableBillingStatus
+                                  }
+                                />
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>
 
-              <BillingCampaignDrilldown
-                detail={detail}
-                filter={operationalFilter}
-                onInvoice={onInvoice}
-              />
+              {flatRows.length > 0 ? (
+                <BillingCampaignDrilldown
+                  detail={detail}
+                  filter={operationalFilter}
+                  onInvoice={onInvoice}
+                />
+              ) : null}
             </>
           )}
         </CardContent>

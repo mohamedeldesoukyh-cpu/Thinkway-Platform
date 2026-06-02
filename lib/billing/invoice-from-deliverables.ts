@@ -46,6 +46,7 @@ type DeliverableRecord = {
     name: string;
     billing_status: string;
     invoice_id: string | null;
+    revenue_vat_percent?: number | null;
     revenue_vat_exempt?: boolean | null;
   } | null;
 };
@@ -79,31 +80,72 @@ export function mapDeliverableRecord(
   };
 }
 
+function resolveInvoiceLineBeforeVat(deliverable: DeliverableBillingRow): number {
+  if (deliverable.revenue_before_vat > 0) {
+    return deliverable.revenue_before_vat;
+  }
+  if (deliverable.remaining_amount > 0) {
+    return deliverable.remaining_amount;
+  }
+  return deliverable.billable_amount;
+}
+
+function resolveInvoiceLineVatPercent(
+  deliverable: DeliverableBillingRow,
+  line: { revenue_vat_percent?: number | null; revenue_vat_exempt?: boolean | null },
+  defaultVatRate: number
+): number {
+  const exempt =
+    deliverable.revenue_vat_exempt || Boolean(line.revenue_vat_exempt);
+  if (exempt) return 0;
+  if (deliverable.revenue_vat_percent > 0) return deliverable.revenue_vat_percent;
+  if (Number(line.revenue_vat_percent ?? 0) > 0) {
+    return Number(line.revenue_vat_percent);
+  }
+  return defaultVatRate;
+}
+
 function deliverableInvoiceLinePayload(
   invoiceId: string,
   headerId: string,
-  line: { id: string; document_number: string; name: string },
+  line: { id: string; document_number: string; name: string; revenue_vat_percent?: number | null; revenue_vat_exempt?: boolean | null },
   deliverable: DeliverableBillingRow,
-  sortOrder: number
+  sortOrder: number,
+  defaultVatRate: number
 ) {
-  const beforeVat = deliverable.revenue_before_vat;
-  const vatExempt = deliverable.revenue_vat_exempt;
-  const vatPercent = vatExempt ? 0 : deliverable.revenue_vat_percent;
+  const beforeVat = resolveInvoiceLineBeforeVat(deliverable);
+  const vatExempt =
+    deliverable.revenue_vat_exempt || Boolean(line.revenue_vat_exempt);
+  const vatPercent = resolveInvoiceLineVatPercent(deliverable, line, defaultVatRate);
 
   return {
     invoice_id: invoiceId,
     campaign_line_id: line.id,
     campaign_header_id: headerId,
-    campaign_id: headerId,
     assignment_deliverable_id: deliverable.id,
     sort_order: sortOrder,
     description: `${line.document_number} — ${line.name} · ${deliverable.label}`,
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,
-    revenue_vat_percent: vatPercent,
+    revenue_vat_percent: vatExempt ? 0 : vatPercent,
     revenue_vat_exempt: vatExempt,
   };
+}
+
+export async function recalculateInvoiceTotals(
+  supabase: SupabaseClient,
+  invoiceId: string
+): Promise<{ error?: string }> {
+  const { error } = await supabase.rpc("recalculate_invoice_totals", {
+    p_invoice_id: invoiceId,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {};
 }
 
 export async function resolveInvoiceDeliverableIds(
@@ -143,7 +185,7 @@ export async function fetchDeliverablesForInvoicing(
   deliverableIds: string[]
 ): Promise<{ deliverables: DeliverableRecord[]; error?: string }> {
   const campaignLineEmbed =
-    "campaign_line:campaign_lines!inner(id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue_vat_exempt)";
+    "campaign_line:campaign_lines!inner(id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue_vat_percent, revenue_vat_exempt)";
 
   const { data, error, includesVatExempt } = await queryAssignmentDeliverables<
     DeliverableRecord
@@ -207,8 +249,10 @@ export async function lockDeliverablesOnInvoice(
   supabase: SupabaseClient,
   invoiceId: string,
   headerId: string,
-  deliverables: DeliverableRecord[]
+  deliverables: DeliverableRecord[],
+  options?: { defaultVatRate?: number }
 ): Promise<{ error?: string }> {
+  const defaultVatRate = options?.defaultVatRate ?? 0;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
@@ -221,7 +265,16 @@ export async function lockDeliverablesOnInvoice(
     const mapped = mapDeliverableRecord(row);
     const { data: item, error: itemError } = await supabase
       .from("invoice_line_items")
-      .insert(deliverableInvoiceLinePayload(invoiceId, headerId, line, mapped, sortOrder))
+      .insert(
+        deliverableInvoiceLinePayload(
+          invoiceId,
+          headerId,
+          line,
+          mapped,
+          sortOrder,
+          defaultVatRate
+        )
+      )
       .select("id")
       .single();
 
@@ -289,13 +342,19 @@ export async function lockDeliverablesOnInvoice(
     await syncLineBillingFromDeliverables(supabase, lineId, nextStatus);
   }
 
+  const totalsError = await recalculateInvoiceTotals(supabase, invoiceId);
+  if (totalsError.error) {
+    return totalsError;
+  }
+
   return {};
 }
 
 export async function regenerateInvoiceFromDeliverables(
   supabase: SupabaseClient,
   invoiceId: string,
-  headerId: string
+  headerId: string,
+  options?: { defaultVatRate?: number }
 ): Promise<{ error?: string; usedDeliverables: boolean }> {
   const { data: existingItems, error: itemsError } = await supabase
     .from("invoice_line_items")
@@ -342,9 +401,18 @@ export async function regenerateInvoiceFromDeliverables(
     await supabase
       .from("invoice_line_items")
       .insert(
-        deliverableInvoiceLinePayload(invoiceId, headerId, line, mapped, sortOrder)
+        deliverableInvoiceLinePayload(
+          invoiceId,
+          headerId,
+          line,
+          mapped,
+          sortOrder,
+          options?.defaultVatRate ?? 0
+        )
       );
   }
+
+  await recalculateInvoiceTotals(supabase, invoiceId);
 
   return { usedDeliverables: true };
 }

@@ -11,6 +11,7 @@ import { resolveClientBillingVatRate } from "@/lib/vat/queries";
 import {
   fetchDeliverablesForInvoicing,
   lockDeliverablesOnInvoice,
+  recalculateInvoiceTotals,
   regenerateInvoiceFromDeliverables,
   resolveInvoiceDeliverableIds,
   validateDeliverablesForInvoice,
@@ -83,17 +84,21 @@ function invoiceLinePayload(
   invoiceId: string,
   headerId: string,
   line: CampaignLineForInvoice,
-  sortOrder: number
+  sortOrder: number,
+  defaultVatRate: number
 ) {
   const beforeVat = Number(line.revenue_before_vat ?? line.revenue);
   const vatExempt = line.revenue_vat_exempt ?? false;
-  const vatPercent = vatExempt ? 0 : Number(line.revenue_vat_percent ?? 0);
+  const vatPercent = vatExempt
+    ? 0
+    : Number(line.revenue_vat_percent ?? 0) > 0
+      ? Number(line.revenue_vat_percent)
+      : defaultVatRate;
 
   return {
     invoice_id: invoiceId,
     campaign_line_id: line.id,
     campaign_header_id: headerId,
-    campaign_id: headerId,
     sort_order: sortOrder,
     description: `${line.document_number} — ${line.name}`,
     quantity: 1,
@@ -578,6 +583,11 @@ export async function createInvoiceFromLinesAction(
   let invoiceId: string;
   let invoiceDocumentNumber: string;
 
+  const { countryCode, vatRate } = await resolveClientBillingVatRate(
+    supabase,
+    header.client_id
+  );
+
   if (parsed.data.invoice_mode === "append") {
     const existingId = parsed.data.existing_invoice_id?.trim();
     if (!existingId) {
@@ -601,16 +611,10 @@ export async function createInvoiceFromLinesAction(
       console.debug("[billing-invoice] append action", { invoiceId, postIds, deliverableIds });
     }
   } else {
-    const { countryCode } = await resolveClientBillingVatRate(
-      supabase,
-      header.client_id
-    );
-
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .insert({
         client_id: header.client_id,
-        campaign_id: header.id,
         campaign_header_id: header.id,
         status: "sent",
         due_date: parsed.data.due_date,
@@ -646,7 +650,8 @@ export async function createInvoiceFromLinesAction(
     supabase,
     invoiceId,
     header.id,
-    deliverables
+    deliverables,
+    { defaultVatRate: vatRate }
   );
 
   if (lockResult.error) {
@@ -1084,7 +1089,7 @@ export async function regenerateInvoiceAction(
   const { data: invoice, error: invError } = await supabase
     .from("invoices")
     .select(
-      "id, document_number, campaign_header_id, version_number, regeneration_status"
+      "id, document_number, campaign_header_id, client_id, version_number, regeneration_status"
     )
     .eq("id", parsed.data.invoice_id)
     .maybeSingle();
@@ -1111,10 +1116,13 @@ export async function regenerateInvoiceAction(
     return { ok: false, message: linesError.message };
   }
 
+  const { vatRate } = await resolveClientBillingVatRate(supabase, invoice.client_id);
+
   const deliverableRegen = await regenerateInvoiceFromDeliverables(
     supabase,
     invoice.id,
-    invoice.campaign_header_id!
+    invoice.campaign_header_id!,
+    { defaultVatRate: vatRate }
   );
 
   if (deliverableRegen.error) {
@@ -1132,10 +1140,12 @@ export async function regenerateInvoiceAction(
           invoice.id,
           invoice.campaign_header_id!,
           line as CampaignLineForInvoice,
-          sortOrder
+          sortOrder,
+          vatRate
         )
       );
     }
+    await recalculateInvoiceTotals(supabase, invoice.id);
   }
 
   const { data: refreshedInvoice, error: refreshError } = await supabase
