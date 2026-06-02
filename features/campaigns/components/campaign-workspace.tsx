@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeftIcon,
   CopyIcon,
@@ -32,6 +32,7 @@ import type { AssignmentBillingGroup, BillingLineRow } from "@/features/billing/
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
+import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 
 type CampaignWorkspaceViewProps = {
   workspace: import("@/features/campaigns/types").CampaignWorkspace;
@@ -57,6 +58,14 @@ export function CampaignWorkspaceView({
   currencyOptions,
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+
+  const operationalDeliverableCount = useMemo(() => {
+    return flattenOperationalDeliverables(
+      assignmentHierarchy,
+      publications,
+      workspace.deliverables ?? []
+    ).rows.length;
+  }, [assignmentHierarchy, publications, workspace.deliverables]);
 
   return (
     <div className="space-y-6">
@@ -102,7 +111,10 @@ export function CampaignWorkspaceView({
         </p>
       </div>
 
-      <CampaignKpiStrip workspace={workspace} />
+      <CampaignKpiStrip
+        workspace={workspace}
+        operationalDeliverableCount={operationalDeliverableCount}
+      />
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
@@ -136,7 +148,11 @@ export function CampaignWorkspaceView({
         </TabsContent>
         <TabsContent value="deliverables">
           <TabErrorBoundary tabName="Deliverables">
-            <CampaignDeliverablesTab workspace={workspace} />
+            <CampaignDeliverablesTab
+              workspace={workspace}
+              assignmentHierarchy={assignmentHierarchy}
+              publications={publications}
+            />
           </TabErrorBoundary>
         </TabsContent>
         <TabsContent value="publications">

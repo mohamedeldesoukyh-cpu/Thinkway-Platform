@@ -1,12 +1,9 @@
 "use client";
 
 import { format, isValid, parseISO } from "date-fns";
-import { PlusIcon } from "lucide-react";
-import { useActionState, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,23 +22,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  updateDeliverableStatusAction,
-  type FormActionState,
-} from "@/features/campaigns/actions";
-import { CampaignDeliverableSheet } from "@/features/campaigns/components/campaign-deliverable-sheet";
-import {
-  DELIVERABLE_DISPLAY_STATUS_OPTIONS,
-  DELIVERABLE_TYPE_OPTIONS,
-} from "@/features/campaigns/constants";
-import type { CampaignDeliverableRow, CampaignWorkspace } from "@/features/campaigns/types";
-import { formatPlatformLabel } from "@/features/campaigns/utils";
-import { labelForOption } from "@/lib/master-data/constants";
+import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";
+import { DeliverableBillingBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-billing-badge";
+import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
+import { SCHEDULE_STATUS_OPTIONS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
+import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
+import type {
+  OperationalDeliverableExplorerRow,
+  OperationalDeliverableFlattenStats,
+} from "@/features/campaigns/types/operational-deliverable-explorer";
+import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
+import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
 
-const ALL_STATUSES = "all";
+const ALL = "all";
 
 type CampaignDeliverablesTabProps = {
   workspace: CampaignWorkspace;
+  assignmentHierarchy: AssignmentHierarchy;
+  publications?: CampaignPublicationRow[];
 };
 
 function safeFormatDate(value: string | null | undefined): string {
@@ -55,198 +55,284 @@ function safeFormatDate(value: string | null | undefined): string {
   }
 }
 
-export function CampaignDeliverablesTab({ workspace }: CampaignDeliverablesTabProps) {
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+export function CampaignDeliverablesTab({
+  workspace,
+  assignmentHierarchy,
+  publications = [],
+}: CampaignDeliverablesTabProps) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [platformFilter, setPlatformFilter] = useState(ALL);
+  const [workflowFilter, setWorkflowFilter] = useState(ALL);
+  const [billingFilter, setBillingFilter] = useState(ALL);
+  const [creatorFilter, setCreatorFilter] = useState(ALL);
+  const [publicationFilter, setPublicationFilter] = useState(ALL);
 
-  const deliverables = workspace.deliverables ?? [];
-  const lines = workspace.lines ?? [];
+  const { rows, stats } = useMemo(
+    () =>
+      flattenOperationalDeliverables(
+        assignmentHierarchy,
+        publications,
+        workspace.deliverables ?? []
+      ),
+    [assignmentHierarchy, publications, workspace.deliverables]
+  );
 
-  const assignmentLines = lines.filter(
-    (l) => l.influencer_id && l.campaign_influencer_id
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    console.log("[deliverables-tab] loaded rows", {
+      total: rows.length,
+      stats,
+      hierarchyGroups: assignmentHierarchy.groups?.length ?? 0,
+    });
+  }, [rows.length, stats, assignmentHierarchy.groups]);
+
+  const platformOptions = useMemo(
+    () => uniqueSorted(rows.map((r) => r.platform)),
+    [rows]
+  );
+  const creatorOptions = useMemo(
+    () => uniqueSorted(rows.map((r) => r.creator_name ?? "")),
+    [rows]
+  );
+  const billingOptions = useMemo(
+    () => uniqueSorted(rows.map((r) => r.billing_status)),
+    [rows]
+  );
+  const publicationOptions = useMemo(
+    () => uniqueSorted(rows.map((r) => r.publication_status ?? "")),
+    [rows]
   );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return deliverables.filter((d) => {
-      if (statusFilter !== ALL_STATUSES && d.display_status !== statusFilter) return false;
+    return rows.filter((row) => {
+      if (platformFilter !== ALL && row.platform !== platformFilter) return false;
+      if (workflowFilter !== ALL && row.workflow_status !== workflowFilter) return false;
+      if (billingFilter !== ALL && row.billing_status !== billingFilter) return false;
+      if (creatorFilter !== ALL && (row.creator_name ?? "") !== creatorFilter) return false;
+      if (publicationFilter !== ALL) {
+        const pub = row.publication_status ?? "none";
+        if (publicationFilter === "none" && row.publication_status) return false;
+        if (publicationFilter !== "none" && pub !== publicationFilter) return false;
+      }
       if (!q) return true;
-      const title = (d.title ?? "").toLowerCase();
-      const creator = (d.influencer_name ?? "").toLowerCase();
-      return title.includes(q) || creator.includes(q);
+      return row.search_text.includes(q);
     });
-  }, [deliverables, search, statusFilter]);
+  }, [
+    rows,
+    search,
+    platformFilter,
+    workflowFilter,
+    billingFilter,
+    creatorFilter,
+    publicationFilter,
+  ]);
+
+  const emptyMessage =
+    rows.length === 0
+      ? "No operational deliverables yet. Add assignments and deliverables in the Assignments tab."
+      : "No deliverables match the current search and filters.";
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle>Deliverables</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Posts, reels, stories, TikTok, and YouTube integrations.
-            </p>
+    <Card>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+        <div>
+          <CardTitle>Deliverables</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Operational explorer — synced from assignment deliverables and post schedules.
+          </p>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {stats.hierarchy_load_error ? (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+            Hierarchy loaded with warnings: {stats.hierarchy_load_error}
           </div>
-          <Button
-            size="sm"
-            onClick={() => setSheetOpen(true)}
-            disabled={assignmentLines.length === 0}
-          >
-            <PlusIcon data-icon="inline-start" />
-            Add deliverable
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="deliverable_search">Search</Label>
-              <Input
-                id="deliverable_search"
-                placeholder="Title or creator…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
-                  {DELIVERABLE_DISPLAY_STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        ) : null}
+
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Displaying {filtered.length} of {rows.length}
+        </p>
+
+        <div className="grid gap-2">
+          <Label htmlFor="deliverable_search">Search</Label>
+          <Input
+            id="deliverable_search"
+            placeholder="Creator, platform, type, assignment, notes, workflow…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <FilterSelect
+            label="Platform"
+            value={platformFilter}
+            onValueChange={setPlatformFilter}
+            options={platformOptions.map((p) => ({
+              value: p,
+              label: getPlatformOptionLabel(p),
+            }))}
+          />
+          <FilterSelect
+            label="Workflow"
+            value={workflowFilter}
+            onValueChange={setWorkflowFilter}
+            options={SCHEDULE_STATUS_OPTIONS.map((o) => ({
+              value: o.value,
+              label: o.label,
+            }))}
+          />
+          <FilterSelect
+            label="Billing"
+            value={billingFilter}
+            onValueChange={setBillingFilter}
+            options={billingOptions.map((b) => ({
+              value: b,
+              label: b.replace(/_/g, " "),
+            }))}
+          />
+          <FilterSelect
+            label="Creator"
+            value={creatorFilter}
+            onValueChange={setCreatorFilter}
+            options={creatorOptions.map((c) => ({ value: c, label: c }))}
+          />
+          <FilterSelect
+            label="Publication"
+            value={publicationFilter}
+            onValueChange={setPublicationFilter}
+            options={[
+              ...publicationOptions.map((p) => ({
+                value: p,
+                label: p.replace(/_/g, " "),
+              })),
+              { value: "none", label: "No publication" },
+            ]}
+          />
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Deliverable</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Creator</TableHead>
+                  <TableHead>Platform</TableHead>
+                  <TableHead>Due</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Content</TableHead>
+                  <TableHead className="text-right">Billing</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((row) => (
+                  <OperationalExplorerRow key={row.id} row={row} stats={stats} />
+                ))}
+              </TableBody>
+            </Table>
           </div>
-
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No deliverables found.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Deliverable</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Creator</TableHead>
-                    <TableHead>Platform</TableHead>
-                    <TableHead>Due</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Content</TableHead>
-                    <TableHead className="text-right">Update</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((d) => (
-                    <DeliverableRow
-                      key={d.id}
-                      deliverable={d}
-                      campaignId={workspace.id}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <CampaignDeliverableSheet
-        campaignId={workspace.id}
-        assignments={assignmentLines}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-      />
-    </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
-function DeliverableRow({
-  deliverable,
-  campaignId,
+function FilterSelect({
+  label,
+  value,
+  onValueChange,
+  options,
 }: {
-  deliverable: CampaignDeliverableRow;
-  campaignId: string;
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: { value: string; label: string }[];
 }) {
-  const [status, setStatus] = useState(deliverable.status);
-  const [state, action, isPending] = useActionState(updateDeliverableStatusAction, {
-    ok: false,
-  } satisfies FormActionState);
+  return (
+    <div className="grid gap-1.5">
+      <Label className="text-xs">{label}</Label>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger className="h-8 w-full">
+          <SelectValue placeholder={`All ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All</SelectItem>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (!state.message) return;
-    if (state.ok) toast.success(state.message);
-    else toast.error(state.message);
-  }, [state]);
-
-  const displayLabel =
-    DELIVERABLE_DISPLAY_STATUS_OPTIONS.find(
-      (o) => o.value === deliverable.display_status
-    )?.label ?? deliverable.display_status;
-
+function OperationalExplorerRow({
+  row,
+}: {
+  row: OperationalDeliverableExplorerRow;
+  stats: OperationalDeliverableFlattenStats;
+}) {
   return (
     <TableRow>
       <TableCell>
         <div className="space-y-0.5">
-          <span className="font-medium">{deliverable.title ?? "Untitled"}</span>
-          <p className="font-mono text-xs text-muted-foreground">
-            {deliverable.document_number}
+          <span className="font-medium">{row.label}</span>
+          <p className="font-mono text-[10px] text-muted-foreground">
+            {row.assignment_title}
+            {row.sequence_number != null ? ` · #${row.sequence_number}` : null}
+          </p>
+          <p className="font-mono text-[10px] text-muted-foreground/80">
+            line:{row.campaign_line_id.slice(0, 8)} · del:
+            {row.assignment_deliverable_id.slice(0, 8)}
+            {row.assignment_post_schedule_id
+              ? ` · post:${row.assignment_post_schedule_id.slice(0, 8)}`
+              : null}
           </p>
         </div>
       </TableCell>
       <TableCell>
-        {labelForOption(DELIVERABLE_TYPE_OPTIONS, deliverable.deliverable_type)}
+        <Badge variant="outline" className="text-[10px] font-normal">
+          {row.deliverable_type_label}
+        </Badge>
       </TableCell>
-      <TableCell>{deliverable.influencer_name ?? "—"}</TableCell>
-      <TableCell>{formatPlatformLabel(deliverable.platform)}</TableCell>
-      <TableCell className="text-muted-foreground">
-        {safeFormatDate(deliverable.due_date)}
+      <TableCell>{row.creator_name ?? "—"}</TableCell>
+      <TableCell>{row.platform_label}</TableCell>
+      <TableCell className="text-muted-foreground">{safeFormatDate(row.live_date)}</TableCell>
+      <TableCell>
+        <DeliverableWorkflowBadge status={row.workflow_status} />
       </TableCell>
       <TableCell>
-        <Badge variant="outline">{displayLabel}</Badge>
-      </TableCell>
-      <TableCell>
-        {deliverable.content_url ? (
-          <a
-            href={deliverable.content_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm underline"
-          >
-            View
-          </a>
+        {row.notes ? (
+          <span className="line-clamp-2 text-xs text-muted-foreground">{row.notes}</span>
+        ) : row.publication_status ? (
+          <Badge variant="secondary" className="text-[10px] capitalize">
+            {row.publication_status.replace(/_/g, " ")}
+          </Badge>
         ) : (
           "—"
         )}
       </TableCell>
       <TableCell className="text-right">
-        <form action={action} className="inline-flex gap-1">
-          <input type="hidden" name="deliverable_id" value={deliverable.id} />
-          <input type="hidden" name="campaign_id" value={campaignId} />
-          <input type="hidden" name="status" value={status} />
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-8 w-[130px]" disabled={isPending}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="submitted">Submitted</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-              <SelectItem value="published">Posted</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="submit" size="sm" variant="outline" disabled={isPending}>
-            Save
-          </Button>
-        </form>
+        {row.billing_status === "legacy" ? (
+          <Badge variant="outline" className="text-[10px]">
+            Legacy
+          </Badge>
+        ) : (
+          <DeliverableBillingBadge
+            status={row.billing_status as AssignmentDeliverableBillingStatus}
+          />
+        )}
       </TableCell>
     </TableRow>
   );

@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 type CampaignKpiStripProps = {
   workspace: CampaignWorkspace;
+  operationalDeliverableCount?: number;
 };
 
 type KpiItem = {
@@ -22,10 +23,15 @@ type KpiItem = {
   alert?: "warning" | "danger";
 };
 
-export function CampaignKpiStrip({ workspace }: CampaignKpiStripProps) {
+export function CampaignKpiStrip({
+  workspace,
+  operationalDeliverableCount,
+}: CampaignKpiStripProps) {
   const { financials, lines, deliverables, po } = workspace;
   const currency = workspace.currency_code;
   const assignedLines = lines.filter((l) => l.influencer_id);
+  const deliverableKpi =
+    operationalDeliverableCount ?? deliverables.length;
 
   const budgetAlert: KpiItem["alert"] =
     financials.po_exceeded || po.po_status === "exceeded"
@@ -45,7 +51,7 @@ export function CampaignKpiStrip({ workspace }: CampaignKpiStripProps) {
     { label: "GP", value: formatMoney(financials.gp, currency) },
     { label: "Margin", value: formatPercent(financials.margin_percent) },
     { label: "Assignments", value: String(assignedLines.length) },
-    { label: "Deliverables", value: String(deliverables.length) },
+    { label: "Deliverables", value: String(deliverableKpi) },
     {
       label: "Outstanding billing",
       value: formatMoney(financials.billing_outstanding, currency),
