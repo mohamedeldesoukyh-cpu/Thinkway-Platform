@@ -472,8 +472,11 @@ CREATE POLICY invoices_select
   FOR SELECT
   TO authenticated
   USING (
-    public.has_permission('invoices.read')
-    AND public.can_access_client(client_id)
+    public.can_access_client(client_id)
+    AND (
+      public.has_permission('invoices.read')
+      OR public.has_permission('invoices.write')
+    )
   );
 
 DROP POLICY IF EXISTS invoices_insert ON public.invoices;
@@ -487,6 +490,10 @@ CREATE POLICY invoices_insert
     AND (
       campaign_id IS NULL
       OR public.can_access_campaign(campaign_id)
+    )
+    AND (
+      campaign_header_id IS NULL
+      OR public.can_access_campaign_header(campaign_header_id)
     )
   );
 
@@ -533,27 +540,30 @@ CREATE POLICY invoice_line_items_select
   );
 
 DROP POLICY IF EXISTS invoice_line_items_write ON public.invoice_line_items;
-CREATE POLICY invoice_line_items_write
+DROP POLICY IF EXISTS invoice_line_items_insert ON public.invoice_line_items;
+DROP POLICY IF EXISTS invoice_line_items_update ON public.invoice_line_items;
+DROP POLICY IF EXISTS invoice_line_items_delete ON public.invoice_line_items;
+
+CREATE POLICY invoice_line_items_insert
   ON public.invoice_line_items
-  FOR ALL
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (public.can_write_invoice_line_items(invoice_id));
+
+CREATE POLICY invoice_line_items_update
+  ON public.invoice_line_items
+  FOR UPDATE
+  TO authenticated
+  USING (public.can_write_invoice_line_items(invoice_id))
+  WITH CHECK (public.can_write_invoice_line_items(invoice_id));
+
+CREATE POLICY invoice_line_items_delete
+  ON public.invoice_line_items
+  FOR DELETE
   TO authenticated
   USING (
-    public.has_permission('invoices.write')
-    AND EXISTS (
-      SELECT 1
-      FROM public.invoices i
-      WHERE i.id = invoice_id
-        AND public.can_access_client(i.client_id)
-    )
-  )
-  WITH CHECK (
-    public.has_permission('invoices.write')
-    AND EXISTS (
-      SELECT 1
-      FROM public.invoices i
-      WHERE i.id = invoice_id
-        AND public.can_access_client(i.client_id)
-    )
+    public.has_permission('invoices.delete')
+    AND public.is_admin()
   );
 
 -- -----------------------------------------------------------------------------

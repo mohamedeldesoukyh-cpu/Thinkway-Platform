@@ -992,6 +992,18 @@ SET search_path = public
 AS $$
   SELECT
     public.is_admin()
+    OR (
+      public.is_internal_user()
+      AND (
+        public.has_permission('clients.read')
+        OR public.has_permission('clients.write')
+        OR public.has_permission('invoices.read')
+        OR public.has_permission('invoices.write')
+        OR public.has_permission('payments.read')
+        OR public.has_permission('payments.write')
+        OR public.has_permission('campaigns.read')
+      )
+    )
     OR EXISTS (
       SELECT 1
       FROM public.clients c
@@ -1004,6 +1016,22 @@ AS $$
       WHERE cu.client_id = p_client_id
         AND cu.profile_id = auth.uid()
     );
+$$;
+
+CREATE OR REPLACE FUNCTION public.can_write_invoice_line_items(p_invoice_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.invoices i
+    WHERE i.id = p_invoice_id
+      AND public.has_permission('invoices.write')
+      AND public.can_access_client(i.client_id)
+  );
 $$;
 
 CREATE OR REPLACE FUNCTION public.can_access_campaign(p_campaign_id uuid)
