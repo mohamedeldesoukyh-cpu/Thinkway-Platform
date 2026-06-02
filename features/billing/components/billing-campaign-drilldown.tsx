@@ -43,15 +43,37 @@ type BillingCampaignDrilldownProps = {
   detail: CampaignOperationalBillingDetail;
   filter?: OperationalBillingFilter;
   onInvoice?: (selection: OperationalSelectionPayload) => void;
+  /** Controlled selection for queue-level partial invoicing. */
+  selection?: OperationalSelectionState;
+  onSelectionChange?: (selection: OperationalSelectionState) => void;
+  /** Approve / move to billing bulk actions (review panel). Default true. */
+  showOperationalActions?: boolean;
 };
 
 export function BillingCampaignDrilldown({
   detail,
   filter = "all",
   onInvoice,
+  selection: controlledSelection,
+  onSelectionChange,
+  showOperationalActions = true,
 }: BillingCampaignDrilldownProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [selection, setSelection] = useState<OperationalSelectionState>(createEmptySelection());
+  const [internalSelection, setInternalSelection] =
+    useState<OperationalSelectionState>(createEmptySelection());
+
+  const selection = controlledSelection ?? internalSelection;
+
+  function updateSelection(
+    updater: (prev: OperationalSelectionState) => OperationalSelectionState
+  ) {
+    const next = updater(selection);
+    if (onSelectionChange) {
+      onSelectionChange(next);
+    } else {
+      setInternalSelection(next);
+    }
+  }
 
   const [approveState, approveAction, approvePending] = useActionState(
     bulkApproveOperationalBillingAction,
@@ -89,17 +111,17 @@ export function BillingCampaignDrilldown({
   }
 
   function toggleRow(row: OperationalBillingRow) {
-    setSelection((prev) =>
+    updateSelection((prev) =>
       toggleOperationalRowSelection(row, prev, detail.operational_rows)
     );
   }
 
   function handleSelectAllToggle() {
-    setSelection((prev) => toggleGlobalOperationalSelection(filteredRows, prev));
+    updateSelection((prev) => toggleGlobalOperationalSelection(filteredRows, prev));
   }
 
   function handleClearSelection() {
-    setSelection(clearOperationalSelection());
+    updateSelection(() => clearOperationalSelection());
   }
 
   const hiddenFormFields = useMemo(() => {
@@ -173,24 +195,28 @@ export function BillingCampaignDrilldown({
               Clear
             </Button>
           </div>
-          <form action={approveAction}>
-            <input type="hidden" name="campaign_id" value={hiddenFormFields.campaign_id} />
-            <input type="hidden" name="line_ids" value={hiddenFormFields.line_ids} />
-            <input type="hidden" name="deliverable_ids" value={hiddenFormFields.deliverable_ids} />
-            <input type="hidden" name="post_ids" value={hiddenFormFields.post_ids} />
-            <Button type="submit" size="sm" variant="outline" disabled={approvePending || selectedCount === 0}>
-              Bulk approve
-            </Button>
-          </form>
-          <form action={moveAction}>
-            <input type="hidden" name="campaign_id" value={hiddenFormFields.campaign_id} />
-            <input type="hidden" name="line_ids" value={hiddenFormFields.line_ids} />
-            <input type="hidden" name="deliverable_ids" value={hiddenFormFields.deliverable_ids} />
-            <input type="hidden" name="post_ids" value={hiddenFormFields.post_ids} />
-            <Button type="submit" size="sm" variant="outline" disabled={movePending || selectedCount === 0}>
-              Move to billing
-            </Button>
-          </form>
+          {showOperationalActions ? (
+            <>
+              <form action={approveAction}>
+                <input type="hidden" name="campaign_id" value={hiddenFormFields.campaign_id} />
+                <input type="hidden" name="line_ids" value={hiddenFormFields.line_ids} />
+                <input type="hidden" name="deliverable_ids" value={hiddenFormFields.deliverable_ids} />
+                <input type="hidden" name="post_ids" value={hiddenFormFields.post_ids} />
+                <Button type="submit" size="sm" variant="outline" disabled={approvePending || selectedCount === 0}>
+                  Bulk approve
+                </Button>
+              </form>
+              <form action={moveAction}>
+                <input type="hidden" name="campaign_id" value={hiddenFormFields.campaign_id} />
+                <input type="hidden" name="line_ids" value={hiddenFormFields.line_ids} />
+                <input type="hidden" name="deliverable_ids" value={hiddenFormFields.deliverable_ids} />
+                <input type="hidden" name="post_ids" value={hiddenFormFields.post_ids} />
+                <Button type="submit" size="sm" variant="outline" disabled={movePending || selectedCount === 0}>
+                  Move to billing
+                </Button>
+              </form>
+            </>
+          ) : null}
           {onInvoice ? (
             <Button type="button" size="sm" onClick={handleInvoiceSelected} disabled={selectedCount === 0}>
               Invoice selected

@@ -28,7 +28,6 @@ import {
   filterOperationalBillingTree,
   mapCampaignQueueFilterToOperational,
 } from "@/lib/billing/operational-row-filters";
-import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import { cn } from "@/lib/utils";
 
 type ReviewFlatRow = {
@@ -75,7 +74,6 @@ type BillingCampaignReviewPanelProps = {
   filter: CampaignBillingQueueFilter;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvoice?: (selection: OperationalSelectionPayload) => void;
 };
 
 export function BillingCampaignReviewPanel({
@@ -86,7 +84,6 @@ export function BillingCampaignReviewPanel({
   filter,
   open,
   onOpenChange,
-  onInvoice,
 }: BillingCampaignReviewPanelProps) {
   const operationalFilter = mapCampaignQueueFilterToOperational(filter);
 
@@ -283,7 +280,7 @@ export function BillingCampaignReviewPanel({
                 <BillingCampaignDrilldown
                   detail={detail}
                   filter={operationalFilter}
-                  onInvoice={onInvoice}
+                  showOperationalActions
                 />
               ) : null}
             </>

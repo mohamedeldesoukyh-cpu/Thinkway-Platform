@@ -62,6 +62,7 @@ type InvoiceGenerationSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSelection?: OperationalSelectionPayload;
+  initialInvoiceMode?: "new" | "append";
 };
 
 export function InvoiceGenerationSheet({
@@ -73,6 +74,7 @@ export function InvoiceGenerationSheet({
   open,
   onOpenChange,
   initialSelection,
+  initialInvoiceMode = "new",
 }: InvoiceGenerationSheetProps) {
   const [selected, setSelected] = useState<OperationalSelectionState>(createEmptySelection());
   const [invoiceMode, setInvoiceMode] = useState<"new" | "append">("new");
@@ -103,15 +105,20 @@ export function InvoiceGenerationSheet({
       buildInvoiceSelectionBatch(payloadToSelection(initialSelection), operationalRows);
     }
 
-    if (appendableOptions.length > 0) {
-      if (process.env.NODE_ENV === "development") {
-        console.debug("[append-to-existing] appendable invoices available for selection", {
-          count: appendableOptions.length,
-          invoiceIds: appendableOptions.map((invoice) => invoice.id),
-        });
-      }
+    setInvoiceMode(initialInvoiceMode);
+    if (initialInvoiceMode === "append" && appendableOptions.length > 0) {
+      setExistingInvoiceId(appendableOptions[0]?.id ?? "");
+    } else {
+      setExistingInvoiceId("");
     }
-  }, [open, initialSelection, appendableOptions, operationalRows]);
+
+    if (appendableOptions.length > 0 && process.env.NODE_ENV === "development") {
+      console.debug("[append-to-existing] appendable invoices available for selection", {
+        count: appendableOptions.length,
+        invoiceIds: appendableOptions.map((invoice) => invoice.id),
+      });
+    }
+  }, [open, initialSelection, initialInvoiceMode, appendableOptions, operationalRows]);
 
   const eligibleLeaves = useMemo(() => {
     return flattenOperationalLeaves(operationalRows).filter((row) =>
