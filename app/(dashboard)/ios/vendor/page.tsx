@@ -36,7 +36,7 @@ export default async function VendorIosPage({ searchParams }: Props) {
               />
             </CardHeader>
             <CardContent>
-              <VendorIosTable rows={rows} />
+              <VendorIosTable rows={rows} selectedId={selected?.id ?? null} />
             </CardContent>
           </Card>
 

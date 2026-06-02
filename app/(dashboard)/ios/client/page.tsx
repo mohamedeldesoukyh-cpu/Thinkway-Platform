@@ -35,7 +35,7 @@ export default async function ClientIosPage({ searchParams }: Props) {
               />
             </CardHeader>
             <CardContent>
-              <ClientIosTable rows={rows} />
+              <ClientIosTable rows={rows} selectedId={selected?.id ?? null} />
             </CardContent>
           </Card>
 
