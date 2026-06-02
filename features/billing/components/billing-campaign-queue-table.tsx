@@ -73,14 +73,44 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
   const loadDetail = useCallback(
     (campaignId: string) => {
       if (detailCache[campaignId]) return;
+      if (process.env.NODE_ENV === "development") {
+        console.debug("[drilldown-load] loading campaign operational billing", { campaignId });
+      }
       startTransition(async () => {
         const result = await loadCampaignBillingDetailAction(campaignId);
         if (result.ok && result.detail) {
           setDetailCache((prev) => ({ ...prev, [campaignId]: result.detail! }));
+          if (process.env.NODE_ENV === "development") {
+            console.debug("[drilldown-load] campaign detail ready", {
+              campaignId,
+              assignments: result.detail!.operational_rows.length,
+            });
+          }
         } else {
           toast.error(result.ok ? "No detail returned." : result.message);
         }
       });
+    },
+    [detailCache]
+  );
+
+  const openInvoiceWorkflow = useCallback(
+    async (campaignId: string, selection?: OperationalSelectionPayload) => {
+      setInvoiceSelection(selection);
+      if (!detailCache[campaignId]) {
+        if (process.env.NODE_ENV === "development") {
+          console.debug("[drilldown-load] loading detail for invoice workflow", { campaignId });
+        }
+        const result = await loadCampaignBillingDetailAction(campaignId);
+        if (result.ok && result.detail) {
+          setDetailCache((prev) => ({ ...prev, [campaignId]: result.detail! }));
+          setInvoiceCampaignId(campaignId);
+        } else {
+          toast.error(result.ok ? "No detail returned." : result.message);
+        }
+        return;
+      }
+      setInvoiceCampaignId(campaignId);
     },
     [detailCache]
   );
@@ -118,7 +148,12 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           </div>
           <Select
             value={filter}
-            onValueChange={(v) => setFilter(v as CampaignBillingQueueFilter)}
+            onValueChange={(value) => {
+              setFilter(value as CampaignBillingQueueFilter);
+              if (process.env.NODE_ENV === "development") {
+                console.debug("[queue-filter] billing queue filter changed", { filter: value });
+              }
+            }}
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filter" />
@@ -238,11 +273,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                onClick={() => {
-                                  if (!detail) loadDetail(row.campaign_header_id);
-                                  setInvoiceSelection(undefined);
-                                  setInvoiceCampaignId(row.campaign_header_id);
-                                }}
+                                onClick={() => openInvoiceWorkflow(row.campaign_header_id)}
                               >
                                 Invoice
                               </Button>
@@ -265,8 +296,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                                 <BillingCampaignDrilldown
                                   detail={detail}
                                   onInvoice={(selection) => {
-                                    setInvoiceSelection(selection);
-                                    setInvoiceCampaignId(row.campaign_header_id);
+                                    openInvoiceWorkflow(row.campaign_header_id, selection);
                                   }}
                                 />
                               ) : (

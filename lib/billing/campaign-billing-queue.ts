@@ -201,7 +201,7 @@ export function filterCampaignQueueRows(
   });
 
   if (process.env.NODE_ENV === "development") {
-    console.debug("[billing-queue-filter]", {
+    console.debug("[queue-filter]", {
       filter,
       inputCount: rows.length,
       outputCount: filtered.length,

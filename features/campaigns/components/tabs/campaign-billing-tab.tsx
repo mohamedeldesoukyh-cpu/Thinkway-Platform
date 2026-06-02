@@ -13,6 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -30,6 +37,10 @@ import type {
   CampaignOperationalBillingDetail,
 } from "@/features/billing/types";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
+import {
+  OPERATIONAL_BILLING_FILTER_OPTIONS,
+  type OperationalBillingFilter,
+} from "@/lib/billing/operational-row-filters";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
@@ -68,6 +79,7 @@ export function CampaignBillingTab({
   const [invoiceSelection, setInvoiceSelection] = useState<
     OperationalSelectionPayload | undefined
   >();
+  const [billingFilter, setBillingFilter] = useState<OperationalBillingFilter>("all");
 
   const poAlert =
     financials.po_exceeded || po.po_status === "exceeded"
@@ -187,13 +199,36 @@ export function CampaignBillingTab({
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-3">
           <CardTitle>Operational billing</CardTitle>
+          {operationalBilling ? (
+            <Select
+              value={billingFilter}
+              onValueChange={(value) => {
+                setBillingFilter(value as OperationalBillingFilter);
+                if (process.env.NODE_ENV === "development") {
+                  console.debug("[billing-filter] campaign tab filter changed", { filter: value });
+                }
+              }}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                {OPERATIONAL_BILLING_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
         </CardHeader>
         <CardContent className="p-0">
           {operationalBilling ? (
             <BillingCampaignDrilldown
               detail={operationalBilling}
+              filter={billingFilter}
               onInvoice={(selection) => {
                 setInvoiceSelection(selection);
                 setOperationalInvoiceOpen(true);

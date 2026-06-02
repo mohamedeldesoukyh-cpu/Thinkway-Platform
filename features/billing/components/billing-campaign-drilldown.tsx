@@ -22,11 +22,18 @@ import {
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import {
+  filterOperationalBillingTree,
+  type OperationalBillingFilter,
+} from "@/lib/billing/operational-row-filters";
+import {
   buildInvoiceSelectionBatch,
+  clearOperationalSelection,
   countSelection,
   createEmptySelection,
+  getGlobalSelectionStatus,
   getRowSelectionStatus,
   selectionToPayload,
+  toggleGlobalOperationalSelection,
   toggleOperationalRowSelection,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
@@ -34,11 +41,13 @@ import {
 
 type BillingCampaignDrilldownProps = {
   detail: CampaignOperationalBillingDetail;
+  filter?: OperationalBillingFilter;
   onInvoice?: (selection: OperationalSelectionPayload) => void;
 };
 
 export function BillingCampaignDrilldown({
   detail,
+  filter = "all",
   onInvoice,
 }: BillingCampaignDrilldownProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -61,9 +70,14 @@ export function BillingCampaignDrilldown({
     }
   }, [approveState, moveState]);
 
+  const filteredRows = useMemo(
+    () => filterOperationalBillingTree(detail.operational_rows, filter),
+    [detail.operational_rows, filter]
+  );
+
   const selectedCount = countSelection(selection);
   const rollup = detail.rollup;
-  const rootRows = detail.operational_rows;
+  const globalSelectionStatus = getGlobalSelectionStatus(filteredRows, selection);
 
   function toggleExpanded(id: string) {
     setExpanded((prev) => {
@@ -76,8 +90,16 @@ export function BillingCampaignDrilldown({
 
   function toggleRow(row: OperationalBillingRow) {
     setSelection((prev) =>
-      toggleOperationalRowSelection(row, prev, rootRows)
+      toggleOperationalRowSelection(row, prev, detail.operational_rows)
     );
+  }
+
+  function handleSelectAllToggle() {
+    setSelection((prev) => toggleGlobalOperationalSelection(filteredRows, prev));
+  }
+
+  function handleClearSelection() {
+    setSelection(clearOperationalSelection());
   }
 
   const hiddenFormFields = useMemo(() => {
@@ -92,7 +114,7 @@ export function BillingCampaignDrilldown({
 
   function handleInvoiceSelected() {
     if (!onInvoice || selectedCount === 0) return;
-    const batch = buildInvoiceSelectionBatch(selection, rootRows);
+    const batch = buildInvoiceSelectionBatch(selection, detail.operational_rows);
     onInvoice(batch);
   }
 
@@ -131,7 +153,26 @@ export function BillingCampaignDrilldown({
             </strong>
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-2xl border px-2 py-1">
+            <OperationalSelectionCheckbox
+              status={globalSelectionStatus}
+              onToggle={handleSelectAllToggle}
+              ariaLabel="Select all operational rows"
+            />
+            <Button type="button" size="sm" variant="ghost" onClick={handleSelectAllToggle}>
+              Select all
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={handleClearSelection}
+              disabled={selectedCount === 0}
+            >
+              Clear
+            </Button>
+          </div>
           <form action={approveAction}>
             <input type="hidden" name="campaign_id" value={hiddenFormFields.campaign_id} />
             <input type="hidden" name="line_ids" value={hiddenFormFields.line_ids} />
@@ -158,21 +199,25 @@ export function BillingCampaignDrilldown({
         </div>
       </div>
 
-      <div className="space-y-1">
-        {rootRows.map((assignment) => (
-          <OperationalRowTree
-            key={assignment.id}
-            row={assignment}
-            depth={0}
-            currency={detail.currency_code}
-            rootRows={rootRows}
-            selection={selection}
-            expanded={expanded}
-            onToggleExpand={toggleExpanded}
-            onToggleSelect={toggleRow}
-          />
-        ))}
-      </div>
+      {filteredRows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No operational rows match this filter.</p>
+      ) : (
+        <div className="space-y-1">
+          {filteredRows.map((assignment) => (
+            <OperationalRowTree
+              key={assignment.id}
+              row={assignment}
+              depth={0}
+              currency={detail.currency_code}
+              rootRows={detail.operational_rows}
+              selection={selection}
+              expanded={expanded}
+              onToggleExpand={toggleExpanded}
+              onToggleSelect={toggleRow}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

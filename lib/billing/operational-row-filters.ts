@@ -1,0 +1,97 @@
+import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
+
+export type OperationalBillingFilter =
+  | "all"
+  | "invoiced"
+  | "not_invoiced"
+  | "partially_invoiced"
+  | "approved"
+  | "moved_to_billing";
+
+export const OPERATIONAL_BILLING_FILTER_OPTIONS: {
+  value: OperationalBillingFilter;
+  label: string;
+}[] = [
+  { value: "all", label: "All" },
+  { value: "invoiced", label: "Invoiced" },
+  { value: "not_invoiced", label: "Not invoiced" },
+  { value: "partially_invoiced", label: "Partially invoiced" },
+  { value: "approved", label: "Approved" },
+  { value: "moved_to_billing", label: "Moved to billing" },
+];
+
+function rowMatchesOperationalFilter(
+  row: OperationalBillingRow,
+  filter: OperationalBillingFilter
+): boolean {
+  if (filter === "all") return true;
+
+  const lineStatus = row.line_billing_status;
+  const status = row.billing_status;
+  const billable = row.billable_amount;
+  const invoiced = row.invoiced_amount;
+  const remaining = row.remaining_amount;
+
+  switch (filter) {
+    case "invoiced":
+      return billable > 0 && invoiced >= billable;
+    case "not_invoiced":
+      return billable > 0 && invoiced <= 0;
+    case "partially_invoiced":
+      return invoiced > 0 && remaining > 0;
+    case "approved":
+      return lineStatus === "approved" || status === "ready_to_invoice";
+    case "moved_to_billing":
+      return (
+        lineStatus === "moved_to_billing" ||
+        ["ready_to_invoice", "partially_invoiced"].includes(status)
+      );
+    default:
+      return true;
+  }
+}
+
+function filterOperationalNode(
+  row: OperationalBillingRow,
+  filter: OperationalBillingFilter
+): OperationalBillingRow | null {
+  if (filter === "all") return row;
+
+  const filteredChildren = row.children
+    .map((child) => filterOperationalNode(child, filter))
+    .filter(Boolean) as OperationalBillingRow[];
+
+  const selfMatches = rowMatchesOperationalFilter(row, filter);
+
+  if (filteredChildren.length > 0) {
+    return { ...row, children: filteredChildren };
+  }
+
+  if (selfMatches) {
+    return { ...row, children: [] };
+  }
+
+  return null;
+}
+
+/** Filters operational hierarchy while preserving assignment → deliverable → post structure. */
+export function filterOperationalBillingTree(
+  rows: OperationalBillingRow[],
+  filter: OperationalBillingFilter
+): OperationalBillingRow[] {
+  if (filter === "all") return rows;
+
+  const filtered = rows
+    .map((row) => filterOperationalNode(row, filter))
+    .filter(Boolean) as OperationalBillingRow[];
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[billing-filter] applied operational filter", {
+      filter,
+      inputAssignments: rows.length,
+      outputAssignments: filtered.length,
+    });
+  }
+
+  return filtered;
+}

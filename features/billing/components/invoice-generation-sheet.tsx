@@ -147,7 +147,7 @@ export function InvoiceGenerationSheet({
   function handleInvoiceModeChange(mode: "new" | "append") {
     setInvoiceMode(mode);
     if (process.env.NODE_ENV === "development") {
-      console.debug("[append-to-existing] invoice mode selected", {
+      console.debug("[invoice-mode] invoice target selected", {
         mode,
         appendableCount: appendableOptions.length,
       });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeftIcon,
   CopyIcon,
@@ -69,6 +69,12 @@ export function CampaignWorkspaceView({
     ).rows.length;
   }, [assignmentHierarchy, publications, workspace.deliverables]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[sticky-layout] campaign tab navigation sticky enabled");
+    }
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -119,15 +125,20 @@ export function CampaignWorkspaceView({
       />
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="lines">Assignments</TabsTrigger>
-          <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
-          <TabsTrigger value="publications">Publications</TabsTrigger>
-          <TabsTrigger value="workflow">Workflow</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline & activity</TabsTrigger>
-        </TabsList>
+        <div
+          className="sticky top-0 z-20 -mx-1 border-b border-border/60 bg-background/95 px-1 pb-2 pt-1 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+          data-sticky="campaign-tabs"
+        >
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="lines">Assignments</TabsTrigger>
+            <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
+            <TabsTrigger value="publications">Publications</TabsTrigger>
+            <TabsTrigger value="workflow">Workflow</TabsTrigger>
+            <TabsTrigger value="billing">Billing</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline & activity</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview">
           <CampaignOverviewTab

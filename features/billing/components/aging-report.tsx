@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type AgingReportProps = {
   aging: BillingDashboard["aging"];
   currency?: string;
+  mixedCurrency?: boolean;
 };
 
 const BUCKET_COLORS = [
@@ -18,8 +19,12 @@ const BUCKET_COLORS = [
   "bg-destructive/15 border-destructive/30",
 ];
 
-export function AgingReport({ aging, currency = "USD" }: AgingReportProps) {
+export function AgingReport({ aging, currency, mixedCurrency = false }: AgingReportProps) {
   const totalOutstanding = aging.reduce((s, b) => s + b.amount, 0);
+  const formatAmount = (amount: number) =>
+    mixedCurrency || !currency
+      ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount)
+      : formatBillingMoney(amount, currency);
 
   return (
     <Card>
@@ -27,7 +32,7 @@ export function AgingReport({ aging, currency = "USD" }: AgingReportProps) {
         <CardTitle className="text-base">A/R aging</CardTitle>
         <p className="text-sm text-muted-foreground">
           Outstanding balance by days past due ·{" "}
-          {formatBillingMoney(totalOutstanding, currency)} total
+          {formatAmount(totalOutstanding)} total
         </p>
       </CardHeader>
       <CardContent>
@@ -49,7 +54,7 @@ export function AgingReport({ aging, currency = "USD" }: AgingReportProps) {
                   {bucket.label}
                 </p>
                 <p className="font-heading mt-1 text-xl font-semibold">
-                  {formatBillingMoney(bucket.amount, currency)}
+                  {formatAmount(bucket.amount)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {bucket.count} invoice{bucket.count === 1 ? "" : "s"} · {pct}%

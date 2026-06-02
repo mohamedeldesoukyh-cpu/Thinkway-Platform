@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgingReport } from "@/features/billing/components/aging-report";
 import { BillingApprovalsPanel } from "@/features/billing/components/billing-approvals-panel";
@@ -15,9 +17,21 @@ type BillingWorkspaceViewProps = {
 };
 
 export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
+  const queueCurrencies = useMemo(
+    () => [...new Set(dashboard.campaign_queue.map((row) => row.currency_code))],
+    [dashboard.campaign_queue]
+  );
+
+  const kpiCurrency = queueCurrencies.length === 1 ? queueCurrencies[0] : undefined;
+  const mixedCurrency = queueCurrencies.length > 1;
+
   return (
     <div className="space-y-6">
-      <BillingKpiStrip kpis={dashboard.kpis} />
+      <BillingKpiStrip
+        kpis={dashboard.kpis}
+        currency={kpiCurrency}
+        mixedCurrency={mixedCurrency}
+      />
 
       <Tabs defaultValue="queue" className="space-y-4">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
@@ -48,7 +62,7 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
         </TabsContent>
 
         <TabsContent value="aging">
-          <AgingReport aging={dashboard.aging} />
+          <AgingReport aging={dashboard.aging} mixedCurrency={mixedCurrency} />
         </TabsContent>
 
         <TabsContent value="approvals">

@@ -235,3 +235,53 @@ export function buildInvoiceSelectionBatch(
 
   return payload;
 }
+
+/** Select all operational rows in the provided tree (assignments, deliverables, posts). */
+export function selectAllOperationalRows(
+  rows: OperationalBillingRow[]
+): OperationalSelectionState {
+  const selection = createEmptySelection();
+  for (const row of rows) {
+    applySelectionMutation(selection, collectSubtreeSelection(row), "add");
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[selection-sync] select all operational rows", {
+      assignmentCount: rows.length,
+      line_ids: [...selection.line_ids],
+      deliverable_ids: [...selection.deliverable_ids],
+      post_ids: [...selection.post_ids],
+    });
+  }
+
+  return selection;
+}
+
+export function clearOperationalSelection(): OperationalSelectionState {
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[selection-sync] cleared operational selection");
+  }
+  return createEmptySelection();
+}
+
+export function getGlobalSelectionStatus(
+  rows: OperationalBillingRow[],
+  selection: OperationalSelectionState
+): RowSelectionStatus {
+  if (rows.length === 0) return "unchecked";
+  const statuses = rows.map((row) => getRowSelectionStatus(row, selection));
+  if (statuses.every((status) => status === "checked")) return "checked";
+  if (statuses.every((status) => status === "unchecked")) return "unchecked";
+  return "indeterminate";
+}
+
+export function toggleGlobalOperationalSelection(
+  rows: OperationalBillingRow[],
+  selection: OperationalSelectionState
+): OperationalSelectionState {
+  const status = getGlobalSelectionStatus(rows, selection);
+  if (status === "checked") {
+    return clearOperationalSelection();
+  }
+  return selectAllOperationalRows(rows);
+}

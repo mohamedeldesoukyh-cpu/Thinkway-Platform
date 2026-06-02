@@ -93,6 +93,9 @@ if (process.env.NODE_ENV === "development") {
     { amount: 12_500, currency: "EUR" },
   ];
   for (const row of sample) {
-    console.debug("[currency-format] normalized", row.currency, "→", formatCurrencyAmount(row.amount, row.currency, { decimals: 0 }));
+    console.debug("[currency-normalization]", {
+      currency: row.currency,
+      formatted: formatCurrencyAmount(row.amount, row.currency, { decimals: 0 }),
+    });
   }
 }

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 type BillingKpiStripProps = {
   kpis: BillingKpiSummary;
   currency?: string;
+  mixedCurrency?: boolean;
 };
 
 const KPI_ITEMS = [
@@ -25,21 +26,40 @@ const KPI_ITEMS = [
   { key: "po_remaining", label: "PO remaining" },
 ] as const;
 
-export function BillingKpiStrip({ kpis, currency = "USD" }: BillingKpiStripProps) {
+export function BillingKpiStrip({
+  kpis,
+  currency,
+  mixedCurrency = false,
+}: BillingKpiStripProps) {
+  const formatKpiAmount = (amount: number) => {
+    if (mixedCurrency || !currency) {
+      return new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    }
+    return formatBillingMoney(amount, currency);
+  };
+
   const values: Record<(typeof KPI_ITEMS)[number]["key"], string> = {
-    revenue: formatBillingMoney(kpis.revenue, currency),
-    cost: formatBillingMoney(kpis.cost, currency),
-    gp: formatBillingMoney(kpis.gp, currency),
+    revenue: formatKpiAmount(kpis.revenue),
+    cost: formatKpiAmount(kpis.cost),
+    gp: formatKpiAmount(kpis.gp),
     margin: formatPercent(kpis.margin_percent),
-    billed: formatBillingMoney(kpis.billed_revenue, currency),
-    collected: formatBillingMoney(kpis.collected_revenue, currency),
-    outstanding: formatBillingMoney(kpis.outstanding_invoices, currency),
-    unpaid_vendor: formatBillingMoney(kpis.unpaid_vendor_cost, currency),
-    po_remaining: formatBillingMoney(kpis.po_remaining, currency),
+    billed: formatKpiAmount(kpis.billed_revenue),
+    collected: formatKpiAmount(kpis.collected_revenue),
+    outstanding: formatKpiAmount(kpis.outstanding_invoices),
+    unpaid_vendor: formatKpiAmount(kpis.unpaid_vendor_cost),
+    po_remaining: formatKpiAmount(kpis.po_remaining),
   };
 
   return (
     <div className="space-y-2">
+      {mixedCurrency ? (
+        <p className="text-xs text-muted-foreground">
+          KPI totals combine multiple currencies — row-level amounts use each campaign&apos;s currency.
+        </p>
+      ) : null}
       {kpis.po_over_consumed_count > 0 ? (
         <div className="flex items-center gap-2 rounded-3xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-800 dark:text-red-200">
           <AlertTriangleIcon className="size-4 shrink-0" />

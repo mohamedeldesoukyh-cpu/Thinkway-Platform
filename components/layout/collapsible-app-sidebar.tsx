@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ComponentType } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
   ArrowRightLeftIcon,
@@ -60,10 +61,16 @@ type CollapsibleAppSidebarProps = {
 export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps) {
   const pathname = usePathname();
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.debug("[sticky-layout] sidebar sticky enabled");
+    }
+  }, []);
+
   return (
     <aside
       className={cn(
-        "group/sidebar relative hidden shrink-0 border-r border-border bg-sidebar md:flex md:flex-col",
+        "group/sidebar relative hidden shrink-0 self-start border-r border-border bg-sidebar md:sticky md:top-0 md:flex md:h-svh md:max-h-svh md:flex-col md:overflow-hidden",
         "w-16 transition-[width] duration-200 ease-out hover:w-64"
       )}
     >
