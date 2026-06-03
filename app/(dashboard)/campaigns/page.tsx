@@ -3,13 +3,16 @@ import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CampaignsEmptyState } from "@/features/campaigns/components/campaigns-empty-state";
+import { CampaignsKpiStrip } from "@/features/campaigns/components/campaigns-kpi-strip";
 import { CampaignsPagination } from "@/features/campaigns/components/campaigns-pagination";
 import { CampaignsSearch } from "@/features/campaigns/components/campaigns-search";
 import { CampaignsTable } from "@/features/campaigns/components/campaigns-table";
 import { NewCampaignDialog } from "@/features/campaigns/components/new-campaign-dialog";
 import {
   getCampaignFormOptions,
+  getCampaignsKpis,
   getCampaignsList,
+  type CampaignsKpis,
 } from "@/features/campaigns/queries";
 
 type CampaignsPageProps = {
@@ -27,6 +30,13 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
   let list;
   let formOptions;
   let errorMessage: string | null = null;
+  let kpis: CampaignsKpis | null = null;
+
+  try {
+    kpis = await getCampaignsKpis();
+  } catch {
+    kpis = null;
+  }
 
   try {
     [list, formOptions] = await Promise.all([
@@ -68,6 +78,11 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
       description="Plan and manage campaign headers and lines across the brand hierarchy."
       actions={<NewCampaignDialog {...formOptions} />}
     >
+      {kpis ? (
+        <div className="mb-4">
+          <CampaignsKpiStrip kpis={kpis} />
+        </div>
+      ) : null}
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">

@@ -1,9 +1,10 @@
+import Image from "next/image";
+
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { LoginForm } from "@/features/auth/components/login-form";
 import { sanitizeNextPath } from "@/lib/auth/routes";
@@ -32,9 +33,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="font-heading text-2xl tracking-tight">
-            Thinkway
-          </CardTitle>
+          <Image
+            src="/tw-wordmark.png"
+            alt="Thinkway"
+            width={180}
+            height={36}
+            priority
+            className="mx-auto mb-2 h-8 w-auto"
+          />
           <CardDescription>
             Sign in to manage clients, campaigns, and operations.
           </CardDescription>

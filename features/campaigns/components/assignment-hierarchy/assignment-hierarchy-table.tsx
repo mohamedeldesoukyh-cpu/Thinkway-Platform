@@ -158,9 +158,8 @@ export function AssignmentHierarchyTable({
 
   return (
     <div ref={tableRef} className="space-y-3">
-      <div className="overflow-x-auto rounded-xl border">
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur">
+      <Table>
+          <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
             <TableRow className="text-[10px] uppercase tracking-wide">
               <TableHead className="w-8 px-2">{HIERARCHY_COLUMN_LABELS.expand}</TableHead>
               <TableHead className="w-8 px-2">{HIERARCHY_COLUMN_LABELS.select}</TableHead>
@@ -222,7 +221,6 @@ export function AssignmentHierarchyTable({
             })}
           </TableBody>
         </Table>
-      </div>
 
       {showInvoiceSelection ? (
         <AssignmentTotalsFooter

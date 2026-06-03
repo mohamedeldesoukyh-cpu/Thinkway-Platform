@@ -1,20 +1,24 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { ComponentType } from "react";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
   ArrowRightLeftIcon,
+  BarChart3Icon,
   Building2Icon,
   CalendarClockIcon,
   FileSignatureIcon,
   LayoutDashboardIcon,
   LineChartIcon,
   LayersIcon,
+  Link2Icon,
   MegaphoneIcon,
   ReceiptIcon,
   Settings2Icon,
+  SparklesIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -68,6 +72,9 @@ const navItems: NavItem[] = [
       { href: "/system/health", label: "System health" },
     ],
   },
+  { href: "/reports", label: "Reports", icon: BarChart3Icon },
+  { href: "/ai", label: "AI Analyst", icon: SparklesIcon },
+  { href: "/links", label: "Link Generator", icon: Link2Icon },
   {
     href: "/settings",
     label: "Settings",
@@ -102,14 +109,19 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
         "w-16 transition-[width] duration-200 ease-out hover:w-64"
       )}
     >
-      <div className="flex h-16 items-center border-b border-sidebar-border px-3 group-hover/sidebar:px-6">
-        <Link
-          href="/"
-          className="font-heading text-lg font-semibold tracking-tight truncate"
-          title="Thinkway"
-        >
-          <span className="hidden group-hover/sidebar:inline">Thinkway</span>
-          <span className="inline group-hover/sidebar:hidden">TW</span>
+      <div className="flex h-16 items-center border-b border-sidebar-border px-3 group-hover/sidebar:px-5">
+        <Link href="/" className="flex items-center gap-2.5" title="Thinkway">
+          <Image
+            src="/tw-icon.png"
+            alt="Thinkway"
+            width={36}
+            height={36}
+            priority
+            className="size-9 shrink-0 rounded-lg"
+          />
+          <span className="hidden font-heading text-lg font-extrabold tracking-tight text-white group-hover/sidebar:inline">
+            THINK<span className="text-brand-blue">WAY</span>
+          </span>
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden p-2 group-hover/sidebar:p-4">
@@ -126,10 +138,10 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                 href={item.children?.[0]?.href ?? item.href}
                 title={item.label}
                 className={cn(
-                  "flex items-center gap-3 rounded-3xl px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                    ? "bg-brand-gradient text-white shadow-sm"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
               >
                 <Icon className="size-4 shrink-0" />

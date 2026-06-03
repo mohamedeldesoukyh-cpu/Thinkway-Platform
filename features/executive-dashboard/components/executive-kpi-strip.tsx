@@ -19,26 +19,45 @@ function trendForCard(card: AnalyticsKpiCard): "up" | "down" | "flat" {
   return "flat";
 }
 
+/** Subtle brand accent colors cycled across the KPI strip (operational, low-opacity). */
+const KPI_ACCENTS = [
+  "var(--brand-blue)",
+  "var(--brand-purple)",
+  "var(--brand-pink)",
+  "var(--success)",
+] as const;
+
 function KpiCard({
   card,
   mixedCurrency,
+  index,
 }: {
   card: AnalyticsKpiCard;
   mixedCurrency: boolean;
+  index: number;
 }) {
   const trend = trendForCard(card);
   const isPercent = card.id === "margin";
   const isCount = card.id === "active_campaigns";
+  const hasAlert = card.alert === "danger" || card.alert === "warning";
+  const accent = KPI_ACCENTS[index % KPI_ACCENTS.length];
 
   return (
     <Card
       className={cn(
-        "shadow-sm transition-colors",
+        "relative shadow-sm transition-colors",
         card.alert === "danger" && "border-destructive/40 bg-destructive/5",
         card.alert === "warning" && "border-amber-500/40 bg-amber-500/5"
       )}
     >
-      <CardContent className="p-3">
+      {!hasAlert ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-5 -right-5 size-16 rounded-full opacity-[0.07]"
+          style={{ backgroundColor: accent }}
+        />
+      ) : null}
+      <CardContent className="relative p-3">
         <p className="text-xs text-muted-foreground">{card.label}</p>
         <p className="font-heading text-lg font-semibold tracking-tight">
           {isPercent
@@ -98,10 +117,11 @@ export function ExecutiveKpiStrip({ strip, loading }: ExecutiveKpiStripProps) {
         </p>
       ) : null}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {strip.cards.map((card) => (
+        {strip.cards.map((card, index) => (
           <KpiCard
             key={card.id}
             card={card}
+            index={index}
             mixedCurrency={strip.currency.is_mixed_currency}
           />
         ))}

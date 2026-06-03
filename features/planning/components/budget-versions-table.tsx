@@ -96,7 +96,7 @@ export function BudgetVersionsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border">
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>

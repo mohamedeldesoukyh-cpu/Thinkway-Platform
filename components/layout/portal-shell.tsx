@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { cn } from "@/lib/utils";
@@ -26,8 +27,15 @@ export function PortalShell({
     <div className="flex min-h-svh bg-background">
       <aside className="hidden w-64 shrink-0 border-r border-border bg-card/40 p-4 md:block">
         <div className="mb-6">
-          <p className="font-heading text-lg font-semibold">Thinkway</p>
-          <p className="text-xs text-muted-foreground">{userLabel ?? "Portal user"}</p>
+          <Image
+            src="/tw-wordmark.png"
+            alt="Thinkway"
+            width={140}
+            height={28}
+            priority
+            className="h-6 w-auto"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">{userLabel ?? "Portal user"}</p>
         </div>
         <nav className="space-y-1">
           {navItems.map((item) => (

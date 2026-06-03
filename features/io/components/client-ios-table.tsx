@@ -24,8 +24,7 @@ export function ClientIosTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
+    <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Campaign</TableHead>
@@ -55,7 +54,7 @@ export function ClientIosTable({
                 <div className="inline-flex items-center gap-2">
                   <Button
                     size="sm"
-                    variant={selectedId === row.id ? "default" : "outline"}
+                    variant="outline"
                     onClick={() => onView(row.id)}
                     disabled={isNavigating}
                   >
@@ -72,7 +71,6 @@ export function ClientIosTable({
           ))}
         </TableBody>
       </Table>
-    </div>
   );
 }
 

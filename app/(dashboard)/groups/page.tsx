@@ -42,7 +42,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
           {errorMessage}
         </div>
       ) : result ? (
-        <div className="rounded-3xl border border-border">
+        <div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -68,7 +68,10 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="capitalize">
+                    <Badge
+                      variant="outline"
+                      className="border-success/40 bg-success/10 font-medium text-success capitalize"
+                    >
                       {group.status}
                     </Badge>
                   </TableCell>

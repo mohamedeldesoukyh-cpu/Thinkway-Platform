@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   Building2Icon,
@@ -43,8 +44,15 @@ export async function DashboardShell({
       <CollapsibleAppSidebar userEmail={userEmail} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
-          <Link href="/" className="font-heading text-lg font-semibold">
-            Thinkway
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/tw-wordmark.png"
+              alt="Thinkway"
+              width={130}
+              height={26}
+              priority
+              className="h-6 w-auto"
+            />
           </Link>
           <nav className="flex items-center gap-1">
             {mobileNavItems.map((item) => {
@@ -54,7 +62,7 @@ export async function DashboardShell({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-3xl px-3 py-2 text-xs font-medium",
+                    "flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-medium",
                     "bg-muted text-foreground"
                   )}
                 >

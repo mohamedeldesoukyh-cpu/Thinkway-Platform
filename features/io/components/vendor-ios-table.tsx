@@ -32,8 +32,7 @@ export function VendorIosTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
+    <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Influencer</TableHead>
@@ -67,7 +66,7 @@ export function VendorIosTable({
                 <div className="inline-flex items-center gap-2">
                   <Button
                     size="sm"
-                    variant={selectedId === row.id ? "default" : "outline"}
+                    variant="outline"
                     onClick={() => onView(row.id)}
                     disabled={isNavigating}
                   >
@@ -84,7 +83,6 @@ export function VendorIosTable({
           ))}
         </TableBody>
       </Table>
-    </div>
   );
 }
 

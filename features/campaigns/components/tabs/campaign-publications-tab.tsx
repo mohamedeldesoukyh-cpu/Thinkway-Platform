@@ -175,8 +175,7 @@ export function CampaignPublicationsTab({
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground">No publications found.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Type</TableHead>
@@ -236,7 +235,6 @@ export function CampaignPublicationsTab({
                   ))}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>

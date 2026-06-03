@@ -44,8 +44,7 @@ function isCampaignPoExceeded(campaign: CampaignListItem): boolean {
 
 export function CampaignsTable({ campaigns }: CampaignsTableProps) {
   return (
-    <div className="overflow-x-auto">
-      <Table>
+    <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Campaign #</TableHead>
@@ -86,9 +85,14 @@ export function CampaignsTable({ campaigns }: CampaignsTableProps) {
               </TableCell>
               <TableCell>
                 {campaign.lines.length > 0 ? (
-                  <span className="font-mono text-xs">
-                    {campaign.lines.map((l) => l.document_number).join(", ")}
-                  </span>
+                  <Badge
+                    variant="secondary"
+                    className="text-[11px]"
+                    title={campaign.lines.map((l) => l.document_number).join(", ")}
+                  >
+                    {campaign.lines.length}{" "}
+                    {campaign.lines.length === 1 ? "line" : "lines"}
+                  </Badge>
                 ) : (
                   "—"
                 )}
@@ -124,6 +128,5 @@ export function CampaignsTable({ campaigns }: CampaignsTableProps) {
           ))}
         </TableBody>
       </Table>
-    </div>
   );
 }

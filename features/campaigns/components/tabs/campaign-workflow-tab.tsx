@@ -80,8 +80,7 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
           {workspace.approvals.length === 0 ? (
             <p className="text-sm text-muted-foreground">No approval records.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Approval</TableHead>
@@ -118,7 +117,6 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>

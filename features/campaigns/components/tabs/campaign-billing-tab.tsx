@@ -258,8 +258,7 @@ export function CampaignBillingTab({
           {workspace.invoices.length === 0 ? (
             <p className="text-sm text-muted-foreground">No invoices linked yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice</TableHead>
@@ -303,7 +302,6 @@ export function CampaignBillingTab({
                   ))}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>
@@ -316,8 +314,7 @@ export function CampaignBillingTab({
           {workspace.payments.length === 0 ? (
             <p className="text-sm text-muted-foreground">No payments recorded.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Payment</TableHead>
@@ -351,7 +348,6 @@ export function CampaignBillingTab({
                   ))}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>

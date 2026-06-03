@@ -188,6 +188,55 @@ export async function getCampaignsList(params: {
   };
 }
 
+export type CampaignsKpis = {
+  total_campaigns: number;
+  total_revenue: number;
+  avg_margin: number;
+  assignments: number;
+  currency_code: string;
+};
+
+export async function getCampaignsKpis(): Promise<CampaignsKpis> {
+  const { supabase } = await requireUser();
+
+  const [headersResult, linesResult, assignmentsResult] = await Promise.all([
+    supabase.from("campaign_headers").select("id, currency_code").limit(2000),
+    supabase.from("campaign_lines").select("revenue, profit").limit(5000),
+    supabase
+      .from("campaign_influencers")
+      .select("id", { count: "exact", head: true }),
+  ]);
+
+  const headers = (headersResult.data ?? []) as {
+    id: string;
+    currency_code: string | null;
+  }[];
+  const lines = (linesResult.data ?? []) as {
+    revenue: number | null;
+    profit: number | null;
+  }[];
+
+  const totalRevenue = lines.reduce((sum, l) => sum + Number(l.revenue ?? 0), 0);
+  const totalProfit = lines.reduce((sum, l) => sum + Number(l.profit ?? 0), 0);
+  const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+  const currencyCounts = new Map<string, number>();
+  for (const header of headers) {
+    const code = header.currency_code ?? "USD";
+    currencyCounts.set(code, (currencyCounts.get(code) ?? 0) + 1);
+  }
+  const currencyCode =
+    [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+
+  return {
+    total_campaigns: headers.length,
+    total_revenue: totalRevenue,
+    avg_margin: avgMargin,
+    assignments: assignmentsResult.count ?? 0,
+    currency_code: currencyCode,
+  };
+}
+
 export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
   const { supabase } = await requireUser();
 

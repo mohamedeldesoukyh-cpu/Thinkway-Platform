@@ -61,8 +61,7 @@ export function CampaignTimelineTab({ workspace }: CampaignTimelineTabProps) {
           {workspace.vendors.length === 0 ? (
             <p className="text-sm text-muted-foreground">No vendor assignments.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Vendor</TableHead>
@@ -88,7 +87,6 @@ export function CampaignTimelineTab({ workspace }: CampaignTimelineTabProps) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>

@@ -219,27 +219,25 @@ export function CampaignDeliverablesTab({
         {filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Deliverable</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Creator</TableHead>
-                  <TableHead>Platform</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Content</TableHead>
-                  <TableHead className="text-right">Billing</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((row) => (
-                  <OperationalExplorerRow key={row.id} row={row} stats={stats} />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Deliverable</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Creator</TableHead>
+                <TableHead>Platform</TableHead>
+                <TableHead>Due</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Content</TableHead>
+                <TableHead className="text-right">Billing</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((row) => (
+                <OperationalExplorerRow key={row.id} row={row} stats={stats} />
+              ))}
+            </TableBody>
+          </Table>
         )}
       </CardContent>
     </Card>
@@ -288,16 +286,9 @@ function OperationalExplorerRow({
       <TableCell>
         <div className="space-y-0.5">
           <span className="font-medium">{row.label}</span>
-          <p className="font-mono text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {row.assignment_title}
             {row.sequence_number != null ? ` · #${row.sequence_number}` : null}
-          </p>
-          <p className="font-mono text-[10px] text-muted-foreground/80">
-            line:{row.campaign_line_id.slice(0, 8)} · del:
-            {row.assignment_deliverable_id.slice(0, 8)}
-            {row.assignment_post_schedule_id
-              ? ` · post:${row.assignment_post_schedule_id.slice(0, 8)}`
-              : null}
           </p>
         </div>
       </TableCell>

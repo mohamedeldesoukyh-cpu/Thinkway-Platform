@@ -139,7 +139,7 @@ function BillingCampaignReviewPanelInner({
       {open ? (
         <CardContent className="space-y-4 pt-0">
           {loading ? (
-            <div className="overflow-x-auto rounded-2xl border">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -176,7 +176,7 @@ function BillingCampaignReviewPanelInner({
                 </p>
               ) : null}
 
-              <div className="overflow-x-auto rounded-2xl border">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
