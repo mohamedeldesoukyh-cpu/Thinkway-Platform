@@ -28,6 +28,7 @@ type AssignmentDeliverableRowsProps = {
   onToggleDeliverable: (id: string) => void;
   showSelection: boolean;
   parentColSpan: number;
+  nestedGroupClassName?: string;
 };
 
 export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows({
@@ -39,6 +40,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   onToggleDeliverable,
   showSelection,
   parentColSpan,
+  nestedGroupClassName,
 }: AssignmentDeliverableRowsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -102,7 +104,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
 
   return (
     <TableRow className="border-0 hover:bg-transparent">
-      <TableCell colSpan={parentColSpan} className="p-0">
+      <TableCell colSpan={parentColSpan} className={cn("p-0", nestedGroupClassName)}>
         <div className={cn("mt-0 pl-2", OPERATIONAL_TABLE_SURFACE)}>
           <div className="overflow-x-auto pb-0.5">
             <table

@@ -39,6 +39,9 @@ type AssignmentSafeActionsFooterProps = {
   campaignId: string;
   currency: string;
   selectedLineIds: string[];
+  selectableLineCount: number;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
   vioLineIds: string[];
   reviseVioLineIds: string[];
   ungenerateIoLineIds: string[];
@@ -64,6 +67,9 @@ export function AssignmentSafeActionsFooter({
   campaignId,
   currency,
   selectedLineIds,
+  selectableLineCount,
+  onSelectAll,
+  onClearSelection,
   vioLineIds,
   reviseVioLineIds,
   ungenerateIoLineIds,
@@ -79,7 +85,7 @@ export function AssignmentSafeActionsFooter({
   const [ungenerateReason, setUngenerateReason] = useState("");
   const [reviseReason, setReviseReason] = useState("");
 
-  if (selectedLineIds.length === 0) return null;
+  const hasSelection = selectedLineIds.length > 0;
 
   function runVioGenerate() {
     startTransition(async () => {
@@ -131,45 +137,85 @@ export function AssignmentSafeActionsFooter({
   return (
     <div
       className={cn(
-        "sticky bottom-2 flex flex-wrap items-center justify-between gap-3",
-        "rounded-xl border bg-background/95 px-3 py-2.5 text-sm shadow-sm backdrop-blur",
+        "sticky bottom-2 flex flex-col gap-2",
+        "rounded-xl border border-border/60 bg-background/95 px-3 py-2.5 text-sm shadow-md backdrop-blur",
         className
       )}
     >
-      <div className="text-muted-foreground">
-        <span className="font-medium text-foreground">{selectedLineIds.length}</span> assignment
-        {selectedLineIds.length === 1 ? "" : "s"} selected
-        {invoiceLineIds.length > 0 ? (
-          <>
-            {" "}
-            · Invoice {formatMoney(invoiceTotal, currency)}
-          </>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {vioLineIds.length > 0 ? (
-          <Button type="button" size="sm" variant="outline" disabled={pending} onClick={runVioGenerate}>
-            <FileStackIcon data-icon="inline-start" />
-            {pending ? "Generating…" : "Generate Vendor IO"}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            disabled={selectableLineCount === 0}
+            onClick={onSelectAll}
+          >
+            Select all
           </Button>
-        ) : null}
-        {reviseVioLineIds.length > 0 ? (
-          <Button type="button" size="sm" variant="outline" onClick={() => setReviseOpen(true)}>
-            <GitBranchIcon data-icon="inline-start" />
-            Revise Vendor IO
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs"
+            disabled={!hasSelection}
+            onClick={onClearSelection}
+          >
+            Clear
           </Button>
-        ) : null}
-        {ungenerateIoLineIds.length > 0 ? (
-          <Button type="button" size="sm" variant="outline" onClick={() => setUngenerateOpen(true)}>
-            <Undo2Icon data-icon="inline-start" />
-            Ungenerate IO
-          </Button>
-        ) : null}
-        {invoiceLineIds.length > 0 ? (
-          <Button type="button" size="sm" onClick={() => onGenerateInvoice(invoiceLineIds)}>
-            <FileTextIcon data-icon="inline-start" />
-            Generate invoice
-          </Button>
+          <span className="text-xs text-muted-foreground">
+            {hasSelection ? (
+              <>
+                <span className="font-medium text-foreground">{selectedLineIds.length}</span>{" "}
+                selected
+                {invoiceLineIds.length > 0 ? (
+                  <> · Invoice {formatMoney(invoiceTotal, currency)}</>
+                ) : null}
+              </>
+            ) : (
+              <>Select assignments for Vendor IO or invoice actions</>
+            )}
+          </span>
+        </div>
+        {hasSelection ? (
+          <div className="flex flex-wrap gap-2">
+            {vioLineIds.length > 0 ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={runVioGenerate}
+              >
+                <FileStackIcon data-icon="inline-start" />
+                {pending ? "Generating…" : "Generate Vendor IO"}
+              </Button>
+            ) : null}
+            {reviseVioLineIds.length > 0 ? (
+              <Button type="button" size="sm" variant="outline" onClick={() => setReviseOpen(true)}>
+                <GitBranchIcon data-icon="inline-start" />
+                Revise Vendor IO
+              </Button>
+            ) : null}
+            {ungenerateIoLineIds.length > 0 ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setUngenerateOpen(true)}
+              >
+                <Undo2Icon data-icon="inline-start" />
+                Ungenerate IO
+              </Button>
+            ) : null}
+            {invoiceLineIds.length > 0 ? (
+              <Button type="button" size="sm" onClick={() => onGenerateInvoice(invoiceLineIds)}>
+                <FileTextIcon data-icon="inline-start" />
+                Generate invoice
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

@@ -256,7 +256,9 @@ export function AssignmentsRender({
     const expansionHint =
       stage === "expansion"
         ? "Expand a row (chevron) for deliverable/post children. No checkboxes or VIO footer."
-        : undefined;
+        : stage === "footer" || stage === "checkboxes"
+          ? "Select rows · Generate Vendor IO / invoice in footer. Invoice sheets off until dialogs."
+          : undefined;
     return (
       <AssignmentsSafeGridStage
         stage={stage}

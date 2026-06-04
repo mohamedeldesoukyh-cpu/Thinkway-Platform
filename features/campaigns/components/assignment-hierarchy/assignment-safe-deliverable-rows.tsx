@@ -3,10 +3,9 @@
 import dynamic from "next/dynamic";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
+import { ASSIGNMENT_SAFE_GRID_COL_SPAN } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-
-const PARENT_COL_SPAN = 13;
 
 const AssignmentDeliverableRows = dynamic(
   () =>
@@ -16,8 +15,11 @@ const AssignmentDeliverableRows = dynamic(
   {
     ssr: false,
     loading: () => (
-      <tr className="bg-muted/10">
-        <td colSpan={PARENT_COL_SPAN} className="px-4 py-3 text-xs text-muted-foreground">
+      <tr className="bg-muted/20">
+        <td
+          colSpan={ASSIGNMENT_SAFE_GRID_COL_SPAN}
+          className="border-b border-border/50 bg-muted/20 px-6 py-3 text-xs text-muted-foreground"
+        >
           Loading deliverables…
         </td>
       </tr>
@@ -82,8 +84,11 @@ export function AssignmentSafeDeliverableRows({
 }: AssignmentSafeDeliverableRowsProps) {
   if (deliverables.length === 0) {
     return (
-      <tr className="bg-muted/10">
-        <td colSpan={parentColSpan} className="px-6 py-2 text-xs text-muted-foreground">
+      <tr className="bg-muted/20">
+        <td
+          colSpan={parentColSpan}
+          className="border-b border-border/50 border-l-[3px] border-l-border/70 bg-muted/20 px-6 py-2 text-xs text-muted-foreground"
+        >
           No deliverable breakdown for this assignment.
         </td>
       </tr>
@@ -101,6 +106,7 @@ export function AssignmentSafeDeliverableRows({
         onToggleDeliverable={() => {}}
         showSelection={false}
         parentColSpan={parentColSpan}
+        nestedGroupClassName="border-l-[3px] border-l-border/70 bg-muted/20"
       />
     </SafeDeliverableBoundary>
   );

@@ -75,11 +75,8 @@ export function resolveAssignmentsRenderStage(): {
 
   const fromPublic = parseAssignmentsRenderStage(publicRaw);
 
-  if (
-    process.env.VERCEL_ENV === "production" &&
-    fromPublic === "static-table"
-  ) {
-    return { stage: "expansion", source: "production_recovery" };
+  if (process.env.VERCEL_ENV === "production" && fromPublic === "static-table") {
+    return { stage: "footer", source: "production_recovery" };
   }
 
   if (publicRaw?.trim()) {
