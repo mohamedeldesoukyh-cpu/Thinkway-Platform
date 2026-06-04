@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
+import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import {
   vendorIoBaseDocumentNumber,
   vendorIoRevisionDocumentNumber,
@@ -72,7 +74,7 @@ export async function reviseVendorIosFromLinesAction(
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, name, revenue, currency, operational_status, vendor_io_id, finance_override_until"
+      "id, name, revenue, operational_status, vendor_io_id, finance_override_until, invoice_id, billing_status"
     )
     .eq("campaign_header_id", campaignId)
     .in("id", lineIds);
@@ -89,16 +91,25 @@ export async function reviseVendorIosFromLinesAction(
     id: string;
     name: string;
     revenue: number;
-    currency: string;
     operational_status: string;
     vendor_io_id: string | null;
     finance_override_until: string | null;
+    invoice_id: string | null;
+    billing_status: string;
   };
 
   const typed = lines as unknown as LineRow[];
 
   for (const line of typed) {
-    if (line.operational_status !== "reopened") {
+    const status = effectiveLineOperationalStatus({
+      operational_status: line.operational_status,
+      vendor_io_id: line.vendor_io_id,
+      invoice_id: line.invoice_id,
+      billing_status: line.billing_status,
+      finance_override_until: line.finance_override_until,
+    }) as CampaignLineOperationalStatus;
+
+    if (status !== "reopened") {
       return {
         ok: false,
         message: `Line "${line.name}" must be reopened (invoice ungenerated) before creating a VIO revision.`,

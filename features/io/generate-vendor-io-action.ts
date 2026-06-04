@@ -64,7 +64,7 @@ export async function generateVendorIosFromLinesAction(
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, campaign_header_id, name, revenue, currency, metadata, operational_status, vendor_io_id, invoice_id, billing_status"
+      "id, campaign_header_id, name, revenue, currency_code, metadata, operational_status, vendor_io_id, invoice_id, billing_status"
     )
     .eq("campaign_header_id", campaignId)
     .in("id", lineIds);
@@ -82,7 +82,7 @@ export async function generateVendorIosFromLinesAction(
     campaign_header_id: string;
     name: string;
     revenue: number;
-    currency: string;
+    currency_code: string;
     metadata: Record<string, unknown> | null;
     operational_status: string;
     vendor_io_id: string | null;
@@ -127,7 +127,7 @@ export async function generateVendorIosFromLinesAction(
       influencer_name: assignment.influencer_name,
       lines: [],
       total_fee: 0,
-      currency: line.currency || "USD",
+      currency: line.currency_code || "USD",
     };
     bucket.lines.push(line);
     bucket.total_fee += Number(line.revenue) || 0;
@@ -157,7 +157,7 @@ export async function generateVendorIosFromLinesAction(
           influencer_id: group.influencer_id,
           status: "confirmed",
           agreed_fee: group.total_fee,
-          currency: primaryLine.currency,
+          currency: primaryLine.currency_code || "USD",
           deliverable_count: 0,
         } as never)
         .select("id")
