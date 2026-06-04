@@ -1,3 +1,4 @@
+import { filterUuids, isUuid } from "@/lib/validation/uuid";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
 import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
@@ -264,6 +265,10 @@ export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
 export async function getCampaignWorkspace(
   campaignId: string
 ): Promise<CampaignWorkspace | null> {
+  if (!isUuid(campaignId)) {
+    return null;
+  }
+
   const { supabase } = await requireUser();
 
   const { data: header, error: headerError } = await supabase
@@ -314,7 +319,7 @@ export async function getCampaignWorkspace(
         line:${REL.campaignInfluencers.campaignLine}(document_number)
       `
       )
-      .or(`campaign_header_id.eq.${campaignId},campaign_id.eq.${campaignId}`),
+      .eq("campaign_header_id", campaignId),
     supabase
       .from("deliverables")
       .select(
@@ -380,9 +385,7 @@ export async function getCampaignWorkspace(
     .map((line) => parseLineAssignment(line.metadata as Record<string, unknown>)?.influencer_id)
     .filter((id): id is string => Boolean(id));
 
-  const influencerIds = [
-    ...new Set([...vendorInfluencerIds, ...assignmentInfluencerIds]),
-  ];
+  const influencerIds = filterUuids([...vendorInfluencerIds, ...assignmentInfluencerIds]);
 
   let platformAccounts: {
     influencer_id: string;

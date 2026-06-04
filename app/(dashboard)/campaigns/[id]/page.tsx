@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CampaignWorkspaceView } from "@/features/campaigns/components/campaign-workspace";
 import {
@@ -14,6 +16,7 @@ import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 import { devLog } from "@/lib/dev-log";
+import { isUuid } from "@/lib/validation/uuid";
 
 type CampaignWorkspacePageProps = {
   params: Promise<{ id: string }>;
@@ -23,6 +26,26 @@ export default async function CampaignWorkspacePage({
   params,
 }: CampaignWorkspacePageProps) {
   const { id } = await params;
+
+  if (!isUuid(id)) {
+    return (
+      <DashboardShell
+        title="Campaign workspace"
+        description="Operational command center for lines, vendors, deliverables, billing, and workflow."
+      >
+        <div className="space-y-4 rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-6 text-sm">
+          <p className="font-medium text-destructive">Invalid campaign link</p>
+          <p className="text-muted-foreground">
+            The URL does not contain a valid campaign ID. Open a campaign from the{" "}
+            <strong>Campaigns</strong> list instead of using a bookmark or preview link.
+          </p>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/campaigns">Back to campaigns</Link>
+          </Button>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   let workspace;
   let formOptions: Awaited<ReturnType<typeof getCampaignFormOptions>> | null =

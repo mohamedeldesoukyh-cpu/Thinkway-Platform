@@ -1,3 +1,4 @@
+import { isUuid } from "@/lib/validation/uuid";
 import { rollupFacts } from "@/lib/analytics/aggregations/rollup-engine";
 import { roundMoney } from "@/lib/analytics/aggregations/round";
 import { devLog } from "@/lib/dev-log";
@@ -81,7 +82,7 @@ export function buildFinanceAlerts(input: {
         group: "profitability",
         title: "Low margin campaign",
         description: `${node.label} margin is ${m.margin_percent.toFixed(1)}%.`,
-        href: `/campaigns/${node.key}`,
+        href: isUuid(node.key) ? `/campaigns/${node.key}` : "/campaigns",
         amount: m.gp,
       });
     }

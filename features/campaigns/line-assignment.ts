@@ -1,3 +1,5 @@
+import { isUuid } from "@/lib/validation/uuid";
+
 import { DELIVERABLE_TYPE_OPTIONS, PLATFORM_OPTIONS } from "./constants";
 import {
   PLATFORM_DELIVERABLE_CODES,
@@ -83,7 +85,7 @@ export function parseLineAssignment(
   const raw = metadata?.[LINE_ASSIGNMENT_META_KEY];
   if (!raw || typeof raw !== "object") return null;
   const a = raw as LineInfluencerAssignment;
-  if (!a.influencer_id || !a.influencer_name) return null;
+  if (!a.influencer_id || !a.influencer_name || !isUuid(a.influencer_id)) return null;
   return {
     ...a,
     platforms: Array.isArray(a.platforms) ? a.platforms : [],
