@@ -30,7 +30,7 @@ import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-st
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
 import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/campaign-deliverables-tab";
-import { CampaignLinesTab } from "@/features/campaigns/components/tabs/campaign-lines-tab";
+import { CampaignAssignmentsTab } from "@/features/campaigns/components/tabs/campaign-assignments-tab";
 import { CampaignPublicationsTab } from "@/features/campaigns/components/tabs/campaign-publications-tab";
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
@@ -50,6 +50,7 @@ import {
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
+import type { AssignmentsRenderStage } from "@/lib/campaigns/assignments-render-stage";
 import { cn } from "@/lib/utils";
 type CampaignWorkspaceViewProps = {
   workspace: import("@/features/campaigns/types").CampaignWorkspace;
@@ -63,6 +64,8 @@ type CampaignWorkspaceViewProps = {
   publications: CampaignPublicationRow[];
   publicationsLoadError?: string | null;
   currencyOptions: { value: string; label: string }[];
+  assignmentsRenderStage: AssignmentsRenderStage;
+  assignmentsRenderStageSource?: "server" | "next_public" | "default" | "production_recovery";
 };
 
 export function CampaignWorkspaceView({
@@ -77,6 +80,8 @@ export function CampaignWorkspaceView({
   publications,
   publicationsLoadError,
   currencyOptions,
+  assignmentsRenderStage,
+  assignmentsRenderStageSource,
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -270,16 +275,18 @@ export function CampaignWorkspaceView({
         </TabsContent>
         <TabsContent value="lines" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-          <TabErrorBoundary tabName="Assignments">
-            <CampaignLinesTab
-              workspace={workspace}
-              po={workspace.po}
-              currencyOptions={currencyOptions}
-              assignmentHierarchy={assignmentHierarchy}
-              billingGroups={billingGroups}
-              operationalBilling={operationalBilling}
-            />
-          </TabErrorBoundary>
+            {activeTab === "lines" ? (
+              <CampaignAssignmentsTab
+                workspace={workspace}
+                po={workspace.po}
+                currencyOptions={currencyOptions}
+                assignmentHierarchy={assignmentHierarchy}
+                billingGroups={billingGroups}
+                operationalBilling={operationalBilling}
+                renderStage={assignmentsRenderStage}
+                renderStageSource={assignmentsRenderStageSource}
+              />
+            ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="deliverables" className={tabPanelClass}>

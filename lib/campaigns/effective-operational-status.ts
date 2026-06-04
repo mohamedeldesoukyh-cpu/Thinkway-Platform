@@ -1,3 +1,4 @@
+import { normalizeOperationalStatus } from "@/lib/campaigns/operational-status-utils";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 
 /**
@@ -17,7 +18,7 @@ export function effectiveLineOperationalStatus(input: {
     return "draft";
   }
 
-  if (raw !== "draft") return raw;
+  if (raw !== "draft") return normalizeOperationalStatus(raw);
 
   const billing = input.billing_status ?? "draft";
   if (billing === "closed") return "closed";
@@ -44,4 +45,11 @@ export function effectiveLineOperationalStatus(input: {
   if (input.vendor_io_id) return "io_generated";
 
   return "draft";
+}
+
+/** Safe status for UI maps (row classes, badges) — unknown DB values become `draft`. */
+export function effectiveLineOperationalStatusForUi(
+  input: Parameters<typeof effectiveLineOperationalStatus>[0]
+): CampaignLineOperationalStatus {
+  return normalizeOperationalStatus(effectiveLineOperationalStatus(input));
 }

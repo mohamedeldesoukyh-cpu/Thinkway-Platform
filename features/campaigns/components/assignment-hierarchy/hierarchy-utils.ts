@@ -5,12 +5,13 @@ import {
   type SocialPlatform,
 } from "@/lib/social/platforms";
 
-export function platformShortLabel(platform: string): string {
-  if (isSocialPlatform(platform)) {
-    return PLATFORM_SHORT_LABELS[platform as SocialPlatform];
+export function platformShortLabel(platform: string | null | undefined): string {
+  const value = typeof platform === "string" && platform.trim() ? platform.trim() : "other";
+  if (isSocialPlatform(value)) {
+    return PLATFORM_SHORT_LABELS[value as SocialPlatform];
   }
-  if (platform === "multi") return "Multi";
-  return platform.slice(0, 2).toUpperCase();
+  if (value === "multi") return "Multi";
+  return value.slice(0, 2).toUpperCase();
 }
 
 export function deliverableTagLabel(type: string): string {

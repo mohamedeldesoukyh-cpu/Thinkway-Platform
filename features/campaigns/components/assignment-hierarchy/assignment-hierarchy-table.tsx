@@ -10,6 +10,7 @@ import {
   type KeyboardEvent,
 } from "react";
 
+import { ClientOnly } from "@/components/ui/client-only";
 import {
   CampaignOperationalTable,
   CampaignOperationalTableBody,
@@ -18,17 +19,33 @@ import {
   CampaignOperationalTableHeaderRow,
 } from "@/features/campaigns/components/campaign-operational-table";
 import { AssignmentDeliverableRows } from "@/features/campaigns/components/assignment-hierarchy/assignment-deliverable-rows";
+import { AssignmentMinimalRow } from "@/features/campaigns/components/assignment-hierarchy/assignment-minimal-row";
 import { AssignmentParentRow } from "@/features/campaigns/components/assignment-hierarchy/assignment-parent-row";
-import { AssignmentOperationalActionsFooter } from "@/features/campaigns/components/assignment-operational-actions-footer";
+import { AssignmentRowErrorBoundary } from "@/features/campaigns/components/assignment-hierarchy/assignment-row-error-boundary";
 import { HIERARCHY_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
-import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
-import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
+import dynamic from "next/dynamic";
+
+const AssignmentOperationalActionsFooter = dynamic(
+  () =>
+    import("@/features/campaigns/components/assignment-operational-actions-footer").then(
+      (m) => m.AssignmentOperationalActionsFooter
+    ),
+  { ssr: false }
+);
 import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
-import { isLineUngenerateIoEligible } from "@/lib/io/vendor-io-ungenerate-eligibility";
+import {
+  assignmentsLayerAtLeast,
+  assignmentsLayerLabel,
+  getAssignmentsUiLayer,
+} from "@/lib/campaigns/assignments-ui-layer";
+import {
+  tryBuildAssignmentRowViewModel,
+  type AssignmentRowViewModel,
+} from "@/lib/campaigns/assignment-row-view-model";
+import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment-hierarchy";
+import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { cn } from "@/lib/utils";
 
 const PARENT_COLUMN_COUNT = 17;
@@ -40,80 +57,54 @@ type AssignmentHierarchyTableProps = {
   onInvoiceLines?: (lineIds: string[]) => void;
 };
 
+/** @deprecated Prefer AssignmentSafeGrid — heavy table crashes some production bundles. */
 export function AssignmentHierarchyTable({
   campaignId,
   hierarchy,
   onEditLine,
   onInvoiceLines,
 }: AssignmentHierarchyTableProps) {
-  const currency = hierarchy.currency_code;
+  logAssignmentsStage("table render start", {
+    campaignId,
+    rawGroups: hierarchy.groups?.length ?? 0,
+  });
+
+  const uiLayer = getAssignmentsUiLayer();
+  const enableExpansion = assignmentsLayerAtLeast(uiLayer, "expansion");
+  const enableBillingPills = assignmentsLayerAtLeast(uiLayer, "billing_pills");
+  const enableOperationalActions = assignmentsLayerAtLeast(uiLayer, "operational_actions");
+  const isMinimal = uiLayer === "minimal";
+
+  const sanitized = useMemo(
+    () => sanitizeAssignmentHierarchy(hierarchy, { campaignId }),
+    [hierarchy, campaignId]
+  );
+
+  const currency = sanitized.currency_code;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(new Set());
   const [focusedIndex, setFocusedIndex] = useState(0);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  const groups = Array.isArray(hierarchy.groups) ? hierarchy.groups : [];
+  const preparedRows = useMemo(() => {
+    const rows: AssignmentRowViewModel[] = [];
+    for (const group of sanitized.groups) {
+      const vm = tryBuildAssignmentRowViewModel(group, { campaignId });
+      if (vm) rows.push(vm);
+    }
+    return rows;
+  }, [sanitized.groups, campaignId]);
 
   const lineMeta = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        vioEligible: boolean;
-        invoiceEligible: boolean;
-        reviseVioEligible: boolean;
-        ungenerateIoEligible: boolean;
-        rowSelectable: boolean;
-        remaining: number;
-      }
-    >();
-    for (const group of groups) {
-      const status = effectiveLineOperationalStatus({
-        operational_status: group.line.operational_status,
-        vendor_io_id: group.line.vendor_io_id,
-        billing_status: group.line.billing_status,
-        invoice_id: group.line.invoice_id,
-      }) as CampaignLineOperationalStatus;
-      const vioEligible = isLineVendorIoGenerateEligible({
-        vendor_io_id: group.line.vendor_io_id,
-        invoice_id: group.line.invoice_id,
-        billing_status: group.line.billing_status,
-        operational_status: group.line.operational_status,
-        influencer_id: group.line.influencer_id,
-        campaign_influencer_id: group.line.campaign_influencer_id,
-      });
-      const invoiceEligible = isLineInvoiceEligible({
-        operational_status: status,
-        vendor_io_id: group.line.vendor_io_id,
-        billing_status: group.line.billing_status,
-        is_locked: group.line.revenue_locked,
-      });
-      const reviseVioEligible =
-        status === "reopened" && Boolean(group.line.vendor_io_id);
-      const ungenerateIoEligible = isLineUngenerateIoEligible({
-        vendor_io_id: group.line.vendor_io_id,
-        operational_status: status,
-        invoice_id: group.line.invoice_id ?? null,
-        billing_status: group.line.billing_status,
-      });
-      const rowSelectable =
-        vioEligible ||
-        invoiceEligible ||
-        reviseVioEligible ||
-        ungenerateIoEligible;
-
-      map.set(group.line.id, {
-        vioEligible,
-        invoiceEligible,
-        reviseVioEligible,
-        ungenerateIoEligible,
-        rowSelectable,
-        remaining: group.rollups.remaining_value,
-      });
+    const map = new Map<string, AssignmentRowViewModel["meta"]>();
+    for (const row of preparedRows) {
+      map.set(row.lineId, row.meta);
     }
     return map;
-  }, [groups]);
+  }, [preparedRows]);
 
   const selectableLineIds = useMemo(() => {
+    if (!enableOperationalActions) return [];
     const ids: string[] = [];
     for (const [lineId, meta] of lineMeta) {
       if (
@@ -126,7 +117,7 @@ export function AssignmentHierarchyTable({
       }
     }
     return ids;
-  }, [lineMeta]);
+  }, [lineMeta, enableOperationalActions]);
 
   const toggleLine = useCallback((lineId: string) => {
     setSelectedLineIds((prev) => {
@@ -154,26 +145,22 @@ export function AssignmentHierarchyTable({
   );
 
   const vioLineIds = useMemo(
-    () =>
-      [...selectedLineIds].filter((id) => lineMeta.get(id)?.vioEligible),
+    () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.vioEligible),
     [selectedLineIds, lineMeta]
   );
 
   const invoiceLineIds = useMemo(
-    () =>
-      [...selectedLineIds].filter((id) => lineMeta.get(id)?.invoiceEligible),
+    () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.invoiceEligible),
     [selectedLineIds, lineMeta]
   );
 
   const ungenerateIoLineIds = useMemo(
-    () =>
-      [...selectedLineIds].filter((id) => lineMeta.get(id)?.ungenerateIoEligible),
+    () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.ungenerateIoEligible),
     [selectedLineIds, lineMeta]
   );
 
   const reviseVioLineIds = useMemo(
-    () =>
-      [...selectedLineIds].filter((id) => lineMeta.get(id)?.reviseVioEligible),
+    () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.reviseVioEligible),
     [selectedLineIds, lineMeta]
   );
 
@@ -186,6 +173,8 @@ export function AssignmentHierarchyTable({
   }, [invoiceLineIds, lineMeta]);
 
   useEffect(() => {
+    if (!enableExpansion) return;
+
     function onKeyDown(event: KeyboardEvent | globalThis.KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       if (
@@ -201,17 +190,17 @@ export function AssignmentHierarchyTable({
       if (!tableRef.current?.contains(document.activeElement)) return;
 
       if (event.key === "ArrowRight") {
-        const group = groups[focusedIndex];
-        if (group) {
-          setExpandedIds((prev) => new Set(prev).add(group.line.id));
+        const row = preparedRows[focusedIndex];
+        if (row) {
+          setExpandedIds((prev) => new Set(prev).add(row.lineId));
           event.preventDefault();
         }
       } else if (event.key === "ArrowLeft") {
-        const group = groups[focusedIndex];
-        if (group) {
+        const row = preparedRows[focusedIndex];
+        if (row) {
           setExpandedIds((prev) => {
             const next = new Set(prev);
-            next.delete(group.line.id);
+            next.delete(row.lineId);
             return next;
           });
           event.preventDefault();
@@ -221,9 +210,22 @@ export function AssignmentHierarchyTable({
 
     window.addEventListener("keydown", onKeyDown as EventListener);
     return () => window.removeEventListener("keydown", onKeyDown as EventListener);
-  }, [focusedIndex, groups]);
+  }, [focusedIndex, preparedRows, enableExpansion]);
 
-  if (groups.length === 0) {
+  const skippedCount = sanitized.skipped_line_ids.length;
+  const sanitizeWarning =
+    sanitized.sanitize_warnings.length > 0
+      ? sanitized.sanitize_warnings.slice(0, 3).join(" ")
+      : null;
+
+  if (preparedRows.length === 0) {
+    if (sanitized.load_error) {
+      return (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-4 text-sm text-destructive">
+          Assignment data could not be loaded: {sanitized.load_error}
+        </p>
+      );
+    }
     return (
       <p className="text-sm text-muted-foreground">
         No creator assignments yet. Search for an influencer to build the first assignment
@@ -234,95 +236,141 @@ export function AssignmentHierarchyTable({
 
   return (
     <div ref={tableRef} className={cn(OPERATIONAL_TABLE_FONT)}>
+      <p className="border-b border-border/40 bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground">
+        Assignments UI layer: <span className="font-medium">{assignmentsLayerLabel(uiLayer)}</span>
+        {skippedCount > 0 ? ` · ${skippedCount} row(s) skipped (data sanitize)` : null}
+      </p>
+
+      {sanitizeWarning ? (
+        <p className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[10px] text-amber-900 dark:text-amber-200">
+          {sanitizeWarning}
+        </p>
+      ) : null}
+
       <CampaignOperationalTable>
         <CampaignOperationalTableHeader>
           <CampaignOperationalTableHeaderRow>
-            <CampaignOperationalTableHead className="w-8">{HIERARCHY_COLUMN_LABELS.expand}</CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="w-8">{HIERARCHY_COLUMN_LABELS.select}</CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="min-w-[140px]">
-              {HIERARCHY_COLUMN_LABELS.assignment}
-            </CampaignOperationalTableHead>
-            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.creator}</CampaignOperationalTableHead>
-            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.platforms}</CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="text-right">
-              {HIERARCHY_COLUMN_LABELS.deliverables}
-            </CampaignOperationalTableHead>
-            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.postingDates}</CampaignOperationalTableHead>
-            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.opsStatus}</CampaignOperationalTableHead>
-            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.billing}</CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="text-right tabular-nums">
-              {HIERARCHY_COLUMN_LABELS.revenue}
-            </CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="text-right tabular-nums">
-              {HIERARCHY_COLUMN_LABELS.costReceived}
-            </CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="text-center">
-              {HIERARCHY_COLUMN_LABELS.costCurrency}
-            </CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="text-right tabular-nums">
-              {HIERARCHY_COLUMN_LABELS.costInLc}
-            </CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="text-right tabular-nums">
-              {HIERARCHY_COLUMN_LABELS.gp}
-            </CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="text-right tabular-nums">
-              {HIERARCHY_COLUMN_LABELS.margin}
-            </CampaignOperationalTableHead>
-            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.payout}</CampaignOperationalTableHead>
-            <CampaignOperationalTableHead className="w-10 text-right">
-              {HIERARCHY_COLUMN_LABELS.actions}
-            </CampaignOperationalTableHead>
+            {isMinimal ? (
+              <>
+                <CampaignOperationalTableHead className="min-w-[160px]">
+                  Assignment
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Creator</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">Revenue</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Ops status</CampaignOperationalTableHead>
+              </>
+            ) : (
+              <>
+                {enableExpansion ? (
+                  <CampaignOperationalTableHead className="w-8">
+                    {HIERARCHY_COLUMN_LABELS.expand}
+                  </CampaignOperationalTableHead>
+                ) : null}
+                {enableOperationalActions ? (
+                  <CampaignOperationalTableHead className="w-8">
+                    {HIERARCHY_COLUMN_LABELS.select}
+                  </CampaignOperationalTableHead>
+                ) : null}
+                <CampaignOperationalTableHead className="min-w-[140px]">
+                  {HIERARCHY_COLUMN_LABELS.assignment}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.creator}</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.platforms}</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">
+                  {HIERARCHY_COLUMN_LABELS.deliverables}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.postingDates}</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.opsStatus}</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.billing}</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.revenue}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.costReceived}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-center">
+                  {HIERARCHY_COLUMN_LABELS.costCurrency}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.costInLc}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.gp}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.margin}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.payout}</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="w-10 text-right">
+                  {HIERARCHY_COLUMN_LABELS.actions}
+                </CampaignOperationalTableHead>
+              </>
+            )}
           </CampaignOperationalTableHeaderRow>
         </CampaignOperationalTableHeader>
         <CampaignOperationalTableBody>
-          {groups.map((group, index) => {
-            const lineId = group.line.id;
-            const expanded = expandedIds.has(lineId);
-            const meta = lineMeta.get(lineId);
+          {preparedRows.map((row, index) => {
+            const lineId = row.lineId;
+            const expanded = enableExpansion && expandedIds.has(lineId);
+            const meta = row.meta;
             const parentSelected = selectedLineIds.has(lineId);
+            const deliverables = Array.isArray(row.group.deliverables)
+              ? row.group.deliverables
+              : [];
+            const colSpan = isMinimal ? 4 : PARENT_COLUMN_COUNT;
 
             return (
-              <Fragment key={lineId}>
-                <AssignmentParentRow
-                  group={group}
-                  currency={currency}
-                  expanded={expanded}
-                  onToggleExpand={() => {
-                    setExpandedIds((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(lineId)) next.delete(lineId);
-                      else next.add(lineId);
-                      return next;
-                    });
-                  }}
-                  onEdit={onEditLine}
-                  parentSelected={parentSelected}
-                  parentIndeterminate={false}
-                  onToggleParentSelect={() => toggleParentSelect(lineId)}
-                  rowSelectable={meta?.rowSelectable ?? false}
-                  rowIndex={index}
-                  focused={focusedIndex === index}
-                  onFocus={() => setFocusedIndex(index)}
-                />
-                {expanded ? (
-                  <AssignmentDeliverableRows
-                    campaignId={campaignId}
-                    line={group.line}
-                    deliverables={group.deliverables}
-                    currency={currency}
-                    selectedIds={new Set()}
-                    onToggleDeliverable={() => {}}
-                    showSelection={false}
-                    parentColSpan={PARENT_COLUMN_COUNT}
-                  />
-                ) : null}
-              </Fragment>
+              <AssignmentRowErrorBoundary key={lineId} lineId={lineId} colSpan={colSpan}>
+                {isMinimal ? (
+                  <AssignmentMinimalRow viewModel={row} />
+                ) : (
+                  <Fragment>
+                    <AssignmentParentRow
+                      group={row.group}
+                      viewModel={row}
+                      currency={currency}
+                      expanded={expanded}
+                      enableExpansion={enableExpansion}
+                      enableBillingPills={enableBillingPills}
+                      enableSelection={enableOperationalActions}
+                      onToggleExpand={() => {
+                        setExpandedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(lineId)) next.delete(lineId);
+                          else next.add(lineId);
+                          return next;
+                        });
+                      }}
+                      onEdit={onEditLine}
+                      parentSelected={parentSelected}
+                      parentIndeterminate={false}
+                      onToggleParentSelect={() => toggleParentSelect(lineId)}
+                      rowSelectable={meta.rowSelectable}
+                      rowIndex={index}
+                      focused={focusedIndex === index}
+                      onFocus={() => setFocusedIndex(index)}
+                    />
+                    {expanded ? (
+                      <AssignmentDeliverableRows
+                        campaignId={campaignId}
+                        line={row.group.line}
+                        deliverables={deliverables}
+                        currency={currency}
+                        selectedIds={new Set()}
+                        onToggleDeliverable={() => {}}
+                        showSelection={false}
+                        parentColSpan={PARENT_COLUMN_COUNT}
+                      />
+                    ) : null}
+                  </Fragment>
+                )}
+              </AssignmentRowErrorBoundary>
             );
           })}
         </CampaignOperationalTableBody>
       </CampaignOperationalTable>
 
-      {selectableLineIds.length === 0 ? (
+      {enableOperationalActions && selectableLineIds.length === 0 ? (
         <p className="border-t border-border/50 px-3 py-2 text-[11px] text-muted-foreground">
           No lines are eligible for Vendor IO or invoicing. Assign a creator first, ensure the line
           has no Vendor IO yet (see Ops status / IO #), or use the Vendor IO tab to un-generate an
@@ -330,18 +378,22 @@ export function AssignmentHierarchyTable({
         </p>
       ) : null}
 
-      <AssignmentOperationalActionsFooter
-        campaignId={campaignId}
-        currency={currency}
-        selectedLineIds={[...selectedLineIds]}
-        vioLineIds={vioLineIds}
-        reviseVioLineIds={reviseVioLineIds}
-        ungenerateIoLineIds={ungenerateIoLineIds}
-        invoiceLineIds={invoiceLineIds}
-        invoiceTotal={invoiceTotal}
-        onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}
-        className="rounded-none border-x-0 border-b-0 border-t border-border/50"
-      />
+      {enableOperationalActions ? (
+        <ClientOnly>
+          <AssignmentOperationalActionsFooter
+            campaignId={campaignId}
+            currency={currency}
+            selectedLineIds={[...selectedLineIds]}
+            vioLineIds={vioLineIds}
+            reviseVioLineIds={reviseVioLineIds}
+            ungenerateIoLineIds={ungenerateIoLineIds}
+            invoiceLineIds={invoiceLineIds}
+            invoiceTotal={invoiceTotal}
+            onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}
+            className="rounded-none border-x-0 border-b-0 border-t border-border/50"
+          />
+        </ClientOnly>
+      ) : null}
     </div>
   );
 }

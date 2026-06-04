@@ -3,6 +3,7 @@
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { EditablePostRow } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
+import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 
 type DeliverableGroupRowProps = {
   campaignId: string;
@@ -33,19 +34,24 @@ export function DeliverableGroupRow({
   platformOptions,
 }: DeliverableGroupRowProps) {
   const readOnly = deliverable.is_synthetic || deliverable.is_locked;
-  const deliverableScoped = deliverable.posts.length === 1;
+  const posts = Array.isArray(deliverable.posts) ? deliverable.posts : [];
+  const deliverableScoped = posts.length === 1;
+  const safeParentStatus = effectiveLineOperationalStatusForUi({
+    operational_status: parentOperationalStatus,
+    vendor_io_id: null,
+  });
 
   return (
     <>
-      {deliverable.posts.map((post, index) => (
+      {posts.map((post, index) => (
         <EditablePostRow
-          key={post.id}
+          key={post.id ?? `${deliverable.id}-post-${index}`}
           campaignId={campaignId}
           campaignLineId={campaignLineId}
           deliverable={deliverable}
           post={post}
           currency={currency}
-          parentOperationalStatus={parentOperationalStatus}
+          parentOperationalStatus={safeParentStatus}
           readOnly={readOnly}
           revenueVatExempt={revenueVatExempt}
           defaultRevenueVatPercent={defaultRevenueVatPercent}

@@ -87,6 +87,9 @@ export type AssignmentHierarchy = {
   currency_code: string;
   /** Set when hierarchy query partially or fully failed — UI should show warning, not crash. */
   load_error?: string | null;
+  /** Lines removed during server/client sanitize (bad payload). */
+  skipped_line_ids?: string[];
+  sanitize_warnings?: string[];
 };
 
 /** @deprecated Use AssignmentPostOperationalRow */

@@ -38,7 +38,7 @@ export function DeliverableWorkflowBadge({
   status,
   className,
 }: DeliverableWorkflowBadgeProps) {
-  const key = status.replace(/-/g, "_");
+  const key = String(status ?? "draft").replace(/-/g, "_");
   return (
     <Badge
       variant="outline"

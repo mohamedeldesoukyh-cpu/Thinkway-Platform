@@ -90,14 +90,19 @@ export function flattenOperationalDeliverables(
   let deliverableFallbackRows = 0;
 
   for (const group of hierarchy.groups ?? []) {
-    const line = group.line;
+    const line = group?.line;
+    if (!line?.id) continue;
+
     const creatorName = line.influencer_name ?? null;
     const assignmentTitle = line.name ?? "Assignment";
 
     for (const deliverable of group.deliverables ?? []) {
       deliverableGroups++;
-      const posts = deliverable.posts ?? [];
-      const realPosts = posts.filter((p) => !p.id.startsWith("virtual-"));
+      const posts = Array.isArray(deliverable.posts) ? deliverable.posts : [];
+      const realPosts = posts.filter((p) => {
+        const id = p?.id;
+        return typeof id === "string" && !id.startsWith("virtual-");
+      });
 
       const deliverableRow: OperationalDeliverableExplorerRow = {
         id: deliverable.id,

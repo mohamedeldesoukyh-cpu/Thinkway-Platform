@@ -32,12 +32,20 @@ export function useKeyboardShortcuts() {
 }
 
 export function useRegisterShortcut(action: ShortcutAction | null) {
-  const { register } = useKeyboardShortcuts();
+  const ctx = useContext(KeyboardShortcutsContext);
 
   useEffect(() => {
-    if (!action) return;
-    return register(action);
-  }, [action, register]);
+    if (!action || !ctx) {
+      if (action && process.env.NODE_ENV === "development") {
+        console.warn(
+          "[keyboard-shortcuts] useRegisterShortcut skipped — no KeyboardShortcutsProvider",
+          { id: action.id }
+        );
+      }
+      return;
+    }
+    return ctx.register(action);
+  }, [action, ctx]);
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {

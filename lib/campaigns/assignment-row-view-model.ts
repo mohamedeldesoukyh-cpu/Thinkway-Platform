@@ -1,0 +1,181 @@
+import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";
+import { LINE_OPERATIONAL_STATUS_LABELS } from "@/features/campaigns/constants/operational-status";
+import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
+import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
+import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
+import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
+import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
+import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
+import { isLineUngenerateIoEligible } from "@/lib/io/vendor-io-ungenerate-eligibility";
+import { safeSummarizePostingDates } from "@/lib/campaigns/safe-assignment-dates";
+import { platformShortLabel } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+
+export type AssignmentLineMeta = {
+  vioEligible: boolean;
+  invoiceEligible: boolean;
+  reviseVioEligible: boolean;
+  ungenerateIoEligible: boolean;
+  rowSelectable: boolean;
+  remaining: number;
+};
+
+export type AssignmentRowViewModel = {
+  lineId: string;
+  group: AssignmentHierarchyGroup;
+  meta: AssignmentLineMeta;
+  operationalStatus: CampaignLineOperationalStatus;
+  childBillingStatus: AssignmentDeliverableBillingStatus;
+  displayName: string;
+  platformSummary: string;
+  postingSummary: string;
+  opsStatusLabel: string;
+  billingStatusLabel: string;
+  rollups: ReturnType<typeof coalesceAssignmentRollups>;
+};
+
+function finiteNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function deriveChildBillingStatus(
+  operationalStatus: CampaignLineOperationalStatus
+): AssignmentDeliverableBillingStatus {
+  if (operationalStatus === "invoiced") return "invoiced";
+  if (operationalStatus === "partially_invoiced") return "partially_invoiced";
+  if (operationalStatus === "reopened") return "ready_to_invoice";
+  if (operationalStatus === "io_generated") return "ready_to_invoice";
+  if (operationalStatus === "moved_to_billing") return "ready_to_invoice";
+  return "draft";
+}
+
+function summarizePlatforms(group: AssignmentHierarchyGroup): string {
+  try {
+    const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
+    const platforms = [...new Set(deliverables.map((d) => d.platform).filter(Boolean))];
+    if (platforms.length === 0) return group.line.platform_summary ?? "—";
+    return platforms.map(platformShortLabel).join(", ");
+  } catch {
+    return group.line.platform_summary ?? "—";
+  }
+}
+
+function collectLiveDates(group: AssignmentHierarchyGroup): Array<string | null | undefined> {
+  const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
+  return deliverables.flatMap((d) => {
+    const posts = Array.isArray(d.posts) ? d.posts : [];
+    if (posts.length > 0) {
+      return posts.map((p) => p.live_date);
+    }
+    return [d.live_date];
+  });
+}
+
+export function deriveAssignmentLineMeta(
+  group: AssignmentHierarchyGroup
+): AssignmentLineMeta {
+  const line = group.line;
+  const status = effectiveLineOperationalStatusForUi({
+    operational_status: line.operational_status,
+    vendor_io_id: line.vendor_io_id,
+    billing_status: line.billing_status,
+    invoice_id: line.invoice_id,
+  });
+
+  const vioEligible = isLineVendorIoGenerateEligible({
+    vendor_io_id: line.vendor_io_id,
+    invoice_id: line.invoice_id,
+    billing_status: line.billing_status,
+    operational_status: line.operational_status,
+    influencer_id: line.influencer_id,
+    campaign_influencer_id: line.campaign_influencer_id,
+  });
+
+  const invoiceEligible = isLineInvoiceEligible({
+    operational_status: status,
+    vendor_io_id: line.vendor_io_id,
+    billing_status: line.billing_status,
+    is_locked: line.revenue_locked,
+  });
+
+  const reviseVioEligible = status === "reopened" && Boolean(line.vendor_io_id);
+  const ungenerateIoEligible = isLineUngenerateIoEligible({
+    vendor_io_id: line.vendor_io_id,
+    operational_status: status,
+    invoice_id: line.invoice_id ?? null,
+    billing_status: line.billing_status,
+  });
+
+  return {
+    vioEligible,
+    invoiceEligible,
+    reviseVioEligible,
+    ungenerateIoEligible,
+    rowSelectable:
+      vioEligible || invoiceEligible || reviseVioEligible || ungenerateIoEligible,
+    remaining: finiteNumber(
+      group.rollups?.remaining_value,
+      finiteNumber(line.revenue_before_vat, finiteNumber(line.revenue))
+    ),
+  };
+}
+
+export function buildAssignmentRowViewModel(
+  group: AssignmentHierarchyGroup
+): AssignmentRowViewModel {
+  const line = group.line;
+  const rollups = coalesceAssignmentRollups(line, group.rollups);
+  const operationalStatus = effectiveLineOperationalStatusForUi({
+    operational_status: line.operational_status,
+    vendor_io_id: line.vendor_io_id,
+    billing_status: line.billing_status,
+    invoice_id: line.invoice_id,
+  });
+  const childBillingStatus = deriveChildBillingStatus(operationalStatus);
+  const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
+
+  const displayName =
+    buildAssignmentDisplayName(line.influencer_name ?? line.name.split(" — ")[0] ?? line.name, [
+      ...deliverables.map((d) => ({
+        platform: d.platform,
+        deliverable_type: d.deliverable_type,
+        posts_count: Array.isArray(d.posts) ? d.posts.length : 0,
+      })),
+    ]) || line.name;
+
+  return {
+    lineId: line.id,
+    group,
+    meta: deriveAssignmentLineMeta(group),
+    operationalStatus,
+    childBillingStatus,
+    displayName,
+    platformSummary: summarizePlatforms(group),
+    postingSummary: safeSummarizePostingDates(collectLiveDates(group)),
+    opsStatusLabel: LINE_OPERATIONAL_STATUS_LABELS[operationalStatus] ?? operationalStatus,
+    billingStatusLabel:
+      childBillingStatus === "ready_to_invoice"
+        ? "IO generated"
+        : childBillingStatus.replace(/_/g, " "),
+    rollups,
+  };
+}
+
+export function tryBuildAssignmentRowViewModel(
+  group: AssignmentHierarchyGroup,
+  context: { campaignId?: string } = {}
+): AssignmentRowViewModel | null {
+  const lineId = group?.line?.id;
+  try {
+    return buildAssignmentRowViewModel(group);
+  } catch (error) {
+    console.error("[assignment-hierarchy] row view-model failed — skip render", {
+      campaignId: context.campaignId,
+      lineId,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return null;
+  }
+}

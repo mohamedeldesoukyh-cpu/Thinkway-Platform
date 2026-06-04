@@ -194,7 +194,8 @@ export function EditablePostRow({
           ? "Pend"
           : "—";
 
-  const canEdit = !readOnly && !post.id.startsWith("virtual-");
+  const postId = typeof post.id === "string" ? post.id : "";
+  const canEdit = !readOnly && postId.length > 0 && !postId.startsWith("virtual-");
   const canEditCommercial = canEdit && !deliverable.is_locked;
 
   function persistCommercial() {
@@ -222,7 +223,7 @@ export function EditablePostRow({
       } else {
         const result = await updatePostScheduleAction({
           campaign_id: campaignId,
-          schedule_id: post.id,
+          schedule_id: postId,
           live_date: meta.live_date || null,
           status: meta.workflow_status,
           revenue_per_post: commercial.draft.revPerAd,
@@ -247,7 +248,7 @@ export function EditablePostRow({
     const merged = { ...meta, ...overrides };
     return {
       campaign_id: campaignId,
-      schedule_id: post.id,
+          schedule_id: postId,
       live_date: merged.live_date || null,
       status: merged.workflow_status,
       revenue_per_post: commercial.draft.revPerAd,

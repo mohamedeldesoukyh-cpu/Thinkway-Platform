@@ -23,6 +23,8 @@ import { deliverableTagLabel } from "@/features/campaigns/components/assignment-
 import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { formatMarginPercent } from "@/features/billing/types";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
+import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
+import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 
 function lineAllowsDeliverableInvoice(line: CampaignLineWorkspace): boolean {
@@ -172,7 +174,8 @@ function buildSyntheticDeliverable(
       ? "invoiced"
       : line.billing_status === "partially_invoiced"
         ? "partially_invoiced"
-        : ["moved_to_billing", "approved"].includes(line.billing_status)
+        : line.operational_status === "reopened" ||
+            ["moved_to_billing", "approved"].includes(line.billing_status)
           ? "ready_to_invoice"
           : "draft";
 
@@ -329,7 +332,13 @@ export async function getCampaignAssignmentHierarchy(
     const message =
       error instanceof Error ? error.message : "Failed to load assignment hierarchy.";
     console.error("[assignment-hierarchy] load failed", { campaignId, message });
-    return { groups: [], currency_code: "USD", load_error: message };
+    return {
+      groups: [],
+      currency_code: "USD",
+      load_error: message,
+      skipped_line_ids: [],
+      sanitize_warnings: [],
+    };
   }
 }
 
@@ -651,21 +660,41 @@ async function loadCampaignAssignmentHierarchy(
     deliverablesByLine.set(row.campaign_line_id, list);
   }
 
-  const groups: AssignmentHierarchyGroup[] = workspace.lines.map((line) => {
-    let deliverables = deliverablesByLine.get(line.id) ?? [];
-    if (deliverables.length === 0) {
-      deliverables = [buildSyntheticDeliverable(line)];
+  const groups: AssignmentHierarchyGroup[] = [];
+
+  for (const line of workspace.lines) {
+    const lineId = line.id;
+    try {
+      let deliverables = deliverablesByLine.get(lineId) ?? [];
+      if (deliverables.length === 0) {
+        deliverables = [buildSyntheticDeliverable(line)];
+      }
+      const rollups = buildRollups(deliverables, line);
+      groups.push({ line, deliverables, rollups });
+    } catch (error) {
+      console.error("[assignment-hierarchy] group mapping failed — skipping row", {
+        campaignId,
+        lineId,
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
-    return {
-      line,
-      deliverables,
-      rollups: buildRollups(deliverables, line),
-    };
+  }
+
+  const result = sanitizeAssignmentHierarchy(
+    {
+      groups,
+      currency_code: workspace.currency_code,
+      load_error: loadWarnings.length > 0 ? loadWarnings.join(" · ") : null,
+    },
+    { campaignId }
+  );
+
+  logAssignmentsStage("hierarchy built", {
+    campaignId,
+    groupCount: result.groups.length,
+    skipped: result.skipped_line_ids?.length ?? 0,
   });
 
-  return {
-    groups,
-    currency_code: workspace.currency_code,
-    load_error: loadWarnings.length > 0 ? loadWarnings.join(" · ") : null,
-  };
+  return result;
 }

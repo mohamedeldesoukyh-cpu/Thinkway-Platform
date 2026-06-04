@@ -14,19 +14,4 @@ export const OPERATIONAL_PILL_CLASS: Record<CampaignLineOperationalStatus, strin
 export const OPERATIONAL_STATUS_PILL_BASE =
   "inline-flex text-[10px] font-medium capitalize border";
 
-const KNOWN: CampaignLineOperationalStatus[] = [
-  "draft",
-  "io_generated",
-  "moved_to_billing",
-  "partially_invoiced",
-  "invoiced",
-  "reopened",
-  "closed",
-];
-
-export function normalizeOperationalStatus(
-  status: CampaignLineOperationalStatus | string | null | undefined
-): CampaignLineOperationalStatus {
-  const key = (status ?? "draft") as CampaignLineOperationalStatus;
-  return KNOWN.includes(key) ? key : "draft";
-}
+export { normalizeOperationalStatus } from "@/lib/campaigns/operational-status-utils";

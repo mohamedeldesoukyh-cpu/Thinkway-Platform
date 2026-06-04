@@ -265,7 +265,7 @@ export function collectOperationalRowIds(rows: OperationalBillingRow[]): {
     if (node.kind === "assignment") line_ids.add(node.id);
     if (node.kind === "deliverable_group") deliverable_ids.add(node.id);
     if (node.kind === "post") post_ids.add(node.id);
-    for (const child of node.children) walk(child);
+    for (const child of node.children ?? []) walk(child);
   }
 
   for (const row of rows) walk(row);

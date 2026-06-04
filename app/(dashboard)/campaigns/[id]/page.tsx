@@ -12,6 +12,12 @@ import {
 import { getCampaignBillingGroups, getCampaignBillingLines, getCampaignOperationalBillingDetail } from "@/features/billing/queries";
 import { getFinanceInvoiceRegister } from "@/features/finance/invoices/queries";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
+import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
+import {
+  assignmentsRenderStageSourceLabel,
+  resolveAssignmentsRenderStage,
+} from "@/lib/campaigns/assignments-render-stage";
+import { toPlainAssignmentHierarchy } from "@/lib/campaigns/serialize-assignment-hierarchy";
 import { getCampaignPublications } from "@/features/campaigns/queries/publications";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
@@ -128,15 +134,24 @@ export default async function CampaignWorkspacePage({
     }
 
     try {
-      assignmentHierarchy = await getCampaignAssignmentHierarchy(id);
+      const loaded = await getCampaignAssignmentHierarchy(id);
+      assignmentHierarchy = toPlainAssignmentHierarchy(loaded);
+      logAssignmentsStage("page query success", {
+        campaignId: id,
+        groupCount: assignmentHierarchy.groups.length,
+        skipped: assignmentHierarchy.skipped_line_ids?.length ?? 0,
+        loadError: assignmentHierarchy.load_error ?? null,
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to load assignment hierarchy.";
-      console.error("[campaign-page] assignment hierarchy failed", { campaignId: id, message });
+      console.error("[Assignments] page hierarchy query failed", { campaignId: id, message });
       assignmentHierarchy = {
         groups: [],
         currency_code: workspace.currency_code,
         load_error: message,
+        skipped_line_ids: [],
+        sanitize_warnings: [],
       };
     }
 
@@ -157,6 +172,15 @@ export default async function CampaignWorkspacePage({
 
   const teams = masterData?.teams ?? [];
   const currencyOptions = buildCurrencyOptions(masterData?.currencies ?? []);
+  const { stage: assignmentsRenderStage, source: assignmentsRenderStageSource } =
+    resolveAssignmentsRenderStage();
+
+  logAssignmentsStage("page render stage resolved", {
+    campaignId: id,
+    stage: assignmentsRenderStage,
+    source: assignmentsRenderStageSource,
+    envLabel: assignmentsRenderStageSourceLabel(assignmentsRenderStageSource),
+  });
 
   return (
     <DashboardShell
@@ -184,6 +208,8 @@ export default async function CampaignWorkspacePage({
               publications={publications}
               publicationsLoadError={publicationsLoadError}
               currencyOptions={currencyOptions}
+              assignmentsRenderStage={assignmentsRenderStage}
+              assignmentsRenderStageSource={assignmentsRenderStageSource}
             />
           </div>
         </PlatformErrorBoundary>

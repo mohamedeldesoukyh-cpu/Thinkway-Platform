@@ -11,8 +11,8 @@ import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { getCreatorConnectedPlatformOptions, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
+import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import {
   OPERATIONAL_TABLE_HEADER_SURFACE,
   OPERATIONAL_TABLE_SURFACE,
@@ -43,6 +43,12 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const locked = line.vendor_assignment_locked ?? false;
+  const parentOperationalStatus = effectiveLineOperationalStatusForUi({
+    operational_status: line.operational_status,
+    vendor_io_id: line.vendor_io_id,
+    billing_status: line.billing_status,
+    invoice_id: line.invoice_id,
+  });
   const platformOptions = getCreatorConnectedPlatformOptions({
     creatorPlatformAccounts: line.creator_platform_accounts,
     assignment: line.assignment,
@@ -138,9 +144,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                     campaignLineId={line.id}
                     deliverable={deliverable}
                     currency={currency}
-                    parentOperationalStatus={
-                      (line.operational_status ?? "draft") as CampaignLineOperationalStatus
-                    }
+                    parentOperationalStatus={parentOperationalStatus}
                     selected={selectedIds.has(deliverable.id)}
                     onToggleSelect={() => onToggleDeliverable(deliverable.id)}
                     showSelection={showSelection}

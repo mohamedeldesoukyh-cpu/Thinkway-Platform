@@ -23,11 +23,20 @@ export class TabErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    const digest =
+      "digest" in error ? String((error as Error & { digest?: string }).digest) : undefined;
     console.error(`[${this.props.tabName}] tab render failed`, {
       message: error.message,
+      digest,
       stack: error.stack,
       componentStack: info.componentStack,
     });
+    if (this.props.tabName === "Assignments") {
+      console.error("[Assignments] tab error boundary caught failure", {
+        digest,
+        message: error.message,
+      });
+    }
   }
 
   render() {
