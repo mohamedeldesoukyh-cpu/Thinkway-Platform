@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { PencilIcon, UserIcon } from "lucide-react";
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,13 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           : "draft";
   const platformSummary = useMemo(() => summarizePlatforms(group), [group]);
   const postingSummary = useMemo(() => summarizePostingDates(group), [group]);
+  const selectRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectRef.current) {
+      selectRef.current.indeterminate = parentIndeterminate;
+    }
+  }, [parentIndeterminate, parentSelected]);
 
   return (
     <TableRow
@@ -133,14 +140,12 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       <TableCell className="w-8 px-1.5 py-1.5">
         {rowSelectable ? (
           <input
+            ref={selectRef}
             type="checkbox"
             className="size-3.5 rounded border-border"
             checked={parentSelected}
-            ref={(el) => {
-              if (el) el.indeterminate = parentIndeterminate;
-            }}
             onChange={onToggleParentSelect}
-            aria-label={`Select all deliverables for ${line.influencer_name ?? line.name}`}
+            aria-label={`Select assignment ${line.influencer_name ?? line.name}`}
           />
         ) : null}
       </TableCell>
@@ -166,7 +171,12 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {rollups.deliverable_count}
       </TableCell>
-      <TableCell className="px-1.5 py-1.5 text-muted-foreground">{postingSummary}</TableCell>
+      <TableCell
+        className="px-1.5 py-1.5 text-muted-foreground"
+        suppressHydrationWarning
+      >
+        {postingSummary}
+      </TableCell>
       <TableCell className="px-1.5 py-1.5">
         <AssignmentOperationalStatusBadge status={operationalStatus} />
         {line.vendor_io_document_number ? (

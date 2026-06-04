@@ -233,18 +233,22 @@ export function rollupOperationalRows(rows: OperationalBillingRow[]): CampaignFi
 }
 
 /** Prefer post leaves, then deliverable leaves, then assignment roots. */
-export function flattenOperationalLeaves(rows: OperationalBillingRow[]): OperationalBillingRow[] {
+export function flattenOperationalLeaves(
+  rows: OperationalBillingRow[] | null | undefined
+): OperationalBillingRow[] {
   const leaves: OperationalBillingRow[] = [];
+  const safeRows = rows ?? [];
 
   function walk(node: OperationalBillingRow) {
-    if (node.children.length > 0) {
-      for (const child of node.children) walk(child);
+    const children = node.children ?? [];
+    if (children.length > 0) {
+      for (const child of children) walk(child);
       return;
     }
     leaves.push(node);
   }
 
-  for (const row of rows) walk(row);
+  for (const row of safeRows) walk(row);
   return leaves;
 }
 

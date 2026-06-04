@@ -78,8 +78,8 @@ export function InvoiceGenerationSheet({
   campaignId,
   currency,
   rollup,
-  operationalRows,
-  appendableInvoices,
+  operationalRows: operationalRowsProp,
+  appendableInvoices: appendableInvoicesProp,
   defaultVatPercent = 0,
   open,
   onOpenChange,
@@ -87,6 +87,16 @@ export function InvoiceGenerationSheet({
   targetMode,
   onInvoiceComplete,
 }: InvoiceGenerationSheetProps) {
+  const operationalRows = operationalRowsProp ?? [];
+  const appendableInvoices = appendableInvoicesProp ?? [];
+  const safeRollup = rollup ?? {
+    total_campaign_amount: 0,
+    achieved_revenue: 0,
+    already_invoiced: 0,
+    remaining_to_invoice: 0,
+    unachieved_revenue: 0,
+  };
+
   const router = useRouter();
   const isAppend = targetMode === "append";
   const [selected, setSelected] = useState<OperationalSelectionState>(createEmptySelection());
@@ -141,8 +151,8 @@ export function InvoiceGenerationSheet({
         selection: selected,
         defaultVatPercent,
         campaignRollup: {
-          already_invoiced: rollup.already_invoiced,
-          remaining_to_invoice: rollup.remaining_to_invoice,
+          already_invoiced: safeRollup.already_invoiced,
+          remaining_to_invoice: safeRollup.remaining_to_invoice,
         },
         appendInvoice:
           isAppend && selectedAppendInvoice ? { total: selectedAppendInvoice.total } : null,
@@ -151,16 +161,16 @@ export function InvoiceGenerationSheet({
       operationalRows,
       selected,
       defaultVatPercent,
-      rollup.already_invoiced,
-      rollup.remaining_to_invoice,
+      safeRollup.already_invoiced,
+      safeRollup.remaining_to_invoice,
       isAppend,
       selectedAppendInvoice,
     ]
   );
 
   const showPartialContext =
-    rollup.already_invoiced > 0 ||
-    financialPreview.remainingAfterInvoice < rollup.remaining_to_invoice;
+    safeRollup.already_invoiced > 0 ||
+    financialPreview.remainingAfterInvoice < safeRollup.remaining_to_invoice;
 
   const [state, formAction, pending] = useActionState(
     createInvoiceFromLinesAction,
@@ -220,19 +230,19 @@ export function InvoiceGenerationSheet({
               <div className="grid gap-2 rounded-3xl border p-4 text-sm">
                 <SummaryRow
                   label="Total campaign amount"
-                  value={formatBillingMoneyCompact(rollup.total_campaign_amount, currency)}
+                  value={formatBillingMoneyCompact(safeRollup.total_campaign_amount, currency)}
                 />
                 <SummaryRow
                   label="Achieved revenue"
-                  value={formatBillingMoneyCompact(rollup.achieved_revenue, currency)}
+                  value={formatBillingMoneyCompact(safeRollup.achieved_revenue, currency)}
                 />
                 <SummaryRow
                   label="Already invoiced"
-                  value={formatBillingMoneyCompact(rollup.already_invoiced, currency)}
+                  value={formatBillingMoneyCompact(safeRollup.already_invoiced, currency)}
                 />
                 <SummaryRow
                   label="Remaining to invoice"
-                  value={formatBillingMoneyCompact(rollup.remaining_to_invoice, currency)}
+                  value={formatBillingMoneyCompact(safeRollup.remaining_to_invoice, currency)}
                   strong
                 />
               </div>

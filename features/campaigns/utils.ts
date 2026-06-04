@@ -33,6 +33,8 @@ export function formatMoneyCompact(amount: number, currency: string): string {
   return formatCurrencyAmount(amount, currency, { decimals: 0 });
 }
 
-export function formatPercent(value: number): string {
-  return `${value.toFixed(1)}%`;
+export function formatPercent(value: number | null | undefined): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "0.0%";
+  return `${n.toFixed(1)}%`;
 }

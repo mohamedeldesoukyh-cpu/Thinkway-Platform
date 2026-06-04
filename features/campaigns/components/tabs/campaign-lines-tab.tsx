@@ -108,25 +108,27 @@ export function CampaignLinesTab({
           />
       </OperationalTableSection>
 
-      <CampaignLineSheet
-        campaignId={workspace.id}
-        currencyCode={workspace.currency_code}
-        defaultRevenueVatPercent={workspace.vat_context.default_revenue_vat_percent}
-        clientCountryCode={workspace.vat_context.client_country_code}
-        po={po}
-        currencyOptions={currencyOptions}
-        line={editing}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-      />
+      {sheetOpen ? (
+        <CampaignLineSheet
+          campaignId={workspace.id}
+          currencyCode={workspace.currency_code}
+          defaultRevenueVatPercent={workspace.vat_context.default_revenue_vat_percent}
+          clientCountryCode={workspace.vat_context.client_country_code}
+          po={po}
+          currencyOptions={currencyOptions}
+          line={editing}
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+        />
+      ) : null}
 
-      {operationalBilling ? (
+      {invoiceOpen && operationalBilling ? (
         <InvoiceGenerationSheet
           campaignId={workspace.id}
           currency={operationalBilling.currency_code}
           rollup={operationalBilling.rollup}
-          operationalRows={operationalBilling.operational_rows}
-          appendableInvoices={operationalBilling.appendable_invoices}
+          operationalRows={operationalBilling.operational_rows ?? []}
+          appendableInvoices={operationalBilling.appendable_invoices ?? []}
           defaultVatPercent={operationalBilling.default_vat_percent}
           targetMode="new"
           initialSelection={invoiceSelection}
@@ -137,7 +139,9 @@ export function CampaignLinesTab({
             if (!open) setInvoiceSelection(undefined);
           }}
         />
-      ) : (
+      ) : null}
+
+      {invoiceOpen && !operationalBilling ? (
         <CreateInvoiceSheet
           campaignId={workspace.id}
           groups={billingGroups}
@@ -145,7 +149,7 @@ export function CampaignLinesTab({
           open={invoiceOpen}
           onOpenChange={setInvoiceOpen}
         />
-      )}
+      ) : null}
     </>
   );
 }

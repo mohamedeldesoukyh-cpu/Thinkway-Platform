@@ -52,7 +52,7 @@ export function AssignmentHierarchyTable({
   const [focusedIndex, setFocusedIndex] = useState(0);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  const groups = hierarchy.groups;
+  const groups = Array.isArray(hierarchy.groups) ? hierarchy.groups : [];
 
   const lineMeta = useMemo(() => {
     const map = new Map<

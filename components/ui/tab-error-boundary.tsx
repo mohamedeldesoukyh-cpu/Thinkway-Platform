@@ -39,8 +39,17 @@ export class TabErrorBoundary extends Component<
             {this.props.tabName} could not load completely
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {this.state.error.message}
+            {process.env.NODE_ENV === "development"
+              ? this.state.error.message
+              : this.state.error.message.includes("Server Components render")
+                ? "A rendering error occurred. Refresh the page or redeploy the latest build. In development, the full error is logged to the console."
+                : this.state.error.message}
           </p>
+          {"digest" in this.state.error && this.state.error.digest ? (
+            <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+              Ref: {String(this.state.error.digest)}
+            </p>
+          ) : null}
           <button
             type="button"
             className="mt-3 text-xs font-medium underline"
