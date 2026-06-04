@@ -14,6 +14,7 @@ import {
   assignmentsRenderStageSourceLabel,
   getAssignmentsRenderStage,
   type AssignmentsRenderStage,
+  type AssignmentsRenderStageSource,
 } from "@/lib/campaigns/assignments-render-stage";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 
@@ -72,12 +73,16 @@ type CampaignAssignmentsTabProps = {
   billingGroups: AssignmentBillingGroup[];
   operationalBilling: CampaignOperationalBillingDetail | null;
   renderStage?: AssignmentsRenderStage;
-  renderStageSource?: "server" | "next_public" | "default" | "production_recovery";
+  renderStageSource?: AssignmentsRenderStageSource;
+  requestedRenderStage?: AssignmentsRenderStage;
+  showRenderStageBanner?: boolean;
 };
 
 export function CampaignAssignmentsTab({
   renderStage: renderStageProp,
   renderStageSource,
+  requestedRenderStage,
+  showRenderStageBanner = false,
   ...props
 }: CampaignAssignmentsTabProps) {
   const stage = renderStageProp ?? getAssignmentsRenderStage();
@@ -86,10 +91,19 @@ export function CampaignAssignmentsTab({
     logAssignmentsStage("tab entry", {
       campaignId: props.workspace.id,
       stage,
+      requestedStage: requestedRenderStage,
       stageSource: renderStageSource ?? "client",
+      showBanner: showRenderStageBanner,
       groups: props.assignmentHierarchy.groups?.length ?? 0,
     });
-  }, [props.workspace.id, stage, renderStageSource, props.assignmentHierarchy.groups?.length]);
+  }, [
+    props.workspace.id,
+    stage,
+    requestedRenderStage,
+    renderStageSource,
+    showRenderStageBanner,
+    props.assignmentHierarchy.groups?.length,
+  ]);
 
   return (
     <AssignmentsTabBoundary hierarchy={props.assignmentHierarchy}>
@@ -97,6 +111,8 @@ export function CampaignAssignmentsTab({
         {...props}
         renderStage={stage}
         renderStageSource={renderStageSource}
+        requestedRenderStage={requestedRenderStage}
+        showRenderStageBanner={showRenderStageBanner}
       />
     </AssignmentsTabBoundary>
   );

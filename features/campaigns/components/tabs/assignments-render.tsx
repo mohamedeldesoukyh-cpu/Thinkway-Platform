@@ -15,6 +15,7 @@ import {
   assignmentsStageLabel,
   getAssignmentsRenderStage,
   type AssignmentsRenderStage,
+  type AssignmentsRenderStageSource,
 } from "@/lib/campaigns/assignments-render-stage";
 import {
   plainLinesFromHierarchy,
@@ -51,7 +52,9 @@ type AssignmentsRenderProps = {
   billingGroups: AssignmentBillingGroup[];
   operationalBilling: CampaignOperationalBillingDetail | null;
   renderStage?: AssignmentsRenderStage;
-  renderStageSource?: "server" | "next_public" | "default" | "production_recovery";
+  renderStageSource?: AssignmentsRenderStageSource;
+  requestedRenderStage?: AssignmentsRenderStage;
+  showRenderStageBanner?: boolean;
 };
 
 function StageBanner({
@@ -157,14 +160,16 @@ function AssignmentsSafeGridStage({
   stage,
   stageHint,
   stageSource,
+  showRenderStageBanner,
   workspace,
   assignmentHierarchy,
   billingGroups,
   operationalBilling,
 }: {
-  stage: ReturnType<typeof getAssignmentsRenderStage>;
+  stage: AssignmentsRenderStage;
   stageHint?: string;
   stageSource?: string;
+  showRenderStageBanner: boolean;
   workspace: CampaignWorkspace;
   assignmentHierarchy: AssignmentHierarchy;
   billingGroups: AssignmentBillingGroup[];
@@ -180,11 +185,13 @@ function AssignmentsSafeGridStage({
 
   return (
     <div>
-      <StageBanner
-        stage={assignmentsStageLabel(stage)}
-        hint={stageHint}
-        source={stageSource}
-      />
+      {showRenderStageBanner ? (
+        <StageBanner
+          stage={assignmentsStageLabel(stage)}
+          hint={stageHint}
+          source={stageSource}
+        />
+      ) : null}
       <AssignmentSafeGrid
         campaignId={workspace.id}
         hierarchy={assignmentHierarchy}
@@ -216,10 +223,12 @@ export function AssignmentsRender({
   operationalBilling,
   renderStage: renderStageProp,
   renderStageSource,
+  requestedRenderStage,
+  showRenderStageBanner = false,
 }: AssignmentsRenderProps) {
   const stage = renderStageProp ?? getAssignmentsRenderStage();
   const sourceLabel = renderStageSource
-    ? assignmentsRenderStageSourceLabel(renderStageSource)
+    ? assignmentsRenderStageSourceLabel(renderStageSource, requestedRenderStage)
     : undefined;
 
   useEffect(() => {
@@ -237,7 +246,9 @@ export function AssignmentsRender({
   if (stage === "bypass") {
     return (
       <div>
-        <StageBanner stage={assignmentsStageLabel(stage)} source={sourceLabel} />
+        {showRenderStageBanner ? (
+          <StageBanner stage={assignmentsStageLabel(stage)} source={sourceLabel} />
+        ) : null}
         <div className="px-4 py-8 text-sm font-semibold tracking-tight">ASSIGNMENTS SAFE TEST</div>
       </div>
     );
@@ -246,7 +257,9 @@ export function AssignmentsRender({
   if (assignmentsStageAtLeast(stage, "static-table") && !assignmentsStageAtLeast(stage, "safe-grid")) {
     return (
       <div>
-        <StageBanner stage={assignmentsStageLabel(stage)} source={sourceLabel} />
+        {showRenderStageBanner ? (
+          <StageBanner stage={assignmentsStageLabel(stage)} source={sourceLabel} />
+        ) : null}
         <StaticAssignmentsTable lines={plainLines} stage={stage} />
       </div>
     );
@@ -264,6 +277,7 @@ export function AssignmentsRender({
         stage={stage}
         stageHint={expansionHint}
         stageSource={sourceLabel}
+        showRenderStageBanner={showRenderStageBanner}
         workspace={workspace}
         assignmentHierarchy={assignmentHierarchy}
         billingGroups={billingGroups}
@@ -275,7 +289,9 @@ export function AssignmentsRender({
   if (stage === "full") {
     return (
       <div>
-        <StageBanner stage="full" source={sourceLabel} />
+        {showRenderStageBanner ? (
+          <StageBanner stage="full" source={sourceLabel} />
+        ) : null}
         <CampaignLinesTabInner
           workspace={workspace}
           po={po}

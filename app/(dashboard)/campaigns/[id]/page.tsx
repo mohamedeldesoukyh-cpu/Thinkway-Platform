@@ -172,14 +172,19 @@ export default async function CampaignWorkspacePage({
 
   const teams = masterData?.teams ?? [];
   const currencyOptions = buildCurrencyOptions(masterData?.currencies ?? []);
-  const { stage: assignmentsRenderStage, source: assignmentsRenderStageSource } =
-    resolveAssignmentsRenderStage();
+  const resolved = resolveAssignmentsRenderStage();
 
   logAssignmentsStage("page render stage resolved", {
     campaignId: id,
-    stage: assignmentsRenderStage,
-    source: assignmentsRenderStageSource,
-    envLabel: assignmentsRenderStageSourceLabel(assignmentsRenderStageSource),
+    stage: resolved.stage,
+    requestedStage: resolved.requestedStage,
+    source: resolved.source,
+    envLabel: assignmentsRenderStageSourceLabel(
+      resolved.source,
+      resolved.requestedStage
+    ),
+    showBanner: resolved.showRenderStageBanner,
+    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
   });
 
   return (
@@ -208,8 +213,10 @@ export default async function CampaignWorkspacePage({
               publications={publications}
               publicationsLoadError={publicationsLoadError}
               currencyOptions={currencyOptions}
-              assignmentsRenderStage={assignmentsRenderStage}
-              assignmentsRenderStageSource={assignmentsRenderStageSource}
+              assignmentsRenderStage={resolved.stage}
+              assignmentsRenderStageSource={resolved.source}
+              assignmentsRequestedRenderStage={resolved.requestedStage}
+              showAssignmentsRenderStageBanner={resolved.showRenderStageBanner}
             />
           </div>
         </PlatformErrorBoundary>

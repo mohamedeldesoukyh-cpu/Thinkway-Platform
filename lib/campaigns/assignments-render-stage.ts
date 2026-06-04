@@ -25,6 +25,12 @@ export const ASSIGNMENTS_RENDER_STAGES = [
 
 export type AssignmentsRenderStage = (typeof ASSIGNMENTS_RENDER_STAGES)[number];
 
+export type AssignmentsRenderStageSource =
+  | "server"
+  | "next_public"
+  | "default"
+  | "production_recovery";
+
 const STAGE_RANK: Record<AssignmentsRenderStage, number> = {
   bypass: 0,
   "static-table": 1,
@@ -41,8 +47,10 @@ const STAGE_RANK: Record<AssignmentsRenderStage, number> = {
   full: 12,
 };
 
-/** When no env is set — expansion (grid + children, no footer/dialogs). */
-const DEFAULT_STAGE: AssignmentsRenderStage = "expansion";
+/** Code default when no env is set. */
+const DEFAULT_STAGE: AssignmentsRenderStage = "footer";
+
+const PRODUCTION_RECOVERY_TARGET: AssignmentsRenderStage = "footer";
 
 export function parseAssignmentsRenderStage(
   raw: string | null | undefined
@@ -54,41 +62,91 @@ export function parseAssignmentsRenderStage(
   return DEFAULT_STAGE;
 }
 
+function isProductionRuntime(): boolean {
+  return process.env.VERCEL_ENV === "production";
+}
+
+function bisectAllowedInProduction(): boolean {
+  return process.env.ASSIGNMENTS_ALLOW_RENDER_BISECT === "1";
+}
+
+/**
+ * In Production, auto-upgrade stale bisect stages unless ASSIGNMENTS_ALLOW_RENDER_BISECT=1.
+ * Upgrades: static-table, expansion → footer (operational actions without invoice sheets).
+ */
+function applyProductionRecovery(
+  stage: AssignmentsRenderStage
+): { stage: AssignmentsRenderStage; recovered: boolean } {
+  if (!isProductionRuntime() || bisectAllowedInProduction()) {
+    return { stage, recovered: false };
+  }
+  if (stage === "static-table" || stage === "expansion") {
+    return { stage: PRODUCTION_RECOVERY_TARGET, recovered: true };
+  }
+  return { stage, recovered: false };
+}
+
+/**
+ * Debug banner: shown during recovery bisects; hidden in Production when stage is `full`.
+ */
+export function shouldShowAssignmentsRenderStageBanner(
+  stage: AssignmentsRenderStage
+): boolean {
+  if (process.env.ASSIGNMENTS_HIDE_RENDER_STAGE_BANNER === "1") return false;
+  if (process.env.ASSIGNMENTS_SHOW_RENDER_STAGE_BANNER === "1") return true;
+  if (isProductionRuntime()) return stage !== "full";
+  return process.env.NODE_ENV === "development";
+}
+
+export type ResolvedAssignmentsRenderStage = {
+  stage: AssignmentsRenderStage;
+  source: AssignmentsRenderStageSource;
+  showRenderStageBanner: boolean;
+  requestedStage: AssignmentsRenderStage;
+};
+
 /**
  * Server-only: resolve stage from runtime env (campaign page → client props).
- * In Vercel Production, ignores stale `static-table` unless explicitly set via
- * `ASSIGNMENTS_RENDER_STAGE=static-table` (emergency bisect).
  */
-export function resolveAssignmentsRenderStage(): {
-  stage: AssignmentsRenderStage;
-  source: "server" | "next_public" | "default" | "production_recovery";
-} {
-  const serverRaw = process.env.ASSIGNMENTS_RENDER_STAGE;
-  const publicRaw = process.env.NEXT_PUBLIC_ASSIGNMENTS_RENDER_STAGE;
+export function resolveAssignmentsRenderStage(): ResolvedAssignmentsRenderStage {
+  const serverRaw = process.env.ASSIGNMENTS_RENDER_STAGE?.trim();
+  const publicRaw = process.env.NEXT_PUBLIC_ASSIGNMENTS_RENDER_STAGE?.trim();
 
-  if (serverRaw?.trim()) {
-    return {
-      stage: parseAssignmentsRenderStage(serverRaw),
-      source: "server",
-    };
+  let stage: AssignmentsRenderStage;
+  let source: AssignmentsRenderStageSource;
+
+  if (serverRaw) {
+    stage = parseAssignmentsRenderStage(serverRaw);
+    source = "server";
+  } else if (publicRaw) {
+    stage = parseAssignmentsRenderStage(publicRaw);
+    source = "next_public";
+  } else {
+    stage = DEFAULT_STAGE;
+    source = "default";
   }
 
-  const fromPublic = parseAssignmentsRenderStage(publicRaw);
-
-  if (process.env.VERCEL_ENV === "production" && fromPublic === "static-table") {
-    return { stage: "footer", source: "production_recovery" };
+  const requestedStage = stage;
+  const recovered = applyProductionRecovery(stage);
+  if (recovered.recovered) {
+    stage = recovered.stage;
+    source = "production_recovery";
   }
 
-  if (publicRaw?.trim()) {
-    return { stage: fromPublic, source: "next_public" };
-  }
-
-  return { stage: DEFAULT_STAGE, source: "default" };
+  return {
+    stage,
+    source,
+    requestedStage,
+    showRenderStageBanner: shouldShowAssignmentsRenderStageBanner(stage),
+  };
 }
 
 /** Client fallback when stage prop is not passed (local dev / legacy paths). */
 export function getAssignmentsRenderStage(): AssignmentsRenderStage {
-  return parseAssignmentsRenderStage(process.env.NEXT_PUBLIC_ASSIGNMENTS_RENDER_STAGE);
+  const parsed = parseAssignmentsRenderStage(
+    process.env.NEXT_PUBLIC_ASSIGNMENTS_RENDER_STAGE
+  );
+  return applyProductionRecovery(parsed).stage;
 }
 
 export function assignmentsStageAtLeast(
@@ -103,7 +161,8 @@ export function assignmentsStageLabel(stage: AssignmentsRenderStage): string {
 }
 
 export function assignmentsRenderStageSourceLabel(
-  source: ReturnType<typeof resolveAssignmentsRenderStage>["source"]
+  source: AssignmentsRenderStageSource,
+  requestedStage?: AssignmentsRenderStage
 ): string {
   switch (source) {
     case "server":
@@ -111,7 +170,9 @@ export function assignmentsRenderStageSourceLabel(
     case "next_public":
       return "NEXT_PUBLIC_ASSIGNMENTS_RENDER_STAGE";
     case "production_recovery":
-      return "production recovery (ignored static-table)";
+      return requestedStage
+        ? `production recovery (${requestedStage}→${PRODUCTION_RECOVERY_TARGET})`
+        : "production recovery";
     default:
       return "code default";
   }

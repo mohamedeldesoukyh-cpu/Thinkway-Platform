@@ -50,7 +50,10 @@ import {
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
-import type { AssignmentsRenderStage } from "@/lib/campaigns/assignments-render-stage";
+import type {
+  AssignmentsRenderStage,
+  AssignmentsRenderStageSource,
+} from "@/lib/campaigns/assignments-render-stage";
 import { cn } from "@/lib/utils";
 type CampaignWorkspaceViewProps = {
   workspace: import("@/features/campaigns/types").CampaignWorkspace;
@@ -65,7 +68,9 @@ type CampaignWorkspaceViewProps = {
   publicationsLoadError?: string | null;
   currencyOptions: { value: string; label: string }[];
   assignmentsRenderStage: AssignmentsRenderStage;
-  assignmentsRenderStageSource?: "server" | "next_public" | "default" | "production_recovery";
+  assignmentsRenderStageSource?: AssignmentsRenderStageSource;
+  assignmentsRequestedRenderStage?: AssignmentsRenderStage;
+  showAssignmentsRenderStageBanner?: boolean;
 };
 
 export function CampaignWorkspaceView({
@@ -82,6 +87,8 @@ export function CampaignWorkspaceView({
   currencyOptions,
   assignmentsRenderStage,
   assignmentsRenderStageSource,
+  assignmentsRequestedRenderStage,
+  showAssignmentsRenderStageBanner = false,
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -285,6 +292,8 @@ export function CampaignWorkspaceView({
                 operationalBilling={operationalBilling}
                 renderStage={assignmentsRenderStage}
                 renderStageSource={assignmentsRenderStageSource}
+                requestedRenderStage={assignmentsRequestedRenderStage}
+                showRenderStageBanner={showAssignmentsRenderStageBanner}
               />
             ) : null}
           </CampaignWorkspaceTabPanel>
