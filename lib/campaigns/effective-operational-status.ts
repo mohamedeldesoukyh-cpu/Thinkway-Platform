@@ -12,6 +12,11 @@ export function effectiveLineOperationalStatus(input: {
   finance_override_until?: string | null | undefined;
 }): CampaignLineOperationalStatus {
   const raw = (input.operational_status ?? "draft") as CampaignLineOperationalStatus;
+
+  if (raw === "io_generated" && !input.vendor_io_id) {
+    return "draft";
+  }
+
   if (raw !== "draft") return raw;
 
   const billing = input.billing_status ?? "draft";

@@ -37,7 +37,7 @@ type AssignmentParentRowProps = {
   parentSelected: boolean;
   parentIndeterminate: boolean;
   onToggleParentSelect: () => void;
-  showSelection: boolean;
+  rowSelectable: boolean;
   rowIndex: number;
   focused: boolean;
   onFocus: () => void;
@@ -72,7 +72,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
   parentSelected,
   parentIndeterminate,
   onToggleParentSelect,
-  showSelection,
+  rowSelectable,
   rowIndex,
   focused,
   onFocus,
@@ -103,10 +103,6 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
         : operationalStatus === "io_generated"
           ? "ready_to_invoice"
           : "draft";
-  const lineSelectable =
-    (operationalStatus === "draft" && !line.vendor_io_id) ||
-    (operationalStatus === "io_generated" && Boolean(line.vendor_io_id));
-
   const platformSummary = useMemo(() => summarizePlatforms(group), [group]);
   const postingSummary = useMemo(() => summarizePostingDates(group), [group]);
 
@@ -135,7 +131,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
         />
       </TableCell>
       <TableCell className="w-8 px-1.5 py-1.5">
-        {showSelection && lineSelectable ? (
+        {rowSelectable ? (
           <input
             type="checkbox"
             className="size-3.5 rounded border-border"

@@ -27,6 +27,7 @@ import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operat
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
 import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
 import { isLineUngenerateIoEligible } from "@/lib/io/vendor-io-ungenerate-eligibility";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,7 @@ export function AssignmentHierarchyTable({
         invoiceEligible: boolean;
         reviseVioEligible: boolean;
         ungenerateIoEligible: boolean;
+        rowSelectable: boolean;
         remaining: number;
       }
     >();
@@ -71,7 +73,14 @@ export function AssignmentHierarchyTable({
         billing_status: group.line.billing_status,
         invoice_id: group.line.invoice_id,
       }) as CampaignLineOperationalStatus;
-      const vioEligible = status === "draft" && !group.line.vendor_io_id;
+      const vioEligible = isLineVendorIoGenerateEligible({
+        vendor_io_id: group.line.vendor_io_id,
+        invoice_id: group.line.invoice_id,
+        billing_status: group.line.billing_status,
+        operational_status: group.line.operational_status,
+        influencer_id: group.line.influencer_id,
+        campaign_influencer_id: group.line.campaign_influencer_id,
+      });
       const invoiceEligible = isLineInvoiceEligible({
         operational_status: status,
         vendor_io_id: group.line.vendor_io_id,
@@ -86,11 +95,18 @@ export function AssignmentHierarchyTable({
         invoice_id: group.line.invoice_id ?? null,
         billing_status: group.line.billing_status,
       });
+      const rowSelectable =
+        vioEligible ||
+        invoiceEligible ||
+        reviseVioEligible ||
+        ungenerateIoEligible;
+
       map.set(group.line.id, {
         vioEligible,
         invoiceEligible,
         reviseVioEligible,
         ungenerateIoEligible,
+        rowSelectable,
         remaining: group.rollups.remaining_value,
       });
     }
@@ -263,9 +279,6 @@ export function AssignmentHierarchyTable({
             const lineId = group.line.id;
             const expanded = expandedIds.has(lineId);
             const meta = lineMeta.get(lineId);
-            const canSelect = Boolean(
-              meta?.vioEligible || meta?.invoiceEligible || meta?.ungenerateIoEligible
-            );
             const parentSelected = selectedLineIds.has(lineId);
 
             return (
@@ -286,7 +299,7 @@ export function AssignmentHierarchyTable({
                   parentSelected={parentSelected}
                   parentIndeterminate={false}
                   onToggleParentSelect={() => toggleParentSelect(lineId)}
-                  showSelection={canSelect}
+                  rowSelectable={meta?.rowSelectable ?? false}
                   rowIndex={index}
                   focused={focusedIndex === index}
                   onFocus={() => setFocusedIndex(index)}
@@ -308,6 +321,14 @@ export function AssignmentHierarchyTable({
           })}
         </CampaignOperationalTableBody>
       </CampaignOperationalTable>
+
+      {selectableLineIds.length === 0 ? (
+        <p className="border-t border-border/50 px-3 py-2 text-[11px] text-muted-foreground">
+          No lines are eligible for Vendor IO or invoicing. Assign a creator first, ensure the line
+          has no Vendor IO yet (see Ops status / IO #), or use the Vendor IO tab to un-generate an
+          existing IO before regenerating.
+        </p>
+      ) : null}
 
       <AssignmentOperationalActionsFooter
         campaignId={campaignId}

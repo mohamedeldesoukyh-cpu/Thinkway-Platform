@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { parseLineAssignment } from "@/features/campaigns/line-assignment";
+import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const generateVendorIoSchema = z.object({
@@ -62,7 +63,9 @@ export async function generateVendorIosFromLinesAction(
 
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
-    .select("id, campaign_header_id, name, revenue, currency, metadata, operational_status, vendor_io_id")
+    .select(
+      "id, campaign_header_id, name, revenue, currency, metadata, operational_status, vendor_io_id, invoice_id, billing_status"
+    )
     .eq("campaign_header_id", campaignId)
     .in("id", lineIds);
 
@@ -83,15 +86,24 @@ export async function generateVendorIosFromLinesAction(
     metadata: Record<string, unknown> | null;
     operational_status: string;
     vendor_io_id: string | null;
+    invoice_id: string | null;
+    billing_status: string;
   };
 
   const typedLines = lines as unknown as LineRow[];
 
   for (const line of typedLines) {
-    if (line.vendor_io_id || line.operational_status === "io_generated") {
+    if (
+      !isLineVendorIoGenerateEligible({
+        vendor_io_id: line.vendor_io_id,
+        invoice_id: line.invoice_id,
+        operational_status: line.operational_status,
+        billing_status: line.billing_status,
+      })
+    ) {
       return {
         ok: false,
-        message: `Line ${line.name} already has a Vendor IO. Select draft lines only.`,
+        message: `Line ${line.name} cannot receive a Vendor IO (already linked, invoiced, or closed).`,
       };
     }
   }
