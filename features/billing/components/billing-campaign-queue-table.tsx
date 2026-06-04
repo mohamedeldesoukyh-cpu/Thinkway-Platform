@@ -69,7 +69,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
   >({});
   const [invoiceCampaignId, setInvoiceCampaignId] = useState<string | null>(null);
   const [invoiceSelection, setInvoiceSelection] = useState<OperationalSelectionPayload | undefined>();
-  const [invoiceInitialMode, setInvoiceInitialMode] = useState<"new" | "append">("new");
+  const [invoiceTargetMode, setInvoiceTargetMode] = useState<"new" | "append">("new");
   const [pending, startTransition] = useTransition();
   const reviewPanelRef = useRef<HTMLDivElement>(null);
   const detailCacheRef = useRef(detailCache);
@@ -161,7 +161,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
       mode: "new" | "append" = "new"
     ) => {
       setInvoiceSelection(selection);
-      setInvoiceInitialMode(mode);
+      setInvoiceTargetMode(mode);
       const detail = await ensureDetailLoaded(campaignId);
       if (detail) setInvoiceCampaignId(campaignId);
     },
@@ -350,7 +350,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                 disabled={!invoiceContext}
                 onClick={() => handleQueueInvoiceSelected("new")}
               >
-                Invoice selected
+                Create new invoice
               </Button>
               <Button
                 type="button"
@@ -359,7 +359,7 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
                 disabled={!invoiceContext}
                 onClick={() => handleQueueInvoiceSelected("append")}
               >
-                Append to existing invoice
+                Append to open invoice
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={handleClearQueueSelection}>
                 Clear selection
@@ -453,14 +453,14 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
           appendableInvoices={invoiceDetail.appendable_invoices}
           defaultVatPercent={invoiceDetail.default_vat_percent}
           initialSelection={invoiceSelection}
-          initialInvoiceMode={invoiceInitialMode}
+          targetMode={invoiceTargetMode}
           open
           onInvoiceComplete={handleInvoiceComplete}
           onOpenChange={(open) => {
             if (!open) {
               setInvoiceCampaignId(null);
               setInvoiceSelection(undefined);
-              setInvoiceInitialMode("new");
+              setInvoiceTargetMode("new");
             }
           }}
         />

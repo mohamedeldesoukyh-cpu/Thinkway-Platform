@@ -45,7 +45,10 @@ export const createInvoiceFromLinesSchema = z
     line_ids: z.string().optional().or(z.literal("")),
     deliverable_ids: z.string().optional().or(z.literal("")),
     post_ids: z.string().optional().or(z.literal("")),
-    invoice_mode: z.enum(["new", "append"]).default("new"),
+    invoice_mode: z.preprocess(
+      (val) => (val === "append" ? "append" : "new"),
+      z.enum(["new", "append"])
+    ),
     existing_invoice_id: z.string().uuid().optional().or(z.literal("")),
     due_date: z
       .string()
@@ -67,7 +70,13 @@ export const createInvoiceFromLinesSchema = z
   .refine(
     (data) => data.invoice_mode !== "append" || Boolean(data.existing_invoice_id?.trim()),
     { message: "Select an invoice to append to.", path: ["existing_invoice_id"] }
-  );
+  )
+  .transform((data) => ({
+    ...data,
+    invoice_mode: data.invoice_mode === "append" ? ("append" as const) : ("new" as const),
+    existing_invoice_id:
+      data.invoice_mode === "append" ? data.existing_invoice_id?.trim() || undefined : undefined,
+  }));
 
 export const recordCollectionPaymentSchema = z.object({
   invoice_id: z.string().uuid(),

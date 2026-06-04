@@ -253,7 +253,7 @@ function BillingCampaignDrilldownInner({
                 onClick={handleInvoiceSelected}
                 disabled={selectedCount === 0}
               >
-                Invoice selected
+                Create new invoice
               </Button>
             ) : null}
           </div>

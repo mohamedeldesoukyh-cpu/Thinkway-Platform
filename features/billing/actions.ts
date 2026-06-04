@@ -601,7 +601,9 @@ export async function createInvoiceFromLinesAction(
     header.client_id
   );
 
-  if (parsed.data.invoice_mode === "append") {
+  const invoiceMode = parsed.data.invoice_mode === "append" ? "append" : "new";
+
+  if (invoiceMode === "append") {
     const existingId = parsed.data.existing_invoice_id?.trim();
     if (!existingId) {
       return { ok: false, message: "Select an invoice to append to." };
@@ -668,7 +670,7 @@ export async function createInvoiceFromLinesAction(
   );
 
   if (lockResult.error) {
-    if (parsed.data.invoice_mode === "new") {
+    if (invoiceMode === "new") {
       await supabase.from("invoices").delete().eq("id", invoiceId);
     }
     return { ok: false, message: lockResult.error };
@@ -687,8 +689,7 @@ export async function createInvoiceFromLinesAction(
     });
   }
 
-  const actionLabel =
-    parsed.data.invoice_mode === "append" ? "Appended to" : "Created";
+  const actionLabel = invoiceMode === "append" ? "Appended to" : "Created";
 
   return {
     ok: true,

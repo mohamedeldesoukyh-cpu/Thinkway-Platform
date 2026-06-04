@@ -166,7 +166,7 @@ export function CampaignBillingTab({
             }}
           >
             <PlusIcon data-icon="inline-start" />
-            Create invoice
+            Create new invoice
           </Button>
         </div>
       </div>
@@ -359,6 +359,7 @@ export function CampaignBillingTab({
           operationalRows={operationalBilling.operational_rows}
           appendableInvoices={operationalBilling.appendable_invoices}
           defaultVatPercent={operationalBilling.default_vat_percent}
+          targetMode="new"
           initialSelection={invoiceSelection}
           open={operationalInvoiceOpen}
           onInvoiceComplete={() => router.refresh()}
