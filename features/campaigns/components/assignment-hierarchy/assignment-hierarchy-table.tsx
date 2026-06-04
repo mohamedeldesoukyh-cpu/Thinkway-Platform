@@ -23,6 +23,7 @@ import { AssignmentOperationalActionsFooter } from "@/features/campaigns/compone
 import { HIERARCHY_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
 import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
@@ -64,7 +65,12 @@ export function AssignmentHierarchyTable({
       }
     >();
     for (const group of groups) {
-      const status = (group.line.operational_status ?? "draft") as CampaignLineOperationalStatus;
+      const status = effectiveLineOperationalStatus({
+        operational_status: group.line.operational_status,
+        vendor_io_id: group.line.vendor_io_id,
+        billing_status: group.line.billing_status,
+        invoice_id: group.line.invoice_id,
+      }) as CampaignLineOperationalStatus;
       const vioEligible = status === "draft" && !group.line.vendor_io_id;
       const invoiceEligible = isLineInvoiceEligible({
         operational_status: status,
@@ -77,7 +83,7 @@ export function AssignmentHierarchyTable({
       const ungenerateIoEligible = isLineUngenerateIoEligible({
         vendor_io_id: group.line.vendor_io_id,
         operational_status: status,
-        invoice_id: group.line.invoice_id,
+        invoice_id: group.line.invoice_id ?? null,
         billing_status: group.line.billing_status,
       });
       map.set(group.line.id, {

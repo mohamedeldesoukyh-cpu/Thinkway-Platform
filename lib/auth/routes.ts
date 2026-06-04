@@ -1,5 +1,10 @@
 /** Routes that do not require an authenticated session. */
-export const PUBLIC_ROUTE_PREFIXES = ["/login", "/auth", "/io-approval"] as const;
+export const PUBLIC_ROUTE_PREFIXES = [
+  "/login",
+  "/auth",
+  "/io-approval",
+  "/api/build-info",
+] as const;
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_ROUTE_PREFIXES.some(

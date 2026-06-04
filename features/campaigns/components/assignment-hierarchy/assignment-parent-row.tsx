@@ -20,6 +20,7 @@ import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/opera
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
+import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
 import { DocumentNumber } from "@/components/ui/document-number";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
@@ -88,7 +89,12 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       ]) || line.name,
     [group.deliverables, line.influencer_name, line.name]
   );
-  const operationalStatus = (line.operational_status ?? "draft") as CampaignLineOperationalStatus;
+  const operationalStatus = effectiveLineOperationalStatus({
+    operational_status: line.operational_status,
+    vendor_io_id: line.vendor_io_id,
+    billing_status: line.billing_status,
+    invoice_id: line.invoice_id,
+  }) as CampaignLineOperationalStatus;
   const childBillingStatus: AssignmentDeliverableBillingStatus =
     operationalStatus === "invoiced"
       ? "invoiced"

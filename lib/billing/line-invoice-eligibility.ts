@@ -1,3 +1,4 @@
+import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { isInvoiceEligibleOperationalStatus } from "@/features/campaigns/types/operational";
 
@@ -25,7 +26,11 @@ export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolea
     return false;
   }
 
-  const status = (line.operational_status ?? "draft") as CampaignLineOperationalStatus;
+  const status = effectiveLineOperationalStatus({
+    operational_status: line.operational_status,
+    vendor_io_id: line.vendor_io_id,
+    billing_status: line.billing_status,
+  }) as CampaignLineOperationalStatus;
   return isInvoiceEligibleOperationalStatus(status);
 }
 
