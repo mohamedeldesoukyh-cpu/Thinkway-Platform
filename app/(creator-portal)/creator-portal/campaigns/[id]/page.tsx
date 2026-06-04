@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from "lucide-react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreatorDeliverableRowPanel } from "@/features/portals/components/creator-deliverable-row";
 import {
@@ -39,8 +40,8 @@ export default async function CreatorCampaignDetailPage({ params }: Props) {
           <h2 className="font-heading text-2xl font-semibold tracking-tight">
             {detail.campaign_name}
           </h2>
-          <p className="font-mono text-sm text-muted-foreground">
-            {detail.campaign_document_number}
+          <p className="text-sm text-muted-foreground">
+            <DocumentNumber value={detail.campaign_document_number} />
           </p>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <PortalStatusBadge value={detail.campaign_status} />

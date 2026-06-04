@@ -197,6 +197,12 @@ export function VendorRowActions({ vendor }: VendorRowActionsProps) {
   );
 }
 
-export function VendorStatusCell({ vendor }: { vendor: VendorListRow }) {
-  return <VendorStatusBadge status={vendor.status} />;
+export function VendorStatusCell({
+  vendor,
+  badgeClassName,
+}: {
+  vendor: VendorListRow;
+  badgeClassName?: string;
+}) {
+  return <VendorStatusBadge status={vendor.status} className={badgeClassName} />;
 }

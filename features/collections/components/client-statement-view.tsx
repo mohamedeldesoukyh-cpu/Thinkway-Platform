@@ -2,6 +2,7 @@
 
 import type { ClientStatementPayload } from "@/lib/collections/queries/client-statements";
 import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { AGING_BUCKET_LABELS } from "@/lib/collections/aging";
 
 type ClientStatementViewProps = {
@@ -89,7 +90,7 @@ export function ClientStatementView({ statement }: ClientStatementViewProps) {
               .filter((i) => i.outstanding > 0)
               .map((inv) => (
                 <tr key={inv.document_number} className="border-b border-border/60">
-                  <td className="py-2 font-mono">{inv.document_number}</td>
+                  <td className="py-2 tabular-nums">{formatDocumentNumberForDisplay(inv.document_number)}</td>
                   <td>{inv.due_date ?? "—"}</td>
                   <td className="text-right">{format(inv.outstanding)}</td>
                   <td>{AGING_BUCKET_LABELS[inv.aging_bucket as keyof typeof AGING_BUCKET_LABELS] ?? inv.aging_bucket}</td>
@@ -104,7 +105,7 @@ export function ClientStatementView({ statement }: ClientStatementViewProps) {
         <ul className="mt-2 space-y-1 text-xs">
           {statement.payments.slice(0, 10).map((p) => (
             <li key={p.document_number}>
-              {p.document_number} · {format(p.amount)}
+              {formatDocumentNumberForDisplay(p.document_number)} · {format(p.amount)}
               {p.paid_at ? ` · ${p.paid_at.slice(0, 10)}` : ""}
               {p.reference_number ? ` · ref ${p.reference_number}` : ""}
             </li>

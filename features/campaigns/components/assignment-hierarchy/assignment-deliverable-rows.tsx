@@ -11,7 +11,12 @@ import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { getCreatorConnectedPlatformOptions, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
+import {
+  OPERATIONAL_TABLE_HEADER_SURFACE,
+  OPERATIONAL_TABLE_SURFACE,
+} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { cn } from "@/lib/utils";
 
 type AssignmentDeliverableRowsProps = {
@@ -90,38 +95,40 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   }, [locked, campaignId, line.id]);
 
   return (
-    <TableRow className="hover:bg-transparent">
+    <TableRow className="border-0 hover:bg-transparent">
       <TableCell colSpan={parentColSpan} className="p-0">
-        <div
-          className={cn(
-            "border-l-[3px] border-l-primary/40 bg-muted/25",
-            "mx-1 mb-2 mt-0 rounded-lg border border-border/50"
-          )}
-        >
-          <div className="flex items-center justify-between gap-2 border-b border-border/40 px-3 py-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Operational deliverables · {line.influencer_name ?? line.name}
-            </p>
-            {!locked ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-6 text-[10px]"
-                onClick={addDeliverable}
-                disabled={pending}
-                title="Add deliverable (Alt+N)"
+        <div className={cn("mt-0 pl-2", OPERATIONAL_TABLE_SURFACE)}>
+          <div className="overflow-x-auto pb-0.5">
+            <table
+              className={cn(
+                "w-full min-w-[1100px] border-collapse text-[11px] font-normal",
+                OPERATIONAL_TABLE_SURFACE
+              )}
+            >
+              <thead
+                className={cn(
+                  "sticky top-0 z-[4] border-b border-border/50",
+                  OPERATIONAL_TABLE_HEADER_SURFACE
+                )}
               >
-                <PlusIcon data-icon="inline-start" className="size-3" />
-                Add deliverable
-              </Button>
-            ) : null}
-          </div>
-
-          <div className="overflow-x-auto px-1 pb-1.5">
-            <table className="w-full min-w-[1200px] border-collapse">
-              <thead>
-                <OperationalGridHeader />
+                <OperationalGridHeader
+                  actions={
+                    !locked ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5 text-[10px] font-normal"
+                        onClick={addDeliverable}
+                        disabled={pending}
+                        title="Add deliverable (Alt+N)"
+                      >
+                        <PlusIcon className="size-3" />
+                        Add
+                      </Button>
+                    ) : null
+                  }
+                />
               </thead>
               <tbody>
                 {deliverables.map((deliverable) => (
@@ -131,6 +138,9 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                     campaignLineId={line.id}
                     deliverable={deliverable}
                     currency={currency}
+                    parentOperationalStatus={
+                      (line.operational_status ?? "draft") as CampaignLineOperationalStatus
+                    }
                     selected={selectedIds.has(deliverable.id)}
                     onToggleSelect={() => onToggleDeliverable(deliverable.id)}
                     showSelection={showSelection}

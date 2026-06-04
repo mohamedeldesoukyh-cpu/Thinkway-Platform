@@ -119,6 +119,8 @@ export type CampaignLineWorkspace = {
   revenue_vat_amount: number;
   revenue_after_vat: number;
   revenue_vat_exempt: boolean;
+  cost_received: number;
+  cost_received_currency: string;
   cost_before_vat: number;
   cost_vat_percent: number;
   cost_vat_amount: number;
@@ -130,6 +132,9 @@ export type CampaignLineWorkspace = {
   po_amount: number;
   remaining_po: number;
   billing_status: import("@/features/billing/types").CampaignLineBillingStatus;
+  operational_status: import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
+  vendor_io_id: string | null;
+  vendor_io_document_number: string | null;
   revenue_locked: boolean;
   cost_locked: boolean;
   vendor_assignment_locked: boolean;
@@ -190,6 +195,7 @@ export type CampaignInvoiceRow = {
   id: string;
   document_number: string;
   status: string;
+  regeneration_status?: string | null;
   issue_date: string;
   due_date: string | null;
   total: number;

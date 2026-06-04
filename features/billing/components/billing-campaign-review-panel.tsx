@@ -4,6 +4,7 @@ import { memo, useMemo } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -225,14 +226,14 @@ function BillingCampaignReviewPanelInner({
                               >
                                 <p className="text-sm font-medium">{row.label}</p>
                                 {row.document_number ? (
-                                  <p className="font-mono text-[10px] text-muted-foreground">
-                                    {row.document_number}
+                                  <p className="text-[10px] text-muted-foreground">
+                                    <DocumentNumber value={row.document_number} />
                                   </p>
                                 ) : null}
                               </div>
                             </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {row.invoice_document_number ?? "—"}
+                            <TableCell className="text-xs">
+                              <DocumentNumber value={row.invoice_document_number} />
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
                               {invoiceStatus}
@@ -266,11 +267,7 @@ function BillingCampaignReviewPanelInner({
               </div>
 
               {flatRows.length > 0 ? (
-                <BillingCampaignDrilldown
-                  detail={detail}
-                  filter={operationalFilter}
-                  showOperationalActions
-                />
+                <BillingCampaignDrilldown detail={detail} filter={operationalFilter} />
               ) : null}
             </>
           )}

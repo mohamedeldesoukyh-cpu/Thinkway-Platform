@@ -41,7 +41,7 @@ export default async function ExecutiveDashboardPage({ searchParams }: PageProps
       description="CFO-grade finance monitoring — revenue, profitability, collections, and operational exposure."
     >
       {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[11px] text-destructive">
           {errorMessage}
         </div>
       ) : payload && filterOptions ? (

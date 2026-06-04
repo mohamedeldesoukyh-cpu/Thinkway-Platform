@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { FieldError } from "@/components/forms/field-error";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -58,13 +60,9 @@ export function VendorOverviewTab({
   }, [state]);
 
   return (
-    <div className="space-y-4">
-    {portalAccessPanel}
-    <Card>
-      <CardHeader>
-        <CardTitle>Overview</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className={cn("space-y-4", OPERATIONAL_TABLE_FONT)}>
+      {portalAccessPanel}
+      <CampaignFlatSection title="Overview">
         <form action={formAction} className="grid gap-4">
           <input type="hidden" name="influencer_id" value={vendor.id} />
           <input type="hidden" name="status" value={status} />
@@ -254,8 +252,7 @@ export function VendorOverviewTab({
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </CampaignFlatSection>
     </div>
   );
 }

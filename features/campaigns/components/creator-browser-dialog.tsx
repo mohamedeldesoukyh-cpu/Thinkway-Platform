@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -205,8 +206,8 @@ export function CreatorBrowserDialog({
                           {verified ? (
                             <BadgeCheckIcon className="size-4 text-sky-500" aria-label="Verified" />
                           ) : null}
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {creator.document_number}
+                          <span className="text-xs text-muted-foreground">
+                            <DocumentNumber value={creator.document_number} />
                           </span>
                         </div>
                         <div className="mt-1 flex flex-wrap gap-1">

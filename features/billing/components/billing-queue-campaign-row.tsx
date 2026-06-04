@@ -2,6 +2,8 @@
 
 import { Fragment, memo, useCallback, useMemo } from "react";
 import Link from "next/link";
+
+import { DocumentNumber } from "@/components/ui/document-number";
 import { ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -109,7 +111,9 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
             ariaLabel={`Select all billable rows for ${row.campaign_name}`}
           />
         </TableCell>
-        <TableCell className="font-mono text-xs">{row.campaign_document_number}</TableCell>
+        <TableCell className="text-xs">
+          <DocumentNumber value={row.campaign_document_number} />
+        </TableCell>
         <TableCell>{row.client_name}</TableCell>
         <TableCell className="text-muted-foreground">{row.brand_name ?? "—"}</TableCell>
         <TableCell>
@@ -171,7 +175,6 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
                 filter={operationalFilter}
                 selection={selection}
                 onSelectionChange={handleSelectionChange}
-                showOperationalActions={false}
                 showBulkSelectionControls={false}
               />
             ) : (

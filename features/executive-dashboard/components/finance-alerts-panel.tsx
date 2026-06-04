@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { formatAnalyticsAmount, buildCurrencyContext } from "@/lib/analytics/currency/engine";
 import type { FinanceAlert, FinanceAlertsPayload } from "@/lib/analytics/queries/dashboard-alerts";
 import { cn } from "@/lib/utils";
@@ -50,16 +51,24 @@ export function FinanceAlertsPanel({ alerts }: FinanceAlertsPanelProps) {
   const currency = buildCurrencyContext([]);
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-sm font-medium">Finance alerts</CardTitle>
-        <CardDescription className="text-xs">
-          Grouped monitoring signals — click through to resolve.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <OperationalTableSection
+      wide
+      tableOnly
+      cardSurface
+      leading={
+        <div className="min-w-0 space-y-0.5">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            Finance alerts
+          </h2>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            Grouped monitoring signals — click through to resolve.
+          </p>
+        </div>
+      }
+    >
+      <div className="space-y-4 px-4 py-4 md:px-5">
         {alerts.alerts.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+          <p className="py-6 text-center text-[11px] text-muted-foreground">
             No active alerts for the current filter set.
           </p>
         ) : (
@@ -70,10 +79,13 @@ export function FinanceAlertsPanel({ alerts }: FinanceAlertsPanelProps) {
               <div key={group} className="space-y-2">
                 <div className="flex items-center gap-2">
                   <GroupIcon group={group} />
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {GROUP_LABELS[group]}
                   </h3>
-                  <Badge variant="secondary" className="text-[10px]">
+                  <Badge
+                    variant="secondary"
+                    className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "font-normal")}
+                  >
                     {items.length}
                   </Badge>
                 </div>
@@ -83,19 +95,19 @@ export function FinanceAlertsPanel({ alerts }: FinanceAlertsPanelProps) {
                       <Link
                         href={alert.href}
                         className={cn(
-                          "flex items-start gap-3 rounded-2xl border px-3 py-2 transition-colors hover:bg-muted/50",
+                          "flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors hover:bg-muted/50",
                           alert.severity === "danger" && "border-destructive/30",
                           alert.severity === "warning" && "border-amber-500/30"
                         )}
                       >
                         <SeverityIcon severity={alert.severity} />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">{alert.title}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
+                          <p className="text-[11px] font-medium text-foreground">{alert.title}</p>
+                          <p className="line-clamp-2 text-[10px] text-muted-foreground">
                             {alert.description}
                           </p>
                           {alert.amount != null ? (
-                            <p className="mt-1 text-xs tabular-nums text-foreground">
+                            <p className="mt-1 text-[10px] tabular-nums text-foreground">
                               {formatAnalyticsAmount(alert.amount, currency)}
                             </p>
                           ) : null}
@@ -108,8 +120,8 @@ export function FinanceAlertsPanel({ alerts }: FinanceAlertsPanelProps) {
             );
           })
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </OperationalTableSection>
   );
 }
 

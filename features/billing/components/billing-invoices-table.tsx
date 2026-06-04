@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 
+import { DocumentNumber } from "@/components/ui/document-number";
 import { CollectionStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -47,9 +48,9 @@ export function BillingInvoicesTable({ invoices }: BillingInvoicesTableProps) {
               <TableCell>
                 <Link
                   href={`/billing/invoices/${inv.id}`}
-                  className="font-mono text-xs font-medium hover:underline"
+                  className="text-xs font-medium hover:underline"
                 >
-                  {inv.document_number}
+                  <DocumentNumber value={inv.document_number} showCanonicalTitle={false} />
                 </Link>
               </TableCell>
               <TableCell className="max-w-[140px] truncate">{inv.client_name}</TableCell>
@@ -112,8 +113,8 @@ export function VendorBatchesCard({ batches }: VendorBatchesCardProps) {
               <TableBody>
                 {batches.map((batch) => (
                   <TableRow key={batch.id}>
-                    <TableCell className="font-mono text-xs">
-                      {batch.document_number}
+                    <TableCell className="text-xs">
+                      <DocumentNumber value={batch.document_number} />
                     </TableCell>
                     <TableCell>{batch.name}</TableCell>
                     <TableCell>

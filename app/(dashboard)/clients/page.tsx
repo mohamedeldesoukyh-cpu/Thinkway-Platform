@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataPanel, DataPanelContent, DataPanelHeader } from "@/components/ui/data-panel";
+import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ClientsEmptyState } from "@/features/clients/components/clients-empty-state";
 import { ClientsPagination } from "@/features/clients/components/clients-pagination";
@@ -58,25 +59,18 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
       description="Legal entities within groups. Brands and campaigns hang off each entity."
       actions={<NewClientDialog groups={groups} currencyOptions={currencyOptions} />}
     >
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle>All clients</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {total === 1 ? "1 client" : `${total} clients`}
-              {hasSearch ? ` matching "${search}"` : ""}
-            </p>
-          </div>
-          <Suspense fallback={null}>
-            <ClientsSearch />
-          </Suspense>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {errorMessage ? (
-            <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
-            </div>
-          ) : null}
+      <DataPanel>
+        <DataPanelHeader
+          title="All legal entities"
+          meta={`${total === 1 ? "1 entity" : `${total} entities`}${hasSearch ? ` matching "${search}"` : ""}`}
+          toolbar={
+            <Suspense fallback={null}>
+              <ClientsSearch />
+            </Suspense>
+          }
+        />
+        <DataPanelContent>
+          {errorMessage ? <PageAlert>{errorMessage}</PageAlert> : null}
 
           {clients.length === 0 ? (
             <ClientsEmptyState hasSearch={hasSearch} />
@@ -90,8 +84,8 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
               />
             </>
           )}
-        </CardContent>
-      </Card>
+        </DataPanelContent>
+      </DataPanel>
     </DashboardShell>
   );
 }

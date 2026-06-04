@@ -1,4 +1,7 @@
-import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
+import {
+  isOperationalRowUiSelectable,
+  type OperationalBillingRow,
+} from "@/lib/billing/operational-billing-rows";
 
 export type OperationalSelectionState = {
   line_ids: Set<string>;
@@ -96,6 +99,28 @@ export function collectSubtreeSelection(row: OperationalBillingRow): Operational
   return selection;
 }
 
+export function collectSelectableSubtreeSelection(
+  row: OperationalBillingRow
+): OperationalSelectionState {
+  const selection = createEmptySelection();
+  function walk(node: OperationalBillingRow) {
+    for (const child of node.children) walk(child);
+    if (isOperationalRowUiSelectable(node)) {
+      addRowToSelection(selection, node);
+    }
+  }
+  walk(row);
+  return selection;
+}
+
+export function getSelectableDescendantRows(
+  row: OperationalBillingRow
+): OperationalBillingRow[] {
+  return getDescendantRows(row).filter((descendant) =>
+    isOperationalRowUiSelectable(descendant)
+  );
+}
+
 function applySelectionMutation(
   target: OperationalSelectionState,
   mutation: OperationalSelectionState,
@@ -154,18 +179,23 @@ export function getRowSelectionStatus(
   row: OperationalBillingRow,
   selection: OperationalSelectionState
 ): RowSelectionStatus {
-  const descendants = getDescendantRows(row);
+  const descendants = getSelectableDescendantRows(row);
+  const rowSelectable = isOperationalRowUiSelectable(row);
+
   if (descendants.length === 0) {
+    if (!rowSelectable) return "unchecked";
     return isRowDirectlySelected(row, selection) ? "checked" : "unchecked";
   }
 
   const selectedDescendants = descendants.filter((descendant) =>
     isRowDirectlySelected(descendant, selection)
   ).length;
-  const selfSelected = isRowDirectlySelected(row, selection);
+  const selfSelected = rowSelectable && isRowDirectlySelected(row, selection);
 
   if (selectedDescendants === 0 && !selfSelected) return "unchecked";
-  if (selectedDescendants === descendants.length && selfSelected) return "checked";
+  if (selectedDescendants === descendants.length && (selfSelected || !rowSelectable)) {
+    return "checked";
+  }
   if (selectedDescendants === descendants.length && descendants.length > 0) return "checked";
   return "indeterminate";
 }
@@ -190,10 +220,14 @@ export function toggleOperationalRowSelection(
   selection: OperationalSelectionState,
   rootRows: OperationalBillingRow[]
 ): OperationalSelectionState {
+  const canSelect =
+    isOperationalRowUiSelectable(row) || getSelectableDescendantRows(row).length > 0;
+  if (!canSelect) return selection;
+
   const next = cloneSelection(selection);
   const status = getRowSelectionStatus(row, selection);
   const selecting = status !== "checked";
-  const subtree = collectSubtreeSelection(row);
+  const subtree = collectSelectableSubtreeSelection(row);
 
   applySelectionMutation(next, subtree, selecting ? "add" : "remove");
 
@@ -218,7 +252,7 @@ export function selectAllOperationalRows(
 ): OperationalSelectionState {
   const selection = createEmptySelection();
   for (const row of rows) {
-    applySelectionMutation(selection, collectSubtreeSelection(row), "add");
+    applySelectionMutation(selection, collectSelectableSubtreeSelection(row), "add");
   }
 
   return selection;
@@ -232,8 +266,12 @@ export function getGlobalSelectionStatus(
   rows: OperationalBillingRow[],
   selection: OperationalSelectionState
 ): RowSelectionStatus {
-  if (rows.length === 0) return "unchecked";
-  const statuses = rows.map((row) => getRowSelectionStatus(row, selection));
+  const selectableRoots = rows.filter(
+    (row) =>
+      isOperationalRowUiSelectable(row) || getSelectableDescendantRows(row).length > 0
+  );
+  if (selectableRoots.length === 0) return "unchecked";
+  const statuses = selectableRoots.map((row) => getRowSelectionStatus(row, selection));
   if (statuses.every((status) => status === "checked")) return "checked";
   if (statuses.every((status) => status === "unchecked")) return "unchecked";
   return "indeterminate";

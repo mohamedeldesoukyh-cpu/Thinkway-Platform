@@ -3,18 +3,22 @@
 import Link from "next/link";
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import type { VendorsListResult } from "@/features/vendors/queries";
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableCell,
+  CampaignOperationalTableCellAmount,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+  CampaignOperationalTableRow,
+} from "@/features/campaigns/components/campaign-operational-table";
+import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import {
   VendorRowActions,
   VendorStatusCell,
 } from "@/features/vendors/components/vendor-row-actions";
+import { DocumentNumber } from "@/components/ui/document-number";
+import type { VendorsListResult } from "@/features/vendors/queries";
 import {
   formatCategoriesList,
   formatFollowers,
@@ -30,59 +34,74 @@ type VendorsTableProps = {
 export function VendorsTable({ vendors }: VendorsTableProps) {
   return (
     <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Vendor #</TableHead>
-            <TableHead>Creator</TableHead>
-            <TableHead>Agency</TableHead>
-            <TableHead>Platforms</TableHead>
-            <TableHead>Followers</TableHead>
-            <TableHead>Assignments</TableHead>
-            <TableHead>Niche</TableHead>
-            <TableHead>Pricing</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Country</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+      <CampaignOperationalTable>
+        <CampaignOperationalTableHeader>
+          <CampaignOperationalTableHeaderRow>
+            <CampaignOperationalTableHead>Vendor #</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>Creator</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>Agency</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>Platforms</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right">
+              Followers
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right">
+              Assignments
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>Niche</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right">Pricing</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>Status</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>Country</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right">Actions</CampaignOperationalTableHead>
+          </CampaignOperationalTableHeaderRow>
+        </CampaignOperationalTableHeader>
+        <CampaignOperationalTableBody>
           {vendors.map((vendor) => (
-            <TableRow key={vendor.id}>
-              <TableCell className="font-mono text-xs">
-                {vendor.document_number}
-              </TableCell>
-              <TableCell>
+            <CampaignOperationalTableRow key={vendor.id}>
+              <CampaignOperationalTableCell className="text-muted-foreground">
+                <DocumentNumber value={vendor.document_number} />
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell>
                 <Link
                   href={`/vendors/${vendor.id}`}
-                  className="font-medium hover:underline"
+                  className="font-medium text-foreground hover:text-primary hover:underline"
                 >
                   {vendor.display_name}
                 </Link>
-              </TableCell>
-              <TableCell>{vendor.legal_name ?? "—"}</TableCell>
-              <TableCell>
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell className="text-muted-foreground">
+                {vendor.legal_name ?? "—"}
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell className="text-muted-foreground">
                 {formatPlatformsSummary(vendor.platform_accounts)}
-              </TableCell>
-              <TableCell>
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCellAmount>
                 {formatFollowers(getTotalFollowers(vendor.platform_accounts))}
-              </TableCell>
-              <TableCell>{vendor.assignment_count}</TableCell>
-              <TableCell className="max-w-[140px] truncate">
+              </CampaignOperationalTableCellAmount>
+              <CampaignOperationalTableCellAmount>
+                {vendor.assignment_count}
+              </CampaignOperationalTableCellAmount>
+              <CampaignOperationalTableCell className="max-w-[140px] truncate text-muted-foreground">
                 {formatCategoriesList(vendor.categories)}
-              </TableCell>
-              <TableCell>{formatPricing(vendor.rate_card)}</TableCell>
-              <TableCell>
-                <VendorStatusCell vendor={vendor} />
-              </TableCell>
-              <TableCell>{vendor.country_code ?? "—"}</TableCell>
-              <TableCell className="text-right">
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCellAmount>
+                {formatPricing(vendor.rate_card)}
+              </CampaignOperationalTableCellAmount>
+              <CampaignOperationalTableCell>
+                <VendorStatusCell
+                  vendor={vendor}
+                  badgeClassName={OPERATIONAL_CHROME_STATUS_BADGE}
+                />
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell className="text-muted-foreground">
+                {vendor.country_code ?? "—"}
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell className="text-right">
                 <VendorRowActions vendor={vendor} />
-              </TableCell>
-            </TableRow>
+              </CampaignOperationalTableCell>
+            </CampaignOperationalTableRow>
           ))}
-        </TableBody>
-      </Table>
+        </CampaignOperationalTableBody>
+      </CampaignOperationalTable>
     </div>
   );
 }

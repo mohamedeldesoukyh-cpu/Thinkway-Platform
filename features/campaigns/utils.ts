@@ -1,6 +1,11 @@
 import { METADATA_PLATFORM_KEY } from "./constants";
 import { formatCurrencyAmount } from "@/lib/finance/currency-format";
 
+export {
+  documentNumberDisplayTitle,
+  formatDocumentNumberForDisplay,
+} from "@/lib/documents/format-document-number";
+
 export function getCampaignPlatform(
   metadata: Record<string, unknown> | null | undefined
 ): string | null {

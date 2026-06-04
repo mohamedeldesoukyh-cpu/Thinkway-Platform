@@ -133,6 +133,11 @@ export const createCampaignLineSchema = z.object({
     .optional()
     .transform((v) => v === "1" || v === "true"),
   cost_before_vat: z.coerce.number().min(0).optional(),
+  cost_received: z.coerce.number().min(0).optional(),
+  cost_received_currency: currencyCodeSchema.optional(),
+  fx_rate: z.coerce.number().positive("FX rate must be positive").optional(),
+  fx_from_currency: currencyCodeSchema.optional(),
+  fx_to_currency: currencyCodeSchema.optional(),
   cost_vat_percent: z.coerce.number().min(0).max(100).default(0),
   cost_vat_exempt: z
     .enum(["0", "1", "true", "false"])

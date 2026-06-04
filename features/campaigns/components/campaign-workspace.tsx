@@ -16,7 +16,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { CampaignWorkspaceScrollShell } from "@/features/campaigns/components/campaign-workspace-scroll-shell";
+import {
+  CampaignWorkspaceTabPanel,
+  CampaignWorkspaceTabTrigger,
+  CampaignWorkspaceTabsBar,
+} from "@/features/campaigns/components/campaign-workspace-tabs";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
 import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
@@ -32,12 +38,19 @@ import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campai
 import { ClientIoHeaderControls } from "@/features/io/components/client-io-header-controls";
 import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { AssignmentBillingGroup, BillingLineRow, CampaignOperationalBillingDetail } from "@/features/billing/types";
+import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
+import {
+  OPERATIONAL_CHROME_LABEL,
+  OPERATIONAL_CHROME_META,
+  OPERATIONAL_CHROME_STATUS_BADGE,
+  OPERATIONAL_CHROME_TITLE,
+} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 import { cn } from "@/lib/utils";
-
 type CampaignWorkspaceViewProps = {
   workspace: import("@/features/campaigns/types").CampaignWorkspace;
   accountManagers: { id: string; full_name: string | null; email: string }[];
@@ -45,6 +58,7 @@ type CampaignWorkspaceViewProps = {
   billingLines: BillingLineRow[];
   billingGroups: AssignmentBillingGroup[];
   operationalBilling: CampaignOperationalBillingDetail | null;
+  campaignInvoiceRegister: FinanceInvoiceRegisterRow[];
   assignmentHierarchy: AssignmentHierarchy;
   publications: CampaignPublicationRow[];
   publicationsLoadError?: string | null;
@@ -58,6 +72,7 @@ export function CampaignWorkspaceView({
   billingLines,
   billingGroups,
   operationalBilling,
+  campaignInvoiceRegister,
   assignmentHierarchy,
   publications,
   publicationsLoadError,
@@ -75,9 +90,33 @@ export function CampaignWorkspaceView({
     ).rows.length;
   }, [assignmentHierarchy, publications, workspace.deliverables]);
 
+  const tabCounts = useMemo(
+    () => ({
+      lines: workspace.lines.filter((l) => l.influencer_id).length,
+      vendorIo: workspace.vendor_ios.length,
+      deliverables: operationalDeliverableCount,
+      publications: publications.length,
+      workflow: workspace.approvals.length,
+      billing: billingLines.length,
+      timeline: workspace.vendors.length,
+    }),
+    [
+      workspace.lines,
+      workspace.vendor_ios.length,
+      workspace.approvals.length,
+      workspace.vendors.length,
+      operationalDeliverableCount,
+      publications.length,
+      billingLines.length,
+    ]
+  );
+
+  const tabPanelClass =
+    "mt-4 flex-none outline-none focus-visible:outline-none data-[state=inactive]:hidden";
+
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      console.debug("[sticky-header] campaign workspace sticky header mounted", {
+      console.debug("[sticky-header] campaign workspace sticky tabs mounted", {
         campaignId: workspace.id,
       });
     }
@@ -90,148 +129,147 @@ export function CampaignWorkspaceView({
   }, [activeTab]);
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild className="-ml-2 w-fit">
-        <Link href="/campaigns">
-          <ArrowLeftIcon data-icon="inline-start" />
-          Back to campaigns
-        </Link>
-      </Button>
-
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
-        className="space-y-4"
+        className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
       >
-        <div
-          className={cn(
-            "sticky top-0 z-30 w-full -mx-4 space-y-6 border-b border-border/60 bg-background px-4 pb-4 pt-1 shadow-sm",
-            "md:-mx-8 md:px-8"
-          )}
-          data-sticky="campaign-workspace-header"
-        >
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setDetailsOpen(true)}
-                  className="font-heading text-left text-2xl font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
-                  title="View campaign details"
-                >
-                  {workspace.name}
-                </button>
-                <CampaignStatusBadge status={workspace.status} />
-              </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {workspace.client_io ? (
-                  <ClientIoHeaderControls
-                    io={workspace.client_io}
-                    campaignId={workspace.id}
-                    viewHref={`/ios/client?io=${workspace.client_io.id}`}
-                  />
-                ) : null}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <MoreHorizontalIcon className="size-4" />
-                      Actions
+        <CampaignWorkspaceScrollShell
+          chrome={
+            <>
+              <div className="space-y-1 pt-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0"
+                      asChild
+                      title="Back to campaigns"
+                    >
+                      <Link href="/campaigns">
+                        <ArrowLeftIcon className="size-4" />
+                        <span className="sr-only">Back to campaigns</span>
+                      </Link>
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
-                      <CopyIcon className="size-4" />
-                      Duplicate campaign
-                    </DropdownMenuItem>
-                    <DropdownMenuItem disabled>
-                      <PencilIcon className="size-4" />
-                      Edit header (Overview tab)
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    <button
+                      type="button"
+                      onClick={() => setDetailsOpen(true)}
+                      className={cn(
+                        OPERATIONAL_CHROME_TITLE,
+                        "truncate text-left transition-colors hover:text-primary"
+                      )}
+                      title="View campaign details"
+                    >
+                      {workspace.name}
+                    </button>
+                    <CampaignStatusBadge
+                      status={workspace.status}
+                      className={OPERATIONAL_CHROME_STATUS_BADGE}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {workspace.client_io ? (
+                      <ClientIoHeaderControls
+                        io={workspace.client_io}
+                        campaignId={workspace.id}
+                        viewHref={`/ios/client?io=${workspace.client_io.id}`}
+                      />
+                    ) : null}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={cn(OPERATIONAL_CHROME_LABEL, "h-7 gap-1 px-2")}
+                        >
+                          <MoreHorizontalIcon className="size-3.5" />
+                          Actions
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                          <CopyIcon className="size-4" />
+                          Duplicate campaign
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled>
+                          <PencilIcon className="size-4" />
+                          Edit header (Overview tab)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                <p className={cn(OPERATIONAL_CHROME_META, "pl-10")}>
+                  <DocumentNumber value={workspace.document_number} />
+                  {workspace.brand ? ` · ${workspace.brand.name}` : null}
+                  {workspace.platform
+                    ? ` · ${formatPlatformLabel(workspace.platform)}`
+                    : null}
+                </p>
               </div>
-            </div>
-            <p className="font-mono text-sm text-muted-foreground">
-              {workspace.document_number}
-              {workspace.brand ? ` · ${workspace.brand.name}` : null}
-              {workspace.platform
-                ? ` · ${formatPlatformLabel(workspace.platform)}`
-                : null}
-            </p>
-          </div>
 
-          <CampaignKpiStrip
-            workspace={workspace}
-            operationalDeliverableCount={operationalDeliverableCount}
-          />
-
-          <div className="-mx-1 border-b border-border px-1">
-          <TabsList
-            variant="line"
-            className="h-auto w-full flex-wrap justify-start gap-0 rounded-none border-0 bg-transparent p-0"
-          >
-            <TabsTrigger
-              value="overview"
-              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
-            >
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="lines"
-              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
-            >
-              Assignments
-            </TabsTrigger>
-            <TabsTrigger
-              value="vendor-io"
-              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
-            >
-              Vendor IO
-            </TabsTrigger>
-            <TabsTrigger
-              value="deliverables"
-              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
-            >
-              Deliverables
-            </TabsTrigger>
-            <TabsTrigger
-              value="publications"
-              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
-            >
-              Publications
-            </TabsTrigger>
-            <TabsTrigger
-              value="workflow"
-              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
-            >
-              Workflow
-            </TabsTrigger>
-            <TabsTrigger
-              value="billing"
-              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
-            >
-              Billing
-            </TabsTrigger>
-            <TabsTrigger
-              value="timeline"
-              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
-            >
-              Timeline & activity
-            </TabsTrigger>
-          </TabsList>
-          </div>
-        </div>
-
-        <TabsContent value="overview">
-          <CampaignOverviewTab
-            workspace={workspace}
-            accountManagers={accountManagers}
-            teams={teams}
-            currencyOptions={currencyOptions}
-            onOpenDetails={() => setDetailsOpen(true)}
-          />
+              <CampaignKpiStrip
+                workspace={workspace}
+                operationalDeliverableCount={operationalDeliverableCount}
+              />
+            </>
+          }
+          tabs={
+            <CampaignWorkspaceTabsBar>
+              <CampaignWorkspaceTabTrigger value="overview" label="Overview" />
+              <CampaignWorkspaceTabTrigger
+                value="lines"
+                label="Assignments"
+                count={tabCounts.lines}
+              />
+              <CampaignWorkspaceTabTrigger
+                value="vendor-io"
+                label="Vendor IO"
+                count={tabCounts.vendorIo}
+              />
+              <CampaignWorkspaceTabTrigger
+                value="deliverables"
+                label="Deliverables"
+                count={tabCounts.deliverables}
+              />
+              <CampaignWorkspaceTabTrigger
+                value="publications"
+                label="Publications"
+                count={tabCounts.publications}
+              />
+              <CampaignWorkspaceTabTrigger
+                value="workflow"
+                label="Workflow"
+                count={tabCounts.workflow}
+              />
+              <CampaignWorkspaceTabTrigger
+                value="billing"
+                label="Billing"
+                count={tabCounts.billing}
+              />
+              <CampaignWorkspaceTabTrigger
+                value="timeline"
+                label="Timeline & activity"
+                count={tabCounts.timeline}
+              />
+            </CampaignWorkspaceTabsBar>
+          }
+        >
+        <TabsContent value="overview" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel className="p-4 md:p-5">
+            <CampaignOverviewTab
+              workspace={workspace}
+              accountManagers={accountManagers}
+              teams={teams}
+              currencyOptions={currencyOptions}
+              onOpenDetails={() => setDetailsOpen(true)}
+            />
+          </CampaignWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="lines">
+        <TabsContent value="lines" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel>
           <TabErrorBoundary tabName="Assignments">
             <CampaignLinesTab
               workspace={workspace}
@@ -239,10 +277,13 @@ export function CampaignWorkspaceView({
               currencyOptions={currencyOptions}
               assignmentHierarchy={assignmentHierarchy}
               billingGroups={billingGroups}
+              operationalBilling={operationalBilling}
             />
           </TabErrorBoundary>
+          </CampaignWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="deliverables">
+        <TabsContent value="deliverables" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel>
           <TabErrorBoundary tabName="Deliverables">
             <CampaignDeliverablesTab
               workspace={workspace}
@@ -250,13 +291,17 @@ export function CampaignWorkspaceView({
               publications={publications}
             />
           </TabErrorBoundary>
+          </CampaignWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="vendor-io">
+        <TabsContent value="vendor-io" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel>
           <TabErrorBoundary tabName="Vendor IO">
             <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
           </TabErrorBoundary>
+          </CampaignWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="publications">
+        <TabsContent value="publications" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel>
           <TabErrorBoundary tabName="Publications">
             <CampaignPublicationsTab
               workspace={workspace}
@@ -264,27 +309,36 @@ export function CampaignWorkspaceView({
               loadError={publicationsLoadError}
             />
           </TabErrorBoundary>
+          </CampaignWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="workflow">
+        <TabsContent value="workflow" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel className="p-4 md:p-5">
           <TabErrorBoundary tabName="Workflow">
             <CampaignWorkflowTab workspace={workspace} />
           </TabErrorBoundary>
+          </CampaignWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="billing">
+        <TabsContent value="billing" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel>
           <TabErrorBoundary tabName="Billing">
             <CampaignBillingTab
               workspace={workspace}
               billingLines={billingLines}
               billingGroups={billingGroups}
               operationalBilling={operationalBilling}
+              campaignInvoiceRegister={campaignInvoiceRegister}
             />
           </TabErrorBoundary>
+          </CampaignWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="timeline">
+        <TabsContent value="timeline" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel className="p-4 md:p-5">
           <TabErrorBoundary tabName="Timeline">
             <CampaignTimelineTab workspace={workspace} />
           </TabErrorBoundary>
+          </CampaignWorkspaceTabPanel>
         </TabsContent>
+        </CampaignWorkspaceScrollShell>
       </Tabs>
 
       <CampaignDetailsSheet

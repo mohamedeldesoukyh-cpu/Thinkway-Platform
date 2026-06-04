@@ -58,7 +58,7 @@ export function CampaignsSearch() {
         placeholder="Search campaigns..."
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="pl-9 pr-9"
+        className="h-8 pl-9 pr-9 text-[11px]"
         aria-busy={isPending}
       />
       {value ? (

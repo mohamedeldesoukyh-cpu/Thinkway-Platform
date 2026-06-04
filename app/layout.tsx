@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, DM_Mono } from "next/font/google";
+import { Inter, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 import { cn } from "@/lib/utils";
 
-const jakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
@@ -33,7 +33,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         "h-full antialiased font-sans",
-        jakarta.variable,
+        inter.variable,
         dmMono.variable
       )}
     >

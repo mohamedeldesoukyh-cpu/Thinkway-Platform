@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -109,8 +110,8 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
             </DialogTitle>
             <DialogDescription>
               {mode === "ungenerate"
-                ? `Unlock lines linked to ${invoice.document_number}. Invoice number ${invoice.document_number} remains reserved.`
-                : `Refresh totals from corrected campaign lines. Invoice ${invoice.document_number} will be re-locked.`}
+                ? `Unlock lines linked to ${formatDocumentNumberForDisplay(invoice.document_number)}. Invoice number ${formatDocumentNumberForDisplay(invoice.document_number)} remains reserved.`
+                : `Refresh totals from corrected campaign lines. Invoice ${formatDocumentNumberForDisplay(invoice.document_number)} will be re-locked.`}
             </DialogDescription>
           </DialogHeader>
           <form

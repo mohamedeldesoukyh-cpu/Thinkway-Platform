@@ -2,6 +2,9 @@ import Link from "next/link";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { DataPanel, DataPanelContent, DataPanelHeader } from "@/components/ui/data-panel";
+import { PageAlert } from "@/components/ui/page-alert";
 import {
   Table,
   TableBody,
@@ -37,13 +40,15 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
       description="Top-level holding groups containing legal entities and brands."
       actions={<NewGroupDialog />}
     >
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : result ? (
-        <div>
-          <Table>
+      {errorMessage ? <PageAlert className="mb-4">{errorMessage}</PageAlert> : null}
+      {result ? (
+        <DataPanel>
+          <DataPanelHeader
+            title="All groups"
+            meta={`${result.total === 1 ? "1 group" : `${result.total} groups`}`}
+          />
+          <DataPanelContent flush className="[&_[data-slot=table-container]]:rounded-none">
+          <Table variant="flush">
             <TableHeader>
               <TableRow>
                 <TableHead>Group #</TableHead>
@@ -54,12 +59,12 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
             <TableBody>
               {result.groups.map((group) => (
                 <TableRow key={group.id}>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="text-xs">
                     <Link
                       href={`/groups/${group.id}`}
                       className="hover:underline"
                     >
-                      {group.document_number}
+                      <DocumentNumber value={group.document_number} showCanonicalTitle={false} />
                     </Link>
                   </TableCell>
                   <TableCell className="font-medium">
@@ -80,7 +85,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
             </TableBody>
           </Table>
           {result.groups.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">
+            <p className="px-5 py-6 text-sm text-muted-foreground">
               No groups yet.{" "}
               <Link href="/clients" className="underline">
                 Add legal entities
@@ -88,7 +93,8 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
               under a group to build your hierarchy.
             </p>
           ) : null}
-        </div>
+          </DataPanelContent>
+        </DataPanel>
       ) : null}
     </DashboardShell>
   );

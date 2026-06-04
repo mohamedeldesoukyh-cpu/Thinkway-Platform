@@ -10,6 +10,7 @@ import {
   deriveLineBillingStatusFromDeliverables,
   type DeliverableBillingRow,
 } from "@/lib/billing/deliverable-billing";
+import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
 
 function lineBillingPatch(billingStatus: string) {
   const assignmentStatus = assignmentStatusFromBilling(billingStatus);
@@ -138,6 +139,8 @@ export async function syncLineBillingFromDeliverables(
       vat_locked: partialLock || fullLock,
     })
     .eq("id", lineId);
+
+  await syncLineOperationalStatus(supabase, lineId);
 }
 
 export async function unlockDeliverablesForInvoice(

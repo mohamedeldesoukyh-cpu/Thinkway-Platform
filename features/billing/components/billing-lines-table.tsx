@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangleIcon, LockIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -59,8 +60,8 @@ export function BillingLinesTable({
               <TableRow key={line.id}>
                 <TableCell>
                   <p className="font-medium">{line.name}</p>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {line.document_number}
+                  <p className="text-xs text-muted-foreground">
+                    <DocumentNumber value={line.document_number} />
                   </p>
                 </TableCell>
                 {showCampaign ? (
@@ -136,9 +137,12 @@ export function BillingLinesTable({
                   {line.invoice_id ? (
                     <Link
                       href={`/billing/invoices/${line.invoice_id}`}
-                      className="font-mono text-xs hover:underline"
+                      className="text-xs hover:underline"
                     >
-                      {line.invoice_document_number}
+                      <DocumentNumber
+                        value={line.invoice_document_number}
+                        showCanonicalTitle={false}
+                      />
                     </Link>
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>

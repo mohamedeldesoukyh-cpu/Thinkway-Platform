@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageAlert } from "@/components/ui/page-alert";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { NewVendorDialog } from "@/features/vendors/components/new-vendor-dialog";
 import { VendorsEmptyState } from "@/features/vendors/components/vendors-empty-state";
@@ -76,6 +77,8 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
 
   const { vendors, total, totalPages } = list;
   const hasFilters = Boolean(search || status || platform);
+  const meta =
+    total === 1 ? "1 vendor" : `${total} vendors` + (hasFilters ? " matching filters" : "");
 
   return (
     <DashboardShell
@@ -83,36 +86,41 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
       description="Manage creators, agencies, and platform presence for campaign assignments."
       actions={<NewVendorDialog currencyOptions={currencyOptions} />}
     >
-      <Card>
-        <CardHeader className="flex flex-col gap-4">
-          <div className="space-y-1">
-            <CardTitle>All vendors</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {total === 1 ? "1 vendor" : `${total} vendors`}
-              {hasFilters ? " matching filters" : ""}
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <Suspense fallback={null}>
-              <VendorsSearch />
-            </Suspense>
-            <Suspense fallback={null}>
-              <VendorsFilters />
-            </Suspense>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {errorMessage ? (
-            <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <div className="flex flex-col gap-3">
+            <div className="min-w-0 space-y-0.5">
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                All vendors
+              </h2>
+              <p className="text-[11px] leading-snug text-muted-foreground">{meta}</p>
             </div>
-          ) : null}
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <Suspense fallback={null}>
+                <VendorsSearch />
+              </Suspense>
+              <Suspense fallback={null}>
+                <VendorsFilters />
+              </Suspense>
+            </div>
+          </div>
+        }
+      >
+        {errorMessage ? (
+          <div className="border-b border-border/40 px-4 py-3">
+            <PageAlert>{errorMessage}</PageAlert>
+          </div>
+        ) : null}
 
-          {vendors.length === 0 ? (
-            <VendorsEmptyState hasFilters={hasFilters} />
-          ) : (
-            <>
-              <VendorsTable vendors={vendors} />
+        {vendors.length === 0 ? (
+          <VendorsEmptyState hasFilters={hasFilters} />
+        ) : (
+          <>
+            <VendorsTable vendors={vendors} />
+            <div className="border-t border-border/40 px-4 py-3 md:px-5">
               <VendorsPagination
                 page={list.page}
                 totalPages={totalPages}
@@ -120,10 +128,10 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
                 status={status || undefined}
                 platform={platform || undefined}
               />
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </div>
+          </>
+        )}
+      </OperationalTableSection>
     </DashboardShell>
   );
 }

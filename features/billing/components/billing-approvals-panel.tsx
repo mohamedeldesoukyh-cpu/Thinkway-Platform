@@ -4,6 +4,7 @@ import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -85,8 +86,8 @@ function ApprovalRow({ approval }: { approval: FinancialApprovalRow }) {
     <TableRow>
       <TableCell>
         <p className="font-medium">{approval.title}</p>
-        <p className="font-mono text-xs text-muted-foreground">
-          {approval.document_number}
+        <p className="text-xs text-muted-foreground">
+          <DocumentNumber value={approval.document_number} />
         </p>
       </TableCell>
       <TableCell>

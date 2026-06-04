@@ -23,6 +23,7 @@ export type ClientIoRow = {
 
 export type VendorIoRow = {
   id: string;
+  document_number: string | null;
   assignment_id: string;
   campaign_header_id: string;
   campaign_name: string;
@@ -33,6 +34,8 @@ export type VendorIoRow = {
   amount: number;
   currency_code: string;
   status: VendorIoStatus;
+  ungenerate_eligible: boolean;
+  ungenerate_ineligible_reason: string | null;
   terms_html: string | null;
   terms_text: string | null;
   usage_rights: string | null;

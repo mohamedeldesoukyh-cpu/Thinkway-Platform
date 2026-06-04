@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { DocumentNumber } from "@/components/ui/document-number";
 import { ArchiveIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -152,8 +154,8 @@ function LegalEntityRow({
           >
             {entity.name}
           </Link>
-          <p className="font-mono text-xs text-muted-foreground">
-            {entity.document_number}
+          <p className="text-xs text-muted-foreground">
+            <DocumentNumber value={entity.document_number} />
           </p>
         </div>
       </TableCell>

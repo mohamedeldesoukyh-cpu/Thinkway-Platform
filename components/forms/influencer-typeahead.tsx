@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreatorBrowserDialog } from "@/features/campaigns/components/creator-browser-dialog";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { cn } from "@/lib/utils";
 import type { InfluencerSearchResult } from "@/features/campaigns/types";
 
@@ -196,8 +197,8 @@ export function InfluencerTypeahead({
                 onClick={() => pick(item)}
               >
                 <span className="font-medium">{item.display_name}</span>
-                <span className="ml-2 font-mono text-xs text-muted-foreground">
-                  {item.document_number}
+                <span className="ml-2 text-xs text-muted-foreground">
+                  <DocumentNumber value={item.document_number} />
                 </span>
                 {item.platforms.length > 0 ? (
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">

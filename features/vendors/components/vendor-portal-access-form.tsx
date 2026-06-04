@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -43,11 +43,10 @@ export function VendorPortalAccessForm({
   }, [state]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Creator portal login</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <CampaignFlatSection
+      title="Creator portal login"
+      description="Links this vendor to a user with the influencer role so they can sign in to the creator portal."
+    >
         <form action={action} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="influencer_id" value={influencerId} />
           <input type="hidden" name="profile_id" value={profileId} />
@@ -74,10 +73,6 @@ export function VendorPortalAccessForm({
             {pending ? "Saving..." : "Save link"}
           </Button>
         </form>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Links this vendor to a user with the influencer role so they can sign in to the creator portal.
-        </p>
-      </CardContent>
-    </Card>
+    </CampaignFlatSection>
   );
 }

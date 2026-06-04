@@ -15,15 +15,19 @@ const statusTone: Record<InfluencerStatus, StatusTone> = {
 
 type VendorStatusBadgeProps = {
   status: InfluencerStatus;
+  className?: string;
 };
 
-export function VendorStatusBadge({ status }: VendorStatusBadgeProps) {
+export function VendorStatusBadge({ status, className }: VendorStatusBadgeProps) {
   const label =
     VENDOR_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
     status;
 
   return (
-    <Badge variant="outline" className={cn("font-medium", STATUS_TONE_CLASS[statusTone[status]])}>
+    <Badge
+      variant="outline"
+      className={cn("font-medium", STATUS_TONE_CLASS[statusTone[status]], className)}
+    >
       {label}
     </Badge>
   );

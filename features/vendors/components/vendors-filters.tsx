@@ -50,7 +50,10 @@ export function VendorsFilters() {
         onValueChange={(value) => updateFilter("status", value)}
         disabled={isPending}
       >
-        <SelectTrigger className="w-full sm:w-40" aria-label="Filter by status">
+        <SelectTrigger
+          className="h-8 w-full text-[11px] sm:w-40"
+          aria-label="Filter by status"
+        >
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -69,7 +72,7 @@ export function VendorsFilters() {
         disabled={isPending}
       >
         <SelectTrigger
-          className="w-full sm:w-44"
+          className="h-8 w-full text-[11px] sm:w-44"
           aria-label="Filter by platform"
         >
           <SelectValue placeholder="Platform" />

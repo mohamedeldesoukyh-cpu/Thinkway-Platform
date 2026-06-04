@@ -34,23 +34,27 @@ export default async function VendorProfilePage({
   return (
     <DashboardShell
       title="Creator workspace"
-      description="Enterprise creator profile — platforms, assignments, billing, and audit."
+      hidePageHeader
+      containedMain
+      mainClassName="min-h-0 flex-1 flex-col p-3 md:px-6 md:py-4"
     >
       {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[11px] text-destructive">
           {errorMessage}
         </div>
       ) : workspace ? (
-        <VendorWorkspaceView
-          workspace={workspace}
-          defaultTab={tab ?? "overview"}
-          portalAccessPanel={
-            <VendorPortalAccessCard
-              influencerId={workspace.id}
-              profileId={workspace.profile_id}
-            />
-          }
-        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <VendorWorkspaceView
+            workspace={workspace}
+            defaultTab={tab ?? "overview"}
+            portalAccessPanel={
+              <VendorPortalAccessCard
+                influencerId={workspace.id}
+                profileId={workspace.profile_id}
+              />
+            }
+          />
+        </div>
       ) : null}
     </DashboardShell>
   );

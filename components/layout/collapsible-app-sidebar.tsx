@@ -16,6 +16,7 @@ import {
   ChevronRightIcon,
   CoinsIcon,
   FileSignatureIcon,
+  FileTextIcon,
   LayoutDashboardIcon,
   LineChartIcon,
   LayersIcon,
@@ -87,6 +88,7 @@ const navGroups: NavGroup[] = [
       { href: "/planning", label: "Planning", icon: CalendarClockIcon },
       { href: "/collections", label: "Collections", icon: CoinsIcon },
       { href: "/treasury", label: "Treasury", icon: WalletIcon },
+      { href: "/finance/invoices", label: "Invoices", icon: FileTextIcon },
       { href: "/finance/vat", label: "VAT & Tax", icon: PercentIcon },
       { href: "/finance/po-tracker", label: "PO Tracker", icon: ReceiptIcon },
       { href: "/finance/exchange-rates", label: "Exchange Rates", icon: RefreshCwIcon },
@@ -223,14 +225,16 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
   return (
     <aside
       className={cn(
-        "relative hidden shrink-0 self-start border-r border-border bg-sidebar transition-[width] duration-200 ease-out md:sticky md:top-0 md:flex md:h-svh md:max-h-svh md:flex-col",
-        expanded ? "w-64" : "w-16"
+        "relative hidden shrink-0 self-start border-r transition-[width] duration-200 ease-out md:sticky md:top-0 md:flex md:h-svh md:max-h-svh md:flex-col",
+        expanded
+          ? "w-64 border-sidebar-border bg-sidebar"
+          : "w-16 border-border/50 bg-card"
       )}
     >
       <div
         className={cn(
-          "flex h-16 items-center border-b border-sidebar-border",
-          expanded ? "justify-between px-4" : "justify-center px-2"
+          "flex h-16 items-center border-b",
+          expanded ? "justify-between border-sidebar-border px-4" : "justify-center border-border/40 px-2"
         )}
       >
         <Link
@@ -266,11 +270,11 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       </div>
 
       {!expanded ? (
-        <div className="flex justify-center border-b border-sidebar-border py-2">
+        <div className="flex justify-center border-b border-border/40 py-2">
           <button
             type="button"
             onClick={() => persistExpanded(true)}
-            className="rounded-lg p-1.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            className="rounded-lg p-1.5 text-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
             title="Expand sidebar"
             aria-label="Expand sidebar"
           >
@@ -292,7 +296,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
           return (
             <div key={group.label} className="flex flex-col">
               {groupIndex > 0 && !expanded ? (
-                <div className="mx-auto my-1 h-px w-8 bg-sidebar-border" />
+                <div className="mx-auto my-1 h-px w-8 bg-border/60" />
               ) : null}
 
               {expanded ? (
@@ -334,8 +338,10 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                         expanded ? "gap-3 px-3" : "justify-center px-2",
                         active
                           ? "bg-brand-gradient text-white shadow-sm"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                        !expanded && hasActiveItem && active && "ring-1 ring-white/20"
+                          : expanded
+                            ? "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            : "text-foreground/60 hover:bg-muted hover:text-foreground",
+                        !expanded && hasActiveItem && active && "ring-1 ring-brand-blue/25"
                       )}
                     >
                       <Icon className="size-4 shrink-0" />
@@ -353,8 +359,8 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
 
       <div
         className={cn(
-          "border-t border-sidebar-border",
-          expanded ? "p-4" : "p-2"
+          "border-t",
+          expanded ? "border-sidebar-border p-4" : "border-border/40 p-2"
         )}
       >
         {expanded ? (

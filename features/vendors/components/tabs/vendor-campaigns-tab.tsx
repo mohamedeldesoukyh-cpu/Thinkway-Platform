@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { DocumentNumber } from "@/components/ui/document-number";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -59,8 +61,8 @@ export function VendorCampaignsTab({ vendor }: { vendor: VendorDetail }) {
                         "—"
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {assignment.campaign?.document_number ?? "—"}
+                    <TableCell className="text-xs">
+                      <DocumentNumber value={assignment.campaign?.document_number} />
                     </TableCell>
                     <TableCell className="capitalize">
                       {assignment.status.replace(/_/g, " ")}

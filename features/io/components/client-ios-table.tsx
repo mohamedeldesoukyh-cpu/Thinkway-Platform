@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
@@ -43,7 +45,7 @@ export function ClientIosTable({
             >
               <TableCell>
                 <Link href={`/campaigns/${row.campaign_header_id}`} className="hover:underline">
-                  {row.campaign_document_number} · {row.campaign_name}
+                  <DocumentNumber value={row.campaign_document_number} /> · {row.campaign_name}
                 </Link>
               </TableCell>
               <TableCell>{row.client_name}</TableCell>

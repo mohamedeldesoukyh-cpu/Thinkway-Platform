@@ -13,6 +13,7 @@ import {
   shouldLockLineFully,
 } from "@/lib/billing/deliverable-billing";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
+import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
 import { syncPostScheduleOnDeliverableInvoiceLock } from "@/lib/billing/sync-post-invoice-lock";
 import { devLog } from "@/lib/dev-log";
 

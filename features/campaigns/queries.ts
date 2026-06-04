@@ -94,6 +94,9 @@ type LineRow = {
   revenue_vat_amount?: number;
   revenue_after_vat?: number;
   revenue_vat_exempt?: boolean;
+  cost_received?: number | null;
+  cost_received_currency?: string | null;
+  fx_from_currency?: string | null;
   cost_before_vat?: number;
   cost_vat_percent?: number;
   cost_vat_amount?: number;
@@ -114,6 +117,8 @@ type LineRow = {
   cost_locked: boolean;
   vendor_assignment_locked: boolean;
   invoice_id: string | null;
+  operational_status?: string | null;
+  vendor_io_id?: string | null;
 };
 
 function escapeIlikePattern(value: string): string {
@@ -377,6 +382,12 @@ export async function getCampaignWorkspace(
   const lines = (linesResult.data ?? []) as unknown as LineRow[];
   const lineIds = new Set(lines.map((l) => l.id));
   const lineDocMap = new Map(lines.map((l) => [l.id, l.document_number]));
+  const vendorIoDocById = new Map(
+    (vendorIos ?? []).map((vio) => {
+      const row = vio as unknown as { id: string; document_number?: string | null };
+      return [row.id, row.document_number ?? ""] as const;
+    })
+  );
 
   const vendorInfluencerIds = (vendorsResult.data ?? []).map(
     (v) => (v as { influencer_id: string }).influencer_id
@@ -490,6 +501,7 @@ export async function getCampaignWorkspace(
       id: string;
       document_number: string;
       status: string;
+      regeneration_status?: string | null;
       issue_date: string;
       due_date: string | null;
       total: number;
@@ -502,6 +514,7 @@ export async function getCampaignWorkspace(
       id: row.id,
       document_number: row.document_number,
       status: row.status,
+      regeneration_status: row.regeneration_status ?? null,
       issue_date: row.issue_date,
       due_date: row.due_date,
       total,
@@ -590,6 +603,11 @@ export async function getCampaignWorkspace(
       revenue_vat_amount: Number(line.revenue_vat_amount ?? 0),
       revenue_after_vat: Number(line.revenue_after_vat ?? revenue),
       revenue_vat_exempt: line.revenue_vat_exempt ?? false,
+      cost_received: Number(line.cost_received ?? line.cost_before_vat ?? cost),
+      cost_received_currency:
+        line.cost_received_currency ??
+        line.fx_from_currency ??
+        line.currency_code,
       cost_before_vat: Number(line.cost_before_vat ?? cost),
       cost_vat_percent: Number(line.cost_vat_percent ?? 0),
       cost_vat_amount: Number(line.cost_vat_amount ?? 0),
@@ -603,6 +621,12 @@ export async function getCampaignWorkspace(
       remaining_po: Number(line.remaining_po),
       po_over_consumed: poConsumed > poAmount && poAmount > 0,
       billing_status: line.billing_status ?? "draft",
+      operational_status:
+        (line.operational_status as CampaignLineWorkspace["operational_status"]) ?? "draft",
+      vendor_io_id: line.vendor_io_id ?? null,
+      vendor_io_document_number: line.vendor_io_id
+        ? (vendorIoDocById.get(line.vendor_io_id) ?? null)
+        : null,
       revenue_locked: line.revenue_locked ?? false,
       cost_locked: line.cost_locked ?? false,
       vendor_assignment_locked: line.vendor_assignment_locked ?? false,

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -85,7 +86,7 @@ export function InviteUserSheet({
                   <SelectContent>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name} ({client.document_number})
+                        {client.name} ({formatDocumentNumberForDisplay(client.document_number)})
                       </SelectItem>
                     ))}
                   </SelectContent>

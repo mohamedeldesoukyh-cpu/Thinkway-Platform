@@ -55,6 +55,35 @@ function emptyToNull(value: string | undefined): string | null {
   return value.trim();
 }
 
+function resolveAssignmentMultiCurrencyCost(parsed: {
+  currency_code: string;
+  cost?: number;
+  cost_before_vat?: number;
+  cost_received?: number;
+  cost_received_currency?: string;
+  fx_rate?: number;
+  fx_from_currency?: string;
+  fx_to_currency?: string;
+}) {
+  const campaignCurrency = parsed.currency_code;
+  const costInLc = parsed.cost_before_vat ?? parsed.cost ?? 0;
+  const costReceived = parsed.cost_received ?? costInLc;
+  const costReceivedCurrency =
+    parsed.cost_received_currency ?? parsed.fx_from_currency ?? campaignCurrency;
+  const fxRate = parsed.fx_rate ?? 1;
+
+  return {
+    cost: costInLc,
+    cost_before_vat: costInLc,
+    cost_received: costReceived,
+    cost_received_currency: costReceivedCurrency,
+    fx_rate: fxRate,
+    fx_from_currency: parsed.fx_from_currency ?? costReceivedCurrency,
+    fx_to_currency: parsed.fx_to_currency ?? campaignCurrency,
+    fx_snapshot_at: new Date().toISOString(),
+  };
+}
+
 function resolveLineVatInput(
   parsed: {
     revenue: number;
@@ -421,12 +450,19 @@ export async function createCampaignLineAction(
   }
 
   const commercial = commercialResolved.value;
+  const currency =
+    parsed.data.currency_code || header?.currency_code || "USD";
+  const costFx = resolveAssignmentMultiCurrencyCost({
+    ...parsed.data,
+    currency_code: currency,
+    cost: commercial.cost_before_vat || parsed.data.cost,
+    cost_before_vat: commercial.cost_before_vat || parsed.data.cost_before_vat,
+  });
   const lineInput = {
     ...parsed.data,
     revenue: commercial.revenue_before_vat || parsed.data.revenue,
-    cost: commercial.cost_before_vat || parsed.data.cost,
+    ...costFx,
     revenue_before_vat: commercial.revenue_before_vat || parsed.data.revenue_before_vat,
-    cost_before_vat: commercial.cost_before_vat || parsed.data.cost_before_vat,
   };
 
   const { vatRate: clientVatRate } = await resolveCampaignBillingVatRate(
@@ -457,8 +493,6 @@ export async function createCampaignLineAction(
     emptyToNull(parsed.data.platform) ??
     deriveLinePlatformField(platforms);
   const deliverableCount = commercial.deliverable_count;
-  const currency =
-    parsed.data.currency_code || header?.currency_code || "USD";
 
   const assignmentMeta: LineInfluencerAssignment = {
     influencer_id: influencer.id,
@@ -482,9 +516,14 @@ export async function createCampaignLineAction(
       po_amount: parsed.data.po_amount,
       pricing_mode: commercial.pricing_mode,
       ...vatPayload,
+      cost_received: costFx.cost_received,
+      cost_received_currency: costFx.cost_received_currency,
       currency_code: currency,
       base_currency: "USD",
-      fx_rate: 1,
+      fx_rate: costFx.fx_rate,
+      fx_from_currency: costFx.fx_from_currency,
+      fx_to_currency: costFx.fx_to_currency,
+      fx_snapshot_at: costFx.fx_snapshot_at,
       start_date: parsed.data.start_date,
       end_date: parsed.data.end_date,
       metadata: { [LINE_ASSIGNMENT_META_KEY]: assignmentMeta },
@@ -664,12 +703,26 @@ export async function updateCampaignLineAction(
   }
 
   const commercial = commercialResolved.value;
+
+  const { data: header } = await supabase
+    .from("campaign_headers")
+    .select("client_id, currency_code")
+    .eq("id", parsed.data.campaign_id)
+    .maybeSingle();
+
+  const currency =
+    parsed.data.currency_code || header?.currency_code || "USD";
+  const costFx = resolveAssignmentMultiCurrencyCost({
+    ...parsed.data,
+    currency_code: currency,
+    cost: commercial.cost_before_vat || parsed.data.cost,
+    cost_before_vat: commercial.cost_before_vat || parsed.data.cost_before_vat,
+  });
   const lineInput = {
     ...parsed.data,
     revenue: commercial.revenue_before_vat || parsed.data.revenue,
-    cost: commercial.cost_before_vat || parsed.data.cost,
+    ...costFx,
     revenue_before_vat: commercial.revenue_before_vat || parsed.data.revenue_before_vat,
-    cost_before_vat: commercial.cost_before_vat || parsed.data.cost_before_vat,
   };
 
   const { vatRate: clientVatRate } = await resolveCampaignBillingVatRate(
@@ -712,12 +765,6 @@ export async function updateCampaignLineAction(
       commercial.commercial_rows.length > 0 ? commercial.commercial_rows : undefined,
   };
 
-  const { data: header } = await supabase
-    .from("campaign_headers")
-    .select("client_id")
-    .eq("id", parsed.data.campaign_id)
-    .maybeSingle();
-
   const { data: existingLineMeta } = await supabase
     .from("campaign_lines")
     .select("metadata, vendor_assignment_locked")
@@ -733,7 +780,13 @@ export async function updateCampaignLineAction(
       po_amount: parsed.data.po_amount,
       pricing_mode: commercial.pricing_mode,
       ...vatPayload,
-      currency_code: parsed.data.currency_code,
+      cost_received: costFx.cost_received,
+      cost_received_currency: costFx.cost_received_currency,
+      currency_code: currency,
+      fx_rate: costFx.fx_rate,
+      fx_from_currency: costFx.fx_from_currency,
+      fx_to_currency: costFx.fx_to_currency,
+      fx_snapshot_at: costFx.fx_snapshot_at,
       start_date: parsed.data.start_date,
       end_date: parsed.data.end_date,
       metadata: {

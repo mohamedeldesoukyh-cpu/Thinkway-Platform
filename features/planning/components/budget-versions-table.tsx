@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import {
   Table,
   TableBody,
@@ -121,8 +122,8 @@ export function BudgetVersionsTable({
                 key={version.id}
                 className={cn(isSelected && "bg-muted/40")}
               >
-                <TableCell className="font-mono text-xs">
-                  {version.document_number}
+                <TableCell className="text-xs">
+                  <DocumentNumber value={version.document_number} />
                 </TableCell>
                 <TableCell className="font-medium">{version.name}</TableCell>
                 <TableCell>{version.fiscal_year}</TableCell>

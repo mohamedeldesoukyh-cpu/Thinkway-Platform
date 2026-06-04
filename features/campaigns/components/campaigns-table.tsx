@@ -1,25 +1,31 @@
 import Link from "next/link";
 import { format } from "date-fns";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { CampaignListItem } from "@/types/database";
-
+import {
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableCell,
+  CampaignOperationalTableCellAmount,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+  CampaignOperationalTableRow,
+} from "@/features/campaigns/components/campaign-operational-table";
+import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
+import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+import { formatMoney } from "@/features/campaigns/utils";
 import { resolveCampaignListPoBudget } from "@/lib/finance/po/operational-budget";
 import {
+  PO_ALERT_FRAME,
   PO_STATUS_LABELS,
   PO_STATUS_VARIANT,
+  resolvePoAlertStatus,
 } from "@/lib/finance/po/status";
-
-import { formatMoney } from "../utils";
-import { CampaignStatusBadge } from "./campaign-status-badge";
+import type { CampaignListItem } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 type CampaignsTableProps = {
   campaigns: CampaignListItem[];
@@ -36,59 +42,67 @@ function campaignPoBudget(campaign: CampaignListItem) {
   return resolveCampaignListPoBudget(campaign);
 }
 
-function isCampaignPoExceeded(campaign: CampaignListItem): boolean {
+function listPoAlertStatus(campaign: CampaignListItem) {
   const budget = campaignPoBudget(campaign);
   const consumed = Number(campaign.po_consumed_amount ?? 0);
-  return budget > 0 && consumed > budget;
+  return resolvePoAlertStatus({
+    po_status: campaign.po_status ?? "draft",
+    po_exceeded: budget > 0 && consumed > budget,
+  });
 }
 
 export function CampaignsTable({ campaigns }: CampaignsTableProps) {
   return (
-    <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Campaign #</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Brand</TableHead>
-            <TableHead>Group · Legal entity</TableHead>
-            <TableHead>Lines</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>PO total</TableHead>
-            <TableHead>Dates</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {campaigns.map((campaign) => (
-            <TableRow key={campaign.id}>
-              <TableCell className="font-mono text-xs">
-                <Link
-                  href={`/campaigns/${campaign.id}`}
-                  className="hover:underline"
-                >
-                  {campaign.document_number}
+    <CampaignOperationalTable>
+      <CampaignOperationalTableHeader>
+        <CampaignOperationalTableHeaderRow>
+          <CampaignOperationalTableHead>Campaign #</CampaignOperationalTableHead>
+          <CampaignOperationalTableHead>Name</CampaignOperationalTableHead>
+          <CampaignOperationalTableHead>Brand</CampaignOperationalTableHead>
+          <CampaignOperationalTableHead>Group · Legal entity</CampaignOperationalTableHead>
+          <CampaignOperationalTableHead>Lines</CampaignOperationalTableHead>
+          <CampaignOperationalTableHead>Status</CampaignOperationalTableHead>
+          <CampaignOperationalTableHead className="text-right">PO total</CampaignOperationalTableHead>
+          <CampaignOperationalTableHead>Dates</CampaignOperationalTableHead>
+        </CampaignOperationalTableHeaderRow>
+      </CampaignOperationalTableHeader>
+      <CampaignOperationalTableBody>
+        {campaigns.map((campaign) => {
+          const poAlertStatus = listPoAlertStatus(campaign);
+          const href = `/campaigns/${campaign.id}`;
+
+          return (
+            <CampaignOperationalTableRow key={campaign.id}>
+              <CampaignOperationalTableCell className="text-muted-foreground">
+                <Link href={href} className="hover:text-foreground hover:underline">
+                  <DocumentNumber value={campaign.document_number} />
                 </Link>
-              </TableCell>
-              <TableCell className="font-medium">
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell>
                 <Link
-                  href={`/campaigns/${campaign.id}`}
-                  className="hover:underline"
+                  href={href}
+                  className="font-medium text-foreground hover:text-primary hover:underline"
                 >
                   {campaign.name}
                 </Link>
-              </TableCell>
-              <TableCell>{campaign.brand?.name ?? "—"}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell className="text-muted-foreground">
+                {campaign.brand?.name ?? "—"}
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell className="text-muted-foreground">
                 {campaign.group?.name ?? "—"}
                 {campaign.client?.legal_name || campaign.client?.name
                   ? ` · ${campaign.client.legal_name ?? campaign.client.name}`
                   : ""}
-              </TableCell>
-              <TableCell>
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell>
                 {campaign.lines.length > 0 ? (
                   <Badge
-                    variant="secondary"
-                    className="text-[11px]"
-                    title={campaign.lines.map((l) => l.document_number).join(", ")}
+                    variant="outline"
+                    className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "font-normal")}
+                    title={campaign.lines
+                      .map((l) => formatDocumentNumberForDisplay(l.document_number))
+                      .join(", ")}
                   >
                     {campaign.lines.length}{" "}
                     {campaign.lines.length === 1 ? "line" : "lines"}
@@ -96,37 +110,45 @@ export function CampaignsTable({ campaigns }: CampaignsTableProps) {
                 ) : (
                   "—"
                 )}
-              </TableCell>
-              <TableCell>
-                <CampaignStatusBadge status={campaign.status} />
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1">
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell>
+                <CampaignStatusBadge
+                  status={campaign.status}
+                  className={OPERATIONAL_CHROME_STATUS_BADGE}
+                />
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCellAmount>
+                <div className="flex flex-col items-end gap-1">
                   <span
-                    className={
-                      isCampaignPoExceeded(campaign)
-                        ? "font-medium text-red-600 dark:text-red-400"
-                        : undefined
-                    }
+                    className={cn(
+                      poAlertStatus === "exceeded" && "text-red-600 dark:text-red-400",
+                      poAlertStatus === "near_limit" && "text-amber-700 dark:text-amber-300"
+                    )}
                   >
                     {formatMoney(campaignPoBudget(campaign), campaign.currency_code)}
                   </span>
                   {campaign.po_status && campaign.po_status !== "draft" ? (
                     <Badge
                       variant={PO_STATUS_VARIANT[campaign.po_status]}
-                      className="w-fit text-[10px]"
+                      className={cn(
+                        OPERATIONAL_CHROME_STATUS_BADGE,
+                        "font-normal",
+                        poAlertStatus && "border-2",
+                        poAlertStatus && PO_ALERT_FRAME[poAlertStatus]
+                      )}
                     >
                       {PO_STATUS_LABELS[campaign.po_status]}
                     </Badge>
                   ) : null}
                 </div>
-              </TableCell>
-              <TableCell className="text-muted-foreground whitespace-nowrap">
+              </CampaignOperationalTableCellAmount>
+              <CampaignOperationalTableCell className="whitespace-nowrap text-muted-foreground">
                 {formatDate(campaign.start_date)} – {formatDate(campaign.end_date)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </CampaignOperationalTableCell>
+            </CampaignOperationalTableRow>
+          );
+        })}
+      </CampaignOperationalTableBody>
+    </CampaignOperationalTable>
   );
 }

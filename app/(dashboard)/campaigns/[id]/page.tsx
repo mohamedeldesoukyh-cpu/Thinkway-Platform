@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CampaignWorkspaceView } from "@/features/campaigns/components/campaign-workspace";
 import {
@@ -9,6 +10,7 @@ import {
   getCampaignWorkspace,
 } from "@/features/campaigns/queries";
 import { getCampaignBillingGroups, getCampaignBillingLines, getCampaignOperationalBillingDetail } from "@/features/billing/queries";
+import { getFinanceInvoiceRegister } from "@/features/finance/invoices/queries";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { getCampaignPublications } from "@/features/campaigns/queries/publications";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
@@ -63,6 +65,7 @@ export default async function CampaignWorkspacePage({
   let publications: Awaited<ReturnType<typeof getCampaignPublications>>["publications"] =
     [];
   let publicationsLoadError: string | null = null;
+  let campaignInvoiceRegister: Awaited<ReturnType<typeof getFinanceInvoiceRegister>> = [];
   let errorMessage: string | null = null;
 
   try {
@@ -103,6 +106,16 @@ export default async function CampaignWorkspacePage({
     }
     if (settled[3].status === "fulfilled") {
       billingGroups = settled[3].value;
+    }
+
+    try {
+      campaignInvoiceRegister = await getFinanceInvoiceRegister({
+        campaignHeaderId: id,
+      });
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        devLog("[campaign-page] campaign invoice register fallback", error);
+      }
     }
 
     try {
@@ -148,28 +161,31 @@ export default async function CampaignWorkspacePage({
   return (
     <DashboardShell
       title="Campaign workspace"
-      description="Operational command center for lines, vendors, deliverables, billing, and workflow."
+      hidePageHeader
+      containedMain
+      mainClassName="min-h-0 flex-1 flex-col p-3 md:px-6 md:py-4"
     >
       {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
+        <PageAlert>{errorMessage}</PageAlert>
       ) : workspace ? (
         <PlatformErrorBoundary surface="campaigns">
-          <CampaignWorkspaceView
-            workspace={workspace}
-            accountManagers={
-              (formOptions ?? EMPTY_CAMPAIGN_FORM_OPTIONS).accountManagers
-            }
-            teams={teams}
-            billingLines={billingLines}
-            billingGroups={billingGroups}
-            operationalBilling={operationalBilling}
-            assignmentHierarchy={assignmentHierarchy}
-            publications={publications}
-            publicationsLoadError={publicationsLoadError}
-            currencyOptions={currencyOptions}
-          />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <CampaignWorkspaceView
+              workspace={workspace}
+              accountManagers={
+                (formOptions ?? EMPTY_CAMPAIGN_FORM_OPTIONS).accountManagers
+              }
+              teams={teams}
+              billingLines={billingLines}
+              billingGroups={billingGroups}
+              operationalBilling={operationalBilling}
+              campaignInvoiceRegister={campaignInvoiceRegister}
+              assignmentHierarchy={assignmentHierarchy}
+              publications={publications}
+              publicationsLoadError={publicationsLoadError}
+              currencyOptions={currencyOptions}
+            />
+          </div>
         </PlatformErrorBoundary>
       ) : null}
     </DashboardShell>

@@ -45,6 +45,8 @@ type LineRow = {
   name: string;
   campaign_header_id: string;
   billing_status: CampaignLineBillingStatus;
+  operational_status?: string | null;
+  vendor_io_id?: string | null;
   currency_code: string;
   pricing_mode: string | null;
   revenue: number;
@@ -53,6 +55,7 @@ type LineRow = {
   metadata: Record<string, unknown> | null;
   invoice_id: string | null;
   invoice: { document_number: string } | null;
+  vendor_io?: { document_number: string } | null;
 };
 
 type PostRow = {
@@ -141,9 +144,9 @@ export async function loadCampaignOperationalBilling(
   error?: string;
 }> {
   const lineSelectWithSort =
-    "id, document_number, name, campaign_header_id, billing_status, currency_code, pricing_mode, revenue, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, sort_order, invoice:invoices(document_number)";
+    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, currency_code, pricing_mode, revenue, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, sort_order, invoice:invoices(document_number), vendor_io:vendor_ios(document_number)";
   const lineSelectFallback =
-    "id, document_number, name, campaign_header_id, billing_status, currency_code, pricing_mode, revenue, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, invoice:invoices(document_number)";
+    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, currency_code, pricing_mode, revenue, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, invoice:invoices(document_number), vendor_io:vendor_ios(document_number)";
 
   const { data: lines, error: linesError } =
     await queryCampaignLinesWithDisplayOrder<LineRow>(async (orderColumn, includeSortOrderColumn) => {
@@ -308,6 +311,11 @@ export async function loadCampaignOperationalBilling(
             invoice_document_number: line.invoice?.document_number ?? null,
             revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
             revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
+            operational_status: line.operational_status ?? "draft",
+            vendor_io_id: line.vendor_io_id ?? null,
+            vendor_io_document_number:
+              (line as { vendor_io?: { document_number?: string } | null }).vendor_io
+                ?.document_number ?? null,
           },
           postLabel(deliverable.platform, deliverable.deliverable_type, post.sequence_number)
         );
@@ -345,7 +353,10 @@ export async function loadCampaignOperationalBilling(
         locked_at: deliverable.locked_at,
         is_locked: Boolean(deliverable.locked_at),
         is_invoice_eligible:
-          groupFinancials.remaining_amount > 0 && !deliverable.locked_at,
+          line.operational_status === "io_generated" &&
+          Boolean(line.vendor_io_id) &&
+          groupFinancials.remaining_amount > 0 &&
+          !deliverable.locked_at,
         is_achieved: ["ready_to_invoice", "partially_invoiced", "invoiced"].includes(
           deliverable.billing_status
         ),
@@ -386,7 +397,15 @@ export async function loadCampaignOperationalBilling(
       invoice_line_item_id: null,
       locked_at: null,
       is_locked: false,
-      is_invoice_eligible: deliverableChildren.some((d) => d.is_invoice_eligible),
+      is_invoice_eligible:
+        line.operational_status === "io_generated" &&
+        Boolean(line.vendor_io_id) &&
+        deliverableChildren.some((d) => d.is_invoice_eligible),
+      operational_status: line.operational_status ?? "draft",
+      vendor_io_id: line.vendor_io_id ?? null,
+      vendor_io_document_number:
+        (line as { vendor_io?: { document_number?: string } | null }).vendor_io
+          ?.document_number ?? null,
       is_achieved: ["approved", "moved_to_billing", "partially_invoiced", "invoiced"].includes(
         line.billing_status
       ),

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -434,7 +435,9 @@ export function MoveBetweenAccountsWorkspace({
                           aria-label={`Select ${c.name}`}
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{c.document_number}</TableCell>
+                      <TableCell className="text-xs">
+                        <DocumentNumber value={c.document_number} />
+                      </TableCell>
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell>{c.group_name ?? "—"}</TableCell>
                       <TableCell>{c.client_name ?? "—"}</TableCell>

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,13 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableCell,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+  CampaignOperationalTableRow,
+} from "@/features/campaigns/components/campaign-operational-table";
 import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";
 import { DeliverableBillingBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-billing-badge";
 import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
@@ -139,31 +141,35 @@ export function CampaignDeliverablesTab({
 
   return (
     <OperationalTableSection
-      title="Deliverables"
-      description="Operational explorer — synced from assignment deliverables and post schedules."
-    >
-      {stats.hierarchy_load_error ? (
-        <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-900 dark:text-amber-200">
-          Hierarchy loaded with warnings: {stats.hierarchy_load_error}
-        </div>
-      ) : null}
-
-      <div className="space-y-4 border-b border-border px-4 py-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Displaying {filtered.length} of {rows.length}
-        </p>
-
-        <div className="grid gap-2">
-          <Label htmlFor="deliverable_search">Search</Label>
-          <Input
-            id="deliverable_search"
-            placeholder="Creator, platform, type, assignment, notes, workflow…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      wide
+      tableOnly
+      cardSurface
+      leading={
+        <CampaignOperationalSectionHeader
+          title="Deliverables"
+          description="Operational explorer — synced from assignment deliverables and post schedules."
+        />
+      }
+      toolbar={
+        <div className="space-y-3">
+          {stats.hierarchy_load_error ? (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+              Hierarchy loaded with warnings: {stats.hierarchy_load_error}
+            </div>
+          ) : null}
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Displaying {filtered.length} of {rows.length}
+          </p>
+          <div className="grid gap-2">
+            <Label htmlFor="deliverable_search">Search</Label>
+            <Input
+              id="deliverable_search"
+              placeholder="Creator, platform, type, assignment, notes, workflow…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <FilterSelect
             label="Platform"
             value={platformFilter}
@@ -209,31 +215,32 @@ export function CampaignDeliverablesTab({
               { value: "none", label: "No publication" },
             ]}
           />
+          </div>
         </div>
-      </div>
-
+      }
+    >
       {filtered.length === 0 ? (
         <p className="px-4 py-8 text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
-        <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Deliverable</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Creator</TableHead>
-                <TableHead>Platform</TableHead>
-                <TableHead>Due</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Content</TableHead>
-                <TableHead className="text-right">Billing</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <CampaignOperationalTable>
+            <CampaignOperationalTableHeader>
+              <CampaignOperationalTableHeaderRow>
+                <CampaignOperationalTableHead>Deliverable</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Type</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Creator</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Platform</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Due</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Status</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Content</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">Billing</CampaignOperationalTableHead>
+              </CampaignOperationalTableHeaderRow>
+            </CampaignOperationalTableHeader>
+            <CampaignOperationalTableBody>
               {filtered.map((row) => (
                 <OperationalExplorerRow key={row.id} row={row} stats={stats} />
               ))}
-            </TableBody>
-          </Table>
+            </CampaignOperationalTableBody>
+          </CampaignOperationalTable>
       )}
     </OperationalTableSection>
   );
@@ -277,30 +284,32 @@ function OperationalExplorerRow({
   stats: OperationalDeliverableFlattenStats;
 }) {
   return (
-    <TableRow>
-      <TableCell>
+    <CampaignOperationalTableRow>
+      <CampaignOperationalTableCell>
         <div className="space-y-0.5">
           <span className="font-medium">{row.label}</span>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             {row.assignment_title}
             {row.sequence_number != null ? ` · #${row.sequence_number}` : null}
           </p>
         </div>
-      </TableCell>
-      <TableCell>
+      </CampaignOperationalTableCell>
+      <CampaignOperationalTableCell>
         <Badge variant="outline" className="text-[10px] font-normal">
           {row.deliverable_type_label}
         </Badge>
-      </TableCell>
-      <TableCell>{row.creator_name ?? "—"}</TableCell>
-      <TableCell>{row.platform_label}</TableCell>
-      <TableCell className="text-muted-foreground">{safeFormatDate(row.live_date)}</TableCell>
-      <TableCell>
+      </CampaignOperationalTableCell>
+      <CampaignOperationalTableCell>{row.creator_name ?? "—"}</CampaignOperationalTableCell>
+      <CampaignOperationalTableCell>{row.platform_label}</CampaignOperationalTableCell>
+      <CampaignOperationalTableCell className="text-muted-foreground">
+        {safeFormatDate(row.live_date)}
+      </CampaignOperationalTableCell>
+      <CampaignOperationalTableCell>
         <DeliverableWorkflowBadge status={row.workflow_status} />
-      </TableCell>
-      <TableCell>
+      </CampaignOperationalTableCell>
+      <CampaignOperationalTableCell>
         {row.notes ? (
-          <span className="line-clamp-2 text-xs text-muted-foreground">{row.notes}</span>
+          <span className="line-clamp-2 text-[11px] text-muted-foreground">{row.notes}</span>
         ) : row.publication_status ? (
           <Badge variant="secondary" className="text-[10px] capitalize">
             {row.publication_status.replace(/_/g, " ")}
@@ -308,8 +317,8 @@ function OperationalExplorerRow({
         ) : (
           "—"
         )}
-      </TableCell>
-      <TableCell className="text-right">
+      </CampaignOperationalTableCell>
+      <CampaignOperationalTableCell className="text-right">
         {row.billing_status === "legacy" ? (
           <Badge variant="outline" className="text-[10px]">
             Legacy
@@ -319,7 +328,7 @@ function OperationalExplorerRow({
             status={row.billing_status as AssignmentDeliverableBillingStatus}
           />
         )}
-      </TableCell>
-    </TableRow>
+      </CampaignOperationalTableCell>
+    </CampaignOperationalTableRow>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
 import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
@@ -49,8 +50,8 @@ export function CampaignDetailsSheet({
                 <SheetTitle className="font-heading text-xl font-semibold">
                   {workspace.name}
                 </SheetTitle>
-                <SheetDescription className="font-mono text-xs">
-                  {workspace.document_number}
+                <SheetDescription className="text-xs tabular-nums">
+                  <DocumentNumber value={workspace.document_number} />
                   {workspace.brand ? ` · ${workspace.brand.name}` : null}
                   {workspace.platform
                     ? ` · ${formatPlatformLabel(workspace.platform)}`

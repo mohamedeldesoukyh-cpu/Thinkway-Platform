@@ -1,12 +1,17 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CreateInvoiceSheet } from "@/features/billing/components/create-invoice-sheet";
-import type { AssignmentBillingGroup } from "@/features/billing/types";
+import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
+import type {
+  AssignmentBillingGroup,
+  CampaignOperationalBillingDetail,
+} from "@/features/billing/types";
 import { AssignmentHierarchyTable } from "@/features/campaigns/components/assignment-hierarchy/assignment-hierarchy-table";
 import { CampaignLineSheet } from "@/features/campaigns/components/campaign-line-sheet";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
@@ -15,6 +20,7 @@ import type {
   CampaignPoSummary,
   CampaignWorkspace,
 } from "@/features/campaigns/types";
+import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 
 type CampaignLinesTabProps = {
@@ -23,6 +29,7 @@ type CampaignLinesTabProps = {
   currencyOptions: { value: string; label: string }[];
   assignmentHierarchy: AssignmentHierarchy;
   billingGroups: AssignmentBillingGroup[];
+  operationalBilling: CampaignOperationalBillingDetail | null;
 };
 
 export function CampaignLinesTab({
@@ -31,10 +38,14 @@ export function CampaignLinesTab({
   currencyOptions,
   assignmentHierarchy,
   billingGroups,
+  operationalBilling,
 }: CampaignLinesTabProps) {
+  const router = useRouter();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const [invoiceSelection, setInvoiceSelection] = useState<string[]>([]);
+  const [invoiceSelection, setInvoiceSelection] = useState<
+    OperationalSelectionPayload | undefined
+  >();
   const [editing, setEditing] = useState<CampaignLineWorkspace | null>(null);
 
   function openCreate() {
@@ -47,8 +58,12 @@ export function CampaignLinesTab({
     setSheetOpen(true);
   }
 
-  function openInvoiceWithSelection(ids: string[]) {
-    setInvoiceSelection(ids);
+  function openInvoiceWithLines(lineIds: string[]) {
+    setInvoiceSelection({
+      line_ids: lineIds,
+      deliverable_ids: [],
+      post_ids: [],
+    });
     setInvoiceOpen(true);
   }
 
@@ -64,27 +79,33 @@ export function CampaignLinesTab({
   return (
     <>
       <OperationalTableSection
-        title="Creator assignments"
-        description="Expand assignments to edit deliverables inline, manage posting schedules, and invoice line-by-line. Alt+N adds a deliverable when expanded. Arrow keys expand or collapse rows."
-        actions={
-          <Button size="sm" onClick={openCreate} title="Assign influencer (A)">
-            <PlusIcon data-icon="inline-start" />
-            Assign influencer
-          </Button>
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              Creator assignments
+            </h2>
+            <Button size="sm" onClick={openCreate} title="Assign influencer (A)">
+              <PlusIcon data-icon="inline-start" />
+              Assign influencer
+            </Button>
+          </div>
         }
       >
-        {assignmentHierarchy.load_error ? (
-          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-900 dark:text-amber-200">
-            Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}. Showing
-            available rows — apply pending migrations if commercial columns are missing.
-          </div>
-        ) : null}
-        <AssignmentHierarchyTable
-          campaignId={workspace.id}
-          hierarchy={assignmentHierarchy}
-          onEditLine={openEdit}
-          onInvoiceSelected={openInvoiceWithSelection}
-        />
+          {assignmentHierarchy.load_error ? (
+            <div className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+              Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}. Showing
+              available rows — apply pending migrations if commercial columns are missing.
+            </div>
+          ) : null}
+          <AssignmentHierarchyTable
+            campaignId={workspace.id}
+            hierarchy={assignmentHierarchy}
+            onEditLine={openEdit}
+            onInvoiceLines={openInvoiceWithLines}
+          />
       </OperationalTableSection>
 
       <CampaignLineSheet
@@ -99,14 +120,32 @@ export function CampaignLinesTab({
         onOpenChange={setSheetOpen}
       />
 
-      <CreateInvoiceSheet
-        campaignId={workspace.id}
-        groups={billingGroups}
-        currency={workspace.currency_code}
-        open={invoiceOpen}
-        onOpenChange={setInvoiceOpen}
-        initialSelectedIds={invoiceSelection}
-      />
+      {operationalBilling ? (
+        <InvoiceGenerationSheet
+          campaignId={workspace.id}
+          currency={operationalBilling.currency_code}
+          rollup={operationalBilling.rollup}
+          operationalRows={operationalBilling.operational_rows}
+          appendableInvoices={operationalBilling.appendable_invoices}
+          defaultVatPercent={operationalBilling.default_vat_percent}
+          targetMode="new"
+          initialSelection={invoiceSelection}
+          open={invoiceOpen}
+          onInvoiceComplete={() => router.refresh()}
+          onOpenChange={(open) => {
+            setInvoiceOpen(open);
+            if (!open) setInvoiceSelection(undefined);
+          }}
+        />
+      ) : (
+        <CreateInvoiceSheet
+          campaignId={workspace.id}
+          groups={billingGroups}
+          currency={workspace.currency_code}
+          open={invoiceOpen}
+          onOpenChange={setInvoiceOpen}
+        />
+      )}
     </>
   );
 }

@@ -7,6 +7,7 @@ import type {
   IoSearchFilters,
   VendorIoRow,
 } from "@/features/io/types";
+import { attachVendorIoUngenerateEligibility } from "@/features/io/vendor-io-query-helpers";
 
 function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
@@ -110,7 +111,7 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
         .from("vendor_ios")
         .select(
           `
-          id, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
+          id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
           terms_html, terms_text, usage_rights, exclusivity, attachment_url, sent_at, approved_at,
           approved_by_name, rejection_reason, created_by, created_at, updated_at,
           campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
@@ -121,15 +122,17 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
         `
         )
         .eq("campaign_header_id", campaignHeaderId)
+        .eq("is_superseded", false)
         .order("created_at", { ascending: false });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      return ((data ?? []) as unknown[]).map((row) => {
+      const mapped = ((data ?? []) as unknown[]).map((row) => {
         const typed = row as {
           id: string;
+          document_number: string | null;
           assignment_id: string;
           campaign_header_id: string;
           influencer_id: string;
@@ -155,6 +158,7 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
 
         return {
           id: typed.id,
+          document_number: typed.document_number,
           assignment_id: typed.assignment_id,
           campaign_header_id: typed.campaign_header_id,
           campaign_name: typed.campaign?.name ?? "—",
@@ -177,8 +181,12 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
           created_by: typed.created_by,
           created_at: typed.created_at,
           updated_at: typed.updated_at,
+          ungenerate_eligible: false,
+          ungenerate_ineligible_reason: null,
         } satisfies VendorIoRow;
       });
+
+      return attachVendorIoUngenerateEligibility(supabase, mapped);
     },
     []
   );
@@ -272,7 +280,7 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
         .from("vendor_ios")
         .select(
           `
-          id, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
+          id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
           terms_html, terms_text, usage_rights, exclusivity, attachment_url, sent_at, approved_at,
           approved_by_name, rejection_reason, created_by, created_at, updated_at,
           campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
@@ -282,6 +290,7 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
           )
         `
         )
+        .eq("is_superseded", false)
         .order("created_at", { ascending: false });
 
       if (filters.status && filters.status !== "all") {
@@ -300,9 +309,10 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
         throw new Error(error.message);
       }
 
-      return ((data ?? []) as unknown[]).map((row) => {
+      const mapped = ((data ?? []) as unknown[]).map((row) => {
         const typed = row as {
           id: string;
+          document_number: string | null;
           assignment_id: string;
           campaign_header_id: string;
           influencer_id: string;
@@ -328,6 +338,7 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
 
         return {
           id: typed.id,
+          document_number: typed.document_number,
           assignment_id: typed.assignment_id,
           campaign_header_id: typed.campaign_header_id,
           campaign_name: typed.campaign?.name ?? "—",
@@ -350,8 +361,12 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
           created_by: typed.created_by,
           created_at: typed.created_at,
           updated_at: typed.updated_at,
+          ungenerate_eligible: false,
+          ungenerate_ineligible_reason: null,
         } satisfies VendorIoRow;
       });
+
+      return attachVendorIoUngenerateEligibility(supabase, mapped);
     },
     []
   );

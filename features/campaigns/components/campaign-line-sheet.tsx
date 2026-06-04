@@ -47,6 +47,7 @@ import {
   type AssignmentPricingMode,
   type LineInfluencerAssignment,
 } from "@/features/campaigns/line-assignment";
+import { AssignmentMultiCurrencyCostFields } from "@/features/campaigns/components/assignment-multi-currency-cost-fields";
 import { CampaignLinePoPanel } from "@/features/campaigns/components/campaign-line-po-panel";
 import { PoGovernanceDialog } from "@/features/campaigns/components/po-governance-dialog";
 import { calculatePoConsumption } from "@/lib/finance/po/calculations";
@@ -104,6 +105,12 @@ export function CampaignLineSheet({
   const [titleEdited, setTitleEdited] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [cost, setCost] = useState(line?.cost_before_vat ?? line?.cost ?? 0);
+  const [costReceived, setCostReceived] = useState(
+    line?.cost_received ?? line?.cost_before_vat ?? line?.cost ?? 0
+  );
+  const [costReceivedCurrency, setCostReceivedCurrency] = useState(
+    line?.cost_received_currency ?? line?.currency_code ?? currencyCode
+  );
   const [revenue, setRevenue] = useState(line?.revenue_before_vat ?? line?.revenue ?? 0);
   const [revenueVatPercent, setRevenueVatPercent] = useState(
     line?.revenue_vat_percent ?? defaultRevenueVatPercent
@@ -231,7 +238,14 @@ export function CampaignLineSheet({
     if (pricingMode !== "per_deliverable") return;
     setRevenue(commercialSummary.total_revenue_before_vat);
     setCost(commercialSummary.total_cost_before_vat);
-  }, [pricingMode, commercialSummary.total_revenue_before_vat, commercialSummary.total_cost_before_vat]);
+    setCostReceived(commercialSummary.total_cost_before_vat);
+    setCostReceivedCurrency(currency);
+  }, [
+    pricingMode,
+    commercialSummary.total_revenue_before_vat,
+    commercialSummary.total_cost_before_vat,
+    currency,
+  ]);
 
   useRegisterShortcut(
     open
@@ -352,6 +366,10 @@ export function CampaignLineSheet({
     setLineTitle(line?.name ?? "");
     setTitleEdited(line?.assignment?.title_user_edited ?? false);
     setCost(line?.cost_before_vat ?? line?.cost ?? 0);
+    setCostReceived(line?.cost_received ?? line?.cost_before_vat ?? line?.cost ?? 0);
+    setCostReceivedCurrency(
+      line?.cost_received_currency ?? line?.currency_code ?? currencyCode
+    );
     setRevenue(line?.revenue_before_vat ?? line?.revenue ?? 0);
     setRevenueVatPercent(line?.revenue_vat_percent ?? defaultRevenueVatPercent);
     setRevenueVatExempt(line?.revenue_vat_exempt ?? false);
@@ -663,15 +681,29 @@ export function CampaignLineSheet({
               }
             />
 
+            <AssignmentMultiCurrencyCostFields
+              campaignCurrency={currencyCode}
+              costReceived={costReceived}
+              costReceivedCurrency={costReceivedCurrency}
+              costInLc={cost}
+              currencyOptions={currencyOptions}
+              disabled={isPending || Boolean(line?.cost_locked || line?.vat_locked)}
+              onCostReceivedChange={setCostReceived}
+              onCostReceivedCurrencyChange={setCostReceivedCurrency}
+              onCostInLcChange={setCost}
+              onFxRateChange={() => {}}
+            />
+
             <VatAmountSection
-              title="Creator cost"
-              amountLabel="Cost (ex-VAT)"
+              title="Creator cost VAT"
+              amountLabel="Cost in LC (ex-VAT)"
               beforeVat={cost}
               vatPercent={costVatPercent}
               exempt={costVatExempt}
-              currency={currency}
+              currency={currencyCode}
               disabled={isPending || Boolean(line?.cost_locked || line?.vat_locked)}
-              onBeforeVatChange={setCost}
+              amountDisabled
+              onBeforeVatChange={() => {}}
               onVatPercentChange={setCostVatPercent}
               onExemptChange={setCostVatExempt}
               badge={

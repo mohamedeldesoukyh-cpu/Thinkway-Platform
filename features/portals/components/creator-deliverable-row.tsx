@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DocumentNumber } from "@/components/ui/document-number";
 import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
 import { CreatorDeliverableUploadForm } from "@/features/portals/components/creator-deliverable-upload-form";
 import { getPortalUploadsForDeliverable } from "@/features/portals/queries";
@@ -17,8 +18,8 @@ export async function CreatorDeliverableRowPanel({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-medium">{deliverable.title}</p>
-          <p className="font-mono text-xs text-muted-foreground">
-            {deliverable.document_number}
+          <p className="text-xs text-muted-foreground">
+            <DocumentNumber value={deliverable.document_number} />
           </p>
         </div>
         <PortalStatusBadge value={deliverable.status} />

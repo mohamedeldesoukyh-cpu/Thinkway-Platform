@@ -4,6 +4,7 @@ import { PlusIcon } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { DocumentNumber } from "@/components/ui/document-number";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,8 +153,8 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
                       <TableCell>
                         <div className="space-y-0.5">
                           <span className="font-medium">{brand.name}</span>
-                          <p className="font-mono text-xs text-muted-foreground">
-                            {brand.document_number}
+                          <p className="text-xs text-muted-foreground">
+                            <DocumentNumber value={brand.document_number} />
                           </p>
                         </div>
                       </TableCell>

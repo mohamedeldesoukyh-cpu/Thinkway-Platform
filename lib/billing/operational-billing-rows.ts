@@ -37,6 +37,9 @@ export type OperationalBillingRow = {
   /** Assignment-level VAT fallback (line / package). */
   line_revenue_vat_percent?: number;
   line_revenue_vat_exempt?: boolean;
+  operational_status?: string | null;
+  vendor_io_id?: string | null;
+  vendor_io_document_number?: string | null;
   children: OperationalBillingRow[];
 };
 
@@ -96,16 +99,73 @@ export function isOperationalRowAchieved(
 export function isOperationalRowInvoiceEligible(
   row: Pick<
     OperationalBillingRow,
-    "kind" | "is_locked" | "remaining_amount" | "billing_status" | "line_billing_status" | "is_invoice_eligible"
+    | "kind"
+    | "is_locked"
+    | "remaining_amount"
+    | "billing_status"
+    | "line_billing_status"
+    | "is_invoice_eligible"
+    | "operational_status"
+    | "vendor_io_id"
   >
 ): boolean {
-  if (row.is_invoice_eligible) return true;
   if (row.is_locked || row.remaining_amount <= 0) return false;
   if (row.billing_status === "disputed" || row.billing_status === "cancelled") return false;
   if (["invoiced", "collected"].includes(row.billing_status)) return false;
-  return ["moved_to_billing", "approved", "partially_invoiced", "ready_to_invoice"].includes(
-    row.line_billing_status
-  ) || row.billing_status === "ready_to_invoice";
+
+  const operational = (row.operational_status ?? "draft") as
+    import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
+
+  if (operational === "draft" || operational === "invoiced" || operational === "closed") {
+    return false;
+  }
+  if (!row.vendor_io_id) return false;
+
+  return row.is_invoice_eligible !== false;
+}
+
+const UI_SELECTABLE_OPERATIONAL = new Set<
+  import("@/features/campaigns/types/operational").CampaignLineOperationalStatus
+>(["io_generated", "partially_invoiced", "reopened"]);
+
+const UI_BLOCKED_LINE_BILLING = new Set<CampaignLineBillingStatus>([
+  "invoiced",
+  "paid",
+  "closed",
+  "partially_paid",
+]);
+
+/** UI checkbox eligibility (excludes invoiced / locked / paid lines from Select all). */
+export function isOperationalRowUiSelectable(
+  row: Pick<
+    OperationalBillingRow,
+    | "kind"
+    | "is_locked"
+    | "remaining_amount"
+    | "billing_status"
+    | "line_billing_status"
+    | "operational_status"
+    | "vendor_io_id"
+  >
+): boolean {
+  if (row.is_locked) return false;
+  if (row.remaining_amount <= 0) return false;
+  if (row.billing_status === "disputed" || row.billing_status === "cancelled") return false;
+  if (["invoiced", "collected"].includes(row.billing_status)) return false;
+  if (UI_BLOCKED_LINE_BILLING.has(row.line_billing_status)) return false;
+
+  const operational = (row.operational_status ?? "draft") as
+    import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
+
+  if (operational === "invoiced" || operational === "draft") return false;
+
+  const operationalOk = UI_SELECTABLE_OPERATIONAL.has(operational);
+  const movedToBilling = row.line_billing_status === "moved_to_billing";
+
+  if (!operationalOk && !movedToBilling) return false;
+  if (row.kind === "assignment" && !row.vendor_io_id) return false;
+
+  return true;
 }
 
 export function isOperationalRowActionEligible(
@@ -266,6 +326,9 @@ export function buildPostOperationalRow(
     invoice_document_number: string | null;
     revenue_vat_percent?: number;
     revenue_vat_exempt?: boolean;
+    operational_status?: string | null;
+    vendor_io_id?: string | null;
+    vendor_io_document_number?: string | null;
   },
   label: string
 ): OperationalBillingRow {
@@ -300,7 +363,14 @@ export function buildPostOperationalRow(
     invoice_line_item_id: post.invoice_line_item_id ?? null,
     locked_at: post.locked_at ?? null,
     is_locked: locked,
-    is_invoice_eligible: !locked && remaining > 0,
+    is_invoice_eligible:
+      line.operational_status === "io_generated" &&
+      Boolean(line.vendor_io_id) &&
+      !locked &&
+      remaining > 0,
+    operational_status: line.operational_status ?? "draft",
+    vendor_io_id: line.vendor_io_id ?? null,
+    vendor_io_document_number: line.vendor_io_document_number ?? null,
     is_achieved: ACHIEVED_DELIVERABLE_STATUSES.has(post.billing_status || deliverable.billing_status),
     is_legacy_synthetic: false,
     revenue_before_vat: Number(post.revenue_before_vat ?? 0),

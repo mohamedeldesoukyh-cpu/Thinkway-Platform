@@ -6,6 +6,7 @@ import { CopyIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import {
   Dialog,
   DialogContent,
@@ -60,7 +61,8 @@ export function DuplicateCampaignDialog({
             Duplicate campaign
           </DialogTitle>
           <DialogDescription>
-            Copy structure from {workspace.document_number}. New campaign and line numbers will be generated.
+            Copy structure from {formatDocumentNumberForDisplay(workspace.document_number)}. New
+            campaign and line numbers will be generated.
             Billing history, collections, and audit logs are excluded.
           </DialogDescription>
         </DialogHeader>

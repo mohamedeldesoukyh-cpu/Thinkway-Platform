@@ -15,6 +15,8 @@ type VatAmountSectionProps = {
   exempt: boolean;
   currency: string;
   disabled?: boolean;
+  /** When true, amount is read-only (e.g. FX-derived cost in LC). */
+  amountDisabled?: boolean;
   onBeforeVatChange: (value: number) => void;
   onVatPercentChange: (value: number) => void;
   onExemptChange: (value: boolean) => void;
@@ -29,6 +31,7 @@ export function VatAmountSection({
   exempt,
   currency,
   disabled,
+  amountDisabled,
   onBeforeVatChange,
   onVatPercentChange,
   onExemptChange,
@@ -59,7 +62,7 @@ export function VatAmountSection({
             step="0.01"
             value={beforeVat}
             onChange={(e) => onBeforeVatChange(Number(e.target.value))}
-            disabled={disabled}
+            disabled={disabled || amountDisabled}
           />
         </div>
         <div className="grid gap-2">

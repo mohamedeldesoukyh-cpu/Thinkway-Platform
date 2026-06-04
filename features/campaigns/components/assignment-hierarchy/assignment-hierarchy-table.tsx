@@ -11,46 +11,103 @@ import {
 } from "react";
 
 import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+} from "@/features/campaigns/components/campaign-operational-table";
 import { AssignmentDeliverableRows } from "@/features/campaigns/components/assignment-hierarchy/assignment-deliverable-rows";
 import { AssignmentParentRow } from "@/features/campaigns/components/assignment-hierarchy/assignment-parent-row";
-import { AssignmentTotalsFooter } from "@/features/campaigns/components/assignment-hierarchy/assignment-totals-footer";
+import { AssignmentOperationalActionsFooter } from "@/features/campaigns/components/assignment-operational-actions-footer";
 import { HIERARCHY_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
+import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { isLineUngenerateIoEligible } from "@/lib/io/vendor-io-ungenerate-eligibility";
+import { cn } from "@/lib/utils";
 
-const PARENT_COLUMN_COUNT = 15;
+const PARENT_COLUMN_COUNT = 17;
 
 type AssignmentHierarchyTableProps = {
   campaignId: string;
   hierarchy: AssignmentHierarchy;
   onEditLine: (line: CampaignLineWorkspace) => void;
-  onInvoiceSelected?: (deliverableIds: string[]) => void;
-  showInvoiceSelection?: boolean;
+  onInvoiceLines?: (lineIds: string[]) => void;
 };
 
 export function AssignmentHierarchyTable({
   campaignId,
   hierarchy,
   onEditLine,
-  onInvoiceSelected,
-  showInvoiceSelection = true,
+  onInvoiceLines,
 }: AssignmentHierarchyTableProps) {
   const currency = hierarchy.currency_code;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(new Set());
   const [focusedIndex, setFocusedIndex] = useState(0);
   const tableRef = useRef<HTMLDivElement>(null);
 
   const groups = hierarchy.groups;
 
-  const toggleExpand = useCallback((lineId: string) => {
-    setExpandedIds((prev) => {
+  const lineMeta = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        vioEligible: boolean;
+        invoiceEligible: boolean;
+        reviseVioEligible: boolean;
+        ungenerateIoEligible: boolean;
+        remaining: number;
+      }
+    >();
+    for (const group of groups) {
+      const status = (group.line.operational_status ?? "draft") as CampaignLineOperationalStatus;
+      const vioEligible = status === "draft" && !group.line.vendor_io_id;
+      const invoiceEligible = isLineInvoiceEligible({
+        operational_status: status,
+        vendor_io_id: group.line.vendor_io_id,
+        billing_status: group.line.billing_status,
+        is_locked: group.line.revenue_locked,
+      });
+      const reviseVioEligible =
+        status === "reopened" && Boolean(group.line.vendor_io_id);
+      const ungenerateIoEligible = isLineUngenerateIoEligible({
+        vendor_io_id: group.line.vendor_io_id,
+        operational_status: status,
+        invoice_id: group.line.invoice_id,
+        billing_status: group.line.billing_status,
+      });
+      map.set(group.line.id, {
+        vioEligible,
+        invoiceEligible,
+        reviseVioEligible,
+        ungenerateIoEligible,
+        remaining: group.rollups.remaining_value,
+      });
+    }
+    return map;
+  }, [groups]);
+
+  const selectableLineIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const [lineId, meta] of lineMeta) {
+      if (
+        meta.vioEligible ||
+        meta.invoiceEligible ||
+        meta.reviseVioEligible ||
+        meta.ungenerateIoEligible
+      ) {
+        ids.push(lineId);
+      }
+    }
+    return ids;
+  }, [lineMeta]);
+
+  const toggleLine = useCallback((lineId: string) => {
+    setSelectedLineIds((prev) => {
       const next = new Set(prev);
       if (next.has(lineId)) next.delete(lineId);
       else next.add(lineId);
@@ -58,56 +115,53 @@ export function AssignmentHierarchyTable({
     });
   }, []);
 
-  const eligibleByLine = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const group of groups) {
-      map.set(
-        group.line.id,
-        group.deliverables
-          .filter((d) => d.invoice_eligible && !d.is_synthetic)
-          .map((d) => d.id)
-      );
-    }
-    return map;
-  }, [groups]);
-
-  const toggleDeliverable = useCallback((id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
   const toggleParentSelect = useCallback(
     (lineId: string) => {
-      const ids = eligibleByLine.get(lineId) ?? [];
-      if (ids.length === 0) return;
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        const allSelected = ids.every((id) => next.has(id));
-        for (const id of ids) {
-          if (allSelected) next.delete(id);
-          else next.add(id);
-        }
-        return next;
-      });
+      const meta = lineMeta.get(lineId);
+      if (
+        !meta?.vioEligible &&
+        !meta?.invoiceEligible &&
+        !meta?.reviseVioEligible &&
+        !meta?.ungenerateIoEligible
+      ) {
+        return;
+      }
+      toggleLine(lineId);
     },
-    [eligibleByLine]
+    [lineMeta, toggleLine]
   );
 
-  const selectedTotal = useMemo(() => {
+  const vioLineIds = useMemo(
+    () =>
+      [...selectedLineIds].filter((id) => lineMeta.get(id)?.vioEligible),
+    [selectedLineIds, lineMeta]
+  );
+
+  const invoiceLineIds = useMemo(
+    () =>
+      [...selectedLineIds].filter((id) => lineMeta.get(id)?.invoiceEligible),
+    [selectedLineIds, lineMeta]
+  );
+
+  const ungenerateIoLineIds = useMemo(
+    () =>
+      [...selectedLineIds].filter((id) => lineMeta.get(id)?.ungenerateIoEligible),
+    [selectedLineIds, lineMeta]
+  );
+
+  const reviseVioLineIds = useMemo(
+    () =>
+      [...selectedLineIds].filter((id) => lineMeta.get(id)?.reviseVioEligible),
+    [selectedLineIds, lineMeta]
+  );
+
+  const invoiceTotal = useMemo(() => {
     let total = 0;
-    for (const group of groups) {
-      for (const d of group.deliverables) {
-        if (selectedIds.has(d.id)) {
-          total += d.remaining_amount;
-        }
-      }
+    for (const id of invoiceLineIds) {
+      total += lineMeta.get(id)?.remaining ?? 0;
     }
     return total;
-  }, [groups, selectedIds]);
+  }, [invoiceLineIds, lineMeta]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent | globalThis.KeyboardEvent) {
@@ -157,79 +211,110 @@ export function AssignmentHierarchyTable({
   }
 
   return (
-    <div ref={tableRef} className="space-y-3">
-      <Table>
-          <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
-            <TableRow className="text-[10px] uppercase tracking-wide">
-              <TableHead className="w-8 px-2">{HIERARCHY_COLUMN_LABELS.expand}</TableHead>
-              <TableHead className="w-8 px-2">{HIERARCHY_COLUMN_LABELS.select}</TableHead>
-              <TableHead className="min-w-[140px] px-2">{HIERARCHY_COLUMN_LABELS.assignment}</TableHead>
-              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.creator}</TableHead>
-              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.platforms}</TableHead>
-              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.deliverables}</TableHead>
-              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.postingDates}</TableHead>
-              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.opsStatus}</TableHead>
-              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.billing}</TableHead>
-              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.revenue}</TableHead>
-              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.cost}</TableHead>
-              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.gp}</TableHead>
-              <TableHead className="px-2 text-right">{HIERARCHY_COLUMN_LABELS.margin}</TableHead>
-              <TableHead className="px-2">{HIERARCHY_COLUMN_LABELS.payout}</TableHead>
-              <TableHead className="w-10 px-2 text-right">{HIERARCHY_COLUMN_LABELS.actions}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {groups.map((group, index) => {
-              const lineId = group.line.id;
-              const expanded = expandedIds.has(lineId);
-              const eligible = eligibleByLine.get(lineId) ?? [];
-              const selectedCount = eligible.filter((id) => selectedIds.has(id)).length;
-              const parentSelected = eligible.length > 0 && selectedCount === eligible.length;
-              const parentIndeterminate =
-                selectedCount > 0 && selectedCount < eligible.length;
+    <div ref={tableRef} className={cn(OPERATIONAL_TABLE_FONT)}>
+      <CampaignOperationalTable>
+        <CampaignOperationalTableHeader>
+          <CampaignOperationalTableHeaderRow>
+            <CampaignOperationalTableHead className="w-8">{HIERARCHY_COLUMN_LABELS.expand}</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="w-8">{HIERARCHY_COLUMN_LABELS.select}</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="min-w-[140px]">
+              {HIERARCHY_COLUMN_LABELS.assignment}
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.creator}</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.platforms}</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right">
+              {HIERARCHY_COLUMN_LABELS.deliverables}
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.postingDates}</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.opsStatus}</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.billing}</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right tabular-nums">
+              {HIERARCHY_COLUMN_LABELS.revenue}
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right tabular-nums">
+              {HIERARCHY_COLUMN_LABELS.costReceived}
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-center">
+              {HIERARCHY_COLUMN_LABELS.costCurrency}
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right tabular-nums">
+              {HIERARCHY_COLUMN_LABELS.costInLc}
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right tabular-nums">
+              {HIERARCHY_COLUMN_LABELS.gp}
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="text-right tabular-nums">
+              {HIERARCHY_COLUMN_LABELS.margin}
+            </CampaignOperationalTableHead>
+            <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.payout}</CampaignOperationalTableHead>
+            <CampaignOperationalTableHead className="w-10 text-right">
+              {HIERARCHY_COLUMN_LABELS.actions}
+            </CampaignOperationalTableHead>
+          </CampaignOperationalTableHeaderRow>
+        </CampaignOperationalTableHeader>
+        <CampaignOperationalTableBody>
+          {groups.map((group, index) => {
+            const lineId = group.line.id;
+            const expanded = expandedIds.has(lineId);
+            const meta = lineMeta.get(lineId);
+            const canSelect = Boolean(
+              meta?.vioEligible || meta?.invoiceEligible || meta?.ungenerateIoEligible
+            );
+            const parentSelected = selectedLineIds.has(lineId);
 
-              return (
-                <Fragment key={lineId}>
-                  <AssignmentParentRow
-                    group={group}
+            return (
+              <Fragment key={lineId}>
+                <AssignmentParentRow
+                  group={group}
+                  currency={currency}
+                  expanded={expanded}
+                  onToggleExpand={() => {
+                    setExpandedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(lineId)) next.delete(lineId);
+                      else next.add(lineId);
+                      return next;
+                    });
+                  }}
+                  onEdit={onEditLine}
+                  parentSelected={parentSelected}
+                  parentIndeterminate={false}
+                  onToggleParentSelect={() => toggleParentSelect(lineId)}
+                  showSelection={canSelect}
+                  rowIndex={index}
+                  focused={focusedIndex === index}
+                  onFocus={() => setFocusedIndex(index)}
+                />
+                {expanded ? (
+                  <AssignmentDeliverableRows
+                    campaignId={campaignId}
+                    line={group.line}
+                    deliverables={group.deliverables}
                     currency={currency}
-                    expanded={expanded}
-                    onToggleExpand={() => toggleExpand(lineId)}
-                    onEdit={onEditLine}
-                    parentSelected={parentSelected}
-                    parentIndeterminate={parentIndeterminate}
-                    onToggleParentSelect={() => toggleParentSelect(lineId)}
-                    showSelection={showInvoiceSelection}
-                    rowIndex={index}
-                    focused={focusedIndex === index}
-                    onFocus={() => setFocusedIndex(index)}
+                    selectedIds={new Set()}
+                    onToggleDeliverable={() => {}}
+                    showSelection={false}
+                    parentColSpan={PARENT_COLUMN_COUNT}
                   />
-                  {expanded ? (
-                    <AssignmentDeliverableRows
-                      campaignId={campaignId}
-                      line={group.line}
-                      deliverables={group.deliverables}
-                      currency={currency}
-                      selectedIds={selectedIds}
-                      onToggleDeliverable={toggleDeliverable}
-                      showSelection={showInvoiceSelection}
-                      parentColSpan={PARENT_COLUMN_COUNT}
-                    />
-                  ) : null}
-                </Fragment>
-              );
-            })}
-          </TableBody>
-        </Table>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </CampaignOperationalTableBody>
+      </CampaignOperationalTable>
 
-      {showInvoiceSelection ? (
-        <AssignmentTotalsFooter
-          selectedCount={selectedIds.size}
-          selectedTotal={selectedTotal}
-          currency={currency}
-          onCreateInvoice={() => onInvoiceSelected?.([...selectedIds])}
-        />
-      ) : null}
+      <AssignmentOperationalActionsFooter
+        campaignId={campaignId}
+        currency={currency}
+        selectedLineIds={[...selectedLineIds]}
+        vioLineIds={vioLineIds}
+        reviseVioLineIds={reviseVioLineIds}
+        ungenerateIoLineIds={ungenerateIoLineIds}
+        invoiceLineIds={invoiceLineIds}
+        invoiceTotal={invoiceTotal}
+        onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}
+        className="rounded-none border-x-0 border-b-0 border-t border-border/50"
+      />
     </div>
   );
 }

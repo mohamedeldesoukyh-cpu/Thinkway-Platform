@@ -1,6 +1,17 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  FileTextIcon,
+  LayersIcon,
+  MegaphoneIcon,
+  PercentIcon,
+  Share2Icon,
+  TrendingUpIcon,
+  UsersIcon,
+  WalletIcon,
+} from "lucide-react";
+
+import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import { formatMoney, formatPercent } from "@/features/vendors/utils";
 
@@ -8,39 +19,76 @@ type VendorKpiStripProps = {
   workspace: VendorWorkspace;
 };
 
+const ACCENT_TILE = {
+  blue: "bg-brand-blue/10 text-brand-blue",
+  purple: "bg-brand-purple/10 text-brand-purple",
+  pink: "bg-brand-pink/10 text-brand-pink",
+  green: "bg-success/10 text-success",
+} as const;
+
 export function VendorKpiStrip({ workspace }: VendorKpiStripProps) {
   const { counts, financials } = workspace;
   const currency =
     (workspace.payment_details as { currency?: string })?.currency ?? "USD";
 
   const items = [
-    { label: "Assignments", value: String(counts.assignments) },
-    { label: "Campaigns", value: String(counts.campaigns) },
-    { label: "Deliverables", value: String(counts.deliverables) },
-    { label: "Platforms", value: String(counts.platforms) },
-    { label: "Revenue", value: formatMoney(financials.total_revenue, currency) },
-    { label: "GP", value: formatMoney(financials.total_gp, currency) },
-    { label: "Margin", value: formatPercent(financials.margin_percent) },
     {
+      id: "assignments",
+      label: "Assignments",
+      value: String(counts.assignments),
+      icon: UsersIcon,
+      accentClass: ACCENT_TILE.purple,
+    },
+    {
+      id: "campaigns",
+      label: "Campaigns",
+      value: String(counts.campaigns),
+      icon: MegaphoneIcon,
+      accentClass: ACCENT_TILE.blue,
+    },
+    {
+      id: "deliverables",
+      label: "Deliverables",
+      value: String(counts.deliverables),
+      icon: LayersIcon,
+      accentClass: ACCENT_TILE.pink,
+    },
+    {
+      id: "platforms",
+      label: "Platforms",
+      value: String(counts.platforms),
+      icon: Share2Icon,
+      accentClass: ACCENT_TILE.green,
+    },
+    {
+      id: "revenue",
+      label: "Revenue",
+      value: formatMoney(financials.total_revenue, currency),
+      icon: TrendingUpIcon,
+      accentClass: ACCENT_TILE.purple,
+    },
+    {
+      id: "gp",
+      label: "GP",
+      value: formatMoney(financials.total_gp, currency),
+      icon: WalletIcon,
+      accentClass: ACCENT_TILE.green,
+    },
+    {
+      id: "margin",
+      label: "Margin",
+      value: formatPercent(financials.margin_percent),
+      icon: PercentIcon,
+      accentClass: ACCENT_TILE.blue,
+    },
+    {
+      id: "payout",
       label: "Pending payout",
       value: formatMoney(financials.pending_payout, currency),
+      icon: FileTextIcon,
+      accentClass: ACCENT_TILE.pink,
     },
   ];
 
-  return (
-    <div className="sticky top-0 z-10 -mx-1 px-1 pb-2 pt-1 backdrop-blur-sm">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-        {items.map((item) => (
-          <Card key={item.label} className="shadow-sm">
-            <CardContent className="p-3">
-              <p className="text-xs text-muted-foreground">{item.label}</p>
-              <p className="font-heading text-base font-semibold tracking-tight">
-                {item.value}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
+  return <KpiCarousel items={items} showNavigation={false} className="pb-1" />;
 }

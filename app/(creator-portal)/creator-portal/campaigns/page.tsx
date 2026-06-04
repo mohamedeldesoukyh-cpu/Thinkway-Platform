@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
@@ -42,7 +43,9 @@ export default async function CreatorPortalCampaignsPage() {
                           >
                             {row.campaign_name}
                           </Link>
-                          <p className="text-xs text-muted-foreground">{row.campaign_document_number}</p>
+                          <p className="text-xs text-muted-foreground">
+                            <DocumentNumber value={row.campaign_document_number} />
+                          </p>
                         </div>
                       </TableCell>
                       <TableCell>

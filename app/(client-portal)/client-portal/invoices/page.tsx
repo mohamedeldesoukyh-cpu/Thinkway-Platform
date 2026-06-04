@@ -1,3 +1,4 @@
+import { DocumentNumber } from "@/components/ui/document-number";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,7 +35,9 @@ export default async function ClientPortalInvoicesPage() {
                 <TableBody>
                   {rows.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell>{row.document_number}</TableCell>
+                      <TableCell>
+                        <DocumentNumber value={row.document_number} />
+                      </TableCell>
                       <TableCell>{row.campaign_name ?? "—"}</TableCell>
                       <TableCell>{new Date(row.issue_date).toLocaleDateString()}</TableCell>
                       <TableCell>{row.due_date ? new Date(row.due_date).toLocaleDateString() : "—"}</TableCell>

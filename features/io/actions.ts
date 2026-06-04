@@ -113,18 +113,48 @@ export async function updateVendorIoAction(
   const { supabase, user, error } = await requireAuthUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
 
+  const { data: existing, error: loadError } = await supabase
+    .from("vendor_ios")
+    .select("id, is_superseded, revision_number")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (loadError || !existing) {
+    return { ok: false, message: loadError?.message ?? "Vendor IO not found." };
+  }
+
+  if ((existing as { is_superseded?: boolean }).is_superseded) {
+    return {
+      ok: false,
+      message: "This Vendor IO revision is superseded. Edit the active revision only.",
+    };
+  }
+
+  const amountRaw = formData.get("amount");
+  const amount =
+    amountRaw != null && String(amountRaw).trim() !== ""
+      ? Number(amountRaw)
+      : undefined;
+
+  const patch: Record<string, unknown> = {
+    terms_text: termsText || null,
+    terms_html: termsHtml || null,
+    usage_rights: usageRights || null,
+    exclusivity: exclusivity || null,
+    attachment_url: attachmentUrl || null,
+    status,
+    updated_by: user.id,
+  };
+
+  if (amount !== undefined && Number.isFinite(amount) && amount >= 0) {
+    patch.amount = amount;
+  }
+
   const { error: updateError } = await supabase
     .from("vendor_ios")
-    .update({
-      terms_text: termsText || null,
-      terms_html: termsHtml || null,
-      usage_rights: usageRights || null,
-      exclusivity: exclusivity || null,
-      attachment_url: attachmentUrl || null,
-      status,
-      updated_by: user.id,
-    } as never)
-    .eq("id", id);
+    .update(patch as never)
+    .eq("id", id)
+    .eq("is_superseded", false);
 
   if (updateError) {
     return { ok: false, message: updateError.message };

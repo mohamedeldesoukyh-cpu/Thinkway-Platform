@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type ChartCardProps = {
@@ -19,16 +18,21 @@ export function ChartCard({
   minHeight = 200,
 }: ChartCardProps) {
   return (
-    <Card className={cn("shadow-sm", className)}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+    <div
+      className={cn(
+        "overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm",
+        className
+      )}
+    >
+      <div className="border-b border-border/40 px-4 py-2.5 md:px-5">
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
         {description ? (
-          <CardDescription className="text-xs">{description}</CardDescription>
+          <p className="text-[11px] leading-snug text-muted-foreground">{description}</p>
         ) : null}
-      </CardHeader>
-      <CardContent style={{ minHeight }} className="pt-0">
+      </div>
+      <div className="px-4 pt-2 pb-4 md:px-5" style={{ minHeight }}>
         {children}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

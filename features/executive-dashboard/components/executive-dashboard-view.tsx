@@ -22,21 +22,30 @@ export function ExecutiveDashboardView({
   filterOptions,
 }: ExecutiveDashboardViewProps) {
   return (
-    <div className="space-y-6">
-      <Suspense fallback={<div className="h-14 animate-pulse rounded-2xl bg-muted" />}>
+    <div className="space-y-4">
+      <Suspense
+        fallback={
+          <div className="h-20 animate-pulse rounded-xl border border-border/70 bg-muted/40" />
+        }
+      >
         <DashboardFilterBar options={filterOptions} />
       </Suspense>
 
       <ExecutiveKpiStrip strip={data.executive_kpis} />
 
       <section className="space-y-3">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">
-          Performance trends
-        </h2>
+        <div className="min-w-0 space-y-0.5">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            Performance trends
+          </h2>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            Revenue, GP, billing, collections, and PO consumption by period.
+          </p>
+        </div>
         <ExecutiveChartsGrid charts={data.charts} />
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <ProfitabilitySection tables={data.profitability_tables} />
         </div>

@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { DocumentNumber } from "@/components/ui/document-number";
 import { format } from "date-fns";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,8 +49,8 @@ export function ClientCampaignsTab({ client }: { client: ClientDetail }) {
                         {campaign.name}
                       </Link>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {campaign.document_number}
+                    <TableCell className="text-xs">
+                      <DocumentNumber value={campaign.document_number} />
                     </TableCell>
                     <TableCell>
                       {(campaign.brand as { name: string } | null)?.name ?? "—"}

@@ -1,3 +1,4 @@
+import { DocumentNumber } from "@/components/ui/document-number";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,7 +35,9 @@ export default async function CreatorPortalDeliverablesPage() {
                     <TableRow key={row.id}>
                       <TableCell>
                         <p className="font-medium">{row.title}</p>
-                        <p className="text-xs text-muted-foreground">{row.document_number}</p>
+                        <p className="text-xs text-muted-foreground">
+                          <DocumentNumber value={row.document_number} />
+                        </p>
                       </TableCell>
                       <TableCell>{row.campaign_name}</TableCell>
                       <TableCell>

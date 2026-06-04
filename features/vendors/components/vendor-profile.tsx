@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { VendorDetail } from "@/types/database";
 
@@ -35,8 +36,8 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
           </h2>
           <VendorStatusBadge status={vendor.status} />
         </div>
-        <p className="font-mono text-sm text-muted-foreground">
-          {vendor.document_number}
+        <p className="text-sm text-muted-foreground">
+          <DocumentNumber value={vendor.document_number} />
         </p>
       </div>
 

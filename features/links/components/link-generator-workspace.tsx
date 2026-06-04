@@ -83,7 +83,7 @@ export function LinkGeneratorWorkspace() {
                 id="campaign"
                 value={campaign}
                 onChange={(event) => setCampaign(event.target.value)}
-                placeholder="TW-2026-0001"
+                placeholder="TW-2026-1"
               />
             </div>
             <div className="grid gap-2">

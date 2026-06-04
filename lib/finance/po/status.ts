@@ -27,6 +27,38 @@ export const PO_STATUS_VARIANT: Record<
   closed: "outline",
 };
 
+/** Campaign PO alert card border/text by operational status. */
+export const PO_ALERT_FRAME: Record<PoStatus, string> = {
+  draft: "border-2 border-border/80 text-foreground",
+  active: "border-2 border-emerald-500/70 text-foreground",
+  near_limit: "border-2 border-amber-500 text-amber-950 dark:text-amber-50",
+  exceeded: "border-2 border-red-500 text-red-950 dark:text-red-50",
+  expired: "border-2 border-orange-500 text-orange-950 dark:text-orange-50",
+  closed: "border-2 border-border/80 text-foreground",
+};
+
+export const PO_ALERT_TITLE: Record<PoStatus, string> = {
+  draft: "PO draft",
+  active: "PO active",
+  near_limit: "PO near limit",
+  exceeded: "PO exceeded",
+  expired: "PO expired",
+  closed: "PO closed",
+};
+
+export function resolvePoAlertStatus(input: {
+  po_status: PoStatus;
+  po_exceeded: boolean;
+}): PoStatus | null {
+  if (input.po_exceeded || input.po_status === "exceeded") {
+    return "exceeded";
+  }
+  if (input.po_status === "near_limit" || input.po_status === "expired") {
+    return input.po_status;
+  }
+  return null;
+}
+
 export function getPoHealthColor(
   health: "healthy" | "near_limit" | "exceeded" | "inactive"
 ): string {

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
@@ -187,13 +188,13 @@ export function VendorMovementWorkspace({
                       <TableCell>
                         <div>
                           <span className="font-medium">{a.campaign_name}</span>
-                          <p className="font-mono text-xs text-muted-foreground">
-                            {a.campaign_document_number}
+                          <p className="text-xs text-muted-foreground">
+                            <DocumentNumber value={a.campaign_document_number} />
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {a.line_document_number ?? "—"}
+                      <TableCell className="text-xs">
+                        <DocumentNumber value={a.line_document_number} />
                       </TableCell>
                       <TableCell className="capitalize">
                         {a.billing_status?.replace(/_/g, " ") ?? "—"}

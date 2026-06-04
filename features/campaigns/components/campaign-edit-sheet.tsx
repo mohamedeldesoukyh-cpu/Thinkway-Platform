@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { FieldError } from "@/components/forms/field-error";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -90,7 +91,7 @@ export function CampaignEditSheet({
         <SheetHeader>
           <SheetTitle>Edit campaign</SheetTitle>
           <SheetDescription>
-            Update operational details for {workspace.document_number}.
+            Update operational details for {formatDocumentNumberForDisplay(workspace.document_number)}.
           </SheetDescription>
         </SheetHeader>
         <form action={formAction} className="flex flex-1 flex-col gap-4 px-6 pb-6">

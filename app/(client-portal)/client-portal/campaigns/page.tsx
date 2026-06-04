@@ -1,3 +1,4 @@
+import { DocumentNumber } from "@/components/ui/document-number";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,7 +35,9 @@ export default async function ClientPortalCampaignsPage() {
                     <TableRow key={row.campaign_header_id}>
                       <TableCell>
                         <p className="font-medium">{row.campaign_name}</p>
-                        <p className="text-xs text-muted-foreground">{row.campaign_document_number}</p>
+                        <p className="text-xs text-muted-foreground">
+                          <DocumentNumber value={row.campaign_document_number} />
+                        </p>
                       </TableCell>
                       <TableCell>
                         <PortalStatusBadge value={row.status} />

@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { CheckIcon, PencilIcon, XIcon } from "lucide-react";
+import {
+  CheckIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,64 +23,125 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  addPostToDeliverableAction,
+  deleteAssignmentDeliverableAction,
+  updateAssignmentDeliverableAction,
   updatePostScheduleAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
-import { DeliverableBillingBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-billing-badge";
 import { DeliverableTypeTag } from "@/features/campaigns/components/assignment-hierarchy/deliverable-type-tag";
 import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
-import { PlatformSelect, DeliverableTypeSelect } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
+import { HierarchyBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
+import {
+  OperationalAmountField,
+  OperationalQtyField,
+} from "@/features/campaigns/components/assignment-hierarchy/operational-amount-field";
+import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import {
+  OPERATIONAL_AMOUNT_CLASS,
+  OPERATIONAL_TABLE_HEADER_CELL,
+  OPERATIONAL_TABLE_HEADER_ROW,
+  OPERATIONAL_TABLE_SURFACE,
+} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import {
+  PlatformSelect,
+  DeliverableTypeSelect,
+} from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
 import { SCHEDULE_STATUS_OPTIONS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import {
   GRID_CELL,
   OPERATIONAL_GRID_LABELS,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-grid-columns";
-import type { AssignmentPostOperationalRow } from "@/features/campaigns/types/assignment-hierarchy";
-import { formatMoney } from "@/features/campaigns/utils";
+import { useOperationalCommercialDraft } from "@/features/campaigns/components/assignment-hierarchy/use-operational-commercial-draft";
+import type {
+  AssignmentDeliverableHierarchyRow,
+  AssignmentPostOperationalRow,
+} from "@/features/campaigns/types/assignment-hierarchy";
+import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
 import { computeVatLine } from "@/lib/vat/calculations";
 import { cn } from "@/lib/utils";
 
 type EditablePostRowProps = {
   campaignId: string;
+  campaignLineId: string;
+  deliverable: AssignmentDeliverableHierarchyRow;
   post: AssignmentPostOperationalRow;
   currency: string;
+  parentOperationalStatus: CampaignLineOperationalStatus;
   readOnly: boolean;
   revenueVatExempt: boolean;
   defaultRevenueVatPercent: number;
   platformOptions: { value: string; label: string }[];
+  deliverableScoped: boolean;
+  showSelection: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
+  isFirstPost: boolean;
 };
 
-type Draft = {
+type MetaDraft = {
   platform: string;
   deliverable_type: string;
   live_date: string;
-  revenue_per_post: number;
-  cost_per_post: number;
   revenue_vat_percent: number;
   workflow_status: string;
   billing_status: string;
   notes: string;
 };
 
+function commercialInitial(
+  deliverable: AssignmentDeliverableHierarchyRow,
+  post: AssignmentPostOperationalRow,
+  deliverableScoped: boolean
+) {
+  if (deliverableScoped) {
+    return {
+      qty: deliverable.quantity,
+      revPerAd: deliverable.unit_revenue,
+      rev: deliverable.revenue_before_vat,
+      costPerAd: deliverable.unit_cost,
+      cost: deliverable.cost_before_vat,
+    };
+  }
+  return {
+    qty: 1,
+    revPerAd: post.revenue_per_post,
+    rev: post.revenue_per_post,
+    costPerAd: post.cost_per_post,
+    cost: post.cost_per_post,
+  };
+}
+
 export function EditablePostRow({
   campaignId,
+  campaignLineId,
+  deliverable,
   post,
-  currency,
+  currency: _currency,
+  parentOperationalStatus,
   readOnly,
   revenueVatExempt,
   defaultRevenueVatPercent,
   platformOptions,
+  deliverableScoped,
+  showSelection,
+  selected,
+  onToggleSelect,
+  isFirstPost,
 }: EditablePostRowProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Draft>(() => ({
+
+  const commercial = useOperationalCommercialDraft(
+    commercialInitial(deliverable, post, deliverableScoped)
+  );
+
+  const [meta, setMeta] = useState<MetaDraft>(() => ({
     platform: post.platform,
     deliverable_type: post.deliverable_type,
     live_date: post.live_date ?? "",
-    revenue_per_post: post.revenue_per_post,
-    cost_per_post: post.cost_per_post,
     revenue_vat_percent: post.revenue_vat_percent || defaultRevenueVatPercent,
     workflow_status: post.workflow_status,
     billing_status: post.billing_status,
@@ -81,29 +149,41 @@ export function EditablePostRow({
   }));
 
   useEffect(() => {
-    if (!editing) {
-      setDraft({
-        platform: post.platform,
-        deliverable_type: post.deliverable_type,
-        live_date: post.live_date ?? "",
-        revenue_per_post: post.revenue_per_post,
-        cost_per_post: post.cost_per_post,
-        revenue_vat_percent: post.revenue_vat_percent || defaultRevenueVatPercent,
-        workflow_status: post.workflow_status,
-        billing_status: post.billing_status,
-        notes: post.notes ?? "",
-      });
-    }
-  }, [post, editing, defaultRevenueVatPercent]);
+    if (editing) return;
+    commercial.reset(commercialInitial(deliverable, post, deliverableScoped));
+    setMeta({
+      platform: post.platform,
+      deliverable_type: post.deliverable_type,
+      live_date: post.live_date ?? "",
+      revenue_vat_percent: post.revenue_vat_percent || defaultRevenueVatPercent,
+      workflow_status: post.workflow_status,
+      billing_status: post.billing_status,
+      notes: post.notes ?? "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when server row changes
+  }, [
+    editing,
+    post.id,
+    post.revenue_per_post,
+    post.cost_per_post,
+    deliverable.id,
+    deliverable.quantity,
+    deliverable.unit_revenue,
+    deliverable.revenue_before_vat,
+    deliverable.unit_cost,
+    deliverable.cost_before_vat,
+    deliverableScoped,
+    defaultRevenueVatPercent,
+  ]);
 
   const computedVat = useMemo(() => {
     const revenue = computeVatLine({
-      beforeVat: draft.revenue_per_post,
-      vatPercent: revenueVatExempt ? 0 : draft.revenue_vat_percent,
+      beforeVat: commercial.draft.rev,
+      vatPercent: revenueVatExempt ? 0 : meta.revenue_vat_percent,
       exempt: revenueVatExempt,
     });
     return revenue.vatAmount;
-  }, [draft, revenueVatExempt]);
+  }, [commercial.draft.rev, meta.revenue_vat_percent, revenueVatExempt]);
 
   const collectionLabel =
     post.collection_status === "collected"
@@ -115,39 +195,63 @@ export function EditablePostRow({
           : "—";
 
   const canEdit = !readOnly && !post.id.startsWith("virtual-");
+  const canEditCommercial = canEdit && !deliverable.is_locked;
 
-  function buildSchedulePayload(overrides: Partial<Draft> = {}) {
-    const merged = {
-      platform: overrides.platform ?? (editing ? draft.platform : post.platform),
-      deliverable_type:
-        overrides.deliverable_type ??
-        (editing ? draft.deliverable_type : post.deliverable_type),
-      live_date: overrides.live_date ?? (editing ? draft.live_date : post.live_date ?? ""),
-      workflow_status:
-        overrides.workflow_status ??
-        (editing ? draft.workflow_status : post.workflow_status),
-      revenue_per_post:
-        overrides.revenue_per_post ??
-        (editing ? draft.revenue_per_post : post.revenue_per_post),
-      cost_per_post:
-        overrides.cost_per_post ?? (editing ? draft.cost_per_post : post.cost_per_post),
-      revenue_vat_percent:
-        overrides.revenue_vat_percent ??
-        (editing
-          ? draft.revenue_vat_percent
-          : post.revenue_vat_percent || defaultRevenueVatPercent),
-      billing_status:
-        overrides.billing_status ?? (editing ? draft.billing_status : post.billing_status),
-      notes: overrides.notes ?? (editing ? draft.notes : post.notes ?? ""),
-    };
+  function persistCommercial() {
+    if (!canEditCommercial) return;
+    startTransition(async () => {
+      if (deliverableScoped) {
+        const result = await updateAssignmentDeliverableAction({
+          campaign_id: campaignId,
+          campaign_line_id: campaignLineId,
+          deliverable_id: deliverable.id,
+          platform: meta.platform,
+          deliverable_type: meta.deliverable_type,
+          quantity: commercial.draft.qty,
+          unit_revenue: commercial.draft.revPerAd,
+          unit_cost: commercial.draft.costPerAd,
+          revenue_vat_percent: meta.revenue_vat_percent,
+          live_date: meta.live_date || null,
+          notes: meta.notes || null,
+          billing_status: meta.billing_status as typeof post.billing_status,
+        });
+        if (!result.ok) {
+          setError(result.message ?? "Failed to save.");
+          return;
+        }
+      } else {
+        const result = await updatePostScheduleAction({
+          campaign_id: campaignId,
+          schedule_id: post.id,
+          live_date: meta.live_date || null,
+          status: meta.workflow_status,
+          revenue_per_post: commercial.draft.revPerAd,
+          cost_per_post: commercial.draft.costPerAd,
+          revenue_vat_percent: meta.revenue_vat_percent,
+          notes: meta.notes || null,
+          billing_status: meta.billing_status as typeof post.billing_status,
+          platform: meta.platform,
+          deliverable_type: meta.deliverable_type,
+        });
+        if (!result.ok) {
+          setError(result.message ?? "Failed to save.");
+          return;
+        }
+      }
+      setError(null);
+      router.refresh();
+    });
+  }
 
+  function buildSchedulePayload(overrides: Partial<MetaDraft> = {}) {
+    const merged = { ...meta, ...overrides };
     return {
       campaign_id: campaignId,
       schedule_id: post.id,
       live_date: merged.live_date || null,
       status: merged.workflow_status,
-      revenue_per_post: merged.revenue_per_post,
-      cost_per_post: merged.cost_per_post,
+      revenue_per_post: commercial.draft.revPerAd,
+      cost_per_post: commercial.draft.costPerAd,
       revenue_vat_percent: merged.revenue_vat_percent,
       notes: merged.notes || null,
       billing_status: merged.billing_status as typeof post.billing_status,
@@ -156,7 +260,7 @@ export function EditablePostRow({
     };
   }
 
-  function persistPostPatch(patch: Partial<Draft>, options?: { closeEdit?: boolean }) {
+  function persistMetaPatch(patch: Partial<MetaDraft>, options?: { closeEdit?: boolean }) {
     if (!canEdit) return;
     startTransition(async () => {
       const result = await updatePostScheduleAction(buildSchedulePayload(patch));
@@ -170,41 +274,77 @@ export function EditablePostRow({
     });
   }
 
-  function save() {
+  function saveMeta() {
     if (!canEdit) return;
-    persistPostPatch({}, { closeEdit: true });
+    if (deliverableScoped) {
+      persistCommercial();
+      setEditing(false);
+      return;
+    }
+    persistMetaPatch({}, { closeEdit: true });
+  }
+
+  function addPost() {
+    if (readOnly || deliverable.is_synthetic) return;
+    startTransition(async () => {
+      const result = await addPostToDeliverableAction({
+        campaign_id: campaignId,
+        deliverable_id: deliverable.id,
+      });
+      if (result.ok) router.refresh();
+    });
+  }
+
+  function deleteDeliverable() {
+    if (readOnly || deliverable.is_synthetic) return;
+    if (!window.confirm("Remove this deliverable and all posts?")) return;
+    startTransition(async () => {
+      const result = await deleteAssignmentDeliverableAction({
+        campaign_id: campaignId,
+        deliverable_id: deliverable.id,
+      });
+      if (result.ok) router.refresh();
+    });
   }
 
   return (
     <>
       <tr
         className={cn(
-          "border-b border-border/30 border-l-2 border-l-primary/20 bg-muted/50 text-[11px] last:border-0",
-          editing && "bg-background ring-1 ring-inset ring-primary/20"
+          "border-b border-border/15 text-[11px] font-normal text-foreground/80",
+          OPERATIONAL_TABLE_SURFACE,
+          "hover:bg-muted/15",
+          editing && OPERATIONAL_TABLE_SURFACE
         )}
       >
-        <td className={cn(GRID_CELL.select, "pl-6")}>
-          <span className="text-muted-foreground">└</span>
+        <td className={cn(GRID_CELL.select, "pl-4")}>
+          {showSelection && deliverable.invoice_eligible && !deliverable.is_synthetic ? (
+            <input
+              type="checkbox"
+              className="size-3 rounded border-border"
+              checked={selected}
+              onChange={onToggleSelect}
+            />
+          ) : (
+            <span className="text-muted-foreground/50">·</span>
+          )}
         </td>
-        <td className={cn(GRID_CELL.type, "font-medium")}>{post.label}</td>
+        <td className={cn(GRID_CELL.type, "font-normal text-muted-foreground")}>
+          {isFirstPost ? deliverable.label : post.label}
+        </td>
         <td className={GRID_CELL.platform}>
-          {canEdit ? (
+          {canEdit && editing ? (
             <PlatformSelect
-              platform={editing ? draft.platform : post.platform}
+              platform={meta.platform}
               platformOptions={platformOptions}
-              disabled={pending && !editing}
+              disabled={pending}
               onPlatformChange={(platform) => {
                 const types = getDeliverableTypeCodesForPlatform(platform);
-                const deliverableType = types[0] ?? "other";
-                if (editing) {
-                  setDraft((d) => ({
-                    ...d,
-                    platform,
-                    deliverable_type: deliverableType,
-                  }));
-                } else {
-                  persistPostPatch({ platform, deliverable_type: deliverableType });
-                }
+                setMeta((m) => ({
+                  ...m,
+                  platform,
+                  deliverable_type: types[0] ?? "other",
+                }));
               }}
             />
           ) : (
@@ -212,76 +352,70 @@ export function EditablePostRow({
           )}
         </td>
         <td className={GRID_CELL.deliverableType}>
-          {canEdit ? (
+          {canEdit && editing ? (
             <DeliverableTypeSelect
-              platform={editing ? draft.platform : post.platform}
-              deliverableType={editing ? draft.deliverable_type : post.deliverable_type}
-              disabled={pending && !editing}
-              onDeliverableTypeChange={(deliverableType) => {
-                if (editing) {
-                  setDraft((d) => ({ ...d, deliverable_type: deliverableType }));
-                } else {
-                  persistPostPatch({ deliverable_type: deliverableType });
-                }
-              }}
+              platform={meta.platform}
+              deliverableType={meta.deliverable_type}
+              disabled={pending}
+              onDeliverableTypeChange={(deliverableType) =>
+                setMeta((m) => ({ ...m, deliverable_type: deliverableType }))
+              }
             />
           ) : (
             <span className="text-muted-foreground">{post.deliverable_type_label}</span>
           )}
         </td>
         <td className={GRID_CELL.postDate}>
-          {editing ? (
+          {canEdit && editing ? (
             <Input
               type="date"
-              value={draft.live_date}
-              onChange={(e) => setDraft((d) => ({ ...d, live_date: e.target.value }))}
-              className="h-6 w-full text-[11px]"
+              value={meta.live_date}
+              onChange={(e) => setMeta((m) => ({ ...m, live_date: e.target.value }))}
+              className="h-6 w-full text-[10px]"
             />
           ) : (
-            post.live_date ?? "—"
+            <span className="text-muted-foreground">{post.live_date ?? "—"}</span>
           )}
         </td>
-        <td className={GRID_CELL.qty}>1</td>
-        <td className={GRID_CELL.money}>
-          {editing ? (
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={draft.revenue_per_post}
-              onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
-                  revenue_per_post: Number(e.target.value) || 0,
-                }))
-              }
-              className="h-6 w-full text-right text-[11px]"
-            />
-          ) : (
-            formatMoney(post.revenue_per_post, currency)
-          )}
+        <td className={GRID_CELL.qty}>
+          <OperationalQtyField
+            value={commercial.draft.qty}
+            onChange={(q) => commercial.setQty(q)}
+            onBlur={persistCommercial}
+            disabled={!canEditCommercial || !deliverableScoped}
+          />
         </td>
         <td className={GRID_CELL.money}>
-          {editing ? (
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={draft.cost_per_post}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, cost_per_post: Number(e.target.value) || 0 }))
-              }
-              className="h-6 w-full text-right text-[11px]"
-            />
-          ) : (
-            formatMoney(post.cost_per_post, currency)
-          )}
-        </td>
-        <td className={cn(GRID_CELL.money, "font-medium")}>
-          {formatMoney(editing ? draft.revenue_per_post : post.revenue_per_post, currency)}
+          <OperationalAmountField
+            value={commercial.draft.revPerAd}
+            onChange={(n) => commercial.setRevPerAd(n)}
+            onBlur={persistCommercial}
+            disabled={!canEditCommercial}
+          />
         </td>
         <td className={GRID_CELL.money}>
-          {formatMoney(editing ? draft.cost_per_post : post.cost_per_post, currency)}
+          <OperationalAmountField
+            value={commercial.draft.costPerAd}
+            onChange={(n) => commercial.setCostPerAd(n)}
+            onBlur={persistCommercial}
+            disabled={!canEditCommercial}
+          />
+        </td>
+        <td className={GRID_CELL.money}>
+          <OperationalAmountField
+            value={commercial.draft.rev}
+            onChange={(n) => commercial.setRev(n)}
+            onBlur={persistCommercial}
+            disabled={!canEditCommercial}
+          />
+        </td>
+        <td className={GRID_CELL.money}>
+          <OperationalAmountField
+            value={commercial.draft.cost}
+            onChange={(n) => commercial.setCost(n)}
+            onBlur={persistCommercial}
+            disabled={!canEditCommercial}
+          />
         </td>
         <td className={GRID_CELL.vat}>
           {editing && !revenueVatExempt ? (
@@ -290,43 +424,41 @@ export function EditablePostRow({
               min={0}
               max={100}
               step="0.1"
-              value={draft.revenue_vat_percent}
+              value={meta.revenue_vat_percent}
               onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
+                setMeta((m) => ({
+                  ...m,
                   revenue_vat_percent: Number(e.target.value) || 0,
                 }))
               }
-              className="h-6 w-full text-right text-[11px]"
+              className={cn(
+                "h-auto min-h-0 w-full border-0 bg-transparent py-0 text-right text-[11px] font-normal shadow-none focus-visible:ring-1"
+              )}
             />
           ) : revenueVatExempt ? (
-            "Ex"
+            <span className={OPERATIONAL_AMOUNT_CLASS}>Ex</span>
           ) : (
-            formatMoney(editing ? computedVat : post.revenue_vat_amount, currency)
+            <span className={OPERATIONAL_AMOUNT_CLASS}>
+              {formatOperationalAmount(computedVat)}
+            </span>
           )}
         </td>
         <td className={GRID_CELL.status}>
-          {editing ? (
-            <Select
-              value={draft.billing_status}
-              onValueChange={(v) => setDraft((d) => ({ ...d, billing_status: v }))}
-            >
-              <SelectTrigger className="h-6 text-[10px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="ready_to_invoice">Ready</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <DeliverableBillingBadge status={post.billing_status} />
-          )}
+          <HierarchyBillingStatusBadge
+            operationalStatus={parentOperationalStatus}
+            billingStatus={post.billing_status}
+          />
         </td>
         <td className={GRID_CELL.invoice}>
           {post.invoice_document_number ? (
-            <Link href={`/billing/invoices/${post.invoice_id}`} className="font-mono text-[10px] hover:underline">
-              {post.invoice_document_number}
+            <Link
+              href={`/billing/invoices/${post.invoice_id}`}
+              className="text-[9px] hover:underline"
+            >
+              <DocumentNumber
+                value={post.invoice_document_number}
+                showCanonicalTitle={false}
+              />
             </Link>
           ) : (
             "—"
@@ -343,8 +475,11 @@ export function EditablePostRow({
           )}
         </td>
         <td className={GRID_CELL.workflow}>
-          {editing ? (
-            <Select value={draft.workflow_status} onValueChange={(v) => setDraft((d) => ({ ...d, workflow_status: v }))}>
+          {canEdit && editing ? (
+            <Select
+              value={meta.workflow_status}
+              onValueChange={(v) => setMeta((m) => ({ ...m, workflow_status: v }))}
+            >
               <SelectTrigger className="h-6 text-[10px]">
                 <SelectValue />
               </SelectTrigger>
@@ -361,36 +496,83 @@ export function EditablePostRow({
           )}
         </td>
         <td className={GRID_CELL.notes}>
-          {editing ? (
+          {canEdit && editing ? (
             <Input
-              value={draft.notes}
-              onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+              value={meta.notes}
+              onChange={(e) => setMeta((m) => ({ ...m, notes: e.target.value }))}
               className="h-6 text-[10px]"
               onKeyDown={(e) => {
-                if (e.key === "Enter") save();
+                if (e.key === "Enter") saveMeta();
                 if (e.key === "Escape") setEditing(false);
               }}
             />
           ) : (
-            <span className="line-clamp-1 text-[10px] text-muted-foreground">{post.notes ?? "—"}</span>
+            <span className="line-clamp-1 text-muted-foreground">{post.notes ?? "—"}</span>
           )}
         </td>
         <td className={GRID_CELL.actions}>
           {!canEdit ? (
-            <span className="text-[9px] text-muted-foreground">—</span>
+            <span className="text-muted-foreground">—</span>
           ) : editing ? (
             <div className="flex justify-end gap-0.5">
-              <Button type="button" variant="ghost" size="icon" className="size-6" onClick={save} disabled={pending}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                onClick={saveMeta}
+                disabled={pending}
+              >
                 <CheckIcon className="size-3" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="size-6" onClick={() => setEditing(false)}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                onClick={() => setEditing(false)}
+              >
                 <XIcon className="size-3" />
               </Button>
             </div>
           ) : (
-            <Button type="button" variant="ghost" size="icon" className="size-6" onClick={() => setEditing(true)}>
-              <PencilIcon className="size-3" />
-            </Button>
+            <div className="flex justify-end gap-0.5">
+              {isFirstPost && !deliverable.is_synthetic ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    onClick={addPost}
+                    disabled={pending}
+                    title="Add post"
+                  >
+                    <PlusIcon className="size-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-destructive"
+                    onClick={deleteDeliverable}
+                    disabled={pending}
+                    title="Remove deliverable"
+                  >
+                    <Trash2Icon className="size-3" />
+                  </Button>
+                </>
+              ) : null}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                onClick={() => setEditing(true)}
+              >
+                <PencilIcon className="size-3" />
+              </Button>
+            </div>
           )}
         </td>
       </tr>
@@ -405,27 +587,65 @@ export function EditablePostRow({
   );
 }
 
-export function OperationalGridHeader() {
+type OperationalGridHeaderProps = {
+  actions?: ReactNode;
+};
+
+export function OperationalGridHeader({ actions }: OperationalGridHeaderProps) {
   return (
-    <tr className="border-b border-border/50 text-left text-[9px] uppercase tracking-wide text-muted-foreground">
-      <th className={GRID_CELL.select} />
-      <th className={GRID_CELL.type}>{OPERATIONAL_GRID_LABELS.type}</th>
-      <th className={GRID_CELL.platform}>{OPERATIONAL_GRID_LABELS.platform}</th>
-      <th className={GRID_CELL.deliverableType}>{OPERATIONAL_GRID_LABELS.deliverableType}</th>
-      <th className={GRID_CELL.postDate}>{OPERATIONAL_GRID_LABELS.postDate}</th>
-      <th className={cn(GRID_CELL.qty, "text-right")}>{OPERATIONAL_GRID_LABELS.qty}</th>
-      <th className={GRID_CELL.money}>{OPERATIONAL_GRID_LABELS.revPerAd}</th>
-      <th className={GRID_CELL.money}>{OPERATIONAL_GRID_LABELS.costPerAd}</th>
-      <th className={GRID_CELL.money}>{OPERATIONAL_GRID_LABELS.rev}</th>
-      <th className={GRID_CELL.money}>{OPERATIONAL_GRID_LABELS.cost}</th>
-      <th className={GRID_CELL.vat}>{OPERATIONAL_GRID_LABELS.vat}</th>
-      <th className={GRID_CELL.status}>{OPERATIONAL_GRID_LABELS.billing}</th>
-      <th className={GRID_CELL.invoice}>{OPERATIONAL_GRID_LABELS.invoice}</th>
-      <th className={GRID_CELL.collection}>{OPERATIONAL_GRID_LABELS.collection}</th>
-      <th className={GRID_CELL.payout}>{OPERATIONAL_GRID_LABELS.payout}</th>
-      <th className={GRID_CELL.workflow}>{OPERATIONAL_GRID_LABELS.workflow}</th>
-      <th className={GRID_CELL.notes}>{OPERATIONAL_GRID_LABELS.notes}</th>
-      <th className={GRID_CELL.actions} />
+    <tr className={OPERATIONAL_TABLE_HEADER_ROW}>
+      <th className={cn(GRID_CELL.select, OPERATIONAL_TABLE_HEADER_CELL)} />
+      <th className={cn(GRID_CELL.type, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.type}
+      </th>
+      <th className={cn(GRID_CELL.platform, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.platform}
+      </th>
+      <th className={cn(GRID_CELL.deliverableType, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.deliverableType}
+      </th>
+      <th className={cn(GRID_CELL.postDate, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.postDate}
+      </th>
+      <th className={cn(GRID_CELL.qty, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+        {OPERATIONAL_GRID_LABELS.qty}
+      </th>
+      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+        {OPERATIONAL_GRID_LABELS.revPerAd}
+      </th>
+      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+        {OPERATIONAL_GRID_LABELS.costPerAd}
+      </th>
+      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+        {OPERATIONAL_GRID_LABELS.rev}
+      </th>
+      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+        {OPERATIONAL_GRID_LABELS.cost}
+      </th>
+      <th className={cn(GRID_CELL.vat, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+        {OPERATIONAL_GRID_LABELS.vat}
+      </th>
+      <th className={cn(GRID_CELL.status, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.billing}
+      </th>
+      <th className={cn(GRID_CELL.invoice, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.invoice}
+      </th>
+      <th className={cn(GRID_CELL.collection, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.collection}
+      </th>
+      <th className={cn(GRID_CELL.payout, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.payout}
+      </th>
+      <th className={cn(GRID_CELL.workflow, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.workflow}
+      </th>
+      <th className={cn(GRID_CELL.notes, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.notes}
+      </th>
+      <th className={cn(GRID_CELL.actions, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+        {actions}
+      </th>
     </tr>
   );
 }

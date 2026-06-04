@@ -27,11 +27,17 @@ import {
   resolveOperationalInvoiceTargets,
   validateAppendableInvoice,
 } from "@/lib/billing/resolve-operational-invoice";
+import { invoiceUngenerateIneligibleReason } from "@/lib/billing/invoice-ungenerate-eligibility";
+import {
+  blockInvoiceWithoutVendorIoMessage,
+  isLineInvoiceEligible,
+} from "@/lib/billing/line-invoice-eligibility";
 import {
   approveOperationalRows,
   markOperationalRowsReadyToInvoice,
   resolveBulkBillingTargets,
 } from "@/lib/billing/sync-operational-row-billing";
+import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
 
 import {
   approveLineForBillingSchema,
@@ -561,6 +567,50 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: resolveError };
   }
 
+  if (lineIds.length > 0 || deliverableIds.length > 0) {
+    const idsFromDeliverables =
+      deliverableIds.length > 0
+        ? (
+            await supabase
+              .from("assignment_deliverables")
+              .select("campaign_line_id")
+              .in("id", deliverableIds)
+          ).data?.map((r) => (r as { campaign_line_id: string }).campaign_line_id) ?? []
+        : [];
+
+    const uniqueLineIds = [...new Set([...lineIds, ...idsFromDeliverables])];
+    if (uniqueLineIds.length > 0) {
+      const { data: opLines, error: opError } = await supabase
+        .from("campaign_lines")
+        .select("id, document_number, operational_status, vendor_io_id")
+        .in("id", uniqueLineIds);
+
+      if (opError) {
+        return { ok: false, message: opError.message };
+      }
+
+      for (const row of opLines ?? []) {
+        const line = row as unknown as {
+          id: string;
+          document_number: string;
+          operational_status: string;
+          vendor_io_id: string | null;
+        };
+        if (
+          !isLineInvoiceEligible({
+            operational_status: line.operational_status,
+            vendor_io_id: line.vendor_io_id,
+          })
+        ) {
+          return {
+            ok: false,
+            message: `${blockInvoiceWithoutVendorIoMessage()} (line ${line.document_number}).`,
+          };
+        }
+      }
+    }
+  }
+
   if (process.env.NODE_ENV === "development") {
     console.debug("[billing-invoice] invoice grouping batch", {
       campaignId: parsed.data.campaign_id,
@@ -976,7 +1026,7 @@ export async function ungenerateInvoiceAction(
   const { data: invoice, error: invError } = await supabase
     .from("invoices")
     .select(
-      "id, document_number, campaign_header_id, client_id, total, subtotal, tax_amount, version_number, regeneration_status"
+      "id, document_number, campaign_header_id, client_id, total, subtotal, tax_amount, version_number, regeneration_status, status, is_operational_locked"
     )
     .eq("id", parsed.data.invoice_id)
     .maybeSingle();
@@ -985,8 +1035,13 @@ export async function ungenerateInvoiceAction(
     return { ok: false, message: invError?.message ?? "Invoice not found." };
   }
 
-  if (invoice.regeneration_status === "pending_regeneration") {
-    return { ok: false, message: "Invoice is already pending regeneration." };
+  const ineligible = invoiceUngenerateIneligibleReason({
+    status: invoice.status as string,
+    regeneration_status: invoice.regeneration_status,
+    is_operational_locked: invoice.is_operational_locked,
+  });
+  if (ineligible) {
+    return { ok: false, message: ineligible };
   }
 
   const { data: lineItems } = await supabase
@@ -1052,6 +1107,8 @@ export async function ungenerateInvoiceAction(
         })
         .eq("id", lineId);
     }
+
+    await syncLineOperationalStatusBatch(supabase, affectedLineIds);
   }
 
   const { error: updateError } = await supabase
@@ -1214,6 +1271,8 @@ export async function regenerateInvoiceAction(
         billing_invoiced_at: now,
       })
       .in("id", lineIds);
+
+    await syncLineOperationalStatusBatch(supabase, lineIds);
   }
 
   await governanceDb(supabase).from("invoice_versions").insert({

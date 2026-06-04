@@ -4,13 +4,31 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+type TableProps = React.ComponentProps<"table"> & {
+  /** flush = borderless wide operational grid (e.g. campaign assignments) */
+  variant?: "default" | "flush"
+}
+
+function Table({ className, variant = "default", ...props }: TableProps) {
+  const flush = variant === "flush"
+
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-hidden rounded-2xl border border-border bg-card"
+      data-variant={variant}
+      className={cn(
+        "relative w-full",
+        flush
+          ? "overflow-x-auto bg-card"
+          : "overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm"
+      )}
     >
-      <div className="max-h-[70vh] w-full overflow-auto">
+      <div
+        className={cn(
+          "w-full",
+          flush ? "overflow-x-auto" : "max-h-[70vh] overflow-auto"
+        )}
+      >
         <table
           data-slot="table"
           className={cn(
@@ -68,7 +86,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b border-border transition-colors hover:bg-brand-blue/5 has-aria-expanded:bg-brand-blue/5 data-[state=selected]:bg-brand-blue/10",
+        "border-b border-border/70 transition-colors hover:bg-accent/80 has-aria-expanded:bg-accent/80 data-[state=selected]:bg-accent",
         className
       )}
       {...props}
@@ -114,6 +132,8 @@ function TableCaption({
     />
   )
 }
+
+export type { TableProps }
 
 export {
   Table,

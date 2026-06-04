@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { DocumentNumber } from "@/components/ui/document-number";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -70,9 +72,9 @@ export function InvoicesArTable({
                 <TableCell>
                   <Link
                     href={`/billing/invoices/${inv.id}`}
-                    className="font-mono text-xs text-primary hover:underline"
+                    className="text-xs text-primary hover:underline"
                   >
-                    {inv.document_number}
+                    <DocumentNumber value={inv.document_number} showCanonicalTitle={false} />
                   </Link>
                 </TableCell>
                 <TableCell className="max-w-[140px] truncate">{inv.client_name}</TableCell>

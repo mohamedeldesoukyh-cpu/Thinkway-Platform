@@ -69,16 +69,16 @@ export function DashboardFilterBar({ options }: DashboardFilterBarProps) {
 
   return (
     <div
-      className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8"
+      className="rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-sm md:px-4"
       data-pending={isPending ? "true" : undefined}
     >
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <FilterIcon className="size-4" aria-hidden />
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
+          <FilterIcon className="size-3.5" aria-hidden />
           Filters
         </div>
         <div className="grid min-w-[120px] flex-1 gap-1 sm:max-w-[140px]">
-          <Label htmlFor="filter-from" className="text-xs">
+          <Label htmlFor="filter-from" className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
             From
           </Label>
           <Input
@@ -86,11 +86,11 @@ export function DashboardFilterBar({ options }: DashboardFilterBarProps) {
             type="date"
             value={state.from ?? ""}
             onChange={(e) => update({ from: e.target.value || undefined })}
-            className="h-9"
+            className="h-8 text-[11px]"
           />
         </div>
         <div className="grid min-w-[120px] flex-1 gap-1 sm:max-w-[140px]">
-          <Label htmlFor="filter-to" className="text-xs">
+          <Label htmlFor="filter-to" className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
             To
           </Label>
           <Input
@@ -98,7 +98,7 @@ export function DashboardFilterBar({ options }: DashboardFilterBarProps) {
             type="date"
             value={state.to ?? ""}
             onChange={(e) => update({ to: e.target.value || undefined })}
-            className="h-9"
+            className="h-8 text-[11px]"
           />
         </div>
         <FilterSelect
@@ -149,7 +149,7 @@ export function DashboardFilterBar({ options }: DashboardFilterBarProps) {
           type="button"
           variant="outline"
           size="sm"
-          className="h-9 shrink-0"
+          className="h-8 shrink-0 text-[11px]"
           onClick={reset}
         >
           <RotateCcwIcon className="size-3.5" data-icon="inline-start" />
@@ -173,9 +173,11 @@ function FilterSelect({
 }) {
   return (
     <div className="grid min-w-[140px] flex-1 gap-1 sm:max-w-[180px]">
-      <Label className="text-xs">{label}</Label>
+      <Label className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </Label>
       <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="h-9 w-full">
+        <SelectTrigger className="h-8 w-full text-[11px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

@@ -64,7 +64,7 @@ export function CampaignsPagination({
   const pages = getPageNumbers(page, totalPages);
 
   return (
-    <Pagination className="justify-end">
+    <Pagination className="justify-end text-[11px]">
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious

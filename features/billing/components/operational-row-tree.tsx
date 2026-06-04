@@ -6,16 +6,20 @@ import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { DeliverableBillingStatusBadge } from "@/features/billing/components/deliverable-billing-status-badge";
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { formatBillingMoney } from "@/features/billing/utils";
+import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import {
-  isOperationalRowActionEligible,
-  isOperationalRowInvoiceEligible,
+  isOperationalRowUiSelectable,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import {
   getRowSelectionStatus,
+  getSelectableDescendantRows,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
+import { cn } from "@/lib/utils";
 
 export type OperationalRowTreeProps = {
   row: OperationalBillingRow;
@@ -26,9 +30,32 @@ export type OperationalRowTreeProps = {
   isOpen: boolean;
   onToggleExpand: (id: string) => void;
   onToggleSelect: (row: OperationalBillingRow) => void;
-  /** Child row ids that are expanded — only passed to children that need it. */
   expandedIds: ReadonlySet<string>;
+  /** Match campaign workspace assignment table typography */
+  appearance?: "default" | "campaign";
 };
+
+function isRowMuted(row: OperationalBillingRow): boolean {
+  const operational = (row.operational_status ?? "draft") as CampaignLineOperationalStatus;
+  if (operational === "invoiced") return true;
+  if (["invoiced", "paid", "closed", "partially_paid"].includes(row.line_billing_status)) {
+    return true;
+  }
+  if (row.is_locked) return true;
+  if (["invoiced", "collected"].includes(row.billing_status)) return true;
+  return false;
+}
+
+function resolveAssignmentBillingStatus(
+  row: OperationalBillingRow
+): import("@/features/billing/types").CampaignLineBillingStatus {
+  const operational = (row.operational_status ?? "draft") as CampaignLineOperationalStatus;
+  if (operational === "invoiced") return "invoiced";
+  if (operational === "io_generated" && row.line_billing_status === "approved") {
+    return "moved_to_billing";
+  }
+  return row.line_billing_status;
+}
 
 export const OperationalRowTree = memo(function OperationalRowTree({
   row,
@@ -40,14 +67,18 @@ export const OperationalRowTree = memo(function OperationalRowTree({
   onToggleExpand,
   onToggleSelect,
   expandedIds,
+  appearance = "default",
 }: OperationalRowTreeProps) {
+  const campaign = appearance === "campaign";
   const hasChildren = row.children.length > 0;
   const selectionStatus = useMemo(
     () => getRowSelectionStatus(row, selection),
     [row, selection]
   );
-  const eligible =
-    isOperationalRowActionEligible(row) || isOperationalRowInvoiceEligible(row);
+  const selectable =
+    isOperationalRowUiSelectable(row) ||
+    getSelectableDescendantRows(row).length > 0;
+  const muted = isRowMuted(row);
   const indent = depth * 16;
 
   const handleExpand = useCallback(() => {
@@ -61,7 +92,11 @@ export const OperationalRowTree = memo(function OperationalRowTree({
   return (
     <>
       <div
-        className="flex items-center gap-2 rounded-2xl px-2 py-1.5 hover:bg-muted/40"
+        className={cn(
+          "flex items-center gap-2 px-2 hover:bg-muted/40",
+          campaign ? "rounded-none py-1.5 hover:bg-muted/15" : "rounded-2xl py-1.5",
+          muted && "opacity-50"
+        )}
         style={{ paddingLeft: indent + 8 }}
       >
         {hasChildren ? (
@@ -82,20 +117,31 @@ export const OperationalRowTree = memo(function OperationalRowTree({
         )}
         <OperationalSelectionCheckbox
           status={selectionStatus}
-          disabled={!eligible && selectionStatus === "unchecked"}
+          disabled={!selectable}
           onToggle={handleSelect}
           ariaLabel={`Select ${row.label}`}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-medium">{row.label}</p>
+            <p
+              className={cn(
+                campaign ? "text-[11px] font-normal" : "text-sm font-medium",
+                muted && "text-muted-foreground"
+              )}
+            >
+              {row.label}
+            </p>
             {row.document_number ? (
-              <span className="font-mono text-[10px] text-muted-foreground">
-                {row.document_number}
-              </span>
+              <DocumentNumber
+                value={row.document_number}
+                className={cn(
+                  "text-muted-foreground",
+                  campaign ? "text-[11px]" : "text-[10px]"
+                )}
+              />
             ) : null}
             {row.kind === "assignment" ? (
-              <BillingStatusBadge status={row.line_billing_status} />
+              <BillingStatusBadge status={resolveAssignmentBillingStatus(row)} />
             ) : (
               <DeliverableBillingStatusBadge
                 status={
@@ -107,10 +153,12 @@ export const OperationalRowTree = memo(function OperationalRowTree({
               <span className="text-[10px] text-muted-foreground">Locked</span>
             ) : null}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className={cn("text-muted-foreground", campaign ? "text-[11px] font-normal" : "text-xs")}>
             {formatBillingMoney(row.remaining_amount, currency)} remaining ·{" "}
             {formatBillingMoney(row.invoiced_amount, currency)} invoiced
-            {row.invoice_document_number ? ` · ${row.invoice_document_number}` : ""}
+            {row.invoice_document_number
+              ? ` · ${formatDocumentNumberForDisplay(row.invoice_document_number)}`
+              : ""}
           </p>
         </div>
       </div>
@@ -124,9 +172,10 @@ export const OperationalRowTree = memo(function OperationalRowTree({
               rootRows={rootRows}
               selection={selection}
               isOpen={expandedIds.has(child.id)}
+              expandedIds={expandedIds}
               onToggleExpand={onToggleExpand}
               onToggleSelect={onToggleSelect}
-              expandedIds={expandedIds}
+              appearance={appearance}
             />
           ))
         : null}

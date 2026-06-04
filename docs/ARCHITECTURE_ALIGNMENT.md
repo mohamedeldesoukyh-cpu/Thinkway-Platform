@@ -2,7 +2,22 @@
 
 This document compares the **current Thinkway platform** (`thinkway-platform`) against the [System Reference](./THINKWAY_SYSTEM_REFERENCE.md). Use it before new modules: compare → detect gaps → recommend → avoid duplicate entities.
 
-**Last reviewed:** May 2026 (against reference doc dated 30-05-2026)
+**Last reviewed:** Jun 2026 (Vendor IO → invoice lifecycle Phase 1; see `docs/VENDOR_IO_INVOICE_LIFECYCLE.md`)
+
+### Vendor IO & invoice lifecycle (Jun 2026)
+
+| Capability | Status |
+|------------|--------|
+| Manual **Generate Vendor IO** from assignment lines (grouped by influencer) | ✅ Phase 1 |
+| `campaign_lines.operational_status` + `vendor_io_id` gate | ✅ Phase 1 (migration `20260605010000`) |
+| Invoice queue on campaign Billing tab | ✅ Phase 1 |
+| Append only to unlocked, same-campaign invoices | ✅ (`is_operational_locked` + regeneration status) |
+| Invoice number preserved on ungenerate | ✅ (existing governance) |
+| VIO revision suffix `/1`, `/2` (new row, supersede prior) | ✅ Phase 2 |
+| Post-invoice `operational_status` sync (single helper) | ✅ Phase 2 |
+| Append when `partially_invoiced` / `reopened` | ✅ Phase 2 |
+| Invoice HTML preview | ✅ Phase 2a · PDF export ⏳ Phase 2b |
+| One-time invoice data reset migration | ⚠️ Requires explicit `supabase db push` approval |
 
 ---
 
@@ -73,7 +88,7 @@ Entities in reference **not yet implemented** as first-class modules:
 | **Brands** | Category, VR%, currency, agency/direct | Client-type-specific rules; brand-level contract terms |
 | **Campaign header** | Brand sync, dates, status, account manager, team | Thinkway PO legal entity, client PO file/number/amount, GR#, achievement, report type, sales person, end report upload |
 | **Campaign line** | PO, revenue, cost, GP, platform, remaining_po | Ad-live month/date, budget month, campaign type, went live, week, **billing fields** (moved to billing, invoiced, INV#, vendor paid, locked) |
-| **Billing** | `invoices`, `payments`; billing tab read-only | Generate invoice flow, INV-XXXXX assignment, line lock on invoice, proof of payment upload, billing dashboard metrics |
+| **Billing** | Operational invoice flow, Vendor IO gate (`operational_status`), campaign billing queue, append/ungenerate | Proof of payment upload, full finance queue export, VIO `/n` revision suffix UI |
 | **VR%** | `md_vr_rates` on brand | Group/client override resolution (§9.2); admin CRUD UI |
 | **Roles** | Supabase auth + partial RLS | Full 6-role matrix (§6), CM scoping, Data Entry financial column hiding |
 | **Reports** | None in app | All 10 standard reports + custom builder (§14) |

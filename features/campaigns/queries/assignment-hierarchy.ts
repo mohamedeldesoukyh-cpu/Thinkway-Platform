@@ -22,6 +22,15 @@ import type {
 import { deliverableTagLabel } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { formatMarginPercent } from "@/features/billing/types";
+import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
+import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+
+function lineAllowsDeliverableInvoice(line: CampaignLineWorkspace): boolean {
+  return isLineInvoiceEligible({
+    operational_status: line.operational_status,
+    vendor_io_id: line.vendor_io_id,
+  });
+}
 
 async function requireUser() {
   const supabase = await createSupabaseServerClient();
@@ -224,30 +233,32 @@ function buildSyntheticDeliverable(
     posts,
     remaining_amount: Math.max(0, revenueBeforeVat - invoiced),
     invoiced_amount: invoiced,
-    invoice_eligible: isDeliverableInvoiceEligible(
-      {
-        id: `synthetic-${line.id}`,
-        campaign_line_id: line.id,
-        sort_order: 0,
-        platform: line.platform ?? "other",
-        deliverable_type: "other",
-        quantity: 1,
-        live_date: line.start_date,
-        billable_amount: revenueBeforeVat,
-        invoiced_amount: invoiced,
-        collected_amount: 0,
-        disputed_amount: 0,
-        remaining_amount: Math.max(0, revenueBeforeVat - invoiced),
-        billing_status: billingStatus,
-        invoice_line_item_id: null,
-        locked_at: null,
-        revenue_before_vat: revenueBeforeVat,
-        revenue_vat_percent: line.revenue_vat_percent,
-        revenue_vat_exempt: line.revenue_vat_exempt,
-        label: "Package",
-      },
-      line.billing_status
-    ),
+    invoice_eligible:
+      lineAllowsDeliverableInvoice(line) &&
+      isDeliverableInvoiceEligible(
+        {
+          id: `synthetic-${line.id}`,
+          campaign_line_id: line.id,
+          sort_order: 0,
+          platform: line.platform ?? "other",
+          deliverable_type: "other",
+          quantity: 1,
+          live_date: line.start_date,
+          billable_amount: revenueBeforeVat,
+          invoiced_amount: invoiced,
+          collected_amount: 0,
+          disputed_amount: 0,
+          remaining_amount: Math.max(0, revenueBeforeVat - invoiced),
+          billing_status: billingStatus,
+          invoice_line_item_id: null,
+          locked_at: null,
+          revenue_before_vat: revenueBeforeVat,
+          revenue_vat_percent: line.revenue_vat_percent,
+          revenue_vat_exempt: line.revenue_vat_exempt,
+          label: "Package",
+        },
+        line.billing_status
+      ),
     is_synthetic: true,
     is_locked: line.revenue_locked ?? false,
   };
@@ -604,30 +615,33 @@ async function loadCampaignAssignmentHierarchy(
       posts,
       remaining_amount: Number(row.remaining_amount),
       invoiced_amount: Number(row.invoiced_amount),
-      invoice_eligible: isDeliverableInvoiceEligible(
-        {
-          id: row.id,
-          campaign_line_id: row.campaign_line_id,
-          sort_order: row.sort_order,
-          platform: row.platform,
-          deliverable_type: row.deliverable_type,
-          quantity: row.quantity,
-          live_date: row.live_date,
-          billable_amount: Number(row.billable_amount),
-          invoiced_amount: Number(row.invoiced_amount),
-          collected_amount: Number(row.collected_amount),
-          disputed_amount: 0,
-          remaining_amount: Number(row.remaining_amount),
-          billing_status: billingStatus,
-          invoice_line_item_id: row.invoice_line_item_id,
-          locked_at: null,
-          revenue_before_vat: Number(row.revenue_before_vat),
-          revenue_vat_percent: 0,
-          revenue_vat_exempt: resolveDeliverableVatExempt(row, includesVatExempt),
-          label,
-        },
-        line?.billing_status ?? "draft"
-      ),
+      invoice_eligible:
+        line != null &&
+        lineAllowsDeliverableInvoice(line) &&
+        isDeliverableInvoiceEligible(
+          {
+            id: row.id,
+            campaign_line_id: row.campaign_line_id,
+            sort_order: row.sort_order,
+            platform: row.platform,
+            deliverable_type: row.deliverable_type,
+            quantity: row.quantity,
+            live_date: row.live_date,
+            billable_amount: Number(row.billable_amount),
+            invoiced_amount: Number(row.invoiced_amount),
+            collected_amount: Number(row.collected_amount),
+            disputed_amount: 0,
+            remaining_amount: Number(row.remaining_amount),
+            billing_status: billingStatus,
+            invoice_line_item_id: row.invoice_line_item_id,
+            locked_at: null,
+            revenue_before_vat: Number(row.revenue_before_vat),
+            revenue_vat_percent: 0,
+            revenue_vat_exempt: resolveDeliverableVatExempt(row, includesVatExempt),
+            label,
+          },
+          line.billing_status ?? "draft"
+        ),
       is_synthetic: false,
       is_locked: Boolean(row.locked_at),
     };

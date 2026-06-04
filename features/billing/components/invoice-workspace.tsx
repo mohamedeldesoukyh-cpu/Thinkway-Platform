@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { format } from "date-fns";
 import { ArrowLeftIcon } from "lucide-react";
+
+import { DocumentNumber } from "@/components/ui/document-number";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -66,12 +68,15 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
         </Button>
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="font-heading text-2xl font-semibold tracking-tight">
-            {invoice.document_number}
+            <DocumentNumber value={invoice.document_number} />
           </h2>
           <CollectionStatusBadge status={invoice.collection_status} />
           <Badge variant="outline" className="capitalize">
             {invoice.status}
           </Badge>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/billing/invoices/${invoice.id}/preview`}>Preview invoice</Link>
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground">
           {invoice.client.name}
@@ -144,8 +149,8 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
                 <TableBody>
                   {invoice.lines.map((line) => (
                     <TableRow key={line.id}>
-                      <TableCell className="font-mono text-xs">
-                        {line.line_document_number ?? "—"}
+                      <TableCell className="text-xs">
+                        <DocumentNumber value={line.line_document_number} />
                       </TableCell>
                       <TableCell>{line.description}</TableCell>
                       <TableCell className="text-right">{line.quantity}</TableCell>
@@ -239,8 +244,8 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
                   <TableBody>
                     {invoice.payments.map((p) => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-mono text-xs">
-                          {p.document_number}
+                        <TableCell className="text-xs">
+                          <DocumentNumber value={p.document_number} />
                         </TableCell>
                         <TableCell className="text-right">
                           {formatBillingMoney(p.amount, p.currency)}

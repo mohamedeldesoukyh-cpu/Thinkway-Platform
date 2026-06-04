@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
+import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
 
 type Props = {
@@ -35,6 +38,7 @@ export function VendorIosTable({
     <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>IO #</TableHead>
             <TableHead>Influencer</TableHead>
             <TableHead>Campaign</TableHead>
             <TableHead>Assignment</TableHead>
@@ -47,17 +51,22 @@ export function VendorIosTable({
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
+            <VendorIoRowContextMenu key={row.id} row={row}>
             <TableRow
-              key={row.id}
               className={selectedId === row.id ? "bg-muted/40" : undefined}
             >
+              <TableCell className="text-xs">
+                <DocumentNumber value={row.document_number} />
+              </TableCell>
               <TableCell>{row.influencer_name}</TableCell>
               <TableCell>
                 <Link href={`/campaigns/${row.campaign_header_id}`} className="hover:underline">
-                  {row.campaign_document_number} · {row.campaign_name}
+                  <DocumentNumber value={row.campaign_document_number} /> · {row.campaign_name}
                 </Link>
               </TableCell>
-              <TableCell className="font-mono text-xs">{row.assignment_document_number ?? "—"}</TableCell>
+              <TableCell className="text-xs">
+                <DocumentNumber value={row.assignment_document_number} />
+              </TableCell>
               <TableCell className="text-right">{formatMoney(row.amount, row.currency_code)}</TableCell>
               <TableCell><IoStatusBadge status={row.status} /></TableCell>
               <TableCell>{row.sent_at ? new Date(row.sent_at).toLocaleString() : "—"}</TableCell>
@@ -77,9 +86,15 @@ export function VendorIosTable({
                       {row.status === "sent" ? "Resend" : "Send"}
                     </Link>
                   </Button>
+                  <VendorIoUngenerateTrigger
+                    row={row}
+                    disabled={!row.ungenerate_eligible}
+                    title={row.ungenerate_ineligible_reason ?? undefined}
+                  />
                 </div>
               </TableCell>
             </TableRow>
+            </VendorIoRowContextMenu>
           ))}
         </TableBody>
       </Table>

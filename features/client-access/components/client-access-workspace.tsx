@@ -17,6 +17,7 @@ import {
   removeClientUserAction,
   setPrimaryClientUserAction,
 } from "@/features/client-access/actions";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { AssignClientUserSheet } from "@/features/client-access/components/assign-client-user-sheet";
 import { ClientAccessRoleSelect } from "@/features/client-access/components/client-access-role-select";
 import type {
@@ -62,8 +63,8 @@ export function ClientAccessWorkspace({ entity, assignable, compact }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-heading text-lg font-semibold">{entity.client_name}</h3>
-            <p className="font-mono text-sm text-muted-foreground">
-              {entity.document_number}
+            <p className="text-sm text-muted-foreground">
+              <DocumentNumber value={entity.document_number} />
             </p>
           </div>
           <AssignClientUserSheet

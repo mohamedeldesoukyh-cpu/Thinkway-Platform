@@ -16,15 +16,19 @@ const statusTone: Record<CampaignStatus, StatusTone> = {
 
 type CampaignStatusBadgeProps = {
   status: CampaignStatus;
+  className?: string;
 };
 
-export function CampaignStatusBadge({ status }: CampaignStatusBadgeProps) {
+export function CampaignStatusBadge({ status, className }: CampaignStatusBadgeProps) {
   const label =
     CAMPAIGN_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
     status;
 
   return (
-    <Badge variant="outline" className={cn("font-medium", STATUS_TONE_CLASS[statusTone[status]])}>
+    <Badge
+      variant="outline"
+      className={cn("font-medium", STATUS_TONE_CLASS[statusTone[status]], className)}
+    >
       {label}
     </Badge>
   );

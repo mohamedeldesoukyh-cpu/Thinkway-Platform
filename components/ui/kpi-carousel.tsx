@@ -12,15 +12,20 @@ export type KpiCarouselItem = {
   value: string;
   icon: LucideIcon;
   accentClass?: string;
+  /** Tint value text only — card chrome stays uniform. */
+  valueAlert?: "warning" | "danger";
+  /** @deprecated Use valueAlert */
   alert?: "warning" | "danger";
 };
 
 type KpiCarouselProps = {
   items: KpiCarouselItem[];
   className?: string;
+  /** Side scroll buttons (disable on campaign workspace for grid alignment). */
+  showNavigation?: boolean;
 };
 
-export function KpiCarousel({ items, className }: KpiCarouselProps) {
+export function KpiCarousel({ items, className, showNavigation = true }: KpiCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -31,44 +36,34 @@ export function KpiCarousel({ items, className }: KpiCarouselProps) {
   };
 
   return (
-    <div className={cn("relative", className)}>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        className="absolute top-1/2 left-0 z-10 hidden -translate-x-1/2 -translate-y-1/2 shadow-sm md:flex"
-        onClick={() => scroll("left")}
-        aria-label="Scroll KPIs left"
-      >
-        <ChevronLeftIcon className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        className="absolute top-1/2 right-0 z-10 hidden translate-x-1/2 -translate-y-1/2 shadow-sm md:flex"
-        onClick={() => scroll("right")}
-        aria-label="Scroll KPIs right"
-      >
-        <ChevronRightIcon className="size-4" />
-      </Button>
+    <div className={cn("flex min-w-0 items-stretch gap-2", className)}>
+      {showNavigation ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          className="hidden shrink-0 self-center shadow-sm md:inline-flex"
+          onClick={() => scroll("left")}
+          aria-label="Scroll KPIs left"
+        >
+          <ChevronLeftIcon className="size-4" />
+        </Button>
+      ) : null}
 
       <div
         ref={scrollRef}
-        className="flex gap-2 overflow-x-auto pb-1 scroll-smooth snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          "flex min-w-0 gap-2 overflow-x-auto pb-1 scroll-smooth snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          showNavigation ? "flex-1" : "w-full"
+        )}
       >
         {items.map((item) => {
           const Icon = item.icon;
+          const valueTone = item.valueAlert ?? item.alert;
           return (
             <div
               key={item.id}
-              className={cn(
-                "flex min-w-[168px] max-w-[168px] shrink-0 snap-start items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-sm",
-                item.alert === "danger" &&
-                  "border-red-500/40 bg-red-500/5 dark:bg-red-500/10",
-                item.alert === "warning" &&
-                  "border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10"
-              )}
+              className="flex min-w-[168px] max-w-[168px] shrink-0 snap-start items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md"
             >
               <div
                 className={cn(
@@ -83,8 +78,8 @@ export function KpiCarousel({ items, className }: KpiCarouselProps) {
                 <p
                   className={cn(
                     "truncate font-heading text-sm font-bold tracking-tight",
-                    item.alert === "danger" && "text-red-600 dark:text-red-400",
-                    item.alert === "warning" && "text-amber-700 dark:text-amber-300"
+                    valueTone === "danger" && "text-red-600 dark:text-red-400",
+                    valueTone === "warning" && "text-amber-700 dark:text-amber-300"
                   )}
                 >
                   {item.value}
@@ -94,6 +89,19 @@ export function KpiCarousel({ items, className }: KpiCarouselProps) {
           );
         })}
       </div>
+
+      {showNavigation ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          className="hidden shrink-0 self-center shadow-sm md:inline-flex"
+          onClick={() => scroll("right")}
+          aria-label="Scroll KPIs right"
+        >
+          <ChevronRightIcon className="size-4" />
+        </Button>
+      ) : null}
     </div>
   );
 }

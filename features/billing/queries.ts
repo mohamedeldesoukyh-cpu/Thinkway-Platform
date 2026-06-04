@@ -896,7 +896,7 @@ export async function getCampaignOperationalBillingDetail(
   const { data: invoiceRows } = await supabase
     .from("invoices")
     .select(
-      "id, document_number, status, regeneration_status, total, subtotal, tax_amount, currency, client_id, campaign_header_id"
+      "id, document_number, status, regeneration_status, is_operational_locked, total, subtotal, tax_amount, currency, client_id, campaign_header_id"
     )
     .eq("campaign_header_id", campaignId)
     .not("status", "eq", "void");
@@ -908,6 +908,7 @@ export async function getCampaignOperationalBillingDetail(
         document_number: string;
         status: string;
         regeneration_status: string | null;
+        is_operational_locked?: boolean | null;
         total: number;
         subtotal: number;
         tax_amount: number;
@@ -918,6 +919,7 @@ export async function getCampaignOperationalBillingDetail(
       const appendable = isInvoiceAppendable({
         status: row.status,
         regeneration_status: row.regeneration_status,
+        is_operational_locked: row.is_operational_locked,
         currency: row.currency,
         client_id: row.client_id,
         campaign_header_id: row.campaign_header_id,
@@ -937,7 +939,9 @@ export async function getCampaignOperationalBillingDetail(
         currency: row.currency,
         client_id: row.client_id,
         campaign_header_id: row.campaign_header_id,
-        is_locked: row.regeneration_status === "pending_regeneration",
+        is_locked:
+          Boolean(row.is_operational_locked) ||
+          row.regeneration_status === "pending_regeneration",
       };
     })
     .filter(Boolean) as CampaignOperationalBillingDetail["appendable_invoices"];

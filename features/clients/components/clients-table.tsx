@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 
+import { DocumentNumber } from "@/components/ui/document-number";
 import {
   Table,
   TableBody,
@@ -33,8 +34,8 @@ export function ClientsTable({ clients }: ClientsTableProps) {
       <TableBody>
         {clients.map((client) => (
           <TableRow key={client.id}>
-            <TableCell className="font-mono text-xs">
-              {client.document_number}
+            <TableCell className="text-xs">
+              <DocumentNumber value={client.document_number} />
             </TableCell>
             <TableCell>
               <div className="flex flex-col">

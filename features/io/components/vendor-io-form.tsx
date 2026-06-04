@@ -4,12 +4,14 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateVendorIoAction, sendVendorIoAction } from "@/features/io/actions";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -52,10 +54,22 @@ export function VendorIoForm({ row }: Props) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-          <span>Vendor IO · {row.influencer_name}</span>
-          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            Vendor IO ·{" "}
+            {row.document_number ? (
+              <DocumentNumber value={row.document_number} />
+            ) : (
+              row.influencer_name
+            )}
+          </span>
+          <div className="inline-flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>{formatMoney(row.amount, row.currency_code)}</span>
             <IoStatusBadge status={row.status} />
+            <VendorIoUngenerateTrigger
+              row={row}
+              disabled={!row.ungenerate_eligible}
+              title={row.ungenerate_ineligible_reason ?? undefined}
+            />
           </div>
         </CardTitle>
       </CardHeader>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClientStatusBadge } from "@/features/clients/components/client-status-badge";
 import { GroupKpiStrip } from "@/features/groups/components/group-kpi-strip";
@@ -42,8 +43,8 @@ export function GroupWorkspaceView({
           </h2>
           <ClientStatusBadge status={workspace.status} />
         </div>
-        <p className="font-mono text-sm text-muted-foreground">
-          {workspace.document_number}
+        <p className="text-sm text-muted-foreground">
+          <DocumentNumber value={workspace.document_number} />
           {workspace.region ? ` · ${workspace.region}` : null}
         </p>
       </div>

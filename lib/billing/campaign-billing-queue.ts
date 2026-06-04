@@ -217,6 +217,7 @@ export const APPENDABLE_INVOICE_STATUSES = new Set(["draft", "sent", "partial"])
 export function isInvoiceAppendable(input: {
   status: string;
   regeneration_status: string | null;
+  is_operational_locked?: boolean | null;
   currency: string;
   client_id: string;
   campaign_header_id: string | null;
@@ -229,6 +230,7 @@ export function isInvoiceAppendable(input: {
   if (input.campaign_header_id && input.campaign_header_id !== input.target_campaign_id) {
     return false;
   }
+  if (input.is_operational_locked) return false;
   if (!APPENDABLE_INVOICE_STATUSES.has(input.status)) return false;
   if (input.status === "void" || input.status === "paid") return false;
   if (input.regeneration_status === "pending_regeneration") return false;

@@ -20,6 +20,7 @@ import {
 } from "@/features/collections/actions";
 import type { CollectionInvoiceRow } from "@/lib/collections/queries/load-collection-invoices";
 import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import type { AnalyticsCurrencyContext } from "@/lib/analytics/types/metrics";
 
 type PaymentAllocationSectionProps = {
@@ -91,7 +92,7 @@ export function PaymentAllocationSection({
             <SelectContent>
               {open.map((inv) => (
                 <SelectItem key={inv.id} value={inv.id}>
-                  {inv.document_number} — {format(inv.outstanding)}
+                  {formatDocumentNumberForDisplay(inv.document_number)} — {format(inv.outstanding)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -128,7 +129,9 @@ export function PaymentAllocationSection({
         <div className="max-h-48 space-y-2 overflow-y-auto">
           {open.slice(0, 15).map((inv) => (
             <div key={inv.id} className="flex items-center gap-2 text-xs">
-              <span className="min-w-0 flex-1 truncate">{inv.document_number}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {formatDocumentNumberForDisplay(inv.document_number)}
+              </span>
               <Input
                 className="h-8 w-24"
                 type="number"

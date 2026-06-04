@@ -6,7 +6,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { sendClientIoAction } from "@/features/io/actions";
+import {
+  OPERATIONAL_CHROME_BADGE,
+  OPERATIONAL_CHROME_LABEL,
+} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import type { ClientIoRow } from "@/features/io/types";
+import { cn } from "@/lib/utils";
 
 const INITIAL_STATE = { ok: false } as const;
 
@@ -32,20 +37,35 @@ export function ClientIoHeaderControls({ io, campaignId, viewHref }: Props) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="inline-flex items-center gap-2 rounded-3xl border border-border px-3 py-1.5 text-sm">
-        <span className="text-muted-foreground">Client IO</span>
-        <IoStatusBadge status={io.status} />
+      <div
+        className={cn(
+          OPERATIONAL_CHROME_LABEL,
+          "inline-flex items-center gap-2 rounded-md border border-border px-2 py-1"
+        )}
+      >
+        <span>Client IO</span>
+        <IoStatusBadge status={io.status} className={OPERATIONAL_CHROME_BADGE} />
       </div>
 
       {sent ? (
-        <Button size="sm" variant="outline" asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className={cn(OPERATIONAL_CHROME_LABEL, "h-7 px-2")}
+          asChild
+        >
           <a href={viewHref}>View Client IO</a>
         </Button>
       ) : (
         <form action={formAction}>
           <input type="hidden" name="id" value={io.id} />
           <input type="hidden" name="campaign_header_id" value={campaignId} />
-          <Button size="sm" type="submit" disabled={pending}>
+          <Button
+            size="sm"
+            type="submit"
+            disabled={pending}
+            className={cn(OPERATIONAL_CHROME_LABEL, "h-7 px-2")}
+          >
             Send Client IO
           </Button>
         </form>
@@ -55,7 +75,13 @@ export function ClientIoHeaderControls({ io, campaignId, viewHref }: Props) {
         <form action={formAction}>
           <input type="hidden" name="id" value={io.id} />
           <input type="hidden" name="campaign_header_id" value={campaignId} />
-          <Button size="sm" variant="outline" type="submit" disabled={pending}>
+          <Button
+            size="sm"
+            variant="outline"
+            type="submit"
+            disabled={pending}
+            className={cn(OPERATIONAL_CHROME_LABEL, "h-7 px-2")}
+          >
             Resend
           </Button>
         </form>

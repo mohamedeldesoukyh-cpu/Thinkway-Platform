@@ -86,7 +86,7 @@ export async function validateAppendableInvoice(
   const { data: invoice, error } = await supabase
     .from("invoices")
     .select(
-      "id, document_number, status, regeneration_status, currency, client_id, campaign_header_id"
+      "id, document_number, status, regeneration_status, is_operational_locked, currency, client_id, campaign_header_id"
     )
     .eq("id", invoiceId)
     .maybeSingle();
@@ -100,6 +100,7 @@ export async function validateAppendableInvoice(
     document_number: string;
     status: string;
     regeneration_status: string | null;
+    is_operational_locked?: boolean | null;
     currency: string;
     client_id: string;
     campaign_header_id: string | null;
@@ -111,6 +112,7 @@ export async function validateAppendableInvoice(
     !isInvoiceAppendable({
       status: row.status,
       regeneration_status: row.regeneration_status,
+      is_operational_locked: row.is_operational_locked,
       currency: row.currency,
       client_id: row.client_id,
       campaign_header_id: row.campaign_header_id,

@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
+
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -152,7 +154,7 @@ export function VatWorkspace({ data }: VatWorkspaceProps) {
               "",
             ]}
             rows={data.invoices.map((row) => [
-              row.document_number,
+              formatDocumentNumberForDisplay(row.document_number),
               row.client_name,
               row.country_code ?? "—",
               formatBillingMoney(row.revenue_before_vat, row.currency),

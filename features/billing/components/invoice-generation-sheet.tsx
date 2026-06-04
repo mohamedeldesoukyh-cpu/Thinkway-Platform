@@ -5,6 +5,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -293,7 +294,8 @@ export function InvoiceGenerationSheet({
                       <SelectContent>
                         {appendableOptions.map((inv) => (
                           <SelectItem key={inv.id} value={inv.id}>
-                            {inv.document_number} · {formatBillingMoney(inv.total, inv.currency)}{" "}
+                            {formatDocumentNumberForDisplay(inv.document_number)} ·{" "}
+                            {formatBillingMoney(inv.total, inv.currency)}{" "}
                             · {inv.status}
                           </SelectItem>
                         ))}

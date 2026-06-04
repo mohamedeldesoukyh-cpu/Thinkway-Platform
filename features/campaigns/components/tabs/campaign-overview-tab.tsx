@@ -4,11 +4,13 @@ import { InfoIcon, PencilIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
 import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
 import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
+import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { cn } from "@/lib/utils";
 
 type CampaignOverviewTabProps = {
   workspace: CampaignWorkspace;
@@ -30,7 +32,7 @@ export function CampaignOverviewTab({
 
   return (
     <>
-      <div className="space-y-4">
+      <div className={cn("space-y-4", OPERATIONAL_TABLE_FONT)}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           {onOpenDetails ? (
             <Button variant="outline" size="sm" onClick={onOpenDetails}>
@@ -44,7 +46,7 @@ export function CampaignOverviewTab({
           </Button>
         </div>
 
-        <CampaignOverviewDetails workspace={workspace} layout="grid" />
+        <CampaignOverviewDetails workspace={workspace} layout="grid" compactTypography />
 
         <CampaignPoSection
           campaignId={workspace.id}
@@ -54,16 +56,9 @@ export function CampaignOverviewTab({
         />
 
         {workspace.brief ? (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Brief</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                {workspace.brief}
-              </p>
-            </CardContent>
-          </Card>
+          <CampaignFlatSection title="Brief">
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{workspace.brief}</p>
+          </CampaignFlatSection>
         ) : null}
       </div>
 

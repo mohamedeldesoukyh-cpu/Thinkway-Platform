@@ -5,6 +5,7 @@ import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -160,7 +161,9 @@ export function ForecastSection({
                   key={f.id}
                   className={f.id === selectedForecastId ? "bg-muted/40" : undefined}
                 >
-                  <TableCell className="font-mono text-xs">{f.document_number}</TableCell>
+                  <TableCell className="text-xs">
+                    <DocumentNumber value={f.document_number} />
+                  </TableCell>
                   <TableCell>{f.name}</TableCell>
                   <TableCell>{f.status}</TableCell>
                   <TableCell>{f.fiscal_year}</TableCell>

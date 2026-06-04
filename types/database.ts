@@ -171,6 +171,8 @@ export type CampaignLineRow = {
   revenue_vat_amount: number;
   revenue_after_vat: number;
   revenue_vat_exempt: boolean;
+  cost_received: number | null;
+  cost_received_currency: string | null;
   cost_before_vat: number;
   cost_vat_percent: number;
   cost_vat_amount: number;
@@ -189,6 +191,8 @@ export type CampaignLineRow = {
   cost_locked: boolean;
   vendor_assignment_locked: boolean;
   invoice_id: string | null;
+  operational_status?: string;
+  vendor_io_id?: string | null;
   currency_code: string;
   base_currency: string;
   fx_rate: number;
@@ -569,12 +573,19 @@ export type Database = {
           cost_locked?: boolean;
           vendor_assignment_locked?: boolean;
           invoice_id?: string | null;
+          operational_status?: string;
+          vendor_io_id?: string | null;
           finance_override_until?: string | null;
           billing_moved_at?: string | null;
           billing_invoiced_at?: string | null;
           currency_code?: string;
           base_currency?: string;
           fx_rate?: number;
+          fx_from_currency?: string | null;
+          fx_to_currency?: string | null;
+          fx_snapshot_at?: string | null;
+          cost_received?: number | null;
+          cost_received_currency?: string | null;
           start_date?: string | null;
           end_date?: string | null;
           sort_order?: number;
@@ -1122,6 +1133,7 @@ export type Database = {
           notes?: string | null;
           created_by?: string | null;
           regeneration_status?: string;
+          is_operational_locked?: boolean;
           version_number?: number;
           ungenerated_at?: string | null;
           ungenerated_by?: string | null;

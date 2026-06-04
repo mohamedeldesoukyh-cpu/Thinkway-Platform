@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageAlert } from "@/components/ui/page-alert";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CampaignsEmptyState } from "@/features/campaigns/components/campaigns-empty-state";
 import { CampaignsKpiStrip } from "@/features/campaigns/components/campaigns-kpi-strip";
@@ -71,6 +72,8 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
 
   const { campaigns, total, totalPages } = list;
   const hasSearch = Boolean(search);
+  const meta =
+    total === 1 ? "1 campaign" : `${total} campaigns` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
     <DashboardShell
@@ -78,45 +81,47 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
       description="Plan and manage campaign headers and lines across the brand hierarchy."
       actions={<NewCampaignDialog {...formOptions} />}
     >
-      {kpis ? (
-        <div className="mb-4">
-          <CampaignsKpiStrip kpis={kpis} />
-        </div>
-      ) : null}
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle>All campaigns</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {total === 1 ? "1 campaign" : `${total} campaigns`}
-              {hasSearch ? ` matching "${search}"` : ""}
-            </p>
-          </div>
-          <Suspense fallback={null}>
-            <CampaignsSearch />
-          </Suspense>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {errorMessage ? (
-            <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
-            </div>
-          ) : null}
+      {kpis ? <CampaignsKpiStrip kpis={kpis} className="mb-4" /> : null}
 
-          {campaigns.length === 0 ? (
-            <CampaignsEmptyState hasSearch={hasSearch} />
-          ) : (
-            <>
-              <CampaignsTable campaigns={campaigns} />
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 space-y-0.5">
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                All campaigns
+              </h2>
+              <p className="text-[11px] leading-snug text-muted-foreground">{meta}</p>
+            </div>
+            <Suspense fallback={null}>
+              <CampaignsSearch />
+            </Suspense>
+          </div>
+        }
+      >
+        {errorMessage ? (
+          <div className="border-b border-border/40 px-4 py-3">
+            <PageAlert>{errorMessage}</PageAlert>
+          </div>
+        ) : null}
+
+        {campaigns.length === 0 ? (
+          <CampaignsEmptyState hasSearch={hasSearch} />
+        ) : (
+          <>
+            <CampaignsTable campaigns={campaigns} />
+            <div className="border-t border-border/40 px-4 py-3 md:px-5">
               <CampaignsPagination
                 page={list.page}
                 totalPages={totalPages}
                 search={search}
               />
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </div>
+          </>
+        )}
+      </OperationalTableSection>
     </DashboardShell>
   );
 }

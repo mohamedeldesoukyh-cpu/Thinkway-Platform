@@ -19,20 +19,24 @@ export const OPERATIONAL_GRID_LABELS = {
   actions: "",
 } as const;
 
+import { OPERATIONAL_CHILD_AMOUNT_CLASS } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+
+const amountCell = `${OPERATIONAL_CHILD_AMOUNT_CLASS} text-right`;
+
 export const GRID_CELL = {
-  select: "w-8 px-1.5 py-1.5",
-  type: "w-[88px] px-1.5 py-1.5",
-  platform: "w-[52px] px-1.5 py-1.5",
-  deliverableType: "min-w-[88px] px-1.5 py-1.5",
-  postDate: "w-[104px] px-1.5 py-1.5",
-  qty: "w-[44px] px-1.5 py-1.5 text-right font-mono",
-  money: "w-[72px] px-1.5 py-1.5 text-right font-mono",
-  vat: "w-[64px] px-1.5 py-1.5 text-right font-mono",
-  status: "w-[80px] px-1.5 py-1.5",
-  invoice: "w-[72px] px-1.5 py-1.5",
-  collection: "w-[52px] px-1.5 py-1.5 text-[10px]",
-  payout: "w-[64px] px-1.5 py-1.5",
-  workflow: "w-[72px] px-1.5 py-1.5",
-  notes: "min-w-[88px] max-w-[120px] px-1.5 py-1.5",
-  actions: "w-[64px] px-1.5 py-1.5 text-right",
+  select: "w-7 px-1 py-1",
+  type: "w-[84px] px-1 py-1",
+  platform: "w-[48px] px-1 py-1",
+  deliverableType: "min-w-[80px] px-1 py-1",
+  postDate: "w-[96px] px-1 py-1",
+  qty: `w-[40px] px-1 py-1 ${amountCell}`,
+  money: `w-[68px] px-1 py-1 ${amountCell}`,
+  vat: `w-[56px] px-1 py-1 ${amountCell}`,
+  status: "w-[76px] px-1 py-1",
+  invoice: "w-[68px] px-1 py-1",
+  collection: "w-[44px] px-1 py-1 text-[9px]",
+  payout: "w-[56px] px-1 py-1",
+  workflow: "w-[64px] px-1 py-1",
+  notes: "min-w-[72px] max-w-[100px] px-1 py-1",
+  actions: "w-[60px] px-1 py-1 text-right",
 } as const;

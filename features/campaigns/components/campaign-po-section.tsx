@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { CampaignPoEditSheet } from "@/features/campaigns/components/campaign-po-edit-sheet";
 import {
   PO_STATUS_LABELS,
@@ -40,20 +40,17 @@ export function CampaignPoSection({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-base">Client PO governance</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Consumption uses assignment revenue before VAT. VAT never affects PO utilization.
-            </p>
-          </div>
+      <CampaignFlatSection
+        title="Client PO governance"
+        description="Consumption uses assignment revenue before VAT. VAT never affects PO utilization."
+        actions={
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
             <PencilIcon data-icon="inline-start" />
             Edit PO
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        }
+      >
+        <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={PO_STATUS_VARIANT[po.po_status]}>
               {PO_STATUS_LABELS[po.po_status]}
@@ -118,8 +115,8 @@ export function CampaignPoSection({
               </div>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </CampaignFlatSection>
 
       <CampaignPoEditSheet
         campaignId={campaignId}

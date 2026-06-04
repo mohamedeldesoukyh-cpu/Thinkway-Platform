@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CategorySubcategoryFields } from "@/components/forms/category-subcategory-fields";
 import { FieldError } from "@/components/forms/field-error";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -144,8 +145,8 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
                   <TableBody>
                     {client.brands.map((brand) => (
                       <TableRow key={brand.id}>
-                        <TableCell className="font-mono text-xs">
-                          {brand.document_number}
+                        <TableCell className="text-xs">
+                          <DocumentNumber value={brand.document_number} />
                         </TableCell>
                         <TableCell className="font-medium">{brand.name}</TableCell>
                         <TableCell>{brand.category_name ?? "—"}</TableCell>

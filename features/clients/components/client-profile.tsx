@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
@@ -46,8 +47,8 @@ export function ClientProfile({
           </h2>
           <ClientStatusBadge status={client.status} />
         </div>
-        <p className="font-mono text-sm text-muted-foreground">
-          {client.document_number}
+        <p className="text-sm text-muted-foreground">
+          <DocumentNumber value={client.document_number} />
           {client.group ? ` · ${client.group.name}` : null}
         </p>
       </div>

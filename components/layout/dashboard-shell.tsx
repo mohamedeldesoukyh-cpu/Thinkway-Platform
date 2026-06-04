@@ -28,6 +28,14 @@ type DashboardShellProps = {
   title: string;
   description?: string;
   actions?: React.ReactNode;
+  /** Hide generic page header (entity workspaces provide their own). */
+  hidePageHeader?: boolean;
+  /**
+   * Lock shell height and delegate scrolling to page content (campaign workspaces).
+   * Prevents document/main scroll so inner sticky regions work.
+   */
+  containedMain?: boolean;
+  mainClassName?: string;
 };
 
 export async function DashboardShell({
@@ -35,6 +43,9 @@ export async function DashboardShell({
   title,
   description,
   actions,
+  hidePageHeader = false,
+  containedMain = false,
+  mainClassName,
 }: DashboardShellProps) {
   const { user } = await getAuthUser();
   const userEmail = user?.email ?? null;
@@ -42,7 +53,12 @@ export async function DashboardShell({
   return (
     <div className="flex min-h-svh bg-background">
       <CollapsibleAppSidebar userEmail={userEmail} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          containedMain && "h-svh max-h-svh overflow-hidden"
+        )}
+      >
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
           <Link href="/" className="flex items-center">
             <Image
@@ -74,20 +90,33 @@ export async function DashboardShell({
           </nav>
           <UserAccount email={userEmail} compact />
         </div>
-        <header className="flex flex-col gap-4 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
-          <div className="space-y-0.5">
-            <h1 className="font-heading text-xl font-semibold tracking-tight">
-              {title}
-            </h1>
-            {description ? (
-              <p className="text-sm text-muted-foreground">{description}</p>
+        {hidePageHeader ? null : (
+          <header className="thinkway-shell-header flex flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
+            <div className="min-w-0 space-y-1">
+              <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">
+                {title}
+              </h1>
+              {description ? (
+                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  {description}
+                </p>
+              ) : null}
+            </div>
+            {actions ? (
+              <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
             ) : null}
-          </div>
-          {actions ? (
-            <div className="flex shrink-0 items-center gap-2">{actions}</div>
-          ) : null}
-        </header>
-        <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+          </header>
+        )}
+        <main
+          className={cn(
+            containedMain
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden p-4 md:p-6"
+              : "min-h-0 flex-1 overflow-y-auto p-4 md:p-6",
+            mainClassName
+          )}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

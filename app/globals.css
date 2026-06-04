@@ -52,6 +52,7 @@
   --color-brand-navy: var(--brand-navy);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-brand-product: var(--brand-product);
 }
 
 :root {
@@ -66,8 +67,10 @@
   --brand-gradient-3: linear-gradient(135deg, #33b6fc 0%, #a038fb 100%);
   --success: #10b981;
   --warning: #f59e0b;
+  /* IConnect product accent (ops / finance emphasis) */
+  --brand-product: #1d9e75;
 
-  --background: #f0f4fa;
+  --background: #f4f6fb;
   --foreground: #020925;
   --card: #ffffff;
   --card-foreground: #020925;
@@ -82,8 +85,8 @@
   --accent: #eaf6fe;
   --accent-foreground: #020925;
   --destructive: #ef4444;
-  --border: #e2e8f4;
-  --input: #e2e8f4;
+  --border: #dfe6f2;
+  --input: #dfe6f2;
   --ring: #33b6fc;
   --chart-1: #33b6fc;
   --chart-2: #a038fb;
@@ -179,4 +182,13 @@
   table:not([data-slot="table"]) th {
     @apply bg-muted/60 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase;
   }
+
+  .thinkway-shell-header {
+    @apply border-b border-border/50 bg-card/90 backdrop-blur-md;
+  }
+
+  .thinkway-workspace-chrome {
+    @apply border-b border-border/40 bg-background/95 backdrop-blur-md;
+  }
+
 }

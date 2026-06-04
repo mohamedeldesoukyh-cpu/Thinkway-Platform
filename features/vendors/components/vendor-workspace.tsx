@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeftIcon, MoreHorizontalIcon } from "lucide-react";
-import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { CampaignWorkspaceScrollShell } from "@/features/campaigns/components/campaign-workspace-scroll-shell";
+import {
+  OPERATIONAL_CHROME_LABEL,
+  OPERATIONAL_CHROME_META,
+  OPERATIONAL_CHROME_STATUS_BADGE,
+  OPERATIONAL_CHROME_TITLE,
+} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { VendorDependencyDialog } from "@/features/vendors/components/vendor-dependency-dialog";
 import { VendorKpiStrip } from "@/features/vendors/components/vendor-kpi-strip";
 import { VendorStatusBadge } from "@/features/vendors/components/vendor-status-badge";
@@ -22,7 +29,14 @@ import { VendorContractsTab } from "@/features/vendors/components/tabs/vendor-co
 import { VendorDocumentsTab } from "@/features/vendors/components/tabs/vendor-documents-tab";
 import { VendorOverviewTab } from "@/features/vendors/components/tabs/vendor-overview-tab";
 import { VendorPlatformsTab } from "@/features/vendors/components/tabs/vendor-platforms-tab";
+import {
+  VendorWorkspaceTabPanel,
+  VendorWorkspaceTabTrigger,
+  VendorWorkspaceTabsBar,
+} from "@/features/vendors/components/vendor-workspace-tabs";
+import { DocumentNumber } from "@/components/ui/document-number";
 import type { VendorWorkspace } from "@/features/vendors/types";
+import { cn } from "@/lib/utils";
 
 type VendorWorkspaceViewProps = {
   workspace: VendorWorkspace;
@@ -30,88 +44,163 @@ type VendorWorkspaceViewProps = {
   portalAccessPanel?: React.ReactNode;
 };
 
+const TAB_PANEL_CLASS =
+  "mt-4 flex-none outline-none focus-visible:outline-none data-[state=inactive]:hidden";
+
 export function VendorWorkspaceView({
   workspace,
   defaultTab = "overview",
   portalAccessPanel,
 }: VendorWorkspaceViewProps) {
   const [depOpen, setDepOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
+
+  const tabCounts = useMemo(
+    () => ({
+      platforms: workspace.counts.platforms,
+      assignments: workspace.counts.assignments,
+      documents: workspace.documents.length,
+      activity: workspace.activity.length,
+    }),
+    [
+      workspace.counts.platforms,
+      workspace.counts.assignments,
+      workspace.documents.length,
+      workspace.activity.length,
+    ]
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 w-fit">
-          <Link href="/vendors">
-            <ArrowLeftIcon data-icon="inline-start" />
-            Back to vendors
-          </Link>
-        </Button>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-heading text-2xl font-semibold tracking-tight">
-              {workspace.display_name}
-            </h2>
-            <VendorStatusBadge status={workspace.status} />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <MoreHorizontalIcon className="size-4" />
-                Actions
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setDepOpen(true)}>
-                View dependencies
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/operations/move?vendor=${workspace.id}`}>
-                  Reassign via Move
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <p className="font-mono text-sm text-muted-foreground">
-          {workspace.document_number}
-          {workspace.country_code ? ` · ${workspace.country_code}` : null}
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
+      >
+        <CampaignWorkspaceScrollShell
+          chrome={
+            <>
+              <div className="space-y-1 pt-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0"
+                      asChild
+                      title="Back to vendors"
+                    >
+                      <Link href="/vendors">
+                        <ArrowLeftIcon className="size-4" />
+                        <span className="sr-only">Back to vendors</span>
+                      </Link>
+                    </Button>
+                    <h1 className={OPERATIONAL_CHROME_TITLE}>{workspace.display_name}</h1>
+                    <VendorStatusBadge
+                      status={workspace.status}
+                      className={OPERATIONAL_CHROME_STATUS_BADGE}
+                    />
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(OPERATIONAL_CHROME_LABEL, "h-7 gap-1 px-2")}
+                      >
+                        <MoreHorizontalIcon className="size-3.5" />
+                        Actions
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setDepOpen(true)}>
+                        View dependencies
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/operations/move?vendor=${workspace.id}`}>
+                          Reassign via Move
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <p className={cn(OPERATIONAL_CHROME_META, "pl-10")}>
+                  <DocumentNumber value={workspace.document_number} />
+                  {workspace.country_code ? ` · ${workspace.country_code}` : null}
+                </p>
+              </div>
 
-      <VendorKpiStrip workspace={workspace} />
-
-      <Tabs defaultValue={defaultTab} className="space-y-4">
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="platforms">Platforms</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="billing">Billing & Payments</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="contracts">Contracts</TabsTrigger>
-          <TabsTrigger value="activity">Activity & Audit</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview">
-          <VendorOverviewTab vendor={workspace} portalAccessPanel={portalAccessPanel} />
-        </TabsContent>
-        <TabsContent value="platforms">
-          <VendorPlatformsTab vendor={workspace} />
-        </TabsContent>
-        <TabsContent value="assignments">
-          <VendorAssignmentsTab workspace={workspace} />
-        </TabsContent>
-        <TabsContent value="billing">
-          <VendorBillingTab workspace={workspace} />
-        </TabsContent>
-        <TabsContent value="documents">
-          <VendorDocumentsTab vendor={workspace} />
-        </TabsContent>
-        <TabsContent value="contracts">
-          <VendorContractsTab vendor={workspace} />
-        </TabsContent>
-        <TabsContent value="activity">
-          <VendorActivityTab workspace={workspace} />
-        </TabsContent>
+              <VendorKpiStrip workspace={workspace} />
+            </>
+          }
+          tabs={
+            <VendorWorkspaceTabsBar>
+              <VendorWorkspaceTabTrigger value="overview" label="Overview" />
+              <VendorWorkspaceTabTrigger
+                value="platforms"
+                label="Platforms"
+                count={tabCounts.platforms}
+              />
+              <VendorWorkspaceTabTrigger
+                value="assignments"
+                label="Assignments"
+                count={tabCounts.assignments}
+              />
+              <VendorWorkspaceTabTrigger value="billing" label="Billing & Payments" />
+              <VendorWorkspaceTabTrigger
+                value="documents"
+                label="Documents"
+                count={tabCounts.documents}
+              />
+              <VendorWorkspaceTabTrigger value="contracts" label="Contracts" />
+              <VendorWorkspaceTabTrigger
+                value="activity"
+                label="Activity & Audit"
+                count={tabCounts.activity}
+              />
+            </VendorWorkspaceTabsBar>
+          }
+        >
+          <TabsContent value="overview" className={TAB_PANEL_CLASS}>
+            <VendorWorkspaceTabPanel className="p-4 md:p-5">
+              <VendorOverviewTab vendor={workspace} portalAccessPanel={portalAccessPanel} />
+            </VendorWorkspaceTabPanel>
+          </TabsContent>
+          <TabsContent value="platforms" className={TAB_PANEL_CLASS}>
+            <VendorWorkspaceTabPanel>
+              <VendorPlatformsTab vendor={workspace} />
+            </VendorWorkspaceTabPanel>
+          </TabsContent>
+          <TabsContent value="assignments" className={TAB_PANEL_CLASS}>
+            <VendorWorkspaceTabPanel>
+              <VendorAssignmentsTab workspace={workspace} />
+            </VendorWorkspaceTabPanel>
+          </TabsContent>
+          <TabsContent value="billing" className={TAB_PANEL_CLASS}>
+            <VendorWorkspaceTabPanel>
+              <VendorBillingTab workspace={workspace} />
+            </VendorWorkspaceTabPanel>
+          </TabsContent>
+          <TabsContent value="documents" className={TAB_PANEL_CLASS}>
+            <VendorWorkspaceTabPanel className="p-4 md:p-5">
+              <VendorDocumentsTab vendor={workspace} />
+            </VendorWorkspaceTabPanel>
+          </TabsContent>
+          <TabsContent value="contracts" className={TAB_PANEL_CLASS}>
+            <VendorWorkspaceTabPanel className="p-4 md:p-5">
+              <VendorContractsTab vendor={workspace} />
+            </VendorWorkspaceTabPanel>
+          </TabsContent>
+          <TabsContent value="activity" className={TAB_PANEL_CLASS}>
+            <VendorWorkspaceTabPanel>
+              <VendorActivityTab workspace={workspace} />
+            </VendorWorkspaceTabPanel>
+          </TabsContent>
+        </CampaignWorkspaceScrollShell>
       </Tabs>
 
       <VendorDependencyDialog

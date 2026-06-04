@@ -5,6 +5,7 @@ import { useActionState, useEffect } from "react";
 import { AlertTriangleIcon, ArchiveIcon, ArrowRightLeftIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
 import {
   Dialog,
   DialogContent,
@@ -106,8 +107,8 @@ export function EntityDependencyDialog({
                         <TableCell>
                           <div>
                             <span className="font-medium">{c.name}</span>
-                            <p className="font-mono text-xs text-muted-foreground">
-                              {c.document_number}
+                            <p className="text-xs text-muted-foreground">
+                              <DocumentNumber value={c.document_number} />
                             </p>
                           </div>
                         </TableCell>

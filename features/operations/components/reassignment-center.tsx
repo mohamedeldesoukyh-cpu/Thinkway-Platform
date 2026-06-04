@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -69,8 +70,8 @@ export function ReassignmentCenter({ batches }: ReassignmentCenterProps) {
               <TableBody>
                 {batches.map((batch) => (
                   <TableRow key={batch.id}>
-                    <TableCell className="font-mono text-xs">
-                      {batch.document_number}
+                    <TableCell className="text-xs">
+                      <DocumentNumber value={batch.document_number} />
                     </TableCell>
                     <TableCell>{TYPE_LABELS[batch.movement_type] ?? batch.movement_type}</TableCell>
                     <TableCell>

@@ -17,8 +17,11 @@ import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import {
+  PO_ALERT_FRAME,
+  PO_ALERT_TITLE,
   PO_STATUS_LABELS,
   PO_STATUS_VARIANT,
+  resolvePoAlertStatus,
 } from "@/lib/finance/po/status";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +39,10 @@ const ACCENT_TILE: Record<KpiAccent, string> = {
   green: "bg-success/10 text-success",
 };
 
+/** Same chrome as KPI carousel tiles (rounded-xl, not full-bleed bars). */
+const KPI_TILE_SHELL =
+  "rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-sm";
+
 export function CampaignKpiStrip({
   workspace,
   operationalDeliverableCount,
@@ -46,10 +53,15 @@ export function CampaignKpiStrip({
   const deliverableKpi =
     operationalDeliverableCount ?? deliverables.length;
 
+  const poAlertStatus = resolvePoAlertStatus({
+    po_status: po.po_status,
+    po_exceeded: financials.po_exceeded,
+  });
+
   const budgetAlert =
-    financials.po_exceeded || po.po_status === "exceeded"
+    poAlertStatus === "exceeded"
       ? "danger"
-      : po.po_status === "near_limit"
+      : poAlertStatus === "near_limit" || poAlertStatus === "expired"
         ? "warning"
         : undefined;
 
@@ -60,7 +72,7 @@ export function CampaignKpiStrip({
       value: formatMoney(financials.budget, currency),
       icon: WalletIcon,
       accentClass: ACCENT_TILE.blue,
-      alert: budgetAlert,
+      valueAlert: budgetAlert,
     },
     {
       id: "revenue",
@@ -117,40 +129,37 @@ export function CampaignKpiStrip({
     value: string;
     icon: LucideIcon;
     accentClass: string;
-    alert?: "warning" | "danger";
+    valueAlert?: "warning" | "danger";
   }[];
 
   return (
-    <div className="space-y-2">
-      {(financials.po_exceeded || po.po_status === "near_limit") && (
-        <div
-          className={cn(
-            "flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-sm",
-            financials.po_exceeded
-              ? "border-red-500/40 bg-red-500/10 text-red-800 dark:text-red-200"
-              : "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100"
-          )}
-        >
-          {financials.po_exceeded ? (
-            <AlertTriangleIcon className="size-4 shrink-0" />
-          ) : null}
-          <span className="font-medium">
-            {financials.po_exceeded ? "PO exceeded" : "PO near limit"}
-          </span>
-          <span className="text-muted-foreground">
-            {formatMoney(financials.po_consumed, currency)} consumed of{" "}
-            {formatMoney(financials.budget, currency)}
-            {financials.po_remaining_percent != null
-              ? ` · ${formatPercent(financials.po_remaining_percent)} remaining`
-              : null}
-          </span>
-          <Badge variant={PO_STATUS_VARIANT[po.po_status]} className="ml-auto">
-            {PO_STATUS_LABELS[po.po_status]}
-          </Badge>
+    <div className="space-y-3 pb-8">
+      {poAlertStatus ? (
+        <div className="flex w-full justify-end">
+          <div
+            className={cn(
+              KPI_TILE_SHELL,
+              "inline-flex w-fit max-w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm",
+              PO_ALERT_FRAME[poAlertStatus]
+            )}
+          >
+            <AlertTriangleIcon className="size-4 shrink-0 opacity-90" />
+            <span className="font-medium">{PO_ALERT_TITLE[poAlertStatus]}</span>
+            <span className="text-muted-foreground">
+              {formatMoney(financials.po_consumed, currency)} consumed of{" "}
+              {formatMoney(financials.budget, currency)}
+              {financials.po_remaining_percent != null
+                ? ` · ${formatPercent(financials.po_remaining_percent)} remaining`
+                : null}
+            </span>
+            <Badge variant={PO_STATUS_VARIANT[po.po_status]} className="shrink-0">
+              {PO_STATUS_LABELS[po.po_status]}
+            </Badge>
+          </div>
         </div>
-      )}
+      ) : null}
 
-      <KpiCarousel items={items} />
+      <KpiCarousel items={items} showNavigation={false} />
     </div>
   );
 }

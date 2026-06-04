@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 
+import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -81,8 +82,8 @@ export function GroupActivityTab({ workspace }: GroupActivityTabProps) {
                       <TableCell>
                         <div className="space-y-0.5">
                           <span className="font-medium">{campaign.name}</span>
-                          <p className="font-mono text-xs text-muted-foreground">
-                            {campaign.document_number}
+                          <p className="text-xs text-muted-foreground">
+                            <DocumentNumber value={campaign.document_number} />
                           </p>
                         </div>
                       </TableCell>
