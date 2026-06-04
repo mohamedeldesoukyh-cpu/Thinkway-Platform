@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -106,16 +106,17 @@ export function CampaignPublicationsTab({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle>Publications</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Manual URL tracking for live influencer content.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={exportCsv} disabled={filtered.length === 0}>
+      <OperationalTableSection
+        title="Publications"
+        description="Manual URL tracking for live influencer content."
+        actions={
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={exportCsv}
+              disabled={filtered.length === 0}
+            >
               <DownloadIcon data-icon="inline-start" className="size-3.5" />
               Export CSV
             </Button>
@@ -123,17 +124,17 @@ export function CampaignPublicationsTab({
               <PlusIcon data-icon="inline-start" />
               Add publication
             </Button>
+          </>
+        }
+      >
+        {loadError ? (
+          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-900 dark:text-amber-200">
+            Publications data could not be loaded fully. Apply migration{" "}
+            <code className="font-mono">20260531400000_campaign_publications.sql</code>. {loadError}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loadError ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-              Publications data could not be loaded fully. Apply migration{" "}
-              <code className="font-mono">20260531400000_campaign_publications.sql</code>.{" "}
-              {loadError}
-            </div>
-          ) : null}
+        ) : null}
 
+        <div className="space-y-4 border-b border-border px-4 py-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Displaying {filtered.length} of {rows.length}
           </p>
@@ -171,11 +172,12 @@ export function CampaignPublicationsTab({
               </Select>
             </div>
           </div>
+        </div>
 
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No publications found.</p>
-          ) : (
-            <Table>
+        {filtered.length === 0 ? (
+          <p className="px-4 py-8 text-sm text-muted-foreground">No publications found.</p>
+        ) : (
+          <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Type</TableHead>
@@ -235,9 +237,8 @@ export function CampaignPublicationsTab({
                   ))}
                 </TableBody>
               </Table>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </OperationalTableSection>
 
       <CampaignPublicationSheet
         campaignId={workspace.id}

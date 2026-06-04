@@ -2,6 +2,7 @@ import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CreatorApproveVendorIoForm } from "@/features/portals/components/creator-approve-vendor-io-form";
+import { CreatorRejectVendorIoForm } from "@/features/portals/components/creator-reject-vendor-io-form";
 import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
 import { getCreatorVendorIos } from "@/features/portals/queries";
 
@@ -46,7 +47,14 @@ export default async function CreatorPortalVendorIosPage() {
                       <TableCell>{row.sent_at ? new Date(row.sent_at).toLocaleString() : "—"}</TableCell>
                       <TableCell>{row.approved_at ? new Date(row.approved_at).toLocaleString() : "—"}</TableCell>
                       <TableCell className="text-right">
-                        {row.status === "sent" ? <CreatorApproveVendorIoForm vendorIoId={row.id} /> : "—"}
+                        {row.status === "sent" ? (
+                          <div className="flex flex-col items-end gap-2">
+                            <CreatorApproveVendorIoForm vendorIoId={row.id} />
+                            <CreatorRejectVendorIoForm vendorIoId={row.id} />
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

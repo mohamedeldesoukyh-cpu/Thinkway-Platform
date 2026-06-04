@@ -48,6 +48,7 @@ function revalidateSettings() {
   revalidatePath("/settings/roles");
   revalidatePath("/settings/permissions");
   revalidatePath("/settings/access-control");
+  revalidatePath("/settings/client-access");
 }
 
 export async function inviteUserAction(
@@ -60,8 +61,14 @@ export async function inviteUserAction(
   const portalType = String(formData.get("portal_type") ?? "internal").trim();
   const department = String(formData.get("department") ?? "").trim();
   const countryCode = String(formData.get("country_code") ?? "").trim().toUpperCase();
+  const clientId = String(formData.get("client_id") ?? "").trim();
+  const accessRole = String(formData.get("access_role") ?? "view").trim();
+  const isPrimaryInvite = formData.get("is_primary") === "on";
 
   if (!email || !roleId) return { ok: false, message: "Email and role are required." };
+  if (portalType === "client" && !clientId) {
+    return { ok: false, message: "Legal entity is required for client portal invites." };
+  }
 
   const { supabase, user, error } = await requireSettingsWrite();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
@@ -69,6 +76,15 @@ export async function inviteUserAction(
   const rawToken = randomInviteToken();
   const tokenHash = hashToken(rawToken);
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
+
+  const inviteMetadata =
+    portalType === "client"
+      ? {
+          client_id: clientId,
+          access_role: accessRole === "approve" ? "approve" : "view",
+          is_primary: isPrimaryInvite,
+        }
+      : {};
 
   const { error: insertError } = await supabase.from("user_invites").insert({
     email,
@@ -81,6 +97,7 @@ export async function inviteUserAction(
     expires_at: expiresAt,
     invited_by: user.id,
     status: "invited",
+    metadata: inviteMetadata,
   } as never);
 
   if (insertError) return { ok: false, message: insertError.message };

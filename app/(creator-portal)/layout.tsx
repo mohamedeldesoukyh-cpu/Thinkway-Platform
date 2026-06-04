@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 
 import { PortalShell } from "@/components/layout/portal-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCreatorUnreadNotificationCount } from "@/features/portals/queries";
 import { requireCreatorScope } from "@/features/portals/scope";
+import type { PortalNavItem } from "@/components/layout/portal-nav";
 
 const creatorNavItems = [
   { href: "/creator-portal", label: "Dashboard" },
@@ -35,12 +37,19 @@ export default async function CreatorPortalLayout({
     redirect("/");
   }
 
+  const unreadCount = await getCreatorUnreadNotificationCount();
+  const navItems: PortalNavItem[] = creatorNavItems.map((item) =>
+    item.href === "/creator-portal/notifications"
+      ? { ...item, badge: unreadCount }
+      : { ...item }
+  );
+
   return (
     <PortalShell
       title="Creator Portal"
       description="Campaign-focused execution for creator assignments, IOs, deliverables, and payment visibility."
       userLabel={creatorName}
-      navItems={[...creatorNavItems]}
+      navItems={navItems}
     >
       {children}
     </PortalShell>

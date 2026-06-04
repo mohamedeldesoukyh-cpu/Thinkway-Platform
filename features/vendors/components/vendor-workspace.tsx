@@ -27,11 +27,13 @@ import type { VendorWorkspace } from "@/features/vendors/types";
 type VendorWorkspaceViewProps = {
   workspace: VendorWorkspace;
   defaultTab?: string;
+  portalAccessPanel?: React.ReactNode;
 };
 
 export function VendorWorkspaceView({
   workspace,
   defaultTab = "overview",
+  portalAccessPanel,
 }: VendorWorkspaceViewProps) {
   const [depOpen, setDepOpen] = useState(false);
 
@@ -90,7 +92,7 @@ export function VendorWorkspaceView({
         </TabsList>
 
         <TabsContent value="overview">
-          <VendorOverviewTab vendor={workspace} />
+          <VendorOverviewTab vendor={workspace} portalAccessPanel={portalAccessPanel} />
         </TabsContent>
         <TabsContent value="platforms">
           <VendorPlatformsTab vendor={workspace} />

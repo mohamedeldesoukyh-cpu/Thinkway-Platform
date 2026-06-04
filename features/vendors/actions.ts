@@ -72,6 +72,43 @@ async function requireAuthUser() {
   return { supabase, user, error: null };
 }
 
+export async function setInfluencerProfileLinkAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const influencerId = String(formData.get("influencer_id") ?? "").trim();
+  const profileId = String(formData.get("profile_id") ?? "").trim();
+
+  if (!influencerId) {
+    return { ok: false, message: "Vendor is required." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  const { error: updateError } = await supabase
+    .from("influencers")
+    .update({ profile_id: profileId || null } as never)
+    .eq("id", influencerId);
+
+  if (updateError) {
+    return { ok: false, message: updateError.message };
+  }
+
+  revalidatePath("/vendors");
+  revalidatePath(`/vendors/${influencerId}`);
+  revalidatePath("/creator-portal");
+
+  return {
+    ok: true,
+    message: profileId
+      ? "Creator portal login linked."
+      : "Creator portal login unlinked.",
+  };
+}
+
 export async function createVendorAction(
   _prevState: CreateVendorFormState,
   formData: FormData

@@ -21,9 +21,15 @@ type ClientProfileProps = {
   client: ClientDetail;
   groups: { id: string; name: string; document_number: string }[];
   masterData: MasterDataOptions;
+  clientAccessPanel?: React.ReactNode;
 };
 
-export function ClientProfile({ client, groups, masterData }: ClientProfileProps) {
+export function ClientProfile({
+  client,
+  groups,
+  masterData,
+  clientAccessPanel,
+}: ClientProfileProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
   return (
     <div className="space-y-6">
@@ -54,6 +60,7 @@ export function ClientProfile({ client, groups, masterData }: ClientProfileProps
           <TabsTrigger value="finance">Finance</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="campaigns">Campaign History</TabsTrigger>
+          <TabsTrigger value="access">Client Access</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -73,6 +80,11 @@ export function ClientProfile({ client, groups, masterData }: ClientProfileProps
         </TabsContent>
         <TabsContent value="campaigns">
           <ClientCampaignsTab client={client} />
+        </TabsContent>
+        <TabsContent value="access">
+          {clientAccessPanel ?? (
+            <p className="text-sm text-muted-foreground">Client access is loading…</p>
+          )}
         </TabsContent>
       </Tabs>
     </div>

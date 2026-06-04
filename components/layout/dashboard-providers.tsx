@@ -15,9 +15,9 @@ export function DashboardProviders({ children }: DashboardProvidersProps) {
   return (
     <KeyboardShortcutsProvider helpOpen={helpOpen} onHelpOpenChange={setHelpOpen}>
       <div className="relative min-h-screen">
-        <div className="pointer-events-none fixed top-3 right-3 z-50 md:right-8">
+        <div className="pointer-events-none fixed bottom-5 right-5 z-50 max-md:bottom-4 max-md:right-4">
           <div className="pointer-events-auto">
-            <HelpMenuButton onClick={() => setHelpOpen(true)} />
+            <HelpMenuButton onClick={() => setHelpOpen(true)} floating />
           </div>
         </div>
         {children}

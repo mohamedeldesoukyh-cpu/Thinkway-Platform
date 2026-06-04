@@ -10,7 +10,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
       data-slot="table-container"
       className="relative w-full overflow-hidden rounded-2xl border border-border bg-card"
     >
-      <div className="w-full overflow-x-auto">
+      <div className="max-h-[70vh] w-full overflow-auto">
         <table
           data-slot="table"
           className={cn(
@@ -28,7 +28,10 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("bg-muted/60 [&_tr]:border-b", className)}
+      className={cn(
+        "sticky top-0 z-10 bg-muted [&_tr]:border-b",
+        className
+      )}
       {...props}
     />
   )
@@ -38,7 +41,10 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   return (
     <tbody
       data-slot="table-body"
-      className={cn("[&_tr:last-child]:border-0", className)}
+      className={cn(
+        "[&_tr:last-child]:border-0 [&_tr:nth-child(even)]:bg-muted/25",
+        className
+      )}
       {...props}
     />
   )

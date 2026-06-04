@@ -4,6 +4,7 @@ import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Table,
   TableBody,
@@ -72,54 +73,47 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Approvals</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {workspace.approvals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No approval records.</p>
-          ) : (
-            <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Approval</TableHead>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Assignee</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Due</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {workspace.approvals.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell>
-                        <div className="space-y-0.5">
-                          <span className="font-medium">{a.title}</span>
-                          <p className="font-mono text-xs text-muted-foreground">
-                            {a.document_number}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="capitalize">{a.entity_type}</TableCell>
-                      <TableCell>{a.assigned_to_name ?? "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {a.status.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {a.due_at
-                          ? format(new Date(a.due_at), "MMM d, yyyy")
-                          : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-          )}
-        </CardContent>
-      </Card>
+      <OperationalTableSection title="Approvals" description="Pending and completed approval steps for this campaign.">
+        {workspace.approvals.length === 0 ? (
+          <p className="px-4 py-8 text-sm text-muted-foreground">No approval records.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Approval</TableHead>
+                <TableHead>Entity</TableHead>
+                <TableHead>Assignee</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Due</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {workspace.approvals.map((a) => (
+                <TableRow key={a.id}>
+                  <TableCell>
+                    <div className="space-y-0.5">
+                      <span className="font-medium">{a.title}</span>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {a.document_number}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="capitalize">{a.entity_type}</TableCell>
+                  <TableCell>{a.assigned_to_name ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize">
+                      {a.status.replace("_", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {a.due_at ? format(new Date(a.due_at), "MMM d, yyyy") : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </OperationalTableSection>
     </div>
   );
 }

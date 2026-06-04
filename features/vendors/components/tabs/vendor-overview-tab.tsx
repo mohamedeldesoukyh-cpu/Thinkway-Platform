@@ -29,7 +29,13 @@ import {
 } from "@/features/vendors/constants";
 import type { InfluencerStatus, VendorDetail } from "@/types/database";
 
-export function VendorOverviewTab({ vendor }: { vendor: VendorDetail }) {
+export function VendorOverviewTab({
+  vendor,
+  portalAccessPanel,
+}: {
+  vendor: VendorDetail;
+  portalAccessPanel?: React.ReactNode;
+}) {
   const [status, setStatus] = useState(vendor.status);
   const [country, setCountry] = useState(vendor.country_code ?? "");
   const [nationality, setNationality] = useState(vendor.nationality ?? "");
@@ -52,6 +58,8 @@ export function VendorOverviewTab({ vendor }: { vendor: VendorDetail }) {
   }, [state]);
 
   return (
+    <div className="space-y-4">
+    {portalAccessPanel}
     <Card>
       <CardHeader>
         <CardTitle>Overview</CardTitle>
@@ -248,5 +256,6 @@ export function VendorOverviewTab({ vendor }: { vendor: VendorDetail }) {
         </form>
       </CardContent>
     </Card>
+    </div>
   );
 }

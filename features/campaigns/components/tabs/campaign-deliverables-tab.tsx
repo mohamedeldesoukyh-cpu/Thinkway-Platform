@@ -4,7 +4,7 @@ import { format, isValid, parseISO } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -138,22 +138,17 @@ export function CampaignDeliverablesTab({
       : "No deliverables match the current search and filters.";
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-        <div>
-          <CardTitle>Deliverables</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Operational explorer — synced from assignment deliverables and post schedules.
-          </p>
+    <OperationalTableSection
+      title="Deliverables"
+      description="Operational explorer — synced from assignment deliverables and post schedules."
+    >
+      {stats.hierarchy_load_error ? (
+        <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-900 dark:text-amber-200">
+          Hierarchy loaded with warnings: {stats.hierarchy_load_error}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {stats.hierarchy_load_error ? (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-            Hierarchy loaded with warnings: {stats.hierarchy_load_error}
-          </div>
-        ) : null}
+      ) : null}
 
+      <div className="space-y-4 border-b border-border px-4 py-4">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Displaying {filtered.length} of {rows.length}
         </p>
@@ -215,11 +210,12 @@ export function CampaignDeliverablesTab({
             ]}
           />
         </div>
+      </div>
 
-        {filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-        ) : (
-          <Table>
+      {filtered.length === 0 ? (
+        <p className="px-4 py-8 text-sm text-muted-foreground">{emptyMessage}</p>
+      ) : (
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Deliverable</TableHead>
@@ -238,9 +234,8 @@ export function CampaignDeliverablesTab({
               ))}
             </TableBody>
           </Table>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </OperationalTableSection>
   );
 }
 

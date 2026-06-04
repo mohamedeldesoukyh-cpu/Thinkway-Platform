@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { VendorPortalAccessCard } from "@/features/vendors/components/vendor-portal-access-card";
 import { VendorWorkspaceView } from "@/features/vendors/components/vendor-workspace";
 import { getVendorWorkspace } from "@/features/vendors/queries";
 
@@ -40,7 +41,16 @@ export default async function VendorProfilePage({
           {errorMessage}
         </div>
       ) : workspace ? (
-        <VendorWorkspaceView workspace={workspace} defaultTab={tab ?? "overview"} />
+        <VendorWorkspaceView
+          workspace={workspace}
+          defaultTab={tab ?? "overview"}
+          portalAccessPanel={
+            <VendorPortalAccessCard
+              influencerId={workspace.id}
+              profileId={workspace.profile_id}
+            />
+          }
+        />
       ) : null}
     </DashboardShell>
   );

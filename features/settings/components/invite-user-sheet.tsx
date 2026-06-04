@@ -8,15 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CLIENT_ACCESS_ROLES } from "@/features/client-access/constants";
 import { inviteUserAction } from "@/features/settings/actions";
 import type { SettingsRoleRow } from "@/features/settings/types";
 
 const INITIAL = { ok: false } as const;
 
-export function InviteUserSheet({ roles }: { roles: SettingsRoleRow[] }) {
+type ClientOption = { id: string; name: string; document_number: string };
+
+export function InviteUserSheet({
+  roles,
+  clients = [],
+}: {
+  roles: SettingsRoleRow[];
+  clients?: ClientOption[];
+}) {
   const [open, setOpen] = useState(false);
   const [portalType, setPortalType] = useState("internal");
   const [roleId, setRoleId] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [accessRole, setAccessRole] = useState("view");
+  const [isPrimary, setIsPrimary] = useState(false);
   const [state, action, pending] = useActionState(inviteUserAction, INITIAL);
 
   useEffect(() => {
@@ -62,6 +74,54 @@ export function InviteUserSheet({ roles }: { roles: SettingsRoleRow[] }) {
             <input type="hidden" name="portal_type" value={portalType} />
           </div>
 
+          {portalType === "client" ? (
+            <>
+              <div className="grid gap-2">
+                <Label>Legal entity</Label>
+                <Select value={clientId} onValueChange={setClientId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select legal entity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name} ({client.document_number})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="client_id" value={clientId} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Client access role</Label>
+                <Select value={accessRole} onValueChange={setAccessRole}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CLIENT_ACCESS_ROLES.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="access_role" value={accessRole} />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="invite_is_primary"
+                  name="is_primary"
+                  checked={isPrimary}
+                  onChange={(e) => setIsPrimary(e.target.checked)}
+                  className="size-4 rounded border"
+                />
+                <Label htmlFor="invite_is_primary">Primary contact</Label>
+              </div>
+            </>
+          ) : null}
+
           <div className="grid gap-2">
             <Label>Role</Label>
             <Select value={roleId} onValueChange={setRoleId}>
@@ -88,7 +148,14 @@ export function InviteUserSheet({ roles }: { roles: SettingsRoleRow[] }) {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={pending || !roleId}>
+            <Button
+              type="submit"
+              disabled={
+                pending ||
+                !roleId ||
+                (portalType === "client" && !clientId)
+              }
+            >
               {pending ? "Inviting..." : "Send invite"}
             </Button>
           </div>

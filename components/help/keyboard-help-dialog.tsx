@@ -102,7 +102,29 @@ export function KeyboardHelpDialog({ open, onOpenChange }: KeyboardHelpDialogPro
   );
 }
 
-export function HelpMenuButton({ onClick }: { onClick: () => void }) {
+export function HelpMenuButton({
+  onClick,
+  floating = false,
+}: {
+  onClick: () => void;
+  floating?: boolean;
+}) {
+  if (floating) {
+    return (
+      <Button
+        type="button"
+        variant="default"
+        size="icon"
+        onClick={onClick}
+        className="size-11 rounded-full shadow-lg"
+        title="Help & keyboard shortcuts"
+        aria-label="Help and keyboard shortcuts"
+      >
+        <HelpCircleIcon className="size-5" />
+      </Button>
+    );
+  }
+
   return (
     <Button type="button" variant="outline" size="sm" onClick={onClick}>
       <HelpCircleIcon data-icon="inline-start" />

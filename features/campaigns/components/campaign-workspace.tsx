@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
+import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
 import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
@@ -63,6 +64,7 @@ export function CampaignWorkspaceView({
   currencyOptions,
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
   const operationalDeliverableCount = useMemo(() => {
@@ -111,9 +113,14 @@ export function CampaignWorkspaceView({
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="font-heading text-2xl font-semibold tracking-tight">
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen(true)}
+                  className="font-heading text-left text-2xl font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+                  title="View campaign details"
+                >
                   {workspace.name}
-                </h2>
+                </button>
                 <CampaignStatusBadge status={workspace.status} />
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
@@ -158,16 +165,61 @@ export function CampaignWorkspaceView({
             operationalDeliverableCount={operationalDeliverableCount}
           />
 
-          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="lines">Assignments</TabsTrigger>
-            <TabsTrigger value="vendor-io">Vendor IO</TabsTrigger>
-            <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
-            <TabsTrigger value="publications">Publications</TabsTrigger>
-            <TabsTrigger value="workflow">Workflow</TabsTrigger>
-            <TabsTrigger value="billing">Billing</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline & activity</TabsTrigger>
+          <div className="-mx-1 border-b border-border px-1">
+          <TabsList
+            variant="line"
+            className="h-auto w-full flex-wrap justify-start gap-0 rounded-none border-0 bg-transparent p-0"
+          >
+            <TabsTrigger
+              value="overview"
+              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="lines"
+              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
+            >
+              Assignments
+            </TabsTrigger>
+            <TabsTrigger
+              value="vendor-io"
+              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
+            >
+              Vendor IO
+            </TabsTrigger>
+            <TabsTrigger
+              value="deliverables"
+              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
+            >
+              Deliverables
+            </TabsTrigger>
+            <TabsTrigger
+              value="publications"
+              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
+            >
+              Publications
+            </TabsTrigger>
+            <TabsTrigger
+              value="workflow"
+              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
+            >
+              Workflow
+            </TabsTrigger>
+            <TabsTrigger
+              value="billing"
+              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
+            >
+              Billing
+            </TabsTrigger>
+            <TabsTrigger
+              value="timeline"
+              className="rounded-none px-4 py-2.5 after:!h-0.5 after:bg-brand-blue data-active:text-foreground"
+            >
+              Timeline & activity
+            </TabsTrigger>
           </TabsList>
+          </div>
         </div>
 
         <TabsContent value="overview">
@@ -176,6 +228,7 @@ export function CampaignWorkspaceView({
             accountManagers={accountManagers}
             teams={teams}
             currencyOptions={currencyOptions}
+            onOpenDetails={() => setDetailsOpen(true)}
           />
         </TabsContent>
         <TabsContent value="lines">
@@ -233,6 +286,15 @@ export function CampaignWorkspaceView({
           </TabErrorBoundary>
         </TabsContent>
       </Tabs>
+
+      <CampaignDetailsSheet
+        workspace={workspace}
+        accountManagers={accountManagers}
+        teams={teams}
+        currencyOptions={currencyOptions}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
 
       <DuplicateCampaignDialog
         workspace={workspace}

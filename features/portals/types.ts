@@ -2,6 +2,31 @@ export type PortalPaymentStatus = "Pending" | "Invoiced" | "Partially Paid" | "P
 export type ClientInvoiceStatus = "Draft" | "Issued" | "Partially Paid" | "Paid";
 export type PortalApprovalStatus = "Pending" | "Approved" | "Rejected";
 
+export type CreatorCampaignDetail = {
+  campaign_header_id: string;
+  campaign_document_number: string;
+  campaign_name: string;
+  campaign_status: string;
+  brief: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  assignment_id: string;
+  assignment_status: string;
+  agreed_amount: number;
+  currency_code: string;
+  vendor_io_status: string | null;
+  vendor_io_id: string | null;
+  deliverables: CreatorDeliverableRow[];
+};
+
+export type PortalUploadRow = {
+  id: string;
+  file_name: string | null;
+  external_link: string | null;
+  storage_path: string | null;
+  created_at: string;
+};
+
 export type CreatorCampaignRow = {
   campaign_header_id: string;
   campaign_document_number: string;

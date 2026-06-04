@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Table,
   TableBody,
@@ -53,43 +54,41 @@ export function CampaignTimelineTab({ workspace }: CampaignTimelineTabProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent assignments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {workspace.vendors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No vendor assignments.</p>
-          ) : (
-            <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Line</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Confirmed</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {workspace.vendors.slice(0, 10).map((v) => (
-                    <TableRow key={v.id}>
-                      <TableCell>{v.influencer_name}</TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {v.line_document_number ?? "—"}
-                      </TableCell>
-                      <TableCell className="capitalize">{v.status}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {v.confirmed_at
-                          ? format(new Date(v.confirmed_at), "MMM d, yyyy")
-                          : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-          )}
-        </CardContent>
-      </Card>
+      <OperationalTableSection
+        title="Recent assignments"
+        description="Latest vendor assignments on this campaign."
+      >
+        {workspace.vendors.length === 0 ? (
+          <p className="px-4 py-8 text-sm text-muted-foreground">No vendor assignments.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Vendor</TableHead>
+                <TableHead>Line</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Confirmed</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {workspace.vendors.slice(0, 10).map((v) => (
+                <TableRow key={v.id}>
+                  <TableCell>{v.influencer_name}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {v.line_document_number ?? "—"}
+                  </TableCell>
+                  <TableCell className="capitalize">{v.status}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {v.confirmed_at
+                      ? format(new Date(v.confirmed_at), "MMM d, yyyy")
+                      : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </OperationalTableSection>
     </div>
   );
 }

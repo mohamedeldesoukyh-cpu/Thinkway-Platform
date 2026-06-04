@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import {
@@ -29,22 +29,11 @@ type CampaignKpiStripProps = {
 
 type KpiAccent = "blue" | "purple" | "pink" | "green";
 
-type KpiItem = {
-  label: string;
-  value: string;
-  icon: LucideIcon;
-  accent: KpiAccent;
-  alert?: "warning" | "danger";
-};
-
-const ACCENTS: Record<KpiAccent, { tile: string; dot: string }> = {
-  blue: { tile: "bg-brand-blue/10 text-brand-blue", dot: "var(--brand-blue)" },
-  purple: {
-    tile: "bg-brand-purple/10 text-brand-purple",
-    dot: "var(--brand-purple)",
-  },
-  pink: { tile: "bg-brand-pink/10 text-brand-pink", dot: "var(--brand-pink)" },
-  green: { tile: "bg-success/10 text-success", dot: "var(--success)" },
+const ACCENT_TILE: Record<KpiAccent, string> = {
+  blue: "bg-brand-blue/10 text-brand-blue",
+  purple: "bg-brand-purple/10 text-brand-purple",
+  pink: "bg-brand-pink/10 text-brand-pink",
+  green: "bg-success/10 text-success",
 };
 
 export function CampaignKpiStrip({
@@ -57,71 +46,86 @@ export function CampaignKpiStrip({
   const deliverableKpi =
     operationalDeliverableCount ?? deliverables.length;
 
-  const budgetAlert: KpiItem["alert"] =
+  const budgetAlert =
     financials.po_exceeded || po.po_status === "exceeded"
       ? "danger"
       : po.po_status === "near_limit"
         ? "warning"
         : undefined;
 
-  const items: KpiItem[] = [
+  const items = [
     {
+      id: "budget",
       label: "Budget (PO)",
       value: formatMoney(financials.budget, currency),
       icon: WalletIcon,
-      accent: "blue",
+      accentClass: ACCENT_TILE.blue,
       alert: budgetAlert,
     },
     {
+      id: "revenue",
       label: "Revenue",
       value: formatMoney(financials.revenue, currency),
       icon: TrendingUpIcon,
-      accent: "purple",
+      accentClass: ACCENT_TILE.purple,
     },
     {
+      id: "cost",
       label: "Cost",
       value: formatMoney(financials.cost, currency),
       icon: ReceiptIcon,
-      accent: "pink",
+      accentClass: ACCENT_TILE.pink,
     },
     {
+      id: "gp",
       label: "GP",
       value: formatMoney(financials.gp, currency),
       icon: TrendingUpIcon,
-      accent: "green",
+      accentClass: ACCENT_TILE.green,
     },
     {
+      id: "margin",
       label: "Margin",
       value: formatPercent(financials.margin_percent),
       icon: PercentIcon,
-      accent: "blue",
+      accentClass: ACCENT_TILE.blue,
     },
     {
+      id: "assignments",
       label: "Assignments",
       value: String(assignedLines.length),
       icon: UsersIcon,
-      accent: "purple",
+      accentClass: ACCENT_TILE.purple,
     },
     {
+      id: "deliverables",
       label: "Deliverables",
       value: String(deliverableKpi),
       icon: PackageIcon,
-      accent: "pink",
+      accentClass: ACCENT_TILE.pink,
     },
     {
+      id: "billing",
       label: "Outstanding billing",
       value: formatMoney(financials.billing_outstanding, currency),
       icon: FileTextIcon,
-      accent: "green",
+      accentClass: ACCENT_TILE.green,
     },
-  ];
+  ] satisfies {
+    id: string;
+    label: string;
+    value: string;
+    icon: LucideIcon;
+    accentClass: string;
+    alert?: "warning" | "danger";
+  }[];
 
   return (
-    <div className="sticky top-0 z-10 -mx-1 space-y-2 px-1 pb-2 pt-1 backdrop-blur-sm">
+    <div className="space-y-2">
       {(financials.po_exceeded || po.po_status === "near_limit") && (
         <div
           className={cn(
-            "flex flex-wrap items-center gap-2 rounded-2xl border px-3 py-2 text-sm",
+            "flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-sm",
             financials.po_exceeded
               ? "border-red-500/40 bg-red-500/10 text-red-800 dark:text-red-200"
               : "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100"
@@ -131,9 +135,7 @@ export function CampaignKpiStrip({
             <AlertTriangleIcon className="size-4 shrink-0" />
           ) : null}
           <span className="font-medium">
-            {financials.po_exceeded
-              ? "PO exceeded"
-              : "PO near limit"}
+            {financials.po_exceeded ? "PO exceeded" : "PO near limit"}
           </span>
           <span className="text-muted-foreground">
             {formatMoney(financials.po_consumed, currency)} consumed of{" "}
@@ -148,54 +150,7 @@ export function CampaignKpiStrip({
         </div>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-        {items.map((item) => {
-          const hasAlert = item.alert === "danger" || item.alert === "warning";
-          const tone = ACCENTS[item.accent];
-          const Icon = item.icon;
-          return (
-            <Card
-              key={item.label}
-              className={cn(
-                "relative shadow-sm",
-                item.alert === "danger" &&
-                  "border-red-500/50 bg-red-500/5 dark:bg-red-500/10",
-                item.alert === "warning" &&
-                  "border-amber-500/50 bg-amber-500/5 dark:bg-amber-500/10"
-              )}
-            >
-              {!hasAlert ? (
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -top-5 -right-5 size-16 rounded-full opacity-[0.07]"
-                  style={{ backgroundColor: tone.dot }}
-                />
-              ) : null}
-              <CardContent className="relative p-3">
-                <div
-                  className={cn(
-                    "mb-2 flex size-8 items-center justify-center rounded-xl",
-                    hasAlert ? "bg-muted text-muted-foreground" : tone.tile
-                  )}
-                >
-                  <Icon className="size-4" />
-                </div>
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p
-                  className={cn(
-                    "font-heading text-base font-bold tracking-tight",
-                    item.alert === "danger" && "text-red-600 dark:text-red-400",
-                    item.alert === "warning" &&
-                      "text-amber-700 dark:text-amber-300"
-                  )}
-                >
-                  {item.value}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <KpiCarousel items={items} />
     </div>
   );
 }

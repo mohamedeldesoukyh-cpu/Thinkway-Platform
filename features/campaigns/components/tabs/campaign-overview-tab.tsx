@@ -1,30 +1,21 @@
 "use client";
 
-import { format } from "date-fns";
-import Link from "next/link";
-import { PencilIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { InfoIcon, PencilIcon } from "lucide-react";
 import { useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
 import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
-import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
-import { formatMoney, formatPercent, formatPlatformLabel } from "@/features/campaigns/utils";
+import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
-import {
-  PO_STATUS_LABELS,
-  PO_STATUS_VARIANT,
-} from "@/lib/finance/po/status";
-import { cn } from "@/lib/utils";
 
 type CampaignOverviewTabProps = {
   workspace: CampaignWorkspace;
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
   currencyOptions: { value: string; label: string }[];
+  onOpenDetails?: () => void;
 };
 
 export function CampaignOverviewTab({
@@ -32,6 +23,7 @@ export function CampaignOverviewTab({
   accountManagers,
   teams,
   currencyOptions,
+  onOpenDetails,
 }: CampaignOverviewTabProps) {
   const [editOpen, setEditOpen] = useState(false);
   const currency = workspace.currency_code;
@@ -39,135 +31,20 @@ export function CampaignOverviewTab({
   return (
     <>
       <div className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {onOpenDetails ? (
+            <Button variant="outline" size="sm" onClick={onOpenDetails}>
+              <InfoIcon data-icon="inline-start" />
+              Campaign details panel
+            </Button>
+          ) : null}
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
             <PencilIcon data-icon="inline-start" />
             Edit campaign
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Campaign header</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <Row label="Campaign #" value={workspace.document_number} />
-              <Row label="Name" value={workspace.name} />
-              <Row
-                label="Status"
-                value={<CampaignStatusBadge status={workspace.status} />}
-              />
-              <Row
-                label="Platform"
-                value={formatPlatformLabel(workspace.platform)}
-              />
-              <Row label="Currency" value={workspace.currency_code} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Hierarchy</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <Row
-                label="Group"
-                value={
-                  workspace.group ? (
-                    <Link
-                      href={`/groups/${workspace.group.id}`}
-                      className="hover:underline"
-                    >
-                      {workspace.group.name}
-                    </Link>
-                  ) : (
-                    "—"
-                  )
-                }
-              />
-              <Row
-                label="Legal entity"
-                value={
-                  workspace.client ? (
-                    <Link
-                      href={`/clients/${workspace.client.id}`}
-                      className="hover:underline"
-                    >
-                      {workspace.client.name}
-                    </Link>
-                  ) : (
-                    "—"
-                  )
-                }
-              />
-              <Row label="Brand" value={workspace.brand?.name ?? "—"} />
-              <Row label="Team" value={workspace.team?.name ?? "—"} />
-              <Row
-                label="Account manager"
-                value={
-                  workspace.account_manager?.full_name ??
-                  workspace.account_manager?.email ??
-                  "—"
-                }
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Commercial</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <Row
-                label="Dates"
-                value={`${formatDate(workspace.start_date)} – ${formatDate(workspace.end_date)}`}
-              />
-              <Row
-                label="Budget (PO)"
-                value={
-                  <span
-                    className={cn(
-                      workspace.financials.po_exceeded &&
-                        "font-medium text-red-600 dark:text-red-400"
-                    )}
-                  >
-                    {formatMoney(workspace.financials.budget, currency)}
-                  </span>
-                }
-              />
-              {workspace.financials.po_exceeded ||
-              workspace.po.po_status === "near_limit" ? (
-                <Row
-                  label="PO utilization"
-                  value={
-                    <Badge variant={PO_STATUS_VARIANT[workspace.po.po_status]}>
-                      {PO_STATUS_LABELS[workspace.po.po_status]} ·{" "}
-                      {formatMoney(workspace.financials.po_consumed, currency)}{" "}
-                      / {formatMoney(workspace.financials.budget, currency)}
-                    </Badge>
-                  }
-                />
-              ) : null}
-              <Row
-                label="Revenue"
-                value={formatMoney(workspace.financials.revenue, currency)}
-              />
-              <Row
-                label="Cost"
-                value={formatMoney(workspace.financials.cost, currency)}
-              />
-              <Row
-                label="GP"
-                value={formatMoney(workspace.financials.gp, currency)}
-              />
-              <Row
-                label="Margin"
-                value={formatPercent(workspace.financials.margin_percent)}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        <CampaignOverviewDetails workspace={workspace} layout="grid" />
 
         <CampaignPoSection
           campaignId={workspace.id}
@@ -182,7 +59,7 @@ export function CampaignOverviewTab({
               <CardTitle className="text-base">Brief</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
                 {workspace.brief}
               </p>
             </CardContent>
@@ -200,18 +77,4 @@ export function CampaignOverviewTab({
       />
     </>
   );
-}
-
-function Row({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
-    </div>
-  );
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "—";
-  return format(new Date(`${value}T00:00:00`), "MMM d, yyyy");
 }

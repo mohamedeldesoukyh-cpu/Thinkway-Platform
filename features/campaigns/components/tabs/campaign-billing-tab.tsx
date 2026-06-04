@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Select,
   SelectContent,
@@ -201,10 +202,11 @@ export function CampaignBillingTab({
         ))}
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-3">
-          <CardTitle>Operational billing</CardTitle>
-          {operationalBilling ? (
+      <OperationalTableSection
+        title="Operational billing"
+        description="Line-level billing state, PO consumption, and invoice generation."
+        actions={
+          operationalBilling ? (
             <Select
               value={billingFilter}
               onValueChange={(value) => {
@@ -225,40 +227,35 @@ export function CampaignBillingTab({
                 ))}
               </SelectContent>
             </Select>
-          ) : null}
-        </CardHeader>
-        <CardContent className="p-0">
-          {operationalBilling ? (
-            <BillingCampaignDrilldown
-              detail={operationalBilling}
-              filter={billingFilter}
-              onInvoice={(selection) => {
-                setInvoiceSelection(selection);
-                setOperationalInvoiceOpen(true);
-              }}
+          ) : null
+        }
+      >
+        {operationalBilling ? (
+          <BillingCampaignDrilldown
+            detail={operationalBilling}
+            filter={billingFilter}
+            onInvoice={(selection) => {
+              setInvoiceSelection(selection);
+              setOperationalInvoiceOpen(true);
+            }}
+          />
+        ) : (
+          <div className="p-4">
+            <AssignmentBillingGroupsTable
+              groups={billingGroups}
+              billingLines={billingLines}
+              currency={currency}
+              campaignId={workspace.id}
             />
-          ) : (
-            <div className="p-4">
-              <AssignmentBillingGroupsTable
-                groups={billingGroups}
-                billingLines={billingLines}
-                currency={currency}
-                campaignId={workspace.id}
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </OperationalTableSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {workspace.invoices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No invoices linked yet.</p>
-          ) : (
-            <Table>
+      <OperationalTableSection title="Invoices" description="Client invoices linked to this campaign.">
+        {workspace.invoices.length === 0 ? (
+          <p className="px-4 py-8 text-sm text-muted-foreground">No invoices linked yet.</p>
+        ) : (
+          <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice</TableHead>
@@ -302,19 +299,14 @@ export function CampaignBillingTab({
                   ))}
                 </TableBody>
               </Table>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </OperationalTableSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {workspace.payments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No payments recorded.</p>
-          ) : (
-            <Table>
+      <OperationalTableSection title="Payments" description="Recorded payments against campaign invoices.">
+        {workspace.payments.length === 0 ? (
+          <p className="px-4 py-8 text-sm text-muted-foreground">No payments recorded.</p>
+        ) : (
+          <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Payment</TableHead>
@@ -348,9 +340,8 @@ export function CampaignBillingTab({
                   ))}
                 </TableBody>
               </Table>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </OperationalTableSection>
 
       <CreateInvoiceSheet
         campaignId={workspace.id}

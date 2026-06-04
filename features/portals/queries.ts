@@ -7,9 +7,11 @@ import type {
   ClientDashboardSummary,
   ClientInvoiceRow,
   ClientReportRow,
+  CreatorCampaignDetail,
   CreatorCampaignRow,
   CreatorDashboardSummary,
   CreatorDeliverableRow,
+  PortalUploadRow,
   CreatorPaymentRow,
   CreatorPublicationRow,
   CreatorVendorIoRow,
@@ -161,6 +163,152 @@ export async function getCreatorCampaigns(): Promise<CreatorCampaignRow[]> {
       });
     },
     []
+  );
+
+  return result.data;
+}
+
+export async function getCreatorCampaignDetail(
+  campaignHeaderId: string
+): Promise<CreatorCampaignDetail | null> {
+  const result = await safeOperationalQuery(
+    "creator-portal:getCampaignDetail",
+    async () => {
+      const { supabase, scope } = await requireCreatorScope("creator_portal.read");
+      const { data, error } = await supabase
+        .from("campaign_influencers")
+        .select(
+          `
+          id, status, agreed_fee, currency,
+          campaign:campaign_headers!campaign_influencers_campaign_header_id_fkey(
+            id, document_number, name, status, brief, start_date, end_date
+          ),
+          io:vendor_ios!vendor_ios_assignment_id_fkey(id, status),
+          deliverables:deliverables!deliverables_campaign_influencer_id_fkey(
+            id, document_number, campaign_id, title, deliverable_type, platform, status,
+            due_date, submitted_at, approved_at, published_at, content_url
+          )
+        `
+        )
+        .eq("influencer_id", scope.influencerId)
+        .eq("campaign_header_id", campaignHeaderId)
+        .maybeSingle();
+
+      if (error) throw new Error(error.message);
+      if (!data) return null;
+
+      const typed = data as {
+        id: string;
+        status: string;
+        agreed_fee: number;
+        currency: string;
+        campaign: {
+          id: string;
+          document_number: string;
+          name: string;
+          status: string;
+          brief: string | null;
+          start_date: string | null;
+          end_date: string | null;
+        } | null;
+        io: { id: string; status: string }[] | null;
+        deliverables: CreatorDeliverableRow[] | null;
+      };
+
+      const deliverables = ((typed.deliverables ?? []) as unknown[]).map((row) => {
+        const d = row as CreatorDeliverableRow & { campaign_id: string };
+        return {
+          ...d,
+          campaign_header_id: d.campaign_id,
+          campaign_name: typed.campaign?.name ?? "—",
+        } satisfies CreatorDeliverableRow;
+      });
+
+      return {
+        campaign_header_id: campaignHeaderId,
+        campaign_document_number: typed.campaign?.document_number ?? "—",
+        campaign_name: typed.campaign?.name ?? "—",
+        campaign_status: typed.campaign?.status ?? "—",
+        brief: typed.campaign?.brief ?? null,
+        start_date: typed.campaign?.start_date ?? null,
+        end_date: typed.campaign?.end_date ?? null,
+        assignment_id: typed.id,
+        assignment_status: typed.status,
+        agreed_amount: Number(typed.agreed_fee ?? 0),
+        currency_code: typed.currency ?? "USD",
+        vendor_io_status: typed.io?.[0]?.status ?? null,
+        vendor_io_id: typed.io?.[0]?.id ?? null,
+        deliverables,
+      } satisfies CreatorCampaignDetail;
+    },
+    null
+  );
+
+  return result.data;
+}
+
+export async function getPortalUploadsForDeliverable(
+  deliverableId: string
+): Promise<PortalUploadRow[]> {
+  const result = await safeOperationalQuery(
+    "creator-portal:getDeliverableUploads",
+    async () => {
+      const { supabase, scope } = await requireCreatorScope("creator_portal.read");
+      const { data, error } = await supabase
+        .from("portal_uploads")
+        .select("id, file_name, external_link, storage_path, created_at")
+        .eq("portal_type", "creator")
+        .eq("entity_type", "deliverable")
+        .eq("entity_id", deliverableId)
+        .eq("influencer_id", scope.influencerId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return (data ?? []) as PortalUploadRow[];
+    },
+    []
+  );
+
+  return result.data;
+}
+
+export async function getCreatorUnreadNotificationCount(): Promise<number> {
+  const result = await safeOperationalQuery(
+    "creator-portal:unreadCount",
+    async () => {
+      const { supabase, scope } = await requireCreatorScope("creator_portal.read");
+      const { count, error } = await supabase
+        .from("portal_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("audience_type", "creator")
+        .eq("influencer_id", scope.influencerId)
+        .eq("is_read", false);
+
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    },
+    0
+  );
+
+  return result.data;
+}
+
+export async function getClientUnreadNotificationCount(): Promise<number> {
+  const result = await safeOperationalQuery(
+    "client-portal:unreadCount",
+    async () => {
+      const { supabase, scope } = await requireClientScope("client_portal.read");
+      const { count, error } = await supabase
+        .from("portal_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("audience_type", "client")
+        .in("client_id", scope.clientIds)
+        .eq("is_read", false);
+
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    },
+    0
   );
 
   return result.data;

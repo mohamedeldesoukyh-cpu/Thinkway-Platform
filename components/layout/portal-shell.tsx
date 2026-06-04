@@ -1,12 +1,8 @@
 import Image from "next/image";
-import Link from "next/link";
-import { SignOutButton } from "@/features/auth/components/sign-out-button";
-import { cn } from "@/lib/utils";
 
-type PortalNavItem = {
-  href: string;
-  label: string;
-};
+import { PortalMobileNav } from "@/components/layout/portal-mobile-nav";
+import { PortalNav, type PortalNavItem } from "@/components/layout/portal-nav";
+import { SignOutButton } from "@/features/auth/components/sign-out-button";
 
 type PortalShellProps = {
   title: string;
@@ -37,19 +33,7 @@ export function PortalShell({
           />
           <p className="mt-2 text-xs text-muted-foreground">{userLabel ?? "Portal user"}</p>
         </div>
-        <nav className="space-y-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "block rounded-2xl px-3 py-2 text-sm font-medium text-foreground/80 hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <PortalNav items={navItems} />
         <div className="mt-8">
           <SignOutButton />
         </div>
@@ -59,6 +43,7 @@ export function PortalShell({
           <h1 className="font-heading text-xl font-semibold tracking-tight">{title}</h1>
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </header>
+        <PortalMobileNav items={navItems} />
         <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>
     </div>

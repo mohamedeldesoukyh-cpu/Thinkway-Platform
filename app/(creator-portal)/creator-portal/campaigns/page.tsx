@@ -36,7 +36,12 @@ export default async function CreatorPortalCampaignsPage() {
                     <TableRow key={row.assignment_id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{row.campaign_name}</p>
+                          <Link
+                            href={`/creator-portal/campaigns/${row.campaign_header_id}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {row.campaign_name}
+                          </Link>
                           <p className="text-xs text-muted-foreground">{row.campaign_document_number}</p>
                         </div>
                       </TableCell>

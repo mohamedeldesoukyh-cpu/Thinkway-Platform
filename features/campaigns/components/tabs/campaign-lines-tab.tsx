@@ -4,7 +4,7 @@ import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CreateInvoiceSheet } from "@/features/billing/components/create-invoice-sheet";
 import type { AssignmentBillingGroup } from "@/features/billing/types";
 import { AssignmentHierarchyTable } from "@/features/campaigns/components/assignment-hierarchy/assignment-hierarchy-table";
@@ -63,36 +63,29 @@ export function CampaignLinesTab({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle>Creator assignments</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Expand assignments to edit deliverables inline, manage posting schedules, and
-              invoice line-by-line. Alt+N adds a deliverable when expanded. Arrow keys expand
-              or collapse rows.
-            </p>
-          </div>
+      <OperationalTableSection
+        title="Creator assignments"
+        description="Expand assignments to edit deliverables inline, manage posting schedules, and invoice line-by-line. Alt+N adds a deliverable when expanded. Arrow keys expand or collapse rows."
+        actions={
           <Button size="sm" onClick={openCreate} title="Assign influencer (A)">
             <PlusIcon data-icon="inline-start" />
             Assign influencer
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {assignmentHierarchy.load_error ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-              Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}. Showing
-              available rows — apply pending migrations if commercial columns are missing.
-            </div>
-          ) : null}
-          <AssignmentHierarchyTable
-            campaignId={workspace.id}
-            hierarchy={assignmentHierarchy}
-            onEditLine={openEdit}
-            onInvoiceSelected={openInvoiceWithSelection}
-          />
-        </CardContent>
-      </Card>
+        }
+      >
+        {assignmentHierarchy.load_error ? (
+          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-900 dark:text-amber-200">
+            Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}. Showing
+            available rows — apply pending migrations if commercial columns are missing.
+          </div>
+        ) : null}
+        <AssignmentHierarchyTable
+          campaignId={workspace.id}
+          hierarchy={assignmentHierarchy}
+          onEditLine={openEdit}
+          onInvoiceSelected={openInvoiceWithSelection}
+        />
+      </OperationalTableSection>
 
       <CampaignLineSheet
         campaignId={workspace.id}

@@ -224,6 +224,9 @@ CREATE POLICY client_users_select
   TO authenticated
   USING (
     profile_id = auth.uid()
+    OR public.is_admin()
+    OR public.has_permission('client_access.read')
+    OR public.has_permission('client_access.write')
     OR public.can_access_client(client_id)
     OR public.has_permission('users.read')
   );
@@ -234,12 +237,20 @@ CREATE POLICY client_users_write
   FOR ALL
   TO authenticated
   USING (
-    public.has_permission('clients.write')
-    AND public.can_access_client(client_id)
+    public.is_admin()
+    OR public.has_permission('client_access.write')
+    OR (
+      public.has_permission('clients.write')
+      AND public.can_access_client(client_id)
+    )
   )
   WITH CHECK (
-    public.has_permission('clients.write')
-    AND public.can_access_client(client_id)
+    public.is_admin()
+    OR public.has_permission('client_access.write')
+    OR (
+      public.has_permission('clients.write')
+      AND public.can_access_client(client_id)
+    )
   );
 
 -- -----------------------------------------------------------------------------

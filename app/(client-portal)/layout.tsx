@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 
 import { PortalShell } from "@/components/layout/portal-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getClientUnreadNotificationCount } from "@/features/portals/queries";
 import { requireClientScope } from "@/features/portals/scope";
+import type { PortalNavItem } from "@/components/layout/portal-nav";
 
 const clientNavItems = [
   { href: "/client-portal", label: "Dashboard" },
@@ -44,12 +46,19 @@ export default async function ClientPortalLayout({
     redirect("/");
   }
 
+  const unreadCount = await getClientUnreadNotificationCount();
+  const navItems: PortalNavItem[] = clientNavItems.map((item) =>
+    item.href === "/client-portal/notifications"
+      ? { ...item, badge: unreadCount }
+      : { ...item }
+  );
+
   return (
     <PortalShell
       title="Client Portal"
       description="Operational campaign visibility with approvals, invoices, reports, and client IO."
       userLabel={userLabel}
-      navItems={[...clientNavItems]}
+      navItems={navItems}
     >
       {children}
     </PortalShell>

@@ -615,7 +615,9 @@ CREATE INDEX IF NOT EXISTS client_contacts_client_id_idx ON public.client_contac
 CREATE TABLE IF NOT EXISTS public.client_users (
   client_id uuid NOT NULL REFERENCES public.clients (id) ON DELETE CASCADE,
   profile_id uuid NOT NULL REFERENCES public.profiles (id) ON DELETE CASCADE,
+  access_role text NOT NULL DEFAULT 'view' CHECK (access_role IN ('view', 'approve')),
   is_primary boolean NOT NULL DEFAULT false,
+  granted_by uuid REFERENCES public.profiles (id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
   PRIMARY KEY (client_id, profile_id)
 );

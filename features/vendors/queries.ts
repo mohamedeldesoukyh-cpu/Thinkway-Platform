@@ -227,6 +227,44 @@ async function enrichVendorList(
   }));
 }
 
+export async function getLinkableCreatorProfiles(
+  vendorId: string
+): Promise<{ id: string; full_name: string | null; email: string }[]> {
+  const { supabase } = await requireUser();
+
+  const { data: roleRow } = await supabase
+    .from("roles")
+    .select("id")
+    .eq("slug", "influencer")
+    .maybeSingle();
+
+  if (!roleRow) return [];
+
+  const { data: profiles, error } = await (supabase as any)
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("role_id", (roleRow as { id: string }).id)
+    .eq("is_active", true)
+    .order("full_name");
+
+  if (error) throw new Error(error.message);
+
+  const { data: linked } = await supabase
+    .from("influencers")
+    .select("id, profile_id")
+    .not("profile_id", "is", null);
+
+  const takenByOther = new Set(
+    ((linked ?? []) as { id: string; profile_id: string }[])
+      .filter((row) => row.id !== vendorId)
+      .map((row) => row.profile_id)
+  );
+
+  return ((profiles ?? []) as { id: string; full_name: string | null; email: string }[]).filter(
+    (profile) => !takenByOther.has(profile.id)
+  );
+}
+
 export async function getVendorById(id: string): Promise<VendorDetail | null> {
   const { supabase } = await requireUser();
 
