@@ -154,6 +154,7 @@ export function CampaignLinesTabInner({
             <AssignmentSafeGrid
               campaignId={workspace.id}
               hierarchy={assignmentHierarchy}
+              campaignPoExceeded={workspace.financials.po_exceeded}
               onEditLine={openEdit}
               onInvoiceLines={openInvoiceWithLines}
               onCreateAssignment={enableLineSheet ? openCreate : undefined}

@@ -32,9 +32,9 @@ export function AssignmentStickyFooter({
       )}
     >
       {poExceeded ? (
-        <div className="mb-2 flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+        <div className="mb-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300">
           <AlertTriangleIcon className="size-3.5" />
-          PO exceeded — finance override may be required
+          PO exceeded — warning only; you can still save this assignment
         </div>
       ) : null}
       <div className="flex flex-wrap items-end justify-between gap-3">

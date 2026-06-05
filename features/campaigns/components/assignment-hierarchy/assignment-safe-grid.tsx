@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils";
 type AssignmentSafeGridProps = {
   campaignId: string;
   hierarchy: AssignmentHierarchy;
+  campaignPoExceeded?: boolean;
   onEditLine: (line: CampaignLineWorkspace) => void;
   onInvoiceLines?: (lineIds: string[]) => void;
   onCreateAssignment?: () => void;
@@ -88,6 +89,7 @@ function tryRenderRowCells(lineId: string, render: () => ReactNode): ReactNode {
 export function AssignmentSafeGrid({
   campaignId,
   hierarchy,
+  campaignPoExceeded = false,
   onEditLine,
   onInvoiceLines,
   onCreateAssignment,
@@ -341,7 +343,17 @@ export function AssignmentSafeGrid({
                           ) : null}
                         </td>
                         <td className={SAFE_GRID_TD}>
-                          <span className="font-medium text-foreground">{row.displayName}</span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-medium text-foreground">{row.displayName}</span>
+                            {campaignPoExceeded || line.po_over_consumed ? (
+                              <Badge
+                                variant="outline"
+                                className="border-amber-500/60 text-[10px] text-amber-800 dark:text-amber-200"
+                              >
+                                PO exceeded
+                              </Badge>
+                            ) : null}
+                          </div>
                           <p className="text-[10px] text-muted-foreground">
                             <DocumentNumber value={line.document_number} />
                           </p>

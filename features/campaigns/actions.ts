@@ -7,7 +7,7 @@ import {
 } from "@/features/campaigns/constants";
 import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
 import { resolveLineCommercialInput } from "@/lib/assignments/resolve-line-commercial-input";
-import { syncAssignmentCommercialRows } from "@/lib/assignments/sync-commercial-rows";
+import { syncAssignmentDeliverablesForLine } from "@/lib/assignments/sync-assignment-deliverables-for-line";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   buildLineVatPayload,
@@ -575,20 +575,18 @@ export async function createCampaignLineAction(
       dueDate: parsed.data.end_date ?? parsed.data.start_date,
     });
 
-    if (
-      commercial.pricing_mode === "per_deliverable" &&
-      commercial.commercial_rows.length > 0
-    ) {
-      await syncAssignmentCommercialRows(supabase, {
-        campaignHeaderId: parsed.data.campaign_id,
-        campaignLineId: line.id,
-        rows: commercial.commercial_rows,
-        revenueVatPercent: vatPayload.revenue_vat_percent,
-        revenueVatExempt: vatPayload.revenue_vat_exempt,
-        costVatPercent: vatPayload.cost_vat_percent,
-        costVatExempt: vatPayload.cost_vat_exempt,
-      });
-    }
+    await syncAssignmentDeliverablesForLine(supabase, {
+      campaignHeaderId: parsed.data.campaign_id,
+      campaignLineId: line.id,
+      commercial,
+      revenueBeforeVat: vatPayload.revenue_before_vat,
+      costBeforeVat: vatPayload.cost_before_vat,
+      dueDate: parsed.data.end_date ?? parsed.data.start_date ?? null,
+      revenueVatPercent: vatPayload.revenue_vat_percent,
+      revenueVatExempt: vatPayload.revenue_vat_exempt,
+      costVatPercent: vatPayload.cost_vat_percent,
+      costVatExempt: vatPayload.cost_vat_exempt,
+    });
   } catch (e) {
     await supabase.from("campaign_influencers").delete().eq("id", vendorAssignmentId);
     await supabase.from("campaign_lines").delete().eq("id", line.id);
@@ -839,20 +837,18 @@ export async function updateCampaignLineAction(
       dueDate: parsed.data.end_date ?? parsed.data.start_date,
     });
 
-    if (
-      commercial.pricing_mode === "per_deliverable" &&
-      commercial.commercial_rows.length > 0
-    ) {
-      await syncAssignmentCommercialRows(supabase, {
-        campaignHeaderId: parsed.data.campaign_id,
-        campaignLineId: parsed.data.line_id,
-        rows: commercial.commercial_rows,
-        revenueVatPercent: vatPayload.revenue_vat_percent,
-        revenueVatExempt: vatPayload.revenue_vat_exempt,
-        costVatPercent: vatPayload.cost_vat_percent,
-        costVatExempt: vatPayload.cost_vat_exempt,
-      });
-    }
+    await syncAssignmentDeliverablesForLine(supabase, {
+      campaignHeaderId: parsed.data.campaign_id,
+      campaignLineId: parsed.data.line_id,
+      commercial,
+      revenueBeforeVat: vatPayload.revenue_before_vat,
+      costBeforeVat: vatPayload.cost_before_vat,
+      dueDate: parsed.data.end_date ?? parsed.data.start_date ?? null,
+      revenueVatPercent: vatPayload.revenue_vat_percent,
+      revenueVatExempt: vatPayload.revenue_vat_exempt,
+      costVatPercent: vatPayload.cost_vat_percent,
+      costVatExempt: vatPayload.cost_vat_exempt,
+    });
   }
 
   revalidateCampaign(parsed.data.campaign_id, header?.client_id);

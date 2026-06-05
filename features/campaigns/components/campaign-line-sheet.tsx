@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { InfluencerTypeahead } from "@/components/forms/influencer-typeahead";
@@ -49,8 +50,8 @@ import {
 } from "@/features/campaigns/line-assignment";
 import { AssignmentMultiCurrencyCostFields } from "@/features/campaigns/components/assignment-multi-currency-cost-fields";
 import { CampaignLinePoPanel } from "@/features/campaigns/components/campaign-line-po-panel";
-import { PoGovernanceDialog } from "@/features/campaigns/components/po-governance-dialog";
 import { calculatePoConsumption } from "@/lib/finance/po/calculations";
+import { formatMoney } from "@/features/campaigns/utils";
 import {
   commercialRowsToPlatformSelections,
   createEmptyCommercialRow,
@@ -91,6 +92,7 @@ export function CampaignLineSheet({
   open,
   onOpenChange,
 }: CampaignLineSheetProps) {
+  const router = useRouter();
   const isEdit = line !== null;
   const [assignmentStatus, setAssignmentStatus] =
     useState<CampaignLineAssignmentStatus>(line?.assignment_status ?? "assigned");
@@ -123,8 +125,6 @@ export function CampaignLineSheet({
   const [poAmount, setPoAmount] = useState(line?.po_amount ?? 0);
   const [startDate, setStartDate] = useState(line?.start_date ?? "");
   const [endDate, setEndDate] = useState(line?.end_date ?? "");
-  const [poDialogOpen, setPoDialogOpen] = useState(false);
-  const [overrideApproved, setOverrideApproved] = useState(false);
   const [pricingMode, setPricingMode] = useState<AssignmentPricingMode>(
     line?.assignment?.pricing_mode ?? "package"
   );
@@ -133,7 +133,8 @@ export function CampaignLineSheet({
   );
   const formRef = useRef<HTMLFormElement>(null);
   const submitLockRef = useRef(false);
-  const overrideApprovedRef = useRef(false);
+  const poExceededOnSaveRef = useRef(false);
+  const poExceededAmountRef = useRef(0);
 
   const [createState, createAction, createPending] = useActionState(
     createCampaignLineAction,
@@ -298,10 +299,6 @@ export function CampaignLineSheet({
   );
 
   useEffect(() => {
-    overrideApprovedRef.current = overrideApproved;
-  }, [overrideApproved]);
-
-  useEffect(() => {
     if (!isPending) {
       submitLockRef.current = false;
     }
@@ -310,8 +307,8 @@ export function CampaignLineSheet({
   useEffect(() => {
     if (!open) {
       submitLockRef.current = false;
-      setOverrideApproved(false);
-      overrideApprovedRef.current = false;
+      poExceededOnSaveRef.current = false;
+      poExceededAmountRef.current = 0;
     }
   }, [open]);
 
@@ -319,11 +316,18 @@ export function CampaignLineSheet({
     if (!state.message) return;
     if (state.ok) {
       toast.success(state.message);
+      if (poExceededOnSaveRef.current) {
+        toast.warning(
+          `Campaign PO exceeded by ${formatMoney(poExceededAmountRef.current, currencyCode)}. Assignment saved — adjust revenue or PO to clear the warning.`,
+          { duration: 6000 }
+        );
+      }
+      router.refresh();
       onOpenChange(false);
       return;
     }
     toast.error(state.message);
-  }, [state, onOpenChange]);
+  }, [state, onOpenChange, router, currencyCode]);
 
   async function loadProfile(id: string, existing?: PlatformSelectionState[]) {
     setLoadingProfile(true);
@@ -469,16 +473,8 @@ export function CampaignLineSheet({
               return;
             }
 
-            if (
-              poSnapshot.is_over_consumed &&
-              !overrideApprovedRef.current &&
-              !po.po_override_approved
-            ) {
-              event.preventDefault();
-              setPoDialogOpen(true);
-              return;
-            }
-
+            poExceededOnSaveRef.current = poSnapshot.is_over_consumed;
+            poExceededAmountRef.current = poSnapshot.exceeded_amount;
             submitLockRef.current = true;
           }}
         >
@@ -756,23 +752,6 @@ export function CampaignLineSheet({
             poExceeded={poSnapshot.is_over_consumed}
           />
         </form>
-        <PoGovernanceDialog
-          open={poDialogOpen}
-          onOpenChange={setPoDialogOpen}
-          campaignId={campaignId}
-          lineId={line?.id}
-          currency={currencyCode}
-          snapshot={poSnapshot}
-          onCancel={() => setPoDialogOpen(false)}
-          onConfirm={() => {
-            if (submitLockRef.current || isPending) return;
-            overrideApprovedRef.current = true;
-            setOverrideApproved(true);
-            setPoDialogOpen(false);
-            submitLockRef.current = true;
-            formRef.current?.requestSubmit();
-          }}
-        />
       </SheetContent>
     </Sheet>
   );

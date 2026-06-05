@@ -164,7 +164,11 @@ export function CampaignBillingTab({
             <p className="font-medium">Campaign PO exceeded</p>
             <p>
               Consumed {formatMoney(financials.po_consumed, currency)} exceeds approved PO{" "}
-              {formatMoney(financials.po_total, currency)}. Finance override may be required.
+              {formatMoney(financials.po_total, currency)}
+              {financials.po_consumed > financials.po_total
+                ? ` by ${formatMoney(financials.po_consumed - financials.po_total, currency)}`
+                : null}
+              . Warning only — assignments remain editable.
             </p>
           </div>
         </div>
