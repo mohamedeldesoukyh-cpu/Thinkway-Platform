@@ -20,6 +20,7 @@ import type {
   DeliverableCollectionStatus,
 } from "@/features/campaigns/types/assignment-hierarchy";
 import { deliverableTagLabel } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import { formatDeliverableHierarchyLabel } from "@/lib/campaigns/deliverable-display-label";
 import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { formatMarginPercent } from "@/features/billing/types";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
@@ -144,7 +145,11 @@ function buildVirtualPosts(input: {
     id: `virtual-${input.deliverableId}-${index + 1}`,
     assignment_deliverable_id: input.deliverableId,
     sequence_number: index + 1,
-    label: `${deliverableTagLabel(input.deliverableType)} #${index + 1}`,
+    label: formatDeliverableHierarchyLabel({
+      platform: input.platform,
+      deliverable_type: input.deliverableType,
+      sequence: index + 1,
+    }),
     platform: input.platform,
     deliverable_type: input.deliverableType,
     deliverable_type_label: deliverableTypeLabel(input.deliverableType),
@@ -488,7 +493,11 @@ async function loadCampaignAssignmentHierarchy(
           platform,
           deliverable_type: deliverableType,
           deliverable_type_label: deliverableTypeLabel(deliverableType),
-          label: `${deliverableTagLabel(deliverableType)} #${post.sequence_number}`,
+          label: formatDeliverableHierarchyLabel({
+            platform,
+            deliverable_type: deliverableType,
+            sequence: post.sequence_number,
+          }),
           invoice_id: invoiceLink?.invoice_id ?? null,
           invoice_document_number: invoiceLink?.document_number ?? null,
           payout_status: line?.vendor_payment_status ?? null,

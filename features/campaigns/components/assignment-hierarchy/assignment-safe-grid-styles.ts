@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 
 /** Parent column count — keep in sync with AssignmentSafeGrid header cells. */
-export const ASSIGNMENT_SAFE_GRID_COL_SPAN = 17;
+export const ASSIGNMENT_SAFE_GRID_COL_SPAN = 18;
 
 export const SAFE_GRID_SHELL = cn(
   OPERATIONAL_TABLE_SURFACE,
@@ -50,6 +50,25 @@ export const SAFE_GRID_CHILD_GROUP_CELL = cn(
 );
 
 export const SAFE_GRID_AMOUNT = OPERATIONAL_AMOUNT_CLASS;
+
+/** Parent financial emphasis — Rev/Cost strongest, GP secondary. */
+export const SAFE_GRID_HIGHLIGHT_REV = cn(
+  SAFE_GRID_TD,
+  SAFE_GRID_AMOUNT,
+  "bg-primary/8 font-semibold text-foreground"
+);
+
+export const SAFE_GRID_HIGHLIGHT_COST = cn(
+  SAFE_GRID_TD,
+  SAFE_GRID_AMOUNT,
+  "bg-amber-500/10 font-semibold text-foreground dark:bg-amber-500/15"
+);
+
+export const SAFE_GRID_HIGHLIGHT_GP = cn(
+  SAFE_GRID_TD,
+  SAFE_GRID_AMOUNT,
+  "font-semibold text-foreground"
+);
 
 export const SAFE_GRID_CHECKBOX =
   "size-3.5 shrink-0 rounded border-border accent-primary";

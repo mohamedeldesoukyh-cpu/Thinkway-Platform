@@ -1,3 +1,5 @@
+import { formatDeliverableHierarchyLabel } from "@/lib/campaigns/deliverable-display-label";
+
 export type AssignmentDeliverableBillingStatus =
   | "draft"
   | "ready_to_invoice"
@@ -53,12 +55,12 @@ export function deliverableDisplayLabel(row: {
   sort_order: number;
   quantity: number;
 }): string {
-  const typeLabel = row.deliverable_type.replace(/_/g, " ");
-  const platformLabel = row.platform.charAt(0).toUpperCase() + row.platform.slice(1);
-  if (row.quantity > 1) {
-    return `${platformLabel} ${typeLabel} ×${row.quantity} (#${row.sort_order + 1})`;
-  }
-  return `${platformLabel} ${typeLabel} (#${row.sort_order + 1})`;
+  return formatDeliverableHierarchyLabel({
+    platform: row.platform,
+    deliverable_type: row.deliverable_type,
+    sequence: row.sort_order + 1,
+    quantity: row.quantity,
+  });
 }
 
 export function rollupAssignmentBilling(

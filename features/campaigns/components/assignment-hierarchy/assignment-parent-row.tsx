@@ -149,6 +149,51 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       >
         {postingSummary}
       </TableCell>
+      <TableCell className="px-1.5 py-1.5 text-center text-[10px] font-normal text-muted-foreground">
+        {line.currency_code ?? "—"}
+      </TableCell>
+      <TableCell
+        className={cn(
+          "px-1.5 py-1.5 text-right",
+          OPERATIONAL_AMOUNT_CLASS,
+          "bg-primary/8 font-semibold text-foreground"
+        )}
+      >
+        {formatOperationalAmount(rollups.revenue)}
+      </TableCell>
+      <TableCell
+        className={cn(
+          "px-1.5 py-1.5 text-right",
+          OPERATIONAL_AMOUNT_CLASS,
+          "bg-amber-500/10 font-semibold text-foreground dark:bg-amber-500/15"
+        )}
+      >
+        {formatOperationalAmount(line.cost_before_vat)}
+      </TableCell>
+      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+        {formatOperationalAmount(line.revenue_vat_amount)}
+      </TableCell>
+      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+        {formatOperationalAmount(line.revenue_after_vat)}
+      </TableCell>
+      <TableCell
+        className={cn(
+          "px-1.5 py-1.5 text-right",
+          OPERATIONAL_AMOUNT_CLASS,
+          "font-semibold text-foreground"
+        )}
+      >
+        {formatOperationalAmount(rollups.gp)}
+      </TableCell>
+      <TableCell
+        className={cn(
+          "px-1.5 py-1.5 text-right",
+          OPERATIONAL_AMOUNT_CLASS,
+          "text-muted-foreground"
+        )}
+      >
+        {formatPercent(rollups.margin_percent)}
+      </TableCell>
       <TableCell className="px-1.5 py-1.5">
         {enableBillingPills ? (
           <>
@@ -172,30 +217,6 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
         ) : (
           <span className="capitalize text-muted-foreground">{billingStatusLabel}</span>
         )}
-      </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
-        {formatOperationalAmount(rollups.revenue)}
-      </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
-        {formatOperationalAmount(line.cost_received)}
-      </TableCell>
-      <TableCell className="px-1.5 py-1.5 text-center text-[10px] font-normal text-muted-foreground">
-        {line.cost_received_currency ?? "—"}
-      </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
-        {formatOperationalAmount(line.cost_before_vat)}
-      </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
-        {formatOperationalAmount(rollups.gp)}
-      </TableCell>
-      <TableCell
-        className={cn(
-          "px-1.5 py-1.5 text-right",
-          OPERATIONAL_AMOUNT_CLASS,
-          "text-muted-foreground"
-        )}
-      >
-        {formatPercent(rollups.margin_percent)}
       </TableCell>
       <TableCell className="px-1.5 py-1.5">
         {line.vendor_payment_status ? (

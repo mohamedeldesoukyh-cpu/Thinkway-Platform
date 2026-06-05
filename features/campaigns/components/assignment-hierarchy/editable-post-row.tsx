@@ -49,6 +49,8 @@ import {
 import { SCHEDULE_STATUS_OPTIONS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import {
   GRID_CELL,
+  GRID_HIGHLIGHT_COST,
+  GRID_HIGHLIGHT_REV,
   OPERATIONAL_GRID_LABELS,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-grid-columns";
 import { useOperationalCommercialDraft } from "@/features/campaigns/components/assignment-hierarchy/use-operational-commercial-draft";
@@ -402,7 +404,7 @@ export function EditablePostRow({
             disabled={!canEditCommercial}
           />
         </td>
-        <td className={GRID_CELL.money}>
+        <td className={GRID_HIGHLIGHT_REV}>
           <OperationalAmountField
             value={commercial.draft.rev}
             onChange={(n) => commercial.setRev(n)}
@@ -410,7 +412,7 @@ export function EditablePostRow({
             disabled={!canEditCommercial}
           />
         </td>
-        <td className={GRID_CELL.money}>
+        <td className={GRID_HIGHLIGHT_COST}>
           <OperationalAmountField
             value={commercial.draft.cost}
             onChange={(n) => commercial.setCost(n)}
@@ -496,21 +498,6 @@ export function EditablePostRow({
             <DeliverableWorkflowBadge status={post.workflow_status} />
           )}
         </td>
-        <td className={GRID_CELL.notes}>
-          {canEdit && editing ? (
-            <Input
-              value={meta.notes}
-              onChange={(e) => setMeta((m) => ({ ...m, notes: e.target.value }))}
-              className="h-6 text-[10px]"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") saveMeta();
-                if (e.key === "Escape") setEditing(false);
-              }}
-            />
-          ) : (
-            <span className="line-clamp-1 text-muted-foreground">{post.notes ?? "—"}</span>
-          )}
-        </td>
         <td className={GRID_CELL.actions}>
           {!canEdit ? (
             <span className="text-muted-foreground">—</span>
@@ -579,7 +566,7 @@ export function EditablePostRow({
       </tr>
       {error ? (
         <tr>
-          <td colSpan={18} className="px-4 pb-1 text-[10px] text-destructive">
+          <td colSpan={17} className="px-4 pb-1 text-[10px] text-destructive">
             {error}
           </td>
         </tr>
@@ -640,9 +627,6 @@ export function OperationalGridHeader({ actions }: OperationalGridHeaderProps) {
       </th>
       <th className={cn(GRID_CELL.workflow, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.workflow}
-      </th>
-      <th className={cn(GRID_CELL.notes, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.notes}
       </th>
       <th className={cn(GRID_CELL.actions, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
         {actions}

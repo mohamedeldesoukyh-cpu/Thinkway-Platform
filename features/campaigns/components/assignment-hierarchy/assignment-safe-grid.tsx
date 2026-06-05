@@ -23,6 +23,9 @@ import {
   SAFE_GRID_AMOUNT,
   SAFE_GRID_CHECKBOX,
   SAFE_GRID_CONTROL_CELL,
+  SAFE_GRID_HIGHLIGHT_COST,
+  SAFE_GRID_HIGHLIGHT_GP,
+  SAFE_GRID_HIGHLIGHT_REV,
   SAFE_GRID_PARENT_ROW,
   SAFE_GRID_PARENT_ROW_EXPANDED,
   SAFE_GRID_SHELL,
@@ -266,19 +269,20 @@ export function AssignmentSafeGrid({
                 {HIERARCHY_COLUMN_LABELS.deliverables}
               </th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.postingDates}</th>
-              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.opsStatus}</th>
-              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.billing}</th>
-              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
-                {HIERARCHY_COLUMN_LABELS.revenue}
-              </th>
-              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
-                {HIERARCHY_COLUMN_LABELS.costReceived}
-              </th>
               <th className={cn(SAFE_GRID_TH, "text-center")}>
                 {HIERARCHY_COLUMN_LABELS.costCurrency}
               </th>
               <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
-                {HIERARCHY_COLUMN_LABELS.costInLc}
+                {HIERARCHY_COLUMN_LABELS.revenue}
+              </th>
+              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+                {HIERARCHY_COLUMN_LABELS.cost}
+              </th>
+              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+                {HIERARCHY_COLUMN_LABELS.vat}
+              </th>
+              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+                {HIERARCHY_COLUMN_LABELS.totalBilling}
               </th>
               <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.gp}
@@ -286,6 +290,8 @@ export function AssignmentSafeGrid({
               <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.margin}
               </th>
+              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.opsStatus}</th>
+              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.billing}</th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.payout}</th>
               <th className={cn(SAFE_GRID_TH, "w-10")} />
             </tr>
@@ -378,6 +384,34 @@ export function AssignmentSafeGrid({
                         >
                           {row.postingSummary}
                         </td>
+                        <td className={cn(SAFE_GRID_TD, "text-center text-[10px] text-muted-foreground")}>
+                          {line.currency_code ?? "—"}
+                        </td>
+                        <td className={SAFE_GRID_HIGHLIGHT_REV}>
+                          {formatOperationalAmount(row.rollups.revenue)}
+                        </td>
+                        <td className={SAFE_GRID_HIGHLIGHT_COST}>
+                          {formatOperationalAmount(line.cost_before_vat)}
+                        </td>
+                        <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
+                          {formatOperationalAmount(line.revenue_vat_amount)}
+                        </td>
+                        <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
+                          {formatOperationalAmount(line.revenue_after_vat)}
+                        </td>
+                        <td className={SAFE_GRID_HIGHLIGHT_GP}>
+                          {formatOperationalAmount(row.rollups.gp)}
+                        </td>
+                        <td
+                          className={cn(
+                            SAFE_GRID_TD,
+                            "text-right",
+                            SAFE_GRID_AMOUNT,
+                            "text-muted-foreground"
+                          )}
+                        >
+                          {formatPercent(row.rollups.margin_percent)}
+                        </td>
                         <td className={SAFE_GRID_TD}>
                           {gates.enablePills ? (
                             <>
@@ -397,31 +431,6 @@ export function AssignmentSafeGrid({
                             operationalStatus={row.operationalStatus}
                             billingStatus={row.childBillingStatus}
                           />
-                        </td>
-                        <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
-                          {formatOperationalAmount(row.rollups.revenue)}
-                        </td>
-                        <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
-                          {formatOperationalAmount(line.cost_received)}
-                        </td>
-                        <td className={cn(SAFE_GRID_TD, "text-center text-[10px] text-muted-foreground")}>
-                          {line.cost_received_currency ?? "—"}
-                        </td>
-                        <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
-                          {formatOperationalAmount(line.cost_before_vat)}
-                        </td>
-                        <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
-                          {formatOperationalAmount(row.rollups.gp)}
-                        </td>
-                        <td
-                          className={cn(
-                            SAFE_GRID_TD,
-                            "text-right",
-                            SAFE_GRID_AMOUNT,
-                            "text-muted-foreground"
-                          )}
-                        >
-                          {formatPercent(row.rollups.margin_percent)}
                         </td>
                         <td className={SAFE_GRID_TD}>
                           {line.vendor_payment_status ? (

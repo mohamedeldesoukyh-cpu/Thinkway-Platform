@@ -1,3 +1,7 @@
+import { cn } from "@/lib/utils";
+
+import { OPERATIONAL_CHILD_AMOUNT_CLASS } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+
 export const OPERATIONAL_GRID_LABELS = {
   select: "",
   type: "Type",
@@ -15,11 +19,8 @@ export const OPERATIONAL_GRID_LABELS = {
   collection: "Coll",
   payout: "Payout",
   workflow: "WF",
-  notes: "Notes",
   actions: "",
 } as const;
-
-import { OPERATIONAL_CHILD_AMOUNT_CLASS } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 
 const amountCell = `${OPERATIONAL_CHILD_AMOUNT_CLASS} text-right`;
 
@@ -37,6 +38,16 @@ export const GRID_CELL = {
   collection: "w-[44px] px-1 py-1 text-[9px]",
   payout: "w-[56px] px-1 py-1",
   workflow: "w-[64px] px-1 py-1",
-  notes: "min-w-[72px] max-w-[100px] px-1 py-1",
   actions: "w-[60px] px-1 py-1 text-right",
 } as const;
+
+/** Child financial emphasis — matches parent Rev/Cost styling. */
+export const GRID_HIGHLIGHT_REV = cn(
+  GRID_CELL.money,
+  "bg-primary/8 font-semibold text-foreground"
+);
+
+export const GRID_HIGHLIGHT_COST = cn(
+  GRID_CELL.money,
+  "bg-amber-500/10 font-semibold text-foreground dark:bg-amber-500/15"
+);

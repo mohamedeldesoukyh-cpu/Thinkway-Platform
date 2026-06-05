@@ -48,7 +48,7 @@ import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { cn } from "@/lib/utils";
 
-const PARENT_COLUMN_COUNT = 17;
+const PARENT_COLUMN_COUNT = 18;
 
 type AssignmentHierarchyTableProps = {
   campaignId: string;
@@ -280,19 +280,20 @@ export function AssignmentHierarchyTable({
                   {HIERARCHY_COLUMN_LABELS.deliverables}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.postingDates}</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.opsStatus}</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.billing}</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right tabular-nums">
-                  {HIERARCHY_COLUMN_LABELS.revenue}
-                </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right tabular-nums">
-                  {HIERARCHY_COLUMN_LABELS.costReceived}
-                </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead className="text-center">
                   {HIERARCHY_COLUMN_LABELS.costCurrency}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead className="text-right tabular-nums">
-                  {HIERARCHY_COLUMN_LABELS.costInLc}
+                  {HIERARCHY_COLUMN_LABELS.revenue}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.cost}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.vat}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.totalBilling}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead className="text-right tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.gp}
@@ -300,6 +301,8 @@ export function AssignmentHierarchyTable({
                 <CampaignOperationalTableHead className="text-right tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.margin}
                 </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.opsStatus}</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.billing}</CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.payout}</CampaignOperationalTableHead>
                 <CampaignOperationalTableHead className="w-10 text-right">
                   {HIERARCHY_COLUMN_LABELS.actions}

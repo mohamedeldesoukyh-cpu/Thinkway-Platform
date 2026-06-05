@@ -26,14 +26,15 @@ export const HIERARCHY_COLUMN_LABELS = {
   platforms: "Platforms",
   deliverables: "Deliv",
   postingDates: "Dates",
-  opsStatus: "Ops",
-  billing: "Billing",
-  revenue: "Rev",
-  costReceived: "Cost rcv",
   costCurrency: "CCY",
-  costInLc: "Cost LC",
+  revenue: "Rev",
+  cost: "Cost",
+  vat: "VAT",
+  totalBilling: "Total Billing",
   gp: "GP",
   margin: "Mgn",
+  opsStatus: "Ops",
+  billing: "Billing",
   payout: "Payout",
   actions: "",
 } as const;
@@ -54,7 +55,6 @@ export const CHILD_COLUMN_LABELS = {
   collection: "Collection",
   payout: "Payout",
   workflow: "Workflow",
-  notes: "Notes",
   actions: "",
 } as const;
 
