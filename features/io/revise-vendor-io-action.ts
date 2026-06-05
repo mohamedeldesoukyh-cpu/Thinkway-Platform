@@ -5,11 +5,12 @@ import { z } from "zod";
 
 import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import { logReviseVendorIo } from "@/lib/io/revise-vendor-io-log";
 import {
   vendorIoBaseDocumentNumber,
   vendorIoRevisionDocumentNumber,
 } from "@/lib/io/vendor-io-revision";
-import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
+import { finalizeLineBillingAfterVendorIoRevisionBatch } from "@/lib/billing/vendor-io-revision-line-billing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const reviseVendorIoSchema = z.object({
@@ -29,6 +30,8 @@ const reviseVendorIoSchema = z.object({
 export type ReviseVendorIoState = {
   ok: boolean;
   message?: string;
+  revised_line_ids?: string[];
+  new_vendor_io_ids?: string[];
 };
 
 async function requireAuth() {
@@ -71,6 +74,8 @@ export async function reviseVendorIosFromLinesAction(
 
   const { campaign_id: campaignId, line_ids: lineIds, reason } = parsed.data;
 
+  logReviseVendorIo("start", { campaignId, lineIds, reasonLength: reason.length });
+
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
     .select(
@@ -80,6 +85,7 @@ export async function reviseVendorIosFromLinesAction(
     .in("id", lineIds);
 
   if (linesError) {
+    logReviseVendorIo("lines_query_failed", { message: linesError.message });
     return { ok: false, message: linesError.message };
   }
 
@@ -109,6 +115,14 @@ export async function reviseVendorIosFromLinesAction(
       finance_override_until: line.finance_override_until,
     }) as CampaignLineOperationalStatus;
 
+    logReviseVendorIo("eligibility_check", {
+      lineId: line.id,
+      status,
+      vendor_io_id: line.vendor_io_id,
+      billing_status: line.billing_status,
+      invoice_id: line.invoice_id,
+    });
+
     if (status !== "reopened") {
       return {
         ok: false,
@@ -130,9 +144,16 @@ export async function reviseVendorIosFromLinesAction(
     byVendorIo.set(line.vendor_io_id!, list);
   }
 
+  const revisedLineIds: string[] = [];
+  const newVendorIoIds: string[] = [];
   let revised = 0;
 
   for (const [oldVioId, groupLines] of byVendorIo) {
+    logReviseVendorIo("group_start", {
+      oldVioId,
+      lineIds: groupLines.map((l) => l.id),
+    });
+
     const { data: oldVio, error: oldError } = await supabase
       .from("vendor_ios")
       .select(
@@ -142,6 +163,7 @@ export async function reviseVendorIosFromLinesAction(
       .maybeSingle();
 
     if (oldError || !oldVio) {
+      logReviseVendorIo("old_vio_missing", { oldVioId, message: oldError?.message });
       return { ok: false, message: oldError?.message ?? "Vendor IO not found." };
     }
 
@@ -185,6 +207,14 @@ export async function reviseVendorIosFromLinesAction(
     const baseDoc = vendorIoBaseDocumentNumber(old.document_number);
     const nextDoc = vendorIoRevisionDocumentNumber(baseDoc, nextRevision);
 
+    logReviseVendorIo("revision_plan", {
+      oldVioId: old.id,
+      rootId,
+      nextRevision,
+      nextDoc,
+      supersede: true,
+    });
+
     const groupTotal = groupLines.reduce((s, l) => s + (Number(l.revenue) || 0), 0);
 
     const { error: supersedeError } = await supabase
@@ -193,6 +223,7 @@ export async function reviseVendorIosFromLinesAction(
       .eq("id", old.id);
 
     if (supersedeError) {
+      logReviseVendorIo("supersede_failed", { message: supersedeError.message });
       return { ok: false, message: supersedeError.message };
     }
 
@@ -228,10 +259,15 @@ export async function reviseVendorIosFromLinesAction(
         .from("vendor_ios")
         .update({ is_superseded: false } as never)
         .eq("id", old.id);
+      logReviseVendorIo("insert_failed", { message: insertError?.message });
       return { ok: false, message: insertError?.message ?? "Failed to create VIO revision." };
     }
 
-    const newVioId = (newVio as { id: string }).id;
+    const newVioId = (newVio as { id: string; document_number: string }).id;
+    const newDoc = (newVio as { document_number: string }).document_number;
+    newVendorIoIds.push(newVioId);
+
+    logReviseVendorIo("insert_ok", { newVioId, newDoc, replaces: old.id });
 
     const { data: linkedLines } = await supabase
       .from("vendor_io_lines")
@@ -244,30 +280,99 @@ export async function reviseVendorIosFromLinesAction(
     ]);
 
     for (const lineId of lineIdsToMove) {
-      await supabase.from("vendor_io_lines").delete().eq("campaign_line_id", lineId);
-      await supabase.from("vendor_io_lines").insert({
+      const { error: deleteLinkError } = await supabase
+        .from("vendor_io_lines")
+        .delete()
+        .eq("campaign_line_id", lineId);
+
+      if (deleteLinkError) {
+        logReviseVendorIo("vendor_io_lines_delete_failed", {
+          lineId,
+          message: deleteLinkError.message,
+        });
+        return { ok: false, message: deleteLinkError.message };
+      }
+
+      const { error: insertLinkError } = await supabase.from("vendor_io_lines").insert({
         vendor_io_id: newVioId,
         campaign_line_id: lineId,
       } as never);
 
-      await supabase
+      if (insertLinkError) {
+        logReviseVendorIo("vendor_io_lines_insert_failed", {
+          lineId,
+          message: insertLinkError.message,
+        });
+        return { ok: false, message: insertLinkError.message };
+      }
+
+      const { error: lineUpdateError } = await supabase
         .from("campaign_lines")
         .update({
           vendor_io_id: newVioId,
-          operational_status: "io_generated",
           finance_override_until: null,
         } as never)
         .eq("id", lineId);
+
+      if (lineUpdateError) {
+        logReviseVendorIo("line_update_failed", { lineId, message: lineUpdateError.message });
+        return { ok: false, message: lineUpdateError.message };
+      }
+
+      revisedLineIds.push(lineId);
+      logReviseVendorIo("line_linked", { lineId, newVioId, oldVioId: old.id });
+    }
+
+    const { count: staleCount } = await supabase
+      .from("campaign_lines")
+      .select("id", { count: "exact", head: true })
+      .eq("vendor_io_id", old.id);
+
+    if ((staleCount ?? 0) > 0) {
+      logReviseVendorIo("stale_vendor_io_refs_remain", { oldVioId: old.id, staleCount });
     }
 
     revised += 1;
   }
 
-  await syncLineOperationalStatusBatch(supabase, lineIds);
+  const uniqueLineIds = [...new Set(revisedLineIds)];
+  await finalizeLineBillingAfterVendorIoRevisionBatch(supabase, uniqueLineIds);
+
+  for (const lineId of uniqueLineIds) {
+    const { data: snapshot } = await supabase
+      .from("campaign_lines")
+      .select("operational_status, billing_status, vendor_io_id, invoice_id")
+      .eq("id", lineId)
+      .maybeSingle();
+
+    const snap = snapshot as {
+      operational_status: string;
+      billing_status: string;
+      vendor_io_id: string | null;
+      invoice_id: string | null;
+    } | null;
+
+    if (
+      snap &&
+      snap.operational_status === "reopened" &&
+      ["invoiced", "paid", "partially_invoiced"].includes(snap.billing_status)
+    ) {
+      logReviseVendorIo("post_sync_invalid_pair", { lineId, snapshot: snap });
+    } else {
+      logReviseVendorIo("post_sync_status", { lineId, snapshot: snap ?? null });
+    }
+  }
 
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath("/campaigns");
   revalidatePath("/ios/vendor");
+
+  logReviseVendorIo("complete", {
+    campaignId,
+    revised,
+    revisedLineIds: uniqueLineIds,
+    newVendorIoIds,
+  });
 
   return {
     ok: true,
@@ -275,5 +380,7 @@ export async function reviseVendorIosFromLinesAction(
       revised === 1
         ? "Vendor IO revision created. Lines are invoice-eligible again after corrections."
         : `${revised} Vendor IO revisions created.`,
+    revised_line_ids: uniqueLineIds,
+    new_vendor_io_ids: newVendorIoIds,
   };
 }

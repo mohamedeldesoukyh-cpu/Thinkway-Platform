@@ -95,6 +95,23 @@ export function validateAssignmentHierarchyClient(
     if (line.operational_status === "io_generated" && !line.vendor_io_id) {
       warnings.push(`Line ${lineId}: io_generated without vendor_io_id`);
     }
+    if (
+      line.operational_status === "reopened" &&
+      line.billing_status === "invoiced"
+    ) {
+      warnings.push(
+        `Line ${lineId}: operational reopened but billing still invoiced (sync mismatch)`
+      );
+    }
+    if (
+      line.operational_status === "io_generated" &&
+      line.billing_status === "invoiced" &&
+      !line.invoice_id
+    ) {
+      warnings.push(
+        `Line ${lineId}: io_generated with invoiced billing but no header invoice_id`
+      );
+    }
 
     const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
     for (const d of deliverables) {
@@ -118,4 +135,58 @@ export function validateAssignmentHierarchyClient(
   }
 
   return warnings;
+}
+
+/** React key / child-row trace after Vendor IO revision. */
+export function logRevisionHierarchyKeys(
+  hierarchy: AssignmentHierarchy,
+  context: { campaignId?: string } = {}
+): void {
+  for (const group of hierarchy.groups ?? []) {
+    const line = group?.line;
+    if (!line?.id) continue;
+    const keys: string[] = [];
+    const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
+    for (const d of deliverables) {
+      if (!d?.id) continue;
+      keys.push(`del:${d.id}`);
+      const posts = Array.isArray(d.posts) ? d.posts : [];
+      for (const post of posts) {
+        keys.push(`post:${post?.id ?? "missing"}`);
+      }
+    }
+    const seen = new Set<string>();
+    const dupes = keys.filter((k) => {
+      if (seen.has(k)) return true;
+      seen.add(k);
+      return false;
+    });
+    console.log("[Assignments] CHILD KEYS", {
+      campaignId: context.campaignId,
+      lineId: line.id,
+      vendor_io_id: line.vendor_io_id,
+      operational_status: line.operational_status,
+      billing_status: line.billing_status,
+      keyCount: keys.length,
+      keys,
+    });
+    if (dupes.length > 0) {
+      console.warn("[Assignments] DUPLICATE CHILD KEYS", {
+        campaignId: context.campaignId,
+        lineId: line.id,
+        dupes,
+      });
+    }
+  }
+}
+
+export function assignmentHierarchyBoundaryKey(
+  hierarchy: AssignmentHierarchy
+): string {
+  return (hierarchy.groups ?? [])
+    .map(
+      (g) =>
+        `${g.line?.id ?? ""}:${g.line?.vendor_io_id ?? ""}:${g.line?.operational_status ?? ""}:${g.line?.billing_status ?? ""}`
+    )
+    .join("|");
 }

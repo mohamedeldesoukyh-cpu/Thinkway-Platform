@@ -26,13 +26,10 @@ export const createCampaignSchema = z
       .trim()
       .min(1, "Campaign name is required")
       .max(200, "Name is too long"),
-    line_name: z.string().trim().max(200).optional().or(z.literal("")),
     platform: z.string().trim().max(64).optional().or(z.literal("")),
     po_amount: z.coerce
       .number({ error: "PO amount must be a number" })
       .min(0, "PO amount cannot be negative"),
-    revenue: z.coerce.number().min(0).optional(),
-    cost: z.coerce.number().min(0).optional(),
     fx_rate: z.coerce.number().positive("FX rate must be positive").default(1),
     currency_code: currencyCodeSchema,
     start_date: optionalDate,

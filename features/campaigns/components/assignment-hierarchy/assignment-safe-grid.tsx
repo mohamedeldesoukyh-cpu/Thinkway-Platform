@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
+import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import { AssignmentSafeActionsFooter } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-actions-footer";
 import { AssignmentSafeDeliverableRows } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-deliverable-rows";
 import {
@@ -39,27 +40,19 @@ import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/operational-status";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import {
-  getAssignmentsRenderStage,
-  type AssignmentsRenderStage,
-} from "@/lib/campaigns/assignments-render-stage";
-import {
+  assignmentHierarchyBoundaryKey,
   logAssignmentHierarchyRows,
   logPreparedAssignmentRows,
+  logRevisionHierarchyKeys,
   validateAssignmentHierarchyClient,
 } from "@/lib/campaigns/assignment-row-debug";
-import {
-  plainLinesFromHierarchy,
-  type PlainAssignmentLine,
-} from "@/lib/campaigns/assignments-plain-lines";
 import { resolveAssignmentsGridGates } from "@/lib/campaigns/assignments-grid-gates";
 import {
   tryBuildAssignmentRowViewModel,
   type AssignmentRowViewModel,
 } from "@/lib/campaigns/assignment-row-view-model";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
-import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment-hierarchy";
 import { formatPercent } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
@@ -69,16 +62,10 @@ type AssignmentSafeGridProps = {
   hierarchy: AssignmentHierarchy;
   onEditLine: (line: CampaignLineWorkspace) => void;
   onInvoiceLines?: (lineIds: string[]) => void;
-  renderStage?: AssignmentsRenderStage;
+  onCreateAssignment?: () => void;
 };
 
 const PARENT_COL_SPAN = ASSIGNMENT_SAFE_GRID_COL_SPAN;
-
-function renderPlainCell(value: unknown): string {
-  if (value == null) return "—";
-  if (typeof value === "object") return "—";
-  return String(value);
-}
 
 function tryRenderRowCells(lineId: string, render: () => ReactNode): ReactNode {
   try {
@@ -98,150 +85,68 @@ function tryRenderRowCells(lineId: string, render: () => ReactNode): ReactNode {
   }
 }
 
-function plainUiStatus(line: PlainAssignmentLine): CampaignLineOperationalStatus {
-  return effectiveLineOperationalStatusForUi({
-    operational_status: line.operational_status,
-    vendor_io_id: line.vendor_io_id,
-    billing_status: line.billing_status,
-    invoice_id: line.invoice_id,
-  });
-}
-
-type MinimalRowProps = {
-  line: PlainAssignmentLine;
-  enableRowStyling: boolean;
-  enablePills: boolean;
-  showExtraColumns: boolean;
-};
-
-function MinimalRow({ line, enableRowStyling, enablePills, showExtraColumns }: MinimalRowProps) {
-  const uiStatus = plainUiStatus(line);
-  const rowClass = enableRowStyling
-    ? (LINE_OPERATIONAL_ROW_CLASS[uiStatus] ?? LINE_OPERATIONAL_ROW_CLASS.draft)
-    : "";
-
-  return (
-    <tr
-      className={cn(SAFE_GRID_PARENT_ROW, rowClass)}
-      data-line-id={line.line_id}
-    >
-      <td className={SAFE_GRID_CONTROL_CELL} />
-      <td className={SAFE_GRID_CONTROL_CELL} />
-      <td className={SAFE_GRID_TD}>
-        <span className="font-medium">{renderPlainCell(line.name)}</span>
-        <p className="text-[10px] text-muted-foreground">
-          {renderPlainCell(line.document_number)}
-        </p>
-      </td>
-      <td className={SAFE_GRID_TD}>{renderPlainCell(line.influencer)}</td>
-      {showExtraColumns ? (
-        <>
-          <td className={SAFE_GRID_TD}>—</td>
-          <td className={cn(SAFE_GRID_TD, "text-right tabular-nums")}>{line.deliverables}</td>
-          <td className={SAFE_GRID_TD}>—</td>
-        </>
-      ) : null}
-      <td className={SAFE_GRID_TD}>
-        {enablePills ? (
-          <AssignmentOperationalStatusBadge status={uiStatus} />
-        ) : (
-          renderPlainCell(line.operational_status)
-        )}
-      </td>
-      <td className={SAFE_GRID_TD}>
-        {enablePills ? (
-          <HierarchyBillingStatusBadge
-            operationalStatus={uiStatus}
-            billingStatus={
-              uiStatus === "invoiced"
-                ? "invoiced"
-                : uiStatus === "partially_invoiced"
-                  ? "partially_invoiced"
-                  : uiStatus === "reopened" ||
-                      uiStatus === "io_generated" ||
-                      uiStatus === "moved_to_billing"
-                    ? "ready_to_invoice"
-                    : "draft"
-            }
-          />
-        ) : (
-          renderPlainCell(line.billing_status)
-        )}
-      </td>
-      <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
-        {renderPlainCell(line.revenue)}
-      </td>
-      {showExtraColumns ? (
-        <>
-          <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>—</td>
-          <td className={cn(SAFE_GRID_TD, "text-center text-[10px]")}>—</td>
-          <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>—</td>
-          <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>—</td>
-          <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>—</td>
-          <td className={SAFE_GRID_TD}>—</td>
-        </>
-      ) : null}
-      <td className={SAFE_GRID_TD} />
-    </tr>
-  );
-}
-
 export function AssignmentSafeGrid({
   campaignId,
   hierarchy,
   onEditLine,
   onInvoiceLines,
-  renderStage: renderStageProp,
+  onCreateAssignment,
 }: AssignmentSafeGridProps) {
-  const renderStage = renderStageProp ?? getAssignmentsRenderStage();
-  const gates = resolveAssignmentsGridGates(renderStage);
+  const gates = resolveAssignmentsGridGates();
 
   logAssignmentsStage("safe grid render start", {
     campaignId,
-    renderStage,
     groups: hierarchy.groups?.length ?? 0,
-    gates,
   });
 
-  const plainLines = useMemo(
-    () => plainLinesFromHierarchy(hierarchy, { campaignId }),
-    [hierarchy, campaignId]
-  );
-
   const sanitized = useMemo(
-    () => (gates.usePreparedData ? sanitizeAssignmentHierarchy(hierarchy, { campaignId }) : null),
-    [hierarchy, campaignId, gates.usePreparedData]
+    () => sanitizeAssignmentHierarchy(hierarchy, { campaignId }),
+    [hierarchy, campaignId]
   );
 
   useEffect(() => {
     logAssignmentHierarchyRows(hierarchy, {
       campaignId,
-      layer: `safe-grid:${renderStage}`,
+      layer: "safe-grid",
     });
     validateAssignmentHierarchyClient(hierarchy);
-  }, [hierarchy, campaignId, renderStage]);
+  }, [hierarchy, campaignId]);
 
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+  const hierarchySignature = useMemo(
+    () => assignmentHierarchyBoundaryKey(hierarchy),
+    [hierarchy]
+  );
+
+  const resetOperationalUiState = useCallback(() => {
+    setSelectedLineIds(new Set());
+    setExpandedIds(new Set());
+  }, []);
+
+  useEffect(() => {
+    resetOperationalUiState();
+    logRevisionHierarchyKeys(hierarchy, { campaignId });
+  }, [hierarchySignature, hierarchy, campaignId, resetOperationalUiState]);
+
   const preparedRows = useMemo(() => {
-    if (!gates.usePreparedData || !sanitized) return [];
     const rows: AssignmentRowViewModel[] = [];
     for (const group of sanitized.groups) {
       const vm = tryBuildAssignmentRowViewModel(group, { campaignId });
       if (vm) rows.push(vm);
     }
     return rows;
-  }, [sanitized, campaignId, gates.usePreparedData]);
+  }, [sanitized, campaignId]);
 
   useEffect(() => {
     if (preparedRows.length > 0) {
       logPreparedAssignmentRows(preparedRows, {
         campaignId,
-        layer: `safe-grid:${renderStage}`,
+        layer: "safe-grid",
       });
     }
-  }, [preparedRows, campaignId, renderStage]);
+  }, [preparedRows, campaignId]);
 
   const toggleLine = useCallback((lineId: string, selectable: boolean) => {
     if (!selectable) return;
@@ -312,21 +217,18 @@ export function AssignmentSafeGrid({
     setSelectedLineIds(new Set());
   }, []);
 
-  const usePlainRowsOnly = !gates.usePreparedData;
-  const displayCount = usePlainRowsOnly ? plainLines.length : preparedRows.length;
-
-  if (displayCount === 0) {
-    return (
-      <p className="px-3 py-6 text-sm text-muted-foreground">
-        {hierarchy.load_error
-          ? `Assignment data could not be loaded: ${hierarchy.load_error}`
-          : "No creator assignments yet."}
-      </p>
-    );
+  if (preparedRows.length === 0) {
+    if (hierarchy.load_error) {
+      return (
+        <p className="px-3 py-6 text-sm text-destructive">
+          Assignment data could not be loaded: {hierarchy.load_error}
+        </p>
+      );
+    }
+    return <AssignmentsEmptyState onCreateAssignment={onCreateAssignment} />;
   }
 
-  const currency = sanitized?.currency_code ?? hierarchy.currency_code;
-  const showPreparedColumns = gates.usePreparedData;
+  const currency = sanitized.currency_code ?? hierarchy.currency_code;
 
   return (
     <div className={cn(OPERATIONAL_TABLE_FONT, "space-y-2")}>
@@ -357,71 +259,51 @@ export function AssignmentSafeGrid({
                 {HIERARCHY_COLUMN_LABELS.assignment}
               </th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.creator}</th>
-              {showPreparedColumns ? (
-                <>
-                  <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.platforms}</th>
-                  <th className={cn(SAFE_GRID_TH, "text-right")}>
-                    {HIERARCHY_COLUMN_LABELS.deliverables}
-                  </th>
-                  <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.postingDates}</th>
-                </>
-              ) : null}
+              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.platforms}</th>
+              <th className={cn(SAFE_GRID_TH, "text-right")}>
+                {HIERARCHY_COLUMN_LABELS.deliverables}
+              </th>
+              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.postingDates}</th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.opsStatus}</th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.billing}</th>
               <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.revenue}
               </th>
-              {showPreparedColumns ? (
-                <>
-                  <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
-                    {HIERARCHY_COLUMN_LABELS.costReceived}
-                  </th>
-                  <th className={cn(SAFE_GRID_TH, "text-center")}>
-                    {HIERARCHY_COLUMN_LABELS.costCurrency}
-                  </th>
-                  <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
-                    {HIERARCHY_COLUMN_LABELS.costInLc}
-                  </th>
-                  <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
-                    {HIERARCHY_COLUMN_LABELS.gp}
-                  </th>
-                  <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
-                    {HIERARCHY_COLUMN_LABELS.margin}
-                  </th>
-                  <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.payout}</th>
-                </>
-              ) : null}
+              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+                {HIERARCHY_COLUMN_LABELS.costReceived}
+              </th>
+              <th className={cn(SAFE_GRID_TH, "text-center")}>
+                {HIERARCHY_COLUMN_LABELS.costCurrency}
+              </th>
+              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+                {HIERARCHY_COLUMN_LABELS.costInLc}
+              </th>
+              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+                {HIERARCHY_COLUMN_LABELS.gp}
+              </th>
+              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+                {HIERARCHY_COLUMN_LABELS.margin}
+              </th>
+              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.payout}</th>
               <th className={cn(SAFE_GRID_TH, "w-10")} />
             </tr>
           </thead>
         <tbody>
-          {usePlainRowsOnly
-            ? plainLines.map((line) =>
-                tryRenderRowCells(line.line_id, () => (
-                  <MinimalRow
-                    key={line.line_id}
-                    line={line}
-                    enableRowStyling={gates.enableRowStyling}
-                    enablePills={gates.enablePills}
-                    showExtraColumns={false}
-                  />
-                ))
-              )
-            : preparedRows.map((row) => {
-                const line = row.group.line;
-                const expanded = gates.enableExpansion && expandedIds.has(row.lineId);
-                const meta = row.meta;
-                const selectable = gates.enableCheckboxes && meta.rowSelectable;
-                const deliverables = Array.isArray(row.group.deliverables)
-                  ? row.group.deliverables
-                  : [];
-                const rowClass = gates.enableRowStyling
-                  ? (LINE_OPERATIONAL_ROW_CLASS[row.operationalStatus] ??
-                    LINE_OPERATIONAL_ROW_CLASS.draft)
-                  : "";
+          {preparedRows.map((row) => {
+            const line = row.group.line;
+            const expanded = gates.enableExpansion && expandedIds.has(row.lineId);
+            const meta = row.meta;
+            const selectable = gates.enableCheckboxes && meta.rowSelectable;
+            const deliverables = Array.isArray(row.group.deliverables)
+              ? row.group.deliverables
+              : [];
+            const rowClass = gates.enableRowStyling
+              ? (LINE_OPERATIONAL_ROW_CLASS[row.operationalStatus] ??
+                LINE_OPERATIONAL_ROW_CLASS.draft)
+              : "";
 
-                return (
-                  <Fragment key={row.lineId}>
+            return (
+              <Fragment key={row.lineId}>
                     {tryRenderRowCells(row.lineId, () => (
                       <tr
                         className={cn(
@@ -499,14 +381,10 @@ export function AssignmentSafeGrid({
                           )}
                         </td>
                         <td className={SAFE_GRID_TD}>
-                          {gates.enablePills ? (
-                            <HierarchyBillingStatusBadge
-                              operationalStatus={row.operationalStatus}
-                              billingStatus={row.childBillingStatus}
-                            />
-                          ) : (
-                            renderPlainCell(line.billing_status)
-                          )}
+                          <HierarchyBillingStatusBadge
+                            operationalStatus={row.operationalStatus}
+                            billingStatus={row.childBillingStatus}
+                          />
                         </td>
                         <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
                           {formatOperationalAmount(row.rollups.revenue)}
@@ -565,9 +443,9 @@ export function AssignmentSafeGrid({
                         parentColSpan={PARENT_COL_SPAN}
                       />
                     ) : null}
-                  </Fragment>
-                );
-              })}
+              </Fragment>
+            );
+          })}
           </tbody>
         </table>
       </div>
@@ -586,6 +464,7 @@ export function AssignmentSafeGrid({
           invoiceLineIds={invoiceLineIds}
           invoiceTotal={invoiceTotal}
           onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}
+          onAfterOperationalMutation={resetOperationalUiState}
         />
       ) : null}
     </div>

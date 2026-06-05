@@ -49,7 +49,7 @@ export function CampaignKpiStrip({
 }: CampaignKpiStripProps) {
   const { financials, lines, deliverables, po } = workspace;
   const currency = workspace.currency_code;
-  const assignedLines = lines.filter((l) => l.influencer_id);
+  const assignedLines = lines;
   const deliverableKpi =
     operationalDeliverableCount ?? deliverables.length;
 

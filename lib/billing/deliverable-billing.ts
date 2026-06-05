@@ -94,6 +94,18 @@ export function deriveLineBillingStatusFromDeliverables(
     return "invoiced";
   }
   if (invoiced > 0 && invoiced < billable) return "partially_invoiced";
+
+  if (invoiced === 0 && collected === 0) {
+    const hasReady = deliverables.some((d) => d.billing_status === "ready_to_invoice");
+    const allUnlocked = deliverables.every((d) => !d.locked_at);
+    if (
+      (hasReady || allUnlocked) &&
+      ["invoiced", "partially_invoiced", "paid", "partially_paid"].includes(currentLineStatus)
+    ) {
+      return hasReady ? "moved_to_billing" : "approved";
+    }
+  }
+
   if (["moved_to_billing", "approved"].includes(currentLineStatus)) {
     return currentLineStatus;
   }

@@ -13,10 +13,6 @@ import { getCampaignBillingGroups, getCampaignBillingLines, getCampaignOperation
 import { getFinanceInvoiceRegister } from "@/features/finance/invoices/queries";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
-import {
-  assignmentsRenderStageSourceLabel,
-  resolveAssignmentsRenderStage,
-} from "@/lib/campaigns/assignments-render-stage";
 import { toPlainAssignmentHierarchy } from "@/lib/campaigns/serialize-assignment-hierarchy";
 import { getCampaignPublications } from "@/features/campaigns/queries/publications";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
@@ -172,20 +168,6 @@ export default async function CampaignWorkspacePage({
 
   const teams = masterData?.teams ?? [];
   const currencyOptions = buildCurrencyOptions(masterData?.currencies ?? []);
-  const resolved = resolveAssignmentsRenderStage();
-
-  logAssignmentsStage("page render stage resolved", {
-    campaignId: id,
-    stage: resolved.stage,
-    requestedStage: resolved.requestedStage,
-    source: resolved.source,
-    envLabel: assignmentsRenderStageSourceLabel(
-      resolved.source,
-      resolved.requestedStage
-    ),
-    showBanner: resolved.showRenderStageBanner,
-    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
-  });
 
   return (
     <DashboardShell
@@ -213,10 +195,6 @@ export default async function CampaignWorkspacePage({
               publications={publications}
               publicationsLoadError={publicationsLoadError}
               currencyOptions={currencyOptions}
-              assignmentsRenderStage={resolved.stage}
-              assignmentsRenderStageSource={resolved.source}
-              assignmentsRequestedRenderStage={resolved.requestedStage}
-              showAssignmentsRenderStageBanner={resolved.showRenderStageBanner}
             />
           </div>
         </PlatformErrorBoundary>

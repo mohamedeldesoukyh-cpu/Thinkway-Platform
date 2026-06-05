@@ -19,7 +19,7 @@ export function coalesceAssignmentRollups(
   const revenueBeforeVat = Number(line.revenue_before_vat) || revenue;
 
   return {
-    deliverable_count: line.deliverable_count || 1,
+    deliverable_count: line.deliverable_count ?? 0,
     revenue,
     cost,
     gp,

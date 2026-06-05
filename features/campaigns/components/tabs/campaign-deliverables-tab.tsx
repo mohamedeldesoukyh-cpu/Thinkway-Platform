@@ -136,7 +136,7 @@ export function CampaignDeliverablesTab({
 
   const emptyMessage =
     rows.length === 0
-      ? "No operational deliverables yet. Add assignments and deliverables in the Assignments tab."
+      ? "No deliverables yet. Create an assignment first, then add deliverables under that assignment in the Assignments tab."
       : "No deliverables match the current search and filters.";
 
   return (

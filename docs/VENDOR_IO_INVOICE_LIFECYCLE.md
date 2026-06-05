@@ -3,6 +3,8 @@
 **Status:** Phase 1 in progress (May–Jun 2026)  
 **Replaces:** Direct invoice creation without Vendor IO control.
 
+> **Status transitions:** Never manually update `campaign_lines.operational_status` or `billing_status`. Use only lifecycle actions in `docs/CLEAN_RESET_EXECUTION_PLAN.md`.
+
 ## Lifecycle (strict order)
 
 ```

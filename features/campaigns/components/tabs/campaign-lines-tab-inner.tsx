@@ -26,6 +26,7 @@ import {
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 
+import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
 
 const CreateInvoiceSheet = dynamic(
@@ -64,6 +65,7 @@ export function CampaignLinesTabInner({
   const router = useRouter();
   const uiLayer = getAssignmentsUiLayer();
   const enableLineSheet = assignmentsLayerAtLeast(uiLayer, "operational_actions");
+  const hasAssignments = workspace.lines.length > 0;
   const enableInvoiceDialogs = assignmentsLayerAtLeast(uiLayer, "invoice_dialogs");
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -128,27 +130,36 @@ export function CampaignLinesTabInner({
               Creator assignments
             </h2>
             {enableLineSheet ? (
-              <Button size="sm" onClick={openCreate} title="Assign influencer (A)">
+              <Button size="sm" onClick={openCreate} title="Create assignment (A)">
                 <PlusIcon data-icon="inline-start" />
-                Assign influencer
+                Create assignment
               </Button>
             ) : null}
           </div>
         }
       >
-        {assignmentHierarchy.load_error ? (
-          <div className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-            Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}. Showing
-            available rows — apply pending migrations if commercial columns are missing.
-          </div>
-        ) : null}
-        <AssignmentSafeGrid
-          campaignId={workspace.id}
-          hierarchy={assignmentHierarchy}
-          onEditLine={openEdit}
-          onInvoiceLines={openInvoiceWithLines}
-          renderStage="full"
-        />
+        {!hasAssignments ? (
+          <AssignmentsEmptyState
+            onCreateAssignment={enableLineSheet ? openCreate : undefined}
+          />
+        ) : (
+          <>
+            {assignmentHierarchy.load_error ? (
+              <div className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}.
+                Showing available rows — apply pending migrations if commercial columns are
+                missing.
+              </div>
+            ) : null}
+            <AssignmentSafeGrid
+              campaignId={workspace.id}
+              hierarchy={assignmentHierarchy}
+              onEditLine={openEdit}
+              onInvoiceLines={openInvoiceWithLines}
+              onCreateAssignment={enableLineSheet ? openCreate : undefined}
+            />
+          </>
+        )}
       </OperationalTableSection>
 
       {enableLineSheet && sheetOpen ? (

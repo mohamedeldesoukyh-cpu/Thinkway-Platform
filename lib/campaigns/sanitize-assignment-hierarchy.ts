@@ -8,6 +8,7 @@ import type {
 } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
+import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import { normalizeOperationalStatus } from "@/lib/campaigns/operational-status-utils";
 
 export type SanitizedAssignmentHierarchy = AssignmentHierarchy & {
@@ -157,16 +158,50 @@ function sanitizeRollups(
   }
 }
 
+function normalizeLineBillingForHierarchy(
+  line: Partial<CampaignLineWorkspace>
+): CampaignLineWorkspace["billing_status"] {
+  const billing = (line.billing_status ?? "draft") as CampaignLineWorkspace["billing_status"];
+  const uiOps = effectiveLineOperationalStatusForUi({
+    operational_status: line.operational_status,
+    vendor_io_id: line.vendor_io_id,
+    billing_status: billing,
+    invoice_id: line.invoice_id,
+  });
+  if (
+    !line.invoice_id &&
+    (uiOps === "io_generated" || uiOps === "reopened") &&
+    ["invoiced", "paid", "partially_invoiced"].includes(billing)
+  ) {
+    return "moved_to_billing";
+  }
+  return billing;
+}
+
 function sanitizeLine(line: Partial<CampaignLineWorkspace> | null | undefined): CampaignLineWorkspace | null {
   if (!line?.id) return null;
   try {
+    const uiOps = effectiveLineOperationalStatusForUi({
+      operational_status: line.operational_status,
+      vendor_io_id: line.vendor_io_id,
+      billing_status: line.billing_status,
+      invoice_id: line.invoice_id,
+    });
+    let operational_status = normalizeOperationalStatus(line.operational_status);
+    if (operational_status === "reopened" && line.vendor_io_id && !line.invoice_id) {
+      operational_status = "io_generated";
+    }
+    if (uiOps === "io_generated" && operational_status === "reopened") {
+      operational_status = "io_generated";
+    }
+
     return {
       ...line,
       id: String(line.id),
       name: String(line.name ?? "Assignment"),
       document_number: line.document_number ?? null,
-      operational_status: normalizeOperationalStatus(line.operational_status),
-      billing_status: (line.billing_status ?? "draft") as CampaignLineWorkspace["billing_status"],
+      operational_status,
+      billing_status: normalizeLineBillingForHierarchy(line),
       revenue: finiteNumber(line.revenue),
       cost: finiteNumber(line.cost),
       gp: finiteNumber(line.gp),

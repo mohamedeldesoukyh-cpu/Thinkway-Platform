@@ -24,6 +24,7 @@ import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { formatMarginPercent } from "@/features/billing/types";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
+import { logRevisionHierarchyKeys } from "@/lib/campaigns/assignment-row-debug";
 import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 
@@ -164,122 +165,22 @@ function buildVirtualPosts(input: {
   }));
 }
 
-function buildSyntheticDeliverable(
-  line: AssignmentHierarchyGroup["line"]
-): AssignmentDeliverableHierarchyRow {
-  const billingStatus: AssignmentDeliverableBillingStatus =
-    line.billing_status === "invoiced" ||
-    line.billing_status === "paid" ||
-    line.billing_status === "closed"
-      ? "invoiced"
-      : line.billing_status === "partially_invoiced"
-        ? "partially_invoiced"
-        : line.operational_status === "reopened" ||
-            ["moved_to_billing", "approved"].includes(line.billing_status)
-          ? "ready_to_invoice"
-          : "draft";
-
-  const revenueBeforeVat = line.revenue_before_vat;
-  const invoiced =
-    billingStatus === "invoiced" || billingStatus === "partially_invoiced"
-      ? revenueBeforeVat
-      : 0;
-
-  const qty = line.deliverable_count || 1;
-  const unitRev = line.revenue_before_vat / Math.max(1, qty);
-  const unitCost = line.cost_before_vat / Math.max(1, qty);
-  const posts = buildVirtualPosts({
-    deliverableId: `synthetic-${line.id}`,
-    quantity: qty,
-    platform: line.platform ?? "other",
-    deliverableType: "other",
-    unitRevenue: unitRev,
-    unitCost,
-    revenueVatPercent: line.revenue_vat_percent,
-    revenueVatPerPost: line.revenue_vat_amount / Math.max(1, qty),
-    costVatPerPost: line.cost_vat_amount / Math.max(1, qty),
-    liveDate: line.start_date,
-    notes: null,
-    billingStatus,
-    collectionStatus: deriveCollectionStatus(billingStatus),
-    invoiceId: line.invoice_id,
-    invoiceDocumentNumber: null,
-    payoutStatus: line.vendor_payment_status,
-    isLocked: line.revenue_locked ?? false,
-  });
-
-  return {
-    id: `synthetic-${line.id}`,
-    campaign_line_id: line.id,
-    sort_order: 0,
-    label: `${line.influencer_name ?? line.name} — Package`,
-    platform: line.platform ?? "other",
-    deliverable_type: "other",
-    deliverable_type_label: "Package",
-    quantity: line.deliverable_count || 1,
-    unit_cost: line.cost_before_vat / Math.max(1, line.deliverable_count || 1),
-    unit_revenue: line.revenue_before_vat / Math.max(1, line.deliverable_count || 1),
-    live_date: line.start_date,
-    notes: null,
-    revenue_before_vat: revenueBeforeVat,
-    cost_before_vat: line.cost_before_vat,
-    revenue_vat_percent: line.revenue_vat_percent,
-    revenue_vat_amount: line.revenue_vat_amount,
-    revenue_after_vat: line.revenue_after_vat,
-    cost_vat_amount: line.cost_vat_amount,
-    billing_status: billingStatus,
-    collection_status: deriveCollectionStatus(billingStatus),
-    invoice_id: line.invoice_id,
-    invoice_document_number: null,
-    payout_status: line.vendor_payment_status,
-    workflow_status: deriveWorkflowStatusFromPosts(posts, billingStatus),
-    posts,
-    remaining_amount: Math.max(0, revenueBeforeVat - invoiced),
-    invoiced_amount: invoiced,
-    invoice_eligible:
-      lineAllowsDeliverableInvoice(line) &&
-      isDeliverableInvoiceEligible(
-        {
-          id: `synthetic-${line.id}`,
-          campaign_line_id: line.id,
-          sort_order: 0,
-          platform: line.platform ?? "other",
-          deliverable_type: "other",
-          quantity: 1,
-          live_date: line.start_date,
-          billable_amount: revenueBeforeVat,
-          invoiced_amount: invoiced,
-          collected_amount: 0,
-          disputed_amount: 0,
-          remaining_amount: Math.max(0, revenueBeforeVat - invoiced),
-          billing_status: billingStatus,
-          invoice_line_item_id: null,
-          locked_at: null,
-          revenue_before_vat: revenueBeforeVat,
-          revenue_vat_percent: line.revenue_vat_percent,
-          revenue_vat_exempt: line.revenue_vat_exempt,
-          label: "Package",
-        },
-        line.billing_status
-      ),
-    is_synthetic: true,
-    is_locked: line.revenue_locked ?? false,
-  };
-}
-
 function buildRollups(
   deliverables: AssignmentDeliverableHierarchyRow[],
   line: AssignmentHierarchyGroup["line"]
 ): AssignmentHierarchyRollups {
-  if (deliverables.every((d) => d.is_synthetic)) {
+  if (deliverables.length === 0) {
+    const revenue = Number(line.revenue) || 0;
+    const cost = Number(line.cost) || 0;
+    const gp = Number.isFinite(Number(line.gp)) ? Number(line.gp) : revenue - cost;
     return {
-      deliverable_count: line.deliverable_count || 1,
-      revenue: line.revenue,
-      cost: line.cost,
-      gp: line.gp,
+      deliverable_count: 0,
+      revenue,
+      cost,
+      gp,
       margin_percent: line.margin_percent,
-      invoiced_value: deliverables[0]?.invoiced_amount ?? 0,
-      remaining_value: deliverables[0]?.remaining_amount ?? line.revenue_before_vat,
+      invoiced_value: 0,
+      remaining_value: Number(line.revenue_before_vat) || revenue,
       collected_value: 0,
     };
   }
@@ -665,10 +566,7 @@ async function loadCampaignAssignmentHierarchy(
   for (const line of workspace.lines) {
     const lineId = line.id;
     try {
-      let deliverables = deliverablesByLine.get(lineId) ?? [];
-      if (deliverables.length === 0) {
-        deliverables = [buildSyntheticDeliverable(line)];
-      }
+      const deliverables = deliverablesByLine.get(lineId) ?? [];
       const rollups = buildRollups(deliverables, line);
       groups.push({ line, deliverables, rollups });
     } catch (error) {
@@ -694,7 +592,10 @@ async function loadCampaignAssignmentHierarchy(
     campaignId,
     groupCount: result.groups.length,
     skipped: result.skipped_line_ids?.length ?? 0,
+    sanitizeWarnings: result.sanitize_warnings?.length ?? 0,
   });
+
+  logRevisionHierarchyKeys(result, { campaignId });
 
   return result;
 }

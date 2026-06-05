@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import {
   assignmentDeliverableBillingSelect,
@@ -9,6 +10,10 @@ import {
   deriveLineBillingStatusFromDeliverables,
   type DeliverableBillingRow,
 } from "@/lib/billing/deliverable-billing";
+import {
+  getCampaignLineStatusViolations,
+  repairCampaignLineStatusPatch,
+} from "@/lib/campaigns/campaign-line-status-invariants";
 
 type LineSnapshot = {
   id: string;
@@ -82,7 +87,36 @@ function deriveOperationalFromState(input: {
   return "draft";
 }
 
-/** Single source of truth: sync campaign_lines.operational_status from billing + deliverable locks. */
+function lineBillingPatch(billingStatus: string) {
+  const assignmentStatus = assignmentStatusFromBilling(billingStatus);
+  return assignmentStatus
+    ? { billing_status: billingStatus, assignment_status: assignmentStatus }
+    : { billing_status: billingStatus };
+}
+
+/** Coerce invalid DB pairs (e.g. reopened without active finance override). */
+function coerceOperationalStatus(
+  next: CampaignLineOperationalStatus,
+  snapshot: LineSnapshot
+): CampaignLineOperationalStatus {
+  if (
+    next === "reopened" &&
+    !hasActiveFinanceOverride(snapshot.finance_override_until)
+  ) {
+    if (snapshot.vendor_io_id) return "io_generated";
+    return "draft";
+  }
+  if (
+    next === "reopened" &&
+    snapshot.vendor_io_id &&
+    !snapshot.invoice_id
+  ) {
+    return "io_generated";
+  }
+  return next;
+}
+
+/** Single source of truth: sync campaign_lines operational + billing from deliverables. */
 export async function syncLineOperationalStatus(
   supabase: SupabaseClient,
   lineId: string
@@ -121,19 +155,59 @@ export async function syncLineOperationalStatus(
     snapshot.billing_status
   );
 
-  const nextOperational = deriveOperationalFromState({
-    billingStatus,
-    vendorIoId: snapshot.vendor_io_id,
-    invoiceId: snapshot.invoice_id,
-    financeOverrideUntil: snapshot.finance_override_until,
-    deliverables,
+  let nextOperational = coerceOperationalStatus(
+    deriveOperationalFromState({
+      billingStatus,
+      vendorIoId: snapshot.vendor_io_id,
+      invoiceId: snapshot.invoice_id,
+      financeOverrideUntil: snapshot.finance_override_until,
+      deliverables,
+    }),
+    snapshot
+  );
+
+  if (
+    snapshot.vendor_io_id &&
+    nextOperational === "reopened" &&
+    !hasActiveFinanceOverride(snapshot.finance_override_until)
+  ) {
+    nextOperational = "io_generated";
+  }
+
+  let patch: Record<string, string | null> = {};
+  if (nextOperational !== snapshot.operational_status) {
+    patch.operational_status = nextOperational;
+  }
+  if (billingStatus !== snapshot.billing_status) {
+    Object.assign(patch, lineBillingPatch(billingStatus));
+  }
+
+  patch = repairCampaignLineStatusPatch(snapshot, patch);
+
+  const violations = getCampaignLineStatusViolations({
+    billing_status: String(patch.billing_status ?? snapshot.billing_status),
+    operational_status: String(patch.operational_status ?? snapshot.operational_status),
+    invoice_id:
+      patch.invoice_id !== undefined ? patch.invoice_id : snapshot.invoice_id,
+    vendor_io_id: snapshot.vendor_io_id,
+    finance_override_until: snapshot.finance_override_until,
   });
 
-  if (nextOperational !== snapshot.operational_status) {
-    await supabase
-      .from("campaign_lines")
-      .update({ operational_status: nextOperational } as never)
-      .eq("id", lineId);
+  if (violations.length > 0) {
+    console.warn("[sync-line-operational-status] invariant repair", {
+      lineId,
+      violations,
+      patch,
+    });
+  }
+
+  const updateKeys = Object.keys(patch).filter(
+    (k) => patch[k] !== undefined && patch[k] !== (snapshot as Record<string, unknown>)[k]
+  );
+
+  if (updateKeys.length > 0) {
+    const updatePayload = Object.fromEntries(updateKeys.map((k) => [k, patch[k]]));
+    await supabase.from("campaign_lines").update(updatePayload as never).eq("id", lineId);
   }
 
   return nextOperational;

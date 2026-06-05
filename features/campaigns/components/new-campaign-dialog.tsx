@@ -116,8 +116,9 @@ export function NewCampaignDialog({
         <DialogHeader>
           <DialogTitle>New campaign</DialogTitle>
           <DialogDescription>
-            Select a brand to auto-fill hierarchy and commercial terms. Header
-            and line A are created together.
+            Select a brand to auto-fill hierarchy and commercial terms. Only the
+            campaign header and PO budget are created — add assignments from the
+            Assignments tab.
           </DialogDescription>
         </DialogHeader>
         {!hasBrands ? (
@@ -190,10 +191,6 @@ export function NewCampaignDialog({
                 <Label htmlFor="name">Campaign name</Label>
                 <Input id="name" name="name" required disabled={isPending} />
                 <FieldError messages={state.fieldErrors?.name} />
-              </div>
-              <div className="grid gap-2 sm:col-span-2">
-                <Label htmlFor="line_name">Line A name (optional)</Label>
-                <Input id="line_name" name="line_name" disabled={isPending} />
               </div>
               <div className="grid gap-2">
                 <Label>Platform</Label>

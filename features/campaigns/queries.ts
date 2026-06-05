@@ -16,6 +16,7 @@ import {
   getCampaignClientIo,
   getCampaignVendorIos,
 } from "@/features/io/queries";
+import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
 import type { CampaignListItem } from "@/types/database";
 
 import type { CampaignLineBillingStatus } from "@/features/billing/types";
@@ -389,6 +390,14 @@ export async function getCampaignWorkspace(
     })
   );
 
+  const lineVendorIoIds = lines
+    .map((l) => l.vendor_io_id)
+    .filter((id): id is string => Boolean(id));
+  const activeVendorIoDocMap = await buildActiveVendorIoDocumentMap(
+    supabase,
+    lineVendorIoIds
+  );
+
   const vendorInfluencerIds = (vendorsResult.data ?? []).map(
     (v) => (v as { influencer_id: string }).influencer_id
   );
@@ -625,7 +634,9 @@ export async function getCampaignWorkspace(
         (line.operational_status as CampaignLineWorkspace["operational_status"]) ?? "draft",
       vendor_io_id: line.vendor_io_id ?? null,
       vendor_io_document_number: line.vendor_io_id
-        ? (vendorIoDocById.get(line.vendor_io_id) ?? null)
+        ? (activeVendorIoDocMap.get(line.vendor_io_id) ??
+          vendorIoDocById.get(line.vendor_io_id) ??
+          null)
         : null,
       revenue_locked: line.revenue_locked ?? false,
       cost_locked: line.cost_locked ?? false,

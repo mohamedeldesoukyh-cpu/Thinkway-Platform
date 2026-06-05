@@ -11,6 +11,7 @@ import {
   type DeliverableBillingRow,
 } from "@/lib/billing/deliverable-billing";
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
+import { repairCampaignLineStatusPatch } from "@/lib/campaigns/campaign-line-status-invariants";
 
 function lineBillingPatch(billingStatus: string) {
   const assignmentStatus = assignmentStatusFromBilling(billingStatus);
@@ -41,50 +42,28 @@ type LineRow = {
   pricing_mode?: string | null;
 };
 
-/** Ensures every billable line has at least one assignment_deliverables row. */
+/**
+ * Legacy synthetic deliverable auto-insert removed — deliverables must be created
+ * explicitly via Create assignment / commercial sync before billing moves.
+ */
 export async function ensureBillableDeliverablesForLine(
   supabase: SupabaseClient,
   line: LineRow
-): Promise<void> {
+): Promise<{ ok: boolean; message?: string }> {
   const { count } = await supabase
     .from("assignment_deliverables")
     .select("id", { count: "exact", head: true })
     .eq("campaign_line_id", line.id);
 
-  if ((count ?? 0) > 0) return;
+  if ((count ?? 0) > 0) {
+    return { ok: true };
+  }
 
-  const revenueBeforeVat = Number(line.revenue_before_vat ?? line.revenue);
-  const costBeforeVat = Number(line.cost_before_vat ?? line.cost);
-
-  await supabase.from("assignment_deliverables").insert({
-    campaign_header_id: line.campaign_header_id,
-    campaign_line_id: line.id,
-    sort_order: 0,
-    platform: line.platform ?? "other",
-    deliverable_type: "other",
-    quantity: 1,
-    unit_cost: costBeforeVat,
-    total_cost: costBeforeVat,
-    revenue_before_vat: revenueBeforeVat,
-    revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
-    revenue_vat_amount: Number(line.revenue_vat_amount ?? 0),
-    revenue_after_vat: Number(line.revenue_after_vat ?? line.revenue),
-    revenue_vat_exempt: line.revenue_vat_exempt ?? false,
-    cost_before_vat: costBeforeVat,
-    cost_vat_percent: Number(line.cost_vat_percent ?? 0),
-    cost_vat_amount: Number(line.cost_vat_amount ?? 0),
-    cost_after_vat: Number(line.cost_after_vat ?? line.cost),
-    cost_vat_exempt: line.cost_vat_exempt ?? false,
-    billable_amount: revenueBeforeVat,
-    remaining_amount: revenueBeforeVat,
-    billing_status:
-      line.billing_status === "moved_to_billing" ||
-      line.billing_status === "approved"
-        ? "ready_to_invoice"
-        : "draft",
-    schedule_mode: "single",
-    metadata: { legacy_synthetic: true },
-  });
+  return {
+    ok: false,
+    message:
+      "No deliverables on this assignment. Add deliverables via Create assignment before moving to billing.",
+  };
 }
 
 export async function markDeliverablesReadyToInvoice(
@@ -131,13 +110,32 @@ export async function syncLineBillingFromDeliverables(
   const fullLock = deliverables.length > 0 && deliverables.every((d) => d.locked_at);
   const partialLock = deliverables.some((d) => d.locked_at);
 
+  const { data: lineRow } = await supabase
+    .from("campaign_lines")
+    .select("billing_status, operational_status, invoice_id, vendor_io_id, finance_override_until")
+    .eq("id", lineId)
+    .maybeSingle();
+
+  const statusPatch = lineRow
+    ? repairCampaignLineStatusPatch(
+        lineRow as {
+          billing_status: string;
+          operational_status: string;
+          invoice_id: string | null;
+          vendor_io_id: string | null;
+          finance_override_until: string | null;
+        },
+        lineBillingPatch(nextStatus) as Record<string, string | null>
+      )
+    : lineBillingPatch(nextStatus);
+
   await supabase
     .from("campaign_lines")
     .update({
-      ...lineBillingPatch(nextStatus),
+      ...statusPatch,
       revenue_locked: fullLock,
       vat_locked: partialLock || fullLock,
-    })
+    } as never)
     .eq("id", lineId);
 
   await syncLineOperationalStatus(supabase, lineId);

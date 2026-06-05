@@ -222,38 +222,36 @@ export async function createCampaignAction(
     return { ok: false, message: headerError.message };
   }
 
-  const lineName =
-    parsed.data.line_name?.trim() || `${parsed.data.name} — Line A`;
-  const revenue = parsed.data.revenue ?? parsed.data.po_amount;
-  const cost = parsed.data.cost ?? 0;
+  const currency = parsed.data.currency_code || brandRow.currency_code;
+  const poAmount = Number(parsed.data.po_amount) || 0;
+  const fxRate = Number(parsed.data.fx_rate) || 1;
 
-  const { error: lineError } = await supabase.from("campaign_lines").insert({
-    campaign_header_id: header.id,
-    name: lineName,
-    status: parsed.data.status,
-    platform,
-    po_amount: parsed.data.po_amount,
-    revenue,
-    cost,
-    currency_code: parsed.data.currency_code || brandRow.currency_code,
-    base_currency: "USD",
-    fx_rate: parsed.data.fx_rate,
-    start_date: parsed.data.start_date,
-    end_date: parsed.data.end_date,
-    metadata,
-    created_by: user.id,
-  });
+  const { error: poError } = await supabase
+    .from("campaign_headers")
+    .update({
+      po_currency: currency,
+      po_exchange_rate: fxRate,
+      po_amount_original: poAmount,
+      po_amount_campaign_currency: poAmount,
+      po_status: poAmount > 0 ? "active" : "draft",
+    } as never)
+    .eq("id", header.id);
 
-  if (lineError) {
+  if (poError) {
     await supabase.from("campaign_headers").delete().eq("id", header.id);
-    return { ok: false, message: lineError.message };
+    return { ok: false, message: poError.message };
   }
+
+  console.info("[create-campaign] header only — no campaign_lines bootstrap", {
+    campaignId: header.id,
+    documentNumber: header.document_number,
+  });
 
   revalidateCampaign(header.id, brandRow.client_id);
 
   return {
     ok: true,
-    message: `Campaign ${header.document_number} created with line A.`,
+    message: `Campaign ${header.document_number} created. Add assignments when ready.`,
     campaignId: header.id,
   };
 }

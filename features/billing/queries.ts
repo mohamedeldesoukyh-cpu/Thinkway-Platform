@@ -665,7 +665,7 @@ export async function getCampaignBillingLines(
     .from("campaign_lines")
     .select(
       `
-        id, document_number, name, campaign_header_id, billing_status,
+        id, document_number, name, campaign_header_id, billing_status, metadata,
         revenue, cost, profit, po_amount, po_consumed, remaining_po,
         revenue_locked, cost_locked, vendor_assignment_locked,
         currency_code, invoice_id,

@@ -49,16 +49,34 @@ export async function GET() {
     schema.note = error instanceof Error ? error.message : String(error);
   }
 
+  const hints: string[] = [];
+  if (!build.supabaseAligned) {
+    hints.push(
+      "Production NEXT_PUBLIC_SUPABASE_URL does not match the project where migrations were applied (thinkway-dev / hsxrewjcbvmbkqdlzjhs). Update Vercel Production env vars, then redeploy."
+    );
+  }
+  if (build.legacyAssignmentsEnvPresent) {
+    hints.push(
+      "Remove ASSIGNMENTS_RENDER_STAGE, NEXT_PUBLIC_ASSIGNMENTS_RENDER_STAGE, and ASSIGNMENTS_ALLOW_RENDER_BISECT from Vercel, then redeploy."
+    );
+  }
+  if (!build.gitSha) {
+    hints.push(
+      "gitSha is null — deploy via Vercel git integration so VERCEL_GIT_COMMIT_SHA is set for commit verification."
+    );
+  }
+
   return NextResponse.json(
     {
       ...build,
       schema,
-      hints: build.supabaseAligned
-        ? []
-        : [
-            "Production NEXT_PUBLIC_SUPABASE_URL does not match the project where migrations were applied (thinkway-dev / hsxrewjcbvmbkqdlzjhs).",
-            "Update Vercel Production env vars, then redeploy.",
-          ],
+      verify: {
+        expectArchitectureVersion: build.architecture.version,
+        expectNoRenderStageBanner: true,
+        expectNoCampaignCreateBootstrap: true,
+        checkUrl: "Open /api/build-info after deploy; gitSha must match latest main commit.",
+      },
+      hints,
     },
     {
       headers: {

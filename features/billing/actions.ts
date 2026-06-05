@@ -341,7 +341,7 @@ export async function moveLineToBillingAction(
     return { ok: false, message: error.message };
   }
 
-  await ensureBillableDeliverablesForLine(supabase, {
+  const deliverableCheck = await ensureBillableDeliverablesForLine(supabase, {
     id: line.id,
     campaign_header_id: line.campaign_header_id,
     document_number: line.document_number,
@@ -361,6 +361,13 @@ export async function moveLineToBillingAction(
     cost_vat_exempt: line.cost_vat_exempt ?? false,
     billing_status: "moved_to_billing",
   });
+  if (!deliverableCheck.ok) {
+    await supabase
+      .from("campaign_lines")
+      .update({ billing_status: line.billing_status })
+      .eq("id", parsed.data.line_id);
+    return { ok: false, message: deliverableCheck.message ?? "Deliverables required." };
+  }
   await markDeliverablesReadyToInvoice(supabase, parsed.data.line_id);
 
   revalidateBilling({ campaignId: parsed.data.campaign_id });

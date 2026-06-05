@@ -1,20 +1,32 @@
-# Assignments production recovery checklist
+# Assignments tab — production notes
 
-## Vercel (Production)
+Render-stage bisect and emergency JSON fallback have been **removed**. The Assignments tab always renders the full operational grid.
 
-1. `ASSIGNMENTS_RENDER_STAGE` = `footer` (includes checkboxes + VIO/invoice actions)
-2. `NEXT_PUBLIC_ASSIGNMENTS_RENDER_STAGE` = `footer` (remove `static-table`)
-3. **Redeploy** after saving env vars
-4. Hard refresh: `Ctrl+Shift+R`
+Lifecycle validation after auto-bootstrap removal: **`docs/CLEAN_LIFECYCLE_VALIDATION.md`**
 
-## Success
+Clean-slate campaign reset: **`docs/CLEAN_RESET_EXECUTION_PLAN.md`**
 
-Banner shows **footer** (or **footer (production recovery (expansion→footer))** if Vercel still has `expansion` set — deploy latest code to auto-upgrade).
+## Vercel cleanup
 
-Stuck on **expansion**? Set `ASSIGNMENTS_RENDER_STAGE=footer` and redeploy commit `88593ff`+, or deploy this build which auto-upgrades `expansion` → `footer` in Production.
+Delete obsolete Production variables (no effect if left, but confusing):
 
-## Next stages (after footer stable)
+- `ASSIGNMENTS_RENDER_STAGE`
+- `NEXT_PUBLIC_ASSIGNMENTS_RENDER_STAGE`
+- `ASSIGNMENTS_ALLOW_RENDER_BISECT`
 
-`dialogs` → `full` (banner auto-hides in Production at `full`)
+Redeploy after removal. Hard refresh: `Ctrl+Shift+R`.
 
-Update `ASSIGNMENTS_RENDER_STAGE` and redeploy after each step.
+## On Assignments tab failure
+
+- UI: `AssignmentsTabErrorFallback` (error message + digest only)
+- Browser console: `[Assignments] tab boundary`, row crash logs
+- Server: `[assignment-hierarchy]`, `[revise-vendor-io]`
+
+Do **not** expect JSON emergency rows or render-stage banners.
+
+## Revise Vendor IO
+
+1. `npx tsx lib/billing/vendor-io-revision-scenarios.test.ts`
+2. Migration `20260608010000_campaign_line_status_invariants.sql`
+3. Manual path in `docs/VENDOR_IO_REVISE_VERIFICATION.md`
+4. Log: `[revise-vendor-io] billing_finalize_complete` with `valid: true`

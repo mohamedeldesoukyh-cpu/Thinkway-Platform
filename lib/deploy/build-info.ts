@@ -1,3 +1,8 @@
+import {
+  CLEAN_LIFECYCLE_MANIFEST,
+  hasLegacyAssignmentsEnv,
+} from "@/lib/deploy/architecture-manifest";
+
 /** Expected Supabase project ref (thinkway-dev) — migrations are applied here. */
 export const EXPECTED_SUPABASE_PROJECT_REF = "hsxrewjcbvmbkqdlzjhs";
 
@@ -40,5 +45,11 @@ export function getBuildInfo() {
     supabaseAligned:
       supabaseRef != null && supabaseRef === EXPECTED_SUPABASE_PROJECT_REF,
     builtAt: new Date().toISOString(),
+    architecture: CLEAN_LIFECYCLE_MANIFEST,
+    legacyAssignmentsEnvPresent: hasLegacyAssignmentsEnv(),
+    productionReady:
+      !hasLegacyAssignmentsEnv() &&
+      supabaseRef != null &&
+      supabaseRef === EXPECTED_SUPABASE_PROJECT_REF,
   };
 }

@@ -246,7 +246,7 @@ function normalizeAssignmentRow(
     return {
       ...assignment,
       ...assignmentFallback,
-      is_legacy_synthetic: true,
+      is_legacy_synthetic: false,
       is_invoice_eligible: assignmentFallback.remaining_amount > 0,
       is_achieved: isOperationalRowAchieved({
         kind: "assignment",

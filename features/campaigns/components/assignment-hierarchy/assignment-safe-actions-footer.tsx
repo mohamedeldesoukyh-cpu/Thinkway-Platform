@@ -48,6 +48,8 @@ type AssignmentSafeActionsFooterProps = {
   invoiceLineIds: string[];
   invoiceTotal: number;
   onGenerateInvoice: (lineIds: string[]) => void;
+  /** Clear selection / expansion before router.refresh after IO mutations. */
+  onAfterOperationalMutation?: () => void;
   className?: string;
 };
 
@@ -76,6 +78,7 @@ export function AssignmentSafeActionsFooter({
   invoiceLineIds,
   invoiceTotal,
   onGenerateInvoice,
+  onAfterOperationalMutation,
   className,
 }: AssignmentSafeActionsFooterProps) {
   const router = useRouter();
@@ -95,6 +98,7 @@ export function AssignmentSafeActionsFooter({
       );
       if (result.ok) {
         toast.success(result.message);
+        onAfterOperationalMutation?.();
         router.refresh();
       } else toast.error(result.message ?? "Vendor IO generation failed.");
     });
@@ -109,9 +113,16 @@ export function AssignmentSafeActionsFooter({
         buildFormData(campaignId, reviseVioLineIds, reason)
       );
       if (result.ok) {
+        if (process.env.NODE_ENV === "development") {
+          console.log("[Assignments] revise Vendor IO success", {
+            revised_line_ids: result.revised_line_ids,
+            new_vendor_io_ids: result.new_vendor_io_ids,
+          });
+        }
         toast.success(result.message);
         setReviseOpen(false);
         setReviseReason("");
+        onAfterOperationalMutation?.();
         router.refresh();
       } else toast.error(result.message ?? "Revise Vendor IO failed.");
     });
@@ -129,6 +140,7 @@ export function AssignmentSafeActionsFooter({
         toast.success(result.message);
         setUngenerateOpen(false);
         setUngenerateReason("");
+        onAfterOperationalMutation?.();
         router.refresh();
       } else toast.error(result.message ?? "Un-generate failed.");
     });
