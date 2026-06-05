@@ -749,9 +749,6 @@ export function CampaignLineSheet({
             summary={footerSummary}
             revenueVatAmount={revenueVatAmount}
             costVatAmount={costVatAmount}
-            poExceeded={poSnapshot.is_over_consumed}
-            poAmount={po.po_amount_campaign_currency}
-            poConsumed={poSnapshot.projected_consumed}
           />
         </form>
       </SheetContent>

@@ -1,6 +1,5 @@
 "use client";
 
-import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import type { CommercialSummary } from "@/lib/assignments/commercial-calculations";
@@ -11,9 +10,6 @@ type AssignmentStickyFooterProps = {
   summary: CommercialSummary;
   revenueVatAmount: number;
   costVatAmount: number;
-  poExceeded?: boolean;
-  poAmount?: number;
-  poConsumed?: number;
   className?: string;
 };
 
@@ -22,13 +18,8 @@ export function AssignmentStickyFooter({
   summary,
   revenueVatAmount,
   costVatAmount,
-  poExceeded,
-  poAmount = 0,
-  poConsumed = 0,
   className,
 }: AssignmentStickyFooterProps) {
-  const showPoBanner = poAmount > 0 && (poExceeded || poConsumed > 0);
-
   return (
     <div
       className={cn(
@@ -36,18 +27,6 @@ export function AssignmentStickyFooter({
         className
       )}
     >
-      {showPoBanner ? (
-        <div className="mb-2">
-          <PoConsumptionBanner
-            consumed={poConsumed}
-            po_amount={poAmount}
-            currency={currency}
-            formatMoney={formatMoney}
-            po_exceeded={poExceeded}
-            compact
-          />
-        </div>
-      ) : null}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap gap-4 text-sm">
           <Stat label="Deliverables" value={String(summary.deliverable_units)} />

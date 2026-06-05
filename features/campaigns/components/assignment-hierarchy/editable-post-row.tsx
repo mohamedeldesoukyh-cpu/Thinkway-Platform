@@ -324,7 +324,7 @@ export function EditablePostRow({
           editing && OPERATIONAL_TABLE_SURFACE
         )}
       >
-        <td className={cn(GRID_CELL.select, "pl-4")}>
+        <td className={GRID_CELL.select}>
           {showSelection && deliverable.invoice_eligible && !deliverable.is_synthetic ? (
             <input
               type="checkbox"
@@ -336,19 +336,26 @@ export function EditablePostRow({
             <span className="text-muted-foreground/50">·</span>
           )}
         </td>
-        <td className={cn(GRID_CELL.type, "font-normal text-foreground/90")}>
-          {canEdit && editing ? (
-            <DeliverableTypeSelect
-              platform={meta.platform}
-              deliverableType={meta.deliverable_type}
-              disabled={pending}
-              onDeliverableTypeChange={(deliverableType) =>
-                setMeta((m) => ({ ...m, deliverable_type: deliverableType }))
-              }
-            />
-          ) : (
-            assignmentChildTypeLabel(post.deliverable_type, post.deliverable_type_label)
-          )}
+        <td className={cn(GRID_CELL.type, "text-left font-normal text-foreground/90")}>
+          <div className="flex items-center gap-1.5 text-left">
+            <span className="w-4 shrink-0 text-left tabular-nums text-[10px] text-muted-foreground">
+              {post.sequence_number}
+            </span>
+            {canEdit && editing ? (
+              <DeliverableTypeSelect
+                platform={meta.platform}
+                deliverableType={meta.deliverable_type}
+                disabled={pending}
+                onDeliverableTypeChange={(deliverableType) =>
+                  setMeta((m) => ({ ...m, deliverable_type: deliverableType }))
+                }
+              />
+            ) : (
+              <span className="min-w-0 truncate">
+                {assignmentChildTypeLabel(post.deliverable_type, post.deliverable_type_label)}
+              </span>
+            )}
+          </div>
         </td>
         <td className={GRID_CELL.platform}>
           {canEdit && editing ? (

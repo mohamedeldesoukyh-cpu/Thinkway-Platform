@@ -391,20 +391,26 @@ export async function lockDeliverablesOnInvoice(
     const fullLock = shouldLockLineFully(mappedAll);
     const partialLock = mappedAll.some((d) => d.locked_at);
 
+    const linePatch: Record<string, unknown> = {
+      ...lineBillingPatch(nextStatus),
+      invoice_id: fullLock ? invoiceId : null,
+      revenue_locked: fullLock,
+      cost_locked: fullLock,
+      vendor_assignment_locked: fullLock,
+      vat_locked: partialLock,
+      billing_invoiced_at: fullLock ? now : null,
+    };
+    if (fullLock || partialLock) {
+      linePatch.operational_status = "locked";
+    }
+
     await supabase
       .from("campaign_lines")
-      .update({
-        ...lineBillingPatch(nextStatus),
-        invoice_id: fullLock ? invoiceId : null,
-        revenue_locked: fullLock,
-        cost_locked: fullLock,
-        vendor_assignment_locked: fullLock,
-        vat_locked: partialLock,
-        billing_invoiced_at: fullLock ? now : null,
-      })
+      .update(linePatch as never)
       .eq("id", lineId);
 
     await syncLineBillingFromDeliverables(supabase, lineId, nextStatus);
+    await syncLineOperationalStatus(supabase, lineId);
   }
 
   const totalsError = await recalculateInvoiceTotals(supabase, invoiceId);

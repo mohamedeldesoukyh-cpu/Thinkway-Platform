@@ -939,9 +939,7 @@ export async function getCampaignOperationalBillingDetail(
         currency: row.currency,
         client_id: row.client_id,
         campaign_header_id: row.campaign_header_id,
-        is_locked:
-          Boolean(row.is_operational_locked) ||
-          row.regeneration_status === "pending_regeneration",
+        is_locked: Boolean(row.is_operational_locked),
       };
     })
     .filter(Boolean) as CampaignOperationalBillingDetail["appendable_invoices"];

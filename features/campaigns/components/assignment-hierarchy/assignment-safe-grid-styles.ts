@@ -44,9 +44,9 @@ export const SAFE_GRID_PARENT_ROW_EXPANDED = cn(
 
 export const SAFE_GRID_CHILD_GROUP_ROW = "border-b border-border/50 bg-muted/20";
 
+/** Child expansion cell — left border aligns with parent row accent (no extra inset). */
 export const SAFE_GRID_CHILD_GROUP_CELL = cn(
-  "border-b border-border/50 bg-muted/20 p-0",
-  "border-l-[3px] border-l-border/70 pl-3"
+  "border-b border-border/50 bg-muted/20 p-0"
 );
 
 export const SAFE_GRID_AMOUNT = OPERATIONAL_AMOUNT_CLASS;

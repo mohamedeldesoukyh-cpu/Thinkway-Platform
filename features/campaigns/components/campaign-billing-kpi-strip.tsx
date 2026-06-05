@@ -9,7 +9,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
@@ -99,18 +98,5 @@ export function CampaignBillingKpiStrip({ workspace }: CampaignBillingKpiStripPr
     alert?: "warning" | "danger";
   }[];
 
-  return (
-    <div className="space-y-2">
-      {financials.po_total > 0 ? (
-        <PoConsumptionBanner
-          consumed={financials.po_consumed}
-          po_amount={financials.po_total}
-          currency={currency}
-          formatMoney={formatMoney}
-          po_exceeded={financials.po_exceeded}
-        />
-      ) : null}
-      <KpiCarousel items={items} />
-    </div>
-  );
+  return <KpiCarousel items={items} />;
 }

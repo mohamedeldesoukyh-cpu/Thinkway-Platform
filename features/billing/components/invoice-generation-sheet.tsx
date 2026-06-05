@@ -71,6 +71,8 @@ type InvoiceGenerationSheetProps = {
   initialSelection?: OperationalSelectionPayload;
   /** Locked for this sheet session — no switching between new and append. */
   targetMode: InvoiceGenerationTargetMode;
+  /** Pre-selected invoice when opened from target choice dialog. */
+  initialExistingInvoiceId?: string;
   onInvoiceComplete?: (campaignId: string) => void | Promise<void>;
 };
 
@@ -85,6 +87,7 @@ export function InvoiceGenerationSheet({
   onOpenChange,
   initialSelection,
   targetMode,
+  initialExistingInvoiceId,
   onInvoiceComplete,
 }: InvoiceGenerationSheetProps) {
   const operationalRows = operationalRowsProp ?? [];
@@ -127,11 +130,20 @@ export function InvoiceGenerationSheet({
     }
 
     if (isAppend && appendableOptions.length > 0) {
-      setExistingInvoiceId(appendableOptions[0]?.id ?? "");
+      setExistingInvoiceId(
+        initialExistingInvoiceId ?? appendableOptions[0]?.id ?? ""
+      );
     } else {
       setExistingInvoiceId("");
     }
-  }, [open, initialSelection, isAppend, appendableOptions, operationalRows]);
+  }, [
+    open,
+    initialSelection,
+    isAppend,
+    appendableOptions,
+    operationalRows,
+    initialExistingInvoiceId,
+  ]);
 
   const eligibleLeaves = useMemo(() => {
     return flattenOperationalLeaves(operationalRows).filter((row) =>

@@ -3,10 +3,16 @@
 import dynamic from "next/dynamic";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import { ASSIGNMENT_SAFE_GRID_COL_SPAN } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
+import {
+  ASSIGNMENT_SAFE_GRID_COL_SPAN,
+  SAFE_GRID_CHILD_GROUP_CELL,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
+import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/operational-status";
+import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
+import { cn } from "@/lib/utils";
 
 const AssignmentDeliverableRows = dynamic(
   () =>
@@ -84,12 +90,24 @@ export function AssignmentSafeDeliverableRows({
   parentColSpan,
 }: AssignmentSafeDeliverableRowsProps) {
   const currency = resolveAssignmentLineCurrency(line) || currencyProp;
+  const parentRowClass = LINE_OPERATIONAL_ROW_CLASS[
+    effectiveLineOperationalStatusForUi({
+      operational_status: line.operational_status,
+      vendor_io_id: line.vendor_io_id,
+      billing_status: line.billing_status,
+      invoice_id: line.invoice_id,
+      revenue_locked: line.revenue_locked,
+      vendor_assignment_locked: line.vendor_assignment_locked,
+    })
+  ];
+  const childBorderClass = parentRowClass.split(" ").filter((c) => c.startsWith("border-l")).join(" ");
+
   if (deliverables.length === 0) {
     return (
       <tr className="bg-muted/20">
         <td
           colSpan={parentColSpan}
-          className="border-b border-border/50 border-l-[3px] border-l-border/70 bg-muted/20 px-6 py-2 text-xs text-muted-foreground"
+          className={cn(SAFE_GRID_CHILD_GROUP_CELL, childBorderClass, "px-4 py-2 text-xs text-muted-foreground")}
         >
           No deliverable breakdown for this assignment.
         </td>
@@ -108,7 +126,7 @@ export function AssignmentSafeDeliverableRows({
         onToggleDeliverable={() => {}}
         showSelection={false}
         parentColSpan={parentColSpan}
-        nestedGroupClassName="border-l-[3px] border-l-border/70 bg-muted/20"
+        nestedGroupClassName={cn(SAFE_GRID_CHILD_GROUP_CELL, childBorderClass)}
       />
     </SafeDeliverableBoundary>
   );

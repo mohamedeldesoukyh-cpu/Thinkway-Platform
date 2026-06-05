@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { LINE_OPERATIONAL_STATUS_LABELS } from "@/features/campaigns/constants/operational-status";
 import {
-  normalizeOperationalStatus,
+  normalizeOperationalStatusForOpsBadge,
   OPERATIONAL_PILL_CLASS,
   OPERATIONAL_STATUS_PILL_BASE,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-status-pill-styles";
@@ -19,7 +19,7 @@ export function AssignmentOperationalStatusBadge({
   status,
   className,
 }: AssignmentOperationalStatusBadgeProps) {
-  const safe = normalizeOperationalStatus(status);
+  const safe = normalizeOperationalStatusForOpsBadge(status);
 
   return (
     <Badge

@@ -1,4 +1,7 @@
-import { normalizeOperationalStatus } from "@/lib/campaigns/operational-status-utils";
+import {
+  normalizeOperationalStatus,
+  normalizeOperationalStatusForOpsBadge,
+} from "@/lib/campaigns/operational-status-utils";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 
 /**
@@ -11,6 +14,8 @@ export function effectiveLineOperationalStatus(input: {
   billing_status?: string | null | undefined;
   invoice_id?: string | null | undefined;
   finance_override_until?: string | null | undefined;
+  revenue_locked?: boolean | null;
+  vendor_assignment_locked?: boolean | null;
 }): CampaignLineOperationalStatus {
   const raw = (input.operational_status ?? "draft") as CampaignLineOperationalStatus;
 
@@ -18,28 +23,45 @@ export function effectiveLineOperationalStatus(input: {
     return "draft";
   }
 
-  // Legacy rows stored moved_to_billing on operational_status — billing column owns that state.
   if (raw === "moved_to_billing" && input.vendor_io_id) {
     return "io_generated";
   }
 
-  if (raw !== "draft") return normalizeOperationalStatus(raw);
+  if (raw === "io_revised" || raw === "reopened") {
+    return "io_revised";
+  }
+
+  if (raw === "locked") {
+    return "locked";
+  }
+
+  if (raw === "invoiced" || raw === "partially_invoiced") {
+    return "locked";
+  }
 
   const billing = input.billing_status ?? "draft";
+  const locked =
+    Boolean(input.invoice_id) ||
+    Boolean(input.revenue_locked) ||
+    Boolean(input.vendor_assignment_locked) ||
+    ["invoiced", "paid", "partially_invoiced", "partially_paid", "closed"].includes(billing);
+
+  if (locked) {
+    return "locked";
+  }
+
+  if (raw !== "draft") return normalizeOperationalStatus(raw);
+
   if (billing === "closed") return "closed";
-  if (billing === "partially_invoiced") return "partially_invoiced";
-  if (["invoiced", "paid", "closed"].includes(billing)) return "invoiced";
 
   if (input.invoice_id) {
-    return billing === "partially_invoiced" ? "partially_invoiced" : "invoiced";
+    return "locked";
   }
 
   if (input.finance_override_until) {
     const until = new Date(input.finance_override_until).getTime();
-    if (Number.isFinite(until) && until > Date.now()) {
-      if (["moved_to_billing", "approved", "partially_invoiced", "invoiced"].includes(billing)) {
-        return "reopened";
-      }
+    if (Number.isFinite(until) && until > Date.now() && input.vendor_io_id) {
+      return "io_revised";
     }
   }
 
@@ -48,9 +70,9 @@ export function effectiveLineOperationalStatus(input: {
   return "draft";
 }
 
-/** Safe status for UI maps (row classes, badges) — unknown DB values become `draft`. */
+/** Safe status for UI maps (row classes, badges) — Ops never shows Invoiced. */
 export function effectiveLineOperationalStatusForUi(
   input: Parameters<typeof effectiveLineOperationalStatus>[0]
 ): CampaignLineOperationalStatus {
-  return normalizeOperationalStatus(effectiveLineOperationalStatus(input));
+  return normalizeOperationalStatusForOpsBadge(effectiveLineOperationalStatus(input));
 }

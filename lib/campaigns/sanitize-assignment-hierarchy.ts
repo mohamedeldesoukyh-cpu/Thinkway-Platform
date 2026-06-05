@@ -208,6 +208,12 @@ function sanitizeLine(line: Partial<CampaignLineWorkspace> | null | undefined): 
     if (uiOps === "io_generated" && operational_status === "reopened") {
       operational_status = "io_generated";
     }
+    if (operational_status === "invoiced" || operational_status === "partially_invoiced") {
+      operational_status = "locked";
+    }
+    if (operational_status === "reopened" && line.vendor_io_id) {
+      operational_status = "io_revised";
+    }
 
     return {
       ...line,

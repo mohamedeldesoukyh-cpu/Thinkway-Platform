@@ -45,6 +45,14 @@ const InvoiceGenerationSheet = dynamic(
   { ssr: false }
 );
 
+const InvoiceTargetChoiceDialog = dynamic(
+  () =>
+    import("@/features/billing/components/invoice-target-choice-dialog").then(
+      (m) => m.InvoiceTargetChoiceDialog
+    ),
+  { ssr: false }
+);
+
 type CampaignLinesTabInnerProps = {
   workspace: CampaignWorkspace;
   po: CampaignPoSummary;
@@ -70,6 +78,9 @@ export function CampaignLinesTabInner({
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceChoiceOpen, setInvoiceChoiceOpen] = useState(false);
+  const [invoiceTargetMode, setInvoiceTargetMode] = useState<"new" | "append">("new");
+  const [appendInvoiceId, setAppendInvoiceId] = useState<string | undefined>();
   const [invoiceSelection, setInvoiceSelection] = useState<
     OperationalSelectionPayload | undefined
   >();
@@ -96,12 +107,27 @@ export function CampaignLinesTabInner({
   }
 
   function openInvoiceWithLines(lineIds: string[]) {
-    if (!enableInvoiceDialogs) return;
-    setInvoiceSelection({
+    if (!enableInvoiceDialogs || !operationalBilling) return;
+    const selection = {
       line_ids: lineIds,
       deliverable_ids: [],
       post_ids: [],
-    });
+    };
+    const eligible = (operationalBilling.appendable_invoices ?? []).filter(
+      (inv) =>
+        !inv.is_locked &&
+        inv.status !== "void" &&
+        inv.status !== "paid" &&
+        inv.status !== "cancelled"
+    );
+    if (eligible.length > 0) {
+      setInvoiceSelection(selection);
+      setInvoiceChoiceOpen(true);
+      return;
+    }
+    setInvoiceTargetMode("new");
+    setAppendInvoiceId(undefined);
+    setInvoiceSelection(selection);
     setInvoiceOpen(true);
   }
 
@@ -177,23 +203,36 @@ export function CampaignLinesTabInner({
         />
       ) : null}
 
-      {enableInvoiceDialogs && invoiceOpen && operationalBilling ? (
-        <InvoiceGenerationSheet
-          campaignId={workspace.id}
-          currency={operationalBilling.currency_code}
-          rollup={operationalBilling.rollup}
-          operationalRows={operationalBilling.operational_rows ?? []}
-          appendableInvoices={operationalBilling.appendable_invoices ?? []}
-          defaultVatPercent={operationalBilling.default_vat_percent}
-          targetMode="new"
-          initialSelection={invoiceSelection}
-          open={invoiceOpen}
-          onInvoiceComplete={() => router.refresh()}
-          onOpenChange={(open) => {
-            setInvoiceOpen(open);
-            if (!open) setInvoiceSelection(undefined);
-          }}
-        />
+      {enableInvoiceDialogs && operationalBilling ? (
+        <>
+          <InvoiceTargetChoiceDialog
+            open={invoiceChoiceOpen}
+            onOpenChange={setInvoiceChoiceOpen}
+            appendableInvoices={operationalBilling.appendable_invoices ?? []}
+            onConfirm={(mode, existingInvoiceId) => {
+              setInvoiceTargetMode(mode);
+              setAppendInvoiceId(existingInvoiceId);
+              setInvoiceOpen(true);
+            }}
+          />
+          <InvoiceGenerationSheet
+            campaignId={workspace.id}
+            currency={operationalBilling.currency_code}
+            rollup={operationalBilling.rollup}
+            operationalRows={operationalBilling.operational_rows ?? []}
+            appendableInvoices={operationalBilling.appendable_invoices ?? []}
+            defaultVatPercent={operationalBilling.default_vat_percent}
+            targetMode={invoiceTargetMode}
+            initialExistingInvoiceId={appendInvoiceId}
+            initialSelection={invoiceSelection}
+            open={invoiceOpen}
+            onInvoiceComplete={() => router.refresh()}
+            onOpenChange={(open) => {
+              setInvoiceOpen(open);
+              if (!open) setInvoiceSelection(undefined);
+            }}
+          />
+        </>
       ) : null}
 
       {enableInvoiceDialogs && invoiceOpen && !operationalBilling ? (

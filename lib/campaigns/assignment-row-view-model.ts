@@ -84,6 +84,8 @@ export function deriveAssignmentLineMeta(
     vendor_io_id: line.vendor_io_id,
     billing_status: line.billing_status,
     invoice_id: line.invoice_id,
+    revenue_locked: line.revenue_locked,
+    vendor_assignment_locked: line.vendor_assignment_locked,
   });
 
   const vioEligible = isLineVendorIoGenerateEligible({
@@ -104,7 +106,8 @@ export function deriveAssignmentLineMeta(
   });
 
   const reviseVioEligible =
-    status === "reopened" && Boolean(line.active_vendor_io_id ?? line.vendor_io_id);
+    (status === "io_revised" || status === "locked") &&
+    Boolean(line.active_vendor_io_id ?? line.vendor_io_id);
   const ungenerateIoEligible = isLineUngenerateIoEligible({
     vendor_io_id: line.active_vendor_io_id ?? line.vendor_io_id,
     operational_status: status,
@@ -136,6 +139,8 @@ export function buildAssignmentRowViewModel(
     vendor_io_id: line.vendor_io_id,
     billing_status: line.billing_status,
     invoice_id: line.invoice_id,
+    revenue_locked: line.revenue_locked,
+    vendor_assignment_locked: line.vendor_assignment_locked,
   });
   const childBillingStatus = deriveChildBillingStatus(line.billing_status ?? "draft");
   const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];

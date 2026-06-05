@@ -42,6 +42,10 @@ import {
 } from "@/features/campaigns/components/tabs/campaign-billing-queue-table";
 import { CreateInvoiceSheet } from "@/features/billing/components/create-invoice-sheet";
 import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
+import {
+  InvoiceTargetChoiceDialog,
+  type InvoiceTargetMode,
+} from "@/features/billing/components/invoice-target-choice-dialog";
 import type {
   AssignmentBillingGroup,
   BillingLineRow,
@@ -89,6 +93,9 @@ export function CampaignBillingTab({
   const currency = workspace.currency_code;
   const [legacyInvoiceOpen, setLegacyInvoiceOpen] = useState(false);
   const [operationalInvoiceOpen, setOperationalInvoiceOpen] = useState(false);
+  const [invoiceChoiceOpen, setInvoiceChoiceOpen] = useState(false);
+  const [invoiceTargetMode, setInvoiceTargetMode] = useState<InvoiceTargetMode>("new");
+  const [appendInvoiceId, setAppendInvoiceId] = useState<string | undefined>();
   const [invoiceSelection, setInvoiceSelection] = useState<
     OperationalSelectionPayload | undefined
   >();
@@ -143,13 +150,34 @@ export function CampaignBillingTab({
     setSelectedQueueBatchKeys(new Set(billingQueueRows.map((r) => r.batch_key)));
   }
 
+  const appendableInvoices = operationalBilling?.appendable_invoices ?? [];
+
+  function beginInvoiceFlow(selection?: OperationalSelectionPayload) {
+    if (!operationalBilling) return;
+    const eligible = appendableInvoices.filter(
+      (inv) =>
+        !inv.is_locked &&
+        inv.status !== "void" &&
+        inv.status !== "paid" &&
+        inv.status !== "cancelled"
+    );
+    if (eligible.length > 0) {
+      setInvoiceSelection(selection);
+      setInvoiceChoiceOpen(true);
+      return;
+    }
+    setInvoiceTargetMode("new");
+    setAppendInvoiceId(undefined);
+    setInvoiceSelection(selection);
+    setOperationalInvoiceOpen(true);
+  }
+
   function handleQueueGenerateInvoice() {
     if (!operationalBilling || selectedQueueBatchKeys.size === 0) return;
     const payload = buildConsolidatedQueueInvoiceSelection(
       operationalBilling.operational_rows
     );
-    setInvoiceSelection(payload);
-    setOperationalInvoiceOpen(true);
+    beginInvoiceFlow(payload);
   }
 
   return (
@@ -179,8 +207,7 @@ export function CampaignBillingTab({
             size="sm"
             onClick={() => {
               if (operationalBilling) {
-                setInvoiceSelection(undefined);
-                setOperationalInvoiceOpen(true);
+                beginInvoiceFlow(undefined);
               } else {
                 setLegacyInvoiceOpen(true);
               }
@@ -289,8 +316,7 @@ export function CampaignBillingTab({
               onSelectionChange={setDrilldownSelection}
               appearance="campaign"
               onInvoice={(selection) => {
-                setInvoiceSelection(selection);
-                setOperationalInvoiceOpen(true);
+                beginInvoiceFlow(selection);
               }}
             />
           </div>
@@ -373,22 +399,35 @@ export function CampaignBillingTab({
       />
 
       {operationalBilling ? (
-        <InvoiceGenerationSheet
-          campaignId={workspace.id}
-          currency={operationalBilling.currency_code}
-          rollup={operationalBilling.rollup}
-          operationalRows={operationalBilling.operational_rows}
-          appendableInvoices={operationalBilling.appendable_invoices}
-          defaultVatPercent={operationalBilling.default_vat_percent}
-          targetMode="new"
-          initialSelection={invoiceSelection}
-          open={operationalInvoiceOpen}
-          onInvoiceComplete={() => router.refresh()}
-          onOpenChange={(open) => {
-            setOperationalInvoiceOpen(open);
-            if (!open) setInvoiceSelection(undefined);
-          }}
-        />
+        <>
+          <InvoiceTargetChoiceDialog
+            open={invoiceChoiceOpen}
+            onOpenChange={setInvoiceChoiceOpen}
+            appendableInvoices={appendableInvoices}
+            onConfirm={(mode, existingInvoiceId) => {
+              setInvoiceTargetMode(mode);
+              setAppendInvoiceId(existingInvoiceId);
+              setOperationalInvoiceOpen(true);
+            }}
+          />
+          <InvoiceGenerationSheet
+            campaignId={workspace.id}
+            currency={operationalBilling.currency_code}
+            rollup={operationalBilling.rollup}
+            operationalRows={operationalBilling.operational_rows}
+            appendableInvoices={operationalBilling.appendable_invoices}
+            defaultVatPercent={operationalBilling.default_vat_percent}
+            targetMode={invoiceTargetMode}
+            initialExistingInvoiceId={appendInvoiceId}
+            initialSelection={invoiceSelection}
+            open={operationalInvoiceOpen}
+            onInvoiceComplete={() => router.refresh()}
+            onOpenChange={(open) => {
+              setOperationalInvoiceOpen(open);
+              if (!open) setInvoiceSelection(undefined);
+            }}
+          />
+        </>
       ) : null}
     </div>
   );

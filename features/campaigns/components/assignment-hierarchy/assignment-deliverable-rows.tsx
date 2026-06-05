@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { memo, useEffect, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import { TableCell, TableRow } from "@/components/ui/table";
 import { createAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
+import {
+  SAFE_GRID_CHILD_GROUP_CELL,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
 import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-hierarchy/deliverable-group-row";
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
@@ -50,18 +52,13 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
     vendor_io_id: line.vendor_io_id,
     billing_status: line.billing_status,
     invoice_id: line.invoice_id,
+    revenue_locked: line.revenue_locked,
+    vendor_assignment_locked: line.vendor_assignment_locked,
   });
   const platformOptions = getCreatorConnectedPlatformOptions({
     creatorPlatformAccounts: line.creator_platform_accounts,
     assignment: line.assignment,
   });
-
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "development") return;
-    console.log("Creator platforms", line.creator_platform_accounts);
-    console.log("Assignment platforms", line.assignment?.platforms);
-    console.log("Available platform options", platformOptions);
-  }, [line.creator_platform_accounts, line.assignment, platformOptions]);
 
   function addDeliverable() {
     const defaultPlatform = platformOptions[0]?.value ?? "instagram";
@@ -103,9 +100,12 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   }, [locked, campaignId, line.id]);
 
   return (
-    <TableRow className="border-0 hover:bg-transparent">
-      <TableCell colSpan={parentColSpan} className={cn("p-0", nestedGroupClassName)}>
-        <div className={cn("mt-0 pl-2", OPERATIONAL_TABLE_SURFACE)}>
+    <tr className="border-0 hover:bg-transparent">
+      <td
+        colSpan={parentColSpan}
+        className={cn(SAFE_GRID_CHILD_GROUP_CELL, "p-0", nestedGroupClassName)}
+      >
+        <div className={cn(OPERATIONAL_TABLE_SURFACE)}>
           <div className="overflow-x-auto pb-0.5">
             <table
               className={cn(
@@ -159,7 +159,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
             </table>
           </div>
         </div>
-      </TableCell>
-    </TableRow>
+      </td>
+    </tr>
   );
 });

@@ -761,11 +761,19 @@ export async function updateCampaignLineAction(
       commercial.commercial_rows.length > 0 ? commercial.commercial_rows : undefined,
   };
 
-  const { data: existingLineMeta } = await supabase
+  const { data: existingLineMetaRaw } = await supabase
     .from("campaign_lines")
-    .select("metadata, vendor_assignment_locked")
+    .select("metadata, vendor_assignment_locked, vendor_io_id, operational_status")
     .eq("id", parsed.data.line_id)
     .maybeSingle();
+
+  const existingLineMeta = existingLineMetaRaw as {
+    metadata?: Record<string, unknown> | null;
+    vendor_assignment_locked?: boolean | null;
+    vendor_io_id?: string | null;
+    operational_status?: string | null;
+    finance_override_until?: string | null;
+  } | null;
 
   const { error } = await supabase
     .from("campaign_lines")
@@ -849,6 +857,27 @@ export async function updateCampaignLineAction(
       costVatPercent: vatPayload.cost_vat_percent,
       costVatExempt: vatPayload.cost_vat_exempt,
     });
+  }
+
+  const { data: overrideRow } = await supabase
+    .from("campaign_lines")
+    .select("vendor_io_id, finance_override_until")
+    .eq("id", parsed.data.line_id)
+    .maybeSingle();
+
+  const overrideMeta = overrideRow as {
+    vendor_io_id?: string | null;
+    finance_override_until?: string | null;
+  } | null;
+
+  if (overrideMeta?.vendor_io_id && overrideMeta.finance_override_until) {
+    const until = new Date(overrideMeta.finance_override_until).getTime();
+    if (Number.isFinite(until) && until > Date.now()) {
+      await supabase
+        .from("campaign_lines")
+        .update({ operational_status: "io_revised" } as never)
+        .eq("id", parsed.data.line_id);
+    }
   }
 
   revalidateCampaign(parsed.data.campaign_id, header?.client_id);

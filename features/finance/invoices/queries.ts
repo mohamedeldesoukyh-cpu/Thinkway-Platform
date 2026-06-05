@@ -24,6 +24,14 @@ function resolveLockedStatus(input: {
   return "Open";
 }
 
+const ACTIVE_REGISTER_STATUSES = new Set([
+  "draft",
+  "sent",
+  "partial",
+  "partially_paid",
+  "paid",
+]);
+
 export async function getFinanceInvoiceRegister(options?: {
   campaignHeaderId?: string;
 }): Promise<FinanceInvoiceRegisterRow[]> {
@@ -55,19 +63,23 @@ export async function getFinanceInvoiceRegister(options?: {
     `
     )
     .not("status", "eq", "void")
+    .not("status", "eq", "cancelled")
     .order("issue_date", { ascending: false })
     .limit(500);
 
   if (options?.campaignHeaderId) {
-    query = query.eq("campaign_id", options.campaignHeaderId);
+    query = query.eq("campaign_header_id", options.campaignHeaderId);
   }
 
   const { data, error } = await query;
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row) => {
-    const inv = row as unknown as {
+  const seen = new Set<string>();
+  const rows: FinanceInvoiceRegisterRow[] = [];
+
+  for (const raw of data ?? []) {
+    const inv = raw as unknown as {
       id: string;
       document_number: string;
       status: string;
@@ -89,6 +101,10 @@ export async function getFinanceInvoiceRegister(options?: {
       } | null;
     };
 
+    if (!ACTIVE_REGISTER_STATUSES.has(inv.status)) continue;
+    if (seen.has(inv.id)) continue;
+    seen.add(inv.id);
+
     const revenue_before_vat = Number(
       inv.revenue_before_vat ?? inv.subtotal ?? 0
     );
@@ -97,7 +113,7 @@ export async function getFinanceInvoiceRegister(options?: {
       inv.revenue_after_vat ?? inv.total ?? revenue_before_vat + vat_amount
     );
 
-    return {
+    rows.push({
       id: inv.id,
       document_number: inv.document_number,
       client_name: inv.client?.name ?? "—",
@@ -113,6 +129,8 @@ export async function getFinanceInvoiceRegister(options?: {
       currency: inv.currency,
       regeneration_status: inv.regeneration_status,
       is_operational_locked: inv.is_operational_locked ?? false,
-    } satisfies FinanceInvoiceRegisterRow;
-  });
+    } satisfies FinanceInvoiceRegisterRow);
+  }
+
+  return rows;
 }

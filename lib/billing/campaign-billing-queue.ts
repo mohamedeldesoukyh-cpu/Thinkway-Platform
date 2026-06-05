@@ -232,7 +232,11 @@ export function isInvoiceAppendable(input: {
   }
   if (input.is_operational_locked) return false;
   if (!APPENDABLE_INVOICE_STATUSES.has(input.status)) return false;
-  if (input.status === "void" || input.status === "paid") return false;
-  if (input.regeneration_status === "pending_regeneration") return false;
+  if (input.status === "void" || input.status === "paid" || input.status === "cancelled") {
+    return false;
+  }
+  if (input.regeneration_status === "pending_regeneration") {
+    return input.status === "draft";
+  }
   return true;
 }

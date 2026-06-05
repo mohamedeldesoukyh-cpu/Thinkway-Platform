@@ -26,11 +26,16 @@ export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolea
     return false;
   }
 
+  if (line.is_locked) return false;
+
   const status = effectiveLineOperationalStatus({
     operational_status: line.operational_status,
     vendor_io_id: line.vendor_io_id,
     billing_status: line.billing_status,
   }) as CampaignLineOperationalStatus;
+
+  if (status === "locked") return false;
+
   return isInvoiceEligibleOperationalStatus(status);
 }
 

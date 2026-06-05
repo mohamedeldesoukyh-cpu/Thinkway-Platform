@@ -693,7 +693,7 @@ export async function createInvoiceFromLinesAction(
       .insert({
         client_id: header.client_id,
         campaign_header_id: header.id,
-        status: "sent",
+        status: "draft",
         due_date: parsed.data.due_date,
         currency: header.currency_code,
         notes: emptyToNull(parsed.data.notes),
@@ -1120,6 +1120,16 @@ export async function ungenerateInvoiceAction(
         .eq("id", lineId);
     }
 
+    for (const lineId of affectedLineIds) {
+      await supabase
+        .from("campaign_lines")
+        .update({
+          operational_status: "io_generated",
+          billing_status: "moved_to_billing",
+        } as never)
+        .eq("id", lineId);
+    }
+
     await syncLineOperationalStatusBatch(supabase, affectedLineIds);
   }
 
@@ -1127,10 +1137,12 @@ export async function ungenerateInvoiceAction(
     .from("invoices")
     .update({
       regeneration_status: "pending_regeneration",
+      status: "draft",
+      is_operational_locked: false,
       ungenerated_at: new Date().toISOString(),
       ungenerated_by: auth.userId,
       ungenerate_reason: parsed.data.reason,
-    })
+    } as never)
     .eq("id", invoice.id);
 
   if (updateError) {
@@ -1260,8 +1272,9 @@ export async function regenerateInvoiceAction(
     .update({
       version_number: newVersion,
       regeneration_status: "regenerated",
-      status: "sent",
-    })
+      status: "draft",
+      is_operational_locked: false,
+    } as never)
     .eq("id", invoice.id);
 
   if (invoiceUpdateError) {
@@ -1275,6 +1288,7 @@ export async function regenerateInvoiceAction(
       .from("campaign_lines")
       .update({
         ...lineBillingPatch("invoiced"),
+        operational_status: "locked",
         revenue_locked: true,
         cost_locked: true,
         vendor_assignment_locked: true,

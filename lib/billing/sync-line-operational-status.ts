@@ -22,6 +22,8 @@ type LineSnapshot = {
   invoice_id: string | null;
   finance_override_until: string | null;
   operational_status: string;
+  revenue_locked?: boolean | null;
+  vendor_assignment_locked?: boolean | null;
 };
 
 function hasActiveFinanceOverride(until: string | null): boolean {
@@ -35,45 +37,43 @@ function deriveOperationalFromState(input: {
   invoiceId: string | null;
   financeOverrideUntil: string | null;
   deliverables: DeliverableBillingRow[];
+  storedOperational: string;
 }): CampaignLineOperationalStatus {
-  const { billingStatus, vendorIoId, invoiceId, financeOverrideUntil, deliverables } =
-    input;
+  const {
+    billingStatus,
+    vendorIoId,
+    invoiceId,
+    financeOverrideUntil,
+    deliverables,
+    storedOperational,
+  } = input;
 
   if (billingStatus === "closed") {
     return "closed";
-  }
-
-  if (billingStatus === "paid" && deliverables.length > 0) {
-    const billable = deliverables.reduce((s, d) => s + d.billable_amount, 0);
-    const collected = deliverables.reduce((s, d) => s + d.collected_amount, 0);
-    if (billable > 0 && collected >= billable) {
-      return "closed";
-    }
   }
 
   const billable = deliverables.reduce((s, d) => s + d.billable_amount, 0);
   const invoiced = deliverables.reduce((s, d) => s + d.invoiced_amount, 0);
   const anyLocked = deliverables.some((d) => d.locked_at);
 
-  if (billable > 0 && invoiced >= billable && anyLocked) {
-    return "invoiced";
+  if (invoiceId || anyLocked || invoiced > 0) {
+    return "locked";
   }
-  if (invoiced > 0 && invoiced < billable) {
-    return "partially_invoiced";
+
+  if (["invoiced", "paid", "partially_invoiced", "partially_paid"].includes(billingStatus)) {
+    return "locked";
+  }
+
+  if (storedOperational === "io_revised") {
+    return "io_revised";
   }
 
   if (
     !invoiceId &&
     hasActiveFinanceOverride(financeOverrideUntil) &&
-    ["moved_to_billing", "approved", "partially_invoiced", "invoiced"].includes(
-      billingStatus
-    )
+    vendorIoId
   ) {
-    return "reopened";
-  }
-
-  if (invoiceId) {
-    return invoiced > 0 && invoiced < billable ? "partially_invoiced" : "invoiced";
+    return "io_generated";
   }
 
   if (vendorIoId) {
@@ -95,18 +95,14 @@ function coerceOperationalStatus(
   next: CampaignLineOperationalStatus,
   snapshot: LineSnapshot
 ): CampaignLineOperationalStatus {
-  if (
-    next === "reopened" &&
-    !hasActiveFinanceOverride(snapshot.finance_override_until)
-  ) {
-    if (snapshot.vendor_io_id) return "io_generated";
-    return "draft";
+  if (next === "invoiced" || next === "partially_invoiced" || next === "reopened") {
+    if (snapshot.invoice_id || snapshot.revenue_locked) return "locked";
+    if (snapshot.vendor_io_id && hasActiveFinanceOverride(snapshot.finance_override_until)) {
+      return snapshot.operational_status === "io_revised" ? "io_revised" : "io_generated";
+    }
+    return snapshot.vendor_io_id ? "io_generated" : "draft";
   }
-  if (
-    next === "reopened" &&
-    snapshot.vendor_io_id &&
-    !snapshot.invoice_id
-  ) {
+  if (next === "moved_to_billing" && snapshot.vendor_io_id) {
     return "io_generated";
   }
   return next;
@@ -120,7 +116,7 @@ export async function syncLineOperationalStatus(
   const { data: line, error: lineError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, billing_status, vendor_io_id, invoice_id, finance_override_until, operational_status"
+      "id, billing_status, vendor_io_id, invoice_id, finance_override_until, operational_status, revenue_locked, vendor_assignment_locked"
     )
     .eq("id", lineId)
     .maybeSingle();
@@ -158,17 +154,10 @@ export async function syncLineOperationalStatus(
       invoiceId: snapshot.invoice_id,
       financeOverrideUntil: snapshot.finance_override_until,
       deliverables,
+      storedOperational: snapshot.operational_status,
     }),
     snapshot
   );
-
-  if (
-    snapshot.vendor_io_id &&
-    nextOperational === "reopened" &&
-    !hasActiveFinanceOverride(snapshot.finance_override_until)
-  ) {
-    nextOperational = "io_generated";
-  }
 
   let patch: Record<string, string | null> = {};
   if (nextOperational !== snapshot.operational_status) {
