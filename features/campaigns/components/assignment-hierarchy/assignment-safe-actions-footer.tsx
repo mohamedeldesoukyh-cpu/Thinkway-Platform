@@ -46,8 +46,9 @@ type AssignmentSafeActionsFooterProps = {
   reviseVioLineIds: string[];
   ungenerateIoLineIds: string[];
   invoiceLineIds: string[];
+  hasInvoiceSelection?: boolean;
   invoiceTotal: number;
-  onGenerateInvoice: (lineIds: string[]) => void;
+  onGenerateInvoice: () => void;
   /** Clear selection / expansion before router.refresh after IO mutations. */
   onAfterOperationalMutation?: () => void;
   className?: string;
@@ -76,6 +77,7 @@ export function AssignmentSafeActionsFooter({
   reviseVioLineIds,
   ungenerateIoLineIds,
   invoiceLineIds,
+  hasInvoiceSelection = invoiceLineIds.length > 0,
   invoiceTotal,
   onGenerateInvoice,
   onAfterOperationalMutation,
@@ -221,8 +223,8 @@ export function AssignmentSafeActionsFooter({
                 Ungenerate IO
               </Button>
             ) : null}
-            {invoiceLineIds.length > 0 ? (
-              <Button type="button" size="sm" onClick={() => onGenerateInvoice(invoiceLineIds)}>
+            {hasInvoiceSelection ? (
+              <Button type="button" size="sm" onClick={onGenerateInvoice}>
                 <FileTextIcon data-icon="inline-start" />
                 Generate invoice
               </Button>

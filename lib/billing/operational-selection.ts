@@ -215,6 +215,27 @@ export function isRowEffectivelySelected(
 }
 
 /** Toggle a row and cascade selection to all descendants; works when hierarchy is collapsed. */
+function pruneMixedAssignmentSelection(
+  selection: OperationalSelectionState,
+  row: OperationalBillingRow,
+  rootRows: OperationalBillingRow[]
+): void {
+  const path = findRowPath(rootRows, row.id);
+  if (!path || path.length === 0) return;
+
+  const assignment = path[0];
+  const pricingMode = assignment.pricing_mode ?? "package";
+
+  if (pricingMode === "package") {
+    for (const descendant of getDescendantRows(assignment)) {
+      removeRowFromSelection(selection, descendant);
+    }
+    return;
+  }
+
+  removeRowFromSelection(selection, assignment);
+}
+
 export function toggleOperationalRowSelection(
   row: OperationalBillingRow,
   selection: OperationalSelectionState,
@@ -231,7 +252,9 @@ export function toggleOperationalRowSelection(
 
   applySelectionMutation(next, subtree, selecting ? "add" : "remove");
 
-  if (!selecting) {
+  if (selecting) {
+    pruneMixedAssignmentSelection(next, row, rootRows);
+  } else {
     pruneAncestorSelections(next, row, rootRows);
   }
 

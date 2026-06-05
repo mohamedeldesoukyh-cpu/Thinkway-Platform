@@ -279,6 +279,10 @@ export async function loadCampaignOperationalBilling(
     });
 
     const deliverableChildren: OperationalBillingRow[] = [];
+    const assignmentPricingMode =
+      (line.pricing_mode ?? assignment?.pricing_mode ?? "package") as
+        | "package"
+        | "per_deliverable";
 
     for (const deliverable of deliverables) {
       const posts = postsByDeliverable.get(deliverable.id) ?? [];
@@ -295,7 +299,7 @@ export async function loadCampaignOperationalBilling(
             fallback: fallbackPerPost,
           }),
         };
-        return buildPostOperationalRow(
+        const postRow = buildPostOperationalRow(
           enrichedPost,
           {
             platform: deliverable.platform,
@@ -319,6 +323,7 @@ export async function loadCampaignOperationalBilling(
           },
           postLabel(deliverable.platform, deliverable.deliverable_type, post.sequence_number)
         );
+        return { ...postRow, line_pricing_mode: assignmentPricingMode };
       });
 
       const postBillableTotal = postChildren.reduce((sum, post) => sum + post.billable_amount, 0);
@@ -332,6 +337,7 @@ export async function loadCampaignOperationalBilling(
       deliverableChildren.push({
         id: deliverable.id,
         kind: "deliverable_group",
+        line_pricing_mode: assignmentPricingMode,
         campaign_header_id: campaignId,
         campaign_line_id: line.id,
         assignment_deliverable_id: deliverable.id,
@@ -357,6 +363,11 @@ export async function loadCampaignOperationalBilling(
           Boolean(line.vendor_io_id) &&
           groupFinancials.remaining_amount > 0 &&
           !deliverable.locked_at,
+        operational_status: line.operational_status ?? "draft",
+        vendor_io_id: line.vendor_io_id ?? null,
+        vendor_io_document_number:
+          (line as { vendor_io?: { document_number?: string } | null }).vendor_io
+            ?.document_number ?? null,
         is_achieved: ["ready_to_invoice", "partially_invoiced", "invoiced"].includes(
           deliverable.billing_status
         ),
@@ -410,6 +421,7 @@ export async function loadCampaignOperationalBilling(
         line.billing_status
       ),
       is_legacy_synthetic: deliverables.length === 0,
+      pricing_mode: assignmentPricingMode,
       revenue_before_vat: Number(line.revenue ?? 0),
       revenue_vat_percent: lineVatPercent,
       revenue_vat_exempt: lineVatExempt,

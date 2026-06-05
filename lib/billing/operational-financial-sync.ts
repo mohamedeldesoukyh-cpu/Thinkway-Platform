@@ -371,7 +371,7 @@ export function computeCampaignFinancialRollup(input: {
       total_campaign_amount: legacyTotal,
       achieved_revenue: achieved,
       already_invoiced: legacyInvoiced,
-      remaining_to_invoice: Math.max(0, achieved - legacyInvoiced),
+      remaining_to_invoice: Math.max(0, legacyTotal - legacyInvoiced),
       unachieved_revenue: Math.max(0, legacyTotal - achieved),
     };
     if (process.env.NODE_ENV === "development") {

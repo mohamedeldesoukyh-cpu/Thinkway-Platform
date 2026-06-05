@@ -33,9 +33,11 @@ import { OperationalSelectionCheckbox } from "@/features/billing/components/oper
 import type { AppendableInvoiceOption } from "@/features/billing/types";
 import { formatBillingMoney, formatBillingMoneyCompact } from "@/features/billing/utils";
 import { computeInvoiceBatchFinancialPreview } from "@/lib/billing/invoice-batch-preview";
+import { cn } from "@/lib/utils";
+import { isAppendableInvoiceStatus } from "@/lib/billing/invoice-status";
 import {
   flattenOperationalLeaves,
-  isOperationalRowInvoiceEligible,
+  isOperationalRowUiSelectable,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import {
@@ -110,9 +112,8 @@ export function InvoiceGenerationSheet({
       appendableInvoices.filter(
         (invoice) =>
           !invoice.is_locked &&
-          invoice.status !== "void" &&
-          invoice.status !== "paid" &&
-          invoice.status !== "cancelled"
+          isAppendableInvoiceStatus(invoice.status) &&
+          invoice.status !== "paid"
       ),
     [appendableInvoices]
   );
@@ -145,9 +146,9 @@ export function InvoiceGenerationSheet({
     initialExistingInvoiceId,
   ]);
 
-  const eligibleLeaves = useMemo(() => {
-    return flattenOperationalLeaves(operationalRows).filter((row) =>
-      isOperationalRowInvoiceEligible(row)
+  const invoiceSheetLeaves = useMemo(() => {
+    return flattenOperationalLeaves(operationalRows).filter(
+      (row) => row.billable_amount > 0 || row.invoiced_amount > 0
     );
   }, [operationalRows]);
 
@@ -267,13 +268,15 @@ export function InvoiceGenerationSheet({
               />
 
               <div className="space-y-2">
-                {eligibleLeaves.length === 0 ? (
+                {invoiceSheetLeaves.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No billable rows selected. Generate Vendor IO on assignments, then select
                     deliverables with remaining revenue.
                   </p>
                 ) : (
-                  eligibleLeaves.map((row) => {
+                  invoiceSheetLeaves.map((row) => {
+                    const selectable = isOperationalRowUiSelectable(row);
+                    const locked = !selectable;
                     const status = getRowSelectionStatus(row, selected);
                     const effectivelySelected =
                       status === "checked" ||
@@ -282,17 +285,32 @@ export function InvoiceGenerationSheet({
                     return (
                       <label
                         key={`${row.kind}-${row.id}`}
-                        className="flex cursor-pointer items-start gap-3 rounded-2xl border p-2 hover:bg-muted/40"
+                        className={cn(
+                          "flex items-start gap-3 rounded-2xl border p-2",
+                          locked
+                            ? "cursor-not-allowed bg-muted/30 opacity-70"
+                            : "cursor-pointer hover:bg-muted/40"
+                        )}
                       >
                         <OperationalSelectionCheckbox
                           status={effectivelySelected ? "checked" : status}
-                          onToggle={() => toggleLeafRow(row)}
+                          disabled={locked}
+                          onToggle={() => {
+                            if (!locked) toggleLeafRow(row);
+                          }}
                         />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium">{row.label}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatBillingMoney(row.remaining_amount, currency)} uninvoiced
-                          </p>
+                          {locked && row.invoice_document_number ? (
+                            <p className="text-xs text-muted-foreground">
+                              Invoiced ·{" "}
+                              {formatDocumentNumberForDisplay(row.invoice_document_number)}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              {formatBillingMoney(row.remaining_amount, currency)} uninvoiced
+                            </p>
+                          )}
                         </div>
                       </label>
                     );
@@ -305,7 +323,7 @@ export function InvoiceGenerationSheet({
                   <Label htmlFor="existing_invoice">Existing invoice</Label>
                   {appendableOptions.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No appendable invoices available. Locked, paid, cancelled, or exported
+                      No appendable invoices available. Locked, paid, void, or exported
                       invoices cannot receive additional rows. Use Create new invoice instead.
                     </p>
                   ) : (

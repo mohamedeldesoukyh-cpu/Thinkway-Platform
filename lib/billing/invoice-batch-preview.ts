@@ -55,11 +55,14 @@ export function resolvePreviewDeliverableRows(
   }
 
   for (const assignment of operationalRows) {
-    if (selection.line_ids.has(assignment.id)) {
-      for (const deliverable of assignment.children) {
-        if (isPreviewEligibleDeliverable(deliverable)) {
-          ids.add(deliverable.id);
-        }
+    if (!selection.line_ids.has(assignment.id)) continue;
+    const pricingMode = assignment.pricing_mode ?? "package";
+    if (pricingMode === "per_deliverable" && !assignment.is_legacy_synthetic) {
+      continue;
+    }
+    for (const deliverable of assignment.children) {
+      if (isPreviewEligibleDeliverable(deliverable)) {
+        ids.add(deliverable.id);
       }
     }
   }

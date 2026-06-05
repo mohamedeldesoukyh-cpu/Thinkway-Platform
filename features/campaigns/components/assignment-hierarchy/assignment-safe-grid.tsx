@@ -67,6 +67,7 @@ import {
   resolveAssignmentLineCurrencyDisplay,
 } from "@/lib/campaigns/assignment-line-currency";
 import { formatPercent } from "@/features/campaigns/utils";
+import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import { cn } from "@/lib/utils";
 
 type AssignmentSafeGridProps = {
@@ -74,7 +75,7 @@ type AssignmentSafeGridProps = {
   hierarchy: AssignmentHierarchy;
   campaignPoExceeded?: boolean;
   onEditLine: (line: CampaignLineWorkspace) => void;
-  onInvoiceLines?: (lineIds: string[]) => void;
+  onInvoiceLines?: (selection: OperationalSelectionPayload) => void;
   onCreateAssignment?: () => void;
 };
 
@@ -127,6 +128,9 @@ export function AssignmentSafeGrid({
   }, [hierarchy, campaignId]);
 
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(new Set());
+  const [selectedDeliverableIds, setSelectedDeliverableIds] = useState<Set<string>>(
+    new Set()
+  );
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const hierarchySignature = useMemo(
@@ -136,6 +140,7 @@ export function AssignmentSafeGrid({
 
   const resetOperationalUiState = useCallback(() => {
     setSelectedLineIds(new Set());
+    setSelectedDeliverableIds(new Set());
     setExpandedIds(new Set());
   }, []);
 
@@ -172,6 +177,21 @@ export function AssignmentSafeGrid({
     });
   }, []);
 
+  const toggleDeliverable = useCallback((deliverableId: string, lineId: string) => {
+    setSelectedDeliverableIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(deliverableId)) next.delete(deliverableId);
+      else next.add(deliverableId);
+      return next;
+    });
+    setSelectedLineIds((prev) => {
+      if (!prev.has(lineId)) return prev;
+      const next = new Set(prev);
+      next.delete(lineId);
+      return next;
+    });
+  }, []);
+
   const lineMeta = useMemo(() => {
     const map = new Map<string, AssignmentRowViewModel["meta"]>();
     for (const row of preparedRows) {
@@ -188,6 +208,24 @@ export function AssignmentSafeGrid({
     () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.invoiceEligible),
     [selectedLineIds, lineMeta]
   );
+  const invoiceDeliverableIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const row of preparedRows) {
+      const pricingMode = row.group.line.assignment?.pricing_mode ?? "package";
+      if (pricingMode !== "per_deliverable") continue;
+      for (const deliverable of row.group.deliverables ?? []) {
+        if (
+          selectedDeliverableIds.has(deliverable.id) &&
+          deliverable.invoice_eligible &&
+          !deliverable.is_synthetic
+        ) {
+          ids.push(deliverable.id);
+        }
+      }
+    }
+    return ids;
+  }, [preparedRows, selectedDeliverableIds]);
+  const hasInvoiceSelection = invoiceLineIds.length > 0 || invoiceDeliverableIds.length > 0;
   const reviseVioLineIds = useMemo(
     () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.reviseVioEligible),
     [selectedLineIds, lineMeta]
@@ -202,8 +240,23 @@ export function AssignmentSafeGrid({
     for (const id of invoiceLineIds) {
       total += lineMeta.get(id)?.remaining ?? 0;
     }
+    for (const row of preparedRows) {
+      for (const deliverable of row.group.deliverables ?? []) {
+        if (invoiceDeliverableIds.includes(deliverable.id)) {
+          total += deliverable.remaining_amount;
+        }
+      }
+    }
     return total;
-  }, [invoiceLineIds, lineMeta]);
+  }, [invoiceLineIds, invoiceDeliverableIds, lineMeta, preparedRows]);
+
+  const emitInvoiceSelection = useCallback(() => {
+    onInvoiceLines?.({
+      line_ids: invoiceLineIds,
+      deliverable_ids: invoiceDeliverableIds,
+      post_ids: [],
+    });
+  }, [onInvoiceLines, invoiceLineIds, invoiceDeliverableIds]);
 
   const footerCurrency = useMemo(() => {
     const lineIds =
@@ -228,14 +281,14 @@ export function AssignmentSafeGrid({
       currencies.add(resolveAssignmentLineCurrency(line));
     }
     return {
-      count: selectedLineIds.size,
+      count: selectedLineIds.size + selectedDeliverableIds.size,
       revenue,
       cost,
       gp,
       currency: currencies.size === 1 ? [...currencies][0]! : null,
       currencyMixed: currencies.size > 1,
     };
-  }, [selectedLineIds, preparedRows]);
+  }, [selectedLineIds, selectedDeliverableIds, preparedRows]);
 
   const selectableLineIds = useMemo(
     () => preparedRows.filter((r) => r.meta.rowSelectable).map((r) => r.lineId),
@@ -282,7 +335,8 @@ export function AssignmentSafeGrid({
           totals={selectionTotals}
           vioLineIds={vioLineIds}
           invoiceLineIds={invoiceLineIds}
-          onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}
+          onGenerateInvoice={emitInvoiceSelection}
+          hasInvoiceSelection={hasInvoiceSelection}
           onAfterOperationalMutation={resetOperationalUiState}
         />
       ) : null}
@@ -505,6 +559,13 @@ export function AssignmentSafeGrid({
                         deliverables={deliverables}
                         currency={lineCurrency}
                         parentColSpan={PARENT_COL_SPAN}
+                        selectedIds={selectedDeliverableIds}
+                        onToggleDeliverable={(deliverableId) =>
+                          toggleDeliverable(deliverableId, row.lineId)
+                        }
+                        showSelection={
+                          (line.assignment?.pricing_mode ?? "package") === "per_deliverable"
+                        }
                       />
                     ) : null}
               </Fragment>
@@ -527,7 +588,8 @@ export function AssignmentSafeGrid({
           ungenerateIoLineIds={ungenerateIoLineIds}
           invoiceLineIds={invoiceLineIds}
           invoiceTotal={invoiceTotal}
-          onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}
+          onGenerateInvoice={emitInvoiceSelection}
+          hasInvoiceSelection={hasInvoiceSelection}
           onAfterOperationalMutation={resetOperationalUiState}
         />
       ) : null}

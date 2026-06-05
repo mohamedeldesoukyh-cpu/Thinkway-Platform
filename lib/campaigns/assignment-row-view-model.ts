@@ -98,12 +98,17 @@ export function deriveAssignmentLineMeta(
     campaign_influencer_id: line.campaign_influencer_id,
   });
 
-  const invoiceEligible = isLineInvoiceEligible({
-    operational_status: status,
-    vendor_io_id: line.vendor_io_id,
-    billing_status: line.billing_status,
-    is_locked: line.revenue_locked,
-  });
+  const pricingMode = line.assignment?.pricing_mode ?? "package";
+  const hasDeliverableBreakdown = (group.deliverables?.length ?? 0) > 0;
+  const invoiceEligible =
+    pricingMode === "per_deliverable" && hasDeliverableBreakdown
+      ? false
+      : isLineInvoiceEligible({
+          operational_status: status,
+          vendor_io_id: line.vendor_io_id,
+          billing_status: line.billing_status,
+          is_locked: line.revenue_locked,
+        });
 
   const reviseVioEligible =
     (status === "io_revised" || status === "locked") &&

@@ -106,19 +106,14 @@ export function CampaignLinesTabInner({
     setSheetOpen(true);
   }
 
-  function openInvoiceWithLines(lineIds: string[]) {
+  function openInvoiceWithLines(selection: OperationalSelectionPayload) {
     if (!enableInvoiceDialogs || !operationalBilling) return;
-    const selection = {
-      line_ids: lineIds,
-      deliverable_ids: [],
-      post_ids: [],
-    };
     const eligible = (operationalBilling.appendable_invoices ?? []).filter(
       (inv) =>
         !inv.is_locked &&
         inv.status !== "void" &&
         inv.status !== "paid" &&
-        inv.status !== "cancelled"
+        inv.status !== "void"
     );
     if (eligible.length > 0) {
       setInvoiceSelection(selection);

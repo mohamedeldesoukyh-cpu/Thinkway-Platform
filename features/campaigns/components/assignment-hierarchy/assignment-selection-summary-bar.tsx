@@ -30,7 +30,8 @@ type AssignmentSelectionSummaryBarProps = {
   totals: AssignmentSelectionTotals;
   vioLineIds: string[];
   invoiceLineIds: string[];
-  onGenerateInvoice: (lineIds: string[]) => void;
+  hasInvoiceSelection?: boolean;
+  onGenerateInvoice: () => void;
   onAfterOperationalMutation?: () => void;
   className?: string;
 };
@@ -47,6 +48,7 @@ export function AssignmentSelectionSummaryBar({
   totals,
   vioLineIds,
   invoiceLineIds,
+  hasInvoiceSelection = invoiceLineIds.length > 0,
   onGenerateInvoice,
   onAfterOperationalMutation,
   className,
@@ -136,13 +138,13 @@ export function AssignmentSelectionSummaryBar({
               {pending ? "Generating…" : "Generate Vendor IO"}
             </Button>
           ) : null}
-          {invoiceLineIds.length > 0 ? (
+          {hasInvoiceSelection ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
               className="h-8 text-xs"
-              onClick={() => onGenerateInvoice(invoiceLineIds)}
+              onClick={onGenerateInvoice}
             >
               <FileTextIcon data-icon="inline-start" />
               Generate invoice

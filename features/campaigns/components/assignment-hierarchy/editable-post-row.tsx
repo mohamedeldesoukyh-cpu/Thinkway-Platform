@@ -332,6 +332,25 @@ export function EditablePostRow({
               checked={selected}
               onChange={onToggleSelect}
             />
+          ) : showSelection &&
+            !deliverable.is_synthetic &&
+            (deliverable.invoiced_amount > 0 ||
+              deliverable.invoice_document_number ||
+              deliverable.is_locked) ? (
+            <div className="flex flex-col items-start gap-0.5">
+              <input
+                type="checkbox"
+                className="size-3 rounded border-border opacity-40"
+                checked
+                disabled
+                aria-label="Already invoiced"
+              />
+              {deliverable.invoice_document_number ? (
+                <span className="max-w-[5rem] truncate text-[9px] text-muted-foreground">
+                  {deliverable.invoice_document_number}
+                </span>
+              ) : null}
+            </div>
           ) : (
             <span className="text-muted-foreground/50">·</span>
           )}

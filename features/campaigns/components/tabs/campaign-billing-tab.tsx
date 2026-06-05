@@ -7,7 +7,6 @@ import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { PlusIcon } from "lucide-react";
 
-import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -62,7 +61,6 @@ import {
   type OperationalBillingFilter,
 } from "@/lib/billing/operational-row-filters";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
-import { formatMoney } from "@/features/campaigns/utils";
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { cn } from "@/lib/utils";
 
@@ -108,8 +106,6 @@ export function CampaignBillingTab({
   const [drilldownSelection, setDrilldownSelection] =
     useState<OperationalSelectionState>(createEmptySelection);
   const [drilldownPending, startDrilldownTransition] = useTransition();
-
-  const headerPoExceeded = financials.po_exceeded;
 
   const billingQueueRows = useMemo(() => {
     if (!operationalBilling) return [];
@@ -159,7 +155,7 @@ export function CampaignBillingTab({
         !inv.is_locked &&
         inv.status !== "void" &&
         inv.status !== "paid" &&
-        inv.status !== "cancelled"
+        inv.status !== "void"
     );
     if (eligible.length > 0) {
       setInvoiceSelection(selection);
@@ -182,16 +178,6 @@ export function CampaignBillingTab({
 
   return (
     <div className="space-y-4">
-      {financials.po_total > 0 ? (
-        <PoConsumptionBanner
-          consumed={financials.po_consumed}
-          po_amount={financials.po_total}
-          currency={currency}
-          formatMoney={formatMoney}
-          po_exceeded={headerPoExceeded}
-        />
-      ) : null}
-
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           Billing lifecycle: draft → approved → moved to billing → partially invoiced → invoiced → paid → closed

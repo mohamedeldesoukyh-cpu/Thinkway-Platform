@@ -40,6 +40,9 @@ export type OperationalBillingRow = {
   operational_status?: string | null;
   vendor_io_id?: string | null;
   vendor_io_document_number?: string | null;
+  pricing_mode?: "package" | "per_deliverable";
+  /** Inherited from parent assignment for deliverable/post rows. */
+  line_pricing_mode?: "package" | "per_deliverable";
   children: OperationalBillingRow[];
 };
 
@@ -96,6 +99,15 @@ export function isOperationalRowAchieved(
   return false;
 }
 
+function resolveRowPricingMode(
+  row: Pick<OperationalBillingRow, "kind" | "pricing_mode" | "line_pricing_mode">
+): "package" | "per_deliverable" {
+  if (row.kind === "assignment") {
+    return row.pricing_mode ?? "package";
+  }
+  return row.line_pricing_mode ?? "package";
+}
+
 export function isOperationalRowInvoiceEligible(
   row: Pick<
     OperationalBillingRow,
@@ -107,11 +119,22 @@ export function isOperationalRowInvoiceEligible(
     | "is_invoice_eligible"
     | "operational_status"
     | "vendor_io_id"
+    | "pricing_mode"
+    | "line_pricing_mode"
+    | "is_legacy_synthetic"
   >
 ): boolean {
   if (row.is_locked || row.remaining_amount <= 0) return false;
   if (row.billing_status === "disputed" || row.billing_status === "cancelled") return false;
   if (["invoiced", "collected"].includes(row.billing_status)) return false;
+
+  const pricingMode = resolveRowPricingMode(row);
+  if (pricingMode === "package" && row.kind !== "assignment" && !row.is_legacy_synthetic) {
+    return false;
+  }
+  if (pricingMode === "per_deliverable" && row.kind === "assignment" && !row.is_legacy_synthetic) {
+    return false;
+  }
 
   const operational = (row.operational_status ?? "draft") as
     import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
@@ -119,7 +142,7 @@ export function isOperationalRowInvoiceEligible(
   if (operational === "draft" || operational === "invoiced" || operational === "closed") {
     return false;
   }
-  if (!row.vendor_io_id) return false;
+  if (row.kind === "assignment" && !row.vendor_io_id) return false;
 
   return row.is_invoice_eligible !== false;
 }
@@ -146,12 +169,13 @@ export function isOperationalRowUiSelectable(
     | "line_billing_status"
     | "operational_status"
     | "vendor_io_id"
+    | "pricing_mode"
+    | "line_pricing_mode"
+    | "is_legacy_synthetic"
+    | "is_invoice_eligible"
   >
 ): boolean {
-  if (row.is_locked) return false;
-  if (row.remaining_amount <= 0) return false;
-  if (row.billing_status === "disputed" || row.billing_status === "cancelled") return false;
-  if (["invoiced", "collected"].includes(row.billing_status)) return false;
+  if (!isOperationalRowInvoiceEligible(row)) return false;
   if (UI_BLOCKED_LINE_BILLING.has(row.line_billing_status)) return false;
 
   const operational = (row.operational_status ?? "draft") as
@@ -206,7 +230,7 @@ export function rollupOperationalRows(rows: OperationalBillingRow[]): CampaignFi
     }
   }
 
-  const remaining_to_invoice = Math.max(0, achieved_revenue - already_invoiced);
+  const remaining_to_invoice = Math.max(0, total_campaign_amount - already_invoiced);
   const unachieved_revenue = Math.max(0, total_campaign_amount - achieved_revenue);
 
   const rollup: CampaignFinancialRollup = {
@@ -410,7 +434,7 @@ export function aggregateRollupFromLeaves(
     total_campaign_amount,
     achieved_revenue,
     already_invoiced,
-    remaining_to_invoice: Math.max(0, achieved_revenue - already_invoiced),
+    remaining_to_invoice: Math.max(0, total_campaign_amount - already_invoiced),
     unachieved_revenue: Math.max(0, total_campaign_amount - achieved_revenue),
   };
 

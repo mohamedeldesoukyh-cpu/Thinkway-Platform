@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isActiveInvoiceForFinancialTotals } from "@/lib/billing/invoice-status";
 import { devLog } from "@/lib/dev-log";
 
 export type CampaignInvoiceLineRollup = {
@@ -23,7 +24,7 @@ export async function loadCampaignInvoiceLineRollups(
   const { data, error } = await supabase
     .from("invoice_line_items")
     .select(
-      "campaign_header_id, revenue_before_vat, invoice:invoices!inner(status)"
+      "campaign_header_id, revenue_before_vat, invoice:invoices!inner(status, regeneration_status)"
     )
     .in("campaign_header_id", campaignHeaderIds);
 
@@ -41,10 +42,18 @@ export async function loadCampaignInvoiceLineRollups(
     const typed = row as unknown as {
       campaign_header_id: string | null;
       revenue_before_vat: number;
-      invoice: { status: string } | null;
+      invoice: { status: string; regeneration_status: string | null } | null;
     };
     if (!typed.campaign_header_id) continue;
-    if (typed.invoice?.status === "void") continue;
+    if (
+      !typed.invoice ||
+      !isActiveInvoiceForFinancialTotals({
+        status: typed.invoice.status,
+        regeneration_status: typed.invoice.regeneration_status,
+      })
+    ) {
+      continue;
+    }
 
     const amount = roundMoney(Number(typed.revenue_before_vat ?? 0));
     const existing = result.get(typed.campaign_header_id) ?? {
@@ -81,19 +90,18 @@ export function reconcileCampaignRollupWithInvoiceLines(input: {
   const operationalInvoiced = roundMoney(input.already_invoiced);
   const lineInvoiced = roundMoney(input.invoice_line_invoiced);
   const already_invoiced =
-    lineInvoiced > 0
-      ? roundMoney(Math.max(operationalInvoiced, lineInvoiced))
-      : operationalInvoiced;
+    lineInvoiced > 0 ? lineInvoiced : operationalInvoiced;
   const remaining_to_invoice = roundMoney(
-    Math.max(0, input.achieved_revenue - already_invoiced)
+    Math.max(0, input.total_campaign_amount - already_invoiced)
   );
 
-  if (process.env.NODE_ENV === "development" && lineInvoiced > operationalInvoiced) {
-    devLog("[billing-sync] reconciled invoiced totals from invoice_line_items", {
+  if (process.env.NODE_ENV === "development" && lineInvoiced !== operationalInvoiced) {
+    devLog("[billing-sync] reconciled invoiced totals from active invoice_line_items", {
       operationalInvoiced,
       lineInvoiced,
       already_invoiced,
       remaining_to_invoice,
+      total_campaign_amount: input.total_campaign_amount,
     });
   }
 

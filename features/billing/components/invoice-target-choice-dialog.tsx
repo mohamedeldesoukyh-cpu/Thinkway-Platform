@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AppendableInvoiceOption } from "@/features/billing/types";
+import { isAppendableInvoiceStatus } from "@/lib/billing/invoice-status";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
@@ -41,9 +42,8 @@ export function InvoiceTargetChoiceDialog({
   const eligible = appendableInvoices.filter(
     (inv) =>
       !inv.is_locked &&
-      inv.status !== "void" &&
-      inv.status !== "paid" &&
-      inv.status !== "cancelled"
+      isAppendableInvoiceStatus(inv.status) &&
+      inv.status !== "paid"
   );
 
   const [existingInvoiceId, setExistingInvoiceId] = useState("");

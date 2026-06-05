@@ -80,6 +80,9 @@ type AssignmentSafeDeliverableRowsProps = {
   deliverables: AssignmentDeliverableHierarchyRow[];
   currency: string;
   parentColSpan: number;
+  selectedIds: Set<string>;
+  onToggleDeliverable: (id: string) => void;
+  showSelection: boolean;
 };
 
 export function AssignmentSafeDeliverableRows({
@@ -88,6 +91,9 @@ export function AssignmentSafeDeliverableRows({
   deliverables,
   currency: currencyProp,
   parentColSpan,
+  selectedIds,
+  onToggleDeliverable,
+  showSelection,
 }: AssignmentSafeDeliverableRowsProps) {
   const currency = resolveAssignmentLineCurrency(line) || currencyProp;
   const parentRowClass = LINE_OPERATIONAL_ROW_CLASS[
@@ -122,9 +128,9 @@ export function AssignmentSafeDeliverableRows({
         line={line}
         deliverables={deliverables}
         currency={currency}
-        selectedIds={new Set()}
-        onToggleDeliverable={() => {}}
-        showSelection={false}
+        selectedIds={selectedIds}
+        onToggleDeliverable={onToggleDeliverable}
+        showSelection={showSelection}
         parentColSpan={parentColSpan}
         nestedGroupClassName={cn(SAFE_GRID_CHILD_GROUP_CELL, childBorderClass)}
       />

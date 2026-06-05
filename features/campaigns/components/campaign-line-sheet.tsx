@@ -50,6 +50,7 @@ import {
 } from "@/features/campaigns/line-assignment";
 import { AssignmentMultiCurrencyCostFields } from "@/features/campaigns/components/assignment-multi-currency-cost-fields";
 import { CampaignLinePoPanel } from "@/features/campaigns/components/campaign-line-po-panel";
+import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
 import { calculatePoConsumption } from "@/lib/finance/po/calculations";
 import { formatMoney } from "@/features/campaigns/utils";
 import {
@@ -525,7 +526,28 @@ export function CampaignLineSheet({
             <Label>Pricing structure</Label>
             <Select
               value={pricingMode}
-              onValueChange={(v) => setPricingMode(v as AssignmentPricingMode)}
+              onValueChange={(v) => {
+                const next = v as AssignmentPricingMode;
+                if (
+                  next === "per_deliverable" &&
+                  pricingMode === "package" &&
+                  commercialRows.length === 0 &&
+                  activeSelections.length > 0
+                ) {
+                  const converted = packagePlatformsToCommercialRows(
+                    activeSelections.map(({ selected: _s, ...rest }) => rest),
+                    {
+                      totalRevenueBeforeVat: revenue,
+                      totalCostBeforeVat: cost,
+                      dueDate: endDate || null,
+                    }
+                  );
+                  if (converted.length > 0) {
+                    setCommercialRows(converted);
+                  }
+                }
+                setPricingMode(next);
+              }}
               disabled={isPending}
             >
               <SelectTrigger className="w-full">

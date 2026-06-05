@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isActiveInvoiceForFinancialTotals } from "@/lib/billing/invoice-status";
 import { devLog } from "@/lib/dev-log";
 import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
 
@@ -24,7 +25,7 @@ export async function loadOperationalInvoiceLinkage(
       assignment_post_schedule_id,
       campaign_line_id,
       revenue_before_vat,
-      invoice:invoices!inner(document_number, status)
+      invoice:invoices!inner(document_number, status, regeneration_status)
     `
     )
     .eq("campaign_header_id", campaignHeaderId);
@@ -39,26 +40,40 @@ export async function loadOperationalInvoiceLinkage(
     return [];
   }
 
-  return (data ?? []).map((row) => {
+  const links: LineItemLink[] = [];
+
+  for (const row of data ?? []) {
     const typed = row as unknown as {
       assignment_deliverable_id: string | null;
       assignment_post_schedule_id: string | null;
       campaign_line_id: string | null;
       revenue_before_vat: number;
-      invoice: { document_number: string; status: string } | null;
+      invoice: {
+        document_number: string;
+        status: string;
+        regeneration_status: string | null;
+      } | null;
     };
-    if (typed.invoice?.status === "void") {
-      return null;
+    if (
+      !typed.invoice ||
+      !isActiveInvoiceForFinancialTotals({
+        status: typed.invoice.status,
+        regeneration_status: typed.invoice.regeneration_status,
+      })
+    ) {
+      continue;
     }
-    return {
+    links.push({
       deliverable_id: typed.assignment_deliverable_id,
       post_id: typed.assignment_post_schedule_id,
       line_id: typed.campaign_line_id,
       revenue_before_vat: Number(typed.revenue_before_vat ?? 0),
-      document_number: typed.invoice?.document_number ?? null,
-      invoice_status: typed.invoice?.status ?? null,
-    };
-  }).filter((row): row is LineItemLink => Boolean(row));
+      document_number: typed.invoice.document_number ?? null,
+      invoice_status: typed.invoice.status ?? null,
+    });
+  }
+
+  return links;
 }
 
 function applyLinkageToRow(

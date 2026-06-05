@@ -1,5 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
+import {
+  isActiveInvoiceForFinancialTotals,
+  isRegisterInvoiceStatus,
+} from "@/lib/billing/invoice-status";
 
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 
@@ -23,14 +27,6 @@ function resolveLockedStatus(input: {
   if (input.regeneration_status === "pending_regeneration") return "Pending regeneration";
   return "Open";
 }
-
-const ACTIVE_REGISTER_STATUSES = new Set([
-  "draft",
-  "sent",
-  "partial",
-  "partially_paid",
-  "paid",
-]);
 
 export async function getFinanceInvoiceRegister(options?: {
   campaignHeaderId?: string;
@@ -63,7 +59,6 @@ export async function getFinanceInvoiceRegister(options?: {
     `
     )
     .not("status", "eq", "void")
-    .not("status", "eq", "cancelled")
     .order("issue_date", { ascending: false })
     .limit(500);
 
@@ -101,7 +96,15 @@ export async function getFinanceInvoiceRegister(options?: {
       } | null;
     };
 
-    if (!ACTIVE_REGISTER_STATUSES.has(inv.status)) continue;
+    if (
+      !isRegisterInvoiceStatus(inv.status) ||
+      !isActiveInvoiceForFinancialTotals({
+        status: inv.status,
+        regeneration_status: inv.regeneration_status,
+      })
+    ) {
+      continue;
+    }
     if (seen.has(inv.id)) continue;
     seen.add(inv.id);
 
