@@ -45,6 +45,7 @@ import {
   type AssignmentRowViewModel,
 } from "@/lib/campaigns/assignment-row-view-model";
 import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment-hierarchy";
+import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { cn } from "@/lib/utils";
 
@@ -80,7 +81,6 @@ export function AssignmentHierarchyTable({
     [hierarchy, campaignId]
   );
 
-  const currency = sanitized.currency_code;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(new Set());
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -171,6 +171,14 @@ export function AssignmentHierarchyTable({
     }
     return total;
   }, [invoiceLineIds, lineMeta]);
+
+  const footerCurrency = useMemo(() => {
+    const lineIds =
+      invoiceLineIds.length > 0 ? invoiceLineIds : [...selectedLineIds];
+    if (lineIds.length === 0) return null;
+    const firstLine = preparedRows.find((r) => r.lineId === lineIds[0])?.group.line;
+    return firstLine ? resolveAssignmentLineCurrency(firstLine) : null;
+  }, [invoiceLineIds, selectedLineIds, preparedRows]);
 
   useEffect(() => {
     if (!enableExpansion) return;
@@ -276,29 +284,29 @@ export function AssignmentHierarchyTable({
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.creator}</CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.platforms}</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">
+                <CampaignOperationalTableHead>
                   {HIERARCHY_COLUMN_LABELS.deliverables}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.postingDates}</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-center">
+                <CampaignOperationalTableHead>
                   {HIERARCHY_COLUMN_LABELS.costCurrency}
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right tabular-nums">
+                <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.revenue}
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right tabular-nums">
+                <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.cost}
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right tabular-nums">
+                <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.vat}
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right tabular-nums">
+                <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.totalBilling}
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right tabular-nums">
+                <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.gp}
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right tabular-nums">
+                <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.margin}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.opsStatus}</CampaignOperationalTableHead>
@@ -320,6 +328,7 @@ export function AssignmentHierarchyTable({
             const deliverables = Array.isArray(row.group.deliverables)
               ? row.group.deliverables
               : [];
+            const lineCurrency = resolveAssignmentLineCurrency(row.group.line);
             const colSpan = isMinimal ? 4 : PARENT_COLUMN_COUNT;
 
             return (
@@ -331,7 +340,7 @@ export function AssignmentHierarchyTable({
                     <AssignmentParentRow
                       group={row.group}
                       viewModel={row}
-                      currency={currency}
+                      currency={lineCurrency}
                       expanded={expanded}
                       enableExpansion={enableExpansion}
                       enableBillingPills={enableBillingPills}
@@ -358,7 +367,7 @@ export function AssignmentHierarchyTable({
                         campaignId={campaignId}
                         line={row.group.line}
                         deliverables={deliverables}
-                        currency={currency}
+                        currency={lineCurrency}
                         selectedIds={new Set()}
                         onToggleDeliverable={() => {}}
                         showSelection={false}
@@ -385,7 +394,7 @@ export function AssignmentHierarchyTable({
         <ClientOnly>
           <AssignmentOperationalActionsFooter
             campaignId={campaignId}
-            currency={currency}
+            currency={footerCurrency ?? "USD"}
             selectedLineIds={[...selectedLineIds]}
             vioLineIds={vioLineIds}
             reviseVioLineIds={reviseVioLineIds}

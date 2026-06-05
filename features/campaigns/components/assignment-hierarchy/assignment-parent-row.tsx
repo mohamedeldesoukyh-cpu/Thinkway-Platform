@@ -21,6 +21,7 @@ import { DocumentNumber } from "@/components/ui/document-number";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { formatPercent } from "@/features/campaigns/utils";
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
+import { resolveAssignmentLineCurrencyDisplay } from "@/lib/campaigns/assignment-line-currency";
 import { cn } from "@/lib/utils";
 
 type AssignmentParentRowProps = {
@@ -149,8 +150,8 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       >
         {postingSummary}
       </TableCell>
-      <TableCell className="px-1.5 py-1.5 text-center text-[10px] font-normal text-muted-foreground">
-        {line.currency_code ?? "—"}
+      <TableCell className="px-1.5 py-1.5 text-center text-[10px] font-medium text-foreground/80">
+        {resolveAssignmentLineCurrencyDisplay(line)}
       </TableCell>
       <TableCell
         className={cn(

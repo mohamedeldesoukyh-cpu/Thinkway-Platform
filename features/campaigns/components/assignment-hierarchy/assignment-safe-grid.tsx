@@ -57,6 +57,10 @@ import {
 } from "@/lib/campaigns/assignment-row-view-model";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment-hierarchy";
+import {
+  resolveAssignmentLineCurrency,
+  resolveAssignmentLineCurrencyDisplay,
+} from "@/lib/campaigns/assignment-line-currency";
 import { formatPercent } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
 
@@ -196,6 +200,14 @@ export function AssignmentSafeGrid({
     return total;
   }, [invoiceLineIds, lineMeta]);
 
+  const footerCurrency = useMemo(() => {
+    const lineIds =
+      invoiceLineIds.length > 0 ? invoiceLineIds : [...selectedLineIds];
+    if (lineIds.length === 0) return null;
+    const firstLine = preparedRows.find((r) => r.lineId === lineIds[0])?.group.line;
+    return firstLine ? resolveAssignmentLineCurrency(firstLine) : null;
+  }, [invoiceLineIds, selectedLineIds, preparedRows]);
+
   const selectableLineIds = useMemo(
     () => preparedRows.filter((r) => r.meta.rowSelectable).map((r) => r.lineId),
     [preparedRows]
@@ -233,8 +245,6 @@ export function AssignmentSafeGrid({
     return <AssignmentsEmptyState onCreateAssignment={onCreateAssignment} />;
   }
 
-  const currency = sanitized.currency_code ?? hierarchy.currency_code;
-
   return (
     <div className={cn(OPERATIONAL_TABLE_FONT, "space-y-2")}>
       <div className={cn(SAFE_GRID_SHELL, "overflow-x-auto")}>
@@ -265,29 +275,25 @@ export function AssignmentSafeGrid({
               </th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.creator}</th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.platforms}</th>
-              <th className={cn(SAFE_GRID_TH, "text-right")}>
-                {HIERARCHY_COLUMN_LABELS.deliverables}
-              </th>
+              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.deliverables}</th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.postingDates}</th>
-              <th className={cn(SAFE_GRID_TH, "text-center")}>
-                {HIERARCHY_COLUMN_LABELS.costCurrency}
-              </th>
-              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+              <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.costCurrency}</th>
+              <th className={cn(SAFE_GRID_TH, "tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.revenue}
               </th>
-              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+              <th className={cn(SAFE_GRID_TH, "tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.cost}
               </th>
-              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+              <th className={cn(SAFE_GRID_TH, "tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.vat}
               </th>
-              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+              <th className={cn(SAFE_GRID_TH, "tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.totalBilling}
               </th>
-              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+              <th className={cn(SAFE_GRID_TH, "tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.gp}
               </th>
-              <th className={cn(SAFE_GRID_TH, "text-right tabular-nums")}>
+              <th className={cn(SAFE_GRID_TH, "tabular-nums")}>
                 {HIERARCHY_COLUMN_LABELS.margin}
               </th>
               <th className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.opsStatus}</th>
@@ -305,6 +311,7 @@ export function AssignmentSafeGrid({
             const deliverables = Array.isArray(row.group.deliverables)
               ? row.group.deliverables
               : [];
+            const lineCurrency = resolveAssignmentLineCurrency(line);
             const rowClass = gates.enableRowStyling
               ? (LINE_OPERATIONAL_ROW_CLASS[row.operationalStatus] ??
                 LINE_OPERATIONAL_ROW_CLASS.draft)
@@ -384,8 +391,8 @@ export function AssignmentSafeGrid({
                         >
                           {row.postingSummary}
                         </td>
-                        <td className={cn(SAFE_GRID_TD, "text-center text-[10px] text-muted-foreground")}>
-                          {line.currency_code ?? "—"}
+                        <td className={cn(SAFE_GRID_TD, "text-center text-[10px] font-medium text-foreground/80")}>
+                          {resolveAssignmentLineCurrencyDisplay(line)}
                         </td>
                         <td className={SAFE_GRID_HIGHLIGHT_REV}>
                           {formatOperationalAmount(row.rollups.revenue)}
@@ -460,7 +467,7 @@ export function AssignmentSafeGrid({
                         campaignId={campaignId}
                         line={line}
                         deliverables={deliverables}
-                        currency={currency}
+                        currency={lineCurrency}
                         parentColSpan={PARENT_COL_SPAN}
                       />
                     ) : null}
@@ -474,7 +481,7 @@ export function AssignmentSafeGrid({
       {gates.enableFooter ? (
         <AssignmentSafeActionsFooter
           campaignId={campaignId}
-          currency={currency}
+          currency={footerCurrency ?? "USD"}
           selectedLineIds={[...selectedLineIds]}
           selectableLineCount={selectableLineIds.length}
           onSelectAll={selectAllLines}

@@ -76,7 +76,7 @@ export function CampaignOperationalTableHeader({
       className={cn(
         "sticky top-0 z-20 border-b border-border/50",
         OPERATIONAL_TABLE_HEADER_SURFACE,
-        "[&_th]:h-auto [&_th]:py-2 [&_th]:font-medium",
+        "[&_th]:h-auto [&_th]:align-middle [&_th]:py-2 [&_th]:font-semibold",
         className
       )}
       {...props}

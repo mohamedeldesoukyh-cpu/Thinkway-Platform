@@ -15,7 +15,7 @@ export const OPERATIONAL_TABLE_HEADER_ROW = cn(
 );
 
 export const OPERATIONAL_TABLE_HEADER_CELL =
-  "h-auto py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground";
+  "h-auto align-middle py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-foreground/80";
 
 export const OPERATIONAL_AMOUNT_CLASS =
   "text-[11px] font-normal tabular-nums tracking-normal text-foreground/90";

@@ -23,7 +23,7 @@ export const SAFE_GRID_HEAD = cn(
 
 export const SAFE_GRID_TH = cn(
   OPERATIONAL_TABLE_HEADER_CELL,
-  "border-b border-border/50 px-2 py-2.5"
+  "border-b border-border/50 px-2 py-2.5 align-middle"
 );
 
 export const SAFE_GRID_TD = cn(

@@ -595,22 +595,22 @@ export function OperationalGridHeader({ actions }: OperationalGridHeaderProps) {
       <th className={cn(GRID_CELL.postDate, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.postDate}
       </th>
-      <th className={cn(GRID_CELL.qty, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+      <th className={cn(GRID_CELL.qty, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.qty}
       </th>
-      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.revPerAd}
       </th>
-      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.costPerAd}
       </th>
-      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.rev}
       </th>
-      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.cost}
       </th>
-      <th className={cn(GRID_CELL.vat, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+      <th className={cn(GRID_CELL.vat, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.vat}
       </th>
       <th className={cn(GRID_CELL.status, OPERATIONAL_TABLE_HEADER_CELL)}>
@@ -628,7 +628,7 @@ export function OperationalGridHeader({ actions }: OperationalGridHeaderProps) {
       <th className={cn(GRID_CELL.workflow, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.workflow}
       </th>
-      <th className={cn(GRID_CELL.actions, OPERATIONAL_TABLE_HEADER_CELL, "text-right")}>
+      <th className={cn(GRID_CELL.actions, OPERATIONAL_TABLE_HEADER_CELL)}>
         {actions}
       </th>
     </tr>

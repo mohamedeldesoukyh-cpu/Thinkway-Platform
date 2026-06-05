@@ -6,6 +6,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { ASSIGNMENT_SAFE_GRID_COL_SPAN } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
 
 const AssignmentDeliverableRows = dynamic(
   () =>
@@ -79,9 +80,10 @@ export function AssignmentSafeDeliverableRows({
   campaignId,
   line,
   deliverables,
-  currency,
+  currency: currencyProp,
   parentColSpan,
 }: AssignmentSafeDeliverableRowsProps) {
+  const currency = resolveAssignmentLineCurrency(line) || currencyProp;
   if (deliverables.length === 0) {
     return (
       <tr className="bg-muted/20">
