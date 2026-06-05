@@ -6,7 +6,6 @@ export const OPERATIONAL_GRID_LABELS = {
   select: "",
   type: "Type",
   platform: "Plat",
-  deliverableType: "Deliv type",
   postDate: "Date",
   qty: "Qty",
   revPerAd: "Rev/ad",
@@ -26,9 +25,8 @@ const amountCell = `${OPERATIONAL_CHILD_AMOUNT_CLASS} text-right`;
 
 export const GRID_CELL = {
   select: "w-7 px-1 py-1",
-  type: "w-[84px] px-1 py-1",
-  platform: "w-[48px] px-1 py-1",
-  deliverableType: "min-w-[80px] px-1 py-1",
+  type: "min-w-[108px] px-1 py-1",
+  platform: "w-[44px] px-1 py-1 text-center",
   postDate: "w-[96px] px-1 py-1",
   qty: `w-[40px] px-1 py-1 ${amountCell}`,
   money: `w-[68px] px-1 py-1 ${amountCell}`,

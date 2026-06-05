@@ -16,6 +16,7 @@ import {
   getCampaignClientIo,
   getCampaignVendorIos,
 } from "@/features/io/queries";
+import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
 import type { CampaignListItem } from "@/types/database";
 
@@ -393,10 +394,10 @@ export async function getCampaignWorkspace(
   const lineVendorIoIds = lines
     .map((l) => l.vendor_io_id)
     .filter((id): id is string => Boolean(id));
-  const activeVendorIoDocMap = await buildActiveVendorIoDocumentMap(
-    supabase,
-    lineVendorIoIds
-  );
+  const [activeVendorIoDocMap, activeVendorIoLinkMap] = await Promise.all([
+    buildActiveVendorIoDocumentMap(supabase, lineVendorIoIds),
+    buildActiveVendorIoLinkMap(supabase, lineVendorIoIds),
+  ]);
 
   const vendorInfluencerIds = (vendorsResult.data ?? []).map(
     (v) => (v as { influencer_id: string }).influencer_id
@@ -633,6 +634,9 @@ export async function getCampaignWorkspace(
       operational_status:
         (line.operational_status as CampaignLineWorkspace["operational_status"]) ?? "draft",
       vendor_io_id: line.vendor_io_id ?? null,
+      active_vendor_io_id: line.vendor_io_id
+        ? (activeVendorIoLinkMap.get(line.vendor_io_id) ?? null)
+        : null,
       vendor_io_document_number: line.vendor_io_id
         ? (activeVendorIoDocMap.get(line.vendor_io_id) ??
           vendorIoDocById.get(line.vendor_io_id) ??

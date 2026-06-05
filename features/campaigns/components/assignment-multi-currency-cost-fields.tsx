@@ -11,9 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatBillingMoney } from "@/features/billing/utils";
 import { resolveExchangeRateAction } from "@/features/finance/exchange-rates/resolve-rate-action";
 import { convertAmount, formatFxRate } from "@/lib/finance/fx/conversion";
-import { formatMoney } from "@/features/campaigns/utils";
 
 type AssignmentMultiCurrencyCostFieldsProps = {
   campaignCurrency: string;
@@ -88,16 +88,18 @@ export function AssignmentMultiCurrencyCostFields({
   }, [costReceived, costReceivedCurrency, campaignCurrency, sameCurrency]);
 
   const fxHint = useMemo(() => {
-    if (sameCurrency) return "Same as campaign currency — no conversion.";
+    if (sameCurrency) return "Same as assignment currency — no conversion.";
     if (resolving) return "Resolving exchange rate…";
     if (fxError) return fxError;
     return `1 ${costReceivedCurrency} = ${formatFxRate(fxRate)} ${campaignCurrency}`;
   }, [sameCurrency, resolving, fxError, costReceivedCurrency, fxRate, campaignCurrency]);
 
   return (
-    <div className="grid gap-3 rounded-2xl border bg-muted/15 p-3">
-      <p className="text-sm font-medium">Creator cost (multi-currency)</p>
-      <div className="grid gap-3 sm:grid-cols-3">
+    <div className="space-y-3 rounded-2xl border border-border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium">Creator cost (multi-currency)</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor="cost_received">Cost received</Label>
           <Input
@@ -110,33 +112,35 @@ export function AssignmentMultiCurrencyCostFields({
             disabled={disabled}
           />
         </div>
-        <div className="grid gap-2">
+        <div className="grid min-w-0 gap-2">
           <Label>Cost currency</Label>
           <Select
             value={costReceivedCurrency}
             onValueChange={onCostReceivedCurrencyChange}
             disabled={disabled}
           >
-            <SelectTrigger className="h-9 w-full text-xs">
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {currencyOptions.map((o) => (
-                <SelectItem key={o.value} value={o.value} className="text-xs">
+                <SelectItem key={o.value} value={o.value}>
                   {o.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="grid gap-2">
-          <Label>Cost in LC</Label>
-          <div className="flex h-9 items-center rounded-md border bg-muted/30 px-3 font-mono text-sm">
-            {formatMoney(costInLc, campaignCurrency)}
-          </div>
-        </div>
       </div>
       <p className="text-xs text-muted-foreground">{fxHint}</p>
+      <div className="grid gap-1 rounded-xl bg-muted/40 p-3 text-sm">
+        <div className="flex justify-between gap-3">
+          <span className="shrink-0 text-muted-foreground">Cost in LC</span>
+          <span className="truncate text-right font-medium tabular-nums">
+            {formatBillingMoney(costInLc, campaignCurrency)}
+          </span>
+        </div>
+      </div>
       <input type="hidden" name="cost_received" value={costReceived} />
       <input type="hidden" name="cost_received_currency" value={costReceivedCurrency} />
       <input type="hidden" name="fx_rate" value={fxRate} />

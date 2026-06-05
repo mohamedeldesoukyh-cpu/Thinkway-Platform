@@ -17,6 +17,10 @@ import { DocumentNumber } from "@/components/ui/document-number";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import { AssignmentSafeActionsFooter } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-actions-footer";
+import {
+  AssignmentSelectionSummaryBar,
+  type AssignmentSelectionTotals,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-selection-summary-bar";
 import { AssignmentSafeDeliverableRows } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-deliverable-rows";
 import {
   ASSIGNMENT_SAFE_GRID_COL_SPAN,
@@ -208,6 +212,30 @@ export function AssignmentSafeGrid({
     return firstLine ? resolveAssignmentLineCurrency(firstLine) : null;
   }, [invoiceLineIds, selectedLineIds, preparedRows]);
 
+  const selectionTotals = useMemo((): AssignmentSelectionTotals => {
+    const currencies = new Set<string>();
+    let revenue = 0;
+    let cost = 0;
+    let gp = 0;
+    for (const id of selectedLineIds) {
+      const row = preparedRows.find((r) => r.lineId === id);
+      if (!row) continue;
+      const line = row.group.line;
+      revenue += Number(line.revenue_before_vat ?? line.revenue) || 0;
+      cost += Number(line.cost_before_vat ?? line.cost) || 0;
+      gp += Number(line.gp) || 0;
+      currencies.add(resolveAssignmentLineCurrency(line));
+    }
+    return {
+      count: selectedLineIds.size,
+      revenue,
+      cost,
+      gp,
+      currency: currencies.size === 1 ? [...currencies][0]! : null,
+      currencyMixed: currencies.size > 1,
+    };
+  }, [selectedLineIds, preparedRows]);
+
   const selectableLineIds = useMemo(
     () => preparedRows.filter((r) => r.meta.rowSelectable).map((r) => r.lineId),
     [preparedRows]
@@ -247,6 +275,16 @@ export function AssignmentSafeGrid({
 
   return (
     <div className={cn(OPERATIONAL_TABLE_FONT, "space-y-2")}>
+      {gates.enableFooter ? (
+        <AssignmentSelectionSummaryBar
+          campaignId={campaignId}
+          totals={selectionTotals}
+          vioLineIds={vioLineIds}
+          invoiceLineIds={invoiceLineIds}
+          onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}
+          onAfterOperationalMutation={resetOperationalUiState}
+        />
+      ) : null}
       <div className={cn(SAFE_GRID_SHELL, "overflow-x-auto")}>
         <table className={SAFE_GRID_TABLE}>
           <thead className={SAFE_GRID_HEAD}>

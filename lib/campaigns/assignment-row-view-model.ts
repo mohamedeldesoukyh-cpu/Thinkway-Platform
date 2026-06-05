@@ -85,6 +85,7 @@ export function deriveAssignmentLineMeta(
 
   const vioEligible = isLineVendorIoGenerateEligible({
     vendor_io_id: line.vendor_io_id,
+    active_vendor_io_id: line.active_vendor_io_id,
     invoice_id: line.invoice_id,
     billing_status: line.billing_status,
     operational_status: line.operational_status,
@@ -99,9 +100,10 @@ export function deriveAssignmentLineMeta(
     is_locked: line.revenue_locked,
   });
 
-  const reviseVioEligible = status === "reopened" && Boolean(line.vendor_io_id);
+  const reviseVioEligible =
+    status === "reopened" && Boolean(line.active_vendor_io_id ?? line.vendor_io_id);
   const ungenerateIoEligible = isLineUngenerateIoEligible({
-    vendor_io_id: line.vendor_io_id,
+    vendor_io_id: line.active_vendor_io_id ?? line.vendor_io_id,
     operational_status: status,
     invoice_id: line.invoice_id ?? null,
     billing_status: line.billing_status,

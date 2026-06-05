@@ -678,7 +678,7 @@ export function CampaignLineSheet({
             />
 
             <AssignmentMultiCurrencyCostFields
-              campaignCurrency={currencyCode}
+              campaignCurrency={currency}
               costReceived={costReceived}
               costReceivedCurrency={costReceivedCurrency}
               costInLc={cost}
@@ -696,7 +696,7 @@ export function CampaignLineSheet({
               beforeVat={cost}
               vatPercent={costVatPercent}
               exempt={costVatExempt}
-              currency={currencyCode}
+              currency={currency}
               disabled={isPending || Boolean(line?.cost_locked || line?.vat_locked)}
               amountDisabled
               onBeforeVatChange={() => {}}

@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { parseLineAssignment } from "@/features/campaigns/line-assignment";
-import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
+import { resolveActiveVendorIoId } from "@/lib/io/vendor-io-active-link";
+import {
+  explainVendorIoGenerateEligibility,
+  logVendorIoEligibility,
+} from "@/lib/io/vendor-io-generate-eligibility";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const generateVendorIoSchema = z.object({
@@ -93,17 +97,23 @@ export async function generateVendorIosFromLinesAction(
   const typedLines = lines as unknown as LineRow[];
 
   for (const line of typedLines) {
-    if (
-      !isLineVendorIoGenerateEligible({
-        vendor_io_id: line.vendor_io_id,
-        invoice_id: line.invoice_id,
-        operational_status: line.operational_status,
-        billing_status: line.billing_status,
-      })
-    ) {
+    const activeVendorIoId = await resolveActiveVendorIoId(supabase, line.vendor_io_id);
+    const assignment = parseLineAssignment(line.metadata);
+    const snapshot = {
+      vendor_io_id: line.vendor_io_id,
+      active_vendor_io_id: activeVendorIoId,
+      invoice_id: line.invoice_id,
+      operational_status: line.operational_status,
+      billing_status: line.billing_status,
+      influencer_id: assignment?.influencer_id ?? null,
+      campaign_influencer_id: null,
+    };
+    logVendorIoEligibility(line.id, snapshot);
+    const { eligible, reason } = explainVendorIoGenerateEligibility(snapshot);
+    if (!eligible) {
       return {
         ok: false,
-        message: `Line ${line.name} cannot receive a Vendor IO (already linked, invoiced, or closed).`,
+        message: `Line "${line.name}" cannot receive a Vendor IO: ${reason}`,
       };
     }
   }

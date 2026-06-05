@@ -134,6 +134,8 @@ export type CampaignLineWorkspace = {
   billing_status: import("@/features/billing/types").CampaignLineBillingStatus;
   operational_status: import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
   vendor_io_id: string | null;
+  /** Active (non-superseded) Vendor IO — null when pointer is orphan or superseded-only. */
+  active_vendor_io_id?: string | null;
   vendor_io_document_number: string | null;
   revenue_locked: boolean;
   cost_locked: boolean;

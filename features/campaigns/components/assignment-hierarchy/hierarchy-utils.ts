@@ -1,4 +1,7 @@
-import { deliverableTypeShortLabel } from "@/lib/campaigns/deliverable-taxonomy";
+import {
+  deliverableTypeLabel,
+  deliverableTypeShortLabel,
+} from "@/lib/campaigns/deliverable-taxonomy";
 import {
   PLATFORM_SHORT_LABELS,
   isSocialPlatform,
@@ -16,6 +19,23 @@ export function platformShortLabel(platform: string | null | undefined): string 
 
 export function deliverableTagLabel(type: string): string {
   return deliverableTypeShortLabel(type);
+}
+
+function titleCaseWords(text: string): string {
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/** Child grid Type column — e.g. Instagram Story, TikTok Video (no platform duplication). */
+export function assignmentChildTypeLabel(
+  deliverableType: string,
+  fallbackLabel?: string | null
+): string {
+  const raw = fallbackLabel?.trim() || deliverableTypeLabel(deliverableType);
+  return titleCaseWords(raw);
 }
 
 export const HIERARCHY_COLUMN_LABELS = {

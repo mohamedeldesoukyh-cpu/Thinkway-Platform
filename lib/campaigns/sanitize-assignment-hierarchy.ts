@@ -211,6 +211,7 @@ function sanitizeLine(line: Partial<CampaignLineWorkspace> | null | undefined): 
       cost_received: finiteNumber(line.cost_received),
       cost_received_currency: line.cost_received_currency ?? null,
       currency_code: line.currency_code ?? null,
+      active_vendor_io_id: line.active_vendor_io_id ?? null,
       deliverable_count: Math.max(0, finiteNumber(line.deliverable_count, 1)),
       influencer_name: line.influencer_name ?? null,
       influencer_id: line.influencer_id ?? null,

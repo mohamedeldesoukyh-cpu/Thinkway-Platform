@@ -28,7 +28,6 @@ import {
   updateAssignmentDeliverableAction,
   updatePostScheduleAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
-import { DeliverableTypeTag } from "@/features/campaigns/components/assignment-hierarchy/deliverable-type-tag";
 import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
 import { HierarchyBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
 import {
@@ -45,8 +44,13 @@ import {
 import {
   PlatformSelect,
   DeliverableTypeSelect,
+  platformBadgeClass,
 } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
-import { SCHEDULE_STATUS_OPTIONS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import {
+  assignmentChildTypeLabel,
+  platformShortLabel,
+  SCHEDULE_STATUS_OPTIONS,
+} from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import {
   GRID_CELL,
   GRID_HIGHLIGHT_COST,
@@ -332,8 +336,19 @@ export function EditablePostRow({
             <span className="text-muted-foreground/50">·</span>
           )}
         </td>
-        <td className={cn(GRID_CELL.type, "font-normal text-muted-foreground")}>
-          {isFirstPost ? deliverable.label : post.label}
+        <td className={cn(GRID_CELL.type, "font-normal text-foreground/90")}>
+          {canEdit && editing ? (
+            <DeliverableTypeSelect
+              platform={meta.platform}
+              deliverableType={meta.deliverable_type}
+              disabled={pending}
+              onDeliverableTypeChange={(deliverableType) =>
+                setMeta((m) => ({ ...m, deliverable_type: deliverableType }))
+              }
+            />
+          ) : (
+            assignmentChildTypeLabel(post.deliverable_type, post.deliverable_type_label)
+          )}
         </td>
         <td className={GRID_CELL.platform}>
           {canEdit && editing ? (
@@ -351,21 +366,14 @@ export function EditablePostRow({
               }}
             />
           ) : (
-            <DeliverableTypeTag platform={post.platform} deliverableType={post.deliverable_type} />
-          )}
-        </td>
-        <td className={GRID_CELL.deliverableType}>
-          {canEdit && editing ? (
-            <DeliverableTypeSelect
-              platform={meta.platform}
-              deliverableType={meta.deliverable_type}
-              disabled={pending}
-              onDeliverableTypeChange={(deliverableType) =>
-                setMeta((m) => ({ ...m, deliverable_type: deliverableType }))
-              }
-            />
-          ) : (
-            <span className="text-muted-foreground">{post.deliverable_type_label}</span>
+            <span
+              className={cn(
+                "inline-flex min-w-[2rem] justify-center rounded-md border px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                platformBadgeClass(post.platform)
+              )}
+            >
+              {platformShortLabel(post.platform)}
+            </span>
           )}
         </td>
         <td className={GRID_CELL.postDate}>
@@ -588,9 +596,6 @@ export function OperationalGridHeader({ actions }: OperationalGridHeaderProps) {
       </th>
       <th className={cn(GRID_CELL.platform, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.platform}
-      </th>
-      <th className={cn(GRID_CELL.deliverableType, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.deliverableType}
       </th>
       <th className={cn(GRID_CELL.postDate, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.postDate}
