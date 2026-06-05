@@ -257,8 +257,8 @@ export function InvoiceGenerationSheet({
               <div className="space-y-2">
                 {eligibleLeaves.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No operational rows ready for invoicing. Approve and move assignments to billing
-                    first.
+                    No billable rows selected. Generate Vendor IO on assignments, then select
+                    deliverables with remaining revenue.
                   </p>
                 ) : (
                   eligibleLeaves.map((row) => {

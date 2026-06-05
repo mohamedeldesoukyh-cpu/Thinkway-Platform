@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
 import { AssignmentOperationalStatusBadge } from "@/features/campaigns/components/assignment-operational-status-badge";
-import { HierarchyBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
+import { LineBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import {
   OPERATIONAL_AMOUNT_CLASS,
@@ -211,10 +211,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       </TableCell>
       <TableCell className="px-1.5 py-1.5">
         {enableBillingPills ? (
-          <HierarchyBillingStatusBadge
-            operationalStatus={operationalStatus}
-            billingStatus={childBillingStatus}
-          />
+          <LineBillingStatusBadge lineBillingStatus={viewModel.lineBillingStatus} />
         ) : (
           <span className="capitalize text-muted-foreground">{billingStatusLabel}</span>
         )}

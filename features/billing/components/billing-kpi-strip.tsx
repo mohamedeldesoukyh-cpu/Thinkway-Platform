@@ -108,10 +108,10 @@ export function BillingKpiStrip({
         </p>
       ) : null}
       {kpis.po_over_consumed_count > 0 ? (
-        <div className="flex items-center gap-2 rounded-3xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-800 dark:text-red-200">
+        <div className="flex items-center gap-2 rounded-xl border-2 border-red-500/70 bg-red-500/10 px-3 py-2 text-sm text-red-950 dark:text-red-50">
           <AlertTriangleIcon className="size-4 shrink-0" />
           {kpis.po_over_consumed_count} campaign
-          {kpis.po_over_consumed_count === 1 ? "" : "s"} exceed approved PO — finance review required.
+          {kpis.po_over_consumed_count === 1 ? "" : "s"} exceed approved PO.
         </div>
       ) : null}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

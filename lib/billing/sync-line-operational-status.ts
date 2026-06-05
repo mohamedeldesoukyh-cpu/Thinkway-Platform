@@ -76,10 +76,6 @@ function deriveOperationalFromState(input: {
     return invoiced > 0 && invoiced < billable ? "partially_invoiced" : "invoiced";
   }
 
-  if (vendorIoId && ["moved_to_billing", "approved"].includes(billingStatus)) {
-    return "moved_to_billing";
-  }
-
   if (vendorIoId) {
     return "io_generated";
   }

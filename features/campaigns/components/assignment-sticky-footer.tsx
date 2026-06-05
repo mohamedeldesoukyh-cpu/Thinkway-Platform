@@ -1,7 +1,6 @@
 "use client";
 
-import { AlertTriangleIcon } from "lucide-react";
-
+import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import type { CommercialSummary } from "@/lib/assignments/commercial-calculations";
@@ -13,6 +12,8 @@ type AssignmentStickyFooterProps = {
   revenueVatAmount: number;
   costVatAmount: number;
   poExceeded?: boolean;
+  poAmount?: number;
+  poConsumed?: number;
   className?: string;
 };
 
@@ -22,8 +23,12 @@ export function AssignmentStickyFooter({
   revenueVatAmount,
   costVatAmount,
   poExceeded,
+  poAmount = 0,
+  poConsumed = 0,
   className,
 }: AssignmentStickyFooterProps) {
+  const showPoBanner = poAmount > 0 && (poExceeded || poConsumed > 0);
+
   return (
     <div
       className={cn(
@@ -31,10 +36,16 @@ export function AssignmentStickyFooter({
         className
       )}
     >
-      {poExceeded ? (
-        <div className="mb-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300">
-          <AlertTriangleIcon className="size-3.5" />
-          PO exceeded — warning only; you can still save this assignment
+      {showPoBanner ? (
+        <div className="mb-2">
+          <PoConsumptionBanner
+            consumed={poConsumed}
+            po_amount={poAmount}
+            currency={currency}
+            formatMoney={formatMoney}
+            po_exceeded={poExceeded}
+            compact
+          />
         </div>
       ) : null}
       <div className="flex flex-wrap items-end justify-between gap-3">

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertTriangleIcon,
   FileTextIcon,
   type LucideIcon,
   PackageIcon,
@@ -12,18 +11,10 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
-import {
-  PO_ALERT_FRAME,
-  PO_ALERT_TITLE,
-  PO_STATUS_LABELS,
-  PO_STATUS_VARIANT,
-  resolvePoAlertStatus,
-} from "@/lib/finance/po/status";
-import { cn } from "@/lib/utils";
 
 type CampaignKpiStripProps = {
   workspace: CampaignWorkspace;
@@ -39,29 +30,20 @@ const ACCENT_TILE: Record<KpiAccent, string> = {
   green: "bg-success/10 text-success",
 };
 
-/** Same chrome as KPI carousel tiles (rounded-xl, not full-bleed bars). */
-const KPI_TILE_SHELL =
-  "rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-sm";
-
 export function CampaignKpiStrip({
   workspace,
   operationalDeliverableCount,
 }: CampaignKpiStripProps) {
-  const { financials, lines, deliverables, po } = workspace;
+  const { financials, lines, deliverables } = workspace;
   const currency = workspace.currency_code;
   const assignedLines = lines;
   const deliverableKpi =
     operationalDeliverableCount ?? deliverables.length;
 
-  const poAlertStatus = resolvePoAlertStatus({
-    po_status: po.po_status,
-    po_exceeded: financials.po_exceeded,
-  });
-
   const budgetAlert =
-    poAlertStatus === "exceeded"
+    financials.po_exceeded
       ? "danger"
-      : poAlertStatus === "near_limit" || poAlertStatus === "expired"
+      : workspace.po.po_status === "near_limit"
         ? "warning"
         : undefined;
 
@@ -134,28 +116,16 @@ export function CampaignKpiStrip({
 
   return (
     <div className="space-y-3 pb-8">
-      {poAlertStatus ? (
+      {financials.budget > 0 ? (
         <div className="flex w-full justify-end">
-          <div
-            className={cn(
-              KPI_TILE_SHELL,
-              "inline-flex w-fit max-w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm",
-              PO_ALERT_FRAME[poAlertStatus]
-            )}
-          >
-            <AlertTriangleIcon className="size-4 shrink-0 opacity-90" />
-            <span className="font-medium">{PO_ALERT_TITLE[poAlertStatus]}</span>
-            <span className="text-muted-foreground">
-              {formatMoney(financials.po_consumed, currency)} consumed of{" "}
-              {formatMoney(financials.budget, currency)}
-              {financials.po_remaining_percent != null
-                ? ` · ${formatPercent(financials.po_remaining_percent)} remaining`
-                : null}
-            </span>
-            <Badge variant={PO_STATUS_VARIANT[po.po_status]} className="shrink-0">
-              {PO_STATUS_LABELS[po.po_status]}
-            </Badge>
-          </div>
+          <PoConsumptionBanner
+            consumed={financials.po_consumed}
+            po_amount={financials.budget}
+            currency={currency}
+            formatMoney={formatMoney}
+            po_exceeded={financials.po_exceeded}
+            className="w-fit max-w-full"
+          />
         </div>
       ) : null}
 

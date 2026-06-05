@@ -142,27 +142,32 @@ export function CampaignBillingQueueToolbar({
   if (rows.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2 border-b px-4 py-2">
-      <div className="flex items-center gap-2 rounded-2xl border px-2 py-1">
-        <OperationalSelectionCheckbox
-          status={globalStatus}
-          onToggle={onSelectAll}
-          ariaLabel="Select all queue rows"
-        />
-        <Button type="button" size="sm" variant="ghost" onClick={onSelectAll}>
-          Select all
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={onClear}
-          disabled={selectedCount === 0}
-        >
-          Clear
-        </Button>
-      </div>
-      <Button type="button" size="sm" onClick={onGenerateInvoice} disabled={selectedCount === 0}>
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
+      <OperationalSelectionCheckbox
+        status={globalStatus}
+        onToggle={onSelectAll}
+        ariaLabel="Select all queue rows"
+      />
+      <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onSelectAll}>
+        Select all
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="h-7 px-2 text-xs"
+        onClick={onClear}
+        disabled={selectedCount === 0}
+      >
+        Clear
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        className="h-7 text-xs"
+        onClick={onGenerateInvoice}
+        disabled={selectedCount === 0}
+      >
         Generate invoice
       </Button>
     </div>

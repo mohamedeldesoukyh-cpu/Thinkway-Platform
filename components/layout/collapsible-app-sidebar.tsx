@@ -228,13 +228,13 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
         "relative hidden shrink-0 self-start border-r transition-[width] duration-200 ease-out md:sticky md:top-0 md:flex md:h-svh md:max-h-svh md:flex-col",
         expanded
           ? "w-64 border-sidebar-border bg-sidebar"
-          : "w-16 border-border/50 bg-card"
+          : "w-14 border-zinc-800 bg-zinc-950"
       )}
     >
       <div
         className={cn(
           "flex h-16 items-center border-b",
-          expanded ? "justify-between border-sidebar-border px-4" : "justify-center border-border/40 px-2"
+          expanded ? "justify-between border-sidebar-border px-4" : "justify-center border-zinc-800 px-1.5"
         )}
       >
         <Link
@@ -248,7 +248,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
             width={36}
             height={36}
             priority
-            className="size-9 shrink-0 rounded-lg"
+            className={cn("shrink-0 rounded-md", expanded ? "size-9" : "size-7")}
           />
           {expanded ? (
             <span className="truncate font-heading text-lg font-extrabold tracking-tight text-white">
@@ -270,11 +270,11 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       </div>
 
       {!expanded ? (
-        <div className="flex justify-center border-b border-border/40 py-2">
+        <div className="flex justify-center border-b border-zinc-800 py-1">
           <button
             type="button"
             onClick={() => persistExpanded(true)}
-            className="rounded-lg p-1.5 text-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-900 hover:text-zinc-200"
             title="Expand sidebar"
             aria-label="Expand sidebar"
           >
@@ -286,7 +286,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       <nav
         className={cn(
           "flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden",
-          expanded ? "p-3" : "p-2"
+          expanded ? "p-3" : "px-1 py-2"
         )}
       >
         {navGroups.map((group, groupIndex) => {
@@ -296,7 +296,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
           return (
             <div key={group.label} className="flex flex-col">
               {groupIndex > 0 && !expanded ? (
-                <div className="mx-auto my-1 h-px w-8 bg-border/60" />
+                <div className="mx-auto my-0.5 h-px w-6 bg-zinc-800" />
               ) : null}
 
               {expanded ? (
@@ -334,17 +334,18 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                       href={item.href}
                       title={item.label}
                       className={cn(
-                        "flex items-center rounded-2xl py-2 text-sm font-medium transition-colors",
-                        expanded ? "gap-3 px-3" : "justify-center px-2",
+                        "flex items-center text-sm font-medium transition-colors",
+                        expanded ? "gap-3 rounded-2xl px-3 py-2" : "justify-center rounded-md px-1 py-1.5",
                         active
-                          ? "bg-brand-gradient text-white shadow-sm"
+                          ? expanded
+                            ? "bg-brand-gradient text-white shadow-sm"
+                            : "bg-zinc-800 text-white"
                           : expanded
                             ? "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                            : "text-foreground/60 hover:bg-muted hover:text-foreground",
-                        !expanded && hasActiveItem && active && "ring-1 ring-brand-blue/25"
+                            : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
                       )}
                     >
-                      <Icon className="size-4 shrink-0" />
+                      <Icon className={cn("shrink-0", expanded ? "size-4" : "size-3.5")} />
                       {expanded ? (
                         <span className="truncate">{item.label}</span>
                       ) : null}
@@ -360,7 +361,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       <div
         className={cn(
           "border-t",
-          expanded ? "border-sidebar-border p-4" : "border-border/40 p-2"
+          expanded ? "border-sidebar-border p-4" : "border-zinc-800 p-1.5"
         )}
       >
         {expanded ? (

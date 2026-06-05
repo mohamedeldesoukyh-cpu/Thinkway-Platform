@@ -1,42 +1,48 @@
 import { cn } from "@/lib/utils";
 
+import {
+  ASSIGNMENT_GRID_MONEY_COL,
+  ASSIGNMENT_GRID_VAT_COL,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
 import { OPERATIONAL_CHILD_AMOUNT_CLASS } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 
 export const OPERATIONAL_GRID_LABELS = {
   select: "",
-  type: "Type",
-  platform: "Plat",
-  postDate: "Date",
-  qty: "Qty",
-  revPerAd: "Rev/ad",
-  costPerAd: "Cost/ad",
-  rev: "Rev",
-  cost: "Cost",
+  type: "TYPE",
+  platform: "PLAT",
+  postDate: "DATE",
+  qty: "QTY",
+  revPerAd: "REV/AD",
+  costPerAd: "COST/AD",
+  rev: "REV",
+  cost: "COST",
   vat: "VAT",
-  billing: "Billing",
-  invoice: "Inv",
-  collection: "Coll",
-  payout: "Payout",
+  billing: "BILLING",
+  invoice: "INV",
+  collection: "COLL",
+  payout: "PAYOUT",
   workflow: "WF",
   actions: "",
 } as const;
 
-const amountCell = `${OPERATIONAL_CHILD_AMOUNT_CLASS} text-right`;
+const amountCell = `${OPERATIONAL_CHILD_AMOUNT_CLASS} text-right tabular-nums`;
 
 export const GRID_CELL = {
-  select: "w-7 px-1 py-1",
-  type: "min-w-[108px] px-1 py-1",
-  platform: "w-[44px] px-1 py-1 text-center",
-  postDate: "w-[96px] px-1 py-1",
-  qty: `w-[40px] px-1 py-1 ${amountCell}`,
-  money: `w-[68px] px-1 py-1 ${amountCell}`,
-  vat: `w-[56px] px-1 py-1 ${amountCell}`,
-  status: "w-[76px] px-1 py-1",
-  invoice: "w-[68px] px-1 py-1",
-  collection: "w-[44px] px-1 py-1 text-[9px]",
-  payout: "w-[56px] px-1 py-1",
-  workflow: "w-[64px] px-1 py-1",
-  actions: "w-[60px] px-1 py-1 text-right",
+  select: "w-7 px-1 py-0.5",
+  type: "w-[140px] max-w-[140px] px-1 py-0.5",
+  platform: "w-[70px] max-w-[70px] px-1 py-0.5 text-center",
+  postDate: "w-[88px] px-1 py-0.5",
+  qty: `w-[40px] px-1 py-0.5 ${amountCell}`,
+  revPerAd: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1 py-0.5"),
+  costPerAd: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1 py-0.5"),
+  money: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1 py-0.5"),
+  vat: cn(ASSIGNMENT_GRID_VAT_COL, "px-1 py-0.5"),
+  status: "w-[72px] px-1 py-0.5",
+  invoice: "w-[64px] px-1 py-0.5",
+  collection: "w-[40px] px-1 py-0.5 text-[9px]",
+  payout: "w-[52px] px-1 py-0.5",
+  workflow: "w-[56px] px-1 py-0.5",
+  actions: "w-[56px] px-1 py-0.5 text-right",
 } as const;
 
 /** Child financial emphasis — matches parent Rev/Cost styling. */

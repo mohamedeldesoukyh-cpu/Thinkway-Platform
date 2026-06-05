@@ -14,6 +14,7 @@ import {
 } from "@/lib/billing/deliverable-billing";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
+import { resolveActiveVendorIoId } from "@/lib/io/vendor-io-active-link";
 import { syncPostScheduleOnDeliverableInvoiceLock } from "@/lib/billing/sync-post-invoice-lock";
 import { devLog } from "@/lib/dev-log";
 
@@ -219,6 +220,51 @@ export async function fetchDeliverablesForInvoicing(
   };
 }
 
+/** Promote io_generated lines with active Vendor IO into billing queue before invoicing. */
+export async function prepareLinesForDeliverableInvoicing(
+  supabase: SupabaseClient,
+  deliverables: DeliverableRecord[]
+): Promise<void> {
+  const lineIds = new Set<string>();
+  for (const row of deliverables) {
+    if (row.campaign_line?.id) lineIds.add(row.campaign_line.id);
+  }
+
+  for (const lineId of lineIds) {
+    const sample = deliverables.find((d) => d.campaign_line?.id === lineId);
+    const line = sample?.campaign_line;
+    if (!line) continue;
+
+    if (["moved_to_billing", "partially_invoiced"].includes(line.billing_status)) {
+      continue;
+    }
+
+    const { data: row } = await supabase
+      .from("campaign_lines")
+      .select("vendor_io_id, invoice_id, billing_status, operational_status")
+      .eq("id", lineId)
+      .maybeSingle();
+
+    if (!row?.vendor_io_id || row.invoice_id) continue;
+    if (["invoiced", "paid", "closed", "partially_paid"].includes(row.billing_status)) {
+      continue;
+    }
+
+    const activeVendorIoId = await resolveActiveVendorIoId(supabase, row.vendor_io_id);
+    if (!activeVendorIoId) continue;
+
+    await supabase
+      .from("campaign_lines")
+      .update({
+        billing_status: "moved_to_billing",
+        operational_status: "io_generated",
+      } as never)
+      .eq("id", lineId);
+
+    line.billing_status = "moved_to_billing";
+  }
+}
+
 export function validateDeliverablesForInvoice(
   deliverables: DeliverableRecord[]
 ): string | null {
@@ -236,12 +282,8 @@ export function validateDeliverablesForInvoice(
     if (row.billing_status === "disputed" || row.billing_status === "cancelled") {
       return "Disputed or cancelled deliverables cannot be invoiced.";
     }
-    if (
-      !["moved_to_billing", "approved", "partially_invoiced"].includes(
-        line.billing_status
-      )
-    ) {
-      return "All assignments must be in billing queue before invoicing deliverables.";
+    if (["invoiced", "paid", "closed"].includes(line.billing_status)) {
+      return "Selected assignments are already fully invoiced or closed.";
     }
   }
 

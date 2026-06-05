@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertTriangleIcon,
   FileTextIcon,
   PercentIcon,
   ReceiptIcon,
@@ -10,10 +9,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
-import { cn } from "@/lib/utils";
 
 type CampaignBillingKpiStripProps = {
   workspace: CampaignWorkspace;
@@ -28,13 +27,13 @@ const ACCENT_TILE = {
 } as const;
 
 export function CampaignBillingKpiStrip({ workspace }: CampaignBillingKpiStripProps) {
-  const { financials, po } = workspace;
+  const { financials } = workspace;
   const currency = workspace.currency_code;
 
   const poAlert =
-    financials.po_exceeded || po.po_status === "exceeded"
+    financials.po_exceeded || workspace.po.po_status === "exceeded"
       ? ("danger" as const)
-      : po.po_status === "near_limit"
+      : workspace.po.po_status === "near_limit"
         ? ("warning" as const)
         : undefined;
 
@@ -102,21 +101,14 @@ export function CampaignBillingKpiStrip({ workspace }: CampaignBillingKpiStripPr
 
   return (
     <div className="space-y-2">
-      {poAlert ? (
-        <div
-          className={cn(
-            "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs",
-            poAlert === "danger"
-              ? "border-red-500/40 bg-red-500/10 text-red-800 dark:text-red-200"
-              : "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100"
-          )}
-        >
-          <AlertTriangleIcon className="size-3.5 shrink-0" />
-          <span>
-            {poAlert === "danger" ? "PO exceeded" : "PO near limit"} — finance review may be
-            required.
-          </span>
-        </div>
+      {financials.po_total > 0 ? (
+        <PoConsumptionBanner
+          consumed={financials.po_consumed}
+          po_amount={financials.po_total}
+          currency={currency}
+          formatMoney={formatMoney}
+          po_exceeded={financials.po_exceeded}
+        />
       ) : null}
       <KpiCarousel items={items} />
     </div>

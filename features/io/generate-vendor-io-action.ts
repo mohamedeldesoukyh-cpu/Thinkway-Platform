@@ -217,6 +217,7 @@ export async function generateVendorIosFromLinesAction(
         .update({
           vendor_io_id: vendorIoId,
           operational_status: "io_generated",
+          billing_status: "moved_to_billing",
         } as never)
         .eq("id", line.id);
 

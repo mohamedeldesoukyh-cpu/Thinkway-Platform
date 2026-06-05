@@ -49,9 +49,11 @@ function isRowMuted(row: OperationalBillingRow): boolean {
 function resolveAssignmentBillingStatus(
   row: OperationalBillingRow
 ): import("@/features/billing/types").CampaignLineBillingStatus {
-  const operational = (row.operational_status ?? "draft") as CampaignLineOperationalStatus;
-  if (operational === "invoiced") return "invoiced";
-  if (operational === "io_generated" && row.line_billing_status === "approved") {
+  if (
+    row.vendor_io_id &&
+    !row.invoice_id &&
+    (row.line_billing_status === "draft" || row.line_billing_status === "approved")
+  ) {
     return "moved_to_billing";
   }
   return row.line_billing_status;

@@ -123,7 +123,11 @@ export function isDeliverableInvoiceEligible(
   if (row.billing_status === "disputed" || row.billing_status === "cancelled") {
     return false;
   }
-  return ["moved_to_billing", "approved", "partially_invoiced"].includes(lineBillingStatus);
+  if (["moved_to_billing", "approved", "partially_invoiced"].includes(lineBillingStatus)) {
+    return true;
+  }
+  // Legacy / in-flight: draft with active Vendor IO is invoiceable after auto-promotion.
+  return lineBillingStatus === "draft";
 }
 
 export function shouldLockLineFully(

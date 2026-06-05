@@ -100,5 +100,16 @@ export function repairCampaignLineStatusPatch(
     patch.operational_status = "io_generated";
   }
 
+  if (
+    merged.operational_status === "moved_to_billing" &&
+    merged.vendor_io_id &&
+    !merged.invoice_id
+  ) {
+    patch.operational_status = "io_generated";
+    if (merged.billing_status === "draft" || merged.billing_status === "approved") {
+      patch.billing_status = "moved_to_billing";
+    }
+  }
+
   return patch;
 }

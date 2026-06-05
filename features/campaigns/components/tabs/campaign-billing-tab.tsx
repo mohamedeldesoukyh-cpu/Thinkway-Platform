@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 
 import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
-import {
-  AlertTriangleIcon,
-  PlusIcon,
-} from "lucide-react";
+import { PlusIcon } from "lucide-react";
 
+import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -104,7 +102,6 @@ export function CampaignBillingTab({
     useState<OperationalSelectionState>(createEmptySelection);
   const [drilldownPending, startDrilldownTransition] = useTransition();
 
-  const poWarnings = billingLines.filter((l) => l.po_over_consumed);
   const headerPoExceeded = financials.po_exceeded;
 
   const billingQueueRows = useMemo(() => {
@@ -157,32 +154,14 @@ export function CampaignBillingTab({
 
   return (
     <div className="space-y-4">
-      {headerPoExceeded ? (
-        <div className="flex items-start gap-2 rounded-3xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-800 dark:text-red-200">
-          <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" />
-          <div>
-            <p className="font-medium">Campaign PO exceeded</p>
-            <p>
-              Consumed {formatMoney(financials.po_consumed, currency)} exceeds approved PO{" "}
-              {formatMoney(financials.po_total, currency)}
-              {financials.po_consumed > financials.po_total
-                ? ` by ${formatMoney(financials.po_consumed - financials.po_total, currency)}`
-                : null}
-              . Warning only — assignments remain editable.
-            </p>
-          </div>
-        </div>
-      ) : poWarnings.length > 0 ? (
-        <div className="flex items-start gap-2 rounded-3xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-          <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" />
-          <div>
-            <p className="font-medium">PO over-consumption warning</p>
-            <p>
-              {poWarnings.length} line{poWarnings.length === 1 ? "" : "s"} exceed
-              PO allocation. Finance override required before billing.
-            </p>
-          </div>
-        </div>
+      {financials.po_total > 0 ? (
+        <PoConsumptionBanner
+          consumed={financials.po_consumed}
+          po_amount={financials.po_total}
+          currency={currency}
+          formatMoney={formatMoney}
+          po_exceeded={headerPoExceeded}
+        />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -220,20 +199,20 @@ export function CampaignBillingTab({
           wide
           tableOnly
           cardSurface
+          compact
           leading={
-            <CampaignOperationalSectionHeader
-              title="Billing queue"
-              description="Consolidated invoice candidates. Select rows to invoice, or click the campaign number to open operational detail below."
-            />
-          }
-          toolbar={
-            <CampaignBillingQueueToolbar
-              rows={billingQueueRows}
-              selectedBatchKeys={selectedQueueBatchKeys}
-              onSelectAll={handleQueueSelectAll}
-              onClear={() => setSelectedQueueBatchKeys(new Set())}
-              onGenerateInvoice={handleQueueGenerateInvoice}
-            />
+            <div className="flex w-full flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                Billing queue
+              </h2>
+              <CampaignBillingQueueToolbar
+                rows={billingQueueRows}
+                selectedBatchKeys={selectedQueueBatchKeys}
+                onSelectAll={handleQueueSelectAll}
+                onClear={() => setSelectedQueueBatchKeys(new Set())}
+                onGenerateInvoice={handleQueueGenerateInvoice}
+              />
+            </div>
           }
         >
           <CampaignBillingQueueTable

@@ -1,4 +1,5 @@
-import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";
+import { labelForBillingStatus } from "@/features/billing/constants";
+import type { AssignmentDeliverableBillingStatus, CampaignLineBillingStatus } from "@/features/billing/types";
 import { LINE_OPERATIONAL_STATUS_LABELS } from "@/features/campaigns/constants/operational-status";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
@@ -26,6 +27,7 @@ export type AssignmentRowViewModel = {
   meta: AssignmentLineMeta;
   operationalStatus: CampaignLineOperationalStatus;
   childBillingStatus: AssignmentDeliverableBillingStatus;
+  lineBillingStatus: CampaignLineBillingStatus;
   displayName: string;
   platformSummary: string;
   postingSummary: string;
@@ -40,13 +42,14 @@ function finiteNumber(value: unknown, fallback = 0): number {
 }
 
 function deriveChildBillingStatus(
-  operationalStatus: CampaignLineOperationalStatus
+  lineBillingStatus: string
 ): AssignmentDeliverableBillingStatus {
-  if (operationalStatus === "invoiced") return "invoiced";
-  if (operationalStatus === "partially_invoiced") return "partially_invoiced";
-  if (operationalStatus === "reopened") return "ready_to_invoice";
-  if (operationalStatus === "io_generated") return "ready_to_invoice";
-  if (operationalStatus === "moved_to_billing") return "ready_to_invoice";
+  if (["invoiced", "paid", "closed"].includes(lineBillingStatus)) return "invoiced";
+  if (lineBillingStatus === "partially_invoiced") return "partially_invoiced";
+  if (lineBillingStatus === "partially_paid") return "partially_collected";
+  if (["moved_to_billing", "approved"].includes(lineBillingStatus)) {
+    return "ready_to_invoice";
+  }
   return "draft";
 }
 
@@ -134,7 +137,7 @@ export function buildAssignmentRowViewModel(
     billing_status: line.billing_status,
     invoice_id: line.invoice_id,
   });
-  const childBillingStatus = deriveChildBillingStatus(operationalStatus);
+  const childBillingStatus = deriveChildBillingStatus(line.billing_status ?? "draft");
   const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
 
   const displayName =
@@ -156,10 +159,10 @@ export function buildAssignmentRowViewModel(
     platformSummary: summarizePlatforms(group),
     postingSummary: safeSummarizePostingDates(collectLiveDates(group)),
     opsStatusLabel: LINE_OPERATIONAL_STATUS_LABELS[operationalStatus] ?? operationalStatus,
-    billingStatusLabel:
-      childBillingStatus === "ready_to_invoice"
-        ? "IO generated"
-        : childBillingStatus.replace(/_/g, " "),
+    lineBillingStatus: (line.billing_status ?? "draft") as CampaignLineBillingStatus,
+    billingStatusLabel: labelForBillingStatus(
+      (line.billing_status ?? "draft") as CampaignLineBillingStatus
+    ),
     rollups,
   };
 }

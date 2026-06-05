@@ -39,8 +39,8 @@ export const PO_ALERT_FRAME: Record<PoStatus, string> = {
 
 export const PO_ALERT_TITLE: Record<PoStatus, string> = {
   draft: "PO draft",
-  active: "PO active",
-  near_limit: "PO near limit",
+  active: "PO consumed",
+  near_limit: "PO consumed",
   exceeded: "PO exceeded",
   expired: "PO expired",
   closed: "PO closed",
@@ -100,10 +100,9 @@ export function computePoStatus(input: {
     return "exceeded";
   }
 
-  if (
-    input.remaining_percent != null &&
-    input.remaining_percent <= 15
-  ) {
+  const consumedPercent =
+    input.po_amount > 0 ? (input.consumed / input.po_amount) * 100 : 0;
+  if (consumedPercent >= 85 && input.consumed <= input.po_amount) {
     return "near_limit";
   }
 

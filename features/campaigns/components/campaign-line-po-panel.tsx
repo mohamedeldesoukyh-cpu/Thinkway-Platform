@@ -110,7 +110,7 @@ function Mini({ label, value }: { label: string; value: string }) {
 function healthLabel(health: PoConsumptionSnapshot["health"]) {
   switch (health) {
     case "healthy":
-      return "Healthy";
+      return "Safe";
     case "near_limit":
       return "Near limit";
     case "exceeded":

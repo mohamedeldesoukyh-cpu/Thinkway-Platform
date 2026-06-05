@@ -175,6 +175,13 @@ function normalizeLineBillingForHierarchy(
   ) {
     return "moved_to_billing";
   }
+  if (
+    line.vendor_io_id &&
+    !line.invoice_id &&
+    (billing === "draft" || billing === "approved")
+  ) {
+    return "moved_to_billing";
+  }
   return billing;
 }
 
@@ -188,6 +195,13 @@ function sanitizeLine(line: Partial<CampaignLineWorkspace> | null | undefined): 
       invoice_id: line.invoice_id,
     });
     let operational_status = normalizeOperationalStatus(line.operational_status);
+    if (
+      operational_status === "moved_to_billing" &&
+      line.vendor_io_id &&
+      !line.invoice_id
+    ) {
+      operational_status = "io_generated";
+    }
     if (operational_status === "reopened" && line.vendor_io_id && !line.invoice_id) {
       operational_status = "io_generated";
     }

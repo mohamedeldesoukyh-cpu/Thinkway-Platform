@@ -318,7 +318,7 @@ export function CampaignLineSheet({
       toast.success(state.message);
       if (poExceededOnSaveRef.current) {
         toast.warning(
-          `Campaign PO exceeded by ${formatMoney(poExceededAmountRef.current, currencyCode)}. Assignment saved — adjust revenue or PO to clear the warning.`,
+          `PO exceeded by ${formatMoney(poExceededAmountRef.current, currencyCode)}. Assignment saved — adjust revenue or PO to clear.`,
           { duration: 6000 }
         );
       }
@@ -750,6 +750,8 @@ export function CampaignLineSheet({
             revenueVatAmount={revenueVatAmount}
             costVatAmount={costVatAmount}
             poExceeded={poSnapshot.is_over_consumed}
+            poAmount={po.po_amount_campaign_currency}
+            poConsumed={poSnapshot.projected_consumed}
           />
         </form>
       </SheetContent>

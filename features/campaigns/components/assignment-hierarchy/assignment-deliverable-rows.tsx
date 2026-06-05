@@ -109,7 +109,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
           <div className="overflow-x-auto pb-0.5">
             <table
               className={cn(
-                "w-full min-w-[1020px] border-collapse text-[11px] font-normal",
+                "w-full min-w-[980px] border-collapse text-[11px] font-normal",
                 OPERATIONAL_TABLE_SURFACE
               )}
             >

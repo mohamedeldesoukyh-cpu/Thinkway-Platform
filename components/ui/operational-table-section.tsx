@@ -53,10 +53,24 @@ export function OperationalTableSection({
       )}
     >
       {leading ? (
-        <div className="border-b border-border/40 px-4 py-2.5 md:px-5">{leading}</div>
+        <div
+          className={cn(
+            "border-b border-border/40 px-4 md:px-5",
+            compact ? "py-2" : "py-2.5"
+          )}
+        >
+          {leading}
+        </div>
       ) : null}
       {toolbar ? (
-        <div className="border-b border-border/40 px-4 py-3 md:px-5">{toolbar}</div>
+        <div
+          className={cn(
+            "border-b border-border/40 px-4 md:px-5",
+            compact ? "py-1.5" : "py-3"
+          )}
+        >
+          {toolbar}
+        </div>
       ) : null}
       {showHeader && !leading ? (
         <CardHeader

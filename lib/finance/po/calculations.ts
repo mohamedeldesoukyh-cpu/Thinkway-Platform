@@ -37,12 +37,10 @@ export function calculatePoConsumption(input: {
 
   let health: PoHealth = "inactive";
   if (poAmount > 0) {
-    if (projectedConsumed > poAmount) {
+    const consumedPercent = (projectedConsumed / poAmount) * 100;
+    if (projectedConsumed > poAmount || consumedPercent > 100) {
       health = "exceeded";
-    } else if (
-      projectedRemainingPercent != null &&
-      projectedRemainingPercent <= 15
-    ) {
+    } else if (consumedPercent >= 85) {
       health = "near_limit";
     } else {
       health = "healthy";

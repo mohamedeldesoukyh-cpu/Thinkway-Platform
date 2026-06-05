@@ -27,7 +27,7 @@ export const SAFE_GRID_TH = cn(
 );
 
 export const SAFE_GRID_TD = cn(
-  "border-b border-border/40 px-2 py-2 align-middle text-[11px]"
+  "border-b border-border/40 px-1.5 py-1.5 align-middle text-[11px]"
 );
 
 export const SAFE_GRID_CONTROL_CELL = cn(SAFE_GRID_TD, "w-9 px-2 text-center");

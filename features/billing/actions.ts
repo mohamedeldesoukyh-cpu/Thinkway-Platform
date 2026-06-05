@@ -14,6 +14,7 @@ import {
   recalculateInvoiceTotals,
   regenerateInvoiceFromDeliverables,
   resolveInvoiceDeliverableIds,
+  prepareLinesForDeliverableInvoicing,
   validateDeliverablesForInvoice,
 } from "@/lib/billing/invoice-from-deliverables";
 import {
@@ -574,50 +575,6 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: resolveError };
   }
 
-  if (lineIds.length > 0 || deliverableIds.length > 0) {
-    const idsFromDeliverables =
-      deliverableIds.length > 0
-        ? (
-            await supabase
-              .from("assignment_deliverables")
-              .select("campaign_line_id")
-              .in("id", deliverableIds)
-          ).data?.map((r) => (r as { campaign_line_id: string }).campaign_line_id) ?? []
-        : [];
-
-    const uniqueLineIds = [...new Set([...lineIds, ...idsFromDeliverables])];
-    if (uniqueLineIds.length > 0) {
-      const { data: opLines, error: opError } = await supabase
-        .from("campaign_lines")
-        .select("id, document_number, operational_status, vendor_io_id")
-        .in("id", uniqueLineIds);
-
-      if (opError) {
-        return { ok: false, message: opError.message };
-      }
-
-      for (const row of opLines ?? []) {
-        const line = row as unknown as {
-          id: string;
-          document_number: string;
-          operational_status: string;
-          vendor_io_id: string | null;
-        };
-        if (
-          !isLineInvoiceEligible({
-            operational_status: line.operational_status,
-            vendor_io_id: line.vendor_io_id,
-          })
-        ) {
-          return {
-            ok: false,
-            message: `${blockInvoiceWithoutVendorIoMessage()} (line ${line.document_number}).`,
-          };
-        }
-      }
-    }
-  }
-
   if (process.env.NODE_ENV === "development") {
     console.debug("[billing-invoice] invoice grouping batch", {
       campaignId: parsed.data.campaign_id,
@@ -643,6 +600,54 @@ export async function createInvoiceFromLinesAction(
 
   if (deliverablesError) {
     return { ok: false, message: deliverablesError };
+  }
+
+  await prepareLinesForDeliverableInvoicing(supabase, deliverables);
+
+  if (lineIds.length > 0 || deliverableIds.length > 0) {
+    const idsFromDeliverables =
+      deliverableIds.length > 0
+        ? [
+            ...new Set(
+              deliverables.map((d) => d.campaign_line?.id).filter(Boolean) as string[]
+            ),
+          ]
+        : [];
+
+    const uniqueLineIds = [...new Set([...lineIds, ...idsFromDeliverables])];
+    if (uniqueLineIds.length > 0) {
+      const { data: opLines, error: opError } = await supabase
+        .from("campaign_lines")
+        .select("id, document_number, operational_status, vendor_io_id, billing_status, invoice_id")
+        .in("id", uniqueLineIds);
+
+      if (opError) {
+        return { ok: false, message: opError.message };
+      }
+
+      for (const row of opLines ?? []) {
+        const line = row as unknown as {
+          id: string;
+          document_number: string;
+          operational_status: string;
+          vendor_io_id: string | null;
+          billing_status: string;
+          invoice_id: string | null;
+        };
+        if (
+          !isLineInvoiceEligible({
+            operational_status: line.operational_status,
+            vendor_io_id: line.vendor_io_id,
+            billing_status: line.billing_status,
+          })
+        ) {
+          return {
+            ok: false,
+            message: `${blockInvoiceWithoutVendorIoMessage()} (line ${line.document_number}).`,
+          };
+        }
+      }
+    }
   }
 
   const validationError = validateDeliverablesForInvoice(deliverables);

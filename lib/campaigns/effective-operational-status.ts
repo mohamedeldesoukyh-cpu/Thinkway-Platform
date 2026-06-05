@@ -18,6 +18,11 @@ export function effectiveLineOperationalStatus(input: {
     return "draft";
   }
 
+  // Legacy rows stored moved_to_billing on operational_status — billing column owns that state.
+  if (raw === "moved_to_billing" && input.vendor_io_id) {
+    return "io_generated";
+  }
+
   if (raw !== "draft") return normalizeOperationalStatus(raw);
 
   const billing = input.billing_status ?? "draft";
@@ -36,10 +41,6 @@ export function effectiveLineOperationalStatus(input: {
         return "reopened";
       }
     }
-  }
-
-  if (input.vendor_io_id && ["moved_to_billing", "approved"].includes(billing)) {
-    return "moved_to_billing";
   }
 
   if (input.vendor_io_id) return "io_generated";

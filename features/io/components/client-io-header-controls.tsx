@@ -64,7 +64,7 @@ export function ClientIoHeaderControls({ io, campaignId, viewHref }: Props) {
             size="sm"
             type="submit"
             disabled={pending}
-            className={cn(OPERATIONAL_CHROME_LABEL, "h-7 px-2")}
+            className="h-7 px-3 font-semibold text-white shadow-sm hover:opacity-90"
           >
             Send Client IO
           </Button>

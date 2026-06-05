@@ -44,8 +44,8 @@ export function buildFinanceAlerts(input: {
         id: `po-near-${node.key}`,
         severity: "warning",
         group: "po",
-        title: "PO near limit",
-        description: `${node.label} has consumed ${Math.round((consumed / budget) * 100)}% of approved PO.`,
+        title: "PO consumed",
+        description: `${node.label}: ${Math.round((consumed / budget) * 100)}% of approved PO consumed.`,
         href: `/finance/po-tracker`,
         amount: roundMoney(budget - consumed),
       });

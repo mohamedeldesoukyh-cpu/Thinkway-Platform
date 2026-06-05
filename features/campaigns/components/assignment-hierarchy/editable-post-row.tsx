@@ -29,7 +29,7 @@ import {
   updatePostScheduleAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
-import { HierarchyBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
+import { DeliverableBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
 import {
   OperationalAmountField,
   OperationalQtyField,
@@ -455,10 +455,7 @@ export function EditablePostRow({
           )}
         </td>
         <td className={GRID_CELL.status}>
-          <HierarchyBillingStatusBadge
-            operationalStatus={parentOperationalStatus}
-            billingStatus={post.billing_status}
-          />
+          <DeliverableBillingStatusBadge billingStatus={post.billing_status} />
         </td>
         <td className={GRID_CELL.invoice}>
           {post.invoice_document_number ? (
