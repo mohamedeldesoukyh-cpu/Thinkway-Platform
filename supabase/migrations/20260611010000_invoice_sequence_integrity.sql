@@ -38,6 +38,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+#variable_conflict use_column
 DECLARE
   v_year integer;
   v_prefix text;
@@ -82,12 +83,14 @@ BEGIN
     surviving_invoices := v_survivors;
     applied := false;
 
-    IF NOT p_dry_run THEN
+    IF NOT p_dry_run AND v_prev IS DISTINCT FROM v_max THEN
       INSERT INTO public.document_sequences (prefix, last_value)
       VALUES (v_prefix, v_max)
       ON CONFLICT (prefix) DO UPDATE
         SET last_value = EXCLUDED.last_value,
             updated_at = timezone('utc', now());
+      applied := true;
+    ELSIF NOT p_dry_run AND v_prev = v_max THEN
       applied := true;
     END IF;
 
@@ -124,10 +127,10 @@ BEGIN
 
     v_next := GREATEST(coalesce(v_next, 0), v_max_existing) + 1;
 
-    UPDATE public.document_sequences
+    UPDATE public.document_sequences ds
     SET last_value = v_next,
         updated_at = timezone('utc', now())
-    WHERE prefix = v_prefix;
+    WHERE ds.prefix = v_prefix;
 
     NEW.document_number := v_prefix || '-' || lpad(v_next::text, 5, '0');
   END IF;
