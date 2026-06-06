@@ -143,6 +143,64 @@ export function isRowInInvoiceSubmitPayload(
   return payload.post_ids.includes(row.id);
 }
 
+function isLeafSelectedForInvoice(
+  leaf: OperationalBillingRow,
+  selection: OperationalSelectionState,
+  rootRows: OperationalBillingRow[]
+): boolean {
+  if (isRowDirectlySelected(leaf, selection)) return true;
+  return isRowEffectivelySelected(leaf, selection, rootRows);
+}
+
+function hasInvoiceableLeafAmount(leaf: OperationalBillingRow): boolean {
+  return leaf.remaining_amount > 0 || leaf.billable_amount > 0;
+}
+
+/** Collect ids from checked billable leaves shown in the invoice sheet. */
+export function collectCheckedInvoiceSheetLeaves(
+  sheetLeaves: OperationalBillingRow[],
+  selection: OperationalSelectionState,
+  rootRows: OperationalBillingRow[]
+): OperationalSelectionPayload {
+  const line_ids: string[] = [];
+  const deliverable_ids: string[] = [];
+  const post_ids: string[] = [];
+
+  for (const leaf of sheetLeaves) {
+    if (!isLeafSelectedForInvoice(leaf, selection, rootRows)) continue;
+    if (!hasInvoiceableLeafAmount(leaf)) continue;
+
+    if (leaf.kind === "assignment") line_ids.push(leaf.id);
+    else if (leaf.kind === "deliverable_group") deliverable_ids.push(leaf.id);
+    else post_ids.push(leaf.id);
+  }
+
+  return { line_ids, deliverable_ids, post_ids };
+}
+
+/**
+ * Final invoice form payload — merges normalized selection with visibly checked
+ * sheet leaves so append/create never submits an empty granular payload.
+ */
+export function buildInvoiceFormPayload(
+  selection: OperationalSelectionState,
+  rootRows: OperationalBillingRow[],
+  sheetLeaves: OperationalBillingRow[]
+): OperationalSelectionPayload {
+  const normalized = selectionToSubmitPayload(selection, rootRows);
+  const fromLeaves = collectCheckedInvoiceSheetLeaves(sheetLeaves, selection, rootRows);
+
+  const mergedSelection = payloadToSelection({
+    line_ids: [...new Set([...normalized.line_ids, ...fromLeaves.line_ids])],
+    deliverable_ids: [
+      ...new Set([...normalized.deliverable_ids, ...fromLeaves.deliverable_ids]),
+    ],
+    post_ids: [...new Set([...normalized.post_ids, ...fromLeaves.post_ids])],
+  });
+
+  return selectionToSubmitPayload(mergedSelection, rootRows);
+}
+
 export function countSubmitPayload(payload: OperationalSelectionPayload): number {
   return payload.line_ids.length + payload.deliverable_ids.length + payload.post_ids.length;
 }

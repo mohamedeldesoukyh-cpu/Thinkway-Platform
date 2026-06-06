@@ -597,13 +597,17 @@ export async function createInvoiceFromLinesAction(
     });
   }
 
-  const usePostInvoicePath = requestedPostIds.length > 0;
+  const usePostInvoicePath = requestedPostIds.length > 0 || postIds.length > 0;
+
+  const deliverableIdsToFetch = [
+    ...new Set([...requestedDeliverableIds, ...deliverableIds]),
+  ];
 
   const { deliverables, error: deliverablesError } =
     await fetchDeliverablesForInvoicing(
       supabase,
       parsed.data.campaign_id,
-      usePostInvoicePath ? requestedDeliverableIds : deliverableIds
+      deliverableIdsToFetch
     );
 
   if (deliverablesError) {
@@ -640,8 +644,9 @@ export async function createInvoiceFromLinesAction(
       };
     }
 
-    if (scopedLineIds.length > 0 || deliverableIds.length > 0) {
+    if (scopedLineIds.length > 0 || deliverableIds.length > 0 || postIds.length > 0) {
       const regenerateScope =
+        !usePostInvoicePath &&
         deliverables.length > 0 &&
         deliverables.every(
           (d) =>
@@ -685,8 +690,13 @@ export async function createInvoiceFromLinesAction(
     }
   }
 
+  const deliverablesToLock = usePostInvoicePath
+    ? deliverables.filter((row) => requestedDeliverableIds.includes(row.id))
+    : deliverables;
+
   if (usePostInvoicePath) {
-    if (requestedPostIds.length > 0 && posts.length === 0) {
+    const postIdsRequested = requestedPostIds.length > 0 || postIds.length > 0;
+    if (postIdsRequested && posts.length === 0) {
       return {
         ok: false,
         message:
@@ -697,27 +707,19 @@ export async function createInvoiceFromLinesAction(
     if (postValidationError) {
       return { ok: false, message: postValidationError };
     }
-  }
+  } else {
+    if (
+      requestedDeliverableIds.length === 0 &&
+      requestedPostIds.length === 0 &&
+      lineIds.length === 0
+    ) {
+      return { ok: false, message: "No billable deliverables selected." };
+    }
 
-  if (
-    !usePostInvoicePath &&
-    requestedDeliverableIds.length === 0 &&
-    requestedPostIds.length === 0 &&
-    lineIds.length === 0
-  ) {
-    return { ok: false, message: "No billable deliverables selected." };
-  }
-
-  const deliverablesToLock = usePostInvoicePath
-    ? deliverables.filter((row) => requestedDeliverableIds.includes(row.id))
-    : deliverables;
-
-  const validationError = validateDeliverablesForInvoice(deliverablesToLock);
-  if (validationError && !usePostInvoicePath) {
-    return { ok: false, message: validationError };
-  }
-  if (validationError && usePostInvoicePath && deliverablesToLock.length > 0) {
-    return { ok: false, message: validationError };
+    const validationError = validateDeliverablesForInvoice(deliverablesToLock);
+    if (validationError) {
+      return { ok: false, message: validationError };
+    }
   }
 
   let invoiceId: string;
@@ -821,11 +823,11 @@ export async function createInvoiceFromLinesAction(
     }
   }
 
-  if (
-    deliverablesToLock.length === 0 &&
-    posts.length === 0 &&
-    lineIds.length > 0
-  ) {
+  const insertedPostRows = usePostInvoicePath && posts.length > 0;
+  const insertedDeliverableRows = deliverablesToLock.length > 0;
+  const willInsertPackageLines = deliverablesToLock.length === 0 && posts.length === 0 && lineIds.length > 0;
+
+  if (willInsertPackageLines) {
     const packageLines = await insertPackageAssignmentLineItems(
       supabase,
       invoiceId,
@@ -845,6 +847,13 @@ export async function createInvoiceFromLinesAction(
       }
       return { ok: false, message: "No billable assignment lines could be invoiced." };
     }
+  }
+
+  if (!insertedPostRows && !insertedDeliverableRows && !willInsertPackageLines) {
+    if (invoiceMode === "new") {
+      await supabase.from("invoices").delete().eq("id", invoiceId);
+    }
+    return { ok: false, message: "No billable deliverables selected." };
   }
 
   await ensureInvoiceFinanceDocument(supabase, invoiceId, user.id);

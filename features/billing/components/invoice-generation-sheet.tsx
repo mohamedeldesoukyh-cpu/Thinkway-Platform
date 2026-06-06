@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   resetToastOnce,
   showErrorToastOnce,
@@ -45,13 +45,12 @@ import {
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import {
-  buildInvoiceSelectionBatch,
+  buildInvoiceFormPayload,
   countSubmitPayload,
   createEmptySelection,
   getRowSelectionStatus,
   isRowInInvoiceSubmitPayload,
   payloadToSelection,
-  selectionToSubmitPayload,
   toggleOperationalRowSelection,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
@@ -108,6 +107,7 @@ export function InvoiceGenerationSheet({
 
   const router = useRouter();
   const handledActionRef = useRef<string | null>(null);
+  const sheetInitializedRef = useRef(false);
   const isAppend = targetMode === "append";
   const [selected, setSelected] = useState<OperationalSelectionState>(createEmptySelection());
   const [existingInvoiceId, setExistingInvoiceId] = useState("");
@@ -125,6 +125,7 @@ export function InvoiceGenerationSheet({
 
   useEffect(() => {
     if (!open) {
+      sheetInitializedRef.current = false;
       setSelected(createEmptySelection());
       setExistingInvoiceId("");
       handledActionRef.current = null;
@@ -132,9 +133,11 @@ export function InvoiceGenerationSheet({
       return;
     }
 
-    if (initialSelection) {
-      setSelected(payloadToSelection(initialSelection));
-      buildInvoiceSelectionBatch(payloadToSelection(initialSelection), operationalRows);
+    if (!sheetInitializedRef.current) {
+      sheetInitializedRef.current = true;
+      if (initialSelection) {
+        setSelected(payloadToSelection(initialSelection));
+      }
     }
 
     if (isAppend && appendableOptions.length > 0) {
@@ -144,14 +147,7 @@ export function InvoiceGenerationSheet({
     } else {
       setExistingInvoiceId("");
     }
-  }, [
-    open,
-    initialSelection,
-    isAppend,
-    appendableOptions,
-    operationalRows,
-    initialExistingInvoiceId,
-  ]);
+  }, [open, initialSelection, isAppend, appendableOptions, initialExistingInvoiceId]);
 
   const invoiceSheetLeaves = useMemo(() => {
     return flattenOperationalLeaves(operationalRows).filter(
@@ -165,8 +161,8 @@ export function InvoiceGenerationSheet({
   );
 
   const submitPayload = useMemo(
-    () => selectionToSubmitPayload(selected, operationalRows),
-    [selected, operationalRows]
+    () => buildInvoiceFormPayload(selected, operationalRows, invoiceSheetLeaves),
+    [selected, operationalRows, invoiceSheetLeaves]
   );
 
   const financialPreview = useMemo(
@@ -237,6 +233,34 @@ export function InvoiceGenerationSheet({
     setSelected((prev) => toggleOperationalRowSelection(row, prev, operationalRows));
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const payload = buildInvoiceFormPayload(selected, operationalRows, invoiceSheetLeaves);
+    if (countSubmitPayload(payload) === 0) return;
+
+    const formData = new FormData();
+    formData.set("campaign_id", campaignId);
+    formData.set("line_ids", payload.line_ids.join(","));
+    formData.set("deliverable_ids", payload.deliverable_ids.join(","));
+    formData.set("post_ids", payload.post_ids.join(","));
+    formData.set("invoice_mode", targetMode);
+    formData.set("existing_invoice_id", isAppend ? existingInvoiceId : "");
+
+    const notes = event.currentTarget.elements.namedItem("notes");
+    if (notes instanceof HTMLTextAreaElement && notes.value.trim()) {
+      formData.set("notes", notes.value.trim());
+    }
+
+    if (!isAppend) {
+      const dueDate = event.currentTarget.elements.namedItem("due_date");
+      if (dueDate instanceof HTMLInputElement && dueDate.value.trim()) {
+        formData.set("due_date", dueDate.value.trim());
+      }
+    }
+
+    formAction(formData);
+  }
+
   const payload = submitPayload;
   const hasSelection = countSubmitPayload(payload) > 0;
 
@@ -252,17 +276,7 @@ export function InvoiceGenerationSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form action={formAction} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <input type="hidden" name="campaign_id" value={campaignId} />
-          <input type="hidden" name="line_ids" value={payload.line_ids.join(",")} />
-          <input type="hidden" name="deliverable_ids" value={payload.deliverable_ids.join(",")} />
-          <input type="hidden" name="post_ids" value={payload.post_ids.join(",")} />
-          <input type="hidden" name="invoice_mode" value={targetMode} />
-          <input
-            type="hidden"
-            name="existing_invoice_id"
-            value={isAppend ? existingInvoiceId : ""}
-          />
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
             <div className="flex flex-col gap-4">
@@ -305,9 +319,7 @@ export function InvoiceGenerationSheet({
                     const locked = !selectable;
                     const status = getRowSelectionStatus(row, selected);
                     const inSubmitPayload = isRowInInvoiceSubmitPayload(row, payload);
-                    const checked = locked
-                      ? inSubmitPayload
-                      : inSubmitPayload || status === "checked";
+                    const checked = inSubmitPayload;
 
                     return (
                       <label
