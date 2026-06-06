@@ -51,6 +51,11 @@ import {
   resolveBulkBillingTargets,
 } from "@/lib/billing/sync-operational-row-billing";
 import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
+import {
+  captureInvoiceLifecycleSnapshot,
+  logInvoiceLifecycleTransition,
+  type InvoiceLineItemOpSummary,
+} from "@/lib/billing/invoice-lifecycle-debug";
 
 import {
   approveLineForBillingSchema,
@@ -830,6 +835,33 @@ export async function createInvoiceFromLinesAction(
     }
   }
 
+  const touchedLineIds = [
+    ...new Set([
+      ...posts.map((post) => post.campaign_line_id),
+      ...deliverablesToLock.map((row) => row.campaign_line_id),
+      ...lineIds,
+    ]),
+  ].filter(Boolean);
+
+  const lifecycleFlow = invoiceMode === "append" ? ("append" as const) : ("new" as const);
+  const lifecycleBefore =
+    invoiceMode === "append"
+      ? await captureInvoiceLifecycleSnapshot(supabase, invoiceId, touchedLineIds)
+      : null;
+
+  if (invoiceMode === "append") {
+    logInvoiceLifecycleTransition({
+      flow: lifecycleFlow,
+      phase: "append/regenerate:start",
+      invoiceId,
+      invoiceDocumentNumber,
+      touchedLineIds,
+      before: lifecycleBefore,
+    });
+  }
+
+  const mergedLineItemOps: InvoiceLineItemOpSummary = { updated: [], created: [] };
+
   if (usePostInvoicePath && posts.length > 0) {
     const postLockResult = await lockPostsOnInvoice(
       supabase,
@@ -841,6 +873,10 @@ export async function createInvoiceFromLinesAction(
         updateExistingOnTargetInvoice: invoiceMode === "append",
       }
     );
+    if (postLockResult.lineItemOps) {
+      mergedLineItemOps.updated.push(...postLockResult.lineItemOps.updated);
+      mergedLineItemOps.created.push(...postLockResult.lineItemOps.created);
+    }
     if (postLockResult.error) {
       if (invoiceMode === "new") {
         await supabase.from("invoices").delete().eq("id", invoiceId);
@@ -861,6 +897,10 @@ export async function createInvoiceFromLinesAction(
       }
     );
 
+    if (lockResult.lineItemOps) {
+      mergedLineItemOps.updated.push(...lockResult.lineItemOps.updated);
+      mergedLineItemOps.created.push(...lockResult.lineItemOps.created);
+    }
     if (lockResult.error) {
       if (invoiceMode === "new") {
         await supabase.from("invoices").delete().eq("id", invoiceId);
@@ -904,6 +944,59 @@ export async function createInvoiceFromLinesAction(
 
   await ensureInvoiceFinanceDocument(supabase, invoiceId, user.id);
   await syncInvoiceOperationalStates(supabase, invoiceId, "draft", user.id);
+  const recalculateResult = await recalculateInvoiceTotals(supabase, invoiceId);
+
+  let usedFallbackLineLock = false;
+  let lockResolvedLineIds: string[] = [];
+
+  if (touchedLineIds.length > 0) {
+    const { lockInvoiceAssignments } = await import("@/lib/finance/invoice-locks");
+    const lockResult = await lockInvoiceAssignments(supabase, invoiceId, {
+      billingStatus: "invoiced",
+    });
+    lockResolvedLineIds = lockResult.lineIds;
+    if (lockResult.lineIds.length === 0) {
+      usedFallbackLineLock = true;
+      const now = new Date().toISOString();
+      await supabase
+        .from("campaign_lines")
+        .update({
+          ...lineBillingPatch("invoiced"),
+          operational_status: "locked",
+          revenue_locked: true,
+          cost_locked: true,
+          vendor_assignment_locked: true,
+          vat_locked: true,
+          invoice_id: invoiceId,
+          billing_invoiced_at: now,
+          finance_override_until: null,
+        } as never)
+        .in("id", touchedLineIds);
+      await syncLineOperationalStatusBatch(supabase, touchedLineIds);
+    }
+  }
+
+  const lifecycleAfter = await captureInvoiceLifecycleSnapshot(
+    supabase,
+    invoiceId,
+    touchedLineIds
+  );
+
+  if (invoiceMode === "append") {
+    logInvoiceLifecycleTransition({
+      flow: lifecycleFlow,
+      phase: "append/regenerate:complete",
+      invoiceId,
+      invoiceDocumentNumber,
+      touchedLineIds,
+      before: lifecycleBefore,
+      after: lifecycleAfter,
+      lineItemOps: mergedLineItemOps,
+      recalculateError: recalculateResult.error ?? null,
+      lockResolvedLineIds,
+      usedFallbackLineLock,
+    });
+  }
 
   revalidateBilling({
     campaignId: parsed.data.campaign_id,
@@ -1460,6 +1553,28 @@ export async function regenerateInvoiceAction(
 
   const { vatRate } = await resolveClientBillingVatRate(supabase, invoice.client_id);
 
+  const regenerateTouchedLineIds = [
+    ...new Set([
+      ...scopedLineIds,
+      ...(linkedLines ?? []).map((line) => (line as { id: string }).id),
+    ]),
+  ];
+
+  const regenerateBefore = await captureInvoiceLifecycleSnapshot(
+    supabase,
+    invoice.id,
+    regenerateTouchedLineIds
+  );
+
+  logInvoiceLifecycleTransition({
+    flow: "regenerate",
+    phase: "regenerate:start",
+    invoiceId: invoice.id,
+    invoiceDocumentNumber: invoice.document_number,
+    touchedLineIds: regenerateTouchedLineIds,
+    before: regenerateBefore,
+  });
+
   const deliverableRegen = await regenerateInvoiceFromDeliverables(
     supabase,
     invoice.id,
@@ -1519,8 +1634,20 @@ export async function regenerateInvoiceAction(
     return { ok: false, message: invoiceUpdateError.message };
   }
 
-  const lineIds = lines.map((l) => (l as { id: string }).id);
-  if (lineIds.length > 0) {
+  const regenerateRecalculateResult = await recalculateInvoiceTotals(supabase, invoice.id);
+  const { lockInvoiceAssignments } = await import("@/lib/finance/invoice-locks");
+  const lockResult = await lockInvoiceAssignments(supabase, invoice.id, {
+    billingStatus: "invoiced",
+  });
+
+  const lineIds =
+    lockResult.lineIds.length > 0
+      ? lockResult.lineIds
+      : lines.map((l) => (l as { id: string }).id);
+
+  const usedFallbackLineLock = lineIds.length > 0 && lockResult.lineIds.length === 0;
+
+  if (usedFallbackLineLock) {
     const now = new Date().toISOString();
     await supabase
       .from("campaign_lines")
@@ -1533,10 +1660,43 @@ export async function regenerateInvoiceAction(
         vat_locked: true,
         finance_override_until: null,
         billing_invoiced_at: now,
+        invoice_id: invoice.id,
       })
       .in("id", lineIds);
 
     await syncLineOperationalStatusBatch(supabase, lineIds);
+  }
+
+  const regenerateAfter = await captureInvoiceLifecycleSnapshot(
+    supabase,
+    invoice.id,
+    regenerateTouchedLineIds
+  );
+
+  logInvoiceLifecycleTransition({
+    flow: "regenerate",
+    phase: "regenerate:complete",
+    invoiceId: invoice.id,
+    invoiceDocumentNumber: invoice.document_number,
+    touchedLineIds: regenerateTouchedLineIds,
+    before: regenerateBefore,
+    after: regenerateAfter,
+    lineItemOps: {
+      updated: [],
+      created: regenerateAfter.lineItems.map((item) => item.id),
+    },
+    recalculateError: regenerateRecalculateResult.error ?? null,
+    lockResolvedLineIds: lockResult.lineIds,
+    usedFallbackLineLock,
+  });
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[invoice-lifecycle-debug] regenerate strategy", {
+      invoiceId: invoice.id,
+      usedDeliverableRebuild: deliverableRegen.usedDeliverables,
+      lineItemCountBefore: regenerateBefore.lineItemCount,
+      lineItemCountAfter: regenerateAfter.lineItemCount,
+    });
   }
 
   await governanceDb(supabase).from("invoice_versions").insert({

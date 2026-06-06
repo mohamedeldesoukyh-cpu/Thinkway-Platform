@@ -1,8 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { RefreshCwIcon, Undo2Icon } from "lucide-react";
-import { toast } from "sonner";
+import {
+  showErrorToastOnce,
+  showSuccessToastOnce,
+} from "@/lib/ui/toast-once";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +36,8 @@ type InvoiceRegenerationPanelProps = {
 export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelProps) {
   const [mode, setMode] = useState<"ungenerate" | "regenerate" | null>(null);
   const [reason, setReason] = useState("");
+  const handledUngenerateRef = useRef<string | null>(null);
+  const handledRegenerateRef = useRef<string | null>(null);
 
   const [ungenerateState, ungenerateAction, ungeneratePending] = useActionState(
     ungenerateInvoiceAction,
@@ -45,21 +50,33 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
 
   useEffect(() => {
     if (!ungenerateState.message) return;
+    const actionKey = `${ungenerateState.ok}:${ungenerateState.message}`;
+    if (handledUngenerateRef.current === actionKey) return;
+    handledUngenerateRef.current = actionKey;
+
     if (ungenerateState.ok) {
-      toast.success(ungenerateState.message);
+      showSuccessToastOnce(ungenerateState.message, { id: "invoice-ungenerate" });
       setMode(null);
       setReason("");
-    } else toast.error(ungenerateState.message);
-  }, [ungenerateState]);
+    } else {
+      showErrorToastOnce(ungenerateState.message, { id: "invoice-ungenerate" });
+    }
+  }, [ungenerateState.message, ungenerateState.ok]);
 
   useEffect(() => {
     if (!regenerateState.message) return;
+    const actionKey = `${regenerateState.ok}:${regenerateState.message}`;
+    if (handledRegenerateRef.current === actionKey) return;
+    handledRegenerateRef.current = actionKey;
+
     if (regenerateState.ok) {
-      toast.success(regenerateState.message);
+      showSuccessToastOnce(regenerateState.message, { id: "invoice-regenerate" });
       setMode(null);
       setReason("");
-    } else toast.error(regenerateState.message);
-  }, [regenerateState]);
+    } else {
+      showErrorToastOnce(regenerateState.message, { id: "invoice-regenerate" });
+    }
+  }, [regenerateState.message, regenerateState.ok]);
 
   const statusLabel =
     invoice.regeneration_status === "pending_regeneration"

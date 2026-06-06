@@ -24,6 +24,7 @@ import {
   resolveLinkedInvoiceIds,
   type InvoiceValidationContext,
 } from "@/lib/billing/invoice-validation-context";
+import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
 import { devLog } from "@/lib/dev-log";
 
 export type PostInvoiceLine = {
@@ -43,6 +44,8 @@ export type PostInvoiceLine = {
     id: string;
     platform: string;
     deliverable_type: string;
+    revenue_before_vat: number;
+    billable_amount: number;
     revenue_vat_percent: number | null;
     revenue_vat_exempt: boolean | null;
     campaign_line: {
@@ -52,6 +55,8 @@ export type PostInvoiceLine = {
       billing_status: string;
       invoice_id: string | null;
       campaign_header_id: string;
+      revenue: number;
+      revenue_before_vat: number;
       revenue_vat_percent: number | null;
       revenue_vat_exempt: boolean | null;
     } | null;
@@ -69,10 +74,41 @@ function postDisplayLabel(platform: string, deliverableType: string, sequence: n
   return `${platformLabel(platform)} ${deliverableType} #${sequence}`;
 }
 
-function postInvoiceBeforeVat(post: PostInvoiceLine): number {
-  if (post.remaining_amount > 0) return post.remaining_amount;
-  if (post.revenue_before_vat > 0) return post.revenue_before_vat;
-  return post.billable_amount;
+function postInvoiceBeforeVat(
+  post: PostInvoiceLine,
+  options?: { updatingExisting?: boolean }
+): number {
+  const remaining = Number(post.remaining_amount ?? 0);
+  const revenueBeforeVat = Number(post.revenue_before_vat ?? 0);
+  const billable = Number(post.billable_amount ?? 0);
+  const invoiced = Number(post.invoiced_amount ?? 0);
+  const deliverable = post.assignment_deliverable;
+  const deliverableRevenue = Number(deliverable?.revenue_before_vat ?? 0);
+  const deliverableBillable = Number(deliverable?.billable_amount ?? 0);
+  const lineRevenue = Number(
+    deliverable?.campaign_line?.revenue_before_vat ??
+      deliverable?.campaign_line?.revenue ??
+      0
+  );
+
+  if (remaining > 0) return remaining;
+
+  if (
+    options?.updatingExisting ||
+    Boolean(post.locked_at || post.invoice_line_item_id)
+  ) {
+    return Math.max(
+      revenueBeforeVat,
+      billable,
+      invoiced,
+      deliverableRevenue,
+      deliverableBillable,
+      lineRevenue
+    );
+  }
+
+  if (revenueBeforeVat > 0) return revenueBeforeVat;
+  return billable;
 }
 
 function postInvoiceLinePayload(
@@ -88,7 +124,9 @@ function postInvoiceLinePayload(
     throw new Error("Post billing context missing.");
   }
 
-  const beforeVat = postInvoiceBeforeVat(post);
+  const beforeVat = postInvoiceBeforeVat(post, {
+    updatingExisting: Boolean(post.invoice_line_item_id),
+  });
   const vatExempt = Boolean(deliverable.revenue_vat_exempt || line.revenue_vat_exempt);
   const vatPercent = resolveInvoiceLineVatPercent(
     {
@@ -199,7 +237,7 @@ export async function fetchPostsForInvoicing(
   const { data: lines, error: lineError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue_vat_percent, revenue_vat_exempt"
+      "id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt"
     )
     .eq("campaign_header_id", campaignId)
     .in("id", lineIds);
@@ -217,6 +255,8 @@ export async function fetchPostsForInvoicing(
         billing_status: string;
         invoice_id: string | null;
         campaign_header_id: string;
+        revenue: number | null;
+        revenue_before_vat: number | null;
         revenue_vat_percent: number | null;
         revenue_vat_exempt: boolean | null;
       };
@@ -226,7 +266,9 @@ export async function fetchPostsForInvoicing(
 
   const { data: deliverables, error: deliverableError } = await supabase
     .from("assignment_deliverables")
-    .select("id, platform, deliverable_type, revenue_vat_percent, revenue_vat_exempt")
+    .select(
+      "id, platform, deliverable_type, revenue_before_vat, billable_amount, revenue_vat_percent, revenue_vat_exempt"
+    )
     .in("id", deliverableIds);
 
   if (deliverableError) {
@@ -239,6 +281,8 @@ export async function fetchPostsForInvoicing(
         id: string;
         platform: string;
         deliverable_type: string;
+        revenue_before_vat: number | null;
+        billable_amount: number | null;
         revenue_vat_percent: number | null;
         revenue_vat_exempt: boolean | null;
       };
@@ -283,6 +327,8 @@ export async function fetchPostsForInvoicing(
         id: deliverable.id,
         platform: deliverable.platform,
         deliverable_type: deliverable.deliverable_type,
+        revenue_before_vat: Number(deliverable.revenue_before_vat ?? 0),
+        billable_amount: Number(deliverable.billable_amount ?? 0),
         revenue_vat_percent: Number(deliverable.revenue_vat_percent ?? 0),
         revenue_vat_exempt: Boolean(deliverable.revenue_vat_exempt),
         campaign_line: {
@@ -292,6 +338,8 @@ export async function fetchPostsForInvoicing(
           billing_status: line.billing_status,
           invoice_id: line.invoice_id,
           campaign_header_id: line.campaign_header_id,
+          revenue: Number(line.revenue ?? 0),
+          revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
           revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
           revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
         },
@@ -373,22 +421,24 @@ export async function lockPostsOnInvoice(
   headerId: string,
   posts: PostInvoiceLine[],
   options?: { defaultVatRate?: number; updateExistingOnTargetInvoice?: boolean }
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; lineItemOps?: InvoiceLineItemOpSummary }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
   const deliverableIds = new Set<string>();
+  const lineItemOps: InvoiceLineItemOpSummary = { updated: [], created: [] };
 
   for (const post of posts) {
     sortOrder += 1;
-    const billable = postInvoiceBeforeVat(post);
-    const payload = postInvoiceLinePayload(invoiceId, headerId, post, sortOrder, defaultVatRate);
-    const reuseLineItem =
+    const updatingExisting =
       updateExisting &&
-      post.invoice_line_item_id &&
+      Boolean(post.invoice_line_item_id) &&
       post.linked_invoice_id === invoiceId;
+    const billable = postInvoiceBeforeVat(post, { updatingExisting });
+    const payload = postInvoiceLinePayload(invoiceId, headerId, post, sortOrder, defaultVatRate);
+    const reuseLineItem = updatingExisting;
 
     let lineItemId = post.invoice_line_item_id;
 
@@ -399,8 +449,9 @@ export async function lockPostsOnInvoice(
         .eq("id", lineItemId);
 
       if (updateError) {
-        return { error: updateError.message };
+        return { error: updateError.message, lineItemOps };
       }
+      lineItemOps.updated.push(lineItemId!);
     } else {
       const { data: item, error: itemError } = await supabase
         .from("invoice_line_items")
@@ -409,10 +460,11 @@ export async function lockPostsOnInvoice(
         .single();
 
       if (itemError || !item) {
-        return { error: itemError?.message ?? "Invoice line item creation failed." };
+        return { error: itemError?.message ?? "Invoice line item creation failed.", lineItemOps };
       }
 
       lineItemId = item.id;
+      lineItemOps.created.push(item.id);
     }
 
     const { error: lockError } = await supabase
@@ -428,7 +480,7 @@ export async function lockPostsOnInvoice(
       .eq("id", post.id);
 
     if (lockError) {
-      return { error: lockError.message };
+      return { error: lockError.message, lineItemOps };
     }
 
     lineIds.add(post.campaign_line_id);
@@ -439,6 +491,8 @@ export async function lockPostsOnInvoice(
         postId: post.id,
         invoiceId,
         billable,
+        lineItemMode: reuseLineItem ? "updated" : "created",
+        lineItemId,
       });
     }
   }
@@ -488,8 +542,8 @@ export async function lockPostsOnInvoice(
 
   const totalsError = await recalculateInvoiceTotals(supabase, invoiceId);
   if (totalsError.error) {
-    return totalsError;
+    return { ...totalsError, lineItemOps };
   }
 
-  return {};
+  return { lineItemOps };
 }

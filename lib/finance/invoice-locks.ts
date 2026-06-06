@@ -29,27 +29,63 @@ async function resolveInvoiceLineIds(
   supabase: SupabaseClient,
   invoiceId: string
 ): Promise<string[]> {
+  const lineIds = new Set<string>();
+
   const { data: linkedLines } = await supabase
     .from("campaign_lines")
     .select("id")
     .eq("invoice_id", invoiceId);
 
-  const fromLines = (linkedLines ?? []).map((l) => (l as { id: string }).id);
+  for (const row of linkedLines ?? []) {
+    lineIds.add((row as { id: string }).id);
+  }
 
   const { data: items } = await supabase
     .from("invoice_line_items")
-    .select("campaign_line_id")
+    .select(
+      "campaign_line_id, assignment_deliverable_id, assignment_post_schedule_id"
+    )
     .eq("invoice_id", invoiceId);
 
-  const fromItems = [
-    ...new Set(
-      (items ?? [])
-        .map((i) => (i as { campaign_line_id: string | null }).campaign_line_id)
-        .filter(Boolean) as string[]
-    ),
-  ];
+  const postIds = new Set<string>();
+  const deliverableIds = new Set<string>();
 
-  return [...new Set([...fromLines, ...fromItems])];
+  for (const item of items ?? []) {
+    const row = item as {
+      campaign_line_id: string | null;
+      assignment_deliverable_id: string | null;
+      assignment_post_schedule_id: string | null;
+    };
+    if (row.campaign_line_id) lineIds.add(row.campaign_line_id);
+    if (row.assignment_post_schedule_id) postIds.add(row.assignment_post_schedule_id);
+    if (row.assignment_deliverable_id) deliverableIds.add(row.assignment_deliverable_id);
+  }
+
+  if (postIds.size > 0) {
+    const { data: posts } = await supabase
+      .from("assignment_post_schedule")
+      .select("campaign_line_id")
+      .in("id", [...postIds]);
+
+    for (const post of posts ?? []) {
+      const lineId = (post as { campaign_line_id: string | null }).campaign_line_id;
+      if (lineId) lineIds.add(lineId);
+    }
+  }
+
+  if (deliverableIds.size > 0) {
+    const { data: deliverables } = await supabase
+      .from("assignment_deliverables")
+      .select("campaign_line_id")
+      .in("id", [...deliverableIds]);
+
+    for (const deliverable of deliverables ?? []) {
+      const lineId = (deliverable as { campaign_line_id: string | null }).campaign_line_id;
+      if (lineId) lineIds.add(lineId);
+    }
+  }
+
+  return [...lineIds];
 }
 
 /** Lock assignments, deliverables, pricing, and IO editing for an invoiced state. */

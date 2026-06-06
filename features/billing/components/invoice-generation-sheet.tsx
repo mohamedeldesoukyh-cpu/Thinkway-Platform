@@ -128,10 +128,11 @@ export function InvoiceGenerationSheet({
       sheetInitializedRef.current = false;
       setSelected(createEmptySelection());
       setExistingInvoiceId("");
-      handledActionRef.current = null;
-      resetToastOnce("invoice-generation");
       return;
     }
+
+    handledActionRef.current = null;
+    resetToastOnce("invoice-generation");
 
     if (!sheetInitializedRef.current) {
       sheetInitializedRef.current = true;
@@ -199,7 +200,7 @@ export function InvoiceGenerationSheet({
   );
 
   useEffect(() => {
-    if (!state.message) return;
+    if (!open || !state.message) return;
 
     const actionKey = `${state.ok}:${state.message}:${state.invoiceId ?? ""}:${state.campaignId ?? campaignId}`;
     if (handledActionRef.current === actionKey) return;
@@ -219,6 +220,7 @@ export function InvoiceGenerationSheet({
       showErrorToastOnce(state.message, { id: "invoice-generation" });
     }
   }, [
+    open,
     state.message,
     state.ok,
     state.invoiceId,

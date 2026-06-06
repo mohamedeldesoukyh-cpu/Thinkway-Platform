@@ -23,6 +23,7 @@ import {
   resolveLinkedInvoiceIds,
   type InvoiceValidationContext,
 } from "@/lib/billing/invoice-validation-context";
+import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
 import { devLog } from "@/lib/dev-log";
 
 function lineBillingPatch(billingStatus: string) {
@@ -92,14 +93,26 @@ export function mapDeliverableRecord(
   };
 }
 
-export function resolveInvoiceLineBeforeVat(deliverable: DeliverableBillingRow): number {
-  if (deliverable.revenue_before_vat > 0) {
-    return deliverable.revenue_before_vat;
+export function resolveInvoiceLineBeforeVat(
+  deliverable: DeliverableBillingRow,
+  options?: { updatingExisting?: boolean }
+): number {
+  const revenueBeforeVat = Number(deliverable.revenue_before_vat ?? 0);
+  const remaining = Number(deliverable.remaining_amount ?? 0);
+  const billable = Number(deliverable.billable_amount ?? 0);
+  const invoiced = Number(deliverable.invoiced_amount ?? 0);
+
+  if (remaining > 0) return remaining;
+
+  if (
+    options?.updatingExisting ||
+    Boolean(deliverable.locked_at || deliverable.invoice_line_item_id)
+  ) {
+    return Math.max(revenueBeforeVat, billable, invoiced);
   }
-  if (deliverable.remaining_amount > 0) {
-    return deliverable.remaining_amount;
-  }
-  return deliverable.billable_amount;
+
+  if (revenueBeforeVat > 0) return revenueBeforeVat;
+  return billable;
 }
 
 export function resolveInvoiceLineVatPercent(
@@ -125,7 +138,9 @@ function deliverableInvoiceLinePayload(
   sortOrder: number,
   defaultVatRate: number
 ) {
-  const beforeVat = resolveInvoiceLineBeforeVat(deliverable);
+  const beforeVat = resolveInvoiceLineBeforeVat(deliverable, {
+    updatingExisting: Boolean(deliverable.invoice_line_item_id),
+  });
   const vatExempt =
     deliverable.revenue_vat_exempt || Boolean(line.revenue_vat_exempt);
   const vatPercent = resolveInvoiceLineVatPercent(deliverable, line, defaultVatRate);
@@ -436,12 +451,13 @@ export async function lockDeliverablesOnInvoice(
   headerId: string,
   deliverables: DeliverableRecord[],
   options?: { defaultVatRate?: number; updateExistingOnTargetInvoice?: boolean }
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; lineItemOps?: InvoiceLineItemOpSummary }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
+  const lineItemOps: InvoiceLineItemOpSummary = { updated: [], created: [] };
 
   for (const row of deliverables) {
     const line = row.campaign_line!;
@@ -461,6 +477,9 @@ export async function lockDeliverablesOnInvoice(
       updateExisting &&
       row.invoice_line_item_id &&
       row.linked_invoice_id === invoiceId;
+    const billable = resolveInvoiceLineBeforeVat(mapped, {
+      updatingExisting: Boolean(reuseLineItem),
+    });
 
     let lineItemId = row.invoice_line_item_id;
 
@@ -471,8 +490,9 @@ export async function lockDeliverablesOnInvoice(
         .eq("id", lineItemId);
 
       if (updateError) {
-        return { error: updateError.message };
+        return { error: updateError.message, lineItemOps };
       }
+      lineItemOps.updated.push(lineItemId!);
     } else {
       const { data: item, error: itemError } = await supabase
         .from("invoice_line_items")
@@ -481,13 +501,13 @@ export async function lockDeliverablesOnInvoice(
         .single();
 
       if (itemError || !item) {
-        return { error: itemError?.message ?? "Invoice line item creation failed." };
+        return { error: itemError?.message ?? "Invoice line item creation failed.", lineItemOps };
       }
 
       lineItemId = item.id;
+      lineItemOps.created.push(item.id);
     }
 
-    const billable = Number(row.billable_amount);
     const { error: lockError } = await supabase
       .from("assignment_deliverables")
       .update({
@@ -501,7 +521,7 @@ export async function lockDeliverablesOnInvoice(
       .eq("id", row.id);
 
     if (lockError) {
-      return { error: lockError.message };
+      return { error: lockError.message, lineItemOps };
     }
 
     const postSyncError = await syncPostScheduleOnDeliverableInvoiceLock(supabase, {
@@ -512,7 +532,7 @@ export async function lockDeliverablesOnInvoice(
     });
 
     if (postSyncError.error) {
-      return { error: postSyncError.error };
+      return { error: postSyncError.error, lineItemOps };
     }
 
     if (process.env.NODE_ENV === "development") {
@@ -520,6 +540,8 @@ export async function lockDeliverablesOnInvoice(
         deliverableId: row.id,
         invoiceId,
         billable,
+        lineItemMode: reuseLineItem ? "updated" : "created",
+        lineItemId,
       });
     }
   }
@@ -574,10 +596,10 @@ export async function lockDeliverablesOnInvoice(
 
   const totalsError = await recalculateInvoiceTotals(supabase, invoiceId);
   if (totalsError.error) {
-    return totalsError;
+    return { ...totalsError, lineItemOps };
   }
 
-  return {};
+  return { lineItemOps };
 }
 
 export async function regenerateInvoiceFromDeliverables(
