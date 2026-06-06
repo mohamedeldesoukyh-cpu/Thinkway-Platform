@@ -17,9 +17,16 @@ import {
 } from "@/lib/billing/invoice-from-deliverables";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
+import {
+  invoicedRowAllowed,
+  invoicedRowBlockMessage,
+  isInvoicedOperationalRow,
+  resolveLinkedInvoiceIds,
+  type InvoiceValidationContext,
+} from "@/lib/billing/invoice-validation-context";
 import { devLog } from "@/lib/dev-log";
 
-type PostInvoiceLine = {
+export type PostInvoiceLine = {
   id: string;
   campaign_line_id: string;
   assignment_deliverable_id: string;
@@ -31,6 +38,7 @@ type PostInvoiceLine = {
   billing_status: string;
   locked_at: string | null;
   invoice_line_item_id: string | null;
+  linked_invoice_id?: string | null;
   assignment_deliverable: {
     id: string;
     platform: string;
@@ -238,6 +246,11 @@ export async function fetchPostsForInvoicing(
     })
   );
 
+  const lineItemIds = rawPosts
+    .map((row) => row.invoice_line_item_id)
+    .filter(Boolean) as string[];
+  const linkedInvoiceByLineItem = await resolveLinkedInvoiceIds(supabase, lineItemIds);
+
   const posts: PostInvoiceLine[] = [];
 
   for (const row of rawPosts) {
@@ -263,6 +276,9 @@ export async function fetchPostsForInvoicing(
       billing_status: String(row.billing_status ?? "ready_to_invoice"),
       locked_at: row.locked_at ?? null,
       invoice_line_item_id: row.invoice_line_item_id ?? null,
+      linked_invoice_id: row.invoice_line_item_id
+        ? (linkedInvoiceByLineItem.get(row.invoice_line_item_id) ?? null)
+        : null,
       assignment_deliverable: {
         id: deliverable.id,
         platform: deliverable.platform,
@@ -286,7 +302,10 @@ export async function fetchPostsForInvoicing(
   return { posts };
 }
 
-export function validatePostsForInvoice(posts: PostInvoiceLine[]): string | null {
+export function validatePostsForInvoice(
+  posts: PostInvoiceLine[],
+  validationCtx: InvoiceValidationContext = { mode: "new" }
+): string | null {
   if (posts.length === 0) {
     return "No billable deliverables selected.";
   }
@@ -295,10 +314,15 @@ export function validatePostsForInvoice(posts: PostInvoiceLine[]): string | null
     if (!post.assignment_deliverable?.campaign_line) {
       return "Selected post rows are missing billing context.";
     }
-    if (post.locked_at || post.invoice_line_item_id) {
-      return "Selected post rows include already invoiced items.";
+    if (!invoicedRowAllowed(post, validationCtx)) {
+      return invoicedRowBlockMessage("post", validationCtx);
     }
-    if (post.remaining_amount <= 0 && postInvoiceBeforeVat(post) <= 0) {
+    if (
+      validationCtx.mode === "new" &&
+      !isInvoicedOperationalRow(post) &&
+      post.remaining_amount <= 0 &&
+      postInvoiceBeforeVat(post) <= 0
+    ) {
       return "Selected post rows include already invoiced items.";
     }
     if (post.billing_status === "disputed" || post.billing_status === "cancelled") {
@@ -348,9 +372,10 @@ export async function lockPostsOnInvoice(
   invoiceId: string,
   headerId: string,
   posts: PostInvoiceLine[],
-  options?: { defaultVatRate?: number }
+  options?: { defaultVatRate?: number; updateExistingOnTargetInvoice?: boolean }
 ): Promise<{ error?: string }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
+  const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
@@ -359,15 +384,35 @@ export async function lockPostsOnInvoice(
   for (const post of posts) {
     sortOrder += 1;
     const billable = postInvoiceBeforeVat(post);
+    const payload = postInvoiceLinePayload(invoiceId, headerId, post, sortOrder, defaultVatRate);
+    const reuseLineItem =
+      updateExisting &&
+      post.invoice_line_item_id &&
+      post.linked_invoice_id === invoiceId;
 
-    const { data: item, error: itemError } = await supabase
-      .from("invoice_line_items")
-      .insert(postInvoiceLinePayload(invoiceId, headerId, post, sortOrder, defaultVatRate))
-      .select("id")
-      .single();
+    let lineItemId = post.invoice_line_item_id;
 
-    if (itemError || !item) {
-      return { error: itemError?.message ?? "Invoice line item creation failed." };
+    if (reuseLineItem && lineItemId) {
+      const { error: updateError } = await supabase
+        .from("invoice_line_items")
+        .update(payload)
+        .eq("id", lineItemId);
+
+      if (updateError) {
+        return { error: updateError.message };
+      }
+    } else {
+      const { data: item, error: itemError } = await supabase
+        .from("invoice_line_items")
+        .insert(payload)
+        .select("id")
+        .single();
+
+      if (itemError || !item) {
+        return { error: itemError?.message ?? "Invoice line item creation failed." };
+      }
+
+      lineItemId = item.id;
     }
 
     const { error: lockError } = await supabase
@@ -376,7 +421,7 @@ export async function lockPostsOnInvoice(
         invoiced_amount: billable,
         remaining_amount: 0,
         billing_status: "invoiced",
-        invoice_line_item_id: item.id,
+        invoice_line_item_id: lineItemId,
         invoiced_at: now,
         locked_at: now,
       })

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { resolveInvoiceDeliverableIds } from "@/lib/billing/invoice-from-deliverables";
+import type { InvoiceValidationContext } from "@/lib/billing/invoice-validation-context";
 
 export async function resolveOperationalInvoiceTargets(
   supabase: SupabaseClient,
@@ -9,7 +10,8 @@ export async function resolveOperationalInvoiceTargets(
     lineIds: string[];
     deliverableIds: string[];
     postIds: string[];
-  }
+  },
+  validationCtx: InvoiceValidationContext = { mode: "new" }
 ): Promise<{ deliverableIds: string[]; postIds: string[]; error?: string }> {
   const deliverableSet = new Set<string>(input.deliverableIds);
   const postSet = new Set<string>(input.postIds);
@@ -25,7 +27,10 @@ export async function resolveOperationalInvoiceTargets(
     }
 
     for (const post of posts ?? []) {
-      if (post.locked_at || post.invoice_line_item_id) {
+      if (
+        validationCtx.mode !== "append" &&
+        (post.locked_at || post.invoice_line_item_id)
+      ) {
         return {
           deliverableIds: [],
           postIds: [],

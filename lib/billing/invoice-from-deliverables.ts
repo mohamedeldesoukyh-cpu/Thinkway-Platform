@@ -16,6 +16,13 @@ import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
 import { resolveActiveVendorIoId } from "@/lib/io/vendor-io-active-link";
 import { syncPostScheduleOnDeliverableInvoiceLock } from "@/lib/billing/sync-post-invoice-lock";
+import {
+  invoicedRowAllowed,
+  invoicedRowBlockMessage,
+  isInvoicedOperationalRow,
+  resolveLinkedInvoiceIds,
+  type InvoiceValidationContext,
+} from "@/lib/billing/invoice-validation-context";
 import { devLog } from "@/lib/dev-log";
 
 function lineBillingPatch(billingStatus: string) {
@@ -41,6 +48,7 @@ type DeliverableRecord = {
   billing_status: string;
   invoice_line_item_id: string | null;
   locked_at: string | null;
+  linked_invoice_id?: string | null;
   revenue_before_vat: number;
   revenue_vat_percent: number;
   revenue_vat_exempt?: boolean | null;
@@ -309,12 +317,24 @@ export async function fetchDeliverablesForInvoicing(
     return { deliverables: [], error };
   }
 
+  const mapped = (data ?? []).map((row) => ({
+    ...row,
+    revenue_vat_exempt:
+      resolveDeliverableVatExempt(row, includesVatExempt) ||
+      (row.campaign_line?.revenue_vat_exempt ?? false),
+  })) as DeliverableRecord[];
+
+  const linkedInvoiceByLineItem = await resolveLinkedInvoiceIds(
+    supabase,
+    mapped.map((row) => row.invoice_line_item_id).filter(Boolean) as string[]
+  );
+
   return {
-    deliverables: (data ?? []).map((row) => ({
+    deliverables: mapped.map((row) => ({
       ...row,
-      revenue_vat_exempt:
-        resolveDeliverableVatExempt(row, includesVatExempt) ||
-        (row.campaign_line?.revenue_vat_exempt ?? false),
+      linked_invoice_id: row.invoice_line_item_id
+        ? (linkedInvoiceByLineItem.get(row.invoice_line_item_id) ?? null)
+        : null,
     })),
   };
 }
@@ -365,7 +385,8 @@ export async function prepareLinesForDeliverableInvoicing(
 }
 
 export function validateDeliverablesForInvoice(
-  deliverables: DeliverableRecord[]
+  deliverables: DeliverableRecord[],
+  validationCtx: InvoiceValidationContext = { mode: "new" }
 ): string | null {
   if (deliverables.length === 0) {
     return "No billable deliverables selected.";
@@ -375,13 +396,33 @@ export function validateDeliverablesForInvoice(
     const line = row.campaign_line;
     if (!line) return "Deliverable assignment not found.";
 
-    if (row.locked_at || Number(row.remaining_amount) <= 0) {
+    if (!invoicedRowAllowed(row, validationCtx)) {
+      return invoicedRowBlockMessage("deliverable", validationCtx);
+    }
+
+    if (
+      validationCtx.mode === "new" &&
+      !isInvoicedOperationalRow(row) &&
+      Number(row.remaining_amount) <= 0
+    ) {
       return "Selected deliverables include already invoiced items.";
     }
     if (row.billing_status === "disputed" || row.billing_status === "cancelled") {
       return "Disputed or cancelled deliverables cannot be invoiced.";
     }
-    if (["invoiced", "paid", "closed"].includes(line.billing_status)) {
+    if (
+      validationCtx.mode === "new" &&
+      ["invoiced", "paid", "closed"].includes(line.billing_status)
+    ) {
+      return "Selected assignments are already fully invoiced or closed.";
+    }
+    if (
+      validationCtx.mode === "append" &&
+      validationCtx.targetInvoiceId &&
+      ["invoiced", "paid", "closed"].includes(line.billing_status) &&
+      line.invoice_id &&
+      line.invoice_id !== validationCtx.targetInvoiceId
+    ) {
       return "Selected assignments are already fully invoiced or closed.";
     }
   }
@@ -394,9 +435,10 @@ export async function lockDeliverablesOnInvoice(
   invoiceId: string,
   headerId: string,
   deliverables: DeliverableRecord[],
-  options?: { defaultVatRate?: number }
+  options?: { defaultVatRate?: number; updateExistingOnTargetInvoice?: boolean }
 ): Promise<{ error?: string }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
+  const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
@@ -407,24 +449,42 @@ export async function lockDeliverablesOnInvoice(
     sortOrder += 1;
 
     const mapped = mapDeliverableRecord(row);
-    const { data: item, error: itemError } = await supabase
-      .from("invoice_line_items")
-      .insert(
-        deliverableInvoiceLinePayload(
-          invoiceId,
-          headerId,
-          line,
-          mapped,
-          sortOrder,
-          defaultVatRate
-        )
-      )
-      .select("id")
-      .single();
+    const payload = deliverableInvoiceLinePayload(
+      invoiceId,
+      headerId,
+      line,
+      mapped,
+      sortOrder,
+      defaultVatRate
+    );
+    const reuseLineItem =
+      updateExisting &&
+      row.invoice_line_item_id &&
+      row.linked_invoice_id === invoiceId;
 
-    if (itemError || !item) {
-      await supabase.from("invoices").delete().eq("id", invoiceId);
-      return { error: itemError?.message ?? "Invoice line item creation failed." };
+    let lineItemId = row.invoice_line_item_id;
+
+    if (reuseLineItem && lineItemId) {
+      const { error: updateError } = await supabase
+        .from("invoice_line_items")
+        .update(payload)
+        .eq("id", lineItemId);
+
+      if (updateError) {
+        return { error: updateError.message };
+      }
+    } else {
+      const { data: item, error: itemError } = await supabase
+        .from("invoice_line_items")
+        .insert(payload)
+        .select("id")
+        .single();
+
+      if (itemError || !item) {
+        return { error: itemError?.message ?? "Invoice line item creation failed." };
+      }
+
+      lineItemId = item.id;
     }
 
     const billable = Number(row.billable_amount);
@@ -434,26 +494,24 @@ export async function lockDeliverablesOnInvoice(
         invoiced_amount: billable,
         remaining_amount: 0,
         billing_status: "invoiced",
-        invoice_line_item_id: item.id,
+        invoice_line_item_id: lineItemId,
         invoiced_at: now,
         locked_at: now,
       })
       .eq("id", row.id);
 
     if (lockError) {
-      await supabase.from("invoices").delete().eq("id", invoiceId);
       return { error: lockError.message };
     }
 
     const postSyncError = await syncPostScheduleOnDeliverableInvoiceLock(supabase, {
       deliverableId: row.id,
-      invoiceLineItemId: item.id,
+      invoiceLineItemId: lineItemId!,
       lockedAt: now,
       deliverableBillable: billable,
     });
 
     if (postSyncError.error) {
-      await supabase.from("invoices").delete().eq("id", invoiceId);
       return { error: postSyncError.error };
     }
 

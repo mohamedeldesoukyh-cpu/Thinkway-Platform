@@ -40,6 +40,12 @@ import { syncInvoiceOperationalStates } from "@/lib/finance/invoice-locks";
 import { blockInvoiceWithoutVendorIoMessage } from "@/lib/billing/line-invoice-eligibility";
 import { resolveScopedInvoiceLineIds } from "@/lib/billing/invoice-validation-scope";
 import {
+  buildInvoiceValidationContext,
+  invoicedRowAllowed,
+  isInvoicedOperationalRow,
+  parseInvoiceBillingMode,
+} from "@/lib/billing/invoice-validation-context";
+import {
   approveOperationalRows,
   markOperationalRowsReadyToInvoice,
   resolveBulkBillingTargets,
@@ -543,6 +549,12 @@ export async function createInvoiceFromLinesAction(
     .map((s) => s.trim())
     .filter(Boolean);
 
+  const invoiceMode = parseInvoiceBillingMode(parsed.data.invoice_mode);
+  const validationCtx = buildInvoiceValidationContext({
+    mode: invoiceMode,
+    targetInvoiceId: parsed.data.existing_invoice_id,
+  });
+
   const { supabase, user, error: authError } = await requireAuthUser();
   if (authError || !user) {
     return { ok: false, message: authError ?? "Unauthorized" };
@@ -571,11 +583,16 @@ export async function createInvoiceFromLinesAction(
   }
 
   const { deliverableIds, postIds, error: resolveError } =
-    await resolveOperationalInvoiceTargets(supabase, parsed.data.campaign_id, {
-      lineIds,
-      deliverableIds: requestedDeliverableIds,
-      postIds: requestedPostIds,
-    });
+    await resolveOperationalInvoiceTargets(
+      supabase,
+      parsed.data.campaign_id,
+      {
+        lineIds,
+        deliverableIds: requestedDeliverableIds,
+        postIds: requestedPostIds,
+      },
+      validationCtx
+    );
 
   if (resolveError) {
     return { ok: false, message: resolveError };
@@ -645,7 +662,7 @@ export async function createInvoiceFromLinesAction(
     }
 
     if (scopedLineIds.length > 0 || deliverableIds.length > 0 || postIds.length > 0) {
-      const regenerateScope =
+      const deliverableRegenerateScope =
         !usePostInvoicePath &&
         deliverables.length > 0 &&
         deliverables.every(
@@ -654,6 +671,30 @@ export async function createInvoiceFromLinesAction(
             Boolean(d.invoice_line_item_id) ||
             Number(d.remaining_amount ?? 0) <= 0
         );
+      const postRegenerateScope =
+        usePostInvoicePath &&
+        posts.length > 0 &&
+        posts.every(
+          (p) => invoicedRowAllowed(p, validationCtx) && isInvoicedOperationalRow(p)
+        );
+      const ioCoverageMode =
+        invoiceMode === "append" || deliverableRegenerateScope || postRegenerateScope
+          ? ("regenerate" as const)
+          : ("generate" as const);
+
+      let appendInvoiceLines:
+        | import("@/features/billing/types").InvoiceWorkspace["lines"]
+        | undefined;
+      if (invoiceMode === "append" && validationCtx.targetInvoiceId) {
+        const { getInvoiceLines } = await import("@/lib/finance/invoice-line-registry");
+        const appendLinesResult = await getInvoiceLines(
+          supabase,
+          validationCtx.targetInvoiceId
+        );
+        if (!appendLinesResult.error) {
+          appendInvoiceLines = appendLinesResult.lines;
+        }
+      }
 
       const { analyzeCreateInvoiceCoverage } = await import(
         "@/lib/operations/io-coverage-server"
@@ -662,7 +703,8 @@ export async function createInvoiceFromLinesAction(
         campaignId: parsed.data.campaign_id,
         lineIds: scopedLineIds,
         deliverableIds,
-        mode: regenerateScope ? "regenerate" : "generate",
+        mode: ioCoverageMode,
+        appendInvoiceLines,
       });
 
       if (coverage.case === "blocked") {
@@ -703,7 +745,7 @@ export async function createInvoiceFromLinesAction(
           "Selected post rows could not be loaded for invoicing. Refresh the campaign and try again.",
       };
     }
-    const postValidationError = validatePostsForInvoice(posts);
+    const postValidationError = validatePostsForInvoice(posts, validationCtx);
     if (postValidationError) {
       return { ok: false, message: postValidationError };
     }
@@ -716,7 +758,7 @@ export async function createInvoiceFromLinesAction(
       return { ok: false, message: "No billable deliverables selected." };
     }
 
-    const validationError = validateDeliverablesForInvoice(deliverablesToLock);
+    const validationError = validateDeliverablesForInvoice(deliverablesToLock, validationCtx);
     if (validationError) {
       return { ok: false, message: validationError };
     }
@@ -729,8 +771,6 @@ export async function createInvoiceFromLinesAction(
     supabase,
     header.client_id
   );
-
-  const invoiceMode = parsed.data.invoice_mode === "append" ? "append" : "new";
 
   if (invoiceMode === "append") {
     const existingId = parsed.data.existing_invoice_id?.trim();
@@ -796,7 +836,10 @@ export async function createInvoiceFromLinesAction(
       invoiceId,
       header.id,
       posts,
-      { defaultVatRate: vatRate }
+      {
+        defaultVatRate: vatRate,
+        updateExistingOnTargetInvoice: invoiceMode === "append",
+      }
     );
     if (postLockResult.error) {
       if (invoiceMode === "new") {
@@ -812,7 +855,10 @@ export async function createInvoiceFromLinesAction(
       invoiceId,
       header.id,
       deliverablesToLock,
-      { defaultVatRate: vatRate }
+      {
+        defaultVatRate: vatRate,
+        updateExistingOnTargetInvoice: invoiceMode === "append",
+      }
     );
 
     if (lockResult.error) {
