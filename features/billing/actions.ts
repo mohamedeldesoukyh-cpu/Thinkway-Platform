@@ -10,6 +10,7 @@ import { governanceDb } from "@/lib/supabase/governance-client";
 import { resolveClientBillingVatRate } from "@/lib/vat/queries";
 import {
   fetchDeliverablesForInvoicing,
+  insertPackageAssignmentLineItems,
   lockDeliverablesOnInvoice,
   recalculateInvoiceTotals,
   regenerateInvoiceFromDeliverables,
@@ -738,6 +739,28 @@ export async function createInvoiceFromLinesAction(
       await supabase.from("invoices").delete().eq("id", invoiceId);
     }
     return { ok: false, message: lockResult.error };
+  }
+
+  if (deliverables.length === 0 && lineIds.length > 0) {
+    const packageLines = await insertPackageAssignmentLineItems(
+      supabase,
+      invoiceId,
+      header.id,
+      lineIds,
+      { defaultVatRate: vatRate }
+    );
+    if (packageLines.error) {
+      if (invoiceMode === "new") {
+        await supabase.from("invoices").delete().eq("id", invoiceId);
+      }
+      return { ok: false, message: packageLines.error };
+    }
+    if (packageLines.inserted === 0) {
+      if (invoiceMode === "new") {
+        await supabase.from("invoices").delete().eq("id", invoiceId);
+      }
+      return { ok: false, message: "No billable assignment lines could be invoiced." };
+    }
   }
 
   await ensureInvoiceFinanceDocument(supabase, invoiceId, user.id);

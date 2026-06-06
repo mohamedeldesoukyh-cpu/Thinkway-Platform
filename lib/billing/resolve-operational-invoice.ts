@@ -64,6 +64,9 @@ export async function resolveOperationalInvoiceTargets(
   }
 
   if (finalDeliverableIds.length === 0 && finalPostIds.length === 0) {
+    if (input.lineIds.length > 0) {
+      return { deliverableIds: [], postIds: finalPostIds };
+    }
     return {
       deliverableIds: [],
       postIds: [],

@@ -2,6 +2,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const INV_PREFIX_PATTERN = /^INV-(\d{4})-(\d+)$/;
 
+export type InvoiceSequenceRepairResult = {
+  year: number;
+  renumbered: number;
+  previous_max_serial: number;
+  new_max_serial: number;
+  next_serial: number;
+};
+
 export type InvoiceSequenceValidation = {
   year: number;
   prefix: string;
@@ -26,7 +34,7 @@ export function parseInvoiceDocumentNumber(
 }
 
 export function formatInvoiceDocumentNumber(year: number, serial: number): string {
-  return `INV-${year}-${String(serial).padStart(5, "0")}`;
+  return `INV-${year}-${serial}`;
 }
 
 export function maxInvoiceSerialFromNumbers(documentNumbers: string[]): number {
@@ -75,6 +83,39 @@ export function validateInvoiceSequence(input: {
     message: is_valid
       ? `Next invoice: ${formatInvoiceDocumentNumber(input.year, next_would_be)}`
       : `Sequence ahead of invoices by ${drift}. Run repairInvoiceSequences().`,
+  };
+}
+
+/** Compact surviving invoice serials to 1..N and reseed sequence (server-side RPC). */
+export async function repairInvoiceSequenceForYear(
+  supabase: SupabaseClient,
+  year: number,
+  options?: { dryRun?: boolean }
+): Promise<{ ok: boolean; result?: InvoiceSequenceRepairResult; error?: string }> {
+  const { data, error } = await supabase.rpc("repair_invoice_sequence_for_year", {
+    p_year: year,
+    p_dry_run: options?.dryRun ?? false,
+  });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    return { ok: true };
+  }
+
+  const typed = row as Record<string, unknown>;
+  return {
+    ok: true,
+    result: {
+      year,
+      renumbered: Number(typed.renumbered ?? 0),
+      previous_max_serial: Number(typed.previous_max_serial ?? 0),
+      new_max_serial: Number(typed.new_max_serial ?? 0),
+      next_serial: Number(typed.next_serial ?? 0),
+    },
   };
 }
 

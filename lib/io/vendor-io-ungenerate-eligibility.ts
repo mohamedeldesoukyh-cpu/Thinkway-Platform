@@ -8,15 +8,9 @@ export function isLineBlockingVendorIoUngenerate(
   line: VendorIoLineBillingSnapshot
 ): boolean {
   if (line.invoice_id) return true;
-  if (
-    line.operational_status === "invoiced" ||
-    line.operational_status === "partially_invoiced"
-  ) {
-    return true;
-  }
-  return ["invoiced", "partially_invoiced", "paid", "closed"].includes(
-    line.billing_status
-  );
+  if (line.operational_status === "invoiced") return true;
+  if (line.operational_status === "partially_invoiced") return true;
+  return ["invoiced", "paid", "closed"].includes(line.billing_status);
 }
 
 export function isLineUngenerateIoEligible(

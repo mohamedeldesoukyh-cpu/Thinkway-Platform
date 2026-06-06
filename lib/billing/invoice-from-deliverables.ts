@@ -137,6 +137,105 @@ function deliverableInvoiceLinePayload(
   };
 }
 
+export function packageAssignmentLineItemPayload(
+  invoiceId: string,
+  headerId: string,
+  line: {
+    id: string;
+    document_number: string;
+    name: string;
+    revenue?: number | null;
+    revenue_before_vat?: number | null;
+    revenue_vat_percent?: number | null;
+    revenue_vat_exempt?: boolean | null;
+    remaining_amount?: number | null;
+  },
+  sortOrder: number,
+  defaultVatRate: number
+) {
+  const beforeVat = Number(
+    line.remaining_amount ?? line.revenue_before_vat ?? line.revenue ?? 0
+  );
+  const vatExempt = Boolean(line.revenue_vat_exempt);
+  const vatPercent = vatExempt
+    ? 0
+    : Number(line.revenue_vat_percent ?? 0) > 0
+      ? Number(line.revenue_vat_percent)
+      : defaultVatRate;
+
+  return {
+    invoice_id: invoiceId,
+    campaign_line_id: line.id,
+    campaign_header_id: headerId,
+    sort_order: sortOrder,
+    description: `${line.document_number} — ${line.name}`,
+    quantity: 1,
+    unit_price: beforeVat,
+    revenue_before_vat: beforeVat,
+    revenue_vat_percent: vatPercent,
+    revenue_vat_exempt: vatExempt,
+  };
+}
+
+export async function insertPackageAssignmentLineItems(
+  supabase: SupabaseClient,
+  invoiceId: string,
+  headerId: string,
+  lineIds: string[],
+  options?: { defaultVatRate?: number }
+): Promise<{ error?: string; inserted: number }> {
+  if (lineIds.length === 0) return { inserted: 0 };
+
+  const { data: lines, error } = await supabase
+    .from("campaign_lines")
+    .select(
+      "id, document_number, name, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt, billing_status, vendor_io_id"
+    )
+    .in("id", lineIds);
+
+  if (error) {
+    return { error: error.message, inserted: 0 };
+  }
+
+  const defaultVatRate = options?.defaultVatRate ?? 0;
+  let sortOrder = 0;
+  let inserted = 0;
+
+  for (const row of lines ?? []) {
+    const line = row as {
+      id: string;
+      document_number: string;
+      name: string;
+      revenue?: number | null;
+      revenue_before_vat?: number | null;
+      revenue_vat_percent?: number | null;
+      revenue_vat_exempt?: boolean | null;
+      billing_status: string;
+      vendor_io_id: string | null;
+    };
+    if (!line.vendor_io_id) continue;
+    if (["invoiced", "paid", "closed"].includes(line.billing_status)) continue;
+
+    sortOrder += 1;
+    const { error: insertError } = await supabase.from("invoice_line_items").insert(
+      packageAssignmentLineItemPayload(invoiceId, headerId, line, sortOrder, defaultVatRate)
+    );
+    if (insertError) {
+      return { error: insertError.message, inserted };
+    }
+    inserted += 1;
+  }
+
+  if (inserted > 0) {
+    const totalsError = await recalculateInvoiceTotals(supabase, invoiceId);
+    if (totalsError.error) {
+      return { error: totalsError.error, inserted };
+    }
+  }
+
+  return { inserted };
+}
+
 export async function recalculateInvoiceTotals(
   supabase: SupabaseClient,
   invoiceId: string

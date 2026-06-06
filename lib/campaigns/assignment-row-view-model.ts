@@ -122,6 +122,7 @@ export function deriveAssignmentLineMeta(
         });
 
   const reviseVioEligible =
+    remaining <= 0 &&
     (status === "io_revised" || status === "locked") &&
     Boolean(line.active_vendor_io_id ?? line.vendor_io_id);
   const ungenerateIoEligible = isLineUngenerateIoEligible({

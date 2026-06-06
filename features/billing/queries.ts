@@ -494,18 +494,9 @@ export async function getInvoiceWorkspace(
 
   const [linesResult, paymentsResult, approvalsResult, auditResult, profilesResult] =
     await Promise.all([
-      supabase
-        .from("invoice_line_items")
-        .select(
-          `
-        id, campaign_line_id, assignment_deliverable_id, description, quantity, unit_price, line_total,
-        revenue_before_vat, revenue_vat_percent, revenue_vat_amount, revenue_vat_exempt,
-        line:${REL.invoiceLineItems.campaignLine}(document_number),
-        deliverable:assignment_deliverables(platform, deliverable_type, sort_order, quantity)
-        `
-        )
-        .eq("invoice_id", invoiceId)
-        .order("sort_order"),
+      import("@/lib/finance/invoice-line-registry").then((mod) =>
+        mod.reconcileInvoiceHeaderFromLines(supabase, invoiceId)
+      ),
       supabase
         .from("payments")
         .select("id, document_number, amount, currency, status, paid_at, payment_method")
@@ -559,45 +550,26 @@ export async function getInvoiceWorkspace(
     notes: inv.notes,
     client: inv.client,
     campaign: inv.campaign,
-    lines: (linesResult.data ?? []).map((l) => {
-      const row = l as unknown as {
-        id: string;
-        campaign_line_id: string | null;
-        assignment_deliverable_id: string | null;
-        description: string;
-        quantity: number;
-        unit_price: number;
-        line_total: number;
-        revenue_before_vat: number;
-        revenue_vat_percent: number;
-        revenue_vat_amount: number;
-        revenue_vat_exempt: boolean;
-        line: { document_number: string } | null;
-        deliverable: {
-          platform: string;
-          deliverable_type: string;
-          sort_order: number;
-          quantity: number;
-        } | null;
-      };
-      return {
+    lines: (() => {
+      if (linesResult.integrityWarning && process.env.NODE_ENV === "development") {
+        console.warn("[getInvoiceWorkspace]", linesResult.integrityWarning);
+      }
+      return linesResult.lines.map((row) => ({
         id: row.id,
         campaign_line_id: row.campaign_line_id,
         assignment_deliverable_id: row.assignment_deliverable_id,
         description: row.description,
-        quantity: Number(row.quantity),
-        unit_price: Number(row.unit_price),
-        line_total: Number(row.line_total),
-        revenue_before_vat: Number(row.revenue_before_vat ?? row.unit_price),
-        revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
-        revenue_vat_amount: Number(row.revenue_vat_amount ?? 0),
-        revenue_vat_exempt: row.revenue_vat_exempt ?? false,
-        line_document_number: row.line?.document_number ?? null,
-        deliverable_label: row.deliverable
-          ? deliverableDisplayLabel(row.deliverable)
-          : null,
-      };
-    }),
+        quantity: row.quantity,
+        unit_price: row.unit_price,
+        line_total: row.line_total,
+        revenue_before_vat: row.revenue_before_vat,
+        revenue_vat_percent: row.revenue_vat_percent,
+        revenue_vat_amount: row.revenue_vat_amount,
+        revenue_vat_exempt: row.revenue_vat_exempt,
+        line_document_number: row.line_document_number,
+        deliverable_label: row.deliverable_label,
+      }));
+    })(),
     payments: (paymentsResult.data ?? []).map((p) => ({
       id: p.id,
       document_number: p.document_number,

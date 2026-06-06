@@ -26,13 +26,13 @@ export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolea
 
   const remaining = getRemainingRevenue({
     remaining_amount: line.remaining_amount,
+    billable_amount: line.billable_amount,
+    invoiced_amount: line.invoiced_amount,
   });
 
-  if (isPartiallyInvoicedBillingStatus(billing)) {
-    return remaining > 0;
-  }
+  if (remaining <= 0) return false;
 
-  if (line.is_locked && remaining <= 0) return false;
+  if (isPartiallyInvoicedBillingStatus(billing)) return true;
 
   const status = effectiveLineOperationalStatus({
     operational_status: line.operational_status,
@@ -46,7 +46,6 @@ export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolea
   }) as CampaignLineOperationalStatus;
 
   if (status === "locked") return false;
-  if (remaining <= 0) return false;
 
   return isInvoiceEligibleOperationalStatus(status);
 }

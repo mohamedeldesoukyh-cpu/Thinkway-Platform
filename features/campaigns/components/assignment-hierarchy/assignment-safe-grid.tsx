@@ -17,10 +17,7 @@ import { DocumentNumber } from "@/components/ui/document-number";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import { AssignmentSafeActionsFooter } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-actions-footer";
-import {
-  canGenerateInvoiceForSelection,
-  getInvoiceableSelections,
-} from "@/lib/billing/invoice-action-eligibility";
+import { resolveSelectionActions } from "@/lib/billing/selection-action-engine";
 import {
   AssignmentSelectionSummaryBar,
   type AssignmentSelectionTotals,
@@ -209,45 +206,27 @@ export function AssignmentSafeGrid({
     return map;
   }, [preparedRows]);
 
-  const vioLineIds = useMemo(
-    () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.vioEligible),
-    [selectedLineIds, lineMeta]
-  );
-  const invoiceSelectionInput = useMemo(
+  const selectionActions = useMemo(
     () =>
-      preparedRows.map((row) => ({
-        lineId: row.lineId,
-        group: row.group,
-        meta: lineMeta.get(row.lineId),
-      })),
-    [preparedRows, lineMeta]
-  );
-  const { lineIds: invoiceLineIds, deliverableIds: invoiceDeliverableIds } = useMemo(
-    () =>
-      getInvoiceableSelections({
+      resolveSelectionActions({
         selectedLineIds,
         selectedDeliverableIds,
-        preparedRows: invoiceSelectionInput,
+        preparedRows: preparedRows.map((row) => ({
+          lineId: row.lineId,
+          group: row.group,
+          meta: lineMeta.get(row.lineId),
+        })),
       }),
-    [selectedLineIds, selectedDeliverableIds, invoiceSelectionInput]
+    [selectedLineIds, selectedDeliverableIds, preparedRows, lineMeta]
   );
-  const hasInvoiceSelection = useMemo(
-    () =>
-      canGenerateInvoiceForSelection({
-        selectedLineIds,
-        selectedDeliverableIds,
-        preparedRows: invoiceSelectionInput,
-      }),
-    [selectedLineIds, selectedDeliverableIds, invoiceSelectionInput]
-  );
-  const reviseVioLineIds = useMemo(
-    () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.reviseVioEligible),
-    [selectedLineIds, lineMeta]
-  );
-  const ungenerateIoLineIds = useMemo(
-    () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.ungenerateIoEligible),
-    [selectedLineIds, lineMeta]
-  );
+  const {
+    invoiceLineIds,
+    invoiceDeliverableIds,
+    hasInvoiceSelection,
+    vioLineIds,
+    reviseVioLineIds,
+    ungenerateIoLineIds,
+  } = selectionActions;
 
   const invoiceTotal = useMemo(() => {
     let total = 0;
