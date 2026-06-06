@@ -78,7 +78,7 @@ DO $$ BEGIN
 END $$;
 
 -- Year-based serial assignment (prefix e.g. CCN-2026)
-CREATE OR REPLACE FUNCTION public.assign_finance_year_document_number(p_prefix text)
+CREATE OR REPLACE FUNCTION public.assign_finance_year_document_number()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -86,18 +86,24 @@ SET search_path = public
 AS $$
 DECLARE
   v_year text := to_char(timezone('utc', now()), 'YYYY');
-  v_full_prefix text := p_prefix || '-' || v_year;
+  v_prefix text := TG_ARGV[0];
+  v_full_prefix text := v_prefix || '-' || v_year;
   v_next bigint;
 BEGIN
   IF NEW.document_number IS NULL OR btrim(NEW.document_number) = '' THEN
+
     INSERT INTO public.document_sequences AS ds (prefix, last_value)
     VALUES (v_full_prefix, 1)
+
     ON CONFLICT (prefix) DO UPDATE
-      SET last_value = ds.last_value + 1
+    SET last_value = ds.last_value + 1
+
     RETURNING last_value INTO v_next;
 
     NEW.document_number := v_full_prefix || '-' || lpad(v_next::text, 5, '0');
+
   END IF;
+
   RETURN NEW;
 END;
 $$;
