@@ -107,7 +107,10 @@ BEGIN
         CASE WHEN ili.invoice_id = ps_inv.invoice_id THEN 0 ELSE 1 END,
         ili.revenue_before_vat DESC NULLS LAST
       ) AS line_ids,
-      max(ili.invoice_id) AS inv_id
+      (array_agg(ili.invoice_id ORDER BY
+        CASE WHEN ili.invoice_id = ps_inv.invoice_id THEN 0 ELSE 1 END,
+        ili.revenue_before_vat DESC NULLS LAST
+      ))[1] AS inv_id
     FROM public.assignment_post_schedule ps
     JOIN public.invoice_line_items ili ON ili.id = ps.invoice_line_item_id
     LEFT JOIN public.invoice_line_items ps_inv
