@@ -1,5 +1,6 @@
 "use client";
 
+import { useActionState } from "react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -22,31 +23,52 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  createAndPostBatchAction,
+  previewPostingBatchAction,
+  reversePostingBatchAction,
+  type PostingCenterActionState,
+} from "@/features/finance/posting-center/actions";
 import type { PostingBatchRow, PostingPreviewRow } from "@/features/finance/posting-center/queries";
 import { formatMoney } from "@/features/campaigns/utils";
+import { PostingBatchStatusBadge } from "@/components/finance/posting-batch-status-badge";
 import {
   FINANCE_DOCUMENT_KIND_LABELS,
   POSTING_CENTER_TRANSACTION_TYPES,
   type FinanceDocumentKind,
 } from "@/lib/finance/status/document-kind";
-import { POSTING_BATCH_STATUS_LABELS } from "@/lib/finance/status/posting-status";
 
 type PostingCenterWorkspaceProps = {
   initialPreview: PostingPreviewRow[];
   batches: PostingBatchRow[];
   defaultTransactionType: FinanceDocumentKind;
+  defaultPeriodFrom: string;
+  defaultPeriodTo: string;
 };
 
 export function PostingCenterWorkspace({
   initialPreview,
   batches,
   defaultTransactionType,
+  defaultPeriodFrom,
+  defaultPeriodTo,
 }: PostingCenterWorkspaceProps) {
   const [transactionType, setTransactionType] =
     useState<FinanceDocumentKind>(defaultTransactionType);
-  const [periodFrom, setPeriodFrom] = useState("");
-  const [periodTo, setPeriodTo] = useState("");
+  const [periodFrom, setPeriodFrom] = useState(defaultPeriodFrom);
+  const [periodTo, setPeriodTo] = useState(defaultPeriodTo);
   const [preview] = useState(initialPreview);
+  const [previewState, previewAction, previewPending] = useActionState(
+    previewPostingBatchAction,
+    { ok: false } satisfies PostingCenterActionState
+  );
+  const [postState, postAction, postPending] = useActionState(createAndPostBatchAction, {
+    ok: false,
+  } satisfies PostingCenterActionState);
+  const [reverseState, reverseAction, reversePending] = useActionState(
+    reversePostingBatchAction,
+    { ok: false } satisfies PostingCenterActionState
+  );
 
   const totals = useMemo(
     () =>
@@ -61,13 +83,14 @@ export function PostingCenterWorkspace({
     [preview]
   );
 
+  const statusMessage = postState.message ?? previewState.message ?? reverseState.message;
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border p-4">
         <h3 className="text-sm font-semibold">Posting workflow</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Thinkway operational subledger → batch-controlled ERP bridge. Unposting requires open
-          period and no dependent collections.
+          Thinkway operational subledger → batch-controlled ERP bridge. Reverse instead of delete.
         </p>
 
         <div className="mt-4 grid gap-4 md:grid-cols-4">
@@ -93,6 +116,7 @@ export function PostingCenterWorkspace({
             <Label htmlFor="period_from">From date</Label>
             <Input
               id="period_from"
+              name="period_from"
               type="date"
               value={periodFrom}
               onChange={(e) => setPeriodFrom(e.target.value)}
@@ -102,15 +126,21 @@ export function PostingCenterWorkspace({
             <Label htmlFor="period_to">To date</Label>
             <Input
               id="period_to"
+              name="period_to"
               type="date"
               value={periodTo}
               onChange={(e) => setPeriodTo(e.target.value)}
             />
           </div>
           <div className="flex items-end">
-            <Button type="button" variant="outline" className="w-full" disabled>
-              Preview (server refresh)
-            </Button>
+            <form action={previewAction} className="w-full">
+              <input type="hidden" name="transaction_type" value={transactionType} />
+              <input type="hidden" name="period_from" value={periodFrom} />
+              <input type="hidden" name="period_to" value={periodTo} />
+              <Button type="submit" variant="outline" className="w-full" disabled={previewPending}>
+                {previewPending ? "Refreshing…" : "Preview"}
+              </Button>
+            </form>
           </div>
         </div>
 
@@ -168,10 +198,22 @@ export function PostingCenterWorkspace({
             Batch total: {formatMoney(totals.after, preview[0]?.currency ?? "USD")} ({preview.length}{" "}
             docs)
           </p>
-          <Button type="button" disabled>
-            Post to accounting
-          </Button>
+          <form action={postAction}>
+            <input type="hidden" name="transaction_type" value={transactionType} />
+            <input type="hidden" name="period_from" value={periodFrom} />
+            <input type="hidden" name="period_to" value={periodTo} />
+            <Button type="submit" disabled={postPending || preview.length === 0}>
+              {postPending ? "Posting…" : "Post to accounting"}
+            </Button>
+          </form>
         </div>
+        {statusMessage ? (
+          <p
+            className={`mt-2 text-sm ${postState.ok || previewState.ok || reverseState.ok ? "text-muted-foreground" : "text-destructive"}`}
+          >
+            {statusMessage}
+          </p>
+        ) : null}
       </section>
 
       <section className="rounded-3xl border p-4">
@@ -185,12 +227,13 @@ export function PostingCenterWorkspace({
                 <TableHead>Period</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {batches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-muted-foreground">
+                  <TableCell colSpan={6} className="text-muted-foreground">
                     No posting batches yet.
                   </TableCell>
                 </TableRow>
@@ -210,9 +253,25 @@ export function PostingCenterWorkspace({
                       {formatMoney(batch.total_after_vat, batch.currency ?? "USD")}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {POSTING_BATCH_STATUS_LABELS[batch.status]}
-                      </Badge>
+                      <PostingBatchStatusBadge status={batch.status} />
+                    </TableCell>
+                    <TableCell>
+                      {batch.status === "posted" ? (
+                        <form action={reverseAction}>
+                          <input type="hidden" name="batch_id" value={batch.id} />
+                          <Button
+                            type="submit"
+                            size="sm"
+                            variant="outline"
+                            disabled={reversePending}
+                            className="h-7 text-[10px]"
+                          >
+                            Reverse
+                          </Button>
+                        </form>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

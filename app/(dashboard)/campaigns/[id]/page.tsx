@@ -20,6 +20,8 @@ import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 import { devLog } from "@/lib/dev-log";
+import { loadFinanceAuditTimeline } from "@/lib/finance/queries/finance-audit";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/validation/uuid";
 
 type CampaignWorkspacePageProps = {
@@ -68,6 +70,7 @@ export default async function CampaignWorkspacePage({
     [];
   let publicationsLoadError: string | null = null;
   let campaignInvoiceRegister: Awaited<ReturnType<typeof getFinanceInvoiceRegister>> = [];
+  let financeAudit: Awaited<ReturnType<typeof loadFinanceAuditTimeline>> = [];
   let errorMessage: string | null = null;
 
   try {
@@ -152,6 +155,16 @@ export default async function CampaignWorkspacePage({
     }
 
     try {
+      const supabase = await createSupabaseServerClient();
+      financeAudit = await loadFinanceAuditTimeline(supabase, {
+        campaign_id: id,
+        limit: 40,
+      });
+    } catch (error) {
+      devLog("[campaign-page] finance audit failed", { campaignId: id, error });
+    }
+
+    try {
       const publicationResult = await getCampaignPublications(id);
       publications = publicationResult.publications;
       publicationsLoadError = publicationResult.load_error;
@@ -195,6 +208,7 @@ export default async function CampaignWorkspacePage({
               publications={publications}
               publicationsLoadError={publicationsLoadError}
               currencyOptions={currencyOptions}
+              financeAudit={financeAudit}
             />
           </div>
         </PlatformErrorBoundary>

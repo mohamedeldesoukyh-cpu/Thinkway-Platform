@@ -16,16 +16,28 @@ import {
   CampaignOperationalTableRow,
 } from "@/features/campaigns/components/campaign-operational-table";
 import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { FinanceAuditTimeline } from "@/components/finance/finance-audit-timeline";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import type { FinanceAuditTimelineEntry } from "@/lib/finance/queries/finance-audit";
 import { cn } from "@/lib/utils";
 
 type CampaignTimelineTabProps = {
   workspace: CampaignWorkspace;
+  financeAudit?: FinanceAuditTimelineEntry[];
 };
 
-export function CampaignTimelineTab({ workspace }: CampaignTimelineTabProps) {
+export function CampaignTimelineTab({
+  workspace,
+  financeAudit = [],
+}: CampaignTimelineTabProps) {
   return (
     <div className={cn("grid gap-4 xl:grid-cols-2", OPERATIONAL_TABLE_FONT)}>
+      <CampaignFlatSection
+        title="Finance audit"
+        description="Invoice, CN/DN, posting, and cancellation events."
+      >
+        <FinanceAuditTimeline entries={financeAudit} />
+      </CampaignFlatSection>
       <CampaignFlatSection
         title="Activity feed"
         description="Edits, uploads, approvals, status changes, and assignments."

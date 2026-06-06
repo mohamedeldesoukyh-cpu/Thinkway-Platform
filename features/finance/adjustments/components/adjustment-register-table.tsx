@@ -2,7 +2,8 @@
 
 import { format } from "date-fns";
 
-import { Badge } from "@/components/ui/badge";
+import { AdjustmentLifecycleButtons } from "@/features/finance/adjustments/components/adjustment-lifecycle-buttons";
+import { AdjustmentStatusBadge } from "@/components/finance/adjustment-status-badge";
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
   Table,
@@ -13,11 +14,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { FinanceAdjustmentRegisterRow } from "@/features/finance/adjustments/types";
-import { FINANCE_ADJUSTMENT_STATUS_LABELS } from "@/lib/finance/status/adjustment-status";
+import type { AdjustmentTableKind } from "@/lib/finance/adjustment-table-config";
 import { formatMoney } from "@/features/campaigns/utils";
 
 type AdjustmentRegisterTableProps = {
   rows: FinanceAdjustmentRegisterRow[];
+  kind: AdjustmentTableKind;
 };
 
 function formatDate(value: string): string {
@@ -26,7 +28,7 @@ function formatDate(value: string): string {
   return format(date, "MMM d, yyyy");
 }
 
-export function AdjustmentRegisterTable({ rows }: AdjustmentRegisterTableProps) {
+export function AdjustmentRegisterTable({ rows, kind }: AdjustmentRegisterTableProps) {
   if (rows.length === 0) {
     return (
       <p className="px-4 py-8 text-sm text-muted-foreground">
@@ -46,6 +48,7 @@ export function AdjustmentRegisterTable({ rows }: AdjustmentRegisterTableProps) 
           <TableHead>Date</TableHead>
           <TableHead className="text-right">Amount</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -74,9 +77,10 @@ export function AdjustmentRegisterTable({ rows }: AdjustmentRegisterTableProps) 
               {formatMoney(row.amount_after_vat, row.currency)}
             </TableCell>
             <TableCell>
-              <Badge variant="outline" className="text-[10px]">
-                {FINANCE_ADJUSTMENT_STATUS_LABELS[row.status] ?? row.status}
-              </Badge>
+              <AdjustmentStatusBadge status={row.status} />
+            </TableCell>
+            <TableCell>
+              <AdjustmentLifecycleButtons kind={kind} id={row.id} status={row.status} />
             </TableCell>
           </TableRow>
         ))}

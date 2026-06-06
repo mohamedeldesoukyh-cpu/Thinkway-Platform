@@ -28,6 +28,8 @@ export default async function PostingCenterPage() {
           initialPreview={preview}
           batches={batches}
           defaultTransactionType="client_invoice"
+          defaultPeriodFrom={period_from}
+          defaultPeriodTo={period_to}
         />
       </PlatformErrorBoundary>
     </DashboardShell>

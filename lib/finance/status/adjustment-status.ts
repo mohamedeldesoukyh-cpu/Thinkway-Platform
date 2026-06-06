@@ -13,7 +13,7 @@ export const FINANCE_ADJUSTMENT_STATUS_LABELS: Record<FinanceAdjustmentStatus, s
   posted: "Posted",
   cancelled: "Cancelled",
   void: "Void",
-  pending_repost: "Pending repost",
+  pending_repost: "Reopened",
 };
 
 export const ACTIVE_ADJUSTMENT_STATUSES: readonly FinanceAdjustmentStatus[] = [

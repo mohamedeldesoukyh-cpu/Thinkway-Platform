@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 
+import { InvoiceStatusBadge } from "@/components/finance/invoice-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
@@ -135,9 +136,7 @@ export function FinanceInvoiceRegisterTable({
               {formatAmount(row.revenue_after_vat, row.currency)}
             </RootAmountCell>
             <RootCell>
-              <Badge variant="outline" className="text-[10px] capitalize">
-                {row.status}
-              </Badge>
+              <InvoiceStatusBadge status={row.status} />
             </RootCell>
             <RootCell>
               <Badge

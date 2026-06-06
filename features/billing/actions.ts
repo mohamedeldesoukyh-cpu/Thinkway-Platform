@@ -29,6 +29,8 @@ import {
   validateAppendableInvoice,
 } from "@/lib/billing/resolve-operational-invoice";
 import { invoiceUngenerateIneligibleReason } from "@/lib/billing/invoice-ungenerate-eligibility";
+import { ensureInvoiceFinanceDocument } from "@/lib/finance/finance-document-registry";
+import { syncInvoiceOperationalStates } from "@/lib/finance/invoice-locks";
 import {
   blockInvoiceWithoutVendorIoMessage,
   isLineInvoiceEligible,
@@ -737,6 +739,9 @@ export async function createInvoiceFromLinesAction(
     }
     return { ok: false, message: lockResult.error };
   }
+
+  await ensureInvoiceFinanceDocument(supabase, invoiceId, user.id);
+  await syncInvoiceOperationalStates(supabase, invoiceId, "draft", user.id);
 
   revalidateBilling({
     campaignId: parsed.data.campaign_id,

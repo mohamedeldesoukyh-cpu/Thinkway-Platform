@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { asFinanceControlClient } from "@/lib/finance/supabase-finance";
 import { computeAdjustmentVatAmounts } from "@/lib/finance/credit-note-vat";
 import { FINANCE_AUDIT_EVENTS } from "@/lib/finance/audit-events";
+import { logFinanceAuditEvent } from "@/lib/finance/audit-log";
 import type { CreateClientCreditNoteInput } from "@/features/finance/adjustments/types";
 
 export type FinanceAdjustmentActionState = {
@@ -22,25 +23,6 @@ async function requireUser() {
   } = await supabase.auth.getUser();
   if (error || !user) throw new Error(error?.message ?? "Unauthorized");
   return { supabase, user };
-}
-
-async function logFinanceEvent(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  input: {
-    userId: string;
-    event: string;
-    entity_type: string;
-    entity_id: string;
-    payload?: Record<string, unknown>;
-  }
-) {
-  await supabase.from("audit_logs").insert({
-    actor_id: input.userId,
-    action: "create",
-    entity_type: input.entity_type,
-    entity_id: input.entity_id,
-    metadata: { event: input.event, ...input.payload },
-  });
 }
 
 export async function createClientCreditNoteAction(
@@ -151,11 +133,11 @@ export async function createClientCreditNoteAction(
       });
     }
 
-    await logFinanceEvent(baseClient, {
-      userId: user.id,
+    await logFinanceAuditEvent(baseClient, {
       event: FINANCE_AUDIT_EVENTS.cn_created,
       entity_type: "client_credit_note",
       entity_id: createdRow.id,
+      actor_id: user.id,
       payload: { invoice_id, amount_after_vat: vat.amount_after_vat },
     });
 

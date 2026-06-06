@@ -26,6 +26,7 @@ import {
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
 import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
+import { CancelCampaignDialog } from "@/components/campaigns/cancel-campaign-dialog";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
@@ -39,6 +40,7 @@ import { ClientIoHeaderControls } from "@/features/io/components/client-io-heade
 import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { AssignmentBillingGroup, BillingLineRow, CampaignOperationalBillingDetail } from "@/features/billing/types";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
+import type { FinanceAuditTimelineEntry } from "@/lib/finance/queries/finance-audit";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
@@ -63,6 +65,7 @@ type CampaignWorkspaceViewProps = {
   publications: CampaignPublicationRow[];
   publicationsLoadError?: string | null;
   currencyOptions: { value: string; label: string }[];
+  financeAudit?: FinanceAuditTimelineEntry[];
 };
 
 export function CampaignWorkspaceView({
@@ -77,6 +80,7 @@ export function CampaignWorkspaceView({
   publications,
   publicationsLoadError,
   currencyOptions,
+  financeAudit = [],
 }: CampaignWorkspaceViewProps) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -175,6 +179,12 @@ export function CampaignWorkspaceView({
                         io={workspace.client_io}
                         campaignId={workspace.id}
                         viewHref={`/ios/client?io=${workspace.client_io.id}`}
+                      />
+                    ) : null}
+                    {workspace.status !== "cancelled" ? (
+                      <CancelCampaignDialog
+                        campaignId={workspace.id}
+                        campaignName={workspace.name}
                       />
                     ) : null}
                     <DropdownMenu>
@@ -334,7 +344,7 @@ export function CampaignWorkspaceView({
         <TabsContent value="timeline" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
           <TabErrorBoundary tabName="Timeline">
-            <CampaignTimelineTab workspace={workspace} />
+            <CampaignTimelineTab workspace={workspace} financeAudit={financeAudit} />
           </TabErrorBoundary>
           </CampaignWorkspaceTabPanel>
         </TabsContent>

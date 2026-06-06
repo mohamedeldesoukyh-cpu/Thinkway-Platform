@@ -3,6 +3,7 @@ import { AdjustmentRegisterTable } from "@/features/finance/adjustments/componen
 import { ClientCreditNoteWorkspace } from "@/features/finance/adjustments/components/client-credit-note-workspace";
 import { getAdjustmentRegister, searchInvoicesForAdjustment } from "@/features/finance/adjustments/queries";
 import type { AdjustmentModuleKey } from "@/lib/finance/status/document-kind";
+import { adjustmentKindFromModule } from "@/features/finance/adjustments/adjustment-kind-map";
 import { ADJUSTMENT_MODULE_CONFIG } from "@/lib/finance/status/document-kind";
 
 type AdjustmentModuleShellProps = {
@@ -40,7 +41,7 @@ export async function AdjustmentModuleShell({ moduleKey }: AdjustmentModuleShell
         title="Register"
         description={`${rows.length} document${rows.length === 1 ? "" : "s"} — historical serials retained (no deletes).`}
       >
-        <AdjustmentRegisterTable rows={rows} />
+        <AdjustmentRegisterTable rows={rows} kind={adjustmentKindFromModule(moduleKey)} />
       </OperationalTableSection>
     </div>
   );
