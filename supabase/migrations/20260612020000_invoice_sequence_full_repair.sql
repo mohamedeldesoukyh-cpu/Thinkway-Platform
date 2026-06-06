@@ -1,6 +1,9 @@
 -- Full invoice sequence repair: two-phase renumber avoids UNIQUE collisions,
 -- syncs finance_documents.document_number, preserves invoice IDs and links.
 
+-- Return type expanded vs 20260612010000 — must drop before recreate (42P13).
+DROP FUNCTION IF EXISTS public.repair_invoice_sequence_for_year(integer, boolean);
+
 CREATE OR REPLACE FUNCTION public.repair_invoice_sequence_for_year(
   p_year integer,
   p_dry_run boolean DEFAULT true
