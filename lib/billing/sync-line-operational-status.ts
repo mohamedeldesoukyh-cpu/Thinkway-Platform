@@ -54,14 +54,25 @@ function deriveOperationalFromState(input: {
 
   const billable = deliverables.reduce((s, d) => s + d.billable_amount, 0);
   const invoiced = deliverables.reduce((s, d) => s + d.invoiced_amount, 0);
-  const anyLocked = deliverables.some((d) => d.locked_at);
+  const remaining = deliverables.reduce((s, d) => s + d.remaining_amount, 0);
+  const fullyInvoiced =
+    deliverables.length > 0 &&
+    deliverables.every((d) => d.locked_at && d.remaining_amount <= 0);
 
-  if (invoiceId || anyLocked || invoiced > 0) {
+  if (billingStatus === "partially_invoiced" || billingStatus === "partially_paid") {
+    if (vendorIoId && remaining > 0) return "io_generated";
+  }
+
+  if (invoiceId && fullyInvoiced) {
     return "locked";
   }
 
-  if (["invoiced", "paid", "partially_invoiced", "partially_paid"].includes(billingStatus)) {
+  if (["invoiced", "paid"].includes(billingStatus) || (fullyInvoiced && invoiced >= billable)) {
     return "locked";
+  }
+
+  if (invoiced > 0 && remaining > 0 && vendorIoId) {
+    return "io_generated";
   }
 
   if (storedOperational === "io_revised") {

@@ -144,8 +144,13 @@ export function AssignmentSafeGrid({
     setExpandedIds(new Set());
   }, []);
 
+  const prevCampaignIdRef = useRef(campaignId);
+
   useEffect(() => {
-    resetOperationalUiState();
+    if (prevCampaignIdRef.current !== campaignId) {
+      resetOperationalUiState();
+      prevCampaignIdRef.current = campaignId;
+    }
     logRevisionHierarchyKeys(hierarchy, { campaignId });
   }, [hierarchySignature, hierarchy, campaignId, resetOperationalUiState]);
 

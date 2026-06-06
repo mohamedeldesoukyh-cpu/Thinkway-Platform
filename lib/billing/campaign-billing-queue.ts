@@ -5,6 +5,7 @@ import {
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import { computeCampaignFinancialRollup } from "@/lib/billing/operational-financial-sync";
+import { campaignHasBillingQueueCandidates } from "@/lib/billing/queue-eligibility";
 
 export type CampaignBillingQueueFilter =
   | "all"
@@ -169,6 +170,23 @@ export function buildCampaignQueueFromBillingLines(
   }
 
   return rows;
+}
+
+/** Campaigns with zero remaining invoiceable revenue are fully invoiced — hide from default queue. */
+export function filterCampaignsWithRemainingInvoiceable(
+  rows: CampaignBillingQueueRow[],
+  operationalRowsByCampaign?: Map<string, import("@/lib/billing/operational-billing-rows").OperationalBillingRow[]>
+): CampaignBillingQueueRow[] {
+  if (!operationalRowsByCampaign) {
+    return rows.filter((row) => row.remaining_to_invoice > 0 || row.already_invoiced <= 0);
+  }
+  return rows.filter((row) => {
+    const ops = operationalRowsByCampaign.get(row.campaign_header_id);
+    if (!ops || ops.length === 0) {
+      return row.remaining_to_invoice > 0;
+    }
+    return campaignHasBillingQueueCandidates(ops) || row.remaining_to_invoice > 0;
+  });
 }
 
 export function filterCampaignQueueRows(

@@ -1,8 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  resetToastOnce,
+  showErrorToastOnce,
+  showSuccessToastOnce,
+} from "@/lib/ui/toast-once";
 
 import { Button } from "@/components/ui/button";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
@@ -103,6 +107,7 @@ export function InvoiceGenerationSheet({
   };
 
   const router = useRouter();
+  const handledActionRef = useRef<string | null>(null);
   const isAppend = targetMode === "append";
   const [selected, setSelected] = useState<OperationalSelectionState>(createEmptySelection());
   const [existingInvoiceId, setExistingInvoiceId] = useState("");
@@ -122,6 +127,8 @@ export function InvoiceGenerationSheet({
     if (!open) {
       setSelected(createEmptySelection());
       setExistingInvoiceId("");
+      handledActionRef.current = null;
+      resetToastOnce("invoice-generation");
       return;
     }
 
@@ -192,8 +199,13 @@ export function InvoiceGenerationSheet({
 
   useEffect(() => {
     if (!state.message) return;
+
+    const actionKey = `${state.ok}:${state.message}:${state.invoiceId ?? ""}:${state.campaignId ?? campaignId}`;
+    if (handledActionRef.current === actionKey) return;
+    handledActionRef.current = actionKey;
+
     if (state.ok) {
-      toast.success(state.message);
+      showSuccessToastOnce(state.message, { id: "invoice-generation" });
       const completedCampaignId = state.campaignId ?? campaignId;
       void (async () => {
         if (completedCampaignId && onInvoiceComplete) {
@@ -203,9 +215,18 @@ export function InvoiceGenerationSheet({
         onOpenChange(false);
       })();
     } else {
-      toast.error(state.message);
+      showErrorToastOnce(state.message, { id: "invoice-generation" });
     }
-  }, [state, onOpenChange, onInvoiceComplete, campaignId, router]);
+  }, [
+    state.message,
+    state.ok,
+    state.invoiceId,
+    state.campaignId,
+    onOpenChange,
+    onInvoiceComplete,
+    campaignId,
+    router,
+  ]);
 
   function toggleLeafRow(row: OperationalBillingRow) {
     setSelected((prev) => toggleOperationalRowSelection(row, prev, operationalRows));

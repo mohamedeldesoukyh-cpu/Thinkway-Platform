@@ -3,6 +3,10 @@ import {
   normalizeOperationalStatusForOpsBadge,
 } from "@/lib/campaigns/operational-status-utils";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import {
+  isFullyInvoicedBillingStatus,
+  isPartiallyInvoicedBillingStatus,
+} from "@/lib/billing/partial-invoice-lifecycle";
 
 /**
  * Derive UI/eligibility status when DB operational_status is stale (e.g. prod not backfilled).
@@ -35,18 +39,33 @@ export function effectiveLineOperationalStatus(input: {
     return "locked";
   }
 
-  if (raw === "invoiced" || raw === "partially_invoiced") {
+  const billing = input.billing_status ?? "draft";
+
+  if (raw === "invoiced") {
     return "locked";
   }
 
-  const billing = input.billing_status ?? "draft";
-  const locked =
-    Boolean(input.invoice_id) ||
-    Boolean(input.revenue_locked) ||
-    Boolean(input.vendor_assignment_locked) ||
-    ["invoiced", "paid", "partially_invoiced", "partially_paid", "closed"].includes(billing);
+  if (raw === "partially_invoiced" && input.vendor_io_id) {
+    return "io_generated";
+  }
 
-  if (locked) {
+  if (isFullyInvoicedBillingStatus(billing)) {
+    return "locked";
+  }
+
+  if (isPartiallyInvoicedBillingStatus(billing) && input.vendor_io_id) {
+    return "io_generated";
+  }
+
+  const fullyLocked =
+    Boolean(input.invoice_id) &&
+    isFullyInvoicedBillingStatus(billing);
+
+  if (
+    fullyLocked ||
+    (Boolean(input.revenue_locked) && isFullyInvoicedBillingStatus(billing)) ||
+    (Boolean(input.vendor_assignment_locked) && isFullyInvoicedBillingStatus(billing))
+  ) {
     return "locked";
   }
 

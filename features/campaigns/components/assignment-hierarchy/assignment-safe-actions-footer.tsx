@@ -3,7 +3,7 @@
 import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { showErrorToastOnce, showSuccessToastOnce } from "@/lib/ui/toast-once";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -99,10 +99,16 @@ export function AssignmentSafeActionsFooter({
         buildFormData(campaignId, vioLineIds)
       );
       if (result.ok) {
-        toast.success(result.message);
+        showSuccessToastOnce(result.message ?? "Vendor IO generated.", {
+          id: "assignment-safe-vio",
+        });
         onAfterOperationalMutation?.();
         router.refresh();
-      } else toast.error(result.message ?? "Vendor IO generation failed.");
+      } else {
+        showErrorToastOnce(result.message ?? "Vendor IO generation failed.", {
+          id: "assignment-safe-vio",
+        });
+      }
     });
   }
 
@@ -121,12 +127,18 @@ export function AssignmentSafeActionsFooter({
             new_vendor_io_ids: result.new_vendor_io_ids,
           });
         }
-        toast.success(result.message);
+        showSuccessToastOnce(result.message ?? "Vendor IO revised.", {
+          id: "assignment-safe-revise",
+        });
         setReviseOpen(false);
         setReviseReason("");
         onAfterOperationalMutation?.();
         router.refresh();
-      } else toast.error(result.message ?? "Revise Vendor IO failed.");
+      } else {
+        showErrorToastOnce(result.message ?? "Revise Vendor IO failed.", {
+          id: "assignment-safe-revise",
+        });
+      }
     });
   }
 
@@ -139,12 +151,18 @@ export function AssignmentSafeActionsFooter({
         buildFormData(campaignId, ungenerateIoLineIds, reason)
       );
       if (result.ok) {
-        toast.success(result.message);
+        showSuccessToastOnce(result.message ?? "Vendor IO un-generated.", {
+          id: "assignment-safe-ungenerate",
+        });
         setUngenerateOpen(false);
         setUngenerateReason("");
         onAfterOperationalMutation?.();
         router.refresh();
-      } else toast.error(result.message ?? "Un-generate failed.");
+      } else {
+        showErrorToastOnce(result.message ?? "Un-generate failed.", {
+          id: "assignment-safe-ungenerate",
+        });
+      }
     });
   }
 

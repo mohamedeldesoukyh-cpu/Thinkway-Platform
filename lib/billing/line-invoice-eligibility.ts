@@ -1,6 +1,11 @@
 import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { isInvoiceEligibleOperationalStatus } from "@/features/campaigns/types/operational";
+import {
+  getRemainingRevenue,
+  isFullyInvoicedBillingStatus,
+  isPartiallyInvoicedBillingStatus,
+} from "@/lib/billing/partial-invoice-lifecycle";
 
 export type LineInvoiceEligibilityInput = {
   operational_status?: CampaignLineOperationalStatus | string | null;
@@ -10,23 +15,21 @@ export type LineInvoiceEligibilityInput = {
   billing_status?: string | null;
 };
 
-const BLOCKED_LINE_BILLING = new Set([
-  "invoiced",
-  "paid",
-  "closed",
-  "partially_paid",
-]);
-
 export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolean {
-  if (line.is_locked) return false;
   if (!line.vendor_io_id) return false;
 
   const billing = line.billing_status ?? "";
-  if (BLOCKED_LINE_BILLING.has(billing)) {
-    return false;
+  if (isFullyInvoicedBillingStatus(billing)) return false;
+
+  const remaining = getRemainingRevenue({
+    remaining_amount: line.remaining_amount,
+  });
+
+  if (isPartiallyInvoicedBillingStatus(billing)) {
+    return remaining > 0;
   }
 
-  if (line.is_locked) return false;
+  if (line.is_locked && remaining <= 0) return false;
 
   const status = effectiveLineOperationalStatus({
     operational_status: line.operational_status,
@@ -35,6 +38,8 @@ export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolea
   }) as CampaignLineOperationalStatus;
 
   if (status === "locked") return false;
+
+  if (remaining <= 0 && line.remaining_amount != null) return false;
 
   return isInvoiceEligibleOperationalStatus(status);
 }

@@ -3,7 +3,7 @@
 import { FileStackIcon, FileTextIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { toast } from "sonner";
+import { showErrorToastOnce, showSuccessToastOnce } from "@/lib/ui/toast-once";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,11 +64,15 @@ export function AssignmentSelectionSummaryBar({
         buildFormData(campaignId, vioLineIds)
       );
       if (result.ok) {
-        toast.success(result.message);
+        showSuccessToastOnce(result.message ?? "Vendor IO generated.", {
+          id: "assignment-vio-generate",
+        });
         onAfterOperationalMutation?.();
         router.refresh();
       } else {
-        toast.error(result.message ?? "Vendor IO generation failed.");
+        showErrorToastOnce(result.message ?? "Vendor IO generation failed.", {
+          id: "assignment-vio-generate",
+        });
       }
     });
   }

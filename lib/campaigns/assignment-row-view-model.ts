@@ -7,6 +7,7 @@ import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-nami
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
+import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
 import { isLineUngenerateIoEligible } from "@/lib/io/vendor-io-ungenerate-eligibility";
 import { safeSummarizePostingDates } from "@/lib/campaigns/safe-assignment-dates";
@@ -100,6 +101,12 @@ export function deriveAssignmentLineMeta(
 
   const pricingMode = line.assignment?.pricing_mode ?? "package";
   const hasDeliverableBreakdown = (group.deliverables?.length ?? 0) > 0;
+  const remaining = getRemainingRevenue({
+    remaining_amount: group.rollups?.remaining_value,
+    billable_amount: group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue,
+    invoiced_amount: group.rollups?.invoiced_value,
+  });
+
   const invoiceEligible =
     pricingMode === "per_deliverable" && hasDeliverableBreakdown
       ? false
@@ -108,6 +115,7 @@ export function deriveAssignmentLineMeta(
           vendor_io_id: line.vendor_io_id,
           billing_status: line.billing_status,
           is_locked: line.revenue_locked,
+          remaining_amount: remaining,
         });
 
   const reviseVioEligible =
@@ -127,10 +135,7 @@ export function deriveAssignmentLineMeta(
     ungenerateIoEligible,
     rowSelectable:
       vioEligible || invoiceEligible || reviseVioEligible || ungenerateIoEligible,
-    remaining: finiteNumber(
-      group.rollups?.remaining_value,
-      finiteNumber(line.revenue_before_vat, finiteNumber(line.revenue))
-    ),
+    remaining,
   };
 }
 

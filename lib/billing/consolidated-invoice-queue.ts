@@ -1,7 +1,13 @@
 import {
+  flattenOperationalLeaves,
   isOperationalRowInvoiceEligible,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
+import {
+  campaignHasBillingQueueCandidates,
+  getRemainingInvoiceableDeliverables,
+} from "@/lib/billing/queue-eligibility";
+import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 import {
   buildInvoiceSelectionBatch,
   selectAllOperationalRows,
@@ -39,16 +45,22 @@ export function buildConsolidatedInvoiceQueueRows(input: {
   currency_code: string;
   operational_rows: OperationalBillingRow[];
 }): ConsolidatedInvoiceQueueRow[] {
+  if (!campaignHasBillingQueueCandidates(input.operational_rows)) return [];
+
+  const invoiceable = getRemainingInvoiceableDeliverables(input.operational_rows);
+  const leaves = flattenOperationalLeaves(input.operational_rows);
+  const leafById = new Map(leaves.map((row) => [row.id, row]));
+
   let revenue_before_vat = 0;
   let vat_amount = 0;
   let revenue_after_vat = 0;
-  let eligible_line_count = 0;
+  const eligibleLineIds = new Set<string>();
 
-  for (const row of input.operational_rows) {
-    if (row.kind !== "assignment") continue;
-    if (!isOperationalRowInvoiceEligible(row)) continue;
+  for (const ref of invoiceable) {
+    const row = leafById.get(ref.id);
+    if (!row || !isOperationalRowInvoiceEligible(row)) continue;
 
-    const billable = Math.max(0, row.remaining_amount);
+    const billable = getRemainingRevenue(row);
     if (billable <= 0) continue;
 
     const vat = computeVatLine({
@@ -60,9 +72,10 @@ export function buildConsolidatedInvoiceQueueRows(input: {
     revenue_before_vat += vat.beforeVat;
     vat_amount += vat.vatAmount;
     revenue_after_vat += vat.afterVat;
-    eligible_line_count += 1;
+    eligibleLineIds.add(row.campaign_line_id);
   }
 
+  const eligible_line_count = eligibleLineIds.size;
   if (eligible_line_count === 0) return [];
 
   return [

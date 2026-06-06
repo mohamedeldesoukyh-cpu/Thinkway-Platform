@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
-import { toast } from "sonner";
+import { showErrorToastOnce, showSuccessToastOnce, resetToastOnce } from "@/lib/ui/toast-once";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,17 +89,30 @@ export function CreateInvoiceSheet({
     createInvoiceFromLinesAction,
     { ok: false } satisfies BillingActionState
   );
+  const handledActionRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      handledActionRef.current = null;
+      resetToastOnce("create-invoice");
+      return;
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!state.message) return;
+    const actionKey = `${state.ok}:${state.message}`;
+    if (handledActionRef.current === actionKey) return;
+    handledActionRef.current = actionKey;
+
     if (state.ok) {
-      toast.success(state.message);
+      showSuccessToastOnce(state.message, { id: "create-invoice" });
       onOpenChange(false);
       setSelected(new Set());
     } else {
-      toast.error(state.message);
+      showErrorToastOnce(state.message, { id: "create-invoice" });
     }
-  }, [state, onOpenChange]);
+  }, [state.message, state.ok, onOpenChange]);
 
   function toggleDeliverable(id: string) {
     setSelected((prev) => {

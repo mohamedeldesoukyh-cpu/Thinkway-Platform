@@ -400,8 +400,10 @@ export async function lockDeliverablesOnInvoice(
       vat_locked: partialLock,
       billing_invoiced_at: fullLock ? now : null,
     };
-    if (fullLock || partialLock) {
+    if (fullLock) {
       linePatch.operational_status = "locked";
+    } else if (partialLock) {
+      linePatch.operational_status = "io_generated";
     }
 
     await supabase

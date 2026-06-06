@@ -1,6 +1,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
 import {
+  getInvoiceOperationalState,
+  type InvoiceRegistryRow,
+} from "@/lib/finance/invoice-registry";
+import {
   isActiveInvoiceForFinancialTotals,
   isRegisterInvoiceStatus,
 } from "@/lib/finance/status";
@@ -17,15 +21,6 @@ async function requireUser() {
     throw new Error(error?.message ?? "Unauthorized");
   }
   return { supabase };
-}
-
-function resolveLockedStatus(input: {
-  is_operational_locked?: boolean | null;
-  regeneration_status?: string | null;
-}): string {
-  if (input.is_operational_locked) return "Locked";
-  if (input.regeneration_status === "pending_regeneration") return "Pending regeneration";
-  return "Open";
 }
 
 export async function getFinanceInvoiceRegister(options?: {
@@ -116,6 +111,17 @@ export async function getFinanceInvoiceRegister(options?: {
       inv.revenue_after_vat ?? inv.total ?? revenue_before_vat + vat_amount
     );
 
+    const registryRow: InvoiceRegistryRow = {
+      id: inv.id,
+      document_number: inv.document_number,
+      status: inv.status,
+      regeneration_status: inv.regeneration_status,
+      is_operational_locked: inv.is_operational_locked,
+      revenue_before_vat,
+      vat_amount,
+      revenue_after_vat,
+    };
+
     rows.push({
       id: inv.id,
       document_number: inv.document_number,
@@ -127,7 +133,7 @@ export async function getFinanceInvoiceRegister(options?: {
       vat_amount,
       revenue_after_vat,
       status: inv.status,
-      locked_status: resolveLockedStatus(inv),
+      locked_status: getInvoiceOperationalState(registryRow).locked_status,
       created_date: inv.issue_date,
       currency: inv.currency,
       regeneration_status: inv.regeneration_status,

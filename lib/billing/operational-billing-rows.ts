@@ -2,6 +2,28 @@ import type {
   AssignmentDeliverableBillingStatus,
   CampaignLineBillingStatus,
 } from "@/features/billing/types";
+import {
+  getRemainingRevenue,
+  isFullyInvoiced,
+  isFullyInvoicedBillingStatus,
+  isPartiallyInvoicedBillingStatus,
+} from "@/lib/billing/partial-invoice-lifecycle";
+
+function hasRemainingInvoiceableRevenue(
+  row: Pick<
+    OperationalBillingRow,
+    "remaining_amount" | "billable_amount" | "invoiced_amount" | "line_billing_status"
+  >
+): boolean {
+  const remaining = getRemainingRevenue(row);
+  if (remaining <= 0) return false;
+  if (isFullyInvoicedBillingStatus(row.line_billing_status)) return false;
+  return !isFullyInvoiced({
+    billable: row.billable_amount,
+    invoiced: row.invoiced_amount,
+    remaining,
+  });
+}
 
 export type OperationalBillingRowKind = "assignment" | "deliverable_group" | "post";
 
@@ -114,6 +136,8 @@ export function isOperationalRowInvoiceEligible(
     | "kind"
     | "is_locked"
     | "remaining_amount"
+    | "billable_amount"
+    | "invoiced_amount"
     | "billing_status"
     | "line_billing_status"
     | "is_invoice_eligible"
@@ -124,9 +148,23 @@ export function isOperationalRowInvoiceEligible(
     | "is_legacy_synthetic"
   >
 ): boolean {
-  if (row.is_locked || row.remaining_amount <= 0) return false;
+  if (
+    !hasRemainingInvoiceableRevenue({
+      remaining_amount: row.remaining_amount,
+      billable_amount: row.billable_amount,
+      invoiced_amount: row.invoiced_amount,
+      line_billing_status: row.line_billing_status,
+    })
+  ) {
+    return false;
+  }
   if (row.billing_status === "disputed" || row.billing_status === "cancelled") return false;
-  if (["invoiced", "collected"].includes(row.billing_status)) return false;
+  if (["invoiced", "collected"].includes(row.billing_status) && row.remaining_amount <= 0) {
+    return false;
+  }
+  if (isFullyInvoicedBillingStatus(row.line_billing_status) && row.remaining_amount <= 0) {
+    return false;
+  }
 
   const pricingMode = resolveRowPricingMode(row);
   if (pricingMode === "package" && row.kind !== "assignment" && !row.is_legacy_synthetic) {
@@ -139,7 +177,8 @@ export function isOperationalRowInvoiceEligible(
   const operational = (row.operational_status ?? "draft") as
     import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
 
-  if (operational === "draft" || operational === "invoiced" || operational === "closed") {
+  if (operational === "draft" || operational === "closed") return false;
+  if (operational === "invoiced" && !isPartiallyInvoicedBillingStatus(row.line_billing_status)) {
     return false;
   }
   if (row.kind === "assignment" && !row.vendor_io_id) return false;
@@ -155,7 +194,6 @@ const UI_BLOCKED_LINE_BILLING = new Set<CampaignLineBillingStatus>([
   "invoiced",
   "paid",
   "closed",
-  "partially_paid",
 ]);
 
 /** UI checkbox eligibility (excludes invoiced / locked / paid lines from Select all). */
@@ -165,6 +203,8 @@ export function isOperationalRowUiSelectable(
     | "kind"
     | "is_locked"
     | "remaining_amount"
+    | "billable_amount"
+    | "invoiced_amount"
     | "billing_status"
     | "line_billing_status"
     | "operational_status"
@@ -181,7 +221,10 @@ export function isOperationalRowUiSelectable(
   const operational = (row.operational_status ?? "draft") as
     import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
 
-  if (operational === "invoiced" || operational === "draft") return false;
+  if (operational === "draft") return false;
+  if (operational === "invoiced" && !isPartiallyInvoicedBillingStatus(row.line_billing_status)) {
+    return false;
+  }
 
   const operationalOk = UI_SELECTABLE_OPERATIONAL.has(operational);
   const movedToBilling = row.line_billing_status === "moved_to_billing";
