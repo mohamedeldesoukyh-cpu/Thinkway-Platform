@@ -47,6 +47,7 @@ type AssignmentSafeActionsFooterProps = {
   ungenerateIoLineIds: string[];
   invoiceLineIds: string[];
   hasInvoiceSelection?: boolean;
+  invoiceActionLabel?: "generate" | "regenerate" | null;
   invoiceTotal: number;
   onGenerateInvoice: () => void;
   /** Clear selection / expansion before router.refresh after IO mutations. */
@@ -78,6 +79,7 @@ export function AssignmentSafeActionsFooter({
   ungenerateIoLineIds,
   invoiceLineIds,
   hasInvoiceSelection = invoiceLineIds.length > 0,
+  invoiceActionLabel = "generate",
   invoiceTotal,
   onGenerateInvoice,
   onAfterOperationalMutation,
@@ -244,7 +246,7 @@ export function AssignmentSafeActionsFooter({
             {hasInvoiceSelection ? (
               <Button type="button" size="sm" onClick={onGenerateInvoice}>
                 <FileTextIcon data-icon="inline-start" />
-                Generate invoice
+                {invoiceActionLabel === "regenerate" ? "Regenerate invoice" : "Generate invoice"}
               </Button>
             ) : null}
           </div>

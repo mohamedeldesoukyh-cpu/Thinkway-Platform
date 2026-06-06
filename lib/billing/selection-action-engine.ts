@@ -1,9 +1,13 @@
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
 import {
-  getRemainingRevenue,
-  isFullyInvoicedBillingStatus,
-} from "@/lib/billing/partial-invoice-lifecycle";
+  canRegenerateInvoice,
+  hasInvoiceLinkage,
+  hasRegeneratableRevenue,
+  isInvoiceLifecycleReopenable,
+  resolveInvoiceActionLabel,
+  type RegenerationEligibilityInput,
+} from "@/lib/billing/regeneration-eligibility";
 
 export type SelectionActionRowInput = {
   lineId: string;
@@ -19,36 +23,45 @@ export type ResolvedSelectionActions = {
   ungenerateIoLineIds: string[];
   hasInvoiceSelection: boolean;
   showGenerateInvoice: boolean;
+  invoiceActionLabel: "generate" | "regenerate" | null;
 };
 
-function isDeliverableInvoiceable(
-  deliverable: AssignmentHierarchyGroup["deliverables"][number]
-): boolean {
-  if (deliverable.is_synthetic) return false;
-  const remaining = Number(deliverable.remaining_amount ?? 0);
-  if (remaining <= 0) return false;
-  if (deliverable.is_locked) return false;
-  if (["invoiced", "collected", "cancelled", "disputed"].includes(deliverable.billing_status)) {
-    return false;
-  }
-  return true;
-}
+const TERMINAL_BILLING = new Set(["void", "cancelled", "closed"]);
 
-/** Remaining invoiceable revenue — sole gate for invoice actions. */
-export function hasRemainingInvoiceableAssignment(row: SelectionActionRowInput): boolean {
+function rowEligibilityInput(row: SelectionActionRowInput): RegenerationEligibilityInput {
   const line = row.group.line;
-  if (!line.vendor_io_id) return false;
-
-  const billing = line.billing_status ?? "";
-  if (isFullyInvoicedBillingStatus(billing)) return false;
-
-  const remaining = getRemainingRevenue({
+  return {
+    billing_status: line.billing_status,
+    operational_status: line.operational_status,
+    vendor_io_id: line.vendor_io_id,
+    invoice_id: line.invoice_id,
     remaining_amount: row.meta?.remaining ?? row.group.rollups?.remaining_value,
     billable_amount: row.group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue,
     invoiced_amount: row.group.rollups?.invoiced_value,
-  });
+  };
+}
 
-  return remaining > 0;
+function isDeliverableInvoiceActionEligible(
+  deliverable: AssignmentHierarchyGroup["deliverables"][number],
+  line: SelectionActionRowInput
+): boolean {
+  if (deliverable.is_synthetic) return false;
+  if (TERMINAL_BILLING.has(deliverable.billing_status)) return false;
+  if (["cancelled", "disputed"].includes(deliverable.billing_status)) return false;
+
+  const remaining = Number(deliverable.remaining_amount ?? 0);
+  if (remaining > 0 && !deliverable.is_locked) return true;
+
+  return canRegenerateInvoice({
+    ...rowEligibilityInput(line),
+    remaining_amount: deliverable.remaining_amount,
+    invoiced_amount: deliverable.invoiced_amount,
+  });
+}
+
+/** Invoice/regenerate action eligibility from remaining revenue OR reversible lifecycle. */
+export function hasRemainingInvoiceableAssignment(row: SelectionActionRowInput): boolean {
+  return canRegenerateInvoice(rowEligibilityInput(row));
 }
 
 export function getInvoiceableSelectedAssignments(input: {
@@ -70,7 +83,6 @@ export function getInvoiceableSelectedAssignments(input: {
 export function getInvoiceableSelectedDeliverables(input: {
   selectedDeliverableIds: Iterable<string>;
   preparedRows: SelectionActionRowInput[];
-  invoiceableLineIds: Set<string>;
 }): string[] {
   const selected = new Set(input.selectedDeliverableIds);
   const deliverableIds: string[] = [];
@@ -81,7 +93,7 @@ export function getInvoiceableSelectedDeliverables(input: {
 
     for (const deliverable of row.group.deliverables ?? []) {
       if (!selected.has(deliverable.id)) continue;
-      if (!isDeliverableInvoiceable(deliverable)) continue;
+      if (!isDeliverableInvoiceActionEligible(deliverable, row)) continue;
       deliverableIds.push(deliverable.id);
     }
   }
@@ -103,7 +115,6 @@ export function hasInvoiceableSelection(input: {
   const deliverableIds = getInvoiceableSelectedDeliverables({
     selectedDeliverableIds: input.selectedDeliverableIds,
     preparedRows: input.preparedRows,
-    invoiceableLineIds: new Set(invoiceLineIds),
   });
   return deliverableIds.length > 0;
 }
@@ -125,11 +136,18 @@ export function resolveSelectionActions(input: {
   const invoiceDeliverableIds = getInvoiceableSelectedDeliverables({
     selectedDeliverableIds: input.selectedDeliverableIds,
     preparedRows: input.preparedRows,
-    invoiceableLineIds: invoiceableLineSet,
   });
 
   const hasInvoiceSelection =
     invoiceLineIds.length > 0 || invoiceDeliverableIds.length > 0;
+
+  const invoiceActionLabel = resolveInvoiceActionLabel({
+    invoiceLineIds,
+    getRow: (lineId) => {
+      const row = input.preparedRows.find((entry) => entry.lineId === lineId);
+      return row ? rowEligibilityInput(row) : null;
+    },
+  });
 
   const vioLineIds: string[] = [];
   const reviseVioLineIds: string[] = [];
@@ -148,7 +166,12 @@ export function resolveSelectionActions(input: {
       reviseVioLineIds.push(row.lineId);
     }
 
-    if (!invoiceable && meta?.ungenerateIoEligible) {
+    if (
+      !invoiceable &&
+      meta?.ungenerateIoEligible &&
+      !hasInvoiceLinkage(rowEligibilityInput(row)) &&
+      !isInvoiceLifecycleReopenable(rowEligibilityInput(row))
+    ) {
       ungenerateIoLineIds.push(row.lineId);
     }
   }
@@ -161,5 +184,6 @@ export function resolveSelectionActions(input: {
     ungenerateIoLineIds,
     hasInvoiceSelection,
     showGenerateInvoice: hasInvoiceSelection,
+    invoiceActionLabel,
   };
 }

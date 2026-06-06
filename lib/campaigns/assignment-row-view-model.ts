@@ -6,7 +6,7 @@ import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/o
 import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
-import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
+import { canRegenerateInvoice } from "@/lib/billing/regeneration-eligibility";
 import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
 import { isLineUngenerateIoEligible } from "@/lib/io/vendor-io-ungenerate-eligibility";
@@ -110,13 +110,12 @@ export function deriveAssignmentLineMeta(
   const invoiceEligible =
     pricingMode === "per_deliverable" && hasDeliverableBreakdown
       ? false
-      : isLineInvoiceEligible({
+      : canRegenerateInvoice({
           operational_status: line.operational_status,
           vendor_io_id: line.vendor_io_id,
           billing_status: line.billing_status,
-          is_locked: line.revenue_locked,
-          remaining_amount: remaining,
           invoice_id: line.invoice_id,
+          remaining_amount: remaining,
           billable_amount: group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue,
           invoiced_amount: group.rollups?.invoiced_value,
         });

@@ -10,6 +10,12 @@ export type InvoiceSequenceRepairResult = {
   next_serial: number;
 };
 
+export type InvoiceSequenceRepairPreviewRow = {
+  invoice_id: string | null;
+  old_document_number: string | null;
+  new_document_number: string | null;
+};
+
 export type InvoiceSequenceValidation = {
   year: number;
   prefix: string;
@@ -91,30 +97,45 @@ export async function repairInvoiceSequenceForYear(
   supabase: SupabaseClient,
   year: number,
   options?: { dryRun?: boolean }
-): Promise<{ ok: boolean; result?: InvoiceSequenceRepairResult; error?: string }> {
+): Promise<{
+  ok: boolean;
+  result?: InvoiceSequenceRepairResult;
+  preview?: InvoiceSequenceRepairPreviewRow[];
+  error?: string;
+}> {
+  const dryRun = options?.dryRun ?? false;
   const { data, error } = await supabase.rpc("repair_invoice_sequence_for_year", {
     p_year: year,
-    p_dry_run: options?.dryRun ?? false,
+    p_dry_run: dryRun,
   });
 
   if (error) {
     return { ok: false, error: error.message };
   }
 
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) {
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  if (rows.length === 0) {
     return { ok: true };
   }
 
-  const typed = row as Record<string, unknown>;
+  const preview: InvoiceSequenceRepairPreviewRow[] = rows
+    .filter((row) => row.invoice_id)
+    .map((row) => ({
+      invoice_id: row.invoice_id ? String(row.invoice_id) : null,
+      old_document_number: row.old_document_number ? String(row.old_document_number) : null,
+      new_document_number: row.new_document_number ? String(row.new_document_number) : null,
+    }));
+
+  const summary = rows[rows.length - 1];
   return {
     ok: true,
+    preview: dryRun ? preview : undefined,
     result: {
       year,
-      renumbered: Number(typed.renumbered ?? 0),
-      previous_max_serial: Number(typed.previous_max_serial ?? 0),
-      new_max_serial: Number(typed.new_max_serial ?? 0),
-      next_serial: Number(typed.next_serial ?? 0),
+      renumbered: preview.length,
+      previous_max_serial: Number(summary.previous_max_serial ?? 0),
+      new_max_serial: Number(summary.new_max_serial ?? 0),
+      next_serial: Number(summary.next_serial ?? 0),
     },
   };
 }

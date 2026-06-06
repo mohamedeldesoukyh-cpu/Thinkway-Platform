@@ -223,6 +223,7 @@ export function AssignmentSafeGrid({
     invoiceLineIds,
     invoiceDeliverableIds,
     hasInvoiceSelection,
+    invoiceActionLabel,
     vioLineIds,
     reviseVioLineIds,
     ungenerateIoLineIds,
@@ -330,6 +331,7 @@ export function AssignmentSafeGrid({
           invoiceLineIds={invoiceLineIds}
           onGenerateInvoice={emitInvoiceSelection}
           hasInvoiceSelection={hasInvoiceSelection}
+          invoiceActionLabel={invoiceActionLabel}
           onAfterOperationalMutation={resetOperationalUiState}
         />
       ) : null}
@@ -583,6 +585,7 @@ export function AssignmentSafeGrid({
           invoiceTotal={invoiceTotal}
           onGenerateInvoice={emitInvoiceSelection}
           hasInvoiceSelection={hasInvoiceSelection}
+          invoiceActionLabel={invoiceActionLabel}
           onAfterOperationalMutation={resetOperationalUiState}
         />
       ) : null}

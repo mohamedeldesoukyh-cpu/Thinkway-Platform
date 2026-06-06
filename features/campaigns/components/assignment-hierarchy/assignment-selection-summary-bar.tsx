@@ -31,6 +31,7 @@ type AssignmentSelectionSummaryBarProps = {
   vioLineIds: string[];
   invoiceLineIds: string[];
   hasInvoiceSelection?: boolean;
+  invoiceActionLabel?: "generate" | "regenerate" | null;
   onGenerateInvoice: () => void;
   onAfterOperationalMutation?: () => void;
   className?: string;
@@ -49,6 +50,7 @@ export function AssignmentSelectionSummaryBar({
   vioLineIds,
   invoiceLineIds,
   hasInvoiceSelection = invoiceLineIds.length > 0,
+  invoiceActionLabel = "generate",
   onGenerateInvoice,
   onAfterOperationalMutation,
   className,
@@ -151,7 +153,7 @@ export function AssignmentSelectionSummaryBar({
               onClick={onGenerateInvoice}
             >
               <FileTextIcon data-icon="inline-start" />
-              Generate invoice
+              {invoiceActionLabel === "regenerate" ? "Regenerate invoice" : "Generate invoice"}
             </Button>
           ) : null}
         </div>
