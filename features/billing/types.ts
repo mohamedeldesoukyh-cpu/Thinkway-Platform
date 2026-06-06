@@ -1,3 +1,5 @@
+import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
+
 export type CampaignLineBillingStatus =
   | "draft"
   | "approved"
@@ -194,6 +196,8 @@ export type InvoiceWorkspace = {
   }[];
   approvals: FinancialApprovalRow[];
   activity: BillingActivityItem[];
+  /** Populated when invoice is pending regeneration — IO coverage vs current campaign lines. */
+  regeneration_coverage?: IoCoverageAnalysis | null;
 };
 
 export type FinancialApprovalRow = {

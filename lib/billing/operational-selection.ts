@@ -51,6 +51,50 @@ export function selectionToPayload(selection: OperationalSelectionState): Operat
   };
 }
 
+/**
+ * Submit payload for invoice actions — drops parent assignment line_ids when
+ * granular deliverable/post rows are selected (avoids stale bulk-selection ids).
+ */
+export function selectionToSubmitPayload(
+  selection: OperationalSelectionState,
+  rootRows: OperationalBillingRow[]
+): OperationalSelectionPayload {
+  const prunedLineIds: string[] = [];
+
+  for (const lineId of selection.line_ids) {
+    const path = findRowPath(rootRows, lineId);
+    const assignment = path?.[0];
+    if (!assignment || assignment.kind !== "assignment") continue;
+
+    const pricingMode = assignment.pricing_mode ?? "package";
+    const selectableDescendants = getSelectableDescendantRows(assignment);
+    const hasDirectGranular = selectableDescendants.some((descendant) =>
+      isRowDirectlySelected(descendant, selection)
+    );
+
+    if (pricingMode === "per_deliverable") {
+      if (!hasDirectGranular) prunedLineIds.push(lineId);
+      continue;
+    }
+
+    if (selectableDescendants.length === 0) {
+      prunedLineIds.push(lineId);
+      continue;
+    }
+
+    const allDescendantsSelected = selectableDescendants.every((descendant) =>
+      isRowDirectlySelected(descendant, selection)
+    );
+    if (allDescendantsSelected) prunedLineIds.push(lineId);
+  }
+
+  return {
+    line_ids: prunedLineIds,
+    deliverable_ids: [...selection.deliverable_ids],
+    post_ids: [...selection.post_ids],
+  };
+}
+
 export function countSelection(selection: OperationalSelectionState): number {
   return selection.line_ids.size + selection.deliverable_ids.size + selection.post_ids.size;
 }

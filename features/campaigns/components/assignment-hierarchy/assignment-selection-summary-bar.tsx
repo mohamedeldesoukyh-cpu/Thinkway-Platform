@@ -12,6 +12,7 @@ import {
   type GenerateVendorIoState,
 } from "@/features/io/generate-vendor-io-action";
 import { formatMoney } from "@/features/campaigns/utils";
+import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
 import { cn } from "@/lib/utils";
 
 const initialVioState: GenerateVendorIoState = { ok: false };
@@ -32,6 +33,7 @@ type AssignmentSelectionSummaryBarProps = {
   invoiceLineIds: string[];
   hasInvoiceSelection?: boolean;
   invoiceActionLabel?: "generate" | "regenerate" | null;
+  ioCoverage?: IoCoverageAnalysis | null;
   onGenerateInvoice: () => void;
   onAfterOperationalMutation?: () => void;
   className?: string;
@@ -51,6 +53,7 @@ export function AssignmentSelectionSummaryBar({
   invoiceLineIds,
   hasInvoiceSelection = invoiceLineIds.length > 0,
   invoiceActionLabel = "generate",
+  ioCoverage = null,
   onGenerateInvoice,
   onAfterOperationalMutation,
   className,
@@ -150,6 +153,7 @@ export function AssignmentSelectionSummaryBar({
               size="sm"
               variant="outline"
               className="h-8 text-xs"
+              disabled={ioCoverage?.case === "blocked"}
               onClick={onGenerateInvoice}
             >
               <FileTextIcon data-icon="inline-start" />
@@ -157,6 +161,12 @@ export function AssignmentSelectionSummaryBar({
             </Button>
           ) : null}
         </div>
+        {ioCoverage?.case === "revision_warning" && ioCoverage.warning_message ? (
+          <p className="text-xs text-amber-800 dark:text-amber-200">{ioCoverage.warning_message}</p>
+        ) : null}
+        {ioCoverage?.case === "blocked" && ioCoverage.block_message ? (
+          <p className="text-xs text-destructive">{ioCoverage.block_message}</p>
+        ) : null}
       </div>
     </div>
   );

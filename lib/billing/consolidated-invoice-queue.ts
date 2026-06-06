@@ -3,8 +3,8 @@ import { isCampaignBillingEligible } from "@/lib/billing/campaign-billing-eligib
 import { getRemainingInvoiceableDeliverables } from "@/lib/billing/queue-eligibility";
 import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 import {
-  buildInvoiceSelectionBatch,
-  selectAllOperationalRows,
+  createEmptySelection,
+  selectionToSubmitPayload,
   type OperationalSelectionPayload,
 } from "@/lib/billing/operational-selection";
 import { computeVatLine } from "@/lib/vat/calculations";
@@ -100,10 +100,18 @@ export function consolidatedQueueBatchLabel(batchKey: string): string {
   return batchKey;
 }
 
-/** Invoice payload for all UI-selectable lines under a consolidated queue row. */
+/** Invoice payload for queue-eligible rows only (no parent assignment pollution). */
 export function buildConsolidatedQueueInvoiceSelection(
   operational_rows: OperationalBillingRow[]
 ): OperationalSelectionPayload {
-  const selection = selectAllOperationalRows(operational_rows);
-  return buildInvoiceSelectionBatch(selection, operational_rows);
+  const selection = createEmptySelection();
+  const invoiceable = getRemainingInvoiceableDeliverables(operational_rows);
+
+  for (const ref of invoiceable) {
+    if (ref.kind === "assignment") selection.line_ids.add(ref.id);
+    else if (ref.kind === "deliverable_group") selection.deliverable_ids.add(ref.id);
+    else selection.post_ids.add(ref.id);
+  }
+
+  return selectionToSubmitPayload(selection, operational_rows);
 }

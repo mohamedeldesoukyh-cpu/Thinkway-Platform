@@ -51,7 +51,7 @@ import {
   getRowSelectionStatus,
   isRowEffectivelySelected,
   payloadToSelection,
-  selectionToPayload,
+  selectionToSubmitPayload,
   toggleOperationalRowSelection,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
@@ -232,7 +232,7 @@ export function InvoiceGenerationSheet({
     setSelected((prev) => toggleOperationalRowSelection(row, prev, operationalRows));
   }
 
-  const payload = selectionToPayload(selected);
+  const payload = selectionToSubmitPayload(selected, operationalRows);
   const hasSelection = countSelection(selected) > 0;
 
   return (

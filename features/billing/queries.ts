@@ -531,6 +531,27 @@ export async function getInvoiceWorkspace(
   const total = Number(inv.total);
   const amountPaid = Number(inv.amount_paid);
 
+  const invoiceLines = (() => {
+    if (linesResult.integrityWarning && process.env.NODE_ENV === "development") {
+      console.warn("[getInvoiceWorkspace]", linesResult.integrityWarning);
+    }
+    return linesResult.lines.map((row) => ({
+      id: row.id,
+      campaign_line_id: row.campaign_line_id,
+      assignment_deliverable_id: row.assignment_deliverable_id,
+      description: row.description,
+      quantity: row.quantity,
+      unit_price: row.unit_price,
+      line_total: row.line_total,
+      revenue_before_vat: row.revenue_before_vat,
+      revenue_vat_percent: row.revenue_vat_percent,
+      revenue_vat_amount: row.revenue_vat_amount,
+      revenue_vat_exempt: row.revenue_vat_exempt,
+      line_document_number: row.line_document_number,
+      deliverable_label: row.deliverable_label,
+    }));
+  })();
+
   return {
     id: inv.id,
     document_number: inv.document_number,
@@ -550,26 +571,8 @@ export async function getInvoiceWorkspace(
     notes: inv.notes,
     client: inv.client,
     campaign: inv.campaign,
-    lines: (() => {
-      if (linesResult.integrityWarning && process.env.NODE_ENV === "development") {
-        console.warn("[getInvoiceWorkspace]", linesResult.integrityWarning);
-      }
-      return linesResult.lines.map((row) => ({
-        id: row.id,
-        campaign_line_id: row.campaign_line_id,
-        assignment_deliverable_id: row.assignment_deliverable_id,
-        description: row.description,
-        quantity: row.quantity,
-        unit_price: row.unit_price,
-        line_total: row.line_total,
-        revenue_before_vat: row.revenue_before_vat,
-        revenue_vat_percent: row.revenue_vat_percent,
-        revenue_vat_amount: row.revenue_vat_amount,
-        revenue_vat_exempt: row.revenue_vat_exempt,
-        line_document_number: row.line_document_number,
-        deliverable_label: row.deliverable_label,
-      }));
-    })(),
+    lines: invoiceLines,
+    regeneration_coverage: null,
     payments: (paymentsResult.data ?? []).map((p) => ({
       id: p.id,
       document_number: p.document_number,

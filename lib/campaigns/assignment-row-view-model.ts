@@ -7,6 +7,11 @@ import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-nami
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import { canRegenerateInvoice } from "@/lib/billing/regeneration-eligibility";
+import { buildScopedLineSnapshotFromHierarchy } from "@/lib/operations/io-coverage-scope";
+import {
+  hasExistingIoCoverage,
+  requiresIoRevision,
+} from "@/lib/operations/io-coverage";
 import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
 import { isLineUngenerateIoEligible } from "@/lib/io/vendor-io-ungenerate-eligibility";
@@ -80,14 +85,6 @@ export function deriveAssignmentLineMeta(
   group: AssignmentHierarchyGroup
 ): AssignmentLineMeta {
   const line = group.line;
-  const status = effectiveLineOperationalStatusForUi({
-    operational_status: line.operational_status,
-    vendor_io_id: line.vendor_io_id,
-    billing_status: line.billing_status,
-    invoice_id: line.invoice_id,
-    revenue_locked: line.revenue_locked,
-    vendor_assignment_locked: line.vendor_assignment_locked,
-  });
 
   const vioEligible = isLineVendorIoGenerateEligible({
     vendor_io_id: line.vendor_io_id,
@@ -113,6 +110,8 @@ export function deriveAssignmentLineMeta(
       : canRegenerateInvoice({
           operational_status: line.operational_status,
           vendor_io_id: line.vendor_io_id,
+          active_vendor_io_id: line.active_vendor_io_id,
+          vendor_io_document_number: line.vendor_io_document_number,
           billing_status: line.billing_status,
           invoice_id: line.invoice_id,
           remaining_amount: remaining,
@@ -120,10 +119,17 @@ export function deriveAssignmentLineMeta(
           invoiced_amount: group.rollups?.invoiced_value,
         });
 
+  const currentIoSnapshot = buildScopedLineSnapshotFromHierarchy(group, {
+    mode: "regenerate",
+  });
+  const ioBaseline = buildScopedLineSnapshotFromHierarchy(group, {
+    mode: "regenerate",
+  });
+
   const reviseVioEligible =
     remaining <= 0 &&
-    (status === "io_revised" || status === "locked") &&
-    Boolean(line.active_vendor_io_id ?? line.vendor_io_id);
+    hasExistingIoCoverage(currentIoSnapshot) &&
+    requiresIoRevision(ioBaseline, currentIoSnapshot);
   const ungenerateIoEligible = isLineUngenerateIoEligible({
     vendor_io_id: line.active_vendor_io_id ?? line.vendor_io_id,
     operational_status: status,

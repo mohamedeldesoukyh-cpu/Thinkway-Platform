@@ -33,14 +33,21 @@ export async function resolveOperationalInvoiceTargets(
         };
       }
       postSet.add(post.id);
+      if (post.assignment_deliverable_id) {
+        deliverableSet.add(post.assignment_deliverable_id);
+      }
     }
   }
+
+  const hasGranularSelection =
+    input.deliverableIds.length > 0 || input.postIds.length > 0;
+  const lineIdsForExpansion = hasGranularSelection ? [] : input.lineIds;
 
   const { deliverableIds, error } = await resolveInvoiceDeliverableIds(
     supabase,
     campaignId,
     [...deliverableSet],
-    input.lineIds
+    lineIdsForExpansion
   );
 
   if (error) {

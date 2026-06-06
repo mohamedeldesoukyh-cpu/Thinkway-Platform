@@ -2,6 +2,7 @@ import {
   getRemainingRevenue,
   isPartiallyInvoicedBillingStatus,
 } from "@/lib/billing/partial-invoice-lifecycle";
+import { hasExistingIoCoverage } from "@/lib/operations/io-coverage";
 
 const TERMINAL_BILLING = new Set(["void", "cancelled", "closed"]);
 
@@ -9,6 +10,8 @@ export type RegenerationEligibilityInput = {
   billing_status?: string | null;
   operational_status?: string | null;
   vendor_io_id?: string | null;
+  active_vendor_io_id?: string | null;
+  vendor_io_document_number?: string | null;
   invoice_id?: string | null;
   regeneration_status?: string | null;
   invoice_status?: string | null;
@@ -45,7 +48,15 @@ export function isInvoiceLifecycleReopenable(
   const billing = input.billing_status ?? "draft";
   if (TERMINAL_BILLING.has(billing)) return false;
   if (input.invoice_status === "void") return false;
-  if (!input.vendor_io_id) return false;
+  if (
+    !hasExistingIoCoverage({
+      vendor_io_id: input.vendor_io_id,
+      active_vendor_io_id: input.active_vendor_io_id,
+      vendor_io_document_number: input.vendor_io_document_number,
+    })
+  ) {
+    return false;
+  }
 
   if (input.regeneration_status === "pending_regeneration") return true;
   if (input.invoice_status === "draft" && Boolean(input.invoice_id)) return true;
@@ -67,10 +78,16 @@ export function isInvoiceLifecycleReopenable(
 }
 
 export function canRegenerateInvoice(input: RegenerationEligibilityInput): boolean {
-  if (!input.vendor_io_id) return false;
-
   const billing = input.billing_status ?? "draft";
   if (TERMINAL_BILLING.has(billing)) return false;
+
+  const hasIo = hasExistingIoCoverage({
+    vendor_io_id: input.vendor_io_id,
+    active_vendor_io_id: input.active_vendor_io_id,
+    vendor_io_document_number: input.vendor_io_document_number,
+  });
+
+  if (!hasIo && !hasInvoiceLinkage(input)) return false;
 
   if (hasRegeneratableRevenue(input)) return true;
 

@@ -1,5 +1,7 @@
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
+import { analyzeAssignmentGroupsCoverage } from "@/lib/operations/io-coverage-server";
+import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
 import {
   canRegenerateInvoice,
   hasInvoiceLinkage,
@@ -24,6 +26,7 @@ export type ResolvedSelectionActions = {
   hasInvoiceSelection: boolean;
   showGenerateInvoice: boolean;
   invoiceActionLabel: "generate" | "regenerate" | null;
+  ioCoverage: IoCoverageAnalysis | null;
 };
 
 const TERMINAL_BILLING = new Set(["void", "cancelled", "closed"]);
@@ -34,6 +37,8 @@ function rowEligibilityInput(row: SelectionActionRowInput): RegenerationEligibil
     billing_status: line.billing_status,
     operational_status: line.operational_status,
     vendor_io_id: line.vendor_io_id,
+    active_vendor_io_id: line.active_vendor_io_id,
+    vendor_io_document_number: line.vendor_io_document_number,
     invoice_id: line.invoice_id,
     remaining_amount: row.meta?.remaining ?? row.group.rollups?.remaining_value,
     billable_amount: row.group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue,
@@ -149,6 +154,23 @@ export function resolveSelectionActions(input: {
     },
   });
 
+  const coverageLineIds = [
+    ...new Set([...invoiceLineIds, ...deriveLineIdsForDeliverables(input, invoiceDeliverableIds)]),
+  ];
+
+  const ioCoverage =
+    coverageLineIds.length > 0 || invoiceDeliverableIds.length > 0
+      ? analyzeAssignmentGroupsCoverage({
+          groups: input.preparedRows.map((r) => r.group),
+          scope: {
+            lineIds: coverageLineIds,
+            deliverableIds:
+              invoiceDeliverableIds.length > 0 ? invoiceDeliverableIds : undefined,
+          },
+          mode: invoiceActionLabel === "regenerate" ? "regenerate" : "generate",
+        })
+      : null;
+
   const vioLineIds: string[] = [];
   const reviseVioLineIds: string[] = [];
   const ungenerateIoLineIds: string[] = [];
@@ -162,7 +184,11 @@ export function resolveSelectionActions(input: {
       vioLineIds.push(row.lineId);
     }
 
-    if (!invoiceable && meta?.reviseVioEligible) {
+    if (
+      !invoiceable &&
+      meta?.reviseVioEligible &&
+      (!ioCoverage || ioCoverage.revised_line_ids.includes(row.lineId))
+    ) {
       reviseVioLineIds.push(row.lineId);
     }
 
@@ -185,5 +211,24 @@ export function resolveSelectionActions(input: {
     hasInvoiceSelection,
     showGenerateInvoice: hasInvoiceSelection,
     invoiceActionLabel,
+    ioCoverage,
   };
+}
+
+function deriveLineIdsForDeliverables(
+  input: {
+    preparedRows: SelectionActionRowInput[];
+  },
+  deliverableIds: string[]
+): string[] {
+  if (deliverableIds.length === 0) return [];
+  const deliverableSet = new Set(deliverableIds);
+  const lineIds: string[] = [];
+  for (const row of input.preparedRows) {
+    const hasSelectedDeliverable = (row.group.deliverables ?? []).some((d) =>
+      deliverableSet.has(d.id)
+    );
+    if (hasSelectedDeliverable) lineIds.push(row.lineId);
+  }
+  return lineIds;
 }

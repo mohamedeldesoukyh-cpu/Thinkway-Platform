@@ -224,6 +224,7 @@ export function AssignmentSafeGrid({
     invoiceDeliverableIds,
     hasInvoiceSelection,
     invoiceActionLabel,
+    ioCoverage,
     vioLineIds,
     reviseVioLineIds,
     ungenerateIoLineIds,
@@ -332,6 +333,7 @@ export function AssignmentSafeGrid({
           onGenerateInvoice={emitInvoiceSelection}
           hasInvoiceSelection={hasInvoiceSelection}
           invoiceActionLabel={invoiceActionLabel}
+          ioCoverage={ioCoverage}
           onAfterOperationalMutation={resetOperationalUiState}
         />
       ) : null}
@@ -586,6 +588,7 @@ export function AssignmentSafeGrid({
           onGenerateInvoice={emitInvoiceSelection}
           hasInvoiceSelection={hasInvoiceSelection}
           invoiceActionLabel={invoiceActionLabel}
+          ioCoverage={ioCoverage}
           onAfterOperationalMutation={resetOperationalUiState}
         />
       ) : null}

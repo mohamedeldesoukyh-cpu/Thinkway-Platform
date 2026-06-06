@@ -32,10 +32,8 @@ import {
 import { invoiceUngenerateIneligibleReason } from "@/lib/billing/invoice-ungenerate-eligibility";
 import { ensureInvoiceFinanceDocument } from "@/lib/finance/finance-document-registry";
 import { syncInvoiceOperationalStates } from "@/lib/finance/invoice-locks";
-import {
-  blockInvoiceWithoutVendorIoMessage,
-  isLineInvoiceEligible,
-} from "@/lib/billing/line-invoice-eligibility";
+import { blockInvoiceWithoutVendorIoMessage } from "@/lib/billing/line-invoice-eligibility";
+import { resolveScopedInvoiceLineIds } from "@/lib/billing/invoice-validation-scope";
 import {
   approveOperationalRows,
   markOperationalRowsReadyToInvoice,
@@ -607,47 +605,62 @@ export async function createInvoiceFromLinesAction(
 
   await prepareLinesForDeliverableInvoicing(supabase, deliverables);
 
-  if (lineIds.length > 0 || deliverableIds.length > 0) {
-    const idsFromDeliverables =
-      deliverableIds.length > 0
-        ? [
-            ...new Set(
-              deliverables.map((d) => d.campaign_line?.id).filter(Boolean) as string[]
-            ),
-          ]
-        : [];
+  if (lineIds.length > 0 || deliverableIds.length > 0 || postIds.length > 0) {
+    let scopedLineIds: string[] = [];
+    try {
+      scopedLineIds = await resolveScopedInvoiceLineIds(supabase, {
+        requestedLineIds: lineIds,
+        resolvedDeliverableIds: deliverableIds,
+        resolvedPostIds: postIds,
+        deliverables,
+      });
+    } catch (scopeError) {
+      return {
+        ok: false,
+        message: scopeError instanceof Error ? scopeError.message : "Invoice scope resolution failed.",
+      };
+    }
 
-    const uniqueLineIds = [...new Set([...lineIds, ...idsFromDeliverables])];
-    if (uniqueLineIds.length > 0) {
-      const { data: opLines, error: opError } = await supabase
-        .from("campaign_lines")
-        .select("id, document_number, operational_status, vendor_io_id, billing_status, invoice_id")
-        .in("id", uniqueLineIds);
+    if (scopedLineIds.length > 0 || deliverableIds.length > 0) {
+      const regenerateScope =
+        deliverables.length > 0 &&
+        deliverables.every(
+          (d) =>
+            Boolean(d.locked_at) ||
+            Boolean(d.invoice_line_item_id) ||
+            Number(d.remaining_amount ?? 0) <= 0
+        );
 
-      if (opError) {
-        return { ok: false, message: opError.message };
+      const { analyzeCreateInvoiceCoverage } = await import(
+        "@/lib/operations/io-coverage-server"
+      );
+      const coverage = await analyzeCreateInvoiceCoverage(supabase, {
+        campaignId: parsed.data.campaign_id,
+        lineIds: scopedLineIds,
+        deliverableIds,
+        mode: regenerateScope ? "regenerate" : "generate",
+      });
+
+      if (coverage.case === "blocked") {
+        const blockedLine = coverage.lines.find((l) => l.category === "needs_io");
+        return {
+          ok: false,
+          message: blockedLine
+            ? `${coverage.block_message ?? blockInvoiceWithoutVendorIoMessage()} (${blockedLine.line_name}).`
+            : (coverage.block_message ?? blockInvoiceWithoutVendorIoMessage()),
+        };
       }
 
-      for (const row of opLines ?? []) {
-        const line = row as unknown as {
-          id: string;
-          document_number: string;
-          operational_status: string;
-          vendor_io_id: string | null;
-          billing_status: string;
-          invoice_id: string | null;
-        };
-        if (
-          !isLineInvoiceEligible({
-            operational_status: line.operational_status,
-            vendor_io_id: line.vendor_io_id,
-            billing_status: line.billing_status,
-          })
-        ) {
-          return {
-            ok: false,
-            message: `${blockInvoiceWithoutVendorIoMessage()} (line ${line.document_number}).`,
-          };
+      if (coverage.revised_line_ids.length > 0) {
+        const { reviseVendorIoBatch } = await import("@/lib/io/revise-vendor-io-batch");
+        const reviseResult = await reviseVendorIoBatch(supabase, {
+          campaignId: parsed.data.campaign_id,
+          lineIds: coverage.revised_line_ids,
+          reason: "Invoice commercial correction before billing",
+          userId: user.id,
+        });
+        if (!reviseResult.ok) {
+          return { ok: false, message: reviseResult.error ?? "Vendor IO revision failed." };
         }
       }
     }
@@ -1237,6 +1250,13 @@ export async function regenerateInvoiceAction(
     };
   }
 
+  const { getInvoiceLines } = await import("@/lib/finance/invoice-line-registry");
+  const invoiceLinesResult = await getInvoiceLines(supabase, invoice.id);
+  if (invoiceLinesResult.error) {
+    return { ok: false, message: invoiceLinesResult.error };
+  }
+  const invoiceLineItems = invoiceLinesResult.lines;
+
   const { data: linkedLines, error: linesError } = await supabase
     .from("campaign_lines")
     .select(
@@ -1246,6 +1266,70 @@ export async function regenerateInvoiceAction(
 
   if (linesError) {
     return { ok: false, message: linesError.message };
+  }
+
+  const scopedLineIds = [
+    ...new Set(
+      invoiceLineItems.map((i) => i.campaign_line_id).filter(Boolean) as string[]
+    ),
+  ];
+  const scopedDeliverableIds = [
+    ...new Set(
+      invoiceLineItems
+        .map((i) => i.assignment_deliverable_id)
+        .filter(Boolean) as string[]
+    ),
+  ];
+
+  if (scopedLineIds.length > 0 && invoice.campaign_header_id) {
+    const { analyzeInvoiceRegenerationCoverage } = await import(
+      "@/lib/operations/io-coverage-server"
+    );
+    const coverage = await analyzeInvoiceRegenerationCoverage(supabase, {
+      invoiceLines: invoiceLineItems.map((row) => ({
+        id: row.id,
+        campaign_line_id: row.campaign_line_id,
+        assignment_deliverable_id: row.assignment_deliverable_id,
+        description: row.description,
+        quantity: row.quantity,
+        unit_price: row.unit_price,
+        line_total: row.line_total,
+        revenue_before_vat: row.revenue_before_vat,
+        revenue_vat_percent: row.revenue_vat_percent,
+        revenue_vat_amount: row.revenue_vat_amount,
+        revenue_vat_exempt: row.revenue_vat_exempt,
+        line_document_number: row.line_document_number,
+        deliverable_label: row.deliverable_label,
+      })),
+      scope: {
+        lineIds: scopedLineIds,
+        deliverableIds:
+          scopedDeliverableIds.length > 0 ? scopedDeliverableIds : undefined,
+      },
+      mode: "regenerate",
+    });
+
+    if (coverage.case === "blocked") {
+      return {
+        ok: false,
+        message:
+          coverage.block_message ??
+          "Generate Vendor IO for new assignments or deliverables before regenerating.",
+      };
+    }
+
+    if (coverage.revised_line_ids.length > 0) {
+      const { reviseVendorIoBatch } = await import("@/lib/io/revise-vendor-io-batch");
+      const reviseResult = await reviseVendorIoBatch(supabase, {
+        campaignId: invoice.campaign_header_id,
+        lineIds: coverage.revised_line_ids,
+        reason: `Invoice regeneration: ${parsed.data.reason}`,
+        userId: auth.userId,
+      });
+      if (!reviseResult.ok) {
+        return { ok: false, message: reviseResult.error ?? "Vendor IO revision failed." };
+      }
+    }
   }
 
   const { vatRate } = await resolveClientBillingVatRate(supabase, invoice.client_id);

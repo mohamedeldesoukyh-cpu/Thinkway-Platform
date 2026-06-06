@@ -35,7 +35,7 @@ import {
   countSelection,
   createEmptySelection,
   selectAllOperationalRows,
-  selectionToPayload,
+  selectionToSubmitPayload,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
@@ -262,7 +262,8 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
   const onOpenInvoice = useCallback(
     (campaignId: string) => {
       const selection = queueSelectionsRef.current[campaignId] ?? createEmptySelection();
-      openInvoiceWorkflow(campaignId, selectionToPayload(selection));
+      const rows = detailCacheRef.current[campaignId]?.operational_rows ?? [];
+      openInvoiceWorkflow(campaignId, selectionToSubmitPayload(selection, rows));
     },
     [openInvoiceWorkflow]
   );

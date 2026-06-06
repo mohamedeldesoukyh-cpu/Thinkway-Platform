@@ -29,6 +29,7 @@ import {
   type UngenerateVendorIoState,
 } from "@/features/io/ungenerate-vendor-io-action";
 import { formatMoney } from "@/features/campaigns/utils";
+import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
 import { cn } from "@/lib/utils";
 
 const initialVioState: GenerateVendorIoState = { ok: false };
@@ -48,6 +49,7 @@ type AssignmentSafeActionsFooterProps = {
   invoiceLineIds: string[];
   hasInvoiceSelection?: boolean;
   invoiceActionLabel?: "generate" | "regenerate" | null;
+  ioCoverage?: IoCoverageAnalysis | null;
   invoiceTotal: number;
   onGenerateInvoice: () => void;
   /** Clear selection / expansion before router.refresh after IO mutations. */
@@ -80,6 +82,7 @@ export function AssignmentSafeActionsFooter({
   invoiceLineIds,
   hasInvoiceSelection = invoiceLineIds.length > 0,
   invoiceActionLabel = "generate",
+  ioCoverage = null,
   invoiceTotal,
   onGenerateInvoice,
   onAfterOperationalMutation,
@@ -244,12 +247,23 @@ export function AssignmentSafeActionsFooter({
               </Button>
             ) : null}
             {hasInvoiceSelection ? (
-              <Button type="button" size="sm" onClick={onGenerateInvoice}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={ioCoverage?.case === "blocked"}
+                onClick={onGenerateInvoice}
+              >
                 <FileTextIcon data-icon="inline-start" />
                 {invoiceActionLabel === "regenerate" ? "Regenerate invoice" : "Generate invoice"}
               </Button>
             ) : null}
           </div>
+        ) : null}
+        {ioCoverage?.case === "revision_warning" && ioCoverage.warning_message ? (
+          <p className="text-xs text-amber-800 dark:text-amber-200">{ioCoverage.warning_message}</p>
+        ) : null}
+        {ioCoverage?.case === "blocked" && ioCoverage.block_message ? (
+          <p className="text-xs text-destructive">{ioCoverage.block_message}</p>
         ) : null}
       </div>
 
@@ -258,8 +272,8 @@ export function AssignmentSafeActionsFooter({
           <DialogHeader>
             <DialogTitle>Revise Vendor IO</DialogTitle>
             <DialogDescription>
-              Create a new VIO revision for {reviseVioLineIds.length} line
-              {reviseVioLineIds.length === 1 ? "" : "s"}.
+              Vendor IO will be revised using the same IO number for {reviseVioLineIds.length}{" "}
+              line{reviseVioLineIds.length === 1 ? "" : "s"} (internal revision /n).
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">

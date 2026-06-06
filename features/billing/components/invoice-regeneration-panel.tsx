@@ -23,6 +23,7 @@ import {
   ungenerateInvoiceAction,
   type BillingActionState,
 } from "@/features/billing/actions";
+import { InvoiceRegenerateCoveragePanel } from "@/features/billing/components/invoice-regenerate-coverage-panel";
 import type { InvoiceWorkspace } from "@/features/billing/types";
 
 type InvoiceRegenerationPanelProps = {
@@ -66,6 +67,9 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
       : invoice.regeneration_status === "regenerated"
         ? `Regenerated (v${invoice.version_number})`
         : "Active";
+
+  const coverage = invoice.regeneration_coverage ?? null;
+  const regenerateBlocked = coverage?.case === "blocked";
 
   return (
     <>
@@ -118,6 +122,9 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
             action={mode === "ungenerate" ? ungenerateAction : regenerateAction}
             className="grid gap-3"
           >
+            {mode === "regenerate" && coverage ? (
+              <InvoiceRegenerateCoveragePanel coverage={coverage} />
+            ) : null}
             <input type="hidden" name="invoice_id" value={invoice.id} />
             <div className="grid gap-2">
               <Label htmlFor="gov_reason">Reason (required)</Label>
@@ -140,7 +147,8 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
                 variant={mode === "ungenerate" ? "destructive" : "default"}
                 disabled={
                   (mode === "ungenerate" ? ungeneratePending : regeneratePending) ||
-                  !reason.trim()
+                  !reason.trim() ||
+                  (mode === "regenerate" && regenerateBlocked)
                 }
               >
                 {mode === "ungenerate"

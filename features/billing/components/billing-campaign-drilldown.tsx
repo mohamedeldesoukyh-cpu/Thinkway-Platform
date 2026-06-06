@@ -13,12 +13,11 @@ import {
   type OperationalBillingFilter,
 } from "@/lib/billing/operational-row-filters";
 import {
-  buildInvoiceSelectionBatch,
   clearOperationalSelection,
   countSelection,
   createEmptySelection,
   getGlobalSelectionStatus,
-  selectionToPayload,
+  selectionToSubmitPayload,
   toggleGlobalOperationalSelection,
   toggleOperationalRowSelection,
   type OperationalSelectionPayload,
@@ -110,7 +109,7 @@ function BillingCampaignDrilldownInner({
 
   const handleInvoiceSelected = useCallback(() => {
     if (!onInvoice || selectedCount === 0) return;
-    onInvoice(buildInvoiceSelectionBatch(selection, rootRows));
+    onInvoice(selectionToSubmitPayload(selection, rootRows));
   }, [onInvoice, selectedCount, selection, rootRows]);
 
   return (
