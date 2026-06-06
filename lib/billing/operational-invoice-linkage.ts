@@ -5,12 +5,14 @@ import { devLog } from "@/lib/dev-log";
 import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
 
 type LineItemLink = {
+  invoice_id: string;
   deliverable_id: string | null;
   post_id: string | null;
   line_id: string | null;
   revenue_before_vat: number;
   document_number: string | null;
   invoice_status: string | null;
+  regeneration_status: string | null;
 };
 
 export async function loadOperationalInvoiceLinkage(
@@ -25,7 +27,7 @@ export async function loadOperationalInvoiceLinkage(
       assignment_post_schedule_id,
       campaign_line_id,
       revenue_before_vat,
-      invoice:invoices!inner(document_number, status, regeneration_status)
+      invoice:invoices!inner(id, document_number, status, regeneration_status)
     `
     )
     .eq("campaign_header_id", campaignHeaderId);
@@ -49,6 +51,7 @@ export async function loadOperationalInvoiceLinkage(
       campaign_line_id: string | null;
       revenue_before_vat: number;
       invoice: {
+        id: string;
         document_number: string;
         status: string;
         regeneration_status: string | null;
@@ -64,12 +67,14 @@ export async function loadOperationalInvoiceLinkage(
       continue;
     }
     links.push({
+      invoice_id: typed.invoice.id,
       deliverable_id: typed.assignment_deliverable_id,
       post_id: typed.assignment_post_schedule_id,
       line_id: typed.campaign_line_id,
       revenue_before_vat: Number(typed.revenue_before_vat ?? 0),
       document_number: typed.invoice.document_number ?? null,
       invoice_status: typed.invoice.status ?? null,
+      regeneration_status: typed.invoice.regeneration_status ?? null,
     });
   }
 
@@ -94,9 +99,9 @@ function applyLinkageToRow(
   const directLineInvoiced = roundMoney(
     rowLinks.reduce((sum, link) => sum + link.revenue_before_vat, 0)
   );
+  const primaryLink = rowLinks[0];
   const invoiceDoc =
-    rowLinks.find((link) => link.document_number)?.document_number ??
-    row.invoice_document_number;
+    primaryLink?.document_number ?? row.invoice_document_number;
 
   const invoiced_amount =
     children.length > 0
@@ -108,18 +113,30 @@ function applyLinkageToRow(
       ? childRemaining
       : Math.max(0, roundMoney(row.billable_amount - invoiced_amount));
 
-  const is_locked = Boolean(
-    row.is_locked || row.invoice_line_item_id || invoiced_amount >= row.billable_amount
-  );
+  const linkedInvoiceId = primaryLink?.invoice_id ?? row.linked_invoice_id ?? row.invoice_id;
+  const regenerationStatus =
+    primaryLink?.regeneration_status ?? row.invoice_regeneration_status ?? null;
+  const pendingRegeneration = regenerationStatus === "pending_regeneration";
+
+  const is_locked = pendingRegeneration
+    ? Boolean(row.locked_at)
+    : Boolean(
+        row.is_locked ||
+          row.invoice_line_item_id ||
+          invoiced_amount >= row.billable_amount
+      );
 
   return {
     ...row,
     children,
+    linked_invoice_id: linkedInvoiceId,
+    invoice_regeneration_status: regenerationStatus,
     invoice_document_number: invoiceDoc ?? row.invoice_document_number,
     invoiced_amount,
     remaining_amount,
     is_locked,
-    is_invoice_eligible: !is_locked && remaining_amount > 0,
+    is_invoice_eligible:
+      pendingRegeneration || (!is_locked && remaining_amount > 0),
   };
 }
 

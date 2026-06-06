@@ -594,77 +594,239 @@ export async function lockDeliverablesOnInvoice(
     await syncLineOperationalStatus(supabase, lineId);
   }
 
-  const totalsError = await recalculateInvoiceTotals(supabase, invoiceId);
-  if (totalsError.error) {
-    return { ...totalsError, lineItemOps };
-  }
-
   return { lineItemOps };
 }
 
+/**
+ * PR4: Regenerate updates existing invoice_line_items in place — never delete+reinsert.
+ */
+export async function regenerateInvoiceLineItems(
+  supabase: SupabaseClient,
+  invoiceId: string,
+  headerId: string,
+  options?: { defaultVatRate?: number }
+): Promise<{ error?: string; updated: number; touchedLineIds: string[] }> {
+  const defaultVatRate = options?.defaultVatRate ?? 0;
+
+  const { data: existingItems, error: itemsError } = await supabase
+    .from("invoice_line_items")
+    .select(
+      "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, sort_order"
+    )
+    .eq("invoice_id", invoiceId)
+    .order("sort_order");
+
+  if (itemsError) {
+    return { error: itemsError.message, updated: 0, touchedLineIds: [] };
+  }
+
+  if (!existingItems?.length) {
+    return { updated: 0, touchedLineIds: [] };
+  }
+
+  const postIds = (existingItems ?? [])
+    .map((i) => (i as { assignment_post_schedule_id: string | null }).assignment_post_schedule_id)
+    .filter(Boolean) as string[];
+
+  const deliverableIds = (existingItems ?? [])
+    .filter((i) => {
+      const row = i as {
+        assignment_deliverable_id: string | null;
+        assignment_post_schedule_id: string | null;
+      };
+      return row.assignment_deliverable_id && !row.assignment_post_schedule_id;
+    })
+    .map((i) => (i as { assignment_deliverable_id: string }).assignment_deliverable_id);
+
+  const packageLineIds = (existingItems ?? [])
+    .filter((i) => {
+      const row = i as {
+        assignment_deliverable_id: string | null;
+        assignment_post_schedule_id: string | null;
+        campaign_line_id: string | null;
+      };
+      return row.campaign_line_id && !row.assignment_deliverable_id && !row.assignment_post_schedule_id;
+    })
+    .map((i) => (i as { campaign_line_id: string }).campaign_line_id);
+
+  const touchedLineIds = new Set<string>();
+  let updated = 0;
+
+  if (postIds.length > 0) {
+    const { buildPostInvoiceLinePayload, fetchPostsForInvoicing } = await import(
+      "@/lib/billing/invoice-from-posts"
+    );
+    const { posts, error: postsError } = await fetchPostsForInvoicing(
+      supabase,
+      headerId,
+      postIds
+    );
+    if (postsError) {
+      return { error: postsError, updated, touchedLineIds: [...touchedLineIds] };
+    }
+
+    const postById = new Map(posts.map((post) => [post.id, post]));
+
+    for (const item of existingItems ?? []) {
+      const row = item as {
+        id: string;
+        assignment_post_schedule_id: string | null;
+        campaign_line_id: string | null;
+        sort_order: number;
+      };
+      if (!row.assignment_post_schedule_id) continue;
+
+      const post = postById.get(row.assignment_post_schedule_id);
+      if (!post) continue;
+
+      const payload = buildPostInvoiceLinePayload(
+        invoiceId,
+        headerId,
+        post,
+        Number(row.sort_order ?? 1),
+        defaultVatRate
+      );
+
+      const { error: updateError } = await supabase
+        .from("invoice_line_items")
+        .update(payload)
+        .eq("id", row.id);
+
+      if (updateError) {
+        return { error: updateError.message, updated, touchedLineIds: [...touchedLineIds] };
+      }
+
+      updated += 1;
+      if (row.campaign_line_id) touchedLineIds.add(row.campaign_line_id);
+    }
+  }
+
+  if (deliverableIds.length > 0) {
+    const { deliverables, error: deliverablesError } = await fetchDeliverablesForInvoicing(
+      supabase,
+      headerId,
+      deliverableIds
+    );
+    if (deliverablesError) {
+      return { error: deliverablesError, updated, touchedLineIds: [...touchedLineIds] };
+    }
+
+    const deliverableById = new Map(deliverables.map((row) => [row.id, row]));
+
+    for (const item of existingItems ?? []) {
+      const row = item as {
+        id: string;
+        assignment_deliverable_id: string | null;
+        assignment_post_schedule_id: string | null;
+        campaign_line_id: string | null;
+        sort_order: number;
+      };
+      if (!row.assignment_deliverable_id || row.assignment_post_schedule_id) continue;
+
+      const deliverable = deliverableById.get(row.assignment_deliverable_id);
+      const line = deliverable?.campaign_line;
+      if (!deliverable || !line) continue;
+
+      const mapped = mapDeliverableRecord(deliverable);
+      const payload = deliverableInvoiceLinePayload(
+        invoiceId,
+        headerId,
+        line,
+        mapped,
+        Number(row.sort_order ?? 1),
+        defaultVatRate
+      );
+
+      const { error: updateError } = await supabase
+        .from("invoice_line_items")
+        .update(payload)
+        .eq("id", row.id);
+
+      if (updateError) {
+        return { error: updateError.message, updated, touchedLineIds: [...touchedLineIds] };
+      }
+
+      updated += 1;
+      touchedLineIds.add(line.id);
+    }
+  }
+
+  if (packageLineIds.length > 0) {
+    const { data: lines, error: linesError } = await supabase
+      .from("campaign_lines")
+      .select(
+        "id, document_number, name, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt"
+      )
+      .in("id", packageLineIds);
+
+    if (linesError) {
+      return { error: linesError.message, updated, touchedLineIds: [...touchedLineIds] };
+    }
+
+    const lineById = new Map((lines ?? []).map((line) => [(line as { id: string }).id, line]));
+
+    for (const item of existingItems ?? []) {
+      const row = item as {
+        id: string;
+        campaign_line_id: string | null;
+        assignment_deliverable_id: string | null;
+        assignment_post_schedule_id: string | null;
+        sort_order: number;
+      };
+      if (
+        !row.campaign_line_id ||
+        row.assignment_deliverable_id ||
+        row.assignment_post_schedule_id
+      ) {
+        continue;
+      }
+
+      const line = lineById.get(row.campaign_line_id);
+      if (!line) continue;
+
+      const payload = packageAssignmentLineItemPayload(
+        invoiceId,
+        headerId,
+        line as {
+          id: string;
+          document_number: string;
+          name: string;
+          revenue?: number | null;
+          revenue_before_vat?: number | null;
+          revenue_vat_percent?: number | null;
+          revenue_vat_exempt?: boolean | null;
+        },
+        Number(row.sort_order ?? 1),
+        defaultVatRate
+      );
+
+      const { error: updateError } = await supabase
+        .from("invoice_line_items")
+        .update(payload)
+        .eq("id", row.id);
+
+      if (updateError) {
+        return { error: updateError.message, updated, touchedLineIds: [...touchedLineIds] };
+      }
+
+      updated += 1;
+      touchedLineIds.add(row.campaign_line_id);
+    }
+  }
+
+  return { updated, touchedLineIds: [...touchedLineIds] };
+}
+
+/** @deprecated Use regenerateInvoiceLineItems — kept for import compatibility during migration. */
 export async function regenerateInvoiceFromDeliverables(
   supabase: SupabaseClient,
   invoiceId: string,
   headerId: string,
   options?: { defaultVatRate?: number }
 ): Promise<{ error?: string; usedDeliverables: boolean }> {
-  const { data: existingItems, error: itemsError } = await supabase
-    .from("invoice_line_items")
-    .select("assignment_deliverable_id, campaign_line_id, sort_order")
-    .eq("invoice_id", invoiceId)
-    .order("sort_order");
-
-  if (itemsError) {
-    return { error: itemsError.message, usedDeliverables: false };
-  }
-
-  const deliverableIds = (existingItems ?? [])
-    .map((i) => i.assignment_deliverable_id)
-    .filter(Boolean) as string[];
-
-  await supabase.from("invoice_line_items").delete().eq("invoice_id", invoiceId);
-
-  if (deliverableIds.length === 0) {
-    return { usedDeliverables: false };
-  }
-
-  const { deliverables, error } = await fetchDeliverablesForInvoicing(
-    supabase,
-    headerId,
-    deliverableIds
-  );
-
-  if (error) {
-    return { error, usedDeliverables: true };
-  }
-
-  const orderMap = new Map(
-    deliverableIds.map((id, index) => [id, index + 1])
-  );
-  const sorted = [...deliverables].sort(
-    (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0)
-  );
-
-  for (const row of sorted) {
-    const line = row.campaign_line;
-    if (!line) continue;
-    const mapped = mapDeliverableRecord(row);
-    const sortOrder = orderMap.get(row.id) ?? 1;
-    await supabase
-      .from("invoice_line_items")
-      .insert(
-        deliverableInvoiceLinePayload(
-          invoiceId,
-          headerId,
-          line,
-          mapped,
-          sortOrder,
-          options?.defaultVatRate ?? 0
-        )
-      );
-  }
-
-  await recalculateInvoiceTotals(supabase, invoiceId);
-
-  return { usedDeliverables: true };
+  const result = await regenerateInvoiceLineItems(supabase, invoiceId, headerId, options);
+  return {
+    error: result.error,
+    usedDeliverables: result.updated > 0,
+  };
 }

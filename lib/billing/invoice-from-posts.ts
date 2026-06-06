@@ -111,7 +111,7 @@ function postInvoiceBeforeVat(
   return billable;
 }
 
-function postInvoiceLinePayload(
+export function buildPostInvoiceLinePayload(
   invoiceId: string,
   headerId: string,
   post: PostInvoiceLine,
@@ -437,7 +437,7 @@ export async function lockPostsOnInvoice(
       Boolean(post.invoice_line_item_id) &&
       post.linked_invoice_id === invoiceId;
     const billable = postInvoiceBeforeVat(post, { updatingExisting });
-    const payload = postInvoiceLinePayload(invoiceId, headerId, post, sortOrder, defaultVatRate);
+    const payload = buildPostInvoiceLinePayload(invoiceId, headerId, post, sortOrder, defaultVatRate);
     const reuseLineItem = updatingExisting;
 
     let lineItemId = post.invoice_line_item_id;
@@ -538,11 +538,6 @@ export async function lockPostsOnInvoice(
     await supabase.from("campaign_lines").update(linePatch as never).eq("id", lineId);
     await syncLineBillingFromDeliverables(supabase, lineId, nextStatus);
     await syncLineOperationalStatus(supabase, lineId);
-  }
-
-  const totalsError = await recalculateInvoiceTotals(supabase, invoiceId);
-  if (totalsError.error) {
-    return { ...totalsError, lineItemOps };
   }
 
   return { lineItemOps };

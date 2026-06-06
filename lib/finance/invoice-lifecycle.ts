@@ -1,8 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { regenerateInvoiceFromDeliverables } from "@/lib/billing/invoice-from-deliverables";
-import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
-import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
+import { commitInvoiceLifecycleMutation } from "@/lib/billing/invoice-lifecycle-commit";
+import { regenerateInvoiceLineItems } from "@/lib/billing/invoice-from-deliverables";
 import { logFinanceAuditEvent } from "@/lib/finance/audit-log";
 import { FINANCE_AUDIT_EVENTS } from "@/lib/finance/audit-events";
 import { canUnpostInvoice } from "@/lib/finance/document-controls";
@@ -13,10 +12,6 @@ import {
   syncFinanceDocumentStatus,
 } from "@/lib/finance/finance-document-registry";
 import { guardVoidInvoice } from "@/lib/finance/integrity-guards";
-import {
-  lockInvoiceAssignments,
-  unlockInvoiceAssignments,
-} from "@/lib/finance/invoice-locks";
 import { asFinanceControlClient } from "@/lib/finance/supabase-finance";
 import { governanceDb } from "@/lib/supabase/governance-client";
 import type { Database } from "@/types/database";
@@ -24,13 +19,6 @@ import type { Database } from "@/types/database";
 export type InvoiceLifecycleResult =
   | { ok: true; document_number: string; message: string }
   | { ok: false; error: string };
-
-function lineBillingPatch(billingStatus: string) {
-  const assignmentStatus = assignmentStatusFromBilling(billingStatus);
-  return assignmentStatus
-    ? { billing_status: billingStatus, assignment_status: assignmentStatus }
-    : { billing_status: billingStatus };
-}
 
 export async function unpostInvoice(
   supabase: SupabaseClient<Database>,
@@ -90,22 +78,35 @@ export async function unpostInvoice(
     regenerated_by: input.actor_id,
   });
 
-  await unlockInvoiceAssignments(supabase, input.invoice_id);
+  const commitResult = await commitInvoiceLifecycleMutation(supabase, {
+    mutation: "ungenerate",
+    invoiceId: input.invoice_id,
+    invoiceDocumentNumber: String(inv.document_number),
+    actorId: input.actor_id,
+    preserveLineItems: false,
+    unlockMode: "unpost",
+    execute: async () => {
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update({
+          regeneration_status: "pending_regeneration",
+          status: "draft",
+          is_operational_locked: false,
+          ungenerated_at: new Date().toISOString(),
+          ungenerated_by: input.actor_id,
+          ungenerate_reason: input.reason,
+        } as never)
+        .eq("id", input.invoice_id);
 
-  const { error: updateError } = await supabase
-    .from("invoices")
-    .update({
-      regeneration_status: "pending_regeneration",
-      status: "draft",
-      is_operational_locked: false,
-      ungenerated_at: new Date().toISOString(),
-      ungenerated_by: input.actor_id,
-      ungenerate_reason: input.reason,
-    } as never)
-    .eq("id", input.invoice_id);
+      if (updateError) {
+        return { error: updateError.message };
+      }
+      return {};
+    },
+  });
 
-  if (updateError) {
-    return { ok: false, error: updateError.message };
+  if (commitResult.error) {
+    return { ok: false, error: commitResult.error };
   }
 
   const financeDb = asFinanceControlClient(supabase);
@@ -179,19 +180,31 @@ export async function voidInvoice(
     return { ok: false, error: guard.reason };
   }
 
-  await unlockInvoiceAssignments(supabase, input.invoice_id);
-
   const now = new Date().toISOString();
-  const { error: updateError } = await supabase
-    .from("invoices")
-    .update({
-      status: "void",
-      is_operational_locked: false,
-    } as never)
-    .eq("id", input.invoice_id);
 
-  if (updateError) {
-    return { ok: false, error: updateError.message };
+  const commitResult = await commitInvoiceLifecycleMutation(supabase, {
+    mutation: "void",
+    invoiceId: input.invoice_id,
+    invoiceDocumentNumber: String(inv.document_number),
+    actorId: input.actor_id,
+    execute: async () => {
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update({
+          status: "void",
+          is_operational_locked: false,
+        } as never)
+        .eq("id", input.invoice_id);
+
+      if (updateError) {
+        return { error: updateError.message };
+      }
+      return {};
+    },
+  });
+
+  if (commitResult.error) {
+    return { ok: false, error: commitResult.error };
   }
 
   await ensureInvoiceFinanceDocument(supabase, input.invoice_id, input.actor_id);
@@ -261,15 +274,55 @@ export async function regenerateInvoice(
     return { ok: false, error: "Invoice has no campaign linkage." };
   }
 
-  const deliverableRegen = await regenerateInvoiceFromDeliverables(
-    supabase,
-    input.invoice_id,
-    campaignHeaderId,
-    { defaultVatRate: input.default_vat_rate ?? 0 }
-  );
+  const { data: existingLineItems } = await supabase
+    .from("invoice_line_items")
+    .select("id")
+    .eq("invoice_id", input.invoice_id);
 
-  if (deliverableRegen.error) {
-    return { ok: false, error: deliverableRegen.error };
+  const newVersion = Number(inv.version_number ?? 1) + 1;
+
+  const commitResult = await commitInvoiceLifecycleMutation(supabase, {
+    mutation: "regenerate",
+    invoiceId: input.invoice_id,
+    invoiceDocumentNumber: String(inv.document_number),
+    actorId: input.actor_id,
+    execute: async () => {
+      const regenResult = await regenerateInvoiceLineItems(
+        supabase,
+        input.invoice_id,
+        campaignHeaderId,
+        { defaultVatRate: input.default_vat_rate ?? 0 }
+      );
+
+      if (regenResult.error) {
+        return { error: regenResult.error };
+      }
+
+      const { error: invoiceUpdateError } = await supabase
+        .from("invoices")
+        .update({
+          version_number: newVersion,
+          regeneration_status: "active",
+          status: "draft",
+        } as never)
+        .eq("id", input.invoice_id);
+
+      if (invoiceUpdateError) {
+        return { error: invoiceUpdateError.message };
+      }
+
+      return {
+        touchedLineIds: regenResult.touchedLineIds,
+        lineItemOps: {
+          updated: (existingLineItems ?? []).map((row) => (row as { id: string }).id),
+          created: [],
+        },
+      };
+    },
+  });
+
+  if (commitResult.error) {
+    return { ok: false, error: commitResult.error };
   }
 
   const { data: refreshedInvoice, error: refreshError } = await supabase
@@ -285,50 +338,6 @@ export async function regenerateInvoice(
   const subtotal = Number(refreshedInvoice.subtotal);
   const taxAmount = Number(refreshedInvoice.tax_amount);
   const total = Number(refreshedInvoice.total);
-  const newVersion = Number(inv.version_number ?? 1) + 1;
-
-  const { data: linkedLines } = await supabase
-    .from("campaign_lines")
-    .select("id")
-    .eq("invoice_id", input.invoice_id);
-
-  const lineIds = (linkedLines ?? []).map((l) => (l as { id: string }).id);
-
-  const { error: invoiceUpdateError } = await supabase
-    .from("invoices")
-    .update({
-      version_number: newVersion,
-      regeneration_status: "regenerated",
-      status: "draft",
-      is_operational_locked: false,
-    } as never)
-    .eq("id", input.invoice_id);
-
-  if (invoiceUpdateError) {
-    return { ok: false, error: invoiceUpdateError.message };
-  }
-
-  if (lineIds.length > 0) {
-    const now = new Date().toISOString();
-    await supabase
-      .from("campaign_lines")
-      .update({
-        ...lineBillingPatch("invoiced"),
-        operational_status: "locked",
-        revenue_locked: true,
-        cost_locked: true,
-        vendor_assignment_locked: true,
-        vat_locked: true,
-        finance_override_until: null,
-        billing_invoiced_at: now,
-        invoice_id: input.invoice_id,
-      } as never)
-      .in("id", lineIds);
-
-    await syncLineOperationalStatusBatch(supabase, lineIds);
-  }
-
-  await lockInvoiceAssignments(supabase, input.invoice_id);
 
   await governanceDb(supabase).from("invoice_versions").insert({
     invoice_id: input.invoice_id,
