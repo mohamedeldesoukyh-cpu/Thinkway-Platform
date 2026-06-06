@@ -12,6 +12,7 @@ export type PlatformSurface =
   | "ios"
   | "planning"
   | "invoices"
+  | "finance"
   | "analytics"
   | "executive"
   | "collections"
@@ -50,6 +51,11 @@ const SURFACE_COPY: Record<
     title: "Invoice view encountered an error",
     description:
       "Invoice creation and collections use dedicated queries. Refresh to reload this invoice.",
+  },
+  finance: {
+    title: "Finance module encountered an error",
+    description:
+      "Credit notes, debit notes, and posting use isolated queries. Refresh to retry this panel.",
   },
   analytics: {
     title: "Analytics temporarily unavailable",

@@ -3,7 +3,7 @@ import { REL } from "@/lib/supabase/relation-hints";
 import {
   isActiveInvoiceForFinancialTotals,
   isRegisterInvoiceStatus,
-} from "@/lib/billing/invoice-status";
+} from "@/lib/finance/status";
 
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 
