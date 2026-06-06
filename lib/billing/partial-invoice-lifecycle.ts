@@ -101,19 +101,19 @@ export function deriveAssignmentBillingStatusFromProgress(
   return currentStatus ?? "moved_to_billing";
 }
 
-/** OPS column: Locked only when fully invoiced; partial stays IO Generated. */
+/** OPS column: IO Generated → Partially Invoiced → Locked from progress. */
 export function operationalStatusForInvoiceProgress(input: {
   billing_status: string;
   vendor_io_id: string | null | undefined;
   progress: AssignmentInvoiceProgress;
-}): "io_generated" | "locked" | "io_revised" | "draft" | "closed" {
+}): "io_generated" | "partially_invoiced" | "locked" | "io_revised" | "draft" | "closed" {
   if (input.billing_status === "closed") return "closed";
   if (!input.vendor_io_id) return "draft";
   if (isFullyInvoicedBillingStatus(input.billing_status) || input.progress.state === "full") {
     return "locked";
   }
   if (input.progress.state === "partial" || isPartiallyInvoicedBillingStatus(input.billing_status)) {
-    return "io_generated";
+    return "partially_invoiced";
   }
   return "io_generated";
 }

@@ -6,6 +6,7 @@ import {
   assignmentDeliverableBillingSelect,
   queryAssignmentDeliverables,
 } from "@/lib/billing/assignment-deliverable-queries";
+import { getAssignmentOpsStatus } from "@/lib/billing/assignment-lifecycle-state";
 import {
   deriveLineBillingStatusFromDeliverables,
   type DeliverableBillingRow,
@@ -59,8 +60,18 @@ function deriveOperationalFromState(input: {
     deliverables.length > 0 &&
     deliverables.every((d) => d.locked_at && d.remaining_amount <= 0);
 
-  if (billingStatus === "partially_invoiced" || billingStatus === "partially_paid") {
-    if (vendorIoId && remaining > 0) return "io_generated";
+  const derived = getAssignmentOpsStatus({
+    billing_status: billingStatus,
+    operational_status: storedOperational,
+    vendor_io_id: vendorIoId,
+    billable_amount: billable,
+    invoiced_amount: invoiced,
+    remaining_amount: remaining,
+    invoice_id: invoiceId,
+  });
+
+  if (derived === "locked" || derived === "partially_invoiced" || derived === "io_generated") {
+    return derived;
   }
 
   if (invoiceId && fullyInvoiced) {
@@ -69,10 +80,6 @@ function deriveOperationalFromState(input: {
 
   if (["invoiced", "paid"].includes(billingStatus) || (fullyInvoiced && invoiced >= billable)) {
     return "locked";
-  }
-
-  if (invoiced > 0 && remaining > 0 && vendorIoId) {
-    return "io_generated";
   }
 
   if (storedOperational === "io_revised") {
@@ -107,10 +114,11 @@ function coerceOperationalStatus(
   snapshot: LineSnapshot
 ): CampaignLineOperationalStatus {
   if (next === "invoiced" || next === "partially_invoiced" || next === "reopened") {
-    if (snapshot.invoice_id || snapshot.revenue_locked) return "locked";
+    if (snapshot.revenue_locked && next === "invoiced") return "locked";
     if (snapshot.vendor_io_id && hasActiveFinanceOverride(snapshot.finance_override_until)) {
       return snapshot.operational_status === "io_revised" ? "io_revised" : "io_generated";
     }
+    if (next === "partially_invoiced") return "partially_invoiced";
     return snapshot.vendor_io_id ? "io_generated" : "draft";
   }
   if (next === "moved_to_billing" && snapshot.vendor_io_id) {

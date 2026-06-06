@@ -2,12 +2,14 @@ import type {
   AssignmentDeliverableBillingStatus,
   CampaignLineBillingStatus,
 } from "@/features/billing/types";
+import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
 import {
   getRemainingRevenue,
   isFullyInvoiced,
   isFullyInvoicedBillingStatus,
   isPartiallyInvoicedBillingStatus,
 } from "@/lib/billing/partial-invoice-lifecycle";
+import { isInvoiceEligibleOperationalStatus } from "@/features/campaigns/types/operational";
 
 function hasRemainingInvoiceableRevenue(
   row: Pick<
@@ -174,21 +176,25 @@ export function isOperationalRowInvoiceEligible(
     return false;
   }
 
-  const operational = (row.operational_status ?? "draft") as
-    import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
+  const operational = effectiveLineOperationalStatus({
+    operational_status: row.operational_status,
+    vendor_io_id: row.vendor_io_id,
+    billing_status: row.line_billing_status,
+    remaining_amount: row.remaining_amount,
+    billable_amount: row.billable_amount,
+    invoiced_amount: row.invoiced_amount,
+  });
 
   if (operational === "draft" || operational === "closed") return false;
-  if (operational === "invoiced" && !isPartiallyInvoicedBillingStatus(row.line_billing_status)) {
-    return false;
-  }
+  if (operational === "locked") return false;
   if (row.kind === "assignment" && !row.vendor_io_id) return false;
 
-  return row.is_invoice_eligible !== false;
+  return isInvoiceEligibleOperationalStatus(operational);
 }
 
 const UI_SELECTABLE_OPERATIONAL = new Set<
   import("@/features/campaigns/types/operational").CampaignLineOperationalStatus
->(["io_generated", "partially_invoiced", "reopened"]);
+>(["io_generated", "io_revised", "partially_invoiced", "reopened"]);
 
 const UI_BLOCKED_LINE_BILLING = new Set<CampaignLineBillingStatus>([
   "invoiced",
@@ -218,13 +224,16 @@ export function isOperationalRowUiSelectable(
   if (!isOperationalRowInvoiceEligible(row)) return false;
   if (UI_BLOCKED_LINE_BILLING.has(row.line_billing_status)) return false;
 
-  const operational = (row.operational_status ?? "draft") as
-    import("@/features/campaigns/types/operational").CampaignLineOperationalStatus;
+  const operational = effectiveLineOperationalStatus({
+    operational_status: row.operational_status,
+    vendor_io_id: row.vendor_io_id,
+    billing_status: row.line_billing_status,
+    remaining_amount: row.remaining_amount,
+    billable_amount: row.billable_amount,
+    invoiced_amount: row.invoiced_amount,
+  });
 
-  if (operational === "draft") return false;
-  if (operational === "invoiced" && !isPartiallyInvoicedBillingStatus(row.line_billing_status)) {
-    return false;
-  }
+  if (operational === "draft" || operational === "locked") return false;
 
   const operationalOk = UI_SELECTABLE_OPERATIONAL.has(operational);
   const movedToBilling = row.line_billing_status === "moved_to_billing";

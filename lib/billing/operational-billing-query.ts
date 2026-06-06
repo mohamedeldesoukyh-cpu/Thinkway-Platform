@@ -9,7 +9,12 @@ import {
   queryAssignmentDeliverables,
   resolveDeliverableVatExempt,
 } from "@/lib/billing/assignment-deliverable-queries";
-import { buildCampaignQueueRow } from "@/lib/billing/campaign-billing-queue";
+import { getAssignmentOpsStatus } from "@/lib/billing/assignment-lifecycle-state";
+import { syncCampaignBillingState } from "@/lib/billing/billing-sync-engine";
+import {
+  buildCampaignQueueRow,
+  filterCampaignsWithRemainingInvoiceable,
+} from "@/lib/billing/campaign-billing-queue";
 import type { CampaignBillingQueueRow } from "@/lib/billing/campaign-billing-queue";
 import {
   deliverableDisplayLabel,
@@ -283,6 +288,17 @@ export async function loadCampaignOperationalBilling(
       (line.pricing_mode ?? assignment?.pricing_mode ?? "package") as
         | "package"
         | "per_deliverable";
+    const assignmentOps = getAssignmentOpsStatus({
+      billing_status: line.billing_status,
+      operational_status: line.operational_status,
+      vendor_io_id: line.vendor_io_id,
+      billable_amount: rollups.total_value,
+      invoiced_amount: rollups.invoiced_value,
+      remaining_amount: rollups.remaining_value,
+    });
+    const assignmentInvoiceable = ["io_generated", "partially_invoiced", "io_revised"].includes(
+      assignmentOps
+    );
 
     for (const deliverable of deliverables) {
       const posts = postsByDeliverable.get(deliverable.id) ?? [];
@@ -359,7 +375,7 @@ export async function loadCampaignOperationalBilling(
         locked_at: deliverable.locked_at,
         is_locked: Boolean(deliverable.locked_at),
         is_invoice_eligible:
-          line.operational_status === "io_generated" &&
+          assignmentInvoiceable &&
           Boolean(line.vendor_io_id) &&
           groupFinancials.remaining_amount > 0 &&
           !deliverable.locked_at,
@@ -409,7 +425,7 @@ export async function loadCampaignOperationalBilling(
       locked_at: null,
       is_locked: false,
       is_invoice_eligible:
-        line.operational_status === "io_generated" &&
+        assignmentInvoiceable &&
         Boolean(line.vendor_io_id) &&
         deliverableChildren.some((d) => d.is_invoice_eligible),
       operational_status: line.operational_status ?? "draft",
@@ -537,6 +553,7 @@ export async function loadBillingCampaignQueue(
   }
 
   const campaigns: CampaignBillingQueueRow[] = [];
+  const operationalRowsByCampaign = new Map<string, OperationalBillingRow[]>();
   const seenCampaignIds = new Set<string>();
   let operationalErrors = 0;
 
@@ -579,6 +596,10 @@ export async function loadBillingCampaignQueue(
         }, 0)
       : groups.reduce((s, g) => s + g.invoiced_value, 0);
 
+    if (!error) {
+      operationalRowsByCampaign.set(header.id, operational_rows);
+    }
+
     campaigns.push(
       buildCampaignQueueRow({
         campaign_header_id: header.id,
@@ -602,52 +623,59 @@ export async function loadBillingCampaignQueue(
   );
 
   const syncedCampaigns = campaigns.map((row) => {
+    const ops = operationalRowsByCampaign.get(row.campaign_header_id) ?? [];
+    const synced = syncCampaignBillingState(ops, row);
     const lineRollup = lineRollups.get(row.campaign_header_id);
-    if (!lineRollup || lineRollup.invoiced_subtotal <= 0) return row;
 
-    const reconciled = reconcileCampaignRollupWithInvoiceLines({
-      total_campaign_amount: row.total_campaign_amount,
-      achieved_revenue: row.achieved_revenue,
-      already_invoiced: row.already_invoiced,
-      remaining_to_invoice: row.remaining_to_invoice,
-      unachieved_revenue: row.unachieved_revenue,
-      invoice_line_invoiced: lineRollup.invoiced_subtotal,
-    });
+    let already_invoiced = synced.already_invoiced;
+    let remaining_to_invoice = synced.remaining_to_invoice;
+    let billing_status = synced.billing_status;
 
-    const billing_status =
-      reconciled.already_invoiced >= row.achieved_revenue && row.achieved_revenue > 0
-        ? ("invoiced" as CampaignLineBillingStatus)
-        : reconciled.already_invoiced > 0
-          ? ("partially_invoiced" as CampaignLineBillingStatus)
-          : row.billing_status;
-
-    if (process.env.NODE_ENV === "development") {
-      devLog("[queue-refresh] reconciled queue row from invoice_line_items", {
-        campaignId: row.campaign_header_id,
-        operationalInvoiced: row.already_invoiced,
-        lineInvoiced: lineRollup.invoiced_subtotal,
-        reconciledInvoiced: reconciled.already_invoiced,
-        remaining: reconciled.remaining_to_invoice,
+    if (lineRollup && lineRollup.invoiced_subtotal > 0) {
+      const reconciled = reconcileCampaignRollupWithInvoiceLines({
+        total_campaign_amount: row.total_campaign_amount,
+        achieved_revenue: row.achieved_revenue,
+        already_invoiced: row.already_invoiced,
+        remaining_to_invoice: row.remaining_to_invoice,
+        unachieved_revenue: row.unachieved_revenue,
+        invoice_line_invoiced: lineRollup.invoiced_subtotal,
       });
+
+      already_invoiced = Math.max(reconciled.already_invoiced, synced.already_invoiced);
+      remaining_to_invoice =
+        synced.remaining_to_invoice > 0
+          ? synced.remaining_to_invoice
+          : reconciled.remaining_to_invoice;
+      billing_status =
+        reconciled.already_invoiced >= row.achieved_revenue && row.achieved_revenue > 0
+          ? ("invoiced" as CampaignLineBillingStatus)
+          : reconciled.already_invoiced > 0 || synced.progress.state === "partial"
+            ? ("partially_invoiced" as CampaignLineBillingStatus)
+            : synced.billing_status;
     }
 
     return {
       ...row,
-      already_invoiced: reconciled.already_invoiced,
-      remaining_to_invoice: reconciled.remaining_to_invoice,
+      already_invoiced,
+      remaining_to_invoice,
       billing_status,
     };
   });
 
+  const queueCampaigns = filterCampaignsWithRemainingInvoiceable(
+    syncedCampaigns,
+    operationalRowsByCampaign
+  );
+
   if (process.env.NODE_ENV === "development") {
     devLog("[billing-queue] load complete", {
       headerCount: headers.length,
-      queueCount: syncedCampaigns.length,
+      queueCount: queueCampaigns.length,
       operationalErrors,
       skippedDuplicates: headers.length - syncedCampaigns.length,
       campaignsWithLineItems: lineRollups.size,
     });
   }
 
-  return { campaigns: syncedCampaigns };
+  return { campaigns: queueCampaigns };
 }

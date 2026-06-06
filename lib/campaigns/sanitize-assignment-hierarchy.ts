@@ -170,8 +170,8 @@ function normalizeLineBillingForHierarchy(
   });
   if (
     !line.invoice_id &&
-    (uiOps === "io_generated" || uiOps === "reopened") &&
-    ["invoiced", "paid", "partially_invoiced"].includes(billing)
+    (uiOps === "io_generated" || uiOps === "io_revised" || uiOps === "partially_invoiced") &&
+    ["invoiced", "paid"].includes(billing)
   ) {
     return "moved_to_billing";
   }
@@ -208,7 +208,7 @@ function sanitizeLine(line: Partial<CampaignLineWorkspace> | null | undefined): 
     if (uiOps === "io_generated" && operational_status === "reopened") {
       operational_status = "io_generated";
     }
-    if (operational_status === "invoiced" || operational_status === "partially_invoiced") {
+    if (operational_status === "invoiced") {
       operational_status = "locked";
     }
     if (operational_status === "reopened" && line.vendor_io_id) {

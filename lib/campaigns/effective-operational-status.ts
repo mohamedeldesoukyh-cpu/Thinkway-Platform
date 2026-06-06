@@ -3,7 +3,9 @@ import {
   normalizeOperationalStatusForOpsBadge,
 } from "@/lib/campaigns/operational-status-utils";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import { getAssignmentOpsStatus } from "@/lib/billing/assignment-lifecycle-state";
 import {
+  getRemainingRevenue,
   isFullyInvoicedBillingStatus,
   isPartiallyInvoicedBillingStatus,
 } from "@/lib/billing/partial-invoice-lifecycle";
@@ -20,8 +22,12 @@ export function effectiveLineOperationalStatus(input: {
   finance_override_until?: string | null | undefined;
   revenue_locked?: boolean | null;
   vendor_assignment_locked?: boolean | null;
+  remaining_amount?: number | null;
+  billable_amount?: number | null;
+  invoiced_amount?: number | null;
 }): CampaignLineOperationalStatus {
   const raw = (input.operational_status ?? "draft") as CampaignLineOperationalStatus;
+  const billing = input.billing_status ?? "draft";
 
   if (raw === "io_generated" && !input.vendor_io_id) {
     return "draft";
@@ -31,22 +37,38 @@ export function effectiveLineOperationalStatus(input: {
     return "io_generated";
   }
 
+  if (input.finance_override_until) {
+    const until = new Date(input.finance_override_until).getTime();
+    if (Number.isFinite(until) && until > Date.now() && input.vendor_io_id) {
+      return "io_revised";
+    }
+  }
+
   if (raw === "io_revised" || raw === "reopened") {
     return "io_revised";
   }
 
-  if (raw === "locked") {
-    return "locked";
-  }
+  const remaining = getRemainingRevenue({
+    remaining_amount: input.remaining_amount,
+    billable_amount: input.billable_amount,
+    invoiced_amount: input.invoiced_amount,
+  });
 
-  const billing = input.billing_status ?? "draft";
-
-  if (raw === "invoiced") {
-    return "locked";
-  }
-
-  if (raw === "partially_invoiced" && input.vendor_io_id) {
-    return "io_generated";
+  if (
+    input.remaining_amount != null ||
+    input.billable_amount != null ||
+    input.invoiced_amount != null
+  ) {
+    return getAssignmentOpsStatus({
+      billing_status: billing,
+      operational_status: raw,
+      vendor_io_id: input.vendor_io_id,
+      billable_amount: input.billable_amount,
+      invoiced_amount: input.invoiced_amount,
+      remaining_amount: remaining,
+      invoice_id: input.invoice_id,
+      revenue_locked: input.revenue_locked,
+    });
   }
 
   if (isFullyInvoicedBillingStatus(billing)) {
@@ -54,7 +76,7 @@ export function effectiveLineOperationalStatus(input: {
   }
 
   if (isPartiallyInvoicedBillingStatus(billing) && input.vendor_io_id) {
-    return "io_generated";
+    return "partially_invoiced";
   }
 
   const fullyLocked =
@@ -69,20 +91,21 @@ export function effectiveLineOperationalStatus(input: {
     return "locked";
   }
 
-  if (raw !== "draft") return normalizeOperationalStatus(raw);
-
-  if (billing === "closed") return "closed";
-
-  if (input.invoice_id) {
+  if (raw === "locked" && isFullyInvoicedBillingStatus(billing)) {
     return "locked";
   }
 
-  if (input.finance_override_until) {
-    const until = new Date(input.finance_override_until).getTime();
-    if (Number.isFinite(until) && until > Date.now() && input.vendor_io_id) {
-      return "io_revised";
-    }
+  if (raw === "partially_invoiced" && input.vendor_io_id) {
+    return "partially_invoiced";
   }
+
+  if (raw === "invoiced") {
+    return "locked";
+  }
+
+  if (raw !== "draft") return normalizeOperationalStatus(raw);
+
+  if (billing === "closed") return "closed";
 
   if (input.vendor_io_id) return "io_generated";
 

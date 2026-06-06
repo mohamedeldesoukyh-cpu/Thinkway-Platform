@@ -10,7 +10,7 @@ export type CampaignLineOperationalStatus =
   | "closed";
 
 const INVOICE_ELIGIBLE_OPERATIONAL: ReadonlySet<CampaignLineOperationalStatus> =
-  new Set(["io_generated", "io_revised"]);
+  new Set(["io_generated", "io_revised", "partially_invoiced"]);
 
 export function isInvoiceEligibleOperationalStatus(
   status: CampaignLineOperationalStatus
@@ -23,7 +23,8 @@ export function operationalStatusForOpsBadge(
   status: CampaignLineOperationalStatus | string
 ): CampaignLineOperationalStatus {
   const key = status as CampaignLineOperationalStatus;
-  if (key === "invoiced" || key === "partially_invoiced") return "locked";
+  if (key === "invoiced") return "locked";
+  if (key === "partially_invoiced") return "partially_invoiced";
   if (key === "reopened") return "io_revised";
   if (key === "moved_to_billing") return "io_generated";
   return key;

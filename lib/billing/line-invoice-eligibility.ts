@@ -13,6 +13,9 @@ export type LineInvoiceEligibilityInput = {
   is_locked?: boolean;
   remaining_amount?: number;
   billing_status?: string | null;
+  invoice_id?: string | null;
+  billable_amount?: number;
+  invoiced_amount?: number;
 };
 
 export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolean {
@@ -35,11 +38,15 @@ export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolea
     operational_status: line.operational_status,
     vendor_io_id: line.vendor_io_id,
     billing_status: line.billing_status,
+    invoice_id: line.invoice_id,
+    remaining_amount: remaining,
+    billable_amount: line.billable_amount,
+    invoiced_amount: line.invoiced_amount,
+    revenue_locked: line.is_locked,
   }) as CampaignLineOperationalStatus;
 
   if (status === "locked") return false;
-
-  if (remaining <= 0 && line.remaining_amount != null) return false;
+  if (remaining <= 0) return false;
 
   return isInvoiceEligibleOperationalStatus(status);
 }

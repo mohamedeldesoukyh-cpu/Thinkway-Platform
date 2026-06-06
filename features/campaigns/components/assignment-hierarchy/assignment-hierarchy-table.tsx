@@ -46,6 +46,7 @@ import {
 } from "@/lib/campaigns/assignment-row-view-model";
 import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment-hierarchy";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
+import { getInvoiceableSelections } from "@/lib/billing/invoice-action-eligibility";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { cn } from "@/lib/utils";
 
@@ -149,9 +150,23 @@ export function AssignmentHierarchyTable({
     [selectedLineIds, lineMeta]
   );
 
-  const invoiceLineIds = useMemo(
-    () => [...selectedLineIds].filter((id) => lineMeta.get(id)?.invoiceEligible),
-    [selectedLineIds, lineMeta]
+  const invoiceSelectionInput = useMemo(
+    () =>
+      preparedRows.map((row) => ({
+        lineId: row.lineId,
+        group: row.group,
+        meta: lineMeta.get(row.lineId),
+      })),
+    [preparedRows, lineMeta]
+  );
+  const { lineIds: invoiceLineIds } = useMemo(
+    () =>
+      getInvoiceableSelections({
+        selectedLineIds,
+        selectedDeliverableIds: [],
+        preparedRows: invoiceSelectionInput,
+      }),
+    [selectedLineIds, invoiceSelectionInput]
   );
 
   const ungenerateIoLineIds = useMemo(

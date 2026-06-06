@@ -5,7 +5,7 @@ import {
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import { computeCampaignFinancialRollup } from "@/lib/billing/operational-financial-sync";
-import { campaignHasBillingQueueCandidates } from "@/lib/billing/queue-eligibility";
+import { isCampaignBillingEligible } from "@/lib/billing/campaign-billing-eligibility";
 
 export type CampaignBillingQueueFilter =
   | "all"
@@ -177,15 +177,12 @@ export function filterCampaignsWithRemainingInvoiceable(
   rows: CampaignBillingQueueRow[],
   operationalRowsByCampaign?: Map<string, import("@/lib/billing/operational-billing-rows").OperationalBillingRow[]>
 ): CampaignBillingQueueRow[] {
-  if (!operationalRowsByCampaign) {
-    return rows.filter((row) => row.remaining_to_invoice > 0 || row.already_invoiced <= 0);
-  }
   return rows.filter((row) => {
-    const ops = operationalRowsByCampaign.get(row.campaign_header_id);
-    if (!ops || ops.length === 0) {
-      return row.remaining_to_invoice > 0;
+    const ops = operationalRowsByCampaign?.get(row.campaign_header_id);
+    if (ops && ops.length > 0) {
+      return isCampaignBillingEligible(ops);
     }
-    return campaignHasBillingQueueCandidates(ops) || row.remaining_to_invoice > 0;
+    return row.remaining_to_invoice > 0 || row.billing_status === "partially_invoiced";
   });
 }
 
@@ -200,7 +197,10 @@ export function filterCampaignQueueRows(
       case "invoiced":
         return row.already_invoiced >= row.achieved_revenue && row.achieved_revenue > 0;
       case "partially_invoiced":
-        return row.already_invoiced > 0 && row.remaining_to_invoice > 0;
+        return (
+          row.billing_status === "partially_invoiced" ||
+          (row.already_invoiced > 0 && row.remaining_to_invoice > 0)
+        );
       case "not_invoiced":
         return row.already_invoiced <= 0 && row.achieved_revenue > 0;
       case "fully_achieved":

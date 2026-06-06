@@ -1,12 +1,6 @@
-import {
-  flattenOperationalLeaves,
-  isOperationalRowInvoiceEligible,
-  type OperationalBillingRow,
-} from "@/lib/billing/operational-billing-rows";
-import {
-  campaignHasBillingQueueCandidates,
-  getRemainingInvoiceableDeliverables,
-} from "@/lib/billing/queue-eligibility";
+import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
+import { isCampaignBillingEligible } from "@/lib/billing/campaign-billing-eligibility";
+import { getRemainingInvoiceableDeliverables } from "@/lib/billing/queue-eligibility";
 import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 import {
   buildInvoiceSelectionBatch,
@@ -45,11 +39,17 @@ export function buildConsolidatedInvoiceQueueRows(input: {
   currency_code: string;
   operational_rows: OperationalBillingRow[];
 }): ConsolidatedInvoiceQueueRow[] {
-  if (!campaignHasBillingQueueCandidates(input.operational_rows)) return [];
+  if (!isCampaignBillingEligible(input.operational_rows)) return [];
 
   const invoiceable = getRemainingInvoiceableDeliverables(input.operational_rows);
-  const leaves = flattenOperationalLeaves(input.operational_rows);
-  const leafById = new Map(leaves.map((row) => [row.id, row]));
+  const rowById = new Map<string, OperationalBillingRow>();
+  const collectRows = (rows: OperationalBillingRow[]) => {
+    for (const row of rows) {
+      rowById.set(row.id, row);
+      if (row.children?.length) collectRows(row.children);
+    }
+  };
+  collectRows(input.operational_rows);
 
   let revenue_before_vat = 0;
   let vat_amount = 0;
@@ -57,10 +57,10 @@ export function buildConsolidatedInvoiceQueueRows(input: {
   const eligibleLineIds = new Set<string>();
 
   for (const ref of invoiceable) {
-    const row = leafById.get(ref.id);
-    if (!row || !isOperationalRowInvoiceEligible(row)) continue;
+    const row = rowById.get(ref.id);
+    if (!row) continue;
 
-    const billable = getRemainingRevenue(row);
+    const billable = ref.remaining_amount > 0 ? ref.remaining_amount : getRemainingRevenue(row);
     if (billable <= 0) continue;
 
     const vat = computeVatLine({

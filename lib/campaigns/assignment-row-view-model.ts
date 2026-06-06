@@ -111,11 +111,14 @@ export function deriveAssignmentLineMeta(
     pricingMode === "per_deliverable" && hasDeliverableBreakdown
       ? false
       : isLineInvoiceEligible({
-          operational_status: status,
+          operational_status: line.operational_status,
           vendor_io_id: line.vendor_io_id,
           billing_status: line.billing_status,
           is_locked: line.revenue_locked,
           remaining_amount: remaining,
+          invoice_id: line.invoice_id,
+          billable_amount: group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue,
+          invoiced_amount: group.rollups?.invoiced_value,
         });
 
   const reviseVioEligible =
