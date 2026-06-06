@@ -1,4 +1,5 @@
 import {
+  isOperationalRowInvoiceEligible,
   isOperationalRowUiSelectable,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
@@ -51,7 +52,7 @@ export function selectionToPayload(selection: OperationalSelectionState): Operat
   };
 }
 
-/** Expand ancestor selection into explicit selectable leaf row ids for server actions. */
+/** Expand ancestor selection into explicit billable leaf row ids for invoice actions. */
 export function expandEffectivelySelectedLeaves(
   selection: OperationalSelectionState,
   rootRows: OperationalBillingRow[]
@@ -62,14 +63,23 @@ export function expandEffectivelySelectedLeaves(
     for (const child of node.children ?? []) {
       visit(child);
     }
-    if (!isOperationalRowUiSelectable(node)) return;
+    if (isRowDirectlySelected(node, selection)) {
+      addRowToSelection(expanded, node);
+      return;
+    }
     if (!isRowEffectivelySelected(node, selection, rootRows)) return;
+    if (!isOperationalRowInvoiceEligible(node) && !isOperationalRowUiSelectable(node)) {
+      return;
+    }
     addRowToSelection(expanded, node);
   };
 
   for (const root of rootRows) {
     visit(root);
   }
+
+  for (const id of selection.post_ids) expanded.post_ids.add(id);
+  for (const id of selection.deliverable_ids) expanded.deliverable_ids.add(id);
 
   return expanded;
 }
@@ -112,11 +122,25 @@ export function selectionToSubmitPayload(
     if (allDescendantsSelected) prunedLineIds.push(lineId);
   }
 
+  const deliverable_ids = [
+    ...new Set([...explicit.deliverable_ids, ...selection.deliverable_ids]),
+  ];
+  const post_ids = [...new Set([...explicit.post_ids, ...selection.post_ids])];
+
   return {
     line_ids: prunedLineIds,
-    deliverable_ids: [...explicit.deliverable_ids],
-    post_ids: [...explicit.post_ids],
+    deliverable_ids,
+    post_ids,
   };
+}
+
+export function isRowInInvoiceSubmitPayload(
+  row: OperationalBillingRow,
+  payload: OperationalSelectionPayload
+): boolean {
+  if (row.kind === "assignment") return payload.line_ids.includes(row.id);
+  if (row.kind === "deliverable_group") return payload.deliverable_ids.includes(row.id);
+  return payload.post_ids.includes(row.id);
 }
 
 export function countSubmitPayload(payload: OperationalSelectionPayload): number {

@@ -132,6 +132,20 @@ function postInvoiceLinePayload(
   };
 }
 
+type RawPostRow = {
+  id: string;
+  campaign_line_id: string;
+  assignment_deliverable_id: string;
+  sequence_number: number;
+  billable_amount?: number | null;
+  invoiced_amount?: number | null;
+  remaining_amount?: number | null;
+  revenue_before_vat?: number | null;
+  billing_status?: string | null;
+  locked_at?: string | null;
+  invoice_line_item_id?: string | null;
+};
+
 export async function fetchPostsForInvoicing(
   supabase: SupabaseClient,
   campaignId: string,
@@ -139,100 +153,137 @@ export async function fetchPostsForInvoicing(
 ): Promise<{ posts: PostInvoiceLine[]; error?: string }> {
   if (postIds.length === 0) return { posts: [] };
 
-  const lineEmbed =
-    "campaign_line:campaign_lines!inner(id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue_vat_percent, revenue_vat_exempt)";
-  const deliverableEmbed = `assignment_deliverable:assignment_deliverables!inner(id, platform, deliverable_type, revenue_vat_percent, revenue_vat_exempt, ${lineEmbed})`;
+  const postSelectWithBilling =
+    "id, campaign_line_id, assignment_deliverable_id, sequence_number, billable_amount, invoiced_amount, remaining_amount, revenue_before_vat, billing_status, locked_at, invoice_line_item_id";
+  const postSelectFallback =
+    "id, campaign_line_id, assignment_deliverable_id, sequence_number, revenue_before_vat, billing_status, locked_at, invoice_line_item_id";
 
-  const selectWithBilling = `id, campaign_line_id, assignment_deliverable_id, sequence_number, billable_amount, invoiced_amount, remaining_amount, revenue_before_vat, billing_status, locked_at, invoice_line_item_id, ${deliverableEmbed}`;
-  const selectFallback = `id, campaign_line_id, assignment_deliverable_id, sequence_number, revenue_before_vat, billing_status, locked_at, invoice_line_item_id, ${deliverableEmbed}`;
-
-  let rawRows: unknown[] | null = null;
-  let fetchError: { message: string } | null = null;
-
-  const primary = await supabase
+  const primaryPostResult = await supabase
     .from("assignment_post_schedule")
-    .select(selectWithBilling)
+    .select(postSelectWithBilling)
     .in("id", postIds)
     .order("sequence_number");
 
-  if (primary.error && /column|does not exist/i.test(primary.error.message)) {
-    const fallback = await supabase
-      .from("assignment_post_schedule")
-      .select(selectFallback)
-      .in("id", postIds)
-      .order("sequence_number");
-    rawRows = fallback.data;
-    fetchError = fallback.error;
-  } else {
-    rawRows = primary.data;
-    fetchError = primary.error;
+  const postResult =
+    primaryPostResult.error &&
+    /column|does not exist/i.test(primaryPostResult.error.message)
+      ? await supabase
+          .from("assignment_post_schedule")
+          .select(postSelectFallback)
+          .in("id", postIds)
+          .order("sequence_number")
+      : primaryPostResult;
+
+  if (postResult.error) {
+    return { posts: [], error: postResult.error.message };
   }
 
-  if (fetchError) {
-    return { posts: [], error: fetchError.message };
+  const rawPosts = (postResult.data ?? []) as RawPostRow[];
+  if (rawPosts.length === 0) {
+    return { posts: [] };
   }
 
-  const posts = (rawRows ?? [])
-    .map((row) => normalizePostInvoiceRow(row))
-    .filter((row): row is PostInvoiceLine => row !== null)
-    .filter(
-      (row) => row.assignment_deliverable?.campaign_line?.campaign_header_id === campaignId
-    );
+  const lineIds = [...new Set(rawPosts.map((row) => row.campaign_line_id).filter(Boolean))];
+  const deliverableIds = [
+    ...new Set(rawPosts.map((row) => row.assignment_deliverable_id).filter(Boolean)),
+  ];
 
-  return { posts };
-}
+  const { data: lines, error: lineError } = await supabase
+    .from("campaign_lines")
+    .select(
+      "id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue_vat_percent, revenue_vat_exempt"
+    )
+    .eq("campaign_header_id", campaignId)
+    .in("id", lineIds);
 
-function normalizePostInvoiceRow(row: unknown): PostInvoiceLine | null {
-  if (!row || typeof row !== "object") return null;
-  const record = row as Record<string, unknown>;
-  const deliverableRaw = record.assignment_deliverable;
-  const deliverableRecord = Array.isArray(deliverableRaw)
-    ? deliverableRaw[0]
-    : deliverableRaw;
-  if (!deliverableRecord || typeof deliverableRecord !== "object") return null;
+  if (lineError) {
+    return { posts: [], error: lineError.message };
+  }
 
-  const deliverable = deliverableRecord as Record<string, unknown>;
-  const lineRaw = deliverable.campaign_line;
-  const lineRecord = Array.isArray(lineRaw) ? lineRaw[0] : lineRaw;
-  if (!lineRecord || typeof lineRecord !== "object") return null;
-
-  const line = lineRecord as Record<string, unknown>;
-  const revenueBeforeVat = Number(record.revenue_before_vat ?? 0);
-  const billable = Number(record.billable_amount ?? revenueBeforeVat);
-  const remaining = Number(
-    record.remaining_amount ?? Math.max(0, billable - Number(record.invoiced_amount ?? 0))
+  const lineById = new Map(
+    (lines ?? []).map((row) => {
+      const line = row as {
+        id: string;
+        document_number: string;
+        name: string;
+        billing_status: string;
+        invoice_id: string | null;
+        campaign_header_id: string;
+        revenue_vat_percent: number | null;
+        revenue_vat_exempt: boolean | null;
+      };
+      return [line.id, line] as const;
+    })
   );
 
-  return {
-    id: String(record.id),
-    campaign_line_id: String(record.campaign_line_id),
-    assignment_deliverable_id: String(record.assignment_deliverable_id),
-    sequence_number: Number(record.sequence_number ?? 1),
-    billable_amount: billable,
-    invoiced_amount: Number(record.invoiced_amount ?? 0),
-    remaining_amount: remaining,
-    revenue_before_vat: revenueBeforeVat,
-    billing_status: String(record.billing_status ?? "ready_to_invoice"),
-    locked_at: (record.locked_at as string | null) ?? null,
-    invoice_line_item_id: (record.invoice_line_item_id as string | null) ?? null,
-    assignment_deliverable: {
-      id: String(deliverable.id),
-      platform: String(deliverable.platform ?? ""),
-      deliverable_type: String(deliverable.deliverable_type ?? ""),
-      revenue_vat_percent: Number(deliverable.revenue_vat_percent ?? 0),
-      revenue_vat_exempt: Boolean(deliverable.revenue_vat_exempt),
-      campaign_line: {
-        id: String(line.id),
-        document_number: String(line.document_number ?? ""),
-        name: String(line.name ?? ""),
-        billing_status: String(line.billing_status ?? "moved_to_billing"),
-        invoice_id: (line.invoice_id as string | null) ?? null,
-        campaign_header_id: String(line.campaign_header_id ?? ""),
-        revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
-        revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
+  const { data: deliverables, error: deliverableError } = await supabase
+    .from("assignment_deliverables")
+    .select("id, platform, deliverable_type, revenue_vat_percent, revenue_vat_exempt")
+    .in("id", deliverableIds);
+
+  if (deliverableError) {
+    return { posts: [], error: deliverableError.message };
+  }
+
+  const deliverableById = new Map(
+    (deliverables ?? []).map((row) => {
+      const deliverable = row as {
+        id: string;
+        platform: string;
+        deliverable_type: string;
+        revenue_vat_percent: number | null;
+        revenue_vat_exempt: boolean | null;
+      };
+      return [deliverable.id, deliverable] as const;
+    })
+  );
+
+  const posts: PostInvoiceLine[] = [];
+
+  for (const row of rawPosts) {
+    const line = lineById.get(row.campaign_line_id);
+    const deliverable = deliverableById.get(row.assignment_deliverable_id);
+    if (!line || !deliverable) continue;
+
+    const revenueBeforeVat = Number(row.revenue_before_vat ?? 0);
+    const billable = Number(row.billable_amount ?? revenueBeforeVat);
+    const remaining = Number(
+      row.remaining_amount ?? Math.max(0, billable - Number(row.invoiced_amount ?? 0))
+    );
+
+    posts.push({
+      id: row.id,
+      campaign_line_id: row.campaign_line_id,
+      assignment_deliverable_id: row.assignment_deliverable_id,
+      sequence_number: Number(row.sequence_number ?? 1),
+      billable_amount: billable,
+      invoiced_amount: Number(row.invoiced_amount ?? 0),
+      remaining_amount: remaining,
+      revenue_before_vat: revenueBeforeVat,
+      billing_status: String(row.billing_status ?? "ready_to_invoice"),
+      locked_at: row.locked_at ?? null,
+      invoice_line_item_id: row.invoice_line_item_id ?? null,
+      assignment_deliverable: {
+        id: deliverable.id,
+        platform: deliverable.platform,
+        deliverable_type: deliverable.deliverable_type,
+        revenue_vat_percent: Number(deliverable.revenue_vat_percent ?? 0),
+        revenue_vat_exempt: Boolean(deliverable.revenue_vat_exempt),
+        campaign_line: {
+          id: line.id,
+          document_number: line.document_number,
+          name: line.name,
+          billing_status: line.billing_status,
+          invoice_id: line.invoice_id,
+          campaign_header_id: line.campaign_header_id,
+          revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
+          revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
+        },
       },
-    },
-  };
+    });
+  }
+
+  return { posts };
 }
 
 export function validatePostsForInvoice(posts: PostInvoiceLine[]): string | null {

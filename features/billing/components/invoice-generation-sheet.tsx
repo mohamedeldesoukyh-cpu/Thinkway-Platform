@@ -49,7 +49,7 @@ import {
   countSubmitPayload,
   createEmptySelection,
   getRowSelectionStatus,
-  isRowEffectivelySelected,
+  isRowInInvoiceSubmitPayload,
   payloadToSelection,
   selectionToSubmitPayload,
   toggleOperationalRowSelection,
@@ -164,11 +164,16 @@ export function InvoiceGenerationSheet({
     [appendableOptions, existingInvoiceId]
   );
 
+  const submitPayload = useMemo(
+    () => selectionToSubmitPayload(selected, operationalRows),
+    [selected, operationalRows]
+  );
+
   const financialPreview = useMemo(
     () =>
       computeInvoiceBatchFinancialPreview({
         operationalRows,
-        selection: selected,
+        selection: payloadToSelection(submitPayload),
         defaultVatPercent,
         campaignRollup: {
           already_invoiced: safeRollup.already_invoiced,
@@ -179,7 +184,7 @@ export function InvoiceGenerationSheet({
       }),
     [
       operationalRows,
-      selected,
+      submitPayload,
       defaultVatPercent,
       safeRollup.already_invoiced,
       safeRollup.remaining_to_invoice,
@@ -232,7 +237,7 @@ export function InvoiceGenerationSheet({
     setSelected((prev) => toggleOperationalRowSelection(row, prev, operationalRows));
   }
 
-  const payload = selectionToSubmitPayload(selected, operationalRows);
+  const payload = submitPayload;
   const hasSelection = countSubmitPayload(payload) > 0;
 
   return (
@@ -299,9 +304,10 @@ export function InvoiceGenerationSheet({
                     const selectable = isOperationalRowUiSelectable(row);
                     const locked = !selectable;
                     const status = getRowSelectionStatus(row, selected);
-                    const effectivelySelected =
-                      status === "checked" ||
-                      isRowEffectivelySelected(row, selected, operationalRows);
+                    const inSubmitPayload = isRowInInvoiceSubmitPayload(row, payload);
+                    const checked = locked
+                      ? inSubmitPayload
+                      : inSubmitPayload || status === "checked";
 
                     return (
                       <label
@@ -314,7 +320,7 @@ export function InvoiceGenerationSheet({
                         )}
                       >
                         <OperationalSelectionCheckbox
-                          status={effectivelySelected ? "checked" : status}
+                          status={checked ? "checked" : status}
                           disabled={locked}
                           onToggle={() => {
                             if (!locked) toggleLeafRow(row);

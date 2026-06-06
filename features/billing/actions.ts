@@ -610,8 +610,12 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: deliverablesError };
   }
 
+  const postIdsToFetch = usePostInvoicePath
+    ? [...new Set([...requestedPostIds, ...postIds])]
+    : [];
+
   const { posts, error: postsError } = usePostInvoicePath
-    ? await fetchPostsForInvoicing(supabase, parsed.data.campaign_id, postIds)
+    ? await fetchPostsForInvoicing(supabase, parsed.data.campaign_id, postIdsToFetch)
     : { posts: [], error: undefined };
 
   if (postsError) {
@@ -682,10 +686,26 @@ export async function createInvoiceFromLinesAction(
   }
 
   if (usePostInvoicePath) {
+    if (requestedPostIds.length > 0 && posts.length === 0) {
+      return {
+        ok: false,
+        message:
+          "Selected post rows could not be loaded for invoicing. Refresh the campaign and try again.",
+      };
+    }
     const postValidationError = validatePostsForInvoice(posts);
     if (postValidationError) {
       return { ok: false, message: postValidationError };
     }
+  }
+
+  if (
+    !usePostInvoicePath &&
+    requestedDeliverableIds.length === 0 &&
+    requestedPostIds.length === 0 &&
+    lineIds.length === 0
+  ) {
+    return { ok: false, message: "No billable deliverables selected." };
   }
 
   const deliverablesToLock = usePostInvoicePath
