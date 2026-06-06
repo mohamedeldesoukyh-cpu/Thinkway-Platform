@@ -19,6 +19,11 @@ import {
   validateDeliverablesForInvoice,
 } from "@/lib/billing/invoice-from-deliverables";
 import {
+  fetchPostsForInvoicing,
+  lockPostsOnInvoice,
+  validatePostsForInvoice,
+} from "@/lib/billing/invoice-from-posts";
+import {
   ensureBillableDeliverablesForLine,
   markDeliverablesReadyToInvoice,
   syncLineBillingFromDeliverables,
@@ -592,15 +597,25 @@ export async function createInvoiceFromLinesAction(
     });
   }
 
+  const usePostInvoicePath = requestedPostIds.length > 0;
+
   const { deliverables, error: deliverablesError } =
     await fetchDeliverablesForInvoicing(
       supabase,
       parsed.data.campaign_id,
-      deliverableIds
+      usePostInvoicePath ? requestedDeliverableIds : deliverableIds
     );
 
   if (deliverablesError) {
     return { ok: false, message: deliverablesError };
+  }
+
+  const { posts, error: postsError } = usePostInvoicePath
+    ? await fetchPostsForInvoicing(supabase, parsed.data.campaign_id, postIds)
+    : { posts: [], error: undefined };
+
+  if (postsError) {
+    return { ok: false, message: postsError };
   }
 
   await prepareLinesForDeliverableInvoicing(supabase, deliverables);
@@ -666,8 +681,22 @@ export async function createInvoiceFromLinesAction(
     }
   }
 
-  const validationError = validateDeliverablesForInvoice(deliverables);
-  if (validationError && postIds.length === 0) {
+  if (usePostInvoicePath) {
+    const postValidationError = validatePostsForInvoice(posts);
+    if (postValidationError) {
+      return { ok: false, message: postValidationError };
+    }
+  }
+
+  const deliverablesToLock = usePostInvoicePath
+    ? deliverables.filter((row) => requestedDeliverableIds.includes(row.id))
+    : deliverables;
+
+  const validationError = validateDeliverablesForInvoice(deliverablesToLock);
+  if (validationError && !usePostInvoicePath) {
+    return { ok: false, message: validationError };
+  }
+  if (validationError && usePostInvoicePath && deliverablesToLock.length > 0) {
     return { ok: false, message: validationError };
   }
 
@@ -739,22 +768,44 @@ export async function createInvoiceFromLinesAction(
     }
   }
 
-  const lockResult = await lockDeliverablesOnInvoice(
-    supabase,
-    invoiceId,
-    header.id,
-    deliverables,
-    { defaultVatRate: vatRate }
-  );
-
-  if (lockResult.error) {
-    if (invoiceMode === "new") {
-      await supabase.from("invoices").delete().eq("id", invoiceId);
+  if (usePostInvoicePath && posts.length > 0) {
+    const postLockResult = await lockPostsOnInvoice(
+      supabase,
+      invoiceId,
+      header.id,
+      posts,
+      { defaultVatRate: vatRate }
+    );
+    if (postLockResult.error) {
+      if (invoiceMode === "new") {
+        await supabase.from("invoices").delete().eq("id", invoiceId);
+      }
+      return { ok: false, message: postLockResult.error };
     }
-    return { ok: false, message: lockResult.error };
   }
 
-  if (deliverables.length === 0 && lineIds.length > 0) {
+  if (deliverablesToLock.length > 0) {
+    const lockResult = await lockDeliverablesOnInvoice(
+      supabase,
+      invoiceId,
+      header.id,
+      deliverablesToLock,
+      { defaultVatRate: vatRate }
+    );
+
+    if (lockResult.error) {
+      if (invoiceMode === "new") {
+        await supabase.from("invoices").delete().eq("id", invoiceId);
+      }
+      return { ok: false, message: lockResult.error };
+    }
+  }
+
+  if (
+    deliverablesToLock.length === 0 &&
+    posts.length === 0 &&
+    lineIds.length > 0
+  ) {
     const packageLines = await insertPackageAssignmentLineItems(
       supabase,
       invoiceId,
@@ -796,7 +847,7 @@ export async function createInvoiceFromLinesAction(
 
   return {
     ok: true,
-    message: `${actionLabel} invoice ${invoiceDocumentNumber} for ${deliverables.length} deliverable(s)${postIds.length ? ` and ${postIds.length} post row(s)` : ""}.`,
+    message: `${actionLabel} invoice ${invoiceDocumentNumber} for ${usePostInvoicePath ? posts.length : deliverablesToLock.length} deliverable/post row(s)${!usePostInvoicePath && postIds.length ? ` and ${postIds.length} post row(s)` : ""}.`,
     invoiceId,
     campaignId: parsed.data.campaign_id,
   };

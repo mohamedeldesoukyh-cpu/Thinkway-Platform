@@ -51,6 +51,29 @@ export function selectionToPayload(selection: OperationalSelectionState): Operat
   };
 }
 
+/** Expand ancestor selection into explicit selectable leaf row ids for server actions. */
+export function expandEffectivelySelectedLeaves(
+  selection: OperationalSelectionState,
+  rootRows: OperationalBillingRow[]
+): OperationalSelectionState {
+  const expanded = createEmptySelection();
+
+  const visit = (node: OperationalBillingRow) => {
+    for (const child of node.children ?? []) {
+      visit(child);
+    }
+    if (!isOperationalRowUiSelectable(node)) return;
+    if (!isRowEffectivelySelected(node, selection, rootRows)) return;
+    addRowToSelection(expanded, node);
+  };
+
+  for (const root of rootRows) {
+    visit(root);
+  }
+
+  return expanded;
+}
+
 /**
  * Submit payload for invoice actions — drops parent assignment line_ids when
  * granular deliverable/post rows are selected (avoids stale bulk-selection ids).
@@ -59,9 +82,10 @@ export function selectionToSubmitPayload(
   selection: OperationalSelectionState,
   rootRows: OperationalBillingRow[]
 ): OperationalSelectionPayload {
+  const explicit = expandEffectivelySelectedLeaves(selection, rootRows);
   const prunedLineIds: string[] = [];
 
-  for (const lineId of selection.line_ids) {
+  for (const lineId of explicit.line_ids) {
     const path = findRowPath(rootRows, lineId);
     const assignment = path?.[0];
     if (!assignment || assignment.kind !== "assignment") continue;
@@ -69,7 +93,7 @@ export function selectionToSubmitPayload(
     const pricingMode = assignment.pricing_mode ?? "package";
     const selectableDescendants = getSelectableDescendantRows(assignment);
     const hasDirectGranular = selectableDescendants.some((descendant) =>
-      isRowDirectlySelected(descendant, selection)
+      isRowDirectlySelected(descendant, explicit)
     );
 
     if (pricingMode === "per_deliverable") {
@@ -83,16 +107,20 @@ export function selectionToSubmitPayload(
     }
 
     const allDescendantsSelected = selectableDescendants.every((descendant) =>
-      isRowDirectlySelected(descendant, selection)
+      isRowDirectlySelected(descendant, explicit)
     );
     if (allDescendantsSelected) prunedLineIds.push(lineId);
   }
 
   return {
     line_ids: prunedLineIds,
-    deliverable_ids: [...selection.deliverable_ids],
-    post_ids: [...selection.post_ids],
+    deliverable_ids: [...explicit.deliverable_ids],
+    post_ids: [...explicit.post_ids],
   };
+}
+
+export function countSubmitPayload(payload: OperationalSelectionPayload): number {
+  return payload.line_ids.length + payload.deliverable_ids.length + payload.post_ids.length;
 }
 
 export function countSelection(selection: OperationalSelectionState): number {

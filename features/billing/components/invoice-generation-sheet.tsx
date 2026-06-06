@@ -46,7 +46,7 @@ import {
 } from "@/lib/billing/operational-billing-rows";
 import {
   buildInvoiceSelectionBatch,
-  countSelection,
+  countSubmitPayload,
   createEmptySelection,
   getRowSelectionStatus,
   isRowEffectivelySelected,
@@ -233,7 +233,7 @@ export function InvoiceGenerationSheet({
   }
 
   const payload = selectionToSubmitPayload(selected, operationalRows);
-  const hasSelection = countSelection(selected) > 0;
+  const hasSelection = countSubmitPayload(payload) > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
