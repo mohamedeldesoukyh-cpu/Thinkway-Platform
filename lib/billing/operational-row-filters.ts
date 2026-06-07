@@ -3,6 +3,7 @@ import {
   isOperationalRowAchieved,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
+import { traceChildrenAccess } from "@/lib/billing/operational-billing-trace";
 
 export type OperationalBillingFilter =
   | "all"
@@ -80,6 +81,7 @@ function filterOperationalNode(
 ): OperationalBillingRow | null {
   if (filter === "all") return row;
 
+  traceChildrenAccess("filterOperationalNode:children.map", row, "map");
   const filteredChildren = row.children
     .map((child) => filterOperationalNode(child, filter))
     .filter(Boolean) as OperationalBillingRow[];

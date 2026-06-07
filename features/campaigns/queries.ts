@@ -341,7 +341,7 @@ export async function getCampaignWorkspace(
     supabase
       .from("invoices")
       .select("*")
-      .eq("campaign_id", campaignId)
+      .or(`campaign_header_id.eq.${campaignId},campaign_id.eq.${campaignId}`)
       .order("issue_date", { ascending: false }),
     supabase
       .from("approvals")
@@ -645,6 +645,7 @@ export async function getCampaignWorkspace(
       revenue_locked: line.revenue_locked ?? false,
       cost_locked: line.cost_locked ?? false,
       vendor_assignment_locked: line.vendor_assignment_locked ?? false,
+      finance_override_until: line.finance_override_until ?? null,
       invoice_id: line.invoice_id ?? null,
       payment_status: deriveLinePaymentStatus(cost, vendorFees),
       currency_code: line.currency_code,
@@ -835,7 +836,7 @@ export async function getCampaignWorkspace(
     legacy_consumed: legacyConsumed,
   });
 
-  return {
+  const workspace = {
     id: headerRow.id,
     document_number: headerRow.document_number,
     name: headerRow.name,
@@ -922,12 +923,48 @@ export async function getCampaignWorkspace(
     }),
     blockers,
     client_io: clientIo,
-    vendor_ios: vendorIos,
+    vendor_ios: vendorIos ?? [],
     vat_context: {
       client_country_code: clientCountryCode,
       default_revenue_vat_percent: defaultRevenueVatPercent,
     },
   };
+
+  if (process.env.NODE_ENV === "development") {
+    const arrayFields = {
+      lines: workspace.lines,
+      vendors: workspace.vendors,
+      deliverables: workspace.deliverables,
+      invoices: workspace.invoices,
+      payments: workspace.payments,
+      approvals: workspace.approvals,
+      activity: workspace.activity,
+      blockers: workspace.blockers,
+      vendor_ios: workspace.vendor_ios,
+    };
+    for (const [field, value] of Object.entries(arrayFields)) {
+      if (!Array.isArray(value)) {
+        console.error("[campaign-workspace-trace] getCampaignWorkspace:non-array-field", {
+          campaignId,
+          field,
+          valueType: typeof value,
+          keys: value != null && typeof value === "object" ? Object.keys(value as object) : [],
+          json: JSON.stringify(value).slice(0, 1000),
+        });
+        throw new Error(
+          `[campaign-workspace-trace] getCampaignWorkspace: ${field} is not an array`
+        );
+      }
+    }
+    console.log("[campaign-workspace-trace] getCampaignWorkspace:ok", {
+      campaignId,
+      lines: workspace.lines.length,
+      vendor_ios: workspace.vendor_ios.length,
+      deliverables: workspace.deliverables.length,
+    });
+  }
+
+  return workspace;
 }
 
 export async function searchInfluencersForCampaign(params: {

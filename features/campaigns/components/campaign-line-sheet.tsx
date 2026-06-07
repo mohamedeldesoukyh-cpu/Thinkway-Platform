@@ -31,6 +31,7 @@ import {
   updateCampaignLineAction,
   type FormActionState,
 } from "@/features/campaigns/actions";
+import { AssignmentIoRevisionDialog } from "@/features/campaigns/components/assignment-io-revision-dialog";
 import { AssignmentStickyFooter } from "@/features/campaigns/components/assignment-sticky-footer";
 import { DeliverablePricingEditor } from "@/features/campaigns/components/deliverable-pricing-editor";
 import {
@@ -54,12 +55,14 @@ import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package
 import { calculatePoConsumption } from "@/lib/finance/po/calculations";
 import { formatMoney } from "@/features/campaigns/utils";
 import {
+  applyAssignmentTotalsToCommercialRows,
   commercialRowsToPlatformSelections,
   createEmptyCommercialRow,
   summarizeCommercialRows,
   type CommercialDeliverableRow,
 } from "@/lib/assignments/commercial-calculations";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
+import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
 import { computeOperationalGp } from "@/lib/vat/calculations";
 
 import type {
@@ -136,6 +139,8 @@ export function CampaignLineSheet({
   const submitLockRef = useRef(false);
   const poExceededOnSaveRef = useRef(false);
   const poExceededAmountRef = useRef(0);
+  const [ioRevisionOpen, setIoRevisionOpen] = useState(false);
+  const ioRevisionAckRef = useRef(false);
 
   const [createState, createAction, createPending] = useActionState(
     createCampaignLineAction,
@@ -212,14 +217,50 @@ export function CampaignLineSheet({
       const platforms = commercialRowsToPlatformSelections(commercialRows, accountLookup);
       return JSON.stringify({ platforms });
     }
-    return JSON.stringify({
-      platforms: activeSelections.map(({ selected: _s, ...rest }) => rest),
+    if (activeSelections.length > 0) {
+      return JSON.stringify({
+        platforms: activeSelections.map(({ selected: _s, ...rest }) => rest),
+      });
+    }
+    if (line?.assignment?.platforms?.length) {
+      return JSON.stringify({ platforms: line.assignment.platforms });
+    }
+    return JSON.stringify({ platforms: [] });
+  }, [pricingMode, commercialRows, profile, activeSelections, line?.assignment?.platforms]);
+
+  const effectiveCommercialRows = useMemo((): CommercialDeliverableRow[] => {
+    if (pricingMode !== "per_deliverable") return [];
+    if (commercialRows.length > 0) {
+      return applyAssignmentTotalsToCommercialRows(commercialRows, revenue, cost);
+    }
+    const platforms =
+      activeSelections.length > 0
+        ? activeSelections.map(({ selected: _s, ...rest }) => rest)
+        : (line?.assignment?.platforms ?? []);
+    if (platforms.length === 0) return [];
+    return packagePlatformsToCommercialRows(platforms, {
+      totalRevenueBeforeVat: revenue,
+      totalCostBeforeVat: cost,
+      dueDate: endDate || null,
     });
-  }, [pricingMode, commercialRows, profile, activeSelections]);
+  }, [
+    pricingMode,
+    commercialRows,
+    activeSelections,
+    line?.assignment?.platforms,
+    revenue,
+    cost,
+    endDate,
+  ]);
+
+  const effectiveCommercialSummary = useMemo(
+    () => summarizeCommercialRows(effectiveCommercialRows),
+    [effectiveCommercialRows]
+  );
 
   const commercialJson = useMemo(
-    () => JSON.stringify(commercialRows),
-    [commercialRows]
+    () => JSON.stringify(effectiveCommercialRows),
+    [effectiveCommercialRows]
   );
 
   const autoTitle = useMemo(() => {
@@ -238,12 +279,14 @@ export function CampaignLineSheet({
 
   useEffect(() => {
     if (pricingMode !== "per_deliverable") return;
+    if (commercialRows.length === 0) return;
     setRevenue(commercialSummary.total_revenue_before_vat);
     setCost(commercialSummary.total_cost_before_vat);
     setCostReceived(commercialSummary.total_cost_before_vat);
     setCostReceivedCurrency(currency);
   }, [
     pricingMode,
+    commercialRows.length,
     commercialSummary.total_revenue_before_vat,
     commercialSummary.total_cost_before_vat,
     currency,
@@ -310,6 +353,8 @@ export function CampaignLineSheet({
       submitLockRef.current = false;
       poExceededOnSaveRef.current = false;
       poExceededAmountRef.current = 0;
+      setIoRevisionOpen(false);
+      ioRevisionAckRef.current = false;
     }
   }, [open]);
 
@@ -383,8 +428,20 @@ export function CampaignLineSheet({
     setPoAmount(line?.po_amount ?? 0);
     setStartDate(line?.start_date ?? "");
     setEndDate(line?.end_date ?? "");
-    setPricingMode(line?.assignment?.pricing_mode ?? "package");
-    setCommercialRows(line?.assignment?.commercial_rows ?? []);
+    const nextPricingMode = line?.assignment?.pricing_mode ?? "package";
+    const storedCommercialRows = line?.assignment?.commercial_rows ?? [];
+    const hydratedCommercialRows =
+      nextPricingMode === "per_deliverable" &&
+      storedCommercialRows.length === 0 &&
+      (line?.assignment?.platforms?.length ?? 0) > 0
+        ? packagePlatformsToCommercialRows(line.assignment!.platforms, {
+            totalRevenueBeforeVat: line?.revenue_before_vat ?? line?.revenue ?? 0,
+            totalCostBeforeVat: line?.cost_before_vat ?? line?.cost ?? 0,
+            dueDate: line?.end_date ?? null,
+          })
+        : storedCommercialRows;
+    setPricingMode(nextPricingMode);
+    setCommercialRows(hydratedCommercialRows);
     setProfile(null);
     setSelections([]);
 
@@ -423,13 +480,46 @@ export function CampaignLineSheet({
     [po, revenue, line?.revenue_before_vat]
   );
 
+  const financeOverrideActive = hasActiveFinanceOverride(line?.finance_override_until);
+
+  const commercialChanged =
+    isEdit && line
+      ? Math.abs(revenue - Number(line.revenue_before_vat ?? line.revenue)) > 0.009 ||
+        Math.abs(cost - Number(line.cost_before_vat ?? line.cost)) > 0.009
+      : false;
+
+  const needsIoRevisionAck =
+    isEdit &&
+    Boolean(line?.vendor_io_id) &&
+    financeOverrideActive &&
+    commercialChanged;
+
+  const storedDeliverableUnits = useMemo(() => {
+    if (!isEdit || !line) return 0;
+    if ((line.deliverable_count ?? 0) > 0) return line.deliverable_count;
+    if ((line.assignment?.platforms?.length ?? 0) > 0) {
+      return countLineDeliverables(line.assignment!.platforms);
+    }
+    return line.assignment?.commercial_rows?.reduce((sum, row) => sum + row.quantity, 0) ?? 0;
+  }, [isEdit, line]);
+
+  const hasDeliverableScope = isEdit
+    ? Boolean(line?.id)
+    : pricingMode === "per_deliverable"
+      ? commercialRows.length > 0
+      : activeSelections.length > 0;
+
   const canSubmit =
     Boolean(influencerId) &&
-    (pricingMode === "per_deliverable"
-      ? commercialRows.length > 0
-      : activeSelections.length > 0) &&
-    !loadingProfile &&
+    hasDeliverableScope &&
+    (!loadingProfile || isEdit) &&
     lineTitle.trim().length > 0;
+
+  const assignmentFieldsLocked =
+    Boolean(line?.vendor_assignment_locked) && !financeOverrideActive;
+
+  const commercialFieldsLocked = (locked: boolean) =>
+    isPending || (!financeOverrideActive && locked);
 
   const revenueVatAmount = revenueVatExempt
     ? 0
@@ -439,17 +529,33 @@ export function CampaignLineSheet({
     : Math.round(cost * costVatPercent) / 100;
 
   const footerSummary = useMemo(() => {
-    if (pricingMode === "per_deliverable") {
-      return commercialSummary;
+    const deliverableUnits =
+      activeSelections.length > 0
+        ? countLineDeliverables(activeSelections)
+        : storedDeliverableUnits;
+
+    if (pricingMode === "per_deliverable" && effectiveCommercialRows.length > 0) {
+      return effectiveCommercialSummary;
     }
+
     return {
       total_cost_before_vat: cost,
       total_revenue_before_vat: revenue,
       gp: gpPreview.gp,
       margin_percent: gpPreview.marginPercent,
-      deliverable_units: countLineDeliverables(activeSelections),
+      deliverable_units: deliverableUnits,
     };
-  }, [pricingMode, commercialSummary, cost, revenue, gpPreview, activeSelections]);
+  }, [
+    pricingMode,
+    effectiveCommercialRows.length,
+    effectiveCommercialSummary,
+    cost,
+    revenue,
+    gpPreview.gp,
+    gpPreview.marginPercent,
+    activeSelections,
+    storedDeliverableUnits,
+  ]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -474,9 +580,16 @@ export function CampaignLineSheet({
               return;
             }
 
+            if (needsIoRevisionAck && !ioRevisionAckRef.current) {
+              event.preventDefault();
+              setIoRevisionOpen(true);
+              return;
+            }
+
             poExceededOnSaveRef.current = poSnapshot.is_over_consumed;
             poExceededAmountRef.current = poSnapshot.exceeded_amount;
             submitLockRef.current = true;
+            ioRevisionAckRef.current = false;
           }}
         >
           <input type="hidden" name="campaign_id" value={campaignId} />
@@ -495,12 +608,11 @@ export function CampaignLineSheet({
           <input type="hidden" name="end_date" value={endDate} />
           <input type="hidden" name="pricing_mode" value={pricingMode} />
           <input type="hidden" name="commercial_json" value={commercialJson} />
-
           <InfluencerTypeahead
             value={influencerId}
             selectedLabel={influencerLabel}
             onSelect={onInfluencerPick}
-            disabled={isPending || Boolean(line?.vendor_assignment_locked)}
+            disabled={isPending || assignmentFieldsLocked}
           />
           <FieldError messages={state.fieldErrors?.influencer_id} />
 
@@ -570,14 +682,14 @@ export function CampaignLineSheet({
               profile={profile}
               selections={selections}
               onChange={setSelections}
-              disabled={isPending || Boolean(line?.vendor_assignment_locked)}
+              disabled={isPending || assignmentFieldsLocked}
             />
           ) : profile && pricingMode === "per_deliverable" ? (
             <DeliverablePricingEditor
               rows={commercialRows}
               onChange={setCommercialRows}
               currency={currency}
-              disabled={isPending || Boolean(line?.vendor_assignment_locked)}
+              disabled={isPending || assignmentFieldsLocked}
               assignment={creatorAssignmentForPricing}
               creatorPlatformAccounts={creatorPlatformAccountsForPricing}
             />
@@ -684,7 +796,9 @@ export function CampaignLineSheet({
               vatPercent={revenueVatPercent}
               exempt={revenueVatExempt}
               currency={currency}
-              disabled={isPending || Boolean(line?.revenue_locked || line?.vat_locked)}
+              disabled={commercialFieldsLocked(
+                Boolean(line?.revenue_locked || line?.vat_locked)
+              )}
               onBeforeVatChange={setRevenue}
               onVatPercentChange={setRevenueVatPercent}
               onExemptChange={setRevenueVatExempt}
@@ -705,7 +819,9 @@ export function CampaignLineSheet({
               costReceivedCurrency={costReceivedCurrency}
               costInLc={cost}
               currencyOptions={currencyOptions}
-              disabled={isPending || Boolean(line?.cost_locked || line?.vat_locked)}
+              disabled={commercialFieldsLocked(
+                Boolean(line?.cost_locked || line?.vat_locked)
+              )}
               onCostReceivedChange={setCostReceived}
               onCostReceivedCurrencyChange={setCostReceivedCurrency}
               onCostInLcChange={setCost}
@@ -719,7 +835,9 @@ export function CampaignLineSheet({
               vatPercent={costVatPercent}
               exempt={costVatExempt}
               currency={currency}
-              disabled={isPending || Boolean(line?.cost_locked || line?.vat_locked)}
+              disabled={commercialFieldsLocked(
+                Boolean(line?.cost_locked || line?.vat_locked)
+              )}
               amountDisabled
               onBeforeVatChange={() => {}}
               onVatPercentChange={setCostVatPercent}
@@ -773,6 +891,18 @@ export function CampaignLineSheet({
             costVatAmount={costVatAmount}
           />
         </form>
+
+        <AssignmentIoRevisionDialog
+          open={ioRevisionOpen}
+          onOpenChange={setIoRevisionOpen}
+          vendorIoDocumentNumber={line?.vendor_io_document_number ?? null}
+          onCancel={() => setIoRevisionOpen(false)}
+          onConfirm={() => {
+            ioRevisionAckRef.current = true;
+            setIoRevisionOpen(false);
+            queueMicrotask(() => formRef.current?.requestSubmit());
+          }}
+        />
       </SheetContent>
     </Sheet>
   );

@@ -201,8 +201,13 @@ export function EditablePostRow({
           : "—";
 
   const postId = typeof post.id === "string" ? post.id : "";
-  const canEdit = !readOnly && postId.length > 0 && !postId.startsWith("virtual-");
-  const canEditCommercial = canEdit && !deliverable.is_locked;
+  const isVirtualPost = postId.startsWith("virtual-");
+  const canEditDeliverableScope =
+    !readOnly && deliverableScoped && postId.length > 0 && !deliverable.is_locked;
+  const canEditPostSchedule =
+    !readOnly && postId.length > 0 && !isVirtualPost && !deliverable.is_locked;
+  const canEdit = canEditDeliverableScope || canEditPostSchedule;
+  const canEditCommercial = canEdit;
 
   function persistCommercial() {
     if (!canEditCommercial) return;
@@ -267,8 +272,43 @@ export function EditablePostRow({
     };
   }
 
+  function persistDeliverableMeta(
+    patch: Partial<MetaDraft>,
+    options?: { closeEdit?: boolean }
+  ) {
+    if (!canEditDeliverableScope) return;
+    const merged = { ...meta, ...patch };
+    startTransition(async () => {
+      const result = await updateAssignmentDeliverableAction({
+        campaign_id: campaignId,
+        campaign_line_id: campaignLineId,
+        deliverable_id: deliverable.id,
+        platform: merged.platform,
+        deliverable_type: merged.deliverable_type,
+        quantity: commercial.draft.qty,
+        unit_revenue: commercial.draft.revPerAd,
+        unit_cost: commercial.draft.costPerAd,
+        revenue_vat_percent: merged.revenue_vat_percent,
+        live_date: merged.live_date || null,
+        notes: merged.notes || null,
+        billing_status: merged.billing_status as typeof post.billing_status,
+      });
+      if (!result.ok) {
+        setError(result.message ?? "Failed to save.");
+        return;
+      }
+      if (options?.closeEdit) setEditing(false);
+      setError(null);
+      router.refresh();
+    });
+  }
+
   function persistMetaPatch(patch: Partial<MetaDraft>, options?: { closeEdit?: boolean }) {
     if (!canEdit) return;
+    if (deliverableScoped && isVirtualPost) {
+      persistDeliverableMeta(patch, options);
+      return;
+    }
     startTransition(async () => {
       const result = await updatePostScheduleAction(buildSchedulePayload(patch));
       if (!result.ok) {

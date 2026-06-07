@@ -3,6 +3,7 @@ import {
   isOperationalRowUiSelectable,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
+import { traceChildrenAccess } from "@/lib/billing/operational-billing-trace";
 
 export type OperationalSelectionState = {
   line_ids: Set<string>;
@@ -234,6 +235,7 @@ export function isRowDirectlySelected(
 export function getDescendantRows(row: OperationalBillingRow): OperationalBillingRow[] {
   const descendants: OperationalBillingRow[] = [];
   function walk(node: OperationalBillingRow) {
+    traceChildrenAccess("getDescendantRows:walk", node, "iterable");
     for (const child of node.children) {
       descendants.push(child);
       walk(child);

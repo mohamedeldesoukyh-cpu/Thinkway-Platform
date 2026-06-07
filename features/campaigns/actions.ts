@@ -6,8 +6,10 @@ import {
   METADATA_PLATFORM_KEY,
 } from "@/features/campaigns/constants";
 import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
+import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
 import { resolveLineCommercialInput } from "@/lib/assignments/resolve-line-commercial-input";
 import { syncAssignmentDeliverablesForLine } from "@/lib/assignments/sync-assignment-deliverables-for-line";
+import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   buildLineVatPayload,
@@ -35,6 +37,7 @@ import {
   countLineDeliverables,
   deriveLinePlatformField,
   LINE_ASSIGNMENT_META_KEY,
+  parseLineAssignment,
   type LineInfluencerAssignment,
   type LinePlatformSelection,
 } from "./line-assignment";
@@ -626,7 +629,7 @@ export async function updateCampaignLineAction(
   const { data: existingLine, error: lineError } = await supabase
     .from("campaign_lines")
     .select(
-      "revenue_locked, cost_locked, revenue, cost, revenue_before_vat, cost_before_vat, vat_locked, document_number"
+      "revenue_locked, cost_locked, revenue, cost, revenue_before_vat, cost_before_vat, vat_locked, document_number, finance_override_until, vendor_io_id, vendor_assignment_locked, metadata, operational_status, invoice_id"
     )
     .eq("id", parsed.data.line_id)
     .eq("campaign_header_id", parsed.data.campaign_id)
@@ -636,26 +639,49 @@ export async function updateCampaignLineAction(
     return { ok: false, message: lineError?.message ?? "Line not found." };
   }
 
+  const existingLineMeta = existingLine as {
+    revenue_locked?: boolean | null;
+    cost_locked?: boolean | null;
+    revenue?: number | null;
+    cost?: number | null;
+    revenue_before_vat?: number | null;
+    cost_before_vat?: number | null;
+    vat_locked?: boolean | null;
+    document_number?: string | null;
+    finance_override_until?: string | null;
+    vendor_io_id?: string | null;
+    vendor_assignment_locked?: boolean | null;
+    metadata?: Record<string, unknown> | null;
+    operational_status?: string | null;
+    invoice_id?: string | null;
+  };
+
+  const financeOverrideActive = hasActiveFinanceOverride(
+    existingLineMeta.finance_override_until
+  );
+
   const revenueBeforeVat = parsed.data.revenue_before_vat ?? parsed.data.revenue;
   const costBeforeVat = parsed.data.cost_before_vat ?? parsed.data.cost;
 
   if (
-    existingLine.revenue_locked &&
-    revenueBeforeVat !== Number(existingLine.revenue_before_vat ?? existingLine.revenue)
+    existingLineMeta.revenue_locked &&
+    !financeOverrideActive &&
+    revenueBeforeVat !== Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue)
   ) {
     return {
       ok: false,
-      message: `Revenue is locked on ${existingLine.document_number}. Request a finance override.`,
+      message: `Revenue is locked on ${existingLineMeta.document_number}. Request a finance override.`,
     };
   }
 
   if (
-    existingLine.cost_locked &&
-    costBeforeVat !== Number(existingLine.cost_before_vat ?? existingLine.cost)
+    existingLineMeta.cost_locked &&
+    !financeOverrideActive &&
+    costBeforeVat !== Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost)
   ) {
     return {
       ok: false,
-      message: `Cost is locked on ${existingLine.document_number}. Request a finance override.`,
+      message: `Cost is locked on ${existingLineMeta.document_number}. Request a finance override.`,
     };
   }
 
@@ -686,13 +712,36 @@ export async function updateCampaignLineAction(
     )
     .eq("influencer_id", influencer.id);
 
-  const commercialResolved = resolveLineCommercialInput({
+  let commercialResolved = resolveLineCommercialInput({
     pricing_mode: parsed.data.pricing_mode,
     assignment_json: parsed.data.assignment_json,
     commercial_json: parsed.data.commercial_json,
     platformAccounts: platformAccounts ?? [],
     parseAssignmentJson,
   });
+
+  if (
+    !commercialResolved.ok &&
+    parsed.data.pricing_mode === "per_deliverable"
+  ) {
+    const assignment = parseLineAssignment(existingLineMeta.metadata);
+    if (assignment?.platforms?.length) {
+      const synthesizedRows = packagePlatformsToCommercialRows(assignment.platforms, {
+        totalRevenueBeforeVat: revenueBeforeVat,
+        totalCostBeforeVat: costBeforeVat,
+        dueDate: parsed.data.end_date ?? parsed.data.start_date ?? null,
+      });
+      if (synthesizedRows.length > 0) {
+        commercialResolved = resolveLineCommercialInput({
+          pricing_mode: "per_deliverable",
+          assignment_json: parsed.data.assignment_json,
+          commercial_json: JSON.stringify(synthesizedRows),
+          platformAccounts: platformAccounts ?? [],
+          parseAssignmentJson,
+        });
+      }
+    }
+  }
 
   if (!commercialResolved.ok) {
     return { ok: false, message: commercialResolved.message };
@@ -761,20 +810,6 @@ export async function updateCampaignLineAction(
       commercial.commercial_rows.length > 0 ? commercial.commercial_rows : undefined,
   };
 
-  const { data: existingLineMetaRaw } = await supabase
-    .from("campaign_lines")
-    .select("metadata, vendor_assignment_locked, vendor_io_id, operational_status")
-    .eq("id", parsed.data.line_id)
-    .maybeSingle();
-
-  const existingLineMeta = existingLineMetaRaw as {
-    metadata?: Record<string, unknown> | null;
-    vendor_assignment_locked?: boolean | null;
-    vendor_io_id?: string | null;
-    operational_status?: string | null;
-    finance_override_until?: string | null;
-  } | null;
-
   const { error } = await supabase
     .from("campaign_lines")
     .update({
@@ -794,7 +829,7 @@ export async function updateCampaignLineAction(
       start_date: parsed.data.start_date,
       end_date: parsed.data.end_date,
       metadata: {
-        ...((existingLineMeta?.metadata as Record<string, unknown>) ?? {}),
+        ...((existingLineMeta.metadata as Record<string, unknown>) ?? {}),
         [LINE_ASSIGNMENT_META_KEY]: assignmentMeta,
       },
     })
@@ -807,7 +842,10 @@ export async function updateCampaignLineAction(
 
   let assignmentId: string | null = null;
 
-  if (!existingLineMeta?.vendor_assignment_locked) {
+  const canSyncAssignment =
+    !existingLineMeta.vendor_assignment_locked || financeOverrideActive;
+
+  if (canSyncAssignment) {
     const vendorVatPayload = buildVendorCostVatPayload({
       cost_before_vat: vatPayload.cost_before_vat,
       cost_vat_percent: vatPayload.cost_vat_percent,
@@ -859,29 +897,76 @@ export async function updateCampaignLineAction(
     });
   }
 
-  const { data: overrideRow } = await supabase
-    .from("campaign_lines")
-    .select("vendor_io_id, finance_override_until")
-    .eq("id", parsed.data.line_id)
-    .maybeSingle();
+  const commercialChanged =
+    revenueBeforeVat !== Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue) ||
+    costBeforeVat !== Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost);
 
-  const overrideMeta = overrideRow as {
-    vendor_io_id?: string | null;
-    finance_override_until?: string | null;
-  } | null;
+  const { findVendorIoAmountDriftForCampaign } = await import(
+    "@/lib/io/vendor-io-amount-drift"
+  );
+  const amountDrift =
+    Boolean(existingLineMeta.vendor_io_id) &&
+    (
+      await findVendorIoAmountDriftForCampaign(supabase, parsed.data.campaign_id, [
+        parsed.data.line_id,
+      ])
+    ).length > 0;
 
-  if (overrideMeta?.vendor_io_id && overrideMeta.finance_override_until) {
-    const until = new Date(overrideMeta.finance_override_until).getTime();
-    if (Number.isFinite(until) && until > Date.now()) {
-      await supabase
-        .from("campaign_lines")
-        .update({ operational_status: "io_revised" } as never)
-        .eq("id", parsed.data.line_id);
+  let vendorIoRevisionAllowed = !existingLineMeta.invoice_id || financeOverrideActive;
+  if (!vendorIoRevisionAllowed && existingLineMeta.invoice_id) {
+    const { data: linkedInvoice } = await supabase
+      .from("invoices")
+      .select("regeneration_status")
+      .eq("id", existingLineMeta.invoice_id)
+      .maybeSingle();
+    vendorIoRevisionAllowed =
+      (linkedInvoice as { regeneration_status: string | null } | null)
+        ?.regeneration_status === "pending_regeneration";
+  }
+
+  const shouldReviseVendorIo = Boolean(
+    existingLineMeta.vendor_io_id &&
+      vendorIoRevisionAllowed &&
+      (amountDrift || (financeOverrideActive && commercialChanged))
+  );
+
+  if (shouldReviseVendorIo) {
+    const { reviseVendorIoBatch } = await import("@/lib/io/revise-vendor-io-batch");
+    const reviseResult = await reviseVendorIoBatch(supabase, {
+      campaignId: parsed.data.campaign_id,
+      lineIds: [parsed.data.line_id],
+      reason: amountDrift
+        ? "Creator cost sync to Vendor IO"
+        : "Commercial correction after invoice un-generate",
+      userId: user.id,
+    });
+
+    if (!reviseResult.ok) {
+      return {
+        ok: false,
+        message: reviseResult.error ?? "Vendor IO revision failed after commercial update.",
+      };
     }
+
+    await supabase
+      .from("campaign_lines")
+      .update({
+        revenue_locked: false,
+        cost_locked: false,
+        vendor_assignment_locked: false,
+        vat_locked: false,
+      } as never)
+      .eq("id", parsed.data.line_id);
   }
 
   revalidateCampaign(parsed.data.campaign_id, header?.client_id);
-  return { ok: true, message: "Influencer assignment updated." };
+  revalidatePath("/ios/vendor");
+  return {
+    ok: true,
+    message: shouldReviseVendorIo
+      ? "Assignment updated. Vendor IO revised with updated creator cost."
+      : "Influencer assignment updated.",
+  };
 }
 
 export async function assignCampaignVendorAction(

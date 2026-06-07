@@ -9,12 +9,15 @@ import {
 import { getAssignmentOpsStatus } from "@/lib/billing/assignment-lifecycle-state";
 import {
   deriveLineBillingStatusFromDeliverables,
+  resolveConsensusLineInvoiceId,
   type DeliverableBillingRow,
 } from "@/lib/billing/deliverable-billing";
+import { resolveLinkedInvoiceIds } from "@/lib/billing/invoice-validation-context";
 import {
   getCampaignLineStatusViolations,
   repairCampaignLineStatusPatch,
 } from "@/lib/campaigns/campaign-line-status-invariants";
+import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 
 type LineSnapshot = {
   id: string;
@@ -166,11 +169,19 @@ export async function syncLineOperationalStatus(
     snapshot.billing_status
   );
 
+  const linkedInvoiceByLineItem = await resolveLinkedInvoiceIds(
+    supabase,
+    deliverables.map((d) => d.invoice_line_item_id).filter(Boolean) as string[]
+  );
+  const resolvedInvoiceId =
+    snapshot.invoice_id ??
+    resolveConsensusLineInvoiceId(deliverables, linkedInvoiceByLineItem);
+
   let nextOperational = coerceOperationalStatus(
     deriveOperationalFromState({
       billingStatus,
       vendorIoId: snapshot.vendor_io_id,
-      invoiceId: snapshot.invoice_id,
+      invoiceId: resolvedInvoiceId,
       financeOverrideUntil: snapshot.finance_override_until,
       deliverables,
       storedOperational: snapshot.operational_status,
@@ -186,13 +197,20 @@ export async function syncLineOperationalStatus(
     Object.assign(patch, lineBillingPatch(billingStatus));
   }
 
-  patch = repairCampaignLineStatusPatch(snapshot, patch);
+  if (resolvedInvoiceId && patch.invoice_id === undefined) {
+    patch.invoice_id = resolvedInvoiceId;
+  }
+
+  patch = repairCampaignLineStatusPatch(
+    { ...snapshot, invoice_id: resolvedInvoiceId },
+    patch
+  );
 
   const violations = getCampaignLineStatusViolations({
     billing_status: String(patch.billing_status ?? snapshot.billing_status),
     operational_status: String(patch.operational_status ?? snapshot.operational_status),
     invoice_id:
-      patch.invoice_id !== undefined ? patch.invoice_id : snapshot.invoice_id,
+      patch.invoice_id !== undefined ? patch.invoice_id : resolvedInvoiceId,
     vendor_io_id: snapshot.vendor_io_id,
     finance_override_until: snapshot.finance_override_until,
   });
@@ -211,6 +229,11 @@ export async function syncLineOperationalStatus(
 
   if (updateKeys.length > 0) {
     const updatePayload = Object.fromEntries(updateKeys.map((k) => [k, patch[k]]));
+    if (updatePayload.operational_status != null) {
+      updatePayload.operational_status = operationalStatusForDb(
+        String(updatePayload.operational_status)
+      );
+    }
     await supabase.from("campaign_lines").update(updatePayload as never).eq("id", lineId);
   }
 

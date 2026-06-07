@@ -1,0 +1,8 @@
+{
+  "campaign_name": "LIFECYCLE-FINAL-VALIDATION-2026-06-04",
+  "passed": 0,
+  "total": 0,
+  "steps": [],
+  "error": "permission denied for table brands",
+  "completed_at": "2026-06-06T23:11:26.899Z"
+}

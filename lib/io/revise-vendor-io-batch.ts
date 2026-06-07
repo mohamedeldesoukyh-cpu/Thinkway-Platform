@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { finalizeLineBillingAfterVendorIoRevisionBatch } from "@/lib/billing/vendor-io-revision-line-billing";
 import { logReviseVendorIo } from "@/lib/io/revise-vendor-io-log";
+import { resolveActiveVendorIoId } from "@/lib/io/vendor-io-active-link";
+import { sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
 import {
   vendorIoBaseDocumentNumber,
   vendorIoRevisionDocumentNumber,
@@ -34,7 +36,9 @@ export async function reviseVendorIoBatch(
 
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
-    .select("id, name, revenue, vendor_io_id")
+    .select(
+      "id, name, revenue, revenue_before_vat, cost, cost_before_vat, vendor_io_id"
+    )
     .eq("campaign_header_id", campaignId)
     .in("id", lineIds);
 
@@ -42,7 +46,15 @@ export async function reviseVendorIoBatch(
     return { ok: false, error: linesError.message, revised_line_ids: [], new_vendor_io_ids: [] };
   }
 
-  type LineRow = { id: string; name: string; revenue: number; vendor_io_id: string | null };
+  type LineRow = {
+    id: string;
+    name: string;
+    revenue: number;
+    revenue_before_vat?: number | null;
+    cost?: number | null;
+    cost_before_vat?: number | null;
+    vendor_io_id: string | null;
+  };
   const typed = (lines ?? []) as LineRow[];
   const missingIo = typed.filter((l) => !l.vendor_io_id);
   if (missingIo.length > 0) {
@@ -56,9 +68,18 @@ export async function reviseVendorIoBatch(
 
   const byVendorIo = new Map<string, LineRow[]>();
   for (const line of typed) {
-    const list = byVendorIo.get(line.vendor_io_id!) ?? [];
+    const activeVendorIoId = await resolveActiveVendorIoId(supabase, line.vendor_io_id);
+    if (!activeVendorIoId) {
+      return {
+        ok: false,
+        error: `Line "${line.name}" has no active Vendor IO to revise.`,
+        revised_line_ids: [],
+        new_vendor_io_ids: [],
+      };
+    }
+    const list = byVendorIo.get(activeVendorIoId) ?? [];
     list.push(line);
-    byVendorIo.set(line.vendor_io_id!, list);
+    byVendorIo.set(activeVendorIoId, list);
   }
 
   const revisedLineIds: string[] = [];
@@ -130,7 +151,7 @@ export async function reviseVendorIoBatch(
       lineIds: groupLines.map((l) => l.id),
     });
 
-    const groupTotal = groupLines.reduce((s, l) => s + (Number(l.revenue) || 0), 0);
+    const groupTotal = sumVendorIoLineAmounts(groupLines);
 
     const { error: supersedeError } = await supabase
       .from("vendor_ios")
@@ -152,7 +173,7 @@ export async function reviseVendorIoBatch(
         assignment_id: old.assignment_id,
         campaign_header_id: old.campaign_header_id,
         influencer_id: old.influencer_id,
-        amount: groupTotal || old.amount,
+        amount: groupTotal,
         currency_code: old.currency_code,
         status: "draft",
         terms_text: old.terms_text

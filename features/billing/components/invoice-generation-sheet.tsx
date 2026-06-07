@@ -1,7 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   resetToastOnce,
   showErrorToastOnce,
@@ -260,7 +268,9 @@ export function InvoiceGenerationSheet({
       }
     }
 
-    formAction(formData);
+    startTransition(() => {
+      formAction(formData);
+    });
   }
 
   const payload = submitPayload;

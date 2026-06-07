@@ -10,6 +10,7 @@ import {
   isPartiallyInvoicedBillingStatus,
 } from "@/lib/billing/partial-invoice-lifecycle";
 import { isInvoiceEligibleOperationalStatus } from "@/features/campaigns/types/operational";
+import { snapshotOperationalRow } from "@/lib/billing/operational-billing-trace";
 
 function hasRemainingInvoiceableRevenue(
   row: Pick<
@@ -72,6 +73,28 @@ export type OperationalBillingRow = {
   children: OperationalBillingRow[];
 };
 
+/**
+ * Boundary invariant: every operational row must expose `children` as an array
+ * before financial sync, invoice linkage, selection, or UI tree consumers run.
+ */
+export function ensureOperationalBillingTreeShape(
+  rows: OperationalBillingRow[] | null | undefined
+): OperationalBillingRow[] {
+  const safeRows = rows ?? [];
+  return safeRows.map((row) => {
+    if (process.env.NODE_ENV === "development" && !Array.isArray(row.children)) {
+      console.warn("[operational-billing-trace] ensureOperationalBillingTreeShape:repair", {
+        stage: "ensureOperationalBillingTreeShape",
+        ...snapshotOperationalRow(row),
+      });
+    }
+    return {
+      ...row,
+      children: ensureOperationalBillingTreeShape(row.children),
+    };
+  });
+}
+
 export type CampaignFinancialRollup = {
   campaign_header_id: string;
   total_campaign_amount: number;
@@ -103,12 +126,17 @@ const ACHIEVED_DELIVERABLE_STATUSES = new Set<string>([
 ]);
 
 export function isOperationalRowAchieved(
-  row: Pick<OperationalBillingRow, "kind" | "billing_status" | "line_billing_status" | "is_achieved">
+  row: Pick<
+    OperationalBillingRow,
+    "kind" | "billing_status" | "line_billing_status" | "is_achieved" | "vendor_io_id"
+  >
 ): boolean {
   if (row.is_achieved) return true;
   if (row.kind === "assignment") {
+    if (!row.vendor_io_id) return false;
     return ACHIEVED_LINE_STATUSES.has(row.line_billing_status);
   }
+  if (!row.vendor_io_id) return false;
   if (ACHIEVED_DELIVERABLE_STATUSES.has(row.billing_status)) return true;
   if (["disputed", "cancelled"].includes(row.billing_status)) return false;
   // Deliverable/post rows inherit achievement once parent assignment is billing-ready.

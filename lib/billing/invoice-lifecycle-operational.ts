@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
+import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
 import { devLog } from "@/lib/dev-log";
@@ -60,25 +61,41 @@ async function resolveInvoiceScopeIds(
       lineIds.add(row.campaign_line_id);
     }
 
+    const itemById = new Map(
+      (items ?? []).map((row) => {
+        const item = row as {
+          id: string;
+          campaign_line_id: string | null;
+          assignment_deliverable_id: string | null;
+        };
+        return [item.id, item] as const;
+      })
+    );
+
     const { data: linkedDeliverables } = await supabase
       .from("assignment_deliverables")
-      .select("id, campaign_line_id")
+      .select("id, campaign_line_id, invoice_line_item_id")
       .in("invoice_line_item_id", [...lineItemIds]);
 
     for (const deliverable of linkedDeliverables ?? []) {
-      const row = deliverable as { id: string; campaign_line_id: string };
+      const row = deliverable as {
+        id: string;
+        campaign_line_id: string;
+        invoice_line_item_id: string | null;
+      };
+      const item = row.invoice_line_item_id
+        ? itemById.get(row.invoice_line_item_id)
+        : undefined;
+      if (!item) continue;
+      if (item.assignment_deliverable_id && item.assignment_deliverable_id !== row.id) {
+        continue;
+      }
+      if (item.campaign_line_id && item.campaign_line_id !== row.campaign_line_id) {
+        continue;
+      }
       deliverableIds.add(row.id);
       lineIds.add(row.campaign_line_id);
     }
-  }
-
-  const { data: linkedLines } = await supabase
-    .from("campaign_lines")
-    .select("id")
-    .eq("invoice_id", invoiceId);
-
-  for (const line of linkedLines ?? []) {
-    lineIds.add((line as { id: string }).id);
   }
 
   return {
@@ -115,48 +132,82 @@ export async function unlockInvoiceOperationalScope(
   const scope = await resolveInvoiceScopeIds(supabase, invoiceId);
 
   if (scope.postIds.length > 0) {
-    const postPatch: Record<string, unknown> = {
-      locked_at: null,
-      billing_status: "ready_to_invoice",
-    };
-
-    if (!preserveLineItems) {
-      postPatch.invoice_line_item_id = null;
-      postPatch.invoiced_amount = 0;
-      postPatch.invoiced_at = null;
-    } else {
-      postPatch.invoiced_amount = 0;
-    }
-
-    const { error } = await supabase
+    const { data: postRows, error: loadError } = await supabase
       .from("assignment_post_schedule")
-      .update(postPatch)
+      .select("id, billable_amount, revenue_before_vat")
       .in("id", scope.postIds);
 
-    if (error) {
-      return { ...scope, error: error.message };
+    if (loadError) {
+      return { ...scope, error: loadError.message };
+    }
+
+    for (const post of postRows ?? []) {
+      const row = post as {
+        id: string;
+        billable_amount: number | null;
+        revenue_before_vat: number | null;
+      };
+      const billable = Number(row.billable_amount ?? row.revenue_before_vat ?? 0);
+      const postPatch: Record<string, unknown> = {
+        locked_at: null,
+        billing_status: "ready_to_invoice",
+        invoiced_amount: 0,
+        remaining_amount: billable,
+      };
+
+      if (!preserveLineItems) {
+        postPatch.invoice_line_item_id = null;
+        postPatch.invoiced_at = null;
+      }
+
+      const { error } = await supabase
+        .from("assignment_post_schedule")
+        .update(postPatch)
+        .eq("id", row.id);
+
+      if (error) {
+        return { ...scope, error: error.message };
+      }
     }
   }
 
   if (scope.deliverableIds.length > 0) {
-    const deliverablePatch: Record<string, unknown> = {
-      locked_at: null,
-      billing_status: "ready_to_invoice",
-      invoiced_amount: 0,
-      invoiced_at: null,
-    };
-
-    if (!preserveLineItems) {
-      deliverablePatch.invoice_line_item_id = null;
-    }
-
-    const { error } = await supabase
+    const { data: deliverableRows, error: loadError } = await supabase
       .from("assignment_deliverables")
-      .update(deliverablePatch)
+      .select("id, billable_amount, revenue_before_vat")
       .in("id", scope.deliverableIds);
 
-    if (error) {
-      return { ...scope, error: error.message };
+    if (loadError) {
+      return { ...scope, error: loadError.message };
+    }
+
+    for (const deliverable of deliverableRows ?? []) {
+      const row = deliverable as {
+        id: string;
+        billable_amount: number | null;
+        revenue_before_vat: number | null;
+      };
+      const billable = Number(row.billable_amount ?? row.revenue_before_vat ?? 0);
+      const deliverablePatch: Record<string, unknown> = {
+        locked_at: null,
+        billing_status: "ready_to_invoice",
+        invoiced_amount: 0,
+        invoiced_at: null,
+        remaining_amount: billable,
+      };
+
+      if (!preserveLineItems) {
+        deliverablePatch.invoice_line_item_id = null;
+      }
+
+      const { error } = await supabase
+        .from("assignment_deliverables")
+        .update(deliverablePatch)
+        .eq("id", row.id);
+
+      if (error) {
+        return { ...scope, error: error.message };
+      }
     }
   }
 
@@ -176,10 +227,10 @@ export async function unlockInvoiceOperationalScope(
     await supabase
       .from("campaign_lines")
       .update({
-        revenue_locked: allLocked,
-        cost_locked: allLocked,
-        vendor_assignment_locked: allLocked,
-        vat_locked: anyLocked,
+        revenue_locked: mode === "unpost" ? false : allLocked,
+        cost_locked: mode === "unpost" ? false : allLocked,
+        vendor_assignment_locked: mode === "unpost" ? false : allLocked,
+        vat_locked: mode === "unpost" ? false : anyLocked,
         finance_override_until: overrideUntil,
         invoice_id: null,
         operational_status: "io_generated",
@@ -273,35 +324,39 @@ export async function relockInvoiceOperationalScope(
     }
   }
 
-  if (scope.lineIds.length === 0) {
-    return { lineIds: [] };
+  if (scope.lineIds.length > 0) {
+    const { error: lineError } = await supabase
+      .from("campaign_lines")
+      .update({
+        ...lineBillingPatch(billingStatus),
+        operational_status: operationalStatusForDb("locked"),
+        revenue_locked: true,
+        cost_locked: true,
+        vendor_assignment_locked: true,
+        vat_locked: true,
+        invoice_id: invoiceId,
+        billing_invoiced_at: now,
+        finance_override_until: null,
+      } as never)
+      .in("id", scope.lineIds);
+
+    if (lineError) {
+      return { lineIds: scope.lineIds, error: lineError.message };
+    }
+
+    await syncLineOperationalStatusBatch(supabase, scope.lineIds);
   }
 
-  const { error: lineError } = await supabase
-    .from("campaign_lines")
-    .update({
-      ...lineBillingPatch(billingStatus),
-      operational_status: "locked",
-      revenue_locked: true,
-      cost_locked: true,
-      vendor_assignment_locked: true,
-      vat_locked: true,
-      invoice_id: invoiceId,
-      billing_invoiced_at: now,
-      finance_override_until: null,
-    } as never)
-    .in("id", scope.lineIds);
+  if (scope.lineItemIds.length > 0 || scope.lineIds.length > 0) {
+    const { error: invoiceError } = await supabase
+      .from("invoices")
+      .update({ regeneration_status: "active" } as never)
+      .eq("id", invoiceId);
 
-  if (lineError) {
-    return { lineIds: scope.lineIds, error: lineError.message };
+    if (invoiceError) {
+      return { lineIds: scope.lineIds, error: invoiceError.message };
+    }
   }
-
-  await syncLineOperationalStatusBatch(supabase, scope.lineIds);
-
-  await supabase
-    .from("invoices")
-    .update({ is_operational_locked: true } as never)
-    .eq("id", invoiceId);
 
   if (process.env.NODE_ENV === "development") {
     devLog("[invoice-lifecycle-operational] relock", {

@@ -16,6 +16,7 @@ import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
 import { resolveActiveVendorIoId } from "@/lib/io/vendor-io-active-link";
 import { syncPostScheduleOnDeliverableInvoiceLock } from "@/lib/billing/sync-post-invoice-lock";
+import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import {
   invoicedRowAllowed,
   invoicedRowBlockMessage,
@@ -95,12 +96,16 @@ export function mapDeliverableRecord(
 
 export function resolveInvoiceLineBeforeVat(
   deliverable: DeliverableBillingRow,
-  options?: { updatingExisting?: boolean }
+  options?: { updatingExisting?: boolean; forRegeneration?: boolean }
 ): number {
   const revenueBeforeVat = Number(deliverable.revenue_before_vat ?? 0);
   const remaining = Number(deliverable.remaining_amount ?? 0);
   const billable = Number(deliverable.billable_amount ?? 0);
   const invoiced = Number(deliverable.invoiced_amount ?? 0);
+
+  if (options?.forRegeneration) {
+    return Math.max(revenueBeforeVat, billable, remaining, invoiced);
+  }
 
   if (remaining > 0) return remaining;
 
@@ -136,10 +141,12 @@ function deliverableInvoiceLinePayload(
   line: { id: string; document_number: string; name: string; revenue_vat_percent?: number | null; revenue_vat_exempt?: boolean | null },
   deliverable: DeliverableBillingRow,
   sortOrder: number,
-  defaultVatRate: number
+  defaultVatRate: number,
+  options?: { forRegeneration?: boolean }
 ) {
   const beforeVat = resolveInvoiceLineBeforeVat(deliverable, {
     updatingExisting: Boolean(deliverable.invoice_line_item_id),
+    forRegeneration: options?.forRegeneration,
   });
   const vatExempt =
     deliverable.revenue_vat_exempt || Boolean(line.revenue_vat_exempt);
@@ -174,11 +181,12 @@ export function packageAssignmentLineItemPayload(
     remaining_amount?: number | null;
   },
   sortOrder: number,
-  defaultVatRate: number
+  defaultVatRate: number,
+  options?: { forRegeneration?: boolean }
 ) {
-  const beforeVat = Number(
-    line.remaining_amount ?? line.revenue_before_vat ?? line.revenue ?? 0
-  );
+  const beforeVat = options?.forRegeneration
+    ? Number(line.revenue_before_vat ?? line.revenue ?? line.remaining_amount ?? 0)
+    : Number(line.remaining_amount ?? line.revenue_before_vat ?? line.revenue ?? 0);
   const vatExempt = Boolean(line.revenue_vat_exempt);
   const vatPercent = vatExempt
     ? 0
@@ -200,12 +208,62 @@ export function packageAssignmentLineItemPayload(
   };
 }
 
+export async function lineHasAssignmentDeliverables(
+  supabase: SupabaseClient,
+  lineIds: string[]
+): Promise<boolean> {
+  if (lineIds.length === 0) return false;
+
+  const { count, error } = await supabase
+    .from("assignment_deliverables")
+    .select("id", { count: "exact", head: true })
+    .in("campaign_line_id", lineIds);
+
+  if (error) {
+    return false;
+  }
+
+  return (count ?? 0) > 0;
+}
+
+export function resolveExpectedLineBillable(
+  line: { id: string; revenue?: number | null; revenue_before_vat?: number | null },
+  deliverables: Array<{
+    campaign_line_id: string;
+    billable_amount?: number | null;
+    revenue_before_vat?: number | null;
+  }>
+): number {
+  const lineDeliverables = deliverables.filter(
+    (deliverable) => deliverable.campaign_line_id === line.id
+  );
+  const fromDeliverables = lineDeliverables.reduce(
+    (sum, deliverable) =>
+      sum + Number(deliverable.billable_amount ?? deliverable.revenue_before_vat ?? 0),
+    0
+  );
+  if (fromDeliverables > 0.01) {
+    return Math.round(fromDeliverables * 100) / 100;
+  }
+  return Math.round(Number(line.revenue_before_vat ?? line.revenue ?? 0) * 100) / 100;
+}
+
+export function sumInvoiceLineRevenueForCampaignLine(
+  lineItems: Array<{ campaign_line_id: string | null; revenue_before_vat: number | null }>,
+  lineId: string
+): number {
+  const total = lineItems
+    .filter((item) => item.campaign_line_id === lineId)
+    .reduce((sum, item) => sum + Number(item.revenue_before_vat ?? 0), 0);
+  return Math.round(total * 100) / 100;
+}
+
 export async function insertPackageAssignmentLineItems(
   supabase: SupabaseClient,
   invoiceId: string,
   headerId: string,
   lineIds: string[],
-  options?: { defaultVatRate?: number }
+  options?: { defaultVatRate?: number; forRegeneration?: boolean }
 ): Promise<{ error?: string; inserted: number }> {
   if (lineIds.length === 0) return { inserted: 0 };
 
@@ -220,8 +278,15 @@ export async function insertPackageAssignmentLineItems(
     return { error: error.message, inserted: 0 };
   }
 
+  const { data: existingItems } = await supabase
+    .from("invoice_line_items")
+    .select("campaign_line_id, revenue_before_vat")
+    .eq("invoice_id", invoiceId)
+    .in("campaign_line_id", lineIds);
+
   const defaultVatRate = options?.defaultVatRate ?? 0;
-  let sortOrder = 0;
+  const forRegeneration = options?.forRegeneration ?? false;
+  let sortOrder = (existingItems ?? []).length;
   let inserted = 0;
 
   for (const row of lines ?? []) {
@@ -237,11 +302,33 @@ export async function insertPackageAssignmentLineItems(
       vendor_io_id: string | null;
     };
     if (!line.vendor_io_id) continue;
-    if (["invoiced", "paid", "closed"].includes(line.billing_status)) continue;
+
+    const expectedBillable = Number(line.revenue_before_vat ?? line.revenue ?? 0);
+    const invoicedOnTarget = sumInvoiceLineRevenueForCampaignLine(
+      (existingItems ?? []) as Array<{
+        campaign_line_id: string | null;
+        revenue_before_vat: number | null;
+      }>,
+      line.id
+    );
+
+    if (
+      !forRegeneration &&
+      ["invoiced", "paid", "closed"].includes(line.billing_status) &&
+      invoicedOnTarget >= expectedBillable - 0.01
+    ) {
+      continue;
+    }
+
+    if (invoicedOnTarget >= expectedBillable - 0.01 && expectedBillable > 0) {
+      continue;
+    }
 
     sortOrder += 1;
     const { error: insertError } = await supabase.from("invoice_line_items").insert(
-      packageAssignmentLineItemPayload(invoiceId, headerId, line, sortOrder, defaultVatRate)
+      packageAssignmentLineItemPayload(invoiceId, headerId, line, sortOrder, defaultVatRate, {
+        forRegeneration,
+      })
     );
     if (insertError) {
       return { error: insertError.message, inserted };
@@ -278,26 +365,40 @@ export async function resolveInvoiceDeliverableIds(
   supabase: SupabaseClient,
   campaignId: string,
   deliverableIds: string[],
-  lineIds: string[]
+  lineIds: string[],
+  options?: { forRegeneration?: boolean }
 ): Promise<{ deliverableIds: string[]; error?: string }> {
   const resolved = new Set<string>(deliverableIds);
+  const forRegeneration = options?.forRegeneration ?? false;
+  let scopedLineIds = lineIds;
 
-  if (lineIds.length > 0) {
+  if (forRegeneration && lineIds.length > 0) {
+    const { filterIoGatedCampaignLineIds } = await import(
+      "@/lib/billing/invoice-regeneration-selection"
+    );
+    scopedLineIds = await filterIoGatedCampaignLineIds(supabase, lineIds);
+  }
+
+  if (scopedLineIds.length > 0) {
     const { data: lineDeliverables, error } = await supabase
       .from("assignment_deliverables")
       .select("id, locked_at, remaining_amount, billing_status, campaign_line_id")
       .eq("campaign_header_id", campaignId)
-      .in("campaign_line_id", lineIds);
+      .in("campaign_line_id", scopedLineIds);
 
     if (error) {
       return { deliverableIds: [], error: error.message };
     }
 
     for (const row of lineDeliverables ?? []) {
-      if (row.locked_at || Number(row.remaining_amount) <= 0) continue;
       if (row.billing_status === "disputed" || row.billing_status === "cancelled") {
         continue;
       }
+      if (forRegeneration) {
+        resolved.add(row.id);
+        continue;
+      }
+      if (row.locked_at || Number(row.remaining_amount) <= 0) continue;
       resolved.add(row.id);
     }
   }
@@ -450,10 +551,15 @@ export async function lockDeliverablesOnInvoice(
   invoiceId: string,
   headerId: string,
   deliverables: DeliverableRecord[],
-  options?: { defaultVatRate?: number; updateExistingOnTargetInvoice?: boolean }
+  options?: {
+    defaultVatRate?: number;
+    updateExistingOnTargetInvoice?: boolean;
+    forRegeneration?: boolean;
+  }
 ): Promise<{ error?: string; lineItemOps?: InvoiceLineItemOpSummary }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
+  const forRegeneration = options?.forRegeneration ?? false;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
@@ -471,17 +577,42 @@ export async function lockDeliverablesOnInvoice(
       line,
       mapped,
       sortOrder,
-      defaultVatRate
+      defaultVatRate,
+      { forRegeneration }
     );
-    const reuseLineItem =
+    let reuseLineItem =
       updateExisting &&
-      row.invoice_line_item_id &&
+      Boolean(row.invoice_line_item_id) &&
       row.linked_invoice_id === invoiceId;
     const billable = resolveInvoiceLineBeforeVat(mapped, {
       updatingExisting: Boolean(reuseLineItem),
+      forRegeneration,
     });
 
     let lineItemId = row.invoice_line_item_id;
+
+    if (reuseLineItem && lineItemId) {
+      const { data: existingItem, error: loadError } = await supabase
+        .from("invoice_line_items")
+        .select("id, assignment_deliverable_id")
+        .eq("id", lineItemId)
+        .eq("invoice_id", invoiceId)
+        .maybeSingle();
+
+      if (loadError) {
+        return { error: loadError.message, lineItemOps };
+      }
+
+      const typedItem = existingItem as {
+        id: string;
+        assignment_deliverable_id: string | null;
+      } | null;
+
+      if (!typedItem || typedItem.assignment_deliverable_id !== row.id) {
+        reuseLineItem = false;
+        lineItemId = null;
+      }
+    }
 
     if (reuseLineItem && lineItemId) {
       const { error: updateError } = await supabase
@@ -492,7 +623,7 @@ export async function lockDeliverablesOnInvoice(
       if (updateError) {
         return { error: updateError.message, lineItemOps };
       }
-      lineItemOps.updated.push(lineItemId!);
+      lineItemOps.updated.push(lineItemId);
     } else {
       const { data: item, error: itemError } = await supabase
         .from("invoice_line_items")
@@ -578,9 +709,10 @@ export async function lockDeliverablesOnInvoice(
       vendor_assignment_locked: fullLock,
       vat_locked: partialLock,
       billing_invoiced_at: fullLock ? now : null,
+      finance_override_until: fullLock ? null : undefined,
     };
     if (fullLock) {
-      linePatch.operational_status = "locked";
+      linePatch.operational_status = operationalStatusForDb("locked");
     } else if (partialLock) {
       linePatch.operational_status = "io_generated";
     }
@@ -590,7 +722,9 @@ export async function lockDeliverablesOnInvoice(
       .update(linePatch as never)
       .eq("id", lineId);
 
-    await syncLineBillingFromDeliverables(supabase, lineId, nextStatus);
+    await syncLineBillingFromDeliverables(supabase, lineId, nextStatus, {
+      invoiceId: fullLock ? invoiceId : null,
+    });
     await syncLineOperationalStatus(supabase, lineId);
   }
 
@@ -604,9 +738,35 @@ export async function regenerateInvoiceLineItems(
   supabase: SupabaseClient,
   invoiceId: string,
   headerId: string,
-  options?: { defaultVatRate?: number }
-): Promise<{ error?: string; updated: number; touchedLineIds: string[] }> {
+  options?: {
+    defaultVatRate?: number;
+    lineIds?: string[];
+    deliverableIds?: string[];
+  }
+): Promise<{
+  error?: string;
+  updated: number;
+  touchedLineIds: string[];
+  lineItemOps?: InvoiceLineItemOpSummary;
+}> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
+  const { filterIoGatedCampaignLineIds, pruneNonIoInvoiceLineItems } = await import(
+    "@/lib/billing/invoice-regeneration-selection"
+  );
+
+  const scopedLineIds =
+    options?.lineIds && options.lineIds.length > 0
+      ? await filterIoGatedCampaignLineIds(supabase, options.lineIds)
+      : [];
+  const scopedDeliverableIds = options?.deliverableIds ?? [];
+
+  if (scopedLineIds.length > 0) {
+    const { clearStaleInvoiceLinksOutsideScope } = await import(
+      "@/lib/billing/invoice-regeneration-selection"
+    );
+    await clearStaleInvoiceLinksOutsideScope(supabase, invoiceId, scopedLineIds);
+  }
+  await pruneNonIoInvoiceLineItems(supabase, invoiceId);
 
   const { data: existingItems, error: itemsError } = await supabase
     .from("invoice_line_items")
@@ -621,7 +781,90 @@ export async function regenerateInvoiceLineItems(
   }
 
   if (!existingItems?.length) {
-    return { updated: 0, touchedLineIds: [] };
+    const { deliverableIds: resolvedDeliverableIds, error: resolveError } =
+      await resolveInvoiceDeliverableIds(
+        supabase,
+        headerId,
+        scopedDeliverableIds,
+        scopedLineIds,
+        { forRegeneration: true }
+      );
+
+    if (resolveError) {
+      return { error: resolveError, updated: 0, touchedLineIds: [] };
+    }
+
+    if (resolvedDeliverableIds.length > 0) {
+      const { deliverables, error: fetchError } = await fetchDeliverablesForInvoicing(
+        supabase,
+        headerId,
+        resolvedDeliverableIds
+      );
+      if (fetchError) {
+        return { error: fetchError, updated: 0, touchedLineIds: [] };
+      }
+
+      if (deliverables.length === 0) {
+        return {
+          error:
+            "No billable deliverables found for regeneration. Refresh the campaign and try again.",
+          updated: 0,
+          touchedLineIds: [],
+        };
+      }
+
+      await prepareLinesForDeliverableInvoicing(supabase, deliverables);
+
+      const lockResult = await lockDeliverablesOnInvoice(
+        supabase,
+        invoiceId,
+        headerId,
+        deliverables,
+        { defaultVatRate, updateExistingOnTargetInvoice: false, forRegeneration: true }
+      );
+      if (lockResult.error) {
+        return { error: lockResult.error, updated: 0, touchedLineIds: [] };
+      }
+
+      const touchedLineIds = [
+        ...new Set(deliverables.map((row) => row.campaign_line_id)),
+      ];
+      const created = lockResult.lineItemOps?.created.length ?? 0;
+
+      return {
+        updated: created,
+        touchedLineIds,
+        lineItemOps: lockResult.lineItemOps,
+      };
+    }
+
+    if (scopedLineIds.length > 0) {
+      const insertResult = await insertPackageAssignmentLineItems(
+        supabase,
+        invoiceId,
+        headerId,
+        scopedLineIds,
+        { defaultVatRate, forRegeneration: true }
+      );
+      if (insertResult.error) {
+        return { error: insertResult.error, updated: 0, touchedLineIds: [] };
+      }
+      return {
+        updated: insertResult.inserted,
+        touchedLineIds: scopedLineIds,
+        lineItemOps: {
+          updated: [],
+          created: [],
+        },
+      };
+    }
+
+    return {
+      error:
+        "No assignments or deliverables in regeneration scope. Refresh the campaign and try again.",
+      updated: 0,
+      touchedLineIds: [],
+    };
   }
 
   const postIds = (existingItems ?? [])
@@ -633,10 +876,24 @@ export async function regenerateInvoiceLineItems(
       const row = i as {
         assignment_deliverable_id: string | null;
         assignment_post_schedule_id: string | null;
+        campaign_line_id: string | null;
       };
-      return row.assignment_deliverable_id && !row.assignment_post_schedule_id;
+      if (!row.assignment_deliverable_id || row.assignment_post_schedule_id) {
+        return false;
+      }
+      if (scopedDeliverableIdSet.size > 0) {
+        return scopedDeliverableIdSet.has(row.assignment_deliverable_id);
+      }
+      if (scopedLineIdSet.size > 0 && row.campaign_line_id) {
+        return scopedLineIdSet.has(row.campaign_line_id);
+      }
+      return true;
     })
     .map((i) => (i as { assignment_deliverable_id: string }).assignment_deliverable_id);
+
+  const scopedLineIdSet = new Set(scopedLineIds);
+  const scopedDeliverableIdSet = new Set(scopedDeliverableIds);
+  const hasExplicitScope = scopedLineIdSet.size > 0 || scopedDeliverableIdSet.size > 0;
 
   const packageLineIds = (existingItems ?? [])
     .filter((i) => {
@@ -645,7 +902,10 @@ export async function regenerateInvoiceLineItems(
         assignment_post_schedule_id: string | null;
         campaign_line_id: string | null;
       };
-      return row.campaign_line_id && !row.assignment_deliverable_id && !row.assignment_post_schedule_id;
+      if (!row.campaign_line_id || row.assignment_deliverable_id || row.assignment_post_schedule_id) {
+        return false;
+      }
+      return !hasExplicitScope || scopedLineIdSet.has(row.campaign_line_id);
     })
     .map((i) => (i as { campaign_line_id: string }).campaign_line_id);
 
@@ -734,7 +994,8 @@ export async function regenerateInvoiceLineItems(
         line,
         mapped,
         Number(row.sort_order ?? 1),
-        defaultVatRate
+        defaultVatRate,
+        { forRegeneration: true }
       );
 
       const { error: updateError } = await supabase
@@ -797,7 +1058,8 @@ export async function regenerateInvoiceLineItems(
           revenue_vat_exempt?: boolean | null;
         },
         Number(row.sort_order ?? 1),
-        defaultVatRate
+        defaultVatRate,
+        { forRegeneration: true }
       );
 
       const { error: updateError } = await supabase
@@ -812,6 +1074,15 @@ export async function regenerateInvoiceLineItems(
       updated += 1;
       touchedLineIds.add(row.campaign_line_id);
     }
+  }
+
+  if (updated === 0 && (deliverableIds.length > 0 || packageLineIds.length > 0 || postIds.length > 0)) {
+    return {
+      error:
+        "Invoice line items could not be rebuilt from the corrected assignments. Refresh and try again.",
+      updated,
+      touchedLineIds: [...touchedLineIds],
+    };
   }
 
   return { updated, touchedLineIds: [...touchedLineIds] };

@@ -5,6 +5,10 @@ import {
   isOperationalRowAchieved,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
+import {
+  traceChildrenAccess,
+  traceOperationalTreeStage,
+} from "@/lib/billing/operational-billing-trace";
 
 type FinancialSnapshot = {
   billable_amount: number;
@@ -143,6 +147,11 @@ function normalizeDeliverableRow(
   deliverable: OperationalBillingRow,
   fallback: FinancialSnapshot
 ): OperationalBillingRow {
+  traceChildrenAccess(
+    "normalizeDeliverableRow:posts",
+    deliverable,
+    "length"
+  );
   const posts = deliverable.children;
   const source: FinancialSnapshot = {
     billable_amount: resolveAmount(deliverable.billable_amount, fallback.billable_amount),
@@ -166,7 +175,13 @@ function normalizeDeliverableRow(
   const needsDistribution = !postsHaveFinancialAllocation(posts) && source.billable_amount > 0;
 
   if (needsDistribution) {
+    traceChildrenAccess(
+      "normalizeDeliverableRow:distribute",
+      deliverable,
+      "length"
+    );
     const distributed = distributeFinancialSnapshot(source, posts.length);
+    traceChildrenAccess("normalizeDeliverableRow:posts.map", deliverable, "map");
     const normalizedPosts = posts.map((post, index) =>
       normalizePostRow(post, distributed[index] ?? source)
     );
@@ -187,6 +202,7 @@ function normalizeDeliverableRow(
     };
   }
 
+  traceChildrenAccess("normalizeDeliverableRow:posts.map-fallback", deliverable, "map");
   const normalizedPosts = posts.map((post) =>
     normalizePostRow(post, {
       billable_amount: 0,
@@ -225,6 +241,11 @@ function normalizeAssignmentRow(
   const line = context.linesById.get(assignment.id);
   const group = context.groupsByLineId.get(assignment.id);
   const lineRevenue = Number(line?.revenue ?? 0);
+  traceChildrenAccess(
+    "normalizeAssignmentRow:deliverables",
+    assignment,
+    "length"
+  );
   const deliverables = assignment.children;
 
   const assignmentFallback: FinancialSnapshot = {
@@ -261,6 +282,7 @@ function normalizeAssignmentRow(
     assignmentFallback,
     deliverables.length
   );
+  traceChildrenAccess("normalizeAssignmentRow:deliverables.map", assignment, "map");
   const normalizedDeliverables = deliverables.map((deliverable, index) =>
     normalizeDeliverableRow(deliverable, perDeliverableFallback[index] ?? assignmentFallback)
   );
@@ -299,7 +321,9 @@ export function normalizeOperationalBillingTree(
   rows: OperationalBillingRow[],
   context: OperationalBillingContext
 ): OperationalBillingRow[] {
+  traceOperationalTreeStage("normalizeOperationalBillingTree:input", rows);
   const normalized = rows.map((row) => normalizeAssignmentRow(row, context));
+  traceOperationalTreeStage("normalizeOperationalBillingTree:output", normalized);
 
   if (process.env.NODE_ENV === "development") {
     const before = sumFinancialRows(flattenOperationalLeaves(rows));

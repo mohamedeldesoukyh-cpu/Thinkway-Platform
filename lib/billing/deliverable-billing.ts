@@ -138,3 +138,26 @@ export function shouldLockLineFully(
     (d) => d.remaining_amount <= 0 || d.billing_status === "invoiced"
   );
 }
+
+/** When every deliverable is locked, pick the single invoice that covers the line (per-deliverable billing). */
+export function resolveConsensusLineInvoiceId(
+  deliverables: Array<{
+    locked_at?: string | null;
+    invoice_line_item_id?: string | null;
+  }>,
+  linkedInvoiceByLineItem: Map<string, string>
+): string | null {
+  if (deliverables.length === 0) return null;
+  if (!deliverables.every((d) => Boolean(d.locked_at))) return null;
+
+  const invoiceIds = new Set<string>();
+  for (const deliverable of deliverables) {
+    const lineItemId = deliverable.invoice_line_item_id;
+    if (!lineItemId) continue;
+    const invoiceId = linkedInvoiceByLineItem.get(lineItemId);
+    if (invoiceId) invoiceIds.add(invoiceId);
+  }
+
+  if (invoiceIds.size === 1) return [...invoiceIds][0] ?? null;
+  return null;
+}

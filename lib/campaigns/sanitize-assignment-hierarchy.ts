@@ -6,6 +6,7 @@ import type {
   AssignmentHierarchyRollups,
   AssignmentPostOperationalRow,
 } from "@/features/campaigns/types/assignment-hierarchy";
+import type { CampaignLineBillingStatus } from "@/features/billing/types";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
@@ -158,18 +159,61 @@ function sanitizeRollups(
   }
 }
 
+function resolveEffectiveLineInvoiceId(
+  line: Partial<CampaignLineWorkspace>,
+  deliverables: AssignmentDeliverableHierarchyRow[]
+): string | null {
+  if (line.invoice_id) return line.invoice_id;
+  const invoiceIds = new Set(
+    deliverables.map((d) => d.invoice_id).filter((id): id is string => Boolean(id))
+  );
+  return invoiceIds.size === 1 ? ([...invoiceIds][0] ?? null) : null;
+}
+
+function deriveLineBillingFromDeliverables(
+  billing: CampaignLineBillingStatus,
+  deliverables: AssignmentDeliverableHierarchyRow[]
+): CampaignLineBillingStatus {
+  if (deliverables.length === 0) return billing;
+
+  const statuses = deliverables.map((d) => d.billing_status);
+  const allInvoiced = statuses.every(
+    (status) => status === "invoiced" || status === "collected"
+  );
+  const allLinkedToInvoice = deliverables.every((d) => Boolean(d.invoice_id));
+  const anyInvoiced = statuses.some((status) =>
+    ["invoiced", "partially_invoiced", "collected", "partially_collected"].includes(status)
+  );
+  const anyLinkedToInvoice = deliverables.some((d) => Boolean(d.invoice_id));
+
+  if (allInvoiced && allLinkedToInvoice && billing === "moved_to_billing") {
+    return "invoiced";
+  }
+  if (anyInvoiced && anyLinkedToInvoice && !allInvoiced) {
+    if (billing === "moved_to_billing" || billing === "approved") {
+      return "partially_invoiced";
+    }
+  }
+  return billing;
+}
+
 function normalizeLineBillingForHierarchy(
-  line: Partial<CampaignLineWorkspace>
+  line: Partial<CampaignLineWorkspace>,
+  deliverables: AssignmentDeliverableHierarchyRow[] = []
 ): CampaignLineWorkspace["billing_status"] {
-  const billing = (line.billing_status ?? "draft") as CampaignLineWorkspace["billing_status"];
+  const billing = deriveLineBillingFromDeliverables(
+    (line.billing_status ?? "draft") as CampaignLineBillingStatus,
+    deliverables
+  );
+  const effectiveInvoiceId = resolveEffectiveLineInvoiceId(line, deliverables);
   const uiOps = effectiveLineOperationalStatusForUi({
     operational_status: line.operational_status,
     vendor_io_id: line.vendor_io_id,
     billing_status: billing,
-    invoice_id: line.invoice_id,
+    invoice_id: effectiveInvoiceId,
   });
   if (
-    !line.invoice_id &&
+    !effectiveInvoiceId &&
     (uiOps === "io_generated" || uiOps === "io_revised" || uiOps === "partially_invoiced") &&
     ["invoiced", "paid"].includes(billing)
   ) {
@@ -177,22 +221,29 @@ function normalizeLineBillingForHierarchy(
   }
   if (
     line.vendor_io_id &&
-    !line.invoice_id &&
+    !effectiveInvoiceId &&
     (billing === "draft" || billing === "approved")
   ) {
     return "moved_to_billing";
   }
+  if (!line.vendor_io_id && billing === "moved_to_billing") {
+    return "approved";
+  }
   return billing;
 }
 
-function sanitizeLine(line: Partial<CampaignLineWorkspace> | null | undefined): CampaignLineWorkspace | null {
+function sanitizeLine(
+  line: Partial<CampaignLineWorkspace> | null | undefined,
+  deliverables: AssignmentDeliverableHierarchyRow[] = []
+): CampaignLineWorkspace | null {
   if (!line?.id) return null;
   try {
+    const effectiveInvoiceId = resolveEffectiveLineInvoiceId(line, deliverables);
     const uiOps = effectiveLineOperationalStatusForUi({
       operational_status: line.operational_status,
       vendor_io_id: line.vendor_io_id,
       billing_status: line.billing_status,
-      invoice_id: line.invoice_id,
+      invoice_id: effectiveInvoiceId,
     });
     let operational_status = normalizeOperationalStatus(line.operational_status);
     if (
@@ -221,7 +272,7 @@ function sanitizeLine(line: Partial<CampaignLineWorkspace> | null | undefined): 
       name: String(line.name ?? "Assignment"),
       document_number: line.document_number ?? null,
       operational_status,
-      billing_status: normalizeLineBillingForHierarchy(line),
+      billing_status: normalizeLineBillingForHierarchy(line, deliverables),
       revenue: finiteNumber(line.revenue),
       cost: finiteNumber(line.cost),
       gp: finiteNumber(line.gp),
@@ -238,7 +289,7 @@ function sanitizeLine(line: Partial<CampaignLineWorkspace> | null | undefined): 
       campaign_influencer_id: line.campaign_influencer_id ?? null,
       vendor_io_id: line.vendor_io_id ?? null,
       vendor_io_document_number: line.vendor_io_document_number ?? null,
-      invoice_id: line.invoice_id ?? null,
+      invoice_id: effectiveInvoiceId,
       vendor_payment_status: line.vendor_payment_status ?? null,
       creator_platform_accounts: Array.isArray(line.creator_platform_accounts)
         ? line.creator_platform_accounts
@@ -260,15 +311,6 @@ export function sanitizeAssignmentHierarchyGroup(
 ): AssignmentHierarchyGroup | null {
   const lineId = group?.line?.id;
   try {
-    const line = sanitizeLine(group?.line);
-    if (!line) {
-      console.error("[assignment-hierarchy] skipping group — missing line", {
-        campaignId: context.campaignId,
-        lineId,
-      });
-      return null;
-    }
-
     const rawDeliverables = Array.isArray(group?.deliverables) ? group.deliverables : [];
     const seenDeliverableIds = new Set<string>();
     const deliverables = rawDeliverables
@@ -277,7 +319,7 @@ export function sanitizeAssignmentHierarchyGroup(
         if (d == null) return false;
         if (seenDeliverableIds.has(d.id)) {
           console.warn("[assignment-hierarchy] duplicate deliverable id skipped", {
-            lineId: line.id,
+            lineId,
             deliverableId: d.id,
           });
           return false;
@@ -285,6 +327,15 @@ export function sanitizeAssignmentHierarchyGroup(
         seenDeliverableIds.add(d.id);
         return true;
       });
+
+    const line = sanitizeLine(group?.line, deliverables);
+    if (!line) {
+      console.error("[assignment-hierarchy] skipping group — missing line", {
+        campaignId: context.campaignId,
+        lineId,
+      });
+      return null;
+    }
 
     const rollups = sanitizeRollups(line, group?.rollups, deliverables);
 
@@ -337,6 +388,7 @@ export function sanitizeAssignmentHierarchy(
   return {
     groups,
     currency_code: hierarchy.currency_code ?? "USD",
+    billing_context: hierarchy.billing_context,
     load_error: hierarchy.load_error ?? null,
     skipped_line_ids,
     sanitize_warnings,

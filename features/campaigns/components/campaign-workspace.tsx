@@ -52,6 +52,7 @@ import {
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
+import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { cn } from "@/lib/utils";
 type CampaignWorkspaceViewProps = {
   workspace: import("@/features/campaigns/types").CampaignWorkspace;
@@ -94,6 +95,39 @@ export function CampaignWorkspaceView({
     ).rows.length;
   }, [assignmentHierarchy, publications, workspace.deliverables]);
 
+  const hierarchyLinkedInvoiceCount = useMemo(() => {
+    const ids = new Set<string>();
+    for (const group of assignmentHierarchy.groups) {
+      if (group.line.invoice_id) ids.add(group.line.invoice_id);
+      for (const deliverable of group.deliverables ?? []) {
+        if (deliverable.invoice_id) ids.add(deliverable.invoice_id);
+      }
+    }
+    return ids.size;
+  }, [assignmentHierarchy.groups]);
+
+  const billingTabCount = useMemo(() => {
+    const registerCount = campaignInvoiceRegister.length;
+    const linkedCount = Math.max(registerCount, hierarchyLinkedInvoiceCount);
+    const queueCount = operationalBilling
+      ? buildConsolidatedInvoiceQueueRows({
+          campaign_header_id: workspace.id,
+          campaign_document_number: workspace.document_number,
+          campaign_name: workspace.name,
+          client_name: workspace.client?.name ?? "—",
+          brand_name: workspace.brand?.name ?? null,
+          currency_code: operationalBilling.currency_code,
+          operational_rows: operationalBilling.operational_rows,
+        }).length
+      : 0;
+    return linkedCount + queueCount;
+  }, [
+    campaignInvoiceRegister.length,
+    hierarchyLinkedInvoiceCount,
+    operationalBilling,
+    workspace,
+  ]);
+
   const tabCounts = useMemo(
     () => ({
       lines: workspace.lines.length,
@@ -101,7 +135,7 @@ export function CampaignWorkspaceView({
       deliverables: operationalDeliverableCount,
       publications: publications.length,
       workflow: workspace.approvals.length,
-      billing: billingLines.length,
+      billing: billingTabCount,
       timeline: workspace.vendors.length,
     }),
     [
@@ -111,7 +145,7 @@ export function CampaignWorkspaceView({
       workspace.vendors.length,
       operationalDeliverableCount,
       publications.length,
-      billingLines.length,
+      billingTabCount,
     ]
   );
 
@@ -119,12 +153,44 @@ export function CampaignWorkspaceView({
     "mt-4 flex-none outline-none focus-visible:outline-none data-[state=inactive]:hidden";
 
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.debug("[sticky-header] campaign workspace sticky tabs mounted", {
-        campaignId: workspace.id,
-      });
+    if (process.env.NODE_ENV !== "development") return;
+
+    console.debug("[sticky-header] campaign workspace sticky tabs mounted", {
+      campaignId: workspace.id,
+    });
+
+    const arrayChecks: Record<string, unknown> = {
+      lines: workspace.lines,
+      vendor_ios: workspace.vendor_ios,
+      approvals: workspace.approvals,
+      vendors: workspace.vendors,
+      deliverables: workspace.deliverables,
+    };
+    for (const [field, value] of Object.entries(arrayChecks)) {
+      if (!Array.isArray(value)) {
+        console.error("[campaign-workspace-trace] client:non-array-field", {
+          campaignId: workspace.id,
+          field,
+          valueType: typeof value,
+          keys: value != null && typeof value === "object" ? Object.keys(value as object) : [],
+          json: JSON.stringify(value).slice(0, 1000),
+        });
+      }
     }
-  }, [workspace.id]);
+
+    if (operationalBilling?.operational_rows) {
+      import("@/lib/billing/operational-billing-trace")
+        .then(({ traceOperationalTreeStage }) => {
+          traceOperationalTreeStage(
+            "CampaignWorkspaceView:client-operational-rows",
+            operationalBilling.operational_rows
+          );
+        })
+        .catch((error) => {
+          console.error("[campaign-workspace-trace] client operational tree check failed", error);
+        });
+    }
+  }, [workspace.id, operationalBilling, workspace]);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {

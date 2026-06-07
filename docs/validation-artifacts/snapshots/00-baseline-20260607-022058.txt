@@ -1,0 +1,4 @@
+﻿# Snapshot: 00-baseline @ 20260607-022058
+# Campaign: TW-2026-0003 / LIFECYCLE-FINAL-VALIDATION-2026-06-04
+
+=== invoice_header ===

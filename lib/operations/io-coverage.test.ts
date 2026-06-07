@@ -5,6 +5,7 @@ import {
   analyzeIoCoverage,
   hasCommercialDelta,
   hasExistingIoCoverage,
+  hasVendorIoAmountDrift,
   isSafeInvoiceRegeneration,
   requiresIoRevision,
   requiresNewIoGeneration,
@@ -22,6 +23,7 @@ function line(overrides: Partial<IoLineSnapshot> & { line_id: string }): IoLineS
     vendor_io_id: overrides.vendor_io_id ?? "vio-1",
     active_vendor_io_id: overrides.active_vendor_io_id ?? "vio-1",
     vendor_io_document_number: overrides.vendor_io_document_number ?? "VIO-2026-2",
+    vendor_io_amount: overrides.vendor_io_amount ?? null,
     influencer_id: overrides.influencer_id ?? "inf-1",
     revenue_before_vat: overrides.revenue_before_vat ?? 1000,
     cost_before_vat: overrides.cost_before_vat ?? 500,
@@ -143,6 +145,25 @@ function testCommercialDeltaDeliverableQty() {
   assert(hasCommercialDelta(baseline, current), "quantity change is commercial delta");
 }
 
+function testVendorIoAmountDriftRequiresRevision() {
+  const baseline = line({ line_id: "l1", cost_before_vat: 2500 });
+  const current = line({
+    line_id: "l1",
+    cost_before_vat: 2500,
+    vendor_io_amount: 2000,
+  });
+  assert(hasVendorIoAmountDrift(current), "stored VIO amount drift detected");
+  assert(
+    requiresIoRevision(baseline, current),
+    "amount drift requires revision even when commercial matches baseline"
+  );
+  const analysis = analyzeIoCoverage({
+    currents: [current],
+    baselines: new Map([["l1", baseline]]),
+  });
+  assert(analysis.case === "revision_warning", "amount drift → revision warning");
+}
+
 function run() {
   testSafeRegeneration();
   testRevisionWarning();
@@ -151,6 +172,7 @@ function run() {
   testScopeIgnoresNonSelectedLines();
   testHasIoWithoutBaselineDoesNotNeedNewIo();
   testCommercialDeltaDeliverableQty();
+  testVendorIoAmountDriftRequiresRevision();
   console.log("[io-coverage] all checks passed");
 }
 

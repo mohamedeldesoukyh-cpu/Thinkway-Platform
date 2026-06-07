@@ -38,6 +38,7 @@ export function invoicedRowAllowed(
 ): boolean {
   if (!isInvoicedOperationalRow(row)) return true;
   if (ctx.mode === "append" && ctx.targetInvoiceId) {
+    if (!row.linked_invoice_id) return true;
     return row.linked_invoice_id === ctx.targetInvoiceId;
   }
   return false;

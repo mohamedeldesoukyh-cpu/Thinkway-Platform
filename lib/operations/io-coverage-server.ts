@@ -144,14 +144,73 @@ export async function buildIoLineSnapshotsFromDb(
   ];
 
   const vendorDocById = new Map<string, string>();
+  const vendorAmountById = new Map<string, number>();
   if (vendorIoIds.length > 0) {
     const { data: vendorIos } = await supabase
       .from("vendor_ios")
-      .select("id, document_number")
+      .select("id, document_number, amount, is_superseded, root_vendor_io_id, revision_number")
       .in("id", vendorIoIds);
+    const supersededRoots = new Set<string>();
+    const rowById = new Map<
+      string,
+      {
+        id: string;
+        document_number: string;
+        amount: number;
+        is_superseded: boolean;
+        root_vendor_io_id: string | null;
+      }
+    >();
+
     for (const vio of vendorIos ?? []) {
-      const row = vio as { id: string; document_number: string };
+      const row = vio as {
+        id: string;
+        document_number: string;
+        amount: number;
+        is_superseded: boolean;
+        root_vendor_io_id: string | null;
+      };
+      rowById.set(row.id, row);
       vendorDocById.set(row.id, row.document_number);
+      vendorAmountById.set(row.id, Number(row.amount));
+      if (row.is_superseded) {
+        supersededRoots.add(row.root_vendor_io_id ?? row.id);
+      }
+    }
+
+    if (supersededRoots.size > 0) {
+      const { data: activeRows } = await supabase
+        .from("vendor_ios")
+        .select("id, root_vendor_io_id, document_number, amount, revision_number")
+        .in("root_vendor_io_id", [...supersededRoots])
+        .eq("is_superseded", false)
+        .order("revision_number", { ascending: false });
+
+      const activeByRoot = new Map<
+        string,
+        { id: string; document_number: string; amount: number }
+      >();
+      for (const active of activeRows ?? []) {
+        const typed = active as {
+          id: string;
+          root_vendor_io_id: string | null;
+          document_number: string;
+          amount: number;
+        };
+        const root = typed.root_vendor_io_id ?? typed.id;
+        if (!activeByRoot.has(root)) {
+          activeByRoot.set(root, typed);
+        }
+      }
+
+      for (const [id, row] of rowById) {
+        if (!row.is_superseded) continue;
+        const root = row.root_vendor_io_id ?? row.id;
+        const active = activeByRoot.get(root);
+        if (!active) continue;
+        vendorDocById.set(id, active.document_number);
+        vendorAmountById.set(id, Number(active.amount));
+      }
     }
   }
 
@@ -173,6 +232,7 @@ export async function buildIoLineSnapshotsFromDb(
       vendor_io_id: vendorIoId,
       active_vendor_io_id: vendorIoId,
       vendor_io_document_number: vendorIoId ? vendorDocById.get(vendorIoId) ?? null : null,
+      vendor_io_amount: vendorIoId ? vendorAmountById.get(vendorIoId) ?? null : null,
       influencer_id: (line.influencer_id as string | null) ?? null,
       revenue_before_vat:
         scopedDeliverables.length > 0

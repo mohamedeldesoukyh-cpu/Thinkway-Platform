@@ -14,10 +14,12 @@ export const INVOICE_LOCK_STATUSES: readonly InvoiceStatus[] = [
   "paid",
 ] as const;
 
-const LOCK_STATUS_SET = new Set<string>([...INVOICE_LOCK_STATUSES, "draft"]);
-
 export function shouldLockInvoiceOperationalState(status: string): boolean {
   return INVOICE_LOCK_STATUSES.includes(status as InvoiceStatus);
+}
+
+export function shouldSetInvoiceFinanceLock(status: string): boolean {
+  return shouldLockInvoiceOperationalState(status);
 }
 
 /** Lock assignments, deliverables, posts, and IO editing for an invoiced state. */
@@ -52,7 +54,7 @@ export async function syncInvoiceOperationalStates(
 ): Promise<void> {
   await ensureInvoiceFinanceDocument(supabase, invoiceId, actorId);
 
-  if (shouldLockInvoiceOperationalState(status) || LOCK_STATUS_SET.has(status)) {
+  if (shouldLockInvoiceOperationalState(status)) {
     const billingStatus =
       status === "paid"
         ? "paid"
@@ -60,10 +62,18 @@ export async function syncInvoiceOperationalStates(
           ? "partially_paid"
           : "invoiced";
     await lockInvoiceAssignments(supabase, invoiceId, { billingStatus });
+    await supabase
+      .from("invoices")
+      .update({ is_operational_locked: true } as never)
+      .eq("id", invoiceId);
     return;
   }
 
-  if (status === "void" || status === "draft") {
+  if (status === "void") {
     await unlockInvoiceAssignments(supabase, invoiceId);
+    await supabase
+      .from("invoices")
+      .update({ is_operational_locked: false } as never)
+      .eq("id", invoiceId);
   }
 }

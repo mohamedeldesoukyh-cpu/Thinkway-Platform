@@ -48,6 +48,53 @@ export function rowTotalRevenue(
   return Math.round(row.quantity * row.revenue_before_vat * 100) / 100;
 }
 
+/** Keeps per-deliverable rows aligned when assignment-level revenue/cost fields change. */
+export function applyAssignmentTotalsToCommercialRows(
+  rows: CommercialDeliverableRow[],
+  targetRevenue: number,
+  targetCost: number
+): CommercialDeliverableRow[] {
+  if (rows.length === 0) return rows;
+
+  const summary = summarizeCommercialRows(rows);
+  if (
+    Math.abs(targetRevenue - summary.total_revenue_before_vat) < 0.01 &&
+    Math.abs(targetCost - summary.total_cost_before_vat) < 0.01
+  ) {
+    return rows;
+  }
+
+  if (rows.length === 1) {
+    const row = rows[0]!;
+    const quantity = Math.max(1, row.quantity);
+    return [
+      {
+        ...row,
+        revenue_before_vat: Math.round((targetRevenue / quantity) * 100) / 100,
+        unit_cost: Math.round((targetCost / quantity) * 100) / 100,
+      },
+    ];
+  }
+
+  const revenueScale =
+    summary.total_revenue_before_vat > 0
+      ? targetRevenue / summary.total_revenue_before_vat
+      : 0;
+  const costScale =
+    summary.total_cost_before_vat > 0 ? targetCost / summary.total_cost_before_vat : 0;
+
+  return rows.map((row) => {
+    const quantity = Math.max(1, row.quantity);
+    const scaledRevenue = rowTotalRevenue(row) * revenueScale;
+    const scaledCost = rowTotalCost(row) * costScale;
+    return {
+      ...row,
+      revenue_before_vat: Math.round((scaledRevenue / quantity) * 100) / 100,
+      unit_cost: Math.round((scaledCost / quantity) * 100) / 100,
+    };
+  });
+}
+
 export function summarizeCommercialRows(rows: CommercialDeliverableRow[]): CommercialSummary {
   const total_cost_before_vat = rows.reduce((s, r) => s + rowTotalCost(r), 0);
   const total_revenue_before_vat = rows.reduce((s, r) => s + rowTotalRevenue(r), 0);

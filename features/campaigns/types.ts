@@ -140,6 +140,8 @@ export type CampaignLineWorkspace = {
   revenue_locked: boolean;
   cost_locked: boolean;
   vendor_assignment_locked: boolean;
+  /** Active after invoice ungenerate — allows commercial edits before regeneration. */
+  finance_override_until: string | null;
   invoice_id: string | null;
   po_consumed: number;
   po_over_consumed: boolean;

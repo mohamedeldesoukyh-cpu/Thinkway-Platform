@@ -88,7 +88,14 @@ export function parseLineAssignment(
   if (!a.influencer_id || !a.influencer_name || !isUuid(a.influencer_id)) return null;
   return {
     ...a,
-    platforms: Array.isArray(a.platforms) ? a.platforms : [],
+    platforms: Array.isArray(a.platforms)
+      ? a.platforms.map((platform) => ({
+          ...platform,
+          deliverables: Array.isArray(platform.deliverables)
+            ? platform.deliverables
+            : [],
+        }))
+      : [],
   };
 }
 

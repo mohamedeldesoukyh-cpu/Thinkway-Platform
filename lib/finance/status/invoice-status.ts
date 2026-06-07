@@ -23,6 +23,15 @@ export const REGISTER_INVOICE_STATUSES: readonly InvoiceStatus[] = [
   "overdue",
 ] as const;
 
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: "Draft",
+  sent: "Sent",
+  partial: "Partial",
+  paid: "Paid",
+  overdue: "Overdue",
+  void: "Void",
+};
+
 const REGISTER_STATUS_SET = new Set<string>(REGISTER_INVOICE_STATUSES);
 
 export function isKnownInvoiceStatus(value: string): value is InvoiceStatus {
@@ -62,4 +71,23 @@ export function isRegisterInvoiceStatus(status: string): boolean {
 
 export function isAppendableInvoiceStatus(status: string): boolean {
   return status === "draft" || status === "sent" || status === "partial";
+}
+
+/** Register display labels for operational draft invoices (DB status stays `draft`). */
+export function getInvoiceRegisterStatusLabel(input: {
+  status: string;
+  regeneration_status?: string | null;
+}): string {
+  if (input.status === "draft") {
+    if (input.regeneration_status === "pending_regeneration") {
+      return "Pending";
+    }
+    return "Issued";
+  }
+
+  if (isKnownInvoiceStatus(input.status)) {
+    return INVOICE_STATUS_LABELS[input.status];
+  }
+
+  return input.status;
 }

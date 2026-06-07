@@ -136,7 +136,10 @@ export function FinanceInvoiceRegisterTable({
               {formatAmount(row.revenue_after_vat, row.currency)}
             </RootAmountCell>
             <RootCell>
-              <InvoiceStatusBadge status={row.status} />
+              <InvoiceStatusBadge
+                status={row.status}
+                regeneration_status={row.regeneration_status}
+              />
             </RootCell>
             <RootCell>
               <Badge

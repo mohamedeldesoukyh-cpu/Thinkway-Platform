@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { parseLineAssignment } from "@/features/campaigns/line-assignment";
 import { resolveActiveVendorIoId } from "@/lib/io/vendor-io-active-link";
+import { resolveVendorIoLineAmount } from "@/lib/io/vendor-io-line-amount";
 import {
   explainVendorIoGenerateEligibility,
   logVendorIoEligibility,
@@ -68,7 +69,7 @@ export async function generateVendorIosFromLinesAction(
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, campaign_header_id, name, revenue, currency_code, metadata, operational_status, vendor_io_id, invoice_id, billing_status"
+      "id, campaign_header_id, name, revenue, revenue_before_vat, cost, cost_before_vat, currency_code, metadata, operational_status, vendor_io_id, invoice_id, billing_status"
     )
     .eq("campaign_header_id", campaignId)
     .in("id", lineIds);
@@ -86,6 +87,9 @@ export async function generateVendorIosFromLinesAction(
     campaign_header_id: string;
     name: string;
     revenue: number;
+    revenue_before_vat?: number | null;
+    cost?: number | null;
+    cost_before_vat?: number | null;
     currency_code: string;
     metadata: Record<string, unknown> | null;
     operational_status: string;
@@ -140,7 +144,7 @@ export async function generateVendorIosFromLinesAction(
       currency: line.currency_code || "USD",
     };
     bucket.lines.push(line);
-    bucket.total_fee += Number(line.revenue) || 0;
+    bucket.total_fee += resolveVendorIoLineAmount(line);
     groups.set(key, bucket);
   }
 

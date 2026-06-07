@@ -20,6 +20,11 @@ import type {
 } from "@/features/campaigns/types";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import {
+  enrichRegenerationEligibilityInput,
+  resolveInvoiceActionForSelection,
+  selectionRequiresRegenerateDialog,
+} from "@/lib/billing/regeneration-eligibility";
+import {
   assignmentsLayerAtLeast,
   getAssignmentsUiLayer,
 } from "@/lib/campaigns/assignments-ui-layer";
@@ -49,6 +54,14 @@ const InvoiceTargetChoiceDialog = dynamic(
   () =>
     import("@/features/billing/components/invoice-target-choice-dialog").then(
       (m) => m.InvoiceTargetChoiceDialog
+    ),
+  { ssr: false }
+);
+
+const RegenerateInvoiceDialog = dynamic(
+  () =>
+    import("@/features/billing/components/regenerate-invoice-dialog").then(
+      (m) => m.RegenerateInvoiceDialog
     ),
   { ssr: false }
 );
@@ -84,7 +97,25 @@ export function CampaignLinesTabInner({
   const [invoiceSelection, setInvoiceSelection] = useState<
     OperationalSelectionPayload | undefined
   >();
+  const [regenerateInvoiceOpen, setRegenerateInvoiceOpen] = useState(false);
+  const [regenerateSelection, setRegenerateSelection] = useState<
+    OperationalSelectionPayload | undefined
+  >();
   const [editing, setEditing] = useState<CampaignLineWorkspace | null>(null);
+
+  const pendingRegenerationInvoice =
+    operationalBilling?.appendable_invoices?.find(
+      (invoice) => invoice.regeneration_status === "pending_regeneration"
+    ) ??
+    (assignmentHierarchy.billing_context?.pending_regeneration_invoice_id
+      ? {
+          id: assignmentHierarchy.billing_context.pending_regeneration_invoice_id,
+          document_number: workspace.invoices?.find(
+            (invoice) =>
+              invoice.id === assignmentHierarchy.billing_context?.pending_regeneration_invoice_id
+          )?.document_number ?? "Invoice",
+        }
+      : null);
 
   useEffect(() => {
     logAssignmentsStage("inner tab mounted", {
@@ -106,23 +137,72 @@ export function CampaignLinesTabInner({
     setSheetOpen(true);
   }
 
+  function lineEligibilityInput(lineId: string) {
+    const group = assignmentHierarchy.groups.find((g) => g.line.id === lineId);
+    if (!group) return null;
+    const line = group.line;
+    return enrichRegenerationEligibilityInput(
+      {
+        billing_status: line.billing_status,
+        operational_status: line.operational_status,
+        vendor_io_id: line.vendor_io_id,
+        active_vendor_io_id: line.active_vendor_io_id,
+        vendor_io_document_number: line.vendor_io_document_number,
+        invoice_id: line.invoice_id,
+        finance_override_until: line.finance_override_until,
+        invoiced_amount: group.rollups?.invoiced_value,
+        billable_amount: group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue,
+        remaining_amount: group.rollups?.remaining_value,
+      },
+      assignmentHierarchy.billing_context
+    );
+  }
+
   function openInvoiceWithLines(selection: OperationalSelectionPayload) {
     if (!enableInvoiceDialogs || !operationalBilling) return;
+
+    const selectedLineIds = selection.line_ids ?? [];
+    const invoiceAction = resolveInvoiceActionForSelection({
+      lineIds: selectedLineIds,
+      getRow: lineEligibilityInput,
+    });
+
+    if (
+      pendingRegenerationInvoice &&
+      selectionRequiresRegenerateDialog(
+        selectedLineIds,
+        lineEligibilityInput,
+        assignmentHierarchy.billing_context
+      )
+    ) {
+      setRegenerateSelection({
+        ...selection,
+        line_ids: invoiceAction.regenerateLineIds,
+      });
+      setRegenerateInvoiceOpen(true);
+      return;
+    }
+
+    const generateSelection: OperationalSelectionPayload = {
+      ...selection,
+      line_ids: invoiceAction.generateLineIds,
+    };
+
     const eligible = (operationalBilling.appendable_invoices ?? []).filter(
       (inv) =>
         !inv.is_locked &&
         inv.status !== "void" &&
         inv.status !== "paid" &&
-        inv.status !== "void"
+        inv.regeneration_status !== "pending_regeneration"
     );
     if (eligible.length > 0) {
-      setInvoiceSelection(selection);
+      setInvoiceSelection(generateSelection);
       setInvoiceChoiceOpen(true);
       return;
     }
     setInvoiceTargetMode("new");
     setAppendInvoiceId(undefined);
-    setInvoiceSelection(selection);
+    setInvoiceSelection(generateSelection);
     setInvoiceOpen(true);
   }
 
@@ -237,6 +317,20 @@ export function CampaignLinesTabInner({
           currency={workspace.currency_code}
           open={invoiceOpen}
           onOpenChange={setInvoiceOpen}
+        />
+      ) : null}
+
+      {pendingRegenerationInvoice ? (
+        <RegenerateInvoiceDialog
+          invoiceId={pendingRegenerationInvoice.id}
+          documentNumber={pendingRegenerationInvoice.document_number}
+          open={regenerateInvoiceOpen}
+          onOpenChange={(open) => {
+            setRegenerateInvoiceOpen(open);
+            if (!open) setRegenerateSelection(undefined);
+          }}
+          selection={regenerateSelection}
+          onComplete={() => router.refresh()}
         />
       ) : null}
     </>

@@ -21,6 +21,17 @@ import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 import { devLog } from "@/lib/dev-log";
 import { loadFinanceAuditTimeline } from "@/lib/finance/queries/finance-audit";
+import {
+  repairActiveInvoiceOperationalRelock,
+  repairLinesBillingWithoutVendorIo,
+  repairNonIoInvoiceLineItemsForCampaign,
+  repairAppendMissingInvoiceLineItems,
+  repairDesyncedUngeneratedInvoiceHeaders,
+  repairIncorrectlyFinanceLockedDraftInvoices,
+  repairOrphanedInvoicedOperationalRows,
+  repairStalePendingRegenerationInvoices,
+} from "@/lib/billing/repair-orphaned-invoice-state";
+import { repairVendorIoAmountDrift } from "@/lib/io/repair-vendor-io-amount-drift";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/validation/uuid";
 
@@ -76,6 +87,10 @@ export default async function CampaignWorkspacePage({
   try {
     workspace = await getCampaignWorkspace(id);
   } catch (error) {
+    const { logCampaignWorkspaceLoadError } = await import(
+      "@/lib/billing/operational-billing-trace"
+    );
+    logCampaignWorkspaceLoadError("getCampaignWorkspace", error, { campaignId: id });
     errorMessage =
       error instanceof Error ? error.message : "Failed to load campaign workspace.";
   }
@@ -85,6 +100,26 @@ export default async function CampaignWorkspacePage({
   }
 
   if (workspace) {
+    try {
+      const supabase = await createSupabaseServerClient();
+      const {
+        data: { user: repairUser },
+      } = await supabase.auth.getUser();
+      await repairNonIoInvoiceLineItemsForCampaign(supabase, id);
+      await repairLinesBillingWithoutVendorIo(supabase, id);
+      await repairOrphanedInvoicedOperationalRows(supabase, id);
+      await repairDesyncedUngeneratedInvoiceHeaders(supabase, id);
+      await repairStalePendingRegenerationInvoices(supabase, id);
+      await repairIncorrectlyFinanceLockedDraftInvoices(supabase, id);
+      await repairActiveInvoiceOperationalRelock(supabase, id);
+      await repairAppendMissingInvoiceLineItems(supabase, id);
+      await repairVendorIoAmountDrift(supabase, id, repairUser?.id ?? null);
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        devLog("[campaign-page] orphaned invoice repair skipped", error);
+      }
+    }
+
     const settled = await Promise.allSettled([
       getCampaignFormOptions(),
       getMasterDataOptions(),
@@ -126,9 +161,11 @@ export default async function CampaignWorkspacePage({
     try {
       operationalBilling = await getCampaignOperationalBillingDetail(id);
     } catch (error) {
-      console.error("[campaign-page] operational billing load failed", {
+      const { logCampaignWorkspaceLoadError } = await import(
+        "@/lib/billing/operational-billing-trace"
+      );
+      logCampaignWorkspaceLoadError("getCampaignOperationalBillingDetail", error, {
         campaignId: id,
-        error: error instanceof Error ? error.message : error,
       });
     }
 

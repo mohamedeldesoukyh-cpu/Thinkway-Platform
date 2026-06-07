@@ -19,6 +19,7 @@ import {
   getSelectableDescendantRows,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
+import { traceChildrenAccess } from "@/lib/billing/operational-billing-trace";
 import { cn } from "@/lib/utils";
 
 export type OperationalRowTreeProps = {
@@ -72,6 +73,7 @@ export const OperationalRowTree = memo(function OperationalRowTree({
   appearance = "default",
 }: OperationalRowTreeProps) {
   const campaign = appearance === "campaign";
+  traceChildrenAccess("OperationalRowTree:hasChildren", row, "length");
   const hasChildren = row.children.length > 0;
   const selectionStatus = useMemo(
     () => getRowSelectionStatus(row, selection),

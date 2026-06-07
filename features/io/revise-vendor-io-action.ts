@@ -11,6 +11,7 @@ import {
   vendorIoRevisionDocumentNumber,
 } from "@/lib/io/vendor-io-revision";
 import { finalizeLineBillingAfterVendorIoRevisionBatch } from "@/lib/billing/vendor-io-revision-line-billing";
+import { sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const reviseVendorIoSchema = z.object({
@@ -79,7 +80,7 @@ export async function reviseVendorIosFromLinesAction(
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, name, revenue, operational_status, vendor_io_id, finance_override_until, invoice_id, billing_status"
+      "id, name, revenue, revenue_before_vat, cost, cost_before_vat, operational_status, vendor_io_id, finance_override_until, invoice_id, billing_status"
     )
     .eq("campaign_header_id", campaignId)
     .in("id", lineIds);
@@ -97,6 +98,9 @@ export async function reviseVendorIosFromLinesAction(
     id: string;
     name: string;
     revenue: number;
+    revenue_before_vat?: number | null;
+    cost?: number | null;
+    cost_before_vat?: number | null;
     operational_status: string;
     vendor_io_id: string | null;
     finance_override_until: string | null;
@@ -215,7 +219,7 @@ export async function reviseVendorIosFromLinesAction(
       supersede: true,
     });
 
-    const groupTotal = groupLines.reduce((s, l) => s + (Number(l.revenue) || 0), 0);
+    const groupTotal = sumVendorIoLineAmounts(groupLines);
 
     const { error: supersedeError } = await supabase
       .from("vendor_ios")

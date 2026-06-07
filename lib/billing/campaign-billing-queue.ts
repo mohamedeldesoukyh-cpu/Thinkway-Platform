@@ -178,6 +178,9 @@ export function filterCampaignsWithRemainingInvoiceable(
   operationalRowsByCampaign?: Map<string, import("@/lib/billing/operational-billing-rows").OperationalBillingRow[]>
 ): CampaignBillingQueueRow[] {
   return rows.filter((row) => {
+    if (row.remaining_to_invoice <= 0.01 && row.already_invoiced > 0) {
+      return false;
+    }
     const ops = operationalRowsByCampaign?.get(row.campaign_header_id);
     if (ops && ops.length > 0) {
       return isCampaignBillingEligible(ops);
@@ -254,7 +257,7 @@ export function isInvoiceAppendable(input: {
     return false;
   }
   if (input.regeneration_status === "pending_regeneration") {
-    return input.status === "draft";
+    return false;
   }
   return true;
 }

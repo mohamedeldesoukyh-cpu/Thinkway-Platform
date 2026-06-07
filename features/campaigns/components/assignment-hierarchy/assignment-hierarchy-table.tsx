@@ -90,11 +90,14 @@ export function AssignmentHierarchyTable({
   const preparedRows = useMemo(() => {
     const rows: AssignmentRowViewModel[] = [];
     for (const group of sanitized.groups) {
-      const vm = tryBuildAssignmentRowViewModel(group, { campaignId });
+      const vm = tryBuildAssignmentRowViewModel(group, {
+        campaignId,
+        billingContext: sanitized.billing_context,
+      });
       if (vm) rows.push(vm);
     }
     return rows;
-  }, [sanitized.groups, campaignId]);
+  }, [sanitized.groups, sanitized.billing_context, campaignId]);
 
   const lineMeta = useMemo(() => {
     const map = new Map<string, AssignmentRowViewModel["meta"]>();
@@ -160,8 +163,9 @@ export function AssignmentHierarchyTable({
           group: row.group,
           meta: lineMeta.get(row.lineId),
         })),
+        billingContext: sanitized.billing_context,
       }),
-    [selectedLineIds, preparedRows, lineMeta]
+    [selectedLineIds, preparedRows, lineMeta, sanitized.billing_context]
   );
 
   const ungenerateIoLineIds = useMemo(

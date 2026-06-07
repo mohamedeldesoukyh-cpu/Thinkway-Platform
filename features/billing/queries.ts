@@ -833,10 +833,30 @@ export async function getCampaignOperationalBillingDetail(
 
   if (headerError || !header) return null;
 
-  const { groups, operational_rows, error } = await loadCampaignOperationalBilling(
-    supabase,
-    campaignId
-  );
+  const { traceOperationalTreeStage, logCampaignWorkspaceLoadError } =
+    await import("@/lib/billing/operational-billing-trace");
+
+  let groups: Awaited<ReturnType<typeof loadCampaignOperationalBilling>>["groups"];
+  let operational_rows: Awaited<
+    ReturnType<typeof loadCampaignOperationalBilling>
+  >["operational_rows"];
+  let error: string | undefined;
+
+  try {
+    const loaded = await loadCampaignOperationalBilling(supabase, campaignId);
+    groups = loaded.groups;
+    operational_rows = loaded.operational_rows;
+    error = loaded.error;
+    traceOperationalTreeStage(
+      "getCampaignOperationalBillingDetail:loaded",
+      operational_rows
+    );
+  } catch (loadError) {
+    logCampaignWorkspaceLoadError("getCampaignOperationalBillingDetail", loadError, {
+      campaignId,
+    });
+    throw loadError;
+  }
 
   if (error) {
     throw new Error(error);
@@ -927,6 +947,11 @@ export async function getCampaignOperationalBillingDetail(
       rollup,
     });
   }
+
+  traceOperationalTreeStage(
+    "getCampaignOperationalBillingDetail:return",
+    operational_rows
+  );
 
   return {
     campaign_header_id: campaignId,

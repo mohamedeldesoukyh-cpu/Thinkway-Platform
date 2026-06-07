@@ -130,6 +130,8 @@ export const ungenerateInvoiceSchema = z.object({
 export const regenerateInvoiceSchema = z.object({
   invoice_id: z.string().uuid(),
   reason: z.string().trim().min(3).max(2000),
+  line_ids: z.string().optional(),
+  deliverable_ids: z.string().optional(),
 });
 
 export { billingStatusSchema };

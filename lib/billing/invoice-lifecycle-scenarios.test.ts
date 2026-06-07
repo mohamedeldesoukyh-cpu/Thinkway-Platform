@@ -8,11 +8,20 @@ import {
 } from "@/lib/billing/invoice-validation-context";
 import { isActiveInvoiceForFinancialTotals } from "@/lib/finance/status/invoice-status";
 import {
+  ensureOperationalBillingTreeShape,
   isOperationalRowInvoiceEligible,
   isOperationalRowUiSelectable,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
-import { hasInvoiceLinkage, resolveInvoiceActionLabel } from "@/lib/billing/regeneration-eligibility";
+import {
+  buildOperationalBillingContext,
+  normalizeOperationalBillingTree,
+} from "@/lib/billing/operational-financial-sync";
+import {
+  enrichRegenerationEligibilityInput,
+  hasInvoiceLinkage,
+  resolveInvoiceActionLabel,
+} from "@/lib/billing/regeneration-eligibility";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -172,6 +181,33 @@ function testRegenerateActionLabel() {
   assert(label === "regenerate", "pending_regeneration context yields regenerate label");
 }
 
+function testRegenerateLabelAfterUngenerateUnlock() {
+  const enriched = enrichRegenerationEligibilityInput(
+    {
+      billing_status: "moved_to_billing",
+      operational_status: "io_generated",
+      vendor_io_id: "vio-1",
+      vendor_io_document_number: "VIO-1",
+      invoice_id: null,
+      invoiced_amount: 0,
+      remaining_amount: 2000,
+      billable_amount: 2000,
+      finance_override_until: new Date(Date.now() + 86400000).toISOString(),
+    },
+    {
+      pending_regeneration_invoice_id: "inv-1",
+      regeneration_status: "pending_regeneration",
+      invoice_status: "draft",
+    }
+  );
+
+  const label = resolveInvoiceActionLabel({
+    invoiceLineIds: ["line-1"],
+    getRow: () => enriched,
+  });
+  assert(label === "regenerate", "ungenerated unlocked line yields regenerate label");
+}
+
 function testDuplicatePreventionValidationContext() {
   const newCtx = buildInvoiceValidationContext({ mode: "new" });
   const invoiced = {
@@ -193,6 +229,16 @@ function testQueueLinkageTruth() {
   );
 }
 
+function testOperationalTreeShapeBoundary() {
+  const row = baseRow({
+    children: undefined as unknown as OperationalBillingRow[],
+  });
+  const shaped = ensureOperationalBillingTreeShape([row]);
+  assert(Array.isArray(shaped[0]?.children), "boundary coerces missing children to []");
+  const ctx = buildOperationalBillingContext([], []);
+  normalizeOperationalBillingTree(shaped, ctx);
+}
+
 const tests = [
   testFirstGenerationEligibility,
   testAppendAllowsSameInvoiceRows,
@@ -202,8 +248,10 @@ const tests = [
   testActiveInvoiceLockBlocksNewGeneration,
   testUngenerateResolvesToActiveFinancialTotals,
   testRegenerateActionLabel,
+  testRegenerateLabelAfterUngenerateUnlock,
   testDuplicatePreventionValidationContext,
   testQueueLinkageTruth,
+  testOperationalTreeShapeBoundary,
 ];
 
 for (const run of tests) {

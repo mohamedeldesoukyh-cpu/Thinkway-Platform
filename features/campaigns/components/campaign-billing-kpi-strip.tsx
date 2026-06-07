@@ -12,9 +12,13 @@ import {
 import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { sumIoGatedAssignmentBillable } from "@/lib/billing/queue-eligibility";
+import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
 
 type CampaignBillingKpiStripProps = {
   workspace: CampaignWorkspace;
+  /** When set, revenue / PO consumed reflect Vendor-IO-gated billable only. */
+  operationalRows?: OperationalBillingRow[];
 };
 
 const ACCENT_TILE = {
@@ -25,9 +29,20 @@ const ACCENT_TILE = {
   amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
 } as const;
 
-export function CampaignBillingKpiStrip({ workspace }: CampaignBillingKpiStripProps) {
+export function CampaignBillingKpiStrip({
+  workspace,
+  operationalRows,
+}: CampaignBillingKpiStripProps) {
   const { financials } = workspace;
   const currency = workspace.currency_code;
+
+  const ioGatedBillable =
+    operationalRows && operationalRows.length > 0
+      ? sumIoGatedAssignmentBillable(operationalRows)
+      : null;
+  const billingRevenue = ioGatedBillable ?? financials.revenue;
+  const billingPoConsumed = ioGatedBillable ?? financials.po_consumed;
+  const billingRemainingPo = financials.po_total - billingPoConsumed;
 
   const poAlert =
     financials.po_exceeded || workspace.po.po_status === "exceeded"
@@ -48,7 +63,7 @@ export function CampaignBillingKpiStrip({ workspace }: CampaignBillingKpiStripPr
     {
       id: "po-consumed",
       label: "PO consumed",
-      value: formatMoney(financials.po_consumed, currency),
+      value: formatMoney(billingPoConsumed, currency),
       icon: ReceiptIcon,
       accentClass: ACCENT_TILE.pink,
       alert: poAlert,
@@ -56,7 +71,7 @@ export function CampaignBillingKpiStrip({ workspace }: CampaignBillingKpiStripPr
     {
       id: "remaining-po",
       label: "Remaining PO",
-      value: formatMoney(financials.remaining_po, currency),
+      value: formatMoney(billingRemainingPo, currency),
       icon: WalletIcon,
       accentClass: ACCENT_TILE.amber,
       alert: poAlert,
@@ -64,7 +79,7 @@ export function CampaignBillingKpiStrip({ workspace }: CampaignBillingKpiStripPr
     {
       id: "revenue",
       label: "Revenue",
-      value: formatMoney(financials.revenue, currency),
+      value: formatMoney(billingRevenue, currency),
       icon: TrendingUpIcon,
       accentClass: ACCENT_TILE.purple,
     },

@@ -11,6 +11,7 @@ import { resolveClientBillingVatRate } from "@/lib/vat/queries";
 import {
   fetchDeliverablesForInvoicing,
   insertPackageAssignmentLineItems,
+  lineHasAssignmentDeliverables,
   lockDeliverablesOnInvoice,
   regenerateInvoiceLineItems,
   resolveInvoiceDeliverableIds,
@@ -26,7 +27,15 @@ import {
   ensureBillableDeliverablesForLine,
   markDeliverablesReadyToInvoice,
   syncLineBillingFromDeliverables,
+  unlockDeliverablesForInvoice,
 } from "@/lib/billing/sync-deliverable-billing";
+import {
+  repairDesyncedUngeneratedInvoiceHeaders,
+  repairIncorrectlyFinanceLockedDraftInvoices,
+  repairAppendMissingInvoiceLineItems,
+  repairOrphanedInvoicedOperationalRows,
+  repairStalePendingRegenerationInvoices,
+} from "@/lib/billing/repair-orphaned-invoice-state";
 import { syncDeliverableCollectionsForInvoice } from "@/lib/billing/sync-deliverable-collections";
 import {
   resolveOperationalInvoiceTargets,
@@ -106,6 +115,15 @@ function revalidateBilling(paths: { campaignId?: string; invoiceId?: string }) {
   if (paths.invoiceId) {
     revalidatePath(`/billing/invoices/${paths.invoiceId}`);
   }
+}
+
+async function rollbackNewInvoiceDraft(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  invoiceId: string
+): Promise<void> {
+  await unlockDeliverablesForInvoice(supabase, invoiceId);
+  await supabase.from("invoice_line_items").delete().eq("invoice_id", invoiceId);
+  await supabase.from("invoices").delete().eq("id", invoiceId);
 }
 
 async function createFinancialApprovalChain(
@@ -539,6 +557,11 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: headerError?.message ?? "Campaign not found." };
   }
 
+  await repairOrphanedInvoicedOperationalRows(supabase, parsed.data.campaign_id);
+  await repairStalePendingRegenerationInvoices(supabase, parsed.data.campaign_id);
+  await repairIncorrectlyFinanceLockedDraftInvoices(supabase, parsed.data.campaign_id);
+  await repairAppendMissingInvoiceLineItems(supabase, parsed.data.campaign_id);
+
   const { deliverableIds, postIds, error: resolveError } =
     await resolveOperationalInvoiceTargets(
       supabase,
@@ -602,6 +625,22 @@ export async function createInvoiceFromLinesAction(
 
   await prepareLinesForDeliverableInvoicing(supabase, deliverables);
 
+  const deliverableRegenerateScope =
+    !usePostInvoicePath &&
+    deliverables.length > 0 &&
+    deliverables.every(
+      (d) =>
+        Boolean(d.locked_at) ||
+        Boolean(d.invoice_line_item_id) ||
+        Number(d.remaining_amount ?? 0) <= 0
+    );
+  const postRegenerateScope =
+    usePostInvoicePath &&
+    posts.length > 0 &&
+    posts.every(
+      (p) => invoicedRowAllowed(p, validationCtx) && isInvoicedOperationalRow(p)
+    );
+
   if (lineIds.length > 0 || deliverableIds.length > 0 || postIds.length > 0) {
     let scopedLineIds: string[] = [];
     try {
@@ -619,23 +658,8 @@ export async function createInvoiceFromLinesAction(
     }
 
     if (scopedLineIds.length > 0 || deliverableIds.length > 0 || postIds.length > 0) {
-      const deliverableRegenerateScope =
-        !usePostInvoicePath &&
-        deliverables.length > 0 &&
-        deliverables.every(
-          (d) =>
-            Boolean(d.locked_at) ||
-            Boolean(d.invoice_line_item_id) ||
-            Number(d.remaining_amount ?? 0) <= 0
-        );
-      const postRegenerateScope =
-        usePostInvoicePath &&
-        posts.length > 0 &&
-        posts.every(
-          (p) => invoicedRowAllowed(p, validationCtx) && isInvoicedOperationalRow(p)
-        );
       const ioCoverageMode =
-        invoiceMode === "append" || deliverableRegenerateScope || postRegenerateScope
+        deliverableRegenerateScope || postRegenerateScope
           ? ("regenerate" as const)
           : ("generate" as const);
 
@@ -745,6 +769,14 @@ export async function createInvoiceFromLinesAction(
       return { ok: false, message: appendCheck.error };
     }
 
+    if (appendCheck.invoice.regeneration_status === "pending_regeneration") {
+      return {
+        ok: false,
+        message:
+          "This invoice is pending regeneration. Use Regenerate invoice (not append) after commercial corrections.",
+      };
+    }
+
     invoiceId = appendCheck.invoice.id;
     invoiceDocumentNumber = appendCheck.invoice.document_number;
 
@@ -814,7 +846,7 @@ export async function createInvoiceFromLinesAction(
     }
     if (postLockResult.error) {
       if (invoiceMode === "new") {
-        await supabase.from("invoices").delete().eq("id", invoiceId);
+        await rollbackNewInvoiceDraft(supabase, invoiceId);
       }
       return { ok: false, message: postLockResult.error };
     }
@@ -838,7 +870,7 @@ export async function createInvoiceFromLinesAction(
     }
     if (lockResult.error) {
       if (invoiceMode === "new") {
-        await supabase.from("invoices").delete().eq("id", invoiceId);
+        await rollbackNewInvoiceDraft(supabase, invoiceId);
       }
       return { ok: false, message: lockResult.error };
     }
@@ -849,22 +881,37 @@ export async function createInvoiceFromLinesAction(
   const willInsertPackageLines = deliverablesToLock.length === 0 && posts.length === 0 && lineIds.length > 0;
 
   if (willInsertPackageLines) {
+    const hasDeliverableBreakdown = await lineHasAssignmentDeliverables(supabase, lineIds);
+    if (hasDeliverableBreakdown) {
+      if (invoiceMode === "new") {
+        await rollbackNewInvoiceDraft(supabase, invoiceId);
+      }
+      return {
+        ok: false,
+        message:
+          "No billable deliverables remain on this assignment. Refresh the page — orphaned invoice state was reset if needed.",
+      };
+    }
+
     const packageLines = await insertPackageAssignmentLineItems(
       supabase,
       invoiceId,
       header.id,
       lineIds,
-      { defaultVatRate: vatRate }
+      {
+        defaultVatRate: vatRate,
+        forRegeneration: deliverableRegenerateScope || postRegenerateScope,
+      }
     );
     if (packageLines.error) {
       if (invoiceMode === "new") {
-        await supabase.from("invoices").delete().eq("id", invoiceId);
+        await rollbackNewInvoiceDraft(supabase, invoiceId);
       }
       return { ok: false, message: packageLines.error };
     }
     if (packageLines.inserted === 0) {
       if (invoiceMode === "new") {
-        await supabase.from("invoices").delete().eq("id", invoiceId);
+        await rollbackNewInvoiceDraft(supabase, invoiceId);
       }
       return { ok: false, message: "No billable assignment lines could be invoiced." };
     }
@@ -872,9 +919,56 @@ export async function createInvoiceFromLinesAction(
 
   if (!insertedPostRows && !insertedDeliverableRows && !willInsertPackageLines) {
     if (invoiceMode === "new") {
-      await supabase.from("invoices").delete().eq("id", invoiceId);
+      await rollbackNewInvoiceDraft(supabase, invoiceId);
     }
     return { ok: false, message: "No billable deliverables selected." };
+  }
+
+  if (invoiceMode === "append") {
+    const expectedDeliverableIds = deliverablesToLock.map((row) => row.id);
+    if (expectedDeliverableIds.length > 0) {
+      const { data: linkedItems, error: verifyError } = await supabase
+        .from("invoice_line_items")
+        .select("assignment_deliverable_id")
+        .eq("invoice_id", invoiceId)
+        .in("assignment_deliverable_id", expectedDeliverableIds);
+
+      if (verifyError) {
+        return { ok: false, message: verifyError.message };
+      }
+
+      const linkedCount = new Set(
+        (linkedItems ?? []).map(
+          (row) => (row as { assignment_deliverable_id: string }).assignment_deliverable_id
+        )
+      ).size;
+
+      if (linkedCount < expectedDeliverableIds.length) {
+        return {
+          ok: false,
+          message:
+            "Append did not create invoice line items for all selected deliverables. Refresh and try again.",
+        };
+      }
+    } else if (willInsertPackageLines && lineIds.length > 0) {
+      const { count, error: verifyError } = await supabase
+        .from("invoice_line_items")
+        .select("id", { count: "exact", head: true })
+        .eq("invoice_id", invoiceId)
+        .in("campaign_line_id", lineIds);
+
+      if (verifyError) {
+        return { ok: false, message: verifyError.message };
+      }
+
+      if (!count || count === 0) {
+        return {
+          ok: false,
+          message:
+            "Append did not create invoice line items for the selected assignment. Refresh and try again.",
+        };
+      }
+    }
   }
 
   const commitResult = await commitInvoiceLifecycleMutation(supabase, {
@@ -889,7 +983,7 @@ export async function createInvoiceFromLinesAction(
 
   if (commitResult.error) {
     if (invoiceMode === "new") {
-      await supabase.from("invoices").delete().eq("id", invoiceId);
+      await rollbackNewInvoiceDraft(supabase, invoiceId);
     }
     return { ok: false, message: commitResult.error };
   }
@@ -1236,6 +1330,8 @@ export async function ungenerateInvoiceAction(
     campaignId: invoice.campaign_header_id ?? undefined,
     invoiceDocumentNumber: invoice.document_number,
     actorId: auth.userId,
+    preserveLineItems: false,
+    unlockMode: "unpost",
     execute: async () => {
       const { error: updateError } = await supabase
         .from("invoices")
@@ -1258,6 +1354,10 @@ export async function ungenerateInvoiceAction(
 
   if (commitResult.error) {
     return { ok: false, message: commitResult.error };
+  }
+
+  if (invoice.campaign_header_id) {
+    await repairDesyncedUngeneratedInvoiceHeaders(supabase, invoice.campaign_header_id);
   }
 
   await governanceDb(supabase).from("finance_override_logs").insert({
@@ -1325,38 +1425,83 @@ export async function regenerateInvoiceAction(
   if (invoiceLinesResult.error) {
     return { ok: false, message: invoiceLinesResult.error };
   }
-  const invoiceLineItems = invoiceLinesResult.lines;
+  const { resolveInvoiceRegenerationScope } = await import(
+    "@/lib/billing/invoice-regeneration-scope"
+  );
+  const regenScope = await resolveInvoiceRegenerationScope(supabase, {
+    invoiceId: invoice.id,
+    campaignHeaderId: invoice.campaign_header_id,
+  });
 
-  const { data: linkedLines, error: linesError } = await supabase
-    .from("campaign_lines")
-    .select(
-      "id, document_number, name, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt"
-    )
-    .eq("invoice_id", invoice.id);
+  const requestedLineIds = (parsed.data.line_ids ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const requestedDeliverableIds = (parsed.data.deliverable_ids ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
 
-  if (linesError) {
-    return { ok: false, message: linesError.message };
+  let scopedLineIds = regenScope.lineIds;
+  let scopedDeliverableIds = regenScope.deliverableIds;
+
+  if (
+    (requestedLineIds.length > 0 || requestedDeliverableIds.length > 0) &&
+    invoice.campaign_header_id
+  ) {
+    const { resolveUserRegenerationSelection } = await import(
+      "@/lib/billing/invoice-regeneration-selection"
+    );
+    const userScope = await resolveUserRegenerationSelection(
+      supabase,
+      invoice.campaign_header_id,
+      {
+        lineIds: requestedLineIds,
+        deliverableIds: requestedDeliverableIds,
+      }
+    );
+    if (userScope.error) {
+      return { ok: false, message: userScope.error };
+    }
+    if (userScope.lineIds.length === 0 && userScope.deliverableIds.length === 0) {
+      return {
+        ok: false,
+        message: "Select at least one assignment to regenerate on this invoice.",
+      };
+    }
+    scopedLineIds = userScope.lineIds;
+    scopedDeliverableIds = userScope.deliverableIds;
   }
 
-  const scopedLineIds = [
-    ...new Set(
-      invoiceLineItems.map((i) => i.campaign_line_id).filter(Boolean) as string[]
-    ),
-  ];
-  const scopedDeliverableIds = [
-    ...new Set(
-      invoiceLineItems
-        .map((i) => i.assignment_deliverable_id)
-        .filter(Boolean) as string[]
-    ),
-  ];
+  const { filterIoGatedCampaignLineIds } = await import(
+    "@/lib/billing/invoice-regeneration-selection"
+  );
+  scopedLineIds = await filterIoGatedCampaignLineIds(supabase, scopedLineIds);
+
+  if (scopedLineIds.length === 0 && scopedDeliverableIds.length === 0) {
+    return {
+      ok: false,
+      message:
+        "No assignments in regeneration scope. Select the assignments to rebuild, then try again.",
+    };
+  }
+
+  const baselineInvoiceLines =
+    regenScope.baselineLines.length > 0
+      ? regenScope.baselineLines
+      : invoiceLinesResult.lines;
+
+  const { clearStaleInvoiceLinksOutsideScope } = await import(
+    "@/lib/billing/invoice-regeneration-selection"
+  );
+  await clearStaleInvoiceLinksOutsideScope(supabase, invoice.id, scopedLineIds);
 
   if (scopedLineIds.length > 0 && invoice.campaign_header_id) {
     const { analyzeInvoiceRegenerationCoverage } = await import(
       "@/lib/operations/io-coverage-server"
     );
     const coverage = await analyzeInvoiceRegenerationCoverage(supabase, {
-      invoiceLines: invoiceLineItems.map((row) => ({
+      invoiceLines: baselineInvoiceLines.map((row) => ({
         id: row.id,
         campaign_line_id: row.campaign_line_id,
         assignment_deliverable_id: row.assignment_deliverable_id,
@@ -1388,11 +1533,22 @@ export async function regenerateInvoiceAction(
       };
     }
 
-    if (coverage.revised_line_ids.length > 0) {
+    const { findVendorIoAmountDriftForCampaign } = await import(
+      "@/lib/io/vendor-io-amount-drift"
+    );
+    const vioDriftLineIds = (
+      await findVendorIoAmountDriftForCampaign(
+        supabase,
+        invoice.campaign_header_id,
+        coverage.revised_line_ids
+      )
+    ).map((row) => row.line_id);
+
+    if (vioDriftLineIds.length > 0) {
       const { reviseVendorIoBatch } = await import("@/lib/io/revise-vendor-io-batch");
       const reviseResult = await reviseVendorIoBatch(supabase, {
         campaignId: invoice.campaign_header_id,
-        lineIds: coverage.revised_line_ids,
+        lineIds: vioDriftLineIds,
         reason: `Invoice regeneration: ${parsed.data.reason}`,
         userId: auth.userId,
       });
@@ -1404,12 +1560,7 @@ export async function regenerateInvoiceAction(
 
   const { vatRate } = await resolveClientBillingVatRate(supabase, invoice.client_id);
 
-  const regenerateTouchedLineIds = [
-    ...new Set([
-      ...scopedLineIds,
-      ...(linkedLines ?? []).map((line) => (line as { id: string }).id),
-    ]),
-  ];
+  const regenerateTouchedLineIds = [...new Set(scopedLineIds)];
 
   const newVersion = (invoice.version_number ?? 1) + 1;
 
@@ -1425,11 +1576,31 @@ export async function regenerateInvoiceAction(
         supabase,
         invoice.id,
         invoice.campaign_header_id!,
-        { defaultVatRate: vatRate }
+        {
+          defaultVatRate: vatRate,
+          lineIds: scopedLineIds,
+          deliverableIds: scopedDeliverableIds,
+        }
       );
 
       if (regenResult.error) {
         return { error: regenResult.error };
+      }
+
+      const { count: lineItemCount, error: lineItemCountError } = await supabase
+        .from("invoice_line_items")
+        .select("id", { count: "exact", head: true })
+        .eq("invoice_id", invoice.id);
+
+      if (lineItemCountError) {
+        return { error: lineItemCountError.message };
+      }
+
+      if (!lineItemCount || lineItemCount === 0) {
+        return {
+          error:
+            "Regeneration did not rebuild invoice line items. Save assignment changes, refresh, and try again.",
+        };
       }
 
       const { error: invoiceUpdateError } = await supabase
@@ -1449,8 +1620,8 @@ export async function regenerateInvoiceAction(
         touchedLineIds: [
           ...new Set([...regenerateTouchedLineIds, ...regenResult.touchedLineIds]),
         ],
-        lineItemOps: {
-          updated: invoiceLineItems.map((item) => item.id),
+        lineItemOps: regenResult.lineItemOps ?? {
+          updated: baselineInvoiceLines.map((item) => item.id).filter(Boolean),
           created: [],
         },
       };
@@ -1474,7 +1645,11 @@ export async function regenerateInvoiceAction(
   const subtotal = Number(refreshedInvoice.subtotal);
   const taxAmount = Number(refreshedInvoice.tax_amount);
   const total = Number(refreshedInvoice.total);
-  const lines = linkedLines ?? [];
+  const refreshedLinesResult = await getInvoiceLines(supabase, invoice.id);
+  if (refreshedLinesResult.error) {
+    return { ok: false, message: refreshedLinesResult.error };
+  }
+  const lines = refreshedLinesResult.lines;
 
   await governanceDb(supabase).from("invoice_versions").insert({
     invoice_id: invoice.id,
@@ -1517,6 +1692,10 @@ export async function loadCampaignBillingDetailAction(campaignId: string) {
 
 /** Revalidate billing routes and return fresh campaign operational detail. */
 export async function refreshBillingAfterInvoiceAction(campaignId: string) {
+  const { supabase, error: authError } = await requireAuthUser();
+  if (!authError && supabase) {
+    await repairAppendMissingInvoiceLineItems(supabase, campaignId);
+  }
   revalidateBilling({ campaignId });
   return loadCampaignBillingDetailAction(campaignId);
 }

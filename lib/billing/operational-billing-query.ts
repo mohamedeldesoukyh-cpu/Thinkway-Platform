@@ -22,6 +22,7 @@ import {
 } from "@/lib/billing/deliverable-billing";
 import {
   buildPostOperationalRow,
+  ensureOperationalBillingTreeShape,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import {
@@ -37,6 +38,10 @@ import {
   normalizeOperationalBillingTree,
   resolvePostBillableAmount,
 } from "@/lib/billing/operational-financial-sync";
+import {
+  traceOperationalRowProducer,
+  traceOperationalTreeStage,
+} from "@/lib/billing/operational-billing-trace";
 import { devLog } from "@/lib/dev-log";
 import { queryCampaignLinesWithDisplayOrder } from "@/lib/campaigns/line-ordering";
 import {
@@ -359,7 +364,7 @@ export async function loadCampaignOperationalBilling(
         usePosts
       );
 
-      deliverableChildren.push({
+      const deliverableRow: OperationalBillingRow = {
         id: deliverable.id,
         kind: "deliverable_group",
         line_pricing_mode: assignmentPricingMode,
@@ -405,13 +410,18 @@ export async function loadCampaignOperationalBilling(
         line_revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
         line_revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
         children: postChildren,
-      });
+      };
+      traceOperationalRowProducer(
+        `mapper:deliverable:${deliverable.id}`,
+        deliverableRow
+      );
+      deliverableChildren.push(deliverableRow);
     }
 
     const lineVatPercent = Number(line.revenue_vat_percent ?? 0);
     const lineVatExempt = Boolean(line.revenue_vat_exempt);
 
-    operational_rows.push({
+    const assignmentRow: OperationalBillingRow = {
       id: line.id,
       kind: "assignment",
       campaign_header_id: campaignId,
@@ -457,13 +467,22 @@ export async function loadCampaignOperationalBilling(
       line_revenue_vat_percent: lineVatPercent,
       line_revenue_vat_exempt: lineVatExempt,
       children: deliverableChildren,
-    });
+    };
+    traceOperationalRowProducer(`mapper:assignment:${line.id}`, assignmentRow);
+    operational_rows.push(assignmentRow);
   }
 
+  traceOperationalTreeStage("loadCampaignOperationalBilling:mapper-output", operational_rows);
+
   const billingContext = buildOperationalBillingContext(lines, groups);
-  const normalized_rows = normalizeOperationalBillingTree(operational_rows, billingContext);
+  const shaped_rows = ensureOperationalBillingTreeShape(operational_rows);
+  traceOperationalTreeStage("loadCampaignOperationalBilling:shaped", shaped_rows);
+  const normalized_rows = normalizeOperationalBillingTree(shaped_rows, billingContext);
   const invoiceLinks = await loadOperationalInvoiceLinkage(supabase, campaignId);
-  const linked_rows = applyOperationalInvoiceLinkage(normalized_rows, invoiceLinks);
+  const linked_rows = ensureOperationalBillingTreeShape(
+    applyOperationalInvoiceLinkage(normalized_rows, invoiceLinks)
+  );
+  traceOperationalTreeStage("loadCampaignOperationalBilling:linked", linked_rows);
 
   if (process.env.NODE_ENV === "development") {
     devLog("[operational-billing-query] loaded", {
@@ -656,9 +675,8 @@ export async function loadBillingCampaignQueue(
 
       already_invoiced = Math.max(reconciled.already_invoiced, synced.already_invoiced);
       remaining_to_invoice =
-        synced.remaining_to_invoice > 0
-          ? synced.remaining_to_invoice
-          : reconciled.remaining_to_invoice;
+        Math.round(Math.max(0, row.total_campaign_amount - already_invoiced) * 100) /
+        100;
       billing_status =
         reconciled.already_invoiced >= row.achieved_revenue && row.achieved_revenue > 0
           ? ("invoiced" as CampaignLineBillingStatus)

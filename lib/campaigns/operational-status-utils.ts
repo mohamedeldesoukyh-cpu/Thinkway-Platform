@@ -26,3 +26,16 @@ export function normalizeOperationalStatusForOpsBadge(
 ): CampaignLineOperationalStatus {
   return operationalStatusForOpsBadge(normalizeOperationalStatus(status));
 }
+
+/**
+ * Maps UI/canonical operational labels to Postgres campaign_line_operational_status enum.
+ * DB: draft | io_generated | partially_invoiced | invoiced | reopened | moved_to_billing | closed
+ */
+export function operationalStatusForDb(
+  status: CampaignLineOperationalStatus | string | null | undefined
+): CampaignLineOperationalStatus {
+  const normalized = normalizeOperationalStatus(status);
+  if (normalized === "locked") return "invoiced";
+  if (normalized === "io_revised") return "reopened";
+  return normalized;
+}

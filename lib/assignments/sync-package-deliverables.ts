@@ -1,5 +1,3 @@
-import { randomUUID } from "crypto";
-
 import type { CommercialDeliverableRow } from "@/lib/assignments/commercial-calculations";
 import {
   countLineDeliverables,
@@ -8,6 +6,10 @@ import {
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function newRowId(): string {
+  return globalThis.crypto.randomUUID();
 }
 
 /**
@@ -38,7 +40,7 @@ export function packagePlatformsToCommercialRows(
 
     for (const [deliverableType, quantity] of typeCounts) {
       rows.push({
-        id: randomUUID(),
+        id: newRowId(),
         platform: platform.platform,
         deliverable_type: deliverableType,
         quantity,

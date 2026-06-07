@@ -82,9 +82,17 @@ export type AssignmentHierarchyGroup = {
   rollups: AssignmentHierarchyRollups;
 };
 
+/** Campaign-level invoice lifecycle hints for assignment selection (e.g. after ungenerate). */
+export type AssignmentHierarchyBillingContext = {
+  pending_regeneration_invoice_id: string | null;
+  regeneration_status: string | null;
+  invoice_status: string | null;
+};
+
 export type AssignmentHierarchy = {
   groups: AssignmentHierarchyGroup[];
   currency_code: string;
+  billing_context?: AssignmentHierarchyBillingContext;
   /** Set when hierarchy query partially or fully failed — UI should show warning, not crash. */
   load_error?: string | null;
   /** Lines removed during server/client sanitize (bad payload). */

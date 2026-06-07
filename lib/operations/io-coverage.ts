@@ -20,6 +20,8 @@ export type IoLineSnapshot = {
   vendor_io_id?: string | null;
   active_vendor_io_id?: string | null;
   vendor_io_document_number?: string | null;
+  /** Active Vendor IO stored amount — compared to cost_before_vat for drift revision. */
+  vendor_io_amount?: number | null;
   influencer_id?: string | null;
   revenue_before_vat: number;
   cost_before_vat: number;
@@ -143,13 +145,20 @@ export function requiresNewIoGeneration(
   );
 }
 
+export function hasVendorIoAmountDrift(current: IoLineSnapshot): boolean {
+  if (!hasExistingIoCoverage(current)) return false;
+  if (current.vendor_io_amount == null) return false;
+  return !moneyEqual(current.cost_before_vat, current.vendor_io_amount);
+}
+
 export function requiresIoRevision(
   baseline: IoLineSnapshot | null,
   current: IoLineSnapshot
 ): boolean {
   if (!hasExistingIoCoverage(current)) return false;
-  if (!baseline) return false;
   if (requiresNewIoGeneration(current, baseline)) return false;
+  if (hasVendorIoAmountDrift(current)) return true;
+  if (!baseline) return false;
   return hasCommercialDelta(baseline, current);
 }
 
@@ -175,12 +184,18 @@ export function classifyIoCoverageLine(
   }
 
   if (requiresIoRevision(baseline, current)) {
+    const amountDrift = hasVendorIoAmountDrift(current);
+    const commercialDelta =
+      baseline != null && hasCommercialDelta(baseline, current);
     return {
       line_id: current.line_id,
       line_name: lineName,
       category: "revised",
       vendor_io_document_number: vioDoc,
-      change_summary: "Commercial fields changed (price, deliverables, quantity, cost, or creator).",
+      change_summary:
+        amountDrift && !commercialDelta
+          ? "Vendor IO amount does not match creator cost."
+          : "Commercial fields changed (price, deliverables, quantity, cost, or creator).",
     };
   }
 

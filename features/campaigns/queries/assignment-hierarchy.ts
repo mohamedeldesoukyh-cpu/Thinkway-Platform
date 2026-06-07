@@ -14,6 +14,7 @@ import { getCampaignWorkspace } from "@/features/campaigns/queries";
 import type {
   AssignmentDeliverableHierarchyRow,
   AssignmentHierarchy,
+  AssignmentHierarchyBillingContext,
   AssignmentHierarchyGroup,
   AssignmentHierarchyRollups,
   AssignmentPostOperationalRow,
@@ -119,6 +120,16 @@ function deriveWorkflowStatusFromPosts(
     if (posts.some((p) => p.workflow_status === status)) return status;
   }
   return posts[0]?.workflow_status ?? "draft";
+}
+
+function deriveDeliverableUiLocked(
+  lockedAt: string | null | undefined,
+  billingStatus: AssignmentDeliverableBillingStatus,
+  billingContext?: AssignmentHierarchyBillingContext
+): boolean {
+  if (billingStatus === "ready_to_invoice") return false;
+  if (billingContext?.regeneration_status === "pending_regeneration") return false;
+  return Boolean(lockedAt);
 }
 
 function buildVirtualPosts(input: {
@@ -261,6 +272,17 @@ async function loadCampaignAssignmentHierarchy(
   if (lineIds.length === 0) {
     return { groups: [], currency_code: workspace.currency_code };
   }
+
+  const pendingInvoice = (workspace.invoices ?? []).find(
+    (invoice) => invoice.regeneration_status === "pending_regeneration"
+  );
+  const billingContext: AssignmentHierarchyBillingContext | undefined = pendingInvoice
+    ? {
+        pending_regeneration_invoice_id: pendingInvoice.id,
+        regeneration_status: pendingInvoice.regeneration_status ?? "pending_regeneration",
+        invoice_status: pendingInvoice.status,
+      }
+    : undefined;
 
   const { data: deliverableRows, includesVatExempt, error: deliverableQueryError } =
     await queryAssignmentDeliverables<{
@@ -457,6 +479,12 @@ async function loadCampaignAssignmentHierarchy(
     const vatPerPost = Number(row.revenue_vat_amount ?? 0) / qty;
     const costVatPerPost = Number(row.cost_vat_amount ?? 0) / qty;
 
+    const uiLocked = deriveDeliverableUiLocked(
+      row.locked_at,
+      billingStatus,
+      billingContext
+    );
+
     if (posts.length === 0) {
       posts = buildVirtualPosts({
         deliverableId: row.id,
@@ -475,7 +503,7 @@ async function loadCampaignAssignmentHierarchy(
         invoiceId: invoiceLink?.invoice_id ?? null,
         invoiceDocumentNumber: invoiceLink?.document_number ?? null,
         payoutStatus: line?.vendor_payment_status ?? null,
-        isLocked: Boolean(row.locked_at),
+        isLocked: uiLocked,
       });
     } else {
       posts = posts.map((post) => {
@@ -501,7 +529,7 @@ async function loadCampaignAssignmentHierarchy(
           invoice_id: invoiceLink?.invoice_id ?? null,
           invoice_document_number: invoiceLink?.document_number ?? null,
           payout_status: line?.vendor_payment_status ?? null,
-          is_locked: Boolean(row.locked_at),
+          is_locked: uiLocked,
         };
       });
     }
@@ -562,7 +590,7 @@ async function loadCampaignAssignmentHierarchy(
           line.billing_status ?? "draft"
         ),
       is_synthetic: false,
-      is_locked: Boolean(row.locked_at),
+      is_locked: uiLocked,
     };
 
     const list = deliverablesByLine.get(row.campaign_line_id) ?? [];
@@ -592,6 +620,7 @@ async function loadCampaignAssignmentHierarchy(
     {
       groups,
       currency_code: workspace.currency_code,
+      billing_context: billingContext,
       load_error: loadWarnings.length > 0 ? loadWarnings.join(" · ") : null,
     },
     { campaignId }

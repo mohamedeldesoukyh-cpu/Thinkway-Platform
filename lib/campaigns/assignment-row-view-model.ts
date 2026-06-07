@@ -6,7 +6,12 @@ import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/o
 import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
-import { canRegenerateInvoice } from "@/lib/billing/regeneration-eligibility";
+import {
+  enrichRegenerationEligibilityInput,
+  isAssignmentInvoiceSelectable,
+} from "@/lib/billing/regeneration-eligibility";
+import { effectiveAssignmentBillingStatusForUi } from "@/lib/campaigns/assignment-display-status";
+import type { AssignmentHierarchyBillingContext } from "@/features/campaigns/types/assignment-hierarchy";
 import { buildScopedLineSnapshotFromHierarchy } from "@/lib/operations/io-coverage-scope";
 import {
   hasExistingIoCoverage,
@@ -82,7 +87,8 @@ function collectLiveDates(group: AssignmentHierarchyGroup): Array<string | null 
 }
 
 export function deriveAssignmentLineMeta(
-  group: AssignmentHierarchyGroup
+  group: AssignmentHierarchyGroup,
+  billingContext?: AssignmentHierarchyBillingContext | null
 ): AssignmentLineMeta {
   const line = group.line;
 
@@ -107,17 +113,22 @@ export function deriveAssignmentLineMeta(
   const invoiceEligible =
     pricingMode === "per_deliverable" && hasDeliverableBreakdown
       ? false
-      : canRegenerateInvoice({
-          operational_status: line.operational_status,
-          vendor_io_id: line.vendor_io_id,
-          active_vendor_io_id: line.active_vendor_io_id,
-          vendor_io_document_number: line.vendor_io_document_number,
-          billing_status: line.billing_status,
-          invoice_id: line.invoice_id,
-          remaining_amount: remaining,
-          billable_amount: group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue,
-          invoiced_amount: group.rollups?.invoiced_value,
-        });
+      : isAssignmentInvoiceSelectable(
+          enrichRegenerationEligibilityInput(
+            {
+              operational_status: line.operational_status,
+              vendor_io_id: line.vendor_io_id,
+              active_vendor_io_id: line.active_vendor_io_id,
+              vendor_io_document_number: line.vendor_io_document_number,
+              billing_status: line.billing_status,
+              invoice_id: line.invoice_id,
+              remaining_amount: remaining,
+              billable_amount: group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue,
+              invoiced_amount: group.rollups?.invoiced_value,
+            },
+            billingContext
+          )
+        );
 
   const currentIoSnapshot = buildScopedLineSnapshotFromHierarchy(group, {
     mode: "regenerate",
@@ -132,7 +143,7 @@ export function deriveAssignmentLineMeta(
     requiresIoRevision(ioBaseline, currentIoSnapshot);
   const ungenerateIoEligible = isLineUngenerateIoEligible({
     vendor_io_id: line.active_vendor_io_id ?? line.vendor_io_id,
-    operational_status: status,
+    operational_status: line.operational_status ?? "draft",
     invoice_id: line.invoice_id ?? null,
     billing_status: line.billing_status,
   });
@@ -149,19 +160,24 @@ export function deriveAssignmentLineMeta(
 }
 
 export function buildAssignmentRowViewModel(
-  group: AssignmentHierarchyGroup
+  group: AssignmentHierarchyGroup,
+  billingContext?: AssignmentHierarchyBillingContext | null
 ): AssignmentRowViewModel {
   const line = group.line;
   const rollups = coalesceAssignmentRollups(line, group.rollups);
+  const lineBillingStatus = effectiveAssignmentBillingStatusForUi(line, rollups);
   const operationalStatus = effectiveLineOperationalStatusForUi({
     operational_status: line.operational_status,
     vendor_io_id: line.vendor_io_id,
-    billing_status: line.billing_status,
+    billing_status: lineBillingStatus,
     invoice_id: line.invoice_id,
     revenue_locked: line.revenue_locked,
     vendor_assignment_locked: line.vendor_assignment_locked,
+    remaining_amount: rollups.remaining_value,
+    billable_amount: rollups.revenue,
+    invoiced_amount: rollups.invoiced_value,
   });
-  const childBillingStatus = deriveChildBillingStatus(line.billing_status ?? "draft");
+  const childBillingStatus = deriveChildBillingStatus(lineBillingStatus);
   const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
 
   const displayName =
@@ -176,28 +192,26 @@ export function buildAssignmentRowViewModel(
   return {
     lineId: line.id,
     group,
-    meta: deriveAssignmentLineMeta(group),
+    meta: deriveAssignmentLineMeta(group, billingContext),
     operationalStatus,
     childBillingStatus,
     displayName,
     platformSummary: summarizePlatforms(group),
     postingSummary: safeSummarizePostingDates(collectLiveDates(group)),
     opsStatusLabel: LINE_OPERATIONAL_STATUS_LABELS[operationalStatus] ?? operationalStatus,
-    lineBillingStatus: (line.billing_status ?? "draft") as CampaignLineBillingStatus,
-    billingStatusLabel: labelForBillingStatus(
-      (line.billing_status ?? "draft") as CampaignLineBillingStatus
-    ),
+    lineBillingStatus,
+    billingStatusLabel: labelForBillingStatus(lineBillingStatus),
     rollups,
   };
 }
 
 export function tryBuildAssignmentRowViewModel(
   group: AssignmentHierarchyGroup,
-  context: { campaignId?: string } = {}
+  context: { campaignId?: string; billingContext?: AssignmentHierarchyBillingContext | null } = {}
 ): AssignmentRowViewModel | null {
   const lineId = group?.line?.id;
   try {
-    return buildAssignmentRowViewModel(group);
+    return buildAssignmentRowViewModel(group, context.billingContext);
   } catch (error) {
     console.error("[assignment-hierarchy] row view-model failed — skip render", {
       campaignId: context.campaignId,

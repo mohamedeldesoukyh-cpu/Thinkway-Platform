@@ -17,6 +17,7 @@ import {
 } from "@/lib/billing/invoice-from-deliverables";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
+import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import {
   invoicedRowAllowed,
   invoicedRowBlockMessage,
@@ -530,7 +531,7 @@ export async function lockPostsOnInvoice(
       billing_invoiced_at: fullLock ? now : null,
     };
     if (fullLock) {
-      linePatch.operational_status = "locked";
+      linePatch.operational_status = operationalStatusForDb("locked");
     } else if (partialLock) {
       linePatch.operational_status = "io_generated";
     }

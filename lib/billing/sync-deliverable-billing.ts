@@ -8,8 +8,10 @@ import {
 } from "@/lib/billing/assignment-deliverable-queries";
 import {
   deriveLineBillingStatusFromDeliverables,
+  resolveConsensusLineInvoiceId,
   type DeliverableBillingRow,
 } from "@/lib/billing/deliverable-billing";
+import { resolveLinkedInvoiceIds } from "@/lib/billing/invoice-validation-context";
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
 import { repairCampaignLineStatusPatch } from "@/lib/campaigns/campaign-line-status-invariants";
 
@@ -80,7 +82,8 @@ export async function markDeliverablesReadyToInvoice(
 export async function syncLineBillingFromDeliverables(
   supabase: SupabaseClient,
   lineId: string,
-  currentLineStatus: string
+  currentLineStatus: string,
+  options?: { invoiceId?: string | null }
 ): Promise<void> {
   const { data: rows, includesVatExempt } = await queryAssignmentDeliverables<
     Omit<DeliverableBillingRow, "label"> & { revenue_vat_exempt?: boolean | null }
@@ -110,29 +113,48 @@ export async function syncLineBillingFromDeliverables(
   const fullLock = deliverables.length > 0 && deliverables.every((d) => d.locked_at);
   const partialLock = deliverables.some((d) => d.locked_at);
 
+  const linkedInvoiceByLineItem = await resolveLinkedInvoiceIds(
+    supabase,
+    deliverables.map((d) => d.invoice_line_item_id).filter(Boolean) as string[]
+  );
+  const resolvedInvoiceId =
+    options?.invoiceId ??
+    resolveConsensusLineInvoiceId(deliverables, linkedInvoiceByLineItem);
+
   const { data: lineRow } = await supabase
     .from("campaign_lines")
     .select("billing_status, operational_status, invoice_id, vendor_io_id, finance_override_until")
     .eq("id", lineId)
     .maybeSingle();
 
+  const proposedPatch = {
+    ...lineBillingPatch(nextStatus),
+    ...(resolvedInvoiceId ? { invoice_id: resolvedInvoiceId } : {}),
+  } as Record<string, string | null>;
+
   const statusPatch = lineRow
     ? repairCampaignLineStatusPatch(
-        lineRow as {
-          billing_status: string;
-          operational_status: string;
-          invoice_id: string | null;
-          vendor_io_id: string | null;
-          finance_override_until: string | null;
+        {
+          ...(lineRow as {
+            billing_status: string;
+            operational_status: string;
+            invoice_id: string | null;
+            vendor_io_id: string | null;
+            finance_override_until: string | null;
+          }),
+          invoice_id: lineRow.invoice_id ?? resolvedInvoiceId,
         },
-        lineBillingPatch(nextStatus) as Record<string, string | null>
+        proposedPatch
       )
-    : lineBillingPatch(nextStatus);
+    : proposedPatch;
 
   await supabase
     .from("campaign_lines")
     .update({
       ...statusPatch,
+      ...(resolvedInvoiceId && !statusPatch.invoice_id
+        ? { invoice_id: resolvedInvoiceId }
+        : {}),
       revenue_locked: fullLock,
       vat_locked: partialLock || fullLock,
     } as never)

@@ -4,7 +4,11 @@ import {
   type AssignmentInvoiceProgress,
 } from "@/lib/billing/partial-invoice-lifecycle";
 import {
+  isFullyInvoicedBillingStatus,
+} from "@/lib/billing/partial-invoice-lifecycle";
+import {
   getRemainingInvoiceableDeliverables,
+  hasRemainingInvoiceableRevenue,
   isAssignmentBillingEligible,
   sumRemainingInvoiceableRevenue,
 } from "@/lib/billing/queue-eligibility";
@@ -15,9 +19,11 @@ function assignmentHasQueueSignal(row: OperationalBillingRow): boolean {
   if (row.kind !== "assignment") return false;
   if (row.billing_status === "cancelled") return false;
 
-  const ops = row.operational_status ?? "draft";
-  if (ops === "io_generated" || ops === "partially_invoiced") {
-    return row.remaining_amount > 0 || isAssignmentBillingEligible(row);
+  if (
+    isFullyInvoicedBillingStatus(row.line_billing_status ?? row.billing_status) &&
+    !hasRemainingInvoiceableRevenue(row)
+  ) {
+    return false;
   }
 
   return isAssignmentBillingEligible(row);

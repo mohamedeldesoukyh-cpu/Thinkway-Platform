@@ -36,7 +36,11 @@ export function syncCampaignBillingState(
   const progress = getCampaignInvoiceProgress(operational_rows);
   const queueRemaining = getCampaignRemainingRevenue(operational_rows);
   const remaining_to_invoice =
-    queueRemaining > 0 ? queueRemaining : rollup.remaining_to_invoice;
+    rollup.remaining_to_invoice <= 0.01
+      ? rollup.remaining_to_invoice
+      : queueRemaining > 0
+        ? Math.min(queueRemaining, rollup.remaining_to_invoice)
+        : rollup.remaining_to_invoice;
 
   const billing_status =
     operational_rows.length > 0

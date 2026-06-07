@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeOperationalQuery } from "@/lib/platform/safe-query";
 import { devLog } from "@/lib/platform/logger";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 import type {
   ClientIoRow,
@@ -158,7 +159,9 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
 
         return {
           id: typed.id,
-          document_number: typed.document_number,
+          document_number: typed.document_number
+            ? formatDocumentNumberForDisplay(typed.document_number)
+            : typed.document_number,
           assignment_id: typed.assignment_id,
           campaign_header_id: typed.campaign_header_id,
           campaign_name: typed.campaign?.name ?? "—",
@@ -338,7 +341,9 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
 
         return {
           id: typed.id,
-          document_number: typed.document_number,
+          document_number: typed.document_number
+            ? formatDocumentNumberForDisplay(typed.document_number)
+            : typed.document_number,
           assignment_id: typed.assignment_id,
           campaign_header_id: typed.campaign_header_id,
           campaign_name: typed.campaign?.name ?? "—",

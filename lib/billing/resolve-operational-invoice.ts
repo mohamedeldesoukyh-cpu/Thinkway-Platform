@@ -97,7 +97,17 @@ export async function validateAppendableInvoice(
     clientId: string;
     currency: string;
   }
-): Promise<{ ok: true; invoice: { id: string; document_number: string } } | { ok: false; error: string }> {
+): Promise<
+  | {
+      ok: true;
+      invoice: {
+        id: string;
+        document_number: string;
+        regeneration_status: string | null;
+      };
+    }
+  | { ok: false; error: string }
+> {
   const { data: invoice, error } = await supabase
     .from("invoices")
     .select(
@@ -149,5 +159,12 @@ export async function validateAppendableInvoice(
     };
   }
 
-  return { ok: true, invoice: { id: row.id, document_number: row.document_number } };
+  return {
+    ok: true,
+    invoice: {
+      id: row.id,
+      document_number: row.document_number,
+      regeneration_status: row.regeneration_status,
+    },
+  };
 }

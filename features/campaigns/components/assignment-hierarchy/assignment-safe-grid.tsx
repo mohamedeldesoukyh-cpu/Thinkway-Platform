@@ -158,7 +158,10 @@ export function AssignmentSafeGrid({
   const preparedRows = useMemo(() => {
     const rows: AssignmentRowViewModel[] = [];
     for (const group of sanitized.groups) {
-      const vm = tryBuildAssignmentRowViewModel(group, { campaignId });
+      const vm = tryBuildAssignmentRowViewModel(group, {
+        campaignId,
+        billingContext: sanitized.billing_context,
+      });
       if (vm) rows.push(vm);
     }
     return rows;
@@ -216,8 +219,9 @@ export function AssignmentSafeGrid({
           group: row.group,
           meta: lineMeta.get(row.lineId),
         })),
+        billingContext: sanitized.billing_context,
       }),
-    [selectedLineIds, selectedDeliverableIds, preparedRows, lineMeta]
+    [selectedLineIds, selectedDeliverableIds, preparedRows, lineMeta, sanitized.billing_context]
   );
   const {
     invoiceLineIds,
@@ -231,19 +235,38 @@ export function AssignmentSafeGrid({
   } = selectionActions;
 
   const invoiceTotal = useMemo(() => {
+    const pendingRegeneration =
+      sanitized.billing_context?.regeneration_status === "pending_regeneration";
     let total = 0;
+
     for (const id of invoiceLineIds) {
+      const row = preparedRows.find((entry) => entry.lineId === id);
+      if (!row) continue;
+      if (pendingRegeneration) {
+        const line = row.group.line;
+        total +=
+          Number(row.group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue) || 0;
+        continue;
+      }
       total += lineMeta.get(id)?.remaining ?? 0;
     }
+
     for (const row of preparedRows) {
       for (const deliverable of row.group.deliverables ?? []) {
-        if (invoiceDeliverableIds.includes(deliverable.id)) {
-          total += deliverable.remaining_amount;
-        }
+        if (!invoiceDeliverableIds.includes(deliverable.id)) continue;
+        total += pendingRegeneration
+          ? Number(deliverable.revenue_before_vat ?? 0)
+          : Number(deliverable.remaining_amount ?? 0);
       }
     }
     return total;
-  }, [invoiceLineIds, invoiceDeliverableIds, lineMeta, preparedRows]);
+  }, [
+    invoiceLineIds,
+    invoiceDeliverableIds,
+    lineMeta,
+    preparedRows,
+    sanitized.billing_context?.regeneration_status,
+  ]);
 
   const emitInvoiceSelection = useCallback(() => {
     onInvoiceLines?.({
