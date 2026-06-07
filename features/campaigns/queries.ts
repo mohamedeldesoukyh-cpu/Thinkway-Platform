@@ -118,6 +118,7 @@ type LineRow = {
   revenue_locked: boolean;
   cost_locked: boolean;
   vendor_assignment_locked: boolean;
+  finance_override_until?: string | null;
   invoice_id: string | null;
   operational_status?: string | null;
   vendor_io_id?: string | null;

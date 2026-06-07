@@ -430,11 +430,13 @@ export function CampaignLineSheet({
     setEndDate(line?.end_date ?? "");
     const nextPricingMode = line?.assignment?.pricing_mode ?? "package";
     const storedCommercialRows = line?.assignment?.commercial_rows ?? [];
+    const assignmentPlatforms = line?.assignment?.platforms;
     const hydratedCommercialRows =
       nextPricingMode === "per_deliverable" &&
       storedCommercialRows.length === 0 &&
-      (line?.assignment?.platforms?.length ?? 0) > 0
-        ? packagePlatformsToCommercialRows(line.assignment!.platforms, {
+      assignmentPlatforms &&
+      assignmentPlatforms.length > 0
+        ? packagePlatformsToCommercialRows(assignmentPlatforms, {
             totalRevenueBeforeVat: line?.revenue_before_vat ?? line?.revenue ?? 0,
             totalCostBeforeVat: line?.cost_before_vat ?? line?.cost ?? 0,
             dueDate: line?.end_date ?? null,
