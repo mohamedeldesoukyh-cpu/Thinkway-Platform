@@ -845,6 +845,13 @@ export type Database = {
           cost_vat_percent: number;
           cost_vat_amount: number;
           billing_status: string;
+          billable_amount: number;
+          invoiced_amount: number;
+          collected_amount: number;
+          remaining_amount: number;
+          invoice_line_item_id: string | null;
+          invoiced_at: string | null;
+          locked_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -865,6 +872,13 @@ export type Database = {
           cost_vat_percent?: number;
           cost_vat_amount?: number;
           billing_status?: string;
+          billable_amount?: number;
+          invoiced_amount?: number;
+          collected_amount?: number;
+          remaining_amount?: number;
+          invoice_line_item_id?: string | null;
+          invoiced_at?: string | null;
+          locked_at?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["assignment_post_schedule"]["Insert"]
