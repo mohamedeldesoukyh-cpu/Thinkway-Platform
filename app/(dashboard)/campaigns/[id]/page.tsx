@@ -18,9 +18,9 @@ import { getCampaignPublications } from "@/features/campaigns/queries/publicatio
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
-import { getMasterDataOptions } from "@/lib/master-data/queries";
 import { devLog } from "@/lib/dev-log";
 import { loadFinanceAuditTimeline } from "@/lib/finance/queries/finance-audit";
+import { isBillingRepairOnLoadEnabled } from "@/lib/billing/billing-repair-on-load";
 import {
   repairActiveInvoiceOperationalRelock,
   repairLinesBillingWithoutVendorIo,
@@ -67,8 +67,6 @@ export default async function CampaignWorkspacePage({
   let workspace;
   let formOptions: Awaited<ReturnType<typeof getCampaignFormOptions>> | null =
     null;
-  let masterData: Awaited<ReturnType<typeof getMasterDataOptions>> | null =
-    null;
   let billingLines: Awaited<ReturnType<typeof getCampaignBillingLines>> = [];
   let billingGroups: Awaited<ReturnType<typeof getCampaignBillingGroups>> = [];
   let operationalBilling: Awaited<ReturnType<typeof getCampaignOperationalBillingDetail>> = null;
@@ -100,31 +98,38 @@ export default async function CampaignWorkspacePage({
   }
 
   if (workspace) {
-    try {
-      const supabase = await createSupabaseServerClient();
-      const {
-        data: { user: repairUser },
-      } = await supabase.auth.getUser();
-      await repairNonIoInvoiceLineItemsForCampaign(supabase, id);
-      await repairLinesBillingWithoutVendorIo(supabase, id);
-      await repairOrphanedInvoicedOperationalRows(supabase, id);
-      await repairDesyncedUngeneratedInvoiceHeaders(supabase, id);
-      await repairStalePendingRegenerationInvoices(supabase, id);
-      await repairIncorrectlyFinanceLockedDraftInvoices(supabase, id);
-      await repairActiveInvoiceOperationalRelock(supabase, id);
-      await repairAppendMissingInvoiceLineItems(supabase, id);
-      await repairVendorIoAmountDrift(supabase, id, repairUser?.id ?? null);
-    } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        devLog("[campaign-page] orphaned invoice repair skipped", error);
+    const supabase = await createSupabaseServerClient();
+
+    if (isBillingRepairOnLoadEnabled()) {
+      try {
+        const {
+          data: { user: repairUser },
+        } = await supabase.auth.getUser();
+        await repairNonIoInvoiceLineItemsForCampaign(supabase, id);
+        await repairLinesBillingWithoutVendorIo(supabase, id);
+        await repairOrphanedInvoicedOperationalRows(supabase, id);
+        await repairDesyncedUngeneratedInvoiceHeaders(supabase, id);
+        await repairStalePendingRegenerationInvoices(supabase, id);
+        await repairIncorrectlyFinanceLockedDraftInvoices(supabase, id);
+        await repairActiveInvoiceOperationalRelock(supabase, id);
+        await repairAppendMissingInvoiceLineItems(supabase, id);
+        await repairVendorIoAmountDrift(supabase, id, repairUser?.id ?? null);
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          devLog("[campaign-page] orphaned invoice repair skipped", error);
+        }
       }
     }
 
     const settled = await Promise.allSettled([
       getCampaignFormOptions(),
-      getMasterDataOptions(),
       getCampaignBillingLines(id),
       getCampaignBillingGroups(id),
+      getFinanceInvoiceRegister({ campaignHeaderId: id }),
+      getCampaignOperationalBillingDetail(id),
+      getCampaignAssignmentHierarchy(id, workspace),
+      loadFinanceAuditTimeline(supabase, { campaign_id: id, limit: 40 }),
+      getCampaignPublications(id),
     ]);
 
     if (settled[0].status === "fulfilled") {
@@ -137,50 +142,47 @@ export default async function CampaignWorkspacePage({
     }
 
     if (settled[1].status === "fulfilled") {
-      masterData = settled[1].value;
-    }
-    if (settled[2].status === "fulfilled") {
-      billingLines = settled[2].value;
+      billingLines = settled[1].value;
     } else if (process.env.NODE_ENV === "development") {
-      devLog("[dashboard-resilience] campaign billing lines fallback", settled[2].reason);
+      devLog("[dashboard-resilience] campaign billing lines fallback", settled[1].reason);
     }
+
+    if (settled[2].status === "fulfilled") {
+      billingGroups = settled[2].value;
+    }
+
     if (settled[3].status === "fulfilled") {
-      billingGroups = settled[3].value;
+      campaignInvoiceRegister = settled[3].value;
+    } else if (process.env.NODE_ENV === "development") {
+      devLog("[campaign-page] campaign invoice register fallback", settled[3].reason);
     }
 
-    try {
-      campaignInvoiceRegister = await getFinanceInvoiceRegister({
-        campaignHeaderId: id,
-      });
-    } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        devLog("[campaign-page] campaign invoice register fallback", error);
-      }
-    }
-
-    try {
-      operationalBilling = await getCampaignOperationalBillingDetail(id);
-    } catch (error) {
+    if (settled[4].status === "fulfilled") {
+      operationalBilling = settled[4].value;
+    } else {
       const { logCampaignWorkspaceLoadError } = await import(
         "@/lib/billing/operational-billing-trace"
       );
-      logCampaignWorkspaceLoadError("getCampaignOperationalBillingDetail", error, {
-        campaignId: id,
-      });
+      logCampaignWorkspaceLoadError(
+        "getCampaignOperationalBillingDetail",
+        settled[4].reason,
+        { campaignId: id }
+      );
     }
 
-    try {
-      const loaded = await getCampaignAssignmentHierarchy(id);
-      assignmentHierarchy = toPlainAssignmentHierarchy(loaded);
+    if (settled[5].status === "fulfilled") {
+      assignmentHierarchy = toPlainAssignmentHierarchy(settled[5].value);
       logAssignmentsStage("page query success", {
         campaignId: id,
         groupCount: assignmentHierarchy.groups.length,
         skipped: assignmentHierarchy.skipped_line_ids?.length ?? 0,
         loadError: assignmentHierarchy.load_error ?? null,
       });
-    } catch (error) {
+    } else {
       const message =
-        error instanceof Error ? error.message : "Failed to load assignment hierarchy.";
+        settled[5].reason instanceof Error
+          ? settled[5].reason.message
+          : "Failed to load assignment hierarchy.";
       console.error("[Assignments] page hierarchy query failed", { campaignId: id, message });
       assignmentHierarchy = {
         groups: [],
@@ -191,24 +193,27 @@ export default async function CampaignWorkspacePage({
       };
     }
 
-    try {
-      const supabase = await createSupabaseServerClient();
-      financeAudit = await loadFinanceAuditTimeline(supabase, {
-        campaign_id: id,
-        limit: 40,
+    if (settled[6].status === "fulfilled") {
+      financeAudit = settled[6].value;
+    } else {
+      devLog("[campaign-page] finance audit failed", {
+        campaignId: id,
+        error: settled[6].reason,
       });
-    } catch (error) {
-      devLog("[campaign-page] finance audit failed", { campaignId: id, error });
     }
 
-    try {
-      const publicationResult = await getCampaignPublications(id);
-      publications = publicationResult.publications;
-      publicationsLoadError = publicationResult.load_error;
-    } catch (error) {
+    if (settled[7].status === "fulfilled") {
+      publications = settled[7].value.publications;
+      publicationsLoadError = settled[7].value.load_error;
+    } else {
       publicationsLoadError =
-        error instanceof Error ? error.message : "Failed to load publications.";
-      console.error("[campaign-page] publications failed", { campaignId: id, publicationsLoadError });
+        settled[7].reason instanceof Error
+          ? settled[7].reason.message
+          : "Failed to load publications.";
+      console.error("[campaign-page] publications failed", {
+        campaignId: id,
+        publicationsLoadError,
+      });
     }
   }
 
@@ -216,8 +221,8 @@ export default async function CampaignWorkspacePage({
     notFound();
   }
 
-  const teams = masterData?.teams ?? [];
-  const currencyOptions = buildCurrencyOptions(masterData?.currencies ?? []);
+  const teams = formOptions?.masterData?.teams ?? [];
+  const currencyOptions = buildCurrencyOptions(formOptions?.masterData?.currencies ?? []);
 
   return (
     <DashboardShell

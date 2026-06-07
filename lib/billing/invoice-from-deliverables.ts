@@ -639,16 +639,21 @@ export async function lockDeliverablesOnInvoice(
       lineItemOps.created.push(item.id);
     }
 
+    const lockLiveAdDate = Boolean(row.live_date?.trim());
+    const deliverableLockPatch: Record<string, unknown> = {
+      invoiced_amount: billable,
+      remaining_amount: 0,
+      billing_status: "invoiced",
+      invoice_line_item_id: lineItemId,
+      invoiced_at: now,
+    };
+    if (lockLiveAdDate) {
+      deliverableLockPatch.locked_at = now;
+    }
+
     const { error: lockError } = await supabase
       .from("assignment_deliverables")
-      .update({
-        invoiced_amount: billable,
-        remaining_amount: 0,
-        billing_status: "invoiced",
-        invoice_line_item_id: lineItemId,
-        invoiced_at: now,
-        locked_at: now,
-      })
+      .update(deliverableLockPatch)
       .eq("id", row.id);
 
     if (lockError) {
@@ -660,6 +665,7 @@ export async function lockDeliverablesOnInvoice(
       invoiceLineItemId: lineItemId!,
       lockedAt: now,
       deliverableBillable: billable,
+      lockSchedule: lockLiveAdDate,
     });
 
     if (postSyncError.error) {

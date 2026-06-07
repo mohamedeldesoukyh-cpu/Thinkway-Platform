@@ -23,6 +23,10 @@ import type {
 import { deliverableTagLabel } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { formatDeliverableHierarchyLabel } from "@/lib/campaigns/deliverable-display-label";
 import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
+import {
+  isDeliverableCommercialLocked,
+  isLiveAdDateLocked,
+} from "@/lib/campaigns/live-ad-date";
 import { formatMarginPercent } from "@/features/billing/types";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
@@ -122,14 +126,28 @@ function deriveWorkflowStatusFromPosts(
   return posts[0]?.workflow_status ?? "draft";
 }
 
-function deriveDeliverableUiLocked(
-  lockedAt: string | null | undefined,
-  billingStatus: AssignmentDeliverableBillingStatus,
+function deriveDeliverableLockState(
+  row: {
+    locked_at: string | null;
+    live_date: string | null;
+    billing_status: AssignmentDeliverableBillingStatus;
+    invoice_line_item_id: string | null;
+  },
   billingContext?: AssignmentHierarchyBillingContext
-): boolean {
-  if (billingStatus === "ready_to_invoice") return false;
-  if (billingContext?.regeneration_status === "pending_regeneration") return false;
-  return Boolean(lockedAt);
+) {
+  const lockedAt = row.locked_at;
+  const liveDate = row.live_date;
+  const commercialLocked = isDeliverableCommercialLocked({
+    locked_at: lockedAt,
+    billing_status: row.billing_status,
+    invoice_line_item_id: row.invoice_line_item_id,
+    regeneration_status: billingContext?.regeneration_status,
+  });
+  return {
+    commercialLocked,
+    liveAdDateLocked: isLiveAdDateLocked(liveDate, lockedAt),
+    lockedAt,
+  };
 }
 
 function buildVirtualPosts(input: {
@@ -241,10 +259,11 @@ function buildRollups(
 }
 
 export async function getCampaignAssignmentHierarchy(
-  campaignId: string
+  campaignId: string,
+  workspaceSeed?: Awaited<ReturnType<typeof getCampaignWorkspace>> | null
 ): Promise<AssignmentHierarchy> {
   try {
-    return await loadCampaignAssignmentHierarchy(campaignId);
+    return await loadCampaignAssignmentHierarchy(campaignId, workspaceSeed);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load assignment hierarchy.";
@@ -260,9 +279,10 @@ export async function getCampaignAssignmentHierarchy(
 }
 
 async function loadCampaignAssignmentHierarchy(
-  campaignId: string
+  campaignId: string,
+  workspaceSeed?: Awaited<ReturnType<typeof getCampaignWorkspace>> | null
 ): Promise<AssignmentHierarchy> {
-  const workspace = await getCampaignWorkspace(campaignId);
+  const workspace = workspaceSeed ?? (await getCampaignWorkspace(campaignId));
   if (!workspace) {
     return { groups: [], currency_code: "USD" };
   }
@@ -479,9 +499,13 @@ async function loadCampaignAssignmentHierarchy(
     const vatPerPost = Number(row.revenue_vat_amount ?? 0) / qty;
     const costVatPerPost = Number(row.cost_vat_amount ?? 0) / qty;
 
-    const uiLocked = deriveDeliverableUiLocked(
-      row.locked_at,
-      billingStatus,
+    const lockState = deriveDeliverableLockState(
+      {
+        locked_at: row.locked_at,
+        live_date: row.live_date,
+        billing_status: billingStatus,
+        invoice_line_item_id: row.invoice_line_item_id,
+      },
       billingContext
     );
 
@@ -503,7 +527,7 @@ async function loadCampaignAssignmentHierarchy(
         invoiceId: invoiceLink?.invoice_id ?? null,
         invoiceDocumentNumber: invoiceLink?.document_number ?? null,
         payoutStatus: line?.vendor_payment_status ?? null,
-        isLocked: uiLocked,
+        isLocked: lockState.commercialLocked,
       });
     } else {
       posts = posts.map((post) => {
@@ -529,10 +553,12 @@ async function loadCampaignAssignmentHierarchy(
           invoice_id: invoiceLink?.invoice_id ?? null,
           invoice_document_number: invoiceLink?.document_number ?? null,
           payout_status: line?.vendor_payment_status ?? null,
-          is_locked: uiLocked,
+          is_locked: lockState.commercialLocked,
         };
       });
     }
+
+    const resolvedLiveDate = row.live_date ?? posts[0]?.live_date ?? null;
 
     const mapped: AssignmentDeliverableHierarchyRow = {
       id: row.id,
@@ -545,7 +571,7 @@ async function loadCampaignAssignmentHierarchy(
       quantity: row.quantity,
       unit_cost: Number(row.unit_cost ?? 0),
       unit_revenue: unitRevenue,
-      live_date: row.live_date ?? posts[0]?.live_date ?? null,
+      live_date: resolvedLiveDate,
       notes: row.notes ?? null,
       revenue_before_vat: Number(row.revenue_before_vat),
       cost_before_vat: Number(row.cost_before_vat ?? 0),
@@ -590,7 +616,9 @@ async function loadCampaignAssignmentHierarchy(
           line.billing_status ?? "draft"
         ),
       is_synthetic: false,
-      is_locked: uiLocked,
+      is_locked: lockState.commercialLocked,
+      locked_at: lockState.lockedAt,
+      live_ad_date_locked: lockState.liveAdDateLocked,
     };
 
     const list = deliverablesByLine.get(row.campaign_line_id) ?? [];

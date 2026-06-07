@@ -117,6 +117,10 @@ function sanitizeDeliverable(
       invoice_eligible: Boolean(row.invoice_eligible),
       is_synthetic: Boolean(row.is_synthetic),
       is_locked: Boolean(row.is_locked),
+      locked_at: (row as { locked_at?: string | null }).locked_at ?? null,
+      live_ad_date_locked: Boolean(
+        (row as { live_ad_date_locked?: boolean }).live_ad_date_locked
+      ),
     };
   } catch (error) {
     console.error("[assignment-hierarchy] sanitize deliverable failed", {

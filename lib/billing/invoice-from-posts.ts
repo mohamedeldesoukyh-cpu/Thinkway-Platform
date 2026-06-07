@@ -33,6 +33,7 @@ export type PostInvoiceLine = {
   campaign_line_id: string;
   assignment_deliverable_id: string;
   sequence_number: number;
+  live_date: string | null;
   billable_amount: number;
   invoiced_amount: number;
   remaining_amount: number;
@@ -184,6 +185,7 @@ type RawPostRow = {
   campaign_line_id: string;
   assignment_deliverable_id: string;
   sequence_number: number;
+  live_date?: string | null;
   billable_amount?: number | null;
   invoiced_amount?: number | null;
   remaining_amount?: number | null;
@@ -201,9 +203,9 @@ export async function fetchPostsForInvoicing(
   if (postIds.length === 0) return { posts: [] };
 
   const postSelectWithBilling =
-    "id, campaign_line_id, assignment_deliverable_id, sequence_number, billable_amount, invoiced_amount, remaining_amount, revenue_before_vat, billing_status, locked_at, invoice_line_item_id";
+    "id, campaign_line_id, assignment_deliverable_id, sequence_number, live_date, billable_amount, invoiced_amount, remaining_amount, revenue_before_vat, billing_status, locked_at, invoice_line_item_id";
   const postSelectFallback =
-    "id, campaign_line_id, assignment_deliverable_id, sequence_number, revenue_before_vat, billing_status, locked_at, invoice_line_item_id";
+    "id, campaign_line_id, assignment_deliverable_id, sequence_number, live_date, revenue_before_vat, billing_status, locked_at, invoice_line_item_id";
 
   const primaryPostResult = await supabase
     .from("assignment_post_schedule")
@@ -314,6 +316,7 @@ export async function fetchPostsForInvoicing(
       campaign_line_id: row.campaign_line_id,
       assignment_deliverable_id: row.assignment_deliverable_id,
       sequence_number: Number(row.sequence_number ?? 1),
+      live_date: row.live_date ?? null,
       billable_amount: billable,
       invoiced_amount: Number(row.invoiced_amount ?? 0),
       remaining_amount: remaining,
@@ -468,16 +471,21 @@ export async function lockPostsOnInvoice(
       lineItemOps.created.push(item.id);
     }
 
+    const lockLiveAdDate = Boolean(post.live_date?.trim());
+    const postLockPatch: Record<string, unknown> = {
+      invoiced_amount: billable,
+      remaining_amount: 0,
+      billing_status: "invoiced",
+      invoice_line_item_id: lineItemId,
+      invoiced_at: now,
+    };
+    if (lockLiveAdDate) {
+      postLockPatch.locked_at = now;
+    }
+
     const { error: lockError } = await supabase
       .from("assignment_post_schedule")
-      .update({
-        invoiced_amount: billable,
-        remaining_amount: 0,
-        billing_status: "invoiced",
-        invoice_line_item_id: lineItemId,
-        invoiced_at: now,
-        locked_at: now,
-      })
+      .update(postLockPatch)
       .eq("id", post.id);
 
     if (lockError) {

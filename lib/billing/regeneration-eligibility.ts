@@ -1,5 +1,6 @@
 import {
   getRemainingRevenue,
+  isFullyInvoicedBillingStatus,
   isPartiallyInvoicedBillingStatus,
 } from "@/lib/billing/partial-invoice-lifecycle";
 import { hasExistingIoCoverage } from "@/lib/operations/io-coverage";
@@ -180,17 +181,21 @@ export function isInvoiceLifecycleReopenable(
   if (input.invoice_status === "draft" && Boolean(input.invoice_id)) return true;
   if (hasActiveFinanceOverride(input.finance_override_until ?? null)) return true;
 
+  if (hasRegeneratableRevenue(input)) return true;
+
   if (isPartiallyInvoicedBillingStatus(billing)) return true;
+
+  const ops = input.operational_status ?? "draft";
+  if (["io_revised", "reopened", "partially_invoiced"].includes(ops)) return true;
+
+  // Fully invoiced and locked — no invoice action until ungenerate / finance override.
+  if (isFullyInvoicedBillingStatus(billing) && ops === "locked") return false;
+
   if (billing === "moved_to_billing" && Number(input.invoiced_amount ?? 0) > 0) {
     return true;
   }
 
-  const ops = input.operational_status ?? "draft";
-  if (["io_revised", "reopened", "partially_invoiced"].includes(ops)) return true;
   if (ops === "io_generated" && Number(input.invoiced_amount ?? 0) > 0) return true;
-
-  if (Number(input.invoiced_amount ?? 0) > 0) return true;
-  if (hasInvoiceLinkage(input)) return true;
 
   return false;
 }
@@ -221,7 +226,17 @@ export function isAssignmentInvoiceSelectable(
     return isLineFirstTimeInvoiceEligible(input);
   }
 
-  return hasRegeneratableRevenue(input) || canRegenerateInvoice(input);
+  const remaining = getRemainingRevenue(input);
+  if (
+    isFullyInvoicedBillingStatus(billing) &&
+    remaining <= MONEY_EPSILON &&
+    input.regeneration_status !== "pending_regeneration" &&
+    !hasActiveFinanceOverride(input.finance_override_until ?? null)
+  ) {
+    return false;
+  }
+
+  return remaining > MONEY_EPSILON || canRegenerateInvoice(input);
 }
 
 export function canRegenerateInvoice(input: RegenerationEligibilityInput): boolean {

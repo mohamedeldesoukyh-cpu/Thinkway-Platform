@@ -2,9 +2,7 @@ import type { OperationalBillingRow } from "@/lib/billing/operational-billing-ro
 
 export type ChildrenAccessOp = "length" | "map" | "iterable" | "filter" | "reduce";
 
-const TRACE_ENABLED =
-  process.env.OPERATIONAL_BILLING_TRACE === "1" ||
-  process.env.NODE_ENV === "development";
+const TRACE_ENABLED = process.env.OPERATIONAL_BILLING_TRACE === "1";
 
 export type OperationalRowTraceSnapshot = {
   stage: string;

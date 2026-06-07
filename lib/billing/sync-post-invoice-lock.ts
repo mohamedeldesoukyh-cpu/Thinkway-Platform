@@ -18,8 +18,11 @@ export async function syncPostScheduleOnDeliverableInvoiceLock(
     invoiceLineItemId: string;
     lockedAt: string;
     deliverableBillable: number;
+    /** When false, posts stay open for live ad date entry after invoice. */
+    lockSchedule?: boolean;
   }
 ): Promise<{ error?: string }> {
+  const lockSchedule = input.lockSchedule ?? true;
   const postResult = await supabase
     .from("assignment_post_schedule")
     .select(POST_INVOICE_SELECT)
@@ -83,16 +86,20 @@ export async function syncPostScheduleOnDeliverableInvoiceLock(
         ? roundMoney((postBillable / totalPostBillable) * deliverableBillable)
         : postBillable;
 
+    const postPatch: Record<string, unknown> = {
+      invoiced_amount: share,
+      remaining_amount: 0,
+      billing_status: "invoiced",
+      invoice_line_item_id: input.invoiceLineItemId,
+      invoiced_at: input.lockedAt,
+    };
+    if (lockSchedule) {
+      postPatch.locked_at = input.lockedAt;
+    }
+
     const { error } = await supabase
       .from("assignment_post_schedule")
-      .update({
-        invoiced_amount: share,
-        remaining_amount: 0,
-        billing_status: "invoiced",
-        invoice_line_item_id: input.invoiceLineItemId,
-        invoiced_at: input.lockedAt,
-        locked_at: input.lockedAt,
-      })
+      .update(postPatch)
       .eq("id", post.id);
 
     if (error) {

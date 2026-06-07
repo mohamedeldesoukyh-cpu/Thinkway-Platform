@@ -65,6 +65,10 @@ import type {
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
 import { getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
 import { computeVatLine } from "@/lib/vat/calculations";
+import {
+  canEditLiveAdDate,
+  formatLiveAdMonth,
+} from "@/lib/campaigns/live-ad-date";
 import { cn } from "@/lib/utils";
 
 type EditablePostRowProps = {
@@ -170,6 +174,7 @@ export function EditablePostRow({
   }, [
     editing,
     post.id,
+    post.live_date,
     post.revenue_per_post,
     post.cost_per_post,
     deliverable.id,
@@ -202,12 +207,64 @@ export function EditablePostRow({
 
   const postId = typeof post.id === "string" ? post.id : "";
   const isVirtualPost = postId.startsWith("virtual-");
+  const canEditLiveDateField = canEditLiveAdDate(
+    post.live_date ?? deliverable.live_date,
+    deliverable.locked_at
+  );
   const canEditDeliverableScope =
     !readOnly && deliverableScoped && postId.length > 0 && !deliverable.is_locked;
   const canEditPostSchedule =
     !readOnly && postId.length > 0 && !isVirtualPost && !deliverable.is_locked;
   const canEdit = canEditDeliverableScope || canEditPostSchedule;
   const canEditCommercial = canEdit;
+
+  function persistLiveDate(nextLiveDate: string) {
+    if (!canEditLiveDateField) return;
+    startTransition(async () => {
+      if (deliverableScoped) {
+        const result = await updateAssignmentDeliverableAction({
+          campaign_id: campaignId,
+          campaign_line_id: campaignLineId,
+          deliverable_id: deliverable.id,
+          platform: meta.platform,
+          deliverable_type: meta.deliverable_type,
+          quantity: commercial.draft.qty,
+          unit_revenue: commercial.draft.revPerAd,
+          unit_cost: commercial.draft.costPerAd,
+          revenue_vat_percent: meta.revenue_vat_percent,
+          live_date: nextLiveDate || null,
+          notes: meta.notes || null,
+          billing_status: meta.billing_status as typeof post.billing_status,
+        });
+        if (!result.ok) {
+          setError(result.message ?? "Failed to save live ad date.");
+          return;
+        }
+      } else if (!isVirtualPost && postId) {
+        const result = await updatePostScheduleAction({
+          campaign_id: campaignId,
+          schedule_id: postId,
+          live_date: nextLiveDate || null,
+          status: meta.workflow_status,
+          revenue_per_post: commercial.draft.revPerAd,
+          cost_per_post: commercial.draft.costPerAd,
+          revenue_vat_percent: meta.revenue_vat_percent,
+          notes: meta.notes || null,
+          billing_status: meta.billing_status as typeof post.billing_status,
+          platform: meta.platform,
+          deliverable_type: meta.deliverable_type,
+        });
+        if (!result.ok) {
+          setError(result.message ?? "Failed to save live ad date.");
+          return;
+        }
+      } else {
+        return;
+      }
+      setError(null);
+      router.refresh();
+    });
+  }
 
   function persistCommercial() {
     if (!canEditCommercial) return;
@@ -443,16 +500,20 @@ export function EditablePostRow({
           )}
         </td>
         <td className={GRID_CELL.postDate}>
-          {canEdit && editing ? (
+          {canEditLiveDateField ? (
             <Input
               type="date"
               value={meta.live_date}
               onChange={(e) => setMeta((m) => ({ ...m, live_date: e.target.value }))}
+              onBlur={(e) => persistLiveDate(e.target.value)}
               className="h-6 w-full text-[10px]"
             />
           ) : (
             <span className="text-muted-foreground">{post.live_date ?? "—"}</span>
           )}
+        </td>
+        <td className={cn(GRID_CELL.liveAdMonth, "text-[10px] text-muted-foreground")}>
+          {formatLiveAdMonth(meta.live_date || post.live_date)}
         </td>
         <td className={GRID_CELL.qty}>
           <OperationalQtyField
@@ -637,7 +698,7 @@ export function EditablePostRow({
       </tr>
       {error ? (
         <tr>
-          <td colSpan={17} className="px-4 pb-1 text-[10px] text-destructive">
+          <td colSpan={18} className="px-4 pb-1 text-[10px] text-destructive">
             {error}
           </td>
         </tr>
@@ -662,6 +723,9 @@ export function OperationalGridHeader({ actions }: OperationalGridHeaderProps) {
       </th>
       <th className={cn(GRID_CELL.postDate, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.postDate}
+      </th>
+      <th className={cn(GRID_CELL.liveAdMonth, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.liveAdMonth}
       </th>
       <th className={cn(GRID_CELL.qty, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.qty}

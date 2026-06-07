@@ -10,7 +10,9 @@ import {
   syncPostSchedulesForDeliverable,
 } from "@/lib/assignments/sync-post-schedules";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
+import { applyLiveAdDateLockAfterDateInsert } from "@/lib/billing/apply-live-ad-date-lock";
 import { syncAssignmentLineTitleFromDeliverables } from "@/lib/campaigns/sync-assignment-line-title";
+import { canEditLiveAdDate } from "@/lib/campaigns/live-ad-date";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { computeVatLine } from "@/lib/vat/calculations";
 
@@ -303,7 +305,9 @@ export async function updateAssignmentDeliverableAction(
 
     const { data: existing, error: fetchError } = await supabase
       .from("assignment_deliverables")
-      .select("id, locked_at, invoiced_amount, billing_status")
+      .select(
+        "id, locked_at, invoiced_amount, billing_status, invoice_line_item_id, live_date"
+      )
       .eq("id", parsed.data.deliverable_id)
       .eq("campaign_line_id", line.id)
       .maybeSingle();
@@ -314,6 +318,41 @@ export async function updateAssignmentDeliverableAction(
 
     if (existing.locked_at) {
       return { ok: false, message: "Deliverable is invoiced and locked." };
+    }
+
+    const invoicedOpenForLiveDate =
+      Boolean(existing.invoice_line_item_id) ||
+      ["invoiced", "partially_invoiced", "partially_paid", "paid"].includes(
+        existing.billing_status ?? ""
+      );
+
+    if (
+      invoicedOpenForLiveDate &&
+      canEditLiveAdDate(existing.live_date, existing.locked_at)
+    ) {
+      const nextLiveDate = parsed.data.live_date ?? null;
+      const { error: dateError } = await supabase
+        .from("assignment_deliverables")
+        .update({ live_date: nextLiveDate })
+        .eq("id", parsed.data.deliverable_id);
+
+      if (dateError) {
+        return { ok: false, message: dateError.message };
+      }
+
+      if (nextLiveDate) {
+        const lockResult = await applyLiveAdDateLockAfterDateInsert(
+          supabase,
+          parsed.data.deliverable_id,
+          nextLiveDate
+        );
+        if (lockResult.error) {
+          return { ok: false, message: lockResult.error };
+        }
+      }
+
+      revalidateCampaign(parsed.data.campaign_id);
+      return { ok: true, message: "Live ad date saved." };
     }
 
     const commercial = computeDeliverableCommercial({
@@ -468,13 +507,70 @@ export async function updatePostScheduleAction(
     const { data: post, error: fetchError } = await supabase
       .from("assignment_post_schedule")
       .select(
-        "id, assignment_deliverable_id, campaign_line_id, revenue_before_vat, cost_before_vat, metadata"
+        "id, assignment_deliverable_id, campaign_line_id, revenue_before_vat, cost_before_vat, metadata, live_date, locked_at"
       )
       .eq("id", parsed.data.schedule_id)
       .maybeSingle();
 
     if (fetchError || !post) {
       return { ok: false, message: fetchError?.message ?? "Post not found." };
+    }
+
+    if (post.locked_at) {
+      return { ok: false, message: "Post is locked after live ad date was set." };
+    }
+
+    const { data: deliverable, error: deliverableError } = await supabase
+      .from("assignment_deliverables")
+      .select("id, locked_at, invoice_line_item_id, live_date, billing_status")
+      .eq("id", post.assignment_deliverable_id)
+      .maybeSingle();
+
+    if (deliverableError || !deliverable) {
+      return {
+        ok: false,
+        message: deliverableError?.message ?? "Deliverable not found.",
+      };
+    }
+
+    const invoicedOpenForLiveDate =
+      Boolean(deliverable.invoice_line_item_id) ||
+      ["invoiced", "partially_invoiced", "partially_paid", "paid"].includes(
+        deliverable.billing_status ?? ""
+      );
+
+    if (
+      invoicedOpenForLiveDate &&
+      canEditLiveAdDate(post.live_date ?? deliverable.live_date, deliverable.locked_at)
+    ) {
+      const nextLiveDate = parsed.data.live_date;
+      const { error: dateError } = await supabase
+        .from("assignment_post_schedule")
+        .update({ live_date: nextLiveDate })
+        .eq("id", parsed.data.schedule_id);
+
+      if (dateError) {
+        return { ok: false, message: dateError.message };
+      }
+
+      await supabase
+        .from("assignment_deliverables")
+        .update({ live_date: nextLiveDate })
+        .eq("id", deliverable.id);
+
+      if (nextLiveDate) {
+        const lockResult = await applyLiveAdDateLockAfterDateInsert(
+          supabase,
+          deliverable.id,
+          nextLiveDate
+        );
+        if (lockResult.error) {
+          return { ok: false, message: lockResult.error };
+        }
+      }
+
+      revalidateCampaign(parsed.data.campaign_id);
+      return { ok: true, message: "Live ad date saved." };
     }
 
     const lineVat = await loadLineVatForDeliverable(supabase, post.campaign_line_id);

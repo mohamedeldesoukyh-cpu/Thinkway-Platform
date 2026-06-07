@@ -335,13 +335,15 @@ export function CampaignWorkspaceView({
         >
         <TabsContent value="overview" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
-            <CampaignOverviewTab
-              workspace={workspace}
-              accountManagers={accountManagers}
-              teams={teams}
-              currencyOptions={currencyOptions}
-              onOpenDetails={() => setDetailsOpen(true)}
-            />
+            {activeTab === "overview" ? (
+              <CampaignOverviewTab
+                workspace={workspace}
+                accountManagers={accountManagers}
+                teams={teams}
+                currencyOptions={currencyOptions}
+                onOpenDetails={() => setDetailsOpen(true)}
+              />
+            ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="lines" className={tabPanelClass}>
@@ -360,58 +362,70 @@ export function CampaignWorkspaceView({
         </TabsContent>
         <TabsContent value="deliverables" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-          <TabErrorBoundary tabName="Deliverables">
-            <CampaignDeliverablesTab
-              workspace={workspace}
-              assignmentHierarchy={assignmentHierarchy}
-              publications={publications}
-            />
-          </TabErrorBoundary>
+            {activeTab === "deliverables" ? (
+              <TabErrorBoundary tabName="Deliverables">
+                <CampaignDeliverablesTab
+                  workspace={workspace}
+                  assignmentHierarchy={assignmentHierarchy}
+                  publications={publications}
+                />
+              </TabErrorBoundary>
+            ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="vendor-io" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-          <TabErrorBoundary tabName="Vendor IO">
-            <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
-          </TabErrorBoundary>
+            {activeTab === "vendor-io" ? (
+              <TabErrorBoundary tabName="Vendor IO">
+                <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
+              </TabErrorBoundary>
+            ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="publications" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-          <TabErrorBoundary tabName="Publications">
-            <CampaignPublicationsTab
-              workspace={workspace}
-              publications={publications}
-              loadError={publicationsLoadError}
-            />
-          </TabErrorBoundary>
+            {activeTab === "publications" ? (
+              <TabErrorBoundary tabName="Publications">
+                <CampaignPublicationsTab
+                  workspace={workspace}
+                  publications={publications}
+                  loadError={publicationsLoadError}
+                />
+              </TabErrorBoundary>
+            ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="workflow" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
-          <TabErrorBoundary tabName="Workflow">
-            <CampaignWorkflowTab workspace={workspace} />
-          </TabErrorBoundary>
+            {activeTab === "workflow" ? (
+              <TabErrorBoundary tabName="Workflow">
+                <CampaignWorkflowTab workspace={workspace} />
+              </TabErrorBoundary>
+            ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="billing" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-          <TabErrorBoundary tabName="Billing">
-            <CampaignBillingTab
-              workspace={workspace}
-              billingLines={billingLines}
-              billingGroups={billingGroups}
-              operationalBilling={operationalBilling}
-              campaignInvoiceRegister={campaignInvoiceRegister}
-            />
-          </TabErrorBoundary>
+            {activeTab === "billing" ? (
+              <TabErrorBoundary tabName="Billing">
+                <CampaignBillingTab
+                  workspace={workspace}
+                  billingLines={billingLines}
+                  billingGroups={billingGroups}
+                  operationalBilling={operationalBilling}
+                  campaignInvoiceRegister={campaignInvoiceRegister}
+                />
+              </TabErrorBoundary>
+            ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="timeline" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
-          <TabErrorBoundary tabName="Timeline">
-            <CampaignTimelineTab workspace={workspace} financeAudit={financeAudit} />
-          </TabErrorBoundary>
+            {activeTab === "timeline" ? (
+              <TabErrorBoundary tabName="Timeline">
+                <CampaignTimelineTab workspace={workspace} financeAudit={financeAudit} />
+              </TabErrorBoundary>
+            ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         </CampaignWorkspaceScrollShell>

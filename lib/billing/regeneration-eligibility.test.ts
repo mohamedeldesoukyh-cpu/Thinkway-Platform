@@ -4,6 +4,7 @@
 import {
   enrichRegenerationEligibilityInput,
   hasLineEverBeenInvoiced,
+  isAssignmentInvoiceSelectable,
   partitionInvoiceLineIdsByAction,
   resolveInvoiceActionForSelection,
   resolveInvoiceActionLabel,
@@ -40,9 +41,28 @@ function testInvoicedLineShowsRegenerate() {
       invoiced_amount: 10000,
       billable_amount: 10000,
       remaining_amount: 0,
+      regeneration_status: "pending_regeneration",
+      invoice_status: "draft",
     }),
   });
-  assert(label === "regenerate", "invoiced line should offer regenerate when reopenable");
+  assert(label === "regenerate", "pending regeneration invoiced line should offer regenerate");
+}
+
+function testFullyInvoicedLockedLineNotSelectable() {
+  assert(
+    !isAssignmentInvoiceSelectable({
+      billing_status: "invoiced",
+      operational_status: "locked",
+      vendor_io_id: "vio-1",
+      active_vendor_io_id: "vio-1",
+      vendor_io_document_number: "VIO-1",
+      invoice_id: "inv-1",
+      billable_amount: 3500,
+      invoiced_amount: 3500,
+      remaining_amount: 0,
+    }),
+    "fully invoiced locked line should not be invoice-selectable"
+  );
 }
 
 function testPendingRegenDoesNotBleedOntoFreshLine() {
@@ -161,6 +181,7 @@ function testHasLineEverBeenInvoiced() {
 
 testFreshLineShowsGenerate();
 testInvoicedLineShowsRegenerate();
+testFullyInvoicedLockedLineNotSelectable();
 testPendingRegenDoesNotBleedOntoFreshLine();
 testMixedSelectionUsesGenerate();
 testAllUngeneratedLinesUseRegenerate();

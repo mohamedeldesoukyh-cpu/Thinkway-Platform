@@ -33,11 +33,16 @@ function countPosts(hierarchy: AssignmentHierarchy): RowDebugShape[] {
   return rows;
 }
 
-/** Dev/prod-safe logging for post–Vendor IO regeneration bisects. */
+function isAssignmentDebugEnabled(): boolean {
+  return process.env.NODE_ENV === "development";
+}
+
+/** Dev logging for post–Vendor IO regeneration bisects. */
 export function logAssignmentHierarchyRows(
   hierarchy: AssignmentHierarchy,
   context: { campaignId?: string; layer?: string } = {}
 ): void {
+  if (!isAssignmentDebugEnabled()) return;
   const rows = countPosts(hierarchy);
   console.log("[Assignments] ROWS", {
     campaignId: context.campaignId,
@@ -59,6 +64,7 @@ export function logPreparedAssignmentRows(
   prepared: AssignmentRowViewModel[],
   context: { campaignId?: string; layer?: string } = {}
 ): void {
+  if (!isAssignmentDebugEnabled()) return;
   console.log("[Assignments] PREPARED ROWS", {
     campaignId: context.campaignId,
     layer: context.layer,
@@ -142,6 +148,7 @@ export function logRevisionHierarchyKeys(
   hierarchy: AssignmentHierarchy,
   context: { campaignId?: string } = {}
 ): void {
+  if (!isAssignmentDebugEnabled()) return;
   for (const group of hierarchy.groups ?? []) {
     const line = group?.line;
     if (!line?.id) continue;

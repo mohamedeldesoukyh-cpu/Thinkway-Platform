@@ -11,11 +11,7 @@ import {
   getBrandsForCampaignForm,
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
-import {
-  ensureVendorIoFromAssignment,
-  getCampaignClientIo,
-  getCampaignVendorIos,
-} from "@/features/io/queries";
+import { getCampaignClientIo, getCampaignVendorIos } from "@/features/io/queries";
 import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
 import type { CampaignListItem } from "@/types/database";
@@ -308,7 +304,6 @@ export async function getCampaignWorkspace(
     invoicesResult,
     approvalsResult,
     auditResult,
-    profilesResult,
     clientIo,
     vendorIos,
   ] = await Promise.all([
@@ -370,7 +365,6 @@ export async function getCampaignWorkspace(
       )
       .order("created_at", { ascending: false })
       .limit(50),
-    supabase.from("profiles").select("id, full_name, email"),
     getCampaignClientIo(campaignId),
     getCampaignVendorIos(campaignId),
   ]);
@@ -473,14 +467,6 @@ export async function getCampaignWorkspace(
       confirmed_at: v.confirmed_at,
     };
   });
-
-  await Promise.all(
-    vendors
-      .filter((vendor) => vendor.status === "confirmed")
-      .map((vendor) =>
-        ensureVendorIoFromAssignment(vendor.id).catch(() => null)
-      )
-  );
 
   const influencersByLine = new Map<string, number>();
   const vendorFeesByLine = new Map<string, number>();
@@ -724,33 +710,6 @@ export async function getCampaignWorkspace(
     return false;
   });
 
-  const approvals = filteredApprovals.map((row) => {
-    const a = row as unknown as {
-      id: string;
-      document_number: string;
-      entity_type: string;
-      title: string;
-      status: string;
-      due_at: string | null;
-      decided_at: string | null;
-      assignee: { full_name: string | null; email: string } | null;
-    };
-    return {
-      id: a.id,
-      document_number: a.document_number,
-      entity_type: a.entity_type,
-      title: a.title,
-      status: a.status,
-      assigned_to_name: a.assignee?.full_name ?? a.assignee?.email ?? null,
-      due_at: a.due_at,
-      decided_at: a.decided_at,
-    };
-  });
-
-  const profileMap = new Map(
-    (profilesResult.data ?? []).map((p) => [p.id, p])
-  );
-
   const filteredAudit = (auditResult.data ?? []).filter((log) => {
     const row = log as unknown as { entity_type: string; entity_id: string | null };
     if (row.entity_type === "campaign_headers" && row.entity_id === campaignId) {
@@ -774,6 +733,46 @@ export async function getCampaignWorkspace(
       return true;
     }
     return false;
+  });
+
+  const actorIds = [
+    ...new Set(
+      filteredAudit
+        .map((log) => (log as { actor_id?: string | null }).actor_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  let profileMap = new Map<string, { id: string; full_name: string | null; email: string }>();
+  if (actorIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", actorIds);
+    profileMap = new Map((profileRows ?? []).map((p) => [p.id, p]));
+  }
+
+  const approvals = filteredApprovals.map((row) => {
+    const a = row as unknown as {
+      id: string;
+      document_number: string;
+      entity_type: string;
+      title: string;
+      status: string;
+      due_at: string | null;
+      decided_at: string | null;
+      assignee: { full_name: string | null; email: string } | null;
+    };
+    return {
+      id: a.id,
+      document_number: a.document_number,
+      entity_type: a.entity_type,
+      title: a.title,
+      status: a.status,
+      assigned_to_name: a.assignee?.full_name ?? a.assignee?.email ?? null,
+      due_at: a.due_at,
+      decided_at: a.decided_at,
+    };
   });
 
   const blockers: string[] = [];

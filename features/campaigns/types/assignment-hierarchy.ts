@@ -63,6 +63,8 @@ export type AssignmentDeliverableHierarchyRow = {
   invoice_eligible: boolean;
   is_synthetic: boolean;
   is_locked: boolean;
+  locked_at: string | null;
+  live_ad_date_locked: boolean;
 };
 
 export type AssignmentHierarchyRollups = {

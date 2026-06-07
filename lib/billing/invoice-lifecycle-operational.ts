@@ -4,6 +4,7 @@ import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignmen
 import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
+import { shouldApplyLiveAdDateLockOnInvoice } from "@/lib/campaigns/live-ad-date";
 import { devLog } from "@/lib/dev-log";
 
 export type InvoiceOperationalUnlockMode = "regeneration" | "void" | "unpost";
@@ -284,6 +285,35 @@ export async function relockInvoiceOperationalScope(
       )
       .in("id", scope.lineItemIds);
 
+    const postIds = (lineItems ?? [])
+      .map((item) => (item as { assignment_post_schedule_id: string | null }).assignment_post_schedule_id)
+      .filter(Boolean) as string[];
+    const deliverableIds = (lineItems ?? [])
+      .map((item) => (item as { assignment_deliverable_id: string | null }).assignment_deliverable_id)
+      .filter(Boolean) as string[];
+
+    const liveDateByPostId = new Map<string, string | null>();
+    if (postIds.length > 0) {
+      const { data: postRows } = await supabase
+        .from("assignment_post_schedule")
+        .select("id, live_date")
+        .in("id", postIds);
+      for (const post of postRows ?? []) {
+        liveDateByPostId.set(post.id, post.live_date ?? null);
+      }
+    }
+
+    const liveDateByDeliverableId = new Map<string, string | null>();
+    if (deliverableIds.length > 0) {
+      const { data: deliverableRows } = await supabase
+        .from("assignment_deliverables")
+        .select("id, live_date")
+        .in("id", deliverableIds);
+      for (const deliverable of deliverableRows ?? []) {
+        liveDateByDeliverableId.set(deliverable.id, deliverable.live_date ?? null);
+      }
+    }
+
     for (const item of lineItems ?? []) {
       const row = item as {
         id: string;
@@ -295,30 +325,39 @@ export async function relockInvoiceOperationalScope(
       const amount = Number(row.revenue_before_vat ?? row.unit_price ?? 0);
 
       if (row.assignment_post_schedule_id) {
+        const postLiveDate = liveDateByPostId.get(row.assignment_post_schedule_id) ?? null;
+        const postPatch: Record<string, unknown> = {
+          invoice_line_item_id: row.id,
+          invoiced_at: now,
+          invoiced_amount: amount,
+          remaining_amount: 0,
+          billing_status: "invoiced",
+        };
+        if (shouldApplyLiveAdDateLockOnInvoice(postLiveDate)) {
+          postPatch.locked_at = now;
+        }
         await supabase
           .from("assignment_post_schedule")
-          .update({
-            invoice_line_item_id: row.id,
-            locked_at: now,
-            invoiced_at: now,
-            invoiced_amount: amount,
-            remaining_amount: 0,
-            billing_status: "invoiced",
-          })
+          .update(postPatch)
           .eq("id", row.assignment_post_schedule_id);
       }
 
       if (row.assignment_deliverable_id) {
+        const deliverableLiveDate =
+          liveDateByDeliverableId.get(row.assignment_deliverable_id) ?? null;
+        const deliverablePatch: Record<string, unknown> = {
+          invoice_line_item_id: row.id,
+          invoiced_at: now,
+          invoiced_amount: amount,
+          remaining_amount: 0,
+          billing_status: "invoiced",
+        };
+        if (shouldApplyLiveAdDateLockOnInvoice(deliverableLiveDate)) {
+          deliverablePatch.locked_at = now;
+        }
         await supabase
           .from("assignment_deliverables")
-          .update({
-            invoice_line_item_id: row.id,
-            locked_at: now,
-            invoiced_at: now,
-            invoiced_amount: amount,
-            remaining_amount: 0,
-            billing_status: "invoiced",
-          })
+          .update(deliverablePatch)
           .eq("id", row.assignment_deliverable_id);
       }
     }
