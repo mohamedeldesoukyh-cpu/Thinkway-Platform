@@ -386,6 +386,7 @@ export function AssignmentHierarchyTable({
                         onToggleDeliverable={() => {}}
                         showSelection={false}
                         parentColSpan={PARENT_COLUMN_COUNT}
+                        showExpandColumn={enableExpansion}
                       />
                     ) : null}
                   </Fragment>

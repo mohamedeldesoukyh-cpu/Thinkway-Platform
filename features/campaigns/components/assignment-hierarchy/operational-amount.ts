@@ -10,6 +10,16 @@ export function formatOperationalAmount(amount: number): string {
   });
 }
 
+/** Per-unit amounts (REV/AD, COST/AD) — omit trailing .00 when whole. */
+export function formatOperationalUnitAmount(amount: number): string {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return "0";
+  return value.toLocaleString(OPERATIONAL_AMOUNT_LOCALE, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function roundOperationalAmount(value: number): number {
   return Math.round(value * 100) / 100;
 }

@@ -361,7 +361,7 @@ export function AssignmentSafeGrid({
         />
       ) : null}
       <div className={cn(SAFE_GRID_SHELL, "overflow-x-auto")}>
-        <table className={SAFE_GRID_TABLE}>
+        <table className={SAFE_GRID_TABLE} data-assignment-parent-grid>
           <thead className={SAFE_GRID_HEAD}>
             <tr>
               {gates.enableExpansion ? (
@@ -469,7 +469,7 @@ export function AssignmentSafeGrid({
                           ) : null}
                         </td>
                         <td className={SAFE_GRID_TD}>
-                          <div className="flex flex-wrap items-center gap-1.5">
+                          <div className="flex flex-wrap items-center justify-center gap-1.5 text-center">
                             <span className="font-medium text-foreground">{row.displayName}</span>
                             {campaignPoExceeded || line.po_over_consumed ? (
                               <Badge
@@ -486,7 +486,7 @@ export function AssignmentSafeGrid({
                         </td>
                         <td className={SAFE_GRID_TD}>
                           {line.influencer_name ? (
-                            <div className="flex items-center gap-1 text-muted-foreground">
+                            <div className="flex items-center justify-center gap-1 text-muted-foreground">
                               <UserIcon className="size-3 shrink-0" />
                               <span>{line.influencer_name}</span>
                             </div>
@@ -495,11 +495,11 @@ export function AssignmentSafeGrid({
                           )}
                         </td>
                         <td className={SAFE_GRID_TD}>{row.platformSummary}</td>
-                        <td className={cn(SAFE_GRID_TD, "text-right", SAFE_GRID_AMOUNT)}>
+                        <td className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>
                           {row.rollups.deliverable_count}
                         </td>
                         <td
-                          className={cn(SAFE_GRID_TD, "text-muted-foreground")}
+                          className={cn(SAFE_GRID_TD, "text-center text-muted-foreground")}
                           suppressHydrationWarning
                         >
                           {row.postingSummary}
@@ -559,12 +559,12 @@ export function AssignmentSafeGrid({
                             "—"
                           )}
                         </td>
-                        <td className={cn(SAFE_GRID_TD, "text-right")}>
+                        <td className={cn(SAFE_GRID_TD, "text-center")}>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="size-7"
+                            className="mx-auto size-7"
                             onClick={() => onEditLine(line)}
                           >
                             <PencilIcon className="size-3.5" />
@@ -586,6 +586,7 @@ export function AssignmentSafeGrid({
                         showSelection={
                           (line.assignment?.pricing_mode ?? "package") === "per_deliverable"
                         }
+                        showExpandColumn={gates.enableExpansion}
                       />
                     ) : null}
               </Fragment>

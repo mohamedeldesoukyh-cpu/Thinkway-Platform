@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import {
   formatOperationalAmount,
+  formatOperationalUnitAmount,
   parseOperationalAmountInput,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { OPERATIONAL_AMOUNT_CLASS } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
@@ -11,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 const INPUT_CLASS = cn(
   OPERATIONAL_AMOUNT_CLASS,
-  "h-auto min-h-0 w-full min-w-0 border-0 bg-transparent py-0 text-right shadow-none outline-none focus-visible:ring-1 focus-visible:ring-ring/40"
+  "h-auto min-h-0 w-full min-w-0 border-0 bg-transparent py-0 text-center shadow-none outline-none focus-visible:ring-1 focus-visible:ring-ring/40"
 );
 
 type OperationalAmountFieldProps = {
@@ -20,6 +21,8 @@ type OperationalAmountFieldProps = {
   onBlur?: () => void;
   disabled?: boolean;
   className?: string;
+  /** REV/AD & COST/AD — hide .00 on whole numbers */
+  perUnit?: boolean;
 };
 
 export function OperationalAmountField({
@@ -28,31 +31,36 @@ export function OperationalAmountField({
   onBlur,
   disabled = false,
   className,
+  perUnit = false,
 }: OperationalAmountFieldProps) {
   const inputId = useId();
   const [focused, setFocused] = useState(false);
-  const [text, setText] = useState(() => formatOperationalAmount(value));
+  const format = useMemo(
+    () => (perUnit ? formatOperationalUnitAmount : formatOperationalAmount),
+    [perUnit]
+  );
+  const [text, setText] = useState(() => format(value));
 
   useEffect(() => {
-    if (!focused) setText(formatOperationalAmount(value));
-  }, [value, focused]);
+    if (!focused) setText(format(value));
+  }, [value, focused, format]);
 
   const commitBlur = useCallback(() => {
     setFocused(false);
     const parsed = parseOperationalAmountInput(text);
     if (parsed !== null) {
       onChange(parsed);
-      setText(formatOperationalAmount(parsed));
+      setText(format(parsed));
     } else {
-      setText(formatOperationalAmount(value));
+      setText(format(value));
     }
     onBlur?.();
-  }, [onBlur, onChange, text, value]);
+  }, [format, onBlur, onChange, text, value]);
 
   if (disabled) {
     return (
       <span className={cn(OPERATIONAL_AMOUNT_CLASS, className)}>
-        {formatOperationalAmount(value)}
+        {format(value)}
       </span>
     );
   }
@@ -63,15 +71,15 @@ export function OperationalAmountField({
         type="button"
         className={cn(
           OPERATIONAL_AMOUNT_CLASS,
-          "w-full rounded-sm text-right hover:bg-muted/30",
+          "w-full rounded-sm text-center hover:bg-muted/30",
           className
         )}
         onClick={() => {
-          setText(formatOperationalAmount(value));
+          setText(format(value));
           setFocused(true);
         }}
       >
-        {formatOperationalAmount(value)}
+        {format(value)}
       </button>
     );
   }
@@ -137,7 +145,7 @@ export function OperationalQtyField({
         type="button"
         className={cn(
           OPERATIONAL_AMOUNT_CLASS,
-          "w-full rounded-sm text-right hover:bg-muted/30",
+          "w-full rounded-sm text-center hover:bg-muted/30",
           className
         )}
         onClick={() => {

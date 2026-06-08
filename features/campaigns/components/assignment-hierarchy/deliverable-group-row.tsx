@@ -17,6 +17,8 @@ type DeliverableGroupRowProps = {
   revenueVatExempt: boolean;
   defaultRevenueVatPercent: number;
   platformOptions: { value: string; label: string }[];
+  showExpandColumn?: boolean;
+  isLastDeliverable?: boolean;
 };
 
 /** Renders operational post rows only — no intermediate deliverable totals row. */
@@ -32,6 +34,8 @@ export function DeliverableGroupRow({
   revenueVatExempt,
   defaultRevenueVatPercent,
   platformOptions,
+  showExpandColumn = false,
+  isLastDeliverable = false,
 }: DeliverableGroupRowProps) {
   const readOnly = deliverable.is_synthetic || deliverable.is_locked;
   const posts = Array.isArray(deliverable.posts) ? deliverable.posts : [];
@@ -63,6 +67,8 @@ export function DeliverableGroupRow({
           selected={selected}
           onToggleSelect={onToggleSelect}
           isFirstPost={index === 0}
+          isLastChildRow={isLastDeliverable && index === posts.length - 1}
+          showExpandColumn={showExpandColumn}
         />
       ))}
     </>

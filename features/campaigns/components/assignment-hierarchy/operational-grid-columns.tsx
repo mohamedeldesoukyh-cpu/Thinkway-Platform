@@ -3,8 +3,14 @@ import { cn } from "@/lib/utils";
 import {
   ASSIGNMENT_GRID_MONEY_COL,
   ASSIGNMENT_GRID_VAT_COL,
+  CHILD_GRID_LEADING_CELL,
+  CHILD_GRID_LIVE_DATE_COL,
+  CHILD_GRID_MONTH_COL,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
-import { OPERATIONAL_CHILD_AMOUNT_CLASS } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import {
+  OPERATIONAL_AMOUNT_CLASS,
+  OPERATIONAL_CHILD_AMOUNT_CLASS,
+} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 
 export const OPERATIONAL_GRID_LABELS = {
   select: "",
@@ -12,6 +18,7 @@ export const OPERATIONAL_GRID_LABELS = {
   platform: "PLAT",
   postDate: "Live ad Date",
   liveAdMonth: "Month",
+  ccy: "CCY",
   qty: "QTY",
   revPerAd: "REV/AD",
   costPerAd: "COST/AD",
@@ -26,34 +33,39 @@ export const OPERATIONAL_GRID_LABELS = {
   actions: "",
 } as const;
 
-const amountCell = `${OPERATIONAL_CHILD_AMOUNT_CLASS} text-right tabular-nums`;
+const amountCell = `${OPERATIONAL_CHILD_AMOUNT_CLASS} text-center tabular-nums`;
 
 export const GRID_CELL = {
-  select: "w-7 px-1 py-0.5",
-  type: "w-[140px] max-w-[140px] px-1 py-0.5",
-  platform: "w-[70px] max-w-[70px] px-1 py-0.5 text-center",
-  postDate: "w-[100px] px-1 py-0.5",
-  liveAdMonth: "w-[56px] px-1 py-0.5 text-center",
-  qty: `w-[40px] px-1 py-0.5 ${amountCell}`,
-  revPerAd: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1 py-0.5"),
-  costPerAd: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1 py-0.5"),
-  money: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1 py-0.5"),
-  vat: cn(ASSIGNMENT_GRID_VAT_COL, "px-1 py-0.5"),
-  status: "w-[72px] px-1 py-0.5",
-  invoice: "w-[64px] px-1 py-0.5",
-  collection: "w-[40px] px-1 py-0.5 text-[9px]",
-  payout: "w-[52px] px-1 py-0.5",
-  workflow: "w-[56px] px-1 py-0.5",
-  actions: "w-[56px] px-1 py-0.5 text-right",
+  expand: CHILD_GRID_LEADING_CELL,
+  select: CHILD_GRID_LEADING_CELL,
+  type: cn(CHILD_GRID_LEADING_CELL, "font-normal text-foreground/90"),
+  platform: CHILD_GRID_LEADING_CELL,
+  qty: cn(CHILD_GRID_LEADING_CELL, amountCell),
+  revPerAd: cn(CHILD_GRID_LEADING_CELL, amountCell),
+  costPerAd: cn(CHILD_GRID_LEADING_CELL, amountCell),
+  month: cn(CHILD_GRID_MONTH_COL, "px-1.5 py-1.5 text-center align-middle"),
+  ccy: cn(CHILD_GRID_LEADING_CELL, "text-[10px] font-medium text-foreground/80"),
+  postDate: cn(CHILD_GRID_LIVE_DATE_COL, "px-1.5 py-1.5 text-center align-middle"),
+  leadingRev: cn(CHILD_GRID_LEADING_CELL, amountCell),
+  money: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1.5 py-1.5 align-middle"),
+  vat: cn(ASSIGNMENT_GRID_VAT_COL, "px-1.5 py-1.5 align-middle"),
+  status: "w-[72px] px-1.5 py-1.5 text-center align-middle",
+  invoice: "w-[64px] px-1.5 py-1.5 text-center align-middle",
+  collection: "w-[40px] px-1.5 py-1.5 text-center align-middle text-[9px]",
+  payout: "w-[52px] px-1.5 py-1.5 text-center align-middle",
+  workflow: "w-[56px] px-1.5 py-1.5 text-center align-middle",
+  actions: "w-[56px] px-1.5 py-1.5 text-center align-middle",
 } as const;
 
-/** Child financial emphasis — matches parent Rev/Cost styling. */
+/** Child Rev/Cost — lighter tint than parent row highlights. */
 export const GRID_HIGHLIGHT_REV = cn(
   GRID_CELL.money,
-  "bg-primary/8 font-semibold text-foreground"
+  OPERATIONAL_AMOUNT_CLASS,
+  "bg-primary/4 font-semibold text-foreground dark:bg-primary/6"
 );
 
 export const GRID_HIGHLIGHT_COST = cn(
   GRID_CELL.money,
-  "bg-amber-500/10 font-semibold text-foreground dark:bg-amber-500/15"
+  OPERATIONAL_AMOUNT_CLASS,
+  "bg-amber-500/5 font-semibold text-foreground dark:bg-amber-500/8"
 );

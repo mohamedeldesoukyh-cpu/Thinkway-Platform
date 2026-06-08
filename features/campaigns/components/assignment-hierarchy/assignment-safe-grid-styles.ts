@@ -23,11 +23,11 @@ export const SAFE_GRID_HEAD = cn(
 
 export const SAFE_GRID_TH = cn(
   OPERATIONAL_TABLE_HEADER_CELL,
-  "border-b border-border/50 px-2 py-2.5 align-middle"
+  "border-b border-border/50 px-2 py-2.5 align-middle text-center"
 );
 
 export const SAFE_GRID_TD = cn(
-  "border-b border-border/40 px-1.5 py-1.5 align-middle text-[11px]"
+  "border-b border-border/40 px-1.5 py-1.5 align-middle text-center text-[11px]"
 );
 
 export const SAFE_GRID_CONTROL_CELL = cn(SAFE_GRID_TD, "w-9 px-2 text-center");
@@ -45,9 +45,10 @@ export const SAFE_GRID_PARENT_ROW_EXPANDED = cn(
 export const SAFE_GRID_CHILD_GROUP_ROW = "border-b border-border/50 bg-muted/20";
 
 /** Child expansion cell — left border aligns with parent row accent (no extra inset). */
-export const SAFE_GRID_CHILD_GROUP_CELL = cn(
-  "border-b border-border/50 bg-muted/20 p-0"
-);
+export const SAFE_GRID_CHILD_GROUP_CELL = cn("bg-muted/20 p-0");
+
+/** Full-width rule between child block and the next parent row. */
+export const SAFE_GRID_CHILD_GROUP_BOTTOM_RULE = "border-b-2 border-black";
 
 export const SAFE_GRID_AMOUNT = OPERATIONAL_AMOUNT_CLASS;
 

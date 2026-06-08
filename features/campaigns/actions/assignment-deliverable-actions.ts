@@ -299,10 +299,6 @@ export async function updateAssignmentDeliverableAction(
     const supabase = await requireAuth();
     const line = await loadLineContext(supabase, parsed.data.campaign_line_id);
 
-    if (line.vendor_assignment_locked) {
-      return { ok: false, message: "Assignment is locked and cannot be edited." };
-    }
-
     const { data: existing, error: fetchError } = await supabase
       .from("assignment_deliverables")
       .select(
@@ -314,10 +310,6 @@ export async function updateAssignmentDeliverableAction(
 
     if (fetchError || !existing) {
       return { ok: false, message: fetchError?.message ?? "Deliverable not found." };
-    }
-
-    if (existing.locked_at) {
-      return { ok: false, message: "Deliverable is invoiced and locked." };
     }
 
     const invoicedOpenForLiveDate =
@@ -340,6 +332,11 @@ export async function updateAssignmentDeliverableAction(
         return { ok: false, message: dateError.message };
       }
 
+      await supabase
+        .from("assignment_post_schedule")
+        .update({ live_date: nextLiveDate })
+        .eq("assignment_deliverable_id", parsed.data.deliverable_id);
+
       if (nextLiveDate) {
         const lockResult = await applyLiveAdDateLockAfterDateInsert(
           supabase,
@@ -353,6 +350,14 @@ export async function updateAssignmentDeliverableAction(
 
       revalidateCampaign(parsed.data.campaign_id);
       return { ok: true, message: "Live ad date saved." };
+    }
+
+    if (line.vendor_assignment_locked) {
+      return { ok: false, message: "Assignment is locked and cannot be edited." };
+    }
+
+    if (existing.locked_at) {
+      return { ok: false, message: "Deliverable is invoiced and locked." };
     }
 
     const commercial = computeDeliverableCommercial({
@@ -571,6 +576,11 @@ export async function updatePostScheduleAction(
 
       revalidateCampaign(parsed.data.campaign_id);
       return { ok: true, message: "Live ad date saved." };
+    }
+
+    const line = await loadLineContext(supabase, post.campaign_line_id);
+    if (line.vendor_assignment_locked) {
+      return { ok: false, message: "Assignment is locked and cannot be edited." };
     }
 
     const lineVat = await loadLineVatForDeliverable(supabase, post.campaign_line_id);

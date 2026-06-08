@@ -5,6 +5,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import {
   ASSIGNMENT_SAFE_GRID_COL_SPAN,
+  SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
   SAFE_GRID_CHILD_GROUP_CELL,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
 import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/operational-status";
@@ -83,6 +84,7 @@ type AssignmentSafeDeliverableRowsProps = {
   selectedIds: Set<string>;
   onToggleDeliverable: (id: string) => void;
   showSelection: boolean;
+  showExpandColumn: boolean;
 };
 
 export function AssignmentSafeDeliverableRows({
@@ -94,6 +96,7 @@ export function AssignmentSafeDeliverableRows({
   selectedIds,
   onToggleDeliverable,
   showSelection,
+  showExpandColumn,
 }: AssignmentSafeDeliverableRowsProps) {
   const currency = resolveAssignmentLineCurrency(line) || currencyProp;
   const parentRowClass = LINE_OPERATIONAL_ROW_CLASS[
@@ -113,7 +116,12 @@ export function AssignmentSafeDeliverableRows({
       <tr className="bg-muted/20">
         <td
           colSpan={parentColSpan}
-          className={cn(SAFE_GRID_CHILD_GROUP_CELL, childBorderClass, "px-4 py-2 text-xs text-muted-foreground")}
+          className={cn(
+            SAFE_GRID_CHILD_GROUP_CELL,
+            SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
+            childBorderClass,
+            "px-4 py-2 text-xs text-muted-foreground"
+          )}
         >
           No deliverable breakdown for this assignment.
         </td>
@@ -133,6 +141,7 @@ export function AssignmentSafeDeliverableRows({
         showSelection={showSelection}
         parentColSpan={parentColSpan}
         nestedGroupClassName={cn(SAFE_GRID_CHILD_GROUP_CELL, childBorderClass)}
+        showExpandColumn={showExpandColumn}
       />
     </SafeDeliverableBoundary>
   );

@@ -39,6 +39,7 @@ import {
   OPERATIONAL_AMOUNT_CLASS,
   OPERATIONAL_TABLE_HEADER_CELL,
   OPERATIONAL_TABLE_HEADER_ROW,
+  OPERATIONAL_TABLE_HEADER_SURFACE,
   OPERATIONAL_TABLE_SURFACE,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import {
@@ -51,6 +52,9 @@ import {
   platformShortLabel,
   SCHEDULE_STATUS_OPTIONS,
 } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import {
+  ASSIGNMENT_GRID_MONEY_COL,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
 import {
   GRID_CELL,
   GRID_HIGHLIGHT_COST,
@@ -87,7 +91,12 @@ type EditablePostRowProps = {
   selected: boolean;
   onToggleSelect: () => void;
   isFirstPost: boolean;
+  isLastChildRow?: boolean;
+  showExpandColumn?: boolean;
 };
+
+const CHILD_ROW_COL_COUNT_WITH_EXPAND = 19;
+const CHILD_ROW_COL_COUNT = 18;
 
 type MetaDraft = {
   platform: string;
@@ -127,7 +136,7 @@ export function EditablePostRow({
   campaignLineId,
   deliverable,
   post,
-  currency: _currency,
+  currency,
   parentOperationalStatus,
   readOnly,
   revenueVatExempt,
@@ -138,7 +147,10 @@ export function EditablePostRow({
   selected,
   onToggleSelect,
   isFirstPost,
+  isLastChildRow = false,
+  showExpandColumn = false,
 }: EditablePostRowProps) {
+  const rowColSpan = showExpandColumn ? CHILD_ROW_COL_COUNT_WITH_EXPAND : CHILD_ROW_COL_COUNT;
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -415,48 +427,17 @@ export function EditablePostRow({
     <>
       <tr
         className={cn(
-          "border-b border-border/15 text-[11px] font-normal text-foreground/80",
+          "text-[11px] font-normal text-foreground/80",
+          !isLastChildRow && "border-b border-border/15",
           OPERATIONAL_TABLE_SURFACE,
           "hover:bg-muted/15",
           editing && OPERATIONAL_TABLE_SURFACE
         )}
       >
-        <td className={GRID_CELL.select}>
-          {showSelection && deliverable.invoice_eligible && !deliverable.is_synthetic ? (
-            <input
-              type="checkbox"
-              className="size-3 rounded border-border"
-              checked={selected}
-              onChange={onToggleSelect}
-            />
-          ) : showSelection &&
-            !deliverable.is_synthetic &&
-            (deliverable.invoiced_amount > 0 ||
-              deliverable.invoice_document_number ||
-              deliverable.is_locked) ? (
-            <div className="flex flex-col items-start gap-0.5">
-              <input
-                type="checkbox"
-                className="size-3 rounded border-border opacity-40"
-                checked
-                disabled
-                aria-label="Already invoiced"
-              />
-              {deliverable.invoice_document_number ? (
-                <span className="max-w-[5rem] truncate text-[9px] text-muted-foreground">
-                  {deliverable.invoice_document_number}
-                </span>
-              ) : null}
-            </div>
-          ) : (
-            <span className="text-muted-foreground/50">·</span>
-          )}
-        </td>
-        <td className={cn(GRID_CELL.type, "text-left font-normal text-foreground/90")}>
-          <div className="flex items-center gap-1.5 text-left">
-            <span className="w-4 shrink-0 text-left tabular-nums text-[10px] text-muted-foreground">
-              {post.sequence_number}
-            </span>
+        {showExpandColumn ? <td className={GRID_CELL.expand} aria-hidden /> : null}
+        <td className={GRID_CELL.select} aria-hidden />
+        <td className={GRID_CELL.type}>
+          <div className="flex items-center justify-center">
             {canEdit && editing ? (
               <DeliverableTypeSelect
                 platform={meta.platform}
@@ -499,22 +480,6 @@ export function EditablePostRow({
             </span>
           )}
         </td>
-        <td className={GRID_CELL.postDate}>
-          {canEditLiveDateField ? (
-            <Input
-              type="date"
-              value={meta.live_date}
-              onChange={(e) => setMeta((m) => ({ ...m, live_date: e.target.value }))}
-              onBlur={(e) => persistLiveDate(e.target.value)}
-              className="h-6 w-full text-[10px]"
-            />
-          ) : (
-            <span className="text-muted-foreground">{post.live_date ?? "—"}</span>
-          )}
-        </td>
-        <td className={cn(GRID_CELL.liveAdMonth, "text-[10px] text-muted-foreground")}>
-          {formatLiveAdMonth(meta.live_date || post.live_date)}
-        </td>
         <td className={GRID_CELL.qty}>
           <OperationalQtyField
             value={commercial.draft.qty}
@@ -523,23 +488,26 @@ export function EditablePostRow({
             disabled={!canEditCommercial || !deliverableScoped}
           />
         </td>
-        <td className={GRID_CELL.money}>
+        <td className={GRID_CELL.revPerAd}>
           <OperationalAmountField
             value={commercial.draft.revPerAd}
             onChange={(n) => commercial.setRevPerAd(n)}
             onBlur={persistCommercial}
             disabled={!canEditCommercial}
+            perUnit
           />
         </td>
-        <td className={GRID_CELL.money}>
+        <td className={GRID_CELL.costPerAd}>
           <OperationalAmountField
             value={commercial.draft.costPerAd}
             onChange={(n) => commercial.setCostPerAd(n)}
             onBlur={persistCommercial}
             disabled={!canEditCommercial}
+            perUnit
           />
         </td>
-        <td className={GRID_HIGHLIGHT_REV}>
+        <td className={GRID_CELL.ccy}>{currency}</td>
+        <td className={cn(GRID_HIGHLIGHT_REV, GRID_CELL.leadingRev)}>
           <OperationalAmountField
             value={commercial.draft.rev}
             onChange={(n) => commercial.setRev(n)}
@@ -547,7 +515,7 @@ export function EditablePostRow({
             disabled={!canEditCommercial}
           />
         </td>
-        <td className={GRID_HIGHLIGHT_COST}>
+        <td className={cn(GRID_HIGHLIGHT_COST, ASSIGNMENT_GRID_MONEY_COL)}>
           <OperationalAmountField
             value={commercial.draft.cost}
             onChange={(n) => commercial.setCost(n)}
@@ -570,7 +538,7 @@ export function EditablePostRow({
                 }))
               }
               className={cn(
-                "h-auto min-h-0 w-full border-0 bg-transparent py-0 text-right text-[11px] font-normal shadow-none focus-visible:ring-1"
+                "h-auto min-h-0 w-full border-0 bg-transparent py-0 text-center text-[11px] font-normal shadow-none focus-visible:ring-1"
               )}
             />
           ) : revenueVatExempt ? (
@@ -581,8 +549,42 @@ export function EditablePostRow({
             </span>
           )}
         </td>
-        <td className={GRID_CELL.status}>
-          <DeliverableBillingStatusBadge billingStatus={post.billing_status} />
+        <td className={GRID_CELL.postDate}>
+          {canEditLiveDateField ? (
+            <div className="flex items-center justify-center gap-0.5">
+              <Input
+                type="date"
+                value={meta.live_date}
+                onChange={(e) => setMeta((m) => ({ ...m, live_date: e.target.value }))}
+                onBlur={(e) => persistLiveDate(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    persistLiveDate(meta.live_date);
+                  }
+                }}
+                disabled={pending}
+                className="h-6 min-w-0 flex-1 text-[10px]"
+                aria-label="Live ad date"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6 shrink-0"
+                disabled={pending}
+                title="Save live ad date"
+                onClick={() => persistLiveDate(meta.live_date)}
+              >
+                <CheckIcon className="size-3" />
+              </Button>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">{post.live_date ?? "—"}</span>
+          )}
+        </td>
+        <td className={cn(GRID_CELL.month, "text-[10px] text-muted-foreground")}>
+          {formatLiveAdMonth(meta.live_date || post.live_date)}
         </td>
         <td className={GRID_CELL.invoice}>
           {post.invoice_document_number ? (
@@ -598,6 +600,9 @@ export function EditablePostRow({
           ) : (
             "—"
           )}
+        </td>
+        <td className={GRID_CELL.status}>
+          <DeliverableBillingStatusBadge billingStatus={post.billing_status} />
         </td>
         <td className={GRID_CELL.collection}>{collectionLabel}</td>
         <td className={GRID_CELL.payout}>
@@ -698,7 +703,7 @@ export function EditablePostRow({
       </tr>
       {error ? (
         <tr>
-          <td colSpan={18} className="px-4 pb-1 text-[10px] text-destructive">
+          <td colSpan={rowColSpan} className="px-4 pb-1 text-[10px] text-destructive">
             {error}
           </td>
         </tr>
@@ -709,47 +714,83 @@ export function EditablePostRow({
 
 type OperationalGridHeaderProps = {
   actions?: ReactNode;
+  showExpandColumn?: boolean;
 };
 
-export function OperationalGridHeader({ actions }: OperationalGridHeaderProps) {
+export function OperationalGridHeader({
+  actions,
+  showExpandColumn = false,
+}: OperationalGridHeaderProps) {
   return (
     <tr className={OPERATIONAL_TABLE_HEADER_ROW}>
-      <th className={cn(GRID_CELL.select, OPERATIONAL_TABLE_HEADER_CELL)} />
+      {showExpandColumn ? (
+        <th className={cn(GRID_CELL.expand, OPERATIONAL_TABLE_HEADER_CELL)} aria-hidden />
+      ) : null}
+      <th className={cn(GRID_CELL.select, OPERATIONAL_TABLE_HEADER_CELL)} aria-hidden />
       <th className={cn(GRID_CELL.type, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.type}
       </th>
       <th className={cn(GRID_CELL.platform, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.platform}
       </th>
-      <th className={cn(GRID_CELL.postDate, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.postDate}
-      </th>
-      <th className={cn(GRID_CELL.liveAdMonth, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.liveAdMonth}
-      </th>
       <th className={cn(GRID_CELL.qty, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.qty}
       </th>
-      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL)}>
+      <th
+        className={cn(
+          GRID_CELL.revPerAd,
+          OPERATIONAL_TABLE_HEADER_CELL,
+          "whitespace-nowrap px-1.5"
+        )}
+      >
         {OPERATIONAL_GRID_LABELS.revPerAd}
       </th>
-      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL)}>
+      <th
+        className={cn(
+          GRID_CELL.costPerAd,
+          OPERATIONAL_TABLE_HEADER_CELL,
+          "whitespace-nowrap px-1.5"
+        )}
+      >
         {OPERATIONAL_GRID_LABELS.costPerAd}
       </th>
-      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL)}>
+      <th className={cn(GRID_CELL.ccy, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.ccy}
+      </th>
+      <th
+        className={cn(
+          GRID_CELL.leadingRev,
+          OPERATIONAL_TABLE_HEADER_CELL,
+          OPERATIONAL_TABLE_HEADER_SURFACE,
+          "py-1.5"
+        )}
+      >
         {OPERATIONAL_GRID_LABELS.rev}
       </th>
-      <th className={cn(GRID_CELL.money, OPERATIONAL_TABLE_HEADER_CELL)}>
+      <th
+        className={cn(
+          ASSIGNMENT_GRID_MONEY_COL,
+          OPERATIONAL_TABLE_HEADER_CELL,
+          OPERATIONAL_TABLE_HEADER_SURFACE,
+          "px-1.5 py-1.5"
+        )}
+      >
         {OPERATIONAL_GRID_LABELS.cost}
       </th>
       <th className={cn(GRID_CELL.vat, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.vat}
       </th>
-      <th className={cn(GRID_CELL.status, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.billing}
+      <th className={cn(GRID_CELL.postDate, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.postDate}
+      </th>
+      <th className={cn(GRID_CELL.month, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.liveAdMonth}
       </th>
       <th className={cn(GRID_CELL.invoice, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.invoice}
+      </th>
+      <th className={cn(GRID_CELL.status, OPERATIONAL_TABLE_HEADER_CELL)}>
+        {OPERATIONAL_GRID_LABELS.billing}
       </th>
       <th className={cn(GRID_CELL.collection, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.collection}

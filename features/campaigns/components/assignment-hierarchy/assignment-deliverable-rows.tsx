@@ -2,15 +2,23 @@
 
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { memo, useEffect, useTransition } from "react";
+import { memo, useEffect, useMemo, useRef, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { createAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import {
+  SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
   SAFE_GRID_CHILD_GROUP_CELL,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
 import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-hierarchy/deliverable-group-row";
+import { AssignmentChildTableColGroup } from "@/features/campaigns/components/assignment-hierarchy/assignment-child-table-colgroup";
+import {
+  CHILD_GRID_FALLBACK_TABLE_WIDTH_PX,
+  CHILD_GRID_TRAILING_COL_WIDTHS,
+  sumChildGridColumnWidths,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
+import { useParentLeadingColumnWidths } from "@/features/campaigns/components/assignment-hierarchy/use-parent-leading-column-widths";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { getCreatorConnectedPlatformOptions, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
@@ -31,6 +39,7 @@ type AssignmentDeliverableRowsProps = {
   showSelection: boolean;
   parentColSpan: number;
   nestedGroupClassName?: string;
+  showExpandColumn?: boolean;
 };
 
 export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows({
@@ -43,6 +52,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   showSelection,
   parentColSpan,
   nestedGroupClassName,
+  showExpandColumn = false,
 }: AssignmentDeliverableRowsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -59,6 +69,17 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
     creatorPlatformAccounts: line.creator_platform_accounts,
     assignment: line.assignment,
   });
+  const childTableRef = useRef<HTMLTableElement>(null);
+  const leadingWidths = useParentLeadingColumnWidths(childTableRef, line.id);
+  const childTableWidthPx = useMemo(() => {
+    if (leadingWidths) {
+      return (
+        sumChildGridColumnWidths(leadingWidths) +
+        sumChildGridColumnWidths(CHILD_GRID_TRAILING_COL_WIDTHS)
+      );
+    }
+    return CHILD_GRID_FALLBACK_TABLE_WIDTH_PX;
+  }, [leadingWidths]);
 
   function addDeliverable() {
     const defaultPlatform = platformOptions[0]?.value ?? "instagram";
@@ -103,16 +124,24 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
     <tr className="border-0 hover:bg-transparent">
       <td
         colSpan={parentColSpan}
-        className={cn(SAFE_GRID_CHILD_GROUP_CELL, "p-0", nestedGroupClassName)}
+        className={cn(
+          SAFE_GRID_CHILD_GROUP_CELL,
+          SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
+          "p-0",
+          nestedGroupClassName
+        )}
       >
         <div className={cn(OPERATIONAL_TABLE_SURFACE)}>
-          <div className="overflow-x-auto pb-0.5">
+          <div className="max-w-full overflow-x-auto pb-0.5">
             <table
+              ref={childTableRef}
               className={cn(
-                "w-full min-w-[980px] border-collapse text-[11px] font-normal",
+                "table-fixed border-collapse text-[11px] font-normal",
                 OPERATIONAL_TABLE_SURFACE
               )}
+              style={{ width: childTableWidthPx }}
             >
+              <AssignmentChildTableColGroup leadingWidths={leadingWidths} />
               <thead
                 className={cn(
                   "sticky top-0 z-[4] border-b border-border/50",
@@ -120,6 +149,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                 )}
               >
                 <OperationalGridHeader
+                  showExpandColumn={showExpandColumn}
                   actions={
                     !locked ? (
                       <Button
@@ -139,7 +169,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                 />
               </thead>
               <tbody>
-                {deliverables.map((deliverable) => (
+                {deliverables.map((deliverable, deliverableIndex) => (
                   <DeliverableGroupRow
                     key={deliverable.id}
                     campaignId={campaignId}
@@ -153,6 +183,8 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                     revenueVatExempt={line.revenue_vat_exempt}
                     defaultRevenueVatPercent={line.revenue_vat_percent}
                     platformOptions={platformOptions}
+                    showExpandColumn={showExpandColumn}
+                    isLastDeliverable={deliverableIndex === deliverables.length - 1}
                   />
                 ))}
               </tbody>
