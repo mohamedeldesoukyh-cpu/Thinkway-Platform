@@ -66,3 +66,21 @@ export async function CreatorDeliverableRowPanel({
     </div>
   );
 }
+
+export async function CreatorDeliverablesPanels({
+  rows,
+}: {
+  rows: CreatorDeliverableRow[];
+}) {
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="grid gap-4">
+      {rows.map((row) => (
+        <CreatorDeliverableRowPanel key={row.id} deliverable={row} />
+      ))}
+    </div>
+  );
+}

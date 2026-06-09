@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
@@ -10,7 +12,6 @@ import { OperationalTableSuiteProvider } from "@/components/tables/operational-t
 import { PORTAL_CREATOR_DELIVERABLES_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { CreatorDeliverableRowPanel } from "@/features/portals/components/creator-deliverable-row";
 import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
 import { formatPortalDate } from "@/features/portals/components/portal-table-utils";
 import type { CreatorDeliverableRow } from "@/features/portals/types";
@@ -56,7 +57,13 @@ export const CREATOR_DELIVERABLES_COLUMN_METAS = getOperationalTableColumnMetas(
   CREATOR_DELIVERABLES_COLUMNS
 );
 
-export function CreatorDeliverablesTable({ rows }: { rows: CreatorDeliverableRow[] }) {
+export function CreatorDeliverablesTable({
+  rows,
+  panels,
+}: {
+  rows: CreatorDeliverableRow[];
+  panels?: ReactNode;
+}) {
   return (
     <OperationalTableSuiteProvider
       tableId={OPERATIONAL_TABLE_IDS.portalCreatorDeliverables}
@@ -79,11 +86,7 @@ export function CreatorDeliverablesTable({ rows }: { rows: CreatorDeliverableRow
                 rows={rows}
                 rowKey={(row) => row.id}
               />
-              <div className="grid gap-4">
-                {rows.map((row) => (
-                  <CreatorDeliverableRowPanel key={row.id} deliverable={row} />
-                ))}
-              </div>
+              {panels}
             </>
           )}
         </CardContent>

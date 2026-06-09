@@ -1,4 +1,5 @@
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
+import { CreatorDeliverablesPanels } from "@/features/portals/components/creator-deliverable-row";
 import { CreatorDeliverablesTable } from "@/features/portals/components/tables/creator-deliverables-table";
 import { getCreatorDeliverables } from "@/features/portals/queries";
 
@@ -7,7 +8,10 @@ export default async function CreatorPortalDeliverablesPage() {
 
   return (
     <PlatformErrorBoundary surface="generic">
-      <CreatorDeliverablesTable rows={rows} />
+      <CreatorDeliverablesTable
+        rows={rows}
+        panels={<CreatorDeliverablesPanels rows={rows} />}
+      />
     </PlatformErrorBoundary>
   );
 }
