@@ -1,11 +1,24 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
+import { useMemo } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import {
+  OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
+  OperationalWorkspaceChrome,
+  OperationalWorkspaceSortableTabsBar,
+  OperationalWorkspaceTabPanel,
+  type OperationalWorkspaceTabDef,
+} from "@/components/workspace/operational-workspace-ui";
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useWorkspaceTabOrder } from "@/hooks/use-workspace-tab-order";
+import {
+  CLIENT_PROFILE_TAB_ORDER,
+  CLIENT_PROFILE_TAB_STORAGE_KEY,
+  isClientProfileTabId,
+  type ClientProfileTabId,
+} from "@/lib/workspace/platform-workspace-tabs";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import type { ClientDetail } from "@/types/database";
@@ -32,60 +45,96 @@ export function ClientProfile({
   clientAccessPanel,
 }: ClientProfileProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
+  const { tabOrder, moveTab } = useWorkspaceTabOrder({
+    storageKey: CLIENT_PROFILE_TAB_STORAGE_KEY,
+    defaultOrder: CLIENT_PROFILE_TAB_ORDER,
+    isValidId: isClientProfileTabId,
+  });
+
+  const tabsById = useMemo(
+    (): Record<ClientProfileTabId, OperationalWorkspaceTabDef> => ({
+      overview: { value: "overview", label: "Overview" },
+      brands: { value: "brands", label: "Brands", count: client.brands.length },
+      legal: { value: "legal", label: "Legal" },
+      finance: { value: "finance", label: "Finance" },
+      documents: {
+        value: "documents",
+        label: "Documents",
+        count: client.documents.length,
+      },
+      campaigns: {
+        value: "campaigns",
+        label: "Campaign history",
+        count: client.campaigns.length,
+      },
+      access: { value: "access", label: "Client access" },
+    }),
+    [client.brands.length, client.documents.length, client.campaigns.length]
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 w-fit">
-          <Link href="/clients">
-            <ArrowLeftIcon data-icon="inline-start" />
-            Back to clients
-          </Link>
-        </Button>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="font-heading text-2xl font-semibold tracking-tight">
-            {client.name}
-          </h2>
-          <ClientStatusBadge status={client.status} />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          <DocumentNumber value={client.document_number} />
-          {client.group ? ` · ${client.group.name}` : null}
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-0">
+      <OperationalWorkspaceChrome
+        backButton={
+          <PageBackButton fallbackHref="/clients" label="Back to clients" />
+        }
+        title={client.name}
+        badges={<ClientStatusBadge status={client.status} />}
+        meta={
+          <>
+            <DocumentNumber value={client.document_number} />
+            {client.group ? ` · ${client.group.name}` : null}
+          </>
+        }
+      />
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="brands">Brands</TabsTrigger>
-          <TabsTrigger value="legal">Legal</TabsTrigger>
-          <TabsTrigger value="finance">Finance</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="campaigns">Campaign History</TabsTrigger>
-          <TabsTrigger value="access">Client Access</TabsTrigger>
-        </TabsList>
+      <Tabs
+        defaultValue="overview"
+        className="mt-4 flex min-h-0 flex-1 flex-col gap-0"
+      >
+        <OperationalWorkspaceSortableTabsBar
+          sectionLabel="Legal entity workspace"
+          tabOrder={tabOrder}
+          tabsById={tabsById}
+          onReorder={moveTab}
+        />
 
-        <TabsContent value="overview">
-          <ClientOverviewTab client={client} groups={groups} />
+        <TabsContent value="overview" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            <ClientOverviewTab client={client} groups={groups} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="brands">
-          <ClientBrandsTab client={client} masterData={masterData} />
+        <TabsContent value="brands" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <ClientBrandsTab client={client} masterData={masterData} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="legal">
-          <ClientLegalTab client={client} />
+        <TabsContent value="legal" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            <ClientLegalTab client={client} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="finance">
-          <ClientFinanceTab client={client} currencyOptions={currencyOptions} />
+        <TabsContent value="finance" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            <ClientFinanceTab client={client} currencyOptions={currencyOptions} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="documents">
-          <ClientDocumentsTab client={client} />
+        <TabsContent value="documents" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <ClientDocumentsTab client={client} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="campaigns">
-          <ClientCampaignsTab client={client} />
+        <TabsContent value="campaigns" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <ClientCampaignsTab client={client} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="access">
-          {clientAccessPanel ?? (
-            <p className="text-sm text-muted-foreground">Client access is loading…</p>
-          )}
+        <TabsContent value="access" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            {clientAccessPanel ?? (
+              <p className="text-[11px] text-muted-foreground">Client access is loading…</p>
+            )}
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
       </Tabs>
     </div>

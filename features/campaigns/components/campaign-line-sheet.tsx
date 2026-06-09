@@ -10,7 +10,6 @@ import { FieldError } from "@/components/forms/field-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,13 +18,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  DETAIL_FORM_INPUT_CLASS,
+  DETAIL_FORM_SELECT_TRIGGER_CLASS,
+  DetailFormScrollBody,
+  DetailFormSection,
+  DetailSheetFooter,
+  OperationalDetailSheet,
+  OperationalEditPanelHeader,
+} from "@/features/campaigns/components/operational-detail-panel";
 import {
   createCampaignLineAction,
   updateCampaignLineAction,
@@ -559,24 +559,21 @@ export function CampaignLineSheet({
     storedDeliverableUnits,
   ]);
 
+  const sheetTitle = isEdit ? "Edit influencer assignment" : "Assign influencer";
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle>
-            {isEdit ? "Edit influencer assignment" : "Assign influencer"}
-          </SheetTitle>
-          <SheetDescription>
-            Select a creator, choose platform accounts and deliverables, then set
-            commercial terms. Line title is generated automatically.
-          </SheetDescription>
-        </SheetHeader>
-        <form
-          ref={formRef}
-          action={formAction}
-          data-shortcut-save
-          className="flex flex-1 flex-col gap-5 px-6 pb-24"
-          onSubmit={(event) => {
+    <OperationalDetailSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={sheetTitle}
+      description="Influencer assignment commercial planning"
+    >
+      <form
+        ref={formRef}
+        action={formAction}
+        data-shortcut-save
+        className="flex min-h-0 flex-1 flex-col"
+        onSubmit={(event) => {
             if (submitLockRef.current || isPending) {
               event.preventDefault();
               return;
@@ -593,7 +590,13 @@ export function CampaignLineSheet({
             submitLockRef.current = true;
             ioRevisionAckRef.current = false;
           }}
-        >
+      >
+        <OperationalEditPanelHeader
+          title={sheetTitle}
+          description="Select a creator, choose platform accounts and deliverables, then set commercial terms. Line title is generated automatically."
+        />
+
+        <DetailFormScrollBody>
           <input type="hidden" name="campaign_id" value={campaignId} />
           {isEdit ? <input type="hidden" name="line_id" value={line.id} /> : null}
           <input type="hidden" name="influencer_id" value={influencerId} />
@@ -636,8 +639,10 @@ export function CampaignLineSheet({
             </div>
           ) : null}
 
-          <div className="grid gap-2">
-            <Label>Pricing structure</Label>
+          <DetailFormSection
+            label="Pricing structure"
+            hint="Alt+M to switch mode · Package = single creator cost · Per deliverable = row-level commercial planning"
+          >
             <Select
               value={pricingMode}
               onValueChange={(v) => {
@@ -664,7 +669,7 @@ export function CampaignLineSheet({
               }}
               disabled={isPending}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -672,10 +677,7 @@ export function CampaignLineSheet({
                 <SelectItem value="per_deliverable">Per deliverable pricing</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Alt+M to switch mode · Package = single creator cost · Per deliverable = row-level commercial planning
-            </p>
-          </div>
+          </DetailFormSection>
 
           {loadingProfile ? (
             <p className="text-sm text-muted-foreground">Loading creator profile…</p>
@@ -697,10 +699,17 @@ export function CampaignLineSheet({
             />
           ) : null}
 
-          <div className="grid gap-2">
-            <Label htmlFor="line_title">Assignment title</Label>
+          <DetailFormSection
+            label="Assignment title"
+            hint={`Auto-generated — edit if needed.${
+              activeSelections.length > 0
+                ? ` ${countLineDeliverables(activeSelections)} deliverable(s) selected.`
+                : ""
+            }`}
+          >
             <Input
               id="line_title"
+              className={DETAIL_FORM_INPUT_CLASS}
               value={lineTitle}
               onChange={(e) => {
                 setLineTitle(e.target.value);
@@ -710,38 +719,31 @@ export function CampaignLineSheet({
               disabled={isPending}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              Auto-generated — edit if needed.{" "}
-              {activeSelections.length > 0
-                ? `${countLineDeliverables(activeSelections)} deliverable(s) selected.`
-                : null}
-            </p>
             <FieldError messages={state.fieldErrors?.name} />
-          </div>
+          </DetailFormSection>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="start_date">Posting start</Label>
+            <DetailFormSection label="Posting start">
               <Input
                 id="start_date"
                 type="date"
+                className={DETAIL_FORM_INPUT_CLASS}
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 disabled={isPending}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="end_date">Posting end</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Posting end">
               <Input
                 id="end_date"
                 type="date"
+                className={DETAIL_FORM_INPUT_CLASS}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 disabled={isPending}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>Assignment status</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Assignment status">
               <Select
                 value={assignmentStatus}
                 onValueChange={(v) =>
@@ -749,7 +751,7 @@ export function CampaignLineSheet({
                 }
                 disabled={isPending}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -760,11 +762,10 @@ export function CampaignLineSheet({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Currency</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Currency">
               <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -775,7 +776,7 @@ export function CampaignLineSheet({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </DetailFormSection>
           </div>
 
           <CampaignLinePoPanel
@@ -866,7 +867,7 @@ export function CampaignLineSheet({
             />
             <input type="hidden" name="cost_vat_exempt" value={costVatExempt ? "1" : "0"} />
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               Operational GP (ex-VAT): {currency}{" "}
               {gpPreview.gp.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
@@ -875,37 +876,37 @@ export function CampaignLineSheet({
               · Margin {gpPreview.marginPercent}%
             </p>
           </div>
+        </DetailFormScrollBody>
 
-          <SheetFooter className="px-0">
-            <Button type="submit" disabled={isPending || !canSubmit}>
-              {isPending
-                ? "Saving…"
-                : isEdit
-                  ? "Save assignment"
-                  : "Create assignment"}
-            </Button>
-          </SheetFooter>
-
-          <AssignmentStickyFooter
-            currency={currency}
-            summary={footerSummary}
-            revenueVatAmount={revenueVatAmount}
-            costVatAmount={costVatAmount}
-          />
-        </form>
-
-        <AssignmentIoRevisionDialog
-          open={ioRevisionOpen}
-          onOpenChange={setIoRevisionOpen}
-          vendorIoDocumentNumber={line?.vendor_io_document_number ?? null}
-          onCancel={() => setIoRevisionOpen(false)}
-          onConfirm={() => {
-            ioRevisionAckRef.current = true;
-            setIoRevisionOpen(false);
-            queueMicrotask(() => formRef.current?.requestSubmit());
-          }}
+        <AssignmentStickyFooter
+          currency={currency}
+          summary={footerSummary}
+          revenueVatAmount={revenueVatAmount}
+          costVatAmount={costVatAmount}
         />
-      </SheetContent>
-    </Sheet>
+
+        <DetailSheetFooter>
+          <Button size="sm" type="submit" disabled={isPending || !canSubmit}>
+            {isPending
+              ? "Saving…"
+              : isEdit
+                ? "Save assignment"
+                : "Create assignment"}
+          </Button>
+        </DetailSheetFooter>
+      </form>
+
+      <AssignmentIoRevisionDialog
+        open={ioRevisionOpen}
+        onOpenChange={setIoRevisionOpen}
+        vendorIoDocumentNumber={line?.vendor_io_document_number ?? null}
+        onCancel={() => setIoRevisionOpen(false)}
+        onConfirm={() => {
+          ioRevisionAckRef.current = true;
+          setIoRevisionOpen(false);
+          queueMicrotask(() => formRef.current?.requestSubmit());
+        }}
+      />
+    </OperationalDetailSheet>
   );
 }

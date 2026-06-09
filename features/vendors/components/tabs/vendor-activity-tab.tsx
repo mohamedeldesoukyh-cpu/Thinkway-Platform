@@ -2,20 +2,58 @@
 
 import { format } from "date-fns";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import {
-  CampaignOperationalTable,
-  CampaignOperationalTableBody,
-  CampaignOperationalTableCell,
-  CampaignOperationalTableHead,
-  CampaignOperationalTableHeader,
-  CampaignOperationalTableHeaderRow,
-  CampaignOperationalTableRow,
-} from "@/features/campaigns/components/campaign-operational-table";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import type { VendorWorkspace } from "@/features/vendors/types";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import { VENDOR_DELIVERABLES_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+
+type DeliverableRow = VendorWorkspace["deliverables"][number];
+
+const VENDOR_DELIVERABLES_COLUMNS: OperationalConfigurableColumnDef<DeliverableRow>[] = [
+  {
+    id: "deliverable",
+    label: "Deliverable",
+    renderCell: (deliverable) => (
+      <>
+        <span className="font-medium text-foreground">{deliverable.title}</span>
+        {deliverable.document_number ? (
+          <p className="text-[10px] text-muted-foreground">
+            <DocumentNumber value={deliverable.document_number} />
+          </p>
+        ) : null}
+      </>
+    ),
+  },
+  {
+    id: "campaign",
+    label: "Campaign",
+    cellClassName: "text-muted-foreground",
+    renderCell: (deliverable) => deliverable.campaign_name ?? "—",
+  },
+  {
+    id: "status",
+    label: "Status",
+    cellClassName: "capitalize text-muted-foreground",
+    renderCell: (deliverable) => deliverable.status.replace(/_/g, " "),
+  },
+];
+
+const VENDOR_DELIVERABLES_COLUMN_METAS = getOperationalTableColumnMetas(
+  VENDOR_DELIVERABLES_COLUMNS
+);
 
 export function VendorActivityTab({ workspace }: { workspace: VendorWorkspace }) {
+  const recentDeliverables = workspace.deliverables.slice(0, 10);
+
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       <OperationalTableSection
@@ -61,54 +99,38 @@ export function VendorActivityTab({ workspace }: { workspace: VendorWorkspace })
         )}
       </OperationalTableSection>
 
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">
-            Recent deliverables
-          </h2>
-        }
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.vendorDeliverablesActivity}
+        columns={VENDOR_DELIVERABLES_COLUMNS}
+        rows={recentDeliverables}
+        filterAccessors={VENDOR_DELIVERABLES_FILTER_ACCESSORS}
       >
-        {workspace.deliverables.length === 0 ? (
-          <p className="px-4 py-8 text-center text-[11px] text-muted-foreground md:px-5">
-            No deliverables.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <CampaignOperationalTable>
-              <CampaignOperationalTableHeader>
-                <CampaignOperationalTableHeaderRow>
-                  <CampaignOperationalTableHead>Deliverable</CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead>Campaign</CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead>Status</CampaignOperationalTableHead>
-                </CampaignOperationalTableHeaderRow>
-              </CampaignOperationalTableHeader>
-              <CampaignOperationalTableBody>
-                {workspace.deliverables.slice(0, 10).map((d) => (
-                  <CampaignOperationalTableRow key={d.id}>
-                    <CampaignOperationalTableCell>
-                      <span className="font-medium text-foreground">{d.title}</span>
-                      {d.document_number ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          <DocumentNumber value={d.document_number} />
-                        </p>
-                      ) : null}
-                    </CampaignOperationalTableCell>
-                    <CampaignOperationalTableCell className="text-muted-foreground">
-                      {d.campaign_name ?? "—"}
-                    </CampaignOperationalTableCell>
-                    <CampaignOperationalTableCell className="capitalize text-muted-foreground">
-                      {d.status.replace(/_/g, " ")}
-                    </CampaignOperationalTableCell>
-                  </CampaignOperationalTableRow>
-                ))}
-              </CampaignOperationalTableBody>
-            </CampaignOperationalTable>
-          </div>
-        )}
-      </OperationalTableSection>
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Recent deliverables"
+              actions={
+                <OperationalTableControlsSlot contextLabel="Vendor deliverables" />
+              }
+            />
+          }
+        >
+          {workspace.deliverables.length === 0 ? (
+            <p className="px-4 py-8 text-center text-[11px] text-muted-foreground md:px-5">
+              No deliverables.
+            </p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={VENDOR_DELIVERABLES_COLUMNS}
+              rows={recentDeliverables}
+              rowKey={(deliverable) => deliverable.id}
+            />
+          )}
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
     </div>
   );
 }

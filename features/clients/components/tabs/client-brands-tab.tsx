@@ -6,10 +6,22 @@ import { toast } from "sonner";
 import { CategorySubcategoryFields } from "@/components/forms/category-subcategory-fields";
 import { FieldError } from "@/components/forms/field-error";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DETAIL_FORM_SELECT_TRIGGER_CLASS,
+} from "@/features/campaigns/components/operational-detail-panel";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Dialog,
   DialogContent,
@@ -27,14 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
   archiveBrandAction,
   createBrandAction,
@@ -52,12 +57,85 @@ import { BrandSheet } from "@/features/groups/components/brand-sheet";
 import type { GroupBrandRow } from "@/features/groups/types";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import type { ClientBrandRow, ClientDetail } from "@/types/database";
+import { cn } from "@/lib/utils";
+import { CLIENT_BRANDS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 
 type ClientBrandsTabProps = {
   client: ClientDetail;
   masterData: MasterDataOptions;
 };
+
+type BrandTableContext = {
+  onEdit: (brand: ClientBrandRow) => void;
+  onArchive: (brand: ClientBrandRow) => void;
+};
+
+function buildClientBrandsColumns(
+  context: BrandTableContext
+): OperationalConfigurableColumnDef<ClientBrandRow>[] {
+  return [
+    {
+      id: "brand_number",
+      label: "Brand #",
+      monoCell: true,
+      renderCell: (brand) => <DocumentNumber value={brand.document_number} />,
+    },
+    {
+      id: "name",
+      label: "Name",
+      renderCell: (brand) => <span className="font-medium">{brand.name}</span>,
+    },
+    {
+      id: "category",
+      label: "Category",
+      renderCell: (brand) => brand.category_name ?? "—",
+    },
+    {
+      id: "subcategory",
+      label: "Subcategory",
+      renderCell: (brand) => brand.subcategory_name ?? "—",
+    },
+    {
+      id: "vr_rate",
+      label: "VR%",
+      renderCell: (brand) =>
+        brand.vr_rate_percent != null ? `${brand.vr_rate_percent}%` : "—",
+    },
+    {
+      id: "currency",
+      label: "Currency",
+      renderCell: (brand) => brand.currency_code,
+    },
+    {
+      id: "campaigns",
+      label: "Campaigns",
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      renderCell: (brand) => brand.active_campaigns,
+    },
+    {
+      id: "status",
+      label: "Status",
+      renderCell: (brand) => <BrandStatusToggle brand={brand} />,
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      locked: true,
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      renderCell: (brand) => (
+        <BrandRowActions
+          brand={brand}
+          onEdit={() => context.onEdit(brand)}
+          onArchive={() => context.onArchive(brand)}
+        />
+      ),
+    },
+  ];
+}
 
 export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
@@ -69,6 +147,15 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupBrandRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ClientBrandRow | null>(null);
+
+  const columns = buildClientBrandsColumns({
+    onEdit: (brand) => {
+      setEditing(brandTableRowToGroupBrandRow(brand, client.name));
+      setSheetOpen(true);
+    },
+    onArchive: setArchiveTarget,
+  });
+  const columnMetas = getOperationalTableColumnMetas(columns);
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
     brandName,
@@ -114,82 +201,49 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
   return (
     <>
       <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Brands</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Commercial brands under this legal entity. Campaigns link to brands.
-            </p>
-          </CardHeader>
-          <CardContent>
+        <OperationalTableSuiteProvider
+          tableId={OPERATIONAL_TABLE_IDS.clientBrands}
+          columns={columns}
+          rows={client.brands}
+          filterAccessors={CLIENT_BRANDS_FILTER_ACCESSORS}
+        >
+          <OperationalTableSection
+            wide
+            tableOnly
+            cardSurface
+            leading={
+              <CampaignOperationalSectionHeader
+                title="Brands"
+                description="Commercial brands under this legal entity. Campaigns link to brands."
+                actions={
+                  <OperationalTableControlsSlot contextLabel="Client brands" />
+                }
+              />
+            }
+          >
             {client.brands.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="px-4 py-8 text-[11px] text-muted-foreground">
                 No brands yet for this legal entity.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Brand #</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Subcategory</TableHead>
-                      <TableHead>VR%</TableHead>
-                      <TableHead>Currency</TableHead>
-                      <TableHead className="text-right">Campaigns</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {client.brands.map((brand) => (
-                      <TableRow key={brand.id}>
-                        <TableCell className="text-xs">
-                          <DocumentNumber value={brand.document_number} />
-                        </TableCell>
-                        <TableCell className="font-medium">{brand.name}</TableCell>
-                        <TableCell>{brand.category_name ?? "—"}</TableCell>
-                        <TableCell>{brand.subcategory_name ?? "—"}</TableCell>
-                        <TableCell>
-                          {brand.vr_rate_percent != null
-                            ? `${brand.vr_rate_percent}%`
-                            : "—"}
-                        </TableCell>
-                        <TableCell>{brand.currency_code}</TableCell>
-                        <TableCell className="text-right">
-                          {brand.active_campaigns}
-                        </TableCell>
-                        <TableCell>
-                          <BrandStatusToggle brand={brand} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <BrandRowActions
-                            brand={brand}
-                            onEdit={() => {
-                              setEditing(
-                                brandTableRowToGroupBrandRow(brand, client.name)
-                              );
-                              setSheetOpen(true);
-                            }}
-                            onArchive={() => setArchiveTarget(brand)}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <OperationalConfigurableTable
+                columns={columns}
+                rows={client.brands}
+                rowKey={(brand) => brand.id}
+              />
             )}
-          </CardContent>
-        </Card>
+          </OperationalTableSection>
+        </OperationalTableSuiteProvider>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Add brand</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={formAction} className="grid gap-4">
+        <OperationalFormSection
+          title="Add brand"
+          footer={
+            <Button type="submit" form="client-add-brand-form" disabled={isPending || isDuplicate || checking}>
+              {isPending ? "Creating…" : "Add brand"}
+            </Button>
+          }
+        >
+            <form id="client-add-brand-form" action={formAction} className="grid gap-4">
               <input type="hidden" name="client_id" value={client.id} />
               <input type="hidden" name="category_id" value={categoryId} />
               <input type="hidden" name="subcategory_id" value={subcategoryId} />
@@ -201,6 +255,7 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
                 <Input
                   id="brand_name"
                   name="name"
+                  className={DETAIL_FORM_INPUT_CLASS}
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
                   required
@@ -239,7 +294,7 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
                 <div className="grid gap-2">
                   <Label>Currency</Label>
                   <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -253,12 +308,8 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
                 </div>
               </div>
 
-              <Button type="submit" disabled={isPending || isDuplicate || checking}>
-                {isPending ? "Creating…" : "Add brand"}
-              </Button>
             </form>
-          </CardContent>
-        </Card>
+        </OperationalFormSection>
       </div>
 
       <BrandSheet

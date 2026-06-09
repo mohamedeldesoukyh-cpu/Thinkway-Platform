@@ -2,7 +2,7 @@
 
 ## Product reference (read first)
 
-- **`docs/THINKWAY_SYSTEM_REFERENCE.md`** — IConnect agreed spec (May 2026): modules, hierarchy, campaigns, billing, roles, roadmap.
+- **`docs/THINKWAY_SYSTEM_REFERENCE.md`** — Thinkway product spec (May 2026): modules, hierarchy, campaigns, billing, roles, roadmap.
 - **`docs/ARCHITECTURE_ALIGNMENT.md`** — codebase vs spec gaps; consult before new entities or modules.
 - **`.cursor/rules/thinkway-product-reference.mdc`** — persistent AI guardrails.
 

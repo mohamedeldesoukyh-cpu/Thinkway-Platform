@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import type { InvoiceWorkspace } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
@@ -27,9 +26,11 @@ export function InvoiceHtmlPreview({ invoice, backHref }: InvoiceHtmlPreviewProp
     <article className="mx-auto max-w-3xl rounded-2xl border border-border bg-white p-8 text-foreground shadow-sm print:border-0 print:shadow-none">
       {backHref ? (
         <div className="mb-6 print:hidden">
-          <Link href={backHref} className="text-sm text-primary hover:underline">
-            ← Back to invoice
-          </Link>
+          <PageBackButton
+            fallbackHref={backHref}
+            label="Back to invoice"
+            variant="text"
+          />
         </div>
       ) : null}
 

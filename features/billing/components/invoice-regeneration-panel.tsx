@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import {
   Dialog,
   DialogContent,
@@ -90,14 +90,12 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
 
   return (
     <>
-      <Card className="border-amber-500/20">
-        <CardHeader>
-          <CardTitle className="text-base">Finance governance</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Un-generate to unlock invoiced lines for corrections. Same invoice number is always preserved.
-          </p>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
+      <CampaignFlatSection
+        title="Finance governance"
+        description="Un-generate to unlock invoiced lines for corrections. Same invoice number is always preserved."
+        className="border-amber-500/20"
+      >
+        <div className="flex flex-wrap items-center gap-3">
           <Badge variant="outline">{statusLabel}</Badge>
           {invoice.regeneration_status === "active" ? (
             <Button
@@ -120,8 +118,8 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
               Last un-generate reason: {invoice.ungenerate_reason}
             </p>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </CampaignFlatSection>
 
       <Dialog open={mode !== null} onOpenChange={() => setMode(null)}>
         <DialogContent>

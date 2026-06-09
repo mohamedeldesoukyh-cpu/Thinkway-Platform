@@ -4,6 +4,13 @@ import { format, isValid, parseISO } from "date-fns";
 import { DownloadIcon, FilterIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -17,18 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  CampaignOperationalTable,
-  CampaignOperationalTableBody,
-  CampaignOperationalTableCell,
-  CampaignOperationalTableHead,
-  CampaignOperationalTableHeader,
-  CampaignOperationalTableHeaderRow,
-  CampaignOperationalTableRow,
-} from "@/features/campaigns/components/campaign-operational-table";
 import { CampaignPublicationSheet } from "@/features/campaigns/components/campaign-publication-sheet";
+import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
+import { PublicationDetailSheet } from "@/features/campaigns/components/detail-sheets/publication-detail-sheet";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
-import type { CampaignLineWorkspace, CampaignWorkspace } from "@/features/campaigns/types";
+import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 const ALL_STATUSES = "all";
 
@@ -49,6 +50,87 @@ function safeFormatDate(value: string | null | undefined): string {
   }
 }
 
+function buildPublicationsColumns(
+  onOpenDetail: (id: string) => void
+): OperationalConfigurableColumnDef<CampaignPublicationRow>[] {
+  return [
+    {
+      id: "type",
+      label: "Type",
+      renderCell: (row) => (
+        <div className="space-y-0.5">
+          <DetailClickableLabel
+            onClick={() => onOpenDetail(row.id)}
+            title={`View ${row.publication_type_label} details`}
+          >
+            {row.publication_type_label}
+          </DetailClickableLabel>
+          <p className="text-[11px] text-muted-foreground">{row.platform_label}</p>
+        </div>
+      ),
+    },
+    {
+      id: "content",
+      label: "Content",
+      renderCell: (row) =>
+        row.content_url ? (
+          <a
+            href={row.content_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="line-clamp-2 text-[11px] underline"
+          >
+            {row.content_url}
+          </a>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      id: "creator",
+      label: "Creator",
+      renderCell: (row) => row.influencer_name ?? "—",
+    },
+    {
+      id: "status",
+      label: "Status",
+      renderCell: (row) => (
+        <Badge variant="outline" className="text-[10px] capitalize">
+          {row.status.replace(/_/g, " ")}
+        </Badge>
+      ),
+    },
+    {
+      id: "publication_date",
+      label: "Publication date",
+      cellClassName: "text-muted-foreground",
+      renderCell: (row) => safeFormatDate(row.publication_date),
+    },
+    {
+      id: "assignee",
+      label: "Assignee",
+      renderCell: (row) => row.assignee_name ?? "—",
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      locked: true,
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      renderCell: (row) =>
+        row.content_url ? (
+          <Button asChild size="sm" variant="ghost" className="h-7 text-[11px]">
+            <a href={row.content_url} target="_blank" rel="noopener noreferrer">
+              Open
+            </a>
+          </Button>
+        ) : (
+          "—"
+        ),
+    },
+  ];
+}
+
 export function CampaignPublicationsTab({
   workspace,
   publications,
@@ -57,6 +139,7 @@ export function CampaignPublicationsTab({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [detailPublicationId, setDetailPublicationId] = useState<string | null>(null);
 
   const rows = publications ?? [];
   const lines = (workspace.lines ?? []).filter((l) => l.influencer_id);
@@ -74,6 +157,20 @@ export function CampaignPublicationsTab({
       );
     });
   }, [rows, search, statusFilter]);
+
+  const columns = useMemo(
+    () => buildPublicationsColumns(setDetailPublicationId),
+    []
+  );
+  const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
+
+  const detailRow = useMemo(
+    () =>
+      detailPublicationId
+        ? (rows.find((row) => row.id === detailPublicationId) ?? null)
+        : null,
+    [detailPublicationId, rows]
+  );
 
   function exportCsv() {
     const header = [
@@ -108,152 +205,121 @@ export function CampaignPublicationsTab({
 
   return (
     <>
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <CampaignOperationalSectionHeader
-            title="Publications"
-            description="Manual URL tracking for live influencer content."
-            actions={
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={exportCsv}
-                  disabled={filtered.length === 0}
-                >
-                  <DownloadIcon data-icon="inline-start" className="size-3.5" />
-                  Export CSV
-                </Button>
-                <Button size="sm" onClick={() => setSheetOpen(true)} disabled={lines.length === 0}>
-                  <PlusIcon data-icon="inline-start" />
-                  Add publication
-                </Button>
-              </>
-            }
-          />
-        }
-        toolbar={
-          <div className="space-y-3">
-            {loadError ? (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-                Publications data could not be loaded fully. Apply migration{" "}
-                <code className="font-mono">20260531400000_campaign_publications.sql</code>.{" "}
-                {loadError}
-              </div>
-            ) : null}
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Displaying {filtered.length} of {rows.length}
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="pub_search">
-                  <SearchIcon className="mr-1 inline size-3.5" />
-                  Search
-                </Label>
-                <Input
-                  id="pub_search"
-                  placeholder="Creator, URL, caption…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>
-                  <FilterIcon className="mr-1 inline size-3.5" />
-                  Status
-                </Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="verified">Verified</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.campaignPublications}
+        columns={columns}
+        rows={filtered}
+        filterAccessors={{
+          type: (row) => row.publication_type_label ?? row.platform_label,
+          content: (row) => row.content_url,
+          creator: (row) => row.influencer_name,
+          status: (row) => row.status,
+          publication_date: (row) => row.publication_date,
+          assignee: (row) => row.assignee_name,
+        }}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Publications"
+              description="Manual URL tracking for live influencer content."
+              actions={
+                <>
+                  <OperationalTableControlsSlot contextLabel="Campaign publications" />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={exportCsv}
+                    disabled={filtered.length === 0}
+                  >
+                    <DownloadIcon data-icon="inline-start" className="size-3.5" />
+                    Export CSV
+                  </Button>
+                  <Button size="sm" onClick={() => setSheetOpen(true)} disabled={lines.length === 0}>
+                    <PlusIcon data-icon="inline-start" />
+                    Add publication
+                  </Button>
+                </>
+              }
+            />
+          }
+          toolbar={
+            <div className="space-y-3">
+              {loadError ? (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                  Publications data could not be loaded fully. Apply migration{" "}
+                  <code className="font-mono">20260531400000_campaign_publications.sql</code>.{" "}
+                  {loadError}
+                </div>
+              ) : null}
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Displaying {filtered.length} of {rows.length}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="pub_search">
+                    <SearchIcon className="mr-1 inline size-3.5" />
+                    Search
+                  </Label>
+                  <Input
+                    id="pub_search"
+                    placeholder="Creator, URL, caption…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>
+                    <FilterIcon className="mr-1 inline size-3.5" />
+                    Status
+                  </Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="verified">Verified</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-          </div>
-        }
-      >
-        {filtered.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-muted-foreground">No publications found.</p>
-        ) : (
-          <CampaignOperationalTable>
-            <CampaignOperationalTableHeader>
-              <CampaignOperationalTableHeaderRow>
-                <CampaignOperationalTableHead>Type</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>Content</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>Creator</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>Status</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>Publication date</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>Assignee</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">Actions</CampaignOperationalTableHead>
-              </CampaignOperationalTableHeaderRow>
-            </CampaignOperationalTableHeader>
-            <CampaignOperationalTableBody>
-              {filtered.map((row) => (
-                <CampaignOperationalTableRow key={row.id}>
-                  <CampaignOperationalTableCell>
-                    <div className="space-y-0.5">
-                      <span className="font-medium">{row.publication_type_label}</span>
-                      <p className="text-[11px] text-muted-foreground">{row.platform_label}</p>
-                    </div>
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell>
-                    {row.content_url ? (
-                      <a
-                        href={row.content_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="line-clamp-2 text-[11px] underline"
-                      >
-                        {row.content_url}
-                      </a>
-                    ) : (
-                      "—"
-                    )}
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell>{row.influencer_name ?? "—"}</CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell>
-                    <Badge variant="outline" className="text-[10px] capitalize">
-                      {row.status.replace(/_/g, " ")}
-                    </Badge>
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell className="text-muted-foreground">
-                    {safeFormatDate(row.publication_date)}
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell>{row.assignee_name ?? "—"}</CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell className="text-right">
-                    {row.content_url ? (
-                      <Button asChild size="sm" variant="ghost" className="h-7 text-[11px]">
-                        <a href={row.content_url} target="_blank" rel="noopener noreferrer">
-                          Open
-                        </a>
-                      </Button>
-                    ) : (
-                      "—"
-                    )}
-                  </CampaignOperationalTableCell>
-                </CampaignOperationalTableRow>
-              ))}
-            </CampaignOperationalTableBody>
-          </CampaignOperationalTable>
-        )}
-      </OperationalTableSection>
+          }
+        >
+          {filtered.length === 0 ? (
+            <p className="px-4 py-8 text-sm text-muted-foreground">No publications found.</p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={columns}
+              rows={filtered}
+              rowKey={(row) => row.id}
+            />
+          )}
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
 
       <CampaignPublicationSheet
         campaignId={workspace.id}
         assignmentLines={lines}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      <PublicationDetailSheet
+        open={detailPublicationId != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailPublicationId(null);
+        }}
+        row={detailRow}
+        campaignName={workspace.name}
       />
     </>
   );

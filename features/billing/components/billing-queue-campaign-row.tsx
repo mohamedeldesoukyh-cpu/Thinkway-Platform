@@ -3,15 +3,19 @@
 import { Fragment, memo, useCallback, useMemo } from "react";
 import Link from "next/link";
 
-import { DocumentNumber } from "@/components/ui/document-number";
 import { ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TableCell, TableRow } from "@/components/ui/table";
 import { BillingCampaignDrilldown } from "@/features/billing/components/billing-campaign-drilldown";
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
+import {
+  CampaignOperationalTableCell,
+  CampaignOperationalTableCellAmount,
+  CampaignOperationalTableCellMono,
+  CampaignOperationalTableRow,
+} from "@/features/campaigns/components/campaign-operational-table";
 import type {
   CampaignBillingQueueRow,
   CampaignOperationalBillingDetail,
@@ -23,10 +27,13 @@ import {
 } from "@/lib/billing/operational-row-filters";
 import {
   getGlobalSelectionStatus,
-  selectionToPayload,
   type OperationalSelectionState,
   type RowSelectionStatus,
 } from "@/lib/billing/operational-selection";
+import {
+  useIsOperationalColumnVisible,
+  useOperationalVisibleColumnCount,
+} from "@/components/tables/operational-table-column-context";
 import { cn } from "@/lib/utils";
 
 export type BillingQueueCampaignRowProps = {
@@ -60,6 +67,23 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
 }: BillingQueueCampaignRowProps) {
   const campaignId = row.campaign_header_id;
   const cur = row.currency_code;
+  const visibleColumnCount = useOperationalVisibleColumnCount();
+
+  const showExpand = useIsOperationalColumnVisible("expand");
+  const showSelect = useIsOperationalColumnVisible("select");
+  const showCampaignNo = useIsOperationalColumnVisible("campaign_no");
+  const showClient = useIsOperationalColumnVisible("client");
+  const showBrand = useIsOperationalColumnVisible("brand");
+  const showCampaign = useIsOperationalColumnVisible("campaign");
+  const showCurrency = useIsOperationalColumnVisible("currency");
+  const showTotal = useIsOperationalColumnVisible("total");
+  const showAchieved = useIsOperationalColumnVisible("achieved");
+  const showInvoiced = useIsOperationalColumnVisible("invoiced");
+  const showRemaining = useIsOperationalColumnVisible("remaining");
+  const showUnachieved = useIsOperationalColumnVisible("unachieved");
+  const showStatus = useIsOperationalColumnVisible("status");
+  const showActions = useIsOperationalColumnVisible("actions");
+
   const masterStatus = useMemo(
     () => computeCampaignMasterStatus(detail, selection, operationalFilter),
     [detail, selection, operationalFilter]
@@ -82,7 +106,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
 
   return (
     <Fragment>
-      <TableRow
+      <CampaignOperationalTableRow
         className={cn(
           "cursor-pointer bg-muted/10 hover:bg-muted/20",
           selectedForReview && "bg-primary/5 ring-1 ring-primary/20"
@@ -90,85 +114,118 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
         onClick={() => onSelectForReview(campaignId)}
         aria-selected={selectedForReview}
       >
-        <TableCell onClick={handleExpandClick}>
-          <button
-            type="button"
-            className="rounded p-1 hover:bg-muted"
-            aria-expanded={expanded}
-            aria-label={`Expand ${row.campaign_name}`}
-          >
-            {expanded ? (
-              <ChevronDownIcon className="size-4" />
-            ) : (
-              <ChevronRightIcon className="size-4" />
-            )}
-          </button>
-        </TableCell>
-        <TableCell onClick={(event) => event.stopPropagation()}>
-          <OperationalSelectionCheckbox
-            status={masterStatus}
-            onToggle={() => onMasterSelect(campaignId)}
-            ariaLabel={`Select all billable rows for ${row.campaign_name}`}
-          />
-        </TableCell>
-        <TableCell className="text-xs">
-          <DocumentNumber value={row.campaign_document_number} />
-        </TableCell>
-        <TableCell>{row.client_name}</TableCell>
-        <TableCell className="text-muted-foreground">{row.brand_name ?? "—"}</TableCell>
-        <TableCell>
-          <Link
-            href={`/campaigns/${campaignId}?tab=billing`}
-            className="font-medium hover:underline"
+        {showExpand ? (
+          <CampaignOperationalTableCell onClick={handleExpandClick}>
+            <button
+              type="button"
+              className="rounded p-1 hover:bg-muted"
+              aria-expanded={expanded}
+              aria-label={`Expand ${row.campaign_name}`}
+            >
+              {expanded ? (
+                <ChevronDownIcon className="size-4" />
+              ) : (
+                <ChevronRightIcon className="size-4" />
+              )}
+            </button>
+          </CampaignOperationalTableCell>
+        ) : null}
+        {showSelect ? (
+          <CampaignOperationalTableCell onClick={(event) => event.stopPropagation()}>
+            <OperationalSelectionCheckbox
+              status={masterStatus}
+              onToggle={() => onMasterSelect(campaignId)}
+              ariaLabel={`Select all billable rows for ${row.campaign_name}`}
+            />
+          </CampaignOperationalTableCell>
+        ) : null}
+        {showCampaignNo ? (
+          <CampaignOperationalTableCellMono>{row.campaign_document_number}</CampaignOperationalTableCellMono>
+        ) : null}
+        {showClient ? (
+          <CampaignOperationalTableCell>{row.client_name}</CampaignOperationalTableCell>
+        ) : null}
+        {showBrand ? (
+          <CampaignOperationalTableCell className="text-muted-foreground">
+            {row.brand_name ?? "—"}
+          </CampaignOperationalTableCell>
+        ) : null}
+        {showCampaign ? (
+          <CampaignOperationalTableCell>
+            <Link
+              href={`/campaigns/${campaignId}?tab=billing`}
+              className="font-medium hover:underline"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {row.campaign_name}
+            </Link>
+          </CampaignOperationalTableCell>
+        ) : null}
+        {showCurrency ? (
+          <CampaignOperationalTableCell>
+            <Badge variant="outline">{row.currency_code}</Badge>
+          </CampaignOperationalTableCell>
+        ) : null}
+        {showTotal ? (
+          <CampaignOperationalTableCellAmount className="font-medium">
+            {formatBillingMoneyCompact(row.total_campaign_amount, cur)}
+          </CampaignOperationalTableCellAmount>
+        ) : null}
+        {showAchieved ? (
+          <CampaignOperationalTableCellAmount>
+            {formatBillingMoneyCompact(row.achieved_revenue, cur)}
+          </CampaignOperationalTableCellAmount>
+        ) : null}
+        {showInvoiced ? (
+          <CampaignOperationalTableCellAmount>
+            {formatBillingMoneyCompact(row.already_invoiced, cur)}
+          </CampaignOperationalTableCellAmount>
+        ) : null}
+        {showRemaining ? (
+          <CampaignOperationalTableCellAmount>
+            {formatBillingMoneyCompact(row.remaining_to_invoice, cur)}
+          </CampaignOperationalTableCellAmount>
+        ) : null}
+        {showUnachieved ? (
+          <CampaignOperationalTableCellAmount className="text-muted-foreground">
+            {formatBillingMoneyCompact(row.unachieved_revenue, cur)}
+          </CampaignOperationalTableCellAmount>
+        ) : null}
+        {showStatus ? (
+          <CampaignOperationalTableCell>
+            <BillingStatusBadge status={row.billing_status} />
+          </CampaignOperationalTableCell>
+        ) : null}
+        {showActions ? (
+          <CampaignOperationalTableCell
+            className="text-right"
             onClick={(event) => event.stopPropagation()}
           >
-            {row.campaign_name}
-          </Link>
-        </TableCell>
-        <TableCell>
-          <Badge variant="outline">{row.currency_code}</Badge>
-        </TableCell>
-        <TableCell className="text-right font-medium">
-          {formatBillingMoneyCompact(row.total_campaign_amount, cur)}
-        </TableCell>
-        <TableCell className="text-right">
-          {formatBillingMoneyCompact(row.achieved_revenue, cur)}
-        </TableCell>
-        <TableCell className="text-right">
-          {formatBillingMoneyCompact(row.already_invoiced, cur)}
-        </TableCell>
-        <TableCell className="text-right">
-          {formatBillingMoneyCompact(row.remaining_to_invoice, cur)}
-        </TableCell>
-        <TableCell className="text-right text-muted-foreground">
-          {formatBillingMoneyCompact(row.unachieved_revenue, cur)}
-        </TableCell>
-        <TableCell>
-          <BillingStatusBadge status={row.billing_status} />
-        </TableCell>
-        <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
-          <div className="flex justify-end gap-1">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => onOpenInvoice(campaignId)}
-            >
-              Invoice
-            </Button>
-            <Button size="sm" variant="ghost" asChild>
-              <Link href={`/campaigns/${campaignId}?tab=billing`}>
-                <ExternalLinkIcon className="size-4" />
-              </Link>
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
+            <div className="flex justify-end gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => onOpenInvoice(campaignId)}
+              >
+                Invoice
+              </Button>
+              <Button size="sm" variant="ghost" asChild>
+                <Link href={`/campaigns/${campaignId}?tab=billing`}>
+                  <ExternalLinkIcon className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </CampaignOperationalTableCell>
+        ) : null}
+      </CampaignOperationalTableRow>
       {expanded ? (
-        <TableRow>
-          <TableCell colSpan={14} className="bg-background p-0">
+        <CampaignOperationalTableRow>
+          <CampaignOperationalTableCell colSpan={visibleColumnCount} className="bg-background p-0">
             {detailLoading && !detail ? (
-              <p className="p-4 text-sm text-muted-foreground">Loading operational billing…</p>
+              <p className="px-4 py-8 text-[11px] text-muted-foreground">
+                Loading operational billing…
+              </p>
             ) : detail ? (
               <BillingCampaignDrilldown
                 detail={detail}
@@ -178,10 +235,12 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
                 showBulkSelectionControls={false}
               />
             ) : (
-              <p className="p-4 text-sm text-muted-foreground">Unable to load operational rows.</p>
+              <p className="px-4 py-8 text-[11px] text-muted-foreground">
+                Unable to load operational rows.
+              </p>
             )}
-          </TableCell>
-        </TableRow>
+          </CampaignOperationalTableCell>
+        </CampaignOperationalTableRow>
       ) : null}
     </Fragment>
   );

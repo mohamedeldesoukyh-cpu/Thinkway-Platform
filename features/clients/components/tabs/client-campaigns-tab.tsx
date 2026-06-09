@@ -1,80 +1,113 @@
-import Link from "next/link";
+"use client";
 
-import { DocumentNumber } from "@/components/ui/document-number";
+import Link from "next/link";
 import { format } from "date-fns";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { CLIENT_CAMPAIGNS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import type { ClientDetail } from "@/types/database";
+
+type CampaignRow = ClientDetail["campaigns"][number];
+
+const CLIENT_CAMPAIGNS_COLUMNS: OperationalConfigurableColumnDef<CampaignRow>[] = [
+  {
+    id: "campaign",
+    label: "Campaign",
+    renderCell: (campaign) => (
+      <Link
+        href={`/campaigns/${campaign.id}`}
+        className="font-medium hover:text-primary"
+      >
+        {campaign.name}
+      </Link>
+    ),
+  },
+  {
+    id: "campaign_number",
+    label: "Campaign #",
+    monoCell: true,
+    renderCell: (campaign) => <DocumentNumber value={campaign.document_number} />,
+  },
+  {
+    id: "brand",
+    label: "Brand",
+    renderCell: (campaign) =>
+      (campaign.brand as { name: string } | null)?.name ?? "—",
+  },
+  {
+    id: "status",
+    label: "Status",
+    cellClassName: "capitalize",
+    renderCell: (campaign) => campaign.status.replace(/_/g, " "),
+  },
+  {
+    id: "currency",
+    label: "Currency",
+    renderCell: (campaign) => campaign.currency_code,
+  },
+  {
+    id: "dates",
+    label: "Dates",
+    cellClassName: "text-muted-foreground",
+    renderCell: (campaign) => (
+      <>
+        {campaign.start_date
+          ? format(new Date(campaign.start_date), "MMM d, yyyy")
+          : "—"}
+        {" — "}
+        {campaign.end_date
+          ? format(new Date(campaign.end_date), "MMM d, yyyy")
+          : "—"}
+      </>
+    ),
+  },
+];
+
+export const CLIENT_CAMPAIGNS_TABLE_COLUMNS = CLIENT_CAMPAIGNS_COLUMNS;
 
 export function ClientCampaignsTab({ client }: { client: ClientDetail }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Campaign history</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Campaign headers linked to brands under this legal entity.
-        </p>
-      </CardHeader>
-      <CardContent>
+    <OperationalTableSuiteProvider
+      tableId={OPERATIONAL_TABLE_IDS.clientCampaigns}
+      columns={CLIENT_CAMPAIGNS_TABLE_COLUMNS}
+      rows={client.campaigns}
+      filterAccessors={CLIENT_CAMPAIGNS_FILTER_ACCESSORS}
+    >
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <CampaignOperationalSectionHeader
+            title="Campaign history"
+            description="Campaign headers linked to brands under this legal entity."
+            actions={
+              <OperationalTableControlsSlot contextLabel="Client campaigns" />
+            }
+          />
+        }
+      >
         {client.campaigns.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="px-4 py-8 text-[11px] text-muted-foreground">
             No campaigns yet for this client.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Campaign #</TableHead>
-                  <TableHead>Brand</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Currency</TableHead>
-                  <TableHead>Dates</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {client.campaigns.map((campaign) => (
-                  <TableRow key={campaign.id}>
-                    <TableCell className="font-medium">
-                      <Link href={`/campaigns/${campaign.id}`} className="hover:underline">
-                        {campaign.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <DocumentNumber value={campaign.document_number} />
-                    </TableCell>
-                    <TableCell>
-                      {(campaign.brand as { name: string } | null)?.name ?? "—"}
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {campaign.status.replace(/_/g, " ")}
-                    </TableCell>
-                    <TableCell>{campaign.currency_code}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {campaign.start_date
-                        ? format(new Date(campaign.start_date), "MMM d, yyyy")
-                        : "—"}
-                      {" — "}
-                      {campaign.end_date
-                        ? format(new Date(campaign.end_date), "MMM d, yyyy")
-                        : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <OperationalConfigurableTable
+            columns={CLIENT_CAMPAIGNS_COLUMNS}
+            rows={client.campaigns}
+            rowKey={(campaign) => campaign.id}
+          />
         )}
-      </CardContent>
-    </Card>
+      </OperationalTableSection>
+    </OperationalTableSuiteProvider>
   );
 }

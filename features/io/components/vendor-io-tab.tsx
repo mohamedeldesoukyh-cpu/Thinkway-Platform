@@ -1,29 +1,29 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Button } from "@/components/ui/button";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
-import {
-  CampaignOperationalTable,
-  CampaignOperationalTableBody,
-  CampaignOperationalTableCell,
-  CampaignOperationalTableCellAmount,
-  CampaignOperationalTableCellMono,
-  CampaignOperationalTableHead,
-  CampaignOperationalTableHeader,
-  CampaignOperationalTableHeaderRow,
-  CampaignOperationalTableRow,
-} from "@/features/campaigns/components/campaign-operational-table";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { VendorIoDetailSheet } from "@/features/io/components/vendor-io-detail-sheet";
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import { sendVendorIoAction } from "@/features/io/actions";
 import type { VendorIoRow } from "@/features/io/types";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 const INITIAL_STATE = { ok: false } as const;
 
@@ -32,7 +32,106 @@ type Props = {
   rows: VendorIoRow[];
 };
 
+function buildCampaignVendorIoColumns(
+  campaignId: string,
+  onViewDetail: (ioId: string) => void,
+  formAction: (payload: FormData) => void,
+  pending: boolean
+): OperationalConfigurableColumnDef<VendorIoRow>[] {
+  return [
+    {
+      id: "io_number",
+      label: "IO #",
+      monoCell: true,
+      renderCell: (row) => (
+        <DetailClickableLabel
+          onClick={() => onViewDetail(row.id)}
+          title={`View ${row.document_number ?? "vendor IO"} details`}
+          className="font-mono text-[11px]"
+        >
+          <DocumentNumber value={row.document_number} />
+        </DetailClickableLabel>
+      ),
+    },
+    {
+      id: "assignment",
+      label: "Assignment",
+      monoCell: true,
+      renderCell: (row) => row.assignment_document_number ?? "—",
+    },
+    {
+      id: "influencer",
+      label: "Influencer",
+      renderCell: (row) => row.influencer_name,
+    },
+    {
+      id: "amount",
+      label: "Amount",
+      headerClassName: "text-right",
+      amountCell: true,
+      renderCell: (row) => formatOperationalAmount(row.amount),
+    },
+    {
+      id: "status",
+      label: "Status",
+      renderCell: (row) => <IoStatusBadge status={row.status} />,
+    },
+    {
+      id: "sent",
+      label: "Sent",
+      cellClassName: "text-muted-foreground",
+      renderCell: (row) =>
+        row.sent_at ? new Date(row.sent_at).toLocaleString() : "—",
+    },
+    {
+      id: "approved",
+      label: "Approved",
+      cellClassName: "text-muted-foreground",
+      renderCell: (row) =>
+        row.approved_at ? new Date(row.approved_at).toLocaleString() : "—",
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      locked: true,
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      renderCell: (row) => (
+        <div className="inline-flex items-center gap-2">
+          <Button size="sm" variant="outline" asChild>
+            <a href={`/ios/vendor?campaign=${campaignId}&io=${row.id}`}>View</a>
+          </Button>
+          <form action={formAction}>
+            <input type="hidden" name="id" value={row.id} />
+            <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
+            <Button size="sm" type="submit" disabled={pending}>
+              {row.status === "sent" ? "Resend" : "Send"}
+            </Button>
+          </form>
+          <VendorIoUngenerateTrigger
+            row={row}
+            disabled={!row.ungenerate_eligible}
+            title={row.ungenerate_ineligible_reason ?? undefined}
+          />
+        </div>
+      ),
+    },
+  ];
+}
+
+const CAMPAIGN_VENDOR_IO_TABLE_COLUMNS = buildCampaignVendorIoColumns(
+  "",
+  () => {},
+  () => {},
+  false
+);
+
+export const CAMPAIGN_VENDOR_IO_TABLE_COLUMN_METAS = getOperationalTableColumnMetas(
+  CAMPAIGN_VENDOR_IO_TABLE_COLUMNS
+);
+
 export function VendorIoTab({ campaignId, rows }: Props) {
+  const [detailIoId, setDetailIoId] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState(sendVendorIoAction, INITIAL_STATE);
 
   useEffect(() => {
@@ -49,88 +148,71 @@ export function VendorIoTab({ campaignId, rows }: Props) {
     [rows]
   );
 
+  const detailRow = useMemo(
+    () => (detailIoId ? (sorted.find((row) => row.id === detailIoId) ?? null) : null),
+    [detailIoId, sorted]
+  );
+
+  const columns = useMemo(
+    () => buildCampaignVendorIoColumns(campaignId, setDetailIoId, formAction, pending),
+    [campaignId, formAction, pending]
+  );
+
   return (
-    <OperationalTableSection
-      wide
-      tableOnly
-      cardSurface
-      leading={
-        <CampaignOperationalSectionHeader
-          title="Vendor IO"
-          description="Auto-generated per assignment when status becomes assigned/confirmed. IO status never blocks campaign execution."
-        />
-      }
-    >
-      {sorted.length === 0 ? (
-        <p className="px-4 py-8 text-[11px] text-muted-foreground">
-          No assignment IO drafts generated yet.
-        </p>
-      ) : (
-        <CampaignOperationalTable>
-          <CampaignOperationalTableHeader>
-            <CampaignOperationalTableHeaderRow>
-              <CampaignOperationalTableHead>IO #</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead>Assignment</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead>Influencer</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead className="text-right">Amount</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead>Status</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead>Sent</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead>Approved</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead className="text-right">Actions</CampaignOperationalTableHead>
-            </CampaignOperationalTableHeaderRow>
-          </CampaignOperationalTableHeader>
-          <CampaignOperationalTableBody>
-            {sorted.map((row) => (
-              <VendorIoRowContextMenu key={row.id} row={row}>
-                <CampaignOperationalTableRow>
-                  <CampaignOperationalTableCellMono>
-                    {row.document_number ?? "—"}
-                  </CampaignOperationalTableCellMono>
-                  <CampaignOperationalTableCellMono>
-                    {row.assignment_document_number ?? "—"}
-                  </CampaignOperationalTableCellMono>
-                  <CampaignOperationalTableCell>{row.influencer_name}</CampaignOperationalTableCell>
-                  <CampaignOperationalTableCellAmount>
-                    {formatOperationalAmount(row.amount)}
-                  </CampaignOperationalTableCellAmount>
-                  <CampaignOperationalTableCell>
-                    <IoStatusBadge status={row.status} />
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell className="text-muted-foreground">
-                    {row.sent_at ? new Date(row.sent_at).toLocaleString() : "—"}
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell className="text-muted-foreground">
-                    {row.approved_at ? new Date(row.approved_at).toLocaleString() : "—"}
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell className="text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <Button size="sm" variant="outline" asChild>
-                        <a href={`/ios/vendor?campaign=${campaignId}&io=${row.id}`}>View</a>
-                      </Button>
-                      <form action={formAction}>
-                        <input type="hidden" name="id" value={row.id} />
-                        <input
-                          type="hidden"
-                          name="campaign_header_id"
-                          value={row.campaign_header_id}
-                        />
-                        <Button size="sm" type="submit" disabled={pending}>
-                          {row.status === "sent" ? "Resend" : "Send"}
-                        </Button>
-                      </form>
-                      <VendorIoUngenerateTrigger
-                        row={row}
-                        disabled={!row.ungenerate_eligible}
-                        title={row.ungenerate_ineligible_reason ?? undefined}
-                      />
-                    </div>
-                  </CampaignOperationalTableCell>
-                </CampaignOperationalTableRow>
-              </VendorIoRowContextMenu>
-            ))}
-          </CampaignOperationalTableBody>
-        </CampaignOperationalTable>
-      )}
-    </OperationalTableSection>
+    <>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.campaignVendorIos}
+        columns={columns}
+        rows={sorted}
+        filterAccessors={{
+          io_number: (row) => row.document_number,
+          assignment: (row) => row.assignment_document_number,
+          influencer: (row) => row.influencer_name,
+          amount: (row) => row.amount,
+          status: (row) => row.status,
+          sent: (row) => row.sent_at,
+          approved: (row) => row.approved_at,
+        }}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <CampaignOperationalSectionHeader
+                title="Vendor IO"
+                description="Auto-generated per assignment when status becomes assigned/confirmed. IO status never blocks campaign execution."
+              />
+              <OperationalTableControlsSlot contextLabel="Vendor IO" />
+            </div>
+          }
+        >
+          {sorted.length === 0 ? (
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">
+              No assignment IO drafts generated yet.
+            </p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={columns}
+              rows={sorted}
+              rowKey={(row) => row.id}
+              wrapRow={(row, rowElement) => (
+                <VendorIoRowContextMenu row={row}>{rowElement}</VendorIoRowContextMenu>
+              )}
+            />
+          )}
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
+
+      <VendorIoDetailSheet
+        open={detailIoId != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailIoId(null);
+        }}
+        row={detailRow}
+        campaignId={campaignId}
+      />
+    </>
   );
 }

@@ -4,10 +4,18 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangleIcon } from "lucide-react";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Select,
   SelectContent,
@@ -15,22 +23,110 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
   PO_STATUS_LABELS,
   PO_STATUS_VARIANT,
 } from "@/lib/finance/po/status";
 import { formatMoney } from "@/features/campaigns/utils";
 import type { PoTrackerWorkspaceData } from "@/features/finance/po-tracker/types";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 const NONE = "__all__";
+
+type PoRow = PoTrackerWorkspaceData["rows"][number];
+
+const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
+  {
+    id: "po_number",
+    label: "PO #",
+    monoCell: true,
+    renderCell: (row) => (
+      <div className="flex items-center gap-2">
+        {row.is_over_consumed ? (
+          <AlertTriangleIcon className="size-4 text-destructive" />
+        ) : null}
+        <span className="tabular-nums">{row.po_number ?? "—"}</span>
+      </div>
+    ),
+  },
+  { id: "client", label: "Client", renderCell: (row) => row.client_name },
+  { id: "brand", label: "Brand", renderCell: (row) => row.brand_name },
+  {
+    id: "campaign",
+    label: "Campaign",
+    renderCell: (row) => (
+      <Link
+        href={`/campaigns/${row.campaign_id}`}
+        className="font-medium hover:underline"
+      >
+        {row.campaign_name}
+      </Link>
+    ),
+  },
+  {
+    id: "currency",
+    label: "Currency",
+    renderCell: (row) => row.po_currency ?? row.campaign_currency,
+  },
+  {
+    id: "original_po",
+    label: "Original PO",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) =>
+      formatMoney(row.po_amount_original, row.po_currency ?? row.campaign_currency),
+  },
+  {
+    id: "converted_po",
+    label: "Converted PO",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) =>
+      formatMoney(row.po_amount_campaign_currency, row.campaign_currency),
+  },
+  {
+    id: "consumed",
+    label: "Consumed",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatMoney(row.po_consumed_amount, row.campaign_currency),
+  },
+  {
+    id: "remaining",
+    label: "Remaining",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatMoney(row.po_remaining_amount, row.campaign_currency),
+  },
+  {
+    id: "remaining_percent",
+    label: "Remaining %",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) =>
+      row.po_remaining_percent != null ? `${row.po_remaining_percent.toFixed(1)}%` : "—",
+  },
+  {
+    id: "status",
+    label: "Status",
+    renderCell: (row) => (
+      <Badge variant={PO_STATUS_VARIANT[row.po_status]}>
+        {PO_STATUS_LABELS[row.po_status]}
+      </Badge>
+    ),
+  },
+  { id: "expiry", label: "Expiry", renderCell: (row) => row.po_expiry_date ?? "—" },
+  {
+    id: "fx",
+    label: "FX",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => row.po_exchange_rate?.toFixed(4) ?? "—",
+  },
+];
+
+const PO_TRACKER_COLUMN_METAS = getOperationalTableColumnMetas(PO_TRACKER_COLUMNS);
 
 type PoTrackerWorkspaceProps = {
   data: PoTrackerWorkspaceData;
@@ -69,11 +165,8 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <CampaignFlatSection title="Filters">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <FilterSelect
             label="Group"
             value={searchParams.get("group_id") ?? NONE}
@@ -154,94 +247,53 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CampaignFlatSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">PO tracker</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>PO #</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Currency</TableHead>
-                <TableHead className="text-right">Original PO</TableHead>
-                <TableHead className="text-right">Converted PO</TableHead>
-                <TableHead className="text-right">Consumed</TableHead>
-                <TableHead className="text-right">Remaining</TableHead>
-                <TableHead className="text-right">Remaining %</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Expiry</TableHead>
-                <TableHead className="text-right">FX</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={13} className="text-center text-muted-foreground">
-                    No PO records match these filters.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.rows.map((row) => (
-                  <TableRow key={row.campaign_id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {row.is_over_consumed ? (
-                          <AlertTriangleIcon className="size-4 text-destructive" />
-                        ) : null}
-                        <span>{row.po_number ?? "—"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{row.client_name}</TableCell>
-                    <TableCell>{row.brand_name}</TableCell>
-                    <TableCell>
-                      <Link
-                        href={`/campaigns/${row.campaign_id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {row.campaign_name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{row.po_currency ?? row.campaign_currency}</TableCell>
-                    <TableCell className="text-right">
-                      {formatMoney(row.po_amount_original, row.po_currency ?? row.campaign_currency)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatMoney(row.po_amount_campaign_currency, row.campaign_currency)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatMoney(row.po_consumed_amount, row.campaign_currency)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatMoney(row.po_remaining_amount, row.campaign_currency)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {row.po_remaining_percent != null
-                        ? `${row.po_remaining_percent.toFixed(1)}%`
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={PO_STATUS_VARIANT[row.po_status]}>
-                        {PO_STATUS_LABELS[row.po_status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{row.po_expiry_date ?? "—"}</TableCell>
-                    <TableCell className="text-right">
-                      {row.po_exchange_rate?.toFixed(4) ?? "—"}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.financePoTracker}
+        columns={PO_TRACKER_COLUMNS}
+        rows={data.rows}
+        filterAccessors={{
+          po_number: (row) => row.po_number,
+          client: (row) => row.client_name,
+          brand: (row) => row.brand_name,
+          campaign: (row) => row.campaign_name,
+          currency: (row) => row.po_currency ?? row.campaign_currency,
+          original_po: (row) => row.po_amount_original,
+          converted_po: (row) => row.po_amount_campaign_currency,
+          consumed: (row) => row.po_consumed_amount,
+          remaining: (row) => row.po_remaining_amount,
+          remaining_percent: (row) => row.po_remaining_percent,
+          status: (row) => row.po_status,
+          expiry: (row) => row.po_expiry_date,
+          fx: (row) => row.po_exchange_rate,
+        }}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="PO tracker"
+              actions={<OperationalTableControlsSlot contextLabel="PO tracker" />}
+            />
+          }
+        >
+          {data.rows.length === 0 ? (
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">
+              No PO records match these filters.
+            </p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={PO_TRACKER_COLUMNS}
+              rows={data.rows}
+              rowKey={(row) => row.campaign_id}
+            />
+          )}
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
     </div>
   );
 }
@@ -256,18 +308,14 @@ function KpiCard({
   alert?: boolean;
 }) {
   return (
-    <Card className={alert ? "border-destructive/40" : undefined}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className={`text-2xl font-semibold ${alert ? "text-destructive" : ""}`}>
-          {value}
-        </p>
-      </CardContent>
-    </Card>
+    <CampaignFlatSection
+      title={title}
+      className={cn(alert ? "border-destructive/40" : undefined)}
+    >
+      <p className={cn("text-2xl font-semibold", alert && "text-destructive")}>
+        {value}
+      </p>
+    </CampaignFlatSection>
   );
 }
 

@@ -1,12 +1,16 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IoSearchFilters } from "@/features/io/components/io-search-filters";
 import { VendorIosWorkspace } from "@/features/io/components/vendor-ios-workspace";
 import { getVendorIos } from "@/features/io/queries";
 
 type Props = {
-  searchParams: Promise<{ q?: string; status?: string; io?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    io?: string;
+    campaign?: string;
+  }>;
 };
 
 export default async function VendorIosPage({ searchParams }: Props) {
@@ -14,16 +18,27 @@ export default async function VendorIosPage({ searchParams }: Props) {
   const rows = await getVendorIos({ status: params.status });
   const selected = params.io ? rows.find((row) => row.id === params.io) ?? null : rows[0] ?? null;
 
+  const campaignId = params.campaign ?? selected?.campaign_header_id ?? null;
+  const backFallbackHref = campaignId
+    ? `/campaigns/${campaignId}`
+    : "/ios/vendor";
+
   return (
     <DashboardShell
       title="Vendor IOs"
       description="Assignment-level IO tracking for vendors/influencers. Lightweight operational workflow only."
+      backFallbackHref={backFallbackHref}
+      backLabel={campaignId ? "Back to campaign" : "Back to vendor IOs"}
     >
       <PlatformErrorBoundary surface="ios">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>Vendor IO register</CardTitle>
+        <VendorIosWorkspace
+          rows={rows}
+          initialSelectedId={selected?.id ?? null}
+          leading={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                Vendor IO register
+              </h2>
               <IoSearchFilters
                 statuses={[
                   { value: "all", label: "All statuses" },
@@ -33,15 +48,9 @@ export default async function VendorIosPage({ searchParams }: Props) {
                   { value: "rejected", label: "Rejected" },
                 ]}
               />
-            </CardHeader>
-            <CardContent>
-              <VendorIosWorkspace
-                rows={rows}
-                initialSelectedId={selected?.id ?? null}
-              />
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          }
+        />
       </PlatformErrorBoundary>
     </DashboardShell>
   );

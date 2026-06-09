@@ -1,8 +1,7 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InviteUserSheet } from "@/features/settings/components/invite-user-sheet";
-import { UsersTable } from "@/features/settings/components/users-table";
+import { SettingsUsersSection } from "@/features/settings/components/settings-users-section";
 import { getClientsForAccessSelect } from "@/features/client-access/queries";
 import { getSettingsRoles, getSettingsUsers } from "@/features/settings/queries";
 
@@ -25,14 +24,7 @@ export default async function SettingsUsersPage({ searchParams }: Props) {
       actions={<InviteUserSheet roles={roles} clients={clients} />}
     >
       <PlatformErrorBoundary surface="ios">
-        <Card>
-          <CardHeader>
-            <CardTitle>User management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <UsersTable users={users} roles={roles} />
-          </CardContent>
-        </Card>
+        <SettingsUsersSection users={users} roles={roles} />
       </PlatformErrorBoundary>
     </DashboardShell>
   );

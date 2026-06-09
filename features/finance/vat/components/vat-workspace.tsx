@@ -1,33 +1,230 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { useWorkspaceTabOrder } from "@/hooks/use-workspace-tab-order";
+import {
+  VAT_WORKSPACE_TAB_ORDER,
+  VAT_WORKSPACE_TAB_STORAGE_KEY,
+  isVatWorkspaceTabId,
+  type VatWorkspaceTabId,
+} from "@/lib/workspace/platform-workspace-tabs";
 import Link from "next/link";
 
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import {
+  OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
+  OperationalDetailRow,
+  OperationalWorkspaceSortableTabsBar,
+  OperationalWorkspaceTabPanel,
+  type OperationalWorkspaceTabDef,
+} from "@/components/workspace/operational-workspace-ui";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { buildVatAuditCsv } from "@/features/finance/vat/export";
-import type { VatWorkspaceData } from "@/features/finance/vat/types";
+import type {
+  VatCountryRow,
+  VatEntityRow,
+  VatInvoiceRow,
+  VatMonthlyRow,
+  VatWorkspaceData,
+} from "@/features/finance/vat/types";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 type VatWorkspaceProps = {
   data: VatWorkspaceData;
 };
 
+const VAT_MONTHLY_COLUMNS: OperationalConfigurableColumnDef<VatMonthlyRow>[] = [
+  { id: "month", label: "Month", renderCell: (row) => row.label },
+  {
+    id: "revenue_ex_vat",
+    label: "Revenue ex-VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.revenue_before_vat, "USD"),
+  },
+  {
+    id: "output_vat",
+    label: "Output VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.output_vat, "USD"),
+  },
+  {
+    id: "input_vat",
+    label: "Input VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.input_vat, "USD"),
+  },
+  {
+    id: "net_payable",
+    label: "Net payable",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.net_vat_payable, "USD"),
+  },
+];
+
+const VAT_COUNTRY_COLUMNS: OperationalConfigurableColumnDef<VatCountryRow>[] = [
+  { id: "country", label: "Country", renderCell: (row) => row.country_code },
+  {
+    id: "output_vat",
+    label: "Output VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.output_vat, "USD"),
+  },
+  {
+    id: "input_vat",
+    label: "Input VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.input_vat, "USD"),
+  },
+  {
+    id: "net_payable",
+    label: "Net payable",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.net_vat_payable, "USD"),
+  },
+];
+
+const VAT_ENTITY_COLUMNS: OperationalConfigurableColumnDef<VatEntityRow>[] = [
+  { id: "entity", label: "Legal entity", renderCell: (row) => row.client_name },
+  { id: "country", label: "Country", renderCell: (row) => row.country_code ?? "—" },
+  {
+    id: "revenue_ex_vat",
+    label: "Revenue ex-VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.revenue_before_vat, "USD"),
+  },
+  {
+    id: "output_vat",
+    label: "Output VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.output_vat, "USD"),
+  },
+];
+
+const VAT_INVOICE_COLUMNS: OperationalConfigurableColumnDef<VatInvoiceRow>[] = [
+  {
+    id: "invoice",
+    label: "Invoice",
+    monoCell: true,
+    renderCell: (row) => formatDocumentNumberForDisplay(row.document_number),
+  },
+  { id: "client", label: "Client", renderCell: (row) => row.client_name },
+  { id: "country", label: "Country", renderCell: (row) => row.country_code ?? "—" },
+  {
+    id: "ex_vat",
+    label: "Ex-VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.revenue_before_vat, row.currency),
+  },
+  {
+    id: "vat",
+    label: "VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.output_vat, row.currency),
+  },
+  {
+    id: "total",
+    label: "Total",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatBillingMoney(row.total_after_vat, row.currency),
+  },
+  {
+    id: "actions",
+    label: "",
+    locked: true,
+    renderCell: (row) => (
+      <Link
+        href={`/billing/invoices/${row.id}`}
+        className="text-primary hover:underline"
+      >
+        Open
+      </Link>
+    ),
+  },
+];
+
+function ConfigurableVatTable<T>({
+  tableId,
+  title,
+  contextLabel,
+  columns,
+  rows,
+  rowKey,
+}: {
+  tableId: string;
+  title: string;
+  contextLabel: string;
+  columns: readonly OperationalConfigurableColumnDef<T>[];
+  rows: readonly T[];
+  rowKey: (row: T) => string;
+}) {
+  return (
+    <OperationalTableSuiteProvider tableId={tableId} columns={columns} rows={rows}>
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <CampaignOperationalSectionHeader
+            title={title}
+            actions={<OperationalTableControlsSlot contextLabel={contextLabel} />}
+          />
+        }
+      >
+        {rows.length === 0 ? (
+          <p className="px-4 py-8 text-[11px] text-muted-foreground">No VAT data yet.</p>
+        ) : (
+          <OperationalConfigurableTable columns={columns} rows={rows} rowKey={rowKey} />
+        )}
+      </OperationalTableSection>
+    </OperationalTableSuiteProvider>
+  );
+}
+
 export function VatWorkspace({ data }: VatWorkspaceProps) {
   const [includeVatColumns, setIncludeVatColumns] = useState(true);
+
+  const { tabOrder, moveTab } = useWorkspaceTabOrder({
+    storageKey: VAT_WORKSPACE_TAB_STORAGE_KEY,
+    defaultOrder: VAT_WORKSPACE_TAB_ORDER,
+    isValidId: isVatWorkspaceTabId,
+  });
+
+  const tabsById = useMemo(
+    (): Record<VatWorkspaceTabId, OperationalWorkspaceTabDef> => ({
+      settlement: { value: "settlement", label: "Settlement" },
+      monthly: { value: "monthly", label: "Monthly" },
+      country: { value: "country", label: "By country" },
+      entity: { value: "entity", label: "By legal entity" },
+      invoices: { value: "invoices", label: "By invoice" },
+    }),
+    []
+  );
 
   const csvContent = useMemo(
     () => buildVatAuditCsv(data, includeVatColumns),
@@ -79,96 +276,88 @@ export function VatWorkspace({ data }: VatWorkspaceProps) {
         />
       </div>
 
-      <Tabs defaultValue="settlement" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="settlement">Settlement</TabsTrigger>
-          <TabsTrigger value="monthly">Monthly</TabsTrigger>
-          <TabsTrigger value="country">By country</TabsTrigger>
-          <TabsTrigger value="entity">By legal entity</TabsTrigger>
-          <TabsTrigger value="invoices">By invoice</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="settlement" className="flex flex-col gap-0">
+        <OperationalWorkspaceSortableTabsBar
+          sectionLabel="VAT workspace"
+          tabOrder={tabOrder}
+          tabsById={tabsById}
+          onReorder={moveTab}
+        />
 
-        <TabsContent value="settlement">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">VAT settlement summary</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 text-sm">
-              <Row label="Output VAT (client invoices)" value={data.kpis.output_vat} />
-              <Row label="Input VAT (vendor costs)" value={data.kpis.input_vat} />
-              <Row label="Net VAT payable" value={data.kpis.net_vat_payable} strong />
-              <p className="text-xs text-muted-foreground pt-2">
+        <TabsContent value="settlement" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <CampaignFlatSection title="VAT settlement summary">
+              <OperationalDetailRow
+                label="Output VAT (client invoices)"
+                value={formatBillingMoney(data.kpis.output_vat, "USD")}
+              />
+              <OperationalDetailRow
+                label="Input VAT (vendor costs)"
+                value={formatBillingMoney(data.kpis.input_vat, "USD")}
+              />
+              <OperationalDetailRow
+                label="Net VAT payable"
+                value={formatBillingMoney(data.kpis.net_vat_payable, "USD")}
+                valueClassName="font-semibold"
+              />
+              <p className="pt-2 text-xs text-muted-foreground">
                 Net payable = Output VAT − Input VAT. Operational revenue, cost, GP, and margin
                 never include VAT.
               </p>
-            </CardContent>
-          </Card>
+            </CampaignFlatSection>
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="monthly">
-          <DataTable
-            headers={["Month", "Revenue ex-VAT", "Output VAT", "Input VAT", "Net payable"]}
-            rows={data.monthly.map((row) => [
-              row.label,
-              formatBillingMoney(row.revenue_before_vat, "USD"),
-              formatBillingMoney(row.output_vat, "USD"),
-              formatBillingMoney(row.input_vat, "USD"),
-              formatBillingMoney(row.net_vat_payable, "USD"),
-            ])}
-          />
+        <TabsContent value="monthly" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <ConfigurableVatTable
+              tableId={OPERATIONAL_TABLE_IDS.financeVatMonthly}
+              title="Monthly VAT"
+              contextLabel="VAT monthly"
+              columns={VAT_MONTHLY_COLUMNS}
+              rows={data.monthly}
+              rowKey={(row) => row.month}
+            />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="country">
-          <DataTable
-            headers={["Country", "Output VAT", "Input VAT", "Net payable"]}
-            rows={data.by_country.map((row) => [
-              row.country_code,
-              formatBillingMoney(row.output_vat, "USD"),
-              formatBillingMoney(row.input_vat, "USD"),
-              formatBillingMoney(row.net_vat_payable, "USD"),
-            ])}
-          />
+        <TabsContent value="country" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <ConfigurableVatTable
+              tableId={OPERATIONAL_TABLE_IDS.financeVatByCountry}
+              title="VAT by country"
+              contextLabel="VAT by country"
+              columns={VAT_COUNTRY_COLUMNS}
+              rows={data.by_country}
+              rowKey={(row) => row.country_code}
+            />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="entity">
-          <DataTable
-            headers={["Legal entity", "Country", "Revenue ex-VAT", "Output VAT"]}
-            rows={data.by_entity.map((row) => [
-              row.client_name,
-              row.country_code ?? "—",
-              formatBillingMoney(row.revenue_before_vat, "USD"),
-              formatBillingMoney(row.output_vat, "USD"),
-            ])}
-          />
+        <TabsContent value="entity" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <ConfigurableVatTable
+              tableId={OPERATIONAL_TABLE_IDS.financeVatByEntity}
+              title="VAT by legal entity"
+              contextLabel="VAT by legal entity"
+              columns={VAT_ENTITY_COLUMNS}
+              rows={data.by_entity}
+              rowKey={(row) => row.client_id}
+            />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="invoices">
-          <DataTable
-            headers={[
-              "Invoice",
-              "Client",
-              "Country",
-              "Ex-VAT",
-              "VAT",
-              "Total",
-              "",
-            ]}
-            rows={data.invoices.map((row) => [
-              formatDocumentNumberForDisplay(row.document_number),
-              row.client_name,
-              row.country_code ?? "—",
-              formatBillingMoney(row.revenue_before_vat, row.currency),
-              formatBillingMoney(row.output_vat, row.currency),
-              formatBillingMoney(row.total_after_vat, row.currency),
-              <Link
-                key={row.id}
-                href={`/billing/invoices/${row.id}`}
-                className="text-primary hover:underline"
-              >
-                Open
-              </Link>,
-            ])}
-          />
+        <TabsContent value="invoices" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <ConfigurableVatTable
+              tableId={OPERATIONAL_TABLE_IDS.financeVatByInvoice}
+              title="VAT by invoice"
+              contextLabel="VAT by invoice"
+              columns={VAT_INVOICE_COLUMNS}
+              rows={data.invoices}
+              rowKey={(row) => row.id}
+            />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
       </Tabs>
     </div>
@@ -177,69 +366,8 @@ export function VatWorkspace({ data }: VatWorkspaceProps) {
 
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
-    <Card>
-      <CardContent className="space-y-1 p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-lg font-semibold">{value}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Row({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: number;
-  strong?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className={strong ? "font-medium" : "text-muted-foreground"}>{label}</span>
-      <span className={strong ? "font-semibold" : ""}>{formatBillingMoney(value, "USD")}</span>
-    </div>
-  );
-}
-
-function DataTable({
-  headers,
-  rows,
-}: {
-  headers: string[];
-  rows: (string | ReactNode)[][];
-}) {
-  return (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {headers.map((header) => (
-                <TableHead key={header}>{header}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={headers.length} className="text-muted-foreground">
-                  No VAT data yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row, index) => (
-                <TableRow key={index}>
-                  {row.map((cell, cellIndex) => (
-                    <TableCell key={cellIndex}>{cell}</TableCell>
-                  ))}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <CampaignFlatSection title={label}>
+      <p className="text-lg font-semibold">{value}</p>
+    </CampaignFlatSection>
   );
 }

@@ -5,10 +5,17 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DetailEditBlock,
+  DetailFormSection,
+  DetailPill,
+  DetailSheetFooter,
+} from "@/features/campaigns/components/operational-detail-panel";
 import { updateVendorIoAction, sendVendorIoAction } from "@/features/io/actions";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
@@ -16,17 +23,12 @@ import type { VendorIoRow } from "@/features/io/types";
 
 const INITIAL_STATE = { ok: false } as const;
 
+const DETAIL_TEXTAREA_CLASS =
+  "min-h-[4.5rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1";
+
 type Props = {
   row: VendorIoRow;
 };
-
-function formatMoney(value: number, currencyCode: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode || "USD",
-    minimumFractionDigits: 2,
-  }).format(value || 0);
-}
 
 export function VendorIoForm({ row }: Props) {
   const [termsText, setTermsText] = useState(row.terms_text ?? "");
@@ -37,6 +39,14 @@ export function VendorIoForm({ row }: Props) {
 
   const [saveState, saveAction, saving] = useActionState(updateVendorIoAction, INITIAL_STATE);
   const [sendState, sendAction, sending] = useActionState(sendVendorIoAction, INITIAL_STATE);
+
+  useEffect(() => {
+    setTermsText(row.terms_text ?? "");
+    setTermsHtml(row.terms_html ?? "");
+    setUsageRights(row.usage_rights ?? "");
+    setExclusivity(row.exclusivity ?? "");
+    setAttachmentUrl(row.attachment_url ?? "");
+  }, [row]);
 
   useEffect(() => {
     if (!saveState.message) return;
@@ -51,19 +61,25 @@ export function VendorIoForm({ row }: Props) {
   }, [sendState]);
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-          <span>
+    <OperationalTableSection
+      wide
+      tableOnly
+      cardSurface
+      leading={
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Vendor IO ·{" "}
             {row.document_number ? (
               <DocumentNumber value={row.document_number} />
             ) : (
               row.influencer_name
             )}
-          </span>
-          <div className="inline-flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span>{formatMoney(row.amount, row.currency_code)}</span>
+          </h2>
+          <div className="inline-flex flex-wrap items-center gap-2">
+            <span className="text-[11px] tabular-nums text-foreground/90">
+              {formatOperationalAmount(row.amount)}
+            </span>
+            <DetailPill>{row.currency_code}</DetailPill>
             <IoStatusBadge status={row.status} />
             <VendorIoUngenerateTrigger
               row={row}
@@ -71,86 +87,98 @@ export function VendorIoForm({ row }: Props) {
               title={row.ungenerate_ineligible_reason ?? undefined}
             />
           </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <form action={saveAction} className="grid gap-4">
-          <input type="hidden" name="id" value={row.id} />
-          <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-          <input type="hidden" name="status" value={row.status} />
+        </div>
+      }
+    >
+      <form id="vendor-io-save" action={saveAction} className="flex flex-col">
+        <input type="hidden" name="id" value={row.id} />
+        <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
+        <input type="hidden" name="status" value={row.status} />
 
-          <div className="grid gap-2">
-            <Label htmlFor="terms_text">Terms (plain text)</Label>
-            <Textarea
-              id="terms_text"
-              name="terms_text"
-              value={termsText}
-              onChange={(e) => setTermsText(e.target.value)}
-              rows={8}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="terms_html">Terms (optional HTML)</Label>
-            <Textarea
-              id="terms_html"
-              name="terms_html"
-              value={termsHtml}
-              onChange={(e) => setTermsHtml(e.target.value)}
-              rows={6}
-            />
-          </div>
-
-          <div className="grid gap-2 md:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="usage_rights">Usage rights</Label>
-              <Input
-                id="usage_rights"
-                name="usage_rights"
-                value={usageRights}
-                onChange={(e) => setUsageRights(e.target.value)}
-                placeholder="e.g. 6 months paid media rights"
+        <div className="px-6 py-4">
+          <div className="space-y-1">
+            <DetailEditBlock label="Terms (plain text)">
+              <Textarea
+                id="terms_text"
+                name="terms_text"
+                value={termsText}
+                onChange={(e) => setTermsText(e.target.value)}
+                rows={8}
+                className={DETAIL_TEXTAREA_CLASS}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="exclusivity">Exclusivity</Label>
-              <Input
-                id="exclusivity"
-                name="exclusivity"
-                value={exclusivity}
-                onChange={(e) => setExclusivity(e.target.value)}
-                placeholder="e.g. Beauty category for 30 days"
+            </DetailEditBlock>
+
+            <DetailEditBlock label="Terms (optional HTML)">
+              <Textarea
+                id="terms_html"
+                name="terms_html"
+                value={termsHtml}
+                onChange={(e) => setTermsHtml(e.target.value)}
+                rows={6}
+                className={DETAIL_TEXTAREA_CLASS}
               />
+            </DetailEditBlock>
+
+            <div className="grid gap-5 border-b border-border/40 py-3.5 md:grid-cols-2">
+              <DetailFormSection label="Usage rights">
+                <Input
+                  id="usage_rights"
+                  name="usage_rights"
+                  value={usageRights}
+                  onChange={(e) => setUsageRights(e.target.value)}
+                  placeholder="e.g. 6 months paid media rights"
+                  className={DETAIL_FORM_INPUT_CLASS}
+                />
+              </DetailFormSection>
+              <DetailFormSection label="Exclusivity">
+                <Input
+                  id="exclusivity"
+                  name="exclusivity"
+                  value={exclusivity}
+                  onChange={(e) => setExclusivity(e.target.value)}
+                  placeholder="e.g. Beauty category for 30 days"
+                  className={DETAIL_FORM_INPUT_CLASS}
+                />
+              </DetailFormSection>
             </div>
-          </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="attachment_url">Attachment URL (PO/SOW/signed PDF)</Label>
-            <Input
-              id="attachment_url"
-              name="attachment_url"
-              value={attachmentUrl}
-              onChange={(e) => setAttachmentUrl(e.target.value)}
-              placeholder="https://..."
-            />
+            <DetailFormSection label="Attachment URL (PO/SOW/signed PDF)" className="py-3.5">
+              <Input
+                id="attachment_url"
+                name="attachment_url"
+                value={attachmentUrl}
+                onChange={(e) => setAttachmentUrl(e.target.value)}
+                placeholder="https://..."
+                className={DETAIL_FORM_INPUT_CLASS}
+              />
+            </DetailFormSection>
           </div>
+        </div>
+      </form>
 
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="submit" variant="outline" disabled={saving}>
-              {saving ? "Saving..." : "Save Draft"}
-            </Button>
-          </div>
-        </form>
+      <form id="vendor-io-send" action={sendAction} className="hidden">
+        <input type="hidden" name="id" value={row.id} />
+        <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
+      </form>
 
-        <form action={sendAction} className="flex justify-end">
-          <input type="hidden" name="id" value={row.id} />
-          <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-          <Button type="submit" disabled={sending}>
-            {row.status === "sent" ? "Resend Vendor IO" : "Send to Influencer"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <DetailSheetFooter>
+        <Button
+          form="vendor-io-save"
+          type="submit"
+          variant="outline"
+          size="sm"
+          disabled={saving}
+        >
+          {saving ? "Saving…" : "Save draft"}
+        </Button>
+        <Button form="vendor-io-send" type="submit" size="sm" disabled={sending}>
+          {sending
+            ? "Sending…"
+            : row.status === "sent"
+              ? "Resend vendor IO"
+              : "Send to influencer"}
+        </Button>
+      </DetailSheetFooter>
+    </OperationalTableSection>
   );
 }
-

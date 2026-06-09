@@ -4,10 +4,17 @@ import { PlusIcon } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Dialog,
   DialogContent,
@@ -18,14 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { archiveBrandAction } from "@/features/brands/actions";
 import {
   BrandRowActions,
@@ -35,11 +35,89 @@ import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import { BrandSheet } from "@/features/groups/components/brand-sheet";
 import type { GroupBrandRow, GroupWorkspace } from "@/features/groups/types";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import { GROUP_BRANDS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 
 type GroupBrandsTabProps = {
   workspace: GroupWorkspace;
   masterData: MasterDataOptions;
 };
+
+type BrandTableContext = {
+  onEdit: (brand: GroupBrandRow) => void;
+  onArchive: (brand: GroupBrandRow) => void;
+};
+
+function buildGroupBrandsColumns(
+  context: BrandTableContext
+): OperationalConfigurableColumnDef<GroupBrandRow>[] {
+  return [
+    {
+      id: "brand",
+      label: "Brand",
+      renderCell: (brand) => (
+        <div className="space-y-0.5">
+          <span className="font-medium">{brand.name}</span>
+          <p className="text-[10px] text-muted-foreground">
+            <DocumentNumber value={brand.document_number} />
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "legal_entity",
+      label: "Legal entity",
+      renderCell: (brand) => brand.client_name,
+    },
+    {
+      id: "category",
+      label: "Category",
+      renderCell: (brand) => brand.category_name ?? "—",
+    },
+    {
+      id: "subcategory",
+      label: "Subcategory",
+      renderCell: (brand) => brand.subcategory_name ?? "—",
+    },
+    {
+      id: "vr_rate",
+      label: "VR%",
+      renderCell: (brand) =>
+        brand.vr_rate_percent != null ? `${brand.vr_rate_percent}%` : "—",
+    },
+    {
+      id: "currency",
+      label: "Currency",
+      renderCell: (brand) => brand.currency_code,
+    },
+    {
+      id: "campaigns",
+      label: "Campaigns",
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      renderCell: (brand) => brand.active_campaigns,
+    },
+    {
+      id: "status",
+      label: "Status",
+      renderCell: (brand) => <BrandStatusToggle brand={brand} />,
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      locked: true,
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      renderCell: (brand) => (
+        <BrandRowActions
+          brand={brand}
+          onEdit={() => context.onEdit(brand)}
+          onArchive={() => context.onArchive(brand)}
+        />
+      ),
+    },
+  ];
+}
 
 export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
   const [search, setSearch] = useState("");
@@ -47,6 +125,19 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupBrandRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<GroupBrandRow | null>(null);
+
+  const columns = useMemo(
+    () =>
+      buildGroupBrandsColumns({
+        onEdit: (brand) => {
+          setEditing(brand);
+          setSheetOpen(true);
+        },
+        onArchive: setArchiveTarget,
+      }),
+    []
+  );
+  const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
   const [archiveState, archiveAction, archivePending] = useActionState(
     archiveBrandAction,
@@ -83,112 +174,78 @@ export function GroupBrandsTab({ workspace, masterData }: GroupBrandsTabProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle>Brands</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Commercial brands across all legal entities in this group.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditing(null);
-              setSheetOpen(true);
-            }}
-            disabled={workspace.legal_entities.length === 0}
-          >
-            <PlusIcon data-icon="inline-start" />
-            Add brand
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="grid gap-2 sm:col-span-2">
-              <Label htmlFor="brand_search">Search</Label>
-              <Input
-                id="brand_search"
-                placeholder="Search by brand, entity, or category…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.groupBrands}
+        columns={columns}
+        rows={filteredBrands}
+        filterAccessors={GROUP_BRANDS_FILTER_ACCESSORS}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Brands"
+              description="Commercial brands across all legal entities in this group."
+              actions={
+                <>
+                  <OperationalTableControlsSlot contextLabel="Group brands" />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditing(null);
+                      setSheetOpen(true);
+                    }}
+                    disabled={workspace.legal_entities.length === 0}
+                  >
+                    <PlusIcon data-icon="inline-start" />
+                    Add brand
+                  </Button>
+                </>
+              }
+            />
+          }
+          toolbar={
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="brand_search">Search</Label>
+                <Input
+                  id="brand_search"
+                  placeholder="Search by brand, entity, or category…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Status</Label>
+                <SearchableSelect
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                  options={[{ value: "", label: "All statuses" }, ...statusOptions]}
+                  placeholder="All statuses"
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label>Status</Label>
-              <SearchableSelect
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-                options={[{ value: "", label: "All statuses" }, ...statusOptions]}
-                placeholder="All statuses"
-              />
-            </div>
-          </div>
-
+          }
+        >
           {workspace.legal_entities.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">
               Add a legal entity before creating brands.
             </p>
           ) : filteredBrands.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No brands match your filters.</p>
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">
+              No brands match your filters.
+            </p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Brand</TableHead>
-                    <TableHead>Legal entity</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Subcategory</TableHead>
-                    <TableHead>VR%</TableHead>
-                    <TableHead>Currency</TableHead>
-                    <TableHead className="text-right">Campaigns</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBrands.map((brand) => (
-                    <TableRow key={brand.id}>
-                      <TableCell>
-                        <div className="space-y-0.5">
-                          <span className="font-medium">{brand.name}</span>
-                          <p className="text-xs text-muted-foreground">
-                            <DocumentNumber value={brand.document_number} />
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>{brand.client_name}</TableCell>
-                      <TableCell>{brand.category_name ?? "—"}</TableCell>
-                      <TableCell>{brand.subcategory_name ?? "—"}</TableCell>
-                      <TableCell>
-                        {brand.vr_rate_percent != null
-                          ? `${brand.vr_rate_percent}%`
-                          : "—"}
-                      </TableCell>
-                      <TableCell>{brand.currency_code}</TableCell>
-                      <TableCell className="text-right">{brand.active_campaigns}</TableCell>
-                      <TableCell>
-                        <BrandStatusToggle brand={brand} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <BrandRowActions
-                          brand={brand}
-                          onEdit={() => {
-                            setEditing(brand);
-                            setSheetOpen(true);
-                          }}
-                          onArchive={() => setArchiveTarget(brand)}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <OperationalConfigurableTable
+              columns={columns}
+              rows={filteredBrands}
+              rowKey={(brand) => brand.id}
+            />
           )}
-        </CardContent>
-      </Card>
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
 
       <BrandSheet
         legalEntities={workspace.legal_entities}

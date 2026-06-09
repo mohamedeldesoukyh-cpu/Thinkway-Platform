@@ -1,24 +1,29 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+} from "@/features/campaigns/components/campaign-operational-table";
 import {
   BillingQueueCampaignRow,
   computeCampaignMasterStatus,
 } from "@/features/billing/components/billing-queue-campaign-row";
-import { BillingCampaignReviewPanel } from "@/features/billing/components/billing-campaign-review-panel";
+import {
+  BILLING_CAMPAIGN_REVIEW_LINES_COLUMN_METAS,
+  BillingCampaignReviewPanel,
+} from "@/features/billing/components/billing-campaign-review-panel";
 import { BillingFinanceFilterBar } from "@/features/billing/components/billing-finance-filter-bar";
 import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
 import {
@@ -50,12 +55,92 @@ import {
   type CampaignBillingQueueFilter,
 } from "@/lib/billing/campaign-billing-queue";
 import { devLog } from "@/lib/dev-log";
+import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
+import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
+import { operationalColumnsFromMetas } from "@/lib/tables/operational-filter-columns";
+import {
+  BILLING_CAMPAIGN_QUEUE_FILTER_ACCESSORS,
+  BILLING_CAMPAIGN_REVIEW_LINES_FILTER_ACCESSORS,
+} from "@/lib/tables/workspace-table-filter-fields";
+import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+
+export const BILLING_CAMPAIGN_QUEUE_COLUMN_METAS: OperationalTableColumnMeta[] = [
+  { id: "expand", label: "Expand", locked: true },
+  { id: "select", label: "Select", locked: true },
+  { id: "campaign_no", label: "Campaign No" },
+  { id: "client", label: "Client" },
+  { id: "brand", label: "Brand" },
+  { id: "campaign", label: "Campaign" },
+  { id: "currency", label: "Currency" },
+  { id: "total", label: "Total" },
+  { id: "achieved", label: "Achieved" },
+  { id: "invoiced", label: "Invoiced" },
+  { id: "remaining", label: "Remaining" },
+  { id: "unachieved", label: "Unachieved" },
+  { id: "status", label: "Status" },
+  { id: "actions", label: "Actions", locked: true },
+];
 
 type BillingCampaignQueueTableProps = {
   campaigns: CampaignBillingQueueRow[];
+  settingsSlot?: ReactNode;
 };
 
-export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTableProps) {
+function BillingCampaignQueueTableHeader() {
+  const showExpand = useIsOperationalColumnVisible("expand");
+  const showSelect = useIsOperationalColumnVisible("select");
+  const showCampaignNo = useIsOperationalColumnVisible("campaign_no");
+  const showClient = useIsOperationalColumnVisible("client");
+  const showBrand = useIsOperationalColumnVisible("brand");
+  const showCampaign = useIsOperationalColumnVisible("campaign");
+  const showCurrency = useIsOperationalColumnVisible("currency");
+  const showTotal = useIsOperationalColumnVisible("total");
+  const showAchieved = useIsOperationalColumnVisible("achieved");
+  const showInvoiced = useIsOperationalColumnVisible("invoiced");
+  const showRemaining = useIsOperationalColumnVisible("remaining");
+  const showUnachieved = useIsOperationalColumnVisible("unachieved");
+  const showStatus = useIsOperationalColumnVisible("status");
+  const showActions = useIsOperationalColumnVisible("actions");
+
+  return (
+    <CampaignOperationalTableHeader>
+      <CampaignOperationalTableHeaderRow>
+        {showExpand ? <CampaignOperationalTableHead className="w-8" /> : null}
+        {showSelect ? <CampaignOperationalTableHead className="w-8" /> : null}
+        {showCampaignNo ? <CampaignOperationalTableHead>Campaign No</CampaignOperationalTableHead> : null}
+        {showClient ? <CampaignOperationalTableHead>Client</CampaignOperationalTableHead> : null}
+        {showBrand ? <CampaignOperationalTableHead>Brand</CampaignOperationalTableHead> : null}
+        {showCampaign ? <CampaignOperationalTableHead>Campaign</CampaignOperationalTableHead> : null}
+        {showCurrency ? <CampaignOperationalTableHead>Currency</CampaignOperationalTableHead> : null}
+        {showTotal ? (
+          <CampaignOperationalTableHead className="text-right">Total</CampaignOperationalTableHead>
+        ) : null}
+        {showAchieved ? (
+          <CampaignOperationalTableHead className="text-right">Achieved</CampaignOperationalTableHead>
+        ) : null}
+        {showInvoiced ? (
+          <CampaignOperationalTableHead className="text-right">Invoiced</CampaignOperationalTableHead>
+        ) : null}
+        {showRemaining ? (
+          <CampaignOperationalTableHead className="text-right">Remaining</CampaignOperationalTableHead>
+        ) : null}
+        {showUnachieved ? (
+          <CampaignOperationalTableHead className="text-right">Unachieved</CampaignOperationalTableHead>
+        ) : null}
+        {showStatus ? <CampaignOperationalTableHead>Status</CampaignOperationalTableHead> : null}
+        {showActions ? (
+          <CampaignOperationalTableHead className="text-right">Actions</CampaignOperationalTableHead>
+        ) : null}
+      </CampaignOperationalTableHeaderRow>
+    </CampaignOperationalTableHeader>
+  );
+}
+
+export function BillingCampaignQueueTable({
+  campaigns,
+  settingsSlot,
+}: BillingCampaignQueueTableProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<CampaignBillingQueueFilter>("all");
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
@@ -79,9 +164,13 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
 
   const operationalFilter = mapCampaignQueueFilterToOperational(filter);
 
+  const suiteRows =
+    useOperationalTableDataContextOptional<CampaignBillingQueueRow>()?.processedRows ??
+    campaigns;
+
   const filtered = useMemo(
-    () => filterCampaignQueueRows(campaigns, filter),
-    [campaigns, filter]
+    () => filterCampaignQueueRows(suiteRows, filter),
+    [suiteRows, filter]
   );
 
   const filteredRollup = useMemo(() => {
@@ -307,141 +396,138 @@ export function BillingCampaignQueueTable({ campaigns }: BillingCampaignQueueTab
         }}
       />
 
-      <Card>
-        <CardHeader className="flex flex-col gap-3 pb-3">
-          <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle className="text-base">Billing queue</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                One row per campaign — check a campaign to select all billable rows, or expand to
-                adjust individual lines.
-              </p>
-              {filter !== "all" && filtered.length > 0 ? (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Filtered rollup ({filtered.length} campaign{filtered.length === 1 ? "" : "s"}):{" "}
-                  achieved{" "}
-                  {filteredRollupCurrency
-                    ? formatBillingMoneyCompact(filteredRollup.achieved, filteredRollupCurrency)
-                    : filteredRollup.achieved.toLocaleString()}{" "}
-                  · invoiced{" "}
-                  {filteredRollupCurrency
-                    ? formatBillingMoneyCompact(filteredRollup.invoiced, filteredRollupCurrency)
-                    : filteredRollup.invoiced.toLocaleString()}{" "}
-                  · remaining{" "}
-                  {filteredRollupCurrency
-                    ? formatBillingMoneyCompact(filteredRollup.remaining, filteredRollupCurrency)
-                    : filteredRollup.remaining.toLocaleString()}
-                  {!filteredRollupCurrency ? " (mixed currencies)" : null}
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                  Billing queue
+                </h2>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  One row per campaign — check a campaign to select all billable rows, or expand to
+                  adjust individual lines.
                 </p>
-              ) : null}
+                {filter !== "all" && filtered.length > 0 ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Filtered rollup ({filtered.length} campaign{filtered.length === 1 ? "" : "s"}):{" "}
+                    achieved{" "}
+                    {filteredRollupCurrency
+                      ? formatBillingMoneyCompact(filteredRollup.achieved, filteredRollupCurrency)
+                      : filteredRollup.achieved.toLocaleString()}{" "}
+                    · invoiced{" "}
+                    {filteredRollupCurrency
+                      ? formatBillingMoneyCompact(filteredRollup.invoiced, filteredRollupCurrency)
+                      : filteredRollup.invoiced.toLocaleString()}{" "}
+                    · remaining{" "}
+                    {filteredRollupCurrency
+                      ? formatBillingMoneyCompact(filteredRollup.remaining, filteredRollupCurrency)
+                      : filteredRollup.remaining.toLocaleString()}
+                    {!filteredRollupCurrency ? " (mixed currencies)" : null}
+                  </p>
+                ) : null}
+              </div>
+              {settingsSlot}
             </div>
+
+            {totalQueueSelected > 0 ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 p-2">
+                <span className="px-2 text-xs font-medium text-muted-foreground">
+                  {totalQueueSelected} row{totalQueueSelected === 1 ? "" : "s"} selected
+                  {invoiceContext
+                    ? ` · ${campaigns.find((c) => c.campaign_header_id === invoiceContext.campaignId)?.campaign_name ?? "Campaign"}`
+                    : " · select rows in one campaign only"}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!invoiceContext}
+                  onClick={() => handleQueueInvoiceSelected("new")}
+                >
+                  Create new invoice
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!invoiceContext}
+                  onClick={() => handleQueueInvoiceSelected("append")}
+                >
+                  Append to open invoice
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={handleClearQueueSelection}>
+                  Clear selection
+                </Button>
+              </div>
+            ) : null}
           </div>
+        }
+      >
+        {campaigns.length === 0 ? (
+          <p className="px-4 py-8 text-[11px] text-muted-foreground">
+            No campaigns in the billing queue yet. Campaigns appear here once they have billing
+            lines or operational revenue.
+          </p>
+        ) : filtered.length === 0 ? (
+          <p className="px-4 py-8 text-[11px] text-muted-foreground">
+            No campaigns match this finance filter.
+          </p>
+        ) : (
+          <CampaignOperationalTable>
+            <BillingCampaignQueueTableHeader />
+            <CampaignOperationalTableBody>
+              {filtered.map((row) => {
+                const campaignId = row.campaign_header_id;
+                const detail = detailCache[campaignId];
+                const selection = queueSelections[campaignId] ?? createEmptySelection();
 
-          {totalQueueSelected > 0 ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 p-2">
-              <span className="px-2 text-xs font-medium text-muted-foreground">
-                {totalQueueSelected} row{totalQueueSelected === 1 ? "" : "s"} selected
-                {invoiceContext
-                  ? ` · ${campaigns.find((c) => c.campaign_header_id === invoiceContext.campaignId)?.campaign_name ?? "Campaign"}`
-                  : " · select rows in one campaign only"}
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                disabled={!invoiceContext}
-                onClick={() => handleQueueInvoiceSelected("new")}
-              >
-                Create new invoice
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={!invoiceContext}
-                onClick={() => handleQueueInvoiceSelected("append")}
-              >
-                Append to open invoice
-              </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={handleClearQueueSelection}>
-                Clear selection
-              </Button>
-            </div>
-          ) : null}
-        </CardHeader>
-        <CardContent>
-          {campaigns.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No campaigns in the billing queue yet. Campaigns appear here once they have billing
-              lines or operational revenue.
-            </p>
-          ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No campaigns match this finance filter.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-8" />
-                    <TableHead className="w-8" />
-                    <TableHead>Campaign No</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Brand</TableHead>
-                    <TableHead>Campaign</TableHead>
-                    <TableHead>Currency</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Achieved</TableHead>
-                    <TableHead className="text-right">Invoiced</TableHead>
-                    <TableHead className="text-right">Remaining</TableHead>
-                    <TableHead className="text-right">Unachieved</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((row) => {
-                    const campaignId = row.campaign_header_id;
-                    const detail = detailCache[campaignId];
-                    const selection =
-                      queueSelections[campaignId] ?? createEmptySelection();
-
-                    return (
-                      <BillingQueueCampaignRow
-                        key={campaignId}
-                        row={row}
-                        operationalFilter={operationalFilter}
-                        expanded={expandedCampaignIds.has(campaignId)}
-                        selectedForReview={selectedCampaignId === campaignId}
-                        detail={detail}
-                        detailLoading={pending}
-                        selection={selection}
-                        onToggleExpand={onToggleExpand}
-                        onMasterSelect={onMasterSelect}
-                        onSelectForReview={onSelectForReview}
-                        onSelectionChange={setQueueSelection}
-                        onOpenInvoice={onOpenInvoice}
-                      />
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                return (
+                  <BillingQueueCampaignRow
+                    key={campaignId}
+                    row={row}
+                    operationalFilter={operationalFilter}
+                    expanded={expandedCampaignIds.has(campaignId)}
+                    selectedForReview={selectedCampaignId === campaignId}
+                    detail={detail}
+                    detailLoading={pending}
+                    selection={selection}
+                    onToggleExpand={onToggleExpand}
+                    onMasterSelect={onMasterSelect}
+                    onSelectForReview={onSelectForReview}
+                    onSelectionChange={setQueueSelection}
+                    onOpenInvoice={onOpenInvoice}
+                  />
+                );
+              })}
+            </CampaignOperationalTableBody>
+          </CampaignOperationalTable>
+        )}
+      </OperationalTableSection>
 
       {selectedCampaign ? (
         <div ref={reviewPanelRef}>
-          <BillingCampaignReviewPanel
-            campaignName={selectedCampaign.campaign_name}
-            campaignDocumentNumber={selectedCampaign.campaign_document_number}
-            detail={reviewDetail}
-            loading={reviewLoading}
-            filter={filter}
-            open={reviewOpen}
-            onOpenChange={setReviewOpen}
-          />
+          <OperationalTableSuiteProvider
+            tableId={OPERATIONAL_TABLE_IDS.billingCampaignReviewLines}
+            columns={operationalColumnsFromMetas(
+              BILLING_CAMPAIGN_REVIEW_LINES_COLUMN_METAS,
+              BILLING_CAMPAIGN_REVIEW_LINES_FILTER_ACCESSORS
+            )}
+            rows={reviewDetail?.operational_rows ?? []}
+            filterAccessors={BILLING_CAMPAIGN_REVIEW_LINES_FILTER_ACCESSORS}
+          >
+            <BillingCampaignReviewPanel
+              campaignName={selectedCampaign.campaign_name}
+              campaignDocumentNumber={selectedCampaign.campaign_document_number}
+              detail={reviewDetail}
+              loading={reviewLoading}
+              filter={filter}
+              open={reviewOpen}
+              onOpenChange={setReviewOpen}
+            />
+          </OperationalTableSuiteProvider>
         </div>
       ) : null}
 

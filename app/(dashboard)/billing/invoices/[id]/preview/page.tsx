@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { Button } from "@/components/ui/button";
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { InvoiceHtmlPreview } from "@/features/billing/components/invoice-html-preview";
 import { getInvoiceWorkspace } from "@/features/billing/queries";
 
@@ -36,12 +34,11 @@ export default async function InvoicePreviewPage({ params }: InvoicePreviewPageP
       hidePageHeader
     >
       <div className="mb-4 print:hidden">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 w-fit">
-          <Link href={`/billing/invoices/${id}`}>
-            <ArrowLeftIcon data-icon="inline-start" />
-            Back to invoice workspace
-          </Link>
-        </Button>
+        <PageBackButton
+          fallbackHref={`/billing/invoices/${id}`}
+          label="Back to invoice workspace"
+          variant="text"
+        />
       </div>
 
       {errorMessage ? (

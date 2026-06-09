@@ -4,11 +4,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useMemo, useState, useTransition } from "react";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
+import { InvoiceDetailSheet } from "@/features/campaigns/components/detail-sheets/invoice-detail-sheet";
+import { PaymentDetailSheet } from "@/features/campaigns/components/detail-sheets/payment-detail-sheet";
 import { format } from "date-fns";
 import { PlusIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { operationalColumnsFromMetas } from "@/lib/tables/operational-filter-columns";
+import type { ConsolidatedInvoiceQueueRow } from "@/lib/billing/consolidated-invoice-queue";
+import { FINANCE_INVOICE_REGISTER_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { CampaignBillingKpiStrip } from "@/features/campaigns/components/campaign-billing-kpi-strip";
@@ -19,26 +28,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  CampaignOperationalTable,
-  CampaignOperationalTableBody,
-  CampaignOperationalTableCell,
-  CampaignOperationalTableCellAmount,
-  CampaignOperationalTableCellMono,
-  CampaignOperationalTableHead,
-  CampaignOperationalTableHeader,
-  CampaignOperationalTableHeaderRow,
-  CampaignOperationalTableRow,
-} from "@/features/campaigns/components/campaign-operational-table";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
-import { FinanceInvoiceRegisterTable } from "@/features/finance/invoices/components/finance-invoice-register-table";
+import {
+  FINANCE_INVOICE_REGISTER_COLUMN_METAS_WITH_ACTIONS,
+  FinanceInvoiceRegisterTable,
+} from "@/features/finance/invoices/components/finance-invoice-register-table";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
-import { AssignmentBillingGroupsTable } from "@/features/billing/components/assignment-billing-groups-table";
+import {
+  CAMPAIGN_ASSIGNMENT_BILLING_GROUPS_COLUMN_METAS,
+  AssignmentBillingGroupsTable,
+} from "@/features/billing/components/assignment-billing-groups-table";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { BillingCampaignDrilldown } from "@/features/billing/components/billing-campaign-drilldown";
 import {
+  CAMPAIGN_CONSOLIDATED_INVOICE_QUEUE_COLUMN_METAS,
   CampaignBillingQueueTable,
   CampaignBillingQueueToolbar,
 } from "@/features/campaigns/components/tabs/campaign-billing-queue-table";
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
 import { CreateInvoiceSheet } from "@/features/billing/components/create-invoice-sheet";
 import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
 import { RegenerateInvoiceDialog } from "@/features/billing/components/regenerate-invoice-dialog";
@@ -68,6 +79,61 @@ import {
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { cn } from "@/lib/utils";
+
+type CampaignPaymentRow = CampaignWorkspace["payments"][number];
+
+function buildCampaignPaymentsColumns(
+  onOpenDetail: (id: string) => void
+): OperationalConfigurableColumnDef<CampaignPaymentRow>[] {
+  return [
+    {
+      id: "payment",
+      label: "Payment",
+      monoCell: true,
+      renderCell: (p) => (
+        <DetailClickableLabel
+          onClick={() => onOpenDetail(p.id)}
+          title={`View ${p.document_number} details`}
+          className="font-mono text-[11px]"
+        >
+          <DocumentNumber value={p.document_number} />
+        </DetailClickableLabel>
+      ),
+    },
+    {
+      id: "invoice",
+      label: "Invoice",
+      monoCell: true,
+      renderCell: (p) => p.invoice_document_number,
+    },
+    {
+      id: "amount",
+      label: "Amount",
+      headerClassName: "text-right",
+      amountCell: true,
+      renderCell: (p) => formatOperationalAmount(p.amount),
+    },
+    {
+      id: "status",
+      label: "Status",
+      renderCell: (p) => (
+        <Badge variant="outline" className="text-[10px] capitalize">
+          {p.status}
+        </Badge>
+      ),
+    },
+    {
+      id: "paid_at",
+      label: "Paid at",
+      cellClassName: "text-muted-foreground",
+      renderCell: (p) => formatBillingDateTime(p.paid_at),
+    },
+  ];
+}
+
+const CAMPAIGN_PAYMENTS_COLUMN_METAS = getOperationalTableColumnMetas(
+  buildCampaignPaymentsColumns(() => {})
+);
 
 function formatBillingDateTime(value: string | null | undefined): string {
   if (!value) return "—";
@@ -112,6 +178,13 @@ export function CampaignBillingTab({
     useState<OperationalSelectionState>(createEmptySelection);
   const [drilldownPending, startDrilldownTransition] = useTransition();
   const [regenerateInvoiceOpen, setRegenerateInvoiceOpen] = useState(false);
+  const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(null);
+  const [detailPaymentId, setDetailPaymentId] = useState<string | null>(null);
+
+  const paymentColumns = useMemo(
+    () => buildCampaignPaymentsColumns(setDetailPaymentId),
+    []
+  );
 
   const pendingRegenerationInvoice = useMemo(() => {
     const fromRegister = campaignInvoiceRegister.find(
@@ -128,6 +201,22 @@ export function CampaignBillingTab({
     }
     return null;
   }, [campaignInvoiceRegister, workspace.invoices]);
+
+  const detailInvoice = useMemo(
+    () =>
+      detailInvoiceId
+        ? (campaignInvoiceRegister.find((row) => row.id === detailInvoiceId) ?? null)
+        : null,
+    [detailInvoiceId, campaignInvoiceRegister]
+  );
+
+  const detailPayment = useMemo(
+    () =>
+      detailPaymentId
+        ? (workspace.payments.find((row) => row.id === detailPaymentId) ?? null)
+        : null,
+    [detailPaymentId, workspace.payments]
+  );
 
   const billingQueueRows = useMemo(() => {
     if (!operationalBilling) return [];
@@ -281,173 +370,220 @@ export function CampaignBillingTab({
       />
 
       {operationalBilling ? (
+        <OperationalTableSuiteProvider
+          tableId={OPERATIONAL_TABLE_IDS.campaignConsolidatedInvoiceQueue}
+          columns={operationalColumnsFromMetas(CAMPAIGN_CONSOLIDATED_INVOICE_QUEUE_COLUMN_METAS, {
+            campaign_number: (row: ConsolidatedInvoiceQueueRow) => row.campaign_document_number,
+            client: (row: ConsolidatedInvoiceQueueRow) => row.client_name,
+            brand: (row: ConsolidatedInvoiceQueueRow) => row.brand_name,
+            campaign_name: (row: ConsolidatedInvoiceQueueRow) => row.campaign_name,
+            revenue_before_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_before_vat,
+            vat_amount: (row: ConsolidatedInvoiceQueueRow) => row.vat_amount,
+            revenue_after_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_after_vat,
+          })}
+          rows={billingQueueRows}
+          filterAccessors={{
+            campaign_number: (row: ConsolidatedInvoiceQueueRow) => row.campaign_document_number,
+            client: (row: ConsolidatedInvoiceQueueRow) => row.client_name,
+            brand: (row: ConsolidatedInvoiceQueueRow) => row.brand_name,
+            campaign_name: (row: ConsolidatedInvoiceQueueRow) => row.campaign_name,
+            revenue_before_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_before_vat,
+            vat_amount: (row: ConsolidatedInvoiceQueueRow) => row.vat_amount,
+            revenue_after_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_after_vat,
+          }}
+        >
+          <OperationalTableSection
+            wide
+            tableOnly
+            cardSurface
+            compact
+            leading={
+              <div className="flex w-full flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                  Billing queue
+                </h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <OperationalTableControlsSlot contextLabel="Consolidated invoice queue" />
+                  <CampaignBillingQueueToolbar
+                    rows={billingQueueRows}
+                    selectedBatchKeys={selectedQueueBatchKeys}
+                    onSelectAll={handleQueueSelectAll}
+                    onClear={() => setSelectedQueueBatchKeys(new Set())}
+                    onGenerateInvoice={handleQueueGenerateInvoice}
+                  />
+                </div>
+              </div>
+            }
+          >
+            <CampaignBillingQueueTable
+              rows={billingQueueRows}
+              selectedBatchKeys={selectedQueueBatchKeys}
+              activeBatchKey={activeQueueBatchKey}
+              onToggleRowSelect={toggleQueueBatchSelection}
+              onSelectRow={(row) => openQueueDrilldown(row.batch_key)}
+            />
+          </OperationalTableSection>
+        </OperationalTableSuiteProvider>
+      ) : null}
+
+      {!operationalBilling ? (
+        <OperationalTableSuiteProvider
+          tableId={OPERATIONAL_TABLE_IDS.campaignAssignmentBillingGroups}
+          columns={operationalColumnsFromMetas(CAMPAIGN_ASSIGNMENT_BILLING_GROUPS_COLUMN_METAS)}
+          rows={billingGroups}
+        >
+          <OperationalTableSection
+            wide
+            tableOnly
+            cardSurface
+            leading={
+              <CampaignOperationalSectionHeader
+                title="Operational billing"
+                description="Assignment lines, IO status, and invoice actions for this campaign."
+                actions={
+                  <OperationalTableControlsSlot contextLabel="Assignment billing groups" />
+                }
+              />
+            }
+          >
+            <div className="p-4">
+              <AssignmentBillingGroupsTable
+                groups={billingGroups}
+                billingLines={billingLines}
+                currency={currency}
+                campaignId={workspace.id}
+              />
+            </div>
+          </OperationalTableSection>
+        </OperationalTableSuiteProvider>
+      ) : (
         <OperationalTableSection
           wide
           tableOnly
           cardSurface
-          compact
           leading={
-            <div className="flex w-full flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                Billing queue
-              </h2>
-              <CampaignBillingQueueToolbar
-                rows={billingQueueRows}
-                selectedBatchKeys={selectedQueueBatchKeys}
-                onSelectAll={handleQueueSelectAll}
-                onClear={() => setSelectedQueueBatchKeys(new Set())}
-                onGenerateInvoice={handleQueueGenerateInvoice}
-              />
-            </div>
+            <CampaignOperationalSectionHeader
+              title="Operational billing"
+              description={
+                drilldownVisible
+                  ? "Assignment lines, IO status, and invoice actions for the selected queue row."
+                  : "Select a campaign row in the billing queue above to load operational detail."
+              }
+              actions={
+                drilldownVisible ? (
+                  <Select
+                    value={billingFilter}
+                    onValueChange={(value) => {
+                      setBillingFilter(value as OperationalBillingFilter);
+                    }}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OPERATIONAL_BILLING_FILTER_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null
+              }
+            />
           }
         >
-          <CampaignBillingQueueTable
-            rows={billingQueueRows}
-            selectedBatchKeys={selectedQueueBatchKeys}
-            activeBatchKey={activeQueueBatchKey}
-            onToggleRowSelect={toggleQueueBatchSelection}
-            onSelectRow={(row) => openQueueDrilldown(row.batch_key)}
+          {!drilldownVisible ? (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+              Click the campaign number in the billing queue to open assignment-level operational
+              billing.
+            </p>
+          ) : (
+            <div
+              className={cn(
+                "transition-opacity duration-200",
+                drilldownPending ? "opacity-40" : "opacity-100"
+              )}
+            >
+              <BillingCampaignDrilldown
+                detail={operationalBilling}
+                filter={billingFilter}
+                selection={drilldownSelection}
+                onSelectionChange={setDrilldownSelection}
+                appearance="campaign"
+                onInvoice={(selection) => {
+                  beginInvoiceFlow(selection);
+                }}
+              />
+            </div>
+          )}
+        </OperationalTableSection>
+      )}
+
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.campaignInvoiceRegister}
+        columns={operationalColumnsFromMetas(
+          FINANCE_INVOICE_REGISTER_COLUMN_METAS_WITH_ACTIONS,
+          FINANCE_INVOICE_REGISTER_FILTER_ACCESSORS
+        )}
+        rows={campaignInvoiceRegister}
+        filterAccessors={FINANCE_INVOICE_REGISTER_FILTER_ACCESSORS}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Invoices"
+              description="Client invoices linked to this campaign."
+              actions={<OperationalTableControlsSlot contextLabel="Campaign invoices" />}
+            />
+          }
+        >
+          <FinanceInvoiceRegisterTable
+            rows={campaignInvoiceRegister}
+            showUngenerate
+            onOpenDetail={(row) => setDetailInvoiceId(row.id)}
           />
         </OperationalTableSection>
-      ) : null}
+      </OperationalTableSuiteProvider>
 
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <CampaignOperationalSectionHeader
-            title="Operational billing"
-            description={
-              drilldownVisible
-                ? "Assignment lines, IO status, and invoice actions for the selected queue row."
-                : "Select a campaign row in the billing queue above to load operational detail."
-            }
-            actions={
-              drilldownVisible && operationalBilling ? (
-                <Select
-                  value={billingFilter}
-                  onValueChange={(value) => {
-                    setBillingFilter(value as OperationalBillingFilter);
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Filter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OPERATIONAL_BILLING_FILTER_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null
-            }
-          />
-        }
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.campaignPayments}
+        columns={paymentColumns}
+        rows={workspace.payments}
+        filterAccessors={{
+          payment: (row) => row.document_number,
+          invoice: (row) => row.invoice_document_number,
+          amount: (row) => row.amount,
+          status: (row) => row.status,
+          paid_at: (row) => row.paid_at,
+        }}
       >
-        {!operationalBilling ? (
-          <div className="p-4">
-            <AssignmentBillingGroupsTable
-              groups={billingGroups}
-              billingLines={billingLines}
-              currency={currency}
-              campaignId={workspace.id}
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Payments"
+              description="Recorded payments against campaign invoices."
+              actions={<OperationalTableControlsSlot contextLabel="Campaign payments" />}
             />
-          </div>
-        ) : !drilldownVisible ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            Click the campaign number in the billing queue to open assignment-level operational
-            billing.
-          </p>
-        ) : (
-          <div
-            className={cn(
-              "transition-opacity duration-200",
-              drilldownPending ? "opacity-40" : "opacity-100"
-            )}
-          >
-            <BillingCampaignDrilldown
-              detail={operationalBilling}
-              filter={billingFilter}
-              selection={drilldownSelection}
-              onSelectionChange={setDrilldownSelection}
-              appearance="campaign"
-              onInvoice={(selection) => {
-                beginInvoiceFlow(selection);
-              }}
+          }
+        >
+          {workspace.payments.length === 0 ? (
+            <p className="px-4 py-8 text-sm text-muted-foreground">No payments recorded.</p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={paymentColumns}
+              rows={workspace.payments}
+              rowKey={(p) => p.id}
             />
-          </div>
-        )}
-      </OperationalTableSection>
-
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <CampaignOperationalSectionHeader
-            title="Invoices"
-            description="Client invoices linked to this campaign."
-          />
-        }
-      >
-        <FinanceInvoiceRegisterTable
-          rows={campaignInvoiceRegister}
-          showUngenerate
-          appearance="campaign"
-        />
-      </OperationalTableSection>
-
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <CampaignOperationalSectionHeader
-            title="Payments"
-            description="Recorded payments against campaign invoices."
-          />
-        }
-      >
-        {workspace.payments.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-muted-foreground">No payments recorded.</p>
-        ) : (
-          <CampaignOperationalTable>
-            <CampaignOperationalTableHeader>
-              <CampaignOperationalTableHeaderRow>
-                <CampaignOperationalTableHead>Payment</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>Invoice</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">Amount</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>Status</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead>Paid at</CampaignOperationalTableHead>
-              </CampaignOperationalTableHeaderRow>
-            </CampaignOperationalTableHeader>
-            <CampaignOperationalTableBody>
-              {workspace.payments.map((p) => (
-                <CampaignOperationalTableRow key={p.id}>
-                  <CampaignOperationalTableCellMono>{p.document_number}</CampaignOperationalTableCellMono>
-                  <CampaignOperationalTableCellMono>
-                    {p.invoice_document_number}
-                  </CampaignOperationalTableCellMono>
-                  <CampaignOperationalTableCellAmount>
-                    {formatOperationalAmount(p.amount)}
-                  </CampaignOperationalTableCellAmount>
-                  <CampaignOperationalTableCell>
-                    <Badge variant="outline" className="text-[10px] capitalize">
-                      {p.status}
-                    </Badge>
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCell className="text-muted-foreground">
-                    {formatBillingDateTime(p.paid_at)}
-                  </CampaignOperationalTableCell>
-                </CampaignOperationalTableRow>
-              ))}
-            </CampaignOperationalTableBody>
-          </CampaignOperationalTable>
-        )}
-      </OperationalTableSection>
+          )}
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
 
       <CreateInvoiceSheet
         campaignId={workspace.id}
@@ -497,6 +633,23 @@ export function CampaignBillingTab({
           ) : null}
         </>
       ) : null}
+
+      <InvoiceDetailSheet
+        open={detailInvoiceId != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailInvoiceId(null);
+        }}
+        row={detailInvoice}
+      />
+
+      <PaymentDetailSheet
+        open={detailPaymentId != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailPaymentId(null);
+        }}
+        row={detailPayment}
+        campaignName={workspace.name}
+      />
     </div>
   );
 }

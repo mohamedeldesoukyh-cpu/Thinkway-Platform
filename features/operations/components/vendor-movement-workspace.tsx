@@ -4,18 +4,30 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
+import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
+import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { operationalColumnsFromMetas } from "@/lib/tables/operational-filter-columns";
+import { OPERATIONS_VENDOR_MOVE_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { Label } from "@/components/ui/label";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableCell,
+  CampaignOperationalTableCellAmount,
+  CampaignOperationalTableCellMono,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+  CampaignOperationalTableRow,
+} from "@/features/campaigns/components/campaign-operational-table";
 import { Textarea } from "@/components/ui/textarea";
 import { executeVendorMovementAction } from "@/features/operations/actions";
 import type {
@@ -23,12 +35,165 @@ import type {
   VendorMovementAssignmentRow,
 } from "@/features/operations/types";
 import { formatBillingMoney } from "@/features/billing/utils";
+import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+
+export const OPERATIONS_VENDOR_MOVE_ASSIGNMENTS_COLUMN_METAS: OperationalTableColumnMeta[] = [
+  { id: "select", label: "Select", locked: true },
+  { id: "campaign", label: "Campaign" },
+  { id: "line", label: "Line" },
+  { id: "billing", label: "Billing" },
+  { id: "revenue", label: "Revenue" },
+  { id: "payout", label: "Payout" },
+];
 
 type VendorMovementWorkspaceProps = {
   vendors: HierarchyOption[];
   initialSourceVendorId?: string;
   initialAssignments: VendorMovementAssignmentRow[];
 };
+
+function VendorMoveAssignmentsTableHeader({
+  allSelected,
+  onToggleAll,
+}: {
+  allSelected: boolean;
+  onToggleAll: (checked: boolean) => void;
+}) {
+  const showSelect = useIsOperationalColumnVisible("select");
+  const showCampaign = useIsOperationalColumnVisible("campaign");
+  const showLine = useIsOperationalColumnVisible("line");
+  const showBilling = useIsOperationalColumnVisible("billing");
+  const showRevenue = useIsOperationalColumnVisible("revenue");
+  const showPayout = useIsOperationalColumnVisible("payout");
+
+  return (
+    <CampaignOperationalTableHeader>
+      <CampaignOperationalTableHeaderRow>
+        {showSelect ? (
+          <CampaignOperationalTableHead className="w-10">
+            <input
+              type="checkbox"
+              className="size-4 rounded border"
+              checked={allSelected}
+              onChange={(e) => onToggleAll(e.target.checked)}
+            />
+          </CampaignOperationalTableHead>
+        ) : null}
+        {showCampaign ? (
+          <CampaignOperationalTableHead>Campaign</CampaignOperationalTableHead>
+        ) : null}
+        {showLine ? <CampaignOperationalTableHead>Line</CampaignOperationalTableHead> : null}
+        {showBilling ? (
+          <CampaignOperationalTableHead>Billing</CampaignOperationalTableHead>
+        ) : null}
+        {showRevenue ? (
+          <CampaignOperationalTableHead className="text-right">Revenue</CampaignOperationalTableHead>
+        ) : null}
+        {showPayout ? (
+          <CampaignOperationalTableHead>Payout</CampaignOperationalTableHead>
+        ) : null}
+      </CampaignOperationalTableHeaderRow>
+    </CampaignOperationalTableHeader>
+  );
+}
+
+function VendorMoveAssignmentsTableRow({
+  assignment,
+  selected,
+  onToggle,
+}: {
+  assignment: VendorMovementAssignmentRow;
+  selected: boolean;
+  onToggle: (checked: boolean) => void;
+}) {
+  const showSelect = useIsOperationalColumnVisible("select");
+  const showCampaign = useIsOperationalColumnVisible("campaign");
+  const showLine = useIsOperationalColumnVisible("line");
+  const showBilling = useIsOperationalColumnVisible("billing");
+  const showRevenue = useIsOperationalColumnVisible("revenue");
+  const showPayout = useIsOperationalColumnVisible("payout");
+
+  return (
+    <CampaignOperationalTableRow>
+      {showSelect ? (
+        <CampaignOperationalTableCell>
+          <input
+            type="checkbox"
+            className="size-4 rounded border"
+            checked={selected}
+            onChange={(e) => onToggle(e.target.checked)}
+          />
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showCampaign ? (
+        <CampaignOperationalTableCell>
+          <div>
+            <span className="font-medium">{assignment.campaign_name}</span>
+            <p className="text-[11px] tabular-nums text-muted-foreground">
+              <DocumentNumber value={assignment.campaign_document_number} />
+            </p>
+          </div>
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showLine ? (
+        <CampaignOperationalTableCellMono>
+          <DocumentNumber value={assignment.line_document_number} />
+        </CampaignOperationalTableCellMono>
+      ) : null}
+      {showBilling ? (
+        <CampaignOperationalTableCell className="capitalize">
+          {assignment.billing_status?.replace(/_/g, " ") ?? "—"}
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showRevenue ? (
+        <CampaignOperationalTableCellAmount>
+          {formatBillingMoney(assignment.revenue)}
+        </CampaignOperationalTableCellAmount>
+      ) : null}
+      {showPayout ? (
+        <CampaignOperationalTableCell className="capitalize">
+          {assignment.vendor_payment_status ?? "—"}
+        </CampaignOperationalTableCell>
+      ) : null}
+    </CampaignOperationalTableRow>
+  );
+}
+
+function VendorMoveAssignmentsTable({
+  rows,
+  selected,
+  onToggleAll,
+  onToggleOne,
+}: {
+  rows: VendorMovementAssignmentRow[];
+  selected: Set<string>;
+  onToggleAll: (checked: boolean) => void;
+  onToggleOne: (id: string, checked: boolean) => void;
+}) {
+  const displayRows =
+    useOperationalTableDataContextOptional<VendorMovementAssignmentRow>()?.processedRows ??
+    rows;
+
+  return (
+    <CampaignOperationalTable>
+      <VendorMoveAssignmentsTableHeader
+        allSelected={displayRows.length > 0 && selected.size === displayRows.length}
+        onToggleAll={onToggleAll}
+      />
+      <CampaignOperationalTableBody>
+        {displayRows.map((assignment) => (
+          <VendorMoveAssignmentsTableRow
+            key={assignment.id}
+            assignment={assignment}
+            selected={selected.has(assignment.id)}
+            onToggle={(checked) => onToggleOne(assignment.id, checked)}
+          />
+        ))}
+      </CampaignOperationalTableBody>
+    </CampaignOperationalTable>
+  );
+}
 
 export function VendorMovementWorkspace({
   vendors,
@@ -111,18 +276,22 @@ export function VendorMovementWorkspace({
   };
 
   const filtered = useMemo(() => assignments, [assignments]);
+  const suiteColumns = useMemo(
+    () =>
+      operationalColumnsFromMetas(
+        OPERATIONS_VENDOR_MOVE_ASSIGNMENTS_COLUMN_METAS,
+        OPERATIONS_VENDOR_MOVE_FILTER_ACCESSORS
+      ),
+    []
+  );
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Vendor → Vendor reassignment</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Transfer campaign assignments between creators. Preserves campaign
-            numbering, invoice linkage, audit history, and payment records.
-          </p>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+      <CampaignFlatSection
+        title="Vendor → Vendor reassignment"
+        description="Transfer campaign assignments between creators. Preserves campaign numbering, invoice linkage, audit history, and payment records."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="grid gap-2">
             <Label>Source vendor</Label>
             <SearchableSelect
@@ -142,94 +311,44 @@ export function VendorMovementWorkspace({
               disabled={!sourceVendorId}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CampaignFlatSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Assignments to move</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.operationsVendorMoveAssignments}
+        columns={suiteColumns}
+        rows={filtered}
+        filterAccessors={OPERATIONS_VENDOR_MOVE_FILTER_ACCESSORS}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Assignments to move"
+              actions={<OperationalTableControlsSlot contextLabel="Vendor move assignments" />}
+            />
+          }
+        >
           {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">
               Select a source vendor to load assignments.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <input
-                        type="checkbox"
-                        className="size-4 rounded border"
-                        checked={selected.size === filtered.length}
-                        onChange={(e) => toggleAll(e.target.checked)}
-                      />
-                    </TableHead>
-                    <TableHead>Campaign</TableHead>
-                    <TableHead>Line</TableHead>
-                    <TableHead>Billing</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead>Payout</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded border"
-                          checked={selected.has(a.id)}
-                          onChange={(e) => toggleOne(a.id, e.target.checked)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <span className="font-medium">{a.campaign_name}</span>
-                          <p className="text-xs text-muted-foreground">
-                            <DocumentNumber value={a.campaign_document_number} />
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        <DocumentNumber value={a.line_document_number} />
-                      </TableCell>
-                      <TableCell className="capitalize">
-                        {a.billing_status?.replace(/_/g, " ") ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatBillingMoney(a.revenue)}
-                      </TableCell>
-                      <TableCell className="capitalize">
-                        {a.vendor_payment_status ?? "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <p className="text-sm text-muted-foreground">
-            Selected: {selected.size} assignment(s) ·{" "}
-            {formatBillingMoney(selectedRevenue)} revenue
-          </p>
-          <div className="grid gap-2">
-            <Label htmlFor="vendor_move_reason">Reason *</Label>
-            <Textarea
-              id="vendor_move_reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Operational reason for reassignment (min 3 characters)"
-              rows={3}
+            <VendorMoveAssignmentsTable
+              rows={filtered}
+              selected={selected}
+              onToggleAll={toggleAll}
+              onToggleOne={toggleOne}
             />
-          </div>
+          )}
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
+
+      <OperationalFormSection
+        title="Execute reassignment"
+        footer={
           <Button
             onClick={onExecute}
             disabled={
@@ -242,8 +361,24 @@ export function VendorMovementWorkspace({
           >
             {isPending ? "Executing…" : "Execute vendor reassignment"}
           </Button>
-        </CardContent>
-      </Card>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Selected: {selected.size} assignment(s) ·{" "}
+          {formatBillingMoney(selectedRevenue)} revenue
+        </p>
+        <div className="grid gap-2">
+          <Label htmlFor="vendor_move_reason">Reason *</Label>
+          <Textarea
+            id="vendor_move_reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Operational reason for reassignment (min 3 characters)"
+            rows={3}
+            className="min-h-[4.5rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
+          />
+        </div>
+      </OperationalFormSection>
     </div>
   );
 }

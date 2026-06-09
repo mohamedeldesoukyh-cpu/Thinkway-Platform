@@ -1,14 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import {
-  ArrowLeftIcon,
-  CopyIcon,
-  MoreHorizontalIcon,
-  PencilIcon,
-} from "lucide-react";
+import { CopyIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
 
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,10 +14,11 @@ import {
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { CampaignWorkspaceScrollShell } from "@/features/campaigns/components/campaign-workspace-scroll-shell";
 import {
+  CampaignWorkspaceSortableTabsBar,
   CampaignWorkspaceTabPanel,
-  CampaignWorkspaceTabTrigger,
-  CampaignWorkspaceTabsBar,
 } from "@/features/campaigns/components/campaign-workspace-tabs";
+import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import { useCampaignWorkspaceTabOrder } from "@/features/campaigns/hooks/use-campaign-workspace-tab-order";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
 import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
@@ -86,6 +82,7 @@ export function CampaignWorkspaceView({
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const { tabOrder, moveTab } = useCampaignWorkspaceTabOrder();
 
   const operationalDeliverableCount = useMemo(() => {
     return flattenOperationalDeliverables(
@@ -147,6 +144,32 @@ export function CampaignWorkspaceView({
       publications.length,
       billingTabCount,
     ]
+  );
+
+  const tabsById = useMemo(
+    (): Record<CampaignWorkspaceTabId, { value: string; label: string; count?: number }> => ({
+      overview: { value: "overview", label: "Overview" },
+      lines: { value: "lines", label: "Assignments", count: tabCounts.lines },
+      "vendor-io": { value: "vendor-io", label: "Vendor IO", count: tabCounts.vendorIo },
+      deliverables: {
+        value: "deliverables",
+        label: "Deliverables",
+        count: tabCounts.deliverables,
+      },
+      publications: {
+        value: "publications",
+        label: "Publications",
+        count: tabCounts.publications,
+      },
+      workflow: { value: "workflow", label: "Workflow", count: tabCounts.workflow },
+      billing: { value: "billing", label: "Billing", count: tabCounts.billing },
+      timeline: {
+        value: "timeline",
+        label: "Timeline & activity",
+        count: tabCounts.timeline,
+      },
+    }),
+    [tabCounts]
   );
 
   const tabPanelClass =
@@ -211,18 +234,10 @@ export function CampaignWorkspaceView({
               <div className="space-y-1 pt-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 shrink-0"
-                      asChild
-                      title="Back to campaigns"
-                    >
-                      <Link href="/campaigns">
-                        <ArrowLeftIcon className="size-4" />
-                        <span className="sr-only">Back to campaigns</span>
-                      </Link>
-                    </Button>
+                    <PageBackButton
+                      fallbackHref="/campaigns"
+                      label="Back to campaigns"
+                    />
                     <button
                       type="button"
                       onClick={() => setDetailsOpen(true)}
@@ -293,44 +308,11 @@ export function CampaignWorkspaceView({
             </>
           }
           tabs={
-            <CampaignWorkspaceTabsBar>
-              <CampaignWorkspaceTabTrigger value="overview" label="Overview" />
-              <CampaignWorkspaceTabTrigger
-                value="lines"
-                label="Assignments"
-                count={tabCounts.lines}
-              />
-              <CampaignWorkspaceTabTrigger
-                value="vendor-io"
-                label="Vendor IO"
-                count={tabCounts.vendorIo}
-              />
-              <CampaignWorkspaceTabTrigger
-                value="deliverables"
-                label="Deliverables"
-                count={tabCounts.deliverables}
-              />
-              <CampaignWorkspaceTabTrigger
-                value="publications"
-                label="Publications"
-                count={tabCounts.publications}
-              />
-              <CampaignWorkspaceTabTrigger
-                value="workflow"
-                label="Workflow"
-                count={tabCounts.workflow}
-              />
-              <CampaignWorkspaceTabTrigger
-                value="billing"
-                label="Billing"
-                count={tabCounts.billing}
-              />
-              <CampaignWorkspaceTabTrigger
-                value="timeline"
-                label="Timeline & activity"
-                count={tabCounts.timeline}
-              />
-            </CampaignWorkspaceTabsBar>
+            <CampaignWorkspaceSortableTabsBar
+              tabOrder={tabOrder}
+              tabsById={tabsById}
+              onReorder={moveTab}
+            />
           }
         >
         <TabsContent value="overview" className={tabPanelClass}>
@@ -423,7 +405,11 @@ export function CampaignWorkspaceView({
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
             {activeTab === "timeline" ? (
               <TabErrorBoundary tabName="Timeline">
-                <CampaignTimelineTab workspace={workspace} financeAudit={financeAudit} />
+                <CampaignTimelineTab
+                  workspace={workspace}
+                  assignmentHierarchy={assignmentHierarchy}
+                  financeAudit={financeAudit}
+                />
               </TabErrorBoundary>
             ) : null}
           </CampaignWorkspaceTabPanel>
@@ -436,8 +422,13 @@ export function CampaignWorkspaceView({
         accountManagers={accountManagers}
         teams={teams}
         currencyOptions={currencyOptions}
+        tabCounts={tabCounts}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
+        onNavigateToTab={(tabId) => {
+          setActiveTab(tabId);
+          setDetailsOpen(false);
+        }}
       />
 
       <DuplicateCampaignDialog

@@ -1,7 +1,7 @@
 # Thinkway System Reference
 
 **Source of truth** for product, business logic, terminology, workflows, and roadmap.  
-Extracted from: `Thinkway_System_Reference Updated 30-05-2026.docx` (IConnect, May 2026).
+Extracted from: `Thinkway_System_Reference Updated 30-05-2026.docx` (May 2026).
 
 Use with `docs/ARCHITECTURE_ALIGNMENT.md` when implementing features.
 
@@ -12,7 +12,6 @@ Use with `docs/ARCHITECTURE_ALIGNMENT.md` when implementing features.
 | Item | Value |
 |------|--------|
 | Product name | Thinkway |
-| Client | IConnect |
 | Campaign prefix | TW |
 | Primary colour | `#1D9E75` |
 | Stack | Next.js App Router · Supabase (PostgreSQL + Auth + RLS) · Vercel |

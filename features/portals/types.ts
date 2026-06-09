@@ -158,6 +158,19 @@ export type ClientInvoiceRow = {
   currency: string;
 };
 
+export type ClientIoRow = {
+  id: string;
+  campaign_header_id: string;
+  client_id: string;
+  status: string;
+  sent_at: string | null;
+  approved_at: string | null;
+  approved_by_name: string | null;
+  terms_text: string | null;
+  billing_terms: string | null;
+  campaign: { name: string } | null;
+};
+
 export type ClientReportRow = {
   campaign_header_id: string;
   campaign_name: string;

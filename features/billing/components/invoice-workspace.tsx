@@ -1,17 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { ArrowLeftIcon } from "lucide-react";
-
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Select,
   SelectContent,
@@ -19,15 +25,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
+  OperationalFormSection,
+  OperationalWorkspaceChrome,
+  OperationalWorkspaceSortableTabsBar,
+  OperationalWorkspaceTabPanel,
+  type OperationalWorkspaceTabDef,
+} from "@/components/workspace/operational-workspace-ui";
+import { useWorkspaceTabOrder } from "@/hooks/use-workspace-tab-order";
+import {
+  INVOICE_WORKSPACE_TAB_ORDER,
+  INVOICE_WORKSPACE_TAB_STORAGE_KEY,
+  isInvoiceWorkspaceTabId,
+  type InvoiceWorkspaceTabId,
+} from "@/lib/workspace/platform-workspace-tabs";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DETAIL_FORM_SELECT_TRIGGER_CLASS,
+} from "@/features/campaigns/components/operational-detail-panel";
+import { cn } from "@/lib/utils";
 import {
   CollectionStatusBadge,
 } from "@/features/billing/components/billing-status-badge";
@@ -39,7 +58,165 @@ import {
 import { FINANCIAL_APPROVAL_STAGE_LABELS } from "@/features/billing/constants";
 import type { InvoiceWorkspace } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { Badge } from "@/components/ui/badge";
+
+type InvoiceLineRow = InvoiceWorkspace["lines"][number];
+type InvoicePaymentRow = InvoiceWorkspace["payments"][number];
+type InvoiceApprovalRow = InvoiceWorkspace["approvals"][number];
+
+const INVOICE_DETAIL_LINES_COLUMNS: OperationalConfigurableColumnDef<InvoiceLineRow>[] = [
+  {
+    id: "campaign_line",
+    label: "Campaign line",
+    monoCell: true,
+    renderCell: (line) => line.line_document_number,
+  },
+  {
+    id: "description",
+    label: "Description",
+    renderCell: (line) => line.description,
+  },
+  {
+    id: "quantity",
+    label: "Qty",
+    headerClassName: "text-right",
+    cellClassName: "text-right",
+    renderCell: (line) => line.quantity,
+  },
+  {
+    id: "unit_price",
+    label: "Unit (ex-VAT)",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: () => null,
+  },
+  {
+    id: "vat_percent",
+    label: "VAT %",
+    headerClassName: "text-right",
+    cellClassName: "text-right",
+    renderCell: (line) => (line.revenue_vat_exempt ? "Exempt" : `${line.revenue_vat_percent}%`),
+  },
+  {
+    id: "vat_amount",
+    label: "VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: () => null,
+  },
+  {
+    id: "line_total",
+    label: "Line total",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: () => null,
+  },
+];
+
+export const INVOICE_DETAIL_LINES_COLUMN_METAS =
+  getOperationalTableColumnMetas(INVOICE_DETAIL_LINES_COLUMNS);
+
+const INVOICE_DETAIL_PAYMENTS_COLUMNS: OperationalConfigurableColumnDef<InvoicePaymentRow>[] = [
+  {
+    id: "payment",
+    label: "Payment",
+    monoCell: true,
+    renderCell: (payment) => payment.document_number,
+  },
+  {
+    id: "amount",
+    label: "Amount",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (payment) => formatBillingMoney(payment.amount, payment.currency),
+  },
+  {
+    id: "method",
+    label: "Method",
+    cellClassName: "capitalize",
+    renderCell: (payment) => payment.payment_method.replace("_", " "),
+  },
+  {
+    id: "status",
+    label: "Status",
+    cellClassName: "capitalize",
+    renderCell: (payment) => payment.status,
+  },
+  {
+    id: "paid_at",
+    label: "Paid at",
+    cellClassName: "text-muted-foreground",
+    renderCell: (payment) =>
+      payment.paid_at ? format(new Date(payment.paid_at), "MMM d, yyyy HH:mm") : "—",
+  },
+];
+
+export const INVOICE_DETAIL_PAYMENTS_COLUMN_METAS = getOperationalTableColumnMetas(
+  INVOICE_DETAIL_PAYMENTS_COLUMNS
+);
+
+const INVOICE_DETAIL_APPROVALS_COLUMNS: OperationalConfigurableColumnDef<InvoiceApprovalRow>[] = [
+  {
+    id: "stage",
+    label: "Stage",
+    renderCell: (approval) => FINANCIAL_APPROVAL_STAGE_LABELS[approval.approval_stage],
+  },
+  {
+    id: "title",
+    label: "Title",
+    renderCell: (approval) => approval.title,
+  },
+  {
+    id: "status",
+    label: "Status",
+    cellClassName: "capitalize",
+    renderCell: (approval) => approval.status,
+  },
+  {
+    id: "decided",
+    label: "Decided",
+    cellClassName: "text-muted-foreground",
+    renderCell: (approval) =>
+      approval.decided_at ? format(new Date(approval.decided_at), "MMM d, yyyy") : "Pending",
+  },
+];
+
+export const INVOICE_DETAIL_APPROVALS_COLUMN_METAS = getOperationalTableColumnMetas(
+  INVOICE_DETAIL_APPROVALS_COLUMNS
+);
+
+function InvoiceDetailLinesTable({
+  lines,
+  currency,
+}: {
+  lines: InvoiceLineRow[];
+  currency: string;
+}) {
+  const columns = useMemo(
+    () =>
+      INVOICE_DETAIL_LINES_COLUMNS.map((column) => ({
+        ...column,
+        renderCell: (line: InvoiceLineRow) => {
+          if (column.id === "unit_price") {
+            return formatBillingMoney(line.revenue_before_vat, currency);
+          }
+          if (column.id === "vat_amount") {
+            return formatBillingMoney(line.revenue_vat_amount, currency);
+          }
+          if (column.id === "line_total") {
+            return formatBillingMoney(line.line_total, currency);
+          }
+          return column.renderCell(line);
+        },
+      })),
+    [currency]
+  );
+
+  return (
+    <OperationalConfigurableTable columns={columns} rows={lines} rowKey={(line) => line.id} />
+  );
+}
 
 type InvoiceWorkspaceViewProps = {
   invoice: InvoiceWorkspace;
@@ -57,32 +234,60 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
     else toast.error(paymentState.message);
   }, [paymentState]);
 
+  const { tabOrder, moveTab } = useWorkspaceTabOrder({
+    storageKey: INVOICE_WORKSPACE_TAB_STORAGE_KEY,
+    defaultOrder: INVOICE_WORKSPACE_TAB_ORDER,
+    isValidId: isInvoiceWorkspaceTabId,
+  });
+
+  const tabsById = useMemo(
+    (): Record<InvoiceWorkspaceTabId, OperationalWorkspaceTabDef> => ({
+      lines: { value: "lines", label: "Line items", count: invoice.lines.length },
+      collections: {
+        value: "collections",
+        label: "Collections",
+        count: invoice.payments.length,
+      },
+      approvals: {
+        value: "approvals",
+        label: "Approvals",
+        count: invoice.approvals.length,
+      },
+      activity: { value: "activity", label: "Audit", count: invoice.activity.length },
+    }),
+    [
+      invoice.lines.length,
+      invoice.payments.length,
+      invoice.approvals.length,
+      invoice.activity.length,
+    ]
+  );
+
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 w-fit">
-          <Link href="/billing">
-            <ArrowLeftIcon data-icon="inline-start" />
-            Back to billing
-          </Link>
-        </Button>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="font-heading text-2xl font-semibold tracking-tight">
-            <DocumentNumber value={invoice.document_number} />
-          </h2>
-          <CollectionStatusBadge status={invoice.collection_status} />
-          <Badge variant="outline" className="capitalize">
-            {invoice.status}
-          </Badge>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/billing/invoices/${invoice.id}/preview`}>Preview invoice</Link>
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {invoice.client.name}
-          {invoice.campaign ? ` · ${invoice.campaign.name}` : null}
-        </p>
-      </div>
+      <OperationalWorkspaceChrome
+        backButton={
+          <PageBackButton fallbackHref="/billing" label="Back to billing" />
+        }
+        title={<DocumentNumber value={invoice.document_number} />}
+        badges={
+          <>
+            <CollectionStatusBadge status={invoice.collection_status} />
+            <Badge variant="outline" className="capitalize">
+              {invoice.status}
+            </Badge>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/billing/invoices/${invoice.id}/preview`}>Preview invoice</Link>
+            </Button>
+          </>
+        }
+        meta={
+          <>
+            {invoice.client.name}
+            {invoice.campaign ? ` · ${invoice.campaign.name}` : null}
+          </>
+        }
+      />
 
       <InvoiceRegenerationPanel invoice={invoice} />
 
@@ -117,230 +322,228 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
         />
       </div>
 
-      <Tabs defaultValue="lines" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="lines">Line items</TabsTrigger>
-          <TabsTrigger value="collections">Collections</TabsTrigger>
-          <TabsTrigger value="approvals">Approvals</TabsTrigger>
-          <TabsTrigger value="activity">Audit</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="lines" className="flex flex-col gap-0">
+        <OperationalWorkspaceSortableTabsBar
+          sectionLabel="Invoice workspace"
+          tabOrder={tabOrder}
+          tabsById={tabsById}
+          onReorder={moveTab}
+        />
 
-        <TabsContent value="lines">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Invoice lines</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Pulled from campaign lines · revenue locked on invoicing
-              </p>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Campaign line</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit (ex-VAT)</TableHead>
-                    <TableHead className="text-right">VAT %</TableHead>
-                    <TableHead className="text-right">VAT</TableHead>
-                    <TableHead className="text-right">Line total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoice.lines.map((line) => (
-                    <TableRow key={line.id}>
-                      <TableCell className="text-xs">
-                        <DocumentNumber value={line.line_document_number} />
-                      </TableCell>
-                      <TableCell>{line.description}</TableCell>
-                      <TableCell className="text-right">{line.quantity}</TableCell>
-                      <TableCell className="text-right">
-                        {formatBillingMoney(line.revenue_before_vat, invoice.currency)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {line.revenue_vat_exempt ? "Exempt" : `${line.revenue_vat_percent}%`}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatBillingMoney(line.revenue_vat_amount, invoice.currency)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatBillingMoney(line.line_total, invoice.currency)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+        <TabsContent value="lines" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <OperationalTableSuiteProvider
+              tableId={OPERATIONAL_TABLE_IDS.invoiceDetailLines}
+              columns={INVOICE_DETAIL_LINES_COLUMNS}
+              rows={invoice.lines}
+              filterAccessors={{
+                campaign_line: (row: InvoiceLineRow) => row.line_document_number,
+                description: (row: InvoiceLineRow) => row.description,
+                quantity: (row: InvoiceLineRow) => row.quantity,
+                unit_price: (row: InvoiceLineRow) => row.revenue_before_vat,
+                vat_percent: (row: InvoiceLineRow) => row.revenue_vat_percent,
+                vat_amount: (row: InvoiceLineRow) => row.revenue_vat_amount,
+                line_total: (row: InvoiceLineRow) => row.line_total,
+              }}
+            >
+              <OperationalTableSection
+                wide
+                tableOnly
+                cardSurface
+                leading={
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 space-y-0.5">
+                      <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                        Invoice lines
+                      </h2>
+                      <p className="text-[11px] leading-snug text-muted-foreground">
+                        Pulled from campaign lines · revenue locked on invoicing
+                      </p>
+                    </div>
+                    <OperationalTableControlsSlot contextLabel="Invoice lines" />
+                  </div>
+                }
+              >
+                <InvoiceDetailLinesTable lines={invoice.lines} currency={invoice.currency} />
+              </OperationalTableSection>
+            </OperationalTableSuiteProvider>
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="collections" className="space-y-4">
+        <TabsContent value="collections" className={cn(OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS, "space-y-4")}>
+          <OperationalWorkspaceTabPanel className="space-y-4">
           {invoice.outstanding > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Record payment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form action={paymentAction} className="grid max-w-md gap-4">
-                  <input type="hidden" name="invoice_id" value={invoice.id} />
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Amount</Label>
-                    <Input
-                      id="amount"
-                      name="amount"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      max={invoice.outstanding}
-                      defaultValue={invoice.outstanding}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="payment_method">Method</Label>
-                    <Select name="payment_method" defaultValue="bank_transfer">
-                      <SelectTrigger id="payment_method">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bank_transfer">Bank transfer</SelectItem>
-                        <SelectItem value="wire">Wire</SelectItem>
-                        <SelectItem value="check">Check</SelectItem>
-                        <SelectItem value="credit_card">Credit card</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="reference_number">Reference</Label>
-                    <Input id="reference_number" name="reference_number" />
-                  </div>
-                  <Button type="submit" disabled={paymentPending}>
-                    Record collection
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+            <OperationalFormSection
+              title="Record payment"
+              footer={
+                <Button type="submit" form="record-payment-form" disabled={paymentPending}>
+                  Record collection
+                </Button>
+              }
+            >
+              <form id="record-payment-form" action={paymentAction} className="grid max-w-md gap-4">
+                <input type="hidden" name="invoice_id" value={invoice.id} />
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    name="amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={invoice.outstanding}
+                    defaultValue={invoice.outstanding}
+                    className={DETAIL_FORM_INPUT_CLASS}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment_method">Method</Label>
+                  <Select name="payment_method" defaultValue="bank_transfer">
+                    <SelectTrigger id="payment_method" className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bank_transfer">Bank transfer</SelectItem>
+                      <SelectItem value="wire">Wire</SelectItem>
+                      <SelectItem value="check">Check</SelectItem>
+                      <SelectItem value="credit_card">Credit card</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reference_number">Reference</Label>
+                  <Input id="reference_number" name="reference_number" className={DETAIL_FORM_INPUT_CLASS} />
+                </div>
+              </form>
+            </OperationalFormSection>
           ) : null}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Payment history</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <OperationalTableSuiteProvider
+            tableId={OPERATIONAL_TABLE_IDS.invoiceDetailPayments}
+            columns={INVOICE_DETAIL_PAYMENTS_COLUMNS}
+            rows={invoice.payments}
+            filterAccessors={{
+              payment: (row: InvoicePaymentRow) => row.document_number,
+              amount: (row: InvoicePaymentRow) => row.amount,
+              method: (row: InvoicePaymentRow) => row.payment_method,
+              status: (row: InvoicePaymentRow) => row.status,
+              paid_at: (row: InvoicePaymentRow) => row.paid_at,
+            }}
+          >
+            <OperationalTableSection
+              wide
+              tableOnly
+              cardSurface
+              leading={
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 space-y-0.5">
+                    <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                      Payment history
+                    </h2>
+                  </div>
+                  <OperationalTableControlsSlot contextLabel="Payment history" />
+                </div>
+              }
+            >
               {invoice.payments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No payments recorded.</p>
+                <p className="px-4 py-8 text-[11px] text-muted-foreground">No payments recorded.</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Payment</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Paid at</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoice.payments.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="text-xs">
-                          <DocumentNumber value={p.document_number} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatBillingMoney(p.amount, p.currency)}
-                        </TableCell>
-                        <TableCell className="capitalize">
-                          {p.payment_method.replace("_", " ")}
-                        </TableCell>
-                        <TableCell className="capitalize">{p.status}</TableCell>
-                        <TableCell>
-                          {p.paid_at
-                            ? format(new Date(p.paid_at), "MMM d, yyyy HH:mm")
-                            : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <OperationalConfigurableTable
+                  columns={INVOICE_DETAIL_PAYMENTS_COLUMNS}
+                  rows={invoice.payments}
+                  rowKey={(payment) => payment.id}
+                />
               )}
-            </CardContent>
-          </Card>
+            </OperationalTableSection>
+          </OperationalTableSuiteProvider>
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="approvals">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Approval chain</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Finance → CFO/Admin
-              </p>
-            </CardHeader>
-            <CardContent>
-              {invoice.approvals.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No approval requests.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Stage</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Decided</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoice.approvals.map((a) => (
-                      <TableRow key={a.id}>
-                        <TableCell>
-                          {FINANCIAL_APPROVAL_STAGE_LABELS[a.approval_stage]}
-                        </TableCell>
-                        <TableCell>{a.title}</TableCell>
-                        <TableCell className="capitalize">{a.status}</TableCell>
-                        <TableCell>
-                          {a.decided_at
-                            ? format(new Date(a.decided_at), "MMM d, yyyy")
-                            : "Pending"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="approvals" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <OperationalTableSuiteProvider
+              tableId={OPERATIONAL_TABLE_IDS.invoiceDetailApprovals}
+              columns={INVOICE_DETAIL_APPROVALS_COLUMNS}
+              rows={invoice.approvals}
+              filterAccessors={{
+                stage: (row: InvoiceApprovalRow) => row.approval_stage,
+                title: (row: InvoiceApprovalRow) => row.title,
+                status: (row: InvoiceApprovalRow) => row.status,
+                decided: (row: InvoiceApprovalRow) => row.decided_at,
+              }}
+            >
+              <OperationalTableSection
+                wide
+                tableOnly
+                cardSurface
+                leading={
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 space-y-0.5">
+                      <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                        Approval chain
+                      </h2>
+                      <p className="text-[11px] leading-snug text-muted-foreground">
+                        Finance → CFO/Admin
+                      </p>
+                    </div>
+                    <OperationalTableControlsSlot contextLabel="Approval chain" />
+                  </div>
+                }
+              >
+                {invoice.approvals.length === 0 ? (
+                  <p className="px-4 py-8 text-[11px] text-muted-foreground">No approval requests.</p>
+                ) : (
+                  <OperationalConfigurableTable
+                    columns={INVOICE_DETAIL_APPROVALS_COLUMNS}
+                    rows={invoice.approvals}
+                    rowKey={(approval) => approval.id}
+                  />
+                )}
+              </OperationalTableSection>
+            </OperationalTableSuiteProvider>
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="activity">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Audit trail</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {invoice.activity.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No audit entries.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {invoice.activity.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-3 last:border-0"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{item.summary}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.actor?.full_name ?? item.actor?.email ?? "System"}
-                        </p>
-                      </div>
-                      <time className="text-xs text-muted-foreground">
-                        {format(new Date(item.created_at), "MMM d, yyyy HH:mm")}
-                      </time>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="activity" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+          <OperationalTableSection
+            wide
+            tableOnly
+            cardSurface
+            leading={
+              <div className="min-w-0 space-y-0.5">
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                  Audit trail
+                </h2>
+              </div>
+            }
+          >
+            {invoice.activity.length === 0 ? (
+              <p className="px-4 py-8 text-[11px] text-muted-foreground">No audit entries.</p>
+            ) : (
+              <ul className="divide-y divide-border/40 px-4 md:px-5">
+                {invoice.activity.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-baseline justify-between gap-2 py-3 first:pt-4 last:pb-4"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{item.summary}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {item.actor?.full_name ?? item.actor?.email ?? "System"}
+                      </p>
+                    </div>
+                    <time className="text-[11px] text-muted-foreground">
+                      {format(new Date(item.created_at), "MMM d, yyyy HH:mm")}
+                    </time>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </OperationalTableSection>
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
       </Tabs>
     </div>
@@ -349,11 +552,8 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="font-heading text-xl font-semibold">{value}</p>
-      </CardContent>
-    </Card>
+    <CampaignFlatSection title={label}>
+      <p className="font-heading text-xl font-semibold">{value}</p>
+    </CampaignFlatSection>
   );
 }

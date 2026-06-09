@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { Button } from "@/components/ui/button";
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreatorDeliverableRowPanel } from "@/features/portals/components/creator-deliverable-row";
@@ -29,12 +27,11 @@ export default async function CreatorCampaignDetailPage({ params }: Props) {
   return (
     <PlatformErrorBoundary surface="generic">
       <div className="space-y-6">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 w-fit">
-          <Link href="/creator-portal/campaigns">
-            <ArrowLeftIcon data-icon="inline-start" />
-            Back to campaigns
-          </Link>
-        </Button>
+        <PageBackButton
+          fallbackHref="/creator-portal/campaigns"
+          label="Back to campaigns"
+          variant="text"
+        />
 
         <div className="space-y-1">
           <h2 className="font-heading text-2xl font-semibold tracking-tight">

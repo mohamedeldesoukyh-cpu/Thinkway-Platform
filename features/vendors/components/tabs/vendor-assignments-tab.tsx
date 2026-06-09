@@ -1,145 +1,182 @@
-import Link from "next/link";
+"use client";
 
-import { DocumentNumber } from "@/components/ui/document-number";
+import Link from "next/link";
+import { useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
-  CampaignOperationalTable,
-  CampaignOperationalTableBody,
-  CampaignOperationalTableCell,
-  CampaignOperationalTableCellAmount,
-  CampaignOperationalTableHead,
-  CampaignOperationalTableHeader,
-  CampaignOperationalTableHeaderRow,
-  CampaignOperationalTableRow,
-} from "@/features/campaigns/components/campaign-operational-table";
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { AssignmentStatusBadge } from "@/features/campaigns/components/assignment-status-badge";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { LINE_BILLING_STATUS_LABELS, VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import { formatMoney, formatPercent } from "@/features/vendors/utils";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
+import { VENDOR_ASSIGNMENTS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+
+type AssignmentRow = VendorWorkspace["assignments"][number];
+
+function buildVendorAssignmentsColumns(
+  currency: string
+): OperationalConfigurableColumnDef<AssignmentRow>[] {
+  return [
+    {
+      id: "campaign",
+      label: "Campaign",
+      renderCell: (assignment) => (
+        <>
+          {assignment.campaign_id ? (
+            <Link
+              href={`/campaigns/${assignment.campaign_id}`}
+              className="font-medium text-foreground hover:text-primary hover:underline"
+            >
+              {assignment.campaign_name}
+            </Link>
+          ) : (
+            "—"
+          )}
+          {assignment.campaign_document_number ? (
+            <p className="text-[10px] text-muted-foreground">
+              <DocumentNumber value={assignment.campaign_document_number} />
+            </p>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "assignment_line",
+      label: "Assignment line",
+      renderCell: (assignment) => (
+        <>
+          <span className="font-medium text-foreground">{assignment.line_name ?? "—"}</span>
+          {assignment.line_document_number ? (
+            <p className="text-[10px] text-muted-foreground">
+              <DocumentNumber value={assignment.line_document_number} />
+            </p>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "ops_status",
+      label: "Ops status",
+      renderCell: (assignment) =>
+        assignment.assignment_status ? (
+          <AssignmentStatusBadge
+            status={
+              assignment.assignment_status as import("@/features/campaigns/types").CampaignLineAssignmentStatus
+            }
+          />
+        ) : (
+          "—"
+        ),
+    },
+    {
+      id: "billing",
+      label: "Billing",
+      renderCell: (assignment) => (
+        <Badge
+          variant="outline"
+          className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "font-normal")}
+        >
+          {assignment.billing_status
+            ? LINE_BILLING_STATUS_LABELS[assignment.billing_status]
+            : "—"}
+        </Badge>
+      ),
+    },
+    {
+      id: "revenue",
+      label: "Revenue",
+      amountCell: true,
+      renderCell: (assignment) =>
+        formatMoney(assignment.revenue, assignment.currency || currency),
+    },
+    {
+      id: "cost",
+      label: "Cost",
+      amountCell: true,
+      renderCell: (assignment) =>
+        formatMoney(assignment.cost, assignment.currency || currency),
+    },
+    {
+      id: "gp",
+      label: "GP",
+      amountCell: true,
+      renderCell: (assignment) =>
+        formatMoney(assignment.gp, assignment.currency || currency),
+    },
+    {
+      id: "payout",
+      label: "Payout",
+      renderCell: (assignment) =>
+        assignment.vendor_payment_status ? (
+          <Badge
+            variant="secondary"
+            className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "font-normal")}
+          >
+            {VENDOR_PAYMENT_STATUS_LABELS[assignment.vendor_payment_status]}
+          </Badge>
+        ) : (
+          "—"
+        ),
+    },
+  ];
+}
 
 export function VendorAssignmentsTab({ workspace }: { workspace: VendorWorkspace }) {
   const currency =
     (workspace.payment_details as { currency?: string })?.currency ?? "USD";
+  const columns = useMemo(
+    () => buildVendorAssignmentsColumns(currency),
+    [currency]
+  );
+  const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
   return (
     <div className="space-y-4">
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <div className="min-w-0 space-y-0.5">
-            <h2 className="text-sm font-semibold tracking-tight text-foreground">
-              Assignment history
-            </h2>
-            <p className="text-[11px] leading-snug text-muted-foreground">
-              Campaign lines, deliverables, commercial terms, and operational status.
-            </p>
-          </div>
-        }
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.vendorAssignments}
+        columns={columns}
+        rows={workspace.assignments}
+        filterAccessors={VENDOR_ASSIGNMENTS_FILTER_ACCESSORS}
       >
-        {workspace.assignments.length === 0 ? (
-          <p className="px-4 py-8 text-center text-[11px] text-muted-foreground md:px-5">
-            No campaign assignments yet.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <CampaignOperationalTable>
-              <CampaignOperationalTableHeader>
-                <CampaignOperationalTableHeaderRow>
-                  <CampaignOperationalTableHead>Campaign</CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead>Assignment line</CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead>Ops status</CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead>Billing</CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead className="text-right">
-                    Revenue
-                  </CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead className="text-right">Cost</CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead className="text-right">GP</CampaignOperationalTableHead>
-                  <CampaignOperationalTableHead>Payout</CampaignOperationalTableHead>
-                </CampaignOperationalTableHeaderRow>
-              </CampaignOperationalTableHeader>
-              <CampaignOperationalTableBody>
-                {workspace.assignments.map((a) => (
-                  <CampaignOperationalTableRow key={a.id}>
-                    <CampaignOperationalTableCell>
-                      {a.campaign_id ? (
-                        <Link
-                          href={`/campaigns/${a.campaign_id}`}
-                          className="font-medium text-foreground hover:text-primary hover:underline"
-                        >
-                          {a.campaign_name}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                      {a.campaign_document_number ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          <DocumentNumber value={a.campaign_document_number} />
-                        </p>
-                      ) : null}
-                    </CampaignOperationalTableCell>
-                    <CampaignOperationalTableCell>
-                      <span className="font-medium text-foreground">{a.line_name ?? "—"}</span>
-                      {a.line_document_number ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          <DocumentNumber value={a.line_document_number} />
-                        </p>
-                      ) : null}
-                    </CampaignOperationalTableCell>
-                    <CampaignOperationalTableCell>
-                      {a.assignment_status ? (
-                        <AssignmentStatusBadge
-                          status={
-                            a.assignment_status as import("@/features/campaigns/types").CampaignLineAssignmentStatus
-                          }
-                        />
-                      ) : (
-                        "—"
-                      )}
-                    </CampaignOperationalTableCell>
-                    <CampaignOperationalTableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "font-normal")}
-                      >
-                        {a.billing_status
-                          ? LINE_BILLING_STATUS_LABELS[a.billing_status]
-                          : "—"}
-                      </Badge>
-                    </CampaignOperationalTableCell>
-                    <CampaignOperationalTableCellAmount>
-                      {formatMoney(a.revenue, a.currency || currency)}
-                    </CampaignOperationalTableCellAmount>
-                    <CampaignOperationalTableCellAmount>
-                      {formatMoney(a.cost, a.currency || currency)}
-                    </CampaignOperationalTableCellAmount>
-                    <CampaignOperationalTableCellAmount>
-                      {formatMoney(a.gp, a.currency || currency)}
-                    </CampaignOperationalTableCellAmount>
-                    <CampaignOperationalTableCell>
-                      {a.vendor_payment_status ? (
-                        <Badge
-                          variant="secondary"
-                          className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "font-normal")}
-                        >
-                          {VENDOR_PAYMENT_STATUS_LABELS[a.vendor_payment_status]}
-                        </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </CampaignOperationalTableCell>
-                  </CampaignOperationalTableRow>
-                ))}
-              </CampaignOperationalTableBody>
-            </CampaignOperationalTable>
-          </div>
-        )}
-      </OperationalTableSection>
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Assignment history"
+              description="Campaign lines, deliverables, commercial terms, and operational status."
+              actions={
+                <OperationalTableControlsSlot contextLabel="Vendor assignments" />
+              }
+            />
+          }
+        >
+          {workspace.assignments.length === 0 ? (
+            <p className="px-4 py-8 text-center text-[11px] text-muted-foreground md:px-5">
+              No campaign assignments yet.
+            </p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={columns}
+              rows={workspace.assignments}
+              rowKey={(assignment) => assignment.id}
+            />
+          )}
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
 
       <OperationalTableSection
         wide

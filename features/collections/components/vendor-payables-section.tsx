@@ -1,13 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
+
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
 import { Badge } from "@/components/ui/badge";
 import type { VendorPayablesPayload } from "@/lib/vendor-payables/load-payables";
 import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
@@ -16,10 +15,50 @@ type VendorPayablesSectionProps = {
   payables: VendorPayablesPayload | null;
 };
 
+type VendorPayableRow = VendorPayablesPayload["rows"][number];
+
+function buildVendorPayablesColumns(
+  formatFee: (row: VendorPayableRow) => string
+): OperationalConfigurableColumnDef<VendorPayableRow>[] {
+  return [
+    {
+      id: "vendor",
+      label: "Vendor",
+      renderCell: (row) => row.influencer_name,
+    },
+    {
+      id: "campaign",
+      label: "Campaign",
+      cellClassName: "max-w-[160px] truncate",
+      renderCell: (row) => row.campaign_name,
+    },
+    {
+      id: "status",
+      label: "Status",
+      renderCell: (row) => <Badge variant="outline">{row.status}</Badge>,
+    },
+    {
+      id: "fee",
+      label: "Fee",
+      headerClassName: "text-right",
+      amountCell: true,
+      renderCell: (row) => formatFee(row),
+    },
+  ];
+}
+
+const VENDOR_PAYABLES_TABLE_COLUMNS = buildVendorPayablesColumns(() => "—");
+
+export const VENDOR_PAYABLES_TABLE_COLUMN_METAS = getOperationalTableColumnMetas(
+  VENDOR_PAYABLES_TABLE_COLUMNS
+);
+
 export function VendorPayablesSection({ payables }: VendorPayablesSectionProps) {
   if (!payables) {
     return (
-      <p className="text-sm text-muted-foreground">Vendor payables data unavailable.</p>
+      <p className="px-4 py-8 text-[11px] text-muted-foreground">
+        Vendor payables data unavailable.
+      </p>
     );
   }
 
@@ -29,6 +68,16 @@ export function VendorPayablesSection({ payables }: VendorPayablesSectionProps) 
     currencies: ["USD"],
     mixed_label: null,
   };
+
+  const rows = payables.rows.filter((r) => r.status !== "paid").slice(0, 30);
+
+  const formatFee = (row: VendorPayableRow) =>
+    formatAnalyticsAmount(row.agreed_fee, {
+      ...currency,
+      primary_currency: row.currency,
+    });
+
+  const columns = useMemo(() => buildVendorPayablesColumns(formatFee), [payables]);
 
   return (
     <div className="space-y-4">
@@ -46,38 +95,17 @@ export function VendorPayablesSection({ payables }: VendorPayablesSectionProps) 
           </p>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Campaign</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Fee</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {payables.rows
-              .filter((r) => r.status !== "paid")
-              .slice(0, 30)
-              .map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.influencer_name}</TableCell>
-                  <TableCell className="max-w-[160px] truncate">{row.campaign_name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{row.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs">
-                    {formatAnalyticsAmount(row.agreed_fee, {
-                      ...currency,
-                      primary_currency: row.currency,
-                    })}
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </div>
+      {rows.length === 0 ? (
+        <p className="px-4 py-8 text-[11px] text-muted-foreground">
+          No outstanding vendor payables.
+        </p>
+      ) : (
+        <OperationalConfigurableTable
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.id}
+        />
+      )}
     </div>
   );
 }

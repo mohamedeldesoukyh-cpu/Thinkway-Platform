@@ -6,6 +6,7 @@ import type {
   ClientCampaignRow,
   ClientDashboardSummary,
   ClientInvoiceRow,
+  ClientIoRow,
   ClientReportRow,
   CreatorCampaignDetail,
   CreatorCampaignRow,
@@ -956,7 +957,7 @@ export async function getClientNotifications(): Promise<PortalNotificationRow[]>
   return result.data;
 }
 
-export async function getClientIosList() {
+export async function getClientIosList(): Promise<ClientIoRow[]> {
   const result = await safeOperationalQuery(
     "client-portal:getClientIos",
     async () => {
@@ -972,7 +973,7 @@ export async function getClientIosList() {
         .in("client_id", scope.clientIds)
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
-      return (data ?? []) as unknown[];
+      return (data ?? []) as ClientIoRow[];
     },
     []
   );
@@ -992,7 +993,7 @@ export async function getClientDashboardSummary(): Promise<ClientDashboardSummar
   return {
     active_campaigns: campaigns.filter((c) => c.status === "active").length,
     pending_approvals: approvals.filter((a) => a.status === "Pending").length,
-    pending_client_io: (clientIos as any[]).filter((io) => io.status === "sent").length,
+    pending_client_io: clientIos.filter((io) => io.status === "sent").length,
     open_invoices: invoices.filter((i) => i.status !== "Paid").length,
     recent_publications: publications.slice(0, 6),
     notifications: notifications.slice(0, 8),

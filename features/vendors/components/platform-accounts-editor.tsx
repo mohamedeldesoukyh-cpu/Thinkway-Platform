@@ -20,7 +20,11 @@ import {
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DETAIL_FORM_SELECT_TRIGGER_CLASS,
+} from "@/features/campaigns/components/operational-detail-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -294,15 +298,10 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
   );
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-4">
-        <div>
-          <CardTitle>Platform accounts</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Paste a profile URL to auto-detect platform and public stats. Empty
-            metrics mean data was unavailable — not zero followers.
-          </p>
-        </div>
+    <OperationalFormSection
+      title="Platform accounts"
+      description="Paste a profile URL to auto-detect platform and public stats. Empty metrics mean data was unavailable — not zero followers."
+      actions={
         <Button
           type="button"
           variant="outline"
@@ -312,9 +311,14 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
           <PlusIcon data-icon="inline-start" />
           Add platform
         </Button>
-      </CardHeader>
-      <CardContent>
-        <form action={formAction} className="space-y-4">
+      }
+      footer={
+        <Button type="submit" form="platform-accounts-form" disabled={isPending}>
+          {isPending ? "Saving…" : "Save platforms"}
+        </Button>
+      }
+    >
+        <form id="platform-accounts-form" action={formAction} className="space-y-4">
           <input type="hidden" name="influencer_id" value={vendor.id} />
           <input type="hidden" name="accounts_json" value={accountsJson} />
 
@@ -630,13 +634,7 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
 
           <FieldError messages={state.fieldErrors?.accounts_json} />
 
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : "Save platforms"}
-            </Button>
-          </div>
         </form>
-      </CardContent>
-    </Card>
+    </OperationalFormSection>
   );
 }

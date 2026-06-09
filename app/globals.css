@@ -67,7 +67,7 @@
   --brand-gradient-3: linear-gradient(135deg, #33b6fc 0%, #a038fb 100%);
   --success: #10b981;
   --warning: #f59e0b;
-  /* IConnect product accent (ops / finance emphasis) */
+  /* Thinkway product accent (ops / finance emphasis) */
   --brand-product: #1d9e75;
 
   --background: #f4f6fb;
@@ -102,6 +102,8 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #33b6fc;
+  /* Collapsed rail default — updated when sidebar expands (CollapsibleAppSidebar). */
+  --app-sidebar-width: 3.5rem;
 }
 
 .dark {
@@ -191,4 +193,10 @@
     @apply border-b border-border/40 bg-background/95 backdrop-blur-md;
   }
 
+}
+
+@media (max-width: 767px) {
+  :root {
+    --app-sidebar-width: 0px;
+  }
 }

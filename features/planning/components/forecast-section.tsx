@@ -4,18 +4,19 @@ import { useState, useTransition } from "react";
 import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { createForecastVersionAction } from "@/features/planning/actions";
 import type { PlanningPermissions } from "@/features/planning/load-planning-workspace";
 import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
@@ -23,6 +24,8 @@ import type { ForecastRollupsResult } from "@/lib/planning/queries/load-forecast
 import type { ForecastVersion } from "@/lib/planning/types/forecast";
 import type { BudgetRollupNode } from "@/lib/planning/budgets/budget-rollups";
 import { devLog } from "@/lib/platform/logger";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import { cn } from "@/lib/utils";
 
 type ForecastSectionProps = {
   fiscalYear: number;
@@ -33,6 +36,43 @@ type ForecastSectionProps = {
   selectedForecastId: string | null;
   selectedVersionId: string | null;
 };
+
+const FORECAST_VERSION_COLUMNS: OperationalConfigurableColumnDef<ForecastVersion>[] = [
+  {
+    id: "document",
+    label: "Document",
+    monoCell: true,
+    renderCell: (f) => <DocumentNumber value={f.document_number} />,
+  },
+  { id: "name", label: "Name", renderCell: (f) => f.name },
+  { id: "status", label: "Status", renderCell: (f) => f.status },
+  { id: "fiscal_year", label: "FY", renderCell: (f) => f.fiscal_year },
+];
+
+const FORECAST_VERSION_COLUMN_METAS = getOperationalTableColumnMetas(FORECAST_VERSION_COLUMNS);
+
+function buildForecastByClientColumns(
+  format: (n: number, ctx?: BudgetRollupNode["currency"]) => string
+): OperationalConfigurableColumnDef<BudgetRollupNode>[] {
+  return [
+    { id: "client", label: "Client", renderCell: (node) => node.label },
+    {
+      id: "forecast",
+      label: "Forecast",
+      headerClassName: "text-right",
+      amountCell: true,
+      renderCell: (node) => format(node.metrics.revenue_budget, node.currency),
+    },
+    {
+      id: "budget_slice",
+      label: "Budget slice",
+      headerClassName: "text-right",
+      amountCell: true,
+      cellClassName: "text-muted-foreground",
+      renderCell: () => "Compare via filters",
+    },
+  ];
+}
 
 export function ForecastSection({
   fiscalYear,
@@ -76,6 +116,9 @@ export function ForecastSection({
       currencies: ["USD"],
       mixed_label: null,
     });
+
+  const forecastByClientColumns = buildForecastByClientColumns(format);
+  const forecastByClientColumnMetas = getOperationalTableColumnMetas(forecastByClientColumns);
 
   return (
     <div className="space-y-6">
@@ -135,72 +178,68 @@ export function ForecastSection({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border">
-        <p className="border-b border-border px-4 py-2 text-sm font-medium">
-          Forecast versions
-        </p>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Document</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>FY</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {forecasts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
-                  No forecast versions yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              forecasts.map((f) => (
-                <TableRow
-                  key={f.id}
-                  className={f.id === selectedForecastId ? "bg-muted/40" : undefined}
-                >
-                  <TableCell className="text-xs">
-                    <DocumentNumber value={f.document_number} />
-                  </TableCell>
-                  <TableCell>{f.name}</TableCell>
-                  <TableCell>{f.status}</TableCell>
-                  <TableCell>{f.fiscal_year}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.planningForecastVersions}
+        columns={FORECAST_VERSION_COLUMNS}
+        rows={forecasts}
+        filterAccessors={{
+          document: (row) => row.document_number,
+          name: (row) => row.name,
+          status: (row) => row.status,
+          fiscal_year: (row) => row.fiscal_year,
+        }}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Forecast versions"
+              actions={<OperationalTableControlsSlot contextLabel="Forecast versions" />}
+            />
+          }
+        >
+          {forecasts.length === 0 ? (
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">No forecast versions yet.</p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={FORECAST_VERSION_COLUMNS}
+              rows={forecasts}
+              rowKey={(f) => f.id}
+              rowClassName={(f) => cn(f.id === selectedForecastId && "bg-muted/40")}
+            />
+          )}
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
 
-      <div className="rounded-2xl border border-border">
-        <p className="border-b border-border px-4 py-2 text-sm font-medium">
-          Forecast vs budget (by client)
-        </p>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead>
-              <TableHead className="text-right">Forecast</TableHead>
-              <TableHead className="text-right">Budget slice</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {clientNodes.slice(0, 20).map((node) => (
-              <TableRow key={node.key}>
-                <TableCell>{node.label}</TableCell>
-                <TableCell className="text-right font-mono text-xs">
-                  {format(node.metrics.revenue_budget, node.currency)}
-                </TableCell>
-                <TableCell className="text-right text-xs text-muted-foreground">
-                  Compare via filters
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.planningForecastByClient}
+        columns={forecastByClientColumns}
+        rows={clientNodes.slice(0, 20)}
+        filterAccessors={{
+          client: (row) => row.label,
+          forecast: (row) => row.metrics.revenue_budget,
+        }}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Forecast vs budget (by client)"
+              actions={<OperationalTableControlsSlot contextLabel="Forecast by client" />}
+            />
+          }
+        >
+          <OperationalConfigurableTable
+            columns={forecastByClientColumns}
+            rows={clientNodes.slice(0, 20)}
+            rowKey={(node) => node.key}
+          />
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
     </div>
   );
 }

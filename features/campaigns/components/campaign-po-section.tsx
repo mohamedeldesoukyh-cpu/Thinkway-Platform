@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 type CampaignPoSectionProps = {
   campaignId: string;
+  campaignName: string;
   campaignCurrency: string;
   po: CampaignPoSummary;
   currencyOptions: { value: string; label: string }[];
@@ -25,6 +26,7 @@ type CampaignPoSectionProps = {
 
 export function CampaignPoSection({
   campaignId,
+  campaignName,
   campaignCurrency,
   po,
   currencyOptions,
@@ -120,6 +122,7 @@ export function CampaignPoSection({
 
       <CampaignPoEditSheet
         campaignId={campaignId}
+        campaignName={campaignName}
         campaignCurrency={campaignCurrency}
         po={po}
         currencyOptions={currencyOptions}

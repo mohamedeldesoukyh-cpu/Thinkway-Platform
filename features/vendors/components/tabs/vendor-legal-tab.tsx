@@ -4,7 +4,6 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,6 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DETAIL_FORM_SELECT_TRIGGER_CLASS,
+} from "@/features/campaigns/components/operational-detail-panel";
 import {
   updateVendorLegalAction,
   type FormActionState,
@@ -27,6 +31,7 @@ import type {
   ExclusivityType,
   VendorDetail,
 } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 export function VendorLegalTab({ vendor }: { vendor: VendorDetail }) {
   const [contractStatus, setContractStatus] = useState(
@@ -51,74 +56,71 @@ export function VendorLegalTab({ vendor }: { vendor: VendorDetail }) {
   }, [state]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Legal & contract</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form action={formAction} className="grid gap-4">
-          <input type="hidden" name="influencer_id" value={vendor.id} />
-          <input type="hidden" name="contract_status" value={contractStatus} />
-          <input type="hidden" name="exclusivity" value={exclusivity} />
+    <OperationalFormSection
+      title="Legal & contract"
+      footer={
+        <Button type="submit" form="vendor-legal-form" disabled={isPending}>
+          {isPending ? "Saving…" : "Save legal"}
+        </Button>
+      }
+    >
+      <form id="vendor-legal-form" action={formAction} className="grid gap-4">
+        <input type="hidden" name="influencer_id" value={vendor.id} />
+        <input type="hidden" name="contract_status" value={contractStatus} />
+        <input type="hidden" name="exclusivity" value={exclusivity} />
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="grid gap-2">
-              <Label>Contract status</Label>
-              <Select
-                value={contractStatus}
-                onValueChange={(v) => setContractStatus(v as ContractStatus)}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTRACT_STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="contract_expiry">Contract expiry</Label>
-              <Input
-                id="contract_expiry"
-                name="contract_expiry"
-                type="date"
-                defaultValue={vendor.contract_expiry ?? ""}
-                disabled={isPending}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Exclusivity</Label>
-              <Select
-                value={exclusivity}
-                onValueChange={(v) => setExclusivity(v as ExclusivityType)}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXCLUSIVITY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2">
+            <Label>Contract status</Label>
+            <Select
+              value={contractStatus}
+              onValueChange={(v) => setContractStatus(v as ContractStatus)}
+              disabled={isPending}
+            >
+              <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTRACT_STATUS_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : "Save legal"}
-            </Button>
+          <div className="grid gap-2">
+            <Label htmlFor="contract_expiry">Contract expiry</Label>
+            <Input
+              id="contract_expiry"
+              name="contract_expiry"
+              type="date"
+              className={DETAIL_FORM_INPUT_CLASS}
+              defaultValue={vendor.contract_expiry ?? ""}
+              disabled={isPending}
+            />
           </div>
-        </form>
-      </CardContent>
-    </Card>
+          <div className="grid gap-2">
+            <Label>Exclusivity</Label>
+            <Select
+              value={exclusivity}
+              onValueChange={(v) => setExclusivity(v as ExclusivityType)}
+              disabled={isPending}
+            >
+              <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXCLUSIVITY_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </form>
+    </OperationalFormSection>
   );
 }

@@ -1,8 +1,13 @@
 "use client";
 
-import { ArrowDownIcon, ArrowUpIcon, MinusIcon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  BarChart3Icon,
+  MinusIcon,
+} from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CollectionsKpiCard } from "@/lib/collections/queries/load-collections-dashboard";
 import type { AnalyticsCurrencyContext } from "@/lib/analytics/types/metrics";
@@ -21,71 +26,80 @@ export function CollectionsKpiStrip({
 }: CollectionsKpiStripProps) {
   if (loading) {
     return (
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      <div className="flex gap-2 overflow-hidden">
         {Array.from({ length: 8 }).map((_, i) => (
-          <Card key={i} className="shadow-sm">
-            <CardContent className="space-y-2 p-3">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-6 w-24" />
-            </CardContent>
-          </Card>
+          <div
+            key={i}
+            className="flex min-w-[168px] shrink-0 flex-col gap-2 rounded-xl border border-border/70 bg-card p-3 shadow-sm"
+          >
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-5 w-24" />
+          </div>
         ))}
       </div>
     );
   }
 
+  const items = cards.map((card) => ({
+    id: card.id,
+    label: card.label,
+    value: card.formatted,
+    icon: BarChart3Icon,
+    accentClass:
+      card.variant === "negative"
+        ? "bg-red-500/10 text-red-600"
+        : card.variant === "warning"
+          ? "bg-amber-500/10 text-amber-700"
+          : card.variant === "positive"
+            ? "bg-emerald-500/10 text-emerald-700"
+            : "bg-brand-blue/10 text-brand-blue",
+    valueAlert:
+      card.variant === "negative"
+        ? ("danger" as const)
+        : card.variant === "warning"
+          ? ("warning" as const)
+          : undefined,
+  }));
+
   return (
     <div className="space-y-2">
       {currency.is_mixed_currency ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[11px] text-muted-foreground">
           {currency.mixed_label ?? "Mixed currency"} — totals are not FX-converted.
         </p>
       ) : null}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-        {cards.map((card) => {
-          const trend =
-            card.variant === "positive"
-              ? "up"
-              : card.variant === "negative"
-                ? "down"
-                : "flat";
-          return (
-            <Card
-              key={card.id}
-              className={cn(
-                "shadow-sm",
-                card.variant === "negative" && "border-red-500/30",
-                card.variant === "warning" && "border-amber-500/30"
-              )}
-            >
-              <CardContent className="p-3">
-                <p className="text-xs text-muted-foreground">{card.label}</p>
-                <p
+      <KpiCarousel items={items} showNavigation={false} />
+      {cards.some((c) => c.trend_percent != null) ? (
+        <div className="flex flex-wrap gap-2 px-1">
+          {cards
+            .filter((c) => c.trend_percent != null)
+            .map((card) => {
+              const trend =
+                card.variant === "positive"
+                  ? "up"
+                  : card.variant === "negative"
+                    ? "down"
+                    : "flat";
+              return (
+                <span
+                  key={`trend-${card.id}`}
                   className={cn(
-                    "font-heading text-lg font-semibold",
-                    card.variant === "positive" && "text-emerald-600",
-                    card.variant === "negative" && "text-red-600"
+                    "inline-flex items-center gap-1 rounded-md bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground"
                   )}
                 >
-                  {card.formatted}
-                </p>
-                {card.trend_percent != null ? (
-                  <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-                    {trend === "up" ? (
-                      <ArrowUpIcon className="size-3" />
-                    ) : trend === "down" ? (
-                      <ArrowDownIcon className="size-3" />
-                    ) : (
-                      <MinusIcon className="size-3" />
-                    )}
-                    {Math.abs(card.trend_percent).toFixed(1)}%
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  {trend === "up" ? (
+                    <ArrowUpIcon className="size-3" />
+                  ) : trend === "down" ? (
+                    <ArrowDownIcon className="size-3" />
+                  ) : (
+                    <MinusIcon className="size-3" />
+                  )}
+                  {card.label}: {Math.abs(card.trend_percent ?? 0).toFixed(1)}%
+                </span>
+              );
+            })}
+        </div>
+      ) : null}
     </div>
   );
 }

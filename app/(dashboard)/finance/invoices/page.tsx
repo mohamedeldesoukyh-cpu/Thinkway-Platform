@@ -1,7 +1,6 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import { FinanceInvoiceRegisterTable } from "@/features/finance/invoices/components/finance-invoice-register-table";
+import { FinanceInvoicesListSection } from "@/features/finance/invoices/components/finance-invoices-list-section";
 import { getFinanceInvoiceRegister } from "@/features/finance/invoices/queries";
 
 export default async function FinanceInvoicesPage() {
@@ -26,12 +25,7 @@ export default async function FinanceInvoicesPage() {
         </div>
       ) : (
         <PlatformErrorBoundary surface="invoices">
-          <OperationalTableSection
-            title="Invoice register"
-            description={`${rows.length} invoice${rows.length === 1 ? "" : "s"} in the system.`}
-          >
-            <FinanceInvoiceRegisterTable rows={rows} showUngenerate />
-          </OperationalTableSection>
+          <FinanceInvoicesListSection rows={rows} />
         </PlatformErrorBoundary>
       )}
     </DashboardShell>

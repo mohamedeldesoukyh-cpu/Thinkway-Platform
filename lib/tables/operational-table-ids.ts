@@ -1,0 +1,105 @@
+export const OPERATIONAL_TABLE_IDS = {
+  campaigns: "campaigns-list",
+  clients: "clients-list",
+  groups: "groups-list",
+  vendors: "vendors-list",
+
+  billingCampaignQueue: "billing-campaign-queue",
+  billingCampaignReviewLines: "billing-campaign-review-lines",
+  billingInvoicesList: "billing-invoices-list",
+  billingVendorPaymentBatches: "billing-vendor-payment-batches",
+  billingFinancialApprovals: "billing-financial-approvals",
+  billingCollectionTracker: "billing-collection-tracker",
+  campaignAssignmentBillingGroups: "campaign-assignment-billing-groups",
+  billingLinesRegister: "billing-lines-register",
+  invoiceDetailLines: "invoice-detail-lines",
+  invoiceDetailPayments: "invoice-detail-payments",
+  invoiceDetailApprovals: "invoice-detail-approvals",
+
+  campaignConsolidatedInvoiceQueue: "campaign-consolidated-invoice-queue",
+  campaignPayments: "campaign-payments",
+  campaignDeliverables: "campaign-deliverables",
+  campaignPublications: "campaign-publications",
+  campaignApprovals: "campaign-approvals",
+  campaignTimelineVendors: "campaign-timeline-vendors",
+  campaignInvoiceRegister: "campaign-invoice-register",
+  campaignAssignmentGrid: "campaign-assignment-grid",
+
+  clientCampaigns: "client-campaigns",
+  clientBrands: "client-brands",
+  clientDocuments: "client-documents",
+
+  groupLegalEntities: "group-legal-entities",
+  groupBrands: "group-brands",
+  groupRecentCampaigns: "group-recent-campaigns",
+  groupDocuments: "group-documents",
+
+  vendorCampaigns: "vendor-campaigns",
+  vendorAssignments: "vendor-assignments",
+  vendorBilling: "vendor-billing",
+  vendorDeliverablesActivity: "vendor-deliverables-activity",
+  vendorDocuments: "vendor-documents",
+
+  financeInvoiceRegister: "finance-invoice-register",
+  financePeriodLocks: "finance-period-locks",
+  financeCurrencies: "finance-currencies",
+  financeExchangeRates: "finance-exchange-rates",
+  financeVatMonthly: "finance-vat-monthly",
+  financeVatByCountry: "finance-vat-by-country",
+  financeVatByEntity: "finance-vat-by-entity",
+  financeVatByInvoice: "finance-vat-by-invoice",
+  financePoTracker: "finance-po-tracker",
+  financePostingDocuments: "finance-posting-documents",
+  financePostingBatches: "finance-posting-batches",
+
+  collectionsArOverdue: "collections-ar-overdue",
+  collectionsVendorPayables: "collections-vendor-payables",
+
+  planningBudgetVersions: "planning-budget-versions",
+  planningForecastVersions: "planning-forecast-versions",
+  planningForecastByClient: "planning-forecast-by-client",
+  planningBudgetAllocations: "planning-budget-allocations",
+  planningVariancePositive: "planning-variance-positive",
+  planningVarianceNegative: "planning-variance-negative",
+  planningVarianceClient: "planning-variance-client",
+  planningVarianceBrand: "planning-variance-brand",
+  planningVarianceCountry: "planning-variance-country",
+
+  operationsMoveCampaigns: "operations-move-campaigns",
+  operationsVendorMoveAssignments: "operations-vendor-move-assignments",
+  operationsReassignmentBatches: "operations-reassignment-batches",
+
+  ioClientRegister: "io-client-register",
+  ioVendorRegister: "io-vendor-register",
+  campaignVendorIos: "campaign-vendor-ios",
+
+  settingsUsers: "settings-users",
+  settingsRoles: "settings-roles",
+  settingsClientAccessUsers: "settings-client-access-users",
+  settingsPermissionsMatrix: "settings-permissions-matrix",
+
+  executiveProfitabilityClients: "executive-profitability-clients",
+  executiveProfitabilityLowMarginClients: "executive-profitability-low-margin-clients",
+  executiveProfitabilityCampaigns: "executive-profitability-campaigns",
+  executiveProfitabilityCountries: "executive-profitability-countries",
+  executiveProfitabilityBrands: "executive-profitability-brands",
+
+  portalClientCampaigns: "portal-client-campaigns",
+  portalClientInvoices: "portal-client-invoices",
+  portalClientApprovals: "portal-client-approvals",
+  portalClientPublications: "portal-client-publications",
+  portalClientReports: "portal-client-reports",
+  portalClientIo: "portal-client-io",
+  portalCreatorCampaigns: "portal-creator-campaigns",
+  portalCreatorDeliverables: "portal-creator-deliverables",
+  portalCreatorPublications: "portal-creator-publications",
+  portalCreatorPayments: "portal-creator-payments",
+  portalCreatorVendorIos: "portal-creator-vendor-ios",
+
+  dialogEntityCampaignDeps: "dialog-entity-campaign-deps",
+  dialogVendorAssignmentDeps: "dialog-vendor-assignment-deps",
+} as const;
+
+export function financeAdjustmentRegisterTableId(module: string) {
+  return `finance-adjustment-register-${module}`;
+}

@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { ClientAccessWorkspace } from "@/features/client-access/components/client-access-workspace";
 import {
   getAssignableClientProfiles,
@@ -22,13 +22,8 @@ export async function ClientAccessTab({ clientId }: Props) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Client portal access</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ClientAccessWorkspace entity={entity} assignable={assignable} compact />
-      </CardContent>
-    </Card>
+    <CampaignFlatSection title="Client portal access">
+      <ClientAccessWorkspace entity={entity} assignable={assignable} compact />
+    </CampaignFlatSection>
   );
 }

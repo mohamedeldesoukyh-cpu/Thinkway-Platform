@@ -4,6 +4,14 @@ import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { AlertTriangleIcon, ArchiveIcon, ArrowRightLeftIcon } from "lucide-react";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { VENDOR_ASSIGNMENT_DEPS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
@@ -14,16 +22,50 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getVendorDependenciesAction } from "@/features/vendors/actions";
 import { formatMoney } from "@/features/vendors/utils";
+import type { VendorLinkedAssignment } from "@/lib/operations/vendor-dependencies";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+
+const VENDOR_ASSIGNMENT_DEPS_COLUMNS: OperationalConfigurableColumnDef<VendorLinkedAssignment>[] =
+  [
+    {
+      id: "campaign",
+      label: "Campaign",
+      renderCell: (assignment) => (
+        <div>
+          <span className="font-medium">{assignment.campaign_name}</span>
+          <p className="text-xs text-muted-foreground">
+            <DocumentNumber value={assignment.campaign_document_number} />
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "line",
+      label: "Line",
+      cellClassName: "text-xs",
+      monoCell: true,
+      renderCell: (assignment) => <DocumentNumber value={assignment.line_document_number} />,
+    },
+    {
+      id: "billing",
+      label: "Billing",
+      cellClassName: "capitalize",
+      renderCell: (assignment) => assignment.billing_status?.replace(/_/g, " ") ?? "—",
+    },
+    {
+      id: "fee",
+      label: "Fee",
+      headerClassName: "text-right",
+      amountCell: true,
+      renderCell: (assignment) => formatMoney(assignment.agreed_fee, assignment.currency),
+    },
+  ];
+
+const VENDOR_ASSIGNMENT_DEPS_COLUMN_METAS = getOperationalTableColumnMetas(
+  VENDOR_ASSIGNMENT_DEPS_COLUMNS
+);
 
 type VendorDependencyDialogProps = {
   vendorId: string;
@@ -90,41 +132,21 @@ export function VendorDependencyDialog({
             </div>
 
             {deps.linked_assignments.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Campaign</TableHead>
-                      <TableHead>Line</TableHead>
-                      <TableHead>Billing</TableHead>
-                      <TableHead className="text-right">Fee</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {deps.linked_assignments.map((a) => (
-                      <TableRow key={a.id}>
-                        <TableCell>
-                          <div>
-                            <span className="font-medium">{a.campaign_name}</span>
-                            <p className="text-xs text-muted-foreground">
-                              <DocumentNumber value={a.campaign_document_number} />
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <DocumentNumber value={a.line_document_number} />
-                        </TableCell>
-                        <TableCell className="capitalize">
-                          {a.billing_status?.replace(/_/g, " ") ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatMoney(a.agreed_fee, a.currency)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <OperationalTableSuiteProvider
+                tableId={OPERATIONAL_TABLE_IDS.dialogVendorAssignmentDeps}
+                columns={VENDOR_ASSIGNMENT_DEPS_COLUMNS}
+                rows={deps.linked_assignments}
+                filterAccessors={VENDOR_ASSIGNMENT_DEPS_FILTER_ACCESSORS}
+              >
+                <div className="flex justify-end pb-2">
+                  <OperationalTableControlsSlot contextLabel="Linked assignments" />
+                </div>
+                <OperationalConfigurableTable
+                  columns={VENDOR_ASSIGNMENT_DEPS_COLUMNS}
+                  rows={deps.linked_assignments}
+                  rowKey={(assignment) => assignment.id}
+                />
+              </OperationalTableSuiteProvider>
             ) : null}
 
             <p className="text-sm text-muted-foreground">

@@ -8,8 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
-import { formatMoney, formatPercent, formatPlatformLabel } from "@/features/campaigns/utils";
+import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import {
+  resolveCampaignDisplayDates,
+  resolveCampaignDisplayGroup,
+  resolveCampaignDisplayPlatform,
+} from "@/lib/campaigns/campaign-workspace-presenters";
 import {
   PO_STATUS_LABELS,
   PO_STATUS_VARIANT,
@@ -30,6 +35,9 @@ export function CampaignOverviewDetails({
 }: CampaignOverviewDetailsProps) {
   const currency = workspace.currency_code;
   const bodyClass = cn("space-y-3", compactTypography ? "text-[11px]" : "text-sm");
+  const displayGroup = resolveCampaignDisplayGroup(workspace);
+  const displayPlatform = resolveCampaignDisplayPlatform(workspace);
+  const displayDates = resolveCampaignDisplayDates(workspace);
 
   return (
     <div
@@ -51,11 +59,7 @@ export function CampaignOverviewDetails({
             label="Status"
             value={<CampaignStatusBadge status={workspace.status} />}
           />
-          <DetailRow
-            compact={compactTypography}
-            label="Platform"
-            value={formatPlatformLabel(workspace.platform)}
-          />
+          <DetailRow compact={compactTypography} label="Platform" value={displayPlatform} />
           <DetailRow compact={compactTypography} label="Currency" value={workspace.currency_code} />
         </div>
       </CampaignFlatSection>
@@ -66,12 +70,12 @@ export function CampaignOverviewDetails({
             compact={compactTypography}
             label="Group"
             value={
-              workspace.group ? (
+              displayGroup ? (
                 <Link
-                  href={`/groups/${workspace.group.id}`}
+                  href={`/groups/${displayGroup.id}`}
                   className="text-primary hover:underline"
                 >
-                  {workspace.group.name}
+                  {displayGroup.name}
                 </Link>
               ) : (
                 "—"
@@ -113,7 +117,7 @@ export function CampaignOverviewDetails({
           <DetailRow
             compact={compactTypography}
             label="Dates"
-            value={`${formatDate(workspace.start_date)} – ${formatDate(workspace.end_date)}`}
+            value={`${formatDate(displayDates.start)} – ${formatDate(displayDates.end)}`}
           />
           <DetailRow
             compact={compactTypography}
@@ -179,18 +183,23 @@ function DetailRow({
   compact?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <span className={cn("text-muted-foreground", compact && "text-[11px] font-normal")}>
-        {label}
-      </span>
+    <div className="grid grid-cols-1 gap-1 sm:grid-cols-[minmax(6.5rem,38%)_minmax(0,1fr)] sm:items-start sm:gap-x-4">
       <span
         className={cn(
-          "text-right",
-          compact ? "text-[11px] font-normal text-foreground/90" : "font-medium"
+          "shrink-0 text-muted-foreground",
+          compact ? "text-[11px] font-normal" : "text-sm"
         )}
       >
-        {value}
+        {label}
       </span>
+      <div
+        className={cn(
+          "min-w-0 break-words text-foreground sm:text-right",
+          compact ? "text-[11px] font-normal" : "text-sm font-medium"
+        )}
+      >
+        {value ?? "—"}
+      </div>
     </div>
   );
 }

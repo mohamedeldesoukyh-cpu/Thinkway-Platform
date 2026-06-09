@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeftIcon, MoreHorizontalIcon } from "lucide-react";
+import { MoreHorizontalIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -87,18 +88,10 @@ export function VendorWorkspaceView({
               <div className="space-y-1 pt-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 shrink-0"
-                      asChild
-                      title="Back to vendors"
-                    >
-                      <Link href="/vendors">
-                        <ArrowLeftIcon className="size-4" />
-                        <span className="sr-only">Back to vendors</span>
-                      </Link>
-                    </Button>
+                    <PageBackButton
+                      fallbackHref="/vendors"
+                      label="Back to vendors"
+                    />
                     <h1 className={OPERATIONAL_CHROME_TITLE}>{workspace.display_name}</h1>
                     <VendorStatusBadge
                       status={workspace.status}

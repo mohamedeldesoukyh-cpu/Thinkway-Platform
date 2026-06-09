@@ -23,7 +23,7 @@ export function AssignmentStickyFooter({
   return (
     <div
       className={cn(
-        "sticky bottom-0 -mx-6 border-t bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+        "border-t border-border/60 bg-card/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/90",
         className
       )}
     >

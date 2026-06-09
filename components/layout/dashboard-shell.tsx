@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { CollapsibleAppSidebar } from "@/components/layout/collapsible-app-sidebar";
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { UserAccount } from "@/components/layout/user-account";
 import { getAuthUser } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,9 @@ type DashboardShellProps = {
    */
   containedMain?: boolean;
   mainClassName?: string;
+  /** When set, shows a back control that returns to browser history or this path. */
+  backFallbackHref?: string;
+  backLabel?: string;
 };
 
 export async function DashboardShell({
@@ -46,6 +50,8 @@ export async function DashboardShell({
   hidePageHeader = false,
   containedMain = false,
   mainClassName,
+  backFallbackHref,
+  backLabel = "Go back",
 }: DashboardShellProps) {
   const { user } = await getAuthUser();
   const userEmail = user?.email ?? null;
@@ -92,15 +98,25 @@ export async function DashboardShell({
         </div>
         {hidePageHeader ? null : (
           <header className="thinkway-shell-header flex flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
-            <div className="min-w-0 space-y-1">
-              <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">
-                {title}
-              </h1>
-              {description ? (
-                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                  {description}
-                </p>
+            <div className="flex min-w-0 items-start gap-2">
+              {backFallbackHref ? (
+                <PageBackButton
+                  fallbackHref={backFallbackHref}
+                  label={backLabel}
+                  variant="icon"
+                  className="mt-0.5 shrink-0"
+                />
               ) : null}
+              <div className="min-w-0 space-y-1">
+                <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">
+                  {title}
+                </h1>
+                {description ? (
+                  <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                    {description}
+                  </p>
+                ) : null}
+              </div>
             </div>
             {actions ? (
               <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>

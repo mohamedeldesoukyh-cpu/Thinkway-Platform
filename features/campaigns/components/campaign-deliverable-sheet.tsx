@@ -7,20 +7,19 @@ import { FieldError } from "@/components/forms/field-error";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   createDeliverableAction,
   type FormActionState,
 } from "@/features/campaigns/actions";
 import { DELIVERABLE_TYPE_OPTIONS, PLATFORM_OPTIONS } from "@/features/campaigns/constants";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DetailFormScrollBody,
+  DetailFormSection,
+  DetailSheetFooter,
+  OperationalDetailSheet,
+  OperationalEditPanelHeader,
+} from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 
 type CampaignDeliverableSheetProps = {
@@ -75,23 +74,26 @@ export function CampaignDeliverableSheet({
   }));
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Add deliverable</SheetTitle>
-          <SheetDescription>
-            Attach content to an existing creator assignment line.
-          </SheetDescription>
-        </SheetHeader>
-        <form action={formAction} className="flex flex-1 flex-col gap-4 px-6 pb-6">
+    <OperationalDetailSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Add deliverable"
+      description="Attach content to an assignment line"
+    >
+      <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+        <OperationalEditPanelHeader
+          title="Add deliverable"
+          description="Attach content to an existing creator assignment line."
+        />
+
+        <DetailFormScrollBody>
           <input type="hidden" name="campaign_id" value={campaignId} />
           <input type="hidden" name="influencer_id" value={influencerId} />
           <input type="hidden" name="campaign_influencer_id" value={assignmentId} />
           <input type="hidden" name="deliverable_type" value={deliverableType} />
           <input type="hidden" name="platform" value={platform} />
 
-          <div className="grid gap-2">
-            <Label>Creator assignment</Label>
+          <DetailFormSection label="Creator assignment">
             <SearchableSelect
               value={lineId}
               onValueChange={(v) => {
@@ -105,11 +107,10 @@ export function CampaignDeliverableSheet({
               disabled={isPending || linkedAssignments.length === 0}
             />
             <FieldError messages={state.fieldErrors?.influencer_id} />
-          </div>
+          </DetailFormSection>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Type</Label>
+            <DetailFormSection label="Type">
               <SearchableSelect
                 value={deliverableType}
                 onValueChange={setDeliverableType}
@@ -119,9 +120,8 @@ export function CampaignDeliverableSheet({
                 }))}
                 disabled={isPending}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>Platform</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Platform">
               <SearchableSelect
                 value={platform}
                 onValueChange={setPlatform}
@@ -131,27 +131,37 @@ export function CampaignDeliverableSheet({
                 }))}
                 disabled={isPending}
               />
-            </div>
+            </DetailFormSection>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="deliverable_title">Title</Label>
-            <Input id="deliverable_title" name="title" required disabled={isPending} />
+          <DetailFormSection label="Title">
+            <Input
+              id="deliverable_title"
+              name="title"
+              className={DETAIL_FORM_INPUT_CLASS}
+              required
+              disabled={isPending}
+            />
             <FieldError messages={state.fieldErrors?.title} />
-          </div>
+          </DetailFormSection>
 
-          <div className="grid gap-2">
-            <Label htmlFor="due_date">Due date</Label>
-            <Input id="due_date" name="due_date" type="date" disabled={isPending} />
-          </div>
+          <DetailFormSection label="Due date">
+            <Input
+              id="due_date"
+              name="due_date"
+              type="date"
+              className={DETAIL_FORM_INPUT_CLASS}
+              disabled={isPending}
+            />
+          </DetailFormSection>
+        </DetailFormScrollBody>
 
-          <SheetFooter className="px-0">
-            <Button type="submit" disabled={isPending || !influencerId}>
-              {isPending ? "Creating…" : "Add deliverable"}
-            </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+        <DetailSheetFooter>
+          <Button size="sm" type="submit" disabled={isPending || !influencerId}>
+            {isPending ? "Creating…" : "Add deliverable"}
+          </Button>
+        </DetailSheetFooter>
+      </form>
+    </OperationalDetailSheet>
   );
 }

@@ -6,7 +6,6 @@ import {
   CampaignOperationalTableBody,
   CampaignOperationalTableCell,
   CampaignOperationalTableCellAmount,
-  CampaignOperationalTableCellMono,
   CampaignOperationalTableHead,
   CampaignOperationalTableHeader,
   CampaignOperationalTableHeaderRow,
@@ -16,9 +15,22 @@ import { DocumentNumber } from "@/components/ui/document-number";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
+import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
+import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
 import type { ConsolidatedInvoiceQueueRow } from "@/lib/billing/consolidated-invoice-queue";
 import type { RowSelectionStatus } from "@/lib/billing/operational-selection";
 import { cn } from "@/lib/utils";
+
+export const CAMPAIGN_CONSOLIDATED_INVOICE_QUEUE_COLUMN_METAS: OperationalTableColumnMeta[] = [
+  { id: "select", label: "Select", locked: true },
+  { id: "campaign_number", label: "Campaign number" },
+  { id: "client", label: "Client" },
+  { id: "brand", label: "Brand" },
+  { id: "campaign_name", label: "Campaign name" },
+  { id: "revenue_before_vat", label: "Rev. before VAT" },
+  { id: "vat_amount", label: "VAT" },
+  { id: "revenue_after_vat", label: "Rev. after VAT" },
+];
 
 type CampaignBillingQueueTableProps = {
   rows: ConsolidatedInvoiceQueueRow[];
@@ -39,6 +51,129 @@ function queueGlobalStatus(
   return "indeterminate";
 }
 
+function CampaignBillingQueueTableHeader() {
+  const showSelect = useIsOperationalColumnVisible("select");
+  const showCampaignNumber = useIsOperationalColumnVisible("campaign_number");
+  const showClient = useIsOperationalColumnVisible("client");
+  const showBrand = useIsOperationalColumnVisible("brand");
+  const showCampaignName = useIsOperationalColumnVisible("campaign_name");
+  const showRevenueBeforeVat = useIsOperationalColumnVisible("revenue_before_vat");
+  const showVatAmount = useIsOperationalColumnVisible("vat_amount");
+  const showRevenueAfterVat = useIsOperationalColumnVisible("revenue_after_vat");
+
+  return (
+    <CampaignOperationalTableHeader>
+      <CampaignOperationalTableHeaderRow>
+        {showSelect ? <CampaignOperationalTableHead className="w-10" /> : null}
+        {showCampaignNumber ? (
+          <CampaignOperationalTableHead>Campaign number</CampaignOperationalTableHead>
+        ) : null}
+        {showClient ? <CampaignOperationalTableHead>Client</CampaignOperationalTableHead> : null}
+        {showBrand ? <CampaignOperationalTableHead>Brand</CampaignOperationalTableHead> : null}
+        {showCampaignName ? (
+          <CampaignOperationalTableHead>Campaign name</CampaignOperationalTableHead>
+        ) : null}
+        {showRevenueBeforeVat ? (
+          <CampaignOperationalTableHead className="text-right">
+            Rev. before VAT
+          </CampaignOperationalTableHead>
+        ) : null}
+        {showVatAmount ? (
+          <CampaignOperationalTableHead className="text-right">VAT</CampaignOperationalTableHead>
+        ) : null}
+        {showRevenueAfterVat ? (
+          <CampaignOperationalTableHead className="text-right">
+            Rev. after VAT
+          </CampaignOperationalTableHead>
+        ) : null}
+      </CampaignOperationalTableHeaderRow>
+    </CampaignOperationalTableHeader>
+  );
+}
+
+function CampaignBillingQueueTableRow({
+  row,
+  selected,
+  active,
+  onToggleRowSelect,
+  onSelectRow,
+}: {
+  row: ConsolidatedInvoiceQueueRow;
+  selected: boolean;
+  active: boolean;
+  onToggleRowSelect: (batchKey: string) => void;
+  onSelectRow: (row: ConsolidatedInvoiceQueueRow) => void;
+}) {
+  const showSelect = useIsOperationalColumnVisible("select");
+  const showCampaignNumber = useIsOperationalColumnVisible("campaign_number");
+  const showClient = useIsOperationalColumnVisible("client");
+  const showBrand = useIsOperationalColumnVisible("brand");
+  const showCampaignName = useIsOperationalColumnVisible("campaign_name");
+  const showRevenueBeforeVat = useIsOperationalColumnVisible("revenue_before_vat");
+  const showVatAmount = useIsOperationalColumnVisible("vat_amount");
+  const showRevenueAfterVat = useIsOperationalColumnVisible("revenue_after_vat");
+
+  return (
+    <CampaignOperationalTableRow
+      className={cn(
+        "cursor-pointer transition-colors hover:bg-muted/20",
+        active && "bg-sky-500/10 ring-1 ring-inset ring-sky-500/30"
+      )}
+      onClick={() => onSelectRow(row)}
+    >
+      {showSelect ? (
+        <CampaignOperationalTableCell className="w-10" onClick={(e) => e.stopPropagation()}>
+          <OperationalSelectionCheckbox
+            status={selected ? "checked" : "unchecked"}
+            onToggle={() => onToggleRowSelect(row.batch_key)}
+            ariaLabel={`Select ${formatDocumentNumberForDisplay(row.campaign_document_number)} for invoicing`}
+          />
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showCampaignNumber ? (
+        <CampaignOperationalTableCell>
+          <button
+            type="button"
+            className="text-[11px] font-medium tabular-nums text-sky-800 underline-offset-2 hover:underline dark:text-sky-200"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectRow(row);
+            }}
+          >
+            <DocumentNumber value={row.campaign_document_number} />
+          </button>
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showClient ? (
+        <CampaignOperationalTableCell>{row.client_name}</CampaignOperationalTableCell>
+      ) : null}
+      {showBrand ? (
+        <CampaignOperationalTableCell>{row.brand_name ?? "—"}</CampaignOperationalTableCell>
+      ) : null}
+      {showCampaignName ? (
+        <CampaignOperationalTableCell className="max-w-[200px] truncate font-medium">
+          {row.campaign_name}
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showRevenueBeforeVat ? (
+        <CampaignOperationalTableCellAmount>
+          {formatOperationalAmount(row.revenue_before_vat)}
+        </CampaignOperationalTableCellAmount>
+      ) : null}
+      {showVatAmount ? (
+        <CampaignOperationalTableCellAmount>
+          {formatOperationalAmount(row.vat_amount)}
+        </CampaignOperationalTableCellAmount>
+      ) : null}
+      {showRevenueAfterVat ? (
+        <CampaignOperationalTableCellAmount className="font-medium">
+          {formatOperationalAmount(row.revenue_after_vat)}
+        </CampaignOperationalTableCellAmount>
+      ) : null}
+    </CampaignOperationalTableRow>
+  );
+}
+
 export function CampaignBillingQueueTable({
   rows,
   selectedBatchKeys,
@@ -57,67 +192,18 @@ export function CampaignBillingQueueTable({
 
   return (
     <CampaignOperationalTable>
-      <CampaignOperationalTableHeader>
-        <CampaignOperationalTableHeaderRow>
-          <CampaignOperationalTableHead className="w-10" />
-          <CampaignOperationalTableHead>Campaign number</CampaignOperationalTableHead>
-          <CampaignOperationalTableHead>Client</CampaignOperationalTableHead>
-          <CampaignOperationalTableHead>Brand</CampaignOperationalTableHead>
-          <CampaignOperationalTableHead>Campaign name</CampaignOperationalTableHead>
-          <CampaignOperationalTableHead className="text-right">Rev. before VAT</CampaignOperationalTableHead>
-          <CampaignOperationalTableHead className="text-right">VAT</CampaignOperationalTableHead>
-          <CampaignOperationalTableHead className="text-right">Rev. after VAT</CampaignOperationalTableHead>
-        </CampaignOperationalTableHeaderRow>
-      </CampaignOperationalTableHeader>
+      <CampaignBillingQueueTableHeader />
       <CampaignOperationalTableBody>
-        {rows.map((row) => {
-          const selected = selectedBatchKeys.has(row.batch_key);
-          const active = activeBatchKey === row.batch_key;
-          return (
-            <CampaignOperationalTableRow
-              key={row.batch_key}
-              className={cn(
-                "cursor-pointer transition-colors hover:bg-muted/20",
-                active && "bg-sky-500/10 ring-1 ring-inset ring-sky-500/30"
-              )}
-              onClick={() => onSelectRow(row)}
-            >
-              <CampaignOperationalTableCell className="w-10" onClick={(e) => e.stopPropagation()}>
-                <OperationalSelectionCheckbox
-                  status={selected ? "checked" : "unchecked"}
-                  onToggle={() => onToggleRowSelect(row.batch_key)}
-                  ariaLabel={`Select ${formatDocumentNumberForDisplay(row.campaign_document_number)} for invoicing`}
-                />
-              </CampaignOperationalTableCell>
-              <CampaignOperationalTableCell>
-                <button
-                  type="button"
-                  className="text-[11px] font-medium tabular-nums text-sky-800 underline-offset-2 hover:underline dark:text-sky-200"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectRow(row);
-                  }}
-                >
-                  <DocumentNumber value={row.campaign_document_number} />
-                </button>
-              </CampaignOperationalTableCell>
-              <CampaignOperationalTableCell>{row.client_name}</CampaignOperationalTableCell>
-              <CampaignOperationalTableCell>{row.brand_name ?? "—"}</CampaignOperationalTableCell>
-              <CampaignOperationalTableCell className="max-w-[200px] truncate font-medium">
-                {row.campaign_name}
-              </CampaignOperationalTableCell>
-              <CampaignOperationalTableCellAmount>
-                {formatOperationalAmount(row.revenue_before_vat)}
-              </CampaignOperationalTableCellAmount>
-              <CampaignOperationalTableCellAmount>
-                {formatOperationalAmount(row.vat_amount)}
-              </CampaignOperationalTableCellAmount>
-              <CampaignOperationalTableCellAmount className="font-medium">
-                {formatOperationalAmount(row.revenue_after_vat)}
-              </CampaignOperationalTableCellAmount>
-            </CampaignOperationalTableRow>
-          );
-        })}
+        {rows.map((row) => (
+          <CampaignBillingQueueTableRow
+            key={row.batch_key}
+            row={row}
+            selected={selectedBatchKeys.has(row.batch_key)}
+            active={activeBatchKey === row.batch_key}
+            onToggleRowSelect={onToggleRowSelect}
+            onSelectRow={onSelectRow}
+          />
+        ))}
       </CampaignOperationalTableBody>
     </CampaignOperationalTable>
   );

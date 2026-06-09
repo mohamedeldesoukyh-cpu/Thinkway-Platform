@@ -13,11 +13,10 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { KpiCarousel } from "@/components/ui/kpi-carousel";
 import type { BillingKpiSummary } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { formatPercent } from "@/features/campaigns/utils";
-import { cn } from "@/lib/utils";
 
 type BillingKpiStripProps = {
   kpis: BillingKpiSummary;
@@ -27,14 +26,11 @@ type BillingKpiStripProps = {
 
 type KpiAccent = "blue" | "purple" | "pink" | "green";
 
-const ACCENTS: Record<KpiAccent, { tile: string; dot: string }> = {
-  blue: { tile: "bg-brand-blue/10 text-brand-blue", dot: "var(--brand-blue)" },
-  purple: {
-    tile: "bg-brand-purple/10 text-brand-purple",
-    dot: "var(--brand-purple)",
-  },
-  pink: { tile: "bg-brand-pink/10 text-brand-pink", dot: "var(--brand-pink)" },
-  green: { tile: "bg-success/10 text-success", dot: "var(--success)" },
+const ACCENT_TILE: Record<KpiAccent, string> = {
+  blue: "bg-brand-blue/10 text-brand-blue",
+  purple: "bg-brand-purple/10 text-brand-purple",
+  pink: "bg-brand-pink/10 text-brand-pink",
+  green: "bg-success/10 text-success",
 };
 
 const KPI_ITEMS: {
@@ -100,64 +96,34 @@ export function BillingKpiStrip({
     po_remaining: formatKpiAmount(kpis.po_remaining),
   };
 
+  const items = KPI_ITEMS.map((item) => ({
+    id: item.key,
+    label: item.label,
+    value: values[item.key],
+    icon: item.icon,
+    accentClass: ACCENT_TILE[item.accent],
+    valueAlert:
+      item.key === "po_remaining" && kpis.po_over_consumed_count > 0
+        ? ("danger" as const)
+        : undefined,
+  }));
+
   return (
     <div className="space-y-2">
       {mixedCurrency ? (
-        <p className="text-xs text-muted-foreground">
-          KPI totals combine multiple currencies — row-level amounts use each campaign&apos;s currency.
+        <p className="text-[11px] text-muted-foreground">
+          KPI totals combine multiple currencies — row-level amounts use each campaign&apos;s
+          currency.
         </p>
       ) : null}
       {kpis.po_over_consumed_count > 0 ? (
-        <div className="flex items-center gap-2 rounded-xl border-2 border-red-500/70 bg-red-500/10 px-3 py-2 text-sm text-red-950 dark:text-red-50">
+        <div className="flex items-center gap-2 rounded-xl border-2 border-red-500/70 bg-red-500/10 px-3 py-2 text-[11px] text-red-950 dark:text-red-50">
           <AlertTriangleIcon className="size-4 shrink-0" />
           {kpis.po_over_consumed_count} campaign
           {kpis.po_over_consumed_count === 1 ? "" : "s"} exceed approved PO.
         </div>
       ) : null}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {KPI_ITEMS.map((item) => {
-          const alert =
-            item.key === "po_remaining" && kpis.po_over_consumed_count > 0;
-          const tone = ACCENTS[item.accent];
-          const Icon = item.icon;
-          return (
-            <Card
-              key={item.key}
-              className={cn(
-                "relative shadow-sm",
-                alert && "border-red-500/50 bg-red-500/5 dark:bg-red-500/10"
-              )}
-            >
-              {!alert ? (
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -top-5 -right-5 size-16 rounded-full opacity-[0.07]"
-                  style={{ backgroundColor: tone.dot }}
-                />
-              ) : null}
-              <CardContent className="relative p-3">
-                <div
-                  className={cn(
-                    "mb-2 flex size-8 items-center justify-center rounded-xl",
-                    alert ? "bg-muted text-muted-foreground" : tone.tile
-                  )}
-                >
-                  <Icon className="size-4" />
-                </div>
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p
-                  className={cn(
-                    "font-heading text-lg font-bold tracking-tight",
-                    alert && "text-red-600 dark:text-red-400"
-                  )}
-                >
-                  {values[item.key]}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <KpiCarousel items={items} showNavigation={false} />
     </div>
   );
 }

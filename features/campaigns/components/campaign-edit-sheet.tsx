@@ -8,7 +8,6 @@ import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -16,14 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
   updateCampaignHeaderAction,
@@ -33,6 +24,15 @@ import {
   CAMPAIGN_STATUS_OPTIONS,
   PLATFORM_OPTIONS,
 } from "@/features/campaigns/constants";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DETAIL_FORM_SELECT_TRIGGER_CLASS,
+  DetailFormScrollBody,
+  DetailFormSection,
+  DetailSheetFooter,
+  OperationalDetailSheet,
+  OperationalEditPanelHeader,
+} from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { CampaignStatus } from "@/types/database";
 
@@ -85,16 +85,22 @@ export function CampaignEditSheet({
     setTeamId(workspace.team?.id ?? "");
   }, [open, workspace]);
 
+  const campaignLabel = formatDocumentNumberForDisplay(workspace.document_number);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Edit campaign</SheetTitle>
-          <SheetDescription>
-            Update operational details for {formatDocumentNumberForDisplay(workspace.document_number)}.
-          </SheetDescription>
-        </SheetHeader>
-        <form action={formAction} className="flex flex-1 flex-col gap-4 px-6 pb-6">
+    <OperationalDetailSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit campaign"
+      description={`Update operational details for ${campaignLabel}`}
+    >
+      <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+        <OperationalEditPanelHeader
+          title="Edit campaign"
+          description={`Update operational details for ${campaignLabel}.`}
+        />
+
+        <DetailFormScrollBody>
           <input type="hidden" name="campaign_id" value={workspace.id} />
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="platform" value={platform} />
@@ -102,26 +108,25 @@ export function CampaignEditSheet({
           <input type="hidden" name="account_manager_id" value={accountManagerId} />
           <input type="hidden" name="team_id" value={teamId} />
 
-          <div className="grid gap-2">
-            <Label htmlFor="campaign_name">Campaign name</Label>
+          <DetailFormSection label="Campaign name">
             <Input
               id="campaign_name"
               name="name"
+              className={DETAIL_FORM_INPUT_CLASS}
               defaultValue={workspace.name}
               required
               disabled={isPending}
             />
-          </div>
+          </DetailFormSection>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Status</Label>
+            <DetailFormSection label="Status">
               <Select
                 value={status}
                 onValueChange={(v) => setStatus(v as CampaignStatus)}
                 disabled={isPending}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -132,9 +137,8 @@ export function CampaignEditSheet({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Platform</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Platform">
               <SearchableSelect
                 value={platform}
                 onValueChange={setPlatform}
@@ -145,14 +149,13 @@ export function CampaignEditSheet({
                 placeholder="Select platform"
                 disabled={isPending}
               />
-            </div>
+            </DetailFormSection>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Currency</Label>
+            <DetailFormSection label="Currency">
               <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -163,32 +166,31 @@ export function CampaignEditSheet({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="start_date">Start date</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Start date">
               <Input
                 id="start_date"
                 name="start_date"
                 type="date"
+                className={DETAIL_FORM_INPUT_CLASS}
                 defaultValue={workspace.start_date ?? ""}
                 disabled={isPending}
               />
-            </div>
+            </DetailFormSection>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="end_date">End date</Label>
+            <DetailFormSection label="End date">
               <Input
                 id="end_date"
                 name="end_date"
                 type="date"
+                className={DETAIL_FORM_INPUT_CLASS}
                 defaultValue={workspace.end_date ?? ""}
                 disabled={isPending}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>Account manager</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Account manager">
               <SearchableSelect
                 value={accountManagerId}
                 onValueChange={setAccountManagerId}
@@ -199,11 +201,10 @@ export function CampaignEditSheet({
                 placeholder="Assign manager"
                 disabled={isPending}
               />
-            </div>
+            </DetailFormSection>
           </div>
 
-          <div className="grid gap-2">
-            <Label>Team</Label>
+          <DetailFormSection label="Team">
             <SearchableSelect
               value={teamId}
               onValueChange={setTeamId}
@@ -211,39 +212,39 @@ export function CampaignEditSheet({
               placeholder="Select team"
               disabled={isPending}
             />
-          </div>
+          </DetailFormSection>
 
-          <div className="grid gap-2">
-            <Label htmlFor="description">Description</Label>
+          <DetailFormSection label="Description">
             <Textarea
               id="description"
               name="description"
               rows={2}
+              className="min-h-[4rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
               defaultValue={workspace.description ?? ""}
               disabled={isPending}
             />
-          </div>
+          </DetailFormSection>
 
-          <div className="grid gap-2">
-            <Label htmlFor="brief">Brief</Label>
+          <DetailFormSection label="Brief">
             <Textarea
               id="brief"
               name="brief"
               rows={3}
+              className="min-h-[5rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
               defaultValue={workspace.brief ?? ""}
               disabled={isPending}
             />
-          </div>
+          </DetailFormSection>
 
           <FieldError messages={state.fieldErrors?.end_date} />
+        </DetailFormScrollBody>
 
-          <SheetFooter className="px-0">
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : "Save campaign"}
-            </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+        <DetailSheetFooter>
+          <Button size="sm" type="submit" disabled={isPending}>
+            {isPending ? "Saving…" : "Save campaign"}
+          </Button>
+        </DetailSheetFooter>
+      </form>
+    </OperationalDetailSheet>
   );
 }

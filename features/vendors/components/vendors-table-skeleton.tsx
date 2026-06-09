@@ -1,51 +1,53 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableCell,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+  CampaignOperationalTableRow,
+} from "@/features/campaigns/components/campaign-operational-table";
 
 export function VendorsTableSkeleton() {
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-4">
-        <Skeleton className="h-8 w-48" />
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Skeleton className="h-9 w-full max-w-sm" />
-          <Skeleton className="h-9 w-36" />
-          <Skeleton className="h-9 w-36" />
+    <OperationalTableSection
+      wide
+      tableOnly
+      cardSurface
+      leading={
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-5 w-32" />
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-9 w-36" />
+            <Skeleton className="h-9 w-28" />
+          </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {Array.from({ length: 9 }).map((_, index) => (
-                  <TableHead key={index}>
-                    <Skeleton className="h-4 w-16" />
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from({ length: 8 }).map((_, rowIndex) => (
-                <TableRow key={rowIndex}>
-                  {Array.from({ length: 9 }).map((_, cellIndex) => (
-                    <TableCell key={cellIndex}>
-                      <Skeleton className="h-4 w-full max-w-[100px]" />
-                    </TableCell>
-                  ))}
-                </TableRow>
+      }
+    >
+      <CampaignOperationalTable>
+        <CampaignOperationalTableHeader>
+          <CampaignOperationalTableHeaderRow>
+            {Array.from({ length: 9 }).map((_, index) => (
+              <CampaignOperationalTableHead key={index}>
+                <Skeleton className="mx-auto h-3 w-14" />
+              </CampaignOperationalTableHead>
+            ))}
+          </CampaignOperationalTableHeaderRow>
+        </CampaignOperationalTableHeader>
+        <CampaignOperationalTableBody>
+          {Array.from({ length: 8 }).map((_, rowIndex) => (
+            <CampaignOperationalTableRow key={rowIndex}>
+              {Array.from({ length: 9 }).map((_, cellIndex) => (
+                <CampaignOperationalTableCell key={cellIndex}>
+                  <Skeleton className="h-3 w-full max-w-[100px]" />
+                </CampaignOperationalTableCell>
               ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+            </CampaignOperationalTableRow>
+          ))}
+        </CampaignOperationalTableBody>
+      </CampaignOperationalTable>
+    </OperationalTableSection>
   );
 }

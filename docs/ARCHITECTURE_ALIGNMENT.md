@@ -210,7 +210,7 @@ Reference reports (§14) require these dimensions to be queryable:
 | `campaigns` table | View over headers | **Keep**; writes go to `campaign_headers`/`campaign_lines` |
 | Level 2 = influencer only | Lines + assignments | **Keep both**; clarify mapping in UI/docs |
 | `vendors` table name | `influencers` | **Keep** table name; UI "Vendor" |
-| KWD currency | USD/AED/SAR/EGP/EUR in app | **Add KWD** to currency enum when IConnect requires |
+| KWD currency | USD/AED/SAR/EGP/EUR in app | **Add KWD** to currency enum when required |
 
 ---
 

@@ -3,39 +3,86 @@
 import { useMemo, useState } from "react";
 import { ArrowDownAZIcon, ArrowUpAZIcon } from "lucide-react";
 
+import {
+  OperationalConfigurableTable,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import {
-  CampaignOperationalTable,
-  CampaignOperationalTableBody,
-  CampaignOperationalTableCell,
-  CampaignOperationalTableCellAmount,
-  CampaignOperationalTableHead,
-  CampaignOperationalTableHeader,
-  CampaignOperationalTableHeaderRow,
-  CampaignOperationalTableRow,
-} from "@/features/campaigns/components/campaign-operational-table";
-import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
 import type { AnalyticsRollupNode } from "@/lib/analytics/types/metrics";
+import { cn } from "@/lib/utils";
 import type { ExecutiveDashboardPayload } from "@/features/analytics/load-executive-dashboard";
-type SortKey = "label" | "revenue" | "gp" | "margin";
+import {
+  buildProfitabilityTableColumns,
+  type ProfitabilitySortKey,
+} from "@/lib/tables/profitability-table-columns";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 type ProfitabilitySectionProps = {
   tables: ExecutiveDashboardPayload["profitability_tables"];
 };
 
+const PROFITABILITY_TABLES = [
+  {
+    title: "Top clients",
+    description: "Highest revenue clients",
+    rowsKey: "top_clients" as const,
+    tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityClients,
+    contextLabel: "Top clients",
+    defaultSort: "revenue" as ProfitabilitySortKey,
+  },
+  {
+    title: "Lowest margin clients",
+    description: "Clients requiring margin review",
+    rowsKey: "lowest_margin_clients" as const,
+    tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityLowMarginClients,
+    contextLabel: "Low margin clients",
+    defaultSort: "margin" as ProfitabilitySortKey,
+  },
+  {
+    title: "Top campaigns",
+    description: "Campaign-level revenue leaders",
+    rowsKey: "top_campaigns" as const,
+    tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityCampaigns,
+    contextLabel: "Top campaigns",
+    defaultSort: "revenue" as ProfitabilitySortKey,
+  },
+  {
+    title: "Country profitability",
+    description: "GP performance by market",
+    rowsKey: "country_profitability" as const,
+    tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityCountries,
+    contextLabel: "Country profitability",
+    defaultSort: "gp" as ProfitabilitySortKey,
+  },
+  {
+    title: "Brand profitability",
+    description: "Brand-level margin view",
+    rowsKey: "brand_profitability" as const,
+    tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityBrands,
+    contextLabel: "Brand profitability",
+    defaultSort: "margin" as ProfitabilitySortKey,
+  },
+] as const;
+
 function ProfitabilityTable({
   title,
   description,
   rows,
+  tableId,
+  contextLabel,
   defaultSort,
 }: {
   title: string;
   description: string;
   rows: AnalyticsRollupNode[];
-  defaultSort: SortKey;
+  tableId: (typeof OPERATIONAL_TABLE_IDS)[keyof typeof OPERATIONAL_TABLE_IDS];
+  contextLabel: string;
+  defaultSort: ProfitabilitySortKey;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>(defaultSort);
+  const [sortKey, setSortKey] = useState<ProfitabilitySortKey>(defaultSort);
   const [asc, setAsc] = useState(false);
 
   const sorted = useMemo(() => {
@@ -61,7 +108,7 @@ function ProfitabilityTable({
     return copy;
   }, [rows, sortKey, asc]);
 
-  const toggleSort = (key: SortKey) => {
+  const toggleSort = (key: ProfitabilitySortKey) => {
     if (sortKey === key) setAsc((v) => !v);
     else {
       setSortKey(key);
@@ -69,121 +116,92 @@ function ProfitabilityTable({
     }
   };
 
-  const formatAmount = (node: AnalyticsRollupNode, value: number) =>
-    formatAnalyticsAmount(value, node.currency, { decimals: 0 });
-
-  return (
-    <OperationalTableSection
-      wide
-      tableOnly
-      cardSurface
-      leading={
-        <div className="min-w-0 space-y-0.5">
-          <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
-          <p className="text-[11px] leading-snug text-muted-foreground">{description}</p>
-        </div>
-      }
+  const SortHead = ({
+    label,
+    active,
+    asc: sortAsc,
+    onClick,
+    className,
+  }: {
+    label: string;
+    active: boolean;
+    asc: boolean;
+    onClick: () => void;
+    className?: string;
+  }) => (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className={cn(
+        "-ml-1 inline-flex h-7 px-1.5 text-[10px] font-medium uppercase tracking-wide",
+        className
+      )}
+      onClick={onClick}
     >
-      <div className="overflow-x-auto">
-        <CampaignOperationalTable>
-          <CampaignOperationalTableHeader>
-            <CampaignOperationalTableHeaderRow>
-              <SortHead
-                label="Name"
-                active={sortKey === "label"}
-                asc={asc}
-                onClick={() => toggleSort("label")}
-              />
-              <SortHead
-                label="Revenue"
-                active={sortKey === "revenue"}
-                asc={asc}
-                onClick={() => toggleSort("revenue")}
-                className="text-right"
-              />
-              <SortHead
-                label="GP"
-                active={sortKey === "gp"}
-                asc={asc}
-                onClick={() => toggleSort("gp")}
-                className="text-right"
-              />
-              <SortHead
-                label="Margin"
-                active={sortKey === "margin"}
-                asc={asc}
-                onClick={() => toggleSort("margin")}
-                className="text-right"
-              />
-            </CampaignOperationalTableHeaderRow>
-          </CampaignOperationalTableHeader>
-          <CampaignOperationalTableBody>
-            {sorted.length === 0 ? (
-              <CampaignOperationalTableRow>
-                <CampaignOperationalTableCell
-                  colSpan={4}
-                  className="py-8 text-center text-muted-foreground"
-                >
-                  No rows for current filters
-                </CampaignOperationalTableCell>
-              </CampaignOperationalTableRow>
-            ) : (
-              sorted.map((row) => (
-                <CampaignOperationalTableRow key={`${title}-${row.key}`}>
-                  <CampaignOperationalTableCell className="max-w-[200px] truncate font-medium text-foreground">
-                    {row.label}
-                  </CampaignOperationalTableCell>
-                  <CampaignOperationalTableCellAmount>
-                    {formatAmount(row, row.metrics.revenue)}
-                  </CampaignOperationalTableCellAmount>
-                  <CampaignOperationalTableCellAmount>
-                    {formatAmount(row, row.metrics.gp)}
-                  </CampaignOperationalTableCellAmount>
-                  <CampaignOperationalTableCellAmount>
-                    {row.metrics.margin_percent.toFixed(1)}%
-                  </CampaignOperationalTableCellAmount>
-                </CampaignOperationalTableRow>
-              ))
-            )}
-          </CampaignOperationalTableBody>
-        </CampaignOperationalTable>
-      </div>
-    </OperationalTableSection>
+      {label}
+      {active ? (
+        sortAsc ? (
+          <ArrowUpAZIcon className="size-3" data-icon="inline-end" />
+        ) : (
+          <ArrowDownAZIcon className="size-3" data-icon="inline-end" />
+        )
+      ) : null}
+    </Button>
   );
-}
 
-function SortHead({
-  label,
-  active,
-  asc,
-  onClick,
-  className,
-}: {
-  label: string;
-  active: boolean;
-  asc: boolean;
-  onClick: () => void;
-  className?: string;
-}) {
+  const columns = useMemo(
+    () =>
+      buildProfitabilityTableColumns({
+        sortKey,
+        asc,
+        onToggleSort: toggleSort,
+        SortHead,
+      }),
+    [sortKey, asc]
+  );
+
   return (
-    <CampaignOperationalTableHead className={className}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="-ml-1 h-7 px-1.5 text-[10px] font-medium uppercase tracking-wide"
-        onClick={onClick}
+    <OperationalTableSuiteProvider
+      tableId={tableId}
+      columns={columns}
+      rows={sorted}
+      filterAccessors={{
+        name: (row) => row.label,
+        revenue: (row) => row.metrics.revenue,
+        gp: (row) => row.metrics.gp,
+        margin: (row) => row.metrics.margin_percent,
+      }}
+    >
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 space-y-0.5">
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
+              <p className="text-[11px] leading-snug text-muted-foreground">{description}</p>
+            </div>
+            <OperationalTableControlsSlot contextLabel={contextLabel} />
+          </div>
+        }
       >
-        {label}
-        {active ? (
-          asc ? (
-            <ArrowUpAZIcon className="size-3" data-icon="inline-end" />
+        <div className="overflow-x-auto">
+          {sorted.length === 0 ? (
+            <p className="px-4 py-8 text-center text-[11px] text-muted-foreground">
+              No rows for current filters
+            </p>
           ) : (
-            <ArrowDownAZIcon className="size-3" data-icon="inline-end" />
-          )
-        ) : null}
-      </Button>
-    </CampaignOperationalTableHead>
+            <OperationalConfigurableTable
+              columns={columns}
+              rows={sorted}
+              rowKey={(row) => `${title}-${row.key}`}
+            />
+          )}
+        </div>
+      </OperationalTableSection>
+    </OperationalTableSuiteProvider>
   );
 }
 
@@ -199,36 +217,17 @@ export function ProfitabilitySection({ tables }: ProfitabilitySectionProps) {
         </p>
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
-        <ProfitabilityTable
-          title="Top clients"
-          description="Highest revenue clients"
-          rows={tables.top_clients}
-          defaultSort="revenue"
-        />
-        <ProfitabilityTable
-          title="Lowest margin clients"
-          description="Clients requiring margin review"
-          rows={tables.lowest_margin_clients}
-          defaultSort="margin"
-        />
-        <ProfitabilityTable
-          title="Top campaigns"
-          description="Campaign-level revenue leaders"
-          rows={tables.top_campaigns}
-          defaultSort="revenue"
-        />
-        <ProfitabilityTable
-          title="Country profitability"
-          description="GP performance by market"
-          rows={tables.country_profitability}
-          defaultSort="gp"
-        />
-        <ProfitabilityTable
-          title="Brand profitability"
-          description="Brand-level margin view"
-          rows={tables.brand_profitability}
-          defaultSort="margin"
-        />
+        {PROFITABILITY_TABLES.map((config) => (
+          <ProfitabilityTable
+            key={config.tableId}
+            title={config.title}
+            description={config.description}
+            rows={tables[config.rowsKey]}
+            tableId={config.tableId}
+            contextLabel={config.contextLabel}
+            defaultSort={config.defaultSort}
+          />
+        ))}
       </div>
     </section>
   );

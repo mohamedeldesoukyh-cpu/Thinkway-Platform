@@ -3,9 +3,15 @@
 import { useActionState } from "react";
 import { useMemo, useState } from "react";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DocumentNumber } from "@/components/ui/document-number";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,14 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
   createAndPostBatchAction,
   previewPostingBatchAction,
@@ -37,6 +36,128 @@ import {
   POSTING_CENTER_TRANSACTION_TYPES,
   type FinanceDocumentKind,
 } from "@/lib/finance/status/document-kind";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+
+const POSTING_PREVIEW_COLUMNS: OperationalConfigurableColumnDef<PostingPreviewRow>[] = [
+  {
+    id: "doc_no",
+    label: "Doc no",
+    monoCell: true,
+    renderCell: (row) => row.document_number,
+  },
+  {
+    id: "party",
+    label: "Client/Vendor",
+    renderCell: (row) => row.party_name ?? "—",
+  },
+  {
+    id: "campaign",
+    label: "Campaign",
+    monoCell: true,
+    renderCell: (row) => row.campaign_document_number ?? "—",
+  },
+  {
+    id: "amount",
+    label: "Amount",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatMoney(row.amount_before_vat, row.currency),
+  },
+  {
+    id: "vat",
+    label: "VAT",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (row) => formatMoney(row.vat_amount, row.currency),
+  },
+  {
+    id: "status",
+    label: "Status",
+    renderCell: (row) => <Badge variant="outline">{row.status}</Badge>,
+  },
+];
+
+function PostingBatchActionsCell({
+  batch,
+  reverseAction,
+  reversePending,
+}: {
+  batch: PostingBatchRow;
+  reverseAction: (payload: FormData) => void;
+  reversePending: boolean;
+}) {
+  if (batch.status !== "posted") return "—";
+  return (
+    <form action={reverseAction}>
+      <input type="hidden" name="batch_id" value={batch.id} />
+      <Button
+        type="submit"
+        size="sm"
+        variant="outline"
+        disabled={reversePending}
+        className="h-7 text-[10px]"
+      >
+        Reverse
+      </Button>
+    </form>
+  );
+}
+
+function buildPostingBatchColumns(
+  reverseAction: (payload: FormData) => void,
+  reversePending: boolean
+): OperationalConfigurableColumnDef<PostingBatchRow>[] {
+  return [
+    {
+      id: "batch",
+      label: "Batch",
+      monoCell: true,
+      renderCell: (row) => row.document_number,
+    },
+    {
+      id: "type",
+      label: "Type",
+      renderCell: (row) => FINANCE_DOCUMENT_KIND_LABELS[row.transaction_type],
+    },
+    {
+      id: "period",
+      label: "Period",
+      cellClassName: "text-muted-foreground",
+      renderCell: (row) => `${row.period_from} → ${row.period_to}`,
+    },
+    {
+      id: "total",
+      label: "Total",
+      headerClassName: "text-right",
+      amountCell: true,
+      renderCell: (row) => formatMoney(row.total_after_vat, row.currency ?? "USD"),
+    },
+    {
+      id: "status",
+      label: "Status",
+      renderCell: (row) => <PostingBatchStatusBadge status={row.status} />,
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      locked: true,
+      renderCell: (row) => (
+        <PostingBatchActionsCell
+          batch={row}
+          reverseAction={reverseAction}
+          reversePending={reversePending}
+        />
+      ),
+    },
+  ];
+}
+
+export const POSTING_PREVIEW_COLUMN_METAS = getOperationalTableColumnMetas(POSTING_PREVIEW_COLUMNS);
+
+const POSTING_BATCH_COLUMNS_STATIC = buildPostingBatchColumns(() => {}, false);
+export const POSTING_BATCH_COLUMN_METAS = getOperationalTableColumnMetas(
+  POSTING_BATCH_COLUMNS_STATIC
+);
 
 type PostingCenterWorkspaceProps = {
   initialPreview: PostingPreviewRow[];
@@ -81,6 +202,11 @@ export function PostingCenterWorkspace({
         { before: 0, vat: 0, after: 0 }
       ),
     [preview]
+  );
+
+  const batchColumns = useMemo(
+    () => buildPostingBatchColumns(reverseAction, reversePending),
+    [reverseAction, reversePending]
   );
 
   const statusMessage = postState.message ?? previewState.message ?? reverseState.message;
@@ -144,54 +270,36 @@ export function PostingCenterWorkspace({
           </div>
         </div>
 
-        <div className="mt-4 overflow-x-auto rounded-2xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Doc no</TableHead>
-                <TableHead>Client/Vendor</TableHead>
-                <TableHead>Campaign</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">VAT</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {preview.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-muted-foreground">
-                    No documents in preview range.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                preview.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>
-                      <DocumentNumber value={row.document_number} />
-                    </TableCell>
-                    <TableCell>{row.party_name ?? "—"}</TableCell>
-                    <TableCell>
-                      {row.campaign_document_number ? (
-                        <DocumentNumber value={row.campaign_document_number} />
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(row.amount_before_vat, row.currency)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(row.vat_amount, row.currency)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{row.status}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <OperationalTableSuiteProvider
+          tableId={OPERATIONAL_TABLE_IDS.financePostingDocuments}
+          columns={POSTING_PREVIEW_COLUMNS}
+          rows={preview}
+          filterAccessors={{
+            doc_no: (row) => row.document_number,
+            party: (row) => row.party_name,
+            campaign: (row) => row.campaign_document_number,
+            amount: (row) => row.amount_before_vat,
+            vat: (row) => row.vat_amount,
+            status: (row) => row.status,
+          }}
+        >
+          <div className="mt-4 overflow-x-auto rounded-2xl border">
+            <div className="flex justify-end border-b px-4 py-2">
+              <OperationalTableControlsSlot contextLabel="Posting preview" />
+            </div>
+            {preview.length === 0 ? (
+              <p className="px-4 py-8 text-[11px] text-muted-foreground">
+                No documents in preview range.
+              </p>
+            ) : (
+              <OperationalConfigurableTable
+                columns={POSTING_PREVIEW_COLUMNS}
+                rows={preview}
+                rowKey={(row) => row.id}
+              />
+            )}
+          </div>
+        </OperationalTableSuiteProvider>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
@@ -216,70 +324,38 @@ export function PostingCenterWorkspace({
         ) : null}
       </section>
 
-      <section className="rounded-3xl border p-4">
-        <h3 className="text-sm font-semibold">Recent posting batches</h3>
-        <div className="mt-3 overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Batch</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {batches.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-muted-foreground">
-                    No posting batches yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                batches.map((batch) => (
-                  <TableRow key={batch.id}>
-                    <TableCell>
-                      <DocumentNumber value={batch.document_number} />
-                    </TableCell>
-                    <TableCell>
-                      {FINANCE_DOCUMENT_KIND_LABELS[batch.transaction_type]}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {batch.period_from} → {batch.period_to}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(batch.total_after_vat, batch.currency ?? "USD")}
-                    </TableCell>
-                    <TableCell>
-                      <PostingBatchStatusBadge status={batch.status} />
-                    </TableCell>
-                    <TableCell>
-                      {batch.status === "posted" ? (
-                        <form action={reverseAction}>
-                          <input type="hidden" name="batch_id" value={batch.id} />
-                          <Button
-                            type="submit"
-                            size="sm"
-                            variant="outline"
-                            disabled={reversePending}
-                            className="h-7 text-[10px]"
-                          >
-                            Reverse
-                          </Button>
-                        </form>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </section>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.financePostingBatches}
+        columns={batchColumns}
+        rows={batches}
+        filterAccessors={{
+          batch: (row) => row.document_number,
+          type: (row) => row.transaction_type,
+          period: (row) => row.period_from,
+          total: (row) => row.total_after_vat,
+          status: (row) => row.status,
+        }}
+      >
+        <section className="rounded-3xl border p-4">
+          <CampaignOperationalSectionHeader
+            title="Recent posting batches"
+            actions={<OperationalTableControlsSlot contextLabel="Posting batches" />}
+          />
+          <div className="mt-3 overflow-x-auto">
+            {batches.length === 0 ? (
+              <p className="px-4 py-8 text-[11px] text-muted-foreground">
+                No posting batches yet.
+              </p>
+            ) : (
+              <OperationalConfigurableTable
+                columns={batchColumns}
+                rows={batches}
+                rowKey={(row) => row.id}
+              />
+            )}
+          </div>
+        </section>
+      </OperationalTableSuiteProvider>
     </div>
   );
 }

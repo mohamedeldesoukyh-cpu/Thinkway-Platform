@@ -50,6 +50,7 @@ export function CampaignOverviewTab({
 
         <CampaignPoSection
           campaignId={workspace.id}
+          campaignName={workspace.name}
           campaignCurrency={currency}
           po={workspace.po}
           currencyOptions={currencyOptions}

@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { AlertTriangleIcon, ArchiveIcon, ArrowRightLeftIcon } from "lucide-react";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
@@ -14,17 +21,50 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getEntityDependenciesAction } from "@/features/operations/actions";
-import type { EntityType } from "@/lib/operations/entity-dependencies";
 import { formatBillingMoney } from "@/features/billing/utils";
+import type { EntityType, LinkedCampaignSummary } from "@/lib/operations/entity-dependencies";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import { ENTITY_CAMPAIGN_DEPS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+
+const ENTITY_CAMPAIGN_DEPS_COLUMNS: OperationalConfigurableColumnDef<LinkedCampaignSummary>[] = [
+  {
+    id: "campaign",
+    label: "Campaign",
+    renderCell: (campaign) => (
+      <div>
+        <span className="font-medium">{campaign.name}</span>
+        <p className="text-xs text-muted-foreground">
+          <DocumentNumber value={campaign.document_number} />
+        </p>
+      </div>
+    ),
+  },
+  {
+    id: "status",
+    label: "Status",
+    cellClassName: "capitalize",
+    renderCell: (campaign) => campaign.status,
+  },
+  {
+    id: "revenue",
+    label: "Revenue",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (campaign) => formatBillingMoney(campaign.revenue),
+  },
+  {
+    id: "gp",
+    label: "GP",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (campaign) => formatBillingMoney(campaign.gp),
+  },
+];
+
+const ENTITY_CAMPAIGN_DEPS_COLUMN_METAS = getOperationalTableColumnMetas(
+  ENTITY_CAMPAIGN_DEPS_COLUMNS
+);
 
 type EntityDependencyDialogProps = {
   entityType: EntityType;
@@ -91,39 +131,21 @@ export function EntityDependencyDialog({
             </div>
 
             {deps.linked_campaigns.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Campaign</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">GP</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {deps.linked_campaigns.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell>
-                          <div>
-                            <span className="font-medium">{c.name}</span>
-                            <p className="text-xs text-muted-foreground">
-                              <DocumentNumber value={c.document_number} />
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="capitalize">{c.status}</TableCell>
-                        <TableCell className="text-right">
-                          {formatBillingMoney(c.revenue)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatBillingMoney(c.gp)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <OperationalTableSuiteProvider
+                tableId={OPERATIONAL_TABLE_IDS.dialogEntityCampaignDeps}
+                columns={ENTITY_CAMPAIGN_DEPS_COLUMNS}
+                rows={deps.linked_campaigns}
+                filterAccessors={ENTITY_CAMPAIGN_DEPS_FILTER_ACCESSORS}
+              >
+                <div className="flex justify-end pb-2">
+                  <OperationalTableControlsSlot contextLabel="Linked campaigns" />
+                </div>
+                <OperationalConfigurableTable
+                  columns={ENTITY_CAMPAIGN_DEPS_COLUMNS}
+                  rows={deps.linked_campaigns}
+                  rowKey={(campaign) => campaign.id}
+                />
+              </OperationalTableSuiteProvider>
             ) : null}
           </div>
         ) : null}

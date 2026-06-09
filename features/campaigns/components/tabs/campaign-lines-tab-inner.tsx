@@ -3,10 +3,14 @@
 import dynamic from "next/dynamic";
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { OperationalTableColumnsProvider } from "@/components/tables/operational-table-column-context";
+import { OperationalTableSettingsSlot } from "@/components/tables/operational-data-table";
+import { ASSIGNMENT_GRID_COLUMN_METAS } from "@/lib/tables/assignment-grid-column-metas";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import type {
   AssignmentBillingGroup,
   CampaignOperationalBillingDetail,
@@ -32,7 +36,13 @@ import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
+import { AssignmentAudienceViewProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
+import { AssignmentAudienceViewToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-toggle";
+import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
+import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
+import { tryBuildAssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
+import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience-view";
 
 const CreateInvoiceSheet = dynamic(
   () =>
@@ -102,6 +112,24 @@ export function CampaignLinesTabInner({
     OperationalSelectionPayload | undefined
   >();
   const [editing, setEditing] = useState<CampaignLineWorkspace | null>(null);
+  const [audienceView, setAudienceView] = useState<AssignmentAudienceView>("internal");
+  const [detailLineId, setDetailLineId] = useState<string | null>(null);
+
+  const detailTarget = useMemo(() => {
+    if (!detailLineId) return null;
+    const group = assignmentHierarchy.groups.find((entry) => entry.line.id === detailLineId);
+    if (!group) return null;
+    const row = tryBuildAssignmentRowViewModel(group, {
+      campaignId: workspace.id,
+      billingContext: assignmentHierarchy.billing_context,
+    });
+    return row ? { group, row } : null;
+  }, [
+    detailLineId,
+    assignmentHierarchy.groups,
+    assignmentHierarchy.billing_context,
+    workspace.id,
+  ]);
 
   const pendingRegenerationInvoice =
     operationalBilling?.appendable_invoices?.find(
@@ -221,25 +249,38 @@ export function CampaignLinesTabInner({
 
   return (
     <>
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold tracking-tight text-foreground">
-              Creator assignments
-            </h2>
-            {enableLineSheet ? (
-              <Button size="sm" onClick={openCreate} title="Create assignment (A)">
-                <PlusIcon data-icon="inline-start" />
-                Create assignment
-              </Button>
-            ) : null}
-          </div>
-        }
+      <OperationalTableColumnsProvider
+        tableId={OPERATIONAL_TABLE_IDS.campaignAssignmentGrid}
+        columns={ASSIGNMENT_GRID_COLUMN_METAS}
       >
-        {!hasAssignments ? (
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                  Creator assignments
+                </h2>
+                <AssignmentAudienceViewToggle
+                  value={audienceView}
+                  onChange={setAudienceView}
+                />
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <OperationalTableSettingsSlot contextLabel="Assignments" />
+                {enableLineSheet && audienceView === "internal" ? (
+                  <Button size="sm" onClick={openCreate} title="Create assignment (A)">
+                    <PlusIcon data-icon="inline-start" />
+                    Create assignment
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          }
+        >
+          {!hasAssignments ? (
           <AssignmentsEmptyState
             onCreateAssignment={enableLineSheet ? openCreate : undefined}
           />
@@ -252,17 +293,43 @@ export function CampaignLinesTabInner({
                 missing.
               </div>
             ) : null}
-            <AssignmentSafeGrid
-              campaignId={workspace.id}
-              hierarchy={assignmentHierarchy}
-              campaignPoExceeded={workspace.financials.po_exceeded}
-              onEditLine={openEdit}
-              onInvoiceLines={openInvoiceWithLines}
-              onCreateAssignment={enableLineSheet ? openCreate : undefined}
-            />
+            <AssignmentAudienceViewProvider value={audienceView}>
+              <AssignmentSafeGrid
+                campaignId={workspace.id}
+                hierarchy={assignmentHierarchy}
+                campaignPoExceeded={workspace.financials.po_exceeded}
+                onEditLine={openEdit}
+                onOpenInfluencerDetail={(group) => setDetailLineId(group.line.id)}
+                onInvoiceLines={openInvoiceWithLines}
+                onCreateAssignment={enableLineSheet ? openCreate : undefined}
+              />
+            </AssignmentAudienceViewProvider>
           </>
-        )}
-      </OperationalTableSection>
+          )}
+        </OperationalTableSection>
+      </OperationalTableColumnsProvider>
+
+      <AssignmentInfluencerDetailSheet
+        open={detailLineId != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailLineId(null);
+        }}
+        campaignName={workspace.name}
+        accountManager={workspace.account_manager}
+        clientIoStatus={workspace.client_io?.status ?? null}
+        group={detailTarget?.group ?? null}
+        row={detailTarget?.row ?? null}
+        audienceView={audienceView}
+        onEdit={
+          detailTarget && enableLineSheet
+            ? () => {
+                const line = detailTarget.group.line;
+                setDetailLineId(null);
+                openEdit(line);
+              }
+            : undefined
+        }
+      />
 
       {enableLineSheet && sheetOpen ? (
         <CampaignLineSheet

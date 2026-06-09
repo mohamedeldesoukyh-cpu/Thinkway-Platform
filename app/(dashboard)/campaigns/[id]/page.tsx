@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CampaignWorkspaceView } from "@/features/campaigns/components/campaign-workspace";
@@ -56,9 +55,11 @@ export default async function CampaignWorkspacePage({
             The URL does not contain a valid campaign ID. Open a campaign from the{" "}
             <strong>Campaigns</strong> list instead of using a bookmark or preview link.
           </p>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/campaigns">Back to campaigns</Link>
-          </Button>
+          <PageBackButton
+            fallbackHref="/campaigns"
+            label="Back to campaigns"
+            variant="text"
+          />
         </div>
       </DashboardShell>
     );

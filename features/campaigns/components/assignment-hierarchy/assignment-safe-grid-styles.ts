@@ -65,6 +65,12 @@ export const SAFE_GRID_HIGHLIGHT_COST = cn(
   "bg-amber-500/10 font-semibold text-foreground dark:bg-amber-500/15"
 );
 
+export const SAFE_GRID_HIGHLIGHT_TOTAL_BILLING = cn(
+  SAFE_GRID_TD,
+  SAFE_GRID_AMOUNT,
+  "bg-sky-500/10 font-semibold text-foreground dark:bg-sky-500/12"
+);
+
 export const SAFE_GRID_HIGHLIGHT_GP = cn(
   SAFE_GRID_TD,
   SAFE_GRID_AMOUNT,

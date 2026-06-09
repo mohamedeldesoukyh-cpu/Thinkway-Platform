@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import {
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,19 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { saveBudgetAllocationAction } from "@/features/planning/actions";
 import type { PlanningPermissions } from "@/features/planning/load-planning-workspace";
 import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
 import type { BudgetAllocation } from "@/lib/planning/types/budget";
 import { devLog } from "@/lib/platform/logger";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 type AllocationsSectionProps = {
   allocations: BudgetAllocation[];
@@ -46,6 +46,51 @@ const TARGET_DIMENSIONS = [
   { value: "brand", label: "Brand" },
 ] as const;
 
+function buildAllocationColumns(
+  currency: {
+    primary_currency: string;
+    is_mixed_currency: boolean;
+    currencies: string[];
+    mixed_label: string | null;
+  }
+): OperationalConfigurableColumnDef<BudgetAllocation>[] {
+  return [
+    {
+      id: "line",
+      label: "Line",
+      monoCell: true,
+      renderCell: (row) => `${row.budget_line_id.slice(0, 8)}…`,
+    },
+    {
+      id: "type",
+      label: "Type",
+      renderCell: (row) => row.allocation_type,
+    },
+    {
+      id: "target",
+      label: "Target",
+      renderCell: (row) =>
+        `${row.target_dimension}${row.target_id ? ` · ${row.target_id.slice(0, 8)}` : ""}`,
+    },
+    {
+      id: "amount",
+      label: "Amount",
+      headerClassName: "text-right",
+      amountCell: true,
+      renderCell: (row) => formatAnalyticsAmount(row.allocated_amount, currency),
+    },
+    {
+      id: "percent",
+      label: "%",
+      headerClassName: "text-right",
+      amountCell: true,
+      cellClassName: "text-muted-foreground",
+      renderCell: (row) =>
+        row.allocation_percent != null ? `${row.allocation_percent}%` : "—",
+    },
+  ];
+}
+
 export function AllocationsSection({
   allocations,
   permissions,
@@ -63,12 +108,18 @@ export function AllocationsSection({
     (sum, row) => sum + Number(row.allocated_amount),
     0
   );
-  const currency = {
-    primary_currency: currencyCode,
-    is_mixed_currency: false,
-    currencies: [currencyCode],
-    mixed_label: null,
-  };
+  const currency = useMemo(
+    () => ({
+      primary_currency: currencyCode,
+      is_mixed_currency: false,
+      currencies: [currencyCode],
+      mixed_label: null,
+    }),
+    [currencyCode]
+  );
+
+  const columns = useMemo(() => buildAllocationColumns(currency), [currency]);
+  const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
   const save = () => {
     if (!lineId.trim()) {
@@ -197,49 +248,35 @@ export function AllocationsSection({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Line</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Target</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="text-right">%</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {allocations.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">
-                  No allocations for this budget version.
-                </TableCell>
-              </TableRow>
-            ) : (
-              allocations.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-mono text-xs">
-                    {row.budget_line_id.slice(0, 8)}…
-                  </TableCell>
-                  <TableCell>{row.allocation_type}</TableCell>
-                  <TableCell>
-                    {row.target_dimension}
-                    {row.target_id ? ` · ${row.target_id.slice(0, 8)}` : ""}
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs">
-                    {formatAnalyticsAmount(row.allocated_amount, currency)}
-                  </TableCell>
-                  <TableCell className="text-right text-xs">
-                    {row.allocation_percent != null
-                      ? `${row.allocation_percent}%`
-                      : "—"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.planningBudgetAllocations}
+        columns={columns}
+        rows={allocations}
+        filterAccessors={{
+          line: (row) => row.budget_line_id,
+          type: (row) => row.allocation_type,
+          target: (row) => row.target_dimension ?? row.target_id,
+          amount: (row) => row.allocated_amount,
+          percent: (row) => row.allocation_percent,
+        }}
+      >
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <OperationalTableControlsSlot contextLabel="Budget allocations" />
+          </div>
+          {allocations.length === 0 ? (
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">
+              No allocations for this budget version.
+            </p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={columns}
+              rows={allocations}
+              rowKey={(row) => row.id}
+            />
+          )}
+        </div>
+      </OperationalTableSuiteProvider>
     </div>
   );
 }

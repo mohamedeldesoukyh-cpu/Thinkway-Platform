@@ -9,7 +9,20 @@ import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
+import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { operationalColumnsFromMetas } from "@/lib/tables/operational-filter-columns";
+import { OPERATIONS_MOVE_CAMPAIGNS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DETAIL_FORM_SELECT_TRIGGER_CLASS,
+} from "@/features/campaigns/components/operational-detail-panel";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -28,13 +41,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableCell,
+  CampaignOperationalTableCellAmount,
+  CampaignOperationalTableCellMono,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+  CampaignOperationalTableRow,
+} from "@/features/campaigns/components/campaign-operational-table";
 import { Textarea } from "@/components/ui/textarea";
 import {
   executeMovementAction,
@@ -47,6 +63,23 @@ import type {
   MovementType,
 } from "@/features/operations/types";
 import { formatBillingMoney } from "@/features/billing/utils";
+import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+
+export const OPERATIONS_MOVE_CAMPAIGNS_COLUMN_METAS: OperationalTableColumnMeta[] = [
+  { id: "select", label: "Select", locked: true },
+  { id: "campaign_number", label: "Campaign #" },
+  { id: "name", label: "Name" },
+  { id: "group", label: "Group" },
+  { id: "client", label: "Client" },
+  { id: "brand", label: "Brand" },
+  { id: "revenue", label: "Revenue" },
+  { id: "gp", label: "GP" },
+  { id: "status", label: "Status" },
+  { id: "billing", label: "Billing" },
+  { id: "invoice", label: "Invoice" },
+  { id: "live", label: "Live" },
+];
 
 type MoveBetweenAccountsWorkspaceProps = {
   hierarchy: {
@@ -64,6 +97,186 @@ const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   group_to_group: "Group → Group",
   vendor_to_vendor: "Vendor → Vendor",
 };
+
+function MoveCampaignsTableHeader({
+  allSelected,
+  onToggleAll,
+}: {
+  allSelected: boolean;
+  onToggleAll: (checked: boolean) => void;
+}) {
+  const showSelect = useIsOperationalColumnVisible("select");
+  const showCampaignNumber = useIsOperationalColumnVisible("campaign_number");
+  const showName = useIsOperationalColumnVisible("name");
+  const showGroup = useIsOperationalColumnVisible("group");
+  const showClient = useIsOperationalColumnVisible("client");
+  const showBrand = useIsOperationalColumnVisible("brand");
+  const showRevenue = useIsOperationalColumnVisible("revenue");
+  const showGp = useIsOperationalColumnVisible("gp");
+  const showStatus = useIsOperationalColumnVisible("status");
+  const showBilling = useIsOperationalColumnVisible("billing");
+  const showInvoice = useIsOperationalColumnVisible("invoice");
+  const showLive = useIsOperationalColumnVisible("live");
+
+  return (
+    <CampaignOperationalTableHeader>
+      <CampaignOperationalTableHeaderRow>
+        {showSelect ? (
+          <CampaignOperationalTableHead className="w-10">
+            <input
+              type="checkbox"
+              className="size-4 rounded border"
+              checked={allSelected}
+              onChange={(e) => onToggleAll(e.target.checked)}
+              aria-label="Select all"
+            />
+          </CampaignOperationalTableHead>
+        ) : null}
+        {showCampaignNumber ? (
+          <CampaignOperationalTableHead>Campaign #</CampaignOperationalTableHead>
+        ) : null}
+        {showName ? <CampaignOperationalTableHead>Name</CampaignOperationalTableHead> : null}
+        {showGroup ? <CampaignOperationalTableHead>Group</CampaignOperationalTableHead> : null}
+        {showClient ? <CampaignOperationalTableHead>Client</CampaignOperationalTableHead> : null}
+        {showBrand ? <CampaignOperationalTableHead>Brand</CampaignOperationalTableHead> : null}
+        {showRevenue ? (
+          <CampaignOperationalTableHead className="text-right">Revenue</CampaignOperationalTableHead>
+        ) : null}
+        {showGp ? (
+          <CampaignOperationalTableHead className="text-right">GP</CampaignOperationalTableHead>
+        ) : null}
+        {showStatus ? <CampaignOperationalTableHead>Status</CampaignOperationalTableHead> : null}
+        {showBilling ? <CampaignOperationalTableHead>Billing</CampaignOperationalTableHead> : null}
+        {showInvoice ? <CampaignOperationalTableHead>Invoice</CampaignOperationalTableHead> : null}
+        {showLive ? <CampaignOperationalTableHead>Live</CampaignOperationalTableHead> : null}
+      </CampaignOperationalTableHeaderRow>
+    </CampaignOperationalTableHeader>
+  );
+}
+
+function MoveCampaignsTableRow({
+  campaign,
+  selected,
+  onToggle,
+}: {
+  campaign: MovementCampaignRow;
+  selected: boolean;
+  onToggle: (checked: boolean) => void;
+}) {
+  const showSelect = useIsOperationalColumnVisible("select");
+  const showCampaignNumber = useIsOperationalColumnVisible("campaign_number");
+  const showName = useIsOperationalColumnVisible("name");
+  const showGroup = useIsOperationalColumnVisible("group");
+  const showClient = useIsOperationalColumnVisible("client");
+  const showBrand = useIsOperationalColumnVisible("brand");
+  const showRevenue = useIsOperationalColumnVisible("revenue");
+  const showGp = useIsOperationalColumnVisible("gp");
+  const showStatus = useIsOperationalColumnVisible("status");
+  const showBilling = useIsOperationalColumnVisible("billing");
+  const showInvoice = useIsOperationalColumnVisible("invoice");
+  const showLive = useIsOperationalColumnVisible("live");
+
+  return (
+    <CampaignOperationalTableRow>
+      {showSelect ? (
+        <CampaignOperationalTableCell>
+          <input
+            type="checkbox"
+            className="size-4 rounded border"
+            checked={selected}
+            onChange={(e) => onToggle(e.target.checked)}
+            aria-label={`Select ${campaign.name}`}
+          />
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showCampaignNumber ? (
+        <CampaignOperationalTableCellMono>
+          <DocumentNumber value={campaign.document_number} />
+        </CampaignOperationalTableCellMono>
+      ) : null}
+      {showName ? (
+        <CampaignOperationalTableCell className="font-medium">{campaign.name}</CampaignOperationalTableCell>
+      ) : null}
+      {showGroup ? (
+        <CampaignOperationalTableCell>{campaign.group_name ?? "—"}</CampaignOperationalTableCell>
+      ) : null}
+      {showClient ? (
+        <CampaignOperationalTableCell>{campaign.client_name ?? "—"}</CampaignOperationalTableCell>
+      ) : null}
+      {showBrand ? (
+        <CampaignOperationalTableCell>{campaign.brand_name ?? "—"}</CampaignOperationalTableCell>
+      ) : null}
+      {showRevenue ? (
+        <CampaignOperationalTableCellAmount>
+          {formatBillingMoney(campaign.revenue)}
+        </CampaignOperationalTableCellAmount>
+      ) : null}
+      {showGp ? (
+        <CampaignOperationalTableCellAmount>
+          {formatBillingMoney(campaign.gp)}
+        </CampaignOperationalTableCellAmount>
+      ) : null}
+      {showStatus ? (
+        <CampaignOperationalTableCell>
+          <Badge variant="outline" className="capitalize">
+            {campaign.status}
+          </Badge>
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showBilling ? (
+        <CampaignOperationalTableCell className="capitalize">
+          {campaign.billing_status}
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showInvoice ? (
+        <CampaignOperationalTableCell className="capitalize">
+          {campaign.invoice_status.replace("_", " ")}
+        </CampaignOperationalTableCell>
+      ) : null}
+      {showLive ? (
+        <CampaignOperationalTableCell>
+          {campaign.live_date
+            ? format(new Date(campaign.live_date), "MMM d, yyyy")
+            : "—"}
+        </CampaignOperationalTableCell>
+      ) : null}
+    </CampaignOperationalTableRow>
+  );
+}
+
+function MoveCampaignsTable({
+  rows,
+  selected,
+  onToggleAll,
+  onToggleOne,
+}: {
+  rows: MovementCampaignRow[];
+  selected: Set<string>;
+  onToggleAll: (checked: boolean) => void;
+  onToggleOne: (id: string, checked: boolean) => void;
+}) {
+  const displayRows =
+    useOperationalTableDataContextOptional<MovementCampaignRow>()?.processedRows ?? rows;
+
+  return (
+    <CampaignOperationalTable>
+      <MoveCampaignsTableHeader
+        allSelected={displayRows.length > 0 && selected.size === displayRows.length}
+        onToggleAll={onToggleAll}
+      />
+      <CampaignOperationalTableBody>
+        {displayRows.map((campaign) => (
+          <MoveCampaignsTableRow
+            key={campaign.id}
+            campaign={campaign}
+            selected={selected.has(campaign.id)}
+            onToggle={(checked) => onToggleOne(campaign.id, checked)}
+          />
+        ))}
+      </CampaignOperationalTableBody>
+    </CampaignOperationalTable>
+  );
+}
 
 export function MoveBetweenAccountsWorkspace({
   hierarchy,
@@ -110,6 +323,15 @@ export function MoveBetweenAccountsWorkspace({
         destClientId ? true : true
       ),
     [hierarchy.brands, destClientId]
+  );
+
+  const moveCampaignColumns = useMemo(
+    () =>
+      operationalColumnsFromMetas(
+        OPERATIONS_MOVE_CAMPAIGNS_COLUMN_METAS,
+        OPERATIONS_MOVE_CAMPAIGNS_FILTER_ACCESSORS
+      ),
+    []
   );
 
   const selectedCampaigns = campaigns.filter((c) => selected.has(c.id));
@@ -214,21 +436,18 @@ export function MoveBetweenAccountsWorkspace({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowRightLeftIcon className="size-5" />
-            Movement configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <CampaignFlatSection
+        title="Movement configuration"
+        actions={<ArrowRightLeftIcon className="size-5 text-muted-foreground" />}
+      >
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="grid gap-2">
             <Label>Movement type</Label>
             <Select
               value={movementType}
               onValueChange={(v) => setMovementType(v as MovementType)}
             >
-              <SelectTrigger>
+              <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -240,18 +459,15 @@ export function MoveBetweenAccountsWorkspace({
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CampaignFlatSection>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Source</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Select hierarchy — linked campaigns load below.
-            </p>
-          </CardHeader>
-          <CardContent className="grid gap-3">
+        <CampaignFlatSection
+          title="Source"
+          description="Select hierarchy — linked campaigns load below."
+        >
+          <div className="grid gap-3">
             <div className="grid gap-2">
               <Label>Group</Label>
               <SearchableSelect
@@ -300,17 +516,14 @@ export function MoveBetweenAccountsWorkspace({
             <Button type="button" variant="outline" onClick={loadCampaigns} disabled={isPending}>
               Load campaigns
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </CampaignFlatSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Destination</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Target ownership hierarchy for selected campaigns.
-            </p>
-          </CardHeader>
-          <CardContent className="grid gap-3">
+        <CampaignFlatSection
+          title="Destination"
+          description="Target ownership hierarchy for selected campaigns."
+        >
+          <div className="grid gap-3">
             <div className="grid gap-2">
               <Label>Group</Label>
               <SearchableSelect
@@ -347,12 +560,15 @@ export function MoveBetweenAccountsWorkspace({
                 placeholder="Destination brand"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CampaignFlatSection>
       </div>
 
-      <Card className="sticky top-0 z-10 border-primary/20 bg-background/95 backdrop-blur">
-        <CardContent className="flex flex-wrap items-center gap-4 py-4">
+      <CampaignFlatSection
+        title="Selection summary"
+        className="sticky top-0 z-10 border-primary/20 bg-background/95 backdrop-blur"
+      >
+        <div className="flex flex-wrap items-center gap-4">
           <div>
             <p className="text-xs text-muted-foreground">Selected</p>
             <p className="font-semibold">{selected.size} campaigns</p>
@@ -372,105 +588,55 @@ export function MoveBetweenAccountsWorkspace({
           >
             Preview & move selected
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </CampaignFlatSection>
 
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <CardTitle>Campaign selection</CardTitle>
-          <div className="relative w-full max-w-xs">
-            <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Search campaigns…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && loadCampaigns()}
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.operationsMoveCampaigns}
+        columns={moveCampaignColumns}
+        rows={campaigns}
+        filterAccessors={OPERATIONS_MOVE_CAMPAIGNS_FILTER_ACCESSORS}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+              <CampaignOperationalSectionHeader title="Campaign selection" />
+              <div className="flex flex-wrap items-center gap-2">
+                <OperationalTableControlsSlot contextLabel="Move campaigns" />
+                <div className="relative w-full max-w-xs">
+                  <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className={cn(DETAIL_FORM_INPUT_CLASS, "pl-9")}
+                    placeholder="Search campaigns…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && loadCampaigns()}
+                  />
+                </div>
+              </div>
+            </div>
+          }
+        >
+          {campaigns.length === 0 ? (
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">
+              Select source hierarchy and load campaigns.
+            </p>
+          ) : (
+            <MoveCampaignsTable
+              rows={campaigns}
+              selected={selected}
+              onToggleAll={toggleAll}
+              onToggleOne={toggleOne}
             />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <input
-                      type="checkbox"
-                      className="size-4 rounded border"
-                      checked={campaigns.length > 0 && selected.size === campaigns.length}
-                      onChange={(e) => toggleAll(e.target.checked)}
-                      aria-label="Select all"
-                    />
-                  </TableHead>
-                  <TableHead>Campaign #</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Group</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Brand</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">GP</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Billing</TableHead>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Live</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {campaigns.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={12} className="text-center text-muted-foreground">
-                      Select source hierarchy and load campaigns.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  campaigns.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded border"
-                          checked={selected.has(c.id)}
-                          onChange={(e) => toggleOne(c.id, e.target.checked)}
-                          aria-label={`Select ${c.name}`}
-                        />
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        <DocumentNumber value={c.document_number} />
-                      </TableCell>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell>{c.group_name ?? "—"}</TableCell>
-                      <TableCell>{c.client_name ?? "—"}</TableCell>
-                      <TableCell>{c.brand_name ?? "—"}</TableCell>
-                      <TableCell className="text-right">
-                        {formatBillingMoney(c.revenue)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatBillingMoney(c.gp)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {c.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="capitalize">{c.billing_status}</TableCell>
-                      <TableCell className="capitalize">{c.invoice_status.replace("_", " ")}</TableCell>
-                      <TableCell>
-                        {c.live_date
-                          ? format(new Date(c.live_date), "MMM d, yyyy")
-                          : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
+          )}
+          <p className="mt-2 px-4 pb-4 text-xs text-muted-foreground md:px-5">
             Showing {campaigns.length} of {initialTotal} campaigns
           </p>
-        </CardContent>
-      </Card>
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-lg">

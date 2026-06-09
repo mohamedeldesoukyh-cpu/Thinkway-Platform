@@ -7,7 +7,6 @@ import { FieldError } from "@/components/forms/field-error";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -15,20 +14,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createCampaignPublicationAction,
 } from "@/features/campaigns/actions/publication-actions";
 import type { FormActionState } from "@/features/campaigns/actions";
 import { DeliverableTypeSelect, PlatformSelect } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
+import {
+  DETAIL_FORM_INPUT_CLASS,
+  DETAIL_FORM_SELECT_TRIGGER_CLASS,
+  DetailFormScrollBody,
+  DetailFormSection,
+  DetailSheetFooter,
+  OperationalDetailSheet,
+  OperationalEditPanelHeader,
+} from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import {
   getCreatorConnectedPlatformOptions,
@@ -118,15 +118,19 @@ export function CampaignPublicationSheet({
   }));
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Add publication</SheetTitle>
-          <SheetDescription>
-            Track a live influencer URL manually. API auto-detection can be added later.
-          </SheetDescription>
-        </SheetHeader>
-        <form action={formAction} className="mt-6 space-y-4">
+    <OperationalDetailSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Add publication"
+      description="Manual publication tracking"
+    >
+      <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+        <OperationalEditPanelHeader
+          title="Add publication"
+          description="Track a live influencer URL manually. API auto-detection can be added later."
+        />
+
+        <DetailFormScrollBody>
           <input type="hidden" name="campaign_id" value={campaignId} />
           <input type="hidden" name="campaign_line_id" value={lineId || ""} />
           <input type="hidden" name="influencer_id" value={selectedLine?.influencer_id ?? ""} />
@@ -139,8 +143,7 @@ export function CampaignPublicationSheet({
           <input type="hidden" name="hashtags" value={hashtags} />
           <input type="hidden" name="notes" value={notes} />
 
-          <div className="grid gap-2">
-            <Label>Creator / assignment</Label>
+          <DetailFormSection label="Creator / assignment">
             <SearchableSelect
               options={assignmentOptions}
               value={lineId}
@@ -149,62 +152,59 @@ export function CampaignPublicationSheet({
               disabled={isPending}
             />
             <FieldError messages={state.fieldErrors?.campaign_line_id} />
-          </div>
+          </DetailFormSection>
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <Label>Platform</Label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <DetailFormSection label="Platform">
               <PlatformSelect
                 platform={platform}
                 platformOptions={platformOptions}
                 disabled={isPending || !selectedLine}
-                className="h-8 w-full max-w-none"
+                className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
                 onPlatformChange={(next) => {
                   setPlatform(next);
                   const types = getDeliverableTypeCodesForPlatform(next);
                   setPublicationType(types[0] ?? "other");
                 }}
               />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Publication type</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Publication type">
               <DeliverableTypeSelect
                 platform={platform}
                 deliverableType={publicationType}
                 disabled={isPending || !selectedLine}
-                className="h-8 w-full max-w-none min-w-0"
+                className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
                 onDeliverableTypeChange={setPublicationType}
               />
-            </div>
+            </DetailFormSection>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="pub_url">Publication URL</Label>
+          <DetailFormSection label="Publication URL">
             <Input
               id="pub_url"
               type="url"
+              className={DETAIL_FORM_INPUT_CLASS}
               value={contentUrl}
               onChange={(e) => setContentUrl(e.target.value)}
               placeholder="https://…"
               disabled={isPending}
             />
-          </div>
+          </DetailFormSection>
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <Label htmlFor="pub_date">Publication date</Label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <DetailFormSection label="Publication date">
               <Input
                 id="pub_date"
                 type="date"
+                className={DETAIL_FORM_INPUT_CLASS}
                 value={publicationDate}
                 onChange={(e) => setPublicationDate(e.target.value)}
                 disabled={isPending}
               />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Status</Label>
+            </DetailFormSection>
+            <DetailFormSection label="Status">
               <Select value={status} onValueChange={setStatus} disabled={isPending}>
-                <SelectTrigger className="h-8">
+                <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -215,49 +215,49 @@ export function CampaignPublicationSheet({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </DetailFormSection>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="pub_caption">Caption</Label>
+          <DetailFormSection label="Caption">
             <Textarea
               id="pub_caption"
               rows={2}
+              className="min-h-[4rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               disabled={isPending}
             />
-          </div>
+          </DetailFormSection>
 
-          <div className="grid gap-2">
-            <Label htmlFor="pub_hashtags">Hashtags</Label>
+          <DetailFormSection label="Hashtags">
             <Input
               id="pub_hashtags"
+              className={DETAIL_FORM_INPUT_CLASS}
               value={hashtags}
               onChange={(e) => setHashtags(e.target.value)}
               placeholder="#brand #campaign"
               disabled={isPending}
             />
-          </div>
+          </DetailFormSection>
 
-          <div className="grid gap-2">
-            <Label htmlFor="pub_notes">Notes</Label>
+          <DetailFormSection label="Notes">
             <Textarea
               id="pub_notes"
               rows={2}
+              className="min-h-[4rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={isPending}
             />
-          </div>
+          </DetailFormSection>
+        </DetailFormScrollBody>
 
-          <SheetFooter>
-            <Button type="submit" disabled={isPending || !lineId}>
-              {isPending ? "Saving…" : "Add publication"}
-            </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+        <DetailSheetFooter>
+          <Button size="sm" type="submit" disabled={isPending || !lineId}>
+            {isPending ? "Saving…" : "Add publication"}
+          </Button>
+        </DetailSheetFooter>
+      </form>
+    </OperationalDetailSheet>
   );
 }

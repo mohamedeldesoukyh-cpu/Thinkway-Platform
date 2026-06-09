@@ -1,11 +1,24 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
+import { useMemo } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import {
+  OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
+  OperationalWorkspaceChrome,
+  OperationalWorkspaceSortableTabsBar,
+  OperationalWorkspaceTabPanel,
+  type OperationalWorkspaceTabDef,
+} from "@/components/workspace/operational-workspace-ui";
+import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useWorkspaceTabOrder } from "@/hooks/use-workspace-tab-order";
+import {
+  VENDOR_PROFILE_TAB_ORDER,
+  VENDOR_PROFILE_TAB_STORAGE_KEY,
+  isVendorProfileTabId,
+  type VendorProfileTabId,
+} from "@/lib/workspace/platform-workspace-tabs";
 import type { VendorDetail } from "@/types/database";
 
 import { VendorStatusBadge } from "./vendor-status-badge";
@@ -21,53 +34,79 @@ type VendorProfileProps = {
 };
 
 export function VendorProfile({ vendor }: VendorProfileProps) {
+  const { tabOrder, moveTab } = useWorkspaceTabOrder({
+    storageKey: VENDOR_PROFILE_TAB_STORAGE_KEY,
+    defaultOrder: VENDOR_PROFILE_TAB_ORDER,
+    isValidId: isVendorProfileTabId,
+  });
+
+  const tabsById = useMemo(
+    (): Record<VendorProfileTabId, OperationalWorkspaceTabDef> => ({
+      overview: { value: "overview", label: "Overview" },
+      legal: { value: "legal", label: "Legal" },
+      finance: { value: "finance", label: "Finance" },
+      documents: { value: "documents", label: "Documents" },
+      platforms: { value: "platforms", label: "Platforms" },
+      campaigns: {
+        value: "campaigns",
+        label: "Campaign history",
+        count: vendor.campaign_assignments.length,
+      },
+    }),
+    [vendor.campaign_assignments.length]
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 w-fit">
-          <Link href="/vendors">
-            <ArrowLeftIcon data-icon="inline-start" />
-            Back to vendors
-          </Link>
-        </Button>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="font-heading text-2xl font-semibold tracking-tight">
-            {vendor.display_name}
-          </h2>
-          <VendorStatusBadge status={vendor.status} />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          <DocumentNumber value={vendor.document_number} />
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-0">
+      <OperationalWorkspaceChrome
+        backButton={
+          <PageBackButton fallbackHref="/vendors" label="Back to vendors" />
+        }
+        title={vendor.display_name}
+        badges={<VendorStatusBadge status={vendor.status} />}
+        meta={<DocumentNumber value={vendor.document_number} />}
+      />
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="legal">Legal</TabsTrigger>
-          <TabsTrigger value="finance">Finance</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="platforms">Platforms</TabsTrigger>
-          <TabsTrigger value="campaigns">Campaign History</TabsTrigger>
-        </TabsList>
+      <Tabs
+        defaultValue="overview"
+        className="mt-4 flex min-h-0 flex-1 flex-col gap-0"
+      >
+        <OperationalWorkspaceSortableTabsBar
+          sectionLabel="Vendor workspace"
+          tabOrder={tabOrder}
+          tabsById={tabsById}
+          onReorder={moveTab}
+        />
 
-        <TabsContent value="overview">
-          <VendorOverviewTab vendor={vendor} />
+        <TabsContent value="overview" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            <VendorOverviewTab vendor={vendor} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="legal">
-          <VendorLegalTab vendor={vendor} />
+        <TabsContent value="legal" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            <VendorLegalTab vendor={vendor} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="finance">
-          <VendorFinanceTab vendor={vendor} />
+        <TabsContent value="finance" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            <VendorFinanceTab vendor={vendor} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="documents">
-          <VendorDocumentsTab vendor={vendor} />
+        <TabsContent value="documents" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <VendorDocumentsTab vendor={vendor} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="platforms">
-          <VendorPlatformsTab vendor={vendor} />
+        <TabsContent value="platforms" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            <VendorPlatformsTab vendor={vendor} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="campaigns">
-          <VendorCampaignsTab vendor={vendor} />
+        <TabsContent value="campaigns" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel>
+            <VendorCampaignsTab vendor={vendor} />
+          </OperationalWorkspaceTabPanel>
         </TabsContent>
       </Tabs>
     </div>

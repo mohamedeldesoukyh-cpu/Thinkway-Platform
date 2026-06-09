@@ -281,7 +281,10 @@ export async function getCampaignWorkspace(
       `
       *,
       brand:brands(id, name, document_number),
-      client:clients(id, name, document_number, legal_name, country),
+      client:clients(
+        id, name, document_number, legal_name, country,
+        group:groups(id, name, document_number)
+      ),
       group:groups(id, name, document_number),
       team:md_teams(id, name),
       account_manager:profiles!campaign_headers_account_manager_id_fkey(id, full_name, email)
@@ -847,7 +850,14 @@ export async function getCampaignWorkspace(
     start_date: headerRow.start_date,
     end_date: headerRow.end_date,
     platform,
-    group: headerRow.group,
+    group:
+      headerRow.group ??
+      (
+        headerRow.client as {
+          group?: { id: string; name: string; document_number: string } | null;
+        } | null
+      )?.group ??
+      null,
     client: headerRow.client,
     brand: headerRow.brand,
     team: headerRow.team,

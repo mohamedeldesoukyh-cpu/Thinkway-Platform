@@ -1,12 +1,6 @@
-import { Suspense } from "react";
-
-import { DataPanel, DataPanelContent, DataPanelHeader } from "@/components/ui/data-panel";
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { ClientsEmptyState } from "@/features/clients/components/clients-empty-state";
-import { ClientsPagination } from "@/features/clients/components/clients-pagination";
-import { ClientsSearch } from "@/features/clients/components/clients-search";
-import { ClientsTable } from "@/features/clients/components/clients-table";
+import { ClientsListSection } from "@/features/clients/components/clients-list-section";
 import { NewClientDialog } from "@/features/clients/components/new-client-dialog";
 import { getClientsList } from "@/features/clients/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
@@ -52,6 +46,10 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
 
   const { clients, total, totalPages } = list;
   const hasSearch = Boolean(search);
+  const meta =
+    total === 1
+      ? "1 entity"
+      : `${total} entities` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
     <DashboardShell
@@ -59,33 +57,21 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
       description="Legal entities within groups. Brands and campaigns hang off each entity."
       actions={<NewClientDialog groups={groups} currencyOptions={currencyOptions} />}
     >
-      <DataPanel>
-        <DataPanelHeader
-          title="All legal entities"
-          meta={`${total === 1 ? "1 entity" : `${total} entities`}${hasSearch ? ` matching "${search}"` : ""}`}
-          toolbar={
-            <Suspense fallback={null}>
-              <ClientsSearch />
-            </Suspense>
-          }
-        />
-        <DataPanelContent>
-          {errorMessage ? <PageAlert>{errorMessage}</PageAlert> : null}
-
-          {clients.length === 0 ? (
-            <ClientsEmptyState hasSearch={hasSearch} />
-          ) : (
-            <>
-              <ClientsTable clients={clients} />
-              <ClientsPagination
-                page={list.page}
-                totalPages={totalPages}
-                search={search}
-              />
-            </>
-          )}
-        </DataPanelContent>
-      </DataPanel>
+      <ClientsListSection
+        clients={clients}
+        meta={meta}
+        hasSearch={hasSearch}
+        page={list.page}
+        totalPages={totalPages}
+        search={search}
+        errorSlot={
+          errorMessage ? (
+            <div className="border-b border-border/40 px-4 py-3">
+              <PageAlert>{errorMessage}</PageAlert>
+            </div>
+          ) : null
+        }
+      />
     </DashboardShell>
   );
 }

@@ -1,0 +1,22 @@
+import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
+
+export const ASSIGNMENT_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
+  { id: "expand", label: "Expand", locked: true },
+  { id: "select", label: "Select", locked: true },
+  { id: "assignment", label: "Assignment" },
+  { id: "creator", label: "Creator" },
+  { id: "platforms", label: "Platforms" },
+  { id: "deliverables", label: "Deliverables" },
+  { id: "postingDates", label: "Dates" },
+  { id: "costCurrency", label: "CCY" },
+  { id: "revenue", label: "Revenue" },
+  { id: "cost", label: "Cost" },
+  { id: "vat", label: "VAT" },
+  { id: "totalBilling", label: "Total billing" },
+  { id: "gp", label: "GP" },
+  { id: "margin", label: "Margin" },
+  { id: "opsStatus", label: "Ops status" },
+  { id: "billing", label: "Billing" },
+  { id: "payout", label: "Payout" },
+  { id: "actions", label: "Actions", locked: true },
+];

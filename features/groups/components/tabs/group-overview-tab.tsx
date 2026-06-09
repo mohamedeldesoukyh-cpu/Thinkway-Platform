@@ -1,12 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { format } from "date-fns";
 import { PencilIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OperationalDetailRow } from "@/components/workspace/operational-workspace-ui";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { ClientStatusBadge } from "@/features/clients/components/client-status-badge";
 import { GroupEditSheet } from "@/features/groups/components/group-edit-sheet";
 import type { GroupWorkspace } from "@/features/groups/types";
@@ -34,89 +34,69 @@ export function GroupOverviewTab({
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Identity</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <Row label="Group name" value={workspace.name} />
-              <Row label="Region" value={workspace.region ?? "—"} />
-              <Row
-                label="Status"
-                value={<ClientStatusBadge status={workspace.status} />}
-              />
-              <Row
-                label="Account director"
-                value={
-                  workspace.account_director?.full_name ??
-                  workspace.account_director?.email ??
-                  "—"
-                }
-              />
-              <Row
-                label="Created"
-                value={format(new Date(workspace.created_at), "MMM d, yyyy")}
-              />
-            </CardContent>
-          </Card>
+          <CampaignFlatSection title="Identity">
+            <OperationalDetailRow label="Group name" value={workspace.name} />
+            <OperationalDetailRow label="Region" value={workspace.region ?? "—"} />
+            <OperationalDetailRow
+              label="Status"
+              value={<ClientStatusBadge status={workspace.status} />}
+            />
+            <OperationalDetailRow
+              label="Account director"
+              value={
+                workspace.account_director?.full_name ??
+                workspace.account_director?.email ??
+                "—"
+              }
+            />
+            <OperationalDetailRow
+              label="Created"
+              value={format(new Date(workspace.created_at), "MMM d, yyyy")}
+            />
+          </CampaignFlatSection>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Portfolio</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <Row
-                label="Legal entities"
-                value={String(workspace.counts.legal_entities)}
-              />
-              <Row label="Brands" value={String(workspace.counts.brands)} />
-              <Row
-                label="Campaigns"
-                value={String(workspace.counts.campaigns)}
-              />
-              <Row
-                label="Active campaigns"
-                value={String(workspace.financials.active_campaign_count)}
-              />
-            </CardContent>
-          </Card>
+          <CampaignFlatSection title="Portfolio">
+            <OperationalDetailRow
+              label="Legal entities"
+              value={String(workspace.counts.legal_entities)}
+            />
+            <OperationalDetailRow label="Brands" value={String(workspace.counts.brands)} />
+            <OperationalDetailRow
+              label="Campaigns"
+              value={String(workspace.counts.campaigns)}
+            />
+            <OperationalDetailRow
+              label="Active campaigns"
+              value={String(workspace.financials.active_campaign_count)}
+            />
+          </CampaignFlatSection>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Commercial</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <Row
-                label="Total revenue"
-                value={formatGroupMoney(workspace.financials.total_revenue)}
-              />
-              <Row
-                label="Total GP"
-                value={formatGroupMoney(workspace.financials.total_gp)}
-              />
-              <Row
-                label="Margin"
-                value={formatPercent(workspace.financials.margin_percent)}
-              />
-              <Row
-                label="Billing outstanding"
-                value={formatGroupMoney(workspace.financials.billing_outstanding)}
-              />
-            </CardContent>
-          </Card>
+          <CampaignFlatSection title="Commercial">
+            <OperationalDetailRow
+              label="Total revenue"
+              value={formatGroupMoney(workspace.financials.total_revenue)}
+            />
+            <OperationalDetailRow
+              label="Total GP"
+              value={formatGroupMoney(workspace.financials.total_gp)}
+            />
+            <OperationalDetailRow
+              label="Margin"
+              value={formatPercent(workspace.financials.margin_percent)}
+            />
+            <OperationalDetailRow
+              label="Billing outstanding"
+              value={formatGroupMoney(workspace.financials.billing_outstanding)}
+            />
+          </CampaignFlatSection>
         </div>
 
         {workspace.notes ? (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {workspace.notes}
-              </p>
-            </CardContent>
-          </Card>
+          <CampaignFlatSection title="Notes">
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+              {workspace.notes}
+            </p>
+          </CampaignFlatSection>
         ) : null}
       </div>
 
@@ -127,20 +107,5 @@ export function GroupOverviewTab({
         onOpenChange={setEditOpen}
       />
     </>
-  );
-}
-
-function Row({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
-    </div>
   );
 }

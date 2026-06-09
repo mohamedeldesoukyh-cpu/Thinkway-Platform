@@ -1,7 +1,5 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MoveBetweenAccountsWorkspace } from "@/features/operations/components/move-between-accounts-workspace";
-import { VendorMovementWorkspace } from "@/features/operations/components/vendor-movement-workspace";
+import { MoveOperationsTabs } from "@/features/operations/components/move-operations-tabs";
 import {
   getCampaignsForMovement,
   getHierarchyOptions,
@@ -49,26 +47,13 @@ export default async function MoveBetweenAccountsPage({
           {errorMessage}
         </div>
       ) : hierarchy && campaignsResult && vendors ? (
-        <Tabs defaultValue={vendorParam ? "vendor" : "hierarchy"} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="hierarchy">Group / Client / Brand</TabsTrigger>
-            <TabsTrigger value="vendor">Vendor reassignment</TabsTrigger>
-          </TabsList>
-          <TabsContent value="hierarchy">
-            <MoveBetweenAccountsWorkspace
-              hierarchy={hierarchy}
-              initialCampaigns={campaignsResult.campaigns}
-              initialTotal={campaignsResult.total}
-            />
-          </TabsContent>
-          <TabsContent value="vendor">
-            <VendorMovementWorkspace
-              vendors={vendors}
-              initialSourceVendorId={vendorParam ?? ""}
-              initialAssignments={initialAssignments}
-            />
-          </TabsContent>
-        </Tabs>
+        <MoveOperationsTabs
+          hierarchy={hierarchy}
+          campaignsResult={campaignsResult}
+          vendors={vendors}
+          initialAssignments={initialAssignments}
+          vendorParam={vendorParam}
+        />
       ) : null}
     </DashboardShell>
   );

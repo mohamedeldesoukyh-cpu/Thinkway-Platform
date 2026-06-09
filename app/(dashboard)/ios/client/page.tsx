@@ -1,6 +1,5 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientIosWorkspace } from "@/features/io/components/client-ios-workspace";
 import { IoSearchFilters } from "@/features/io/components/io-search-filters";
 import { getClientIos } from "@/features/io/queries";
@@ -14,16 +13,27 @@ export default async function ClientIosPage({ searchParams }: Props) {
   const rows = await getClientIos({ status: params.status });
   const selected = params.io ? rows.find((row) => row.id === params.io) ?? null : rows[0] ?? null;
 
+  const campaignId = selected?.campaign_header_id ?? null;
+  const backFallbackHref = campaignId
+    ? `/campaigns/${campaignId}`
+    : "/ios/client";
+
   return (
     <DashboardShell
       title="Client IOs"
       description="Campaign-level IO tracking for clients. Draft, send, approve — without blocking campaign execution."
+      backFallbackHref={backFallbackHref}
+      backLabel={campaignId ? "Back to campaign" : "Back to client IOs"}
     >
       <PlatformErrorBoundary surface="ios">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>Client IO register</CardTitle>
+        <ClientIosWorkspace
+          rows={rows}
+          initialSelectedId={selected?.id ?? null}
+          leading={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                Client IO register
+              </h2>
               <IoSearchFilters
                 statuses={[
                   { value: "all", label: "All statuses" },
@@ -32,15 +42,9 @@ export default async function ClientIosPage({ searchParams }: Props) {
                   { value: "approved", label: "Approved" },
                 ]}
               />
-            </CardHeader>
-            <CardContent>
-              <ClientIosWorkspace
-                rows={rows}
-                initialSelectedId={selected?.id ?? null}
-              />
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          }
+        />
       </PlatformErrorBoundary>
     </DashboardShell>
   );

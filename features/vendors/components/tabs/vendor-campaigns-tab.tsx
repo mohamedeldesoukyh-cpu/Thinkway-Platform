@@ -1,17 +1,21 @@
+"use client";
+
 import Link from "next/link";
 
-import { DocumentNumber } from "@/components/ui/document-number";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { VENDOR_CAMPAIGNS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import type { VendorDetail } from "@/types/database";
+
+type AssignmentRow = VendorDetail["campaign_assignments"][number];
 
 function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat(undefined, {
@@ -21,65 +25,81 @@ function formatMoney(amount: number, currency: string) {
   }).format(amount);
 }
 
+const VENDOR_CAMPAIGNS_COLUMNS: OperationalConfigurableColumnDef<AssignmentRow>[] = [
+  {
+    id: "campaign",
+    label: "Campaign",
+    renderCell: (assignment) =>
+      assignment.campaign ? (
+        <Link
+          href={`/campaigns/${assignment.campaign.id}`}
+          className="font-medium hover:text-primary"
+        >
+          {assignment.campaign.name}
+        </Link>
+      ) : (
+        "—"
+      ),
+  },
+  {
+    id: "campaign_number",
+    label: "Campaign #",
+    monoCell: true,
+    renderCell: (assignment) => (
+      <DocumentNumber value={assignment.campaign?.document_number} />
+    ),
+  },
+  {
+    id: "status",
+    label: "Status",
+    cellClassName: "capitalize",
+    renderCell: (assignment) => assignment.status.replace(/_/g, " "),
+  },
+  {
+    id: "agreed_fee",
+    label: "Agreed fee",
+    amountCell: true,
+    renderCell: (assignment) =>
+      formatMoney(Number(assignment.agreed_fee), assignment.currency),
+  },
+];
+
+export const VENDOR_CAMPAIGNS_TABLE_COLUMNS = VENDOR_CAMPAIGNS_COLUMNS;
+
 export function VendorCampaignsTab({ vendor }: { vendor: VendorDetail }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Campaign history</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Campaign assignments for this creator.
-        </p>
-      </CardHeader>
-      <CardContent>
+    <OperationalTableSuiteProvider
+      tableId={OPERATIONAL_TABLE_IDS.vendorCampaigns}
+      columns={VENDOR_CAMPAIGNS_TABLE_COLUMNS}
+      rows={vendor.campaign_assignments}
+      filterAccessors={VENDOR_CAMPAIGNS_FILTER_ACCESSORS}
+    >
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <CampaignOperationalSectionHeader
+            title="Campaign history"
+            description="Campaign assignments for this creator."
+            actions={
+              <OperationalTableControlsSlot contextLabel="Vendor campaigns" />
+            }
+          />
+        }
+      >
         {vendor.campaign_assignments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="px-4 py-8 text-[11px] text-muted-foreground">
             Not assigned to any campaigns yet.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Campaign #</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Agreed fee</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {vendor.campaign_assignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell className="font-medium">
-                      {assignment.campaign ? (
-                        <Link
-                          href={`/campaigns/${assignment.campaign.id}`}
-                          className="hover:underline"
-                        >
-                          {assignment.campaign.name}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <DocumentNumber value={assignment.campaign?.document_number} />
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {assignment.status.replace(/_/g, " ")}
-                    </TableCell>
-                    <TableCell>
-                      {formatMoney(
-                        Number(assignment.agreed_fee),
-                        assignment.currency
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <OperationalConfigurableTable
+            columns={VENDOR_CAMPAIGNS_COLUMNS}
+            rows={vendor.campaign_assignments}
+            rowKey={(assignment) => assignment.id}
+          />
         )}
-      </CardContent>
-    </Card>
+      </OperationalTableSection>
+    </OperationalTableSuiteProvider>
   );
 }

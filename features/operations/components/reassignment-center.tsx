@@ -4,17 +4,19 @@ import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { formatBillingMoney } from "@/features/billing/utils";
 import type { MovementBatchRow } from "@/features/operations/types";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import { REASSIGNMENT_BATCH_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 
 const STATUS_VARIANT: Record<
   string,
@@ -34,75 +36,110 @@ const TYPE_LABELS: Record<string, string> = {
   group_to_group: "Group → Group",
 };
 
+const REASSIGNMENT_BATCH_COLUMNS: OperationalConfigurableColumnDef<MovementBatchRow>[] = [
+  {
+    id: "batch_number",
+    label: "Batch #",
+    monoCell: true,
+    renderCell: (batch) => <DocumentNumber value={batch.document_number} />,
+  },
+  {
+    id: "type",
+    label: "Type",
+    renderCell: (batch) => TYPE_LABELS[batch.movement_type] ?? batch.movement_type,
+  },
+  {
+    id: "status",
+    label: "Status",
+    renderCell: (batch) => (
+      <Badge variant={STATUS_VARIANT[batch.status] ?? "outline"}>{batch.status}</Badge>
+    ),
+  },
+  {
+    id: "campaigns",
+    label: "Campaigns",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (batch) => batch.campaign_count,
+  },
+  {
+    id: "revenue",
+    label: "Revenue",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (batch) => formatBillingMoney(batch.total_revenue),
+  },
+  {
+    id: "gp",
+    label: "GP",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (batch) => formatBillingMoney(batch.total_gp),
+  },
+  {
+    id: "invoices",
+    label: "Invoices",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (batch) => batch.total_invoices,
+  },
+  {
+    id: "moved_by",
+    label: "Moved by",
+    renderCell: (batch) => batch.created_by_name ?? "—",
+  },
+  {
+    id: "executed",
+    label: "Executed",
+    renderCell: (batch) =>
+      batch.executed_at
+        ? format(new Date(batch.executed_at), "MMM d, yyyy HH:mm")
+        : "—",
+  },
+  {
+    id: "reason",
+    label: "Reason",
+    cellClassName: "max-w-[200px] truncate",
+    renderCell: (batch) => batch.reason,
+  },
+];
+
+const REASSIGNMENT_BATCH_COLUMN_METAS = getOperationalTableColumnMetas(REASSIGNMENT_BATCH_COLUMNS);
+
 type ReassignmentCenterProps = {
   batches: MovementBatchRow[];
 };
 
 export function ReassignmentCenter({ batches }: ReassignmentCenterProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Reassignment history</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Audit trail for campaign movements — batch numbers, totals, and execution status.
-        </p>
-      </CardHeader>
-      <CardContent>
+    <OperationalTableSuiteProvider
+      tableId={OPERATIONAL_TABLE_IDS.operationsReassignmentBatches}
+      columns={REASSIGNMENT_BATCH_COLUMNS}
+      rows={batches}
+      filterAccessors={REASSIGNMENT_BATCH_FILTER_ACCESSORS}
+    >
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <CampaignOperationalSectionHeader
+            title="Reassignment history"
+            description="Audit trail for campaign movements — batch numbers, totals, and execution status."
+            actions={<OperationalTableControlsSlot contextLabel="Reassignment batches" />}
+          />
+        }
+      >
         {batches.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No movement batches yet.</p>
+          <p className="px-4 py-8 text-[11px] text-muted-foreground">No movement batches yet.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Batch #</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Campaigns</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">GP</TableHead>
-                  <TableHead className="text-right">Invoices</TableHead>
-                  <TableHead>Moved by</TableHead>
-                  <TableHead>Executed</TableHead>
-                  <TableHead>Reason</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {batches.map((batch) => (
-                  <TableRow key={batch.id}>
-                    <TableCell className="text-xs">
-                      <DocumentNumber value={batch.document_number} />
-                    </TableCell>
-                    <TableCell>{TYPE_LABELS[batch.movement_type] ?? batch.movement_type}</TableCell>
-                    <TableCell>
-                      <Badge variant={STATUS_VARIANT[batch.status] ?? "outline"}>
-                        {batch.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{batch.campaign_count}</TableCell>
-                    <TableCell className="text-right">
-                      {formatBillingMoney(batch.total_revenue)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatBillingMoney(batch.total_gp)}
-                    </TableCell>
-                    <TableCell className="text-right">{batch.total_invoices}</TableCell>
-                    <TableCell>{batch.created_by_name ?? "—"}</TableCell>
-                    <TableCell>
-                      {batch.executed_at
-                        ? format(new Date(batch.executed_at), "MMM d, yyyy HH:mm")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={batch.reason}>
-                      {batch.reason}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <OperationalConfigurableTable
+            columns={REASSIGNMENT_BATCH_COLUMNS}
+            rows={batches}
+            rowKey={(batch) => batch.id}
+          />
         )}
-      </CardContent>
-    </Card>
+      </OperationalTableSection>
+    </OperationalTableSuiteProvider>
   );
 }

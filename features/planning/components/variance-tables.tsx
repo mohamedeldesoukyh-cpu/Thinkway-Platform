@@ -1,15 +1,20 @@
 "use client";
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  OperationalConfigurableTable,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
 import type { VarianceAnalysis } from "@/lib/planning/types/variance";
+import {
+  buildVarianceTableColumns,
+  type VarianceMetric,
+} from "@/lib/tables/variance-table-columns";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
 
 type VarianceTablesProps = {
@@ -21,75 +26,84 @@ type VarianceTablesProps = {
   global: VarianceAnalysis | null;
 };
 
-type VarianceMetric = keyof Pick<
-  VarianceAnalysis["variance_amount"],
-  "revenue" | "gp" | "collections"
->;
+const VARIANCE_TABLE_CONFIG = [
+  {
+    title: "Largest positive variance",
+    tableId: OPERATIONAL_TABLE_IDS.planningVariancePositive,
+    contextLabel: "Positive variance",
+  },
+  {
+    title: "Largest negative variance",
+    tableId: OPERATIONAL_TABLE_IDS.planningVarianceNegative,
+    contextLabel: "Negative variance",
+  },
+  {
+    title: "Client variance",
+    tableId: OPERATIONAL_TABLE_IDS.planningVarianceClient,
+    contextLabel: "Client variance",
+  },
+  {
+    title: "Brand variance",
+    tableId: OPERATIONAL_TABLE_IDS.planningVarianceBrand,
+    contextLabel: "Brand variance",
+  },
+  {
+    title: "Country variance",
+    tableId: OPERATIONAL_TABLE_IDS.planningVarianceCountry,
+    contextLabel: "Country variance",
+  },
+] as const;
 
 function VarianceTable({
   title,
+  tableId,
+  contextLabel,
   rows,
   metric = "revenue",
 }: {
   title: string;
+  tableId: (typeof OPERATIONAL_TABLE_IDS)[keyof typeof OPERATIONAL_TABLE_IDS];
+  contextLabel: string;
   rows: VarianceAnalysis[];
   metric?: VarianceMetric;
 }) {
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-2xl border border-border p-4">
-        <p className="text-sm font-medium">{title}</p>
-        <p className="mt-2 text-xs text-muted-foreground">No variance data.</p>
-      </div>
-    );
-  }
+  const columns = buildVarianceTableColumns(metric);
 
   return (
-    <div className="rounded-2xl border border-border">
-      <p className="border-b border-border px-4 py-2 text-sm font-medium">{title}</p>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Entity</TableHead>
-            <TableHead className="text-right">Budget</TableHead>
-            <TableHead className="text-right">Actual</TableHead>
-            <TableHead className="text-right">Variance</TableHead>
-            <TableHead className="text-right">%</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => {
-            const amount = row.variance_amount[metric];
-            const pct = row.variance_percent[metric as keyof VarianceAnalysis["variance_percent"]];
-            const format = (n: number) =>
-              formatAnalyticsAmount(n, row.currency, { decimals: 0 });
-
-            return (
-              <TableRow key={row.key}>
-                <TableCell className="max-w-[180px] truncate">{row.label}</TableCell>
-                <TableCell className="text-right font-mono text-xs">
-                  {format(row.budget.revenue_budget)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-xs">
-                  {format(row.actual.revenue)}
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    "text-right font-mono text-xs",
-                    amount >= 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400"
-                  )}
-                >
-                  {format(amount)}
-                </TableCell>
-                <TableCell className="text-right text-xs">{pct.toFixed(1)}%</TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+    <OperationalTableSuiteProvider
+      tableId={tableId}
+      columns={columns}
+      rows={rows}
+      filterAccessors={{
+        entity: (row) => row.label,
+        budget: (row) => row.budget[`${metric}_budget` as keyof typeof row.budget],
+        actual: (row) => row.actual[metric as keyof typeof row.actual],
+        variance: (row) => row.variance_amount[metric as keyof typeof row.variance_amount],
+        percent: (row) => row.variance_percent[metric as keyof typeof row.variance_percent],
+      }}
+    >
+      <OperationalTableSection
+        wide
+        tableOnly
+        cardSurface
+        leading={
+          <CampaignOperationalSectionHeader
+            title={title}
+            actions={<OperationalTableControlsSlot contextLabel={contextLabel} />}
+          />
+        }
+      >
+        {rows.length === 0 ? (
+          <p className="px-4 py-8 text-[11px] text-muted-foreground">No variance data.</p>
+        ) : (
+          <OperationalConfigurableTable
+            columns={columns}
+            rows={rows}
+            rowKey={(row) => row.key}
+          />
+        )}
+      </OperationalTableSection>
+    </OperationalTableSuiteProvider>
   );
 }
 
@@ -101,6 +115,14 @@ export function VarianceTables({
   countryVariance,
   global,
 }: VarianceTablesProps) {
+  const rowSets = [
+    topPositive,
+    topNegative,
+    clientVariance,
+    brandVariance,
+    countryVariance,
+  ];
+
   return (
     <div className="space-y-4">
       {global ? (
@@ -142,11 +164,15 @@ export function VarianceTables({
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <VarianceTable title="Largest positive variance" rows={topPositive} />
-        <VarianceTable title="Largest negative variance" rows={topNegative} />
-        <VarianceTable title="Client variance" rows={clientVariance} />
-        <VarianceTable title="Brand variance" rows={brandVariance} />
-        <VarianceTable title="Country variance" rows={countryVariance} />
+        {VARIANCE_TABLE_CONFIG.map((config, index) => (
+          <VarianceTable
+            key={config.tableId}
+            title={config.title}
+            tableId={config.tableId}
+            contextLabel={config.contextLabel}
+            rows={rowSets[index] ?? []}
+          />
+        ))}
       </div>
     </div>
   );

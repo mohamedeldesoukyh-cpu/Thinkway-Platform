@@ -7,7 +7,7 @@ alwaysApply: true
 
 Before designing schema, UI, workflows, or new modules, read:
 
-- `docs/THINKWAY_SYSTEM_REFERENCE.md` — canonical product spec (from IConnect reference doc, May 2026)
+- `docs/THINKWAY_SYSTEM_REFERENCE.md` — canonical product spec (May 2026)
 - `docs/ARCHITECTURE_ALIGNMENT.md` — current codebase vs spec gap analysis
 
 ## Non-negotiable hierarchy (preserve)
@@ -47,4 +47,4 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 
 ## Branding
 
-- Product: **Thinkway** · Client: **IConnect** · Prefix: **TW** · Primary: `#1D9E75`
+- Product: **Thinkway** · Prefix: **TW** · Primary: `#1D9E75`

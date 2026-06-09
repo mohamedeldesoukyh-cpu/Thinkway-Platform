@@ -39,6 +39,11 @@ import {
 } from "lucide-react";
 
 import { UserAccount } from "@/components/layout/user-account";
+import {
+  APP_SIDEBAR_WIDTH_COLLAPSED,
+  APP_SIDEBAR_WIDTH_CSS_VAR,
+  APP_SIDEBAR_WIDTH_EXPANDED,
+} from "@/lib/layout/app-sidebar-width";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -233,6 +238,14 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
     setExpanded(value);
     localStorage.setItem(STORAGE_EXPANDED, String(value));
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    document.documentElement.style.setProperty(
+      APP_SIDEBAR_WIDTH_CSS_VAR,
+      expanded ? APP_SIDEBAR_WIDTH_EXPANDED : APP_SIDEBAR_WIDTH_COLLAPSED
+    );
+  }, [expanded, hydrated]);
 
   const toggleGroup = useCallback((label: string) => {
     setCollapsedGroups((prev) => {

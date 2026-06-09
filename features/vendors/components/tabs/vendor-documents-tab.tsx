@@ -1,20 +1,21 @@
 "use client";
 
 import { format } from "date-fns";
-import { useActionState, useEffect, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useTransition } from "react";
 import { toast } from "sonner";
 
 import { DocumentUploadForm } from "@/components/forms/document-upload-form";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  OperationalConfigurableTable,
+  type OperationalConfigurableColumnDef,
+  getOperationalTableColumnMetas,
+} from "@/components/tables/operational-configurable-table";
+import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { Button } from "@/components/ui/button";
+import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
   deleteInfluencerDocumentAction,
   getInfluencerDocumentDownloadUrlAction,
@@ -24,59 +25,103 @@ import {
   INFLUENCER_DOCUMENT_TYPE_OPTIONS,
   labelForOption,
 } from "@/features/vendors/constants";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import type { VendorDetail } from "@/types/database";
+import { VENDOR_DOCUMENTS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+
+type DocumentRow = VendorDetail["documents"][number];
+
+function buildVendorDocumentsColumns(
+  influencerId: string
+): OperationalConfigurableColumnDef<DocumentRow>[] {
+  return [
+    {
+      id: "type",
+      label: "Type",
+      renderCell: (doc) =>
+        labelForOption(INFLUENCER_DOCUMENT_TYPE_OPTIONS, doc.document_type),
+    },
+    {
+      id: "file",
+      label: "File",
+      cellClassName: "max-w-[200px] truncate",
+      renderCell: (doc) => doc.file_name,
+    },
+    {
+      id: "uploaded",
+      label: "Uploaded",
+      cellClassName: "text-muted-foreground",
+      renderCell: (doc) => format(new Date(doc.created_at), "MMM d, yyyy"),
+    },
+    {
+      id: "expiry",
+      label: "Expiry",
+      cellClassName: "text-muted-foreground",
+      renderCell: (doc) =>
+        doc.expires_at ? format(new Date(doc.expires_at), "MMM d, yyyy") : "—",
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      locked: true,
+      headerClassName: "text-right",
+      cellClassName: "text-right",
+      renderCell: (doc) => (
+        <DocumentActionsCell influencerId={influencerId} doc={doc} />
+      ),
+    },
+  ];
+}
 
 export function VendorDocumentsTab({ vendor }: { vendor: VendorDetail }) {
+  const columns = useMemo(
+    () => buildVendorDocumentsColumns(vendor.id),
+    [vendor.id]
+  );
+  const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
+
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload document</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DocumentUploadForm
-            entityId={vendor.id}
-            documentTypeOptions={INFLUENCER_DOCUMENT_TYPE_OPTIONS}
-            action={uploadInfluencerDocumentWrapper}
-          />
-        </CardContent>
-      </Card>
+      <OperationalFormSection title="Upload document">
+        <DocumentUploadForm
+          entityId={vendor.id}
+          documentTypeOptions={INFLUENCER_DOCUMENT_TYPE_OPTIONS}
+          action={uploadInfluencerDocumentWrapper}
+        />
+      </OperationalFormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Document library</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.vendorDocuments}
+        columns={columns}
+        rows={vendor.documents}
+        filterAccessors={VENDOR_DOCUMENTS_FILTER_ACCESSORS}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Document library"
+              actions={
+                <OperationalTableControlsSlot contextLabel="Vendor documents" />
+              }
+            />
+          }
+        >
           {vendor.documents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="px-4 py-8 text-[11px] text-muted-foreground">
               No documents uploaded yet.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>File</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead>Expiry</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendor.documents.map((doc) => (
-                    <DocumentRow
-                      key={doc.id}
-                      influencerId={vendor.id}
-                      doc={doc}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <OperationalConfigurableTable
+              columns={columns}
+              rows={vendor.documents}
+              rowKey={(doc) => doc.id}
+            />
           )}
-        </CardContent>
-      </Card>
+        </OperationalTableSection>
+      </OperationalTableSuiteProvider>
     </div>
   );
 }
@@ -96,12 +141,12 @@ async function uploadInfluencerDocumentWrapper(
   return uploadInfluencerDocumentAction(prev, mapped);
 }
 
-function DocumentRow({
+function DocumentActionsCell({
   influencerId,
   doc,
 }: {
   influencerId: string;
-  doc: VendorDetail["documents"][number];
+  doc: DocumentRow;
 }) {
   const [isPending, startTransition] = useTransition();
   const [deleteState, deleteAction] = useActionState(
@@ -121,53 +166,37 @@ function DocumentRow({
   }, [deleteState]);
 
   return (
-    <TableRow>
-      <TableCell>
-        {labelForOption(INFLUENCER_DOCUMENT_TYPE_OPTIONS, doc.document_type)}
-      </TableCell>
-      <TableCell className="max-w-[200px] truncate">{doc.file_name}</TableCell>
-      <TableCell className="text-muted-foreground">
-        {format(new Date(doc.created_at), "MMM d, yyyy")}
-      </TableCell>
-      <TableCell className="text-muted-foreground">
-        {doc.expires_at
-          ? format(new Date(doc.expires_at), "MMM d, yyyy")
-          : "—"}
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isPending}
-            onClick={() => {
-              startTransition(async () => {
-                const result = await getInfluencerDocumentDownloadUrlAction(
-                  doc.id,
-                  influencerId
-                );
-                if (result.error) {
-                  toast.error(result.error);
-                  return;
-                }
-                if (result.url) {
-                  window.open(result.url, "_blank", "noopener,noreferrer");
-                }
-              });
-            }}
-          >
-            Download
-          </Button>
-          <form action={deleteAction}>
-            <input type="hidden" name="document_id" value={doc.id} />
-            <input type="hidden" name="influencer_id" value={influencerId} />
-            <Button type="submit" variant="ghost" size="sm">
-              Remove
-            </Button>
-          </form>
-        </div>
-      </TableCell>
-    </TableRow>
+    <div className="flex justify-end gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={isPending}
+        onClick={() => {
+          startTransition(async () => {
+            const result = await getInfluencerDocumentDownloadUrlAction(
+              doc.id,
+              influencerId
+            );
+            if (result.error) {
+              toast.error(result.error);
+              return;
+            }
+            if (result.url) {
+              window.open(result.url, "_blank", "noopener,noreferrer");
+            }
+          });
+        }}
+      >
+        Download
+      </Button>
+      <form action={deleteAction}>
+        <input type="hidden" name="document_id" value={doc.id} />
+        <input type="hidden" name="influencer_id" value={influencerId} />
+        <Button type="submit" variant="ghost" size="sm">
+          Remove
+        </Button>
+      </form>
+    </div>
   );
 }

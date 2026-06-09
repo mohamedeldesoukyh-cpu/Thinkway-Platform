@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import type { BillingDashboard } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { cn } from "@/lib/utils";
@@ -27,15 +27,10 @@ export function AgingReport({ aging, currency, mixedCurrency = false }: AgingRep
       : formatBillingMoney(amount, currency);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">A/R aging</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Outstanding balance by days past due ·{" "}
-          {formatAmount(totalOutstanding)} total
-        </p>
-      </CardHeader>
-      <CardContent>
+    <CampaignFlatSection
+      title="A/R aging"
+      description={`Outstanding balance by days past due · ${formatAmount(totalOutstanding)} total`}
+    >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {aging.map((bucket, index) => {
             const pct =
@@ -63,7 +58,6 @@ export function AgingReport({ aging, currency, mixedCurrency = false }: AgingRep
             );
           })}
         </div>
-      </CardContent>
-    </Card>
+    </CampaignFlatSection>
   );
 }
