@@ -55,15 +55,19 @@ import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package
 import { calculatePoConsumption } from "@/lib/finance/po/calculations";
 import { formatMoney } from "@/features/campaigns/utils";
 import {
-  applyAssignmentTotalsToCommercialRows,
+  applyAssignmentCommercialToCommercialRows,
   commercialRowsToPlatformSelections,
   createEmptyCommercialRow,
+  rowTotalRevenue,
   summarizeCommercialRows,
   type CommercialDeliverableRow,
 } from "@/lib/assignments/commercial-calculations";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
-import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
+import {
+  computeAgencyFeeAmount,
+  computeClientBilling,
+} from "@/lib/assignments/client-billing-commercial";
 
 import type {
   CampaignLineAssignmentStatus,
@@ -245,18 +249,30 @@ export function CampaignLineSheet({
   const effectiveCommercialRows = useMemo((): CommercialDeliverableRow[] => {
     if (pricingMode !== "per_deliverable") return [];
     if (commercialRows.length > 0) {
-      return applyAssignmentTotalsToCommercialRows(commercialRows, revenue, cost);
+      return applyAssignmentCommercialToCommercialRows(
+        commercialRows,
+        revenue,
+        cost,
+        usageRightsAmount,
+        agencyFeePercent
+      );
     }
     const platforms =
       activeSelections.length > 0
         ? activeSelections.map(({ selected: _s, ...rest }) => rest)
         : (line?.assignment?.platforms ?? []);
     if (platforms.length === 0) return [];
-    return packagePlatformsToCommercialRows(platforms, {
-      totalRevenueBeforeVat: revenue,
-      totalCostBeforeVat: cost,
-      dueDate: endDate || null,
-    });
+    return applyAssignmentCommercialToCommercialRows(
+      packagePlatformsToCommercialRows(platforms, {
+        totalRevenueBeforeVat: revenue,
+        totalCostBeforeVat: cost,
+        dueDate: endDate || null,
+      }),
+      revenue,
+      cost,
+      usageRightsAmount,
+      agencyFeePercent
+    );
   }, [
     pricingMode,
     commercialRows,
@@ -264,6 +280,8 @@ export function CampaignLineSheet({
     line?.assignment?.platforms,
     revenue,
     cost,
+    usageRightsAmount,
+    agencyFeePercent,
     endDate,
   ]);
 
@@ -276,6 +294,36 @@ export function CampaignLineSheet({
     () => JSON.stringify(effectiveCommercialRows),
     [effectiveCommercialRows]
   );
+
+  const urAfPreview = useMemo(() => {
+    if (pricingMode === "per_deliverable" && effectiveCommercialRows.length > 0) {
+      const preview = computeClientBilling({
+        revenueBeforeVat: effectiveCommercialSummary.total_revenue_before_vat,
+        usageRightsAmount,
+        agencyFeePercent,
+        vatPercent: revenueVatPercent,
+        vatExempt: revenueVatExempt,
+      });
+      return {
+        agencyFeeAmount: preview.agencyFeeAmount,
+        totalBilling: preview.totalBilling,
+      };
+    }
+    return {
+      agencyFeeAmount: billingPreview.agencyFeeAmount,
+      totalBilling: billingPreview.totalBilling,
+    };
+  }, [
+    pricingMode,
+    effectiveCommercialRows.length,
+    effectiveCommercialSummary.total_revenue_before_vat,
+    usageRightsAmount,
+    agencyFeePercent,
+    revenueVatPercent,
+    revenueVatExempt,
+    billingPreview.agencyFeeAmount,
+    billingPreview.totalBilling,
+  ]);
 
   const autoTitle = useMemo(() => {
     if (!influencerLabel || activeSelections.length === 0) return "";
@@ -298,9 +346,27 @@ export function CampaignLineSheet({
     setCost(commercialSummary.total_cost_before_vat);
     setCostReceived(commercialSummary.total_cost_before_vat);
     setCostReceivedCurrency(currency);
+
+    const totalUr = commercialRows.reduce(
+      (sum, row) => sum + (row.usage_rights_amount ?? 0),
+      0
+    );
+    setUsageRightsAmount(Math.round(totalUr * 100) / 100);
+
+    const revenueTotal = commercialSummary.total_revenue_before_vat;
+    const agencyFeeAmount = commercialRows.reduce((sum, row) => {
+      const rowRevenue = rowTotalRevenue(row);
+      const ur = Number(row.usage_rights_amount ?? 0);
+      return sum + computeAgencyFeeAmount(rowRevenue, ur, row.agency_fee_percent ?? 0);
+    }, 0);
+    const weightedAfPercent =
+      revenueTotal + totalUr > 0
+        ? Math.round((agencyFeeAmount / (revenueTotal + totalUr)) * 10000) / 100
+        : 0;
+    setAgencyFeePercent(weightedAfPercent);
   }, [
     pricingMode,
-    commercialRows.length,
+    commercialRows,
     commercialSummary.total_revenue_before_vat,
     commercialSummary.total_cost_before_vat,
     currency,
@@ -676,7 +742,15 @@ export function CampaignLineSheet({
                     }
                   );
                   if (converted.length > 0) {
-                    setCommercialRows(converted);
+                    setCommercialRows(
+                      applyAssignmentCommercialToCommercialRows(
+                        converted,
+                        revenue,
+                        cost,
+                        usageRightsAmount,
+                        agencyFeePercent
+                      )
+                    );
                   }
                 }
                 setPricingMode(next);
@@ -830,59 +904,60 @@ export function CampaignLineSheet({
               }
             />
 
-            {pricingMode === "package" ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Usage rights (UR)
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={usageRightsAmount}
-                    onChange={(event) =>
-                      setUsageRightsAmount(Number(event.target.value) || 0)
-                    }
-                    disabled={commercialFieldsLocked(
-                      Boolean(line?.revenue_locked || line?.vat_locked)
-                    )}
-                    className={DETAIL_FORM_INPUT_CLASS}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Agency fee (AF %)
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step="0.01"
-                    value={agencyFeePercent}
-                    onChange={(event) =>
-                      setAgencyFeePercent(Number(event.target.value) || 0)
-                    }
-                    disabled={commercialFieldsLocked(
-                      Boolean(line?.revenue_locked || line?.vat_locked)
-                    )}
-                    className={DETAIL_FORM_INPUT_CLASS}
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    AF amount: {currency}{" "}
-                    {billingPreview.agencyFeeAmount.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    · Total billing: {currency}{" "}
-                    {billingPreview.totalBilling.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Usage rights (UR)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={usageRightsAmount}
+                  onChange={(event) =>
+                    setUsageRightsAmount(Number(event.target.value) || 0)
+                  }
+                  disabled={commercialFieldsLocked(
+                    Boolean(line?.revenue_locked || line?.vat_locked)
+                  )}
+                  className={DETAIL_FORM_INPUT_CLASS}
+                />
               </div>
-            ) : null}
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Agency fee (AF %)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  value={agencyFeePercent}
+                  onChange={(event) =>
+                    setAgencyFeePercent(Number(event.target.value) || 0)
+                  }
+                  disabled={commercialFieldsLocked(
+                    Boolean(line?.revenue_locked || line?.vat_locked)
+                  )}
+                  className={DETAIL_FORM_INPUT_CLASS}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {pricingMode === "per_deliverable"
+                    ? "Distributes to deliverable rows on save · "
+                    : ""}
+                  AF amount: {currency}{" "}
+                  {urAfPreview.agencyFeeAmount.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  · Total billing: {currency}{" "}
+                  {urAfPreview.totalBilling.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+              </div>
+            </div>
 
             <AssignmentMultiCurrencyCostFields
               campaignCurrency={currency}

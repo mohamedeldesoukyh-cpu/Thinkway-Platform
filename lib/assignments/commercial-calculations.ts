@@ -51,6 +51,22 @@ export function rowTotalRevenue(
   return Math.round(row.quantity * row.revenue_before_vat * 100) / 100;
 }
 
+function rowTotalUsageRights(
+  row: Pick<CommercialDeliverableRow, "usage_rights_amount">
+): number {
+  return Math.max(0, row.usage_rights_amount ?? 0);
+}
+
+function totalUsageRightsFromRows(rows: CommercialDeliverableRow[]): number {
+  return rows.reduce((sum, row) => sum + rowTotalUsageRights(row), 0);
+}
+
+function rowsMatchAgencyFeePercent(rows: CommercialDeliverableRow[], target: number): boolean {
+  return rows.every(
+    (row) => Math.abs((row.agency_fee_percent ?? 0) - target) < 0.01
+  );
+}
+
 /** Keeps per-deliverable rows aligned when assignment-level revenue/cost fields change. */
 export function applyAssignmentTotalsToCommercialRows(
   rows: CommercialDeliverableRow[],
@@ -96,6 +112,61 @@ export function applyAssignmentTotalsToCommercialRows(
       unit_cost: Math.round((scaledCost / quantity) * 100) / 100,
     };
   });
+}
+
+/** Distributes assignment-level UR and AF% to per-deliverable commercial rows. */
+export function applyAssignmentUrAfToCommercialRows(
+  rows: CommercialDeliverableRow[],
+  targetUr: number,
+  targetAfPercent: number
+): CommercialDeliverableRow[] {
+  if (rows.length === 0) return rows;
+
+  const currentUr = totalUsageRightsFromRows(rows);
+  if (
+    Math.abs(targetUr - currentUr) < 0.01 &&
+    rowsMatchAgencyFeePercent(rows, targetAfPercent)
+  ) {
+    return rows;
+  }
+
+  if (rows.length === 1) {
+    return [
+      {
+        ...rows[0]!,
+        usage_rights_amount: Math.round(Math.max(0, targetUr) * 100) / 100,
+        agency_fee_percent: Math.max(0, targetAfPercent),
+      },
+    ];
+  }
+
+  const summary = summarizeCommercialRows(rows);
+  const totalRevenue = summary.total_revenue_before_vat;
+
+  return rows.map((row) => {
+    const rowRevenue = rowTotalRevenue(row);
+    const urShare =
+      totalRevenue > 0
+        ? (rowRevenue / totalRevenue) * targetUr
+        : targetUr / rows.length;
+    return {
+      ...row,
+      usage_rights_amount: Math.round(Math.max(0, urShare) * 100) / 100,
+      agency_fee_percent: Math.max(0, targetAfPercent),
+    };
+  });
+}
+
+/** Applies assignment revenue, cost, UR, and AF% to child commercial rows. */
+export function applyAssignmentCommercialToCommercialRows(
+  rows: CommercialDeliverableRow[],
+  targetRevenue: number,
+  targetCost: number,
+  targetUr: number,
+  targetAfPercent: number
+): CommercialDeliverableRow[] {
+  const withTotals = applyAssignmentTotalsToCommercialRows(rows, targetRevenue, targetCost);
+  return applyAssignmentUrAfToCommercialRows(withTotals, targetUr, targetAfPercent);
 }
 
 export function summarizeCommercialRows(rows: CommercialDeliverableRow[]): CommercialSummary {

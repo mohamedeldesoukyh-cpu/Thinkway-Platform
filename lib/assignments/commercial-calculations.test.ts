@@ -3,6 +3,7 @@
  */
 import {
   applyAssignmentTotalsToCommercialRows,
+  applyAssignmentUrAfToCommercialRows,
   summarizeCommercialRows,
   type CommercialDeliverableRow,
 } from "@/lib/assignments/commercial-calculations";
@@ -36,4 +37,71 @@ function testSingleRowSyncsAssignmentTotals() {
 }
 
 testSingleRowSyncsAssignmentTotals();
-console.log("commercial-calculations: 1 passed");
+
+function testUrAfDistributesByRevenueShare() {
+  const rows: CommercialDeliverableRow[] = [
+    {
+      id: "row-1",
+      platform: "instagram",
+      deliverable_type: "reel",
+      quantity: 1,
+      unit_cost: 500,
+      revenue_before_vat: 3000,
+      usage_rights_amount: 0,
+      agency_fee_percent: 0,
+      live_date: null,
+      notes: null,
+      schedule_mode: "single",
+      post_schedules: [],
+    },
+    {
+      id: "row-2",
+      platform: "tiktok",
+      deliverable_type: "video",
+      quantity: 1,
+      unit_cost: 500,
+      revenue_before_vat: 2000,
+      usage_rights_amount: 0,
+      agency_fee_percent: 0,
+      live_date: null,
+      notes: null,
+      schedule_mode: "single",
+      post_schedules: [],
+    },
+  ];
+
+  const synced = applyAssignmentUrAfToCommercialRows(rows, 1000, 10);
+  const urTotal = synced.reduce((sum, row) => sum + (row.usage_rights_amount ?? 0), 0);
+
+  assert(Math.abs(urTotal - 1000) < 0.02, "UR should sum to assignment target");
+  assert(synced[0]!.usage_rights_amount === 600, "UR should scale 60/40 by revenue");
+  assert(synced[1]!.usage_rights_amount === 400, "UR should scale 60/40 by revenue");
+  assert(synced.every((row) => row.agency_fee_percent === 10), "AF% should match assignment");
+}
+
+function testSingleRowUrAfSync() {
+  const rows: CommercialDeliverableRow[] = [
+    {
+      id: "row-1",
+      platform: "instagram",
+      deliverable_type: "reel",
+      quantity: 2,
+      unit_cost: 1000,
+      revenue_before_vat: 3000,
+      usage_rights_amount: 0,
+      agency_fee_percent: 0,
+      live_date: null,
+      notes: null,
+      schedule_mode: "single",
+      post_schedules: [],
+    },
+  ];
+
+  const synced = applyAssignmentUrAfToCommercialRows(rows, 500, 15);
+  assert(synced[0]!.usage_rights_amount === 500, "single row UR should match target");
+  assert(synced[0]!.agency_fee_percent === 15, "single row AF% should match target");
+}
+
+testUrAfDistributesByRevenueShare();
+testSingleRowUrAfSync();
+console.log("commercial-calculations: 3 passed");

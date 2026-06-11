@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ResolvedLineCommercialInput } from "@/lib/assignments/resolve-line-commercial-input";
+import {
+  applyAssignmentUrAfToCommercialRows,
+} from "@/lib/assignments/commercial-calculations";
 import { syncAssignmentCommercialRows } from "@/lib/assignments/sync-commercial-rows";
 import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
 
@@ -12,6 +15,8 @@ export async function syncAssignmentDeliverablesForLine(
     commercial: ResolvedLineCommercialInput;
     revenueBeforeVat: number;
     costBeforeVat: number;
+    usageRightsAmount: number;
+    agencyFeePercent: number;
     dueDate: string | null;
     revenueVatPercent: number;
     revenueVatExempt: boolean;
@@ -30,6 +35,11 @@ export async function syncAssignmentDeliverablesForLine(
       totalCostBeforeVat: input.costBeforeVat,
       dueDate: input.dueDate,
     });
+    rows = applyAssignmentUrAfToCommercialRows(
+      rows,
+      input.usageRightsAmount,
+      input.agencyFeePercent
+    );
   }
 
   if (rows.length === 0) return;
