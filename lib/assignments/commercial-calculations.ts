@@ -1,3 +1,4 @@
+import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import {
   getDeliverableTypeCodesForPlatform,
 } from "@/lib/campaigns/deliverable-taxonomy";
@@ -24,6 +25,8 @@ export type CommercialDeliverableRow = {
   quantity: number;
   unit_cost: number;
   revenue_before_vat: number;
+  usage_rights_amount?: number;
+  agency_fee_percent?: number;
   live_date: string | null;
   notes: string | null;
   schedule_mode: "single" | "expanded";
@@ -98,11 +101,15 @@ export function applyAssignmentTotalsToCommercialRows(
 export function summarizeCommercialRows(rows: CommercialDeliverableRow[]): CommercialSummary {
   const total_cost_before_vat = rows.reduce((s, r) => s + rowTotalCost(r), 0);
   const total_revenue_before_vat = rows.reduce((s, r) => s + rowTotalRevenue(r), 0);
-  const gp = total_revenue_before_vat - total_cost_before_vat;
+  const billing_base = rows.reduce((sum, row) => {
+    const revenue = rowTotalRevenue(row);
+    const ur = row.usage_rights_amount ?? 0;
+    const af = computeAgencyFeeAmount(revenue, ur, row.agency_fee_percent ?? 0);
+    return sum + revenue + ur + af;
+  }, 0);
+  const gp = Math.round((billing_base - total_cost_before_vat) * 100) / 100;
   const margin_percent =
-    total_revenue_before_vat > 0
-      ? Math.round((gp / total_revenue_before_vat) * 10000) / 100
-      : 0;
+    billing_base > 0 ? Math.round((gp / billing_base) * 10000) / 100 : 0;
   const deliverable_units = rows.reduce((s, r) => s + r.quantity, 0);
 
   return {
@@ -123,6 +130,8 @@ export function createEmptyCommercialRow(platform = "instagram"): CommercialDeli
     quantity: 1,
     unit_cost: 0,
     revenue_before_vat: 0,
+    usage_rights_amount: 0,
+    agency_fee_percent: 0,
     live_date: null,
     notes: null,
     schedule_mode: "single",

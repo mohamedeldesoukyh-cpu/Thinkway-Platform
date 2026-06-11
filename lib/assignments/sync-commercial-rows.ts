@@ -4,11 +4,13 @@ import type {
   CommercialDeliverableRow,
   PostScheduleEntry,
 } from "@/lib/assignments/commercial-calculations";
+import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import {
   expandPostSchedules,
   rowTotalCost,
   rowTotalRevenue,
 } from "@/lib/assignments/commercial-calculations";
+import { computeVatLine } from "@/lib/vat/calculations";
 
 export async function syncAssignmentCommercialRows(
   supabase: SupabaseClient,
@@ -47,12 +49,19 @@ export async function syncAssignmentCommercialRows(
     }
     const costBeforeVat = rowTotalCost(row);
     const revenueBeforeVat = rowTotalRevenue(row);
-    const revenueVatAmount = input.revenueVatExempt
-      ? 0
-      : Math.round(revenueBeforeVat * input.revenueVatPercent) / 100;
-    const costVatAmount = input.costVatExempt
-      ? 0
-      : Math.round(costBeforeVat * input.costVatPercent) / 100;
+    const billing = computeClientBilling({
+      revenueBeforeVat,
+      usageRightsAmount: row.usage_rights_amount,
+      agencyFeePercent: row.agency_fee_percent,
+      vatPercent: input.revenueVatExempt ? 0 : input.revenueVatPercent,
+      vatExempt: input.revenueVatExempt,
+      costBeforeVat,
+    });
+    const cost = computeVatLine({
+      beforeVat: costBeforeVat,
+      vatPercent: input.costVatExempt ? 0 : input.costVatPercent,
+      exempt: input.costVatExempt,
+    });
 
     const { data: inserted, error } = await supabase
       .from("assignment_deliverables")
@@ -65,22 +74,25 @@ export async function syncAssignmentCommercialRows(
         quantity: row.quantity,
         unit_cost: row.unit_cost,
         total_cost: costBeforeVat,
-        revenue_before_vat: revenueBeforeVat,
-        revenue_vat_percent: input.revenueVatExempt ? 0 : input.revenueVatPercent,
-        revenue_vat_amount: revenueVatAmount,
-        revenue_after_vat: revenueBeforeVat + revenueVatAmount,
-        cost_before_vat: costBeforeVat,
-        cost_vat_percent: input.costVatExempt ? 0 : input.costVatPercent,
-        cost_vat_amount: costVatAmount,
-        cost_after_vat: costBeforeVat + costVatAmount,
+        revenue_before_vat: billing.revenueBeforeVat,
+        usage_rights_amount: billing.usageRightsAmount,
+        agency_fee_percent: billing.agencyFeePercent,
+        agency_fee_amount: billing.agencyFeeAmount,
+        revenue_vat_percent: billing.vatPercent,
+        revenue_vat_amount: billing.vatAmount,
+        revenue_after_vat: billing.totalBilling,
+        cost_before_vat: cost.beforeVat,
+        cost_vat_percent: cost.vatPercent,
+        cost_vat_amount: cost.vatAmount,
+        cost_after_vat: cost.afterVat,
         live_date: row.live_date,
         schedule_mode: row.schedule_mode,
         notes: row.notes,
         metadata: { client_row_id: row.id },
         revenue_vat_exempt: input.revenueVatExempt,
         cost_vat_exempt: input.costVatExempt,
-        billable_amount: revenueBeforeVat,
-        remaining_amount: revenueBeforeVat,
+        billable_amount: billing.taxableBase,
+        remaining_amount: billing.taxableBase,
         billing_status: "draft",
       })
       .select("id")

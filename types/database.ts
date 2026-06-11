@@ -167,6 +167,9 @@ export type CampaignLineRow = {
   revenue: number;
   cost: number;
   revenue_before_vat: number;
+  usage_rights_amount?: number;
+  agency_fee_percent?: number;
+  agency_fee_amount?: number;
   revenue_vat_percent: number;
   revenue_vat_amount: number;
   revenue_after_vat: number;
@@ -556,6 +559,9 @@ export type Database = {
           revenue?: number;
           cost?: number;
           revenue_before_vat?: number;
+          usage_rights_amount?: number;
+          agency_fee_percent?: number;
+          agency_fee_amount?: number;
           revenue_vat_percent?: number;
           revenue_vat_amount?: number;
           revenue_after_vat?: number;
@@ -764,6 +770,9 @@ export type Database = {
           unit_cost: number;
           total_cost: number;
           revenue_before_vat: number;
+          usage_rights_amount: number;
+          agency_fee_percent: number;
+          agency_fee_amount: number;
           revenue_vat_percent: number;
           revenue_vat_amount: number;
           revenue_after_vat: number;
@@ -800,6 +809,9 @@ export type Database = {
           unit_cost?: number;
           total_cost?: number;
           revenue_before_vat?: number;
+          usage_rights_amount?: number;
+          agency_fee_percent?: number;
+          agency_fee_amount?: number;
           revenue_vat_percent?: number;
           revenue_vat_amount?: number;
           revenue_after_vat?: number;

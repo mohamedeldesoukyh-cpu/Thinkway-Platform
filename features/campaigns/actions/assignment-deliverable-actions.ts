@@ -14,6 +14,7 @@ import { applyLiveAdDateLockAfterDateInsert } from "@/lib/billing/apply-live-ad-
 import { syncAssignmentLineTitleFromDeliverables } from "@/lib/campaigns/sync-assignment-line-title";
 import { canEditLiveAdDate } from "@/lib/campaigns/live-ad-date";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { computeVatLine } from "@/lib/vat/calculations";
 
 const platformSchema = z.string().trim().min(1).max(64);
@@ -41,6 +42,8 @@ const createDeliverableSchema = z.object({
   cost_vat_percent: z.coerce.number().min(0).max(100).optional(),
   live_date: z.string().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  usage_rights_amount: z.coerce.number().min(0).optional(),
+  agency_fee_percent: z.coerce.number().min(0).max(100).optional(),
 });
 
 const updateDeliverableSchema = createDeliverableSchema.extend({
@@ -135,6 +138,8 @@ function computeDeliverableCommercial(input: {
   quantity: number;
   unit_cost: number;
   unit_revenue: number;
+  usage_rights_amount?: number;
+  agency_fee_percent?: number;
   revenue_vat_percent: number;
   revenue_vat_exempt: boolean;
   cost_vat_percent: number;
@@ -143,10 +148,13 @@ function computeDeliverableCommercial(input: {
   const costBeforeVat = roundMoney(input.quantity * input.unit_cost);
   const revenueBeforeVat = roundMoney(input.quantity * input.unit_revenue);
 
-  const revenue = computeVatLine({
-    beforeVat: revenueBeforeVat,
+  const billing = computeClientBilling({
+    revenueBeforeVat,
+    usageRightsAmount: input.usage_rights_amount,
+    agencyFeePercent: input.agency_fee_percent,
     vatPercent: input.revenue_vat_exempt ? 0 : input.revenue_vat_percent,
-    exempt: input.revenue_vat_exempt,
+    vatExempt: input.revenue_vat_exempt,
+    costBeforeVat,
   });
 
   const cost = computeVatLine({
@@ -164,12 +172,15 @@ function computeDeliverableCommercial(input: {
     cost_vat_amount: cost.vatAmount,
     cost_after_vat: cost.afterVat,
     cost_vat_exempt: cost.exempt,
-    revenue_before_vat: revenueBeforeVat,
-    revenue_vat_percent: revenue.vatPercent,
-    revenue_vat_amount: revenue.vatAmount,
-    revenue_after_vat: revenue.afterVat,
-    revenue_vat_exempt: revenue.exempt,
-    billable_amount: revenueBeforeVat,
+    revenue_before_vat: billing.revenueBeforeVat,
+    usage_rights_amount: billing.usageRightsAmount,
+    agency_fee_percent: billing.agencyFeePercent,
+    agency_fee_amount: billing.agencyFeeAmount,
+    revenue_vat_percent: billing.vatPercent,
+    revenue_vat_amount: billing.vatAmount,
+    revenue_after_vat: billing.totalBilling,
+    revenue_vat_exempt: input.revenue_vat_exempt,
+    billable_amount: billing.taxableBase,
   };
 }
 
@@ -203,6 +214,8 @@ export async function createAssignmentDeliverableAction(
       quantity: parsed.data.quantity,
       unit_cost: parsed.data.unit_cost,
       unit_revenue: parsed.data.unit_revenue,
+      usage_rights_amount: parsed.data.usage_rights_amount,
+      agency_fee_percent: parsed.data.agency_fee_percent,
       revenue_vat_percent:
         parsed.data.revenue_vat_percent ?? Number(line.revenue_vat_percent ?? 0),
       revenue_vat_exempt: line.revenue_vat_exempt ?? false,
@@ -223,6 +236,9 @@ export async function createAssignmentDeliverableAction(
         unit_cost: commercial.unit_cost,
         total_cost: commercial.total_cost,
         revenue_before_vat: commercial.revenue_before_vat,
+        usage_rights_amount: commercial.usage_rights_amount,
+        agency_fee_percent: commercial.agency_fee_percent,
+        agency_fee_amount: commercial.agency_fee_amount,
         revenue_vat_percent: commercial.revenue_vat_percent,
         revenue_vat_amount: commercial.revenue_vat_amount,
         revenue_after_vat: commercial.revenue_after_vat,
@@ -364,6 +380,8 @@ export async function updateAssignmentDeliverableAction(
       quantity: parsed.data.quantity,
       unit_cost: parsed.data.unit_cost,
       unit_revenue: parsed.data.unit_revenue,
+      usage_rights_amount: parsed.data.usage_rights_amount,
+      agency_fee_percent: parsed.data.agency_fee_percent,
       revenue_vat_percent:
         parsed.data.revenue_vat_percent ?? Number(line.revenue_vat_percent ?? 0),
       revenue_vat_exempt: line.revenue_vat_exempt ?? false,
@@ -384,6 +402,9 @@ export async function updateAssignmentDeliverableAction(
         unit_cost: commercial.unit_cost,
         total_cost: commercial.total_cost,
         revenue_before_vat: commercial.revenue_before_vat,
+        usage_rights_amount: commercial.usage_rights_amount,
+        agency_fee_percent: commercial.agency_fee_percent,
+        agency_fee_amount: commercial.agency_fee_amount,
         revenue_vat_percent: commercial.revenue_vat_percent,
         revenue_vat_amount: commercial.revenue_vat_amount,
         revenue_after_vat: commercial.revenue_after_vat,

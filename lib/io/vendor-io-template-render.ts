@@ -189,7 +189,7 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
   );
   html = html.replace(
     `<span class="label">Platform Distribution Fee</span>\n          <span class="amount">[EGP ——]</span>`,
-    `<span class="label">Platform Distribution Fee</span>\n          <span class="amount">${formatMoney(pricing.platformDistributionFee, currency)}</span>`
+    `<span class="label">Agency Fee (AF)</span>\n          <span class="amount">${formatMoney(pricing.platformDistributionFee, currency)}</span>`
   );
   html = html.replace(
     `<span class="label">Usage Rights Fee</span>\n          <span class="amount">[EGP ——]</span>`,

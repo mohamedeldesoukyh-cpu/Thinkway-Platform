@@ -204,9 +204,13 @@ function buildRollups(
   line: AssignmentHierarchyGroup["line"]
 ): AssignmentHierarchyRollups {
   if (deliverables.length === 0) {
-    const revenue = Number(line.revenue) || 0;
-    const cost = Number(line.cost) || 0;
-    const gp = Number.isFinite(Number(line.gp)) ? Number(line.gp) : revenue - cost;
+    const revenue = Number(line.revenue_before_vat ?? line.revenue) || 0;
+    const billingBase =
+      revenue +
+      Number(line.usage_rights_amount ?? 0) +
+      Number(line.agency_fee_amount ?? 0);
+    const cost = Number(line.cost_before_vat ?? line.cost) || 0;
+    const gp = Number.isFinite(Number(line.gp)) ? Number(line.gp) : billingBase - cost;
     return {
       deliverable_count: 0,
       revenue,
@@ -220,8 +224,11 @@ function buildRollups(
   }
 
   const revenue = deliverables.reduce((s, d) => s + d.revenue_before_vat, 0);
+  const usageRights = deliverables.reduce((s, d) => s + (d.usage_rights_amount ?? 0), 0);
+  const agencyFees = deliverables.reduce((s, d) => s + (d.agency_fee_amount ?? 0), 0);
+  const billingBase = revenue + usageRights + agencyFees;
   const cost = deliverables.reduce((s, d) => s + d.cost_before_vat, 0);
-  const gp = revenue - cost;
+  const gp = billingBase - cost;
   const billingRollup = rollupAssignmentBilling(
     deliverables.map((d) => ({
       id: d.id,
@@ -251,7 +258,7 @@ function buildRollups(
     revenue,
     cost,
     gp,
-    margin_percent: formatMarginPercent(revenue, gp),
+    margin_percent: formatMarginPercent(billingBase, gp),
     invoiced_value: billingRollup.invoiced_value,
     remaining_value: billingRollup.remaining_value,
     collected_value: billingRollup.collected_value,
@@ -574,6 +581,15 @@ async function loadCampaignAssignmentHierarchy(
       live_date: resolvedLiveDate,
       notes: row.notes ?? null,
       revenue_before_vat: Number(row.revenue_before_vat),
+      usage_rights_amount: Number(
+        (row as { usage_rights_amount?: number }).usage_rights_amount ?? 0
+      ),
+      agency_fee_percent: Number(
+        (row as { agency_fee_percent?: number }).agency_fee_percent ?? 0
+      ),
+      agency_fee_amount: Number(
+        (row as { agency_fee_amount?: number }).agency_fee_amount ?? 0
+      ),
       cost_before_vat: Number(row.cost_before_vat ?? 0),
       revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
       revenue_vat_amount: Number(row.revenue_vat_amount ?? 0),

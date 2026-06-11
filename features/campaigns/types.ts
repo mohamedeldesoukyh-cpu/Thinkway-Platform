@@ -115,6 +115,9 @@ export type CampaignLineWorkspace = {
   revenue: number;
   cost: number;
   revenue_before_vat: number;
+  usage_rights_amount: number;
+  agency_fee_percent: number;
+  agency_fee_amount: number;
   revenue_vat_percent: number;
   revenue_vat_amount: number;
   revenue_after_vat: number;

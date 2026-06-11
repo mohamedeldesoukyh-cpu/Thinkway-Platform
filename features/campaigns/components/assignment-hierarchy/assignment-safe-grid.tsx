@@ -441,6 +441,21 @@ export function AssignmentSafeGrid({
                   {HIERARCHY_COLUMN_LABELS.revenue}
                 </th>
               ) : null}
+              {col("usageRights") ? (
+                <th className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                  {HIERARCHY_COLUMN_LABELS.usageRights}
+                </th>
+              ) : null}
+              {col("agencyFeePercent") ? (
+                <th className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_VAT_COL)}>
+                  {HIERARCHY_COLUMN_LABELS.agencyFeePercent}
+                </th>
+              ) : null}
+              {col("agencyFee") ? (
+                <th className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                  {HIERARCHY_COLUMN_LABELS.agencyFee}
+                </th>
+              ) : null}
               {gates.showInternalFinancials && col("cost") ? (
                 <th className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.cost}
@@ -610,6 +625,21 @@ export function AssignmentSafeGrid({
                         {col("revenue") ? (
                           <td className={cn(SAFE_GRID_HIGHLIGHT_REV, ASSIGNMENT_GRID_MONEY_COL)}>
                             {formatOperationalAmount(row.rollups.revenue)}
+                          </td>
+                        ) : null}
+                        {col("usageRights") ? (
+                          <td className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT)}>
+                            {formatOperationalAmount(line.usage_rights_amount)}
+                          </td>
+                        ) : null}
+                        {col("agencyFeePercent") ? (
+                          <td className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_VAT_COL, SAFE_GRID_AMOUNT, "text-muted-foreground")}>
+                            {formatPercent(line.agency_fee_percent)}
+                          </td>
+                        ) : null}
+                        {col("agencyFee") ? (
+                          <td className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT)}>
+                            {formatOperationalAmount(line.agency_fee_amount)}
                           </td>
                         ) : null}
                         {gates.showInternalFinancials && col("cost") ? (

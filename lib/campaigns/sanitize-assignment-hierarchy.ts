@@ -84,7 +84,6 @@ function sanitizeDeliverable(
 
     const revenue = finiteNumber(row.revenue_before_vat);
     const cost = finiteNumber(row.cost_before_vat);
-    const margin = formatMarginPercent(revenue, revenue - cost);
 
     return {
       id: String(row.id),
@@ -100,6 +99,15 @@ function sanitizeDeliverable(
       live_date: row.live_date ?? null,
       notes: row.notes ?? null,
       revenue_before_vat: revenue,
+      usage_rights_amount: finiteNumber(
+        (row as { usage_rights_amount?: number }).usage_rights_amount
+      ),
+      agency_fee_percent: finiteNumber(
+        (row as { agency_fee_percent?: number }).agency_fee_percent
+      ),
+      agency_fee_amount: finiteNumber(
+        (row as { agency_fee_amount?: number }).agency_fee_amount
+      ),
       cost_before_vat: cost,
       revenue_vat_percent: finiteNumber(row.revenue_vat_percent),
       revenue_vat_amount: finiteNumber(row.revenue_vat_amount),
@@ -282,6 +290,9 @@ function sanitizeLine(
       gp: finiteNumber(line.gp),
       margin_percent: finiteNumber(line.margin_percent),
       revenue_before_vat: finiteNumber(line.revenue_before_vat, finiteNumber(line.revenue)),
+      usage_rights_amount: finiteNumber(line.usage_rights_amount),
+      agency_fee_percent: finiteNumber(line.agency_fee_percent),
+      agency_fee_amount: finiteNumber(line.agency_fee_amount),
       cost_before_vat: finiteNumber(line.cost_before_vat, finiteNumber(line.cost)),
       cost_received: finiteNumber(line.cost_received),
       cost_received_currency: line.cost_received_currency ?? null,

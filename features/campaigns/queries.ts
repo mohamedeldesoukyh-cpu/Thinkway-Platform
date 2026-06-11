@@ -88,6 +88,9 @@ type LineRow = {
   revenue: number;
   cost: number;
   revenue_before_vat?: number;
+  usage_rights_amount?: number;
+  agency_fee_percent?: number;
+  agency_fee_amount?: number;
   revenue_vat_percent?: number;
   revenue_vat_amount?: number;
   revenue_after_vat?: number;
@@ -599,6 +602,9 @@ export async function getCampaignWorkspace(
       revenue,
       cost,
       revenue_before_vat: Number(line.revenue_before_vat ?? revenue),
+      usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+      agency_fee_percent: Number(line.agency_fee_percent ?? 0),
+      agency_fee_amount: Number(line.agency_fee_amount ?? 0),
       revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
       revenue_vat_amount: Number(line.revenue_vat_amount ?? 0),
       revenue_after_vat: Number(line.revenue_after_vat ?? revenue),
@@ -615,7 +621,12 @@ export async function getCampaignWorkspace(
       cost_vat_exempt: line.cost_vat_exempt ?? false,
       vat_locked: line.vat_locked ?? false,
       gp,
-      margin_percent: formatMarginPercent(revenue, gp),
+      margin_percent: formatMarginPercent(
+        Number(line.revenue_before_vat ?? revenue) +
+          Number(line.usage_rights_amount ?? 0) +
+          Number(line.agency_fee_amount ?? 0),
+        gp
+      ),
       po_amount: poAmount,
       po_consumed: poConsumed,
       remaining_po: Number(line.remaining_po),

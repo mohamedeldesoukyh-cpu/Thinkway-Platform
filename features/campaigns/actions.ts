@@ -7,6 +7,10 @@ import {
 } from "@/features/campaigns/constants";
 import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
+import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
+import {
+  rowTotalRevenue,
+} from "@/lib/assignments/commercial-calculations";
 import { resolveLineCommercialInput } from "@/lib/assignments/resolve-line-commercial-input";
 import { syncAssignmentDeliverablesForLine } from "@/lib/assignments/sync-assignment-deliverables-for-line";
 import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
@@ -87,11 +91,56 @@ function resolveAssignmentMultiCurrencyCost(parsed: {
   };
 }
 
+function resolveAssignmentCommercialBilling(
+  commercial: {
+    pricing_mode: "package" | "per_deliverable";
+    commercial_rows: Array<{
+      quantity: number;
+      revenue_before_vat: number;
+      usage_rights_amount?: number;
+      agency_fee_percent?: number;
+    }>;
+  },
+  lineUsageRightsAmount: number,
+  lineAgencyFeePercent: number
+) {
+  if (commercial.pricing_mode === "per_deliverable" && commercial.commercial_rows.length > 0) {
+    const usageRightsAmount = commercial.commercial_rows.reduce(
+      (sum, row) => sum + Number(row.usage_rights_amount ?? 0),
+      0
+    );
+    const revenueTotal = commercial.commercial_rows.reduce(
+      (sum, row) => sum + rowTotalRevenue(row),
+      0
+    );
+    const agencyFeeAmount = commercial.commercial_rows.reduce((sum, row) => {
+      const revenue = rowTotalRevenue(row);
+      const ur = Number(row.usage_rights_amount ?? 0);
+      return sum + computeAgencyFeeAmount(revenue, ur, row.agency_fee_percent ?? 0);
+    }, 0);
+    const agencyFeePercent =
+      revenueTotal + usageRightsAmount > 0
+        ? Math.round((agencyFeeAmount / (revenueTotal + usageRightsAmount)) * 10000) / 100
+        : 0;
+    return {
+      usage_rights_amount: Math.round(usageRightsAmount * 100) / 100,
+      agency_fee_percent: agencyFeePercent,
+    };
+  }
+
+  return {
+    usage_rights_amount: lineUsageRightsAmount,
+    agency_fee_percent: lineAgencyFeePercent,
+  };
+}
+
 function resolveLineVatInput(
   parsed: {
     revenue: number;
     cost: number;
     revenue_before_vat?: number;
+    usage_rights_amount?: number;
+    agency_fee_percent?: number;
     cost_before_vat?: number;
     revenue_vat_percent: number;
     cost_vat_percent: number;
@@ -125,6 +174,8 @@ function resolveLineVatInput(
 
   return buildLineVatPayload({
     revenue_before_vat: revenueBeforeVat,
+    usage_rights_amount: parsed.usage_rights_amount ?? 0,
+    agency_fee_percent: parsed.agency_fee_percent ?? 0,
     revenue_vat_percent: revenueVatPercent,
     revenue_vat_exempt: revenueExempt,
     cost_before_vat: costBeforeVat,
@@ -459,11 +510,18 @@ export async function createCampaignLineAction(
     cost: commercial.cost_before_vat || parsed.data.cost,
     cost_before_vat: commercial.cost_before_vat || parsed.data.cost_before_vat,
   });
+  const commercialBilling = resolveAssignmentCommercialBilling(
+    commercial,
+    parsed.data.usage_rights_amount,
+    parsed.data.agency_fee_percent
+  );
   const lineInput = {
     ...parsed.data,
     revenue: commercial.revenue_before_vat || parsed.data.revenue,
     ...costFx,
     revenue_before_vat: commercial.revenue_before_vat || parsed.data.revenue_before_vat,
+    usage_rights_amount: commercialBilling.usage_rights_amount,
+    agency_fee_percent: commercialBilling.agency_fee_percent,
   };
 
   const { vatRate: clientVatRate } = await resolveCampaignBillingVatRate(
@@ -763,11 +821,18 @@ export async function updateCampaignLineAction(
     cost: commercial.cost_before_vat || parsed.data.cost,
     cost_before_vat: commercial.cost_before_vat || parsed.data.cost_before_vat,
   });
+  const commercialBilling = resolveAssignmentCommercialBilling(
+    commercial,
+    parsed.data.usage_rights_amount,
+    parsed.data.agency_fee_percent
+  );
   const lineInput = {
     ...parsed.data,
     revenue: commercial.revenue_before_vat || parsed.data.revenue,
     ...costFx,
     revenue_before_vat: commercial.revenue_before_vat || parsed.data.revenue_before_vat,
+    usage_rights_amount: commercialBilling.usage_rights_amount,
+    agency_fee_percent: commercialBilling.agency_fee_percent,
   };
 
   const { vatRate: clientVatRate } = await resolveCampaignBillingVatRate(

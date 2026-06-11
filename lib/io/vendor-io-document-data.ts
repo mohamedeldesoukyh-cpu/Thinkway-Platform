@@ -67,7 +67,7 @@ export async function loadVendorIoDocumentData(
       .single(),
     supabase
       .from("vendor_io_lines")
-      .select("campaign_line_id, campaign_lines:campaign_line_id(id, name, document_number, metadata, cost_before_vat, cost, revenue_before_vat, revenue)")
+      .select("campaign_line_id, campaign_lines:campaign_line_id(id, name, document_number, metadata, cost_before_vat, cost, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount)")
       .eq("vendor_io_id", vendorIoId),
   ]);
 
@@ -176,6 +176,8 @@ export async function loadVendorIoDocumentData(
     cost: number | null;
     revenue_before_vat: number | null;
     revenue: number | null;
+    usage_rights_amount?: number | null;
+    agency_fee_amount?: number | null;
   };
 
   const linkedLines = (lineLinks ?? [])
@@ -209,12 +211,18 @@ export async function loadVendorIoDocumentData(
     Number((deliverables?.[0] as { cost_vat_percent?: number } | undefined)?.cost_vat_percent) ||
     THINKWAY_AGENCY_DEFAULTS.defaultVatPercent;
 
-  const platformDistributionFee = 0;
-  const usageRightsFee = Math.max(
-    0,
-    Number(typedVio.amount) - lineSubtotal - platformDistributionFee
+  const linkedUsageRightsTotal = linkedLines.reduce(
+    (sum, line) => sum + Number(line?.usage_rights_amount ?? 0),
+    0
   );
-  const totalDue = Number(typedVio.amount) || lineSubtotal + vatAmount;
+  const linkedAgencyFeeTotal = linkedLines.reduce(
+    (sum, line) => sum + Number(line?.agency_fee_amount ?? 0),
+    0
+  );
+  const platformDistributionFee = 0;
+  const usageRightsFee = linkedUsageRightsTotal;
+  const agencyFeeAmount = linkedAgencyFeeTotal;
+  const totalDue = Number(typedVio.amount) || lineSubtotal + usageRightsFee + agencyFeeAmount + vatAmount;
 
   const platforms = [
     ...new Set([
@@ -313,7 +321,7 @@ export async function loadVendorIoDocumentData(
     deliverables: deliverableRows,
     pricing: {
       contentCreationFee: lineSubtotal,
-      platformDistributionFee,
+      platformDistributionFee: agencyFeeAmount,
       usageRightsFee,
       vatAmount,
       vatPercent,

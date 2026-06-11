@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
-import { computeOperationalGp } from "@/lib/vat/calculations";
+import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { buildLineVatPayload } from "@/lib/vat/line-payload";
 
 type LineContext = {
@@ -16,6 +16,8 @@ type LineContext = {
 
 type DeliverableRollupRow = {
   revenue_before_vat: number;
+  usage_rights_amount: number;
+  agency_fee_amount: number;
   cost_before_vat: number;
   quantity: number;
 };
@@ -43,7 +45,7 @@ export async function syncLineCommercialRollupsFromDeliverables(
 
   const { data: rows, error: rowsError } = await supabase
     .from("assignment_deliverables")
-    .select("revenue_before_vat, cost_before_vat, quantity")
+    .select("revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, cost_before_vat, quantity")
     .eq("campaign_line_id", lineId)
     .order("sort_order");
 
@@ -59,6 +61,12 @@ export async function syncLineCommercialRollupsFromDeliverables(
   const revenueBeforeVat = roundMoney(
     deliverables.reduce((sum, row) => sum + Number(row.revenue_before_vat), 0)
   );
+  const usageRightsAmount = roundMoney(
+    deliverables.reduce((sum, row) => sum + Number(row.usage_rights_amount ?? 0), 0)
+  );
+  const agencyFeeAmount = roundMoney(
+    deliverables.reduce((sum, row) => sum + Number(row.agency_fee_amount ?? 0), 0)
+  );
   const costBeforeVat = roundMoney(
     deliverables.reduce((sum, row) => sum + Number(row.cost_before_vat), 0)
   );
@@ -66,11 +74,16 @@ export async function syncLineCommercialRollupsFromDeliverables(
     (sum, row) => sum + Number(row.quantity),
     0
   );
-  const gpResult = computeOperationalGp(revenueBeforeVat, costBeforeVat);
+  const agencyFeePercent =
+    revenueBeforeVat + usageRightsAmount > 0
+      ? roundMoney((agencyFeeAmount / (revenueBeforeVat + usageRightsAmount)) * 100)
+      : 0;
 
   const lineCtx = line as LineContext;
   const vatPayload = buildLineVatPayload({
     revenue_before_vat: revenueBeforeVat,
+    usage_rights_amount: usageRightsAmount,
+    agency_fee_percent: agencyFeePercent,
     revenue_vat_percent: Number(lineCtx.revenue_vat_percent ?? 0),
     revenue_vat_exempt: lineCtx.revenue_vat_exempt ?? false,
     cost_before_vat: costBeforeVat,
@@ -85,12 +98,21 @@ export async function syncLineCommercialRollupsFromDeliverables(
     pricing_mode: "per_deliverable",
   };
 
+  const billing = computeClientBilling({
+    revenueBeforeVat: vatPayload.revenue_before_vat,
+    usageRightsAmount: vatPayload.usage_rights_amount,
+    agencyFeePercent,
+    vatPercent: vatPayload.revenue_vat_percent,
+    vatExempt: vatPayload.revenue_vat_exempt,
+    costBeforeVat: vatPayload.cost_before_vat,
+  });
+
   await supabase
     .from("campaign_lines")
     .update({
       ...vatPayload,
-      gp: gpResult.gp,
-      margin_percent: gpResult.marginPercent,
+      gp: billing.gp,
+      margin_percent: billing.marginPercent,
       deliverable_count: deliverableCount,
       pricing_mode: "per_deliverable",
       metadata,

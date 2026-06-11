@@ -1,8 +1,11 @@
+import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { computeVatLine } from "@/lib/vat/calculations";
 import { resolveVendorDefaultVatPercent } from "@/lib/vat/queries";
 
 export type LineVatFormInput = {
   revenue_before_vat: number;
+  usage_rights_amount?: number;
+  agency_fee_percent?: number;
   revenue_vat_percent: number;
   revenue_vat_exempt: boolean;
   cost_before_vat: number;
@@ -11,10 +14,13 @@ export type LineVatFormInput = {
 };
 
 export function buildLineVatPayload(input: LineVatFormInput) {
-  const revenue = computeVatLine({
-    beforeVat: input.revenue_before_vat,
+  const billing = computeClientBilling({
+    revenueBeforeVat: input.revenue_before_vat,
+    usageRightsAmount: input.usage_rights_amount,
+    agencyFeePercent: input.agency_fee_percent,
     vatPercent: input.revenue_vat_percent,
-    exempt: input.revenue_vat_exempt,
+    vatExempt: input.revenue_vat_exempt,
+    costBeforeVat: input.cost_before_vat,
   });
 
   const cost = computeVatLine({
@@ -24,12 +30,15 @@ export function buildLineVatPayload(input: LineVatFormInput) {
   });
 
   return {
-    revenue_before_vat: revenue.beforeVat,
-    revenue_vat_percent: revenue.vatPercent,
-    revenue_vat_amount: revenue.vatAmount,
-    revenue_after_vat: revenue.afterVat,
-    revenue_vat_exempt: revenue.exempt,
-    revenue: revenue.beforeVat,
+    revenue_before_vat: billing.revenueBeforeVat,
+    usage_rights_amount: billing.usageRightsAmount,
+    agency_fee_percent: billing.agencyFeePercent,
+    agency_fee_amount: billing.agencyFeeAmount,
+    revenue_vat_percent: billing.vatPercent,
+    revenue_vat_amount: billing.vatAmount,
+    revenue_after_vat: billing.totalBilling,
+    revenue_vat_exempt: input.revenue_vat_exempt,
+    revenue: billing.revenueBeforeVat,
     cost_before_vat: cost.beforeVat,
     cost_vat_percent: cost.vatPercent,
     cost_vat_amount: cost.vatAmount,

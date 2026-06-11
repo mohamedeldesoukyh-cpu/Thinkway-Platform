@@ -46,6 +46,9 @@ export type AssignmentDeliverableHierarchyRow = {
   live_date: string | null;
   notes: string | null;
   revenue_before_vat: number;
+  usage_rights_amount: number;
+  agency_fee_percent: number;
+  agency_fee_amount: number;
   cost_before_vat: number;
   revenue_vat_percent: number;
   revenue_vat_amount: number;

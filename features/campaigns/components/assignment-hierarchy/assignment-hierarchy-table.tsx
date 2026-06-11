@@ -309,6 +309,15 @@ export function AssignmentHierarchyTable({
                   {HIERARCHY_COLUMN_LABELS.revenue}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead className="tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.usageRights}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.agencyFeePercent}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.agencyFee}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.cost}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead className="tabular-nums">

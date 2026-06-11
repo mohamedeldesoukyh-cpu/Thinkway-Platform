@@ -63,7 +63,7 @@ import {
 } from "@/lib/assignments/commercial-calculations";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
-import { computeOperationalGp } from "@/lib/vat/calculations";
+import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 
 import type {
   CampaignLineAssignmentStatus,
@@ -118,6 +118,8 @@ export function CampaignLineSheet({
     line?.cost_received_currency ?? line?.currency_code ?? currencyCode
   );
   const [revenue, setRevenue] = useState(line?.revenue_before_vat ?? line?.revenue ?? 0);
+  const [usageRightsAmount, setUsageRightsAmount] = useState(line?.usage_rights_amount ?? 0);
+  const [agencyFeePercent, setAgencyFeePercent] = useState(line?.agency_fee_percent ?? 0);
   const [revenueVatPercent, setRevenueVatPercent] = useState(
     line?.revenue_vat_percent ?? defaultRevenueVatPercent
   );
@@ -155,9 +157,21 @@ export function CampaignLineSheet({
   const formAction = isEdit ? updateAction : createAction;
   const isPending = isEdit ? updatePending : createPending;
 
+  const billingPreview = useMemo(
+    () =>
+      computeClientBilling({
+        revenueBeforeVat: revenue,
+        usageRightsAmount,
+        agencyFeePercent,
+        vatPercent: revenueVatPercent,
+        vatExempt: revenueVatExempt,
+        costBeforeVat: cost,
+      }),
+    [revenue, usageRightsAmount, agencyFeePercent, revenueVatPercent, revenueVatExempt, cost]
+  );
   const gpPreview = useMemo(
-    () => computeOperationalGp(revenue, cost),
-    [revenue, cost]
+    () => ({ gp: billingPreview.gp, marginPercent: billingPreview.marginPercent }),
+    [billingPreview]
   );
 
   const activeSelections = useMemo(
@@ -421,6 +435,8 @@ export function CampaignLineSheet({
       line?.cost_received_currency ?? line?.currency_code ?? currencyCode
     );
     setRevenue(line?.revenue_before_vat ?? line?.revenue ?? 0);
+    setUsageRightsAmount(line?.usage_rights_amount ?? 0);
+    setAgencyFeePercent(line?.agency_fee_percent ?? 0);
     setRevenueVatPercent(line?.revenue_vat_percent ?? defaultRevenueVatPercent);
     setRevenueVatExempt(line?.revenue_vat_exempt ?? false);
     setCostVatPercent(line?.cost_vat_percent ?? 0);
@@ -523,9 +539,7 @@ export function CampaignLineSheet({
   const commercialFieldsLocked = (locked: boolean) =>
     isPending || (!financeOverrideActive && locked);
 
-  const revenueVatAmount = revenueVatExempt
-    ? 0
-    : Math.round(revenue * revenueVatPercent) / 100;
+  const revenueVatAmount = billingPreview.vatAmount;
   const costVatAmount = costVatExempt
     ? 0
     : Math.round(cost * costVatPercent) / 100;
@@ -816,6 +830,60 @@ export function CampaignLineSheet({
               }
             />
 
+            {pricingMode === "package" ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Usage rights (UR)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={usageRightsAmount}
+                    onChange={(event) =>
+                      setUsageRightsAmount(Number(event.target.value) || 0)
+                    }
+                    disabled={commercialFieldsLocked(
+                      Boolean(line?.revenue_locked || line?.vat_locked)
+                    )}
+                    className={DETAIL_FORM_INPUT_CLASS}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Agency fee (AF %)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={agencyFeePercent}
+                    onChange={(event) =>
+                      setAgencyFeePercent(Number(event.target.value) || 0)
+                    }
+                    disabled={commercialFieldsLocked(
+                      Boolean(line?.revenue_locked || line?.vat_locked)
+                    )}
+                    className={DETAIL_FORM_INPUT_CLASS}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    AF amount: {currency}{" "}
+                    {billingPreview.agencyFeeAmount.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    · Total billing: {currency}{" "}
+                    {billingPreview.totalBilling.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             <AssignmentMultiCurrencyCostFields
               campaignCurrency={currency}
               costReceived={costReceived}
@@ -857,6 +925,8 @@ export function CampaignLineSheet({
             <input type="hidden" name="revenue" value={revenue} />
             <input type="hidden" name="cost" value={cost} />
             <input type="hidden" name="revenue_before_vat" value={revenue} />
+            <input type="hidden" name="usage_rights_amount" value={usageRightsAmount} />
+            <input type="hidden" name="agency_fee_percent" value={agencyFeePercent} />
             <input type="hidden" name="cost_before_vat" value={cost} />
             <input type="hidden" name="revenue_vat_percent" value={revenueVatPercent} />
             <input type="hidden" name="cost_vat_percent" value={costVatPercent} />
@@ -868,7 +938,7 @@ export function CampaignLineSheet({
             <input type="hidden" name="cost_vat_exempt" value={costVatExempt ? "1" : "0"} />
 
             <p className="text-[11px] text-muted-foreground">
-              Operational GP (ex-VAT): {currency}{" "}
+              Operational GP (Rev + UR + AF − cost): {currency}{" "}
               {gpPreview.gp.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,

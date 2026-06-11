@@ -162,6 +162,15 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       >
         {formatOperationalAmount(rollups.revenue)}
       </TableCell>
+      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+        {formatOperationalAmount(line.usage_rights_amount)}
+      </TableCell>
+      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS, "text-muted-foreground")}>
+        {formatPercent(line.agency_fee_percent)}
+      </TableCell>
+      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+        {formatOperationalAmount(line.agency_fee_amount)}
+      </TableCell>
       <TableCell
         className={cn(
           "px-1.5 py-1.5 text-right",
