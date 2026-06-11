@@ -6,6 +6,10 @@ import {
   METADATA_PLATFORM_KEY,
 } from "@/features/campaigns/constants";
 import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
+import {
+  buildDuplicatedCampaignLineInsert,
+  copyAssignmentDeliverablesForDuplicate,
+} from "@/lib/campaigns/duplicate-campaign-lines";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
@@ -1203,19 +1207,6 @@ export async function duplicateCampaignAction(
     metadata: Record<string, unknown>;
   };
 
-  type SourceLine = {
-    id: string;
-    name: string;
-    platform: string | null;
-    po_amount: number;
-    revenue: number;
-    cost: number;
-    currency_code: string;
-    base_currency: string;
-    fx_rate: number;
-    metadata: Record<string, unknown>;
-  };
-
   type SourceVendor = {
     campaign_line_id: string | null;
     influencer_id: string;
@@ -1295,25 +1286,27 @@ export async function duplicateCampaignAction(
 
   const lineIdMap = new Map<string, string>();
 
-  for (const line of (sourceLines ?? []) as SourceLine[]) {
+  const sourceLineRows = (sourceLines ?? []) as Array<
+    Record<string, unknown> & {
+      id: string;
+      name: string;
+      platform: string | null;
+      metadata: Record<string, unknown>;
+    }
+  >;
+
+  for (const line of sourceLineRows) {
     const { data: newLine, error: lineError } = await supabase
       .from("campaign_lines")
-      .insert({
-        campaign_header_id: newHeader.id,
-        name: line.name,
-        status: "draft",
-        platform: line.platform,
-        po_amount: parsed.data.copy_pricing ? line.po_amount : 0,
-        revenue: parsed.data.copy_pricing ? line.revenue : 0,
-        cost: parsed.data.copy_pricing ? line.cost : 0,
-        currency_code: line.currency_code,
-        base_currency: line.base_currency,
-        fx_rate: line.fx_rate,
-        start_date: parsed.data.start_date,
-        end_date: parsed.data.end_date,
-        metadata: line.metadata,
-        created_by: user.id,
-      })
+      .insert(
+        buildDuplicatedCampaignLineInsert(line, {
+          campaignHeaderId: newHeader.id,
+          startDate: parsed.data.start_date,
+          endDate: parsed.data.end_date ?? null,
+          copyPricing: parsed.data.copy_pricing,
+          createdBy: user.id,
+        })
+      )
       .select("id")
       .single();
 
@@ -1326,6 +1319,24 @@ export async function duplicateCampaignAction(
   }
 
   if (parsed.data.copy_influencers) {
+    try {
+      await copyAssignmentDeliverablesForDuplicate(supabase, {
+        sourceLineIds: sourceLineRows.map((line) => line.id),
+        lineIdMap,
+        newHeaderId: newHeader.id,
+        copyPricing: parsed.data.copy_pricing,
+      });
+    } catch (error) {
+      await supabase.from("campaign_headers").delete().eq("id", newHeader.id);
+      return {
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to copy assignment deliverables.",
+      };
+    }
+
     const { data: vendors } = await supabase
       .from("campaign_influencers")
       .select("*")

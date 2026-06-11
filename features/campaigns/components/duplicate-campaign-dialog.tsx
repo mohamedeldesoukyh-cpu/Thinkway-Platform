@@ -61,9 +61,9 @@ export function DuplicateCampaignDialog({
             Duplicate campaign
           </DialogTitle>
           <DialogDescription>
-            Copy structure from {formatDocumentNumberForDisplay(workspace.document_number)}. New
-            campaign and line numbers will be generated.
-            Billing history, collections, and audit logs are excluded.
+            Copy structure and commercial amounts from{" "}
+            {formatDocumentNumberForDisplay(workspace.document_number)}. New campaign and line
+            numbers will be generated. Billing history, invoices, and audit logs are excluded.
           </DialogDescription>
         </DialogHeader>
 
