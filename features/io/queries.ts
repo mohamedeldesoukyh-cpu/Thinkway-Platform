@@ -1,14 +1,27 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { safeOperationalQuery } from "@/lib/platform/safe-query";
 import { devLog } from "@/lib/platform/logger";
-import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
-
 import type {
   ClientIoRow,
   IoSearchFilters,
   VendorIoRow,
 } from "@/features/io/types";
+import { mapVendorIoQueryRow } from "@/features/io/vendor-io-row-map";
 import { attachVendorIoUngenerateEligibility } from "@/features/io/vendor-io-query-helpers";
+
+const VENDOR_IO_LIST_SELECT = `
+  id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
+  special_payment_terms,
+  terms_html, terms_text, usage_rights, exclusivity, attachment_url,
+  generated_html_url, generated_pdf_url, document_generated_at,
+  sent_at, approved_at,
+  approved_by_name, rejection_reason, created_by, created_at, updated_at,
+  campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
+  influencer:influencers!vendor_ios_influencer_id_fkey(display_name, payment_terms),
+  assignment:campaign_influencers!vendor_ios_assignment_id_fkey(
+    line:campaign_lines!campaign_influencers_campaign_line_id_fkey(document_number)
+  )
+`;
 
 function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
@@ -110,20 +123,7 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
       const { supabase } = await requireUser();
       const { data, error } = await supabase
         .from("vendor_ios")
-        .select(
-          `
-          id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
-          terms_html, terms_text, usage_rights, exclusivity, attachment_url,
-          generated_html_url, generated_pdf_url, document_generated_at,
-          sent_at, approved_at,
-          approved_by_name, rejection_reason, created_by, created_at, updated_at,
-          campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
-          influencer:influencers!vendor_ios_influencer_id_fkey(display_name),
-          assignment:campaign_influencers!vendor_ios_assignment_id_fkey(
-            line:campaign_lines!campaign_influencers_campaign_line_id_fkey(document_number)
-          )
-        `
-        )
+        .select(VENDOR_IO_LIST_SELECT)
         .eq("campaign_header_id", campaignHeaderId)
         .eq("is_superseded", false)
         .order("created_at", { ascending: false });
@@ -132,70 +132,7 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
         throw new Error(error.message);
       }
 
-      const mapped = ((data ?? []) as unknown[]).map((row) => {
-        const typed = row as {
-          id: string;
-          document_number: string | null;
-          assignment_id: string;
-          campaign_header_id: string;
-          influencer_id: string;
-          amount: number;
-          currency_code: string;
-          status: VendorIoRow["status"];
-          terms_html: string | null;
-          terms_text: string | null;
-          usage_rights: string | null;
-          exclusivity: string | null;
-          attachment_url: string | null;
-          generated_html_url: string | null;
-          generated_pdf_url: string | null;
-          document_generated_at: string | null;
-          sent_at: string | null;
-          approved_at: string | null;
-          approved_by_name: string | null;
-          rejection_reason: string | null;
-          created_by: string | null;
-          created_at: string;
-          updated_at: string;
-          campaign: { document_number: string; name: string } | null;
-          influencer: { display_name: string } | null;
-          assignment: { line: { document_number: string } | null } | null;
-        };
-
-        return {
-          id: typed.id,
-          document_number: typed.document_number
-            ? formatDocumentNumberForDisplay(typed.document_number)
-            : typed.document_number,
-          assignment_id: typed.assignment_id,
-          campaign_header_id: typed.campaign_header_id,
-          campaign_name: typed.campaign?.name ?? "—",
-          campaign_document_number: typed.campaign?.document_number ?? "—",
-          assignment_document_number: typed.assignment?.line?.document_number ?? null,
-          influencer_id: typed.influencer_id,
-          influencer_name: typed.influencer?.display_name ?? "—",
-          amount: Number(typed.amount),
-          currency_code: typed.currency_code,
-          status: typed.status,
-          terms_html: typed.terms_html,
-          terms_text: typed.terms_text,
-          usage_rights: typed.usage_rights,
-          exclusivity: typed.exclusivity,
-          attachment_url: typed.attachment_url,
-          generated_html_url: typed.generated_html_url,
-          generated_pdf_url: typed.generated_pdf_url,
-          document_generated_at: typed.document_generated_at,
-          sent_at: typed.sent_at,
-          approved_at: typed.approved_at,
-          approved_by_name: typed.approved_by_name,
-          rejection_reason: typed.rejection_reason,
-          created_by: typed.created_by,
-          created_at: typed.created_at,
-          updated_at: typed.updated_at,
-          ungenerate_eligible: false,
-          ungenerate_ineligible_reason: null,
-        } satisfies VendorIoRow;
-      });
+      const mapped = ((data ?? []) as unknown[]).map((row) => mapVendorIoQueryRow(row as never));
 
       return attachVendorIoUngenerateEligibility(supabase, mapped);
     },
@@ -289,20 +226,7 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
       const { supabase } = await requireUser();
       let query = supabase
         .from("vendor_ios")
-        .select(
-          `
-          id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
-          terms_html, terms_text, usage_rights, exclusivity, attachment_url,
-          generated_html_url, generated_pdf_url, document_generated_at,
-          sent_at, approved_at,
-          approved_by_name, rejection_reason, created_by, created_at, updated_at,
-          campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
-          influencer:influencers!vendor_ios_influencer_id_fkey(display_name),
-          assignment:campaign_influencers!vendor_ios_assignment_id_fkey(
-            line:campaign_lines!campaign_influencers_campaign_line_id_fkey(document_number)
-          )
-        `
-        )
+        .select(VENDOR_IO_LIST_SELECT)
         .eq("is_superseded", false)
         .order("created_at", { ascending: false });
 
@@ -322,70 +246,7 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
         throw new Error(error.message);
       }
 
-      const mapped = ((data ?? []) as unknown[]).map((row) => {
-        const typed = row as {
-          id: string;
-          document_number: string | null;
-          assignment_id: string;
-          campaign_header_id: string;
-          influencer_id: string;
-          amount: number;
-          currency_code: string;
-          status: VendorIoRow["status"];
-          terms_html: string | null;
-          terms_text: string | null;
-          usage_rights: string | null;
-          exclusivity: string | null;
-          attachment_url: string | null;
-          generated_html_url: string | null;
-          generated_pdf_url: string | null;
-          document_generated_at: string | null;
-          sent_at: string | null;
-          approved_at: string | null;
-          approved_by_name: string | null;
-          rejection_reason: string | null;
-          created_by: string | null;
-          created_at: string;
-          updated_at: string;
-          campaign: { document_number: string; name: string } | null;
-          influencer: { display_name: string } | null;
-          assignment: { line: { document_number: string } | null } | null;
-        };
-
-        return {
-          id: typed.id,
-          document_number: typed.document_number
-            ? formatDocumentNumberForDisplay(typed.document_number)
-            : typed.document_number,
-          assignment_id: typed.assignment_id,
-          campaign_header_id: typed.campaign_header_id,
-          campaign_name: typed.campaign?.name ?? "—",
-          campaign_document_number: typed.campaign?.document_number ?? "—",
-          assignment_document_number: typed.assignment?.line?.document_number ?? null,
-          influencer_id: typed.influencer_id,
-          influencer_name: typed.influencer?.display_name ?? "—",
-          amount: Number(typed.amount),
-          currency_code: typed.currency_code,
-          status: typed.status,
-          terms_html: typed.terms_html,
-          terms_text: typed.terms_text,
-          usage_rights: typed.usage_rights,
-          exclusivity: typed.exclusivity,
-          attachment_url: typed.attachment_url,
-          generated_html_url: typed.generated_html_url,
-          generated_pdf_url: typed.generated_pdf_url,
-          document_generated_at: typed.document_generated_at,
-          sent_at: typed.sent_at,
-          approved_at: typed.approved_at,
-          approved_by_name: typed.approved_by_name,
-          rejection_reason: typed.rejection_reason,
-          created_by: typed.created_by,
-          created_at: typed.created_at,
-          updated_at: typed.updated_at,
-          ungenerate_eligible: false,
-          ungenerate_ineligible_reason: null,
-        } satisfies VendorIoRow;
-      });
+      const mapped = ((data ?? []) as unknown[]).map((row) => mapVendorIoQueryRow(row as never));
 
       return attachVendorIoUngenerateEligibility(supabase, mapped);
     },

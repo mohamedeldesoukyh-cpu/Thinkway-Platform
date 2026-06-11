@@ -242,10 +242,21 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
     `<div class="flabel">IBAN</div><div class="fvalue">${display(paymentDetail(data, "iban"))}</div>`
   );
 
-  // Currency pill
+  const paymentSchedulePill = display(
+    paymentDetail(data, "payment_schedule") || agency.paymentSchedule
+  );
+  const paymentMethodPill = display(paymentDetail(data, "method") || "Bank transfer");
+  const vatPill = `VAT ${data.pricing.vatPercent}% Applicable`;
+  const currencyPill = `${escapeHtml(currency)} Currency`;
+
   html = html.replace(
-    /<span class="pill"><span class="dot"><\/span>EGP Currency<\/span>/,
-    `<span class="pill"><span class="dot"></span>${escapeHtml(currency)} Currency</span>`
+    /<div class="terms-pills">[\s\S]*?<\/div>/,
+    `<div class="terms-pills">
+          <span class="pill"><span class="dot"></span>${paymentSchedulePill}</span>
+          <span class="pill"><span class="dot"></span>${paymentMethodPill}</span>
+          <span class="pill"><span class="dot"></span>${vatPill}</span>
+          <span class="pill"><span class="dot"></span>${currencyPill}</span>
+        </div>`
   );
 
   // Section 7 — Influencer signature name

@@ -48,6 +48,10 @@ export type VendorIoRow = {
   approved_at: string | null;
   approved_by_name: string | null;
   rejection_reason: string | null;
+  vendor_payment_terms: string | null;
+  vendor_payment_terms_label: string;
+  special_payment_terms: string | null;
+  effective_payment_terms_label: string;
   created_by: string | null;
   created_at: string;
   updated_at: string;

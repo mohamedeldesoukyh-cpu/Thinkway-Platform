@@ -110,6 +110,15 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
       <DetailField label="Exclusivity" valueClassName="max-w-[60%]">
         {row.exclusivity?.trim() || "—"}
       </DetailField>
+      <DetailField label="Vendor payment terms" valueClassName="max-w-[60%]">
+        {row.vendor_payment_terms_label || "—"}
+      </DetailField>
+      <DetailField label="Special payment terms" valueClassName="max-w-[60%]">
+        {row.special_payment_terms?.trim() || "—"}
+      </DetailField>
+      <DetailField label="IO payment schedule" valueClassName="max-w-[60%]">
+        {row.effective_payment_terms_label || "—"}
+      </DetailField>
       <DetailField label="Attachment" valueClassName="max-w-[60%]">
         {row.attachment_url?.trim() ? (
           <a

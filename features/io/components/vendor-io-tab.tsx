@@ -20,6 +20,7 @@ import { VendorIoDetailSheet } from "@/features/io/components/vendor-io-detail-s
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
+import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
 import type { VendorIoRow } from "@/features/io/types";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
@@ -69,6 +70,17 @@ function buildCampaignVendorIoColumns(
       id: "status",
       label: "Status",
       renderCell: (row) => <IoStatusBadge status={row.status} />,
+    },
+    {
+      id: "current_payment_terms",
+      label: "Current payment terms",
+      cellClassName: "text-muted-foreground max-w-[10rem]",
+      renderCell: (row) => row.vendor_payment_terms_label || "—",
+    },
+    {
+      id: "special_payment_terms",
+      label: "Special payment terms",
+      renderCell: (row) => <VendorIoSpecialPaymentTermsCell row={row} />,
     },
     {
       id: "sent",

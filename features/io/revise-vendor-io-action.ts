@@ -162,7 +162,7 @@ export async function reviseVendorIosFromLinesAction(
     const { data: oldVio, error: oldError } = await supabase
       .from("vendor_ios")
       .select(
-        "id, document_number, revision_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status, terms_text, terms_html, usage_rights, exclusivity, attachment_url, root_vendor_io_id, is_superseded"
+        "id, document_number, revision_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status, terms_text, terms_html, usage_rights, exclusivity, special_payment_terms, attachment_url, root_vendor_io_id, is_superseded"
       )
       .eq("id", oldVioId)
       .maybeSingle();
@@ -186,6 +186,7 @@ export async function reviseVendorIosFromLinesAction(
       terms_html: string | null;
       usage_rights: string | null;
       exclusivity: string | null;
+      special_payment_terms: string | null;
       attachment_url: string | null;
       root_vendor_io_id: string | null;
       is_superseded: boolean;
@@ -247,6 +248,7 @@ export async function reviseVendorIosFromLinesAction(
         terms_html: old.terms_html,
         usage_rights: old.usage_rights,
         exclusivity: old.exclusivity,
+        special_payment_terms: old.special_payment_terms,
         attachment_url: old.attachment_url,
         created_by: user.id,
         updated_by: user.id,

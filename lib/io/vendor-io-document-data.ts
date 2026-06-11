@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { formatPaymentMethodLabel, formatPaymentTermsLabel } from "@/features/vendors/utils";
+import { formatPaymentMethodLabel } from "@/features/vendors/utils";
+import { resolveVendorIoPaymentSchedule } from "@/lib/io/vendor-io-payment-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type { VendorIoDocumentData, VendorIoDeliverableRow } from "@/lib/io/vendor-io-document-types";
 import { sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
@@ -26,7 +27,7 @@ export async function loadVendorIoDocumentData(
   const { data: vendorIo, error: vioError } = await supabase
     .from("vendor_ios")
     .select(
-      "id, document_number, revision_number, amount, currency_code, status, usage_rights, created_at, influencer_id, campaign_header_id"
+      "id, document_number, revision_number, amount, currency_code, status, usage_rights, special_payment_terms, created_at, influencer_id, campaign_header_id"
     )
     .eq("id", vendorIoId)
     .single();
@@ -43,6 +44,7 @@ export async function loadVendorIoDocumentData(
     currency_code: string;
     status: string;
     usage_rights: string | null;
+    special_payment_terms: string | null;
     created_at: string;
     influencer_id: string;
     campaign_header_id: string;
@@ -242,9 +244,10 @@ export async function loadVendorIoDocumentData(
         : null,
     swift: typeof rawPaymentDetails.swift === "string" ? rawPaymentDetails.swift : null,
     iban: typeof rawPaymentDetails.iban === "string" ? rawPaymentDetails.iban : null,
-    payment_schedule: formatPaymentTermsLabel(
-      typedInfluencer.payment_terms as Parameters<typeof formatPaymentTermsLabel>[0]
-    ),
+    payment_schedule: resolveVendorIoPaymentSchedule({
+      specialPaymentTerms: typedVio.special_payment_terms,
+      vendorPaymentTerms: typedInfluencer.payment_terms,
+    }),
     method:
       typeof rawPaymentDetails.method === "string"
         ? formatPaymentMethodLabel(rawPaymentDetails.method)
