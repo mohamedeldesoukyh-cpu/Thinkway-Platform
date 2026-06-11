@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import {
   queryAssignmentDeliverables,
   resolveDeliverableVatExempt,
@@ -277,7 +278,7 @@ export async function getCampaignAssignmentHierarchy(
     console.error("[assignment-hierarchy] load failed", { campaignId, message });
     return {
       groups: [],
-      currency_code: "USD",
+      currency_code: DEFAULT_PLATFORM_CURRENCY,
       load_error: message,
       skipped_line_ids: [],
       sanitize_warnings: [],
@@ -291,7 +292,7 @@ async function loadCampaignAssignmentHierarchy(
 ): Promise<AssignmentHierarchy> {
   const workspace = workspaceSeed ?? (await getCampaignWorkspace(campaignId));
   if (!workspace) {
-    return { groups: [], currency_code: "USD" };
+    return { groups: [], currency_code: DEFAULT_PLATFORM_CURRENCY };
   }
   const { supabase } = await requireUser();
 

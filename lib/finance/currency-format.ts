@@ -1,13 +1,15 @@
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
+
 /**
  * Centralized currency display for finance surfaces.
- * Uses symbol-first formatting (e.g. £600,000 · $9,000 · €12,500).
+ * Uses symbol-first formatting (e.g. E£600,000 · $9,000 · €12,500).
  */
 
 export const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
   EUR: "€",
   GBP: "£",
-  EGP: "£",
+  EGP: "E£",
   AED: "AED ",
   SAR: "SAR ",
   CAD: "CA$",
@@ -28,8 +30,8 @@ export type FormatCurrencyOptions = {
 };
 
 function normalizeCurrencyCode(currency: string | null | undefined): string {
-  const code = (currency ?? "USD").trim().toUpperCase();
-  return code.length === 3 ? code : "USD";
+  const code = (currency ?? DEFAULT_PLATFORM_CURRENCY).trim().toUpperCase();
+  return code.length === 3 ? code : DEFAULT_PLATFORM_CURRENCY;
 }
 
 function formatNumber(amount: number, decimals: number): string {

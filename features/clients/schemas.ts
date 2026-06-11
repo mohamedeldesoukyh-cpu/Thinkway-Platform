@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 const clientStatusSchema = z.enum([
   "prospect",
@@ -75,7 +76,7 @@ export const createClientSchema = z.object({
       (value) => !value || z.string().email().safeParse(value).success,
       "Enter a valid email"
     ),
-  currency: currencyCodeSchema.default("USD"),
+  currency: currencyCodeSchema.default(DEFAULT_PLATFORM_CURRENCY),
   country: z.string().trim().max(2).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });

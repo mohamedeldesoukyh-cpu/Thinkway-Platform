@@ -1,5 +1,6 @@
 import type { InfluencerSearchResult } from "@/features/campaigns/types";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 export function unifiedToInfluencerSearch(
   creator: UnifiedCreatorResult
@@ -14,7 +15,7 @@ export function unifiedToInfluencerSearch(
     country_code: creator.country_code,
     categories: creator.categories,
     notes: creator.notes,
-    suggested_currency: creator.suggested_currency ?? "USD",
+    suggested_currency: creator.suggested_currency ?? DEFAULT_PLATFORM_CURRENCY,
     platforms: creator.platforms.map((p) => ({
       id: p.id,
       platform: p.platform,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 export const createBrandSchema = z.object({
   client_id: z.string().uuid("Select a legal entity"),
@@ -8,7 +9,7 @@ export const createBrandSchema = z.object({
   category_id: z.string().uuid().optional().or(z.literal("")),
   subcategory_id: z.string().uuid().optional().or(z.literal("")),
   vr_rate_id: z.string().uuid().optional().or(z.literal("")),
-  currency_code: currencyCodeSchema.default("USD"),
+  currency_code: currencyCodeSchema.default(DEFAULT_PLATFORM_CURRENCY),
   country_code: z.string().trim().max(2).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });

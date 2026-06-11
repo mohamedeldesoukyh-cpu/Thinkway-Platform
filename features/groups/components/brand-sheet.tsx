@@ -30,6 +30,7 @@ import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import type { GroupBrandRow, GroupLegalEntityRow } from "@/features/groups/types";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import type { ClientStatus } from "@/types/database";
 
@@ -57,7 +58,9 @@ export function BrandSheet({
   const [categoryId, setCategoryId] = useState(brand?.category_id ?? "");
   const [subcategoryId, setSubcategoryId] = useState(brand?.subcategory_id ?? "");
   const [vrRateId, setVrRateId] = useState(brand?.vr_rate_id ?? "");
-  const [currency, setCurrency] = useState(brand?.currency_code ?? "USD");
+  const [currency, setCurrency] = useState(
+    brand?.currency_code ?? DEFAULT_PLATFORM_CURRENCY
+  );
   const [status, setStatus] = useState<ClientStatus>(brand?.status ?? "active");
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(

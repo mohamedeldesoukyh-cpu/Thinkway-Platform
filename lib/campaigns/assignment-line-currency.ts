@@ -1,4 +1,5 @@
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 type AssignmentCurrencyLine = Pick<
   CampaignLineWorkspace,
@@ -20,7 +21,7 @@ export function resolveAssignmentLineCurrency(
   if (received) return received;
 
   const fallback = options?.fallback?.trim();
-  return fallback || "USD";
+  return fallback || DEFAULT_PLATFORM_CURRENCY;
 }
 
 /** CCY column — show em dash when no assignment currency is stored. */

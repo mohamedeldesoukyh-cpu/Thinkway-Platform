@@ -605,6 +605,15 @@ export function CampaignLineSheet({
   const commercialFieldsLocked = (locked: boolean) =>
     isPending || (!financeOverrideActive && locked);
 
+  const costCommercialLocked =
+    isEdit && commercialFieldsLocked(Boolean(line?.cost_locked || line?.vat_locked));
+
+  const costLockHint = costCommercialLocked
+    ? line?.cost_locked
+      ? "Cost and cost currency are locked because this assignment has been invoiced. Request a finance override from Billing to edit."
+      : "Cost fields are locked while VAT is finalized on this assignment."
+    : null;
+
   const revenueVatAmount = billingPreview.vatAmount;
   const costVatAmount = costVatExempt
     ? 0
@@ -965,9 +974,8 @@ export function CampaignLineSheet({
               costReceivedCurrency={costReceivedCurrency}
               costInLc={cost}
               currencyOptions={currencyOptions}
-              disabled={commercialFieldsLocked(
-                Boolean(line?.cost_locked || line?.vat_locked)
-              )}
+              disabled={costCommercialLocked}
+              lockHint={costLockHint}
               onCostReceivedChange={setCostReceived}
               onCostReceivedCurrencyChange={setCostReceivedCurrency}
               onCostInLcChange={setCost}

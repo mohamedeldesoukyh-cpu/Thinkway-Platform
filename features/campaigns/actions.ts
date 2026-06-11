@@ -7,6 +7,7 @@ import {
 } from "@/features/campaigns/constants";
 import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import {
   rowTotalRevenue,
@@ -503,7 +504,7 @@ export async function createCampaignLineAction(
 
   const commercial = commercialResolved.value;
   const currency =
-    parsed.data.currency_code || header?.currency_code || "USD";
+    parsed.data.currency_code || header?.currency_code || DEFAULT_PLATFORM_CURRENCY;
   const costFx = resolveAssignmentMultiCurrencyCost({
     ...parsed.data,
     currency_code: currency,
@@ -578,7 +579,7 @@ export async function createCampaignLineAction(
       cost_received: costFx.cost_received,
       cost_received_currency: costFx.cost_received_currency,
       currency_code: currency,
-      base_currency: "USD",
+      base_currency: DEFAULT_PLATFORM_CURRENCY,
       fx_rate: costFx.fx_rate,
       fx_from_currency: costFx.fx_from_currency,
       fx_to_currency: costFx.fx_to_currency,
@@ -816,7 +817,7 @@ export async function updateCampaignLineAction(
     .maybeSingle();
 
   const currency =
-    parsed.data.currency_code || header?.currency_code || "USD";
+    parsed.data.currency_code || header?.currency_code || DEFAULT_PLATFORM_CURRENCY;
   const costFx = resolveAssignmentMultiCurrencyCost({
     ...parsed.data,
     currency_code: currency,

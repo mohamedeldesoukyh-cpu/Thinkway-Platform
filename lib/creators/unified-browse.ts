@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
+
 import { unifiedToInfluencerSearch } from "@/lib/creators/adapters";
 import {
   metricWithConfidence,
@@ -287,7 +289,7 @@ async function fetchInternalCreators(
         profile_picture_url: p.profile_picture_url,
       })),
       notes: r.notes,
-      suggested_currency: "USD",
+      suggested_currency: DEFAULT_PLATFORM_CURRENCY,
     });
   }
 

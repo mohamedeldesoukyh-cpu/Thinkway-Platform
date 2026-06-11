@@ -22,6 +22,7 @@ type AssignmentMultiCurrencyCostFieldsProps = {
   costInLc: number;
   currencyOptions: { value: string; label: string }[];
   disabled?: boolean;
+  lockHint?: string | null;
   onCostReceivedChange: (value: number) => void;
   onCostReceivedCurrencyChange: (code: string) => void;
   onCostInLcChange: (value: number) => void;
@@ -35,6 +36,7 @@ export function AssignmentMultiCurrencyCostFields({
   costInLc,
   currencyOptions,
   disabled,
+  lockHint,
   onCostReceivedChange,
   onCostReceivedCurrencyChange,
   onCostInLcChange,
@@ -99,6 +101,9 @@ export function AssignmentMultiCurrencyCostFields({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium">Creator cost (multi-currency)</p>
       </div>
+      {disabled && lockHint ? (
+        <p className="text-xs text-amber-700 dark:text-amber-400">{lockHint}</p>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor="cost_received">Cost received</Label>

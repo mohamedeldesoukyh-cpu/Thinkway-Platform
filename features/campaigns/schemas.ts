@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 const campaignStatusSchema = z.enum([
   "draft",
@@ -142,7 +143,7 @@ export const createCampaignLineSchema = z.object({
     .enum(["0", "1", "true", "false"])
     .optional()
     .transform((v) => v === "1" || v === "true"),
-  currency_code: currencyCodeSchema.default("USD"),
+  currency_code: currencyCodeSchema.default(DEFAULT_PLATFORM_CURRENCY),
   start_date: optionalDate,
   end_date: optionalDate,
   pricing_mode: z.enum(["package", "per_deliverable"]).default("package"),
@@ -159,7 +160,7 @@ export const assignCampaignVendorSchema = z.object({
   campaign_line_id: z.string().uuid().optional().or(z.literal("")),
   influencer_id: z.string().uuid(),
   agreed_fee: z.coerce.number().min(0).default(0),
-  currency: currencyCodeSchema.default("USD"),
+  currency: currencyCodeSchema.default(DEFAULT_PLATFORM_CURRENCY),
   status: z
     .enum([
       "invited",

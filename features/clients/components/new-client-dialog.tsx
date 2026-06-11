@@ -6,6 +6,7 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const [entityName, setEntityName] = useState("");
   const [agencyOrDirect, setAgencyOrDirect] = useState<AgencyOrDirect>("agency");
   const [status, setStatus] = useState("prospect");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
   const [country, setCountry] = useState("");
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
@@ -76,7 +77,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
       toast.success(state.message);
       setGroupId("");
       setStatus("prospect");
-      setCurrency("USD");
+      setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setCountry("");
       setOpen(false);
       if (state.clientId) {

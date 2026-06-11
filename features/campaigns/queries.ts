@@ -36,6 +36,7 @@ import {
   suggestCostFromRateCard,
   suggestCurrencyFromPaymentDetails,
 } from "./line-assignment";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 export type CampaignsListResult = {
   campaigns: CampaignListItem[];
@@ -230,11 +231,12 @@ export async function getCampaignsKpis(): Promise<CampaignsKpis> {
 
   const currencyCounts = new Map<string, number>();
   for (const header of headers) {
-    const code = header.currency_code ?? "USD";
+    const code = header.currency_code ?? DEFAULT_PLATFORM_CURRENCY;
     currencyCounts.set(code, (currencyCounts.get(code) ?? 0) + 1);
   }
   const currencyCode =
-    [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+    [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+      DEFAULT_PLATFORM_CURRENCY;
 
   return {
     total_campaigns: headers.length,
@@ -1091,7 +1093,7 @@ export async function searchInfluencersForCampaign(params: {
       country_code: r.country_code,
       suggested_currency: suggestCurrencyFromPaymentDetails(
         r.payment_details,
-        "USD"
+        DEFAULT_PLATFORM_CURRENCY
       ),
       platforms: accountsByInfluencer.get(r.id) ?? [],
     };
@@ -1148,7 +1150,7 @@ export async function getInfluencerForAssignment(
 
   const suggested_currency = suggestCurrencyFromPaymentDetails(
     inf.payment_details,
-    "USD"
+    DEFAULT_PLATFORM_CURRENCY
   );
   const countryVatRate = await resolveVatRateForCountry(supabase, inf.country_code);
   const suggested_cost_vat_percent = resolveVendorDefaultVatPercent({
@@ -1325,7 +1327,10 @@ export async function browseInfluencersForCampaign(
       country_code: r.country_code,
       categories: r.categories ?? [],
       notes: r.notes,
-      suggested_currency: suggestCurrencyFromPaymentDetails(r.payment_details, "USD"),
+      suggested_currency: suggestCurrencyFromPaymentDetails(
+        r.payment_details,
+        DEFAULT_PLATFORM_CURRENCY
+      ),
       platforms: accountsByInfluencer.get(r.id) ?? [],
     };
   });

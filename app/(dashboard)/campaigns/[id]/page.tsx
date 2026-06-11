@@ -17,6 +17,7 @@ import { getCampaignPublications } from "@/features/campaigns/queries/publicatio
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { devLog } from "@/lib/dev-log";
 import { loadFinanceAuditTimeline } from "@/lib/finance/queries/finance-audit";
 import { isBillingRepairOnLoadEnabled } from "@/lib/billing/billing-repair-on-load";
@@ -73,7 +74,7 @@ export default async function CampaignWorkspacePage({
   let operationalBilling: Awaited<ReturnType<typeof getCampaignOperationalBillingDetail>> = null;
   let assignmentHierarchy: Awaited<ReturnType<typeof getCampaignAssignmentHierarchy>> = {
     groups: [],
-    currency_code: "USD",
+    currency_code: DEFAULT_PLATFORM_CURRENCY,
     load_error: null,
   };
   let publications: Awaited<ReturnType<typeof getCampaignPublications>>["publications"] =

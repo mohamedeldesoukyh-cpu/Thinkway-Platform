@@ -35,6 +35,7 @@ import {
 import type { CampaignFormOptions } from "@/features/campaigns/queries";
 import type { BrandFormOption } from "@/features/campaigns/types";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { labelForOption } from "@/lib/master-data/constants";
 import { AGENCY_OR_DIRECT_OPTIONS } from "@/features/clients/constants";
 
@@ -62,7 +63,7 @@ export function NewCampaignDialog({
   const [brandId, setBrandId] = useState("");
   const [platform, setPlatform] = useState("");
   const [status, setStatus] = useState("draft");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
   const [accountManagerId, setAccountManagerId] = useState(NONE_VALUE);
   const [state, formAction, isPending] = useActionState(
     createCampaignAction,
@@ -89,7 +90,7 @@ export function NewCampaignDialog({
       setBrandId("");
       setPlatform("");
       setStatus("draft");
-      setCurrency("USD");
+      setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setAccountManagerId(NONE_VALUE);
       setOpen(false);
       return;
