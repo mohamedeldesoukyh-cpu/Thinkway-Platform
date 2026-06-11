@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tax Invoice — INV-[NUMBER] — Thinkway</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --navy:   #0A0F1E;
+    --blue:   #0057FF;
+    --blue-lt:#EEF4FF;
+    --blue-md:#C8D6F5;
+    --ink:    #1A1F36;
+    --muted:  #6B7280;
+    --rule:   #E2E8F0;
+    --bg:     #F8FAFC;
+    --white:  #FFFFFF;
+    --green:  #059669;
+    --red:    #DC2626;
+    --radius: 6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 32px auto;
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 8px 32px rgba(0,0,0,.05);
+    overflow: hidden;
+  }
+
+  /* ── HEADER ─────────────────────────────────────── */
+  .doc-header {
+    background: var(--navy);
+    padding: 32px 40px 28px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .brand .logo-text {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  .brand .logo-text span { color: var(--blue); }
+  .brand .tagline { font-size: 11px; color: #8899BB; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 5px; }
+  .brand .address {
+    margin-top: 14px;
+    font-size: 11px;
+    color: #8899BB;
+    line-height: 1.7;
+  }
+  .brand .address strong { color: #BCC8DD; }
+
+  .title-block { text-align: right; }
+  .invoice-type {
+    font-size: 11px;
+    font-weight: 700;
+    color: #8899BB;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .invoice-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  .serial-badge {
+    display: inline-block;
+    margin-top: 10px;
+    background: var(--blue);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 100px;
+    letter-spacing: 0.5px;
+  }
+  .header-meta {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: flex-end;
+  }
+  .header-meta .meta-row {
+    font-size: 11px;
+    color: #8899BB;
+  }
+  .header-meta .meta-row strong { color: #BCC8DD; }
+
+  /* ── BLUE STRIPE ─────────────────────────────────── */
+  .stripe { height: 4px; background: var(--blue); }
+
+  /* ── BODY ───────────────────────────────────────── */
+  .doc-body { padding: 36px 40px 48px; }
+
+  /* ── SECTION ────────────────────────────────────── */
+  .section { margin-bottom: 32px; }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .section-label .num {
+    background: var(--navy);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-label .title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  /* ── PARTIES GRID ───────────────────────────────── */
+  .parties-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .party-card {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    position: relative;
+  }
+  .party-card.billed-to { border-left: 3px solid var(--blue); padding-left: 15px; }
+  .party-card.from { border-left: 3px solid var(--navy); padding-left: 15px; background: var(--blue-lt); }
+  .party-role {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .party-card.from .party-role { color: var(--blue); }
+  .party-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .party-details {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .party-details .trn {
+    display: inline-block;
+    margin-top: 6px;
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* ── FIELDS ─────────────────────────────────────── */
+  .fields {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .field-row {
+    display: grid;
+    border-bottom: 1px solid var(--rule);
+  }
+  .field-row:last-child { border-bottom: none; }
+  .field-row.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+
+  .field {
+    padding: 11px 16px;
+    border-right: 1px solid var(--rule);
+  }
+  .field:last-child { border-right: none; }
+  .field:first-child { border-left: 3px solid var(--blue); padding-left: 13px; }
+  .field.shade { background: var(--blue-lt); }
+  .flabel { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; }
+  .fvalue { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .fvalue.blue { color: var(--blue); font-weight: 600; }
+  .fvalue.due { color: var(--red); font-weight: 700; }
+
+  /* ── LINE ITEMS TABLE ───────────────────────────── */
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-size: 12.5px;
+  }
+  .items-table thead tr { background: var(--navy); color: #fff; }
+  .items-table thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .items-table thead th:first-child { border-left: 3px solid var(--blue); padding-left: 11px; }
+  .items-table thead th.right { text-align: right; }
+
+  .items-table tbody tr { border-bottom: 1px solid var(--rule); }
+  .items-table tbody tr:last-child { border-bottom: none; }
+  .items-table tbody tr:nth-child(even) { background: var(--blue-lt); }
+  .items-table tbody tr:nth-child(odd) { background: var(--white); }
+  .items-table tbody tr td:first-child { border-left: 3px solid var(--blue); padding-left: 11px; }
+  .items-table tbody tr:nth-child(even) td:first-child { border-left: 3px solid var(--blue-md); }
+  .items-table tbody td { padding: 11px 14px; color: var(--ink); }
+  .items-table tbody td.desc { font-weight: 500; }
+  .items-table tbody td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  .items-table tbody td.muted { color: var(--muted); font-size: 12px; }
+
+  /* ── TOTALS ─────────────────────────────────────── */
+  .totals-wrap {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0;
+  }
+  .totals-box {
+    width: 340px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 12.5px;
+  }
+  .total-row:last-child { border-bottom: none; }
+  .total-row .t-label { color: var(--muted); }
+  .total-row .t-amount { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .total-row.subtotal { background: var(--bg); }
+  .total-row.tax { background: var(--bg); }
+  .total-row.grand {
+    background: var(--navy);
+    padding: 14px 16px;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .total-row.grand .t-label { color: #8899BB; font-weight: 500; font-size: 12px; }
+  .total-row.grand .t-amount { color: #fff; font-size: 17px; font-weight: 700; }
+  .total-row.grand .t-sub { font-size: 11px; color: #8899BB; margin-top: 2px; }
+
+  .totals-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+  /* ── CONVERSION NOTE ────────────────────────────── */
+  .conversion-note {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--blue);
+    border-radius: var(--radius);
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .conversion-note strong { color: var(--ink); }
+
+  /* ── PAYMENT TERMS ──────────────────────────────── */
+  .payment-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .bank-box {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .bank-box .bank-header {
+    background: var(--navy);
+    padding: 8px 14px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8899BB;
+    border-left: 3px solid var(--blue);
+    padding-left: 11px;
+  }
+  .bank-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 12px;
+  }
+  .bank-row:last-child { border-bottom: none; }
+  .bank-row:nth-child(even) { background: var(--blue-lt); }
+  .bank-row .bk-label { color: var(--muted); }
+  .bank-row .bk-value { font-weight: 500; color: var(--ink); text-align: right; max-width: 60%; }
+
+  .due-notice {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--red);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: #FFF8F8;
+  }
+  .due-notice .due-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+  .due-notice .due-date { font-size: 18px; font-weight: 700; color: var(--red); }
+  .due-notice .due-note { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--blue-lt); color: var(--blue);
+    font-size: 11px; font-weight: 600;
+    padding: 5px 12px; border-radius: 100px;
+    border: 1px solid var(--blue-md);
+  }
+  .pill .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
+
+  /* ── PAYMENT ADVICE (page 2 style) ─────────────── */
+  .advice-divider {
+    border: none;
+    border-top: 2px dashed var(--rule);
+    margin: 36px 0 28px;
+    position: relative;
+  }
+  .advice-divider::before {
+    content: '✂  PAYMENT ADVICE';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--white);
+    padding: 0 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .advice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .advice-left {
+    padding: 20px;
+    border-right: 1px solid var(--rule);
+  }
+  .advice-left .to-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+  .advice-left .to-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .advice-left .to-detail { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+  .advice-right {
+    padding: 20px;
+    background: var(--blue-lt);
+  }
+  .advice-field { margin-bottom: 12px; }
+  .advice-field:last-child { margin-bottom: 0; }
+  .advice-field .af-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 3px; }
+  .advice-field .af-value { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .advice-field .af-value.large { font-size: 18px; color: var(--blue); }
+  .advice-field .enclosed-line {
+    border-bottom: 1.5px solid var(--blue-md);
+    height: 32px;
+    margin-top: 4px;
+  }
+
+  /* ── FOOTER ─────────────────────────────────────── */
+  .doc-footer {
+    background: var(--bg);
+    border-top: 1px solid var(--rule);
+    padding: 14px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .doc-footer .left { font-size: 11px; color: var(--muted); }
+  .doc-footer .left strong { color: var(--ink); }
+  .doc-footer .right { font-size: 11px; color: var(--blue); font-weight: 600; }
+
+  .confidential {
+    text-align: center;
+    padding: 7px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: var(--bg);
+  }
+
+  /* ── PRINT ───────────────────────────────────────── */
+  @media print {
+    body { background: white; }
+    .page { margin: 0; box-shadow: none; border-radius: 0; }
+    .section { page-break-inside: avoid; }
+    .advice-divider { page-break-before: always; }
+  }
+
+  @media (max-width: 600px) {
+    .doc-header { flex-direction: column; }
+    .title-block { text-align: left; }
+    .header-meta { align-items: flex-start; }
+    .doc-body { padding: 24px 20px 36px; }
+    .parties-grid, .payment-grid, .advice-grid, .field-row.cols-4, .field-row.cols-3, .field-row.cols-2 { grid-template-columns: 1fr; }
+    .totals-wrap { justify-content: stretch; }
+    .totals-box { width: 100%; }
+    .advice-left { border-right: none; border-bottom: 1px solid var(--rule); }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <div class="doc-header">
+    <div class="brand">
+      <div class="logo-text">THINK<span>WAY</span></div>
+      <div class="tagline">Influencer Marketing Agency · ثينكواي</div>
+      <div class="address">
+        <strong>Thinkway (ثينكواي)</strong><br>
+        44B Saraya Mall, Central Axis<br>
+        Sheikh Zayed City, Giza, Egypt<br>
+        CR: 57920 &nbsp;·&nbsp; Tax Reg: 7310<br>
+        VAT: 780-879-732
+      </div>
+    </div>
+    <div class="title-block">
+      <div class="invoice-type">Official Document</div>
+      <div class="invoice-title">TAX INVOICE</div>
+      <div><span class="serial-badge">INV-[NUMBER]</span></div>
+      <div class="header-meta">
+        <div class="meta-row"><strong>Invoice Date</strong> &nbsp; [DATE]</div>
+        <div class="meta-row"><strong>Due Date</strong> &nbsp; [DATE]</div>
+        <div class="meta-row"><strong>IO Reference</strong> &nbsp; VIO-2026-[N]</div>
+      </div>
+    </div>
+  </div>
+  <div class="stripe"></div>
+
+  <div class="doc-body">
+
+    <!-- 01 PARTIES -->
+    <div class="section">
+      <div class="section-label"><div class="num">1</div><div class="title">Parties</div></div>
+      <div class="parties-grid">
+        <div class="party-card billed-to">
+          <div class="party-role">Billed To</div>
+          <div class="party-name">[Client / Agency Name]</div>
+          <div class="party-details">
+            [Address Line 1]<br>
+            [City, Country]<br>
+            <span class="trn">TRN: [TAX REG NUMBER]</span>
+          </div>
+        </div>
+        <div class="party-card from">
+          <div class="party-role">From (Supplier)</div>
+          <div class="party-name">Thinkway (ثينكواي)</div>
+          <div class="party-details">
+            44B Saraya Mall, Central Axis<br>
+            Sheikh Zayed City, Giza, Egypt<br>
+            <span class="trn">VAT: 780-879-732 &nbsp;·&nbsp; CR: 57920</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 INVOICE DETAILS -->
+    <div class="section">
+      <div class="section-label"><div class="num">2</div><div class="title">Invoice Details</div></div>
+      <div class="fields">
+        <div class="field-row cols-4">
+          <div class="field shade">
+            <div class="flabel">Invoice Number</div>
+            <div class="fvalue blue">INV-[NUMBER]</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Invoice Date</div>
+            <div class="fvalue">[DATE]</div>
+          </div>
+          <div class="field">
+            <div class="flabel">IO / PO Reference</div>
+            <div class="fvalue">VIO-2026-[N]</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Account Number</div>
+            <div class="fvalue">[ACCOUNT NO.]</div>
+          </div>
+        </div>
+        <div class="field-row cols-3">
+          <div class="field shade">
+            <div class="flabel">Campaign / Project</div>
+            <div class="fvalue">[Campaign Name]</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Client</div>
+            <div class="fvalue">[Client Name]</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Campaign Period</div>
+            <div class="fvalue">[FROM] — [TO]</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 LINE ITEMS -->
+    <div class="section">
+      <div class="section-label"><div class="num">3</div><div class="title">Line Items</div></div>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width:40%">Description</th>
+            <th>Qty</th>
+            <th class="right">Unit Price (EGP)</th>
+            <th class="right">Tax</th>
+            <th class="right">Amount (EGP)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="desc">
+              Influencer Fee<br>
+              <span style="font-size:11px;color:var(--muted);">[Influencer Name / Handle] · [Platform] · [Campaign Name] · [Month/Period]</span>
+            </td>
+            <td>1.00</td>
+            <td class="right">[0,000.00]</td>
+            <td class="right muted">14%</td>
+            <td class="right">[0,000.00]</td>
+          </tr>
+          <tr>
+            <td class="desc">
+              Usage Rights Fee<br>
+              <span style="font-size:11px;color:var(--muted);">Content usage rights for [duration] across [channels / platforms] — [Campaign Name]</span>
+            </td>
+            <td>1.00</td>
+            <td class="right">[0,000.00]</td>
+            <td class="right muted">14%</td>
+            <td class="right">[0,000.00]</td>
+          </tr>
+          <tr>
+            <td class="desc">
+              Agency Fee<br>
+              <span style="font-size:11px;color:var(--muted);">Thinkway management & strategy fee — [%] of campaign budget</span>
+            </td>
+            <td>1.00</td>
+            <td class="right">[0,000.00]</td>
+            <td class="right muted">14%</td>
+            <td class="right">[0,000.00]</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- TOTALS -->
+      <div class="totals-wrap" style="margin-top:12px;">
+        <div class="totals-box">
+          <div class="total-row subtotal">
+            <span class="t-label">Subtotal</span>
+            <span class="t-amount">EGP [0,000.00]</span>
+          </div>
+          <div class="total-row tax">
+            <span class="t-label">VAT (14%)</span>
+            <span class="t-amount">EGP [0,000.00]</span>
+          </div>
+          <div class="total-row grand">
+            <div>
+              <div class="t-label">Total Amount Due</div>
+              <div class="t-sub">[USD Equivalent: ~USD 0,000.00]</div>
+            </div>
+            <div class="totals-right">
+              <div class="t-amount">EGP [0,000.00]</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="conversion-note">
+        <span>&#9432;</span>
+        <span><strong>Currency Note:</strong> All amounts are invoiced in Egyptian Pounds (EGP). USD equivalent shown for reference only based on prevailing exchange rate. Any bank charges adherent to the payment shall be borne by the remitter. This is a computer-generated invoice and does not require a physical stamp.</span>
+      </div>
+    </div>
+
+    <!-- 04 PAYMENT DETAILS -->
+    <div class="section">
+      <div class="section-label"><div class="num">4</div><div class="title">Payment Details</div></div>
+      <div class="payment-grid">
+
+        <div>
+          <div class="due-notice">
+            <div class="due-label">Payment Due Date</div>
+            <div class="due-date">[DD Month YYYY]</div>
+            <div class="due-note">Payment is due within 30 days of invoice date. Late payments may be subject to applicable charges under Egyptian law.</div>
+          </div>
+          <div class="pills">
+            <span class="pill"><span class="dot"></span>Net 30 Days</span>
+            <span class="pill"><span class="dot"></span>Bank Transfer Only</span>
+            <span class="pill"><span class="dot"></span>VAT 14% Included</span>
+          </div>
+        </div>
+
+        <div class="bank-box">
+          <div class="bank-header">Bank Transfer Details</div>
+          <div class="bank-row">
+            <span class="bk-label">Beneficiary</span>
+            <span class="bk-value">Thinkway</span>
+          </div>
+          <div class="bank-row">
+            <span class="bk-label">Bank</span>
+            <span class="bk-value">Arab African International Bank (AAIB)</span>
+          </div>
+          <div class="bank-row">
+            <span class="bk-label">Branch</span>
+            <span class="bk-value">Park Street Branch</span>
+          </div>
+          <div class="bank-row">
+            <span class="bk-label">Account No.</span>
+            <span class="bk-value">1200842810010201</span>
+          </div>
+          <div class="bank-row">
+            <span class="bk-label">IBAN</span>
+            <span class="bk-value">EG500057093001200842810010201</span>
+          </div>
+          <div class="bank-row">
+            <span class="bk-label">SWIFT</span>
+            <span class="bk-value">ARAIEGCXX</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── PAYMENT ADVICE ── -->
+    <div class="advice-divider"></div>
+
+    <div class="advice-grid">
+      <div class="advice-left">
+        <div class="to-label">To (Supplier)</div>
+        <div class="to-name">Thinkway (ثينكواي)</div>
+        <div class="to-detail">
+          44B Saraya Mall, Central Axis<br>
+          Sheikh Zayed City, Giza, Egypt<br>
+          VAT: 780-879-732 &nbsp;·&nbsp; CR: 57920<br>
+          Tax Reg: 7310
+        </div>
+      </div>
+      <div class="advice-right">
+        <div class="advice-field">
+          <div class="af-label">Customer</div>
+          <div class="af-value">[Client / Agency Name]</div>
+        </div>
+        <div class="advice-field">
+          <div class="af-label">Invoice Number</div>
+          <div class="af-value">INV-[NUMBER]</div>
+        </div>
+        <div class="advice-field">
+          <div class="af-label">Amount Due</div>
+          <div class="af-value large">EGP [0,000.00]</div>
+        </div>
+        <div class="advice-field">
+          <div class="af-label">Due Date</div>
+          <div class="af-value">[DD Month YYYY]</div>
+        </div>
+        <div class="advice-field">
+          <div class="af-label">Amount Enclosed</div>
+          <div class="enclosed-line"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /doc-body -->
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <div class="left">
+      <strong>Thinkway (ثينكواي)</strong> &nbsp;·&nbsp; CR 57920 &nbsp;·&nbsp; VAT 780-879-732 &nbsp;·&nbsp; Tax Reg. 7310<br>
+      44B Saraya Mall, Central Axis, Sheikh Zayed, Giza, Egypt &nbsp;·&nbsp; hello@thinkwaymedia.com
+    </div>
+    <div class="right">INV-[NUMBER]</div>
+  </div>
+
+  <div class="confidential">Confidential &amp; Proprietary — Thinkway 2026</div>
+
+</div>
+
+</body>
+</html>

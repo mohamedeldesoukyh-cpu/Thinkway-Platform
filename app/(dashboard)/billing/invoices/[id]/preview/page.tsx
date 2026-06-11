@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageBackButton } from "@/components/navigation/page-back-button";
-import { InvoiceHtmlPreview } from "@/features/billing/components/invoice-html-preview";
-import { getInvoiceWorkspace } from "@/features/billing/queries";
+import { renderLiveInvoiceHtml } from "@/lib/billing/render-live-invoice-html";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type InvoicePreviewPageProps = {
   params: Promise<{ id: string }>;
@@ -12,47 +11,66 @@ type InvoicePreviewPageProps = {
 
 export default async function InvoicePreviewPage({ params }: InvoicePreviewPageProps) {
   const { id } = await params;
+  const supabase = await createSupabaseServerClient();
 
-  let invoice;
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("id, document_number")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!invoice) {
+    notFound();
+  }
+
+  const typed = invoice as { id: string; document_number: string | null };
+
+  let html: string;
   let errorMessage: string | null = null;
 
   try {
-    invoice = await getInvoiceWorkspace(id);
+    html = await renderLiveInvoiceHtml(supabase, id);
   } catch (error) {
     errorMessage =
-      error instanceof Error ? error.message : "Failed to load invoice.";
-  }
-
-  if (!invoice && !errorMessage) {
-    notFound();
+      error instanceof Error ? error.message : "Failed to render invoice preview.";
+    html = "";
   }
 
   return (
     <DashboardShell
       title="Invoice preview"
-      description="Client-facing HTML preview for finance review (Phase 2a)."
+      description={`${typed.document_number ?? id} — client-facing tax invoice`}
       hidePageHeader
     >
-      <div className="mb-4 print:hidden">
+      <div className="mb-4 flex flex-wrap gap-2 print:hidden">
         <PageBackButton
           fallbackHref={`/billing/invoices/${id}`}
           label="Back to invoice workspace"
           variant="text"
         />
+        {!errorMessage ? (
+          <a
+            className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
+            href={`/api/invoices/${id}/document?download=1`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Download HTML
+          </a>
+        ) : null}
       </div>
 
       {errorMessage ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
-      ) : invoice ? (
-        <PlatformErrorBoundary surface="invoices">
-          <InvoiceHtmlPreview
-            invoice={invoice}
-            backHref={`/billing/invoices/${id}`}
-          />
-        </PlatformErrorBoundary>
-      ) : null}
+      ) : (
+        <iframe
+          title={`Invoice ${typed.document_number ?? id}`}
+          srcDoc={html}
+          className="min-h-[1200px] w-full rounded-xl border border-border bg-white"
+        />
+      )}
     </DashboardShell>
   );
 }
