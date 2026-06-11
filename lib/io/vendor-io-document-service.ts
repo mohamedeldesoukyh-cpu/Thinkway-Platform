@@ -57,10 +57,16 @@ export async function generateVendorIoDocument(
     console.warn("[vendor-io-document] HTML storage failed", error);
   }
 
-  const pdfBuffer = await renderHtmlToPdf(html);
-  if (pdfBuffer) {
+  const pdfResult = await renderHtmlToPdf(html);
+  if (pdfResult.ok) {
     try {
-      pdfUrl = await uploadDocument(supabase, vendorIoId, "document.pdf", pdfBuffer, "application/pdf");
+      pdfUrl = await uploadDocument(
+        supabase,
+        vendorIoId,
+        "document.pdf",
+        pdfResult.buffer,
+        "application/pdf"
+      );
     } catch (error) {
       console.warn("[vendor-io-document] PDF storage failed", error);
     }

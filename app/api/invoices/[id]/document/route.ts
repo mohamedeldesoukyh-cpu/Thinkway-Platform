@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { renderLiveInvoiceHtml } from "@/lib/billing/render-live-invoice-html";
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
-import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -44,12 +44,15 @@ export async function GET(request: Request, context: RouteContext) {
     const disposition = download ? "attachment" : "inline";
 
     if (format === "pdf") {
-      const pdfBuffer = await renderHtmlToPdf(html);
-      if (!pdfBuffer) {
-        return NextResponse.json({ error: "PDF generation unavailable" }, { status: 503 });
+      const pdfResult = await renderHtmlToPdf(html);
+      if (!pdfResult.ok) {
+        return NextResponse.json(
+          { error: pdfUnavailableMessage(pdfResult.error) },
+          { status: 503 }
+        );
       }
 
-      return createPdfDocumentResponse(pdfBuffer, baseName, download);
+      return createPdfDocumentResponse(pdfResult.buffer, baseName, download);
     }
 
     if (format === "html") {

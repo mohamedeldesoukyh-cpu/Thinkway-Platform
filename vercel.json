@@ -1,0 +1,12 @@
+{
+  "functions": {
+    "app/api/vendor-ios/[id]/document/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "app/api/invoices/[id]/document/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  }
+}
