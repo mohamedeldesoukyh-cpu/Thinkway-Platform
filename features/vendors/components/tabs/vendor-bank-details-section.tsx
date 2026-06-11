@@ -1,11 +1,15 @@
 "use client";
 
 import { format } from "date-fns";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { DocumentUploadForm } from "@/components/forms/document-upload-form";
 import { FieldError } from "@/components/forms/field-error";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
 import {
   DETAIL_FORM_INPUT_CLASS,
   DETAIL_FORM_SELECT_TRIGGER_CLASS,
@@ -30,6 +33,7 @@ import {
 import { PAYMENT_TERMS_OPTIONS } from "@/features/vendors/constants";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import {
+  hasVendorBankDetails,
   parseVendorPaymentDetails,
 } from "@/features/vendors/utils";
 import {
@@ -49,8 +53,13 @@ type VendorBankDetailsSectionProps = {
 };
 
 export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSectionProps) {
+  const router = useRouter();
   const paymentDetails = useMemo(
     () => parseVendorPaymentDetails(workspace.payment_details),
+    [workspace.payment_details]
+  );
+  const bankConfigured = useMemo(
+    () => hasVendorBankDetails(workspace.payment_details),
     [workspace.payment_details]
   );
   const [paymentTerms, setPaymentTerms] = useState<string>(
@@ -71,20 +80,35 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
   const latestBankLetter = bankLetters[0] ?? null;
 
   useEffect(() => {
+    setPaymentTerms(workspace.payment_terms ?? "net_30");
+    setPaymentMethod(paymentDetails.payment_method);
+  }, [workspace.payment_terms, workspace.updated_at, paymentDetails.payment_method]);
+
+  useEffect(() => {
     if (!state.message) return;
-    if (state.ok) toast.success(state.message);
-    else toast.error(state.message);
-  }, [state]);
+    if (state.ok) {
+      toast.success(state.message);
+      router.refresh();
+      return;
+    }
+    toast.error(state.message);
+  }, [state, router]);
 
   return (
     <div className="space-y-4 px-4 md:px-5">
-      <OperationalFormSection
-        title="Bank details"
-        description="Used on Vendor IO payment terms and treasury disbursement. Fields flow into generated IO documents automatically."
-        footer={
-          <Button type="submit" form="vendor-bank-details-form" disabled={isPending}>
-            {isPending ? "Saving…" : "Save bank details"}
-          </Button>
+      <CampaignFlatSection
+        title="Vendor payout bank details"
+        description="Saved here on Billing & Payments and rendered live on Vendor IO Section 6 (Vendor Payment Details)."
+        actions={
+          bankConfigured ? (
+            <Badge variant="secondary" className="font-normal">
+              Linked to Vendor IO
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="font-normal">
+              Required for IO payout block
+            </Badge>
+          )
         }
       >
         <form id="vendor-bank-details-form" action={formAction} className="grid gap-4">
@@ -209,10 +233,23 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
               <FieldError messages={state.fieldErrors?.iban} />
             </div>
           </div>
-        </form>
-      </OperationalFormSection>
 
-      <OperationalFormSection
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-4">
+            <p className="text-[11px] text-muted-foreground">
+              Updates apply immediately to{" "}
+              <Link href="/ios/vendor" className="text-foreground hover:underline">
+                Vendor IO
+              </Link>{" "}
+              preview and HTML export.
+            </p>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Saving…" : "Save bank details"}
+            </Button>
+          </div>
+        </form>
+      </CampaignFlatSection>
+
+      <CampaignFlatSection
         title="Bank letter"
         description="Upload the vendor's official bank confirmation letter for treasury verification."
       >
@@ -241,7 +278,7 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
           defaultDocumentType="bank_letter"
           action={uploadBankLetterWrapper}
         />
-      </OperationalFormSection>
+      </CampaignFlatSection>
     </div>
   );
 }

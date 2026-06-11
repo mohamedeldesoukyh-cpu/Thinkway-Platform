@@ -471,8 +471,9 @@ export async function updateVendorBankDetailsAction(
 
   revalidatePath(`/vendors/${parsed.data.influencer_id}`);
   revalidatePath("/vendors");
+  revalidatePath("/ios/vendor");
 
-  return { ok: true, message: "Bank details saved." };
+  return { ok: true, message: "Bank details saved. Vendor IO documents will use these payout details." };
 }
 
 export async function savePlatformAccountsAction(

@@ -19,11 +19,11 @@ import { OperationalTableSection } from "@/components/ui/operational-table-secti
 import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
+import { VendorBankDetailsSection } from "@/features/vendors/components/tabs/vendor-bank-details-section";
 import type { VendorWorkspace } from "@/features/vendors/types";
-import { formatMoney } from "@/features/vendors/utils";
+import { formatMoney, hasVendorBankDetails } from "@/features/vendors/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
-import { VendorBankDetailsSection } from "@/features/vendors/components/tabs/vendor-bank-details-section";
 import { VENDOR_PAYOUTS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 
 const ACCENT_TILE = {
@@ -114,8 +114,21 @@ export function VendorBillingTab({ workspace }: { workspace: VendorWorkspace }) 
     },
   ];
 
+  const bankConfigured = hasVendorBankDetails(workspace.payment_details);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-4">
+      <div className="px-4 pt-4 md:px-5">
+        <CampaignOperationalSectionHeader
+          title="Billing & Payments"
+          description={
+            bankConfigured
+              ? "Vendor payout bank details are on file and linked to Vendor IO Section 6."
+              : "Add vendor bank details below — they flow into Vendor IO payment terms automatically."
+          }
+        />
+      </div>
+
       <VendorBankDetailsSection workspace={workspace} />
 
       <KpiCarousel items={summaryItems} showNavigation={false} className="px-4 md:px-5" />

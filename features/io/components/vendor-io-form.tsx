@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -90,6 +91,16 @@ export function VendorIoForm({ row }: Props) {
         <input type="hidden" name="status" value={row.status} />
 
         <div className="px-6 py-4">
+          <p className="mb-4 text-[11px] text-muted-foreground">
+            Payout bank details are managed on the{" "}
+            <Link
+              href={`/vendors/${row.influencer_id}?tab=billing`}
+              className="font-medium text-foreground hover:underline"
+            >
+              vendor Billing &amp; Payments
+            </Link>{" "}
+            tab and appear live on the IO document.
+          </p>
           <div className="space-y-1">
             <DetailEditBlock label="Terms (plain text)">
               <Textarea

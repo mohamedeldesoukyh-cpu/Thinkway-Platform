@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageBackButton } from "@/components/navigation/page-back-button";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MoreHorizontalIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -53,12 +54,25 @@ export function VendorWorkspaceView({
   defaultTab = "overview",
   portalAccessPanel,
 }: VendorWorkspaceViewProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [depOpen, setDepOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   useEffect(() => {
     setActiveTab(defaultTab);
   }, [defaultTab]);
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      setActiveTab(value);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", value);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   const tabCounts = useMemo(
     () => ({
@@ -79,7 +93,7 @@ export function VendorWorkspaceView({
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
       >
         <CampaignWorkspaceScrollShell
@@ -174,8 +188,13 @@ export function VendorWorkspaceView({
             </VendorWorkspaceTabPanel>
           </TabsContent>
           <TabsContent value="billing" className={TAB_PANEL_CLASS}>
-            <VendorWorkspaceTabPanel>
-              <VendorBillingTab workspace={workspace} />
+            <VendorWorkspaceTabPanel className="min-h-0">
+              {activeTab === "billing" ? (
+                <VendorBillingTab
+                  key={`${workspace.id}-${workspace.updated_at}`}
+                  workspace={workspace}
+                />
+              ) : null}
             </VendorWorkspaceTabPanel>
           </TabsContent>
           <TabsContent value="documents" className={TAB_PANEL_CLASS}>

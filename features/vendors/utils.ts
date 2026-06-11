@@ -216,6 +216,18 @@ export function formatPaymentTermsLabel(
   );
 }
 
+export function hasVendorBankDetails(
+  details: Record<string, unknown> | null | undefined
+): boolean {
+  const parsed = parseVendorPaymentDetails(details);
+  return Boolean(
+    parsed.bank_name.trim() ||
+      parsed.account_number.trim() ||
+      parsed.iban.trim() ||
+      parsed.swift.trim()
+  );
+}
+
 export function formatPaymentMethodLabel(method: string | null | undefined): string {
   if (!method) {
     return "Bank transfer";
