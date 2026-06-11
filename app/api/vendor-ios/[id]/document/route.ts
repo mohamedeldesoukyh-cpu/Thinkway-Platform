@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
 import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
+import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -43,21 +48,31 @@ export async function GET(request: Request, context: RouteContext) {
     const disposition = download ? "attachment" : "inline";
     const baseName = typed.document_number ?? id;
 
-    if (format === "pdf" && typed.generated_pdf_url) {
-      if (!download) {
+    if (format === "pdf") {
+      if (typed.generated_pdf_url && !download) {
         return NextResponse.redirect(typed.generated_pdf_url);
       }
-      const pdfResponse = await fetch(typed.generated_pdf_url);
-      if (!pdfResponse.ok) {
-        return NextResponse.json({ error: "PDF not available" }, { status: 404 });
+
+      if (typed.generated_pdf_url && download) {
+        const pdfResponse = await fetch(typed.generated_pdf_url);
+        if (pdfResponse.ok) {
+          const pdfBuffer = await pdfResponse.arrayBuffer();
+          return new NextResponse(pdfBuffer, {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `${disposition}; filename="${baseName}.pdf"`,
+            },
+          });
+        }
       }
-      const pdfBuffer = await pdfResponse.arrayBuffer();
-      return new NextResponse(pdfBuffer, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `${disposition}; filename="${baseName}.pdf"`,
-        },
-      });
+
+      const html = await renderLiveVendorIoHtml(supabase, id);
+      const pdfBuffer = await renderHtmlToPdf(html);
+      if (!pdfBuffer) {
+        return NextResponse.json({ error: "PDF generation unavailable" }, { status: 503 });
+      }
+
+      return createPdfDocumentResponse(pdfBuffer, baseName, download);
     }
 
     if (format === "html") {

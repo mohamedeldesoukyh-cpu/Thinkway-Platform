@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { renderLiveInvoiceHtml } from "@/lib/billing/render-live-invoice-html";
+import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
+import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -10,6 +15,7 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
   const { searchParams } = new URL(request.url);
+  const format = searchParams.get("format") ?? "html";
   const download = searchParams.get("download") === "1";
 
   const supabase = await createSupabaseServerClient();
@@ -37,12 +43,25 @@ export async function GET(request: Request, context: RouteContext) {
     const baseName = typed.document_number ?? id;
     const disposition = download ? "attachment" : "inline";
 
-    return new NextResponse(html, {
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `${disposition}; filename="${baseName}.html"`,
-      },
-    });
+    if (format === "pdf") {
+      const pdfBuffer = await renderHtmlToPdf(html);
+      if (!pdfBuffer) {
+        return NextResponse.json({ error: "PDF generation unavailable" }, { status: 503 });
+      }
+
+      return createPdfDocumentResponse(pdfBuffer, baseName, download);
+    }
+
+    if (format === "html") {
+      return new NextResponse(html, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Disposition": `${disposition}; filename="${baseName}.html"`,
+        },
+      });
+    }
+
+    return NextResponse.json({ error: "Unsupported format" }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load invoice document";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -49,14 +49,24 @@ export default async function InvoicePreviewPage({ params }: InvoicePreviewPageP
           variant="text"
         />
         {!errorMessage ? (
-          <a
-            className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-            href={`/api/invoices/${id}/document?download=1`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Download HTML
-          </a>
+          <>
+            <a
+              className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
+              href={`/api/invoices/${id}/document?format=html&download=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Download HTML
+            </a>
+            <a
+              className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
+              href={`/api/invoices/${id}/document?format=pdf&download=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Download PDF
+            </a>
+          </>
         ) : null}
       </div>
 
