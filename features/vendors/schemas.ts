@@ -264,8 +264,33 @@ export const uploadInfluencerDocumentSchema = z.object({
     "media_kit",
     "tax_document",
     "rate_card",
+    "bank_letter",
   ]),
   expires_at: optionalDate,
+});
+
+export const updateVendorBankDetailsSchema = z.object({
+  influencer_id: z.string().uuid(),
+  payment_terms: paymentTermsSchema.optional().or(z.literal("")),
+  beneficiary_name: z.string().trim().max(200).optional().or(z.literal("")),
+  payment_method: z
+    .enum(["bank_transfer", "wire_transfer", "local_transfer"])
+    .optional()
+    .or(z.literal("")),
+  bank_name: z.string().trim().max(200).optional().or(z.literal("")),
+  bank_branch: z.string().trim().max(200).optional().or(z.literal("")),
+  account_number: z.string().trim().max(80).optional().or(z.literal("")),
+  swift: z.string().trim().max(20).optional().or(z.literal("")),
+  iban: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (value) => !value || /^[A-Z0-9]+$/i.test(value.replace(/\s/g, "")),
+      "Enter a valid IBAN"
+    ),
 });
 
 export type CreateVendorInput = z.infer<typeof createVendorSchema>;

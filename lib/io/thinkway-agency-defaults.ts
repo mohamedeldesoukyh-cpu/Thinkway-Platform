@@ -1,0 +1,20 @@
+/** Thinkway agency legal entity — matches Thinkway_IO_Global.html static block. */
+export const THINKWAY_AGENCY_DEFAULTS = {
+  legalName: "Thinkway (ثينكواي)",
+  commercialRegister: "57920",
+  registeredAddress: "44B Saraya Mall, Central Axis, Sheikh Zayed, Giza, Egypt",
+  email: "hello@thinkwaymedia.com",
+  vatNumber: "780-879-732",
+  taxRegistration: "7310",
+  country: "Egypt",
+  paymentSchedule: "Net 30 Days from Invoice",
+  paymentMethod: "Bank Transfer (AAIB)",
+  beneficiary: "Thinkway",
+  bankName: "Arab African International Bank (AAIB) — Park Street Branch",
+  accountNumber: "1200842810010201",
+  swift: "ARAIEGCXX",
+  iban: "EG500057093001200842810010201",
+  authorizedSignatory: "Summer Mostafa El Desouky",
+  authorizedTitle: "Company Representative",
+  defaultVatPercent: 14,
+} as const;

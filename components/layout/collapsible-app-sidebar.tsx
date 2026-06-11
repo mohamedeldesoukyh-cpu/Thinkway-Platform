@@ -24,6 +24,7 @@ import {
   LayersIcon,
   Link2Icon,
   MegaphoneIcon,
+  RadarIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   PercentIcon,
@@ -73,6 +74,7 @@ const navGroups: NavGroup[] = [
       { href: "/clients", label: "Legal Entities", icon: Building2Icon },
       { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
       { href: "/vendors", label: "Vendors", icon: UsersIcon },
+      { href: "/discovery", label: "Discovery", icon: RadarIcon },
     ],
   },
   {

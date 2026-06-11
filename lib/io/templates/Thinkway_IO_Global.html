@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insertion Order — VIO-2026-8 — Thinkway</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --navy:   #0A0F1E;
+    --blue:   #0057FF;
+    --blue-lt:#EEF4FF;
+    --blue-md:#C8D6F5;
+    --ink:    #1A1F36;
+    --muted:  #6B7280;
+    --rule:   #E2E8F0;
+    --bg:     #F8FAFC;
+    --white:  #FFFFFF;
+    --green:  #059669;
+    --radius: 6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 32px auto;
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 8px 32px rgba(0,0,0,.05);
+    overflow: hidden;
+  }
+
+  /* ── HEADER ─────────────────────────────────────── */
+  .doc-header {
+    background: var(--navy);
+    padding: 32px 40px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .doc-header .brand { display: flex; flex-direction: column; gap: 6px; }
+  .doc-header .logo-text {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+  .doc-header .logo-text span { color: var(--blue); }
+  .doc-header .tagline { font-size: 11px; color: #8899BB; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  .doc-header .title-block { text-align: right; }
+  .doc-header .io-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .serial-badge {
+    display: inline-block;
+    margin-top: 8px;
+    background: var(--blue);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 100px;
+    letter-spacing: 0.5px;
+  }
+  .doc-header .meta {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #8899BB;
+  }
+
+  /* ── BLUE ACCENT STRIPE ─────────────────────────── */
+  .stripe { height: 4px; background: var(--blue); }
+
+  /* ── BODY ───────────────────────────────────────── */
+  .doc-body { padding: 36px 40px 48px; }
+
+  /* ── SECTION ────────────────────────────────────── */
+  .section { margin-bottom: 36px; }
+  .section:last-child { margin-bottom: 0; }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .section-label .num {
+    background: var(--navy);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    letter-spacing: 0;
+  }
+  .section-label .title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  /* ── FIELD GRID ─────────────────────────────────── */
+  .fields {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .field-row {
+    display: grid;
+    border-bottom: 1px solid var(--rule);
+  }
+  .field-row:last-child { border-bottom: none; }
+  .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .field-row.cols-1 { grid-template-columns: 1fr; }
+  .field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .field {
+    padding: 12px 16px;
+    border-right: 1px solid var(--rule);
+    position: relative;
+  }
+  .field:last-child { border-right: none; }
+  .field.shade { background: var(--blue-lt); }
+  .field .flabel {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+  }
+  .field .fvalue {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    min-height: 18px;
+  }
+  .field .fvalue.empty { color: var(--rule); }
+  .field .fvalue.blue { color: var(--blue); font-weight: 600; }
+
+  /* left accent bar on first col */
+  .field-row .field:first-child {
+    border-left: 3px solid var(--blue);
+    padding-left: 13px;
+  }
+
+  /* ── DELIVERABLES TABLE ─────────────────────────── */
+  .deliv-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-size: 12.5px;
+  }
+  .deliv-table thead tr {
+    background: var(--navy);
+    color: #fff;
+  }
+  .deliv-table thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .deliv-table thead th:first-child {
+    border-left: 3px solid var(--blue);
+    padding-left: 11px;
+  }
+  .deliv-table tbody tr { border-bottom: 1px solid var(--rule); }
+  .deliv-table tbody tr:last-child { border-bottom: none; }
+  .deliv-table tbody tr:nth-child(even) { background: var(--blue-lt); }
+  .deliv-table tbody tr:nth-child(odd) { background: var(--white); }
+  .deliv-table tbody tr:nth-child(even) td:first-child { border-left: 3px solid var(--blue-md); }
+  .deliv-table tbody tr:nth-child(odd) td:first-child { border-left: 3px solid var(--blue); }
+  .deliv-table tbody td {
+    padding: 10px 14px;
+    color: var(--ink);
+  }
+  .deliv-table tbody td .platform {
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .deliv-table tbody td.muted { color: var(--muted); font-size: 12px; }
+
+  /* ── PRICING ────────────────────────────────────── */
+  .pricing-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13px;
+  }
+  .pricing-row:first-child { border-left: 3px solid var(--blue); padding-left: 13px; }
+  .pricing-row:last-child { border-bottom: none; }
+  .pricing-row .label { color: var(--muted); font-size: 12px; }
+  .pricing-row .amount { font-weight: 600; color: var(--ink); }
+  .pricing-row.total {
+    background: var(--navy);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .pricing-row.total .label { color: #8899BB; font-size: 12px; font-weight: 500; }
+  .pricing-row.total .amount { color: #fff; font-size: 16px; font-weight: 700; }
+
+  .pricing-wrap {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  /* ── PAYMENT TERMS ──────────────────────────────── */
+  .terms-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--blue-lt);
+    color: var(--blue);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--blue-md);
+  }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+
+  /* ── SIGNATURES ─────────────────────────────────── */
+  .sig-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .sig-box {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .sig-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+  }
+  .sig-box.party::before { background: var(--rule); }
+  .sig-box.agency::before { background: var(--blue); }
+  .sig-box.agency { background: var(--blue-lt); border-color: var(--blue-md); }
+  .sig-box .sig-role {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .sig-box.agency .sig-role { color: var(--blue); }
+  .sig-field { margin-bottom: 14px; }
+  .sig-field:last-child { margin-bottom: 0; }
+  .sig-field .slabel {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .sig-field .svalue {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    min-height: 18px;
+  }
+  .sig-field .sig-line {
+    border-bottom: 1.5px solid var(--rule);
+    height: 36px;
+    margin-top: 4px;
+  }
+  .sig-box.agency .sig-field .sig-line { border-color: var(--blue-md); }
+
+  /* ── LEGAL TERMS ────────────────────────────────── */
+  .terms-list { list-style: none; }
+  .terms-list li {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+  .terms-list li:last-child { border-bottom: none; }
+  .terms-list li .tnum {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background: var(--blue-lt);
+    color: var(--blue);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+  .terms-list li strong { color: var(--ink); font-weight: 600; }
+
+  /* ── DIVIDER ─────────────────────────────────────── */
+  .page-break-note {
+    text-align: center;
+    padding: 16px 0;
+    font-size: 11px;
+    color: var(--rule);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-top: 1px dashed var(--rule);
+    margin: 36px 0;
+  }
+
+  /* ── FOOTER ─────────────────────────────────────── */
+  .doc-footer {
+    background: var(--bg);
+    border-top: 1px solid var(--rule);
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .doc-footer .left { font-size: 11px; color: var(--muted); }
+  .doc-footer .left strong { color: var(--ink); }
+  .doc-footer .right { font-size: 11px; color: var(--blue); font-weight: 600; letter-spacing: 0.3px; }
+
+  /* ── CONFIDENTIAL BANNER ────────────────────────── */
+  .confidential {
+    text-align: center;
+    padding: 8px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: var(--bg);
+  }
+
+  /* ── PRINT ───────────────────────────────────────── */
+  @media print {
+    body { background: white; }
+    .page { margin: 0; box-shadow: none; border-radius: 0; }
+    .section { page-break-inside: avoid; }
+    .sig-grid { page-break-inside: avoid; }
+  }
+
+  @media (max-width: 600px) {
+    .doc-header { flex-direction: column; align-items: flex-start; }
+    .doc-header .title-block { text-align: left; }
+    .doc-body { padding: 24px 20px 36px; }
+    .field-row.cols-2 { grid-template-columns: 1fr; }
+    .field-row.cols-3 { grid-template-columns: 1fr; }
+    .sig-grid { grid-template-columns: 1fr; }
+    .doc-footer { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="brand">
+      <div class="logo-text">THINK<span>WAY</span></div>
+      <div class="tagline">Influencer Marketing Agency · ثينكواي</div>
+    </div>
+    <div class="title-block">
+      <div class="io-title">Insertion Order</div>
+      <div><span class="serial-badge">VIO-2026-8</span></div>
+      <div class="meta">Issued: June 2026 &nbsp;·&nbsp; Egypt</div>
+    </div>
+  </div>
+  <div class="stripe"></div>
+
+  <div class="doc-body">
+
+    <!-- 01 PARTIES -->
+    <div class="section">
+      <div class="section-label"><div class="num">1</div><div class="title">Parties</div></div>
+      <div class="fields">
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Influencer / Agency</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Advertiser (Agency)</div>
+            <div class="fvalue blue">Thinkway (ثينكواي)</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">National ID / Trade License</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Commercial Register No.</div>
+            <div class="fvalue">57920</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Influencer Address</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Registered Address</div>
+            <div class="fvalue">44B Saraya Mall, Central Axis, Sheikh Zayed, Giza, Egypt</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Influencer Email</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Agency Email &amp; VAT</div>
+            <div class="fvalue">hello@thinkwaymedia.com &nbsp;·&nbsp; VAT 780-879-732</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 CAMPAIGN DETAILS -->
+    <div class="section">
+      <div class="section-label"><div class="num">2</div><div class="title">Campaign Details</div></div>
+      <div class="fields">
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Client</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Brand</div>
+            <div class="fvalue empty">——</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Campaign Name</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Campaign Duration</div>
+            <div class="fvalue">From: [DATE] &nbsp;&nbsp; To: [DATE]</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Channel(s)</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Usage Period (from date of posting)</div>
+            <div class="fvalue empty">——</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 INFLUENCER DETAILS -->
+    <div class="section">
+      <div class="section-label"><div class="num">3</div><div class="title">Influencer Details</div></div>
+      <div class="fields">
+        <div class="field-row cols-3">
+          <div class="field shade">
+            <div class="flabel">Full Name / Handle</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field shade">
+            <div class="flabel">Platform(s)</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field shade">
+            <div class="flabel">Follower Count</div>
+            <div class="fvalue empty">——</div>
+          </div>
+        </div>
+        <div class="field-row cols-3">
+          <div class="field shade">
+            <div class="flabel">Content Niche</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field shade">
+            <div class="flabel">Primary Audience</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field shade">
+            <div class="flabel">Avg. Engagement Rate</div>
+            <div class="fvalue empty">——</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 04 DELIVERABLES -->
+    <div class="section">
+      <div class="section-label"><div class="num">4</div><div class="title">Content Deliverables</div></div>
+      <table class="deliv-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Deliverable Type</th>
+            <th>No. of Posts</th>
+            <th>Account / Handle</th>
+            <th>Scheduled Date(s)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="platform">YouTube</span></td>
+            <td class="muted">Video / Short</td>
+            <td>[●]</td>
+            <td class="muted">[Account / Channel]</td>
+            <td class="muted">[●]</td>
+          </tr>
+          <tr>
+            <td><span class="platform">Instagram</span></td>
+            <td class="muted">Post / Reel / Story</td>
+            <td>[●]</td>
+            <td class="muted">[Account]</td>
+            <td class="muted">[●]</td>
+          </tr>
+          <tr>
+            <td><span class="platform">TikTok</span></td>
+            <td class="muted">Video</td>
+            <td>[●]</td>
+            <td class="muted">[Account]</td>
+            <td class="muted">[●]</td>
+          </tr>
+          <tr>
+            <td><span class="platform">X (Twitter)</span></td>
+            <td class="muted">Post / Thread</td>
+            <td>[●]</td>
+            <td class="muted">[Account]</td>
+            <td class="muted">[●]</td>
+          </tr>
+          <tr>
+            <td><span class="platform">Facebook</span></td>
+            <td class="muted">Post / Reel</td>
+            <td>[●]</td>
+            <td class="muted">[Account / Page]</td>
+            <td class="muted">[●]</td>
+          </tr>
+          <tr>
+            <td><span class="platform">Snapchat</span></td>
+            <td class="muted">Snap / Story</td>
+            <td>[●]</td>
+            <td class="muted">[Account]</td>
+            <td class="muted">[●]</td>
+          </tr>
+          <tr>
+            <td><span class="platform">Threads</span></td>
+            <td class="muted">Post</td>
+            <td>[●]</td>
+            <td class="muted">[Account]</td>
+            <td class="muted">[●]</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 05 PRICING -->
+    <div class="section">
+      <div class="section-label"><div class="num">5</div><div class="title">Pricing &amp; Fees</div></div>
+      <div class="pricing-wrap">
+        <div class="pricing-row">
+          <span class="label">Content Creation Fee</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row">
+          <span class="label">Platform Distribution Fee</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row">
+          <span class="label">Usage Rights Fee</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row">
+          <span class="label">VAT (14%)</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row total">
+          <span class="label">Total Amount Due</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 PAYMENT TERMS -->
+    <div class="section">
+      <div class="section-label"><div class="num">6</div><div class="title">Payment Terms</div></div>
+      <div class="fields">
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Payment Schedule</div>
+            <div class="fvalue">Net 30 Days from Invoice</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Payment Method</div>
+            <div class="fvalue">Bank Transfer (AAIB)</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Beneficiary</div>
+            <div class="fvalue">Thinkway</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Bank</div>
+            <div class="fvalue">Arab African International Bank (AAIB) — Park Street Branch</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Account Number</div>
+            <div class="fvalue">1200842810010201</div>
+          </div>
+          <div class="field">
+            <div class="flabel">SWIFT Code</div>
+            <div class="fvalue">ARAIEGCXX</div>
+          </div>
+        </div>
+        <div class="field-row cols-1">
+          <div class="field shade">
+            <div class="flabel">IBAN</div>
+            <div class="fvalue">EG500057093001200842810010201</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 12px;">
+        <div class="terms-pills">
+          <span class="pill"><span class="dot"></span>Net 30 Days</span>
+          <span class="pill"><span class="dot"></span>Bank Transfer Only</span>
+          <span class="pill"><span class="dot"></span>VAT 14% Applicable</span>
+          <span class="pill"><span class="dot"></span>EGP Currency</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 07 SIGNATURES -->
+    <div class="section">
+      <div class="section-label"><div class="num">7</div><div class="title">Confirmation &amp; Signatures</div></div>
+      <div style="background:var(--bg); border:1px solid var(--rule); border-radius:var(--radius); padding:14px 16px; margin-bottom:16px; font-size:12px; color:var(--muted); line-height:1.6; border-left:3px solid var(--blue);">
+        By signing below, the undersigned parties confirm that all information provided is accurate and agree to be bound by the Terms and Conditions set out in Section 8 of this Insertion Order <strong style="color:var(--ink)">(Ref: VIO-2026-8)</strong>.
+      </div>
+      <div class="sig-grid">
+        <div class="sig-box party">
+          <div class="sig-role">Influencer / Agency</div>
+          <div class="sig-field">
+            <div class="slabel">Full Name</div>
+            <div class="svalue empty" style="color:var(--rule);">——</div>
+          </div>
+          <div class="sig-field">
+            <div class="slabel">Title / Role</div>
+            <div class="svalue empty" style="color:var(--rule);">——</div>
+          </div>
+          <div class="sig-field">
+            <div class="slabel">Signature</div>
+            <div class="sig-line"></div>
+          </div>
+          <div class="sig-field" style="margin-bottom:0">
+            <div class="slabel">Date</div>
+            <div class="sig-line"></div>
+          </div>
+        </div>
+        <div class="sig-box agency">
+          <div class="sig-role">Thinkway — Authorized Signatory</div>
+          <div class="sig-field">
+            <div class="slabel">Full Name</div>
+            <div class="svalue">Summer Mostafa El Desouky</div>
+          </div>
+          <div class="sig-field">
+            <div class="slabel">Title</div>
+            <div class="svalue">Company Representative</div>
+          </div>
+          <div class="sig-field">
+            <div class="slabel">Signature</div>
+            <div class="sig-line"></div>
+          </div>
+          <div class="sig-field" style="margin-bottom:0">
+            <div class="slabel">Date</div>
+            <div class="sig-line"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE BREAK NOTE -->
+    <div class="page-break-note">— Terms &amp; Conditions continue below —</div>
+
+    <!-- 08 TERMS & CONDITIONS -->
+    <div class="section">
+      <div class="section-label"><div class="num">8</div><div class="title">Terms &amp; Conditions</div></div>
+      <ul class="terms-list">
+        <li>
+          <span class="tnum">1</span>
+          <span><strong>Scope of Work &amp; Performance Standards.</strong> The Influencer shall adhere to all instructions made by the Agency and/or the Client. The Influencer commits to delivering all content as specified in the Content Deliverables table, on the agreed dates, and to the Client's satisfaction. Content is subject to a maximum of two (2) revision rounds prior to final posting. The Influencer shall not publish any Produced Content without prior written approval from the Agency.</span>
+        </li>
+        <li>
+          <span class="tnum">2</span>
+          <span><strong>Risk Mitigation &amp; Brand Safety.</strong> The Influencer shall ensure all Produced Content is brand-safe and free from offensive, harmful, defamatory, or discriminatory material. In the event of a brand safety breach, the Influencer shall remove the offending content within 24 hours of written notice, failing which a full refund of all amounts received shall apply. The Agency reserves the right to request content removal at any time without liability.</span>
+        </li>
+        <li>
+          <span class="tnum">3</span>
+          <span><strong>Payment &amp; Secure Payment System.</strong> All payments shall be made via verified bank transfer to the account details provided herein. Thinkway operates a secure and auditable disbursement system through Arab African International Bank (AAIB), ensuring full traceability and compliance with applicable Egyptian financial regulations. The Agency shall not be liable for delays resulting from incomplete or inaccurate bank details provided by the Influencer.</span>
+        </li>
+        <li>
+          <span class="tnum">4</span>
+          <span><strong>Compliance with Local Laws &amp; Ethical Behavior.</strong> The Influencer shall comply with all applicable laws of the Arab Republic of Egypt, including the Consumer Protection Law, the Cybercrime Law, and NTRA regulations governing digital advertising. The Influencer must clearly disclose paid partnerships in all posts (e.g., #Ad, #Sponsored, or platform-native tools). The Influencer shall not produce content that is misleading, deceptive, or makes unsubstantiated claims about any product or service.</span>
+        </li>
+        <li>
+          <span class="tnum">5</span>
+          <span><strong>Ethical Conduct.</strong> The Influencer shall conduct themselves professionally and shall not engage in, promote, or facilitate hate speech, harassment, violence, or discrimination. Both Parties agree not to make disparaging statements about the other Party, its affiliates, employees, or clients during or after the term of this IO.</span>
+        </li>
+        <li>
+          <span class="tnum">6</span>
+          <span><strong>Intellectual Property.</strong> The Influencer warrants that all elements of the Produced Content are either wholly original or properly licensed in accordance with applicable intellectual property laws and platform guidelines. The Influencer shall not include material that infringes upon the copyright, trademark, or other rights of any third party.</span>
+        </li>
+        <li>
+          <span class="tnum">7</span>
+          <span><strong>Exclusivity &amp; Confidentiality.</strong> The Influencer agrees to work exclusively with the Agency on this campaign and not to engage directly or indirectly with the same campaign during the campaign period and for one (1) month thereafter. Any breach shall result in liquidated damages of the EGP equivalent of USD 10,000. All pricing and deal terms shall remain strictly confidential.</span>
+        </li>
+        <li>
+          <span class="tnum">8</span>
+          <span><strong>Limitation of Liability.</strong> The maximum aggregate liability of the Agency under this IO shall be limited to the total amounts paid hereunder or the EGP equivalent of USD 2,000, whichever is lower.</span>
+        </li>
+        <li>
+          <span class="tnum">9</span>
+          <span><strong>Governing Law &amp; Jurisdiction.</strong> This IO shall be governed by and interpreted in accordance with the laws of the Arab Republic of Egypt. Any disputes shall be subject to the exclusive jurisdiction of the competent courts of Cairo, Egypt.</span>
+        </li>
+      </ul>
+    </div>
+
+  </div><!-- /doc-body -->
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <div class="left">
+      <strong>Thinkway (ثينكواي)</strong> &nbsp;·&nbsp; CR 57920 &nbsp;·&nbsp; VAT 780-879-732 &nbsp;·&nbsp; Tax Reg. 7310<br>
+      44B Saraya Mall, Central Axis, Sheikh Zayed, Giza, Egypt &nbsp;·&nbsp; hello@thinkwaymedia.com
+    </div>
+    <div class="right">VIO-2026-8</div>
+  </div>
+
+  <div class="confidential">Confidential &amp; Proprietary — Thinkway 2026</div>
+
+</div>
+
+</body>
+</html>

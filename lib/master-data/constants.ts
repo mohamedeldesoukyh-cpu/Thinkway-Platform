@@ -92,6 +92,13 @@ export const INFLUENCER_DOCUMENT_TYPE_OPTIONS = [
   { value: "media_kit", label: "Media Kit" },
   { value: "tax_document", label: "Tax Document" },
   { value: "rate_card", label: "Rate Card" },
+  { value: "bank_letter", label: "Bank letter" },
+] as const;
+
+export const VENDOR_PAYMENT_METHOD_OPTIONS = [
+  { value: "bank_transfer", label: "Bank transfer" },
+  { value: "wire_transfer", label: "Wire transfer" },
+  { value: "local_transfer", label: "Local transfer" },
 ] as const;
 
 export const CONTRACT_STATUS_OPTIONS = [

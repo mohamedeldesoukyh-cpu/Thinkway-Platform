@@ -113,7 +113,9 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
         .select(
           `
           id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
-          terms_html, terms_text, usage_rights, exclusivity, attachment_url, sent_at, approved_at,
+          terms_html, terms_text, usage_rights, exclusivity, attachment_url,
+          generated_html_url, generated_pdf_url, document_generated_at,
+          sent_at, approved_at,
           approved_by_name, rejection_reason, created_by, created_at, updated_at,
           campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
           influencer:influencers!vendor_ios_influencer_id_fkey(display_name),
@@ -145,6 +147,9 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
           usage_rights: string | null;
           exclusivity: string | null;
           attachment_url: string | null;
+          generated_html_url: string | null;
+          generated_pdf_url: string | null;
+          document_generated_at: string | null;
           sent_at: string | null;
           approved_at: string | null;
           approved_by_name: string | null;
@@ -177,6 +182,9 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
           usage_rights: typed.usage_rights,
           exclusivity: typed.exclusivity,
           attachment_url: typed.attachment_url,
+          generated_html_url: typed.generated_html_url,
+          generated_pdf_url: typed.generated_pdf_url,
+          document_generated_at: typed.document_generated_at,
           sent_at: typed.sent_at,
           approved_at: typed.approved_at,
           approved_by_name: typed.approved_by_name,
@@ -284,7 +292,9 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
         .select(
           `
           id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
-          terms_html, terms_text, usage_rights, exclusivity, attachment_url, sent_at, approved_at,
+          terms_html, terms_text, usage_rights, exclusivity, attachment_url,
+          generated_html_url, generated_pdf_url, document_generated_at,
+          sent_at, approved_at,
           approved_by_name, rejection_reason, created_by, created_at, updated_at,
           campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
           influencer:influencers!vendor_ios_influencer_id_fkey(display_name),
@@ -327,6 +337,9 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
           usage_rights: string | null;
           exclusivity: string | null;
           attachment_url: string | null;
+          generated_html_url: string | null;
+          generated_pdf_url: string | null;
+          document_generated_at: string | null;
           sent_at: string | null;
           approved_at: string | null;
           approved_by_name: string | null;
@@ -359,6 +372,9 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
           usage_rights: typed.usage_rights,
           exclusivity: typed.exclusivity,
           attachment_url: typed.attachment_url,
+          generated_html_url: typed.generated_html_url,
+          generated_pdf_url: typed.generated_pdf_url,
+          document_generated_at: typed.document_generated_at,
           sent_at: typed.sent_at,
           approved_at: typed.approved_at,
           approved_by_name: typed.approved_by_name,

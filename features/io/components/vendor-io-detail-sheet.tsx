@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { BriefcaseIcon, MoreHorizontalIcon } from "lucide-react";
-import { useActionState, useEffect } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
@@ -22,7 +20,7 @@ import {
   DETAIL_TAB_TRIGGER_CLASS,
   OperationalDetailSheet,
 } from "@/features/campaigns/components/operational-detail-panel";
-import { sendVendorIoAction } from "@/features/io/actions";
+import { VendorIoDocumentActions } from "@/features/io/components/vendor-io-document-actions";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
@@ -31,8 +29,6 @@ import {
   initialsFromName,
 } from "@/lib/campaigns/assignment-detail-presenters";
 import { formatMoney } from "@/features/campaigns/utils";
-
-const INITIAL_STATE = { ok: false } as const;
 
 type VendorIoDetailSheetProps = {
   open: boolean;
@@ -155,6 +151,9 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
 function VendorIoActivityTab({ row }: { row: VendorIoRow }) {
   return (
     <div className="px-1">
+      <DetailField label="Document generated">
+        {formatIoDateTime(row.document_generated_at)}
+      </DetailField>
       <DetailField label="Sent">{formatIoDateTime(row.sent_at)}</DetailField>
       <DetailField label="Approved">{formatIoDateTime(row.approved_at)}</DetailField>
       <DetailField label="Approved by">{row.approved_by_name?.trim() || "—"}</DetailField>
@@ -179,14 +178,6 @@ export function VendorIoDetailSheet({
   row,
   campaignId,
 }: VendorIoDetailSheetProps) {
-  const [sendState, sendAction, sending] = useActionState(sendVendorIoAction, INITIAL_STATE);
-
-  useEffect(() => {
-    if (!sendState.message) return;
-    if (sendState.ok) toast.success(sendState.message);
-    else toast.error(sendState.message);
-  }, [sendState]);
-
   const ioLabel = row?.document_number ?? "Vendor IO";
   const title = row?.influencer_name ?? ioLabel;
 
@@ -277,17 +268,8 @@ export function VendorIoDetailSheet({
           </Tabs>
 
           <div className="shrink-0 border-t border-border/60 px-6 py-4">
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button size="sm" variant="outline" asChild>
-                <a href={`/ios/vendor?campaign=${campaignId}&io=${row.id}`}>View</a>
-              </Button>
-              <form action={sendAction}>
-                <input type="hidden" name="id" value={row.id} />
-                <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-                <Button size="sm" type="submit" disabled={sending}>
-                  {row.status === "sent" ? "Resend" : "Send"}
-                </Button>
-              </form>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <VendorIoDocumentActions row={row} />
               <VendorIoUngenerateTrigger
                 row={row}
                 disabled={!row.ungenerate_eligible}

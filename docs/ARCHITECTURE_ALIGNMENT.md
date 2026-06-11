@@ -93,7 +93,7 @@ Entities in reference **not yet implemented** as first-class modules:
 | **Roles** | Supabase auth + partial RLS | Full 6-role matrix (§6), CM scoping, Data Entry financial column hiding |
 | **Reports** | None in app | All 10 standard reports + custom builder (§14) |
 | **Admin** | Nav stubs | Users, roles, system settings, audit UI (§17) |
-| **Discovery** | None | Brief/AI match, shortlist, client report (§13) |
+| **Discovery** | `discovered_profiles` + worker service (`services/discovery-worker`) | Brief/AI match UI, shortlists ✅ Phase 1; client report export ⏳ |
 
 ---
 

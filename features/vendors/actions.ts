@@ -21,6 +21,7 @@ import {
   createVendorSchema,
   platformAccountInputSchema,
   savePlatformAccountsSchema,
+  updateVendorBankDetailsSchema,
   updateVendorFinanceSchema,
   updateVendorLegalSchema,
   updateVendorOverviewSchema,
@@ -404,6 +405,74 @@ export async function updateVendorFinanceAction(
   revalidatePath(`/vendors/${parsed.data.influencer_id}`);
 
   return { ok: true, message: "Finance saved." };
+}
+
+export async function updateVendorBankDetailsAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const parsed = updateVendorBankDetailsSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Please fix the errors below.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const { data: existing, error: loadError } = await supabase
+    .from("influencers")
+    .select("payment_details")
+    .eq("id", parsed.data.influencer_id)
+    .maybeSingle();
+
+  if (loadError || !existing) {
+    return {
+      ok: false,
+      message: loadError?.message ?? "Vendor not found.",
+    };
+  }
+
+  const currentDetails =
+    ((existing as { payment_details?: Record<string, unknown> }).payment_details ??
+      {}) as Record<string, unknown>;
+
+  const paymentDetails: Record<string, unknown> = {
+    ...currentDetails,
+    beneficiary_name: emptyToNull(parsed.data.beneficiary_name),
+    method: emptyToNull(parsed.data.payment_method) ?? "bank_transfer",
+    bank_name: emptyToNull(parsed.data.bank_name),
+    bank_branch: emptyToNull(parsed.data.bank_branch),
+    account_number: emptyToNull(parsed.data.account_number),
+    swift: emptyToNull(parsed.data.swift),
+    iban: emptyToNull(parsed.data.iban)?.replace(/\s/g, "").toUpperCase() ?? null,
+  };
+
+  const { error: updateError } = await supabase
+    .from("influencers")
+    .update({
+      payment_details: paymentDetails,
+      payment_terms: (emptyToNull(parsed.data.payment_terms) ??
+        null) as PaymentTerms | null,
+    } as never)
+    .eq("id", parsed.data.influencer_id);
+
+  if (updateError) {
+    return { ok: false, message: updateError.message };
+  }
+
+  revalidatePath(`/vendors/${parsed.data.influencer_id}`);
+  revalidatePath("/vendors");
+
+  return { ok: true, message: "Bank details saved." };
 }
 
 export async function savePlatformAccountsAction(

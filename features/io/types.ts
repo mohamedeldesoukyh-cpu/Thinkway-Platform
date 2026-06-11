@@ -1,5 +1,5 @@
 export type ClientIoStatus = "draft" | "sent" | "approved";
-export type VendorIoStatus = "draft" | "sent" | "approved" | "rejected";
+export type VendorIoStatus = "draft" | "generated" | "sent" | "approved" | "rejected";
 
 export type ClientIoRow = {
   id: string;
@@ -41,6 +41,9 @@ export type VendorIoRow = {
   usage_rights: string | null;
   exclusivity: string | null;
   attachment_url: string | null;
+  generated_html_url: string | null;
+  generated_pdf_url: string | null;
+  document_generated_at: string | null;
   sent_at: string | null;
   approved_at: string | null;
   approved_by_name: string | null;

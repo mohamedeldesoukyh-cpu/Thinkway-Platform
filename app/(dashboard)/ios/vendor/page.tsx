@@ -43,6 +43,7 @@ export default async function VendorIosPage({ searchParams }: Props) {
                 statuses={[
                   { value: "all", label: "All statuses" },
                   { value: "draft", label: "Draft" },
+                  { value: "generated", label: "Generated" },
                   { value: "sent", label: "Sent" },
                   { value: "approved", label: "Approved" },
                   { value: "rejected", label: "Rejected" },

@@ -33,8 +33,9 @@ export function AssignmentIoRevisionDialog({
         <DialogHeader>
           <DialogTitle>Commercial change affects Vendor IO</DialogTitle>
           <DialogDescription>
-            This assignment was un-generated from an invoice. Saving revises {ioLabel}{" "}
-            under the same serial (for example /2, /3) with the updated creator cost.
+            Vendor IO revision will be generated under the same IO number ({ioLabel}). The
+            next revision will use the same serial with an incremented suffix (for example{" "}
+            {ioLabel}/1, {ioLabel}/2) and updated commercial values.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

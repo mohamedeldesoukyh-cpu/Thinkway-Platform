@@ -176,6 +176,12 @@ export async function sendVendorIoAction(
   const { supabase, user, error } = await requireAuthUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
 
+  const { data: vendorIo } = await supabase
+    .from("vendor_ios")
+    .select("document_number, generated_pdf_url, influencer_id, influencers:influencer_id(email)")
+    .eq("id", id)
+    .maybeSingle();
+
   const { data, error: rpcError } = await (supabase as any).rpc("send_vendor_io", {
     p_vendor_io_id: id,
     p_actor_id: user.id,
@@ -185,8 +191,29 @@ export async function sendVendorIoAction(
   const token = (data as string | null) ?? "";
   const approvalUrl = token ? buildIoEmailLink("vendor", token) : null;
 
+  const typed = vendorIo as {
+    document_number: string | null;
+    generated_pdf_url: string | null;
+    influencers: { email: string | null } | null;
+  } | null;
+
+  await supabase.from("io_notifications").insert({
+    io_type: "vendor",
+    io_id: id,
+    event_type: "vendor_io_sent",
+    recipient_email: typed?.influencers?.email ?? null,
+    delivery_status: "queued",
+    payload: {
+      document_number: typed?.document_number,
+      pdf_url: typed?.generated_pdf_url,
+      approval_url: approvalUrl,
+      campaign_header_id: campaignHeaderId,
+    },
+    sent_at: new Date().toISOString(),
+  } as never);
+
   debugIo("io-email", "vendor io send trigger", { id, approvalUrl });
   revalidateIoPaths(campaignHeaderId);
-  return { ok: true, message: "Vendor IO sent." };
+  return { ok: true, message: "Vendor IO sent with PDF attachment link when available." };
 }
 

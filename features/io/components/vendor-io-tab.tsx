@@ -1,8 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useActionState, useEffect } from "react";
-import { toast } from "sonner";
 
 import {
   OperationalConfigurableTable,
@@ -21,11 +19,9 @@ import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { VendorIoDetailSheet } from "@/features/io/components/vendor-io-detail-sheet";
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
-import { sendVendorIoAction } from "@/features/io/actions";
+import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import type { VendorIoRow } from "@/features/io/types";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
-
-const INITIAL_STATE = { ok: false } as const;
 
 type Props = {
   campaignId: string;
@@ -34,9 +30,7 @@ type Props = {
 
 function buildCampaignVendorIoColumns(
   campaignId: string,
-  onViewDetail: (ioId: string) => void,
-  formAction: (payload: FormData) => void,
-  pending: boolean
+  onViewDetail: (ioId: string) => void
 ): OperationalConfigurableColumnDef<VendorIoRow>[] {
   return [
     {
@@ -99,15 +93,14 @@ function buildCampaignVendorIoColumns(
       renderCell: (row) => (
         <div className="inline-flex items-center gap-2">
           <Button size="sm" variant="outline" asChild>
-            <a href={`/ios/vendor?campaign=${campaignId}&io=${row.id}`}>View</a>
+            <a href={`/ios/vendor/${row.id}/preview`} target="_blank" rel="noopener noreferrer">
+              View IO
+            </a>
           </Button>
-          <form action={formAction}>
-            <input type="hidden" name="id" value={row.id} />
-            <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-            <Button size="sm" type="submit" disabled={pending}>
-              {row.status === "sent" ? "Resend" : "Send"}
-            </Button>
-          </form>
+          <Button size="sm" variant="outline" onClick={() => onViewDetail(row.id)}>
+            Details
+          </Button>
+          <VendorIoSendButton row={row} variant="outline" />
           <VendorIoUngenerateTrigger
             row={row}
             disabled={!row.ungenerate_eligible}
@@ -119,12 +112,7 @@ function buildCampaignVendorIoColumns(
   ];
 }
 
-const CAMPAIGN_VENDOR_IO_TABLE_COLUMNS = buildCampaignVendorIoColumns(
-  "",
-  () => {},
-  () => {},
-  false
-);
+const CAMPAIGN_VENDOR_IO_TABLE_COLUMNS = buildCampaignVendorIoColumns("", () => {});
 
 export const CAMPAIGN_VENDOR_IO_TABLE_COLUMN_METAS = getOperationalTableColumnMetas(
   CAMPAIGN_VENDOR_IO_TABLE_COLUMNS
@@ -132,16 +120,6 @@ export const CAMPAIGN_VENDOR_IO_TABLE_COLUMN_METAS = getOperationalTableColumnMe
 
 export function VendorIoTab({ campaignId, rows }: Props) {
   const [detailIoId, setDetailIoId] = useState<string | null>(null);
-  const [state, formAction, pending] = useActionState(sendVendorIoAction, INITIAL_STATE);
-
-  useEffect(() => {
-    if (!state.message) return;
-    if (state.ok) {
-      toast.success(state.message);
-      return;
-    }
-    toast.error(state.message);
-  }, [state]);
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
@@ -154,8 +132,8 @@ export function VendorIoTab({ campaignId, rows }: Props) {
   );
 
   const columns = useMemo(
-    () => buildCampaignVendorIoColumns(campaignId, setDetailIoId, formAction, pending),
-    [campaignId, formAction, pending]
+    () => buildCampaignVendorIoColumns(campaignId, setDetailIoId),
+    [campaignId]
   );
 
   return (

@@ -12,6 +12,7 @@ import {
 } from "@/lib/io/vendor-io-revision";
 import { finalizeLineBillingAfterVendorIoRevisionBatch } from "@/lib/billing/vendor-io-revision-line-billing";
 import { sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
+import { generateVendorIoDocument } from "@/lib/io/vendor-io-document-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const reviseVendorIoSchema = z.object({
@@ -334,6 +335,22 @@ export async function reviseVendorIosFromLinesAction(
 
     if ((staleCount ?? 0) > 0) {
       logReviseVendorIo("stale_vendor_io_refs_remain", { oldVioId: old.id, staleCount });
+    }
+
+    try {
+      await generateVendorIoDocument(supabase, newVioId, user.id);
+    } catch (docError) {
+      logReviseVendorIo("document_generation_failed", {
+        newVioId,
+        message: docError instanceof Error ? docError.message : "unknown",
+      });
+      return {
+        ok: false,
+        message:
+          docError instanceof Error
+            ? `Revision ${newDoc} created but document generation failed: ${docError.message}`
+            : "Revision created but document generation failed.",
+      };
     }
 
     revised += 1;

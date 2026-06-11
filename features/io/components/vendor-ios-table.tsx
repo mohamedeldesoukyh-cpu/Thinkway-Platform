@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
@@ -92,19 +93,20 @@ function buildVendorIosColumns(
       cellClassName: "text-right",
       renderCell: (row) => (
         <div className="inline-flex items-center gap-2">
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/ios/vendor/${row.id}/preview`} target="_blank" rel="noopener noreferrer">
+              View IO
+            </Link>
+          </Button>
           <Button
             size="sm"
             variant="outline"
             onClick={() => onView(row.id)}
             disabled={isNavigating}
           >
-            View
+            Open
           </Button>
-          <Button size="sm" variant="outline" asChild>
-            <Link href={`/campaigns/${row.campaign_header_id}`}>
-              {row.status === "sent" ? "Resend" : "Send"}
-            </Link>
-          </Button>
+          <VendorIoSendButton row={row} variant="outline" />
           <VendorIoUngenerateTrigger
             row={row}
             disabled={!row.ungenerate_eligible}

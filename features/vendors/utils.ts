@@ -1,4 +1,9 @@
-import type { InfluencerStatus } from "@/types/database";
+import type { InfluencerStatus, PaymentTerms } from "@/types/database";
+import {
+  PAYMENT_TERMS_OPTIONS,
+  VENDOR_PAYMENT_METHOD_OPTIONS,
+  labelForOption,
+} from "@/lib/master-data/constants";
 
 export type PlatformAccountSummary = {
   platform: string;
@@ -165,4 +170,58 @@ export function formatMoney(amount: number, currency = "USD"): string {
 
 export function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
+}
+
+export type VendorPaymentDetailsForm = {
+  beneficiary_name: string;
+  payment_method: string;
+  bank_name: string;
+  bank_branch: string;
+  account_number: string;
+  swift: string;
+  iban: string;
+};
+
+function paymentDetailString(
+  details: Record<string, unknown> | null | undefined,
+  key: string
+): string {
+  const value = details?.[key];
+  return typeof value === "string" ? value : "";
+}
+
+export function parseVendorPaymentDetails(
+  details: Record<string, unknown> | null | undefined
+): VendorPaymentDetailsForm {
+  return {
+    beneficiary_name: paymentDetailString(details, "beneficiary_name"),
+    payment_method: paymentDetailString(details, "method") || "bank_transfer",
+    bank_name: paymentDetailString(details, "bank_name"),
+    bank_branch: paymentDetailString(details, "bank_branch"),
+    account_number: paymentDetailString(details, "account_number"),
+    swift: paymentDetailString(details, "swift"),
+    iban: paymentDetailString(details, "iban"),
+  };
+}
+
+export function formatPaymentTermsLabel(
+  paymentTerms: PaymentTerms | null | undefined
+): string {
+  if (!paymentTerms) {
+    return "Net 30 Days from Invoice";
+  }
+  return (
+    labelForOption(PAYMENT_TERMS_OPTIONS, paymentTerms) ??
+    paymentTerms.replace(/_/g, " ")
+  );
+}
+
+export function formatPaymentMethodLabel(method: string | null | undefined): string {
+  if (!method) {
+    return "Bank transfer";
+  }
+  return (
+    labelForOption(VENDOR_PAYMENT_METHOD_OPTIONS, method) ??
+    method.replace(/_/g, " ")
+  );
 }

@@ -35,6 +35,7 @@ import {
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 
+import { CampaignCreatorDiscoveryPanel } from "@/features/campaigns/components/campaign-creator-discovery-panel";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import { AssignmentAudienceViewProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
 import { AssignmentAudienceViewToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-toggle";
@@ -249,6 +250,14 @@ export function CampaignLinesTabInner({
 
   return (
     <>
+      <div className="mb-4">
+        <CampaignCreatorDiscoveryPanel
+          campaignHeaderId={workspace.id}
+          campaignName={workspace.name}
+          brandCountry={workspace.vat_context.client_country_code}
+        />
+      </div>
+
       <OperationalTableColumnsProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignAssignmentGrid}
         columns={ASSIGNMENT_GRID_COLUMN_METAS}

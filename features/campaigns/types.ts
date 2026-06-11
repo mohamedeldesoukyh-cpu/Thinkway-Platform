@@ -318,9 +318,12 @@ export type CreatorBrowseFilters = {
 
 export type CreatorBrowseResult = {
   creators: InfluencerSearchResult[];
+  unified_creators?: import("@/lib/creators/types").UnifiedCreatorResult[];
   total: number;
   page: number;
   pageSize: number;
+  internal_count?: number;
+  discovery_count?: number;
 };
 
 export type InfluencerAssignmentProfile = InfluencerSearchResult & {

@@ -294,7 +294,8 @@ export type InfluencerDocumentType =
   | "signed_contract"
   | "media_kit"
   | "tax_document"
-  | "rate_card";
+  | "rate_card"
+  | "bank_letter";
 
 export type InfluencerRow = {
   id: string;
@@ -1551,6 +1552,242 @@ export type Database = {
         };
         Update: Partial<
           Database["public"]["Tables"]["influencer_documents"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      discovered_profiles: {
+        Row: {
+          id: string;
+          platform: string;
+          username: string;
+          profile_url: string;
+          display_name: string | null;
+          bio: string | null;
+          profile_image_url: string | null;
+          email_in_bio: string | null;
+          country_code: string | null;
+          city: string | null;
+          language_codes: string[];
+          category_tags: string[];
+          stage: string;
+          refresh_tier: string;
+          authenticity_score: number | null;
+          influencer_id: string | null;
+          search_vector: string | null;
+          metadata: Record<string, unknown>;
+          first_discovered_at: string;
+          last_enriched_at: string | null;
+          next_refresh_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          platform: string;
+          username: string;
+          profile_url: string;
+          display_name?: string | null;
+          bio?: string | null;
+          profile_image_url?: string | null;
+          email_in_bio?: string | null;
+          country_code?: string | null;
+          city?: string | null;
+          language_codes?: string[];
+          category_tags?: string[];
+          stage?: string;
+          refresh_tier?: string;
+          authenticity_score?: number | null;
+          influencer_id?: string | null;
+          metadata?: Record<string, unknown>;
+          first_discovered_at?: string;
+          last_enriched_at?: string | null;
+          next_refresh_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["discovered_profiles"]["Insert"]>;
+        Relationships: [];
+      };
+      profile_metrics: {
+        Row: {
+          id: string;
+          profile_id: string;
+          followers: number;
+          following: number;
+          posts_count: number;
+          avg_likes: number | null;
+          avg_comments: number | null;
+          engagement_rate: number | null;
+          avg_views: number | null;
+          posting_frequency_per_week: number | null;
+          reels_views_avg: number | null;
+          captured_at: string;
+          source: string;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          followers?: number;
+          following?: number;
+          posts_count?: number;
+          avg_likes?: number | null;
+          avg_comments?: number | null;
+          engagement_rate?: number | null;
+          avg_views?: number | null;
+          posting_frequency_per_week?: number | null;
+          reels_views_avg?: number | null;
+          captured_at?: string;
+          source?: string;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<Database["public"]["Tables"]["profile_metrics"]["Insert"]>;
+        Relationships: [];
+      };
+      profile_ai_scores: {
+        Row: {
+          id: string;
+          profile_id: string;
+          category: string | null;
+          niche: string | null;
+          audience_type: string | null;
+          content_quality_score: number | null;
+          luxury_level_score: number | null;
+          brand_fit_score: number | null;
+          professionalism_score: number | null;
+          influencer_summary: string | null;
+          audience_persona: string | null;
+          content_style: string | null;
+          model_version: string;
+          scored_at: string;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          category?: string | null;
+          niche?: string | null;
+          audience_type?: string | null;
+          content_quality_score?: number | null;
+          luxury_level_score?: number | null;
+          brand_fit_score?: number | null;
+          professionalism_score?: number | null;
+          influencer_summary?: string | null;
+          audience_persona?: string | null;
+          content_style?: string | null;
+          model_version?: string;
+          scored_at?: string;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<Database["public"]["Tables"]["profile_ai_scores"]["Insert"]>;
+        Relationships: [];
+      };
+      discovery_jobs: {
+        Row: {
+          id: string;
+          job_type: string;
+          method: string | null;
+          status: string;
+          payload: Record<string, unknown>;
+          result: Record<string, unknown>;
+          profiles_discovered: number;
+          profiles_enriched: number;
+          error_message: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          job_type: string;
+          method?: string | null;
+          status?: string;
+          payload?: Record<string, unknown>;
+          result?: Record<string, unknown>;
+          profiles_discovered?: number;
+          profiles_enriched?: number;
+          error_message?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["discovery_jobs"]["Insert"]>;
+        Relationships: [];
+      };
+      discovery_shortlists: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          owner_id: string;
+          campaign_header_id: string | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          owner_id: string;
+          campaign_header_id?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<Database["public"]["Tables"]["discovery_shortlists"]["Insert"]>;
+        Relationships: [];
+      };
+      discovery_shortlist_items: {
+        Row: {
+          id: string;
+          shortlist_id: string;
+          profile_id: string | null;
+          influencer_id: string | null;
+          unified_id: string | null;
+          notes: string | null;
+          match_score: number | null;
+          sort_order: number;
+          added_by: string | null;
+          added_at: string;
+        };
+        Insert: {
+          id?: string;
+          shortlist_id: string;
+          profile_id?: string | null;
+          influencer_id?: string | null;
+          unified_id?: string | null;
+          notes?: string | null;
+          match_score?: number | null;
+          sort_order?: number;
+          added_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["discovery_shortlist_items"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      discovery_campaign_matches: {
+        Row: {
+          id: string;
+          campaign_header_id: string | null;
+          brief_text: string;
+          profile_id: string;
+          match_score: number;
+          predicted_performance: Record<string, unknown>;
+          rationale: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id?: string | null;
+          brief_text: string;
+          profile_id: string;
+          match_score: number;
+          predicted_performance?: Record<string, unknown>;
+          rationale?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["discovery_campaign_matches"]["Insert"]
         >;
         Relationships: [];
       };

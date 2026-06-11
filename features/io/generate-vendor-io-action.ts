@@ -10,6 +10,7 @@ import {
   explainVendorIoGenerateEligibility,
   logVendorIoEligibility,
 } from "@/lib/io/vendor-io-generate-eligibility";
+import { generateVendorIoDocument } from "@/lib/io/vendor-io-document-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const generateVendorIoSchema = z.object({
@@ -230,10 +231,23 @@ export async function generateVendorIosFromLinesAction(
       }
     }
 
+    try {
+      await generateVendorIoDocument(supabase, vendorIoId, user.id);
+    } catch (docError) {
+      return {
+        ok: false,
+        message:
+          docError instanceof Error
+            ? `Vendor IO created but document generation failed: ${docError.message}`
+            : "Vendor IO created but document generation failed.",
+      };
+    }
+
     created += 1;
   }
 
   revalidatePath(`/campaigns/${campaignId}`);
+  revalidatePath("/ios/vendor");
   revalidatePath("/campaigns");
   revalidatePath("/ios/vendor");
 

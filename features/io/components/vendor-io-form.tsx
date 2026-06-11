@@ -16,8 +16,9 @@ import {
   DetailPill,
   DetailSheetFooter,
 } from "@/features/campaigns/components/operational-detail-panel";
-import { updateVendorIoAction, sendVendorIoAction } from "@/features/io/actions";
+import { updateVendorIoAction } from "@/features/io/actions";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { VendorIoDocumentActions } from "@/features/io/components/vendor-io-document-actions";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
 
@@ -38,7 +39,6 @@ export function VendorIoForm({ row }: Props) {
   const [attachmentUrl, setAttachmentUrl] = useState(row.attachment_url ?? "");
 
   const [saveState, saveAction, saving] = useActionState(updateVendorIoAction, INITIAL_STATE);
-  const [sendState, sendAction, sending] = useActionState(sendVendorIoAction, INITIAL_STATE);
 
   useEffect(() => {
     setTermsText(row.terms_text ?? "");
@@ -53,12 +53,6 @@ export function VendorIoForm({ row }: Props) {
     if (saveState.ok) toast.success(saveState.message);
     else toast.error(saveState.message);
   }, [saveState]);
-
-  useEffect(() => {
-    if (!sendState.message) return;
-    if (sendState.ok) toast.success(sendState.message);
-    else toast.error(sendState.message);
-  }, [sendState]);
 
   return (
     <OperationalTableSection
@@ -156,28 +150,19 @@ export function VendorIoForm({ row }: Props) {
         </div>
       </form>
 
-      <form id="vendor-io-send" action={sendAction} className="hidden">
-        <input type="hidden" name="id" value={row.id} />
-        <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-      </form>
-
       <DetailSheetFooter>
-        <Button
-          form="vendor-io-save"
-          type="submit"
-          variant="outline"
-          size="sm"
-          disabled={saving}
-        >
-          {saving ? "Saving…" : "Save draft"}
-        </Button>
-        <Button form="vendor-io-send" type="submit" size="sm" disabled={sending}>
-          {sending
-            ? "Sending…"
-            : row.status === "sent"
-              ? "Resend vendor IO"
-              : "Send to influencer"}
-        </Button>
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <VendorIoDocumentActions row={row} />
+          <Button
+            form="vendor-io-save"
+            type="submit"
+            variant="outline"
+            size="sm"
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save draft"}
+          </Button>
+        </div>
       </DetailSheetFooter>
     </OperationalTableSection>
   );
