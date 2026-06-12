@@ -214,6 +214,7 @@ export function isOperationalRowInvoiceEligible(
   if (
     !pendingRegeneration &&
     !hasRemainingInvoiceableRevenue({
+      kind: row.kind,
       remaining_amount: row.remaining_amount,
       billable_amount: row.billable_amount,
       invoiced_amount: row.invoiced_amount,
