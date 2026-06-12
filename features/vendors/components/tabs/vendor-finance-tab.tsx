@@ -34,9 +34,14 @@ import { cn } from "@/lib/utils";
 export function VendorFinanceTab({
   vendor,
   currencyOptions = [],
+  sectionTitle = "Rate card & tax",
+  hidePaymentTerms = false,
 }: {
   vendor: VendorDetail;
   currencyOptions?: { value: string; label: string }[];
+  sectionTitle?: string;
+  /** Billing tab already edits payment terms via bank details. */
+  hidePaymentTerms?: boolean;
 }) {
   const rate = parseRateCard(vendor.rate_card);
   const [paymentTerms, setPaymentTerms] = useState(vendor.payment_terms ?? "");
@@ -63,7 +68,7 @@ export function VendorFinanceTab({
 
   return (
     <OperationalFormSection
-      title="Finance"
+      title={sectionTitle}
       actions={
         vatRegistered ? (
           <Badge variant="secondary">VAT Registered</Badge>
@@ -83,25 +88,27 @@ export function VendorFinanceTab({
         <input type="hidden" name="pricing_currency" value={currency} />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="grid gap-2">
-            <Label>Payment terms</Label>
-            <Select
-              value={paymentTerms}
-              onValueChange={setPaymentTerms}
-              disabled={isPending}
-            >
-              <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
-                <SelectValue placeholder="Select terms" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_TERMS_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {hidePaymentTerms ? null : (
+            <div className="grid gap-2">
+              <Label>Payment terms</Label>
+              <Select
+                value={paymentTerms}
+                onValueChange={setPaymentTerms}
+                disabled={isPending}
+              >
+                <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                  <SelectValue placeholder="Select terms" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_TERMS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid gap-2">
             <Label>Rate card currency</Label>
             <Select

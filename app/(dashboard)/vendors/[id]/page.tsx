@@ -4,6 +4,8 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { VendorPortalAccessCard } from "@/features/vendors/components/vendor-portal-access-card";
 import { VendorWorkspaceView } from "@/features/vendors/components/vendor-workspace";
 import { getVendorWorkspace } from "@/features/vendors/queries";
+import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import { getMasterDataOptions } from "@/lib/master-data/queries";
 
 type VendorProfilePageProps = {
   params: Promise<{ id: string }>;
@@ -18,10 +20,16 @@ export default async function VendorProfilePage({
   const { tab } = await searchParams;
 
   let workspace;
+  let currencyOptions: { value: string; label: string }[] = [];
   let errorMessage: string | null = null;
 
   try {
-    workspace = await getVendorWorkspace(id);
+    const [workspaceResult, masterData] = await Promise.all([
+      getVendorWorkspace(id),
+      getMasterDataOptions(),
+    ]);
+    workspace = workspaceResult;
+    currencyOptions = buildCurrencyOptions(masterData.currencies);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load vendor.";
@@ -47,6 +55,7 @@ export default async function VendorProfilePage({
           <VendorWorkspaceView
             workspace={workspace}
             defaultTab={tab ?? "overview"}
+            currencyOptions={currencyOptions}
             portalAccessPanel={
               <VendorPortalAccessCard
                 influencerId={workspace.id}

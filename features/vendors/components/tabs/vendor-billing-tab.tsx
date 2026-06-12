@@ -20,6 +20,7 @@ import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { VendorBankDetailsSection } from "@/features/vendors/components/tabs/vendor-bank-details-section";
+import { VendorFinanceTab } from "@/features/vendors/components/tabs/vendor-finance-tab";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import { formatMoney, hasVendorBankDetails } from "@/features/vendors/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
@@ -64,7 +65,13 @@ const VENDOR_BILLING_COLUMNS: OperationalConfigurableColumnDef<PayoutRow>[] = [
 
 const VENDOR_BILLING_COLUMN_METAS = getOperationalTableColumnMetas(VENDOR_BILLING_COLUMNS);
 
-export function VendorBillingTab({ workspace }: { workspace: VendorWorkspace }) {
+export function VendorBillingTab({
+  workspace,
+  currencyOptions = [],
+}: {
+  workspace: VendorWorkspace;
+  currencyOptions?: { value: string; label: string }[];
+}) {
   const currency =
     (workspace.payment_details as { currency?: string })?.currency ?? "USD";
   const { financials } = workspace;
@@ -130,6 +137,14 @@ export function VendorBillingTab({ workspace }: { workspace: VendorWorkspace }) 
       </div>
 
       <VendorBankDetailsSection workspace={workspace} />
+
+      <div className="px-4 md:px-5">
+        <VendorFinanceTab
+          vendor={workspace}
+          currencyOptions={currencyOptions}
+          hidePaymentTerms
+        />
+      </div>
 
       <KpiCarousel items={summaryItems} showNavigation={false} className="px-4 md:px-5" />
 

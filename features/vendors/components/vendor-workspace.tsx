@@ -44,6 +44,7 @@ type VendorWorkspaceViewProps = {
   workspace: VendorWorkspace;
   defaultTab?: string;
   portalAccessPanel?: React.ReactNode;
+  currencyOptions?: { value: string; label: string }[];
 };
 
 const TAB_PANEL_CLASS =
@@ -53,6 +54,7 @@ export function VendorWorkspaceView({
   workspace,
   defaultTab = "overview",
   portalAccessPanel,
+  currencyOptions = [],
 }: VendorWorkspaceViewProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -193,6 +195,7 @@ export function VendorWorkspaceView({
                 <VendorBillingTab
                   key={`${workspace.id}-${workspace.updated_at}`}
                   workspace={workspace}
+                  currencyOptions={currencyOptions}
                 />
               ) : null}
             </VendorWorkspaceTabPanel>

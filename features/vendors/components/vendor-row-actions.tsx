@@ -104,7 +104,7 @@ export function VendorRowActions({ vendor }: VendorRowActionsProps) {
           <DropdownMenuItem asChild>
             <Link href={`/vendors/${vendor.id}?tab=billing`}>
               <CreditCardIcon className="size-4" />
-              Payment history
+              Billing & rate card
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
