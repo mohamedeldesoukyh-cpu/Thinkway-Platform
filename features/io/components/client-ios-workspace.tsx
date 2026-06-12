@@ -14,16 +14,22 @@ import {
   CLIENT_IOS_TABLE_COLUMNS,
   ClientIosTable,
 } from "@/features/io/components/client-ios-table";
-import type { ClientIoRow } from "@/features/io/types";
+import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 type Props = {
   rows: ClientIoRow[];
   initialSelectedId: string | null;
+  recipientsByClientId: Record<string, ClientIoSendRecipient[]>;
   leading?: ReactNode;
 };
 
-export function ClientIosWorkspace({ rows, initialSelectedId, leading }: Props) {
+export function ClientIosWorkspace({
+  rows,
+  initialSelectedId,
+  recipientsByClientId,
+  leading,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -70,7 +76,13 @@ export function ClientIosWorkspace({ rows, initialSelectedId, leading }: Props) 
           />
         </OperationalTableSection>
         {isPending ? <Skeleton className="h-[320px] w-full" /> : null}
-        {selected ? <ClientIoForm key={selected.id} row={selected} /> : null}
+        {selected ? (
+          <ClientIoForm
+            key={selected.id}
+            row={selected}
+            recipients={recipientsByClientId[selected.client_id] ?? []}
+          />
+        ) : null}
       </div>
     </OperationalTableSuiteProvider>
   );

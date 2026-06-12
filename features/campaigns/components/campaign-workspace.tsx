@@ -259,6 +259,7 @@ export function CampaignWorkspaceView({
                       <ClientIoHeaderControls
                         io={workspace.client_io}
                         campaignId={workspace.id}
+                        recipients={workspace.client_io_send_recipients}
                       />
                     ) : null}
                     {workspace.status !== "cancelled" ? (

@@ -11,7 +11,7 @@ import {
   getBrandsForCampaignForm,
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
-import { getCampaignClientIo, getCampaignVendorIos } from "@/features/io/queries";
+import { getCampaignClientIo, getCampaignVendorIos, getClientIoSendRecipients } from "@/features/io/queries";
 import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
 import type { CampaignListItem } from "@/types/database";
@@ -871,6 +871,10 @@ export async function getCampaignWorkspace(
     legacy_consumed: legacyConsumed,
   });
 
+  const clientIoSendRecipients = clientIo
+    ? await getClientIoSendRecipients(clientIo.client_id)
+    : [];
+
   const workspace = {
     id: headerRow.id,
     document_number: headerRow.document_number,
@@ -965,6 +969,7 @@ export async function getCampaignWorkspace(
     }),
     blockers,
     client_io: clientIo,
+    client_io_send_recipients: clientIoSendRecipients,
     vendor_ios: vendorIos ?? [],
     vat_context: {
       client_country_code: clientCountryCode,

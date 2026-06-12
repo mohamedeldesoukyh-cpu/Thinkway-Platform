@@ -6,13 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { ClientIoViewMenu } from "@/features/io/components/client-io-view-menu";
-import { sendClientIoAction } from "@/features/io/actions";
+import { ClientIoSendControls } from "@/features/io/components/client-io-send-controls";
 import { generateClientIoDocumentAction } from "@/features/io/generate-client-io-document-action";
 import {
   OPERATIONAL_CHROME_BADGE,
   OPERATIONAL_CHROME_LABEL,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import type { ClientIoRow } from "@/features/io/types";
+import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 import { cn } from "@/lib/utils";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -20,20 +20,14 @@ const INITIAL_STATE = { ok: false } as const;
 type Props = {
   io: ClientIoRow;
   campaignId: string;
+  recipients: ClientIoSendRecipient[];
 };
 
-export function ClientIoHeaderControls({ io, campaignId }: Props) {
-  const [sendState, sendAction, sending] = useActionState(sendClientIoAction, INITIAL_STATE);
+export function ClientIoHeaderControls({ io, campaignId, recipients }: Props) {
   const [generateState, generateAction, generating] = useActionState(
     generateClientIoDocumentAction,
     INITIAL_STATE
   );
-
-  useEffect(() => {
-    if (!sendState.message) return;
-    if (sendState.ok) toast.success(sendState.message);
-    else toast.error(sendState.message);
-  }, [sendState]);
 
   useEffect(() => {
     if (!generateState.message) return;
@@ -41,7 +35,6 @@ export function ClientIoHeaderControls({ io, campaignId }: Props) {
     else toast.error(generateState.message);
   }, [generateState]);
 
-  const sent = io.status === "sent" || io.status === "approved";
   const hasDocument = Boolean(io.document_generated_at || io.generated_html_url || io.terms_html);
 
   return (
@@ -82,36 +75,12 @@ export function ClientIoHeaderControls({ io, campaignId }: Props) {
         />
       ) : null}
 
-      {sent ? null : (
-        <form action={sendAction}>
-          <input type="hidden" name="id" value={io.id} />
-          <input type="hidden" name="campaign_header_id" value={campaignId} />
-          <Button
-            size="sm"
-            type="submit"
-            disabled={sending}
-            className="h-7 px-3 font-semibold text-white shadow-sm hover:opacity-90"
-          >
-            Send Client IO
-          </Button>
-        </form>
-      )}
-
-      {sent && io.status !== "approved" ? (
-        <form action={sendAction}>
-          <input type="hidden" name="id" value={io.id} />
-          <input type="hidden" name="campaign_header_id" value={campaignId} />
-          <Button
-            size="sm"
-            variant="outline"
-            type="submit"
-            disabled={sending}
-            className={cn(OPERATIONAL_CHROME_LABEL, "h-7 px-2")}
-          >
-            Resend
-          </Button>
-        </form>
-      ) : null}
+      <ClientIoSendControls
+        io={io}
+        campaignId={campaignId}
+        recipients={recipients}
+        compact
+      />
     </div>
   );
 }

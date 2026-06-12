@@ -1,6 +1,12 @@
 export type ClientIoStatus = "draft" | "generated" | "sent" | "approved";
 export type VendorIoStatus = "draft" | "generated" | "sent" | "approved" | "rejected";
 
+export type ClientIoSendRecipient = {
+  id: string;
+  label: string;
+  email: string;
+};
+
 export type ClientIoRow = {
   id: string;
   document_number: string | null;

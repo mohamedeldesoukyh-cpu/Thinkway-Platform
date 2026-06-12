@@ -3,6 +3,7 @@ import { safeOperationalQuery } from "@/lib/platform/safe-query";
 import { devLog } from "@/lib/platform/logger";
 import type {
   ClientIoRow,
+  ClientIoSendRecipient,
   IoSearchFilters,
   VendorIoRow,
 } from "@/features/io/types";
@@ -91,6 +92,68 @@ async function requireUser() {
     throw new Error(error?.message ?? "Unauthorized");
   }
   return { supabase, user };
+}
+
+export async function getClientIoSendRecipients(
+  clientId: string
+): Promise<ClientIoSendRecipient[]> {
+  const result = await safeOperationalQuery(
+    "io:getClientIoSendRecipients",
+    async () => {
+      const { supabase } = await requireUser();
+
+      const [contactsResult, clientResult] = await Promise.all([
+        supabase
+          .from("client_contacts")
+          .select("id, full_name, email, is_primary")
+          .eq("client_id", clientId)
+          .order("is_primary", { ascending: false })
+          .order("full_name"),
+        supabase.from("clients").select("billing_email, name").eq("id", clientId).maybeSingle(),
+      ]);
+
+      if (contactsResult.error) {
+        throw new Error(contactsResult.error.message);
+      }
+      if (clientResult.error) {
+        throw new Error(clientResult.error.message);
+      }
+
+      const recipients: ClientIoSendRecipient[] = [];
+      const seen = new Set<string>();
+
+      for (const contact of (contactsResult.data ?? []) as Array<{
+        id: string;
+        full_name: string;
+        email: string | null;
+        is_primary: boolean;
+      }>) {
+        const email = String(contact.email ?? "").trim();
+        if (!email || seen.has(email.toLowerCase())) continue;
+        seen.add(email.toLowerCase());
+        recipients.push({
+          id: String(contact.id),
+          label: contact.is_primary ? `${contact.full_name} (Primary)` : contact.full_name,
+          email,
+        });
+      }
+
+      const clientRow = clientResult.data as { billing_email: string | null; name: string } | null;
+      const billingEmail = String(clientRow?.billing_email ?? "").trim();
+      if (billingEmail && !seen.has(billingEmail.toLowerCase())) {
+        recipients.unshift({
+          id: "billing-email",
+          label: `${clientRow?.name ?? "Client"} billing`,
+          email: billingEmail,
+        });
+      }
+
+      return recipients;
+    },
+    []
+  );
+
+  return result.data;
 }
 
 export async function getCampaignClientIo(campaignHeaderId: string): Promise<ClientIoRow | null> {

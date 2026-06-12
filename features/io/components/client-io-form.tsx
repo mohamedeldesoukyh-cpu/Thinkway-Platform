@@ -13,11 +13,12 @@ import {
   DetailFormSection,
   DetailSheetFooter,
 } from "@/features/campaigns/components/operational-detail-panel";
-import { updateClientIoAction, sendClientIoAction } from "@/features/io/actions";
+import { updateClientIoAction } from "@/features/io/actions";
 import { generateClientIoDocumentAction } from "@/features/io/generate-client-io-document-action";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { ClientIoViewMenu } from "@/features/io/components/client-io-view-menu";
-import type { ClientIoRow } from "@/features/io/types";
+import { ClientIoSendControls } from "@/features/io/components/client-io-send-controls";
+import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 
 const INITIAL_STATE = { ok: false } as const;
 
@@ -26,16 +27,16 @@ const DETAIL_TEXTAREA_CLASS =
 
 type Props = {
   row: ClientIoRow;
+  recipients: ClientIoSendRecipient[];
 };
 
-export function ClientIoForm({ row }: Props) {
+export function ClientIoForm({ row, recipients }: Props) {
   const [termsText, setTermsText] = useState(row.terms_text ?? "");
   const [termsHtml, setTermsHtml] = useState(row.terms_html ?? "");
   const [billingTerms, setBillingTerms] = useState(row.billing_terms ?? "");
   const [attachmentUrl, setAttachmentUrl] = useState(row.attachment_url ?? "");
 
   const [saveState, saveAction, saving] = useActionState(updateClientIoAction, INITIAL_STATE);
-  const [sendState, sendAction, sending] = useActionState(sendClientIoAction, INITIAL_STATE);
   const [generateState, generateAction, generating] = useActionState(
     generateClientIoDocumentAction,
     INITIAL_STATE
@@ -53,12 +54,6 @@ export function ClientIoForm({ row }: Props) {
     if (saveState.ok) toast.success(saveState.message);
     else toast.error(saveState.message);
   }, [saveState]);
-
-  useEffect(() => {
-    if (!sendState.message) return;
-    if (sendState.ok) toast.success(sendState.message);
-    else toast.error(sendState.message);
-  }, [sendState]);
 
   useEffect(() => {
     if (!generateState.message) return;
@@ -142,46 +137,43 @@ export function ClientIoForm({ row }: Props) {
         </div>
       </form>
 
-      <form id="client-io-send" action={sendAction} className="hidden">
-        <input type="hidden" name="id" value={row.id} />
-        <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-      </form>
-
       <form id="client-io-generate" action={generateAction} className="hidden">
         <input type="hidden" name="id" value={row.id} />
         <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
       </form>
 
       <DetailSheetFooter>
-        <Button
-          form="client-io-save"
-          type="submit"
-          variant="outline"
-          size="sm"
-          disabled={saving}
-        >
-          {saving ? "Saving…" : "Save draft"}
-        </Button>
-        <Button
-          form="client-io-generate"
-          type="submit"
-          variant="outline"
-          size="sm"
-          disabled={generating}
-        >
-          {generating
-            ? "Generating…"
-            : hasDocument
-              ? "Regenerate document"
-              : "Generate document"}
-        </Button>
-        <Button form="client-io-send" type="submit" size="sm" disabled={sending}>
-          {sending
-            ? "Sending…"
-            : row.status === "sent"
-              ? "Resend client IO"
-              : "Send client IO"}
-        </Button>
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              form="client-io-generate"
+              type="submit"
+              variant="outline"
+              size="sm"
+              disabled={generating}
+            >
+              {generating
+                ? "Generating…"
+                : hasDocument
+                  ? "Regenerate document"
+                  : "Generate document"}
+            </Button>
+            <ClientIoSendControls
+              io={row}
+              campaignId={row.campaign_header_id}
+              recipients={recipients}
+            />
+          </div>
+          <Button
+            form="client-io-save"
+            type="submit"
+            variant="outline"
+            size="sm"
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save draft"}
+          </Button>
+        </div>
       </DetailSheetFooter>
     </OperationalTableSection>
   );
