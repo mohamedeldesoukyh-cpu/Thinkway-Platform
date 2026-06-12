@@ -1,13 +1,10 @@
+import { computeClientInvoiceVatPreview } from "@/lib/billing/client-billable-amount";
 import type { DeliverableBillingRow } from "@/lib/billing/deliverable-billing";
-import {
-  resolveInvoiceLineBeforeVat,
-  resolveInvoiceLineVatPercent,
-} from "@/lib/billing/invoice-from-deliverables";
+import { resolveInvoiceLineVatPercent } from "@/lib/billing/invoice-from-deliverables";
 import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
 import type { OperationalSelectionState } from "@/lib/billing/operational-selection";
 import {
   aggregateInvoiceTotals,
-  computeVatLine,
   type VatLineResult,
 } from "@/lib/vat/calculations";
 
@@ -102,6 +99,9 @@ function operationalRowToDeliverable(row: OperationalBillingRow): DeliverableBil
     invoice_line_item_id: row.invoice_line_item_id,
     locked_at: row.locked_at,
     revenue_before_vat: row.revenue_before_vat,
+    usage_rights_amount: row.usage_rights_amount ?? 0,
+    agency_fee_amount: row.agency_fee_amount ?? 0,
+    agency_fee_percent: row.agency_fee_percent ?? 0,
     revenue_vat_percent: row.revenue_vat_percent,
     revenue_vat_exempt: row.revenue_vat_exempt,
     label: row.label,
@@ -132,10 +132,22 @@ function buildPreviewVatLines(
     const assignment = assignmentByLineId.get(row.campaign_line_id);
     const deliverable = operationalRowToDeliverable(row);
     const lineVat = assignmentLineVatContext(assignment);
-    const beforeVat = resolveInvoiceLineBeforeVat(deliverable);
     const vatPercent = resolveInvoiceLineVatPercent(deliverable, lineVat, defaultVatPercent);
     const exempt = deliverable.revenue_vat_exempt || Boolean(lineVat.revenue_vat_exempt);
-    lines.push(computeVatLine({ beforeVat, vatPercent, exempt }));
+    lines.push(
+      computeClientInvoiceVatPreview({
+        revenue_before_vat: deliverable.revenue_before_vat,
+        usage_rights_amount: deliverable.usage_rights_amount,
+        agency_fee_amount: deliverable.agency_fee_amount,
+        agency_fee_percent: deliverable.agency_fee_percent,
+        billable_amount: deliverable.billable_amount,
+        invoiced_amount: deliverable.invoiced_amount,
+        remaining_amount: deliverable.remaining_amount,
+        locked_at: deliverable.locked_at,
+        revenue_vat_percent: vatPercent,
+        revenue_vat_exempt: exempt,
+      })
+    );
   }
 
   if (lines.length === 0) {
@@ -144,10 +156,19 @@ function buildPreviewVatLines(
       if (!isPreviewEligibleLegacyAssignment(assignment)) continue;
       const deliverable = operationalRowToDeliverable(assignment);
       const lineVat = assignmentLineVatContext(assignment);
-      const beforeVat = resolveInvoiceLineBeforeVat(deliverable);
       const vatPercent = resolveInvoiceLineVatPercent(deliverable, lineVat, defaultVatPercent);
       const exempt = deliverable.revenue_vat_exempt || Boolean(lineVat.revenue_vat_exempt);
-      lines.push(computeVatLine({ beforeVat, vatPercent, exempt }));
+      lines.push(
+        computeClientInvoiceVatPreview({
+          revenue_before_vat: deliverable.revenue_before_vat,
+          billable_amount: deliverable.billable_amount,
+          invoiced_amount: deliverable.invoiced_amount,
+          remaining_amount: deliverable.remaining_amount,
+          locked_at: deliverable.locked_at,
+          revenue_vat_percent: vatPercent,
+          revenue_vat_exempt: exempt,
+        })
+      );
     }
   }
 

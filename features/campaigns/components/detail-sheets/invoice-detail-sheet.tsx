@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 
 import { InvoiceStatusBadge } from "@/components/finance/invoice-status-badge";
+import { InvoiceViewMenu } from "@/features/billing/components/invoice-view-menu";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
@@ -131,7 +132,8 @@ export function InvoiceDetailSheet({ open, onOpenChange, row }: InvoiceDetailShe
           </Tabs>
 
           <div className="shrink-0 border-t border-border/60 px-6 py-4">
-            <div className="flex justify-end">
+            <div className="flex flex-wrap justify-end gap-2">
+              <InvoiceViewMenu invoiceId={row.id} />
               <Button size="sm" variant="outline" asChild>
                 <a href={`/billing/invoices/${row.id}`}>Open full invoice</a>
               </Button>

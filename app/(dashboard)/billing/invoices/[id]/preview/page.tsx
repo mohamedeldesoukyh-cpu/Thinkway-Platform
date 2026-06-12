@@ -1,16 +1,25 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageBackButton } from "@/components/navigation/page-back-button";
+import { InvoicePreviewLayoutToggle } from "@/features/billing/components/invoice-preview-layout-toggle";
+import { resolveInvoiceDocumentLayout } from "@/lib/billing/invoice-document-layout";
 import { renderLiveInvoiceHtml } from "@/lib/billing/render-live-invoice-html";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type InvoicePreviewPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ layout?: string }>;
 };
 
-export default async function InvoicePreviewPage({ params }: InvoicePreviewPageProps) {
+export default async function InvoicePreviewPage({
+  params,
+  searchParams,
+}: InvoicePreviewPageProps) {
   const { id } = await params;
+  const query = await searchParams;
+  const layout = resolveInvoiceDocumentLayout(query.layout);
   const supabase = await createSupabaseServerClient();
 
   const { data: invoice } = await supabase
@@ -29,7 +38,7 @@ export default async function InvoicePreviewPage({ params }: InvoicePreviewPageP
   let errorMessage: string | null = null;
 
   try {
-    html = await renderLiveInvoiceHtml(supabase, id);
+    html = await renderLiveInvoiceHtml(supabase, id, layout);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to render invoice preview.";
@@ -42,17 +51,22 @@ export default async function InvoicePreviewPage({ params }: InvoicePreviewPageP
       description={`${typed.document_number ?? id} — client-facing tax invoice`}
       hidePageHeader
     >
-      <div className="mb-4 flex flex-wrap gap-2 print:hidden">
-        <PageBackButton
-          fallbackHref={`/billing/invoices/${id}`}
-          label="Back to invoice workspace"
-          variant="text"
-        />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex flex-wrap items-center gap-2">
+          <PageBackButton
+            fallbackHref={`/billing/invoices/${id}`}
+            label="Back to invoice workspace"
+            variant="text"
+          />
+          <Suspense fallback={null}>
+            <InvoicePreviewLayoutToggle invoiceId={id} activeLayout={layout} />
+          </Suspense>
+        </div>
         {!errorMessage ? (
-          <>
+          <div className="flex flex-wrap gap-2">
             <a
               className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-              href={`/api/invoices/${id}/document?format=html&download=1`}
+              href={`/api/invoices/${id}/document?format=html&layout=${layout}&download=1`}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -60,13 +74,13 @@ export default async function InvoicePreviewPage({ params }: InvoicePreviewPageP
             </a>
             <a
               className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-              href={`/api/invoices/${id}/document?format=pdf&download=1`}
+              href={`/api/invoices/${id}/document?format=pdf&layout=${layout}&download=1`}
               target="_blank"
               rel="noopener noreferrer"
             >
               Download PDF
             </a>
-          </>
+          </div>
         ) : null}
       </div>
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { resolveInvoiceDocumentLayout } from "@/lib/billing/invoice-document-layout";
 import { renderLiveInvoiceHtml } from "@/lib/billing/render-live-invoice-html";
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
@@ -17,6 +18,7 @@ export async function GET(request: Request, context: RouteContext) {
   const { searchParams } = new URL(request.url);
   const format = searchParams.get("format") ?? "html";
   const download = searchParams.get("download") === "1";
+  const layout = resolveInvoiceDocumentLayout(searchParams.get("layout"));
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -39,7 +41,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const typed = invoice as { document_number: string | null };
-    const html = await renderLiveInvoiceHtml(supabase, id);
+    const html = await renderLiveInvoiceHtml(supabase, id, layout);
     const baseName = typed.document_number ?? id;
     const disposition = download ? "attachment" : "inline";
 

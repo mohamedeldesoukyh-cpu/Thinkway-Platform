@@ -37,6 +37,9 @@ export type DeliverableBillingRow = {
   invoice_line_item_id: string | null;
   locked_at: string | null;
   revenue_before_vat: number;
+  usage_rights_amount?: number;
+  agency_fee_amount?: number;
+  agency_fee_percent?: number;
   revenue_vat_percent: number;
   revenue_vat_exempt: boolean;
   label: string;

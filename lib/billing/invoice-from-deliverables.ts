@@ -25,6 +25,11 @@ import {
   type InvoiceValidationContext,
 } from "@/lib/billing/invoice-validation-context";
 import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
+import { resolveClientTaxableBase } from "@/lib/assignments/client-billing-commercial";
+import {
+  resolveClientBillableAmount,
+  resolveInvoicePreviewBeforeVat,
+} from "@/lib/billing/client-billable-amount";
 import { devLog } from "@/lib/dev-log";
 
 function lineBillingPatch(billingStatus: string) {
@@ -100,24 +105,29 @@ export function resolveInvoiceLineBeforeVat(
 ): number {
   const revenueBeforeVat = Number(deliverable.revenue_before_vat ?? 0);
   const remaining = Number(deliverable.remaining_amount ?? 0);
-  const billable = Number(deliverable.billable_amount ?? 0);
+  const billable = resolveClientBillableAmount({
+    revenue_before_vat: revenueBeforeVat,
+    usage_rights_amount: deliverable.usage_rights_amount,
+    agency_fee_amount: deliverable.agency_fee_amount,
+    agency_fee_percent: deliverable.agency_fee_percent,
+    billable_amount: deliverable.billable_amount,
+  });
   const invoiced = Number(deliverable.invoiced_amount ?? 0);
 
   if (options?.forRegeneration) {
     return Math.max(revenueBeforeVat, billable, remaining, invoiced);
   }
 
-  if (remaining > 0) return remaining;
-
-  if (
-    options?.updatingExisting ||
-    Boolean(deliverable.locked_at || deliverable.invoice_line_item_id)
-  ) {
-    return Math.max(revenueBeforeVat, billable, invoiced);
-  }
-
-  if (revenueBeforeVat > 0) return revenueBeforeVat;
-  return billable;
+  return resolveInvoicePreviewBeforeVat({
+    revenue_before_vat: revenueBeforeVat,
+    usage_rights_amount: deliverable.usage_rights_amount,
+    agency_fee_amount: deliverable.agency_fee_amount,
+    agency_fee_percent: deliverable.agency_fee_percent,
+    billable_amount: billable,
+    invoiced_amount: invoiced,
+    remaining_amount: remaining,
+    locked_at: deliverable.locked_at,
+  });
 }
 
 export function resolveInvoiceLineVatPercent(
@@ -176,6 +186,9 @@ export function packageAssignmentLineItemPayload(
     name: string;
     revenue?: number | null;
     revenue_before_vat?: number | null;
+    usage_rights_amount?: number | null;
+    agency_fee_amount?: number | null;
+    agency_fee_percent?: number | null;
     revenue_vat_percent?: number | null;
     revenue_vat_exempt?: boolean | null;
     remaining_amount?: number | null;
@@ -184,9 +197,20 @@ export function packageAssignmentLineItemPayload(
   defaultVatRate: number,
   options?: { forRegeneration?: boolean }
 ) {
+  const revenueOnly = Number(line.revenue_before_vat ?? line.revenue ?? 0);
+  const taxableBase = resolveClientTaxableBase({
+    revenueBeforeVat: revenueOnly,
+    usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+    agencyFeeAmount:
+      line.agency_fee_amount != null ? Number(line.agency_fee_amount) : null,
+    agencyFeePercent: Number(line.agency_fee_percent ?? 0),
+  });
+  const remaining = Number(line.remaining_amount ?? 0);
   const beforeVat = options?.forRegeneration
-    ? Number(line.revenue_before_vat ?? line.revenue ?? line.remaining_amount ?? 0)
-    : Number(line.remaining_amount ?? line.revenue_before_vat ?? line.revenue ?? 0);
+    ? Math.max(taxableBase, remaining, revenueOnly)
+    : remaining > 0
+      ? remaining
+      : taxableBase;
   const vatExempt = Boolean(line.revenue_vat_exempt);
   const vatPercent = vatExempt
     ? 0
@@ -270,7 +294,7 @@ export async function insertPackageAssignmentLineItems(
   const { data: lines, error } = await supabase
     .from("campaign_lines")
     .select(
-      "id, document_number, name, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt, billing_status, vendor_io_id"
+      "id, document_number, name, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, billing_status, vendor_io_id"
     )
     .in("id", lineIds);
 
@@ -296,6 +320,9 @@ export async function insertPackageAssignmentLineItems(
       name: string;
       revenue?: number | null;
       revenue_before_vat?: number | null;
+      usage_rights_amount?: number | null;
+      agency_fee_amount?: number | null;
+      agency_fee_percent?: number | null;
       revenue_vat_percent?: number | null;
       revenue_vat_exempt?: boolean | null;
       billing_status: string;
@@ -303,7 +330,13 @@ export async function insertPackageAssignmentLineItems(
     };
     if (!line.vendor_io_id) continue;
 
-    const expectedBillable = Number(line.revenue_before_vat ?? line.revenue ?? 0);
+    const expectedBillable = resolveClientTaxableBase({
+      revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
+      usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+      agencyFeeAmount:
+        line.agency_fee_amount != null ? Number(line.agency_fee_amount) : null,
+      agencyFeePercent: Number(line.agency_fee_percent ?? 0),
+    });
     const invoicedOnTarget = sumInvoiceLineRevenueForCampaignLine(
       (existingItems ?? []) as Array<{
         campaign_line_id: string | null;

@@ -21,6 +21,9 @@ type VatAmountSectionProps = {
   onVatPercentChange: (value: number) => void;
   onExemptChange: (value: boolean) => void;
   badge?: React.ReactNode;
+  /** VAT breakdown base when it differs from the editable amount (e.g. Revenue + UR Rev + Fees). */
+  vatDisplayBase?: number;
+  vatDisplayBaseHint?: string;
 };
 
 export function VatAmountSection({
@@ -36,15 +39,17 @@ export function VatAmountSection({
   onVatPercentChange,
   onExemptChange,
   badge,
+  vatDisplayBase,
+  vatDisplayBaseHint,
 }: VatAmountSectionProps) {
   const computed = useMemo(
     () =>
       computeVatLine({
-        beforeVat,
+        beforeVat: vatDisplayBase ?? beforeVat,
         vatPercent,
         exempt,
       }),
-    [beforeVat, vatPercent, exempt]
+    [beforeVat, vatDisplayBase, vatPercent, exempt]
   );
 
   return (
@@ -90,7 +95,9 @@ export function VatAmountSection({
       </label>
       <div className="grid gap-1 rounded-xl bg-muted/40 p-3 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Before VAT</span>
+          <span className="text-muted-foreground">
+            {vatDisplayBaseHint ?? "Before VAT"}
+          </span>
           <span>{formatBillingMoney(computed.beforeVat, currency)}</span>
         </div>
         <div className="flex justify-between">

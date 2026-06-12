@@ -900,6 +900,8 @@ export function CampaignLineSheet({
               title="Client revenue"
               amountLabel="Revenue (ex-VAT)"
               beforeVat={revenue}
+              vatDisplayBase={billingPreview.taxableBase}
+              vatDisplayBaseHint="VAT base (Rev + UR Rev + Fees)"
               vatPercent={revenueVatPercent}
               exempt={revenueVatExempt}
               currency={currency}

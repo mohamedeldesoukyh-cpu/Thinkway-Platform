@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { PageBackButton } from "@/components/navigation/page-back-button";
@@ -51,6 +50,7 @@ import {
   CollectionStatusBadge,
 } from "@/features/billing/components/billing-status-badge";
 import { InvoiceRegenerationPanel } from "@/features/billing/components/invoice-regeneration-panel";
+import { InvoiceViewMenu } from "@/features/billing/components/invoice-view-menu";
 import {
   recordCollectionPaymentAction,
   type BillingActionState,
@@ -276,9 +276,7 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
             <Badge variant="outline" className="capitalize">
               {invoice.status}
             </Badge>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/billing/invoices/${invoice.id}/preview`}>Preview invoice</Link>
-            </Button>
+            <InvoiceViewMenu invoiceId={invoice.id} />
           </>
         }
         meta={

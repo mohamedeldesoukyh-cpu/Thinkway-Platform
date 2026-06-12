@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
+import {
+  allocateAmountByRevenueShare,
+  resolveClientBillableAmount,
+  resolveClientRemainingAmount,
+} from "@/lib/billing/client-billable-amount";
 import { computeVatLine } from "@/lib/vat/calculations";
 
 function roundMoney(value: number): number {
@@ -128,10 +134,28 @@ export async function syncDeliverableRollupFromPosts(
   const rows = posts ?? [];
   if (rows.length === 0) return;
 
+  const { data: deliverableMeta } = await supabase
+    .from("assignment_deliverables")
+    .select(
+      "invoiced_amount, locked_at, campaign_line_id, usage_rights_amount, agency_fee_amount, agency_fee_percent, billable_amount"
+    )
+    .eq("id", deliverableId)
+    .maybeSingle();
+
+  const revenueBeforeVat = roundMoney(
+    rows.reduce((sum, row) => sum + Number(row.revenue_before_vat), 0)
+  );
+  const deliverableBillable = resolveClientBillableAmount({
+    revenue_before_vat: revenueBeforeVat,
+    usage_rights_amount: Number(deliverableMeta?.usage_rights_amount ?? 0),
+    agency_fee_amount: deliverableMeta?.agency_fee_amount,
+    agency_fee_percent: Number(deliverableMeta?.agency_fee_percent ?? 0),
+    billable_amount: deliverableMeta?.billable_amount,
+  });
+  const postBillableShares = allocateAmountByRevenueShare(deliverableBillable, rows);
+
   for (const post of rows) {
-    const billable = Number(post.billable_amount ?? 0) > 0
-      ? Number(post.billable_amount)
-      : Number(post.revenue_before_vat ?? 0);
+    const billable = postBillableShares.get(post.id) ?? Number(post.revenue_before_vat ?? 0);
     const invoiced = Number(post.invoiced_amount ?? 0);
     const collected = Number(post.collected_amount ?? 0);
     const locked = Boolean(post.locked_at || post.invoice_line_item_id);
@@ -163,23 +187,17 @@ export async function syncDeliverableRollupFromPosts(
     });
   }
 
-  const revenueBeforeVat = roundMoney(
-    rows.reduce((sum, row) => sum + Number(row.revenue_before_vat), 0)
-  );
   const costBeforeVat = roundMoney(
     rows.reduce((sum, row) => sum + Number(row.cost_before_vat), 0)
-  );
-  const revenueVatAmount = roundMoney(
-    rows.reduce((sum, row) => sum + Number(row.revenue_vat_amount), 0)
   );
   const costVatAmount = roundMoney(
     rows.reduce((sum, row) => sum + Number(row.cost_vat_amount), 0)
   );
 
-  const revenue = computeVatLine({
-    beforeVat: revenueBeforeVat,
+  const billing = computeClientBilling({
+    revenueBeforeVat: deliverableBillable,
     vatPercent: line.revenue_vat_exempt ? 0 : line.revenue_vat_percent,
-    exempt: line.revenue_vat_exempt,
+    vatExempt: line.revenue_vat_exempt,
   });
   const cost = computeVatLine({
     beforeVat: costBeforeVat,
@@ -190,14 +208,16 @@ export async function syncDeliverableRollupFromPosts(
   const quantity = rows.length;
   const unitCost = quantity > 0 ? roundMoney(costBeforeVat / quantity) : 0;
 
-  const { data: deliverable } = await supabase
-    .from("assignment_deliverables")
-    .select("invoiced_amount, locked_at, campaign_line_id")
-    .eq("id", deliverableId)
-    .maybeSingle();
-
-  const invoicedAmount = Number(deliverable?.invoiced_amount ?? 0);
-  const remainingAmount = Math.max(0, revenueBeforeVat - invoicedAmount);
+  const invoicedAmount = Number(deliverableMeta?.invoiced_amount ?? 0);
+  const remainingAmount = resolveClientRemainingAmount({
+    revenue_before_vat: revenueBeforeVat,
+    usage_rights_amount: Number(deliverableMeta?.usage_rights_amount ?? 0),
+    agency_fee_amount: deliverableMeta?.agency_fee_amount,
+    agency_fee_percent: Number(deliverableMeta?.agency_fee_percent ?? 0),
+    billable_amount: deliverableBillable,
+    invoiced_amount: invoicedAmount,
+    locked_at: deliverableMeta?.locked_at,
+  });
 
   const billingStatuses = rows.map((r) => r.billing_status);
   let billingStatus = "draft";
@@ -221,19 +241,19 @@ export async function syncDeliverableRollupFromPosts(
       cost_vat_amount: costVatAmount,
       cost_after_vat: cost.afterVat,
       revenue_before_vat: revenueBeforeVat,
-      revenue_vat_amount: revenueVatAmount,
-      revenue_after_vat: revenue.afterVat,
-      billable_amount: revenueBeforeVat,
-      remaining_amount: deliverable?.locked_at ? remainingAmount : revenueBeforeVat - invoicedAmount,
+      revenue_vat_amount: billing.vatAmount,
+      revenue_after_vat: billing.totalBilling,
+      billable_amount: deliverableBillable,
+      remaining_amount: remainingAmount,
       billing_status: billingStatus,
       schedule_mode: quantity > 1 ? "expanded" : "single",
     })
     .eq("id", deliverableId);
 
-  if (deliverable?.campaign_line_id) {
+  if (deliverableMeta?.campaign_line_id) {
     await syncLineCommercialRollupsFromDeliverables(
       supabase,
-      deliverable.campaign_line_id
+      deliverableMeta.campaign_line_id
     );
   }
 }

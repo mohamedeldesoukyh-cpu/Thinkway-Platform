@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   computeAgencyFeeAmount,
   computeClientBilling,
+  resolveClientTaxableBase,
 } from "@/lib/assignments/client-billing-commercial";
 
 assert.equal(computeAgencyFeeAmount(100_000, 10_000, 5), 5_500);
@@ -35,5 +36,14 @@ assert.equal(billingWithUrCost.taxableBase, 115_500);
 assert.equal(billingWithUrCost.vatAmount, 16_170);
 assert.equal(billingWithUrCost.totalBilling, 131_670);
 assert.equal(billingWithUrCost.gp, 30_500);
+
+assert.equal(
+  resolveClientTaxableBase({
+    revenueBeforeVat: 100_000,
+    usageRightsAmount: 10_000,
+    agencyFeePercent: 5,
+  }),
+  115_500
+);
 
 console.log("client-billing-commercial.test.ts: ok");

@@ -21,6 +21,11 @@ import {
   rollupAssignmentBilling,
 } from "@/lib/billing/deliverable-billing";
 import {
+  allocateAmountByRevenueShare,
+  resolveClientBillableAmount,
+  resolveClientRemainingAmount,
+} from "@/lib/billing/client-billable-amount";
+import {
   buildPostOperationalRow,
   ensureOperationalBillingTreeShape,
   type OperationalBillingRow,
@@ -158,9 +163,9 @@ export async function loadCampaignOperationalBilling(
   error?: string;
 }> {
   const lineSelectWithSort =
-    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, currency_code, pricing_mode, revenue, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, sort_order, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
+    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, sort_order, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
   const lineSelectFallback =
-    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, currency_code, pricing_mode, revenue, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
+    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
 
   const { data: lines, error: linesError } =
     await queryCampaignLinesWithDisplayOrder<LineRow>(async (orderColumn, includeSortOrderColumn) => {
@@ -242,12 +247,44 @@ export async function loadCampaignOperationalBilling(
     const typed = row as unknown as Omit<DeliverableBillingRow, "label">;
     const mapped: DeliverableBillingRow = {
       ...typed,
-      billable_amount: Number(typed.billable_amount),
+      billable_amount: resolveClientBillableAmount({
+        revenue_before_vat: Number(typed.revenue_before_vat),
+        usage_rights_amount: Number(
+          (typed as { usage_rights_amount?: number }).usage_rights_amount ?? 0
+        ),
+        agency_fee_amount: (typed as { agency_fee_amount?: number }).agency_fee_amount,
+        agency_fee_percent: Number(
+          (typed as { agency_fee_percent?: number }).agency_fee_percent ?? 0
+        ),
+        billable_amount: Number(typed.billable_amount),
+      }),
       invoiced_amount: Number(typed.invoiced_amount),
       collected_amount: Number(typed.collected_amount),
       disputed_amount: Number(typed.disputed_amount),
-      remaining_amount: Number(typed.remaining_amount),
+      remaining_amount: resolveClientRemainingAmount({
+        revenue_before_vat: Number(typed.revenue_before_vat),
+        usage_rights_amount: Number(
+          (typed as { usage_rights_amount?: number }).usage_rights_amount ?? 0
+        ),
+        agency_fee_amount: (typed as { agency_fee_amount?: number }).agency_fee_amount,
+        agency_fee_percent: Number(
+          (typed as { agency_fee_percent?: number }).agency_fee_percent ?? 0
+        ),
+        billable_amount: Number(typed.billable_amount),
+        invoiced_amount: Number(typed.invoiced_amount),
+        remaining_amount: Number(typed.remaining_amount),
+        locked_at: typed.locked_at,
+      }),
       revenue_before_vat: Number(typed.revenue_before_vat),
+      usage_rights_amount: Number(
+        (typed as { usage_rights_amount?: number }).usage_rights_amount ?? 0
+      ),
+      agency_fee_amount: Number(
+        (typed as { agency_fee_amount?: number }).agency_fee_amount ?? 0
+      ),
+      agency_fee_percent: Number(
+        (typed as { agency_fee_percent?: number }).agency_fee_percent ?? 0
+      ),
       revenue_vat_percent: Number(typed.revenue_vat_percent ?? 0),
       revenue_vat_exempt: resolveDeliverableVatExempt(typed, includesVatExempt),
       label: deliverableDisplayLabel(typed),
@@ -311,17 +348,18 @@ export async function loadCampaignOperationalBilling(
 
     for (const deliverable of deliverables) {
       const posts = postsByDeliverable.get(deliverable.id) ?? [];
+      const postBillableShares = allocateAmountByRevenueShare(
+        deliverable.billable_amount,
+        posts
+      );
       const postChildren: OperationalBillingRow[] = posts.map((post) => {
-        const fallbackPerPost =
-          posts.length > 0 && deliverable.billable_amount > 0
-            ? deliverable.billable_amount / posts.length
-            : 0;
+        const sharedBillable = postBillableShares.get(post.id) ?? 0;
         const enrichedPost = {
           ...post,
           billable_amount: resolvePostBillableAmount({
-            billable_amount: post.billable_amount,
+            billable_amount: sharedBillable,
             revenue_before_vat: post.revenue_before_vat,
-            fallback: fallbackPerPost,
+            fallback: sharedBillable,
           }),
         };
         const postRow = buildPostOperationalRow(
@@ -405,6 +443,9 @@ export async function loadCampaignOperationalBilling(
         ),
         is_legacy_synthetic: false,
         revenue_before_vat: deliverable.revenue_before_vat,
+        usage_rights_amount: deliverable.usage_rights_amount,
+        agency_fee_amount: deliverable.agency_fee_amount,
+        agency_fee_percent: deliverable.agency_fee_percent,
         revenue_vat_percent: deliverable.revenue_vat_percent,
         revenue_vat_exempt: deliverable.revenue_vat_exempt,
         line_revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
@@ -434,7 +475,17 @@ export async function loadCampaignOperationalBilling(
       platform: null,
       deliverable_type: null,
       billable_amount:
-        deliverableChildren.reduce((s, d) => s + d.billable_amount, 0) || Number(line.revenue),
+        deliverableChildren.reduce((s, d) => s + d.billable_amount, 0) ||
+        resolveClientBillableAmount({
+          revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
+          usage_rights_amount: Number(
+            (line as { usage_rights_amount?: number }).usage_rights_amount ?? 0
+          ),
+          agency_fee_amount: (line as { agency_fee_amount?: number }).agency_fee_amount,
+          agency_fee_percent: Number(
+            (line as { agency_fee_percent?: number }).agency_fee_percent ?? 0
+          ),
+        }),
       invoiced_amount: deliverableChildren.reduce((s, d) => s + d.invoiced_amount, 0),
       collected_amount: deliverableChildren.reduce((s, d) => s + d.collected_amount, 0),
       remaining_amount: deliverableChildren.reduce((s, d) => s + d.remaining_amount, 0),
@@ -461,7 +512,16 @@ export async function loadCampaignOperationalBilling(
       ),
       is_legacy_synthetic: deliverables.length === 0,
       pricing_mode: assignmentPricingMode,
-      revenue_before_vat: Number(line.revenue ?? 0),
+      revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
+      usage_rights_amount: Number(
+        (line as { usage_rights_amount?: number }).usage_rights_amount ?? 0
+      ),
+      agency_fee_amount: Number(
+        (line as { agency_fee_amount?: number }).agency_fee_amount ?? 0
+      ),
+      agency_fee_percent: Number(
+        (line as { agency_fee_percent?: number }).agency_fee_percent ?? 0
+      ),
       revenue_vat_percent: lineVatPercent,
       revenue_vat_exempt: lineVatExempt,
       line_revenue_vat_percent: lineVatPercent,

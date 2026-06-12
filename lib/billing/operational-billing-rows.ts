@@ -59,6 +59,9 @@ export type OperationalBillingRow = {
   is_achieved: boolean;
   is_legacy_synthetic: boolean;
   revenue_before_vat: number;
+  usage_rights_amount?: number;
+  agency_fee_amount?: number;
+  agency_fee_percent?: number;
   revenue_vat_percent: number;
   revenue_vat_exempt: boolean;
   /** Assignment-level VAT fallback (line / package). */
@@ -487,10 +490,10 @@ export function buildPostOperationalRow(
   const billable = Number(post.billable_amount ?? post.revenue_before_vat ?? 0);
   const invoiced = Number(post.invoiced_amount ?? 0);
   const collected = Number(post.collected_amount ?? 0);
-  const remaining = Number(
-    post.remaining_amount ?? Math.max(0, billable - invoiced)
-  );
   const locked = Boolean(post.locked_at || post.invoice_line_item_id);
+  const remaining = locked
+    ? Number(post.remaining_amount ?? Math.max(0, billable - invoiced))
+    : Math.max(0, billable - invoiced);
 
   return {
     id: post.id,
