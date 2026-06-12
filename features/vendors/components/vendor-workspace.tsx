@@ -193,7 +193,6 @@ export function VendorWorkspaceView({
             <VendorWorkspaceTabPanel className="min-h-0">
               {activeTab === "billing" ? (
                 <VendorBillingTab
-                  key={`${workspace.id}-${workspace.updated_at}`}
                   workspace={workspace}
                   currencyOptions={currencyOptions}
                 />

@@ -22,6 +22,7 @@ export type AssignmentSelectionTotals = {
   revenue: number;
   cost: number;
   gp: number;
+  totalBilling: number;
   currency: string | null;
   currencyMixed: boolean;
 };
@@ -91,7 +92,7 @@ export function AssignmentSelectionSummaryBar({
       className={cn(
         "sticky top-0 z-20 overflow-hidden transition-all duration-200 ease-out",
         visible
-          ? "mb-2 max-h-24 opacity-100"
+          ? "mb-2 max-h-32 opacity-100"
           : "mb-0 max-h-0 opacity-0 pointer-events-none",
         className
       )}
@@ -127,6 +128,13 @@ export function AssignmentSelectionSummaryBar({
             <span className="text-muted-foreground">GP:</span>{" "}
             <span className="font-semibold text-primary">
               {formatMoney(totals.gp, totals.currency ?? "USD")}
+            </span>
+          </span>
+          <span className="hidden text-muted-foreground lg:inline">·</span>
+          <span className="tabular-nums text-foreground">
+            <span className="text-muted-foreground">Total billing:</span>{" "}
+            <span className="font-semibold">
+              {formatMoney(totals.totalBilling, totals.currency ?? "USD")}
             </span>
           </span>
           <Badge variant="outline" className="h-5 text-[10px] font-medium">

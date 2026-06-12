@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { FieldError } from "@/components/forms/field-error";
@@ -15,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useFormActionWithToast } from "@/hooks/use-form-action-with-toast";
 import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
 import {
   DETAIL_FORM_INPUT_CLASS,
@@ -50,21 +50,10 @@ export function VendorFinanceTab({
     (vendor as { vat_registered?: boolean }).vat_registered ?? false
   );
 
-  const [state, formAction, isPending] = useActionState(
+  const [state, formAction, isPending] = useFormActionWithToast(
     updateVendorFinanceAction,
     { ok: false } satisfies FormActionState
   );
-
-  useEffect(() => {
-    if (!state.message) {
-      return;
-    }
-    if (state.ok) {
-      toast.success(state.message);
-      return;
-    }
-    toast.error(state.message);
-  }, [state]);
 
   return (
     <OperationalFormSection
@@ -76,13 +65,8 @@ export function VendorFinanceTab({
           <Badge variant="outline">Non-VAT</Badge>
         )
       }
-      footer={
-        <Button type="submit" form="vendor-finance-form" disabled={isPending}>
-          {isPending ? "Saving…" : "Save finance"}
-        </Button>
-      }
     >
-      <form id="vendor-finance-form" action={formAction} className="grid gap-4">
+      <form action={formAction} className="grid gap-4">
         <input type="hidden" name="influencer_id" value={vendor.id} />
         <input type="hidden" name="payment_terms" value={paymentTerms} />
         <input type="hidden" name="pricing_currency" value={currency} />
@@ -191,6 +175,12 @@ export function VendorFinanceTab({
               disabled={isPending || !vatRegistered}
             />
           </div>
+        </div>
+
+        <div className="flex justify-end border-t border-border/40 pt-4">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Saving…" : "Save rate card"}
+          </Button>
         </div>
       </form>
     </OperationalFormSection>

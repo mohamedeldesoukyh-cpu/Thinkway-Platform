@@ -73,6 +73,7 @@ import {
   resolveAssignmentLineCurrencyDisplay,
 } from "@/lib/campaigns/assignment-line-currency";
 import { formatPercent } from "@/features/campaigns/utils";
+import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import {
   useIsOperationalColumnVisible,
@@ -314,13 +315,25 @@ export function AssignmentSafeGrid({
     let revenue = 0;
     let cost = 0;
     let gp = 0;
+    let totalBilling = 0;
     for (const id of selectedLineIds) {
       const row = preparedRows.find((r) => r.lineId === id);
       if (!row) continue;
       const line = row.group.line;
-      revenue += Number(line.revenue_before_vat ?? line.revenue) || 0;
-      cost += Number(line.cost_before_vat ?? line.cost) || 0;
-      gp += Number(line.gp) || 0;
+      const revenueBeforeVat = Number(line.revenue_before_vat ?? line.revenue) || 0;
+      const costBeforeVat = Number(line.cost_before_vat ?? line.cost) || 0;
+      const billing = computeClientBilling({
+        revenueBeforeVat,
+        usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+        agencyFeePercent: Number(line.agency_fee_percent ?? 0),
+        vatPercent: Number(line.revenue_vat_percent ?? 0),
+        vatExempt: Boolean(line.revenue_vat_exempt),
+        costBeforeVat,
+      });
+      revenue += billing.revenueBeforeVat;
+      cost += costBeforeVat;
+      gp += billing.gp;
+      totalBilling += billing.totalBilling;
       currencies.add(resolveAssignmentLineCurrency(line));
     }
     return {
@@ -328,6 +341,7 @@ export function AssignmentSafeGrid({
       revenue,
       cost,
       gp,
+      totalBilling,
       currency: currencies.size === 1 ? [...currencies][0]! : null,
       currencyMixed: currencies.size > 1,
     };

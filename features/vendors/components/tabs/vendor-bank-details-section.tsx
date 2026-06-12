@@ -2,9 +2,10 @@
 
 import { format } from "date-fns";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+
+import { useFormActionWithToast } from "@/hooks/use-form-action-with-toast";
 
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { DocumentUploadForm } from "@/components/forms/document-upload-form";
@@ -53,7 +54,6 @@ type VendorBankDetailsSectionProps = {
 };
 
 export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSectionProps) {
-  const router = useRouter();
   const paymentDetails = useMemo(
     () => parseVendorPaymentDetails(workspace.payment_details),
     [workspace.payment_details]
@@ -67,7 +67,7 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
   );
   const [paymentMethod, setPaymentMethod] = useState(paymentDetails.payment_method);
 
-  const [state, formAction, isPending] = useActionState(
+  const [state, formAction, isPending] = useFormActionWithToast(
     updateVendorBankDetailsAction,
     INITIAL_STATE
   );
@@ -83,16 +83,6 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
     setPaymentTerms(workspace.payment_terms ?? "net_30");
     setPaymentMethod(paymentDetails.payment_method);
   }, [workspace.payment_terms, workspace.updated_at, paymentDetails.payment_method]);
-
-  useEffect(() => {
-    if (!state.message) return;
-    if (state.ok) {
-      toast.success(state.message);
-      router.refresh();
-      return;
-    }
-    toast.error(state.message);
-  }, [state, router]);
 
   return (
     <div className="space-y-4 px-4 md:px-5">

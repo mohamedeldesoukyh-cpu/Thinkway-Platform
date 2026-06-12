@@ -404,7 +404,7 @@ export async function updateVendorFinanceAction(
 
   revalidatePath(`/vendors/${parsed.data.influencer_id}`);
 
-  return { ok: true, message: "Finance saved." };
+  return { ok: true, message: "Rate card saved." };
 }
 
 export async function updateVendorBankDetailsAction(
@@ -473,7 +473,7 @@ export async function updateVendorBankDetailsAction(
   revalidatePath("/vendors");
   revalidatePath("/ios/vendor");
 
-  return { ok: true, message: "Bank details saved. Vendor IO documents will use these payout details." };
+  return { ok: true, message: "Bank details saved." };
 }
 
 export async function savePlatformAccountsAction(
