@@ -394,6 +394,47 @@ export async function recalculateInvoiceTotals(
   return {};
 }
 
+export async function sumInvoiceLineItemRevenue(
+  supabase: SupabaseClient,
+  invoiceId: string
+): Promise<{ total: number; count: number; error?: string }> {
+  const { data, error, count } = await supabase
+    .from("invoice_line_items")
+    .select("revenue_before_vat", { count: "exact" })
+    .eq("invoice_id", invoiceId);
+
+  if (error) {
+    return { total: 0, count: 0, error: error.message };
+  }
+
+  const total = (data ?? []).reduce(
+    (sum, row) => sum + Number((row as { revenue_before_vat: number | null }).revenue_before_vat ?? 0),
+    0
+  );
+
+  return { total: Math.round(total * 100) / 100, count: count ?? 0 };
+}
+
+export async function assertInvoiceHasBillableLineItems(
+  supabase: SupabaseClient,
+  invoiceId: string
+): Promise<{ error?: string }> {
+  const { total, count, error } = await sumInvoiceLineItemRevenue(supabase, invoiceId);
+  if (error) {
+    return { error };
+  }
+  if (!count || count === 0) {
+    return { error: "Invoice has no line items." };
+  }
+  if (total <= 0.01) {
+    return {
+      error:
+        "Invoice line items have zero billable amounts. Refresh the campaign and try again after commercial sync.",
+    };
+  }
+  return {};
+}
+
 export async function resolveInvoiceDeliverableIds(
   supabase: SupabaseClient,
   campaignId: string,
@@ -781,6 +822,7 @@ export async function regenerateInvoiceLineItems(
     defaultVatRate?: number;
     lineIds?: string[];
     deliverableIds?: string[];
+    postIds?: string[];
   }
 ): Promise<{
   error?: string;
@@ -798,6 +840,14 @@ export async function regenerateInvoiceLineItems(
       ? await filterIoGatedCampaignLineIds(supabase, options.lineIds)
       : [];
   const scopedDeliverableIds = options?.deliverableIds ?? [];
+  const scopedPostIds = options?.postIds ?? [];
+  const scopedLineIdSet = new Set(scopedLineIds);
+  const scopedDeliverableIdSet = new Set(scopedDeliverableIds);
+  const scopedPostIdSet = new Set(scopedPostIds);
+  const hasExplicitScope =
+    scopedLineIdSet.size > 0 ||
+    scopedDeliverableIdSet.size > 0 ||
+    scopedPostIdSet.size > 0;
 
   if (scopedLineIds.length > 0) {
     const { clearStaleInvoiceLinksOutsideScope } = await import(
@@ -820,6 +870,45 @@ export async function regenerateInvoiceLineItems(
   }
 
   if (!existingItems?.length) {
+    if (scopedPostIds.length > 0) {
+      const { fetchPostsForInvoicing, lockPostsOnInvoice } = await import(
+        "@/lib/billing/invoice-from-posts"
+      );
+      const { posts, error: postsError } = await fetchPostsForInvoicing(
+        supabase,
+        headerId,
+        scopedPostIds
+      );
+      if (postsError) {
+        return { error: postsError, updated: 0, touchedLineIds: [] };
+      }
+      if (posts.length === 0) {
+        return {
+          error:
+            "No billable post rows found for regeneration. Refresh the campaign and try again.",
+          updated: 0,
+          touchedLineIds: [],
+        };
+      }
+
+      const lockResult = await lockPostsOnInvoice(supabase, invoiceId, headerId, posts, {
+        defaultVatRate,
+        updateExistingOnTargetInvoice: false,
+        forRegeneration: true,
+      });
+      if (lockResult.error) {
+        return { error: lockResult.error, updated: 0, touchedLineIds: [] };
+      }
+
+      const touchedLineIds = [...new Set(posts.map((row) => row.campaign_line_id))];
+      const created = lockResult.lineItemOps?.created.length ?? 0;
+      return {
+        updated: created,
+        touchedLineIds,
+        lineItemOps: lockResult.lineItemOps,
+      };
+    }
+
     const { deliverableIds: resolvedDeliverableIds, error: resolveError } =
       await resolveInvoiceDeliverableIds(
         supabase,
@@ -930,10 +1019,6 @@ export async function regenerateInvoiceLineItems(
     })
     .map((i) => (i as { assignment_deliverable_id: string }).assignment_deliverable_id);
 
-  const scopedLineIdSet = new Set(scopedLineIds);
-  const scopedDeliverableIdSet = new Set(scopedDeliverableIds);
-  const hasExplicitScope = scopedLineIdSet.size > 0 || scopedDeliverableIdSet.size > 0;
-
   const packageLineIds = (existingItems ?? [])
     .filter((i) => {
       const row = i as {
@@ -983,7 +1068,8 @@ export async function regenerateInvoiceLineItems(
         headerId,
         post,
         Number(row.sort_order ?? 1),
-        defaultVatRate
+        defaultVatRate,
+        { forRegeneration: true }
       );
 
       const { error: updateError } = await supabase

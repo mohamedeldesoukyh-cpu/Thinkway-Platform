@@ -214,6 +214,31 @@ function testRegenerateLabelAfterUngenerateUnlock() {
   assert(label === "regenerate", "ungenerated unlocked line yields regenerate label");
 }
 
+function testPendingRegenerationPostEligibleWithRemainingRevenue() {
+  const row = baseRow({
+    kind: "post",
+    id: "post-1",
+    assignment_deliverable_id: "del-1",
+    parent_id: "del-1",
+    invoice_line_item_id: null,
+    linked_invoice_id: "inv-pending",
+    invoice_regeneration_status: "pending_regeneration",
+    billable_amount: 5000,
+    remaining_amount: 5000,
+    revenue_before_vat: 5000,
+    billing_status: "ready_to_invoice",
+    line_billing_status: "moved_to_billing",
+  });
+  assert(
+    isOperationalRowInvoiceEligible(row),
+    "pending regeneration post with remaining revenue stays invoice eligible after ungenerate"
+  );
+  assert(
+    isOperationalRowUiSelectable(row),
+    "pending regeneration post with remaining revenue stays UI selectable after ungenerate"
+  );
+}
+
 function testDuplicatePreventionValidationContext() {
   const newCtx = buildInvoiceValidationContext({ mode: "new" });
   const invoiced = {
@@ -482,6 +507,7 @@ const tests = [
   testUngenerateResolvesToActiveFinancialTotals,
   testRegenerateActionLabel,
   testRegenerateLabelAfterUngenerateUnlock,
+  testPendingRegenerationPostEligibleWithRemainingRevenue,
   testDuplicatePreventionValidationContext,
   testQueueLinkageTruth,
   testValidatePostsAllowsStaleInvoicePointerWithRemaining,

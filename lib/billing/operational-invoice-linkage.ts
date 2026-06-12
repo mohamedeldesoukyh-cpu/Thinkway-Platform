@@ -275,9 +275,26 @@ function applyLinkageToRow(
         ? children.reduce((sum, child) => sum + getRemainingRevenue(child), 0)
         : getRemainingRevenue(row)
     );
+    const pendingChildren =
+      linkedInvoiceId && children.length > 0
+        ? settledChildren.map((child) => ({
+            ...child,
+            linked_invoice_id: child.linked_invoice_id ?? linkedInvoiceId,
+            invoice_regeneration_status:
+              child.invoice_regeneration_status ?? regenerationStatus,
+            is_invoice_eligible:
+              getRemainingRevenue(child) > 0.01 ||
+              Boolean(
+                child.invoice_line_item_id ??
+                  child.linked_invoice_id ??
+                  child.invoice_id ??
+                  linkedInvoiceId
+              ),
+          }))
+        : settledChildren;
     return {
       ...row,
-      children: settledChildren,
+      children: pendingChildren,
       linked_invoice_id: linkedInvoiceId,
       invoice_regeneration_status: regenerationStatus,
       invoice_document_number: invoiceDoc ?? row.invoice_document_number,

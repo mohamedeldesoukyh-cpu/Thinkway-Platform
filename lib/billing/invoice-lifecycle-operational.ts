@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
 import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
+import { resolveClientBillableAmount } from "@/lib/billing/client-billable-amount";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
 import { shouldApplyLiveAdDateLockOnInvoice } from "@/lib/campaigns/live-ad-date";
@@ -135,25 +136,78 @@ export async function unlockInvoiceOperationalScope(
   if (scope.postIds.length > 0) {
     const { data: postRows, error: loadError } = await supabase
       .from("assignment_post_schedule")
-      .select("id, billable_amount, revenue_before_vat")
+      .select(
+        "id, assignment_deliverable_id, billable_amount, revenue_before_vat, invoiced_amount"
+      )
       .in("id", scope.postIds);
 
     if (loadError) {
       return { ...scope, error: loadError.message };
     }
 
+    const deliverableIds = [
+      ...new Set(
+        (postRows ?? [])
+          .map((row) => (row as { assignment_deliverable_id: string | null }).assignment_deliverable_id)
+          .filter(Boolean) as string[]
+      ),
+    ];
+
+    const deliverableBillableById = new Map<string, number>();
+    if (deliverableIds.length > 0) {
+      const { data: deliverableRows } = await supabase
+        .from("assignment_deliverables")
+        .select(
+          "id, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, billable_amount"
+        )
+        .in("id", deliverableIds);
+
+      for (const deliverable of deliverableRows ?? []) {
+        const row = deliverable as {
+          id: string;
+          revenue_before_vat: number | null;
+          usage_rights_amount?: number | null;
+          agency_fee_amount?: number | null;
+          agency_fee_percent?: number | null;
+          billable_amount: number | null;
+        };
+        deliverableBillableById.set(
+          row.id,
+          resolveClientBillableAmount({
+            revenue_before_vat: row.revenue_before_vat,
+            usage_rights_amount: row.usage_rights_amount,
+            agency_fee_amount: row.agency_fee_amount,
+            agency_fee_percent: row.agency_fee_percent,
+            billable_amount: row.billable_amount,
+          })
+        );
+      }
+    }
+
     for (const post of postRows ?? []) {
       const row = post as {
         id: string;
+        assignment_deliverable_id: string;
         billable_amount: number | null;
         revenue_before_vat: number | null;
+        invoiced_amount: number | null;
       };
-      const billable = Number(row.billable_amount ?? row.revenue_before_vat ?? 0);
+      const deliverableBillable =
+        deliverableBillableById.get(row.assignment_deliverable_id) ?? 0;
+      const billable = Math.max(
+        deliverableBillable,
+        resolveClientBillableAmount({
+          revenue_before_vat: row.revenue_before_vat,
+          billable_amount: row.billable_amount,
+          invoiced_amount: row.invoiced_amount,
+        })
+      );
       const postPatch: Record<string, unknown> = {
         locked_at: null,
         billing_status: "ready_to_invoice",
         invoiced_amount: 0,
         remaining_amount: billable,
+        billable_amount: billable,
       };
 
       if (!preserveLineItems) {
@@ -175,7 +229,9 @@ export async function unlockInvoiceOperationalScope(
   if (scope.deliverableIds.length > 0) {
     const { data: deliverableRows, error: loadError } = await supabase
       .from("assignment_deliverables")
-      .select("id, billable_amount, revenue_before_vat")
+      .select(
+        "id, billable_amount, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
+      )
       .in("id", scope.deliverableIds);
 
     if (loadError) {
@@ -187,14 +243,24 @@ export async function unlockInvoiceOperationalScope(
         id: string;
         billable_amount: number | null;
         revenue_before_vat: number | null;
+        usage_rights_amount?: number | null;
+        agency_fee_amount?: number | null;
+        agency_fee_percent?: number | null;
       };
-      const billable = Number(row.billable_amount ?? row.revenue_before_vat ?? 0);
+      const billable = resolveClientBillableAmount({
+        revenue_before_vat: row.revenue_before_vat,
+        usage_rights_amount: row.usage_rights_amount,
+        agency_fee_amount: row.agency_fee_amount,
+        agency_fee_percent: row.agency_fee_percent,
+        billable_amount: row.billable_amount,
+      });
       const deliverablePatch: Record<string, unknown> = {
         locked_at: null,
         billing_status: "ready_to_invoice",
         invoiced_amount: 0,
         invoiced_at: null,
         remaining_amount: billable,
+        billable_amount: billable,
       };
 
       if (!preserveLineItems) {

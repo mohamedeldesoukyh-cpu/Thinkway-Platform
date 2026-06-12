@@ -82,7 +82,7 @@ function postDisplayLabel(platform: string, deliverableType: string, sequence: n
 
 function postInvoiceBeforeVat(
   post: PostInvoiceLine,
-  options?: { updatingExisting?: boolean }
+  options?: { updatingExisting?: boolean; forRegeneration?: boolean }
 ): number {
   const remaining = Number(post.remaining_amount ?? 0);
   const revenueBeforeVat = Number(post.revenue_before_vat ?? 0);
@@ -97,20 +97,26 @@ function postInvoiceBeforeVat(
       0
   );
 
+  const commercialFallback = Math.max(
+    revenueBeforeVat,
+    billable,
+    invoiced,
+    deliverableRevenue,
+    deliverableBillable,
+    lineRevenue
+  );
+
+  if (options?.forRegeneration) {
+    return Math.max(remaining, commercialFallback);
+  }
+
   if (remaining > 0) return remaining;
 
   if (
     options?.updatingExisting ||
     Boolean(post.locked_at || post.invoice_line_item_id)
   ) {
-    return Math.max(
-      revenueBeforeVat,
-      billable,
-      invoiced,
-      deliverableRevenue,
-      deliverableBillable,
-      lineRevenue
-    );
+    return commercialFallback;
   }
 
   if (revenueBeforeVat > 0) return revenueBeforeVat;
@@ -122,7 +128,8 @@ export function buildPostInvoiceLinePayload(
   headerId: string,
   post: PostInvoiceLine,
   sortOrder: number,
-  defaultVatRate: number
+  defaultVatRate: number,
+  options?: { forRegeneration?: boolean }
 ) {
   const deliverable = post.assignment_deliverable;
   const line = deliverable?.campaign_line;
@@ -132,6 +139,7 @@ export function buildPostInvoiceLinePayload(
 
   const beforeVat = postInvoiceBeforeVat(post, {
     updatingExisting: Boolean(post.invoice_line_item_id),
+    forRegeneration: options?.forRegeneration,
   });
   const vatExempt = Boolean(deliverable.revenue_vat_exempt || line.revenue_vat_exempt);
   const vatPercent = resolveInvoiceLineVatPercent(
@@ -521,10 +529,15 @@ export async function lockPostsOnInvoice(
   invoiceId: string,
   headerId: string,
   posts: PostInvoiceLine[],
-  options?: { defaultVatRate?: number; updateExistingOnTargetInvoice?: boolean }
+  options?: {
+    defaultVatRate?: number;
+    updateExistingOnTargetInvoice?: boolean;
+    forRegeneration?: boolean;
+  }
 ): Promise<{ error?: string; lineItemOps?: InvoiceLineItemOpSummary }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
+  const forRegeneration = options?.forRegeneration ?? false;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
@@ -537,8 +550,15 @@ export async function lockPostsOnInvoice(
       updateExisting &&
       Boolean(post.invoice_line_item_id) &&
       post.linked_invoice_id === invoiceId;
-    const billable = postInvoiceBeforeVat(post, { updatingExisting });
-    const payload = buildPostInvoiceLinePayload(invoiceId, headerId, post, sortOrder, defaultVatRate);
+    const billable = postInvoiceBeforeVat(post, { updatingExisting, forRegeneration });
+    const payload = buildPostInvoiceLinePayload(
+      invoiceId,
+      headerId,
+      post,
+      sortOrder,
+      defaultVatRate,
+      { forRegeneration }
+    );
     const reuseLineItem = updatingExisting;
 
     let lineItemId = post.invoice_line_item_id;

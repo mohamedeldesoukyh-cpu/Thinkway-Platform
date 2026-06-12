@@ -265,7 +265,10 @@ export function isOperationalRowInvoiceEligible(
   if (row.kind === "assignment" && !row.vendor_io_id) return false;
 
   if (pendingRegeneration) {
-    return Boolean(row.invoice_line_item_id ?? row.linked_invoice_id ?? row.invoice_id);
+    return (
+      Boolean(row.invoice_line_item_id ?? row.linked_invoice_id ?? row.invoice_id) ||
+      hasRemainingInvoiceableRevenue(row)
+    );
   }
 
   return isInvoiceEligibleOperationalStatus(operational);

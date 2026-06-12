@@ -13,6 +13,7 @@ import {
   insertPackageAssignmentLineItems,
   lineHasAssignmentDeliverables,
   lockDeliverablesOnInvoice,
+  assertInvoiceHasBillableLineItems,
   regenerateInvoiceLineItems,
   resolveInvoiceDeliverableIds,
   prepareLinesForDeliverableInvoicing,
@@ -31,7 +32,7 @@ import {
   unlockDeliverablesForInvoice,
 } from "@/lib/billing/sync-deliverable-billing";
 import { repairDesyncedUngeneratedInvoiceHeaders } from "@/lib/billing/repair-orphaned-invoice-state";
-import { runPreInvoiceCreateRepairPipeline } from "@/lib/billing/repair-invoice-create-pipeline";
+import { runPreInvoiceCreateRepairPipeline, syncCampaignPostBillableForInvoice } from "@/lib/billing/repair-invoice-create-pipeline";
 import { syncDeliverableCollectionsForInvoice } from "@/lib/billing/sync-deliverable-collections";
 import {
   resolveOperationalInvoiceTargets,
@@ -866,6 +867,7 @@ export async function createInvoiceFromLinesAction(
       {
         defaultVatRate: vatRate,
         updateExistingOnTargetInvoice: invoiceMode === "append",
+        forRegeneration: deliverableRegenerateScope || postRegenerateScope,
       }
     );
     if (postLockResult.lineItemOps) {
@@ -950,6 +952,14 @@ export async function createInvoiceFromLinesAction(
       await rollbackNewInvoiceDraft(supabase, invoiceId);
     }
     return { ok: false, message: "No billable deliverables selected." };
+  }
+
+  const billableCheck = await assertInvoiceHasBillableLineItems(supabase, invoiceId);
+  if (billableCheck.error) {
+    if (invoiceMode === "new") {
+      await rollbackNewInvoiceDraft(supabase, invoiceId);
+    }
+    return { ok: false, message: billableCheck.error };
   }
 
   if (invoiceMode === "append") {
@@ -1393,6 +1403,7 @@ export async function ungenerateInvoiceAction(
   }
 
   if (invoice.campaign_header_id) {
+    await syncCampaignPostBillableForInvoice(supabase, invoice.campaign_header_id);
     await repairDesyncedUngeneratedInvoiceHeaders(supabase, invoice.campaign_header_id);
   }
 
@@ -1454,6 +1465,10 @@ export async function regenerateInvoiceAction(
       ok: false,
       message: "Only invoices pending regeneration can be regenerated.",
     };
+  }
+
+  if (invoice.campaign_header_id) {
+    await runPreInvoiceCreateRepairPipeline(supabase, invoice.campaign_header_id);
   }
 
   const { getInvoiceLines } = await import("@/lib/finance/invoice-line-registry");
@@ -1616,11 +1631,17 @@ export async function regenerateInvoiceAction(
           defaultVatRate: vatRate,
           lineIds: scopedLineIds,
           deliverableIds: scopedDeliverableIds,
+          postIds: regenScope.postIds,
         }
       );
 
       if (regenResult.error) {
         return { error: regenResult.error };
+      }
+
+      const billableCheck = await assertInvoiceHasBillableLineItems(supabase, invoice.id);
+      if (billableCheck.error) {
+        return { error: billableCheck.error };
       }
 
       const { count: lineItemCount, error: lineItemCountError } = await supabase

@@ -7,16 +7,18 @@ import { governanceDb } from "@/lib/supabase/governance-client";
 export type InvoiceRegenerationScope = {
   lineIds: string[];
   deliverableIds: string[];
+  postIds: string[];
   baselineLines: InvoiceWorkspace["lines"];
 };
 
 function mapSnapshotLine(
   row: Record<string, unknown>
-): InvoiceWorkspace["lines"][number] {
+): InvoiceWorkspace["lines"][number] & { assignment_post_schedule_id?: string | null } {
   return {
     id: String(row.id ?? ""),
     campaign_line_id: (row.campaign_line_id as string | null) ?? null,
     assignment_deliverable_id: (row.assignment_deliverable_id as string | null) ?? null,
+    assignment_post_schedule_id: (row.assignment_post_schedule_id as string | null) ?? null,
     description: String(row.description ?? ""),
     quantity: Number(row.quantity ?? 1),
     unit_price: Number(row.unit_price ?? row.revenue_before_vat ?? 0),
@@ -30,10 +32,11 @@ function mapSnapshotLine(
   };
 }
 
-function scopeFromLines(lines: InvoiceWorkspace["lines"]): Pick<
-  InvoiceRegenerationScope,
-  "lineIds" | "deliverableIds"
-> {
+function scopeFromLines(
+  lines: Array<
+    InvoiceWorkspace["lines"][number] & { assignment_post_schedule_id?: string | null }
+  >
+): Pick<InvoiceRegenerationScope, "lineIds" | "deliverableIds" | "postIds"> {
   const lineIds = [
     ...new Set(lines.map((line) => line.campaign_line_id).filter(Boolean) as string[]),
   ];
@@ -42,7 +45,14 @@ function scopeFromLines(lines: InvoiceWorkspace["lines"]): Pick<
       lines.map((line) => line.assignment_deliverable_id).filter(Boolean) as string[]
     ),
   ];
-  return { lineIds, deliverableIds };
+  const postIds = [
+    ...new Set(
+      lines
+        .map((line) => line.assignment_post_schedule_id)
+        .filter(Boolean) as string[]
+    ),
+  ];
+  return { lineIds, deliverableIds, postIds };
 }
 
 async function resolveDeliverableIdsForLineIds(
@@ -93,6 +103,14 @@ export async function resolveInvoiceRegenerationScope(
         )?.campaign_line_id;
         return lineId ? allowedLineIds.has(lineId) : true;
       }),
+      postIds: scoped.postIds.filter((postId) => {
+        const lineId = liveLines.find(
+          (line) =>
+            (line as { assignment_post_schedule_id?: string | null })
+              .assignment_post_schedule_id === postId
+        )?.campaign_line_id;
+        return lineId ? allowedLineIds.has(lineId) : true;
+      }),
       baselineLines: liveLines.filter(
         (line) => !line.campaign_line_id || allowedLineIds.has(line.campaign_line_id)
       ),
@@ -128,6 +146,12 @@ export async function resolveInvoiceRegenerationScope(
         )?.campaign_line_id;
         return lineId ? allowedLineIds.has(lineId) : true;
       }),
+      postIds: scoped.postIds.filter((postId) => {
+        const lineId = snapshotLines.find(
+          (line) => line.assignment_post_schedule_id === postId
+        )?.campaign_line_id;
+        return lineId ? allowedLineIds.has(lineId) : true;
+      }),
       baselineLines: snapshotLines.filter(
         (line) => !line.campaign_line_id || allowedLineIds.has(line.campaign_line_id)
       ),
@@ -148,10 +172,11 @@ export async function resolveInvoiceRegenerationScope(
       return {
         lineIds,
         deliverableIds,
+        postIds: [],
         baselineLines: [],
       };
     }
   }
 
-  return { lineIds: [], deliverableIds: [], baselineLines: [] };
+  return { lineIds: [], deliverableIds: [], postIds: [], baselineLines: [] };
 }
