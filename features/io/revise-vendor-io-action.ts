@@ -11,6 +11,7 @@ import {
   vendorIoRevisionDocumentNumber,
 } from "@/lib/io/vendor-io-revision";
 import { finalizeLineBillingAfterVendorIoRevisionBatch } from "@/lib/billing/vendor-io-revision-line-billing";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
 import { generateVendorIoDocument } from "@/lib/io/vendor-io-document-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -385,6 +386,8 @@ export async function reviseVendorIosFromLinesAction(
       logReviseVendorIo("post_sync_status", { lineId, snapshot: snap ?? null });
     }
   }
+
+  await syncCampaignHeaderStatus(supabase, campaignId);
 
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath("/campaigns");

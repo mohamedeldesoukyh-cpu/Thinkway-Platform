@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { generateClientIoDocument } from "@/lib/io/client-io-document-service";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type GenerateClientIoDocumentState = {
@@ -32,6 +33,7 @@ export async function generateClientIoDocumentAction(
 
   try {
     const result = await generateClientIoDocument(supabase, id, user.id);
+    await syncCampaignHeaderStatus(supabase, campaignHeaderId);
     revalidatePath(`/campaigns/${campaignHeaderId}`);
     revalidatePath("/ios/client");
     revalidatePath(`/ios/client/${id}/preview`);

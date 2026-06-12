@@ -12,6 +12,11 @@ export type InvoiceLineItemRow = {
   lineDocumentNumber: string | null;
 };
 
+export type InvoiceCommercialBreakdown = {
+  revenueAmount: number;
+  agencyFeeAmount: number;
+};
+
 export type InvoiceDocumentData = {
   invoiceId: string;
   documentNumber: string;
@@ -46,8 +51,11 @@ export type InvoiceDocumentData = {
     endDate: string | null;
     brandName: string | null;
     poNumber: string | null;
-    ioReferences: string[];
-    ioReferenceDisplay: string;
+    clientIoReferences: string[];
+    clientIoReferenceDisplay: string;
+    poReferenceDisplay: string;
+    internalReference: string | null;
   } | null;
+  commercialBreakdown: InvoiceCommercialBreakdown;
   lineItems: InvoiceLineItemRow[];
 };

@@ -40,7 +40,7 @@ import {
   isInvoiceWorkspaceTabId,
   type InvoiceWorkspaceTabId,
 } from "@/lib/workspace/platform-workspace-tabs";
-import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { InvoiceWorkspaceKpiStrip } from "@/features/billing/components/invoice-workspace-kpi-strip";
 import {
   DETAIL_FORM_INPUT_CLASS,
   DETAIL_FORM_SELECT_TRIGGER_CLASS,
@@ -289,36 +289,7 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
 
       <InvoiceRegenerationPanel invoice={invoice} />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard
-          label="Subtotal (ex-VAT)"
-          value={formatBillingMoney(invoice.subtotal, invoice.currency)}
-        />
-        <SummaryCard
-          label="Output VAT"
-          value={formatBillingMoney(invoice.tax_amount, invoice.currency)}
-        />
-        <SummaryCard label="Grand total" value={formatBillingMoney(invoice.total, invoice.currency)} />
-        <SummaryCard
-          label="Outstanding"
-          value={formatBillingMoney(invoice.outstanding, invoice.currency)}
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard
-          label="Collected"
-          value={formatBillingMoney(invoice.amount_paid, invoice.currency)}
-        />
-        <SummaryCard
-          label="Due date"
-          value={
-            invoice.due_date
-              ? format(new Date(`${invoice.due_date}T00:00:00`), "MMM d, yyyy")
-              : "—"
-          }
-        />
-      </div>
+      <InvoiceWorkspaceKpiStrip invoice={invoice} />
 
       <Tabs defaultValue="lines" className="flex flex-col gap-0">
         <OperationalWorkspaceSortableTabsBar
@@ -548,10 +519,3 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <CampaignFlatSection title={label}>
-      <p className="font-heading text-xl font-semibold">{value}</p>
-    </CampaignFlatSection>
-  );
-}

@@ -8,6 +8,7 @@ import {
   vendorIoUngenerateEligibility,
   type VendorIoLineBillingSnapshot,
 } from "@/lib/io/vendor-io-ungenerate-eligibility";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ungenerateVendorIoSchema = z.object({
@@ -181,6 +182,8 @@ export async function ungenerateVendorIoAction(
     return { ok: false, message: result.message };
   }
 
+  await syncCampaignHeaderStatus(supabase, campaignId);
+
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath("/campaigns");
   revalidatePath("/ios/vendor");
@@ -257,6 +260,8 @@ export async function ungenerateVendorIosFromLinesAction(
     }
     docNumbers.push(result.documentNumber);
   }
+
+  await syncCampaignHeaderStatus(supabase, campaignId);
 
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath("/campaigns");

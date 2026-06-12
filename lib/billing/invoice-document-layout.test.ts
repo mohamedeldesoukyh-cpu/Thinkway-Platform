@@ -36,9 +36,15 @@ const sample: InvoiceDocumentData = {
     startDate: "2026-05-01",
     endDate: "2026-06-30",
     brandName: "Brand X",
-    poNumber: null,
-    ioReferences: [],
-    ioReferenceDisplay: "TW-2026-0001",
+    poNumber: "PO-12345",
+    clientIoReferences: ["CIO-2026-0001"],
+    clientIoReferenceDisplay: "CIO-2026-0001",
+    poReferenceDisplay: "PO-12345",
+    internalReference: "TW-2026-0001",
+  },
+  commercialBreakdown: {
+    revenueAmount: 490_000,
+    agencyFeeAmount: 25_000,
   },
   lineItems: [
     {
@@ -74,12 +80,10 @@ const detailed = applyInvoiceDocumentLayout(sample, "detailed");
 assert.equal(detailed.lineItems.length, 2);
 
 const packaged = applyInvoiceDocumentLayout(sample, "package");
-assert.equal(packaged.lineItems.length, 1);
-assert.equal(
-  packaged.lineItems[0]!.description,
-  "Summer Influencer Campaign (TW-2026-0001)"
-);
-assert.equal(packaged.lineItems[0]!.revenueBeforeVat, 515_000);
-assert.equal(packaged.lineItems[0]!.lineTotal, 587_100);
+assert.equal(packaged.lineItems.length, 2);
+assert.equal(packaged.lineItems[0]!.description, "Summer Influencer Campaign");
+assert.equal(packaged.lineItems[1]!.description, "Agency fees");
+assert.equal(packaged.lineItems[0]!.revenueBeforeVat, 490_000);
+assert.equal(packaged.lineItems[1]!.revenueBeforeVat, 25_000);
 
 console.log("invoice-document-layout.test.ts: ok");

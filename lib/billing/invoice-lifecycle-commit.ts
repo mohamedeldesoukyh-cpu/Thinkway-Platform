@@ -10,6 +10,7 @@ import {
   type InvoiceOperationalUnlockMode,
 } from "@/lib/billing/invoice-lifecycle-operational";
 import { recalculateInvoiceTotals } from "@/lib/billing/invoice-from-deliverables";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { ensureInvoiceFinanceDocument } from "@/lib/finance/finance-document-registry";
 import { devLog } from "@/lib/dev-log";
 
@@ -103,6 +104,10 @@ export async function commitInvoiceLifecycleMutation(
       lockResolvedLineIds: unlock.lineIds,
     });
 
+    if (input.campaignId) {
+      await syncCampaignHeaderStatus(supabase, input.campaignId);
+    }
+
     return { lineIds: unlock.lineIds };
   }
 
@@ -153,6 +158,10 @@ export async function commitInvoiceLifecycleMutation(
       hasDuplicateLineItems:
         after.duplicatePostLinks.length > 0 || after.duplicateDeliverableLinks.length > 0,
     });
+  }
+
+  if (input.campaignId) {
+    await syncCampaignHeaderStatus(supabase, input.campaignId);
   }
 
   return { lineIds: relock.lineIds };

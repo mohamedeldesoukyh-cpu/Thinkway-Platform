@@ -101,7 +101,9 @@ export function renderInvoiceHtml(data: InvoiceDocumentData): string {
   const issueDate = formatShortDate(data.issueDate);
   const dueDateShort = formatShortDate(data.dueDate);
   const dueDateLong = formatLongDueDate(data.dueDate);
-  const ioRef = display(data.campaign?.ioReferenceDisplay ?? "—");
+  const ioRef = display(data.campaign?.clientIoReferenceDisplay ?? "—");
+  const poRef = display(data.campaign?.poReferenceDisplay ?? "—");
+  const internalRef = display(data.campaign?.internalReference ?? "—");
   const clientName = display(data.client.billingName);
   const clientLegalName = display(data.client.legalName ?? data.client.name);
   const trn = display(data.client.vatNumber ?? data.client.taxId);
@@ -127,6 +129,10 @@ export function renderInvoiceHtml(data: InvoiceDocumentData): string {
     /<div class="meta-row"><strong>IO Reference<\/strong> &nbsp; VIO-2026-\[N\]<\/div>/,
     `<div class="meta-row"><strong>IO Reference</strong> &nbsp; ${ioRef}</div>`
   );
+  html = html.replace(
+    /<div class="meta-row"><strong>Internal Reference<\/strong> &nbsp; TW-2026-\[N\]<\/div>/,
+    `<div class="meta-row"><strong>Internal Reference</strong> &nbsp; ${internalRef}</div>`
+  );
 
   html = html.replace(
     /<div class="party-name">\[Client \/ Agency Name\]<\/div>/g,
@@ -147,7 +153,7 @@ export function renderInvoiceHtml(data: InvoiceDocumentData): string {
   );
   html = html.replace(
     /<div class="flabel">IO \/ PO Reference<\/div>\s*<div class="fvalue">VIO-2026-\[N\]<\/div>/,
-    `<div class="flabel">IO / PO Reference</div><div class="fvalue">${ioRef}</div>`
+    `<div class="flabel">IO / PO Reference</div><div class="fvalue">${poRef}</div>`
   );
   html = html.replace(
     /<div class="flabel">Account Number<\/div>\s*<div class="fvalue">\[ACCOUNT NO\.\]<\/div>/,
@@ -190,14 +196,15 @@ export function renderInvoiceHtml(data: InvoiceDocumentData): string {
     `<span class="t-label">VAT (${data.vatPercent}%)</span>\n            <span class="t-amount">${formatMoney(data.taxAmount, currency)}</span>`
   );
 
+  const isEgp = currency.toUpperCase() === "EGP";
   const usdNote =
-    data.usdEquivalent != null
+    !isEgp && data.usdEquivalent != null
       ? `USD Equivalent: ~USD ${formatMoneyAmount(data.usdEquivalent)}`
-      : "USD equivalent available on request";
+      : "";
 
   html = html.replace(
     `<div class="t-sub">[USD Equivalent: ~USD 0,000.00]</div>`,
-    `<div class="t-sub">${escapeHtml(usdNote)}</div>`
+    usdNote ? `<div class="t-sub">${escapeHtml(usdNote)}</div>` : `<div class="t-sub"></div>`
   );
   html = html.replace(
     `<div class="t-amount">EGP [0,000.00]</div>`,
@@ -232,6 +239,15 @@ export function renderInvoiceHtml(data: InvoiceDocumentData): string {
           <div class="af-value">${dueDateLong}</div>
         </div>`
   );
+
+  if (isEgp) {
+    html = html.replace(/<div class="conversion-note">[\s\S]*?<\/div>\s*/g, "");
+  } else {
+    html = html.replace(
+      /All amounts are invoiced in Egyptian Pounds \(EGP\)/,
+      `All amounts are invoiced in ${escapeHtml(currency)}`
+    );
+  }
 
   if (data.notes?.trim()) {
     html = html.replace(

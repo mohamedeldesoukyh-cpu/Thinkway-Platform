@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logFinanceAuditEvent } from "@/lib/finance/audit-log";
 import { FINANCE_AUDIT_EVENTS } from "@/lib/finance/audit-events";
 import { guardCampaignCancellation } from "@/lib/finance/integrity-guards";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { isActiveInvoiceForFinancialTotals } from "@/lib/finance/status/invoice-status";
 import type { Database } from "@/types/database";
 import type { CampaignStatus } from "@/types/database";
@@ -196,13 +197,24 @@ export async function reopenCampaign(
     return { ok: false, error: updateError.message };
   }
 
+  await syncCampaignHeaderStatus(supabase, input.campaign_id);
+
+  const { data: syncedHeader } = await supabase
+    .from("campaign_headers")
+    .select("status")
+    .eq("id", input.campaign_id)
+    .maybeSingle();
+
+  const resolvedStatus =
+    (syncedHeader as { status: CampaignStatus } | null)?.status ?? nextStatus;
+
   await logFinanceAuditEvent(supabase, {
     event: FINANCE_AUDIT_EVENTS.campaign_reopened,
     entity_type: "campaign_headers",
     entity_id: input.campaign_id,
     actor_id: input.actor_id,
     old_data: { status: current },
-    new_data: { status: nextStatus },
+    new_data: { status: resolvedStatus },
     payload: {
       document_number: (header as { document_number: string }).document_number,
       reason: input.reason ?? null,

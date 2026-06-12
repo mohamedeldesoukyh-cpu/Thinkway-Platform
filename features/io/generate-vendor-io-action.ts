@@ -11,6 +11,7 @@ import {
   logVendorIoEligibility,
 } from "@/lib/io/vendor-io-generate-eligibility";
 import { generateVendorIoDocument } from "@/lib/io/vendor-io-document-service";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const generateVendorIoSchema = z.object({
@@ -245,6 +246,8 @@ export async function generateVendorIosFromLinesAction(
 
     created += 1;
   }
+
+  await syncCampaignHeaderStatus(supabase, campaignId);
 
   revalidatePath(`/campaigns/${campaignId}`);
   revalidatePath("/ios/vendor");

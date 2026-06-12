@@ -1,9 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { InvoiceDocumentData, InvoiceLineItemRow } from "@/lib/billing/invoice-document-types";
+import {
+  computeAgencyFeeAmount,
+} from "@/lib/assignments/client-billing-commercial";
+import type {
+  InvoiceCommercialBreakdown,
+  InvoiceDocumentData,
+  InvoiceLineItemRow,
+} from "@/lib/billing/invoice-document-types";
 import { getInvoiceLines } from "@/lib/finance/invoice-line-registry";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import { REL } from "@/lib/supabase/relation-hints";
+import { roundMoney } from "@/lib/vat/calculations";
 
 function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
@@ -79,14 +87,88 @@ function buildLineSubDescription(input: {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-function resolveIoReferenceDisplay(input: {
-  poNumber: string | null;
-  ioReferences: string[];
-  campaignDocumentNumber: string | null;
-}): string {
-  if (input.poNumber?.trim()) return input.poNumber.trim();
-  if (input.ioReferences.length > 0) return input.ioReferences.join(", ");
-  return input.campaignDocumentNumber ?? "—";
+function resolveClientIoReferenceDisplay(references: string[]): string {
+  if (references.length === 0) return "—";
+  return references.join(", ");
+}
+
+function resolvePoReferenceDisplay(poNumber: string | null): string {
+  return poNumber?.trim() || "—";
+}
+
+type CampaignLineCommercial = {
+  revenueBeforeVat: number;
+  usageRightsAmount: number;
+  agencyFeeAmount: number;
+  taxableBase: number;
+};
+
+function resolveCampaignLineCommercial(line: {
+  revenue?: number | null;
+  revenue_before_vat?: number | null;
+  usage_rights_amount?: number | null;
+  agency_fee_amount?: number | null;
+  agency_fee_percent?: number | null;
+}): CampaignLineCommercial {
+  const revenueBeforeVat = roundMoney(
+    Math.max(0, Number(line.revenue_before_vat ?? line.revenue ?? 0))
+  );
+  const usageRightsAmount = roundMoney(Math.max(0, Number(line.usage_rights_amount ?? 0)));
+  const agencyFeeAmount =
+    line.agency_fee_amount != null && Number(line.agency_fee_amount) > 0
+      ? roundMoney(Number(line.agency_fee_amount))
+      : computeAgencyFeeAmount(
+          revenueBeforeVat,
+          usageRightsAmount,
+          Number(line.agency_fee_percent ?? 0)
+        );
+  const taxableBase = roundMoney(revenueBeforeVat + usageRightsAmount + agencyFeeAmount);
+
+  return {
+    revenueBeforeVat,
+    usageRightsAmount,
+    agencyFeeAmount,
+    taxableBase,
+  };
+}
+
+function splitInvoicedCommercial(
+  invoicedAmount: number,
+  commercial: CampaignLineCommercial
+): { revenueAmount: number; agencyFeeAmount: number } {
+  const invoiced = roundMoney(Math.max(0, invoicedAmount));
+  if (invoiced <= 0 || commercial.taxableBase <= 0) {
+    return { revenueAmount: 0, agencyFeeAmount: 0 };
+  }
+
+  const ratio = invoiced / commercial.taxableBase;
+  const revenueAmount = roundMoney((commercial.revenueBeforeVat + commercial.usageRightsAmount) * ratio);
+  const agencyFeeAmount = roundMoney(commercial.agencyFeeAmount * ratio);
+
+  return { revenueAmount, agencyFeeAmount };
+}
+
+function computeInvoiceCommercialBreakdown(
+  invoiceLines: Array<{ campaign_line_id: string | null; revenue_before_vat: number }>,
+  commercialByLineId: Map<string, CampaignLineCommercial>
+): InvoiceCommercialBreakdown {
+  let revenueAmount = 0;
+  let agencyFeeAmount = 0;
+
+  for (const item of invoiceLines) {
+    if (!item.campaign_line_id) continue;
+    const commercial = commercialByLineId.get(item.campaign_line_id);
+    if (!commercial) continue;
+
+    const split = splitInvoicedCommercial(Number(item.revenue_before_vat ?? 0), commercial);
+    revenueAmount += split.revenueAmount;
+    agencyFeeAmount += split.agencyFeeAmount;
+  }
+
+  return {
+    revenueAmount: roundMoney(revenueAmount),
+    agencyFeeAmount: roundMoney(agencyFeeAmount),
+  };
 }
 
 export async function loadInvoiceDocumentData(
@@ -216,30 +298,49 @@ export async function loadInvoiceDocumentData(
     ...new Set(lines.map((line) => line.campaign_line_id).filter(Boolean) as string[]),
   ];
 
-  let ioReferences: string[] = [];
-  if (campaignLineIds.length > 0) {
-    const { data: linkedLines } = await supabase
-      .from("campaign_lines")
-      .select("vendor_io:vendor_ios(document_number)")
-      .in("id", campaignLineIds);
+  let clientIoReferences: string[] = [];
+  const commercialByLineId = new Map<string, CampaignLineCommercial>();
 
-    ioReferences = [
+  if (campaignRaw?.id) {
+    const { data: clientIos } = await supabase
+      .from("client_ios")
+      .select("document_number")
+      .eq("campaign_header_id", campaignRaw.id);
+
+    clientIoReferences = [
       ...new Set(
-        (linkedLines ?? [])
+        (clientIos ?? [])
           .map((row) => {
-            const typed = row as {
-              vendor_io:
-                | { document_number: string | null }
-                | Array<{ document_number: string | null }>
-                | null;
-            };
-            const vio = unwrapRelation(typed.vendor_io);
-            return vio?.document_number?.trim() ?? null;
+            const typed = row as { document_number: string | null };
+            return typed.document_number?.trim() ?? null;
           })
           .filter((value): value is string => Boolean(value))
       ),
     ].sort();
   }
+
+  if (campaignLineIds.length > 0) {
+    const { data: commercialLines } = await supabase
+      .from("campaign_lines")
+      .select(
+        "id, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
+      )
+      .in("id", campaignLineIds);
+
+    for (const row of commercialLines ?? []) {
+      const typed = row as {
+        id: string;
+        revenue?: number | null;
+        revenue_before_vat?: number | null;
+        usage_rights_amount?: number | null;
+        agency_fee_amount?: number | null;
+        agency_fee_percent?: number | null;
+      };
+      commercialByLineId.set(typed.id, resolveCampaignLineCommercial(typed));
+    }
+  }
+
+  const commercialBreakdown = computeInvoiceCommercialBreakdown(lines, commercialByLineId);
 
   const lineItems: InvoiceLineItemRow[] = lines.map((line) => ({
     id: line.id,
@@ -278,11 +379,9 @@ export async function loadInvoiceDocumentData(
         ? Number(typedInvoice.total)
         : null;
 
-  const ioReferenceDisplay = resolveIoReferenceDisplay({
-    poNumber: campaignRaw?.po_number ?? null,
-    ioReferences,
-    campaignDocumentNumber: campaignRaw?.document_number ?? null,
-  });
+  const clientIoReferenceDisplay = resolveClientIoReferenceDisplay(clientIoReferences);
+  const poReferenceDisplay = resolvePoReferenceDisplay(campaignRaw?.po_number ?? null);
+  const internalReference = campaignRaw?.document_number?.trim() || null;
 
   return {
     invoiceId: typedInvoice.id,
@@ -319,10 +418,13 @@ export async function loadInvoiceDocumentData(
           endDate: campaignRaw.end_date,
           brandName: brand?.name ?? null,
           poNumber: campaignRaw.po_number,
-          ioReferences,
-          ioReferenceDisplay,
+          clientIoReferences,
+          clientIoReferenceDisplay,
+          poReferenceDisplay,
+          internalReference,
         }
       : null,
+    commercialBreakdown,
     lineItems,
   };
 }

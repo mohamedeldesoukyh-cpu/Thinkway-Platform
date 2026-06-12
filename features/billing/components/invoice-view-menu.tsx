@@ -29,7 +29,7 @@ export function InvoiceViewMenu({
   const base = `/billing/invoices/${invoiceId}/preview`;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant={variant} size={size} className="gap-1.5">
           {label}

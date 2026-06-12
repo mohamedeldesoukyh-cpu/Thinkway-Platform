@@ -11,6 +11,7 @@ import {
   getBrandsForCampaignForm,
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { getCampaignClientIo, getCampaignVendorIos, getClientIoSendRecipients } from "@/features/io/queries";
 import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
@@ -305,6 +306,11 @@ export async function getCampaignWorkspace(
   }
   if (!header) {
     return null;
+  }
+
+  const statusSync = await syncCampaignHeaderStatus(supabase, campaignId);
+  if (statusSync.updated) {
+    (header as { status: string }).status = statusSync.status;
   }
 
   const [

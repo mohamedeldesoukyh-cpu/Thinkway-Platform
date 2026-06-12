@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { finalizeLineBillingAfterVendorIoRevisionBatch } from "@/lib/billing/vendor-io-revision-line-billing";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { logReviseVendorIo } from "@/lib/io/revise-vendor-io-log";
 import { resolveActiveVendorIoId } from "@/lib/io/vendor-io-active-link";
 import { sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
@@ -251,6 +252,8 @@ export async function reviseVendorIoBatch(
   }
 
   await finalizeLineBillingAfterVendorIoRevisionBatch(supabase, revisedLineIds);
+
+  await syncCampaignHeaderStatus(supabase, campaignId);
 
   return {
     ok: true,
