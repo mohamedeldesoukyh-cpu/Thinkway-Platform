@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  loadLineVatForDeliverable,
+  syncDeliverableRollupFromPosts,
+} from "@/lib/assignments/sync-post-schedules";
+import { loadActiveInvoiceLineItemIds } from "@/lib/billing/invoice-validation-context";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
 import { devLog } from "@/lib/dev-log";
@@ -23,6 +28,26 @@ type DeliverableRow = {
   remaining_amount?: number | null;
 };
 
+type PostRow = {
+  id: string;
+  campaign_line_id: string;
+  assignment_deliverable_id: string;
+  billing_status: string;
+  invoice_line_item_id: string | null;
+  locked_at: string | null;
+  billable_amount: number | null;
+  revenue_before_vat: number | null;
+  invoiced_amount?: number | null;
+  remaining_amount?: number | null;
+};
+
+const INVOICED_POST_STATUSES = new Set([
+  "invoiced",
+  "partially_invoiced",
+  "collected",
+  "partially_collected",
+]);
+
 type InvoiceLineItemRow = {
   id: string;
   invoice_id: string;
@@ -30,49 +55,6 @@ type InvoiceLineItemRow = {
   campaign_line_id: string | null;
   revenue_before_vat: number;
 };
-
-async function loadActiveInvoiceIdsForLineItems(
-  supabase: SupabaseClient,
-  lineItemIds: string[]
-): Promise<Set<string>> {
-  const active = new Set<string>();
-  if (lineItemIds.length === 0) return active;
-
-  const { data: items } = await supabase
-    .from("invoice_line_items")
-    .select("id, invoice_id")
-    .in("id", lineItemIds);
-
-  const invoiceIds = [
-    ...new Set(
-      (items ?? [])
-        .map((row) => (row as { invoice_id: string | null }).invoice_id)
-        .filter(Boolean) as string[]
-    ),
-  ];
-
-  if (invoiceIds.length === 0) return active;
-
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select("id, status")
-    .in("id", invoiceIds);
-
-  const liveInvoiceIds = new Set(
-    (invoices ?? [])
-      .filter((row) => (row as { status: string }).status !== "void")
-      .map((row) => (row as { id: string }).id)
-  );
-
-  for (const item of items ?? []) {
-    const row = item as { id: string; invoice_id: string | null };
-    if (row.invoice_id && liveInvoiceIds.has(row.invoice_id)) {
-      active.add(row.id);
-    }
-  }
-
-  return active;
-}
 
 function deliverableNeedsRepair(
   row: DeliverableRow,
@@ -89,6 +71,21 @@ function deliverableNeedsRepair(
   return !activeLineItemIds.has(row.invoice_line_item_id);
 }
 
+export function postScheduleNeedsOrphanRepair(
+  row: PostRow,
+  activeLineItemIds: Set<string>
+): boolean {
+  const looksInvoiced =
+    INVOICED_POST_STATUSES.has(row.billing_status) ||
+    Boolean(row.locked_at) ||
+    Boolean(row.invoice_line_item_id);
+
+  if (!looksInvoiced) return false;
+
+  if (!row.invoice_line_item_id) return true;
+  return !activeLineItemIds.has(row.invoice_line_item_id);
+}
+
 /**
  * Resets deliverables/lines that show invoiced/locked without a live invoice link.
  * Common after failed invoice create rollback (invoice deleted, deliverables left locked).
@@ -96,7 +93,11 @@ function deliverableNeedsRepair(
 export async function repairOrphanedInvoicedOperationalRows(
   supabase: SupabaseClient,
   campaignHeaderId: string
-): Promise<{ repairedDeliverables: number; repairedLineIds: string[] }> {
+): Promise<{
+  repairedDeliverables: number;
+  repairedPosts: number;
+  repairedLineIds: string[];
+}> {
   const { data: lineRows } = await supabase
     .from("campaign_lines")
     .select("id, invoice_id, billing_status, vendor_io_id")
@@ -104,7 +105,7 @@ export async function repairOrphanedInvoicedOperationalRows(
 
   const lineIds = (lineRows ?? []).map((row) => (row as { id: string }).id);
   if (lineIds.length === 0) {
-    return { repairedDeliverables: 0, repairedLineIds: [] };
+    return { repairedDeliverables: 0, repairedPosts: 0, repairedLineIds: [] };
   }
 
   const { data: deliverableRows } = await supabase
@@ -114,12 +115,21 @@ export async function repairOrphanedInvoicedOperationalRows(
     )
     .in("campaign_line_id", lineIds);
 
-  const deliverables = (deliverableRows ?? []) as DeliverableRow[];
-  const lineItemIds = deliverables
-    .map((row) => row.invoice_line_item_id)
-    .filter(Boolean) as string[];
+  const { data: postRows } = await supabase
+    .from("assignment_post_schedule")
+    .select(
+      "id, campaign_line_id, assignment_deliverable_id, billing_status, invoice_line_item_id, locked_at, billable_amount, revenue_before_vat, invoiced_amount, remaining_amount"
+    )
+    .in("campaign_line_id", lineIds);
 
-  const activeLineItemIds = await loadActiveInvoiceIdsForLineItems(supabase, lineItemIds);
+  const deliverables = (deliverableRows ?? []) as DeliverableRow[];
+  const posts = (postRows ?? []) as PostRow[];
+  const lineItemIds = [
+    ...deliverables.map((row) => row.invoice_line_item_id),
+    ...posts.map((row) => row.invoice_line_item_id),
+  ].filter(Boolean) as string[];
+
+  const activeLineItemIds = await loadActiveInvoiceLineItemIds(supabase, lineItemIds);
 
   const orphanDeliverableIds = deliverables
     .filter((row) => deliverableNeedsRepair(row, activeLineItemIds))
@@ -156,6 +166,65 @@ export async function repairOrphanedInvoicedOperationalRows(
       }
 
       if (row) repairedLineIds.add(row.campaign_line_id);
+    }
+  }
+
+  const orphanPostIds = posts
+    .filter((row) => postScheduleNeedsOrphanRepair(row, activeLineItemIds))
+    .map((row) => row.id);
+
+  const repairedDeliverableIds = new Set<string>();
+
+  if (orphanPostIds.length > 0) {
+    for (const postId of orphanPostIds) {
+      const row = posts.find((entry) => entry.id === postId);
+      const billable = Number(row?.billable_amount ?? row?.revenue_before_vat ?? 0);
+
+      const { error } = await supabase
+        .from("assignment_post_schedule")
+        .update({
+          billing_status: "ready_to_invoice",
+          invoice_line_item_id: null,
+          invoiced_amount: 0,
+          invoiced_at: null,
+          locked_at: null,
+          remaining_amount: billable,
+        } as never)
+        .eq("id", postId);
+
+      if (error) {
+        if (process.env.NODE_ENV === "development") {
+          devLog("[repair-orphaned-invoice] post reset failed", {
+            campaignHeaderId,
+            postId,
+            message: error.message,
+          });
+        }
+        continue;
+      }
+
+      if (row) {
+        repairedLineIds.add(row.campaign_line_id);
+        repairedDeliverableIds.add(row.assignment_deliverable_id);
+      }
+    }
+  }
+
+  for (const deliverableId of repairedDeliverableIds) {
+    const post = posts.find((entry) => entry.assignment_deliverable_id === deliverableId);
+    if (!post) continue;
+
+    try {
+      const lineVat = await loadLineVatForDeliverable(supabase, post.campaign_line_id);
+      await syncDeliverableRollupFromPosts(supabase, deliverableId, lineVat);
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        devLog("[repair-orphaned-invoice] deliverable rollup sync failed", {
+          campaignHeaderId,
+          deliverableId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
@@ -216,16 +285,21 @@ export async function repairOrphanedInvoicedOperationalRows(
     await syncLineOperationalStatusBatch(supabase, lineIdList);
   }
 
-  if (process.env.NODE_ENV === "development" && (orphanDeliverableIds.length > 0 || lineIdList.length > 0)) {
+  if (
+    process.env.NODE_ENV === "development" &&
+    (orphanDeliverableIds.length > 0 || orphanPostIds.length > 0 || lineIdList.length > 0)
+  ) {
     devLog("[repair-orphaned-invoice] repaired", {
       campaignHeaderId,
       deliverables: orphanDeliverableIds.length,
+      posts: orphanPostIds.length,
       lines: lineIdList,
     });
   }
 
   return {
     repairedDeliverables: orphanDeliverableIds.length,
+    repairedPosts: orphanPostIds.length,
     repairedLineIds: lineIdList,
   };
 }

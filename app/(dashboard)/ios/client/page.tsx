@@ -38,6 +38,7 @@ export default async function ClientIosPage({ searchParams }: Props) {
                 statuses={[
                   { value: "all", label: "All statuses" },
                   { value: "draft", label: "Draft" },
+                  { value: "generated", label: "Generated" },
                   { value: "sent", label: "Sent" },
                   { value: "approved", label: "Approved" },
                 ]}

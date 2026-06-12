@@ -56,6 +56,50 @@ export function invoicedRowBlockMessage(
     : "Selected deliverables include already invoiced items.";
 }
 
+/** Line item ids whose parent invoice is not void. */
+export async function loadActiveInvoiceLineItemIds(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  lineItemIds: string[]
+): Promise<Set<string>> {
+  const active = new Set<string>();
+  if (lineItemIds.length === 0) return active;
+
+  const { data: items } = await supabase
+    .from("invoice_line_items")
+    .select("id, invoice_id")
+    .in("id", lineItemIds);
+
+  const invoiceIds = [
+    ...new Set(
+      (items ?? [])
+        .map((row) => (row as { invoice_id: string | null }).invoice_id)
+        .filter(Boolean) as string[]
+    ),
+  ];
+
+  if (invoiceIds.length === 0) return active;
+
+  const { data: invoices } = await supabase
+    .from("invoices")
+    .select("id, status")
+    .in("id", invoiceIds);
+
+  const liveInvoiceIds = new Set(
+    (invoices ?? [])
+      .filter((row) => (row as { status: string }).status !== "void")
+      .map((row) => (row as { id: string }).id)
+  );
+
+  for (const item of items ?? []) {
+    const row = item as { id: string; invoice_id: string | null };
+    if (row.invoice_id && liveInvoiceIds.has(row.invoice_id)) {
+      active.add(row.id);
+    }
+  }
+
+  return active;
+}
+
 export async function resolveLinkedInvoiceIds(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   lineItemIds: string[]

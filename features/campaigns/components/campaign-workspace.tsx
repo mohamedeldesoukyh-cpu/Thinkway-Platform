@@ -259,7 +259,6 @@ export function CampaignWorkspaceView({
                       <ClientIoHeaderControls
                         io={workspace.client_io}
                         campaignId={workspace.id}
-                        viewHref={`/ios/client?io=${workspace.client_io.id}`}
                       />
                     ) : null}
                     {workspace.status !== "cancelled" ? (

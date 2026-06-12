@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client Insertion Order — CIO-2026-[NUMBER] — Thinkway</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --navy:   #0A0F1E;
+    --blue:   #0057FF;
+    --blue-lt:#EEF4FF;
+    --blue-md:#C8D6F5;
+    --ink:    #1A1F36;
+    --muted:  #6B7280;
+    --rule:   #E2E8F0;
+    --bg:     #F8FAFC;
+    --white:  #FFFFFF;
+    --radius: 6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 32px auto;
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 8px 32px rgba(0,0,0,.05);
+    overflow: hidden;
+  }
+
+  /* ── HEADER ─────────────────────────────────────── */
+  .doc-header {
+    background: var(--navy);
+    padding: 32px 40px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .doc-header .brand { display: flex; flex-direction: column; gap: 6px; }
+  .doc-header .logo-text { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+  .doc-header .logo-text span { color: var(--blue); }
+  .doc-header .tagline { font-size: 11px; color: #8899BB; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  .doc-header .title-block { text-align: right; }
+  .doc-header .io-title { font-size: 13px; font-weight: 600; color: #fff; letter-spacing: 2px; text-transform: uppercase; }
+  .serial-badge {
+    display: inline-block; margin-top: 8px;
+    background: var(--blue); color: #fff;
+    font-size: 11px; font-weight: 600;
+    padding: 4px 12px; border-radius: 100px; letter-spacing: 0.5px;
+  }
+  .doc-header .meta { margin-top: 10px; font-size: 11px; color: #8899BB; }
+
+  /* ── STRIPE ──────────────────────────────────────── */
+  .stripe { height: 4px; background: var(--blue); }
+
+  /* ── BODY ───────────────────────────────────────── */
+  .doc-body { padding: 36px 40px 48px; }
+
+  /* ── SECTION ────────────────────────────────────── */
+  .section { margin-bottom: 36px; }
+  .section:last-child { margin-bottom: 0; }
+
+  .section-label { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .section-label .num {
+    background: var(--navy); color: #fff;
+    font-size: 10px; font-weight: 700;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .section-label .title { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+  /* ── FIELD GRID ─────────────────────────────────── */
+  .fields { border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+  .field-row { display: grid; border-bottom: 1px solid var(--rule); }
+  .field-row:last-child { border-bottom: none; }
+  .field-row.cols-1 { grid-template-columns: 1fr; }
+  .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .field-row.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .field { padding: 12px 16px; border-right: 1px solid var(--rule); }
+  .field:last-child { border-right: none; }
+  .field.shade { background: var(--blue-lt); }
+  .field-row .field:first-child { border-left: 3px solid var(--blue); padding-left: 13px; }
+  .field .flabel { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .field .fvalue { font-size: 13px; font-weight: 500; color: var(--ink); min-height: 18px; }
+  .field .fvalue.empty { color: var(--rule); }
+  .field .fvalue.blue { color: var(--blue); font-weight: 600; }
+
+  /* ── DELIVERABLES TABLE ─────────────────────────── */
+  .deliv-table { width: 100%; border-collapse: collapse; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; font-size: 12.5px; }
+  .deliv-table thead tr { background: var(--navy); color: #fff; }
+  .deliv-table thead th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+  .deliv-table thead th:first-child { border-left: 3px solid var(--blue); padding-left: 11px; }
+  .deliv-table tbody tr { border-bottom: 1px solid var(--rule); }
+  .deliv-table tbody tr:last-child { border-bottom: none; }
+  .deliv-table tbody tr:nth-child(even) { background: var(--blue-lt); }
+  .deliv-table tbody tr:nth-child(odd) { background: var(--white); }
+  .deliv-table tbody tr:nth-child(even) td:first-child { border-left: 3px solid var(--blue-md); }
+  .deliv-table tbody tr:nth-child(odd) td:first-child { border-left: 3px solid var(--blue); }
+  .deliv-table tbody td { padding: 10px 14px; color: var(--ink); }
+  .deliv-table tbody td .platform { font-weight: 600; font-size: 13px; }
+  .deliv-table tbody td.muted { color: var(--muted); font-size: 12px; }
+
+  /* ── PRICING ────────────────────────────────────── */
+  .pricing-wrap { border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+  .pricing-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--rule); font-size: 13px; }
+  .pricing-row:first-child { border-left: 3px solid var(--blue); padding-left: 13px; }
+  .pricing-row:last-child { border-bottom: none; }
+  .pricing-row .label { color: var(--muted); font-size: 12px; }
+  .pricing-row .amount { font-weight: 600; color: var(--ink); }
+  .pricing-row.header { background: var(--bg); }
+  .pricing-row.header .label { color: var(--ink); font-weight: 600; font-size: 12.5px; }
+  .pricing-row.subtotal { background: var(--bg); }
+  .pricing-row.total { background: var(--navy); border-radius: 0 0 var(--radius) var(--radius); }
+  .pricing-row.total .label { color: #8899BB; font-size: 12px; font-weight: 500; }
+  .pricing-row.total .amount { color: #fff; font-size: 16px; font-weight: 700; }
+
+  /* ── PILLS ───────────────────────────────────────── */
+  .terms-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-lt); color: var(--blue); font-size: 11.5px; font-weight: 600; padding: 6px 14px; border-radius: 100px; border: 1px solid var(--blue-md); }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+
+  /* ── NOTICE BOX ─────────────────────────────────── */
+  .notice-box {
+    border: 1px solid var(--rule); border-radius: var(--radius);
+    padding: 16px 18px; margin-bottom: 16px;
+    font-size: 12px; color: var(--muted); line-height: 1.7;
+    border-left: 3px solid var(--blue); background: var(--bg);
+  }
+  .notice-box strong { color: var(--ink); }
+  .notice-box.highlight {
+    background: var(--blue-lt);
+    border-color: var(--blue-md);
+    border-left: 3px solid var(--blue);
+  }
+  .notice-box .notice-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--blue); margin-bottom: 8px;
+  }
+
+  /* ── ACKNOWLEDGEMENT GRID ───────────────────────── */
+  .ack-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .ack-box {
+    border: 1px solid var(--rule); border-radius: var(--radius);
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .ack-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+  .ack-box.client::before { background: var(--rule); }
+  .ack-box.agency::before { background: var(--blue); }
+  .ack-box.agency { background: var(--blue-lt); border-color: var(--blue-md); }
+
+  .ack-box .ack-role { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+  .ack-box.agency .ack-role { color: var(--blue); }
+
+  .ack-field { margin-bottom: 14px; }
+  .ack-field:last-child { margin-bottom: 0; }
+  .ack-field .alabel { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 4px; }
+  .ack-field .avalue { font-size: 13px; font-weight: 500; color: var(--ink); min-height: 18px; }
+  .ack-field .avalue.muted { color: var(--muted); font-style: italic; }
+  .ack-field .ack-line { border-bottom: 1.5px solid var(--rule); height: 36px; margin-top: 4px; }
+  .ack-box.agency .ack-field .ack-line { border-color: var(--blue-md); }
+
+  /* ── TERMS LIST ─────────────────────────────────── */
+  .terms-list { list-style: none; }
+  .terms-list li { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); font-size: 12px; line-height: 1.65; color: var(--muted); }
+  .terms-list li:last-child { border-bottom: none; }
+  .terms-list li .tnum { flex-shrink: 0; width: 20px; height: 20px; background: var(--blue-lt); color: var(--blue); font-size: 10px; font-weight: 700; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .terms-list li strong { color: var(--ink); font-weight: 600; }
+
+  /* ── DIVIDER ─────────────────────────────────────── */
+  .page-break-note { text-align: center; padding: 16px 0; font-size: 11px; color: var(--rule); letter-spacing: 1px; text-transform: uppercase; border-top: 1px dashed var(--rule); margin: 36px 0; }
+
+  /* ── FOOTER ─────────────────────────────────────── */
+  .doc-footer { background: var(--bg); border-top: 1px solid var(--rule); padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .doc-footer .left { font-size: 11px; color: var(--muted); }
+  .doc-footer .left strong { color: var(--ink); }
+  .doc-footer .right { font-size: 11px; color: var(--blue); font-weight: 600; letter-spacing: 0.3px; }
+
+  .confidential { text-align: center; padding: 8px; font-size: 10.5px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; background: var(--bg); }
+
+  /* ── PRINT ───────────────────────────────────────── */
+  @media print {
+    body { background: white; }
+    .page { margin: 0; box-shadow: none; border-radius: 0; }
+    .section { page-break-inside: avoid; }
+    .ack-grid { page-break-inside: avoid; }
+  }
+
+  @media (max-width: 600px) {
+    .doc-header { flex-direction: column; align-items: flex-start; }
+    .doc-header .title-block { text-align: left; }
+    .doc-body { padding: 24px 20px 36px; }
+    .field-row.cols-2, .field-row.cols-3, .field-row.cols-4 { grid-template-columns: 1fr; }
+    .ack-grid { grid-template-columns: 1fr; }
+    .doc-footer { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="brand">
+      <div class="logo-text">THINK<span>WAY</span></div>
+      <div class="tagline">Influencer Marketing Agency · ثينكواي</div>
+    </div>
+    <div class="title-block">
+      <div class="io-title">Client Insertion Order</div>
+      <div><span class="serial-badge">CIO-2026-[NUMBER]</span></div>
+      <div class="meta">Issued: [DATE] &nbsp;·&nbsp; Egypt</div>
+    </div>
+  </div>
+  <div class="stripe"></div>
+
+  <div class="doc-body">
+
+    <!-- 01 PARTIES -->
+    <div class="section">
+      <div class="section-label"><div class="num">1</div><div class="title">Parties</div></div>
+      <div class="fields">
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Client / Advertiser</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Agency</div>
+            <div class="fvalue blue">Thinkway (ثينكواي)</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Client Trade License / CR</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Agency Commercial Register</div>
+            <div class="fvalue">57920</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Client Address</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Agency Address</div>
+            <div class="fvalue">44B Saraya Mall, Central Axis, Sheikh Zayed, Giza, Egypt</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Client Contact Person</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Agency Contact</div>
+            <div class="fvalue">Summer Mostafa El Desouky</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Client Email</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Agency Email &amp; VAT</div>
+            <div class="fvalue">hello@thinkwaymedia.com &nbsp;·&nbsp; VAT 780-879-732</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 CAMPAIGN DETAILS -->
+    <div class="section">
+      <div class="section-label"><div class="num">2</div><div class="title">Campaign Details</div></div>
+      <div class="fields">
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Client</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Brand</div>
+            <div class="fvalue empty">——</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Campaign Name</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Campaign Duration</div>
+            <div class="fvalue">From: [DATE] &nbsp;&nbsp; To: [DATE]</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Channel(s)</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Target Market</div>
+            <div class="fvalue">Egypt</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Business Objective</div>
+            <div class="fvalue empty">——</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Usage Period (from date of posting)</div>
+            <div class="fvalue empty">——</div>
+          </div>
+        </div>
+        <div class="field-row cols-1">
+          <div class="field shade">
+            <div class="flabel">Scope of Services</div>
+            <div class="fvalue">Influencer identification, contracting, briefing, content review, posting coordination, and performance reporting.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 INFLUENCER ROSTER & DELIVERABLES -->
+    <div class="section">
+      <div class="section-label"><div class="num">3</div><div class="title">Influencer Roster &amp; Deliverables</div></div>
+      <table class="deliv-table">
+        <thead>
+          <tr>
+            <th>Influencer</th>
+            <th>Platform</th>
+            <th>Deliverable Type</th>
+            <th>No. of Posts</th>
+            <th>Account / Handle</th>
+            <th>Scheduled Date(s)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="platform">[Influencer Name]</span></td>
+            <td class="muted">Instagram</td>
+            <td class="muted">Post / Reel</td>
+            <td>[●]</td>
+            <td class="muted">[@handle]</td>
+            <td class="muted">[DATE]</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 04 PRICING & FEES -->
+    <div class="section">
+      <div class="section-label"><div class="num">4</div><div class="title">Pricing &amp; Fees</div></div>
+      <div class="pricing-wrap">
+        <div class="pricing-row">
+          <span class="label">Influencer Fees (Total)</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row">
+          <span class="label">Usage Rights Fee</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row">
+          <span class="label">Agency Fee</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row subtotal">
+          <span class="label">Subtotal</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row">
+          <span class="label">VAT (14%)</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+        <div class="pricing-row total">
+          <span class="label">Total Amount Due</span>
+          <span class="amount">[EGP ——]</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 PAYMENT TERMS -->
+    <div class="section">
+      <div class="section-label"><div class="num">5</div><div class="title">Payment Terms</div></div>
+      <div class="fields">
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Payment Schedule</div>
+            <div class="fvalue">Advance — Prior to campaign launch</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Payment Method</div>
+            <div class="fvalue">Bank Transfer (AAIB)</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Beneficiary</div>
+            <div class="fvalue">Thinkway</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Bank</div>
+            <div class="fvalue">Arab African International Bank (AAIB) — Park Street Branch</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Account Number</div>
+            <div class="fvalue">1200842810010201</div>
+          </div>
+          <div class="field">
+            <div class="flabel">SWIFT Code</div>
+            <div class="fvalue">ARAIEGCXX</div>
+          </div>
+        </div>
+        <div class="field-row cols-1">
+          <div class="field shade">
+            <div class="flabel">IBAN</div>
+            <div class="fvalue">EG500057093001200842810010201</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 12px;">
+        <div class="terms-pills">
+          <span class="pill"><span class="dot"></span>Advance Payment</span>
+          <span class="pill"><span class="dot"></span>Bank Transfer Only</span>
+          <span class="pill"><span class="dot"></span>VAT 14% Included</span>
+          <span class="pill"><span class="dot"></span>EGP Currency</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 CONTENT APPROVAL PROCESS -->
+    <div class="section">
+      <div class="section-label"><div class="num">6</div><div class="title">Content Approval Process</div></div>
+      <div class="fields">
+        <div class="field-row cols-1">
+          <div class="field shade">
+            <div class="flabel">Influencer Shortlist Approval</div>
+            <div class="fvalue">Thinkway will share the proposed influencer list with the Client. Client approval or feedback required within <strong>2 business days</strong>. No response = approved.</div>
+          </div>
+        </div>
+        <div class="field-row cols-1">
+          <div class="field">
+            <div class="flabel">Content Review</div>
+            <div class="fvalue">All influencer content will be shared prior to publishing. Client feedback required within <strong>2 business days</strong>. No response = approved.</div>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
+            <div class="flabel">Re-Shoot Policy</div>
+            <div class="fvalue">Subject to influencer discretion. May incur additional fees. Thinkway makes best efforts but assumes no obligation.</div>
+          </div>
+          <div class="field">
+            <div class="flabel">Cancellation Notice</div>
+            <div class="fvalue">Minimum <strong>7 business days</strong> written notice prior to scheduled campaign launch date.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 07 CLIENT ACKNOWLEDGEMENT -->
+    <div class="section">
+      <div class="section-label"><div class="num">7</div><div class="title">Client Acknowledgement</div></div>
+
+      <div class="notice-box highlight">
+        <div class="notice-title">⚡ Deemed Acceptance — 3 Business Days</div>
+        This Client Insertion Order (Ref: <strong>CIO-2026-[NUMBER]</strong>) has been issued by Thinkway to the Client named above. If the Client does not submit a written request for amendment or raise any objection within <strong>three (3) business days</strong> of receipt of this IO, the Client shall be deemed to have reviewed, accepted, and agreed to all terms, campaign details, deliverables, and pricing set forth herein. Thinkway will proceed with campaign execution upon expiry of this period.<br><br>
+        To request an amendment: <strong>hello@thinkwaymedia.com</strong> — reference the IO number above.
+      </div>
+
+      <div class="ack-grid">
+        <div class="ack-box client">
+          <div class="ack-role">Client Acknowledgement</div>
+          <div class="ack-field">
+            <div class="alabel">Client Company</div>
+            <div class="avalue empty" style="color:var(--rule);">——</div>
+          </div>
+          <div class="ack-field">
+            <div class="alabel">Acknowledged By (Name)</div>
+            <div class="ack-line"></div>
+          </div>
+          <div class="ack-field">
+            <div class="alabel">Date of Receipt</div>
+            <div class="ack-line"></div>
+          </div>
+          <div class="ack-field" style="margin-bottom:0">
+            <div class="alabel">Optional — Signature</div>
+            <div class="ack-line"></div>
+          </div>
+        </div>
+        <div class="ack-box agency">
+          <div class="ack-role">Thinkway — Issued By</div>
+          <div class="ack-field">
+            <div class="alabel">Full Name</div>
+            <div class="avalue">Summer Mostafa El Desouky</div>
+          </div>
+          <div class="ack-field">
+            <div class="alabel">Title</div>
+            <div class="avalue">Company Representative</div>
+          </div>
+          <div class="ack-field">
+            <div class="alabel">Signature</div>
+            <div class="ack-line"></div>
+          </div>
+          <div class="ack-field" style="margin-bottom:0">
+            <div class="alabel">Date of Issue</div>
+            <div class="ack-line"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE BREAK NOTE -->
+    <div class="page-break-note">— Terms &amp; Conditions continue below —</div>
+
+    <!-- 08 TERMS & CONDITIONS -->
+    <div class="section">
+      <div class="section-label"><div class="num">8</div><div class="title">Terms &amp; Conditions</div></div>
+      <ul class="terms-list">
+        <li>
+          <span class="tnum">1</span>
+          <span><strong>Scope of Services.</strong> Thinkway shall manage the full lifecycle of the influencer campaign including influencer identification, contracting, briefing, content review, posting coordination, and performance reporting. The Client shall cooperate with Thinkway and provide timely approvals as required herein.</span>
+        </li>
+        <li>
+          <span class="tnum">2</span>
+          <span><strong>Deemed Acceptance.</strong> If the Client does not submit a written objection or amendment request within <strong>three (3) business days</strong> of receiving this IO, the Client shall be deemed to have accepted all terms, deliverables, and pricing set out herein. Thinkway shall proceed with campaign execution upon expiry of this period.</span>
+        </li>
+        <li>
+          <span class="tnum">3</span>
+          <span><strong>Influencer Approval &amp; Content Review.</strong> Thinkway will share the proposed influencer list with the Client. Approval or feedback is required within 2 business days. All influencer content will be shared for review prior to publishing; Client feedback must be provided within 2 business days. Failure to respond shall constitute approval.</span>
+        </li>
+        <li>
+          <span class="tnum">4</span>
+          <span><strong>Payment Terms.</strong> Full payment is due in advance prior to campaign launch. Thinkway reserves the right to suspend any campaign activity in the event of payment delay, without further liability. All amounts are in EGP and include VAT at 14% where applicable.</span>
+        </li>
+        <li>
+          <span class="tnum">5</span>
+          <span><strong>Cancellation &amp; Amendment.</strong> Any cancellation or amendment must be submitted in writing at least 7 business days prior to the scheduled campaign launch. The Client agrees to pay all amounts in this IO plus any costs or damages arising from such cancellation or amendment.</span>
+        </li>
+        <li>
+          <span class="tnum">6</span>
+          <span><strong>Influencer Non-Circumvention.</strong> The Client agrees not to directly approach, contract, or engage any influencer introduced by Thinkway for the purposes of this campaign, during the campaign period and for <strong>12 months</strong> following its conclusion.</span>
+        </li>
+        <li>
+          <span class="tnum">7</span>
+          <span><strong>Intellectual Property.</strong> The Client acknowledges that intellectual property rights in content produced by influencers may belong to the influencer and/or the respective platform. Any reuse of content by the Client shall be subject to the agreed usage rights terms under this IO.</span>
+        </li>
+        <li>
+          <span class="tnum">8</span>
+          <span><strong>Confidentiality.</strong> All commercial terms, pricing, influencer identities, and campaign details in this IO are strictly confidential. The Client shall not disclose any such information to third parties without Thinkway's prior written consent.</span>
+        </li>
+        <li>
+          <span class="tnum">9</span>
+          <span><strong>Limitation of Liability.</strong> Thinkway's maximum aggregate liability under this IO shall be limited to the total fees paid by the Client. Thinkway shall not be liable for any indirect, incidental, or consequential damages.</span>
+        </li>
+        <li>
+          <span class="tnum">10</span>
+          <span><strong>Governing Law &amp; Jurisdiction.</strong> This IO shall be governed by the laws of the Arab Republic of Egypt. Any disputes shall be subject to the exclusive jurisdiction of the competent courts of Giza, Egypt.</span>
+        </li>
+      </ul>
+    </div>
+
+  </div><!-- /doc-body -->
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <div class="left">
+      <strong>Thinkway (ثينكواي)</strong> &nbsp;·&nbsp; CR 57920 &nbsp;·&nbsp; VAT 780-879-732 &nbsp;·&nbsp; Tax Reg. 7310<br>
+      44B Saraya Mall, Central Axis, Sheikh Zayed, Giza, Egypt &nbsp;·&nbsp; hello@thinkwaymedia.com
+    </div>
+    <div class="right">CIO-2026-[NUMBER]</div>
+  </div>
+
+  <div class="confidential">Confidential &amp; Proprietary — Thinkway 2026</div>
+
+</div>
+
+</body>
+</html>

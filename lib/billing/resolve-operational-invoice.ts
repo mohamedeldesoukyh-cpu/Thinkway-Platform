@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { resolveInvoiceDeliverableIds } from "@/lib/billing/invoice-from-deliverables";
-import type { InvoiceValidationContext } from "@/lib/billing/invoice-validation-context";
+import {
+  invoicedRowAllowed,
+  invoicedRowBlockMessage,
+  loadActiveInvoiceLineItemIds,
+  resolveLinkedInvoiceIds,
+  type InvoiceValidationContext,
+} from "@/lib/billing/invoice-validation-context";
 
 export async function resolveOperationalInvoiceTargets(
   supabase: SupabaseClient,
@@ -26,16 +32,39 @@ export async function resolveOperationalInvoiceTargets(
       return { deliverableIds: [], postIds: [], error: error.message };
     }
 
+    const lineItemIds = (posts ?? [])
+      .map((post) => post.invoice_line_item_id)
+      .filter(Boolean) as string[];
+    const [linkedInvoiceByLineItem, activeLineItemIds] = await Promise.all([
+      resolveLinkedInvoiceIds(supabase, lineItemIds),
+      loadActiveInvoiceLineItemIds(supabase, lineItemIds),
+    ]);
+
     for (const post of posts ?? []) {
-      if (
-        validationCtx.mode !== "append" &&
-        (post.locked_at || post.invoice_line_item_id)
-      ) {
-        return {
-          deliverableIds: [],
-          postIds: [],
-          error: "Selected post rows include already invoiced items.",
-        };
+      const linkedInvoiceId = post.invoice_line_item_id
+        ? (linkedInvoiceByLineItem.get(post.invoice_line_item_id) ?? null)
+        : null;
+      const enriched = { ...post, linked_invoice_id: linkedInvoiceId };
+
+      if (validationCtx.mode === "append") {
+        if (!invoicedRowAllowed(enriched, validationCtx)) {
+          return {
+            deliverableIds: [],
+            postIds: [],
+            error: invoicedRowBlockMessage("post", validationCtx),
+          };
+        }
+      } else {
+        const linkedToLive =
+          Boolean(post.invoice_line_item_id) &&
+          activeLineItemIds.has(post.invoice_line_item_id);
+        if (linkedToLive) {
+          return {
+            deliverableIds: [],
+            postIds: [],
+            error: invoicedRowBlockMessage("post", validationCtx),
+          };
+        }
       }
       postSet.add(post.id);
       if (post.assignment_deliverable_id) {

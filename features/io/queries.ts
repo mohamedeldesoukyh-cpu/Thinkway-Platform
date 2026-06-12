@@ -23,6 +23,60 @@ const VENDOR_IO_LIST_SELECT = `
   )
 `;
 
+const CLIENT_IO_LIST_SELECT = `
+  id, document_number, campaign_header_id, client_id, status, terms_html, terms_text, billing_terms,
+  attachment_url, generated_html_url, generated_pdf_url, document_generated_at,
+  sent_at, approved_at, approved_by_name, created_by, created_at, updated_at,
+  campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name),
+  client:clients!client_ios_client_id_fkey(name)
+`;
+
+function mapClientIoQueryRow(row: {
+  id: string;
+  document_number: string | null;
+  campaign_header_id: string;
+  client_id: string;
+  status: ClientIoRow["status"];
+  terms_html: string | null;
+  terms_text: string | null;
+  billing_terms: string | null;
+  attachment_url: string | null;
+  generated_html_url: string | null;
+  generated_pdf_url: string | null;
+  document_generated_at: string | null;
+  sent_at: string | null;
+  approved_at: string | null;
+  approved_by_name: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  campaign: { document_number: string; name: string } | null;
+  client: { name: string } | null;
+}): ClientIoRow {
+  return {
+    id: row.id,
+    document_number: row.document_number,
+    campaign_header_id: row.campaign_header_id,
+    campaign_name: row.campaign?.name ?? "—",
+    campaign_document_number: row.campaign?.document_number ?? "—",
+    client_id: row.client_id,
+    client_name: row.client?.name ?? "—",
+    status: row.status,
+    terms_html: row.terms_html,
+    terms_text: row.terms_text,
+    billing_terms: row.billing_terms,
+    attachment_url: row.attachment_url,
+    generated_html_url: row.generated_html_url,
+    generated_pdf_url: row.generated_pdf_url,
+    document_generated_at: row.document_generated_at,
+    sent_at: row.sent_at,
+    approved_at: row.approved_at,
+    approved_by_name: row.approved_by_name,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
 }
@@ -56,14 +110,7 @@ export async function getCampaignClientIo(campaignHeaderId: string): Promise<Cli
 
       const { data: row, error } = await supabase
         .from("client_ios")
-        .select(
-          `
-          id, campaign_header_id, client_id, status, terms_html, terms_text, billing_terms,
-          attachment_url, sent_at, approved_at, approved_by_name, created_by, created_at, updated_at,
-          campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name),
-          client:clients!client_ios_client_id_fkey(name)
-        `
-        )
+        .select(CLIENT_IO_LIST_SELECT)
         .eq("id", clientIoId)
         .maybeSingle();
 
@@ -71,44 +118,7 @@ export async function getCampaignClientIo(campaignHeaderId: string): Promise<Cli
         throw new Error(error?.message ?? "Client IO not found.");
       }
 
-      const typed = row as unknown as {
-        id: string;
-        campaign_header_id: string;
-        client_id: string;
-        status: ClientIoRow["status"];
-        terms_html: string | null;
-        terms_text: string | null;
-        billing_terms: string | null;
-        attachment_url: string | null;
-        sent_at: string | null;
-        approved_at: string | null;
-        approved_by_name: string | null;
-        created_by: string | null;
-        created_at: string;
-        updated_at: string;
-        campaign: { document_number: string; name: string } | null;
-        client: { name: string } | null;
-      };
-
-      return {
-        id: typed.id,
-        campaign_header_id: typed.campaign_header_id,
-        campaign_name: typed.campaign?.name ?? "—",
-        campaign_document_number: typed.campaign?.document_number ?? "—",
-        client_id: typed.client_id,
-        client_name: typed.client?.name ?? "—",
-        status: typed.status,
-        terms_html: typed.terms_html,
-        terms_text: typed.terms_text,
-        billing_terms: typed.billing_terms,
-        attachment_url: typed.attachment_url,
-        sent_at: typed.sent_at,
-        approved_at: typed.approved_at,
-        approved_by_name: typed.approved_by_name,
-        created_by: typed.created_by,
-        created_at: typed.created_at,
-        updated_at: typed.updated_at,
-      } satisfies ClientIoRow;
+      return mapClientIoQueryRow(row as never);
     },
     null
   );
@@ -149,14 +159,7 @@ export async function getClientIos(filters: IoSearchFilters): Promise<ClientIoRo
       const { supabase } = await requireUser();
       let query = supabase
         .from("client_ios")
-        .select(
-          `
-          id, campaign_header_id, client_id, status, terms_html, terms_text, billing_terms,
-          attachment_url, sent_at, approved_at, approved_by_name, created_by, created_at, updated_at,
-          campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name),
-          client:clients!client_ios_client_id_fkey(name)
-        `
-        )
+        .select(CLIENT_IO_LIST_SELECT)
         .order("created_at", { ascending: false });
 
       if (filters.status && filters.status !== "all") {
@@ -173,45 +176,7 @@ export async function getClientIos(filters: IoSearchFilters): Promise<ClientIoRo
         throw new Error(error.message);
       }
 
-      return ((data ?? []) as unknown[]).map((row) => {
-        const typed = row as {
-          id: string;
-          campaign_header_id: string;
-          client_id: string;
-          status: ClientIoRow["status"];
-          terms_html: string | null;
-          terms_text: string | null;
-          billing_terms: string | null;
-          attachment_url: string | null;
-          sent_at: string | null;
-          approved_at: string | null;
-          approved_by_name: string | null;
-          created_by: string | null;
-          created_at: string;
-          updated_at: string;
-          campaign: { document_number: string; name: string } | null;
-          client: { name: string } | null;
-        };
-        return {
-          id: typed.id,
-          campaign_header_id: typed.campaign_header_id,
-          campaign_name: typed.campaign?.name ?? "—",
-          campaign_document_number: typed.campaign?.document_number ?? "—",
-          client_id: typed.client_id,
-          client_name: typed.client?.name ?? "—",
-          status: typed.status,
-          terms_html: typed.terms_html,
-          terms_text: typed.terms_text,
-          billing_terms: typed.billing_terms,
-          attachment_url: typed.attachment_url,
-          sent_at: typed.sent_at,
-          approved_at: typed.approved_at,
-          approved_by_name: typed.approved_by_name,
-          created_by: typed.created_by,
-          created_at: typed.created_at,
-          updated_at: typed.updated_at,
-        } satisfies ClientIoRow;
-      });
+      return ((data ?? []) as unknown[]).map((row) => mapClientIoQueryRow(row as never));
     },
     []
   );

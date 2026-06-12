@@ -14,7 +14,9 @@ import {
   DetailSheetFooter,
 } from "@/features/campaigns/components/operational-detail-panel";
 import { updateClientIoAction, sendClientIoAction } from "@/features/io/actions";
+import { generateClientIoDocumentAction } from "@/features/io/generate-client-io-document-action";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { ClientIoViewMenu } from "@/features/io/components/client-io-view-menu";
 import type { ClientIoRow } from "@/features/io/types";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -34,6 +36,10 @@ export function ClientIoForm({ row }: Props) {
 
   const [saveState, saveAction, saving] = useActionState(updateClientIoAction, INITIAL_STATE);
   const [sendState, sendAction, sending] = useActionState(sendClientIoAction, INITIAL_STATE);
+  const [generateState, generateAction, generating] = useActionState(
+    generateClientIoDocumentAction,
+    INITIAL_STATE
+  );
 
   useEffect(() => {
     setTermsText(row.terms_text ?? "");
@@ -54,6 +60,16 @@ export function ClientIoForm({ row }: Props) {
     else toast.error(sendState.message);
   }, [sendState]);
 
+  useEffect(() => {
+    if (!generateState.message) return;
+    if (generateState.ok) toast.success(generateState.message);
+    else toast.error(generateState.message);
+  }, [generateState]);
+
+  const hasDocument = Boolean(
+    row.document_generated_at || row.generated_html_url || row.terms_html
+  );
+
   return (
     <OperationalTableSection
       wide
@@ -63,8 +79,12 @@ export function ClientIoForm({ row }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Client IO · {row.campaign_name}
+            {row.document_number ? ` · ${row.document_number}` : null}
           </h2>
-          <IoStatusBadge status={row.status} />
+          <div className="inline-flex flex-wrap items-center gap-2">
+            <IoStatusBadge status={row.status} />
+            {hasDocument ? <ClientIoViewMenu clientIoId={row.id} /> : null}
+          </div>
         </div>
       }
     >
@@ -127,6 +147,11 @@ export function ClientIoForm({ row }: Props) {
         <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
       </form>
 
+      <form id="client-io-generate" action={generateAction} className="hidden">
+        <input type="hidden" name="id" value={row.id} />
+        <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
+      </form>
+
       <DetailSheetFooter>
         <Button
           form="client-io-save"
@@ -136,6 +161,19 @@ export function ClientIoForm({ row }: Props) {
           disabled={saving}
         >
           {saving ? "Saving…" : "Save draft"}
+        </Button>
+        <Button
+          form="client-io-generate"
+          type="submit"
+          variant="outline"
+          size="sm"
+          disabled={generating}
+        >
+          {generating
+            ? "Generating…"
+            : hasDocument
+              ? "Regenerate document"
+              : "Generate document"}
         </Button>
         <Button form="client-io-send" type="submit" size="sm" disabled={sending}>
           {sending

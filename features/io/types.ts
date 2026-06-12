@@ -1,8 +1,9 @@
-export type ClientIoStatus = "draft" | "sent" | "approved";
+export type ClientIoStatus = "draft" | "generated" | "sent" | "approved";
 export type VendorIoStatus = "draft" | "generated" | "sent" | "approved" | "rejected";
 
 export type ClientIoRow = {
   id: string;
+  document_number: string | null;
   campaign_header_id: string;
   campaign_name: string;
   campaign_document_number: string;
@@ -13,6 +14,9 @@ export type ClientIoRow = {
   terms_text: string | null;
   billing_terms: string | null;
   attachment_url: string | null;
+  generated_html_url: string | null;
+  generated_pdf_url: string | null;
+  document_generated_at: string | null;
   sent_at: string | null;
   approved_at: string | null;
   approved_by_name: string | null;
