@@ -95,29 +95,57 @@ export function shouldAutoSyncCampaignHeaderStatus(
   return currentStatus !== "cancelled";
 }
 
+function isMissingColumnError(message: string, column: string): boolean {
+  return message.toLowerCase().includes(column.toLowerCase()) && message.toLowerCase().includes("does not exist");
+}
+
+/** Count active vendor IO rows; falls back when is_superseded column is not migrated yet. */
+export async function countGeneratedVendorIos(
+  supabase: SupabaseClient,
+  campaignHeaderId: string
+): Promise<number> {
+  const activeOnly = await supabase
+    .from("vendor_ios")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_header_id", campaignHeaderId)
+    .eq("is_superseded", false);
+
+  if (!activeOnly.error) {
+    return activeOnly.count ?? 0;
+  }
+
+  if (!isMissingColumnError(activeOnly.error.message, "is_superseded")) {
+    throw new Error(activeOnly.error.message);
+  }
+
+  const allRows = await supabase
+    .from("vendor_ios")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_header_id", campaignHeaderId);
+
+  if (allRows.error) {
+    throw new Error(allRows.error.message);
+  }
+
+  return allRows.count ?? 0;
+}
+
 export async function loadCampaignHeaderStatusSignals(
   supabase: SupabaseClient,
   campaignHeaderId: string
 ): Promise<CampaignHeaderStatusSignals> {
-  const [clientIoResult, vendorIoResult, billingResult] = await Promise.all([
+  const [clientIoResult, vendorIoCount, billingResult] = await Promise.all([
     supabase
       .from("client_ios")
       .select("status, sent_at, attachment_url, terms_html")
       .eq("campaign_header_id", campaignHeaderId)
       .maybeSingle(),
-    supabase
-      .from("vendor_ios")
-      .select("id", { count: "exact", head: true })
-      .eq("campaign_header_id", campaignHeaderId)
-      .eq("is_superseded", false),
+    countGeneratedVendorIos(supabase, campaignHeaderId),
     loadCampaignOperationalBilling(supabase, campaignHeaderId),
   ]);
 
   if (clientIoResult.error) {
     throw new Error(clientIoResult.error.message);
-  }
-  if (vendorIoResult.error) {
-    throw new Error(vendorIoResult.error.message);
   }
   if (billingResult.error) {
     throw new Error(billingResult.error);
@@ -127,7 +155,7 @@ export async function loadCampaignHeaderStatusSignals(
     hasGeneratedClientIo: isClientIoGenerated(
       clientIoResult.data as ClientIoGenerationSignals | null
     ),
-    hasGeneratedVendorIo: isVendorIoGenerated(vendorIoResult.count ?? 0),
+    hasGeneratedVendorIo: isVendorIoGenerated(vendorIoCount),
     fullyInvoiced: isCampaignFullyInvoiced(billingResult.operational_rows),
   };
 }

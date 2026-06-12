@@ -188,11 +188,28 @@ export async function getCampaignsList(params: {
     throw new Error(error.message);
   }
 
+  const campaigns = (data ?? []) as unknown as CampaignListItem[];
+
+  await Promise.all(
+    campaigns.map(async (campaign) => {
+      if (campaign.status === "cancelled") {
+        return;
+      }
+
+      try {
+        const statusSync = await syncCampaignHeaderStatus(supabase, campaign.id);
+        campaign.status = statusSync.status;
+      } catch (syncError) {
+        console.warn("[campaigns-list] syncCampaignHeaderStatus failed", campaign.id, syncError);
+      }
+    })
+  );
+
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / CAMPAIGNS_PAGE_SIZE));
 
   return {
-    campaigns: (data ?? []) as unknown as CampaignListItem[],
+    campaigns,
     total,
     page,
     pageSize: CAMPAIGNS_PAGE_SIZE,
