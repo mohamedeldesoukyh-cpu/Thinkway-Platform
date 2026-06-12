@@ -100,10 +100,12 @@ export function getInvoiceableSelectedAssignments(input: {
 }
 
 export function getInvoiceableSelectedDeliverables(input: {
+  selectedLineIds: Iterable<string>;
   selectedDeliverableIds: Iterable<string>;
   preparedRows: SelectionActionRowInput[];
   billingContext?: AssignmentHierarchyBillingContext | null;
 }): string[] {
+  const selectedLines = new Set(input.selectedLineIds);
   const selected = new Set(input.selectedDeliverableIds);
   const deliverableIds: string[] = [];
 
@@ -111,8 +113,10 @@ export function getInvoiceableSelectedDeliverables(input: {
     const pricingMode = row.group.line.assignment?.pricing_mode ?? "package";
     if (pricingMode !== "per_deliverable") continue;
 
+    const lineSelected = selectedLines.has(row.lineId);
+
     for (const deliverable of row.group.deliverables ?? []) {
-      if (!selected.has(deliverable.id)) continue;
+      if (!selected.has(deliverable.id) && !lineSelected) continue;
       if (!isDeliverableInvoiceActionEligible(deliverable, row, input.billingContext)) {
         continue;
       }
@@ -137,6 +141,7 @@ export function hasInvoiceableSelection(input: {
   if (invoiceLineIds.length > 0) return true;
 
   const deliverableIds = getInvoiceableSelectedDeliverables({
+    selectedLineIds: input.selectedLineIds,
     selectedDeliverableIds: input.selectedDeliverableIds,
     preparedRows: input.preparedRows,
     billingContext: input.billingContext,
@@ -174,6 +179,7 @@ export function resolveSelectionActions(input: {
   const invoiceableLineSet = new Set(invoiceLineIds);
 
   const invoiceDeliverableIds = getInvoiceableSelectedDeliverables({
+    selectedLineIds: input.selectedLineIds,
     selectedDeliverableIds: input.selectedDeliverableIds,
     preparedRows: input.preparedRows,
     billingContext,

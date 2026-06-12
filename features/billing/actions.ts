@@ -54,6 +54,7 @@ import {
 } from "@/lib/billing/sync-operational-row-billing";
 import { commitInvoiceLifecycleMutation } from "@/lib/billing/invoice-lifecycle-commit";
 import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 import {
   approveLineForBillingSchema,
@@ -82,6 +83,27 @@ export type BillingActionState = {
 function emptyToNull(value: string | undefined): string | null {
   if (!value?.trim()) return null;
   return value.trim();
+}
+
+function buildInvoiceCreateSuccessMessage(input: {
+  invoiceMode: ReturnType<typeof parseInvoiceBillingMode>;
+  documentNumber: string;
+  invoicedRowCount: number;
+  requestedLineIds: string[];
+  touchedLineIds: string[];
+}): string {
+  const displayNumber = formatDocumentNumberForDisplay(input.documentNumber);
+  const actionLabel = input.invoiceMode === "append" ? "Appended to" : "Created";
+  const rowLabel = input.invoicedRowCount === 1 ? "row" : "rows";
+  let message = `${actionLabel} invoice ${displayNumber} (${input.invoicedRowCount} ${rowLabel}).`;
+
+  const touched = new Set(input.touchedLineIds);
+  const skippedLineCount = input.requestedLineIds.filter((lineId) => !touched.has(lineId)).length;
+  if (skippedLineCount > 0) {
+    message += ` ${skippedLineCount} selected assignment${skippedLineCount === 1 ? "" : "s"} still ha${skippedLineCount === 1 ? "s" : "ve"} billable rows remaining.`;
+  }
+
+  return message;
 }
 
 function lineBillingPatch(billingStatus: string) {
@@ -707,7 +729,10 @@ export async function createInvoiceFromLinesAction(
   }
 
   const deliverablesToLock = usePostInvoicePath
-    ? deliverables.filter((row) => requestedDeliverableIds.includes(row.id))
+    ? deliverables.filter(
+        (row) =>
+          !posts.some((post) => post.assignment_deliverable_id === row.id)
+      )
     : deliverables;
 
   let postsForInvoice = posts;
@@ -1004,11 +1029,19 @@ export async function createInvoiceFromLinesAction(
     });
   }
 
-  const actionLabel = invoiceMode === "append" ? "Appended to" : "Created";
+  const invoicedRowCount = usePostInvoicePath
+    ? postsForInvoice.length + deliverablesToLock.length
+    : deliverablesToLock.length;
 
   return {
     ok: true,
-    message: `${actionLabel} invoice ${invoiceDocumentNumber} for ${usePostInvoicePath ? postsForInvoice.length : deliverablesToLock.length} deliverable/post row(s)${!usePostInvoicePath && postIds.length ? ` and ${postIds.length} post row(s)` : ""}.`,
+    message: buildInvoiceCreateSuccessMessage({
+      invoiceMode,
+      documentNumber: invoiceDocumentNumber,
+      invoicedRowCount,
+      requestedLineIds: lineIds,
+      touchedLineIds: commitResult.lineIds ?? touchedLineIds,
+    }),
     invoiceId,
     campaignId: parsed.data.campaign_id,
   };

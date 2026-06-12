@@ -208,23 +208,25 @@ export function InvoiceGenerationSheet({
   );
 
   useEffect(() => {
-    if (!open || !state.message) return;
+    if (!state.message) return;
 
     const actionKey = `${state.ok}:${state.message}:${state.invoiceId ?? ""}:${state.campaignId ?? campaignId}`;
     if (handledActionRef.current === actionKey) return;
     handledActionRef.current = actionKey;
 
     if (state.ok) {
-      showSuccessToastOnce(state.message, { id: "invoice-generation" });
+      showSuccessToastOnce(state.message, { id: "invoice-generation", duration: 6000 });
       const completedCampaignId = state.campaignId ?? campaignId;
       void (async () => {
         if (completedCampaignId && onInvoiceComplete) {
           await onInvoiceComplete(completedCampaignId);
         }
         router.refresh();
-        onOpenChange(false);
+        if (open) {
+          onOpenChange(false);
+        }
       })();
-    } else {
+    } else if (open) {
       showErrorToastOnce(state.message, { id: "invoice-generation" });
     }
   }, [

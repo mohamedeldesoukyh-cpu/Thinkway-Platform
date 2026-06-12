@@ -85,15 +85,14 @@ export async function resolveOperationalInvoiceTargets(
     }
   }
 
-  const hasGranularSelection =
-    input.deliverableIds.length > 0 || input.postIds.length > 0;
-  const lineIdsForExpansion = hasGranularSelection ? [] : input.lineIds;
-
+  // Always expand requested assignment line ids. Granular post/deliverable ids are
+  // merged separately; skipping line expansion dropped sibling assignments in mixed
+  // batches (e.g. package post rows for A–D plus line id for per-deliverable E).
   const { deliverableIds, error } = await resolveInvoiceDeliverableIds(
     supabase,
     campaignId,
     [...deliverableSet],
-    lineIdsForExpansion
+    input.lineIds
   );
 
   if (error) {

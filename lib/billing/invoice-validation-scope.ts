@@ -42,13 +42,8 @@ export async function resolveScopedInvoiceLineIds(
     }
   }
 
-  const hasGranularSelection =
-    input.resolvedDeliverableIds.length > 0 || input.resolvedPostIds.length > 0;
-
-  if (!hasGranularSelection) {
-    for (const lineId of input.requestedLineIds) {
-      lineIds.add(lineId);
-    }
+  for (const lineId of input.requestedLineIds) {
+    lineIds.add(lineId);
   }
 
   return [...lineIds];

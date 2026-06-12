@@ -27,6 +27,7 @@ import {
   hasInvoiceLinkage,
   resolveInvoiceActionLabel,
 } from "@/lib/billing/regeneration-eligibility";
+import { getInvoiceableSelectedDeliverables } from "@/lib/billing/selection-action-engine";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -432,6 +433,42 @@ function testOperationalTreeShapeBoundary() {
   normalizeOperationalBillingTree(shaped, ctx);
 }
 
+function testPerDeliverableLineSelectionExpandsDeliverables() {
+  const deliverableIds = getInvoiceableSelectedDeliverables({
+    selectedLineIds: ["line-e"],
+    selectedDeliverableIds: [],
+    preparedRows: [
+      {
+        lineId: "line-e",
+        group: {
+          line: {
+            id: "line-e",
+            billing_status: "moved_to_billing",
+            operational_status: "io_generated",
+            vendor_io_id: "vio-e",
+            assignment: { pricing_mode: "per_deliverable" },
+          },
+          deliverables: [
+            {
+              id: "del-e1",
+              is_synthetic: false,
+              billing_status: "ready_to_invoice",
+              remaining_amount: 1000,
+              is_locked: false,
+              invoiced_amount: 0,
+            },
+          ],
+        } as import("@/features/campaigns/types/assignment-hierarchy").AssignmentHierarchyGroup,
+      },
+    ],
+  });
+
+  assert(
+    deliverableIds.length === 1 && deliverableIds[0] === "del-e1",
+    "per_deliverable assignment line checkbox includes child deliverables"
+  );
+}
+
 const tests = [
   testFirstGenerationEligibility,
   testAppendAllowsSameInvoiceRows,
@@ -453,6 +490,7 @@ const tests = [
   testValidatePostsBlocksLiveDraftPointerFullyInvoiced,
   testStalePointerWithZeroBillableBlocked,
   testOperationalTreeShapeBoundary,
+  testPerDeliverableLineSelectionExpandsDeliverables,
 ];
 
 for (const run of tests) {

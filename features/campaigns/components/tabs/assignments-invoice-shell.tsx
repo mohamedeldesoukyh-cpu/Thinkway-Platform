@@ -47,8 +47,6 @@ export function AssignmentsInvoiceShell({
 }: AssignmentsInvoiceShellProps) {
   const router = useRouter();
 
-  if (!invoiceOpen) return null;
-
   if (operationalBilling) {
     return (
       <InvoiceGenerationSheet
@@ -68,6 +66,8 @@ export function AssignmentsInvoiceShell({
       />
     );
   }
+
+  if (!invoiceOpen) return null;
 
   return (
     <CreateInvoiceSheet
