@@ -2,6 +2,7 @@
  * Billing lifecycle scenario tests — run: npx tsx lib/billing/invoice-lifecycle-scenarios.test.ts
  */
 import {
+  blocksNewInvoiceOperationalRow,
   buildInvoiceValidationContext,
   invoicedRowAllowed,
   isInvoicedOperationalRow,
@@ -365,6 +366,62 @@ function testValidatePostsBlocksLiveInvoicePointer() {
   );
 }
 
+function testValidatePostsAllowsLiveDraftPointerWithRemaining() {
+  const newCtx = buildInvoiceValidationContext({ mode: "new" });
+  const post = basePostInvoiceLine({
+    remaining_amount: 5000,
+    invoiced_amount: 0,
+    billing_status: "ready_to_invoice",
+    linked_invoice_id: "inv-draft",
+  });
+  const activeLineItemIds = new Set(["ili-stale"]);
+  assert(
+    !blocksNewInvoiceOperationalRow(post, activeLineItemIds),
+    "live draft link with remaining billable does not block new invoice"
+  );
+  assert(
+    validatePostsForInvoice([post], newCtx, activeLineItemIds) === null,
+    "live draft pointer with remaining revenue passes new-invoice validation"
+  );
+}
+
+function testValidatePostsBlocksLiveDraftPointerFullyInvoiced() {
+  const newCtx = buildInvoiceValidationContext({ mode: "new" });
+  const post = basePostInvoiceLine({
+    remaining_amount: 0,
+    invoiced_amount: 5000,
+    billable_amount: 5000,
+    billing_status: "invoiced",
+    linked_invoice_id: "inv-draft",
+  });
+  const activeLineItemIds = new Set(["ili-stale"]);
+  assert(
+    blocksNewInvoiceOperationalRow(post, activeLineItemIds),
+    "live draft link with zero remaining blocks new invoice"
+  );
+  assert(
+    validatePostsForInvoice([post], newCtx, activeLineItemIds) !== null,
+    "fully invoiced live draft pointer blocked for new invoice"
+  );
+}
+
+function testStalePointerWithZeroBillableBlocked() {
+  const post = basePostInvoiceLine({
+    remaining_amount: 0,
+    invoiced_amount: 0,
+    billable_amount: 0,
+    revenue_before_vat: 0,
+    invoice_line_item_id: null,
+    locked_at: null,
+    linked_invoice_id: null,
+  });
+  const activeLineItemIds = new Set<string>();
+  assert(
+    blocksNewInvoiceOperationalRow(post, activeLineItemIds),
+    "zero-billable settled rows block new invoice"
+  );
+}
+
 function testOperationalTreeShapeBoundary() {
   const row = baseRow({
     children: undefined as unknown as OperationalBillingRow[],
@@ -392,6 +449,9 @@ const tests = [
   testQueueLinkageTruth,
   testValidatePostsAllowsStaleInvoicePointerWithRemaining,
   testValidatePostsBlocksLiveInvoicePointer,
+  testValidatePostsAllowsLiveDraftPointerWithRemaining,
+  testValidatePostsBlocksLiveDraftPointerFullyInvoiced,
+  testStalePointerWithZeroBillableBlocked,
   testOperationalTreeShapeBoundary,
 ];
 

@@ -19,16 +19,14 @@ import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
 import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import {
-  resolveClientBillableAmount,
-  resolveClientRemainingAmount,
-} from "@/lib/billing/client-billable-amount";
-import {
+  blocksNewInvoiceOperationalRow,
   invoicedRowAllowed,
   invoicedRowBlockMessage,
   isInvoicedOperationalRow,
   isLinkedToLiveInvoiceLineItem,
   loadActiveInvoiceLineItemIds,
   resolveLinkedInvoiceIds,
+  resolveOperationalRemainingForInvoice,
   type InvoiceValidationContext,
 } from "@/lib/billing/invoice-validation-context";
 import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
@@ -364,26 +362,7 @@ function resolvePostRemainingForInvoiceValidation(
   post: PostInvoiceLine,
   activeLineItemIds: Set<string>
 ): number {
-  const billable = resolveClientBillableAmount({
-    revenue_before_vat: post.revenue_before_vat,
-    billable_amount: post.billable_amount,
-  });
-  const invoiced = Number(post.invoiced_amount ?? 0);
-  const staleInvoicedPointer =
-    isInvoicedOperationalRow(post) &&
-    !isLinkedToLiveInvoiceLineItem(post, activeLineItemIds);
-
-  if (staleInvoicedPointer) {
-    return Math.max(0, billable - invoiced);
-  }
-
-  return resolveClientRemainingAmount({
-    revenue_before_vat: post.revenue_before_vat,
-    billable_amount: post.billable_amount,
-    invoiced_amount: post.invoiced_amount,
-    remaining_amount: post.remaining_amount,
-    locked_at: post.locked_at,
-  });
+  return resolveOperationalRemainingForInvoice(post, activeLineItemIds);
 }
 
 function enrichPostForInvoiceValidation(
@@ -487,25 +466,12 @@ export function validatePostsForInvoice(
       if (!invoicedRowAllowed(post, validationCtx)) {
         return invoicedRowBlockMessage("post", validationCtx);
       }
-    } else if (isLinkedToLiveInvoiceLineItem(post, activeLineItemIds)) {
+    } else if (blocksNewInvoiceOperationalRow(post, activeLineItemIds)) {
       return invoicedRowBlockMessage("post", validationCtx);
     }
 
     const remaining = resolvePostRemainingForInvoiceValidation(post, activeLineItemIds);
-    const beforeVat =
-      remaining > 0
-        ? remaining
-        : resolveClientBillableAmount({
-            revenue_before_vat: post.revenue_before_vat,
-            billable_amount: post.billable_amount,
-          });
-
-    if (
-      validationCtx.mode === "new" &&
-      remaining <= 0 &&
-      beforeVat <= 0 &&
-      !isLinkedToLiveInvoiceLineItem(post, activeLineItemIds)
-    ) {
+    if (validationCtx.mode === "new" && remaining <= 0.01) {
       return "Selected post rows include already invoiced items.";
     }
     if (post.billing_status === "disputed" || post.billing_status === "cancelled") {

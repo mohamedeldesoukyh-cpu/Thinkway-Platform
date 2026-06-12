@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { resolveInvoiceDeliverableIds } from "@/lib/billing/invoice-from-deliverables";
 import {
+  blocksNewInvoiceOperationalRow,
   invoicedRowAllowed,
   invoicedRowBlockMessage,
   loadActiveInvoiceLineItemIds,
@@ -23,10 +24,26 @@ export async function resolveOperationalInvoiceTargets(
   const postSet = new Set<string>(input.postIds);
 
   if (input.postIds.length > 0) {
-    const { data: posts, error } = await supabase
+    const postSelectWithBilling =
+      "id, assignment_deliverable_id, locked_at, remaining_amount, invoice_line_item_id, billable_amount, invoiced_amount, revenue_before_vat, billing_status";
+    const postSelectFallback =
+      "id, assignment_deliverable_id, locked_at, remaining_amount, invoice_line_item_id, revenue_before_vat, billing_status";
+
+    const primaryPostResult = await supabase
       .from("assignment_post_schedule")
-      .select("id, assignment_deliverable_id, locked_at, remaining_amount, invoice_line_item_id")
+      .select(postSelectWithBilling)
       .in("id", input.postIds);
+
+    const postResult =
+      primaryPostResult.error &&
+      /column|does not exist/i.test(primaryPostResult.error.message)
+        ? await supabase
+            .from("assignment_post_schedule")
+            .select(postSelectFallback)
+            .in("id", input.postIds)
+        : primaryPostResult;
+
+    const { data: posts, error } = postResult;
 
     if (error) {
       return { deliverableIds: [], postIds: [], error: error.message };
@@ -54,17 +71,12 @@ export async function resolveOperationalInvoiceTargets(
             error: invoicedRowBlockMessage("post", validationCtx),
           };
         }
-      } else {
-        const linkedToLive =
-          Boolean(post.invoice_line_item_id) &&
-          activeLineItemIds.has(post.invoice_line_item_id);
-        if (linkedToLive) {
-          return {
-            deliverableIds: [],
-            postIds: [],
-            error: invoicedRowBlockMessage("post", validationCtx),
-          };
-        }
+      } else if (blocksNewInvoiceOperationalRow(enriched, activeLineItemIds)) {
+        return {
+          deliverableIds: [],
+          postIds: [],
+          error: invoicedRowBlockMessage("post", validationCtx),
+        };
       }
       postSet.add(post.id);
       if (post.assignment_deliverable_id) {

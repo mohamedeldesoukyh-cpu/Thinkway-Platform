@@ -30,13 +30,8 @@ import {
   syncLineBillingFromDeliverables,
   unlockDeliverablesForInvoice,
 } from "@/lib/billing/sync-deliverable-billing";
-import {
-  repairDesyncedUngeneratedInvoiceHeaders,
-  repairIncorrectlyFinanceLockedDraftInvoices,
-  repairAppendMissingInvoiceLineItems,
-  repairOrphanedInvoicedOperationalRows,
-  repairStalePendingRegenerationInvoices,
-} from "@/lib/billing/repair-orphaned-invoice-state";
+import { repairDesyncedUngeneratedInvoiceHeaders } from "@/lib/billing/repair-orphaned-invoice-state";
+import { runPreInvoiceCreateRepairPipeline } from "@/lib/billing/repair-invoice-create-pipeline";
 import { syncDeliverableCollectionsForInvoice } from "@/lib/billing/sync-deliverable-collections";
 import {
   resolveOperationalInvoiceTargets,
@@ -558,10 +553,7 @@ export async function createInvoiceFromLinesAction(
     return { ok: false, message: headerError?.message ?? "Campaign not found." };
   }
 
-  await repairOrphanedInvoicedOperationalRows(supabase, parsed.data.campaign_id);
-  await repairStalePendingRegenerationInvoices(supabase, parsed.data.campaign_id);
-  await repairIncorrectlyFinanceLockedDraftInvoices(supabase, parsed.data.campaign_id);
-  await repairAppendMissingInvoiceLineItems(supabase, parsed.data.campaign_id);
+  await runPreInvoiceCreateRepairPipeline(supabase, parsed.data.campaign_id);
 
   const { deliverableIds, postIds, error: resolveError } =
     await resolveOperationalInvoiceTargets(
@@ -1705,7 +1697,10 @@ export async function loadCampaignBillingDetailAction(campaignId: string) {
 export async function refreshBillingAfterInvoiceAction(campaignId: string) {
   const { supabase, error: authError } = await requireAuthUser();
   if (!authError && supabase) {
-    await repairAppendMissingInvoiceLineItems(supabase, campaignId);
+    const { runPreInvoiceCreateRepairPipeline } = await import(
+      "@/lib/billing/repair-invoice-create-pipeline"
+    );
+    await runPreInvoiceCreateRepairPipeline(supabase, campaignId);
   }
   revalidateBilling({ campaignId });
   return loadCampaignBillingDetailAction(campaignId);
