@@ -32,7 +32,8 @@ import { CampaignPublicationsTab } from "@/features/campaigns/components/tabs/ca
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
-import { ClientIoHeaderControls } from "@/features/io/components/client-io-header-controls";
+import { ClientIoCampaignChrome } from "@/features/io/components/client-io-campaign-chrome";
+import { ClientIoTab } from "@/features/io/components/client-io-tab";
 import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { AssignmentBillingGroup, BillingLineRow, CampaignOperationalBillingDetail } from "@/features/billing/types";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
@@ -128,6 +129,7 @@ export function CampaignWorkspaceView({
   const tabCounts = useMemo(
     () => ({
       lines: workspace.lines.length,
+      clientIo: workspace.client_io ? 1 : 0,
       vendorIo: workspace.vendor_ios.length,
       deliverables: operationalDeliverableCount,
       publications: publications.length,
@@ -137,6 +139,7 @@ export function CampaignWorkspaceView({
     }),
     [
       workspace.lines,
+      workspace.client_io,
       workspace.vendor_ios.length,
       workspace.approvals.length,
       workspace.vendors.length,
@@ -149,6 +152,11 @@ export function CampaignWorkspaceView({
   const tabsById = useMemo(
     (): Record<CampaignWorkspaceTabId, { value: string; label: string; count?: number }> => ({
       overview: { value: "overview", label: "Overview" },
+      "client-io": {
+        value: "client-io",
+        label: "Client IO",
+        count: tabCounts.clientIo,
+      },
       lines: { value: "lines", label: "Assignments", count: tabCounts.lines },
       "vendor-io": { value: "vendor-io", label: "Vendor IO", count: tabCounts.vendorIo },
       deliverables: {
@@ -255,13 +263,11 @@ export function CampaignWorkspaceView({
                     />
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    {workspace.client_io ? (
-                      <ClientIoHeaderControls
-                        io={workspace.client_io}
-                        campaignId={workspace.id}
-                        recipients={workspace.client_io_send_recipients}
-                      />
-                    ) : null}
+                    <ClientIoCampaignChrome
+                      io={workspace.client_io}
+                      campaignId={workspace.id}
+                      recipients={workspace.client_io_send_recipients}
+                    />
                     {workspace.status !== "cancelled" ? (
                       <CancelCampaignDialog
                         campaignId={workspace.id}
@@ -325,6 +331,20 @@ export function CampaignWorkspaceView({
                 currencyOptions={currencyOptions}
                 onOpenDetails={() => setDetailsOpen(true)}
               />
+            ) : null}
+          </CampaignWorkspaceTabPanel>
+        </TabsContent>
+        <TabsContent value="client-io" className={tabPanelClass}>
+          <CampaignWorkspaceTabPanel>
+            {activeTab === "client-io" ? (
+              <TabErrorBoundary tabName="Client IO">
+                <ClientIoTab
+                  campaignId={workspace.id}
+                  campaignName={workspace.name}
+                  io={workspace.client_io}
+                  recipients={workspace.client_io_send_recipients}
+                />
+              </TabErrorBoundary>
             ) : null}
           </CampaignWorkspaceTabPanel>
         </TabsContent>

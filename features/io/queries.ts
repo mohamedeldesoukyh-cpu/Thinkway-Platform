@@ -9,6 +9,7 @@ import type {
 } from "@/features/io/types";
 import { mapVendorIoQueryRow } from "@/features/io/vendor-io-row-map";
 import { attachVendorIoUngenerateEligibility } from "@/features/io/vendor-io-query-helpers";
+import { fetchClientIoRow, fetchClientIoRows } from "@/lib/io/client-io-query";
 
 const VENDOR_IO_LIST_SELECT = `
   id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
@@ -24,60 +25,6 @@ const VENDOR_IO_LIST_SELECT = `
   )
 `;
 
-const CLIENT_IO_LIST_SELECT = `
-  id, document_number, campaign_header_id, client_id, status, terms_html, terms_text, billing_terms,
-  attachment_url, generated_html_url, generated_pdf_url, document_generated_at,
-  sent_at, approved_at, approved_by_name, created_by, created_at, updated_at,
-  campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name),
-  client:clients!client_ios_client_id_fkey(name)
-`;
-
-function mapClientIoQueryRow(row: {
-  id: string;
-  document_number: string | null;
-  campaign_header_id: string;
-  client_id: string;
-  status: ClientIoRow["status"];
-  terms_html: string | null;
-  terms_text: string | null;
-  billing_terms: string | null;
-  attachment_url: string | null;
-  generated_html_url: string | null;
-  generated_pdf_url: string | null;
-  document_generated_at: string | null;
-  sent_at: string | null;
-  approved_at: string | null;
-  approved_by_name: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-  campaign: { document_number: string; name: string } | null;
-  client: { name: string } | null;
-}): ClientIoRow {
-  return {
-    id: row.id,
-    document_number: row.document_number,
-    campaign_header_id: row.campaign_header_id,
-    campaign_name: row.campaign?.name ?? "—",
-    campaign_document_number: row.campaign?.document_number ?? "—",
-    client_id: row.client_id,
-    client_name: row.client?.name ?? "—",
-    status: row.status,
-    terms_html: row.terms_html,
-    terms_text: row.terms_text,
-    billing_terms: row.billing_terms,
-    attachment_url: row.attachment_url,
-    generated_html_url: row.generated_html_url,
-    generated_pdf_url: row.generated_pdf_url,
-    document_generated_at: row.document_generated_at,
-    sent_at: row.sent_at,
-    approved_at: row.approved_at,
-    approved_by_name: row.approved_by_name,
-    created_by: row.created_by,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
-}
 function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
 }
@@ -171,17 +118,12 @@ export async function getCampaignClientIo(campaignHeaderId: string): Promise<Cli
         return null;
       }
 
-      const { data: row, error } = await supabase
-        .from("client_ios")
-        .select(CLIENT_IO_LIST_SELECT)
-        .eq("id", clientIoId)
-        .maybeSingle();
-
-      if (error || !row) {
-        throw new Error(error?.message ?? "Client IO not found.");
+      const row = await fetchClientIoRow(supabase, clientIoId);
+      if (!row) {
+        throw new Error("Client IO not found.");
       }
 
-      return mapClientIoQueryRow(row as never);
+      return row;
     },
     null
   );
@@ -220,26 +162,15 @@ export async function getClientIos(filters: IoSearchFilters): Promise<ClientIoRo
     "io:getClientIos",
     async () => {
       const { supabase } = await requireUser();
-      let query = supabase
-        .from("client_ios")
-        .select(CLIENT_IO_LIST_SELECT)
-        .order("created_at", { ascending: false });
+      const pattern = filters.q?.trim()
+        ? `%${escapeIlikePattern(filters.q.trim())}%`
+        : undefined;
 
-      if (filters.status && filters.status !== "all") {
-        query = query.eq("status", filters.status);
-      }
-
-      if (filters.q?.trim()) {
-        const pattern = `%${escapeIlikePattern(filters.q.trim())}%`;
-        query = query.or(`terms_text.ilike.${pattern},billing_terms.ilike.${pattern}`);
-      }
-
-      const { data, error } = await query.limit(200);
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return ((data ?? []) as unknown[]).map((row) => mapClientIoQueryRow(row as never));
+      return fetchClientIoRows(supabase, {
+        status: filters.status,
+        searchPattern: pattern,
+        limit: 200,
+      });
     },
     []
   );

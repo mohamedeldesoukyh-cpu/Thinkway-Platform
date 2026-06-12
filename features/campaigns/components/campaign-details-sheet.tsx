@@ -220,7 +220,10 @@ function CampaignHierarchyTab({ workspace }: { workspace: CampaignWorkspace }) {
             View client IO
           </Link>
         ) : (
-          "—"
+          <span className="text-muted-foreground">
+            Not set up — use <strong className="font-medium text-foreground">Set up Client IO</strong>{" "}
+            in the campaign header.
+          </span>
         )}
       </DetailField>
       {workspace.description ? (

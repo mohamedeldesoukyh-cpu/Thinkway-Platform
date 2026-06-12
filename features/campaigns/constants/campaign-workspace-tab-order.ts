@@ -1,6 +1,7 @@
 /** Default campaign workspace tab order — shared for all users until customized. */
 export const CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER = [
   "overview",
+  "client-io",
   "lines",
   "vendor-io",
   "deliverables",

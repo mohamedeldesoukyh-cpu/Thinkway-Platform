@@ -8,6 +8,7 @@ import { CampaignFlatSection } from "@/features/campaigns/components/campaign-fl
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
 import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
 import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
+import { ClientIoCampaignChrome } from "@/features/io/components/client-io-campaign-chrome";
 import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,21 @@ export function CampaignOverviewTab({
         </div>
 
         <CampaignOverviewDetails workspace={workspace} layout="grid" compactTypography />
+
+        <CampaignFlatSection title="Client IO">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {workspace.client_io
+                ? "Generate, view, and send the client-facing insertion order for this campaign."
+                : "Set up the client insertion order before generating or sending to the legal entity."}
+            </p>
+            <ClientIoCampaignChrome
+              io={workspace.client_io}
+              campaignId={workspace.id}
+              recipients={workspace.client_io_send_recipients}
+            />
+          </div>
+        </CampaignFlatSection>
 
         <CampaignPoSection
           campaignId={workspace.id}
