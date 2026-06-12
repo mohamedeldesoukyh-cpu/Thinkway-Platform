@@ -15,12 +15,21 @@ import { snapshotOperationalRow } from "@/lib/billing/operational-billing-trace"
 function hasRemainingInvoiceableRevenue(
   row: Pick<
     OperationalBillingRow,
-    "remaining_amount" | "billable_amount" | "invoiced_amount" | "line_billing_status"
+    | "kind"
+    | "remaining_amount"
+    | "billable_amount"
+    | "invoiced_amount"
+    | "line_billing_status"
   >
 ): boolean {
   const remaining = getRemainingRevenue(row);
   if (remaining <= 0) return false;
-  if (isFullyInvoicedBillingStatus(row.line_billing_status)) return false;
+  if (
+    row.kind === "assignment" &&
+    isFullyInvoicedBillingStatus(row.line_billing_status)
+  ) {
+    return false;
+  }
   return !isFullyInvoiced({
     billable: row.billable_amount,
     invoiced: row.invoiced_amount,
@@ -223,7 +232,13 @@ export function isOperationalRowInvoiceEligible(
 
   const pricingMode = resolveRowPricingMode(row);
   if (pricingMode === "package" && row.kind !== "assignment" && !row.is_legacy_synthetic) {
-    return false;
+    const postLeafWithVendorIo =
+      row.kind === "post" &&
+      Boolean(row.vendor_io_id) &&
+      hasRemainingInvoiceableRevenue(row);
+    if (!postLeafWithVendorIo) {
+      return false;
+    }
   }
   if (pricingMode === "per_deliverable" && row.kind === "assignment" && !row.is_legacy_synthetic) {
     return false;
@@ -239,7 +254,13 @@ export function isOperationalRowInvoiceEligible(
   });
 
   if (operational === "draft" || operational === "closed") return false;
-  if (operational === "locked" && !pendingRegeneration) return false;
+  if (
+    operational === "locked" &&
+    !pendingRegeneration &&
+    !hasRemainingInvoiceableRevenue(row)
+  ) {
+    return false;
+  }
   if (row.kind === "assignment" && !row.vendor_io_id) return false;
 
   if (pendingRegeneration) {
@@ -286,7 +307,11 @@ export function isOperationalRowUiSelectable(
   const pendingRegeneration = isRowOnPendingRegenerationInvoice(row);
 
   if (!isOperationalRowInvoiceEligible(row)) return false;
-  if (!pendingRegeneration && UI_BLOCKED_LINE_BILLING.has(row.line_billing_status)) {
+  if (
+    !pendingRegeneration &&
+    UI_BLOCKED_LINE_BILLING.has(row.line_billing_status) &&
+    !hasRemainingInvoiceableRevenue(row)
+  ) {
     return false;
   }
 
@@ -300,7 +325,13 @@ export function isOperationalRowUiSelectable(
   });
 
   if (operational === "draft") return false;
-  if (operational === "locked" && !pendingRegeneration) return false;
+  if (
+    operational === "locked" &&
+    !pendingRegeneration &&
+    !hasRemainingInvoiceableRevenue(row)
+  ) {
+    return false;
+  }
 
   const operationalOk = UI_SELECTABLE_OPERATIONAL.has(operational);
   const movedToBilling = row.line_billing_status === "moved_to_billing";
@@ -514,9 +545,10 @@ export function buildPostOperationalRow(
     locked_at: post.locked_at ?? null,
     is_locked: locked,
     is_invoice_eligible:
-      line.operational_status === "io_generated" &&
       Boolean(line.vendor_io_id) &&
-      remaining > 0,
+      remaining > 0 &&
+      line.operational_status !== "draft" &&
+      line.operational_status !== "closed",
     operational_status: line.operational_status ?? "draft",
     vendor_io_id: line.vendor_io_id ?? null,
     vendor_io_document_number: line.vendor_io_document_number ?? null,

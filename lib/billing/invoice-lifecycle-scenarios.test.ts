@@ -249,6 +249,52 @@ function testStaleInvoicePointerWithRemainingRevenue() {
   );
 }
 
+function testPackagePostLeafWithVendorIoSelectable() {
+  const row = baseRow({
+    kind: "post",
+    id: "post-1",
+    assignment_deliverable_id: "del-1",
+    parent_id: "del-1",
+    label: "Tiktok story #1",
+    platform: "tiktok",
+    deliverable_type: "story",
+    line_pricing_mode: "package",
+    is_legacy_synthetic: false,
+  });
+  assert(
+    isOperationalRowInvoiceEligible(row),
+    "package post leaf with vendor IO and remaining revenue is invoice eligible"
+  );
+  assert(
+    isOperationalRowUiSelectable(row),
+    "package post leaf with vendor IO and remaining revenue is UI selectable"
+  );
+}
+
+function testStaleLineBillingStatusWithPostRemainingSelectable() {
+  const row = baseRow({
+    kind: "post",
+    id: "post-2",
+    assignment_deliverable_id: "del-1",
+    parent_id: "del-1",
+    label: "Instagram reel #1",
+    line_billing_status: "invoiced",
+    operational_status: "locked",
+    billable_amount: 5000,
+    invoiced_amount: 0,
+    remaining_amount: 5000,
+    line_pricing_mode: "per_deliverable",
+  });
+  assert(
+    isOperationalRowInvoiceEligible(row),
+    "post with stale line invoiced status but remaining revenue stays eligible"
+  );
+  assert(
+    isOperationalRowUiSelectable(row),
+    "post with stale line invoiced status but remaining revenue stays selectable"
+  );
+}
+
 function testOperationalTreeShapeBoundary() {
   const row = baseRow({
     children: undefined as unknown as OperationalBillingRow[],
@@ -265,6 +311,8 @@ const tests = [
   testAppendBlocksDifferentInvoice,
   testPartialInvoiceRemainingRevenue,
   testStaleInvoicePointerWithRemainingRevenue,
+  testPackagePostLeafWithVendorIoSelectable,
+  testStaleLineBillingStatusWithPostRemainingSelectable,
   testRegenerateSameRowsPendingRegeneration,
   testActiveInvoiceLockBlocksNewGeneration,
   testUngenerateResolvesToActiveFinancialTotals,

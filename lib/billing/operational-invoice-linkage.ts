@@ -238,6 +238,9 @@ function applyLinkageToRow(
     roundMoney(row.billable_amount - invoiced_amount)
   );
 
+  const partialParentLinkage =
+    directLineInvoiced > 0.01 && directLineInvoiced < row.billable_amount - 0.01;
+
   const settledChildren =
     children.length > 0 && remaining_amount <= 0.01
       ? children.map((child) => {
@@ -245,7 +248,12 @@ function applyLinkageToRow(
           const hasStaleInvoicePointer = Boolean(
             child.invoice_line_item_id || child.locked_at
           );
-          if (childRemaining > 0.01 && hasStaleInvoicePointer) return child;
+          if (
+            childRemaining > 0.01 &&
+            (partialParentLinkage || hasStaleInvoicePointer)
+          ) {
+            return child;
+          }
           return {
             ...child,
             invoiced_amount: child.billable_amount,
