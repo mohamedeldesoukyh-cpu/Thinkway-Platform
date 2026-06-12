@@ -11,6 +11,7 @@ import {
   type DeliverableBillingRow,
   shouldLockLineFully,
 } from "@/lib/billing/deliverable-billing";
+import { resolveClientBillableAmount } from "@/lib/billing/client-billable-amount";
 import {
   recalculateInvoiceTotals,
   resolveInvoiceLineVatPercent,
@@ -63,6 +64,9 @@ export type PostInvoiceLine = {
       campaign_header_id: string;
       revenue: number;
       revenue_before_vat: number;
+      usage_rights_amount?: number | null;
+      agency_fee_amount?: number | null;
+      agency_fee_percent?: number | null;
       revenue_vat_percent: number | null;
       revenue_vat_exempt: boolean | null;
     } | null;
@@ -91,11 +95,15 @@ function postInvoiceBeforeVat(
   const deliverable = post.assignment_deliverable;
   const deliverableRevenue = Number(deliverable?.revenue_before_vat ?? 0);
   const deliverableBillable = Number(deliverable?.billable_amount ?? 0);
-  const lineRevenue = Number(
-    deliverable?.campaign_line?.revenue_before_vat ??
-      deliverable?.campaign_line?.revenue ??
-      0
-  );
+  const line = deliverable?.campaign_line;
+  const lineBillable = line
+    ? resolveClientBillableAmount({
+        revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
+        usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+        agency_fee_amount: line.agency_fee_amount,
+        agency_fee_percent: Number(line.agency_fee_percent ?? 0),
+      })
+    : 0;
 
   const commercialFallback = Math.max(
     revenueBeforeVat,
@@ -103,7 +111,7 @@ function postInvoiceBeforeVat(
     invoiced,
     deliverableRevenue,
     deliverableBillable,
-    lineRevenue
+    lineBillable
   );
 
   if (options?.forRegeneration) {
@@ -252,7 +260,7 @@ export async function fetchPostsForInvoicing(
   const { data: lines, error: lineError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt"
+      "id, document_number, name, billing_status, invoice_id, campaign_header_id, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt"
     )
     .eq("campaign_header_id", campaignId)
     .in("id", lineIds);
@@ -272,6 +280,9 @@ export async function fetchPostsForInvoicing(
         campaign_header_id: string;
         revenue: number | null;
         revenue_before_vat: number | null;
+        usage_rights_amount?: number | null;
+        agency_fee_amount?: number | null;
+        agency_fee_percent?: number | null;
         revenue_vat_percent: number | null;
         revenue_vat_exempt: boolean | null;
       };

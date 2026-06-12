@@ -415,21 +415,80 @@ export async function sumInvoiceLineItemRevenue(
   return { total: Math.round(total * 100) / 100, count: count ?? 0 };
 }
 
+export function formatZeroBillableLineItemLabels(
+  rows: Array<{
+    revenue_before_vat: number | null;
+    description?: string | null;
+    campaign_line?: { document_number?: string | null } | null;
+  }>
+): string[] {
+  const labels: string[] = [];
+
+  for (const row of rows) {
+    if (Number(row.revenue_before_vat ?? 0) > 0.01) continue;
+
+    const documentNumber = row.campaign_line?.document_number?.trim();
+    if (documentNumber) {
+      labels.push(documentNumber);
+      continue;
+    }
+
+    const description = row.description?.trim() ?? "";
+    const match = description.match(/^([A-Z]{2}-\d{4}-\d+(?:-[A-Z])?)\s/);
+    if (match?.[1]) {
+      labels.push(match[1]);
+    }
+  }
+
+  return [...new Set(labels)];
+}
+
 export async function assertInvoiceHasBillableLineItems(
   supabase: SupabaseClient,
   invoiceId: string
 ): Promise<{ error?: string }> {
-  const { total, count, error } = await sumInvoiceLineItemRevenue(supabase, invoiceId);
+  const { data, error, count } = await supabase
+    .from("invoice_line_items")
+    .select(
+      "revenue_before_vat, description, campaign_line:campaign_lines(document_number)",
+      { count: "exact" }
+    )
+    .eq("invoice_id", invoiceId);
+
   if (error) {
-    return { error };
+    return { error: error.message };
   }
   if (!count || count === 0) {
     return { error: "Invoice has no line items." };
   }
-  if (total <= 0.01) {
+
+  const rows = (data ?? []) as Array<{
+    revenue_before_vat: number | null;
+    description?: string | null;
+    campaign_line?: { document_number?: string | null } | { document_number?: string | null }[] | null;
+  }>;
+
+  const total = rows.reduce(
+    (sum, row) => sum + Number(row.revenue_before_vat ?? 0),
+    0
+  );
+
+  if (Math.round(total * 100) / 100 <= 0.01) {
+    const zeroLabels = formatZeroBillableLineItemLabels(
+      rows.map((row) => ({
+        revenue_before_vat: row.revenue_before_vat,
+        description: row.description,
+        campaign_line: Array.isArray(row.campaign_line)
+          ? row.campaign_line[0] ?? null
+          : row.campaign_line ?? null,
+      }))
+    );
+    const assignmentHint =
+      zeroLabels.length > 0
+        ? ` Assignments with zero amounts: ${zeroLabels.join(", ")}.`
+        : "";
     return {
-      error:
-        "Invoice line items have zero billable amounts. Refresh the campaign and try again after commercial sync.",
+      error: `Invoice line items have zero billable amounts.${assignmentHint} Commercial sync could not resolve billable revenue — check assignment commercial fields.`,
     };
   }
   return {};
@@ -834,6 +893,9 @@ export async function regenerateInvoiceLineItems(
   const { filterIoGatedCampaignLineIds, pruneNonIoInvoiceLineItems } = await import(
     "@/lib/billing/invoice-regeneration-selection"
   );
+  const { prepareCampaignCommercialForInvoice } = await import(
+    "@/lib/billing/repair-invoice-create-pipeline"
+  );
 
   const scopedLineIds =
     options?.lineIds && options.lineIds.length > 0
@@ -848,6 +910,10 @@ export async function regenerateInvoiceLineItems(
     scopedLineIdSet.size > 0 ||
     scopedDeliverableIdSet.size > 0 ||
     scopedPostIdSet.size > 0;
+
+  await prepareCampaignCommercialForInvoice(supabase, headerId, {
+    lineIds: scopedLineIds.length > 0 ? scopedLineIds : undefined,
+  });
 
   if (scopedLineIds.length > 0) {
     const { clearStaleInvoiceLinksOutsideScope } = await import(

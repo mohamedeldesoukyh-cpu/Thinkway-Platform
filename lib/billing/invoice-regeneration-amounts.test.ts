@@ -1,7 +1,10 @@
 /**
  * Run: npx tsx lib/billing/invoice-regeneration-amounts.test.ts
  */
-import { resolveInvoiceLineBeforeVat } from "@/lib/billing/invoice-from-deliverables";
+import {
+  formatZeroBillableLineItemLabels,
+  resolveInvoiceLineBeforeVat,
+} from "@/lib/billing/invoice-from-deliverables";
 import { buildPostInvoiceLinePayload, type PostInvoiceLine } from "@/lib/billing/invoice-from-posts";
 
 function assert(condition: boolean, message: string) {
@@ -104,7 +107,62 @@ function testPostCreateUsesRemainingWhenUnlocked() {
   assert(payload.revenue_before_vat === 2500, "first create should invoice remaining billable");
 }
 
+function testPostRegenerationUsesLineCommercialWhenDeliverableZeroed() {
+  const deliverable = basePost().assignment_deliverable!;
+  const payload = buildPostInvoiceLinePayload(
+    "inv-1",
+    "camp-1",
+    basePost({
+      assignment_deliverable: {
+        ...deliverable,
+        revenue_before_vat: 0,
+        billable_amount: 0,
+        campaign_line: {
+          ...deliverable.campaign_line!,
+          revenue_before_vat: 5000,
+          revenue: 5000,
+        },
+      },
+    }),
+    1,
+    0,
+    { forRegeneration: true }
+  );
+
+  assert(
+    payload.revenue_before_vat === 5000,
+    "post regeneration should fall back to assignment line commercial when deliverable and post amounts are zeroed"
+  );
+}
+
+function testZeroBillableErrorListsAssignmentDocumentNumbers() {
+  const labels = formatZeroBillableLineItemLabels([
+    {
+      revenue_before_vat: 0,
+      description: "TW-2026-5-A — Creator package · IG Reel #1",
+      campaign_line: { document_number: "TW-2026-5-A" },
+    },
+    {
+      revenue_before_vat: 5000,
+      description: "TW-2026-5-B — Creator package · IG Story #1",
+      campaign_line: { document_number: "TW-2026-5-B" },
+    },
+    {
+      revenue_before_vat: 0,
+      description: "TW-2026-5-C — Creator package · IG Reel #2",
+      campaign_line: null,
+    },
+  ]);
+
+  assert(
+    labels.join(", ") === "TW-2026-5-A, TW-2026-5-C",
+    "zero-billable diagnostics should list only zero rows and dedupe document numbers"
+  );
+}
+
 testRegenerationUsesCorrectedCommercialAmount();
 testPostRegenerationUsesDeliverableCommercialWhenPostZeroed();
+testPostRegenerationUsesLineCommercialWhenDeliverableZeroed();
 testPostCreateUsesRemainingWhenUnlocked();
-console.log("invoice-regeneration-amounts: 3 passed");
+testZeroBillableErrorListsAssignmentDocumentNumbers();
+console.log("invoice-regeneration-amounts: 5 passed");

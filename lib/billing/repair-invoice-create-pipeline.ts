@@ -9,6 +9,7 @@ import {
   resolveClientBillableAmount,
   resolveClientRemainingAmount,
 } from "@/lib/billing/client-billable-amount";
+import { distributeEqual } from "@/lib/billing/operational-financial-sync";
 import { recalculateInvoiceTotals } from "@/lib/billing/invoice-from-deliverables";
 import { loadActiveInvoiceLineItemIds } from "@/lib/billing/invoice-validation-context";
 import {
@@ -101,6 +102,149 @@ function resolveSyncedPostRemaining(
     remaining_amount: Number(post.remaining_amount ?? 0),
     locked_at: post.locked_at,
   });
+}
+
+type LineCommercialRow = {
+  id: string;
+  revenue: number | null;
+  revenue_before_vat: number | null;
+  usage_rights_amount?: number | null;
+  agency_fee_amount?: number | null;
+  agency_fee_percent?: number | null;
+};
+
+/**
+ * When deliverable billable rows were zeroed (e.g. after ungenerate) but the parent
+ * assignment line still has commercial revenue, distribute line billable to children.
+ */
+export async function syncCampaignDeliverableBillableFromLines(
+  supabase: SupabaseClient,
+  campaignHeaderId: string,
+  options?: { lineIds?: string[] }
+): Promise<{ syncedDeliverables: number }> {
+  const { data: lineRows } = await supabase
+    .from("campaign_lines")
+    .select(
+      "id, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
+    )
+    .eq("campaign_header_id", campaignHeaderId);
+
+  let lines = (lineRows ?? []) as LineCommercialRow[];
+  if (options?.lineIds?.length) {
+    const allowed = new Set(options.lineIds);
+    lines = lines.filter((row) => allowed.has(row.id));
+  }
+
+  if (lines.length === 0) {
+    return { syncedDeliverables: 0 };
+  }
+
+  const lineIds = lines.map((row) => row.id);
+  const { data: deliverableRows } = await supabase
+    .from("assignment_deliverables")
+    .select(
+      "id, campaign_line_id, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, billable_amount, invoiced_amount, remaining_amount, locked_at, billing_status"
+    )
+    .in("campaign_line_id", lineIds)
+    .order("sort_order");
+
+  const deliverables = (deliverableRows ?? []) as Array<
+    DeliverableCommercialRow & {
+      billing_status: string;
+      invoiced_amount?: number | null;
+      remaining_amount?: number | null;
+    }
+  >;
+
+  const deliverablesByLine = new Map<string, typeof deliverables>();
+  for (const deliverable of deliverables) {
+    if (deliverable.billing_status === "disputed" || deliverable.billing_status === "cancelled") {
+      continue;
+    }
+    if (deliverable.locked_at) continue;
+    const list = deliverablesByLine.get(deliverable.campaign_line_id) ?? [];
+    list.push(deliverable);
+    deliverablesByLine.set(deliverable.campaign_line_id, list);
+  }
+
+  let syncedDeliverables = 0;
+
+  for (const line of lines) {
+    const lineDeliverables = deliverablesByLine.get(line.id) ?? [];
+    if (lineDeliverables.length === 0) continue;
+
+    const lineBillable = resolveClientBillableAmount({
+      revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
+      usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+      agency_fee_amount: line.agency_fee_amount,
+      agency_fee_percent: Number(line.agency_fee_percent ?? 0),
+    });
+    if (lineBillable <= 0.01) continue;
+
+    const currentTotal = roundMoney(
+      lineDeliverables.reduce((sum, row) => sum + resolveDeliverableBillable(row), 0)
+    );
+    if (currentTotal > 0.01) continue;
+
+    const shares = distributeEqual(lineBillable, lineDeliverables.length);
+
+    for (let index = 0; index < lineDeliverables.length; index++) {
+      const deliverable = lineDeliverables[index]!;
+      const billable = shares[index] ?? 0;
+      const invoiced = roundMoney(Number(deliverable.invoiced_amount ?? 0));
+      const remaining = roundMoney(Math.max(0, billable - invoiced));
+      const revenueBeforeVat =
+        Number(deliverable.revenue_before_vat ?? 0) > 0.01
+          ? Number(deliverable.revenue_before_vat)
+          : billable;
+
+      const needsSync =
+        roundMoney(Number(deliverable.billable_amount ?? 0)) !== billable ||
+        roundMoney(Number(deliverable.remaining_amount ?? 0)) !== remaining ||
+        roundMoney(Number(deliverable.revenue_before_vat ?? 0)) !== revenueBeforeVat;
+
+      if (!needsSync) continue;
+
+      const { error } = await supabase
+        .from("assignment_deliverables")
+        .update({
+          billable_amount: billable,
+          remaining_amount: remaining,
+          revenue_before_vat: revenueBeforeVat,
+          billing_status:
+            remaining > 0.01
+              ? invoiced > 0.01
+                ? "partially_invoiced"
+                : "ready_to_invoice"
+              : deliverable.billing_status,
+        } as never)
+        .eq("id", deliverable.id);
+
+      if (!error) {
+        syncedDeliverables += 1;
+        deliverable.billable_amount = billable;
+        deliverable.remaining_amount = remaining;
+        deliverable.revenue_before_vat = revenueBeforeVat;
+      }
+    }
+  }
+
+  return { syncedDeliverables };
+}
+
+/** Deliverable then post commercial sync — run before invoice create/regenerate. */
+export async function prepareCampaignCommercialForInvoice(
+  supabase: SupabaseClient,
+  campaignHeaderId: string,
+  options?: { lineIds?: string[] }
+): Promise<{ syncedDeliverables: number; syncedPosts: number }> {
+  const { syncedDeliverables } = await syncCampaignDeliverableBillableFromLines(
+    supabase,
+    campaignHeaderId,
+    options
+  );
+  const { syncedPosts } = await syncCampaignPostBillableForInvoice(supabase, campaignHeaderId);
+  return { syncedDeliverables, syncedPosts };
 }
 
 /** Recompute post billable/remaining from deliverable client commercial before invoice create. */
@@ -432,7 +576,7 @@ export async function runPreInvoiceCreateRepairPipeline(
   campaignHeaderId: string
 ): Promise<void> {
   await repairOrphanedInvoicedOperationalRows(supabase, campaignHeaderId);
-  await syncCampaignPostBillableForInvoice(supabase, campaignHeaderId);
+  await prepareCampaignCommercialForInvoice(supabase, campaignHeaderId);
   await repairStaleLiveDraftInvoicePostLinks(supabase, campaignHeaderId);
   await repairStalePendingRegenerationInvoices(supabase, campaignHeaderId);
   await repairIncorrectlyFinanceLockedDraftInvoices(supabase, campaignHeaderId);

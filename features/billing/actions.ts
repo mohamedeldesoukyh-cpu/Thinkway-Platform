@@ -32,7 +32,7 @@ import {
   unlockDeliverablesForInvoice,
 } from "@/lib/billing/sync-deliverable-billing";
 import { repairDesyncedUngeneratedInvoiceHeaders } from "@/lib/billing/repair-orphaned-invoice-state";
-import { runPreInvoiceCreateRepairPipeline, syncCampaignPostBillableForInvoice } from "@/lib/billing/repair-invoice-create-pipeline";
+import { runPreInvoiceCreateRepairPipeline } from "@/lib/billing/repair-invoice-create-pipeline";
 import { syncDeliverableCollectionsForInvoice } from "@/lib/billing/sync-deliverable-collections";
 import {
   resolveOperationalInvoiceTargets,
@@ -1403,7 +1403,7 @@ export async function ungenerateInvoiceAction(
   }
 
   if (invoice.campaign_header_id) {
-    await syncCampaignPostBillableForInvoice(supabase, invoice.campaign_header_id);
+    await runPreInvoiceCreateRepairPipeline(supabase, invoice.campaign_header_id);
     await repairDesyncedUngeneratedInvoiceHeaders(supabase, invoice.campaign_header_id);
   }
 
