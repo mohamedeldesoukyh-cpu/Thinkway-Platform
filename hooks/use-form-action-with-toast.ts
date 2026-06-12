@@ -16,16 +16,19 @@ type UseFormActionWithToastOptions = {
 };
 
 /** Wraps a server form action with Sonner toasts that fire as soon as the action returns. */
-export function useFormActionWithToast<T extends FormActionResult>(
-  action: (prev: T, formData: FormData) => Promise<T>,
-  initialState: T,
+export function useFormActionWithToast(
+  action: (
+    prev: FormActionResult,
+    formData: FormData
+  ) => Promise<FormActionResult>,
+  initialState: FormActionResult,
   options: UseFormActionWithToastOptions = {}
 ) {
   const router = useRouter();
   const { successDuration = 4000, refreshOnSuccess = true } = options;
 
   const wrappedAction = useCallback(
-    async (prev: T, formData: FormData): Promise<T> => {
+    async (prev: FormActionResult, formData: FormData): Promise<FormActionResult> => {
       const result = await action(prev, formData);
 
       if (result.message) {
