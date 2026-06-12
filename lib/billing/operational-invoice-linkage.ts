@@ -240,13 +240,20 @@ function applyLinkageToRow(
 
   const settledChildren =
     children.length > 0 && remaining_amount <= 0.01
-      ? children.map((child) => ({
-          ...child,
-          invoiced_amount: child.billable_amount,
-          remaining_amount: 0,
-          is_locked: true,
-          is_invoice_eligible: false,
-        }))
+      ? children.map((child) => {
+          const childRemaining = getRemainingRevenue(child);
+          const hasStaleInvoicePointer = Boolean(
+            child.invoice_line_item_id || child.locked_at
+          );
+          if (childRemaining > 0.01 && hasStaleInvoicePointer) return child;
+          return {
+            ...child,
+            invoiced_amount: child.billable_amount,
+            remaining_amount: 0,
+            is_locked: true,
+            is_invoice_eligible: false,
+          };
+        })
       : children;
 
   const linkedInvoiceId = primaryLink?.invoice_id ?? row.linked_invoice_id ?? row.invoice_id;
@@ -273,11 +280,14 @@ function applyLinkageToRow(
     };
   }
 
-  const is_locked = Boolean(
-    row.is_locked ||
-      row.invoice_line_item_id ||
-      invoiced_amount >= row.billable_amount
-  );
+  const is_locked =
+    remaining_amount <= 0.01 &&
+    Boolean(
+      row.locked_at ||
+        row.invoice_line_item_id ||
+        row.is_locked ||
+        invoiced_amount >= row.billable_amount
+    );
 
   return {
     ...row,

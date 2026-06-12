@@ -229,6 +229,26 @@ function testQueueLinkageTruth() {
   );
 }
 
+function testStaleInvoicePointerWithRemainingRevenue() {
+  const row = baseRow({
+    invoice_line_item_id: "ili-stale",
+    locked_at: "2026-01-01",
+    is_locked: true,
+    billable_amount: 13750,
+    invoiced_amount: 0,
+    remaining_amount: 13750,
+    billing_status: "ready_to_invoice",
+  });
+  assert(
+    isOperationalRowInvoiceEligible(row),
+    "stale invoice pointer with remaining revenue stays invoice eligible"
+  );
+  assert(
+    isOperationalRowUiSelectable(row),
+    "stale invoice pointer with remaining revenue stays UI selectable"
+  );
+}
+
 function testOperationalTreeShapeBoundary() {
   const row = baseRow({
     children: undefined as unknown as OperationalBillingRow[],
@@ -244,6 +264,7 @@ const tests = [
   testAppendAllowsSameInvoiceRows,
   testAppendBlocksDifferentInvoice,
   testPartialInvoiceRemainingRevenue,
+  testStaleInvoicePointerWithRemainingRevenue,
   testRegenerateSameRowsPendingRegeneration,
   testActiveInvoiceLockBlocksNewGeneration,
   testUngenerateResolvesToActiveFinancialTotals,

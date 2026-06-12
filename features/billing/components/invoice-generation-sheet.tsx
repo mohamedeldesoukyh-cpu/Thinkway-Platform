@@ -331,7 +331,7 @@ export function InvoiceGenerationSheet({
                     const locked = !selectable;
                     const status = getRowSelectionStatus(row, selected);
                     const inSubmitPayload = isRowInInvoiceSubmitPayload(row, payload);
-                    const checked = inSubmitPayload;
+                    const checked = selectable && inSubmitPayload;
 
                     return (
                       <label

@@ -203,14 +203,6 @@ export function isOperationalRowInvoiceEligible(
   const pendingRegeneration = isRowOnPendingRegenerationInvoice(row);
 
   if (
-    row.invoice_line_item_id &&
-    !pendingRegeneration &&
-    (row.is_locked || Boolean(row.locked_at))
-  ) {
-    return false;
-  }
-
-  if (
     !pendingRegeneration &&
     !hasRemainingInvoiceableRevenue({
       remaining_amount: row.remaining_amount,
@@ -490,10 +482,13 @@ export function buildPostOperationalRow(
   const billable = Number(post.billable_amount ?? post.revenue_before_vat ?? 0);
   const invoiced = Number(post.invoiced_amount ?? 0);
   const collected = Number(post.collected_amount ?? 0);
-  const locked = Boolean(post.locked_at || post.invoice_line_item_id);
-  const remaining = locked
-    ? Number(post.remaining_amount ?? Math.max(0, billable - invoiced))
-    : Math.max(0, billable - invoiced);
+  const computedRemaining = Math.max(0, billable - invoiced);
+  const remaining =
+    post.remaining_amount != null
+      ? Math.max(0, Number(post.remaining_amount))
+      : computedRemaining;
+  const hasInvoicePointer = Boolean(post.locked_at || post.invoice_line_item_id);
+  const locked = hasInvoicePointer && remaining <= 0;
 
   return {
     id: post.id,
@@ -521,7 +516,6 @@ export function buildPostOperationalRow(
     is_invoice_eligible:
       line.operational_status === "io_generated" &&
       Boolean(line.vendor_io_id) &&
-      !locked &&
       remaining > 0,
     operational_status: line.operational_status ?? "draft",
     vendor_io_id: line.vendor_io_id ?? null,
