@@ -65,6 +65,10 @@ type LineRow = {
   currency_code: string;
   pricing_mode: string | null;
   revenue: number;
+  revenue_before_vat?: number | null;
+  usage_rights_amount?: number | null;
+  agency_fee_amount?: number | null;
+  agency_fee_percent?: number | null;
   revenue_vat_percent?: number | null;
   revenue_vat_exempt?: boolean | null;
   metadata: Record<string, unknown> | null;
@@ -478,13 +482,9 @@ export async function loadCampaignOperationalBilling(
         deliverableChildren.reduce((s, d) => s + d.billable_amount, 0) ||
         resolveClientBillableAmount({
           revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
-          usage_rights_amount: Number(
-            (line as { usage_rights_amount?: number }).usage_rights_amount ?? 0
-          ),
-          agency_fee_amount: (line as { agency_fee_amount?: number }).agency_fee_amount,
-          agency_fee_percent: Number(
-            (line as { agency_fee_percent?: number }).agency_fee_percent ?? 0
-          ),
+          usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+          agency_fee_amount: line.agency_fee_amount,
+          agency_fee_percent: Number(line.agency_fee_percent ?? 0),
         }),
       invoiced_amount: deliverableChildren.reduce((s, d) => s + d.invoiced_amount, 0),
       collected_amount: deliverableChildren.reduce((s, d) => s + d.collected_amount, 0),
@@ -513,15 +513,9 @@ export async function loadCampaignOperationalBilling(
       is_legacy_synthetic: deliverables.length === 0,
       pricing_mode: assignmentPricingMode,
       revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
-      usage_rights_amount: Number(
-        (line as { usage_rights_amount?: number }).usage_rights_amount ?? 0
-      ),
-      agency_fee_amount: Number(
-        (line as { agency_fee_amount?: number }).agency_fee_amount ?? 0
-      ),
-      agency_fee_percent: Number(
-        (line as { agency_fee_percent?: number }).agency_fee_percent ?? 0
-      ),
+      usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+      agency_fee_amount: Number(line.agency_fee_amount ?? 0),
+      agency_fee_percent: Number(line.agency_fee_percent ?? 0),
       revenue_vat_percent: lineVatPercent,
       revenue_vat_exempt: lineVatExempt,
       line_revenue_vat_percent: lineVatPercent,
