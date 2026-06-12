@@ -302,21 +302,37 @@ export async function loadInvoiceDocumentData(
   const commercialByLineId = new Map<string, CampaignLineCommercial>();
 
   if (campaignRaw?.id) {
-    const { data: clientIos } = await supabase
+    const { data: clientIos, error: clientIoError } = await supabase
       .from("client_ios")
-      .select("document_number")
+      .select("status, sent_at")
       .eq("campaign_header_id", campaignRaw.id);
 
-    clientIoReferences = [
-      ...new Set(
-        (clientIos ?? [])
-          .map((row) => {
-            const typed = row as { document_number: string | null };
-            return typed.document_number?.trim() ?? null;
-          })
-          .filter((value): value is string => Boolean(value))
-      ),
-    ].sort();
+    if (!clientIoError) {
+      const hasGeneratedClientIo = (clientIos ?? []).some((row) => {
+        const typed = row as { status?: string | null; sent_at?: string | null };
+        return (
+          typed.status === "sent" ||
+          typed.status === "approved" ||
+          typed.status === "generated" ||
+          Boolean(typed.sent_at)
+        );
+      });
+
+      if (hasGeneratedClientIo) {
+        const { data: clientIosWithNumber } = await supabase
+          .from("client_ios")
+          .select("document_number")
+          .eq("campaign_header_id", campaignRaw.id);
+
+        clientIoReferences = [
+          ...new Set(
+            (clientIosWithNumber ?? [])
+              .map((row) => (row as { document_number: string | null }).document_number?.trim() ?? null)
+              .filter((value): value is string => Boolean(value))
+          ),
+        ].sort();
+      }
+    }
   }
 
   if (campaignLineIds.length > 0) {

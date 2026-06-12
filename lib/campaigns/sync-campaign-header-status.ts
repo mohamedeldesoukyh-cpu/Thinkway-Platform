@@ -13,11 +13,39 @@ export type CampaignHeaderStatusSignals = {
   fullyInvoiced: boolean;
 };
 
-/** Client IO counts as generated once the branded document has been rendered. */
-export function isClientIoGenerated(row: {
-  document_generated_at: string | null;
-} | null): boolean {
-  return Boolean(row?.document_generated_at);
+export type ClientIoGenerationSignals = {
+  status?: string | null;
+  sent_at?: string | null;
+  attachment_url?: string | null;
+  terms_html?: string | null;
+  document_generated_at?: string | null;
+  generated_html_url?: string | null;
+};
+
+/** Client IO counts as generated once sent, approved, or a branded document exists. */
+export function isClientIoGenerated(row: ClientIoGenerationSignals | null): boolean {
+  if (!row) {
+    return false;
+  }
+
+  if (row.document_generated_at || row.generated_html_url) {
+    return true;
+  }
+
+  const status = row.status?.toLowerCase() ?? "";
+  if (status === "generated" || status === "sent" || status === "approved") {
+    return true;
+  }
+
+  if (row.sent_at) {
+    return true;
+  }
+
+  if (row.attachment_url?.trim()) {
+    return true;
+  }
+
+  return false;
 }
 
 /** Active (non-superseded) Vendor IO rows represent generated vendor IOs. */
@@ -74,7 +102,7 @@ export async function loadCampaignHeaderStatusSignals(
   const [clientIoResult, vendorIoResult, billingResult] = await Promise.all([
     supabase
       .from("client_ios")
-      .select("document_generated_at")
+      .select("status, sent_at, attachment_url, terms_html")
       .eq("campaign_header_id", campaignHeaderId)
       .maybeSingle(),
     supabase
@@ -97,7 +125,7 @@ export async function loadCampaignHeaderStatusSignals(
 
   return {
     hasGeneratedClientIo: isClientIoGenerated(
-      clientIoResult.data as { document_generated_at: string | null } | null
+      clientIoResult.data as ClientIoGenerationSignals | null
     ),
     hasGeneratedVendorIo: isVendorIoGenerated(vendorIoResult.count ?? 0),
     fullyInvoiced: isCampaignFullyInvoiced(billingResult.operational_rows),

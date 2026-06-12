@@ -37,15 +37,17 @@ function assignmentRow(
   } as OperationalBillingRow;
 }
 
-function testClientIoGeneratedRequiresDocumentTimestamp() {
+function testClientIoGeneratedSignals() {
   assert(!isClientIoGenerated(null), "missing client IO is not generated");
-  assert(
-    !isClientIoGenerated({ document_generated_at: null }),
-    "client IO without document is not generated"
-  );
+  assert(!isClientIoGenerated({ status: "draft" }), "draft client IO is not generated");
   assert(
     isClientIoGenerated({ document_generated_at: "2026-06-01T00:00:00.000Z" }),
     "client IO with document timestamp is generated"
+  );
+  assert(isClientIoGenerated({ status: "sent" }), "sent client IO is generated");
+  assert(
+    isClientIoGenerated({ sent_at: "2026-06-01T00:00:00.000Z" }),
+    "client IO with sent_at is generated"
   );
 }
 
@@ -140,7 +142,7 @@ function testCancelledStatusIsPreserved() {
 }
 
 const tests = [
-  testClientIoGeneratedRequiresDocumentTimestamp,
+  testClientIoGeneratedSignals,
   testVendorIoGeneratedUsesActiveRowCount,
   testDeriveStatusDraftActiveCompleted,
   testFullyInvoicedUsesBillingQueueSemantics,

@@ -308,9 +308,13 @@ export async function getCampaignWorkspace(
     return null;
   }
 
-  const statusSync = await syncCampaignHeaderStatus(supabase, campaignId);
-  if (statusSync.updated) {
-    (header as { status: string }).status = statusSync.status;
+  try {
+    const statusSync = await syncCampaignHeaderStatus(supabase, campaignId);
+    if (statusSync.updated) {
+      (header as { status: string }).status = statusSync.status;
+    }
+  } catch (error) {
+    console.warn("[campaign-workspace] syncCampaignHeaderStatus failed", error);
   }
 
   const [
