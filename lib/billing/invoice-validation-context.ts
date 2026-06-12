@@ -44,6 +44,16 @@ export function invoicedRowAllowed(
   return false;
 }
 
+/** Row points at a line item on a non-void invoice (matches resolve-operational-invoice). */
+export function isLinkedToLiveInvoiceLineItem(
+  row: { invoice_line_item_id?: string | null },
+  activeLineItemIds: Set<string>
+): boolean {
+  return Boolean(
+    row.invoice_line_item_id && activeLineItemIds.has(row.invoice_line_item_id)
+  );
+}
+
 export function invoicedRowBlockMessage(
   kind: "post" | "deliverable",
   ctx: InvoiceValidationContext

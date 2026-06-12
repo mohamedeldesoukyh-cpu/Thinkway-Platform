@@ -6,6 +6,10 @@ import {
   invoicedRowAllowed,
   isInvoicedOperationalRow,
 } from "@/lib/billing/invoice-validation-context";
+import {
+  validatePostsForInvoice,
+  type PostInvoiceLine,
+} from "@/lib/billing/invoice-from-posts";
 import { isActiveInvoiceForFinancialTotals } from "@/lib/finance/status/invoice-status";
 import {
   ensureOperationalBillingTreeShape,
@@ -295,6 +299,72 @@ function testStaleLineBillingStatusWithPostRemainingSelectable() {
   );
 }
 
+function basePostInvoiceLine(
+  overrides: Partial<PostInvoiceLine> = {}
+): PostInvoiceLine {
+  return {
+    id: "post-1",
+    campaign_line_id: "line-1",
+    assignment_deliverable_id: "del-1",
+    sequence_number: 1,
+    live_date: "2026-06-01",
+    billable_amount: 5000,
+    invoiced_amount: 0,
+    remaining_amount: 5000,
+    revenue_before_vat: 5000,
+    billing_status: "ready_to_invoice",
+    locked_at: "2026-01-01",
+    invoice_line_item_id: "ili-stale",
+    linked_invoice_id: "inv-void",
+    assignment_deliverable: {
+      id: "del-1",
+      platform: "instagram",
+      deliverable_type: "reel",
+      revenue_before_vat: 5000,
+      billable_amount: 5000,
+      revenue_vat_percent: 0,
+      revenue_vat_exempt: false,
+      campaign_line: {
+        id: "line-1",
+        document_number: "TW-2026-5-A",
+        name: "Creator package",
+        billing_status: "invoiced",
+        invoice_id: null,
+        campaign_header_id: "camp-1",
+        revenue: 5000,
+        revenue_before_vat: 5000,
+        revenue_vat_percent: 0,
+        revenue_vat_exempt: false,
+      },
+    },
+    ...overrides,
+  };
+}
+
+function testValidatePostsAllowsStaleInvoicePointerWithRemaining() {
+  const newCtx = buildInvoiceValidationContext({ mode: "new" });
+  const post = basePostInvoiceLine();
+  const activeLineItemIds = new Set<string>();
+  assert(
+    validatePostsForInvoice([post], newCtx, activeLineItemIds) === null,
+    "stale post invoice pointer with remaining revenue passes new-invoice validation"
+  );
+}
+
+function testValidatePostsBlocksLiveInvoicePointer() {
+  const newCtx = buildInvoiceValidationContext({ mode: "new" });
+  const post = basePostInvoiceLine({
+    remaining_amount: 0,
+    invoiced_amount: 5000,
+    billing_status: "invoiced",
+  });
+  const activeLineItemIds = new Set(["ili-stale"]);
+  assert(
+    validatePostsForInvoice([post], newCtx, activeLineItemIds) !== null,
+    "live-linked post rows blocked for new invoice"
+  );
+}
+
 function testOperationalTreeShapeBoundary() {
   const row = baseRow({
     children: undefined as unknown as OperationalBillingRow[],
@@ -320,6 +390,8 @@ const tests = [
   testRegenerateLabelAfterUngenerateUnlock,
   testDuplicatePreventionValidationContext,
   testQueueLinkageTruth,
+  testValidatePostsAllowsStaleInvoicePointerWithRemaining,
+  testValidatePostsBlocksLiveInvoicePointer,
   testOperationalTreeShapeBoundary,
 ];
 

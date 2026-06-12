@@ -21,6 +21,7 @@ import {
 import {
   fetchPostsForInvoicing,
   lockPostsOnInvoice,
+  preparePostsForInvoiceValidation,
   validatePostsForInvoice,
 } from "@/lib/billing/invoice-from-posts";
 import {
@@ -717,6 +718,8 @@ export async function createInvoiceFromLinesAction(
     ? deliverables.filter((row) => requestedDeliverableIds.includes(row.id))
     : deliverables;
 
+  let postsForInvoice = posts;
+
   if (usePostInvoicePath) {
     const postIdsRequested = requestedPostIds.length > 0 || postIds.length > 0;
     if (postIdsRequested && posts.length === 0) {
@@ -726,7 +729,15 @@ export async function createInvoiceFromLinesAction(
           "Selected post rows could not be loaded for invoicing. Refresh the campaign and try again.",
       };
     }
-    const postValidationError = validatePostsForInvoice(posts, validationCtx);
+
+    const preparedPosts = await preparePostsForInvoiceValidation(supabase, posts);
+    postsForInvoice = preparedPosts.posts;
+
+    const postValidationError = validatePostsForInvoice(
+      postsForInvoice,
+      validationCtx,
+      preparedPosts.activeLineItemIds
+    );
     if (postValidationError) {
       return { ok: false, message: postValidationError };
     }
@@ -821,7 +832,7 @@ export async function createInvoiceFromLinesAction(
 
   const touchedLineIds = [
     ...new Set([
-      ...posts.map((post) => post.campaign_line_id),
+      ...postsForInvoice.map((post) => post.campaign_line_id),
       ...deliverablesToLock.map((row) => row.campaign_line_id),
       ...lineIds,
     ]),
@@ -829,12 +840,12 @@ export async function createInvoiceFromLinesAction(
 
   const mergedLineItemOps: InvoiceLineItemOpSummary = { updated: [], created: [] };
 
-  if (usePostInvoicePath && posts.length > 0) {
+  if (usePostInvoicePath && postsForInvoice.length > 0) {
     const postLockResult = await lockPostsOnInvoice(
       supabase,
       invoiceId,
       header.id,
-      posts,
+      postsForInvoice,
       {
         defaultVatRate: vatRate,
         updateExistingOnTargetInvoice: invoiceMode === "append",
@@ -876,7 +887,7 @@ export async function createInvoiceFromLinesAction(
     }
   }
 
-  const insertedPostRows = usePostInvoicePath && posts.length > 0;
+  const insertedPostRows = usePostInvoicePath && postsForInvoice.length > 0;
   const insertedDeliverableRows = deliverablesToLock.length > 0;
   const willInsertPackageLines = deliverablesToLock.length === 0 && posts.length === 0 && lineIds.length > 0;
 
@@ -1005,7 +1016,7 @@ export async function createInvoiceFromLinesAction(
 
   return {
     ok: true,
-    message: `${actionLabel} invoice ${invoiceDocumentNumber} for ${usePostInvoicePath ? posts.length : deliverablesToLock.length} deliverable/post row(s)${!usePostInvoicePath && postIds.length ? ` and ${postIds.length} post row(s)` : ""}.`,
+    message: `${actionLabel} invoice ${invoiceDocumentNumber} for ${usePostInvoicePath ? postsForInvoice.length : deliverablesToLock.length} deliverable/post row(s)${!usePostInvoicePath && postIds.length ? ` and ${postIds.length} post row(s)` : ""}.`,
     invoiceId,
     campaignId: parsed.data.campaign_id,
   };

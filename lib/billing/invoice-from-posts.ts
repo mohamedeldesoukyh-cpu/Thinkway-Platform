@@ -19,9 +19,15 @@ import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
 import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import {
+  resolveClientBillableAmount,
+  resolveClientRemainingAmount,
+} from "@/lib/billing/client-billable-amount";
+import {
   invoicedRowAllowed,
   invoicedRowBlockMessage,
   isInvoicedOperationalRow,
+  isLinkedToLiveInvoiceLineItem,
+  loadActiveInvoiceLineItemIds,
   resolveLinkedInvoiceIds,
   type InvoiceValidationContext,
 } from "@/lib/billing/invoice-validation-context";
@@ -354,9 +360,119 @@ export async function fetchPostsForInvoicing(
   return { posts };
 }
 
+function resolvePostRemainingForInvoiceValidation(
+  post: PostInvoiceLine,
+  activeLineItemIds: Set<string>
+): number {
+  const billable = resolveClientBillableAmount({
+    revenue_before_vat: post.revenue_before_vat,
+    billable_amount: post.billable_amount,
+  });
+  const invoiced = Number(post.invoiced_amount ?? 0);
+  const staleInvoicedPointer =
+    isInvoicedOperationalRow(post) &&
+    !isLinkedToLiveInvoiceLineItem(post, activeLineItemIds);
+
+  if (staleInvoicedPointer) {
+    return Math.max(0, billable - invoiced);
+  }
+
+  return resolveClientRemainingAmount({
+    revenue_before_vat: post.revenue_before_vat,
+    billable_amount: post.billable_amount,
+    invoiced_amount: post.invoiced_amount,
+    remaining_amount: post.remaining_amount,
+    locked_at: post.locked_at,
+  });
+}
+
+function enrichPostForInvoiceValidation(
+  post: PostInvoiceLine,
+  activeLineItemIds: Set<string>
+): PostInvoiceLine {
+  const remaining = resolvePostRemainingForInvoiceValidation(post, activeLineItemIds);
+  const staleInvoicedPointer =
+    isInvoicedOperationalRow(post) &&
+    !isLinkedToLiveInvoiceLineItem(post, activeLineItemIds);
+
+  if (!staleInvoicedPointer) {
+    return { ...post, remaining_amount: remaining };
+  }
+
+  const invoiced = Number(post.invoiced_amount ?? 0);
+
+  return {
+    ...post,
+    remaining_amount: remaining,
+    invoice_line_item_id: null,
+    locked_at: null,
+    linked_invoice_id: null,
+    billing_status:
+      remaining > 0 && invoiced > 0
+        ? "partially_invoiced"
+        : remaining > 0
+          ? "ready_to_invoice"
+          : post.billing_status,
+  };
+}
+
+/** Aligns post financials with UI linkage before server validation and lock. */
+export async function preparePostsForInvoiceValidation(
+  supabase: SupabaseClient,
+  posts: PostInvoiceLine[]
+): Promise<{ posts: PostInvoiceLine[]; activeLineItemIds: Set<string> }> {
+  const lineItemIds = posts
+    .map((post) => post.invoice_line_item_id)
+    .filter(Boolean) as string[];
+  const activeLineItemIds = await loadActiveInvoiceLineItemIds(supabase, lineItemIds);
+  const prepared = posts.map((post) =>
+    enrichPostForInvoiceValidation(post, activeLineItemIds)
+  );
+
+  for (let index = 0; index < posts.length; index++) {
+    const raw = posts[index]!;
+    const enriched = prepared[index]!;
+    const staleInvoicedPointer =
+      isInvoicedOperationalRow(raw) &&
+      !isLinkedToLiveInvoiceLineItem(raw, activeLineItemIds);
+
+    if (!staleInvoicedPointer) continue;
+
+    const patch: Record<string, unknown> = {
+      remaining_amount: enriched.remaining_amount,
+    };
+
+    if (
+      raw.invoice_line_item_id ||
+      raw.locked_at ||
+      enriched.remaining_amount > 0
+    ) {
+      patch.billing_status = enriched.billing_status;
+      patch.invoice_line_item_id = null;
+      patch.locked_at = null;
+      patch.invoiced_at = null;
+    }
+
+    const { error } = await supabase
+      .from("assignment_post_schedule")
+      .update(patch)
+      .eq("id", raw.id);
+
+    if (error && process.env.NODE_ENV === "development") {
+      devLog("[billing-invoice] stale post financial sync failed", {
+        postId: raw.id,
+        message: error.message,
+      });
+    }
+  }
+
+  return { posts: prepared, activeLineItemIds };
+}
+
 export function validatePostsForInvoice(
   posts: PostInvoiceLine[],
-  validationCtx: InvoiceValidationContext = { mode: "new" }
+  validationCtx: InvoiceValidationContext = { mode: "new" },
+  activeLineItemIds: Set<string> = new Set()
 ): string | null {
   if (posts.length === 0) {
     return "No billable deliverables selected.";
@@ -366,14 +482,29 @@ export function validatePostsForInvoice(
     if (!post.assignment_deliverable?.campaign_line) {
       return "Selected post rows are missing billing context.";
     }
-    if (!invoicedRowAllowed(post, validationCtx)) {
+
+    if (validationCtx.mode === "append") {
+      if (!invoicedRowAllowed(post, validationCtx)) {
+        return invoicedRowBlockMessage("post", validationCtx);
+      }
+    } else if (isLinkedToLiveInvoiceLineItem(post, activeLineItemIds)) {
       return invoicedRowBlockMessage("post", validationCtx);
     }
+
+    const remaining = resolvePostRemainingForInvoiceValidation(post, activeLineItemIds);
+    const beforeVat =
+      remaining > 0
+        ? remaining
+        : resolveClientBillableAmount({
+            revenue_before_vat: post.revenue_before_vat,
+            billable_amount: post.billable_amount,
+          });
+
     if (
       validationCtx.mode === "new" &&
-      !isInvoicedOperationalRow(post) &&
-      post.remaining_amount <= 0 &&
-      postInvoiceBeforeVat(post) <= 0
+      remaining <= 0 &&
+      beforeVat <= 0 &&
+      !isLinkedToLiveInvoiceLineItem(post, activeLineItemIds)
     ) {
       return "Selected post rows include already invoiced items.";
     }
