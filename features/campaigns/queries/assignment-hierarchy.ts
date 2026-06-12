@@ -462,7 +462,11 @@ async function loadCampaignAssignmentHierarchy(
       live_date: row.live_date,
       workflow_status: row.status ?? "draft",
       notes: row.notes,
-      revenue_per_post: Number(row.revenue_before_vat ?? 0),
+      revenue_per_post: Number(
+        row.revenue_before_vat ??
+          (row as { billable_amount?: number | null }).billable_amount ??
+          0
+      ),
       cost_per_post: Number(row.cost_before_vat ?? 0),
       revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
       revenue_vat_amount: Number(row.revenue_vat_amount ?? 0),

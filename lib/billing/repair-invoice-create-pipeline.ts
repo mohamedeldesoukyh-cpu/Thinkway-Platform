@@ -112,11 +112,40 @@ type LineCommercialRow = {
   usage_rights_amount?: number | null;
   agency_fee_amount?: number | null;
   agency_fee_percent?: number | null;
+  pricing_mode?: string | null;
 };
 
+/** Package lines are commercial source-of-truth on the assignment row, not deliverable rollups. */
+export function shouldDistributeLineCommercialToDeliverables(
+  line: Pick<LineCommercialRow, "pricing_mode" | "revenue_before_vat" | "revenue">,
+  deliverableRevenueSum: number
+): boolean {
+  if (line.pricing_mode === "package") return true;
+  const lineRevenue = Number(line.revenue_before_vat ?? line.revenue ?? 0);
+  if (lineRevenue <= 0.01) return false;
+  return deliverableRevenueSum < lineRevenue * 0.9;
+}
+
+function distributeByWeights(total: number, weights: number[]): number[] {
+  if (weights.length === 0) return [];
+  const weightSum = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
+  if (weightSum <= 0) {
+    return distributeEqual(total, weights.length);
+  }
+  const amounts = weights.map((weight) =>
+    roundMoney((total * Math.max(0, weight)) / weightSum)
+  );
+  const allocated = roundMoney(amounts.reduce((sum, value) => sum + value, 0));
+  const remainder = roundMoney(total - allocated);
+  if (remainder !== 0) {
+    amounts[amounts.length - 1] = roundMoney(amounts[amounts.length - 1] + remainder);
+  }
+  return amounts;
+}
+
 /**
- * When deliverable billable rows were zeroed (e.g. after ungenerate) but the parent
- * assignment line still has commercial revenue, distribute line billable to children.
+ * When deliverable commercial rows were zeroed (e.g. after ungenerate) but the parent
+ * assignment line still has commercial revenue, distribute line commercial to children.
  */
 export async function syncCampaignDeliverableBillableFromLines(
   supabase: SupabaseClient,
@@ -126,7 +155,7 @@ export async function syncCampaignDeliverableBillableFromLines(
   const { data: lineRows } = await supabase
     .from("campaign_lines")
     .select(
-      "id, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
+      "id, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, pricing_mode"
     )
     .eq("campaign_header_id", campaignHeaderId);
 
@@ -144,13 +173,14 @@ export async function syncCampaignDeliverableBillableFromLines(
   const { data: deliverableRows } = await supabase
     .from("assignment_deliverables")
     .select(
-      "id, campaign_line_id, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, billable_amount, invoiced_amount, remaining_amount, locked_at, billing_status"
+      "id, campaign_line_id, quantity, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, billable_amount, invoiced_amount, remaining_amount, locked_at, billing_status"
     )
     .in("campaign_line_id", lineIds)
     .order("sort_order");
 
   const deliverables = (deliverableRows ?? []) as Array<
     DeliverableCommercialRow & {
+      quantity?: number | null;
       billing_status: string;
       invoiced_amount?: number | null;
       remaining_amount?: number | null;
@@ -162,7 +192,6 @@ export async function syncCampaignDeliverableBillableFromLines(
     if (deliverable.billing_status === "disputed" || deliverable.billing_status === "cancelled") {
       continue;
     }
-    if (deliverable.locked_at) continue;
     const list = deliverablesByLine.get(deliverable.campaign_line_id) ?? [];
     list.push(deliverable);
     deliverablesByLine.set(deliverable.campaign_line_id, list);
@@ -174,35 +203,55 @@ export async function syncCampaignDeliverableBillableFromLines(
     const lineDeliverables = deliverablesByLine.get(line.id) ?? [];
     if (lineDeliverables.length === 0) continue;
 
+    const lineRevenue = Number(line.revenue_before_vat ?? line.revenue ?? 0);
+    const lineUr = Number(line.usage_rights_amount ?? 0);
+    const lineAf = Number(line.agency_fee_amount ?? 0);
     const lineBillable = resolveClientBillableAmount({
-      revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
-      usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+      revenue_before_vat: lineRevenue,
+      usage_rights_amount: lineUr,
       agency_fee_amount: line.agency_fee_amount,
       agency_fee_percent: Number(line.agency_fee_percent ?? 0),
     });
     if (lineBillable <= 0.01) continue;
 
-    const currentTotal = roundMoney(
-      lineDeliverables.reduce((sum, row) => sum + resolveDeliverableBillable(row), 0)
+    const deliverableRevenueSum = roundMoney(
+      lineDeliverables.reduce((sum, row) => sum + Number(row.revenue_before_vat ?? 0), 0)
     );
-    if (currentTotal > 0.01) continue;
+    if (!shouldDistributeLineCommercialToDeliverables(line, deliverableRevenueSum)) {
+      continue;
+    }
 
-    const shares = distributeEqual(lineBillable, lineDeliverables.length);
+    const weights = lineDeliverables.map((row) => Math.max(1, Number(row.quantity ?? 1)));
+    const revenueShares = distributeByWeights(lineRevenue, weights);
+    const urShares = distributeByWeights(lineUr, weights);
+    const afShares = distributeByWeights(lineAf, weights);
 
     for (let index = 0; index < lineDeliverables.length; index++) {
       const deliverable = lineDeliverables[index]!;
-      const billable = shares[index] ?? 0;
+      const existingBillable = resolveDeliverableBillable(deliverable);
+      if (deliverable.locked_at && existingBillable > 0.01) {
+        continue;
+      }
+
+      const revenueBeforeVat = revenueShares[index] ?? 0;
+      const usageRightsAmount = urShares[index] ?? 0;
+      const agencyFeeAmount = afShares[index] ?? 0;
+      const billable = resolveClientBillableAmount({
+        revenue_before_vat: revenueBeforeVat,
+        usage_rights_amount: usageRightsAmount,
+        agency_fee_amount: agencyFeeAmount,
+        agency_fee_percent: Number(deliverable.agency_fee_percent ?? line.agency_fee_percent ?? 0),
+        billable_amount: Number(deliverable.billable_amount ?? 0),
+      });
       const invoiced = roundMoney(Number(deliverable.invoiced_amount ?? 0));
       const remaining = roundMoney(Math.max(0, billable - invoiced));
-      const revenueBeforeVat =
-        Number(deliverable.revenue_before_vat ?? 0) > 0.01
-          ? Number(deliverable.revenue_before_vat)
-          : billable;
 
       const needsSync =
         roundMoney(Number(deliverable.billable_amount ?? 0)) !== billable ||
         roundMoney(Number(deliverable.remaining_amount ?? 0)) !== remaining ||
-        roundMoney(Number(deliverable.revenue_before_vat ?? 0)) !== revenueBeforeVat;
+        roundMoney(Number(deliverable.revenue_before_vat ?? 0)) !== revenueBeforeVat ||
+        roundMoney(Number(deliverable.usage_rights_amount ?? 0)) !== usageRightsAmount ||
+        roundMoney(Number(deliverable.agency_fee_amount ?? 0)) !== agencyFeeAmount;
 
       if (!needsSync) continue;
 
@@ -212,12 +261,16 @@ export async function syncCampaignDeliverableBillableFromLines(
           billable_amount: billable,
           remaining_amount: remaining,
           revenue_before_vat: revenueBeforeVat,
+          usage_rights_amount: usageRightsAmount,
+          agency_fee_amount: agencyFeeAmount,
           billing_status:
             remaining > 0.01
               ? invoiced > 0.01
                 ? "partially_invoiced"
                 : "ready_to_invoice"
-              : deliverable.billing_status,
+              : invoiced > 0.01
+                ? "invoiced"
+                : deliverable.billing_status,
         } as never)
         .eq("id", deliverable.id);
 
@@ -241,17 +294,26 @@ export async function syncCampaignLineCommercialRollupsFromDeliverables(
 ): Promise<{ syncedLines: number }> {
   const { data: lineRows } = await supabase
     .from("campaign_lines")
-    .select("id")
+    .select("id, pricing_mode, revenue_before_vat, revenue")
     .eq("campaign_header_id", campaignHeaderId);
 
-  let lineIds = (lineRows ?? []).map((row) => (row as { id: string }).id);
+  let lines = (lineRows ?? []) as Array<{
+    id: string;
+    pricing_mode?: string | null;
+    revenue_before_vat?: number | null;
+    revenue?: number | null;
+  }>;
   if (options?.lineIds?.length) {
     const allowed = new Set(options.lineIds);
-    lineIds = lineIds.filter((id) => allowed.has(id));
+    lines = lines.filter((row) => allowed.has(row.id));
   }
 
   let syncedLines = 0;
-  for (const lineId of lineIds) {
+  for (const line of lines) {
+    const lineId = line.id;
+    if (line.pricing_mode === "package") {
+      continue;
+    }
     const { data: deliverableRows } = await supabase
       .from("assignment_deliverables")
       .select("revenue_before_vat, usage_rights_amount, agency_fee_amount")
@@ -288,18 +350,18 @@ export async function syncCampaignLineCommercialRollupsFromDeliverables(
   return { syncedLines };
 }
 
-/** Line rollup, deliverable distribution, then post sync — run before invoice create/regenerate. */
+/** Line → deliverable → post sync — run before invoice create/regenerate. */
 export async function prepareCampaignCommercialForInvoice(
   supabase: SupabaseClient,
   campaignHeaderId: string,
   options?: { lineIds?: string[] }
 ): Promise<{ syncedLines: number; syncedDeliverables: number; syncedPosts: number }> {
-  const { syncedLines } = await syncCampaignLineCommercialRollupsFromDeliverables(
+  const { syncedDeliverables } = await syncCampaignDeliverableBillableFromLines(
     supabase,
     campaignHeaderId,
     options
   );
-  const { syncedDeliverables } = await syncCampaignDeliverableBillableFromLines(
+  const { syncedLines } = await syncCampaignLineCommercialRollupsFromDeliverables(
     supabase,
     campaignHeaderId,
     options
@@ -368,8 +430,16 @@ export async function syncCampaignPostBillableForInvoice(
     if (deliverablePosts.length === 0) continue;
 
     const deliverableBillable = resolveDeliverableBillable(deliverable);
-    const shares = allocateAmountByRevenueShare(
+    const deliverableRevenue = Number(deliverable.revenue_before_vat ?? 0);
+    const billableShares = allocateAmountByRevenueShare(
       deliverableBillable,
+      deliverablePosts.map((post) => ({
+        id: post.id,
+        revenue_before_vat: post.revenue_before_vat,
+      }))
+    );
+    const revenueShares = allocateAmountByRevenueShare(
+      deliverableRevenue,
       deliverablePosts.map((post) => ({
         id: post.id,
         revenue_before_vat: post.revenue_before_vat,
@@ -379,7 +449,13 @@ export async function syncCampaignPostBillableForInvoice(
     for (const post of deliverablePosts) {
       const billable = resolveSyncedPostBillable(
         post,
-        shares.get(post.id) ?? 0
+        billableShares.get(post.id) ?? 0
+      );
+      const revenueBeforeVat = roundMoney(
+        Math.max(
+          revenueShares.get(post.id) ?? 0,
+          Number(post.revenue_before_vat ?? 0)
+        )
       );
       const remaining = resolveSyncedPostRemaining(post, billable, activeLineItemIds);
       const invoiced = roundMoney(Math.max(0, billable - remaining));
@@ -399,7 +475,8 @@ export async function syncCampaignPostBillableForInvoice(
       const needsSync =
         roundMoney(Number(post.billable_amount ?? 0)) !== billable ||
         roundMoney(Number(post.remaining_amount ?? 0)) !== remaining ||
-        roundMoney(Number(post.invoiced_amount ?? 0)) !== invoiced;
+        roundMoney(Number(post.invoiced_amount ?? 0)) !== invoiced ||
+        roundMoney(Number(post.revenue_before_vat ?? 0)) !== revenueBeforeVat;
 
       if (!needsSync) continue;
 
@@ -407,6 +484,7 @@ export async function syncCampaignPostBillableForInvoice(
         .from("assignment_post_schedule")
         .update({
           billable_amount: billable,
+          revenue_before_vat: revenueBeforeVat,
           invoiced_amount: invoiced,
           remaining_amount: remaining,
           billing_status,

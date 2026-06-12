@@ -115,6 +115,10 @@ export default async function CampaignWorkspacePage({
         await repairIncorrectlyFinanceLockedDraftInvoices(supabase, id);
         await repairActiveInvoiceOperationalRelock(supabase, id);
         await repairAppendMissingInvoiceLineItems(supabase, id);
+        const { prepareCampaignCommercialForInvoice } = await import(
+          "@/lib/billing/repair-invoice-create-pipeline"
+        );
+        await prepareCampaignCommercialForInvoice(supabase, id);
         await repairVendorIoAmountDrift(supabase, id, repairUser?.id ?? null);
       } catch (error) {
         if (process.env.NODE_ENV === "development") {

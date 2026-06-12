@@ -843,6 +843,15 @@ export async function getCampaignOperationalBillingDetail(
   let error: string | undefined;
 
   try {
+    try {
+      const { prepareCampaignCommercialForInvoice } = await import(
+        "@/lib/billing/repair-invoice-create-pipeline"
+      );
+      await prepareCampaignCommercialForInvoice(supabase, campaignId);
+    } catch {
+      // Commercial sync is best-effort before operational billing read.
+    }
+
     const loaded = await loadCampaignOperationalBilling(supabase, campaignId);
     groups = loaded.groups;
     operational_rows = loaded.operational_rows;

@@ -35,13 +35,22 @@ export async function syncLineCommercialRollupsFromDeliverables(
   const { data: line, error: lineError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, billing_status, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt, metadata"
+      "id, billing_status, pricing_mode, revenue_before_vat, revenue, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt, metadata"
     )
     .eq("id", lineId)
     .maybeSingle();
 
   if (lineError || !line) {
     throw new Error(lineError?.message ?? "Campaign line not found.");
+  }
+
+  const lineRow = line as {
+    pricing_mode?: string | null;
+    revenue_before_vat?: number | null;
+    revenue?: number | null;
+  };
+  if (lineRow.pricing_mode === "package") {
+    return;
   }
 
   const { data: rows, error: rowsError } = await supabase
