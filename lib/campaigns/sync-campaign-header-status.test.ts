@@ -3,38 +3,14 @@
  */
 import {
   deriveCampaignHeaderStatus,
-  isCampaignFullyInvoiced,
+  isCampaignFullyInvoicedFromLines,
   isClientIoGenerated,
   isVendorIoGenerated,
   shouldAutoSyncCampaignHeaderStatus,
 } from "@/lib/campaigns/sync-campaign-header-status";
-import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
-}
-
-function assignmentRow(
-  overrides: Partial<OperationalBillingRow> = {}
-): OperationalBillingRow {
-  return {
-    id: "line-1",
-    kind: "assignment",
-    label: "Assignment",
-    campaign_line_id: "line-1",
-    billing_status: "invoiced",
-    line_billing_status: "invoiced",
-    operational_status: "locked",
-    billable_amount: 1000,
-    invoiced_amount: 1000,
-    collected_amount: 0,
-    remaining_amount: 0,
-    is_locked: true,
-    is_achieved: true,
-    vendor_io_id: "vio-1",
-    children: [],
-    ...overrides,
-  } as OperationalBillingRow;
 }
 
 function testClientIoGeneratedSignals() {
@@ -99,34 +75,27 @@ function testDeriveStatusDraftActiveCompleted() {
   );
 }
 
-function testFullyInvoicedUsesBillingQueueSemantics() {
+function testFullyInvoicedFromLines() {
+  assert(!isCampaignFullyInvoicedFromLines([]), "empty lines is not fully invoiced");
   assert(
-    !isCampaignFullyInvoiced([]),
-    "empty operational tree is not fully invoiced"
-  );
-  assert(
-    !isCampaignFullyInvoiced([
-      assignmentRow({
-        billable_amount: 1000,
-        invoiced_amount: 500,
-        remaining_amount: 500,
+    !isCampaignFullyInvoicedFromLines([
+      {
         billing_status: "partially_invoiced",
-        line_billing_status: "partially_invoiced",
-      }),
+        invoice_id: null,
+        revenue: 1000,
+      },
     ]),
-    "partial invoice is not fully invoiced"
+    "partial line billing is not fully invoiced"
   );
   assert(
-    isCampaignFullyInvoiced([
-      assignmentRow({
-        billable_amount: 1000,
-        invoiced_amount: 1000,
-        remaining_amount: 0,
+    isCampaignFullyInvoicedFromLines([
+      {
         billing_status: "invoiced",
-        line_billing_status: "invoiced",
-      }),
+        invoice_id: "inv-1",
+        revenue: 1000,
+      },
     ]),
-    "zero remaining with invoiced amount is fully invoiced"
+    "all terminal lines with revenue is fully invoiced"
   );
 }
 
@@ -145,7 +114,7 @@ const tests = [
   testClientIoGeneratedSignals,
   testVendorIoGeneratedUsesActiveRowCount,
   testDeriveStatusDraftActiveCompleted,
-  testFullyInvoicedUsesBillingQueueSemantics,
+  testFullyInvoicedFromLines,
   testCancelledStatusIsPreserved,
 ];
 

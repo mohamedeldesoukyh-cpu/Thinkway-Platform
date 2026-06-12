@@ -11,7 +11,10 @@ import {
   getBrandsForCampaignForm,
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
-import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
+import {
+  syncCampaignHeaderStatus,
+  syncCampaignHeaderStatusesForList,
+} from "@/lib/campaigns/sync-campaign-header-status";
 import { getCampaignClientIo, getCampaignVendorIos, getClientIoSendRecipients } from "@/features/io/queries";
 import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
@@ -169,7 +172,7 @@ export async function getCampaignsList(params: {
       client:clients(id, name, document_number, legal_name),
       group:groups(id, name),
       account_manager:profiles!campaign_headers_account_manager_id_fkey(id, full_name, email),
-      lines:campaign_lines(id, document_number, name, po_amount, revenue, cost, profit)
+      lines:campaign_lines(id, document_number, name, po_amount, revenue, cost, profit, billing_status, invoice_id)
     `,
       { count: "exact" }
     )
@@ -190,20 +193,11 @@ export async function getCampaignsList(params: {
 
   const campaigns = (data ?? []) as unknown as CampaignListItem[];
 
-  await Promise.all(
-    campaigns.map(async (campaign) => {
-      if (campaign.status === "cancelled") {
-        return;
-      }
-
-      try {
-        const statusSync = await syncCampaignHeaderStatus(supabase, campaign.id);
-        campaign.status = statusSync.status;
-      } catch (syncError) {
-        console.warn("[campaigns-list] syncCampaignHeaderStatus failed", campaign.id, syncError);
-      }
-    })
-  );
+  try {
+    await syncCampaignHeaderStatusesForList(supabase, campaigns);
+  } catch (syncError) {
+    console.warn("[campaigns-list] syncCampaignHeaderStatusesForList failed", syncError);
+  }
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / CAMPAIGNS_PAGE_SIZE));

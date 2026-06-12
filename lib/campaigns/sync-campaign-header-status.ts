@@ -1,10 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  isCampaignBillingEligible,
-} from "@/lib/billing/campaign-billing-eligibility";
-import { loadCampaignOperationalBilling } from "@/lib/billing/operational-billing-query";
-import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
 import type { CampaignStatus } from "@/types/database";
 
 export type CampaignHeaderStatusSignals = {
@@ -21,6 +16,23 @@ export type ClientIoGenerationSignals = {
   document_generated_at?: string | null;
   generated_html_url?: string | null;
 };
+
+export type CampaignLineBillingSnapshot = {
+  billing_status: string;
+  invoice_id: string | null;
+  revenue: number;
+};
+
+const INCOMPLETE_LINE_BILLING = new Set([
+  "draft",
+  "approved",
+  "moved_to_billing",
+  "partially_invoiced",
+  "partially_paid",
+  "partially_collected",
+]);
+
+const TERMINAL_INVOICED_LINE_BILLING = new Set(["invoiced", "paid", "closed"]);
 
 /** Client IO counts as generated once sent, approved, or a branded document exists. */
 export function isClientIoGenerated(row: ClientIoGenerationSignals | null): boolean {
@@ -53,23 +65,31 @@ export function isVendorIoGenerated(count: number): boolean {
   return count > 0;
 }
 
-/** Matches billing queue: no remaining invoiceable work and invoiced revenue exists. */
-export function isCampaignFullyInvoiced(operationalRows: OperationalBillingRow[]): boolean {
-  if (operationalRows.length === 0) {
+/** Fast line-level completion check for header status (avoids full operational billing tree). */
+export function isCampaignFullyInvoicedFromLines(
+  lines: CampaignLineBillingSnapshot[]
+): boolean {
+  const active = lines.filter((line) => line.billing_status !== "cancelled");
+  if (active.length === 0) {
     return false;
   }
 
-  if (isCampaignBillingEligible(operationalRows)) {
-    return false;
+  let invoicedTotal = 0;
+
+  for (const line of active) {
+    if (
+      INCOMPLETE_LINE_BILLING.has(line.billing_status) ||
+      !TERMINAL_INVOICED_LINE_BILLING.has(line.billing_status)
+    ) {
+      return false;
+    }
+
+    if (line.invoice_id || line.revenue > 0) {
+      invoicedTotal += line.revenue;
+    }
   }
 
-  const assignments = operationalRows.filter((row) => row.kind === "assignment");
-  const totalInvoiced = assignments.reduce(
-    (sum, row) => sum + Number(row.invoiced_amount ?? 0),
-    0
-  );
-
-  return totalInvoiced > 0;
+  return invoicedTotal > 0;
 }
 
 export function deriveCampaignHeaderStatus(
@@ -96,7 +116,10 @@ export function shouldAutoSyncCampaignHeaderStatus(
 }
 
 function isMissingColumnError(message: string, column: string): boolean {
-  return message.toLowerCase().includes(column.toLowerCase()) && message.toLowerCase().includes("does not exist");
+  return (
+    message.toLowerCase().includes(column.toLowerCase()) &&
+    message.toLowerCase().includes("does not exist")
+  );
 }
 
 /** Count active vendor IO rows; falls back when is_superseded column is not migrated yet. */
@@ -104,51 +127,103 @@ export async function countGeneratedVendorIos(
   supabase: SupabaseClient,
   campaignHeaderId: string
 ): Promise<number> {
-  const activeOnly = await supabase
-    .from("vendor_ios")
-    .select("id", { count: "exact", head: true })
-    .eq("campaign_header_id", campaignHeaderId)
-    .eq("is_superseded", false);
+  const counts = await loadVendorIoCountsByCampaign(supabase, [campaignHeaderId]);
+  return counts.get(campaignHeaderId) ?? 0;
+}
 
-  if (!activeOnly.error) {
-    return activeOnly.count ?? 0;
+export async function loadVendorIoCountsByCampaign(
+  supabase: SupabaseClient,
+  campaignHeaderIds: string[]
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (campaignHeaderIds.length === 0) {
+    return counts;
   }
 
-  if (!isMissingColumnError(activeOnly.error.message, "is_superseded")) {
-    throw new Error(activeOnly.error.message);
+  const withSuperseded = await supabase
+    .from("vendor_ios")
+    .select("campaign_header_id, is_superseded")
+    .in("campaign_header_id", campaignHeaderIds);
+
+  if (withSuperseded.error && isMissingColumnError(withSuperseded.error.message, "is_superseded")) {
+    const fallback = await supabase
+      .from("vendor_ios")
+      .select("campaign_header_id")
+      .in("campaign_header_id", campaignHeaderIds);
+
+    if (fallback.error) {
+      throw new Error(fallback.error.message);
+    }
+
+    for (const row of fallback.data ?? []) {
+      const campaignId = (row as { campaign_header_id: string }).campaign_header_id;
+      counts.set(campaignId, (counts.get(campaignId) ?? 0) + 1);
+    }
+
+    return counts;
   }
 
-  const allRows = await supabase
-    .from("vendor_ios")
-    .select("id", { count: "exact", head: true })
+  if (withSuperseded.error) {
+    throw new Error(withSuperseded.error.message);
+  }
+
+  for (const row of withSuperseded.data ?? []) {
+    const typed = row as { campaign_header_id: string; is_superseded?: boolean | null };
+    if (typed.is_superseded) {
+      continue;
+    }
+    counts.set(typed.campaign_header_id, (counts.get(typed.campaign_header_id) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+async function loadCampaignLineBillingSnapshots(
+  supabase: SupabaseClient,
+  campaignHeaderId: string
+): Promise<CampaignLineBillingSnapshot[]> {
+  const { data, error } = await supabase
+    .from("campaign_lines")
+    .select("billing_status, invoice_id, revenue")
     .eq("campaign_header_id", campaignHeaderId);
 
-  if (allRows.error) {
-    throw new Error(allRows.error.message);
+  if (error) {
+    throw new Error(error.message);
   }
 
-  return allRows.count ?? 0;
+  return (data ?? []).map((row) => {
+    const typed = row as {
+      billing_status: string | null;
+      invoice_id: string | null;
+      revenue: number | null;
+    };
+    return {
+      billing_status: typed.billing_status ?? "draft",
+      invoice_id: typed.invoice_id ?? null,
+      revenue: Number(typed.revenue ?? 0),
+    };
+  });
 }
 
 export async function loadCampaignHeaderStatusSignals(
   supabase: SupabaseClient,
-  campaignHeaderId: string
+  campaignHeaderId: string,
+  lineSnapshots?: CampaignLineBillingSnapshot[]
 ): Promise<CampaignHeaderStatusSignals> {
-  const [clientIoResult, vendorIoCount, billingResult] = await Promise.all([
+  const [clientIoResult, vendorIoCount, lines] = await Promise.all([
     supabase
       .from("client_ios")
       .select("status, sent_at, attachment_url, terms_html")
       .eq("campaign_header_id", campaignHeaderId)
       .maybeSingle(),
     countGeneratedVendorIos(supabase, campaignHeaderId),
-    loadCampaignOperationalBilling(supabase, campaignHeaderId),
+    lineSnapshots
+      ? Promise.resolve(lineSnapshots)
+      : loadCampaignLineBillingSnapshots(supabase, campaignHeaderId),
   ]);
 
   if (clientIoResult.error) {
     throw new Error(clientIoResult.error.message);
-  }
-  if (billingResult.error) {
-    throw new Error(billingResult.error);
   }
 
   return {
@@ -156,7 +231,7 @@ export async function loadCampaignHeaderStatusSignals(
       clientIoResult.data as ClientIoGenerationSignals | null
     ),
     hasGeneratedVendorIo: isVendorIoGenerated(vendorIoCount),
-    fullyInvoiced: isCampaignFullyInvoiced(billingResult.operational_rows),
+    fullyInvoiced: isCampaignFullyInvoicedFromLines(lines),
   };
 }
 
@@ -169,7 +244,8 @@ export type SyncCampaignHeaderStatusResult = {
 /** Recomputes and persists campaign header status from IO + billing signals. */
 export async function syncCampaignHeaderStatus(
   supabase: SupabaseClient,
-  campaignHeaderId: string
+  campaignHeaderId: string,
+  options?: { lineSnapshots?: CampaignLineBillingSnapshot[] }
 ): Promise<SyncCampaignHeaderStatusResult> {
   const { data: header, error: headerError } = await supabase
     .from("campaign_headers")
@@ -189,7 +265,11 @@ export async function syncCampaignHeaderStatus(
     return { updated: false, status: currentStatus, previousStatus: currentStatus };
   }
 
-  const signals = await loadCampaignHeaderStatusSignals(supabase, campaignHeaderId);
+  const signals = await loadCampaignHeaderStatusSignals(
+    supabase,
+    campaignHeaderId,
+    options?.lineSnapshots
+  );
   const nextStatus = deriveCampaignHeaderStatus(signals);
 
   if (nextStatus === currentStatus) {
@@ -210,4 +290,80 @@ export async function syncCampaignHeaderStatus(
     status: nextStatus,
     previousStatus: currentStatus,
   };
+}
+
+type CampaignListStatusRow = {
+  id: string;
+  status: CampaignStatus;
+  lines?: Array<{
+    billing_status?: string | null;
+    invoice_id?: string | null;
+    revenue?: number | null;
+  }>;
+};
+
+/** Batch status sync for campaigns list — 3 queries total instead of per-campaign billing trees. */
+export async function syncCampaignHeaderStatusesForList(
+  supabase: SupabaseClient,
+  campaigns: CampaignListStatusRow[]
+): Promise<void> {
+  const eligible = campaigns.filter((campaign) =>
+    shouldAutoSyncCampaignHeaderStatus(campaign.status)
+  );
+  const campaignIds = eligible.map((campaign) => campaign.id);
+  if (campaignIds.length === 0) {
+    return;
+  }
+
+  const [clientIosResult, vendorCounts] = await Promise.all([
+    supabase
+      .from("client_ios")
+      .select("campaign_header_id, status, sent_at, attachment_url")
+      .in("campaign_header_id", campaignIds),
+    loadVendorIoCountsByCampaign(supabase, campaignIds),
+  ]);
+
+  if (clientIosResult.error) {
+    throw new Error(clientIosResult.error.message);
+  }
+
+  const clientIoByCampaign = new Map(
+    (clientIosResult.data ?? []).map((row) => {
+      const typed = row as ClientIoGenerationSignals & { campaign_header_id: string };
+      return [typed.campaign_header_id, typed] as const;
+    })
+  );
+
+  const updates: Array<PromiseLike<unknown>> = [];
+
+  for (const campaign of eligible) {
+    const lineSnapshots: CampaignLineBillingSnapshot[] = (campaign.lines ?? []).map((line) => ({
+      billing_status: line.billing_status ?? "draft",
+      invoice_id: line.invoice_id ?? null,
+      revenue: Number(line.revenue ?? 0),
+    }));
+
+    const signals: CampaignHeaderStatusSignals = {
+      hasGeneratedClientIo: isClientIoGenerated(clientIoByCampaign.get(campaign.id) ?? null),
+      hasGeneratedVendorIo: isVendorIoGenerated(vendorCounts.get(campaign.id) ?? 0),
+      fullyInvoiced: isCampaignFullyInvoicedFromLines(lineSnapshots),
+    };
+
+    const nextStatus = deriveCampaignHeaderStatus(signals);
+    if (nextStatus === campaign.status) {
+      continue;
+    }
+
+    campaign.status = nextStatus;
+    updates.push(
+      supabase
+        .from("campaign_headers")
+        .update({ status: nextStatus } as never)
+        .eq("id", campaign.id)
+    );
+  }
+
+  if (updates.length > 0) {
+    await Promise.all(updates);
+  }
 }
