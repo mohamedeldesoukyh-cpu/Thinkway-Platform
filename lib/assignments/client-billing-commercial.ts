@@ -55,6 +55,50 @@ export type ClientBillingResult = {
   marginPercent: number;
 };
 
+export type LineCommercialRollupInput = {
+  revenueBeforeVat: number;
+  usageRightsAmount?: number;
+  usageRightsCost?: number;
+  agencyFeePercent?: number;
+  agencyFeeAmount?: number | null;
+  costBeforeVat?: number;
+};
+
+export type LineCommercialRollup = {
+  revenueBeforeVat: number;
+  billableBase: number;
+  cost: number;
+  gp: number;
+  marginPercent: number;
+};
+
+/** Ex-VAT client commercial rollup for workspace KPIs (Revenue + UR Rev + AF; GP deducts cost + UR cost). */
+export function rollupLineClientCommercial(
+  input: LineCommercialRollupInput
+): LineCommercialRollup {
+  const revenueBeforeVat = roundMoney(Math.max(0, input.revenueBeforeVat));
+  const usageRightsAmount = roundMoney(Math.max(0, input.usageRightsAmount ?? 0));
+  const usageRightsCost = roundMoney(Math.max(0, input.usageRightsCost ?? 0));
+  const costBeforeVat = roundMoney(Math.max(0, input.costBeforeVat ?? 0));
+  const billableBase = resolveClientTaxableBase({
+    revenueBeforeVat,
+    usageRightsAmount,
+    agencyFeeAmount: input.agencyFeeAmount,
+    agencyFeePercent: input.agencyFeePercent,
+  });
+  const gp = roundMoney(billableBase - costBeforeVat - usageRightsCost);
+  const marginPercent =
+    billableBase > 0 ? Math.round((gp / billableBase) * 10000) / 100 : 0;
+
+  return {
+    revenueBeforeVat,
+    billableBase,
+    cost: costBeforeVat,
+    gp,
+    marginPercent,
+  };
+}
+
 /** Client billing: VAT on (Revenue + UR Rev + Fees); GP = taxable base − cost − UR Cost. */
 export function computeClientBilling(input: ClientBillingInput): ClientBillingResult {
   const revenueBeforeVat = roundMoney(Math.max(0, input.revenueBeforeVat));

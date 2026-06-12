@@ -4,6 +4,7 @@ import {
   computeAgencyFeeAmount,
   computeClientBilling,
   resolveClientTaxableBase,
+  rollupLineClientCommercial,
 } from "@/lib/assignments/client-billing-commercial";
 
 assert.equal(computeAgencyFeeAmount(100_000, 10_000, 5), 5_500);
@@ -45,5 +46,17 @@ assert.equal(
   }),
   115_500
 );
+
+const rollup = rollupLineClientCommercial({
+  revenueBeforeVat: 100_000,
+  usageRightsAmount: 10_000,
+  usageRightsCost: 5_000,
+  agencyFeePercent: 5,
+  costBeforeVat: 80_000,
+});
+
+assert.equal(rollup.billableBase, billingWithUrCost.taxableBase);
+assert.equal(rollup.gp, billingWithUrCost.gp);
+assert.equal(rollup.marginPercent, billingWithUrCost.marginPercent);
 
 console.log("client-billing-commercial.test.ts: ok");

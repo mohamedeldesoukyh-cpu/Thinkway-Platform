@@ -37,6 +37,7 @@ import {
   suggestCurrencyFromPaymentDetails,
 } from "./line-assignment";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
+import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 
 export type CampaignsListResult = {
   campaigns: CampaignListItem[];
@@ -562,10 +563,31 @@ export async function getCampaignWorkspace(
     });
   }
 
+  let campaignBillableBase = 0;
+  let campaignCost = 0;
+  let campaignGp = 0;
+
   const workspaceLines = lines.map((line) => {
     const revenue = Number(line.revenue);
     const cost = Number(line.cost);
-    const gp = Number(line.profit);
+    const revenueBeforeVat = Number(line.revenue_before_vat ?? revenue);
+    const usageRightsAmount = Number(line.usage_rights_amount ?? 0);
+    const usageRightsCost = Number(line.usage_rights_cost ?? 0);
+    const agencyFeePercent = Number(line.agency_fee_percent ?? 0);
+    const agencyFeeAmount = Number(line.agency_fee_amount ?? 0);
+    const costBeforeVat = Number(line.cost_before_vat ?? cost);
+    const commercial = rollupLineClientCommercial({
+      revenueBeforeVat,
+      usageRightsAmount,
+      usageRightsCost,
+      agencyFeePercent,
+      agencyFeeAmount,
+      costBeforeVat,
+    });
+    const gp = commercial.gp;
+    campaignBillableBase += commercial.billableBase;
+    campaignCost += costBeforeVat;
+    campaignGp += gp;
     const poAmount = Number(line.po_amount);
     const poConsumed = Number(line.po_consumed ?? cost);
     const vendorFees = vendorFeesByLine.get(line.id) ?? 0;
@@ -604,11 +626,11 @@ export async function getCampaignWorkspace(
         null,
       revenue,
       cost,
-      revenue_before_vat: Number(line.revenue_before_vat ?? revenue),
-      usage_rights_amount: Number(line.usage_rights_amount ?? 0),
-      usage_rights_cost: Number(line.usage_rights_cost ?? 0),
-      agency_fee_percent: Number(line.agency_fee_percent ?? 0),
-      agency_fee_amount: Number(line.agency_fee_amount ?? 0),
+      revenue_before_vat: revenueBeforeVat,
+      usage_rights_amount: usageRightsAmount,
+      usage_rights_cost: usageRightsCost,
+      agency_fee_percent: agencyFeePercent,
+      agency_fee_amount: agencyFeeAmount,
       revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
       revenue_vat_amount: Number(line.revenue_vat_amount ?? 0),
       revenue_after_vat: Number(line.revenue_after_vat ?? revenue),
@@ -618,19 +640,14 @@ export async function getCampaignWorkspace(
         line.cost_received_currency ??
         line.fx_from_currency ??
         line.currency_code,
-      cost_before_vat: Number(line.cost_before_vat ?? cost),
+      cost_before_vat: costBeforeVat,
       cost_vat_percent: Number(line.cost_vat_percent ?? 0),
       cost_vat_amount: Number(line.cost_vat_amount ?? 0),
       cost_after_vat: Number(line.cost_after_vat ?? cost),
       cost_vat_exempt: line.cost_vat_exempt ?? false,
       vat_locked: line.vat_locked ?? false,
       gp,
-      margin_percent: formatMarginPercent(
-        Number(line.revenue_before_vat ?? revenue) +
-          Number(line.usage_rights_amount ?? 0) +
-          Number(line.agency_fee_amount ?? 0),
-        gp
-      ),
+      margin_percent: commercial.marginPercent,
       po_amount: poAmount,
       po_consumed: poConsumed,
       remaining_po: Number(line.remaining_po),
@@ -666,9 +683,9 @@ export async function getCampaignWorkspace(
     (s, l) => s + l.revenue_before_vat,
     0
   );
-  const revenue = workspaceLines.reduce((s, l) => s + l.revenue, 0);
-  const cost = workspaceLines.reduce((s, l) => s + l.cost, 0);
-  const gp = workspaceLines.reduce((s, l) => s + l.gp, 0);
+  const revenue = campaignBillableBase;
+  const cost = campaignCost;
+  const gp = campaignGp;
   const billingOutstanding = invoices.reduce((s, i) => s + i.outstanding, 0);
   const collected = invoices.reduce((s, i) => s + i.amount_paid, 0);
 
