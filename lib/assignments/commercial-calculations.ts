@@ -26,6 +26,7 @@ export type CommercialDeliverableRow = {
   unit_cost: number;
   revenue_before_vat: number;
   usage_rights_amount?: number;
+  usage_rights_cost?: number;
   agency_fee_percent?: number;
   live_date: string | null;
   notes: string | null;
@@ -57,8 +58,18 @@ function rowTotalUsageRights(
   return Math.max(0, row.usage_rights_amount ?? 0);
 }
 
+function rowTotalUsageRightsCost(
+  row: Pick<CommercialDeliverableRow, "usage_rights_cost">
+): number {
+  return Math.max(0, row.usage_rights_cost ?? 0);
+}
+
 function totalUsageRightsFromRows(rows: CommercialDeliverableRow[]): number {
   return rows.reduce((sum, row) => sum + rowTotalUsageRights(row), 0);
+}
+
+function totalUsageRightsCostFromRows(rows: CommercialDeliverableRow[]): number {
+  return rows.reduce((sum, row) => sum + rowTotalUsageRightsCost(row), 0);
 }
 
 function rowsMatchAgencyFeePercent(rows: CommercialDeliverableRow[], target: number): boolean {
@@ -157,28 +168,72 @@ export function applyAssignmentUrAfToCommercialRows(
   });
 }
 
+/** Distributes assignment-level UR Cost to per-deliverable commercial rows. */
+export function applyAssignmentUrCostToCommercialRows(
+  rows: CommercialDeliverableRow[],
+  targetUrCost: number
+): CommercialDeliverableRow[] {
+  if (rows.length === 0) return rows;
+
+  const currentUrCost = totalUsageRightsCostFromRows(rows);
+  if (Math.abs(targetUrCost - currentUrCost) < 0.01) {
+    return rows;
+  }
+
+  if (rows.length === 1) {
+    return [
+      {
+        ...rows[0]!,
+        usage_rights_cost: Math.round(Math.max(0, targetUrCost) * 100) / 100,
+      },
+    ];
+  }
+
+  const summary = summarizeCommercialRows(rows);
+  const totalRevenue = summary.total_revenue_before_vat;
+
+  return rows.map((row) => {
+    const rowRevenue = rowTotalRevenue(row);
+    const urCostShare =
+      totalRevenue > 0
+        ? (rowRevenue / totalRevenue) * targetUrCost
+        : targetUrCost / rows.length;
+    return {
+      ...row,
+      usage_rights_cost: Math.round(Math.max(0, urCostShare) * 100) / 100,
+    };
+  });
+}
+
 /** Applies assignment revenue, cost, UR, and AF% to child commercial rows. */
 export function applyAssignmentCommercialToCommercialRows(
   rows: CommercialDeliverableRow[],
   targetRevenue: number,
   targetCost: number,
   targetUr: number,
-  targetAfPercent: number
+  targetAfPercent: number,
+  targetUrCost = 0
 ): CommercialDeliverableRow[] {
   const withTotals = applyAssignmentTotalsToCommercialRows(rows, targetRevenue, targetCost);
-  return applyAssignmentUrAfToCommercialRows(withTotals, targetUr, targetAfPercent);
+  const withUrAf = applyAssignmentUrAfToCommercialRows(withTotals, targetUr, targetAfPercent);
+  return applyAssignmentUrCostToCommercialRows(withUrAf, targetUrCost);
 }
 
 export function summarizeCommercialRows(rows: CommercialDeliverableRow[]): CommercialSummary {
   const total_cost_before_vat = rows.reduce((s, r) => s + rowTotalCost(r), 0);
   const total_revenue_before_vat = rows.reduce((s, r) => s + rowTotalRevenue(r), 0);
+  const total_usage_rights_cost = rows.reduce(
+    (s, r) => s + rowTotalUsageRightsCost(r),
+    0
+  );
   const billing_base = rows.reduce((sum, row) => {
     const revenue = rowTotalRevenue(row);
     const ur = row.usage_rights_amount ?? 0;
     const af = computeAgencyFeeAmount(revenue, ur, row.agency_fee_percent ?? 0);
     return sum + revenue + ur + af;
   }, 0);
-  const gp = Math.round((billing_base - total_cost_before_vat) * 100) / 100;
+  const gp =
+    Math.round((billing_base - total_cost_before_vat - total_usage_rights_cost) * 100) / 100;
   const margin_percent =
     billing_base > 0 ? Math.round((gp / billing_base) * 10000) / 100 : 0;
   const deliverable_units = rows.reduce((s, r) => s + r.quantity, 0);
@@ -202,6 +257,7 @@ export function createEmptyCommercialRow(platform = "instagram"): CommercialDeli
     unit_cost: 0,
     revenue_before_vat: 0,
     usage_rights_amount: 0,
+    usage_rights_cost: 0,
     agency_fee_percent: 0,
     live_date: null,
     notes: null,

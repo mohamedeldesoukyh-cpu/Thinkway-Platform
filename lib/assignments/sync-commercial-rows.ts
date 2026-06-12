@@ -52,6 +52,7 @@ export async function syncAssignmentCommercialRows(
     const billing = computeClientBilling({
       revenueBeforeVat,
       usageRightsAmount: row.usage_rights_amount,
+      usageRightsCost: row.usage_rights_cost,
       agencyFeePercent: row.agency_fee_percent,
       vatPercent: input.revenueVatExempt ? 0 : input.revenueVatPercent,
       vatExempt: input.revenueVatExempt,
@@ -76,6 +77,7 @@ export async function syncAssignmentCommercialRows(
         total_cost: costBeforeVat,
         revenue_before_vat: billing.revenueBeforeVat,
         usage_rights_amount: billing.usageRightsAmount,
+        usage_rights_cost: billing.usageRightsCost,
         agency_fee_percent: billing.agencyFeePercent,
         agency_fee_amount: billing.agencyFeeAmount,
         revenue_vat_percent: billing.vatPercent,

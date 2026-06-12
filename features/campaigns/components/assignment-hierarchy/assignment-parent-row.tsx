@@ -181,6 +181,9 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
         {formatOperationalAmount(line.cost_before_vat)}
       </TableCell>
       <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+        {formatOperationalAmount(line.usage_rights_cost)}
+      </TableCell>
+      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {formatOperationalAmount(line.revenue_vat_amount)}
       </TableCell>
       <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>

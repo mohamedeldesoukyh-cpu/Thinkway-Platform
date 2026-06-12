@@ -211,7 +211,10 @@ function buildRollups(
       Number(line.usage_rights_amount ?? 0) +
       Number(line.agency_fee_amount ?? 0);
     const cost = Number(line.cost_before_vat ?? line.cost) || 0;
-    const gp = Number.isFinite(Number(line.gp)) ? Number(line.gp) : billingBase - cost;
+    const urCost = Number(line.usage_rights_cost ?? 0);
+    const gp = Number.isFinite(Number(line.gp))
+      ? Number(line.gp)
+      : billingBase - cost - urCost;
     return {
       deliverable_count: 0,
       revenue,
@@ -226,10 +229,11 @@ function buildRollups(
 
   const revenue = deliverables.reduce((s, d) => s + d.revenue_before_vat, 0);
   const usageRights = deliverables.reduce((s, d) => s + (d.usage_rights_amount ?? 0), 0);
+  const usageRightsCost = deliverables.reduce((s, d) => s + (d.usage_rights_cost ?? 0), 0);
   const agencyFees = deliverables.reduce((s, d) => s + (d.agency_fee_amount ?? 0), 0);
   const billingBase = revenue + usageRights + agencyFees;
   const cost = deliverables.reduce((s, d) => s + d.cost_before_vat, 0);
-  const gp = billingBase - cost;
+  const gp = billingBase - cost - usageRightsCost;
   const billingRollup = rollupAssignmentBilling(
     deliverables.map((d) => ({
       id: d.id,
@@ -584,6 +588,9 @@ async function loadCampaignAssignmentHierarchy(
       revenue_before_vat: Number(row.revenue_before_vat),
       usage_rights_amount: Number(
         (row as { usage_rights_amount?: number }).usage_rights_amount ?? 0
+      ),
+      usage_rights_cost: Number(
+        (row as { usage_rights_cost?: number }).usage_rights_cost ?? 0
       ),
       agency_fee_percent: Number(
         (row as { agency_fee_percent?: number }).agency_fee_percent ?? 0

@@ -14,6 +14,7 @@ export function computeAgencyFeeAmount(
 export type ClientBillingInput = {
   revenueBeforeVat: number;
   usageRightsAmount?: number;
+  usageRightsCost?: number;
   agencyFeePercent?: number;
   vatPercent: number;
   vatExempt?: boolean;
@@ -23,6 +24,7 @@ export type ClientBillingInput = {
 export type ClientBillingResult = {
   revenueBeforeVat: number;
   usageRightsAmount: number;
+  usageRightsCost: number;
   agencyFeePercent: number;
   agencyFeeAmount: number;
   taxableBase: number;
@@ -33,10 +35,11 @@ export type ClientBillingResult = {
   marginPercent: number;
 };
 
-/** Client billing: VAT on (Revenue + UR + AF); GP = taxable base − cost. */
+/** Client billing: VAT on (Revenue + UR Rev + AF); GP = taxable base − cost − UR Cost. */
 export function computeClientBilling(input: ClientBillingInput): ClientBillingResult {
   const revenueBeforeVat = roundMoney(Math.max(0, input.revenueBeforeVat));
   const usageRightsAmount = roundMoney(Math.max(0, input.usageRightsAmount ?? 0));
+  const usageRightsCost = roundMoney(Math.max(0, input.usageRightsCost ?? 0));
   const agencyFeePercent = Math.max(0, input.agencyFeePercent ?? 0);
   const agencyFeeAmount = computeAgencyFeeAmount(
     revenueBeforeVat,
@@ -52,13 +55,14 @@ export function computeClientBilling(input: ClientBillingInput): ClientBillingRe
   });
 
   const costBeforeVat = roundMoney(Math.max(0, input.costBeforeVat ?? 0));
-  const gp = roundMoney(taxableBase - costBeforeVat);
+  const gp = roundMoney(taxableBase - costBeforeVat - usageRightsCost);
   const marginPercent =
     taxableBase > 0 ? Math.round((gp / taxableBase) * 10000) / 100 : 0;
 
   return {
     revenueBeforeVat,
     usageRightsAmount,
+    usageRightsCost,
     agencyFeePercent,
     agencyFeeAmount,
     taxableBase,

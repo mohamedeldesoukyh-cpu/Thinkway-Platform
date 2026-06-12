@@ -103,15 +103,21 @@ function resolveAssignmentCommercialBilling(
       quantity: number;
       revenue_before_vat: number;
       usage_rights_amount?: number;
+      usage_rights_cost?: number;
       agency_fee_percent?: number;
     }>;
   },
   lineUsageRightsAmount: number,
+  lineUsageRightsCost: number,
   lineAgencyFeePercent: number
 ) {
   if (commercial.pricing_mode === "per_deliverable" && commercial.commercial_rows.length > 0) {
     const usageRightsAmount = commercial.commercial_rows.reduce(
       (sum, row) => sum + Number(row.usage_rights_amount ?? 0),
+      0
+    );
+    const usageRightsCost = commercial.commercial_rows.reduce(
+      (sum, row) => sum + Number(row.usage_rights_cost ?? 0),
       0
     );
     const revenueTotal = commercial.commercial_rows.reduce(
@@ -129,12 +135,14 @@ function resolveAssignmentCommercialBilling(
         : 0;
     return {
       usage_rights_amount: Math.round(usageRightsAmount * 100) / 100,
+      usage_rights_cost: Math.round(usageRightsCost * 100) / 100,
       agency_fee_percent: agencyFeePercent,
     };
   }
 
   return {
     usage_rights_amount: lineUsageRightsAmount,
+    usage_rights_cost: lineUsageRightsCost,
     agency_fee_percent: lineAgencyFeePercent,
   };
 }
@@ -145,6 +153,7 @@ function resolveLineVatInput(
     cost: number;
     revenue_before_vat?: number;
     usage_rights_amount?: number;
+    usage_rights_cost?: number;
     agency_fee_percent?: number;
     cost_before_vat?: number;
     revenue_vat_percent: number;
@@ -180,6 +189,7 @@ function resolveLineVatInput(
   return buildLineVatPayload({
     revenue_before_vat: revenueBeforeVat,
     usage_rights_amount: parsed.usage_rights_amount ?? 0,
+    usage_rights_cost: parsed.usage_rights_cost ?? 0,
     agency_fee_percent: parsed.agency_fee_percent ?? 0,
     revenue_vat_percent: revenueVatPercent,
     revenue_vat_exempt: revenueExempt,
@@ -518,6 +528,7 @@ export async function createCampaignLineAction(
   const commercialBilling = resolveAssignmentCommercialBilling(
     commercial,
     parsed.data.usage_rights_amount,
+    parsed.data.usage_rights_cost,
     parsed.data.agency_fee_percent
   );
   const lineInput = {
@@ -526,6 +537,7 @@ export async function createCampaignLineAction(
     ...costFx,
     revenue_before_vat: commercial.revenue_before_vat || parsed.data.revenue_before_vat,
     usage_rights_amount: commercialBilling.usage_rights_amount,
+    usage_rights_cost: commercialBilling.usage_rights_cost,
     agency_fee_percent: commercialBilling.agency_fee_percent,
   };
 
@@ -648,6 +660,7 @@ export async function createCampaignLineAction(
       revenueBeforeVat: vatPayload.revenue_before_vat,
       costBeforeVat: vatPayload.cost_before_vat,
       usageRightsAmount: commercialBilling.usage_rights_amount,
+      usageRightsCost: commercialBilling.usage_rights_cost,
       agencyFeePercent: commercialBilling.agency_fee_percent,
       dueDate: parsed.data.end_date ?? parsed.data.start_date ?? null,
       revenueVatPercent: vatPayload.revenue_vat_percent,
@@ -831,6 +844,7 @@ export async function updateCampaignLineAction(
   const commercialBilling = resolveAssignmentCommercialBilling(
     commercial,
     parsed.data.usage_rights_amount,
+    parsed.data.usage_rights_cost,
     parsed.data.agency_fee_percent
   );
   const lineInput = {
@@ -839,6 +853,7 @@ export async function updateCampaignLineAction(
     ...costFx,
     revenue_before_vat: commercial.revenue_before_vat || parsed.data.revenue_before_vat,
     usage_rights_amount: commercialBilling.usage_rights_amount,
+    usage_rights_cost: commercialBilling.usage_rights_cost,
     agency_fee_percent: commercialBilling.agency_fee_percent,
   };
 
@@ -962,6 +977,7 @@ export async function updateCampaignLineAction(
       revenueBeforeVat: vatPayload.revenue_before_vat,
       costBeforeVat: vatPayload.cost_before_vat,
       usageRightsAmount: commercialBilling.usage_rights_amount,
+      usageRightsCost: commercialBilling.usage_rights_cost,
       agencyFeePercent: commercialBilling.agency_fee_percent,
       dueDate: parsed.data.end_date ?? parsed.data.start_date ?? null,
       revenueVatPercent: vatPayload.revenue_vat_percent,

@@ -233,11 +233,20 @@ export function DeliverablePricingEditor({
 
                 <div className="grid gap-2 sm:grid-cols-2">
                   <NumberField
-                    label="UR"
+                    label="UR Rev"
                     value={row.usage_rights_amount ?? 0}
                     onChange={(v) => updateRow(row.id, { usage_rights_amount: v })}
                     disabled={disabled}
                   />
+                  <NumberField
+                    label="UR Cost"
+                    value={row.usage_rights_cost ?? 0}
+                    onChange={(v) => updateRow(row.id, { usage_rights_cost: v })}
+                    disabled={disabled}
+                  />
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
                   <NumberField
                     label="AF %"
                     value={row.agency_fee_percent ?? 0}

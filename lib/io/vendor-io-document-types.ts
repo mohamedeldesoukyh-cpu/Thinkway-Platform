@@ -54,7 +54,6 @@ export type VendorIoDocumentData = {
   deliverables: VendorIoDeliverableRow[];
   pricing: {
     contentCreationFee: number;
-    platformDistributionFee: number;
     usageRightsFee: number;
     vatAmount: number;
     vatPercent: number;

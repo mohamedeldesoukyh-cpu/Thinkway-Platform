@@ -47,6 +47,7 @@ export type AssignmentDeliverableHierarchyRow = {
   notes: string | null;
   revenue_before_vat: number;
   usage_rights_amount: number;
+  usage_rights_cost: number;
   agency_fee_percent: number;
   agency_fee_amount: number;
   cost_before_vat: number;

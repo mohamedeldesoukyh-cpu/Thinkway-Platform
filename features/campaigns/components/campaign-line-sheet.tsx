@@ -123,6 +123,7 @@ export function CampaignLineSheet({
   );
   const [revenue, setRevenue] = useState(line?.revenue_before_vat ?? line?.revenue ?? 0);
   const [usageRightsAmount, setUsageRightsAmount] = useState(line?.usage_rights_amount ?? 0);
+  const [usageRightsCost, setUsageRightsCost] = useState(line?.usage_rights_cost ?? 0);
   const [agencyFeePercent, setAgencyFeePercent] = useState(line?.agency_fee_percent ?? 0);
   const [revenueVatPercent, setRevenueVatPercent] = useState(
     line?.revenue_vat_percent ?? defaultRevenueVatPercent
@@ -166,12 +167,13 @@ export function CampaignLineSheet({
       computeClientBilling({
         revenueBeforeVat: revenue,
         usageRightsAmount,
+        usageRightsCost,
         agencyFeePercent,
         vatPercent: revenueVatPercent,
         vatExempt: revenueVatExempt,
         costBeforeVat: cost,
       }),
-    [revenue, usageRightsAmount, agencyFeePercent, revenueVatPercent, revenueVatExempt, cost]
+    [revenue, usageRightsAmount, usageRightsCost, agencyFeePercent, revenueVatPercent, revenueVatExempt, cost]
   );
   const gpPreview = useMemo(
     () => ({ gp: billingPreview.gp, marginPercent: billingPreview.marginPercent }),
@@ -254,7 +256,8 @@ export function CampaignLineSheet({
         revenue,
         cost,
         usageRightsAmount,
-        agencyFeePercent
+        agencyFeePercent,
+        usageRightsCost
       );
     }
     const platforms =
@@ -271,7 +274,8 @@ export function CampaignLineSheet({
       revenue,
       cost,
       usageRightsAmount,
-      agencyFeePercent
+      agencyFeePercent,
+      usageRightsCost
     );
   }, [
     pricingMode,
@@ -281,6 +285,7 @@ export function CampaignLineSheet({
     revenue,
     cost,
     usageRightsAmount,
+    usageRightsCost,
     agencyFeePercent,
     endDate,
   ]);
@@ -502,6 +507,7 @@ export function CampaignLineSheet({
     );
     setRevenue(line?.revenue_before_vat ?? line?.revenue ?? 0);
     setUsageRightsAmount(line?.usage_rights_amount ?? 0);
+    setUsageRightsCost(line?.usage_rights_cost ?? 0);
     setAgencyFeePercent(line?.agency_fee_percent ?? 0);
     setRevenueVatPercent(line?.revenue_vat_percent ?? defaultRevenueVatPercent);
     setRevenueVatExempt(line?.revenue_vat_exempt ?? false);
@@ -757,7 +763,8 @@ export function CampaignLineSheet({
                         revenue,
                         cost,
                         usageRightsAmount,
-                        agencyFeePercent
+                        agencyFeePercent,
+                        usageRightsCost
                       )
                     );
                   }
@@ -916,7 +923,7 @@ export function CampaignLineSheet({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Usage rights (UR)
+                  UR Rev
                 </label>
                 <Input
                   type="number"
@@ -968,6 +975,30 @@ export function CampaignLineSheet({
               </div>
             </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  UR Cost
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={usageRightsCost}
+                  onChange={(event) =>
+                    setUsageRightsCost(Number(event.target.value) || 0)
+                  }
+                  disabled={commercialFieldsLocked(
+                    Boolean(line?.cost_locked || line?.vat_locked)
+                  )}
+                  className={DETAIL_FORM_INPUT_CLASS}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Creator usage rights cost — deducted from GP, not client billing.
+                </p>
+              </div>
+            </div>
+
             <AssignmentMultiCurrencyCostFields
               campaignCurrency={currency}
               costReceived={costReceived}
@@ -1009,6 +1040,7 @@ export function CampaignLineSheet({
             <input type="hidden" name="cost" value={cost} />
             <input type="hidden" name="revenue_before_vat" value={revenue} />
             <input type="hidden" name="usage_rights_amount" value={usageRightsAmount} />
+            <input type="hidden" name="usage_rights_cost" value={usageRightsCost} />
             <input type="hidden" name="agency_fee_percent" value={agencyFeePercent} />
             <input type="hidden" name="cost_before_vat" value={cost} />
             <input type="hidden" name="revenue_vat_percent" value={revenueVatPercent} />
@@ -1021,7 +1053,7 @@ export function CampaignLineSheet({
             <input type="hidden" name="cost_vat_exempt" value={costVatExempt ? "1" : "0"} />
 
             <p className="text-[11px] text-muted-foreground">
-              Operational GP (Rev + UR + AF − cost): {currency}{" "}
+              Operational GP (Rev + UR Rev + AF − cost − UR Cost): {currency}{" "}
               {gpPreview.gp.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,

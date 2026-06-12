@@ -321,6 +321,9 @@ export function AssignmentHierarchyTable({
                   {HIERARCHY_COLUMN_LABELS.cost}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead className="tabular-nums">
+                  {HIERARCHY_COLUMN_LABELS.usageRightsCost}
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.vat}
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead className="tabular-nums">

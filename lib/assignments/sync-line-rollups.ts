@@ -17,6 +17,7 @@ type LineContext = {
 type DeliverableRollupRow = {
   revenue_before_vat: number;
   usage_rights_amount: number;
+  usage_rights_cost: number;
   agency_fee_amount: number;
   cost_before_vat: number;
   quantity: number;
@@ -45,7 +46,7 @@ export async function syncLineCommercialRollupsFromDeliverables(
 
   const { data: rows, error: rowsError } = await supabase
     .from("assignment_deliverables")
-    .select("revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, cost_before_vat, quantity")
+    .select("revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_amount, agency_fee_percent, cost_before_vat, quantity")
     .eq("campaign_line_id", lineId)
     .order("sort_order");
 
@@ -63,6 +64,9 @@ export async function syncLineCommercialRollupsFromDeliverables(
   );
   const usageRightsAmount = roundMoney(
     deliverables.reduce((sum, row) => sum + Number(row.usage_rights_amount ?? 0), 0)
+  );
+  const usageRightsCost = roundMoney(
+    deliverables.reduce((sum, row) => sum + Number(row.usage_rights_cost ?? 0), 0)
   );
   const agencyFeeAmount = roundMoney(
     deliverables.reduce((sum, row) => sum + Number(row.agency_fee_amount ?? 0), 0)
@@ -83,6 +87,7 @@ export async function syncLineCommercialRollupsFromDeliverables(
   const vatPayload = buildLineVatPayload({
     revenue_before_vat: revenueBeforeVat,
     usage_rights_amount: usageRightsAmount,
+    usage_rights_cost: usageRightsCost,
     agency_fee_percent: agencyFeePercent,
     revenue_vat_percent: Number(lineCtx.revenue_vat_percent ?? 0),
     revenue_vat_exempt: lineCtx.revenue_vat_exempt ?? false,
@@ -101,6 +106,7 @@ export async function syncLineCommercialRollupsFromDeliverables(
   const billing = computeClientBilling({
     revenueBeforeVat: vatPayload.revenue_before_vat,
     usageRightsAmount: vatPayload.usage_rights_amount,
+    usageRightsCost: vatPayload.usage_rights_cost,
     agencyFeePercent,
     vatPercent: vatPayload.revenue_vat_percent,
     vatExempt: vatPayload.revenue_vat_exempt,

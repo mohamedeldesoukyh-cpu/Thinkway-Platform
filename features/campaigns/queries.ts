@@ -90,6 +90,7 @@ type LineRow = {
   cost: number;
   revenue_before_vat?: number;
   usage_rights_amount?: number;
+  usage_rights_cost?: number;
   agency_fee_percent?: number;
   agency_fee_amount?: number;
   revenue_vat_percent?: number;
@@ -605,6 +606,7 @@ export async function getCampaignWorkspace(
       cost,
       revenue_before_vat: Number(line.revenue_before_vat ?? revenue),
       usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+      usage_rights_cost: Number(line.usage_rights_cost ?? 0),
       agency_fee_percent: Number(line.agency_fee_percent ?? 0),
       agency_fee_amount: Number(line.agency_fee_amount ?? 0),
       revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),

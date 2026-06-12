@@ -325,6 +325,7 @@ export function AssignmentSafeGrid({
       const billing = computeClientBilling({
         revenueBeforeVat,
         usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+        usageRightsCost: Number(line.usage_rights_cost ?? 0),
         agencyFeePercent: Number(line.agency_fee_percent ?? 0),
         vatPercent: Number(line.revenue_vat_percent ?? 0),
         vatExempt: Boolean(line.revenue_vat_exempt),
@@ -473,6 +474,11 @@ export function AssignmentSafeGrid({
               {gates.showInternalFinancials && col("cost") ? (
                 <th className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.cost}
+                </th>
+              ) : null}
+              {gates.showInternalFinancials && col("usageRightsCost") ? (
+                <th className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                  {HIERARCHY_COLUMN_LABELS.usageRightsCost}
                 </th>
               ) : null}
               {col("vat") ? (
@@ -659,6 +665,11 @@ export function AssignmentSafeGrid({
                         {gates.showInternalFinancials && col("cost") ? (
                           <td className={cn(SAFE_GRID_HIGHLIGHT_COST, ASSIGNMENT_GRID_MONEY_COL)}>
                             {formatOperationalAmount(line.cost_before_vat)}
+                          </td>
+                        ) : null}
+                        {gates.showInternalFinancials && col("usageRightsCost") ? (
+                          <td className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT)}>
+                            {formatOperationalAmount(line.usage_rights_cost)}
                           </td>
                         ) : null}
                         {col("vat") ? (

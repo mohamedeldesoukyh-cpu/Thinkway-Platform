@@ -4,6 +4,7 @@
 import {
   applyAssignmentTotalsToCommercialRows,
   applyAssignmentUrAfToCommercialRows,
+  applyAssignmentUrCostToCommercialRows,
   summarizeCommercialRows,
   type CommercialDeliverableRow,
 } from "@/lib/assignments/commercial-calculations";
@@ -104,4 +105,68 @@ function testSingleRowUrAfSync() {
 
 testUrAfDistributesByRevenueShare();
 testSingleRowUrAfSync();
-console.log("commercial-calculations: 3 passed");
+
+function testUrCostDistributesByRevenueShare() {
+  const rows: CommercialDeliverableRow[] = [
+    {
+      id: "row-1",
+      platform: "instagram",
+      deliverable_type: "reel",
+      quantity: 1,
+      unit_cost: 500,
+      revenue_before_vat: 3000,
+      usage_rights_cost: 0,
+      live_date: null,
+      notes: null,
+      schedule_mode: "single",
+      post_schedules: [],
+    },
+    {
+      id: "row-2",
+      platform: "tiktok",
+      deliverable_type: "video",
+      quantity: 1,
+      unit_cost: 500,
+      revenue_before_vat: 2000,
+      usage_rights_cost: 0,
+      live_date: null,
+      notes: null,
+      schedule_mode: "single",
+      post_schedules: [],
+    },
+  ];
+
+  const synced = applyAssignmentUrCostToCommercialRows(rows, 1000);
+  const urCostTotal = synced.reduce((sum, row) => sum + (row.usage_rights_cost ?? 0), 0);
+
+  assert(Math.abs(urCostTotal - 1000) < 0.02, "UR Cost should sum to assignment target");
+  assert(synced[0]!.usage_rights_cost === 600, "UR Cost should scale 60/40 by revenue");
+  assert(synced[1]!.usage_rights_cost === 400, "UR Cost should scale 60/40 by revenue");
+}
+
+function testGpDeductsUrCost() {
+  const rows: CommercialDeliverableRow[] = [
+    {
+      id: "row-1",
+      platform: "instagram",
+      deliverable_type: "reel",
+      quantity: 1,
+      unit_cost: 1000,
+      revenue_before_vat: 5000,
+      usage_rights_amount: 500,
+      usage_rights_cost: 200,
+      agency_fee_percent: 10,
+      live_date: null,
+      notes: null,
+      schedule_mode: "single",
+      post_schedules: [],
+    },
+  ];
+
+  const summary = summarizeCommercialRows(rows);
+  assert(summary.gp === 4850, "gp should deduct UR Cost from billing base minus cost");
+}
+
+testUrCostDistributesByRevenueShare();
+testGpDeductsUrCost();
+console.log("commercial-calculations: 5 passed");

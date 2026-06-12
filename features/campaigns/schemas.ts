@@ -126,6 +126,7 @@ export const createCampaignLineSchema = z.object({
   cost: z.coerce.number().min(0).default(0),
   revenue_before_vat: z.coerce.number().min(0).optional(),
   usage_rights_amount: z.coerce.number().min(0).default(0),
+  usage_rights_cost: z.coerce.number().min(0).default(0),
   agency_fee_percent: z.coerce.number().min(0).max(100).default(0),
   revenue_vat_percent: z.coerce.number().min(0).max(100).default(0),
   revenue_vat_exempt: z

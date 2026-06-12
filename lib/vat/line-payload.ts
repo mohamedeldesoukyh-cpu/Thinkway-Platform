@@ -5,6 +5,7 @@ import { resolveVendorDefaultVatPercent } from "@/lib/vat/queries";
 export type LineVatFormInput = {
   revenue_before_vat: number;
   usage_rights_amount?: number;
+  usage_rights_cost?: number;
   agency_fee_percent?: number;
   revenue_vat_percent: number;
   revenue_vat_exempt: boolean;
@@ -17,6 +18,7 @@ export function buildLineVatPayload(input: LineVatFormInput) {
   const billing = computeClientBilling({
     revenueBeforeVat: input.revenue_before_vat,
     usageRightsAmount: input.usage_rights_amount,
+    usageRightsCost: input.usage_rights_cost,
     agencyFeePercent: input.agency_fee_percent,
     vatPercent: input.revenue_vat_percent,
     vatExempt: input.revenue_vat_exempt,
@@ -32,6 +34,7 @@ export function buildLineVatPayload(input: LineVatFormInput) {
   return {
     revenue_before_vat: billing.revenueBeforeVat,
     usage_rights_amount: billing.usageRightsAmount,
+    usage_rights_cost: billing.usageRightsCost,
     agency_fee_percent: billing.agencyFeePercent,
     agency_fee_amount: billing.agencyFeeAmount,
     revenue_vat_percent: billing.vatPercent,

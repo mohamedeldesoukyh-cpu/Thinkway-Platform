@@ -102,6 +102,9 @@ function sanitizeDeliverable(
       usage_rights_amount: finiteNumber(
         (row as { usage_rights_amount?: number }).usage_rights_amount
       ),
+      usage_rights_cost: finiteNumber(
+        (row as { usage_rights_cost?: number }).usage_rights_cost
+      ),
       agency_fee_percent: finiteNumber(
         (row as { agency_fee_percent?: number }).agency_fee_percent
       ),
@@ -291,6 +294,7 @@ function sanitizeLine(
       margin_percent: finiteNumber(line.margin_percent),
       revenue_before_vat: finiteNumber(line.revenue_before_vat, finiteNumber(line.revenue)),
       usage_rights_amount: finiteNumber(line.usage_rights_amount),
+      usage_rights_cost: finiteNumber(line.usage_rights_cost),
       agency_fee_percent: finiteNumber(line.agency_fee_percent),
       agency_fee_amount: finiteNumber(line.agency_fee_amount),
       cost_before_vat: finiteNumber(line.cost_before_vat, finiteNumber(line.cost)),
