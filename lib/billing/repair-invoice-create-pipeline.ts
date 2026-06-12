@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
 import {
   loadLineVatForDeliverable,
   syncDeliverableRollupFromPosts,
@@ -232,19 +233,79 @@ export async function syncCampaignDeliverableBillableFromLines(
   return { syncedDeliverables };
 }
 
-/** Deliverable then post commercial sync — run before invoice create/regenerate. */
+/** Rolls assignment line commercial up from deliverables when line revenue is stale/zero. */
+export async function syncCampaignLineCommercialRollupsFromDeliverables(
+  supabase: SupabaseClient,
+  campaignHeaderId: string,
+  options?: { lineIds?: string[] }
+): Promise<{ syncedLines: number }> {
+  const { data: lineRows } = await supabase
+    .from("campaign_lines")
+    .select("id")
+    .eq("campaign_header_id", campaignHeaderId);
+
+  let lineIds = (lineRows ?? []).map((row) => (row as { id: string }).id);
+  if (options?.lineIds?.length) {
+    const allowed = new Set(options.lineIds);
+    lineIds = lineIds.filter((id) => allowed.has(id));
+  }
+
+  let syncedLines = 0;
+  for (const lineId of lineIds) {
+    const { data: deliverableRows } = await supabase
+      .from("assignment_deliverables")
+      .select("revenue_before_vat, usage_rights_amount, agency_fee_amount")
+      .eq("campaign_line_id", lineId);
+
+    const hasDeliverableCommercial = (deliverableRows ?? []).some((row) => {
+      const typed = row as {
+        revenue_before_vat: number | null;
+        usage_rights_amount?: number | null;
+        agency_fee_amount?: number | null;
+      };
+      return (
+        Number(typed.revenue_before_vat ?? 0) > 0.01 ||
+        Number(typed.usage_rights_amount ?? 0) > 0.01 ||
+        Number(typed.agency_fee_amount ?? 0) > 0.01
+      );
+    });
+    if (!hasDeliverableCommercial) continue;
+
+    try {
+      await syncLineCommercialRollupsFromDeliverables(supabase, lineId);
+      syncedLines += 1;
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        devLog("[repair-invoice-create] line rollup sync failed", {
+          campaignHeaderId,
+          lineId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  return { syncedLines };
+}
+
+/** Line rollup, deliverable distribution, then post sync — run before invoice create/regenerate. */
 export async function prepareCampaignCommercialForInvoice(
   supabase: SupabaseClient,
   campaignHeaderId: string,
   options?: { lineIds?: string[] }
-): Promise<{ syncedDeliverables: number; syncedPosts: number }> {
+): Promise<{ syncedLines: number; syncedDeliverables: number; syncedPosts: number }> {
+  const { syncedLines } = await syncCampaignLineCommercialRollupsFromDeliverables(
+    supabase,
+    campaignHeaderId,
+    options
+  );
   const { syncedDeliverables } = await syncCampaignDeliverableBillableFromLines(
     supabase,
     campaignHeaderId,
     options
   );
   const { syncedPosts } = await syncCampaignPostBillableForInvoice(supabase, campaignHeaderId);
-  return { syncedDeliverables, syncedPosts };
+  return { syncedLines, syncedDeliverables, syncedPosts };
 }
 
 /** Recompute post billable/remaining from deliverable client commercial before invoice create. */

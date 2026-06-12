@@ -57,6 +57,9 @@ type DeliverableRecord = {
   locked_at: string | null;
   linked_invoice_id?: string | null;
   revenue_before_vat: number;
+  usage_rights_amount?: number | null;
+  agency_fee_amount?: number | null;
+  agency_fee_percent?: number | null;
   revenue_vat_percent: number;
   revenue_vat_exempt?: boolean | null;
   campaign_line: {
@@ -91,6 +94,10 @@ export function mapDeliverableRecord(
     invoice_line_item_id: row.invoice_line_item_id,
     locked_at: row.locked_at,
     revenue_before_vat: Number(row.revenue_before_vat),
+    usage_rights_amount: Number(row.usage_rights_amount ?? 0),
+    agency_fee_amount:
+      row.agency_fee_amount != null ? Number(row.agency_fee_amount) : undefined,
+    agency_fee_percent: Number(row.agency_fee_percent ?? 0),
     revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
     revenue_vat_exempt:
       resolveDeliverableVatExempt(row, includesVatExempt) ||
@@ -250,12 +257,25 @@ export async function lineHasAssignmentDeliverables(
   return (count ?? 0) > 0;
 }
 
+export const CAMPAIGN_LINE_INVOICE_COMMERCIAL_SELECT =
+  "id, document_number, name, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, remaining_amount";
+
 export function resolveExpectedLineBillable(
-  line: { id: string; revenue?: number | null; revenue_before_vat?: number | null },
+  line: {
+    id: string;
+    revenue?: number | null;
+    revenue_before_vat?: number | null;
+    usage_rights_amount?: number | null;
+    agency_fee_amount?: number | null;
+    agency_fee_percent?: number | null;
+  },
   deliverables: Array<{
     campaign_line_id: string;
     billable_amount?: number | null;
     revenue_before_vat?: number | null;
+    usage_rights_amount?: number | null;
+    agency_fee_amount?: number | null;
+    agency_fee_percent?: number | null;
   }>
 ): number {
   const lineDeliverables = deliverables.filter(
@@ -263,13 +283,25 @@ export function resolveExpectedLineBillable(
   );
   const fromDeliverables = lineDeliverables.reduce(
     (sum, deliverable) =>
-      sum + Number(deliverable.billable_amount ?? deliverable.revenue_before_vat ?? 0),
+      sum +
+      resolveClientBillableAmount({
+        revenue_before_vat: Number(deliverable.revenue_before_vat ?? 0),
+        usage_rights_amount: Number(deliverable.usage_rights_amount ?? 0),
+        agency_fee_amount: deliverable.agency_fee_amount,
+        agency_fee_percent: Number(deliverable.agency_fee_percent ?? 0),
+        billable_amount: Number(deliverable.billable_amount ?? 0),
+      }),
     0
   );
   if (fromDeliverables > 0.01) {
     return Math.round(fromDeliverables * 100) / 100;
   }
-  return Math.round(Number(line.revenue_before_vat ?? line.revenue ?? 0) * 100) / 100;
+  return resolveClientBillableAmount({
+    revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
+    usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+    agency_fee_amount: line.agency_fee_amount,
+    agency_fee_percent: Number(line.agency_fee_percent ?? 0),
+  });
 }
 
 export function sumInvoiceLineRevenueForCampaignLine(
@@ -294,7 +326,7 @@ export async function insertPackageAssignmentLineItems(
   const { data: lines, error } = await supabase
     .from("campaign_lines")
     .select(
-      "id, document_number, name, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, billing_status, vendor_io_id"
+      `${CAMPAIGN_LINE_INVOICE_COMMERCIAL_SELECT}, billing_status, vendor_io_id`
     )
     .in("id", lineIds);
 
@@ -1206,9 +1238,7 @@ export async function regenerateInvoiceLineItems(
   if (packageLineIds.length > 0) {
     const { data: lines, error: linesError } = await supabase
       .from("campaign_lines")
-      .select(
-        "id, document_number, name, revenue, revenue_before_vat, revenue_vat_percent, revenue_vat_exempt"
-      )
+      .select(CAMPAIGN_LINE_INVOICE_COMMERCIAL_SELECT)
       .in("id", packageLineIds);
 
     if (linesError) {
@@ -1245,8 +1275,12 @@ export async function regenerateInvoiceLineItems(
           name: string;
           revenue?: number | null;
           revenue_before_vat?: number | null;
+          usage_rights_amount?: number | null;
+          agency_fee_amount?: number | null;
+          agency_fee_percent?: number | null;
           revenue_vat_percent?: number | null;
           revenue_vat_exempt?: boolean | null;
+          remaining_amount?: number | null;
         },
         Number(row.sort_order ?? 1),
         defaultVatRate,

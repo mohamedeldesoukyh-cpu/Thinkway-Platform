@@ -52,6 +52,9 @@ export type PostInvoiceLine = {
     platform: string;
     deliverable_type: string;
     revenue_before_vat: number;
+    usage_rights_amount?: number | null;
+    agency_fee_amount?: number | null;
+    agency_fee_percent?: number | null;
     billable_amount: number;
     revenue_vat_percent: number | null;
     revenue_vat_exempt: boolean | null;
@@ -94,7 +97,15 @@ function postInvoiceBeforeVat(
   const invoiced = Number(post.invoiced_amount ?? 0);
   const deliverable = post.assignment_deliverable;
   const deliverableRevenue = Number(deliverable?.revenue_before_vat ?? 0);
-  const deliverableBillable = Number(deliverable?.billable_amount ?? 0);
+  const deliverableBillable = deliverable
+    ? resolveClientBillableAmount({
+        revenue_before_vat: deliverableRevenue,
+        usage_rights_amount: Number(deliverable.usage_rights_amount ?? 0),
+        agency_fee_amount: deliverable.agency_fee_amount,
+        agency_fee_percent: Number(deliverable.agency_fee_percent ?? 0),
+        billable_amount: Number(deliverable.billable_amount ?? 0),
+      })
+    : 0;
   const line = deliverable?.campaign_line;
   const lineBillable = line
     ? resolveClientBillableAmount({
@@ -293,7 +304,7 @@ export async function fetchPostsForInvoicing(
   const { data: deliverables, error: deliverableError } = await supabase
     .from("assignment_deliverables")
     .select(
-      "id, platform, deliverable_type, revenue_before_vat, billable_amount, revenue_vat_percent, revenue_vat_exempt"
+      "id, platform, deliverable_type, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, billable_amount, revenue_vat_percent, revenue_vat_exempt"
     )
     .in("id", deliverableIds);
 
@@ -308,6 +319,9 @@ export async function fetchPostsForInvoicing(
         platform: string;
         deliverable_type: string;
         revenue_before_vat: number | null;
+        usage_rights_amount?: number | null;
+        agency_fee_amount?: number | null;
+        agency_fee_percent?: number | null;
         billable_amount: number | null;
         revenue_vat_percent: number | null;
         revenue_vat_exempt: boolean | null;
@@ -355,6 +369,12 @@ export async function fetchPostsForInvoicing(
         platform: deliverable.platform,
         deliverable_type: deliverable.deliverable_type,
         revenue_before_vat: Number(deliverable.revenue_before_vat ?? 0),
+        usage_rights_amount: Number(deliverable.usage_rights_amount ?? 0),
+        agency_fee_amount:
+          deliverable.agency_fee_amount != null
+            ? Number(deliverable.agency_fee_amount)
+            : null,
+        agency_fee_percent: Number(deliverable.agency_fee_percent ?? 0),
         billable_amount: Number(deliverable.billable_amount ?? 0),
         revenue_vat_percent: Number(deliverable.revenue_vat_percent ?? 0),
         revenue_vat_exempt: Boolean(deliverable.revenue_vat_exempt),
@@ -367,6 +387,10 @@ export async function fetchPostsForInvoicing(
           campaign_header_id: line.campaign_header_id,
           revenue: Number(line.revenue ?? 0),
           revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
+          usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+          agency_fee_amount:
+            line.agency_fee_amount != null ? Number(line.agency_fee_amount) : null,
+          agency_fee_percent: Number(line.agency_fee_percent ?? 0),
           revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
           revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
         },

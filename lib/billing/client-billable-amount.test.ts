@@ -30,4 +30,21 @@ assert.equal(preview.beforeVat, 115_500);
 assert.equal(preview.vatAmount, 16_170);
 assert.equal(preview.afterVat, 131_670);
 
+assert.equal(
+  resolveClientBillableAmount({
+    revenue_before_vat: 0,
+    agency_fee_amount: 5_000,
+  }),
+  5_000
+);
+
+assert.equal(
+  resolveClientBillableAmount({
+    revenue_before_vat: 0,
+    usage_rights_amount: 2_000,
+    agency_fee_amount: 5_000,
+  }),
+  7_000
+);
+
 console.log("client-billable-amount.test.ts: ok");

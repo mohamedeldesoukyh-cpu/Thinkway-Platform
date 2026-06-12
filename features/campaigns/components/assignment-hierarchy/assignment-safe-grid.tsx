@@ -74,6 +74,7 @@ import {
 } from "@/lib/campaigns/assignment-line-currency";
 import { formatPercent } from "@/features/campaigns/utils";
 import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
+import { resolveClientBillableAmount } from "@/lib/billing/client-billable-amount";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import {
   useIsOperationalColumnVisible,
@@ -270,8 +271,12 @@ export function AssignmentSafeGrid({
       if (!row) continue;
       if (pendingRegeneration) {
         const line = row.group.line;
-        total +=
-          Number(row.group.rollups?.revenue ?? line.revenue_before_vat ?? line.revenue) || 0;
+        total += resolveClientBillableAmount({
+          revenue_before_vat: Number(line.revenue_before_vat ?? line.revenue) || 0,
+          usage_rights_amount: Number(line.usage_rights_amount ?? 0),
+          agency_fee_amount: line.agency_fee_amount,
+          agency_fee_percent: Number(line.agency_fee_percent ?? 0),
+        });
         continue;
       }
       total += lineMeta.get(id)?.remaining ?? 0;
@@ -281,7 +286,12 @@ export function AssignmentSafeGrid({
       for (const deliverable of row.group.deliverables ?? []) {
         if (!invoiceDeliverableIds.includes(deliverable.id)) continue;
         total += pendingRegeneration
-          ? Number(deliverable.revenue_before_vat ?? 0)
+          ? resolveClientBillableAmount({
+              revenue_before_vat: Number(deliverable.revenue_before_vat ?? 0),
+              usage_rights_amount: Number(deliverable.usage_rights_amount ?? 0),
+              agency_fee_amount: deliverable.agency_fee_amount,
+              agency_fee_percent: Number(deliverable.agency_fee_percent ?? 0),
+            })
           : Number(deliverable.remaining_amount ?? 0);
       }
     }

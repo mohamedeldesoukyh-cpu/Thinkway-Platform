@@ -227,7 +227,10 @@ function buildRollups(
     };
   }
 
-  const revenue = deliverables.reduce((s, d) => s + d.revenue_before_vat, 0);
+  let revenue = deliverables.reduce((s, d) => s + d.revenue_before_vat, 0);
+  if (revenue <= 0.01) {
+    revenue = Number(line.revenue_before_vat ?? line.revenue) || 0;
+  }
   const usageRights = deliverables.reduce((s, d) => s + (d.usage_rights_amount ?? 0), 0);
   const usageRightsCost = deliverables.reduce((s, d) => s + (d.usage_rights_cost ?? 0), 0);
   const agencyFees = deliverables.reduce((s, d) => s + (d.agency_fee_amount ?? 0), 0);
