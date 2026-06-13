@@ -94,7 +94,7 @@ export async function DashboardShell({
               );
             })}
           </nav>
-          <UserAccount email={userEmail} compact />
+          <UserAccount email={userEmail} compact inSidebar={false} />
         </div>
         {hidePageHeader ? null : (
           <header className="thinkway-shell-header flex flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
