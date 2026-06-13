@@ -68,7 +68,7 @@ export async function GET(request: Request, context: RouteContext) {
         }
       }
 
-      const html = await renderLiveClientIoHtml(supabase, id, layout);
+      const html = await renderLiveClientIoHtml(supabase, id, layout, user.id);
       const pdfResult = await renderHtmlToPdf(html);
       if (!pdfResult.ok) {
         return NextResponse.json(
@@ -81,7 +81,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     if (format === "html") {
-      const html = await renderLiveClientIoHtml(supabase, id, layout);
+      const html = await renderLiveClientIoHtml(supabase, id, layout, user.id);
       const fileName = `${baseName}.html`;
 
       return new NextResponse(html, {

@@ -1,3 +1,11 @@
+import type { ClientIoTerm } from "@/lib/io/client-io-terms";
+
+export type ClientIoAgencyContact = {
+  fullName: string;
+  title: string | null;
+  email: string | null;
+};
+
 export type ClientIoDeliverableRow = {
   influencerName: string;
   platform: string;
@@ -38,6 +46,8 @@ export type ClientIoDocumentData = {
   currencyCode: string;
   status: string;
   paymentSchedule: string | null;
+  agencyContact: ClientIoAgencyContact;
+  terms: ClientIoTerm[];
   client: {
     id: string;
     name: string;
@@ -59,6 +69,9 @@ export type ClientIoDocumentData = {
     businessObjective: string | null;
     usagePeriod: string | null;
   };
+  /** Per-platform / per-deliverable rows (child level). */
   deliverables: ClientIoDeliverableRow[];
+  /** One row per campaign assignment line (main line only). */
+  mainAssignmentDeliverables: ClientIoDeliverableRow[];
   pricing: ClientIoCampaignPricing;
 };

@@ -72,15 +72,22 @@ async function requireUser() {
 /** Resolve all invoice ids linked to a campaign (header FK, lines, deliverables, line items). */
 export async function resolveCampaignInvoiceIds(
   supabase: SupabaseClient,
-  campaignHeaderId: string
+  campaignHeaderId: string,
+  options?: { includeVoid?: boolean }
 ): Promise<string[]> {
   const ids = new Set<string>();
+  const includeVoid = options?.includeVoid ?? false;
 
-  const { data: directRows } = await supabase
+  let directQuery = supabase
     .from("invoices")
     .select("id")
-    .or(`campaign_header_id.eq.${campaignHeaderId},campaign_id.eq.${campaignHeaderId}`)
-    .not("status", "eq", "void");
+    .or(`campaign_header_id.eq.${campaignHeaderId},campaign_id.eq.${campaignHeaderId}`);
+
+  if (!includeVoid) {
+    directQuery = directQuery.not("status", "eq", "void");
+  }
+
+  const { data: directRows } = await directQuery;
 
   for (const row of directRows ?? []) {
     ids.add((row as { id: string }).id);
@@ -140,14 +147,35 @@ export async function resolveCampaignInvoiceIds(
   return [...ids];
 }
 
-function mapInvoiceRegisterRow(inv: InvoiceRegisterQueryRow): FinanceInvoiceRegisterRow | null {
+function isCampaignCancelledInvoice(
+  inv: InvoiceRegisterQueryRow,
+  options?: { includeCampaignCancelled?: boolean; campaignIsCancelled?: boolean }
+): boolean {
+  return (
+    Boolean(options?.includeCampaignCancelled && options?.campaignIsCancelled) &&
+    inv.status === "void"
+  );
+}
+
+function mapInvoiceRegisterRow(
+  inv: InvoiceRegisterQueryRow,
+  options?: { includeCampaignCancelled?: boolean; campaignIsCancelled?: boolean }
+): FinanceInvoiceRegisterRow | null {
+  const includeCancelled = options?.includeCampaignCancelled ?? false;
+  const campaignCancelled = isCampaignCancelledInvoice(inv, options);
+
   if (
-    !isRegisterInvoiceStatus(inv.status) ||
-    !isActiveInvoiceForFinancialTotals({
-      status: inv.status,
-      regeneration_status: inv.regeneration_status,
-    })
+    !campaignCancelled &&
+    (!isRegisterInvoiceStatus(inv.status) ||
+      !isActiveInvoiceForFinancialTotals({
+        status: inv.status,
+        regeneration_status: inv.regeneration_status,
+      }))
   ) {
+    return null;
+  }
+
+  if (campaignCancelled && !includeCancelled) {
     return null;
   }
 
@@ -184,6 +212,7 @@ function mapInvoiceRegisterRow(inv: InvoiceRegisterQueryRow): FinanceInvoiceRegi
     currency: inv.currency,
     regeneration_status: inv.regeneration_status,
     is_operational_locked: inv.is_operational_locked ?? false,
+    metadata: campaignCancelled ? { campaign_cancelled: true } : null,
   } satisfies FinanceInvoiceRegisterRow;
 }
 
@@ -193,9 +222,19 @@ export async function getFinanceInvoiceRegister(options?: {
   const { supabase } = await requireUser();
 
   let invoiceIds: string[] | null = null;
+  let campaignIsCancelled = false;
 
   if (options?.campaignHeaderId) {
-    invoiceIds = await resolveCampaignInvoiceIds(supabase, options.campaignHeaderId);
+    const { data: header } = await supabase
+      .from("campaign_headers")
+      .select("status")
+      .eq("id", options.campaignHeaderId)
+      .maybeSingle();
+
+    campaignIsCancelled = (header as { status?: string } | null)?.status === "cancelled";
+    invoiceIds = await resolveCampaignInvoiceIds(supabase, options.campaignHeaderId, {
+      includeVoid: campaignIsCancelled,
+    });
 
     const directOnly = await supabase
       .from("invoices")
@@ -229,9 +268,12 @@ export async function getFinanceInvoiceRegister(options?: {
   let query = supabase
     .from("invoices")
     .select(INVOICE_REGISTER_SELECT)
-    .not("status", "eq", "void")
     .order("issue_date", { ascending: false })
     .limit(500);
+
+  if (!options?.campaignHeaderId) {
+    query = query.not("status", "eq", "void");
+  }
 
   if (invoiceIds) {
     query = query.in("id", invoiceIds);
@@ -245,7 +287,10 @@ export async function getFinanceInvoiceRegister(options?: {
   const rows: FinanceInvoiceRegisterRow[] = [];
 
   for (const raw of data ?? []) {
-    const mapped = mapInvoiceRegisterRow(raw as unknown as InvoiceRegisterQueryRow);
+    const mapped = mapInvoiceRegisterRow(raw as unknown as InvoiceRegisterQueryRow, {
+      includeCampaignCancelled: Boolean(options?.campaignHeaderId),
+      campaignIsCancelled,
+    });
     if (!mapped || seen.has(mapped.id)) continue;
     seen.add(mapped.id);
     rows.push(mapped);

@@ -160,6 +160,7 @@ export const USERS_TABLE_FILTER_ACCESSORS: Partial<
   name: (row) => row.name,
   email: (row) => row.email,
   role: (row) => row.role,
+  business_function: (row) => row.business_function,
   department: (row) => row.department,
   country: (row) => row.country,
   status: (row) => row.status,

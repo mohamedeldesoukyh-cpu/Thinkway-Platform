@@ -3,7 +3,12 @@ import type { PoHealth } from "@/lib/finance/po/calculations";
 import type { PoStatus } from "@/lib/finance/po/status";
 
 import type { LineInfluencerAssignment } from "./line-assignment";
-import type { ClientIoRow, VendorIoRow, ClientIoSendRecipient } from "@/features/io/types";
+import type {
+  ClientIoRow,
+  ClientIoSendHistoryEntry,
+  VendorIoRow,
+  ClientIoSendRecipient,
+} from "@/features/io/types";
 
 export type BrandFormOption = {
   id: string;
@@ -281,6 +286,8 @@ export type CampaignWorkspace = {
   blockers: string[];
   client_io: ClientIoRow | null;
   client_io_send_recipients: ClientIoSendRecipient[];
+  client_io_send_history: ClientIoSendHistoryEntry[];
+  client_io_sender_name: string | null;
   vendor_ios: VendorIoRow[];
   vat_context: {
     client_country_code: string | null;

@@ -3,13 +3,25 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { logFinanceAuditEvent } from "@/lib/finance/audit-log";
 import { FINANCE_AUDIT_EVENTS } from "@/lib/finance/audit-events";
 import { guardCampaignCancellation } from "@/lib/finance/integrity-guards";
-import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
+import { voidInvoice } from "@/lib/finance/invoice-lifecycle";
+import {
+  isFinancialPeriodLocked,
+  periodLockBlockReason,
+  resolveFinancialPeriodLockForDate,
+} from "@/lib/finance/period-lock";
 import { isActiveInvoiceForFinancialTotals } from "@/lib/finance/status/invoice-status";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import type { Database } from "@/types/database";
 import type { CampaignStatus } from "@/types/database";
 
 export type CampaignCancellationResult =
-  | { ok: true; campaign_id: string; vendor_io_count: number }
+  | {
+      ok: true;
+      campaign_id: string;
+      vendor_io_count: number;
+      invoice_count: number;
+      client_io_count: number;
+    }
   | { ok: false; error: string };
 
 export type CampaignCancellationPreview = {
@@ -18,18 +30,75 @@ export type CampaignCancellationPreview = {
   has_vendor_ios: boolean;
   vendor_io_count: number;
   active_invoice_count: number;
+  client_io_count: number;
+  period_locked: boolean;
+  period_label?: string;
 };
+
+function resolveCampaignPeriodDate(header: {
+  start_date: string | null;
+  created_at?: string | null;
+}): string {
+  if (header.start_date) return header.start_date;
+  if (header.created_at) return header.created_at.slice(0, 10);
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function loadCampaignCancellationContext(
+  supabase: SupabaseClient<Database>,
+  campaignId: string
+) {
+  const [{ data: header, error: headerError }, { data: invoices }, { data: vendorIos }, { data: clientIos }] =
+    await Promise.all([
+      supabase
+        .from("campaign_headers")
+        .select("id, document_number, status, start_date, created_at")
+        .eq("id", campaignId)
+        .maybeSingle(),
+      supabase
+        .from("invoices")
+        .select("id, status, regeneration_status, amount_paid, document_number")
+        .eq("campaign_header_id", campaignId),
+      supabase.from("vendor_ios").select("id").eq("campaign_header_id", campaignId),
+      supabase.from("client_ios").select("id").eq("campaign_header_id", campaignId),
+    ]);
+
+  if (headerError) throw new Error(headerError.message);
+
+  const periodDate = header ? resolveCampaignPeriodDate(header as { start_date: string | null; created_at?: string | null }) : null;
+  const periodLock = periodDate
+    ? await resolveFinancialPeriodLockForDate(supabase, periodDate)
+    : null;
+
+  return {
+    header,
+    invoices: invoices ?? [],
+    vendorIos: vendorIos ?? [],
+    clientIos: clientIos ?? [],
+    periodLock,
+  };
+}
 
 export async function previewCampaignCancellation(
   supabase: SupabaseClient<Database>,
   campaignId: string
 ): Promise<CampaignCancellationPreview> {
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select("id, status, regeneration_status")
-    .eq("campaign_header_id", campaignId);
+  const { header, invoices, vendorIos, clientIos, periodLock } =
+    await loadCampaignCancellationContext(supabase, campaignId);
 
-  const activeInvoices = (invoices ?? []).filter((inv) =>
+  if (!header) {
+    return {
+      allowed: false,
+      reason: "Campaign not found.",
+      has_vendor_ios: false,
+      vendor_io_count: 0,
+      active_invoice_count: 0,
+      client_io_count: 0,
+      period_locked: false,
+    };
+  }
+
+  const activeInvoices = invoices.filter((inv) =>
     isActiveInvoiceForFinancialTotals({
       status: String((inv as { status: string }).status),
       regeneration_status: (inv as { regeneration_status?: string }).regeneration_status,
@@ -37,26 +106,89 @@ export async function previewCampaignCancellation(
   );
 
   const guard = guardCampaignCancellation({
-    invoices: (invoices ?? []).map((inv) => ({
+    period_lock: periodLock,
+    invoices: invoices.map((inv) => ({
       status: String((inv as { status: string }).status),
       regeneration_status: (inv as { regeneration_status?: string }).regeneration_status,
+      amount_paid: Number((inv as { amount_paid?: number }).amount_paid ?? 0),
     })),
   });
 
-  const { data: vendorIos } = await supabase
-    .from("vendor_ios")
-    .select("id")
-    .eq("campaign_header_id", campaignId);
-
-  const vendorIoCount = vendorIos?.length ?? 0;
+  const periodLocked = periodLock ? isFinancialPeriodLocked(periodLock.status) : false;
+  const periodLabel = periodLock
+    ? `${periodLock.year}-${String(periodLock.month).padStart(2, "0")}`
+    : undefined;
 
   return {
     allowed: guard.allowed,
-    reason: guard.allowed ? undefined : guard.reason,
-    has_vendor_ios: vendorIoCount > 0,
-    vendor_io_count: vendorIoCount,
+    reason: guard.allowed
+      ? undefined
+      : guard.reason ??
+        (periodLock && periodLocked
+          ? periodLockBlockReason(periodLock)
+          : "Campaign cannot be cancelled."),
+    has_vendor_ios: vendorIos.length > 0,
+    vendor_io_count: vendorIos.length,
     active_invoice_count: activeInvoices.length,
+    client_io_count: clientIos.length,
+    period_locked: periodLocked,
+    period_label: periodLabel,
   };
+}
+
+async function cancelCampaignInvoices(
+  supabase: SupabaseClient<Database>,
+  input: {
+    campaign_id: string;
+    actor_id: string;
+    reason?: string;
+    invoices: Array<{
+      id: string;
+      status: string;
+      regeneration_status?: string | null;
+    }>;
+  }
+): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+  let count = 0;
+
+  for (const invoice of input.invoices) {
+    if (invoice.status === "void") continue;
+    if (
+      !isActiveInvoiceForFinancialTotals({
+        status: invoice.status,
+        regeneration_status: invoice.regeneration_status,
+      })
+    ) {
+      continue;
+    }
+
+    const voidResult = await voidInvoice(supabase, {
+      invoice_id: invoice.id,
+      actor_id: input.actor_id,
+      reason: input.reason ?? "Campaign cancelled",
+    });
+
+    if (!voidResult.ok) {
+      return { ok: false, error: voidResult.error ?? "Failed to cancel invoice." };
+    }
+
+    await logFinanceAuditEvent(supabase, {
+      event: FINANCE_AUDIT_EVENTS.invoice_cancelled,
+      entity_type: "invoice",
+      entity_id: invoice.id,
+      actor_id: input.actor_id,
+      old_data: { status: invoice.status },
+      new_data: { status: "void", campaign_cancelled: true },
+      payload: {
+        campaign_id: input.campaign_id,
+        reason: input.reason ?? null,
+      },
+    });
+
+    count += 1;
+  }
+
+  return { ok: true, count };
 }
 
 export async function cancelCampaign(
@@ -67,22 +199,42 @@ export async function cancelCampaign(
     reason?: string;
   }
 ): Promise<CampaignCancellationResult> {
-  const preview = await previewCampaignCancellation(supabase, input.campaign_id);
-  if (!preview.allowed) {
-    return { ok: false, error: preview.reason ?? "Campaign cannot be cancelled." };
+  const context = await loadCampaignCancellationContext(supabase, input.campaign_id);
+  const { header, invoices, vendorIos, clientIos, periodLock } = context;
+
+  if (!header) {
+    return { ok: false, error: "Campaign not found." };
   }
 
-  const { data: header, error: headerError } = await supabase
-    .from("campaign_headers")
-    .select("id, document_number, status")
-    .eq("id", input.campaign_id)
-    .maybeSingle();
+  const guard = guardCampaignCancellation({
+    period_lock: periodLock,
+    invoices: invoices.map((inv) => ({
+      status: String((inv as { status: string }).status),
+      regeneration_status: (inv as { regeneration_status?: string }).regeneration_status,
+      amount_paid: Number((inv as { amount_paid?: number }).amount_paid ?? 0),
+    })),
+  });
 
-  if (headerError || !header) {
-    return { ok: false, error: headerError?.message ?? "Campaign not found." };
+  if (!guard.allowed) {
+    return { ok: false, error: guard.reason ?? "Campaign cannot be cancelled." };
   }
 
   const previousStatus = (header as { status: CampaignStatus }).status;
+
+  const invoiceResult = await cancelCampaignInvoices(supabase, {
+    campaign_id: input.campaign_id,
+    actor_id: input.actor_id,
+    reason: input.reason,
+    invoices: invoices.map((inv) => ({
+      id: String((inv as { id: string }).id),
+      status: String((inv as { status: string }).status),
+      regeneration_status: (inv as { regeneration_status?: string | null }).regeneration_status,
+    })),
+  });
+
+  if (!invoiceResult.ok) {
+    return { ok: false, error: invoiceResult.error };
+  }
 
   const { error: updateError } = await supabase
     .from("campaign_headers")
@@ -93,13 +245,12 @@ export async function cancelCampaign(
     return { ok: false, error: updateError.message };
   }
 
-  const { data: vendorIos } = await supabase
+  const { data: vendorIoRows } = await supabase
     .from("vendor_ios")
     .select("id, document_number, status")
     .eq("campaign_header_id", input.campaign_id);
 
-  const now = new Date().toISOString();
-  for (const vio of vendorIos ?? []) {
+  for (const vio of vendorIoRows ?? []) {
     const row = vio as {
       id: string;
       document_number: string;
@@ -128,6 +279,39 @@ export async function cancelCampaign(
     });
   }
 
+  const { data: clientIoRows } = await supabase
+    .from("client_ios")
+    .select("id, document_number, status")
+    .eq("campaign_header_id", input.campaign_id);
+
+  for (const cio of clientIoRows ?? []) {
+    const row = cio as {
+      id: string;
+      document_number?: string | null;
+      status: string;
+    };
+
+    if (row.status === "cancelled") continue;
+
+    await supabase
+      .from("client_ios")
+      .update({ status: "cancelled" } as never)
+      .eq("id", row.id);
+
+    await logFinanceAuditEvent(supabase, {
+      event: FINANCE_AUDIT_EVENTS.client_io_cancelled,
+      entity_type: "client_io",
+      entity_id: row.id,
+      actor_id: input.actor_id,
+      old_data: { status: row.status },
+      new_data: { status: "cancelled", campaign_cancelled: true },
+      payload: {
+        document_number: row.document_number ?? null,
+        campaign_id: input.campaign_id,
+      },
+    });
+  }
+
   const { data: lines } = await supabase
     .from("campaign_lines")
     .select("id")
@@ -137,7 +321,7 @@ export async function cancelCampaign(
   if (lineIds.length > 0) {
     await supabase
       .from("campaign_lines")
-      .update({ billing_status: "cancelled" } as never)
+      .update({ status: "cancelled", billing_status: "cancelled" } as never)
       .in("id", lineIds);
   }
 
@@ -151,14 +335,18 @@ export async function cancelCampaign(
     payload: {
       document_number: (header as { document_number: string }).document_number,
       reason: input.reason ?? null,
-      vendor_io_count: vendorIos?.length ?? 0,
+      vendor_io_count: vendorIos.length,
+      client_io_count: clientIos.length,
+      invoice_count: invoiceResult.count,
     },
   });
 
   return {
     ok: true,
     campaign_id: input.campaign_id,
-    vendor_io_count: vendorIos?.length ?? 0,
+    vendor_io_count: vendorIoRows?.length ?? 0,
+    invoice_count: invoiceResult.count,
+    client_io_count: clientIoRows?.length ?? 0,
   };
 }
 
@@ -225,5 +413,7 @@ export async function reopenCampaign(
     ok: true,
     campaign_id: input.campaign_id,
     vendor_io_count: 0,
+    invoice_count: 0,
+    client_io_count: 0,
   };
 }

@@ -50,7 +50,7 @@ export function VendorIoDocumentActions({
       </Button>
       <Button size="sm" variant="outline" asChild>
         <a
-          href={`/api/vendor-ios/${row.id}/document?format=pdf&download=1`}
+          href={`/api/vendor-ios/${row.id}/document?format=pdf`}
           target="_blank"
           rel="noopener noreferrer"
         >

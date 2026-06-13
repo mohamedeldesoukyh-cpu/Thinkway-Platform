@@ -81,6 +81,8 @@ export function ClientIosWorkspace({
             key={selected.id}
             row={selected}
             recipients={recipientsByClientId[selected.client_id] ?? []}
+            clientDefaultTermsText={selected.client_io_terms_text}
+            brandName={selected.brand_name}
           />
         ) : null}
       </div>

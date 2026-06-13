@@ -59,7 +59,7 @@ export async function generateClientIoDocument(
       .eq("id", clientIoId);
   }
 
-  const data = await loadClientIoDocumentData(supabase, clientIoId);
+  const data = await loadClientIoDocumentData(supabase, clientIoId, actorId);
   const html = renderClientIoHtml(data, layout);
   const generatedAt = new Date().toISOString();
 

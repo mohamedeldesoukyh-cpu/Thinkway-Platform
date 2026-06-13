@@ -22,6 +22,11 @@ const OPTIONS: Array<{ id: ClientIoDocumentLayout; label: string; hint: string }
     label: "Package",
     hint: "Campaign total",
   },
+  {
+    id: "package_main",
+    label: "Package main",
+    hint: "Main lines only",
+  },
 ];
 
 export function ClientIoPreviewLayoutToggle({

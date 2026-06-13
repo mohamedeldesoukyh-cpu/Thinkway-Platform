@@ -3,6 +3,7 @@ import { safeOperationalQuery } from "@/lib/platform/safe-query";
 import { devLog } from "@/lib/platform/logger";
 import type {
   ClientIoRow,
+  ClientIoSendHistoryEntry,
   ClientIoSendRecipient,
   IoSearchFilters,
   VendorIoRow,
@@ -39,6 +40,95 @@ async function requireUser() {
     throw new Error(error?.message ?? "Unauthorized");
   }
   return { supabase, user };
+}
+
+export async function getClientIoSendHistory(
+  clientIoId: string
+): Promise<ClientIoSendHistoryEntry[]> {
+  const result = await safeOperationalQuery(
+    "io:getClientIoSendHistory",
+    async () => {
+      const { supabase } = await requireUser();
+
+      const { data, error } = await supabase
+        .from("io_notifications")
+        .select(
+          "id, recipient_email, recipient_name, sender_email, subject, delivery_status, delivery_error, sent_at, created_at, sent_by, send_batch_id, payload"
+        )
+        .eq("io_type", "client")
+        .eq("io_id", clientIoId)
+        .eq("event_type", "client_io_sent")
+        .not("recipient_email", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const rows = (data ?? []) as Array<{
+        id: string;
+        recipient_email: string | null;
+        recipient_name: string | null;
+        sender_email: string | null;
+        subject: string | null;
+        delivery_status: string | null;
+        delivery_error: string | null;
+        sent_at: string | null;
+        created_at: string;
+        sent_by: string | null;
+        send_batch_id: string | null;
+        payload: Record<string, unknown> | null;
+      }>;
+
+      const actorIds = [
+        ...new Set(rows.map((row) => row.sent_by).filter((id): id is string => Boolean(id))),
+      ];
+
+      const profileMap = new Map<string, string>();
+      if (actorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", actorIds);
+        for (const profile of (profiles ?? []) as Array<{ id: string; full_name: string | null }>) {
+          profileMap.set(profile.id, profile.full_name?.trim() || "User");
+        }
+      }
+
+      return rows.map((row) => {
+        const payload = row.payload ?? {};
+        const emailHtml =
+          typeof payload.email_html === "string" ? payload.email_html : null;
+        const emailText =
+          typeof payload.email_text === "string" ? payload.email_text : null;
+        const sentByDisplayName =
+          typeof payload.sender_display_name === "string"
+            ? payload.sender_display_name
+            : null;
+
+        return {
+          id: row.id,
+          recipient_email: row.recipient_email,
+          recipient_name: row.recipient_name,
+          sender_email: row.sender_email,
+          subject: row.subject,
+          delivery_status: row.delivery_status,
+          delivery_error: row.delivery_error,
+          sent_at: row.sent_at,
+          created_at: row.created_at,
+          sent_by_name: row.sent_by ? (profileMap.get(row.sent_by) ?? null) : null,
+          send_batch_id: row.send_batch_id,
+          email_html: emailHtml,
+          email_text: emailText,
+          sent_by_display_name: sentByDisplayName,
+        };
+      });
+    },
+    []
+  );
+
+  return result.data;
 }
 
 export async function getClientIoSendRecipients(

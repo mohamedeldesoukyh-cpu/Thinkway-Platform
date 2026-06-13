@@ -1,3 +1,5 @@
+import type { BusinessFunction } from "@/types/database";
+
 export type SettingsUserStatus = "invited" | "active" | "disabled";
 export type SettingsPortalType = "internal" | "client" | "creator";
 
@@ -7,6 +9,7 @@ export type SettingsUserRow = {
   email: string;
   role: string | null;
   role_slug: string | null;
+  business_function: BusinessFunction | null;
   department: string | null;
   country: string | null;
   status: SettingsUserStatus;

@@ -1,15 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   DETAIL_FORM_INPUT_CLASS,
-  DetailEditBlock,
   DetailFormSection,
   DetailSheetFooter,
 } from "@/features/campaigns/components/operational-detail-panel";
@@ -17,24 +15,75 @@ import { updateClientIoAction } from "@/features/io/actions";
 import { generateClientIoDocumentAction } from "@/features/io/generate-client-io-document-action";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { ClientIoViewMenu } from "@/features/io/components/client-io-view-menu";
+import { ClientIoEmailPreviewSection } from "@/features/io/components/client-io-email-preview";
+import { ClientIoRecipientsEditor } from "@/features/io/components/client-io-recipients-editor";
 import { ClientIoSendControls } from "@/features/io/components/client-io-send-controls";
-import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
+import { ClientIoSendHistory } from "@/features/io/components/client-io-send-history";
+import { ClientIoTermsEditorField } from "@/features/io/components/client-io-terms-editor";
+import type { ClientIoRow, ClientIoSendHistoryEntry, ClientIoSendRecipient } from "@/features/io/types";
+import {
+  parseSendRecipientsJson,
+  seedRecipientsFromContacts,
+  serializeSendRecipients,
+  type ClientIoRecipientEntry,
+} from "@/lib/io/client-io-send-recipients";
+import {
+  parseTermsText,
+  resolveDefaultTermsForClient,
+  serializeTermsText,
+  termsAreEqual,
+  type ClientIoTerm,
+} from "@/lib/io/client-io-terms";
 
 const INITIAL_STATE = { ok: false } as const;
-
-const DETAIL_TEXTAREA_CLASS =
-  "min-h-[4.5rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1";
 
 type Props = {
   row: ClientIoRow;
   recipients: ClientIoSendRecipient[];
+  sendHistory?: ClientIoSendHistoryEntry[];
+  senderName?: string | null;
+  clientDefaultTermsText?: string | null;
+  brandName?: string | null;
 };
 
-export function ClientIoForm({ row, recipients }: Props) {
-  const [termsText, setTermsText] = useState(row.terms_text ?? "");
-  const [termsHtml, setTermsHtml] = useState(row.terms_html ?? "");
+function SummaryItem({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="space-y-0.5">
+      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="text-sm text-foreground">{value?.trim() || "—"}</dd>
+    </div>
+  );
+}
+
+export function ClientIoForm({
+  row,
+  recipients,
+  sendHistory = [],
+  senderName = null,
+  clientDefaultTermsText = null,
+  brandName = null,
+}: Props) {
+  const defaultTerms = useMemo(
+    () => resolveDefaultTermsForClient(clientDefaultTermsText),
+    [clientDefaultTermsText]
+  );
+
+  const initialTerms = useMemo(() => {
+    return parseTermsText(row.terms_text) ?? defaultTerms;
+  }, [row.terms_text, defaultTerms]);
+
+  const [terms, setTerms] = useState<ClientIoTerm[]>(initialTerms);
+  const [useDefaultTerms, setUseDefaultTerms] = useState(() => !parseTermsText(row.terms_text));
   const [billingTerms, setBillingTerms] = useState(row.billing_terms ?? "");
   const [attachmentUrl, setAttachmentUrl] = useState(row.attachment_url ?? "");
+  const [sendRecipients, setSendRecipients] = useState<ClientIoRecipientEntry[]>(() =>
+    seedRecipientsFromContacts(
+      parseSendRecipientsJson(row.send_recipients),
+      recipients.map((r) => ({ label: r.label, email: r.email }))
+    )
+  );
 
   const [saveState, saveAction, saving] = useActionState(updateClientIoAction, INITIAL_STATE);
   const [generateState, generateAction, generating] = useActionState(
@@ -43,11 +92,12 @@ export function ClientIoForm({ row, recipients }: Props) {
   );
 
   useEffect(() => {
-    setTermsText(row.terms_text ?? "");
-    setTermsHtml(row.terms_html ?? "");
+    setTerms(parseTermsText(row.terms_text) ?? defaultTerms);
+    setUseDefaultTerms(!parseTermsText(row.terms_text));
     setBillingTerms(row.billing_terms ?? "");
     setAttachmentUrl(row.attachment_url ?? "");
-  }, [row]);
+    setSendRecipients(parseSendRecipientsJson(row.send_recipients));
+  }, [row, defaultTerms]);
 
   useEffect(() => {
     if (!saveState.message) return;
@@ -64,6 +114,29 @@ export function ClientIoForm({ row, recipients }: Props) {
   const hasDocument = Boolean(
     row.document_generated_at || row.generated_html_url || row.terms_html
   );
+
+  const sendRecipientsPayload = useMemo(
+    () => serializeSendRecipients(sendRecipients),
+    [sendRecipients]
+  );
+
+  const termsTextPayload = useMemo(() => {
+    if (useDefaultTerms || termsAreEqual(terms, defaultTerms)) {
+      return "";
+    }
+    return serializeTermsText(terms);
+  }, [terms, defaultTerms, useDefaultTerms]);
+
+  function handleTermsChange(nextTerms: ClientIoTerm[]) {
+    setTerms(nextTerms);
+    setUseDefaultTerms(false);
+  }
+
+  function handleRecoverTerms() {
+    setTerms(defaultTerms);
+    setUseDefaultTerms(true);
+    toast.message("Terms reset to default. Save draft to apply.");
+  }
 
   return (
     <OperationalTableSection
@@ -87,30 +160,42 @@ export function ClientIoForm({ row, recipients }: Props) {
         <input type="hidden" name="id" value={row.id} />
         <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
         <input type="hidden" name="status" value={row.status} />
+        <input type="hidden" name="terms_text" value={termsTextPayload} />
+        <input type="hidden" name="send_recipients" value={sendRecipientsPayload} />
 
         <div className="px-6 py-4">
           <div className="space-y-1">
-            <DetailEditBlock label="Terms (plain text)">
-              <Textarea
-                id="terms_text"
-                name="terms_text"
-                value={termsText}
-                onChange={(e) => setTermsText(e.target.value)}
-                rows={8}
-                className={DETAIL_TEXTAREA_CLASS}
-              />
-            </DetailEditBlock>
+            <DetailFormSection label="Document details" className="py-3.5">
+              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <SummaryItem label="Document number" value={row.document_number} />
+                <SummaryItem label="Campaign" value={row.campaign_name} />
+                <SummaryItem label="Client" value={row.client_name} />
+                <SummaryItem label="Brand" value={brandName} />
+                <SummaryItem label="Status" value={row.status} />
+                <SummaryItem label="Billing terms" value={billingTerms || row.billing_terms} />
+              </dl>
+            </DetailFormSection>
 
-            <DetailEditBlock label="Terms (optional HTML)">
-              <Textarea
-                id="terms_html"
-                name="terms_html"
-                value={termsHtml}
-                onChange={(e) => setTermsHtml(e.target.value)}
-                rows={6}
-                className={DETAIL_TEXTAREA_CLASS}
-              />
-            </DetailEditBlock>
+            <ClientIoRecipientsEditor
+              recipients={sendRecipients}
+              onChange={setSendRecipients}
+              disabled={saving}
+            />
+
+            <ClientIoEmailPreviewSection
+              io={row}
+              senderName={senderName}
+              recipients={sendRecipients}
+              hasDocument={hasDocument}
+            />
+
+            <ClientIoTermsEditorField
+              label="Terms & conditions"
+              terms={terms}
+              onChange={handleTermsChange}
+              onRecover={handleRecoverTerms}
+              description="Structured terms injected into Section 8 of the Client IO template. Leave as default or customize per IO."
+            />
 
             <DetailFormSection label="Billing terms" className="py-3.5">
               <Input
@@ -133,6 +218,8 @@ export function ClientIoForm({ row, recipients }: Props) {
                 className={DETAIL_FORM_INPUT_CLASS}
               />
             </DetailFormSection>
+
+            <ClientIoSendHistory history={sendHistory} />
           </div>
         </div>
       </form>
@@ -161,7 +248,9 @@ export function ClientIoForm({ row, recipients }: Props) {
             <ClientIoSendControls
               io={row}
               campaignId={row.campaign_header_id}
-              recipients={recipients}
+              sendRecipientsJson={sendRecipientsPayload}
+              recipientCount={sendRecipients.filter((r) => r.email.trim()).length}
+              hasDocument={hasDocument}
             />
           </div>
           <Button

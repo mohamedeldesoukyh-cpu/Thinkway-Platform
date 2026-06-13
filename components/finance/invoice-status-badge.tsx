@@ -36,17 +36,19 @@ function resolveInvoiceStatusTone(input: {
 type InvoiceStatusBadgeProps = {
   status: string;
   regeneration_status?: string | null;
+  metadata?: Record<string, unknown> | null;
   className?: string;
 };
 
 export function InvoiceStatusBadge({
   status,
   regeneration_status,
+  metadata,
   className,
 }: InvoiceStatusBadgeProps) {
   const label =
-    regeneration_status !== undefined
-      ? getInvoiceRegisterStatusLabel({ status, regeneration_status })
+    regeneration_status !== undefined || metadata
+      ? getInvoiceRegisterStatusLabel({ status, regeneration_status, metadata })
       : isKnownInvoiceStatus(status)
         ? getInvoiceRegisterStatusLabel({ status })
         : status;

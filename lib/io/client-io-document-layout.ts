@@ -3,7 +3,7 @@ import type {
   ClientIoDocumentData,
 } from "@/lib/io/client-io-document-types";
 
-export type ClientIoDocumentLayout = "detailed" | "package";
+export type ClientIoDocumentLayout = "detailed" | "package" | "package_main";
 
 export type ClientIoPricingRow = {
   label: string;
@@ -14,7 +14,7 @@ export type ClientIoPricingRow = {
 export function isClientIoDocumentLayout(
   value: string | null | undefined
 ): value is ClientIoDocumentLayout {
-  return value === "detailed" || value === "package";
+  return value === "detailed" || value === "package" || value === "package_main";
 }
 
 export function resolveClientIoDocumentLayout(
@@ -35,7 +35,7 @@ export function buildClientIoPricingRows(
   pricing: ClientIoCampaignPricing,
   layout: ClientIoDocumentLayout
 ): ClientIoPricingRow[] {
-  if (layout === "package") {
+  if (layout === "package" || layout === "package_main") {
     return [
       { label: "Influencer Fees (Total)", amount: pricing.revenueTotal },
       { label: "Usage Rights Fee", amount: pricing.usageRightsTotal },
@@ -60,6 +60,16 @@ export function buildClientIoPricingRows(
   rows.push({ label: "Total Amount Due", amount: pricing.total, variant: "total" });
 
   return rows;
+}
+
+export function resolveClientIoDeliverableRows(
+  data: ClientIoDocumentData,
+  layout: ClientIoDocumentLayout
+): ClientIoDocumentData["deliverables"] {
+  if (layout === "package_main") {
+    return data.mainAssignmentDeliverables;
+  }
+  return data.deliverables;
 }
 
 export function applyClientIoDocumentLayout(

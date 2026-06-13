@@ -94,7 +94,11 @@ const FINANCE_INVOICE_REGISTER_BASE_COLUMNS: OperationalConfigurableColumnDef<Fi
       id: "invoice_status",
       label: "Invoice status",
       renderCell: (row) => (
-        <InvoiceStatusBadge status={row.status} regeneration_status={row.regeneration_status} />
+        <InvoiceStatusBadge
+          status={row.status}
+          regeneration_status={row.regeneration_status}
+          metadata={row.metadata}
+        />
       ),
     },
     {

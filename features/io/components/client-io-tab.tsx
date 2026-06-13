@@ -9,7 +9,7 @@ import { ensureClientIoForCampaignAction } from "@/features/io/actions";
 import { ClientIoForm } from "@/features/io/components/client-io-form";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
+import type { ClientIoRow, ClientIoSendHistoryEntry, ClientIoSendRecipient } from "@/features/io/types";
 
 const INITIAL_STATE = { ok: false } as const;
 
@@ -18,9 +18,18 @@ type Props = {
   campaignName: string;
   io: ClientIoRow | null;
   recipients: ClientIoSendRecipient[];
+  sendHistory?: ClientIoSendHistoryEntry[];
+  senderName?: string | null;
 };
 
-export function ClientIoTab({ campaignId, campaignName, io, recipients }: Props) {
+export function ClientIoTab({
+  campaignId,
+  campaignName,
+  io,
+  recipients,
+  sendHistory = [],
+  senderName = null,
+}: Props) {
   const [ensureState, ensureAction, ensuring] = useActionState(
     ensureClientIoForCampaignAction,
     INITIAL_STATE
@@ -57,7 +66,14 @@ export function ClientIoTab({ campaignId, campaignName, io, recipients }: Props)
 
   return (
     <div className="space-y-4">
-      <ClientIoForm row={io} recipients={recipients} />
+      <ClientIoForm
+        row={io}
+        recipients={recipients}
+        sendHistory={sendHistory}
+        senderName={senderName}
+        clientDefaultTermsText={io.client_io_terms_text}
+        brandName={io.brand_name}
+      />
       <p className="text-right text-[11px] text-muted-foreground">
         <Link href={`/ios/client?io=${io.id}`} className="underline-offset-2 hover:underline">
           Open in Client IO register

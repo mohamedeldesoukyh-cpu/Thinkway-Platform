@@ -27,6 +27,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UserStatusBadge } from "@/features/settings/components/user-status-badge";
+import { businessFunctionLabel } from "@/features/settings/constants";
 import { toggleUserStatusAction, updateUserRoleAction } from "@/features/settings/actions";
 import type { SettingsRoleRow, SettingsUserRow } from "@/features/settings/types";
 
@@ -36,8 +37,10 @@ function buildUsersColumns(
   roles: SettingsRoleRow[],
   roleMap: Map<string, SettingsRoleRow>,
   selectedRole: string,
+  selectedFunction: string,
   selectedProfile: string,
   setSelectedRole: (value: string) => void,
+  setSelectedFunction: (value: string) => void,
   setSelectedProfile: (value: string) => void,
   roleAction: (payload: FormData) => void,
   rolePending: boolean,
@@ -59,6 +62,11 @@ function buildUsersColumns(
       id: "role",
       label: "Role",
       renderCell: (user) => user.role ?? "—",
+    },
+    {
+      id: "business_function",
+      label: "Function",
+      renderCell: (user) => businessFunctionLabel(user.business_function),
     },
     {
       id: "department",
@@ -102,13 +110,23 @@ function buildUsersColumns(
         <div className="inline-flex items-center gap-2">
           <Sheet>
             <SheetTrigger asChild>
-              <Button size="sm" variant="outline">
-                Edit role
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSelectedProfile(user.id);
+                  setSelectedRole(
+                    roles.find((role) => role.name === user.role)?.id ?? ""
+                  );
+                  setSelectedFunction(user.business_function ?? "unset");
+                }}
+              >
+                Edit user
               </Button>
             </SheetTrigger>
             <SheetContent>
               <SheetHeader>
-                <SheetTitle>Edit role</SheetTitle>
+                <SheetTitle>Edit user</SheetTitle>
               </SheetHeader>
               <form action={roleAction} className="mt-4 grid gap-4">
                 <input type="hidden" name="profile_id" value={user.id} />
@@ -142,6 +160,38 @@ function buildUsersColumns(
                     value={selectedProfile === user.id ? selectedRole : ""}
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label>Function</Label>
+                  <Select
+                    value={
+                      selectedProfile === user.id
+                        ? selectedFunction
+                        : user.business_function ?? "unset"
+                    }
+                    onValueChange={(value) => {
+                      setSelectedProfile(user.id);
+                      setSelectedFunction(value);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select function" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unset">Unset</SelectItem>
+                      <SelectItem value="ops">OPS</SelectItem>
+                      <SelectItem value="sales">Sales</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <input
+                    type="hidden"
+                    name="business_function"
+                    value={
+                      selectedProfile === user.id
+                        ? selectedFunction
+                        : user.business_function ?? "unset"
+                    }
+                  />
+                </div>
                 <div className="flex justify-end">
                   <Button
                     type="submit"
@@ -149,7 +199,7 @@ function buildUsersColumns(
                       rolePending || !(selectedProfile === user.id && roleMap.has(selectedRole))
                     }
                   >
-                    {rolePending ? "Saving..." : "Save role"}
+                    {rolePending ? "Saving..." : "Save changes"}
                   </Button>
                 </div>
               </form>
@@ -181,7 +231,9 @@ const USERS_TABLE_COLUMNS = buildUsersColumns(
   [],
   new Map(),
   "",
+  "unset",
   "",
+  () => {},
   () => {},
   () => {},
   () => {},
@@ -200,6 +252,7 @@ export function UsersTable({
   roles: SettingsRoleRow[];
 }) {
   const [selectedRole, setSelectedRole] = useState("");
+  const [selectedFunction, setSelectedFunction] = useState("unset");
   const [selectedProfile, setSelectedProfile] = useState("");
   const [roleState, roleAction, rolePending] = useActionState(updateUserRoleAction, INITIAL);
   const [statusState, statusAction, statusPending] = useActionState(
@@ -225,8 +278,10 @@ export function UsersTable({
         roles,
         roleMap,
         selectedRole,
+        selectedFunction,
         selectedProfile,
         setSelectedRole,
+        setSelectedFunction,
         setSelectedProfile,
         roleAction,
         rolePending,
@@ -237,6 +292,7 @@ export function UsersTable({
       roles,
       roleMap,
       selectedRole,
+      selectedFunction,
       selectedProfile,
       roleAction,
       rolePending,

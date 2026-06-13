@@ -56,11 +56,7 @@ export function CampaignOverviewTab({
                 ? "Generate, view, and send the client-facing insertion order for this campaign."
                 : "Set up the client insertion order before generating or sending to the legal entity."}
             </p>
-            <ClientIoCampaignChrome
-              io={workspace.client_io}
-              campaignId={workspace.id}
-              recipients={workspace.client_io_send_recipients}
-            />
+            <ClientIoCampaignChrome io={workspace.client_io} campaignId={workspace.id} />
           </div>
         </CampaignFlatSection>
 

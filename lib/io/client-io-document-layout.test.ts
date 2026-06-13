@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import {
   applyClientIoDocumentLayout,
   buildClientIoPricingRows,
+  resolveClientIoDeliverableRows,
 } from "@/lib/io/client-io-document-layout";
 import type { ClientIoDocumentData } from "@/lib/io/client-io-document-types";
+import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
 
 const sample: ClientIoDocumentData = {
   clientIoId: "cio-1",
@@ -14,6 +16,12 @@ const sample: ClientIoDocumentData = {
   currencyCode: "EGP",
   status: "generated",
   paymentSchedule: "Advance — Prior to campaign launch",
+  agencyContact: {
+    fullName: "Alex Operator",
+    title: "Account Manager",
+    email: "alex@thinkwaymedia.com",
+  },
+  terms: CLIENT_IO_DEFAULT_TERMS,
   client: {
     id: "c1",
     name: "Client",
@@ -35,7 +43,42 @@ const sample: ClientIoDocumentData = {
     businessObjective: "Awareness",
     usagePeriod: "90 days",
   },
-  deliverables: [],
+  deliverables: [
+    {
+      influencerName: "Creator A",
+      platform: "Instagram",
+      deliverableType: "Reel",
+      quantity: 1,
+      handle: "@creatorA",
+      scheduledDates: "1 May 2026",
+    },
+    {
+      influencerName: "Creator A",
+      platform: "Instagram",
+      deliverableType: "Story",
+      quantity: 2,
+      handle: "@creatorA",
+      scheduledDates: "2 May 2026",
+    },
+  ],
+  mainAssignmentDeliverables: [
+    {
+      influencerName: "Creator A",
+      platform: "Instagram",
+      deliverableType: "TW-2026-0001-A Package",
+      quantity: 1,
+      handle: "@creatorA",
+      scheduledDates: "1 May 2026 – 2 May 2026",
+    },
+    {
+      influencerName: "Creator B",
+      platform: "TikTok",
+      deliverableType: "TW-2026-0001-B Package",
+      quantity: 1,
+      handle: "@creatorB",
+      scheduledDates: "—",
+    },
+  ],
   pricing: {
     currencyCode: "EGP",
     vatPercent: 14,
@@ -86,5 +129,14 @@ assert.equal(detailed.pricingRows.length, detailedRows.length);
 
 const packaged = applyClientIoDocumentLayout(sample, "package");
 assert.equal(packaged.pricingRows.length, 6);
+
+const packageMainRows = buildClientIoPricingRows(sample.pricing, "package_main");
+assert.equal(packageMainRows[0]?.label, "Influencer Fees (Total)");
+assert.equal(packageMainRows.at(-1)?.amount, 237_006);
+
+const packageMainDeliverables = resolveClientIoDeliverableRows(sample, "package_main");
+assert.equal(packageMainDeliverables.length, 2);
+assert.equal(packageMainDeliverables[0]?.quantity, 1);
+assert.equal(resolveClientIoDeliverableRows(sample, "detailed").length, 2);
 
 console.log("client-io-document-layout.test.ts: ok");

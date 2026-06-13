@@ -60,7 +60,11 @@ export function InvoiceDetailSheet({ open, onOpenChange, row }: InvoiceDetailShe
             }
             badges={
               <>
-                <InvoiceStatusBadge status={row.status} />
+                <InvoiceStatusBadge
+                  status={row.status}
+                  regeneration_status={row.regeneration_status}
+                  metadata={row.metadata}
+                />
                 {row.regeneration_status === "pending_regeneration" ? (
                   <DetailPill className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100">
                     Pending regeneration

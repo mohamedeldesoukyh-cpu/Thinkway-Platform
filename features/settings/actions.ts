@@ -61,6 +61,11 @@ export async function inviteUserAction(
   const portalType = String(formData.get("portal_type") ?? "internal").trim();
   const department = String(formData.get("department") ?? "").trim();
   const countryCode = String(formData.get("country_code") ?? "").trim().toUpperCase();
+  const businessFunctionRaw = String(formData.get("business_function") ?? "").trim();
+  const businessFunction =
+    businessFunctionRaw === "ops" || businessFunctionRaw === "sales"
+      ? businessFunctionRaw
+      : null;
   const clientId = String(formData.get("client_id") ?? "").trim();
   const accessRole = String(formData.get("access_role") ?? "view").trim();
   const isPrimaryInvite = formData.get("is_primary") === "on";
@@ -93,6 +98,7 @@ export async function inviteUserAction(
     portal_type: portalType,
     department: department || null,
     country_code: countryCode || null,
+    business_function: businessFunction,
     token_hash: tokenHash,
     expires_at: expiresAt,
     invited_by: user.id,
@@ -122,14 +128,26 @@ export async function updateUserRoleAction(
 ): Promise<ActionState> {
   const profileId = String(formData.get("profile_id") ?? "").trim();
   const roleId = String(formData.get("role_id") ?? "").trim();
+  const businessFunctionRaw = String(formData.get("business_function") ?? "").trim();
+  const businessFunction =
+    businessFunctionRaw === "ops" || businessFunctionRaw === "sales"
+      ? businessFunctionRaw
+      : businessFunctionRaw === "unset"
+        ? null
+        : undefined;
   if (!profileId || !roleId) return { ok: false, message: "Profile and role are required." };
 
   const { supabase, user, error } = await requireSettingsWrite();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
 
+  const updatePayload: Record<string, unknown> = { role_id: roleId };
+  if (businessFunction !== undefined) {
+    updatePayload.business_function = businessFunction;
+  }
+
   const { error: updateError } = await supabase
     .from("profiles")
-    .update({ role_id: roleId } as never)
+    .update(updatePayload as never)
     .eq("id", profileId);
   if (updateError) return { ok: false, message: updateError.message };
 
@@ -138,12 +156,15 @@ export async function updateUserRoleAction(
     target_profile_id: profileId,
     action: "role_changed",
     module: "settings",
-    metadata: { role_id: roleId },
+    metadata: {
+      role_id: roleId,
+      ...(businessFunction !== undefined ? { business_function: businessFunction } : {}),
+    },
   } as never);
 
-  debugSettings("role-management", "role updated", { profileId, roleId });
+  debugSettings("role-management", "user updated", { profileId, roleId, businessFunction });
   revalidateSettings();
-  return { ok: true, message: "Role updated." };
+  return { ok: true, message: "User updated." };
 }
 
 export async function toggleUserStatusAction(

@@ -19,6 +19,7 @@ import {
   updateClientOverviewSchema,
   uploadClientDocumentSchema,
 } from "./schemas";
+import { parseTermsText, serializeTermsText } from "@/lib/io/client-io-terms";
 
 export type FormActionState = {
   ok: boolean;
@@ -33,6 +34,16 @@ function emptyToNull(value: string | undefined): string | null {
     return null;
   }
   return value.trim();
+}
+
+function normalizeClientIoTermsText(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const parsed = parseTermsText(trimmed);
+  if (!parsed) {
+    throw new Error("Client IO terms must be a valid JSON list of title and body pairs.");
+  }
+  return serializeTermsText(parsed);
 }
 
 async function requireAuthUser() {
@@ -93,6 +104,16 @@ export async function createClientAction(
     };
   }
 
+  let clientIoTermsText: string | null = null;
+  try {
+    clientIoTermsText = normalizeClientIoTermsText(parsed.data.client_io_terms_text);
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Invalid client IO terms.",
+    };
+  }
+
   const { data, error } = await supabase
     .from("clients")
     .insert({
@@ -107,6 +128,7 @@ export async function createClientAction(
       currency: parsed.data.currency,
       country: emptyToNull(parsed.data.country),
       notes: emptyToNull(parsed.data.notes),
+      client_io_terms_text: clientIoTermsText,
       created_by: user.id,
     })
     .select("id")
@@ -170,6 +192,16 @@ export async function updateClientOverviewAction(
     };
   }
 
+  let clientIoTermsText: string | null = null;
+  try {
+    clientIoTermsText = normalizeClientIoTermsText(fields.client_io_terms_text);
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Invalid client IO terms.",
+    };
+  }
+
   const { error } = await supabase
     .from("clients")
     .update({
@@ -185,6 +217,7 @@ export async function updateClientOverviewAction(
       country: emptyToNull(fields.country),
       city: emptyToNull(fields.city),
       notes: emptyToNull(fields.notes),
+      client_io_terms_text: clientIoTermsText,
     })
     .eq("id", client_id);
 

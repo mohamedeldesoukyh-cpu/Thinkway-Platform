@@ -1,15 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { ClientIoRecipientSelect } from "@/features/io/components/client-io-recipient-select";
 import { sendClientIoAction } from "@/features/io/actions";
-import {
-  OPERATIONAL_CHROME_LABEL,
-} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
+import { OPERATIONAL_CHROME_LABEL } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import type { ClientIoRow } from "@/features/io/types";
 import { cn } from "@/lib/utils";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -17,7 +14,9 @@ const INITIAL_STATE = { ok: false } as const;
 type ClientIoSendControlsProps = {
   io: ClientIoRow;
   campaignId: string;
-  recipients: ClientIoSendRecipient[];
+  sendRecipientsJson: string;
+  recipientCount: number;
+  hasDocument: boolean;
   compact?: boolean;
   buttonVariant?: "default" | "outline";
 };
@@ -25,18 +24,13 @@ type ClientIoSendControlsProps = {
 export function ClientIoSendControls({
   io,
   campaignId,
-  recipients,
+  sendRecipientsJson,
+  recipientCount,
+  hasDocument,
   compact = false,
   buttonVariant = "default",
 }: ClientIoSendControlsProps) {
-  const [recipientEmail, setRecipientEmail] = useState("");
   const [sendState, sendAction, sending] = useActionState(sendClientIoAction, INITIAL_STATE);
-
-  useEffect(() => {
-    if (recipientEmail) return;
-    const primary = recipients.find((recipient) => recipient.email)?.email ?? "";
-    if (primary) setRecipientEmail(primary);
-  }, [recipients, recipientEmail]);
 
   useEffect(() => {
     if (!sendState.message) return;
@@ -51,23 +45,18 @@ export function ClientIoSendControls({
     return null;
   }
 
+  const disabled = sending || recipientCount === 0 || !hasDocument;
+
   return (
     <form action={sendAction} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="id" value={io.id} />
       <input type="hidden" name="campaign_header_id" value={campaignId} />
-      <input type="hidden" name="recipient_email" value={recipientEmail} />
-      <ClientIoRecipientSelect
-        recipients={recipients}
-        value={recipientEmail}
-        onValueChange={setRecipientEmail}
-        disabled={sending || recipients.length === 0}
-        compact={compact}
-      />
+      <input type="hidden" name="send_recipients" value={sendRecipientsJson} />
       <Button
         type="submit"
         size="sm"
         variant={buttonVariant}
-        disabled={sending || recipients.length === 0 || !recipientEmail}
+        disabled={disabled}
         className={cn(
           compact && buttonVariant === "default"
             ? cn(OPERATIONAL_CHROME_LABEL, "h-7 px-3 font-semibold text-white shadow-sm hover:opacity-90")
@@ -78,6 +67,11 @@ export function ClientIoSendControls({
       >
         {sending ? "Sending…" : sendLabel}
       </Button>
+      {!hasDocument ? (
+        <span className="text-[11px] text-muted-foreground">Generate document first</span>
+      ) : recipientCount === 0 ? (
+        <span className="text-[11px] text-muted-foreground">Add recipients above</span>
+      ) : null}
     </form>
   );
 }

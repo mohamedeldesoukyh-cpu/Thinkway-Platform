@@ -77,7 +77,12 @@ export function isAppendableInvoiceStatus(status: string): boolean {
 export function getInvoiceRegisterStatusLabel(input: {
   status: string;
   regeneration_status?: string | null;
+  metadata?: Record<string, unknown> | null;
 }): string {
+  if (input.status === "void" && input.metadata?.campaign_cancelled === true) {
+    return "Cancelled";
+  }
+
   if (input.status === "draft") {
     if (input.regeneration_status === "pending_regeneration") {
       return "Pending";

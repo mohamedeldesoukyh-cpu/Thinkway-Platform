@@ -37,7 +37,7 @@ type DashboardShellProps = {
    */
   containedMain?: boolean;
   mainClassName?: string;
-  /** When set, shows a back control that returns to browser history or this path. */
+  /** When set, shows a back control that navigates to this path. */
   backFallbackHref?: string;
   backLabel?: string;
 };

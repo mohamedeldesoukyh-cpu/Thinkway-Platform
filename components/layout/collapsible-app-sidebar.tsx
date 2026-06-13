@@ -142,6 +142,7 @@ const navGroups: NavGroup[] = [
       { href: "/settings/permissions", label: "Permissions", icon: ShieldIcon },
       { href: "/settings/access-control", label: "Access Control", icon: ShieldIcon },
       { href: "/settings/client-access", label: "Client Access", icon: UsersIcon },
+      { href: "/settings/email", label: "Email", icon: Settings2Icon },
       { href: "/system/health", label: "System Health", icon: ActivityIcon },
     ],
   },

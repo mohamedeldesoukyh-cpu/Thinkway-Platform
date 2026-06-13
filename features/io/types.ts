@@ -1,10 +1,27 @@
-export type ClientIoStatus = "draft" | "generated" | "sent" | "approved";
+export type ClientIoStatus = "draft" | "generated" | "sent" | "approved" | "cancelled";
 export type VendorIoStatus = "draft" | "generated" | "sent" | "approved" | "rejected";
 
 export type ClientIoSendRecipient = {
   id: string;
   label: string;
   email: string;
+};
+
+export type ClientIoSendHistoryEntry = {
+  id: string;
+  recipient_email: string | null;
+  recipient_name: string | null;
+  sender_email: string | null;
+  subject: string | null;
+  delivery_status: string | null;
+  delivery_error: string | null;
+  sent_at: string | null;
+  created_at: string;
+  sent_by_name: string | null;
+  send_batch_id: string | null;
+  email_html: string | null;
+  email_text: string | null;
+  sent_by_display_name: string | null;
 };
 
 export type ClientIoRow = {
@@ -26,6 +43,9 @@ export type ClientIoRow = {
   sent_at: string | null;
   approved_at: string | null;
   approved_by_name: string | null;
+  brand_name: string | null;
+  client_io_terms_text: string | null;
+  send_recipients: Array<{ name: string; email: string }>;
   created_by: string | null;
   created_at: string;
   updated_at: string;

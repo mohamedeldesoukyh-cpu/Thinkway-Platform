@@ -12,7 +12,8 @@ import {
   OPERATIONAL_CHROME_BADGE,
   OPERATIONAL_CHROME_LABEL,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
+import type { ClientIoRow } from "@/features/io/types";
+import { serializeSendRecipients } from "@/lib/io/client-io-send-recipients";
 import { cn } from "@/lib/utils";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -20,10 +21,9 @@ const INITIAL_STATE = { ok: false } as const;
 type Props = {
   io: ClientIoRow;
   campaignId: string;
-  recipients: ClientIoSendRecipient[];
 };
 
-export function ClientIoHeaderControls({ io, campaignId, recipients }: Props) {
+export function ClientIoHeaderControls({ io, campaignId }: Props) {
   const [generateState, generateAction, generating] = useActionState(
     generateClientIoDocumentAction,
     INITIAL_STATE
@@ -35,7 +35,10 @@ export function ClientIoHeaderControls({ io, campaignId, recipients }: Props) {
     else toast.error(generateState.message);
   }, [generateState]);
 
-  const hasDocument = Boolean(io.document_generated_at || io.generated_html_url || io.terms_html);
+  const hasDocument = Boolean(
+    io.document_generated_at || io.generated_html_url || io.generated_pdf_url
+  );
+  const sendRecipientsJson = serializeSendRecipients(io.send_recipients ?? []);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -78,7 +81,9 @@ export function ClientIoHeaderControls({ io, campaignId, recipients }: Props) {
       <ClientIoSendControls
         io={io}
         campaignId={campaignId}
-        recipients={recipients}
+        sendRecipientsJson={sendRecipientsJson}
+        recipientCount={(io.send_recipients ?? []).filter((r) => r.email.trim()).length}
+        hasDocument={hasDocument}
         compact
       />
     </div>

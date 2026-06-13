@@ -9,7 +9,7 @@ import { ClientIoHeaderControls } from "@/features/io/components/client-io-heade
 import {
   OPERATIONAL_CHROME_LABEL,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
+import type { ClientIoRow } from "@/features/io/types";
 import { cn } from "@/lib/utils";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -17,10 +17,9 @@ const INITIAL_STATE = { ok: false } as const;
 type Props = {
   io: ClientIoRow | null;
   campaignId: string;
-  recipients: ClientIoSendRecipient[];
 };
 
-export function ClientIoCampaignChrome({ io, campaignId, recipients }: Props) {
+export function ClientIoCampaignChrome({ io, campaignId }: Props) {
   const [ensureState, ensureAction, ensuring] = useActionState(
     ensureClientIoForCampaignAction,
     INITIAL_STATE
@@ -34,7 +33,7 @@ export function ClientIoCampaignChrome({ io, campaignId, recipients }: Props) {
 
   if (io) {
     return (
-      <ClientIoHeaderControls io={io} campaignId={campaignId} recipients={recipients} />
+      <ClientIoHeaderControls io={io} campaignId={campaignId} />
     );
   }
 

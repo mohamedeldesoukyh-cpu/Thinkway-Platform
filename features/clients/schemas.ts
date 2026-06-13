@@ -79,6 +79,7 @@ export const createClientSchema = z.object({
   currency: currencyCodeSchema.default(DEFAULT_PLATFORM_CURRENCY),
   country: z.string().trim().max(2).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  client_io_terms_text: z.string().trim().max(50000).optional().or(z.literal("")),
 });
 
 export const updateClientOverviewSchema = z.object({
@@ -109,6 +110,7 @@ export const updateClientOverviewSchema = z.object({
   country: z.string().trim().max(2).optional().or(z.literal("")),
   city: z.string().trim().max(120).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  client_io_terms_text: z.string().trim().max(50000).optional().or(z.literal("")),
 });
 
 export const updateClientLegalSchema = z.object({

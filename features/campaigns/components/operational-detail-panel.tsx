@@ -147,6 +147,13 @@ export function ClientApprovalPill({ status }: { status: string | null }) {
       </DetailPill>
     );
   }
+  if (normalized === "cancelled") {
+    return (
+      <DetailPill className="border-red-500/30 bg-red-500/10 text-red-800 dark:text-red-200">
+        Cancelled
+      </DetailPill>
+    );
+  }
   return <DetailPill>Draft</DetailPill>;
 }
 

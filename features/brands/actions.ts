@@ -45,6 +45,7 @@ function revalidateBrandPaths(clientId: string, groupId: string | null) {
     revalidatePath(`/groups/${groupId}`);
   }
   revalidatePath("/campaigns");
+  revalidatePath("/reports/pnl");
 }
 
 export async function createBrandAction(
@@ -197,6 +198,19 @@ export async function updateBrandAction(
       ok: false,
       message: friendlyActionError(error, "brand", error.message),
       fieldErrors: error.code === "23505" ? { name: [friendlyActionError(error, "brand")] } : undefined,
+    };
+  }
+
+  const vrRateId = emptyToNull(parsed.data.vr_rate_id);
+  const { error: campaignSyncError } = await supabase
+    .from("campaign_headers")
+    .update({ vr_rate_id: vrRateId })
+    .eq("brand_id", parsed.data.brand_id);
+
+  if (campaignSyncError) {
+    return {
+      ok: false,
+      message: friendlyActionError(campaignSyncError, "brand", campaignSyncError.message),
     };
   }
 

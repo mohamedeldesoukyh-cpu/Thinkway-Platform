@@ -1,19 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ClientIoRow } from "@/features/io/types";
+import { parseSendRecipientsJson } from "@/lib/io/client-io-send-recipients";
 
 export const CLIENT_IO_LIST_SELECT = `
   id, document_number, campaign_header_id, client_id, status, terms_html, terms_text, billing_terms,
   attachment_url, generated_html_url, generated_pdf_url, document_generated_at,
-  sent_at, approved_at, approved_by_name, created_by, created_at, updated_at,
-  campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name),
-  client:clients!client_ios_client_id_fkey(name)
+  sent_at, approved_at, approved_by_name, send_recipients, created_by, created_at, updated_at,
+  campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name, brand:brands(name)),
+  client:clients!client_ios_client_id_fkey(name, client_io_terms_text)
 `;
 
 export const CLIENT_IO_LEGACY_SELECT = `
   id, campaign_header_id, client_id, status, terms_html, terms_text, billing_terms,
   attachment_url, sent_at, approved_at, approved_by_name, created_by, created_at, updated_at,
-  campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name),
+  campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name, brand:brands(name)),
   client:clients!client_ios_client_id_fkey(name)
 `;
 
@@ -33,14 +34,23 @@ type ClientIoQueryRow = {
   sent_at: string | null;
   approved_at: string | null;
   approved_by_name: string | null;
+  send_recipients?: unknown;
   created_by: string | null;
   created_at: string;
   updated_at: string;
-  campaign: { document_number: string; name: string } | null;
-  client: { name: string } | null;
+  campaign:
+    | { document_number: string; name: string; brand: { name: string } | Array<{ name: string }> | null }
+    | null;
+  client: { name: string; client_io_terms_text?: string | null } | null;
 };
 
+function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
 export function mapClientIoQueryRow(row: ClientIoQueryRow): ClientIoRow {
+  const brand = unwrapRelation(row.campaign?.brand ?? null);
   return {
     id: row.id,
     document_number: row.document_number ?? null,
@@ -60,6 +70,9 @@ export function mapClientIoQueryRow(row: ClientIoQueryRow): ClientIoRow {
     sent_at: row.sent_at,
     approved_at: row.approved_at,
     approved_by_name: row.approved_by_name,
+    brand_name: brand?.name ?? null,
+    client_io_terms_text: row.client?.client_io_terms_text ?? null,
+    send_recipients: parseSendRecipientsJson(row.send_recipients),
     created_by: row.created_by,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -76,7 +89,8 @@ function isClientIoSchemaMismatch(message: string): boolean {
     normalized.includes("document_number") ||
     normalized.includes("document_generated_at") ||
     normalized.includes("generated_html_url") ||
-    normalized.includes("generated_pdf_url")
+    normalized.includes("generated_pdf_url") ||
+    normalized.includes("send_recipients")
   );
 }
 

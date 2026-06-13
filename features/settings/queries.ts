@@ -53,6 +53,7 @@ export async function getSettingsUsers(params: {
         .select(
           `
           id, full_name, email, job_title, metadata, is_active, status, last_seen_at,
+          business_function,
           role:roles(id, slug, name)
         `
         )
@@ -71,6 +72,7 @@ export async function getSettingsUsers(params: {
           is_active: boolean;
           status: string | null;
           last_seen_at: string | null;
+          business_function: "ops" | "sales" | null;
           role: { id: string; slug: string; name: string } | null;
         };
         const metadata = typed.metadata ?? {};
@@ -88,6 +90,7 @@ export async function getSettingsUsers(params: {
           email: typed.email,
           role: typed.role?.name ?? null,
           role_slug: roleSlug,
+          business_function: typed.business_function,
           department:
             (metadata.department as string | undefined) ?? typed.job_title ?? null,
           country: (metadata.country as string | undefined) ?? null,

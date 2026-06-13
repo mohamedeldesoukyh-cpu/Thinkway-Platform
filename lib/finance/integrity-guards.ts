@@ -149,16 +149,35 @@ export function guardVoidInvoice(input: {
 }
 
 export function guardCampaignCancellation(input: {
-  invoices: { status: string; regeneration_status?: string | null }[];
+  period_lock?: { year: number; month: number; status: string } | null;
+  invoices: {
+    status: string;
+    regeneration_status?: string | null;
+    amount_paid?: number;
+  }[];
 }): IntegrityResult {
-  const blocking = input.invoices.filter(
-    (inv) =>
-      isActiveInvoiceForFinancialTotals(inv) && inv.status !== "void"
-  );
-  if (blocking.length > 0) {
+  if (input.period_lock && input.period_lock.status !== "open") {
+    const label = `${input.period_lock.year}-${String(input.period_lock.month).padStart(2, "0")}`;
+    if (input.period_lock.status === "fully_locked") {
+      return {
+        allowed: false,
+        reason: `Campaign cannot be cancelled — accounting period ${label} is fully locked.`,
+      };
+    }
     return {
       allowed: false,
-      reason: "Campaign cannot be cancelled while active invoices exist. Void invoices first.",
+      reason: `Campaign cannot be cancelled — accounting period ${label} is locked.`,
+    };
+  }
+
+  const blockingPaid = input.invoices.filter(
+    (inv) =>
+      isActiveInvoiceForFinancialTotals(inv) && Number(inv.amount_paid ?? 0) > 0
+  );
+  if (blockingPaid.length > 0) {
+    return {
+      allowed: false,
+      reason: "Campaign cannot be cancelled while invoices have collected payments.",
     };
   }
   return { allowed: true };

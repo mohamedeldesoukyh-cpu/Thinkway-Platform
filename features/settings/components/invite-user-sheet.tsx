@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CLIENT_ACCESS_ROLES } from "@/features/client-access/constants";
 import { inviteUserAction } from "@/features/settings/actions";
+import { BUSINESS_FUNCTION_OPTIONS } from "@/features/settings/constants";
 import type { SettingsRoleRow } from "@/features/settings/types";
 
 const INITIAL = { ok: false } as const;
@@ -29,6 +30,7 @@ export function InviteUserSheet({
   const [roleId, setRoleId] = useState("");
   const [clientId, setClientId] = useState("");
   const [accessRole, setAccessRole] = useState("view");
+  const [businessFunction, setBusinessFunction] = useState("unset");
   const [isPrimary, setIsPrimary] = useState(false);
   const [state, action, pending] = useActionState(inviteUserAction, INITIAL);
 
@@ -136,6 +138,27 @@ export function InviteUserSheet({
               </SelectContent>
             </Select>
             <input type="hidden" name="role_id" value={roleId} />
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Function</Label>
+            <Select value={businessFunction} onValueChange={setBusinessFunction}>
+              <SelectTrigger>
+                <SelectValue placeholder="OPS / Sales (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {BUSINESS_FUNCTION_OPTIONS.map((option) => (
+                  <SelectItem key={option.value || "unset"} value={option.value || "unset"}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <input
+              type="hidden"
+              name="business_function"
+              value={businessFunction === "unset" ? "" : businessFunction}
+            />
           </div>
 
           <div className="grid gap-2">

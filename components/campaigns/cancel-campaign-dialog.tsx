@@ -69,6 +69,26 @@ export function CancelCampaignDialog({
           <p className="text-sm text-destructive">{preview.reason}</p>
         ) : null}
 
+        {preview?.period_locked ? (
+          <p className="text-sm text-destructive">
+            Accounting period {preview.period_label} is locked. Cancellation is blocked until the
+            period is reopened.
+          </p>
+        ) : null}
+
+        {preview && preview.allowed && preview.active_invoice_count > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {preview.active_invoice_count} active invoice(s) will be marked cancelled. Serial numbers
+            are preserved.
+          </p>
+        ) : null}
+
+        {preview && preview.allowed && preview.client_io_count > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {preview.client_io_count} client IO(s) will be marked cancelled.
+          </p>
+        ) : null}
+
         {preview?.has_vendor_ios ? (
           <p className={CANCELLED_DISPLAY_CLASS}>
             All Vendor IOs and operational flows will be cancelled. This action preserves serial

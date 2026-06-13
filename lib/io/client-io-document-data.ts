@@ -4,7 +4,16 @@ import {
   computeAgencyFeeAmount,
   resolveClientTaxableBase,
 } from "@/lib/assignments/client-billing-commercial";
-import { deliverableLabel, parseLineAssignment } from "@/features/campaigns/line-assignment";
+import {
+  buildLineTitle,
+  deliverableLabel,
+  parseLineAssignment,
+} from "@/features/campaigns/line-assignment";
+import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
+import {
+  parseTermsText,
+  resolveEffectiveTerms,
+} from "@/lib/io/client-io-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type {
   ClientIoAssignmentPricing,
@@ -143,12 +152,13 @@ function buildCampaignPricing(
 
 export async function loadClientIoDocumentData(
   supabase: SupabaseClient,
-  clientIoId: string
+  clientIoId: string,
+  actorId?: string
 ): Promise<ClientIoDocumentData> {
   const { data: clientIo, error: cioError } = await supabase
     .from("client_ios")
     .select(
-      "id, document_number, status, billing_terms, created_at, campaign_header_id, client_id"
+      "id, document_number, status, billing_terms, terms_text, created_at, campaign_header_id, client_id"
     )
     .eq("id", clientIoId)
     .single();
@@ -162,12 +172,22 @@ export async function loadClientIoDocumentData(
     document_number: string | null;
     status: string;
     billing_terms: string | null;
+    terms_text: string | null;
     created_at: string;
     campaign_header_id: string;
     client_id: string;
   };
 
-  const [{ data: campaign }, { data: client }, { data: lines }] = await Promise.all([
+  const profilePromise = actorId
+    ? supabase
+        .from("profiles")
+        .select("full_name, email, job_title")
+        .eq("id", actorId)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null });
+
+  const [{ data: campaign }, { data: client }, { data: lines }, profileResult] =
+    await Promise.all([
     supabase
       .from("campaign_headers")
       .select(
@@ -178,7 +198,7 @@ export async function loadClientIoDocumentData(
     supabase
       .from("clients")
       .select(
-        "id, name, legal_name, trade_license_number, billing_email, billing_phone, legal_address, billing_address, city, country, payment_terms, metadata"
+        "id, name, legal_name, trade_license_number, billing_email, billing_phone, legal_address, billing_address, city, country, payment_terms, metadata, client_io_terms_text"
       )
       .eq("id", typedCio.client_id)
       .single(),
@@ -189,6 +209,7 @@ export async function loadClientIoDocumentData(
       )
       .eq("campaign_header_id", typedCio.campaign_header_id)
       .order("sort_order", { ascending: true }),
+    profilePromise,
   ]);
 
   if (!campaign || !client) {
@@ -231,6 +252,7 @@ export async function loadClientIoDocumentData(
     country: string | null;
     payment_terms: string | null;
     metadata: Record<string, unknown>;
+    client_io_terms_text: string | null;
   };
 
   type LineRow = {
@@ -315,6 +337,56 @@ export async function loadClientIoDocumentData(
     return a.platform.localeCompare(b.platform);
   });
 
+  const mainAssignmentDeliverables: ClientIoDeliverableRow[] = typedLines.map((line) => {
+    const assignment = parseLineAssignment(line.metadata);
+    const platforms = assignment?.platforms ?? [];
+    const childRows = (deliverables ?? []).filter((row) => {
+      const typed = row as { campaign_line_id: string };
+      return typed.campaign_line_id === line.id;
+    });
+    const liveDates = childRows
+      .map((row) => (row as { live_date: string | null }).live_date)
+      .filter((value): value is string => Boolean(value))
+      .sort();
+
+    let scheduledDates = "—";
+    if (liveDates.length === 1) {
+      scheduledDates = new Date(`${liveDates[0]}T00:00:00`).toLocaleDateString("en-GB");
+    } else if (liveDates.length > 1) {
+      const first = new Date(`${liveDates[0]}T00:00:00`).toLocaleDateString("en-GB");
+      const last = new Date(`${liveDates[liveDates.length - 1]}T00:00:00`).toLocaleDateString(
+        "en-GB"
+      );
+      scheduledDates = `${first} – ${last}`;
+    }
+
+    const platformsLabel =
+      platforms.length > 1
+        ? platforms.map((entry) => platformLabel(entry.platform)).join(", ")
+        : platforms[0]
+          ? platformLabel(platforms[0].platform)
+          : "—";
+
+    const primaryHandle = platforms[0]
+      ? `@${platforms[0].handle.replace(/^@/, "")}`
+      : (lineContext.get(line.id)?.handleByPlatform.values().next().value ?? "—");
+
+    const packageLabel = line.document_number
+      ? `${line.document_number} Package`
+      : assignment
+        ? buildLineTitle(assignment.influencer_name, platforms)
+        : line.name;
+
+    return {
+      influencerName: assignment?.influencer_name ?? line.name,
+      platform: platformsLabel,
+      deliverableType: packageLabel,
+      quantity: 1,
+      handle: primaryHandle,
+      scheduledDates,
+    };
+  });
+
   const assignmentPricing: ClientIoAssignmentPricing[] = typedLines.map((line) => {
     const assignment = parseLineAssignment(line.metadata);
     const revenueBeforeVat = roundMoney(
@@ -367,6 +439,24 @@ export async function loadClientIoDocumentData(
     formatPaymentTermsLabel(typedClient.payment_terms) ||
     "Advance — Prior to campaign launch";
 
+  const terms = resolveEffectiveTerms(
+    CLIENT_IO_DEFAULT_TERMS,
+    parseTermsText(typedClient.client_io_terms_text),
+    parseTermsText(typedCio.terms_text)
+  );
+
+  const profile = profileResult.data as {
+    full_name: string | null;
+    email: string | null;
+    job_title: string | null;
+  } | null;
+
+  const agencyContact = {
+    fullName: profile?.full_name?.trim() || THINKWAY_AGENCY_DEFAULTS.authorizedSignatory,
+    title: profile?.job_title?.trim() || THINKWAY_AGENCY_DEFAULTS.authorizedTitle,
+    email: profile?.email?.trim() || THINKWAY_AGENCY_DEFAULTS.email,
+  };
+
   return {
     clientIoId: typedCio.id,
     documentNumber: typedCio.document_number ?? "CIO-PENDING",
@@ -375,6 +465,8 @@ export async function loadClientIoDocumentData(
     currencyCode,
     status: typedCio.status,
     paymentSchedule,
+    agencyContact,
+    terms,
     client: {
       id: typedClient.id,
       name: typedClient.name,
@@ -405,6 +497,7 @@ export async function loadClientIoDocumentData(
       usagePeriod: typedCio.billing_terms?.trim() || null,
     },
     deliverables: deliverableRows,
+    mainAssignmentDeliverables,
     pricing,
   };
 }

@@ -81,6 +81,7 @@ const navItems: NavItem[] = [
       { href: "/settings/roles", label: "Roles" },
       { href: "/settings/permissions", label: "Permissions" },
       { href: "/settings/access-control", label: "Access Control" },
+      { href: "/settings/email", label: "Email" },
     ],
   },
   { href: "/vendors", label: "Vendors", icon: UsersIcon },

@@ -1,4 +1,22 @@
 import type { AccessControlModule } from "@/features/settings/types";
+import type { BusinessFunction } from "@/types/database";
+
+export const BUSINESS_FUNCTION_OPTIONS: {
+  value: BusinessFunction | "";
+  label: string;
+}[] = [
+  { value: "", label: "Unset" },
+  { value: "ops", label: "OPS" },
+  { value: "sales", label: "Sales" },
+];
+
+export function businessFunctionLabel(
+  value: BusinessFunction | null | undefined
+): string {
+  if (value === "ops") return "OPS";
+  if (value === "sales") return "Sales";
+  return "—";
+}
 
 export const SETTINGS_MODULES: AccessControlModule[] = [
   { key: "campaigns", label: "Campaigns", permissions: ["campaigns.read", "campaigns.write"] },

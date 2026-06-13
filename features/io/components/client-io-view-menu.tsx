@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, FileText, Layers } from "lucide-react";
+import { ChevronDown, FileText, Layers, LayoutList } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +57,20 @@ export function ClientIoViewMenu({
               <span className="block font-medium">Package</span>
               <span className="block text-xs text-muted-foreground">
                 Single campaign total
+              </span>
+            </span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link
+            href={`${base}?layout=package_main`}
+            className="flex cursor-pointer items-start gap-2"
+          >
+            <LayoutList className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span>
+              <span className="block font-medium">Package main</span>
+              <span className="block text-xs text-muted-foreground">
+                Package totals with main assignment lines only
               </span>
             </span>
           </Link>

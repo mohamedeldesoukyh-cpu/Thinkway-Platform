@@ -18,6 +18,9 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
   const query = await searchParams;
   const layout = resolveClientIoDocumentLayout(query.layout);
   const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: clientIo } = await supabase
     .from("client_ios")
@@ -39,7 +42,7 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
   let errorMessage: string | null = null;
 
   try {
-    html = await renderLiveClientIoHtml(supabase, id, layout);
+    html = await renderLiveClientIoHtml(supabase, id, layout, user?.id);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to render Client IO preview.";

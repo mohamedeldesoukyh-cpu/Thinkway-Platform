@@ -3,10 +3,12 @@ import { join } from "node:path";
 
 import {
   applyClientIoDocumentLayout,
+  resolveClientIoDeliverableRows,
   type ClientIoDocumentLayout,
   type ClientIoPricingRow,
 } from "@/lib/io/client-io-document-layout";
 import type { ClientIoDocumentData } from "@/lib/io/client-io-document-types";
+import { renderTermsListHtml } from "@/lib/io/client-io-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 
 const TEMPLATE_PATH = join(process.cwd(), "lib/io/templates/Thinkway_Client_IO_Global.html");
@@ -54,16 +56,6 @@ function formatIssuedMeta(issuedAt: string, country: string): string {
   return `Issued: ${monthYear} &nbsp;·&nbsp; ${escapeHtml(country)}`;
 }
 
-function formatIssueDate(issuedAt: string): string {
-  const parsed = new Date(issuedAt);
-  if (Number.isNaN(parsed.getTime())) return "——";
-  return parsed.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function platformLabel(platform: string): string {
   const map: Record<string, string> = {
     twitter: "X (Twitter)",
@@ -74,12 +66,17 @@ function platformLabel(platform: string): string {
   return platform.charAt(0).toUpperCase() + platform.slice(1);
 }
 
-function renderDeliverableRows(data: ClientIoDocumentData): string {
-  if (data.deliverables.length === 0) {
+function renderDeliverableRows(
+  data: ClientIoDocumentData,
+  layout: ClientIoDocumentLayout
+): string {
+  const rows = resolveClientIoDeliverableRows(data, layout);
+
+  if (rows.length === 0) {
     return `<tr><td colspan="6" class="muted">No deliverables on campaign assignment lines.</td></tr>`;
   }
 
-  return data.deliverables
+  return rows
     .map(
       (row) => `
           <tr>
@@ -162,6 +159,10 @@ export function renderClientIoHtml(
     /<div class="flabel">Client Email<\/div>\s*<div class="fvalue empty">——<\/div>/,
     `<div class="flabel">Client Email</div><div class="fvalue">${display(data.client.email)}</div>`
   );
+  html = html.replace(
+    /<div class="flabel">Agency Contact<\/div>\s*<div class="fvalue">——<\/div>/,
+    `<div class="flabel">Agency Contact</div><div class="fvalue">${display(data.agencyContact.fullName)}</div>`
+  );
 
   // Section 2 — Campaign
   html = html.replace(
@@ -201,7 +202,10 @@ export function renderClientIoHtml(
   html = html.replace(
     /<table class="deliv-table">[\s\S]*?<tbody>[\s\S]*?<\/tbody>/,
     (table) =>
-      table.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${renderDeliverableRows(data)}</tbody>`)
+      table.replace(
+        /<tbody>[\s\S]*?<\/tbody>/,
+        `<tbody>${renderDeliverableRows(data, layout)}</tbody>`
+      )
   );
 
   // Section 4 — Pricing
@@ -261,22 +265,10 @@ export function renderClientIoHtml(
         </div>`
   );
 
-  // Section 7 — Client acknowledgement + issue date
+  // Section 8 — Terms & Conditions
   html = html.replace(
-    /<div class="ack-box client">[\s\S]*?<div class="avalue empty" style="color:var\(--rule\);">——<\/div>/,
-    (block) =>
-      block.replace(
-        /<div class="avalue empty" style="color:var\(--rule\);">——<\/div>/,
-        `<div class="avalue">${clientName}</div>`
-      )
-  );
-  html = html.replace(
-    /<div class="ack-box agency">[\s\S]*?<div class="alabel">Date of Issue<\/div>\s*<div class="ack-line"><\/div>/,
-    (block) =>
-      block.replace(
-        /<div class="alabel">Date of Issue<\/div>\s*<div class="ack-line"><\/div>/,
-        `<div class="alabel">Date of Issue</div><div class="avalue">${formatIssueDate(data.issuedAt)}</div>`
-      )
+    /<ul class="terms-list">[\s\S]*?<\/ul>/,
+    `<ul class="terms-list">${renderTermsListHtml(data.terms)}</ul>`
   );
 
   return html;

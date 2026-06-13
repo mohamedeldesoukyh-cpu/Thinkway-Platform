@@ -8,8 +8,9 @@ import { renderClientIoHtml } from "@/lib/io/client-io-template-render";
 export async function renderLiveClientIoHtml(
   supabase: SupabaseClient,
   clientIoId: string,
-  layout: ClientIoDocumentLayout = "detailed"
+  layout: ClientIoDocumentLayout = "detailed",
+  actorId?: string
 ): Promise<string> {
-  const data = await loadClientIoDocumentData(supabase, clientIoId);
+  const data = await loadClientIoDocumentData(supabase, clientIoId, actorId);
   return renderClientIoHtml(data, layout);
 }

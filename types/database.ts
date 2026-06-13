@@ -12,6 +12,8 @@ export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted
 
 export type AgencyOrDirect = "agency" | "direct" | "hybrid";
 
+export type BusinessFunction = "ops" | "sales";
+
 export type GroupDocumentType =
   | "nda"
   | "agreement"
@@ -256,6 +258,7 @@ export type ProfileRow = {
   email: string;
   full_name: string | null;
   is_active: boolean;
+  business_function: BusinessFunction | null;
 };
 
 export type PaymentTerms =
@@ -472,6 +475,7 @@ export type ClientRow = {
   currency: string;
   account_manager_id: string | null;
   notes: string | null;
+  client_io_terms_text: string | null;
   metadata: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
@@ -511,6 +515,7 @@ export type Database = {
           currency?: string;
           account_manager_id?: string | null;
           notes?: string | null;
+          client_io_terms_text?: string | null;
           metadata?: Record<string, unknown>;
           created_by?: string | null;
         };
@@ -1413,6 +1418,7 @@ export type Database = {
           email: string;
           full_name?: string | null;
           is_active?: boolean;
+          business_function?: BusinessFunction | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -1829,6 +1835,7 @@ export type Database = {
       influencer_status: InfluencerStatus;
       po_status: PoStatus;
       assignment_pricing_mode: AssignmentPricingMode;
+      business_function: BusinessFunction;
     };
   };
 };

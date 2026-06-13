@@ -20,6 +20,10 @@ export type CampaignCancelActionState = {
     reason?: string;
     has_vendor_ios: boolean;
     vendor_io_count: number;
+    active_invoice_count: number;
+    client_io_count: number;
+    period_locked: boolean;
+    period_label?: string;
   };
 };
 
@@ -44,6 +48,10 @@ export async function previewCancelCampaignAction(
         reason: preview.reason,
         has_vendor_ios: preview.has_vendor_ios,
         vendor_io_count: preview.vendor_io_count,
+        active_invoice_count: preview.active_invoice_count,
+        client_io_count: preview.client_io_count,
+        period_locked: preview.period_locked,
+        period_label: preview.period_label,
       },
     };
   } catch (error) {
@@ -85,7 +93,7 @@ export async function cancelCampaignAction(
 
   return {
     ok: true,
-    message: `Campaign cancelled. ${result.vendor_io_count} vendor IO(s) marked cancelled.`,
+    message: `Campaign cancelled. ${result.invoice_count} invoice(s), ${result.client_io_count} client IO(s), and ${result.vendor_io_count} vendor IO(s) marked cancelled.`,
   };
 }
 

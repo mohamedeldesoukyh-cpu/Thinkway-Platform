@@ -263,11 +263,7 @@ export function CampaignWorkspaceView({
                     />
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    <ClientIoCampaignChrome
-                      io={workspace.client_io}
-                      campaignId={workspace.id}
-                      recipients={workspace.client_io_send_recipients}
-                    />
+                    <ClientIoCampaignChrome io={workspace.client_io} campaignId={workspace.id} />
                     {workspace.status !== "cancelled" ? (
                       <CancelCampaignDialog
                         campaignId={workspace.id}
@@ -343,6 +339,8 @@ export function CampaignWorkspaceView({
                   campaignName={workspace.name}
                   io={workspace.client_io}
                   recipients={workspace.client_io_send_recipients}
+                  sendHistory={workspace.client_io_send_history}
+                  senderName={workspace.client_io_sender_name}
                 />
               </TabErrorBoundary>
             ) : null}

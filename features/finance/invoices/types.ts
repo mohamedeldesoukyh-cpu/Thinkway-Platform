@@ -14,4 +14,5 @@ export type FinanceInvoiceRegisterRow = {
   currency: string;
   regeneration_status: string | null;
   is_operational_locked?: boolean | null;
+  metadata?: Record<string, unknown> | null;
 };

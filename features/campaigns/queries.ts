@@ -15,7 +15,12 @@ import {
   syncCampaignHeaderStatus,
   syncCampaignHeaderStatusesForList,
 } from "@/lib/campaigns/sync-campaign-header-status";
-import { getCampaignClientIo, getCampaignVendorIos, getClientIoSendRecipients } from "@/features/io/queries";
+import {
+  getCampaignClientIo,
+  getCampaignVendorIos,
+  getClientIoSendHistory,
+  getClientIoSendRecipients,
+} from "@/features/io/queries";
 import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
 import type { CampaignListItem } from "@/types/database";
@@ -292,7 +297,7 @@ export async function getCampaignWorkspace(
     return null;
   }
 
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   const { data: header, error: headerError } = await supabase
     .from("campaign_headers")
@@ -895,6 +900,15 @@ export async function getCampaignWorkspace(
   const clientIoSendRecipients = clientIo
     ? await getClientIoSendRecipients(clientIo.client_id)
     : [];
+  const clientIoSendHistory = clientIo ? await getClientIoSendHistory(clientIo.id) : [];
+
+  const { data: currentProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  const clientIoSenderName =
+    (currentProfile as { full_name?: string | null } | null)?.full_name?.trim() ?? null;
 
   const workspace = {
     id: headerRow.id,
@@ -991,6 +1005,8 @@ export async function getCampaignWorkspace(
     blockers,
     client_io: clientIo,
     client_io_send_recipients: clientIoSendRecipients,
+    client_io_send_history: clientIoSendHistory,
+    client_io_sender_name: clientIoSenderName,
     vendor_ios: vendorIos ?? [],
     vat_context: {
       client_country_code: clientCountryCode,

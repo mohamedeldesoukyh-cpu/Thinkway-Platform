@@ -8,7 +8,7 @@ import { navigateBack } from "@/lib/navigation/go-back";
 import { cn } from "@/lib/utils";
 
 type PageBackButtonProps = {
-  /** Used when there is no browser history to return to. */
+  /** Parent route to navigate to when Back is clicked. */
   fallbackHref: string;
   /** Visible label for text variant; screen-reader text for icon variant. */
   label?: string;
