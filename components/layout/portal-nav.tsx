@@ -29,7 +29,7 @@ export function PortalNav({ items }: { items: PortalNavItem[] }) {
             className={cn(
               "flex items-center justify-between rounded-2xl px-3 py-2 text-sm font-medium transition-colors",
               active
-                ? "bg-brand-gradient text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-foreground/80 hover:bg-muted hover:text-foreground"
             )}
           >

@@ -10,52 +10,32 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-async function getGreetingName(): Promise<string> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return "there";
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const fullName = (profile as { full_name: string | null } | null)?.full_name;
-    if (fullName?.trim()) return fullName.trim().split(/\s+/)[0];
-    return user.email?.split("@")[0] ?? "there";
-  } catch {
-    return "there";
-  }
-}
+import { HomeWelcomeBanner } from "@/features/home/components/home-welcome-banner";
+import { getHomeDashboardSnapshot } from "@/features/home/queries";
 
 export default async function DashboardPage() {
-  const name = await getGreetingName();
+  let snapshot = null;
+  let bannerError: string | null = null;
+
+  try {
+    snapshot = await getHomeDashboardSnapshot();
+  } catch (error) {
+    bannerError =
+      error instanceof Error ? error.message : "Failed to load your dashboard summary.";
+  }
 
   return (
     <DashboardShell
       title="Dashboard"
       description="Influencer marketing operations at a glance."
     >
-      <div className="relative mb-4 overflow-hidden rounded-3xl bg-brand-navy p-7 md:p-8">
-        <div
-          aria-hidden
-          className="bg-brand-gradient pointer-events-none absolute -top-12 -right-12 size-56 rounded-full opacity-20 blur-3xl"
-        />
-        <div className="relative">
-          <h2 className="font-heading text-2xl font-extrabold text-white">
-            Welcome back, {name} 👋
-          </h2>
-          <p className="mt-1 text-sm text-white/60">
-            Pick up where you left off across campaigns, vendors, and billing.
-          </p>
+      {snapshot ? (
+        <HomeWelcomeBanner snapshot={snapshot} />
+      ) : bannerError ? (
+        <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[11px] text-destructive">
+          {bannerError}
         </div>
-      </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card className="border-primary/20 bg-primary/5">

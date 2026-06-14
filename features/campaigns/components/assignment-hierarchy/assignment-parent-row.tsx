@@ -12,7 +12,11 @@ import { LineBillingStatusBadge } from "@/features/campaigns/components/assignme
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import {
   OPERATIONAL_AMOUNT_CLASS,
+  OPERATIONAL_COST_AMOUNT_CLASS,
+  OPERATIONAL_REVENUE_AMOUNT_CLASS,
   OPERATIONAL_TABLE_SURFACE,
+  operationalGpAmountClass,
+  operationalMarginAmountClass,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/operational-status";
 import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
@@ -22,6 +26,7 @@ import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { formatPercent } from "@/features/campaigns/utils";
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import { resolveAssignmentLineCurrencyDisplay } from "@/lib/campaigns/assignment-line-currency";
+import { assignmentParentColDataAttr } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { cn } from "@/lib/utils";
 
 type AssignmentParentRowProps = {
@@ -96,7 +101,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       )}
     >
       {enableExpansion ? (
-        <TableCell className="w-8 px-1.5 py-1.5">
+        <TableCell {...assignmentParentColDataAttr("expand")} className="w-8 px-1.5 py-1.5">
           <AssignmentExpandToggle
             expanded={expanded}
             onToggle={onToggleExpand}
@@ -109,7 +114,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
         </TableCell>
       ) : null}
       {enableSelection ? (
-        <TableCell className="w-8 px-1.5 py-1.5">
+        <TableCell {...assignmentParentColDataAttr("select")} className="w-8 px-1.5 py-1.5">
           {rowSelectable ? (
             <input
               ref={selectRef}
@@ -122,7 +127,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           ) : null}
         </TableCell>
       ) : null}
-      <TableCell className="min-w-[140px] px-1.5 py-1.5">
+      <TableCell {...assignmentParentColDataAttr("assignment")} className="min-w-[140px] px-1.5 py-1.5">
         <div>
           <span className="font-medium text-foreground">{displayName}</span>
           <p className="text-[10px] text-muted-foreground">
@@ -130,7 +135,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           </p>
         </div>
       </TableCell>
-      <TableCell className="px-1.5 py-1.5 text-muted-foreground">
+      <TableCell {...assignmentParentColDataAttr("creator")} className="px-1.5 py-1.5 text-muted-foreground">
         {line.influencer_name ? (
           <div className="flex items-center gap-1">
             <UserIcon className="size-3 text-muted-foreground" />
@@ -140,74 +145,74 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="px-1.5 py-1.5">{platformSummary}</TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+      <TableCell {...assignmentParentColDataAttr("platforms")} className="px-1.5 py-1.5">{platformSummary}</TableCell>
+      <TableCell {...assignmentParentColDataAttr("deliverables")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {rollups.deliverable_count}
       </TableCell>
       <TableCell
+        {...assignmentParentColDataAttr("postingDates")}
         className="px-1.5 py-1.5 text-muted-foreground"
         suppressHydrationWarning
       >
         {postingSummary}
       </TableCell>
-      <TableCell className="px-1.5 py-1.5 text-center text-[10px] font-medium text-foreground/80">
+      <TableCell {...assignmentParentColDataAttr("costCurrency")} className="px-1.5 py-1.5 text-center text-[10px] font-medium text-foreground/80">
         {resolveAssignmentLineCurrencyDisplay(line)}
       </TableCell>
       <TableCell
+        {...assignmentParentColDataAttr("revenue")}
         className={cn(
           "px-1.5 py-1.5 text-right",
-          OPERATIONAL_AMOUNT_CLASS,
-          "bg-primary/8 font-semibold text-foreground"
+          OPERATIONAL_REVENUE_AMOUNT_CLASS,
+          "bg-primary/8 font-semibold"
         )}
       >
         {formatOperationalAmount(rollups.revenue)}
       </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+      <TableCell {...assignmentParentColDataAttr("usageRights")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {formatOperationalAmount(line.usage_rights_amount)}
       </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS, "text-muted-foreground")}>
+      <TableCell {...assignmentParentColDataAttr("agencyFeePercent")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS, "text-muted-foreground")}>
         {formatPercent(line.agency_fee_percent)}
       </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+      <TableCell {...assignmentParentColDataAttr("agencyFee")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {formatOperationalAmount(line.agency_fee_amount)}
       </TableCell>
       <TableCell
+        {...assignmentParentColDataAttr("cost")}
         className={cn(
           "px-1.5 py-1.5 text-right",
-          OPERATIONAL_AMOUNT_CLASS,
-          "bg-amber-500/10 font-semibold text-foreground dark:bg-amber-500/15"
+          OPERATIONAL_COST_AMOUNT_CLASS,
+          "bg-amber-500/10 font-semibold dark:bg-amber-500/15"
         )}
       >
         {formatOperationalAmount(line.cost_before_vat)}
       </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+      <TableCell {...assignmentParentColDataAttr("usageRightsCost")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {formatOperationalAmount(line.usage_rights_cost)}
       </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+      <TableCell {...assignmentParentColDataAttr("vat")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {formatOperationalAmount(line.revenue_vat_amount)}
       </TableCell>
-      <TableCell className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+      <TableCell {...assignmentParentColDataAttr("totalBilling")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {formatOperationalAmount(line.revenue_after_vat)}
       </TableCell>
       <TableCell
-        className={cn(
-          "px-1.5 py-1.5 text-right",
-          OPERATIONAL_AMOUNT_CLASS,
-          "font-semibold text-foreground"
-        )}
+        {...assignmentParentColDataAttr("gp")}
+        className={cn("px-1.5 py-1.5 text-right", operationalGpAmountClass(rollups.gp))}
       >
         {formatOperationalAmount(rollups.gp)}
       </TableCell>
       <TableCell
+        {...assignmentParentColDataAttr("margin")}
         className={cn(
           "px-1.5 py-1.5 text-right",
-          OPERATIONAL_AMOUNT_CLASS,
-          "text-muted-foreground"
+          operationalMarginAmountClass(rollups.margin_percent)
         )}
       >
         {formatPercent(rollups.margin_percent)}
       </TableCell>
-      <TableCell className="px-1.5 py-1.5">
+      <TableCell {...assignmentParentColDataAttr("opsStatus")} className="px-1.5 py-1.5">
         {enableBillingPills ? (
           <>
             <AssignmentOperationalStatusBadge status={operationalStatus} />
@@ -221,14 +226,14 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           <span className="text-muted-foreground">{opsStatusLabel}</span>
         )}
       </TableCell>
-      <TableCell className="px-1.5 py-1.5">
+      <TableCell {...assignmentParentColDataAttr("billing")} className="px-1.5 py-1.5">
         {enableBillingPills ? (
           <LineBillingStatusBadge lineBillingStatus={viewModel.lineBillingStatus} />
         ) : (
           <span className="capitalize text-muted-foreground">{billingStatusLabel}</span>
         )}
       </TableCell>
-      <TableCell className="px-1.5 py-1.5">
+      <TableCell {...assignmentParentColDataAttr("payout")} className="px-1.5 py-1.5">
         {line.vendor_payment_status ? (
           <Badge variant="secondary" className="text-[10px] font-normal">
             {VENDOR_PAYMENT_STATUS_LABELS[line.vendor_payment_status] ?? line.vendor_payment_status}
@@ -237,7 +242,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="px-1.5 py-1.5 text-right">
+      <TableCell {...assignmentParentColDataAttr("actions")} className="px-1.5 py-1.5 text-right">
         <Button
           type="button"
           variant="ghost"

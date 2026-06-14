@@ -43,8 +43,9 @@ import { BillingCampaignDrilldown } from "@/features/billing/components/billing-
 import {
   CAMPAIGN_CONSOLIDATED_INVOICE_QUEUE_COLUMN_METAS,
   CampaignBillingQueueTable,
-  CampaignBillingQueueToolbar,
+  CampaignBillingQueueFloatingBar,
 } from "@/features/campaigns/components/tabs/campaign-billing-queue-table";
+import { operationalFloatingBarContentClass } from "@/components/workspace/operational-floating-action-bar";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
@@ -397,21 +398,13 @@ export function CampaignBillingTab({
             tableOnly
             cardSurface
             compact
+            className={operationalFloatingBarContentClass(selectedQueueBatchKeys.size > 0)}
             leading={
               <div className="flex w-full flex-wrap items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold tracking-tight text-foreground">
                   Billing queue
                 </h2>
-                <div className="flex flex-wrap items-center gap-2">
-                  <OperationalTableControlsSlot contextLabel="Consolidated invoice queue" />
-                  <CampaignBillingQueueToolbar
-                    rows={billingQueueRows}
-                    selectedBatchKeys={selectedQueueBatchKeys}
-                    onSelectAll={handleQueueSelectAll}
-                    onClear={() => setSelectedQueueBatchKeys(new Set())}
-                    onGenerateInvoice={handleQueueGenerateInvoice}
-                  />
-                </div>
+                <OperationalTableControlsSlot contextLabel="Consolidated invoice queue" />
               </div>
             }
           >
@@ -423,6 +416,13 @@ export function CampaignBillingTab({
               onSelectRow={(row) => openQueueDrilldown(row.batch_key)}
             />
           </OperationalTableSection>
+          <CampaignBillingQueueFloatingBar
+            rows={billingQueueRows}
+            selectedBatchKeys={selectedQueueBatchKeys}
+            onSelectAll={handleQueueSelectAll}
+            onClear={() => setSelectedQueueBatchKeys(new Set())}
+            onGenerateInvoice={handleQueueGenerateInvoice}
+          />
         </OperationalTableSuiteProvider>
       ) : null}
 

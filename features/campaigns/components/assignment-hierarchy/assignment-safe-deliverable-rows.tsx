@@ -85,6 +85,9 @@ type AssignmentSafeDeliverableRowsProps = {
   onToggleDeliverable: (id: string) => void;
   showSelection: boolean;
   showExpandColumn: boolean;
+  leadingParentColumnIds?: readonly string[];
+  fallbackLeadingWidths?: readonly number[];
+  fallbackChildTableWidthPx?: number;
 };
 
 export function AssignmentSafeDeliverableRows({
@@ -97,6 +100,9 @@ export function AssignmentSafeDeliverableRows({
   onToggleDeliverable,
   showSelection,
   showExpandColumn,
+  leadingParentColumnIds,
+  fallbackLeadingWidths,
+  fallbackChildTableWidthPx,
 }: AssignmentSafeDeliverableRowsProps) {
   const currency = resolveAssignmentLineCurrency(line) || currencyProp;
   const parentRowClass = LINE_OPERATIONAL_ROW_CLASS[
@@ -142,6 +148,9 @@ export function AssignmentSafeDeliverableRows({
         parentColSpan={parentColSpan}
         nestedGroupClassName={cn(SAFE_GRID_CHILD_GROUP_CELL, childBorderClass)}
         showExpandColumn={showExpandColumn}
+        leadingParentColumnIds={leadingParentColumnIds}
+        fallbackLeadingWidths={fallbackLeadingWidths}
+        fallbackChildTableWidthPx={fallbackChildTableWidthPx}
       />
     </SafeDeliverableBoundary>
   );

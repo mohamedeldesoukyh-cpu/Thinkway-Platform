@@ -102,6 +102,22 @@ export function BillingKpiStrip({
     value: values[item.key],
     icon: item.icon,
     accentClass: ACCENT_TILE[item.accent],
+    valueSemantic:
+      item.key === "revenue" || item.key === "billed" || item.key === "collected"
+        ? ("revenue" as const)
+        : item.key === "cost" || item.key === "unpaid_vendor"
+          ? ("cost" as const)
+          : item.key === "gp"
+            ? ("gp" as const)
+            : item.key === "margin"
+              ? ("margin" as const)
+              : undefined,
+    valueNumeric:
+      item.key === "gp"
+        ? kpis.gp
+        : item.key === "margin"
+          ? kpis.margin_percent
+          : undefined,
     valueAlert:
       item.key === "po_remaining" && kpis.po_over_consumed_count > 0
         ? ("danger" as const)

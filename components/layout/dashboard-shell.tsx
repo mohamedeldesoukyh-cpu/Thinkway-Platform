@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   Building2Icon,
@@ -9,7 +8,9 @@ import {
   UsersIcon,
 } from "lucide-react";
 
+import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { CollapsibleAppSidebar } from "@/components/layout/collapsible-app-sidebar";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { UserAccount } from "@/components/layout/user-account";
 import { getAuthUser } from "@/lib/supabase/server";
@@ -57,24 +58,17 @@ export async function DashboardShell({
   const userEmail = user?.email ?? null;
 
   return (
-    <div className="flex min-h-svh bg-background">
+    <div className="relative flex min-h-svh bg-background text-foreground">
       <CollapsibleAppSidebar userEmail={userEmail} />
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col",
+          "flex min-h-0 min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out",
           containedMain && "h-svh max-h-svh overflow-hidden"
         )}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-md md:hidden dark:bg-background/90">
           <Link href="/" className="flex items-center">
-            <Image
-              src="/tw-wordmark.png"
-              alt="Thinkway"
-              width={130}
-              height={26}
-              priority
-              className="h-6 w-auto"
-            />
+            <ThinkwayLogo compact className="mb-0" />
           </Link>
           <nav className="flex items-center gap-1">
             {mobileNavItems.map((item) => {
@@ -84,8 +78,8 @@ export async function DashboardShell({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-medium",
-                    "bg-muted text-foreground"
+                    "flex items-center gap-1.5 rounded-2xl border border-border px-3 py-2 text-xs font-medium",
+                    "bg-card text-foreground shadow-[var(--card-shadow)]"
                   )}
                 >
                   <Icon className="size-3.5" />
@@ -94,9 +88,16 @@ export async function DashboardShell({
               );
             })}
           </nav>
-          <UserAccount email={userEmail} compact inSidebar={false} />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <UserAccount email={userEmail} compact inSidebar={false} />
+          </div>
         </div>
-        {hidePageHeader ? null : (
+        {hidePageHeader ? (
+          <header className="thinkway-shell-header hidden justify-end px-4 py-3 md:flex md:px-8">
+            <ThemeToggle />
+          </header>
+        ) : (
           <header className="thinkway-shell-header flex flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
             <div className="flex min-w-0 items-start gap-2">
               {backFallbackHref ? (
@@ -118,16 +119,17 @@ export async function DashboardShell({
                 ) : null}
               </div>
             </div>
-            {actions ? (
-              <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
-            ) : null}
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <ThemeToggle />
+              {actions}
+            </div>
           </header>
         )}
         <main
           className={cn(
             containedMain
-              ? "flex min-h-0 flex-1 flex-col overflow-hidden p-4 md:p-6"
-              : "min-h-0 flex-1 overflow-y-auto p-4 md:p-6",
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-background p-4 md:p-6"
+              : "min-h-0 flex-1 overflow-y-auto bg-background p-4 md:p-6",
             mainClassName
           )}
         >

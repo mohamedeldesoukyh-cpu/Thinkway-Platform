@@ -13,12 +13,15 @@ import {
 import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-hierarchy/deliverable-group-row";
 import { AssignmentChildTableColGroup } from "@/features/campaigns/components/assignment-hierarchy/assignment-child-table-colgroup";
 import {
+  CHILD_GRID_FALLBACK_LEADING_WIDTHS,
   CHILD_GRID_FALLBACK_TABLE_WIDTH_PX,
-  CHILD_GRID_TRAILING_COL_WIDTHS,
   sumChildGridColumnWidths,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
+import { getVisibleChildTrailingWidths } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-layout";
+import { assignmentChildLeadingParentColumnIds } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import { useParentLeadingColumnWidths } from "@/features/campaigns/components/assignment-hierarchy/use-parent-leading-column-widths";
+import { useOperationalChildColumnVisibleChecker } from "@/components/tables/operational-table-column-context";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { getCreatorConnectedPlatformOptions, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
@@ -40,6 +43,9 @@ type AssignmentDeliverableRowsProps = {
   parentColSpan: number;
   nestedGroupClassName?: string;
   showExpandColumn?: boolean;
+  leadingParentColumnIds?: readonly string[];
+  fallbackLeadingWidths?: readonly number[];
+  fallbackChildTableWidthPx?: number;
 };
 
 export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows({
@@ -53,7 +59,19 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   parentColSpan,
   nestedGroupClassName,
   showExpandColumn = false,
+  leadingParentColumnIds: leadingParentColumnIdsProp,
+  fallbackLeadingWidths: fallbackLeadingWidthsProp,
+  fallbackChildTableWidthPx: fallbackChildTableWidthPxProp,
 }: AssignmentDeliverableRowsProps) {
+  const leadingParentColumnIds =
+    leadingParentColumnIdsProp ?? assignmentChildLeadingParentColumnIds(showExpandColumn);
+  const fallbackLeadingWidths =
+    fallbackLeadingWidthsProp ??
+    (showExpandColumn
+      ? CHILD_GRID_FALLBACK_LEADING_WIDTHS
+      : CHILD_GRID_FALLBACK_LEADING_WIDTHS.filter((_, index) => index !== 0));
+  const fallbackChildTableWidthPx =
+    fallbackChildTableWidthPxProp ?? CHILD_GRID_FALLBACK_TABLE_WIDTH_PX;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const locked = line.vendor_assignment_locked ?? false;
@@ -69,17 +87,24 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
     creatorPlatformAccounts: line.creator_platform_accounts,
     assignment: line.assignment,
   });
+  const childCol = useOperationalChildColumnVisibleChecker();
   const childTableRef = useRef<HTMLTableElement>(null);
-  const leadingWidths = useParentLeadingColumnWidths(childTableRef, line.id);
+  const measuredWidths = useParentLeadingColumnWidths(
+    childTableRef,
+    line.id,
+    leadingParentColumnIds
+  );
   const childTableWidthPx = useMemo(() => {
-    if (leadingWidths) {
+    if (measuredWidths) {
       return (
-        sumChildGridColumnWidths(leadingWidths) +
-        sumChildGridColumnWidths(CHILD_GRID_TRAILING_COL_WIDTHS)
+        sumChildGridColumnWidths(measuredWidths.leading) +
+        sumChildGridColumnWidths(
+          getVisibleChildTrailingWidths(childCol, measuredWidths.trailing)
+        )
       );
     }
-    return CHILD_GRID_FALLBACK_TABLE_WIDTH_PX;
-  }, [leadingWidths]);
+    return fallbackChildTableWidthPx;
+  }, [measuredWidths, fallbackChildTableWidthPx, childCol]);
 
   function addDeliverable() {
     const defaultPlatform = platformOptions[0]?.value ?? "instagram";
@@ -141,7 +166,11 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
               )}
               style={{ width: childTableWidthPx }}
             >
-              <AssignmentChildTableColGroup leadingWidths={leadingWidths} />
+              <AssignmentChildTableColGroup
+                leadingWidths={measuredWidths?.leading ?? null}
+                trailingWidths={measuredWidths?.trailing ?? null}
+                fallbackLeadingWidths={fallbackLeadingWidths}
+              />
               <thead
                 className={cn(
                   "sticky top-0 z-[4] border-b border-border/50",
@@ -150,6 +179,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
               >
                 <OperationalGridHeader
                   showExpandColumn={showExpandColumn}
+                  leadingParentColumnIds={leadingParentColumnIds}
                   actions={
                     !locked ? (
                       <Button
@@ -184,6 +214,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                     defaultRevenueVatPercent={line.revenue_vat_percent}
                     platformOptions={platformOptions}
                     showExpandColumn={showExpandColumn}
+                    leadingParentColumnIds={leadingParentColumnIds}
                     isLastDeliverable={deliverableIndex === deliverables.length - 1}
                   />
                 ))}

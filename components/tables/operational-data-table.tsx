@@ -84,11 +84,19 @@ export function OperationalDataTable<T>({
 export function OperationalTableSettingsSlot({
   contextLabel,
   className,
+  columnSettings = "default",
 }: {
   contextLabel: string;
   className?: string;
+  columnSettings?: "default" | "assignment-grid";
 }) {
-  return <OperationalTableControlsSlot contextLabel={contextLabel} className={className} />;
+  return (
+    <OperationalTableControlsSlot
+      contextLabel={contextLabel}
+      className={className}
+      columnSettings={columnSettings}
+    />
+  );
 }
 
 export function OperationalTableControlsSlot({
@@ -97,12 +105,14 @@ export function OperationalTableControlsSlot({
   showFilter = true,
   showSort = true,
   showSettings = true,
+  columnSettings = "default",
 }: {
   contextLabel: string;
   className?: string;
   showFilter?: boolean;
   showSort?: boolean;
   showSettings?: boolean;
+  columnSettings?: "default" | "assignment-grid";
 }) {
   return (
     <div className={cn("flex shrink-0 items-center", className)}>
@@ -111,6 +121,7 @@ export function OperationalTableControlsSlot({
         showFilter={showFilter}
         showSort={showSort}
         showSettings={showSettings}
+        columnSettings={columnSettings}
       />
     </div>
   );

@@ -22,7 +22,14 @@ import { AssignmentDeliverableRows } from "@/features/campaigns/components/assig
 import { AssignmentMinimalRow } from "@/features/campaigns/components/assignment-hierarchy/assignment-minimal-row";
 import { AssignmentParentRow } from "@/features/campaigns/components/assignment-hierarchy/assignment-parent-row";
 import { AssignmentRowErrorBoundary } from "@/features/campaigns/components/assignment-hierarchy/assignment-row-error-boundary";
-import { HIERARCHY_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import {
+  CHILD_GRID_FALLBACK_LEADING_WIDTHS,
+  CHILD_GRID_FALLBACK_TABLE_WIDTH_PX,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
+import {
+  HIERARCHY_COLUMN_LABELS,
+  assignmentChildLeadingParentColumnIds,
+} from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import dynamic from "next/dynamic";
@@ -48,6 +55,7 @@ import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
 import { resolveSelectionActions } from "@/lib/billing/selection-action-engine";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
+import { operationalFloatingBarContentClass } from "@/components/workspace/operational-floating-action-bar";
 import { cn } from "@/lib/utils";
 
 const PARENT_COLUMN_COUNT = 18;
@@ -257,7 +265,15 @@ export function AssignmentHierarchyTable({
   }
 
   return (
-    <div ref={tableRef} className={cn(OPERATIONAL_TABLE_FONT)}>
+    <div
+      ref={tableRef}
+      className={cn(
+        OPERATIONAL_TABLE_FONT,
+        operationalFloatingBarContentClass(
+          enableOperationalActions && selectedLineIds.size > 0
+        )
+      )}
+    >
       <p className="border-b border-border/40 bg-muted/30 px-3 py-1.5 text-[10px] text-muted-foreground">
         Assignments UI layer: <span className="font-medium">{assignmentsLayerLabel(uiLayer)}</span>
         {skippedCount > 0 ? ` · ${skippedCount} row(s) skipped (data sanitize)` : null}
@@ -399,6 +415,15 @@ export function AssignmentHierarchyTable({
                         showSelection={false}
                         parentColSpan={PARENT_COLUMN_COUNT}
                         showExpandColumn={enableExpansion}
+                        leadingParentColumnIds={assignmentChildLeadingParentColumnIds(
+                          enableExpansion
+                        )}
+                        fallbackLeadingWidths={
+                          enableExpansion
+                            ? CHILD_GRID_FALLBACK_LEADING_WIDTHS
+                            : CHILD_GRID_FALLBACK_LEADING_WIDTHS.filter((_, index) => index !== 0)
+                        }
+                        fallbackChildTableWidthPx={CHILD_GRID_FALLBACK_TABLE_WIDTH_PX}
                       />
                     ) : null}
                   </Fragment>
@@ -429,7 +454,6 @@ export function AssignmentHierarchyTable({
             invoiceLineIds={invoiceLineIds}
             invoiceTotal={invoiceTotal}
             onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}
-            className="rounded-none border-x-0 border-b-0 border-t border-border/50"
           />
         </ClientOnly>
       ) : null}

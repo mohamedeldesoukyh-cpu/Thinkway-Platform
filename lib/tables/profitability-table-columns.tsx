@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import type { OperationalConfigurableColumnDef } from "@/components/tables/operational-configurable-table";
 import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
 import type { AnalyticsRollupNode } from "@/lib/analytics/types/metrics";
-import { cn } from "@/lib/utils";
 
 export type ProfitabilitySortKey = "label" | "revenue" | "gp" | "margin";
 
@@ -33,6 +32,7 @@ export function buildProfitabilityTableColumns({
     {
       id: "name",
       label: "Name",
+      cellClassName: "text-foreground",
       renderHeader: () => (
         <SortHead
           label="Name"
@@ -48,6 +48,7 @@ export function buildProfitabilityTableColumns({
       label: "Revenue",
       headerClassName: "text-right",
       amountCell: true,
+      amountVariant: "revenue",
       renderHeader: () => (
         <SortHead
           label="Revenue"
@@ -64,6 +65,8 @@ export function buildProfitabilityTableColumns({
       label: "GP",
       headerClassName: "text-right",
       amountCell: true,
+      amountVariant: "gp",
+      amountValue: (row) => row.metrics.gp,
       renderHeader: () => (
         <SortHead
           label="GP"
@@ -80,6 +83,8 @@ export function buildProfitabilityTableColumns({
       label: "Margin",
       headerClassName: "text-right",
       amountCell: true,
+      amountVariant: "margin",
+      amountValue: (row) => row.metrics.margin_percent,
       renderHeader: () => (
         <SortHead
           label="Margin"
@@ -89,15 +94,7 @@ export function buildProfitabilityTableColumns({
           className="justify-end"
         />
       ),
-      renderCell: (row) => (
-        <span
-          className={cn(
-            row.metrics.margin_percent < 15 && "text-amber-700 dark:text-amber-300"
-          )}
-        >
-          {row.metrics.margin_percent.toFixed(1)}%
-        </span>
-      ),
+      renderCell: (row) => `${row.metrics.margin_percent.toFixed(1)}%`,
     },
   ];
 }

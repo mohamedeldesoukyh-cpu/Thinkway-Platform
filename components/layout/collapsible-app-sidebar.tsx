@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import type { ComponentType } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   ActivityIcon,
@@ -27,6 +26,8 @@ import {
   RadarIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
+  PinIcon,
+  PinOffIcon,
   PercentIcon,
   ReceiptIcon,
   RefreshCwIcon,
@@ -39,111 +40,140 @@ import {
   WalletIcon,
 } from "lucide-react";
 
+import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { UserAccount } from "@/components/layout/user-account";
 import {
+  APP_SIDEBAR_MARGIN,
   APP_SIDEBAR_WIDTH_COLLAPSED,
   APP_SIDEBAR_WIDTH_CSS_VAR,
   APP_SIDEBAR_WIDTH_EXPANDED,
+  getAppSidebarLayoutWidth,
+  resolveAppSidebarExpanded,
 } from "@/lib/layout/app-sidebar-width";
 import { cn } from "@/lib/utils";
 
-type NavItem = {
+type NavLinkItem = {
+  kind: "link";
   href: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
 };
 
-type NavGroup = {
+type NavSubheaderItem = {
+  kind: "subheader";
   label: string;
-  items: NavItem[];
 };
 
-/** Global nav order — hierarchy-first, then commercial, finance, system. */
+type NavEntry = NavLinkItem | NavSubheaderItem;
+
+type NavGroup = {
+  label: string;
+  items: NavEntry[];
+};
+
+/** Global nav order — overview, workspace, commercial, operations, finance, insights, admin. */
 const navGroups: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      { href: "/", label: "Home", icon: LayoutDashboardIcon },
-      { href: "/dashboard", label: "Executive", icon: LineChartIcon },
+      { kind: "link", href: "/", label: "Home", icon: LayoutDashboardIcon },
+      { kind: "link", href: "/dashboard", label: "Executive", icon: LineChartIcon },
     ],
   },
   {
-    label: "Organization",
+    label: "Workspace",
     items: [
-      { href: "/groups", label: "Groups", icon: LayersIcon },
-      { href: "/clients", label: "Legal Entities", icon: Building2Icon },
-      { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
-      { href: "/vendors", label: "Vendors", icon: UsersIcon },
-      { href: "/discovery", label: "Discovery", icon: RadarIcon },
+      { kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+      { kind: "link", href: "/discovery", label: "Discovery", icon: RadarIcon },
+      { kind: "link", href: "/vendors", label: "Vendors", icon: UsersIcon },
     ],
   },
   {
     label: "Commercial",
     items: [
-      { href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
-      { href: "/ios/vendor", label: "Vendor IOs", icon: FileSignatureIcon },
-      { href: "/billing", label: "Billing", icon: ReceiptIcon },
+      { kind: "link", href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
+      { kind: "link", href: "/ios/vendor", label: "Vendor IOs", icon: FileSignatureIcon },
+      { kind: "link", href: "/billing", label: "Billing", icon: ReceiptIcon },
+      { kind: "link", href: "/finance/po-tracker", label: "PO Tracker", icon: ReceiptIcon },
     ],
   },
   {
     label: "Operations",
     items: [
-      { href: "/operations/move", label: "Move", icon: ArrowRightLeftIcon },
-      { href: "/operations/reassignment", label: "Reassignment", icon: ArrowRightLeftIcon },
+      { kind: "link", href: "/operations/move", label: "Move", icon: ArrowRightLeftIcon },
+      {
+        kind: "link",
+        href: "/operations/reassignment",
+        label: "Reassignment",
+        icon: ArrowRightLeftIcon,
+      },
     ],
   },
   {
     label: "Finance",
     items: [
-      { href: "/finance/invoices", label: "Invoices", icon: FileTextIcon },
+      { kind: "subheader", label: "Billing & documents" },
+      { kind: "link", href: "/finance/invoices", label: "Invoices", icon: FileTextIcon },
       {
+        kind: "link",
         href: "/finance/client-credit-notes",
         label: "Client credit notes",
         icon: CircleMinusIcon,
       },
       {
-        href: "/finance/vendor-credit-notes",
-        label: "Vendor credit notes",
-        icon: CircleMinusIcon,
-      },
-      {
+        kind: "link",
         href: "/finance/client-debit-notes",
         label: "Client debit notes",
         icon: CirclePlusIcon,
       },
       {
+        kind: "link",
+        href: "/finance/vendor-credit-notes",
+        label: "Vendor credit notes",
+        icon: CircleMinusIcon,
+      },
+      {
+        kind: "link",
         href: "/finance/vendor-debit-notes",
         label: "Vendor debit notes",
         icon: CirclePlusIcon,
       },
-      { href: "/finance/posting-center", label: "Posting center", icon: SendIcon },
-      { href: "/collections", label: "Collections", icon: CoinsIcon },
-      { href: "/treasury", label: "Treasury", icon: WalletIcon },
-      { href: "/finance/vat", label: "VAT & Tax", icon: PercentIcon },
-      { href: "/finance/po-tracker", label: "PO Tracker", icon: ReceiptIcon },
-      { href: "/planning", label: "Planning", icon: CalendarClockIcon },
-      { href: "/finance/exchange-rates", label: "Exchange Rates", icon: RefreshCwIcon },
-      { href: "/finance/periods", label: "Periods", icon: CalendarRangeIcon },
+      { kind: "subheader", label: "Treasury & cash" },
+      { kind: "link", href: "/collections", label: "Collections", icon: CoinsIcon },
+      { kind: "link", href: "/treasury", label: "Treasury", icon: WalletIcon },
+      { kind: "link", href: "/finance/posting-center", label: "Posting center", icon: SendIcon },
+      { kind: "subheader", label: "Compliance & planning" },
+      { kind: "link", href: "/finance/vat", label: "VAT & Tax", icon: PercentIcon },
+      { kind: "link", href: "/finance/exchange-rates", label: "Exchange rates", icon: RefreshCwIcon },
+      { kind: "link", href: "/finance/periods", label: "Periods", icon: CalendarRangeIcon },
+      { kind: "link", href: "/planning", label: "Planning", icon: CalendarClockIcon },
     ],
   },
   {
     label: "Insights",
     items: [
-      { href: "/reports", label: "Reports", icon: BarChart3Icon },
-      { href: "/ai", label: "AI Analyst", icon: SparklesIcon },
-      { href: "/links", label: "Link Generator", icon: Link2Icon },
+      { kind: "link", href: "/reports", label: "Reports", icon: BarChart3Icon },
+      { kind: "link", href: "/ai", label: "AI Analyst", icon: SparklesIcon },
+      { kind: "link", href: "/links", label: "Link Generator", icon: Link2Icon },
     ],
   },
   {
-    label: "System",
+    label: "Administration",
     items: [
-      { href: "/settings/users", label: "Users", icon: Settings2Icon },
-      { href: "/settings/roles", label: "Roles", icon: UserCogIcon },
-      { href: "/settings/permissions", label: "Permissions", icon: ShieldIcon },
-      { href: "/settings/access-control", label: "Access Control", icon: ShieldIcon },
-      { href: "/settings/client-access", label: "Client Access", icon: UsersIcon },
-      { href: "/settings/email", label: "Email", icon: Settings2Icon },
-      { href: "/system/health", label: "System Health", icon: ActivityIcon },
+      { kind: "link", href: "/groups", label: "Groups", icon: LayersIcon },
+      { kind: "link", href: "/clients", label: "Legal Entities", icon: Building2Icon },
+      { kind: "link", href: "/settings/users", label: "Users", icon: Settings2Icon },
+      { kind: "link", href: "/settings/roles", label: "Roles", icon: UserCogIcon },
+      { kind: "link", href: "/settings/permissions", label: "Permissions", icon: ShieldIcon },
+      {
+        kind: "link",
+        href: "/settings/access-control",
+        label: "Access Control",
+        icon: ShieldIcon,
+      },
+      { kind: "link", href: "/settings/client-access", label: "Client Access", icon: UsersIcon },
+      { kind: "link", href: "/settings/email", label: "Email", icon: Settings2Icon },
+      { kind: "link", href: "/system/health", label: "System Health", icon: ActivityIcon },
     ],
   },
 ];
@@ -151,6 +181,39 @@ const navGroups: NavGroup[] = [
 const ALL_GROUP_LABELS = navGroups.map((g) => g.label);
 const STORAGE_EXPANDED = "thinkway-sidebar-expanded";
 const STORAGE_COLLAPSED_GROUPS = "thinkway-sidebar-collapsed-groups";
+const SIDEBAR_HIDE_DELAY_MS = 200;
+const HOVER_TRIGGER_WIDTH = "0.75rem";
+
+/** Legacy section labels from pre-reorg sidebar — map into current groups. */
+const LEGACY_COLLAPSED_LABEL_MAP: Record<string, string[]> = {
+  Organization: ["Workspace", "Administration"],
+  System: ["Administration"],
+};
+
+function getNavLinks(group: NavGroup): NavLinkItem[] {
+  return group.items.filter((item): item is NavLinkItem => item.kind === "link");
+}
+
+function migrateCollapsedGroups(stored: Set<string>): Set<string> {
+  const migrated = new Set<string>();
+  let hadLegacy = false;
+
+  for (const label of stored) {
+    const mapped = LEGACY_COLLAPSED_LABEL_MAP[label];
+    if (mapped) {
+      hadLegacy = true;
+      for (const next of mapped) migrated.add(next);
+    } else if (ALL_GROUP_LABELS.includes(label)) {
+      migrated.add(label);
+    }
+  }
+
+  if (hadLegacy && typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_COLLAPSED_GROUPS, JSON.stringify([...migrated]));
+  }
+
+  return migrated;
+}
 
 type CollapsibleAppSidebarProps = {
   userEmail?: string | null;
@@ -163,7 +226,7 @@ function isItemActive(pathname: string, href: string): boolean {
 
 function findActiveGroupLabel(pathname: string): string | null {
   for (const group of navGroups) {
-    if (group.items.some((item) => isItemActive(pathname, item.href))) {
+    if (getNavLinks(group).some((item) => isItemActive(pathname, item.href))) {
       return group.label;
     }
   }
@@ -176,7 +239,7 @@ function readCollapsedGroups(): Set<string> {
     const raw = localStorage.getItem(STORAGE_COLLAPSED_GROUPS);
     if (!raw) return new Set(ALL_GROUP_LABELS);
     const parsed = JSON.parse(raw) as string[];
-    return new Set(parsed);
+    return migrateCollapsedGroups(new Set(parsed));
   } catch {
     return new Set(ALL_GROUP_LABELS);
   }
@@ -203,10 +266,13 @@ function initialCollapsedGroups(pathname: string): Set<string> {
 export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps) {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState(true);
+  const [revealed, setRevealed] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState(() =>
     initialCollapsedGroups(pathname)
   );
   const [hydrated, setHydrated] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setExpanded(readSidebarExpanded());
@@ -242,13 +308,59 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
     localStorage.setItem(STORAGE_EXPANDED, String(value));
   }, []);
 
+  const clearHideTimer = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleHide = useCallback(() => {
+    if (pinned) return;
+    clearHideTimer();
+    hideTimerRef.current = setTimeout(() => {
+      setRevealed(false);
+      hideTimerRef.current = null;
+    }, SIDEBAR_HIDE_DELAY_MS);
+  }, [clearHideTimer, pinned]);
+
+  const handleReveal = useCallback(() => {
+    clearHideTimer();
+    setRevealed(true);
+  }, [clearHideTimer]);
+
+  const togglePin = useCallback(() => {
+    setPinned((prev) => {
+      const next = !prev;
+      if (next) {
+        clearHideTimer();
+        setRevealed(true);
+      }
+      return next;
+    });
+  }, [clearHideTimer]);
+
+  useEffect(() => {
+    return () => clearHideTimer();
+  }, [clearHideTimer]);
+
+  const isVisible = pinned || revealed;
+  const displayExpanded = resolveAppSidebarExpanded(isVisible, pinned, expanded);
+
   useEffect(() => {
     if (!hydrated) return;
     document.documentElement.style.setProperty(
       APP_SIDEBAR_WIDTH_CSS_VAR,
-      expanded ? APP_SIDEBAR_WIDTH_EXPANDED : APP_SIDEBAR_WIDTH_COLLAPSED
+      getAppSidebarLayoutWidth(isVisible, displayExpanded)
     );
-  }, [expanded, hydrated]);
+  }, [displayExpanded, hydrated, isVisible]);
+
+  const sidebarWidth = displayExpanded
+    ? APP_SIDEBAR_WIDTH_EXPANDED
+    : APP_SIDEBAR_WIDTH_COLLAPSED;
+  const slotWidth = isVisible
+    ? `calc(${sidebarWidth} + ${APP_SIDEBAR_MARGIN})`
+    : "0px";
 
   const toggleGroup = useCallback((label: string) => {
     setCollapsedGroups((prev) => {
@@ -260,91 +372,131 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
     });
   }, []);
 
-  const activeGroupLabel = findActiveGroupLabel(pathname);
+  const sidebarControlButtonClass =
+    "rounded-lg p-1.5 text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground";
 
   return (
-    <aside
-      className={cn(
-        "relative hidden shrink-0 self-start border-r transition-[width] duration-200 ease-out md:sticky md:top-0 md:flex md:h-svh md:max-h-svh md:flex-col",
-        expanded
-          ? "w-64 border-sidebar-border bg-sidebar"
-          : "w-14 border-zinc-800 bg-zinc-950"
-      )}
-    >
+    <>
+      {!isVisible ? (
+        <div
+          aria-hidden
+          className="fixed inset-y-0 left-0 z-50 hidden md:block"
+          style={{ width: HOVER_TRIGGER_WIDTH }}
+          onMouseEnter={handleReveal}
+        />
+      ) : null}
+
+      <div
+        className="relative hidden shrink-0 self-start overflow-hidden transition-all duration-300 ease-in-out md:sticky md:top-0 md:block md:h-svh md:max-h-svh"
+        style={{ width: slotWidth }}
+        onMouseEnter={handleReveal}
+        onMouseLeave={scheduleHide}
+      >
+        <aside
+          className={cn(
+            "absolute flex flex-col overflow-hidden rounded-r-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[var(--card-shadow)] transition-all duration-300 ease-in-out",
+            isVisible
+              ? "pointer-events-auto translate-x-0 opacity-100"
+              : "pointer-events-none -translate-x-2 opacity-0"
+          )}
+          style={{
+            left: APP_SIDEBAR_MARGIN,
+            top: APP_SIDEBAR_MARGIN,
+            height: `calc(100svh - 2 * ${APP_SIDEBAR_MARGIN})`,
+            width: sidebarWidth,
+          }}
+        >
       <div
         className={cn(
           "flex h-16 items-center border-b",
-          expanded ? "justify-between border-sidebar-border px-4" : "justify-center border-zinc-800 px-1.5"
+          displayExpanded
+            ? "justify-between border-sidebar-border px-4"
+            : "justify-center border-sidebar-border px-1.5"
         )}
       >
-        <Link
-          href="/"
-          className="flex min-w-0 items-center gap-2.5"
-          title="Thinkway"
-        >
-          <Image
-            src="/tw-icon.png"
-            alt="Thinkway"
-            width={36}
-            height={36}
-            priority
-            className={cn("shrink-0 rounded-md", expanded ? "size-9" : "size-7")}
-          />
-          {expanded ? (
-            <span className="truncate font-heading text-lg font-extrabold tracking-tight text-white">
-              THINK<span className="text-brand-blue">WAY</span>
-            </span>
-          ) : null}
+        <Link href="/" className="min-w-0" title="Thinkway">
+          <ThinkwayLogo showText={displayExpanded} compact={!displayExpanded} className="mb-0" />
         </Link>
-        {expanded ? (
-          <button
-            type="button"
-            onClick={() => persistExpanded(false)}
-            className="rounded-lg p-1.5 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            title="Collapse sidebar"
-            aria-label="Collapse sidebar"
-          >
-            <PanelLeftCloseIcon className="size-4" />
-          </button>
-        ) : null}
+            {displayExpanded ? (
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={togglePin}
+                  className={sidebarControlButtonClass}
+                  title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+                  aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+                  aria-pressed={pinned}
+                >
+                  {pinned ? (
+                    <PinOffIcon className="size-4" />
+                  ) : (
+                    <PinIcon className="size-4" />
+                  )}
+                </button>
+                {pinned ? (
+                  <button
+                    type="button"
+                    onClick={() => persistExpanded(false)}
+                    className={sidebarControlButtonClass}
+                    title="Collapse sidebar"
+                    aria-label="Collapse sidebar"
+                  >
+                    <PanelLeftCloseIcon className="size-4" />
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
       </div>
 
-      {!expanded ? (
-        <div className="flex justify-center border-b border-zinc-800 py-1">
-          <button
-            type="button"
-            onClick={() => persistExpanded(true)}
-            className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-900 hover:text-zinc-200"
-            title="Expand sidebar"
-            aria-label="Expand sidebar"
-          >
-            <PanelLeftOpenIcon className="size-4" />
-          </button>
-        </div>
-      ) : null}
+          {!displayExpanded ? (
+            <div className="flex justify-center gap-1 border-b border-sidebar-border py-1">
+              <button
+                type="button"
+                onClick={togglePin}
+                className={sidebarControlButtonClass}
+                title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+                aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+                aria-pressed={pinned}
+              >
+                {pinned ? (
+                  <PinOffIcon className="size-4" />
+                ) : (
+                  <PinIcon className="size-4" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => persistExpanded(true)}
+                className={sidebarControlButtonClass}
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                <PanelLeftOpenIcon className="size-4" />
+              </button>
+            </div>
+          ) : null}
 
       <nav
         className={cn(
           "flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden",
-          expanded ? "p-3" : "px-1 py-2"
+          displayExpanded ? "p-3" : "px-1 py-2"
         )}
       >
         {navGroups.map((group, groupIndex) => {
           const groupCollapsed = collapsedGroups.has(group.label);
-          const hasActiveItem = group.label === activeGroupLabel;
 
           return (
             <div key={group.label} className="flex flex-col">
-              {groupIndex > 0 && !expanded ? (
-                <div className="mx-auto my-0.5 h-px w-6 bg-zinc-800" />
+              {groupIndex > 0 && !displayExpanded ? (
+                <div className="mx-auto my-0.5 h-px w-6 bg-sidebar-border" />
               ) : null}
 
-              {expanded ? (
+              {displayExpanded ? (
                 <div className="flex items-center gap-1 rounded-lg px-2 py-1.5">
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.label)}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/75"
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground transition-colors hover:text-sidebar-foreground"
                     aria-expanded={!groupCollapsed}
                     aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
                   >
@@ -362,10 +514,22 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
               <div
                 className={cn(
                   "flex flex-col gap-0.5",
-                  expanded && groupCollapsed && "hidden"
+                  displayExpanded && groupCollapsed && "hidden"
                 )}
               >
                 {group.items.map((item) => {
+                  if (item.kind === "subheader") {
+                    if (!displayExpanded) return null;
+                    return (
+                      <div
+                        key={`subheader-${item.label}`}
+                        className="px-3 pt-2 pb-0.5 text-[9px] font-medium uppercase tracking-wider text-sidebar-muted-foreground/70 first:pt-0"
+                      >
+                        {item.label}
+                      </div>
+                    );
+                  }
+
                   const active = isItemActive(pathname, item.href);
                   const Icon = item.icon;
                   return (
@@ -375,18 +539,22 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                       title={item.label}
                       className={cn(
                         "flex items-center text-sm font-medium transition-colors",
-                        expanded ? "gap-3 rounded-2xl px-3 py-2" : "justify-center rounded-md px-1 py-1.5",
+                        displayExpanded
+                          ? "gap-3 rounded-2xl px-3 py-2"
+                          : "justify-center rounded-md px-1 py-1.5",
                         active
-                          ? expanded
-                            ? "bg-brand-gradient text-white shadow-sm"
-                            : "bg-zinc-800 text-white"
-                          : expanded
-                            ? "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                            : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
+                          ? displayExpanded
+                            ? "border-l-2 border-primary bg-[var(--sidebar-active-bg)] pl-[calc(0.75rem-2px)] font-medium text-primary"
+                            : "bg-[var(--sidebar-active-bg)] text-primary"
+                          : displayExpanded
+                            ? "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       )}
                     >
-                      <Icon className={cn("shrink-0", expanded ? "size-4" : "size-3.5")} />
-                      {expanded ? (
+                      <Icon
+                        className={cn("shrink-0", displayExpanded ? "size-4" : "size-3.5")}
+                      />
+                      {displayExpanded ? (
                         <span className="truncate">{item.label}</span>
                       ) : null}
                     </Link>
@@ -401,15 +569,19 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       <div
         className={cn(
           "border-t",
-          expanded ? "border-sidebar-border p-4" : "border-zinc-800 p-1.5"
+          displayExpanded
+            ? "border-sidebar-border p-4"
+            : "border-sidebar-border p-1.5"
         )}
       >
-        {expanded ? (
+        {displayExpanded ? (
           <UserAccount email={userEmail} />
         ) : (
           <UserAccount email={userEmail} compact />
         )}
       </div>
-    </aside>
+        </aside>
+      </div>
+    </>
   );
 }

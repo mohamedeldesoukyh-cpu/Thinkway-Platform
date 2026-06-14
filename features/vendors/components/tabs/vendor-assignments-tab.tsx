@@ -98,6 +98,7 @@ function buildVendorAssignmentsColumns(
       id: "revenue",
       label: "Revenue",
       amountCell: true,
+      amountVariant: "revenue",
       renderCell: (assignment) =>
         formatMoney(assignment.revenue, assignment.currency || currency),
     },
@@ -105,6 +106,7 @@ function buildVendorAssignmentsColumns(
       id: "cost",
       label: "Cost",
       amountCell: true,
+      amountVariant: "cost",
       renderCell: (assignment) =>
         formatMoney(assignment.cost, assignment.currency || currency),
     },
@@ -112,6 +114,8 @@ function buildVendorAssignmentsColumns(
       id: "gp",
       label: "GP",
       amountCell: true,
+      amountVariant: "gp",
+      amountValue: (assignment) => assignment.gp,
       renderCell: (assignment) =>
         formatMoney(assignment.gp, assignment.currency || currency),
     },

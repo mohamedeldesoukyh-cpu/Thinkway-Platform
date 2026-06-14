@@ -1,8 +1,14 @@
 "use client";
 
 import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { XIcon } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  OperationalFloatingActionBar,
+  operationalFloatingBarContentClass,
+} from "@/components/workspace/operational-floating-action-bar";
 import { OperationalRowTree } from "@/features/billing/components/operational-row-tree";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import type { CampaignOperationalBillingDetail } from "@/features/billing/types";
@@ -112,12 +118,15 @@ function BillingCampaignDrilldownInner({
     onInvoice(selectionToSubmitPayload(selection, rootRows));
   }, [onInvoice, selectedCount, selection, rootRows]);
 
+  const showFloatingBar = showBulkSelectionControls && selectedCount > 0;
+
   return (
     <div
       className={cn(
         OPERATIONAL_TABLE_FONT,
         "space-y-3 border-t",
-        showBulkSelectionControls ? "p-4" : "px-4 py-3"
+        showBulkSelectionControls ? "p-4" : "px-4 py-3",
+        operationalFloatingBarContentClass(showFloatingBar)
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -160,39 +169,6 @@ function BillingCampaignDrilldownInner({
             </span>
           </div>
         ) : null}
-        <div className="flex flex-wrap items-center gap-2">
-          {showBulkSelectionControls ? (
-            <div className="flex items-center gap-2 rounded-2xl border px-2 py-1">
-              <OperationalSelectionCheckbox
-                status={globalSelectionStatus}
-                onToggle={handleSelectAllToggle}
-                ariaLabel="Select all eligible operational rows"
-              />
-              <Button type="button" size="sm" variant="ghost" onClick={handleSelectAllToggle}>
-                Select all
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleClearSelection}
-                disabled={selectedCount === 0}
-              >
-                Clear
-              </Button>
-            </div>
-          ) : null}
-          {onInvoice ? (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleInvoiceSelected}
-              disabled={selectedCount === 0}
-            >
-              Generate invoice
-            </Button>
-          ) : null}
-        </div>
       </div>
 
       {filteredRows.length === 0 ? (
@@ -223,6 +199,64 @@ function BillingCampaignDrilldownInner({
           ))}
         </div>
       )}
+
+      {showBulkSelectionControls ? (
+        <OperationalFloatingActionBar visible={showFloatingBar}>
+          <div className="flex shrink-0 items-center gap-1.5 pr-1">
+            <Badge
+              variant="secondary"
+              className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+            >
+              {selectedCount} selected
+            </Badge>
+            <Button
+              type="button"
+              size="icon-xs"
+              variant="ghost"
+              className="size-6 shrink-0 rounded-full text-muted-foreground"
+              onClick={handleClearSelection}
+              aria-label="Clear selection"
+            >
+              <XIcon className="size-3.5" />
+            </Button>
+          </div>
+
+          <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            <OperationalSelectionCheckbox
+              status={globalSelectionStatus}
+              onToggle={handleSelectAllToggle}
+              ariaLabel="Select all eligible operational rows"
+            />
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              className="hidden shrink-0 sm:inline-flex"
+              onClick={handleSelectAllToggle}
+            >
+              Select all
+            </Button>
+          </div>
+
+          {onInvoice ? (
+            <>
+              <div className="hidden h-5 w-px shrink-0 bg-border/70 md:block" aria-hidden />
+              <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 shrink-0 rounded-full text-xs"
+                  onClick={handleInvoiceSelected}
+                >
+                  Generate invoice
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </OperationalFloatingActionBar>
+      ) : null}
     </div>
   );
 }

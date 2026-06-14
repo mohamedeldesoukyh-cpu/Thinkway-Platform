@@ -2,9 +2,10 @@
 
 import { FileTextIcon } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OperationalFloatingActionBar } from "@/components/workspace/operational-floating-action-bar";
 import { formatMoney } from "@/features/campaigns/utils";
-import { cn } from "@/lib/utils";
 
 type AssignmentTotalsFooterProps = {
   selectedCount: number;
@@ -21,25 +22,31 @@ export function AssignmentTotalsFooter({
   onCreateInvoice,
   className,
 }: AssignmentTotalsFooterProps) {
-  if (selectedCount === 0) return null;
+  const visible = selectedCount > 0;
 
   return (
-    <div
-      className={cn(
-        "sticky bottom-2 flex flex-wrap items-center justify-between gap-3",
-        "rounded-xl border bg-background/95 px-3 py-2.5 text-sm shadow-sm backdrop-blur",
-        className
-      )}
-    >
-      <div>
-        <span className="font-medium">{selectedCount}</span> deliverable
-        {selectedCount === 1 ? "" : "s"} selected · Invoice{" "}
-        <span className="font-semibold">{formatMoney(selectedTotal, currency)}</span>
-      </div>
-      <Button type="button" size="sm" onClick={onCreateInvoice}>
+    <OperationalFloatingActionBar visible={visible} className={className}>
+      <Badge
+        variant="secondary"
+        className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+      >
+        {selectedCount} selected
+      </Badge>
+      <span className="shrink-0 text-xs text-muted-foreground">
+        Invoice{" "}
+        <span className="font-semibold text-foreground">
+          {formatMoney(selectedTotal, currency)}
+        </span>
+      </span>
+      <Button
+        type="button"
+        size="sm"
+        className="ml-auto h-8 shrink-0 rounded-full text-xs"
+        onClick={onCreateInvoice}
+      >
         <FileTextIcon data-icon="inline-start" />
         Create invoice
       </Button>
-    </div>
+    </OperationalFloatingActionBar>
   );
 }

@@ -1,6 +1,13 @@
 "use client";
 
+import { FileTextIcon, XIcon } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  OperationalFloatingActionBar,
+  operationalFloatingBarContentClass,
+} from "@/components/workspace/operational-floating-action-bar";
 import {
   CampaignOperationalTable,
   CampaignOperationalTableBody,
@@ -14,6 +21,7 @@ import {
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import { OPERATIONAL_REVENUE_AMOUNT_CLASS } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
 import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
@@ -156,7 +164,7 @@ function CampaignBillingQueueTableRow({
         </CampaignOperationalTableCell>
       ) : null}
       {showRevenueBeforeVat ? (
-        <CampaignOperationalTableCellAmount>
+        <CampaignOperationalTableCellAmount className={OPERATIONAL_REVENUE_AMOUNT_CLASS}>
           {formatOperationalAmount(row.revenue_before_vat)}
         </CampaignOperationalTableCellAmount>
       ) : null}
@@ -166,7 +174,7 @@ function CampaignBillingQueueTableRow({
         </CampaignOperationalTableCellAmount>
       ) : null}
       {showRevenueAfterVat ? (
-        <CampaignOperationalTableCellAmount className="font-medium">
+        <CampaignOperationalTableCellAmount className={OPERATIONAL_REVENUE_AMOUNT_CLASS}>
           {formatOperationalAmount(row.revenue_after_vat)}
         </CampaignOperationalTableCellAmount>
       ) : null}
@@ -209,7 +217,7 @@ export function CampaignBillingQueueTable({
   );
 }
 
-export function CampaignBillingQueueToolbar({
+export function CampaignBillingQueueFloatingBar({
   rows,
   selectedBatchKeys,
   onSelectAll,
@@ -224,38 +232,66 @@ export function CampaignBillingQueueToolbar({
 }) {
   const globalStatus = queueGlobalStatus(rows, selectedBatchKeys);
   const selectedCount = selectedBatchKeys.size;
+  const visible = selectedCount > 0;
 
   if (rows.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
-      <OperationalSelectionCheckbox
-        status={globalStatus}
-        onToggle={onSelectAll}
-        ariaLabel="Select all queue rows"
-      />
-      <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onSelectAll}>
-        Select all
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        className="h-7 px-2 text-xs"
-        onClick={onClear}
-        disabled={selectedCount === 0}
-      >
-        Clear
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        className="h-7 text-xs"
-        onClick={onGenerateInvoice}
-        disabled={selectedCount === 0}
-      >
-        Generate invoice
-      </Button>
-    </div>
+    <OperationalFloatingActionBar visible={visible}>
+      <div className="flex shrink-0 items-center gap-1.5 pr-1">
+        <Badge
+          variant="secondary"
+          className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+        >
+          {selectedCount} selected
+        </Badge>
+        <Button
+          type="button"
+          size="icon-xs"
+          variant="ghost"
+          className="size-6 shrink-0 rounded-full text-muted-foreground"
+          onClick={onClear}
+          aria-label="Clear selection"
+        >
+          <XIcon className="size-3.5" />
+        </Button>
+      </div>
+
+      <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+
+      <div className="flex shrink-0 items-center gap-1.5">
+        <OperationalSelectionCheckbox
+          status={globalStatus}
+          onToggle={onSelectAll}
+          ariaLabel="Select all queue rows"
+        />
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          className="hidden shrink-0 sm:inline-flex"
+          onClick={onSelectAll}
+        >
+          Select all
+        </Button>
+      </div>
+
+      <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+        <Button
+          type="button"
+          size="sm"
+          className="h-8 shrink-0 rounded-full text-xs"
+          onClick={onGenerateInvoice}
+        >
+          <FileTextIcon data-icon="inline-start" />
+          Generate invoice
+        </Button>
+      </div>
+    </OperationalFloatingActionBar>
   );
+}
+
+/** @deprecated Use CampaignBillingQueueFloatingBar — inline toolbar replaced by floating pill. */
+export function CampaignBillingQueueToolbar(props: Parameters<typeof CampaignBillingQueueFloatingBar>[0]) {
+  return <CampaignBillingQueueFloatingBar {...props} />;
 }

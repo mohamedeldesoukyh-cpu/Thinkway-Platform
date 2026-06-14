@@ -6,16 +6,17 @@ import type { CampaignLineBillingStatus } from "@/features/billing/types";
  */
 
 export const METRIC_DEFINITIONS = {
-  revenue: "Planned campaign revenue (assignment line totals).",
+  revenue:
+    "Planned billable revenue (Rev + UR Rev + AF) from assignment line commercial rollup.",
   achieved_revenue:
-    "Operational revenue in approved, billing-ready, or invoiced states.",
-  unachieved_revenue: "Planned revenue not yet achieved operationally.",
+    "Billable revenue in approved, billing-ready, or invoiced line states.",
+  unachieved_revenue: "Planned billable revenue not yet achieved operationally.",
   invoiced_revenue:
     "Revenue linked to invoice line items (invoice_line_items.revenue_before_vat).",
   collected_revenue: "Cash collected against client invoices (amount_paid).",
   outstanding_revenue: "Invoiced revenue minus collected (open AR).",
-  gp: "Gross profit = revenue − cost.",
-  margin_percent: "GP ÷ revenue × 100 when revenue > 0.",
+  gp: "Gross profit = billable revenue − cost − UR cost.",
+  margin_percent: "GP ÷ billable revenue × 100 when revenue > 0.",
   vendor_payable: "Unpaid vendor / influencer obligations.",
   remaining_to_invoice: "Achieved revenue not yet invoiced.",
   budget_amount: "Approved PO / budget envelope (future-ready).",

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { OperationalFloatingActionBar } from "@/components/workspace/operational-floating-action-bar";
 import {
   generateVendorIosFromLinesAction,
   type GenerateVendorIoState,
@@ -29,7 +31,6 @@ import {
   type UngenerateVendorIoState,
 } from "@/features/io/ungenerate-vendor-io-action";
 import { formatMoney } from "@/features/campaigns/utils";
-import { cn } from "@/lib/utils";
 
 type AssignmentOperationalActionsFooterProps = {
   campaignId: string;
@@ -106,66 +107,77 @@ export function AssignmentOperationalActionsFooter({
     } else toast.error(ungenerateState.message);
   }, [ungenerateState, router]);
 
-  if (selectedLineIds.length === 0) return null;
+  const visible = selectedLineIds.length > 0;
 
   return (
-    <div
-      className={cn(
-        "sticky bottom-2 flex flex-wrap items-center justify-between gap-3",
-        "rounded-xl border bg-background/95 px-3 py-2.5 text-sm shadow-sm backdrop-blur",
-        className
-      )}
-    >
-      <div className="text-muted-foreground">
-        <span className="font-medium text-foreground">{selectedLineIds.length}</span> assignment
-        {selectedLineIds.length === 1 ? "" : "s"} selected
+    <>
+      <OperationalFloatingActionBar visible={visible} className={className}>
+        <Badge
+          variant="secondary"
+          className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+        >
+          {selectedLineIds.length} selected
+        </Badge>
         {invoiceLineIds.length > 0 ? (
-          <>
-            {" "}
-            · Invoice {formatMoney(invoiceTotal, currency)}
-          </>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            Invoice {formatMoney(invoiceTotal, currency)}
+          </span>
         ) : null}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {vioLineIds.length > 0 ? (
-          <form action={vioAction}>
-            <input type="hidden" name="campaign_id" value={campaignId} />
-            <input type="hidden" name="line_ids" value={vioLineIds.join(",")} />
-            <Button type="submit" size="sm" variant="outline" disabled={vioPending}>
-              <FileStackIcon data-icon="inline-start" />
-              {vioPending ? "Generating…" : "Generate Vendor IO"}
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {vioLineIds.length > 0 ? (
+            <form action={vioAction}>
+              <input type="hidden" name="campaign_id" value={campaignId} />
+              <input type="hidden" name="line_ids" value={vioLineIds.join(",")} />
+              <Button
+                type="submit"
+                size="sm"
+                variant="default"
+                className="h-8 shrink-0 rounded-full text-xs"
+                disabled={vioPending}
+              >
+                <FileStackIcon data-icon="inline-start" />
+                {vioPending ? "Generating…" : "Generate Vendor IO"}
+              </Button>
+            </form>
+          ) : null}
+          {reviseVioLineIds.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 rounded-full text-xs"
+              onClick={() => setReviseOpen(true)}
+            >
+              <GitBranchIcon data-icon="inline-start" />
+              Revise Vendor IO
             </Button>
-          </form>
-        ) : null}
-        {reviseVioLineIds.length > 0 ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setReviseOpen(true)}
-          >
-            <GitBranchIcon data-icon="inline-start" />
-            Revise Vendor IO
-          </Button>
-        ) : null}
-        {ungenerateIoLineIds.length > 0 ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setUngenerateOpen(true)}
-          >
-            <Undo2Icon data-icon="inline-start" />
-            Ungenerate IO
-          </Button>
-        ) : null}
-        {invoiceLineIds.length > 0 ? (
-          <Button type="button" size="sm" onClick={() => onGenerateInvoice(invoiceLineIds)}>
-            <FileTextIcon data-icon="inline-start" />
-            Generate invoice
-          </Button>
-        ) : null}
-      </div>
+          ) : null}
+          {ungenerateIoLineIds.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 rounded-full text-xs"
+              onClick={() => setUngenerateOpen(true)}
+            >
+              <Undo2Icon data-icon="inline-start" />
+              Ungenerate IO
+            </Button>
+          ) : null}
+          {invoiceLineIds.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              className="h-8 shrink-0 rounded-full text-xs"
+              onClick={() => onGenerateInvoice(invoiceLineIds)}
+            >
+              <FileTextIcon data-icon="inline-start" />
+              Generate invoice
+            </Button>
+          ) : null}
+        </div>
+      </OperationalFloatingActionBar>
 
       <Dialog open={reviseOpen} onOpenChange={setReviseOpen}>
         <DialogContent>
@@ -247,6 +259,6 @@ export function AssignmentOperationalActionsFooter({
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

@@ -9,7 +9,7 @@ import {
   TrendingUpIcon,
 } from "lucide-react";
 
-import { KpiCarousel } from "@/components/ui/kpi-carousel";
+import { KpiCarousel, type KpiCarouselItem } from "@/components/ui/kpi-carousel";
 import type { GroupWorkspace } from "@/features/groups/types";
 import { formatGroupMoney, formatPercent } from "@/features/groups/utils";
 
@@ -20,13 +20,14 @@ type GroupKpiStripProps = {
 export function GroupKpiStrip({ workspace }: GroupKpiStripProps) {
   const { counts, financials } = workspace;
 
-  const items = [
+  const items: KpiCarouselItem[] = [
     {
       id: "legal_entities",
       label: "Legal entities",
       value: String(counts.legal_entities),
       icon: Building2Icon,
       accentClass: "bg-brand-blue/10 text-brand-blue",
+      valueSemantic: "count",
     },
     {
       id: "brands",
@@ -34,6 +35,7 @@ export function GroupKpiStrip({ workspace }: GroupKpiStripProps) {
       value: String(counts.brands),
       icon: TagIcon,
       accentClass: "bg-brand-purple/10 text-brand-purple",
+      valueSemantic: "count",
     },
     {
       id: "campaigns",
@@ -41,6 +43,7 @@ export function GroupKpiStrip({ workspace }: GroupKpiStripProps) {
       value: String(counts.campaigns),
       icon: LayersIcon,
       accentClass: "bg-brand-pink/10 text-brand-pink",
+      valueSemantic: "count",
     },
     {
       id: "revenue",
@@ -48,6 +51,7 @@ export function GroupKpiStrip({ workspace }: GroupKpiStripProps) {
       value: formatGroupMoney(financials.total_revenue),
       icon: TrendingUpIcon,
       accentClass: "bg-brand-blue/10 text-brand-blue",
+      valueSemantic: "revenue",
     },
     {
       id: "gp",
@@ -55,6 +59,8 @@ export function GroupKpiStrip({ workspace }: GroupKpiStripProps) {
       value: formatGroupMoney(financials.total_gp),
       icon: BriefcaseIcon,
       accentClass: "bg-brand-purple/10 text-brand-purple",
+      valueSemantic: "gp",
+      valueNumeric: financials.total_gp,
     },
     {
       id: "margin",
@@ -62,6 +68,8 @@ export function GroupKpiStrip({ workspace }: GroupKpiStripProps) {
       value: formatPercent(financials.margin_percent),
       icon: PercentIcon,
       accentClass: "bg-success/10 text-success",
+      valueSemantic: "margin",
+      valueNumeric: financials.margin_percent,
     },
   ];
 

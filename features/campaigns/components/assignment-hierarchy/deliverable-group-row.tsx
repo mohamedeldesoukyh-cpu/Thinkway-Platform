@@ -18,6 +18,7 @@ type DeliverableGroupRowProps = {
   defaultRevenueVatPercent: number;
   platformOptions: { value: string; label: string }[];
   showExpandColumn?: boolean;
+  leadingParentColumnIds?: readonly string[];
   isLastDeliverable?: boolean;
 };
 
@@ -35,6 +36,7 @@ export function DeliverableGroupRow({
   defaultRevenueVatPercent,
   platformOptions,
   showExpandColumn = false,
+  leadingParentColumnIds,
   isLastDeliverable = false,
 }: DeliverableGroupRowProps) {
   const readOnly = deliverable.is_synthetic || deliverable.is_locked;
@@ -69,6 +71,7 @@ export function DeliverableGroupRow({
           isFirstPost={index === 0}
           isLastChildRow={isLastDeliverable && index === posts.length - 1}
           showExpandColumn={showExpandColumn}
+          leadingParentColumnIds={leadingParentColumnIds}
         />
       ))}
     </>

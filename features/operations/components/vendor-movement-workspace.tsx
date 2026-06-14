@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { XIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
+import { Badge } from "@/components/ui/badge";
 import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { operationalColumnsFromMetas } from "@/lib/tables/operational-filter-columns";
 import { OPERATIONS_VENDOR_MOVE_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import {
+  OperationalFloatingActionBar,
+  operationalFloatingBarContentClass,
+} from "@/components/workspace/operational-floating-action-bar";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
@@ -324,6 +330,7 @@ export function VendorMovementWorkspace({
           wide
           tableOnly
           cardSurface
+          className={operationalFloatingBarContentClass(selected.size > 0)}
           leading={
             <CampaignOperationalSectionHeader
               title="Assignments to move"
@@ -346,27 +353,56 @@ export function VendorMovementWorkspace({
         </OperationalTableSection>
       </OperationalTableSuiteProvider>
 
-      <OperationalFormSection
-        title="Execute reassignment"
-        footer={
+      <OperationalFloatingActionBar visible={selected.size > 0}>
+        <div className="flex shrink-0 items-center gap-1.5 pr-1">
+          <Badge
+            variant="secondary"
+            className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+          >
+            {selected.size} selected
+          </Badge>
           <Button
-            onClick={onExecute}
+            type="button"
+            size="icon-xs"
+            variant="ghost"
+            className="size-6 shrink-0 rounded-full text-muted-foreground"
+            onClick={() => setSelected(new Set())}
+            aria-label="Clear selection"
+          >
+            <XIcon className="size-3.5" />
+          </Button>
+        </div>
+
+        <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          Revenue{" "}
+          <span className="font-semibold text-foreground">
+            {formatBillingMoney(selectedRevenue)}
+          </span>
+        </span>
+
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 shrink-0 rounded-full text-xs"
             disabled={
               isPending ||
               !sourceVendorId ||
               !destVendorId ||
-              selected.size === 0 ||
               reason.trim().length < 3
             }
+            onClick={onExecute}
           >
-            {isPending ? "Executing…" : "Execute vendor reassignment"}
+            {isPending ? "Executing…" : "Execute reassignment"}
           </Button>
-        }
+        </div>
+      </OperationalFloatingActionBar>
+
+      <OperationalFormSection
+        title="Execute reassignment"
       >
-        <p className="text-sm text-muted-foreground">
-          Selected: {selected.size} assignment(s) ·{" "}
-          {formatBillingMoney(selectedRevenue)} revenue
-        </p>
         <div className="grid gap-2">
           <Label htmlFor="vendor_move_reason">Reason *</Label>
           <Textarea

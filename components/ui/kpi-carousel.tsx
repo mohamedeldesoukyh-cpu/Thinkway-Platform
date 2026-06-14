@@ -5,6 +5,8 @@ import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { OperationalKpiValueSemantic } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { operationalKpiValueClass } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 
 export type KpiCarouselItem = {
   id: string;
@@ -12,6 +14,10 @@ export type KpiCarouselItem = {
   value: string;
   icon: LucideIcon;
   accentClass?: string;
+  /** Semantic platform coloring for the value text. */
+  valueSemantic?: OperationalKpiValueSemantic;
+  /** Numeric value for gp/margin semantic coloring. */
+  valueNumeric?: number;
   /** Tint value text only — card chrome stays uniform. */
   valueAlert?: "warning" | "danger";
   /** @deprecated Use valueAlert */
@@ -60,6 +66,7 @@ export function KpiCarousel({ items, className, showNavigation = true }: KpiCaro
         {items.map((item) => {
           const Icon = item.icon;
           const valueTone = item.valueAlert ?? item.alert;
+          const semanticClass = operationalKpiValueClass(item.valueSemantic, item.valueNumeric);
           return (
             <div
               key={item.id}
@@ -77,9 +84,10 @@ export function KpiCarousel({ items, className, showNavigation = true }: KpiCaro
                 <p className="truncate text-[11px] text-muted-foreground">{item.label}</p>
                 <p
                   className={cn(
-                    "truncate font-heading text-sm font-bold tracking-tight",
-                    valueTone === "danger" && "text-red-600 dark:text-red-400",
-                    valueTone === "warning" && "text-amber-700 dark:text-amber-300"
+                    "truncate font-heading text-sm font-bold tracking-tight tabular-nums",
+                    semanticClass,
+                    valueTone === "danger" && "text-destructive",
+                    valueTone === "warning" && "text-warning"
                   )}
                 >
                   {item.value}

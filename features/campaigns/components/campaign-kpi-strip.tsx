@@ -62,6 +62,7 @@ export function CampaignKpiStrip({
       value: formatMoney(financials.revenue, currency),
       icon: TrendingUpIcon,
       accentClass: ACCENT_TILE.purple,
+      valueSemantic: "revenue",
     },
     {
       id: "cost",
@@ -69,6 +70,7 @@ export function CampaignKpiStrip({
       value: formatMoney(financials.cost, currency),
       icon: ReceiptIcon,
       accentClass: ACCENT_TILE.pink,
+      valueSemantic: "cost",
     },
     {
       id: "gp",
@@ -76,6 +78,8 @@ export function CampaignKpiStrip({
       value: formatMoney(financials.gp, currency),
       icon: TrendingUpIcon,
       accentClass: ACCENT_TILE.green,
+      valueSemantic: "gp",
+      valueNumeric: financials.gp,
     },
     {
       id: "margin",
@@ -83,6 +87,8 @@ export function CampaignKpiStrip({
       value: formatPercent(financials.margin_percent),
       icon: PercentIcon,
       accentClass: ACCENT_TILE.blue,
+      valueSemantic: "margin",
+      valueNumeric: financials.margin_percent,
     },
     {
       id: "assignments",
@@ -90,6 +96,7 @@ export function CampaignKpiStrip({
       value: String(assignedLines.length),
       icon: UsersIcon,
       accentClass: ACCENT_TILE.purple,
+      valueSemantic: "count",
     },
     {
       id: "deliverables",
@@ -97,6 +104,7 @@ export function CampaignKpiStrip({
       value: String(deliverableKpi),
       icon: PackageIcon,
       accentClass: ACCENT_TILE.pink,
+      valueSemantic: "count",
     },
     {
       id: "billing",
@@ -104,6 +112,7 @@ export function CampaignKpiStrip({
       value: formatMoney(financials.billing_outstanding, currency),
       icon: FileTextIcon,
       accentClass: ACCENT_TILE.green,
+      valueSemantic: "revenue",
     },
   ] satisfies {
     id: string;
@@ -111,6 +120,8 @@ export function CampaignKpiStrip({
     value: string;
     icon: LucideIcon;
     accentClass: string;
+    valueSemantic?: "revenue" | "gp" | "cost" | "margin" | "count";
+    valueNumeric?: number;
     valueAlert?: "warning" | "danger";
   }[];
 

@@ -40,6 +40,12 @@ type LineRow = {
   revenue: number;
   cost: number;
   profit: number;
+  revenue_before_vat?: number | null;
+  usage_rights_amount?: number | null;
+  usage_rights_cost?: number | null;
+  agency_fee_percent?: number | null;
+  agency_fee_amount?: number | null;
+  cost_before_vat?: number | null;
   po_amount: number;
   po_consumed: number;
   currency_code: string;
@@ -145,7 +151,7 @@ export async function loadAnalyticsFactsUncached(
     supabase
       .from("campaign_lines")
       .select(
-        "id, campaign_header_id, billing_status, revenue, cost, profit, po_amount, po_consumed, currency_code"
+        "id, campaign_header_id, billing_status, revenue, cost, profit, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, po_amount, po_consumed, currency_code"
       )
       .limit(5000),
     supabase
@@ -181,6 +187,12 @@ export async function loadAnalyticsFactsUncached(
       billing_status: line.billing_status,
       po_amount: Number(line.po_amount),
       po_consumed: Number(line.po_consumed ?? line.cost),
+      revenue_before_vat: line.revenue_before_vat,
+      usage_rights_amount: line.usage_rights_amount,
+      usage_rights_cost: line.usage_rights_cost,
+      agency_fee_percent: line.agency_fee_percent,
+      agency_fee_amount: line.agency_fee_amount,
+      cost_before_vat: line.cost_before_vat,
     });
     linesByCampaign.set(line.campaign_header_id, list);
   }

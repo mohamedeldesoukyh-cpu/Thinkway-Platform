@@ -31,7 +31,6 @@ import {
   type UngenerateVendorIoState,
 } from "@/features/io/ungenerate-vendor-io-action";
 import { formatMoney } from "@/features/campaigns/utils";
-import type { AssignmentSelectionTotals } from "@/features/campaigns/components/assignment-hierarchy/assignment-selection-summary-bar";
 import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
 import { cn } from "@/lib/utils";
 
@@ -39,9 +38,18 @@ const initialVioState: GenerateVendorIoState = { ok: false };
 const initialReviseState: ReviseVendorIoState = { ok: false };
 const initialUngenerateState: UngenerateVendorIoState = { ok: false };
 
-type AssignmentSafeActionsFooterProps = {
+export type AssignmentSelectionTotals = {
+  count: number;
+  revenue: number;
+  cost: number;
+  gp: number;
+  totalBilling: number;
+  currency: string | null;
+  currencyMixed: boolean;
+};
+
+type FloatingSelectionBarProps = {
   campaignId: string;
-  currency: string;
   totals: AssignmentSelectionTotals;
   selectedLineIds: string[];
   selectableLineCount: number;
@@ -54,11 +62,8 @@ type AssignmentSafeActionsFooterProps = {
   hasInvoiceSelection?: boolean;
   invoiceActionLabel?: "generate" | "regenerate" | null;
   ioCoverage?: IoCoverageAnalysis | null;
-  invoiceTotal: number;
   onGenerateInvoice: () => void;
-  /** Clear selection / expansion before router.refresh after IO mutations. */
   onAfterOperationalMutation?: () => void;
-  className?: string;
 };
 
 function buildFormData(
@@ -90,9 +95,8 @@ function SelectionMetric({
   );
 }
 
-export function AssignmentSafeActionsFooter({
+export function FloatingSelectionBar({
   campaignId,
-  currency,
   totals,
   selectedLineIds,
   selectableLineCount,
@@ -105,11 +109,9 @@ export function AssignmentSafeActionsFooter({
   hasInvoiceSelection = invoiceLineIds.length > 0,
   invoiceActionLabel = "generate",
   ioCoverage = null,
-  invoiceTotal: _invoiceTotal,
   onGenerateInvoice,
   onAfterOperationalMutation,
-  className,
-}: AssignmentSafeActionsFooterProps) {
+}: FloatingSelectionBarProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [ungenerateOpen, setUngenerateOpen] = useState(false);
@@ -117,9 +119,9 @@ export function AssignmentSafeActionsFooter({
   const [ungenerateReason, setUngenerateReason] = useState("");
   const [reviseReason, setReviseReason] = useState("");
 
-  const hasSelection = selectedLineIds.length > 0;
-  const displayCurrency = totals.currencyMixed ? "USD" : (totals.currency ?? currency ?? "USD");
-  const currencyLabel = totals.currencyMixed ? "Mixed" : (totals.currency ?? currency ?? "USD");
+  const visible = totals.count > 0;
+  const displayCurrency = totals.currencyMixed ? "USD" : (totals.currency ?? "USD");
+  const currencyLabel = totals.currencyMixed ? "Mixed" : (totals.currency ?? "USD");
   const primaryAction = vioLineIds.length > 0 ? "vio" : hasInvoiceSelection ? "invoice" : null;
 
   function runVioGenerate() {
@@ -130,13 +132,13 @@ export function AssignmentSafeActionsFooter({
       );
       if (result.ok) {
         showSuccessToastOnce(result.message ?? "Vendor IO generated.", {
-          id: "assignment-safe-vio",
+          id: "assignment-vio-generate",
         });
         onAfterOperationalMutation?.();
         router.refresh();
       } else {
         showErrorToastOnce(result.message ?? "Vendor IO generation failed.", {
-          id: "assignment-safe-vio",
+          id: "assignment-vio-generate",
         });
       }
     });
@@ -151,14 +153,8 @@ export function AssignmentSafeActionsFooter({
         buildFormData(campaignId, reviseVioLineIds, reason)
       );
       if (result.ok) {
-        if (process.env.NODE_ENV === "development") {
-          console.log("[Assignments] revise Vendor IO success", {
-            revised_line_ids: result.revised_line_ids,
-            new_vendor_io_ids: result.new_vendor_io_ids,
-          });
-        }
         showSuccessToastOnce(result.message ?? "Vendor IO revised.", {
-          id: "assignment-safe-revise",
+          id: "assignment-vio-revise",
         });
         setReviseOpen(false);
         setReviseReason("");
@@ -166,7 +162,7 @@ export function AssignmentSafeActionsFooter({
         router.refresh();
       } else {
         showErrorToastOnce(result.message ?? "Revise Vendor IO failed.", {
-          id: "assignment-safe-revise",
+          id: "assignment-vio-revise",
         });
       }
     });
@@ -182,7 +178,7 @@ export function AssignmentSafeActionsFooter({
       );
       if (result.ok) {
         showSuccessToastOnce(result.message ?? "Vendor IO un-generated.", {
-          id: "assignment-safe-ungenerate",
+          id: "assignment-vio-ungenerate",
         });
         setUngenerateOpen(false);
         setUngenerateReason("");
@@ -190,7 +186,7 @@ export function AssignmentSafeActionsFooter({
         router.refresh();
       } else {
         showErrorToastOnce(result.message ?? "Un-generate failed.", {
-          id: "assignment-safe-ungenerate",
+          id: "assignment-vio-ungenerate",
         });
       }
     });
@@ -205,11 +201,7 @@ export function AssignmentSafeActionsFooter({
 
   return (
     <>
-      <OperationalFloatingActionBar
-        visible={hasSelection}
-        messages={coverageMessages}
-        className={className}
-      >
+      <OperationalFloatingActionBar visible={visible} messages={coverageMessages}>
         <div className="flex shrink-0 items-center gap-1.5 pr-1">
           <Badge
             variant="secondary"
@@ -222,13 +214,13 @@ export function AssignmentSafeActionsFooter({
             size="icon-xs"
             variant="ghost"
             className="size-6 shrink-0 rounded-full text-muted-foreground"
-            disabled={!hasSelection}
+            disabled={!visible}
             onClick={onClearSelection}
             aria-label="Clear selection"
           >
             <XIcon className="size-3.5" />
           </Button>
-          {selectableLineCount > 0 ? (
+          {selectableLineCount > 0 && selectedLineIds.length < selectableLineCount ? (
             <Button
               type="button"
               size="xs"
@@ -244,10 +236,7 @@ export function AssignmentSafeActionsFooter({
         <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
 
         <div className="flex shrink-0 items-center gap-2 text-xs sm:gap-3">
-          <SelectionMetric
-            label="Revenue"
-            value={formatMoney(totals.revenue, displayCurrency)}
-          />
+          <SelectionMetric label="Revenue" value={formatMoney(totals.revenue, displayCurrency)} />
           <SelectionMetric
             label="Cost"
             value={formatMoney(totals.cost, displayCurrency)}
@@ -347,9 +336,9 @@ export function AssignmentSafeActionsFooter({
           </DialogHeader>
           <div className="grid gap-3">
             <div className="grid gap-2">
-              <Label htmlFor="assignment_vio_revise_reason">Correction reason (required)</Label>
+              <Label htmlFor="floating_vio_revise_reason">Correction reason (required)</Label>
               <Textarea
-                id="assignment_vio_revise_reason"
+                id="floating_vio_revise_reason"
                 value={reviseReason}
                 onChange={(e) => setReviseReason(e.target.value)}
                 rows={3}
@@ -382,9 +371,9 @@ export function AssignmentSafeActionsFooter({
           </DialogHeader>
           <div className="grid gap-3">
             <div className="grid gap-2">
-              <Label htmlFor="assignment_vio_ungenerate_reason">Reason (required)</Label>
+              <Label htmlFor="floating_vio_ungenerate_reason">Reason (required)</Label>
               <Textarea
-                id="assignment_vio_ungenerate_reason"
+                id="floating_vio_ungenerate_reason"
                 value={ungenerateReason}
                 onChange={(e) => setUngenerateReason(e.target.value)}
                 rows={3}

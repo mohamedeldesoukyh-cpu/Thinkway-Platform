@@ -7,7 +7,7 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { KpiCarousel } from "@/components/ui/kpi-carousel";
+import { KpiCarousel, type KpiCarouselItem } from "@/components/ui/kpi-carousel";
 import type { CampaignsKpis } from "@/features/campaigns/queries";
 import { formatMoney } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
@@ -25,13 +25,14 @@ const ACCENT_TILE = {
 } as const;
 
 export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
-  const items = [
+  const items: KpiCarouselItem[] = [
     {
       id: "total",
       label: "Total campaigns",
       value: String(kpis.total_campaigns),
       icon: MegaphoneIcon,
       accentClass: ACCENT_TILE.blue,
+      valueSemantic: "count",
     },
     {
       id: "revenue",
@@ -39,6 +40,7 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
       value: formatMoney(kpis.total_revenue, kpis.currency_code),
       icon: WalletIcon,
       accentClass: ACCENT_TILE.purple,
+      valueSemantic: "revenue",
     },
     {
       id: "margin",
@@ -46,6 +48,8 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
       value: `${kpis.avg_margin.toFixed(1)}%`,
       icon: TrendingUpIcon,
       accentClass: ACCENT_TILE.pink,
+      valueSemantic: "margin",
+      valueNumeric: kpis.avg_margin,
     },
     {
       id: "assignments",
@@ -53,6 +57,7 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
       value: String(kpis.assignments),
       icon: UsersIcon,
       accentClass: ACCENT_TILE.green,
+      valueSemantic: "count",
     },
   ];
 

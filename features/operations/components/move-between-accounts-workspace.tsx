@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
-import { ArrowRightLeftIcon, SearchIcon } from "lucide-react";
+import { ArrowRightLeftIcon, SearchIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -15,6 +15,10 @@ import { OperationalTableSuiteProvider } from "@/components/tables/operational-t
 import { operationalColumnsFromMetas } from "@/lib/tables/operational-filter-columns";
 import { OPERATIONS_MOVE_CAMPAIGNS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import {
+  OperationalFloatingActionBar,
+  operationalFloatingBarContentClass,
+} from "@/components/workspace/operational-floating-action-bar";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
@@ -564,33 +568,6 @@ export function MoveBetweenAccountsWorkspace({
         </CampaignFlatSection>
       </div>
 
-      <CampaignFlatSection
-        title="Selection summary"
-        className="sticky top-0 z-10 border-primary/20 bg-background/95 backdrop-blur"
-      >
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Selected</p>
-            <p className="font-semibold">{selected.size} campaigns</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Revenue</p>
-            <p className="font-semibold">{formatBillingMoney(selectedRevenue)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">GP</p>
-            <p className="font-semibold">{formatBillingMoney(selectedGp)}</p>
-          </div>
-          <Button
-            className="ml-auto"
-            disabled={selected.size === 0 || isPending}
-            onClick={handlePreview}
-          >
-            Preview & move selected
-          </Button>
-        </div>
-      </CampaignFlatSection>
-
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.operationsMoveCampaigns}
         columns={moveCampaignColumns}
@@ -601,6 +578,7 @@ export function MoveBetweenAccountsWorkspace({
           wide
           tableOnly
           cardSurface
+          className={operationalFloatingBarContentClass(selected.size > 0)}
           leading={
             <div className="flex flex-row flex-wrap items-center justify-between gap-3">
               <CampaignOperationalSectionHeader title="Campaign selection" />
@@ -637,6 +615,56 @@ export function MoveBetweenAccountsWorkspace({
           </p>
         </OperationalTableSection>
       </OperationalTableSuiteProvider>
+
+      <OperationalFloatingActionBar visible={selected.size > 0}>
+        <div className="flex shrink-0 items-center gap-1.5 pr-1">
+          <Badge
+            variant="secondary"
+            className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+          >
+            {selected.size} selected
+          </Badge>
+          <Button
+            type="button"
+            size="icon-xs"
+            variant="ghost"
+            className="size-6 shrink-0 rounded-full text-muted-foreground"
+            onClick={() => setSelected(new Set())}
+            aria-label="Clear selection"
+          >
+            <XIcon className="size-3.5" />
+          </Button>
+        </div>
+
+        <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+
+        <div className="flex shrink-0 items-center gap-3 text-xs tabular-nums">
+          <span className="text-muted-foreground">
+            Revenue{" "}
+            <span className="font-semibold text-foreground">
+              {formatBillingMoney(selectedRevenue)}
+            </span>
+          </span>
+          <span className="hidden text-muted-foreground sm:inline">
+            GP{" "}
+            <span className="font-semibold text-foreground">
+              {formatBillingMoney(selectedGp)}
+            </span>
+          </span>
+        </div>
+
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 shrink-0 rounded-full text-xs"
+            disabled={isPending}
+            onClick={handlePreview}
+          >
+            Preview & move selected
+          </Button>
+        </div>
+      </OperationalFloatingActionBar>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-lg">

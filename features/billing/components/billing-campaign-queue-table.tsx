@@ -2,11 +2,17 @@
 
 import type { ReactNode } from "react";
 
+import { XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  OperationalFloatingActionBar,
+  operationalFloatingBarContentClass,
+} from "@/components/workspace/operational-floating-action-bar";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import {
@@ -400,6 +406,7 @@ export function BillingCampaignQueueTable({
         wide
         tableOnly
         cardSurface
+        className={operationalFloatingBarContentClass(totalQueueSelected > 0)}
         leading={
           <div className="flex flex-col gap-3">
             <div className="flex flex-row flex-wrap items-center justify-between gap-3">
@@ -432,37 +439,6 @@ export function BillingCampaignQueueTable({
               </div>
               {settingsSlot}
             </div>
-
-            {totalQueueSelected > 0 ? (
-              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-muted/30 p-2">
-                <span className="px-2 text-xs font-medium text-muted-foreground">
-                  {totalQueueSelected} row{totalQueueSelected === 1 ? "" : "s"} selected
-                  {invoiceContext
-                    ? ` · ${campaigns.find((c) => c.campaign_header_id === invoiceContext.campaignId)?.campaign_name ?? "Campaign"}`
-                    : " · select rows in one campaign only"}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={!invoiceContext}
-                  onClick={() => handleQueueInvoiceSelected("new")}
-                >
-                  Create new invoice
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={!invoiceContext}
-                  onClick={() => handleQueueInvoiceSelected("append")}
-                >
-                  Append to open invoice
-                </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={handleClearQueueSelection}>
-                  Clear selection
-                </Button>
-              </div>
-            ) : null}
           </div>
         }
       >
@@ -530,6 +506,58 @@ export function BillingCampaignQueueTable({
           </OperationalTableSuiteProvider>
         </div>
       ) : null}
+
+      <OperationalFloatingActionBar visible={totalQueueSelected > 0}>
+        <div className="flex shrink-0 items-center gap-1.5 pr-1">
+          <Badge
+            variant="secondary"
+            className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+          >
+            {totalQueueSelected} selected
+          </Badge>
+          <Button
+            type="button"
+            size="icon-xs"
+            variant="ghost"
+            className="size-6 shrink-0 rounded-full text-muted-foreground"
+            onClick={handleClearQueueSelection}
+            aria-label="Clear selection"
+          >
+            <XIcon className="size-3.5" />
+          </Button>
+        </div>
+
+        <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {invoiceContext
+            ? (campaigns.find((c) => c.campaign_header_id === invoiceContext.campaignId)
+                ?.campaign_name ?? "Campaign")
+            : "Select rows in one campaign only"}
+        </span>
+
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 shrink-0 rounded-full text-xs"
+            disabled={!invoiceContext}
+            onClick={() => handleQueueInvoiceSelected("new")}
+          >
+            Create new invoice
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 shrink-0 rounded-full text-xs"
+            disabled={!invoiceContext}
+            onClick={() => handleQueueInvoiceSelected("append")}
+          >
+            Append to open invoice
+          </Button>
+        </div>
+      </OperationalFloatingActionBar>
 
       {invoiceCampaignId && invoiceDetail ? (
         <InvoiceGenerationSheet

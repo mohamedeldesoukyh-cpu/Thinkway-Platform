@@ -2,37 +2,82 @@
 
 import { useLayoutEffect, useState, type RefObject } from "react";
 
-import { CHILD_GRID_LEADING_COLUMN_COUNT } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
+import {
+  CHILD_GRID_TRAILING_COL_WIDTHS,
+  CHILD_GRID_TRAILING_FINANCIAL_COLUMN_IDS,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
 
 const PARENT_GRID_SELECTOR = "[data-assignment-parent-grid]";
+const PARENT_COL_ATTR = "data-assignment-col";
 
-function widthsEqual(a: number[] | null, b: number[]): boolean {
-  if (!a || a.length !== b.length) return false;
-  return a.every((value, index) => value === b[index]);
+export type ChildGridMeasuredWidths = {
+  leading: number[];
+  trailing: number[];
+};
+
+function widthsEqual(
+  a: ChildGridMeasuredWidths | null,
+  b: ChildGridMeasuredWidths
+): boolean {
+  if (!a) return false;
+  if (a.leading.length !== b.leading.length || a.trailing.length !== b.trailing.length) {
+    return false;
+  }
+  return (
+    a.leading.every((value, index) => value === b.leading[index]) &&
+    a.trailing.every((value, index) => value === b.trailing[index])
+  );
+}
+
+function measureCellWidth(container: Element, columnId: string): number | null {
+  const cell = container.querySelector<HTMLElement>(
+    `[${PARENT_COL_ATTR}="${CSS.escape(columnId)}"]`
+  );
+  if (!cell) return null;
+  return Math.round(cell.getBoundingClientRect().width);
 }
 
 function measureLeadingWidths(
+  parentTable: HTMLTableElement,
+  lineId: string,
+  leadingColumnIds: readonly string[]
+): number[] | null {
+  if (leadingColumnIds.length === 0) return null;
+
+  const row = parentTable.querySelector(
+    `tbody tr[data-line-id="${CSS.escape(lineId)}"]`
+  );
+  const source = row ?? parentTable.querySelector("thead > tr");
+  if (!source) return null;
+
+  const widths: number[] = [];
+  for (const columnId of leadingColumnIds) {
+    const width = measureCellWidth(source, columnId);
+    if (width == null) return null;
+    widths.push(width);
+  }
+
+  return widths;
+}
+
+function measureTrailingFinancialWidths(
   parentTable: HTMLTableElement,
   lineId: string
 ): number[] | null {
   const row = parentTable.querySelector(
     `tbody tr[data-line-id="${CSS.escape(lineId)}"]`
   );
-  if (row) {
-    const cells = row.querySelectorAll(":scope > td");
-    if (cells.length >= CHILD_GRID_LEADING_COLUMN_COUNT) {
-      return Array.from(cells)
-        .slice(0, CHILD_GRID_LEADING_COLUMN_COUNT)
-        .map((cell) => Math.round(cell.getBoundingClientRect().width));
-    }
+  const source = row ?? parentTable.querySelector("thead > tr");
+  if (!source) return null;
+
+  const widths: number[] = [];
+  for (const columnId of CHILD_GRID_TRAILING_FINANCIAL_COLUMN_IDS) {
+    const width = measureCellWidth(source, columnId);
+    if (width == null) return null;
+    widths.push(width);
   }
 
-  const headers = parentTable.querySelectorAll("thead > tr > th");
-  if (headers.length < CHILD_GRID_LEADING_COLUMN_COUNT) return null;
-
-  return Array.from(headers)
-    .slice(0, CHILD_GRID_LEADING_COLUMN_COUNT)
-    .map((header) => Math.round(header.getBoundingClientRect().width));
+  return widths;
 }
 
 function resolveParentTable(childTable: HTMLTableElement): HTMLTableElement | null {
@@ -41,24 +86,44 @@ function resolveParentTable(childTable: HTMLTableElement): HTMLTableElement | nu
   return parent;
 }
 
-/** Mirror parent safe-grid widths for child cols 1–9 (through Rev). */
+function buildTrailingWidths(financialWidths: number[] | null): number[] {
+  const nonFinancial = CHILD_GRID_TRAILING_COL_WIDTHS.slice(
+    CHILD_GRID_TRAILING_FINANCIAL_COLUMN_IDS.length
+  );
+  if (
+    financialWidths &&
+    financialWidths.length === CHILD_GRID_TRAILING_FINANCIAL_COLUMN_IDS.length
+  ) {
+    return [...financialWidths, ...nonFinancial];
+  }
+  return [...CHILD_GRID_TRAILING_COL_WIDTHS];
+}
+
+/** Mirror parent safe-grid widths for child leading cols through Rev + financial trailing. */
 export function useParentLeadingColumnWidths(
   tableRef: RefObject<HTMLTableElement | null>,
-  lineId: string
-): number[] | null {
-  const [leadingWidths, setLeadingWidths] = useState<number[] | null>(null);
+  lineId: string,
+  leadingColumnIds: readonly string[]
+): ChildGridMeasuredWidths | null {
+  const [widths, setWidths] = useState<ChildGridMeasuredWidths | null>(null);
+  const leadingKey = leadingColumnIds.join("|");
 
   useLayoutEffect(() => {
     const childTable = tableRef.current;
-    if (!childTable) return;
+    if (!childTable || leadingColumnIds.length === 0) return;
 
     const parentTable = resolveParentTable(childTable);
     if (!parentTable) return;
 
     const measure = () => {
-      const next = measureLeadingWidths(parentTable, lineId);
-      if (!next) return;
-      setLeadingWidths((prev) => (widthsEqual(prev, next) ? prev : next));
+      const leading = measureLeadingWidths(parentTable, lineId, leadingColumnIds);
+      if (!leading) return;
+      const trailingFinancial = measureTrailingFinancialWidths(parentTable, lineId);
+      const next: ChildGridMeasuredWidths = {
+        leading,
+        trailing: buildTrailingWidths(trailingFinancial),
+      };
+      setWidths((prev) => (widthsEqual(prev, next) ? prev : next));
     };
 
     measure();
@@ -66,11 +131,16 @@ export function useParentLeadingColumnWidths(
 
     window.addEventListener("resize", measure);
 
+    const observer =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    observer?.observe(parentTable);
+
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", measure);
+      observer?.disconnect();
     };
-  }, [tableRef, lineId]);
+  }, [tableRef, lineId, leadingKey, leadingColumnIds]);
 
-  return leadingWidths;
+  return widths;
 }

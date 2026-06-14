@@ -1,5 +1,4 @@
-import Image from "next/image";
-
+import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { PortalMobileNav } from "@/components/layout/portal-mobile-nav";
 import { PortalNav, type PortalNavItem } from "@/components/layout/portal-nav";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
@@ -23,14 +22,7 @@ export function PortalShell({
     <div className="flex min-h-svh bg-background">
       <aside className="hidden w-64 shrink-0 border-r border-border bg-card/40 p-4 md:block">
         <div className="mb-6">
-          <Image
-            src="/tw-wordmark.png"
-            alt="Thinkway"
-            width={140}
-            height={28}
-            priority
-            className="h-6 w-auto"
-          />
+          <ThinkwayLogo className="mb-0" />
           <p className="mt-2 text-xs text-muted-foreground">{userLabel ?? "Portal user"}</p>
         </div>
         <PortalNav items={navItems} />

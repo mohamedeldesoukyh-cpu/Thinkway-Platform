@@ -12,6 +12,7 @@
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -25,6 +26,7 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
+  --color-input-background: var(--input-background);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -53,6 +55,10 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-brand-product: var(--brand-product);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-subtle: var(--surface-subtle);
+  --shadow-card: var(--card-shadow);
+  --shadow-card-hover: var(--card-shadow-hover);
 }
 
 :root {
@@ -70,75 +76,120 @@
   /* Thinkway product accent (ops / finance emphasis) */
   --brand-product: #1d9e75;
 
-  --background: #f4f6fb;
-  --foreground: #020925;
-  --card: #ffffff;
-  --card-foreground: #020925;
-  --popover: #ffffff;
-  --popover-foreground: #020925;
-  --primary: #a038fb;
+  /* Login v2 palette — CTAs, links, focus rings */
+  --login-navy: #060810;
+  --login-blue: #0057ff;
+  --login-blue-hover: #0048dd;
+  --login-muted: #8899bb;
+  --login-border: #eef2f8;
+  --login-surface-subtle: #fafbfd;
+  --login-page-bg: #e8effe;
+  --primary-shadow: 0 4px 14px rgba(0, 87, 255, 0.28);
+  --primary-shadow-hover: 0 6px 20px rgba(0, 87, 255, 0.35);
+
+  /* Platform surface system — Stripe / Linear / Vercel tier */
+  --page-bg: #fafbfc;
+  --surface-elevated: #ffffff;
+  --surface-subtle: #f6f8fb;
+  --card-shadow:
+    0 1px 2px rgba(6, 8, 16, 0.04),
+    0 2px 8px rgba(6, 8, 16, 0.05);
+  --card-shadow-hover:
+    0 2px 4px rgba(6, 8, 16, 0.05),
+    0 8px 24px rgba(6, 8, 16, 0.08);
+
+  --background: var(--page-bg);
+  --foreground: var(--login-navy);
+  --card: var(--surface-elevated);
+  --card-foreground: var(--login-navy);
+  --popover: var(--surface-elevated);
+  --popover-foreground: var(--login-navy);
+  --primary: var(--login-blue);
   --primary-foreground: #ffffff;
-  --secondary: #eef2fb;
-  --secondary-foreground: #020925;
-  --muted: #eef2fb;
-  --muted-foreground: #6b7a9f;
-  --accent: #eaf6fe;
-  --accent-foreground: #020925;
+  --primary-hover: var(--login-blue-hover);
+  --secondary: var(--surface-subtle);
+  --secondary-foreground: var(--login-navy);
+  --muted: var(--surface-subtle);
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: var(--login-navy);
   --destructive: #ef4444;
-  --border: #dfe6f2;
-  --input: #dfe6f2;
-  --ring: #33b6fc;
-  --chart-1: #33b6fc;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --input-background: #ffffff;
+  --ring: var(--login-blue);
+  --chart-1: var(--login-blue);
   --chart-2: #a038fb;
   --chart-3: #ff89d3;
   --chart-4: #10b981;
   --chart-5: #f59e0b;
   --radius: 0.75rem;
-  --sidebar: #020925;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #a038fb;
+  /* Sidebar — floating card rail on #fafbfc page, #0057ff accent */
+  --sidebar: var(--surface-elevated);
+  --sidebar-foreground: var(--login-navy);
+  --sidebar-primary: var(--login-blue);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(255, 255, 255, 0.09);
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #33b6fc;
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--login-navy);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--login-blue);
+  --sidebar-muted-foreground: var(--muted-foreground);
+  --sidebar-active-bg: rgba(0, 87, 255, 0.06);
   /* Collapsed rail default — updated when sidebar expands (CollapsibleAppSidebar). */
   --app-sidebar-width: 3.5rem;
+  /* Reserve scroll space above OperationalFloatingActionBar (bar + bottom gap). */
+  --floating-action-bar-offset: 7.5rem;
+  --floating-action-bar-offset-mobile: calc(7.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .dark {
   color-scheme: dark;
-  --background: #020925;
-  --foreground: #f0f4fa;
-  --card: #0a1330;
-  --card-foreground: #f0f4fa;
-  --popover: #0a1330;
-  --popover-foreground: #f0f4fa;
-  --primary: #a038fb;
+
+  /* Platform surface system — Stripe / Linear / Vercel dark tier */
+  --page-bg: #0a0a0f;
+  --surface-elevated: #18181b;
+  --surface-subtle: #141419;
+  --card-shadow: none;
+  --card-shadow-hover: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --primary-shadow: 0 4px 14px rgba(0, 87, 255, 0.32);
+  --primary-shadow-hover: 0 6px 20px rgba(0, 87, 255, 0.4);
+
+  --background: var(--page-bg);
+  --foreground: #fafafa;
+  --card: var(--surface-elevated);
+  --card-foreground: #fafafa;
+  --popover: var(--surface-elevated);
+  --popover-foreground: #fafafa;
+  --primary: #0057ff;
   --primary-foreground: #ffffff;
-  --secondary: #14213f;
-  --secondary-foreground: #f0f4fa;
-  --muted: #14213f;
-  --muted-foreground: #8b98b8;
-  --accent: #14213f;
-  --accent-foreground: #f0f4fa;
+  --primary-hover: #0048dd;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+  --muted: var(--surface-subtle);
+  --muted-foreground: #a1a1aa;
+  --accent: rgba(255, 255, 255, 0.06);
+  --accent-foreground: #fafafa;
   --destructive: #f87171;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.14);
-  --ring: #33b6fc;
-  --chart-1: #33b6fc;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --input-background: #18181b;
+  --ring: #0057ff;
+  --chart-1: #0057ff;
   --chart-2: #a038fb;
   --chart-3: #ff89d3;
   --chart-4: #10b981;
   --chart-5: #f59e0b;
-  --sidebar: #020925;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #a038fb;
+  /* Sidebar — slightly elevated from page */
+  --sidebar: #111116;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #0057ff;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(255, 255, 255, 0.09);
-  --sidebar-accent-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: #fafafa;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #33b6fc;
+  --sidebar-ring: #0057ff;
+  --sidebar-muted-foreground: #a1a1aa;
+  --sidebar-active-bg: rgba(0, 87, 255, 0.12);
 }
 
 @layer base {
@@ -186,11 +237,20 @@
   }
 
   .thinkway-shell-header {
-    @apply border-b border-border/50 bg-card/90 backdrop-blur-md;
+    @apply border-b border-border bg-background/80 backdrop-blur-md;
   }
 
   .thinkway-workspace-chrome {
-    @apply border-b border-border/40 bg-background/95 backdrop-blur-md;
+    @apply border-b border-border bg-background/90 backdrop-blur-md;
+  }
+
+  /* Sidebar logo — readable on dark elevated rail */
+  .dark .login-v2-logo-text {
+    color: #fafafa;
+  }
+
+  .dark .login-v2-logo-text span {
+    color: #0057ff;
   }
 
 }
@@ -296,8 +356,6 @@
 
 @layer components {
   .login-v2 {
-    --login-navy: #060810;
-    --login-blue: #0057ff;
     min-height: 100vh;
     overflow: hidden;
     font-family: var(--font-sans), "Inter", sans-serif;
@@ -425,6 +483,26 @@
 
   .login-v2-logo-text span {
     color: var(--login-blue);
+  }
+
+  .thinkway-logo-compact .login-v2-logo-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+  }
+
+  .thinkway-logo-compact .login-v2-logo-mark::before {
+    top: 6px;
+    left: 6px;
+    width: 8px;
+    height: 8px;
+  }
+
+  .thinkway-logo-compact .login-v2-logo-mark::after {
+    right: 4px;
+    bottom: 4px;
+    width: 11px;
+    height: 11px;
   }
 
   .login-v2-form-title {

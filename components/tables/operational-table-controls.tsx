@@ -5,6 +5,7 @@ import { useState } from "react";
 import { OperationalTableFilterSheet } from "@/components/tables/operational-table-filter-sheet";
 import { OperationalTableSortButton } from "@/components/tables/operational-table-sort-popover";
 import { OperationalTableSettingsButton } from "@/components/tables/operational-table-settings-button";
+import { AssignmentGridSettingsButton } from "@/components/tables/assignment-grid-settings-button";
 import {
   OperationalTableActionCluster,
   OperationalTableIcons,
@@ -18,6 +19,8 @@ type OperationalTableControlsProps = {
   showFilter?: boolean;
   showSort?: boolean;
   showSettings?: boolean;
+  /** Dual Main/Child column picker for assignment hierarchy grids. */
+  columnSettings?: "default" | "assignment-grid";
 };
 
 export function OperationalTableControls({
@@ -25,6 +28,7 @@ export function OperationalTableControls({
   showFilter = true,
   showSort = true,
   showSettings = true,
+  columnSettings = "default",
 }: OperationalTableControlsProps) {
   const dataContext = useOperationalTableDataContextOptional();
   const [filterOpen, setFilterOpen] = useState(false);
@@ -50,7 +54,11 @@ export function OperationalTableControls({
         ) : null}
         {showSort && dataContext ? <OperationalTableSortButton /> : null}
         {showSettings ? (
-          <OperationalTableSettingsButton contextLabel={contextLabel} />
+          columnSettings === "assignment-grid" ? (
+            <AssignmentGridSettingsButton contextLabel={contextLabel} />
+          ) : (
+            <OperationalTableSettingsButton contextLabel={contextLabel} />
+          )
         ) : null}
       </OperationalTableActionCluster>
       {dataContext ? (

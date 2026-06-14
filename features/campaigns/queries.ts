@@ -26,6 +26,7 @@ import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map"
 import type { CampaignListItem } from "@/types/database";
 
 import type { CampaignLineBillingStatus } from "@/features/billing/types";
+import { isCancelledCampaignStatus } from "@/features/groups/types";
 import { CAMPAIGNS_PAGE_SIZE, METADATA_PLATFORM_KEY } from "./constants";
 import {
   deriveLinePaymentStatus,
@@ -228,28 +229,50 @@ export async function getCampaignsKpis(): Promise<CampaignsKpis> {
   const { supabase } = await requireUser();
 
   const [headersResult, linesResult, assignmentsResult] = await Promise.all([
-    supabase.from("campaign_headers").select("id, currency_code").limit(2000),
-    supabase.from("campaign_lines").select("revenue, profit").limit(5000),
+    supabase.from("campaign_headers").select("id, status, currency_code").limit(2000),
+    supabase
+      .from("campaign_lines")
+      .select("campaign_header_id, revenue, profit")
+      .limit(5000),
     supabase
       .from("campaign_influencers")
-      .select("id", { count: "exact", head: true }),
+      .select("id, campaign_header_id")
+      .limit(20000),
   ]);
 
   const headers = (headersResult.data ?? []) as {
     id: string;
+    status: string;
     currency_code: string | null;
   }[];
+  const operationalHeaderIds = new Set(
+    headers.filter((h) => !isCancelledCampaignStatus(h.status)).map((h) => h.id)
+  );
   const lines = (linesResult.data ?? []) as {
+    campaign_header_id: string;
     revenue: number | null;
     profit: number | null;
   }[];
+  const assignments = (assignmentsResult.data ?? []) as {
+    id: string;
+    campaign_header_id: string | null;
+  }[];
 
-  const totalRevenue = lines.reduce((sum, l) => sum + Number(l.revenue ?? 0), 0);
-  const totalProfit = lines.reduce((sum, l) => sum + Number(l.profit ?? 0), 0);
+  const operationalLines = lines.filter((l) =>
+    operationalHeaderIds.has(l.campaign_header_id)
+  );
+  const totalRevenue = operationalLines.reduce(
+    (sum, l) => sum + Number(l.revenue ?? 0),
+    0
+  );
+  const totalProfit = operationalLines.reduce(
+    (sum, l) => sum + Number(l.profit ?? 0),
+    0
+  );
   const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
   const currencyCounts = new Map<string, number>();
-  for (const header of headers) {
+  for (const header of headers.filter((h) => !isCancelledCampaignStatus(h.status))) {
     const code = header.currency_code ?? DEFAULT_PLATFORM_CURRENCY;
     currencyCounts.set(code, (currencyCounts.get(code) ?? 0) + 1);
   }
@@ -257,11 +280,15 @@ export async function getCampaignsKpis(): Promise<CampaignsKpis> {
     [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
       DEFAULT_PLATFORM_CURRENCY;
 
+  const assignmentCount = assignments.filter(
+    (a) => a.campaign_header_id && operationalHeaderIds.has(a.campaign_header_id)
+  ).length;
+
   return {
-    total_campaigns: headers.length,
+    total_campaigns: operationalHeaderIds.size,
     total_revenue: totalRevenue,
     avg_margin: avgMargin,
-    assignments: assignmentsResult.count ?? 0,
+    assignments: assignmentCount,
     currency_code: currencyCode,
   };
 }

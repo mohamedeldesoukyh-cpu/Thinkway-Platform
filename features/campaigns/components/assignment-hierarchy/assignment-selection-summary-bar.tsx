@@ -27,6 +27,7 @@ export type AssignmentSelectionTotals = {
   currencyMixed: boolean;
 };
 
+/** @deprecated Replaced by AssignmentSafeActionsFooter + OperationalFloatingActionBar. */
 type AssignmentSelectionSummaryBarProps = {
   campaignId: string;
   totals: AssignmentSelectionTotals;
@@ -47,6 +48,7 @@ function buildFormData(campaignId: string, lineIds: string[]): FormData {
   return fd;
 }
 
+/** @deprecated Replaced by AssignmentSafeActionsFooter + OperationalFloatingActionBar. */
 export function AssignmentSelectionSummaryBar({
   campaignId,
   totals,

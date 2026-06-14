@@ -1,4 +1,8 @@
 import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+
+export const ASSIGNMENT_GRID_PARENT_TABLE_ID = OPERATIONAL_TABLE_IDS.campaignAssignmentGrid;
+export const ASSIGNMENT_GRID_CHILD_TABLE_ID = OPERATIONAL_TABLE_IDS.campaignAssignmentGridChild;
 
 export const ASSIGNMENT_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
   { id: "expand", label: "Expand", locked: true },
@@ -22,5 +26,31 @@ export const ASSIGNMENT_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
   { id: "opsStatus", label: "Ops status" },
   { id: "billing", label: "Billing" },
   { id: "payout", label: "Payout" },
+  { id: "actions", label: "Actions", locked: true },
+];
+
+/** Deliverable (child) row columns — order matches OperationalGridHeader / EditablePostRow. */
+export const ASSIGNMENT_CHILD_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
+  { id: "expand", label: "Expand", locked: true },
+  { id: "select", label: "Select", locked: true },
+  { id: "type", label: "Type" },
+  { id: "platform", label: "Platform" },
+  { id: "qty", label: "Qty" },
+  { id: "revPerAd", label: "Rev/ad" },
+  { id: "costPerAd", label: "Cost/ad" },
+  { id: "ccy", label: "CCY" },
+  { id: "rev", label: "Rev" },
+  { id: "usageRights", label: "UR Rev" },
+  { id: "agencyFeePercent", label: "AF %" },
+  { id: "agencyFee", label: "AF" },
+  { id: "cost", label: "Cost" },
+  { id: "vat", label: "VAT" },
+  { id: "postDate", label: "Live ad date" },
+  { id: "liveAdMonth", label: "Month" },
+  { id: "invoice", label: "Invoice" },
+  { id: "billing", label: "Billing" },
+  { id: "collection", label: "Collection" },
+  { id: "payout", label: "Payout" },
+  { id: "workflow", label: "Workflow" },
   { id: "actions", label: "Actions", locked: true },
 ];

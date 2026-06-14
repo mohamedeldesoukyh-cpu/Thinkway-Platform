@@ -86,12 +86,25 @@ export function ExecutiveKpiStrip({ strip, loading }: ExecutiveKpiStripProps) {
   const items = strip.cards.map((card, index) => {
     const Icon = KPI_ICONS[card.id] ?? WalletIcon;
     const trend = trendLabel(card);
+    const valueSemantic =
+      card.id === "revenue"
+        ? ("revenue" as const)
+        : card.id === "gp"
+          ? ("gp" as const)
+          : card.id === "margin"
+            ? ("margin" as const)
+            : card.id === "active_campaigns"
+              ? ("count" as const)
+              : undefined;
     return {
       id: card.id,
       label: trend ? `${card.label} (${trend})` : card.label,
       value: formatCardValue(card),
       icon: Icon,
       accentClass: ACCENT_CYCLE[index % ACCENT_CYCLE.length],
+      valueSemantic,
+      valueNumeric:
+        card.id === "gp" || card.id === "margin" ? card.value : undefined,
       valueAlert:
         card.alert === "danger"
           ? ("danger" as const)

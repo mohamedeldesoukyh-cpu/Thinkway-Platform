@@ -24,7 +24,7 @@ export function PortalMobileNav({ items }: { items: PortalNavItem[] }) {
             className={cn(
               "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium",
               active
-                ? "bg-brand-gradient text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground"
             )}
           >

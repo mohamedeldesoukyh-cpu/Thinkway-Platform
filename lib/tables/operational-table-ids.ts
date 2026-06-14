@@ -24,6 +24,7 @@ export const OPERATIONAL_TABLE_IDS = {
   campaignTimelineVendors: "campaign-timeline-vendors",
   campaignInvoiceRegister: "campaign-invoice-register",
   campaignAssignmentGrid: "campaign-assignment-grid",
+  campaignAssignmentGridChild: "campaign-assignment-grid-child",
 
   clientCampaigns: "client-campaigns",
   clientBrands: "client-brands",

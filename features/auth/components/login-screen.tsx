@@ -1,5 +1,6 @@
 "use client";
 
+import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { LoginBrandPanel } from "@/features/auth/components/login-brand-panel";
 import { LoginForm } from "@/features/auth/components/login-form";
 
@@ -7,17 +8,6 @@ type LoginScreenProps = {
   nextPath: string;
   callbackError: string | null;
 };
-
-function LoginLogo() {
-  return (
-    <div className="login-v2-logo">
-      <div className="login-v2-logo-mark" aria-hidden />
-      <div className="login-v2-logo-text">
-        THINK<span>WAY</span>
-      </div>
-    </div>
-  );
-}
 
 export function LoginScreen({ nextPath, callbackError }: LoginScreenProps) {
   return (
@@ -31,7 +21,7 @@ export function LoginScreen({ nextPath, callbackError }: LoginScreenProps) {
       <div className="login-v2-wrapper">
         <div className="login-v2-card">
           <div className="login-v2-form-panel">
-            <LoginLogo />
+            <ThinkwayLogo />
 
             <h1 className="login-v2-form-title">Sign in</h1>
             <p className="login-v2-form-sub">

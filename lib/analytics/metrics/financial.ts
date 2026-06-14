@@ -3,6 +3,7 @@ import {
   INVOICED_LINE_STATUSES,
 } from "@/lib/analytics/metrics/definitions";
 import { roundMoney } from "@/lib/analytics/aggregations/round";
+import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 import type { FinancialMetrics } from "@/lib/analytics/types/metrics";
 import type { CampaignLineBillingStatus } from "@/features/billing/types";
 
@@ -13,26 +14,73 @@ export type LineFinancialInput = {
   billing_status: CampaignLineBillingStatus;
   po_amount?: number;
   po_consumed?: number;
+  revenue_before_vat?: number | null;
+  usage_rights_amount?: number | null;
+  usage_rights_cost?: number | null;
+  agency_fee_percent?: number | null;
+  agency_fee_amount?: number | null;
+  cost_before_vat?: number | null;
 };
+
+/** Billable revenue (Rev + UR + AF), cost, and GP aligned with assignments/billing. */
+export function resolveLineCommercialMetrics(line: LineFinancialInput): {
+  revenue: number;
+  cost: number;
+  gp: number;
+} {
+  const hasCommercialBreakdown =
+    line.revenue_before_vat != null ||
+    line.usage_rights_amount != null ||
+    line.agency_fee_amount != null ||
+    line.agency_fee_percent != null;
+
+  if (!hasCommercialBreakdown) {
+    return {
+      revenue: roundMoney(line.revenue),
+      cost: roundMoney(line.cost),
+      gp: roundMoney(line.profit),
+    };
+  }
+
+  const costBeforeVat = Number(line.cost_before_vat ?? line.cost ?? 0);
+  const usageRightsCost = Number(line.usage_rights_cost ?? 0);
+  const commercial = rollupLineClientCommercial({
+    revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue ?? 0),
+    usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+    usageRightsCost,
+    agencyFeePercent: Number(line.agency_fee_percent ?? 0),
+    agencyFeeAmount: line.agency_fee_amount,
+    costBeforeVat,
+  });
+
+  return {
+    revenue: commercial.billableBase,
+    cost: roundMoney(costBeforeVat + usageRightsCost),
+    gp: commercial.gp,
+  };
+}
 
 export function computeMarginPercent(revenue: number, gp: number): number {
   if (revenue <= 0) return 0;
   return Math.round((gp / revenue) * 10000) / 100;
 }
 
-export function lineAchievedRevenue(line: LineFinancialInput): number {
+export function lineAchievedRevenue(
+  line: LineFinancialInput,
+  billableRevenue?: number
+): number {
   return ACHIEVED_LINE_STATUSES.has(line.billing_status)
-    ? roundMoney(line.revenue)
+    ? roundMoney(billableRevenue ?? line.revenue)
     : 0;
 }
 
 export function linePlannedRevenue(line: LineFinancialInput): number {
-  return roundMoney(line.revenue);
+  return resolveLineCommercialMetrics(line).revenue;
 }
 
 export function lineLegacyInvoicedRevenue(line: LineFinancialInput): number {
   return INVOICED_LINE_STATUSES.has(line.billing_status)
-    ? roundMoney(line.revenue)
+    ? resolveLineCommercialMetrics(line).revenue
     : 0;
 }
 
@@ -111,10 +159,11 @@ export function metricsFromCampaignLines(
   let metrics = emptyFinancialMetrics();
 
   for (const line of lines) {
-    const revenue = linePlannedRevenue(line);
-    const cost = roundMoney(line.cost);
-    const gp = roundMoney(line.profit);
-    const achieved = lineAchievedRevenue(line);
+    const commercial = resolveLineCommercialMetrics(line);
+    const revenue = commercial.revenue;
+    const cost = commercial.cost;
+    const gp = commercial.gp;
+    const achieved = lineAchievedRevenue(line, revenue);
 
     metrics = mergeFinancialMetrics(metrics, {
       revenue,

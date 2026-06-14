@@ -95,3 +95,71 @@ export const SCHEDULE_STATUS_OPTIONS = [
   { value: "verified", label: "Verified" },
   { value: "cancelled", label: "Cancelled" },
 ] as const;
+
+/** Parent column ids for child leading cols 1–9 (Assignment … Rev). */
+export const ASSIGNMENT_CHILD_LEADING_PARENT_COLUMN_IDS = [
+  "expand",
+  "select",
+  "assignment",
+  "creator",
+  "platforms",
+  "deliverables",
+  "postingDates",
+  "costCurrency",
+  "revenue",
+] as const;
+
+const PARENT_TO_CHILD_LEADING_COLUMN_ID: Record<
+  (typeof ASSIGNMENT_CHILD_LEADING_PARENT_COLUMN_IDS)[number],
+  string
+> = {
+  expand: "expand",
+  select: "select",
+  assignment: "type",
+  creator: "platform",
+  platforms: "qty",
+  deliverables: "revPerAd",
+  postingDates: "costPerAd",
+  costCurrency: "ccy",
+  revenue: "rev",
+};
+
+export function assignmentParentToChildLeadingColumnId(parentColumnId: string): string | null {
+  return PARENT_TO_CHILD_LEADING_COLUMN_ID[
+    parentColumnId as (typeof ASSIGNMENT_CHILD_LEADING_PARENT_COLUMN_IDS)[number]
+  ] ?? null;
+}
+
+/** Parent financial cols aligned with child UR Rev … Cost. */
+export const ASSIGNMENT_CHILD_TRAILING_PARENT_FINANCIAL_COLUMN_IDS = [
+  "usageRights",
+  "agencyFeePercent",
+  "agencyFee",
+  "cost",
+] as const;
+
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 22;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 21;
+
+export function assignmentChildLeadingParentColumnIds(
+  showExpandColumn: boolean
+): readonly string[] {
+  return showExpandColumn
+    ? ASSIGNMENT_CHILD_LEADING_PARENT_COLUMN_IDS
+    : ASSIGNMENT_CHILD_LEADING_PARENT_COLUMN_IDS.filter((id) => id !== "expand");
+}
+
+export function assignmentChildRowColSpan(showExpandColumn: boolean): number {
+  return showExpandColumn
+    ? ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND
+    : ASSIGNMENT_CHILD_ROW_COL_COUNT;
+}
+
+export function childGridLeadingColumnCount(showExpandColumn: boolean): number {
+  return showExpandColumn ? 9 : 8;
+}
+
+/** `data-assignment-col` value for parent grid cells (width measurement). */
+export function assignmentParentColDataAttr(columnId: string) {
+  return { "data-assignment-col": columnId } as const;
+}

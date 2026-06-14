@@ -15,6 +15,10 @@ import {
 } from "@/features/campaigns/components/campaign-operational-table";
 import { useOperationalTableColumnsContext } from "@/components/tables/operational-table-column-context";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
+import type {
+  OperationalAmountVariant,
+} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { operationalAmountVariantClass } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +26,10 @@ export type OperationalConfigurableColumnDef<T> = OperationalTableColumnMeta & {
   headerClassName?: string;
   cellClassName?: string;
   amountCell?: boolean;
+  /** Semantic platform coloring for money cells (revenue, gp, cost, margin). */
+  amountVariant?: OperationalAmountVariant;
+  /** Numeric value for dynamic gp/margin coloring. */
+  amountValue?: (row: T) => number;
   monoCell?: boolean;
   renderHeader?: () => ReactNode;
   renderCell: (row: T) => ReactNode;
@@ -127,10 +135,16 @@ function OperationalConfigurableTableView<T>({
                 {columns.map((column) => {
                   const content = column.renderCell(row);
                   if (column.amountCell) {
+                    const amountClassName = column.amountVariant
+                      ? operationalAmountVariantClass(
+                          column.amountVariant,
+                          column.amountValue?.(row)
+                        )
+                      : undefined;
                     return (
                       <CampaignOperationalTableCellAmount
                         key={column.id}
-                        className={column.cellClassName}
+                        className={cn(amountClassName, column.cellClassName)}
                       >
                         {content}
                       </CampaignOperationalTableCellAmount>

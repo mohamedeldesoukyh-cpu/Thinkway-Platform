@@ -136,6 +136,11 @@ export function isActiveCampaignStatus(status: string): boolean {
   return ACTIVE_CAMPAIGN_STATUSES.has(status);
 }
 
+/** Terminal campaign status — excluded from operational KPI totals (revenue, GP, vendor counts). */
+export function isCancelledCampaignStatus(status: string): boolean {
+  return status === "cancelled";
+}
+
 export function formatMargin(revenue: number, gp: number): number {
   if (revenue <= 0) {
     return 0;

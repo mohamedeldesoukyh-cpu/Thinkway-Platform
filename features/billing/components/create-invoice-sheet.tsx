@@ -2,10 +2,11 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import { showErrorToastOnce, showSuccessToastOnce, resetToastOnce } from "@/lib/ui/toast-once";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,6 +18,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  OperationalFloatingActionBar,
+  operationalFloatingBarContentClass,
+} from "@/components/workspace/operational-floating-action-bar";
 import { DeliverableBillingStatusBadge } from "@/features/billing/components/deliverable-billing-status-badge";
 import { createInvoiceFromLinesAction,
   type BillingActionState,
@@ -24,6 +29,7 @@ import { createInvoiceFromLinesAction,
 import type { AssignmentBillingGroup } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { isDeliverableInvoiceEligible } from "@/lib/billing/deliverable-billing";
+import { cn } from "@/lib/utils";
 
 type CreateInvoiceSheetProps = {
   campaignId: string;
@@ -180,7 +186,7 @@ export function CreateInvoiceSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+        <form id="create-invoice-sheet-form" action={formAction} className="flex min-h-0 flex-1 flex-col">
           <input type="hidden" name="campaign_id" value={campaignId} />
           <input type="hidden" name="post_ids" value="" />
           <input type="hidden" name="invoice_mode" value="new" />
@@ -191,7 +197,12 @@ export function CreateInvoiceSheet({
             value={[...selected].join(",")}
           />
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto py-4">
+          <div
+            className={cn(
+              "min-h-0 flex-1 space-y-3 overflow-y-auto py-4",
+              operationalFloatingBarContentClass(selected.size > 0)
+            )}
+          >
             {eligibleGroups.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No deliverables ready for invoicing. Approve assignments and move
@@ -307,25 +318,6 @@ export function CreateInvoiceSheet({
             )}
           </div>
 
-          {selected.size > 0 ? (
-            <div className="sticky bottom-0 space-y-1 rounded-3xl border bg-background p-4 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Selected deliverables</span>
-                <span className="font-medium">{selected.size}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">This invoice</span>
-                <span className="font-semibold">
-                  {formatBillingMoney(selectedTotal, currency)}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Remaining after invoice</span>
-                <span>{formatBillingMoney(remainingAfterInvoice, currency)}</span>
-              </div>
-            </div>
-          ) : null}
-
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label htmlFor="due_date">Due date</Label>
@@ -339,11 +331,48 @@ export function CreateInvoiceSheet({
           </div>
 
           <SheetFooter className="px-0 pt-4">
-            <Button type="submit" disabled={pending || selected.size === 0}>
+            <Button type="submit" disabled={pending || selected.size === 0} className="w-full sm:hidden">
               Create invoice
             </Button>
           </SheetFooter>
         </form>
+
+        <OperationalFloatingActionBar visible={selected.size > 0}>
+          <Badge
+            variant="secondary"
+            className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+          >
+            {selected.size} selected
+          </Badge>
+          <Button
+            type="button"
+            size="icon-xs"
+            variant="ghost"
+            className="size-6 shrink-0 rounded-full text-muted-foreground"
+            onClick={() => setSelected(new Set())}
+            aria-label="Clear selection"
+          >
+            <XIcon className="size-3.5" />
+          </Button>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            Invoice{" "}
+            <span className="font-semibold text-foreground">
+              {formatBillingMoney(selectedTotal, currency)}
+            </span>
+          </span>
+          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+            Remaining {formatBillingMoney(remainingAfterInvoice, currency)}
+          </span>
+          <Button
+            type="submit"
+            form="create-invoice-sheet-form"
+            size="sm"
+            className="ml-auto h-8 shrink-0 rounded-full text-xs"
+            disabled={pending}
+          >
+            {pending ? "Creating…" : "Create invoice"}
+          </Button>
+        </OperationalFloatingActionBar>
       </SheetContent>
     </Sheet>
   );

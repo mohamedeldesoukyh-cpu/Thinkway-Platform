@@ -67,6 +67,7 @@ const REASSIGNMENT_BATCH_COLUMNS: OperationalConfigurableColumnDef<MovementBatch
     label: "Revenue",
     headerClassName: "text-right",
     amountCell: true,
+    amountVariant: "revenue",
     renderCell: (batch) => formatBillingMoney(batch.total_revenue),
   },
   {
@@ -74,6 +75,8 @@ const REASSIGNMENT_BATCH_COLUMNS: OperationalConfigurableColumnDef<MovementBatch
     label: "GP",
     headerClassName: "text-right",
     amountCell: true,
+    amountVariant: "gp",
+    amountValue: (batch) => batch.total_gp,
     renderCell: (batch) => formatBillingMoney(batch.total_gp),
   },
   {

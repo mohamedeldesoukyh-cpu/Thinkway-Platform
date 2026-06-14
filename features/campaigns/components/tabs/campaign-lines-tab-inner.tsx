@@ -7,10 +7,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import { OperationalTableColumnsProvider } from "@/components/tables/operational-table-column-context";
+import { OperationalTableDualColumnsProvider } from "@/components/tables/operational-table-column-context";
 import { OperationalTableSettingsSlot } from "@/components/tables/operational-data-table";
-import { ASSIGNMENT_GRID_COLUMN_METAS } from "@/lib/tables/assignment-grid-column-metas";
-import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import {
+  ASSIGNMENT_CHILD_GRID_COLUMN_METAS,
+  ASSIGNMENT_GRID_COLUMN_METAS,
+  ASSIGNMENT_GRID_CHILD_TABLE_ID,
+  ASSIGNMENT_GRID_PARENT_TABLE_ID,
+} from "@/lib/tables/assignment-grid-column-metas";
 import type {
   AssignmentBillingGroup,
   CampaignOperationalBillingDetail,
@@ -258,9 +262,11 @@ export function CampaignLinesTabInner({
         />
       </div>
 
-      <OperationalTableColumnsProvider
-        tableId={OPERATIONAL_TABLE_IDS.campaignAssignmentGrid}
-        columns={ASSIGNMENT_GRID_COLUMN_METAS}
+      <OperationalTableDualColumnsProvider
+        parentTableId={ASSIGNMENT_GRID_PARENT_TABLE_ID}
+        parentColumns={ASSIGNMENT_GRID_COLUMN_METAS}
+        childTableId={ASSIGNMENT_GRID_CHILD_TABLE_ID}
+        childColumns={ASSIGNMENT_CHILD_GRID_COLUMN_METAS}
       >
         <OperationalTableSection
           wide
@@ -278,7 +284,10 @@ export function CampaignLinesTabInner({
                 />
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <OperationalTableSettingsSlot contextLabel="Assignments" />
+                <OperationalTableSettingsSlot
+                  contextLabel="Assignments"
+                  columnSettings="assignment-grid"
+                />
                 {enableLineSheet && audienceView === "internal" ? (
                   <Button size="sm" onClick={openCreate} title="Create assignment (A)">
                     <PlusIcon data-icon="inline-start" />
@@ -316,7 +325,7 @@ export function CampaignLinesTabInner({
           </>
           )}
         </OperationalTableSection>
-      </OperationalTableColumnsProvider>
+      </OperationalTableDualColumnsProvider>
 
       <AssignmentInfluencerDetailSheet
         open={detailLineId != null}

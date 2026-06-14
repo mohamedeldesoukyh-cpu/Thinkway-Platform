@@ -61,6 +61,7 @@ export const BILLING_INVOICES_TABLE_COLUMNS: OperationalConfigurableColumnDef<Bi
     label: "Total",
     headerClassName: "text-right",
     amountCell: true,
+    amountVariant: "revenue",
     renderCell: (inv) => formatBillingMoney(inv.total, inv.currency),
   },
   {
@@ -75,7 +76,7 @@ export const BILLING_INVOICES_TABLE_COLUMNS: OperationalConfigurableColumnDef<Bi
     label: "Outstanding",
     headerClassName: "text-right",
     amountCell: true,
-    cellClassName: "font-medium",
+    amountVariant: "revenue",
     renderCell: (inv) => formatBillingMoney(inv.outstanding, inv.currency),
   },
   {
@@ -127,6 +128,7 @@ export const BILLING_VENDOR_BATCHES_TABLE_COLUMNS: OperationalConfigurableColumn
     label: "Amount",
     headerClassName: "text-right",
     amountCell: true,
+    amountVariant: "revenue",
     renderCell: (batch) => formatBillingMoney(batch.total_amount, batch.currency),
   },
   {
