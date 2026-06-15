@@ -141,7 +141,7 @@ export function CampaignOverviewDetails({
               value={
                 <Badge variant={PO_STATUS_VARIANT[workspace.po.po_status]}>
                   {PO_STATUS_LABELS[workspace.po.po_status]} ·{" "}
-                  {formatMoney(workspace.financials.po_consumed, currency)} /{" "}
+                  {formatMoney(workspace.financials.po_banner_consumed, currency)} /{" "}
                   {formatMoney(workspace.financials.budget, currency)}
                 </Badge>
               }

@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
 import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
+import { resolveLinePoBillableBase } from "@/lib/finance/po/billable-base";
 import type { PoStatus } from "@/lib/finance/po/status";
 import {
   assignmentDeliverableBillingSelect,
@@ -63,6 +64,9 @@ type LineQueryRow = {
   billing_status: CampaignLineBillingStatus;
   revenue: number;
   revenue_before_vat?: number;
+  usage_rights_amount?: number;
+  agency_fee_percent?: number;
+  agency_fee_amount?: number | null;
   cost: number;
   profit: number;
   revenue_vat_amount?: number;
@@ -95,9 +99,12 @@ function aggregateOperationalPoKpis(
   rawLines: {
     campaign_header_id: string;
     po_amount: number;
-    revenue_before_vat?: number;
-    revenue: number;
-    header: LineQueryRow["header"];
+  revenue_before_vat?: number;
+  revenue: number;
+  usage_rights_amount?: number;
+  agency_fee_percent?: number;
+  agency_fee_amount?: number | null;
+  header: LineQueryRow["header"];
   }[]
 ) {
   const headerMap = new Map<
@@ -132,7 +139,7 @@ function aggregateOperationalPoKpis(
       headerMap.set(headerId, entry);
     }
     entry.legacy_budget += row.po_amount;
-    entry.legacy_consumed += Number(row.revenue_before_vat ?? row.revenue);
+    entry.legacy_consumed += resolveLinePoBillableBase(row);
   }
 
   let po_total = 0;
@@ -143,9 +150,9 @@ function aggregateOperationalPoKpis(
   for (const entry of headerMap.values()) {
     const operational = resolveOperationalPo({
       po_amount_campaign_currency: entry.po_amount_campaign_currency,
-      po_consumed_amount: entry.po_consumed_amount,
-      po_remaining_amount: entry.po_remaining_amount,
-      po_remaining_percent: entry.po_remaining_percent,
+      po_consumed_amount: entry.legacy_consumed,
+      po_remaining_amount: null,
+      po_remaining_percent: null,
       po_status: entry.po_status,
       po_expiry_date: entry.po_expiry_date,
       legacy_budget: entry.legacy_budget,
@@ -177,7 +184,8 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
       .select(
         `
         id, document_number, name, campaign_header_id, billing_status,
-        revenue, revenue_before_vat, cost, profit, po_amount, po_consumed, remaining_po,
+        revenue, revenue_before_vat, usage_rights_amount, agency_fee_percent, agency_fee_amount,
+        cost, profit, po_amount, po_consumed, remaining_po,
         revenue_vat_amount, cost_vat_amount,
         revenue_locked, cost_locked, vendor_assignment_locked,
         currency_code, invoice_id,
@@ -236,7 +244,7 @@ export async function getBillingDashboard(): Promise<BillingDashboard> {
     const cost = Number(row.cost);
     const gp = Number(row.profit);
     const poAmount = Number(row.po_amount);
-    const poConsumed = Number(row.po_consumed ?? row.cost);
+    const poConsumed = resolveLinePoBillableBase(row);
     return {
       id: row.id,
       document_number: row.document_number,
@@ -641,7 +649,8 @@ export async function getCampaignBillingLines(
     .select(
       `
         id, document_number, name, campaign_header_id, billing_status, metadata,
-        revenue, cost, profit, po_amount, po_consumed, remaining_po,
+        revenue, revenue_before_vat, usage_rights_amount, agency_fee_percent, agency_fee_amount,
+        cost, profit, po_amount, po_consumed, remaining_po,
         revenue_locked, cost_locked, vendor_assignment_locked,
         currency_code, invoice_id,
         header:${REL.campaignLines.campaignHeader}(id, name, document_number,
@@ -666,7 +675,7 @@ export async function getCampaignBillingLines(
     const cost = Number(row.cost);
     const gp = Number(row.profit);
     const poAmount = Number(row.po_amount);
-    const poConsumed = Number(row.po_consumed ?? row.cost);
+    const poConsumed = resolveLinePoBillableBase(row);
     return {
       id: row.id,
       document_number: row.document_number,
@@ -708,6 +717,10 @@ export async function getCampaignBillingGroups(
     currency_code: string;
     pricing_mode: string | null;
     revenue: number;
+    revenue_before_vat?: number;
+    usage_rights_amount?: number;
+    agency_fee_percent?: number;
+    agency_fee_amount?: number | null;
     po_amount: number;
     po_consumed: number;
     revenue_locked: boolean;
@@ -719,10 +732,10 @@ export async function getCampaignBillingGroups(
   };
 
   const lineSelectWithSort =
-    "id, document_number, name, billing_status, currency_code, pricing_mode, revenue, cost, po_amount, po_consumed, remaining_po, revenue_locked, cost_locked, vendor_assignment_locked, invoice_id, metadata, sort_order, invoice:invoices(document_number)";
+    "id, document_number, name, billing_status, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_percent, agency_fee_amount, cost, po_amount, po_consumed, remaining_po, revenue_locked, cost_locked, vendor_assignment_locked, invoice_id, metadata, sort_order, invoice:invoices(document_number)";
 
   const lineSelectFallback =
-    "id, document_number, name, billing_status, currency_code, pricing_mode, revenue, cost, po_amount, po_consumed, remaining_po, revenue_locked, cost_locked, vendor_assignment_locked, invoice_id, metadata, invoice:invoices(document_number)";
+    "id, document_number, name, billing_status, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_percent, agency_fee_amount, cost, po_amount, po_consumed, remaining_po, revenue_locked, cost_locked, vendor_assignment_locked, invoice_id, metadata, invoice:invoices(document_number)";
 
   const { data: lines, error: linesError } =
     await queryCampaignLinesWithDisplayOrder<CampaignLineBillingQueryRow>(
@@ -793,7 +806,7 @@ export async function getCampaignBillingGroups(
     const deliverables = deliverablesByLine.get(row.id) ?? [];
     const rollups = rollupAssignmentBilling(deliverables);
     const poAmount = Number(row.po_amount);
-    const poConsumed = Number(row.po_consumed);
+    const poConsumed = resolveLinePoBillableBase(row);
 
     return {
       line_id: row.id,

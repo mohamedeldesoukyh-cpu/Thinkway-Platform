@@ -130,7 +130,7 @@ export function CampaignKpiStrip({
       {financials.budget > 0 ? (
         <div className="flex w-full justify-end">
           <PoConsumptionBanner
-            consumed={financials.po_consumed}
+            consumed={financials.po_banner_consumed}
             po_amount={financials.budget}
             currency={currency}
             formatMoney={formatMoney}

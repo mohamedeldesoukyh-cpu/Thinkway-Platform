@@ -87,6 +87,8 @@ export type CampaignFinancialSummary = {
   /** Operational PO remaining (po_remaining_amount or computed). */
   remaining_po: number;
   po_consumed: number;
+  /** Consumption amount shown on PO banner (billable base). */
+  po_banner_consumed: number;
   po_remaining_percent: number | null;
   po_status: PoStatus;
   po_health: PoHealth;

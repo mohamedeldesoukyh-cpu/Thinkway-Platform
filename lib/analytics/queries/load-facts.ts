@@ -12,6 +12,7 @@ import {
   type LineFinancialInput,
 } from "@/lib/analytics/metrics/financial";
 import { roundMoney } from "@/lib/analytics/aggregations/round";
+import { resolveLinePoBillableBase } from "@/lib/finance/po/billable-base";
 import { resolveFactCountryCode } from "@/lib/analytics/schema-safe";
 import { devLog } from "@/lib/platform/logger";
 import { safeSelect } from "@/lib/platform/schema-validation";
@@ -186,7 +187,7 @@ export async function loadAnalyticsFactsUncached(
       profit: Number(line.profit),
       billing_status: line.billing_status,
       po_amount: Number(line.po_amount),
-      po_consumed: Number(line.po_consumed ?? line.cost),
+      po_consumed: resolveLinePoBillableBase(line),
       revenue_before_vat: line.revenue_before_vat,
       usage_rights_amount: line.usage_rights_amount,
       usage_rights_cost: line.usage_rights_cost,

@@ -6,6 +6,7 @@ import { FINANCIAL_APPROVAL_CHAIN } from "@/features/billing/constants";
 import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
+import { resolveLinePoBillableBase } from "@/lib/finance/po/billable-base";
 import { governanceDb } from "@/lib/supabase/governance-client";
 import { resolveClientBillingVatRate } from "@/lib/vat/queries";
 import {
@@ -290,7 +291,9 @@ export async function moveLineToBillingAction(
 
   const { data: siblingLines } = await supabase
     .from("campaign_lines")
-    .select("po_amount, revenue_before_vat, revenue")
+    .select(
+      "po_amount, revenue_before_vat, revenue, usage_rights_amount, agency_fee_percent, agency_fee_amount"
+    )
     .eq("campaign_header_id", parsed.data.campaign_id);
 
   const legacyBudget = (siblingLines ?? []).reduce(
@@ -298,16 +301,15 @@ export async function moveLineToBillingAction(
     0
   );
   const legacyConsumed = (siblingLines ?? []).reduce(
-    (sum, row) =>
-      sum + Number(row.revenue_before_vat ?? row.revenue ?? 0),
+    (sum, row) => sum + resolveLinePoBillableBase(row),
     0
   );
 
   const operationalPo = resolveOperationalPo({
     po_amount_campaign_currency: header.po_amount_campaign_currency,
-    po_consumed_amount: header.po_consumed_amount,
-    po_remaining_amount: header.po_remaining_amount,
-    po_remaining_percent: header.po_remaining_percent,
+    po_consumed_amount: legacyConsumed,
+    po_remaining_amount: null,
+    po_remaining_percent: null,
     po_status: header.po_status,
     po_expiry_date: header.po_expiry_date,
     legacy_budget: legacyBudget,

@@ -171,7 +171,7 @@ export function metricsFromCampaignLines(
       gp,
       achieved_revenue: achieved,
       budget_amount: roundMoney(line.po_amount ?? 0),
-      actual_amount: roundMoney(line.po_consumed ?? line.cost),
+      actual_amount: revenue,
     });
   }
 

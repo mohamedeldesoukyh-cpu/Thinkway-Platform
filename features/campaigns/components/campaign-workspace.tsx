@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CopyIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
 
 import { PageBackButton } from "@/components/navigation/page-back-button";
@@ -18,7 +19,9 @@ import {
   CampaignWorkspaceTabPanel,
 } from "@/features/campaigns/components/campaign-workspace-tabs";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import { isCampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import { useCampaignWorkspaceTabOrder } from "@/features/campaigns/hooks/use-campaign-workspace-tab-order";
+import { useCampaignTabData } from "@/features/campaigns/hooks/use-campaign-tab-data";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
 import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
@@ -32,14 +35,12 @@ import { CampaignPublicationsTab } from "@/features/campaigns/components/tabs/ca
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
+import { CampaignWorkspaceTabLoading } from "@/features/campaigns/components/campaign-workspace-tab-loading";
 import { ClientIoCampaignChrome } from "@/features/io/components/client-io-campaign-chrome";
 import { ClientIoTab } from "@/features/io/components/client-io-tab";
 import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
-import type { AssignmentBillingGroup, BillingLineRow, CampaignOperationalBillingDetail } from "@/features/billing/types";
-import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
-import type { FinanceAuditTimelineEntry } from "@/lib/finance/queries/finance-audit";
+import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
 import {
   OPERATIONAL_CHROME_LABEL,
@@ -51,47 +52,86 @@ import { DocumentNumber } from "@/components/ui/document-number";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { cn } from "@/lib/utils";
+
 type CampaignWorkspaceViewProps = {
-  workspace: import("@/features/campaigns/types").CampaignWorkspace;
-  accountManagers: { id: string; full_name: string | null; email: string }[];
-  teams: { id: string; name: string }[];
-  billingLines: BillingLineRow[];
-  billingGroups: AssignmentBillingGroup[];
-  operationalBilling: CampaignOperationalBillingDetail | null;
-  campaignInvoiceRegister: FinanceInvoiceRegisterRow[];
-  assignmentHierarchy: AssignmentHierarchy;
-  publications: CampaignPublicationRow[];
-  publicationsLoadError?: string | null;
-  currencyOptions: { value: string; label: string }[];
-  financeAudit?: FinanceAuditTimelineEntry[];
+  workspace: CampaignWorkspace;
+  defaultTab?: CampaignWorkspaceTabId;
+  initialAssignmentHierarchy: AssignmentHierarchy;
 };
 
 export function CampaignWorkspaceView({
   workspace,
-  accountManagers,
-  teams,
-  billingLines,
-  billingGroups,
-  operationalBilling,
-  campaignInvoiceRegister,
-  assignmentHierarchy,
-  publications,
-  publicationsLoadError,
-  currencyOptions,
-  financeAudit = [],
+  defaultTab = "overview",
+  initialAssignmentHierarchy,
 }: CampaignWorkspaceViewProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<CampaignWorkspaceTabId>(defaultTab);
   const { tabOrder, moveTab } = useCampaignWorkspaceTabOrder();
 
+  const tabData = useCampaignTabData(workspace.id, initialAssignmentHierarchy);
+  const {
+    accountManagers,
+    teams,
+    currencyOptions,
+    assignmentHierarchy,
+    billingGroups,
+    operationalBilling,
+    billingLines,
+    campaignInvoiceRegister,
+    publications,
+    publicationsLoadError,
+    financeAudit,
+    isTabLoading,
+    tabLoadError,
+    bundleStatuses,
+  } = tabData;
+
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      if (!isCampaignWorkspaceTabId(value)) return;
+      setActiveTab(value);
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === "overview") {
+        params.delete("tab");
+      } else {
+        params.set("tab", value);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
   const operationalDeliverableCount = useMemo(() => {
-    return flattenOperationalDeliverables(
-      assignmentHierarchy,
-      publications,
-      workspace.deliverables ?? []
-    ).rows.length;
-  }, [assignmentHierarchy, publications, workspace.deliverables]);
+    if (bundleStatuses.publications === "loaded") {
+      return flattenOperationalDeliverables(
+        assignmentHierarchy,
+        publications,
+        workspace.deliverables ?? []
+      ).rows.length;
+    }
+    if (assignmentHierarchy.groups.length > 0) {
+      return flattenOperationalDeliverables(
+        assignmentHierarchy,
+        [],
+        workspace.deliverables ?? []
+      ).rows.length;
+    }
+    return workspace.deliverables?.length ?? 0;
+  }, [
+    assignmentHierarchy,
+    publications,
+    workspace.deliverables,
+    bundleStatuses.publications,
+  ]);
 
   const hierarchyLinkedInvoiceCount = useMemo(() => {
     const ids = new Set<string>();
@@ -105,8 +145,14 @@ export function CampaignWorkspaceView({
   }, [assignmentHierarchy.groups]);
 
   const billingTabCount = useMemo(() => {
+    if (bundleStatuses.billing !== "loaded" && bundleStatuses.assignmentsBilling !== "loaded") {
+      return undefined;
+    }
     const registerCount = campaignInvoiceRegister.length;
-    const linkedCount = Math.max(registerCount, hierarchyLinkedInvoiceCount);
+    const linkedCount = Math.max(
+      registerCount,
+      hierarchyLinkedInvoiceCount ?? 0
+    );
     const queueCount = operationalBilling
       ? buildConsolidatedInvoiceQueueRows({
           campaign_header_id: workspace.id,
@@ -124,6 +170,8 @@ export function CampaignWorkspaceView({
     hierarchyLinkedInvoiceCount,
     operationalBilling,
     workspace,
+    bundleStatuses.billing,
+    bundleStatuses.assignmentsBilling,
   ]);
 
   const tabCounts = useMemo(
@@ -132,7 +180,10 @@ export function CampaignWorkspaceView({
       clientIo: workspace.client_io ? 1 : 0,
       vendorIo: workspace.vendor_ios.length,
       deliverables: operationalDeliverableCount,
-      publications: publications.length,
+      publications:
+        bundleStatuses.publications === "loaded"
+          ? publications.length
+          : undefined,
       workflow: workspace.approvals.length,
       billing: billingTabCount,
       timeline: workspace.vendors.length,
@@ -146,6 +197,7 @@ export function CampaignWorkspaceView({
       operationalDeliverableCount,
       publications.length,
       billingTabCount,
+      bundleStatuses.publications,
     ]
   );
 
@@ -229,11 +281,19 @@ export function CampaignWorkspaceView({
     }
   }, [activeTab]);
 
+  const renderTabContent = (tabId: CampaignWorkspaceTabId, content: React.ReactNode) => {
+    if (activeTab !== tabId) return null;
+    if (isTabLoading(tabId) || tabLoadError(tabId)) {
+      return <CampaignWorkspaceTabLoading error={tabLoadError(tabId)} />;
+    }
+    return content;
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
       >
         <CampaignWorkspaceScrollShell
@@ -303,10 +363,7 @@ export function CampaignWorkspaceView({
                 </p>
               </div>
 
-              <CampaignKpiStrip
-                workspace={workspace}
-                operationalDeliverableCount={operationalDeliverableCount}
-              />
+              <CampaignKpiStrip workspace={workspace} />
             </>
           }
           tabs={
@@ -319,15 +376,13 @@ export function CampaignWorkspaceView({
         >
         <TabsContent value="overview" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
-            {activeTab === "overview" ? (
-              <CampaignOverviewTab
-                workspace={workspace}
-                accountManagers={accountManagers}
-                teams={teams}
-                currencyOptions={currencyOptions}
-                onOpenDetails={() => setDetailsOpen(true)}
-              />
-            ) : null}
+            <CampaignOverviewTab
+              workspace={workspace}
+              accountManagers={accountManagers}
+              teams={teams}
+              currencyOptions={currencyOptions}
+              onOpenDetails={() => setDetailsOpen(true)}
+            />
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="client-io" className={tabPanelClass}>
@@ -348,7 +403,9 @@ export function CampaignWorkspaceView({
         </TabsContent>
         <TabsContent value="lines" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            {activeTab === "lines" ? (
+            {tabLoadError("lines") ? (
+              <CampaignWorkspaceTabLoading error={tabLoadError("lines")} />
+            ) : (
               <CampaignAssignmentsTab
                 workspace={workspace}
                 po={workspace.po}
@@ -357,12 +414,13 @@ export function CampaignWorkspaceView({
                 billingGroups={billingGroups}
                 operationalBilling={operationalBilling}
               />
-            ) : null}
+            )}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="deliverables" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            {activeTab === "deliverables" ? (
+            {renderTabContent(
+              "deliverables",
               <TabErrorBoundary tabName="Deliverables">
                 <CampaignDeliverablesTab
                   workspace={workspace}
@@ -370,7 +428,7 @@ export function CampaignWorkspaceView({
                   publications={publications}
                 />
               </TabErrorBoundary>
-            ) : null}
+            )}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="vendor-io" className={tabPanelClass}>
@@ -384,7 +442,8 @@ export function CampaignWorkspaceView({
         </TabsContent>
         <TabsContent value="publications" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            {activeTab === "publications" ? (
+            {renderTabContent(
+              "publications",
               <TabErrorBoundary tabName="Publications">
                 <CampaignPublicationsTab
                   workspace={workspace}
@@ -392,7 +451,7 @@ export function CampaignWorkspaceView({
                   loadError={publicationsLoadError}
                 />
               </TabErrorBoundary>
-            ) : null}
+            )}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="workflow" className={tabPanelClass}>
@@ -406,7 +465,8 @@ export function CampaignWorkspaceView({
         </TabsContent>
         <TabsContent value="billing" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            {activeTab === "billing" ? (
+            {renderTabContent(
+              "billing",
               <TabErrorBoundary tabName="Billing">
                 <CampaignBillingTab
                   workspace={workspace}
@@ -416,12 +476,13 @@ export function CampaignWorkspaceView({
                   campaignInvoiceRegister={campaignInvoiceRegister}
                 />
               </TabErrorBoundary>
-            ) : null}
+            )}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="timeline" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
-            {activeTab === "timeline" ? (
+            {renderTabContent(
+              "timeline",
               <TabErrorBoundary tabName="Timeline">
                 <CampaignTimelineTab
                   workspace={workspace}
@@ -429,7 +490,7 @@ export function CampaignWorkspaceView({
                   financeAudit={financeAudit}
                 />
               </TabErrorBoundary>
-            ) : null}
+            )}
           </CampaignWorkspaceTabPanel>
         </TabsContent>
         </CampaignWorkspaceScrollShell>
@@ -440,11 +501,18 @@ export function CampaignWorkspaceView({
         accountManagers={accountManagers}
         teams={teams}
         currencyOptions={currencyOptions}
-        tabCounts={tabCounts}
+        tabCounts={{
+          lines: tabCounts.lines,
+          vendorIo: tabCounts.vendorIo,
+          deliverables: tabCounts.deliverables,
+          publications: tabCounts.publications ?? 0,
+          workflow: tabCounts.workflow,
+          billing: tabCounts.billing ?? 0,
+        }}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         onNavigateToTab={(tabId) => {
-          setActiveTab(tabId);
+          handleTabChange(tabId);
           setDetailsOpen(false);
         }}
       />

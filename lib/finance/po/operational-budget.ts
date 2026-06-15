@@ -24,7 +24,7 @@ export type ResolveOperationalPoInput = {
   po_number?: string | null;
   /** Sum of line po_amount — legacy fallback when governance PO is unset. */
   legacy_budget: number;
-  /** Sum of line revenue_before_vat — legacy consumption fallback. */
+  /** Sum of line billable base (Rev + UR + AF) — legacy consumption fallback. */
   legacy_consumed: number;
 };
 
@@ -84,6 +84,20 @@ export function resolveOperationalPo(
     health: poExceeded ? "exceeded" : consumption.health,
     po_exceeded: poExceeded,
     uses_governance: usesGovernance,
+  };
+}
+
+/** Campaign workspace PO alert — consumption is billable base everywhere. */
+export function resolveWorkspacePoAlert(input: {
+  operational: OperationalPoSnapshot;
+}): {
+  po_exceeded: boolean;
+  po_banner_consumed: number;
+} {
+  const { operational } = input;
+  return {
+    po_exceeded: operational.po_exceeded,
+    po_banner_consumed: operational.po_consumed,
   };
 }
 

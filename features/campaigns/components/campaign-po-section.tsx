@@ -44,7 +44,7 @@ export function CampaignPoSection({
     <>
       <CampaignFlatSection
         title="Client PO governance"
-        description="Consumption uses assignment revenue before VAT. VAT never affects PO utilization."
+        description="Consumption uses billable base (Revenue + UR Rev + AF). VAT never affects PO utilization."
         actions={
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
             <PencilIcon data-icon="inline-start" />

@@ -26,5 +26,6 @@ const metrics = metricsFromCampaignLines([shimaaLine], 0);
 assert.equal(metrics.revenue, 165_000, "dashboard revenue uses billable base");
 assert.equal(metrics.gp, 25_000, "dashboard GP uses commercial rollup");
 assert.equal(metrics.margin_percent, 15.15, "margin on billable base");
+assert.equal(metrics.actual_amount, 165_000, "PO actual uses billable base");
 
 console.log("financial.test.ts: all assertions passed");

@@ -1,7 +1,10 @@
 import { filterUuids, isUuid } from "@/lib/validation/uuid";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
-import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
+import {
+  resolveOperationalPo,
+  resolveWorkspacePoAlert,
+} from "@/lib/finance/po/operational-budget";
 import type { PoStatus } from "@/lib/finance/po/status";
 import {
   resolveVatRateForCountry,
@@ -642,7 +645,7 @@ export async function getCampaignWorkspace(
     campaignCost += costBeforeVat;
     campaignGp += gp;
     const poAmount = Number(line.po_amount);
-    const poConsumed = Number(line.po_consumed ?? cost);
+    const poConsumed = commercial.billableBase;
     const vendorFees = vendorFeesByLine.get(line.id) ?? 0;
     const assignment = parseLineAssignment(line.metadata);
     const platformSummary = assignment
@@ -732,10 +735,6 @@ export async function getCampaignWorkspace(
   });
 
   const legacyBudget = workspaceLines.reduce((s, l) => s + l.po_amount, 0);
-  const legacyConsumed = workspaceLines.reduce(
-    (s, l) => s + l.revenue_before_vat,
-    0
-  );
   const revenue = campaignBillableBase;
   const cost = campaignCost;
   const gp = campaignGp;
@@ -915,13 +914,17 @@ export async function getCampaignWorkspace(
 
   const operationalPo = resolveOperationalPo({
     po_amount_campaign_currency: headerRow.po_amount_campaign_currency,
-    po_consumed_amount: headerRow.po_consumed_amount,
-    po_remaining_amount: headerRow.po_remaining_amount,
-    po_remaining_percent: headerRow.po_remaining_percent,
+    po_consumed_amount: campaignBillableBase,
+    po_remaining_amount: null,
+    po_remaining_percent: null,
     po_status: headerRow.po_status,
     po_expiry_date: headerRow.po_expiry_date,
     legacy_budget: legacyBudget,
-    legacy_consumed: legacyConsumed,
+    legacy_consumed: campaignBillableBase,
+  });
+
+  const poAlert = resolveWorkspacePoAlert({
+    operational: operationalPo,
   });
 
   const clientIoSendRecipients = clientIo
@@ -994,7 +997,8 @@ export async function getCampaignWorkspace(
       po_remaining_percent: operationalPo.po_remaining_percent,
       po_status: operationalPo.po_status,
       po_health: operationalPo.health,
-      po_exceeded: operationalPo.po_exceeded,
+      po_exceeded: poAlert.po_exceeded,
+      po_banner_consumed: poAlert.po_banner_consumed,
       billing_outstanding: billingOutstanding,
       collected,
     },

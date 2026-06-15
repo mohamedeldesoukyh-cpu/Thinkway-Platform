@@ -1,4 +1,9 @@
 /** Default campaign workspace tab order — shared for all users until customized. */
+import {
+  normalizeWorkspaceTabOrder,
+  reorderWorkspaceTabs,
+} from "@/lib/workspace/workspace-tab-order";
+
 export const CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER = [
   "overview",
   "client-io",
@@ -22,10 +27,14 @@ export function isCampaignWorkspaceTabId(value: string): value is CampaignWorksp
   return ALLOWED_TAB_IDS.has(value);
 }
 
-import {
-  normalizeWorkspaceTabOrder,
-  reorderWorkspaceTabs,
-} from "@/lib/workspace/workspace-tab-order";
+export function resolveCampaignWorkspaceTab(
+  tabParam: string | undefined
+): CampaignWorkspaceTabId {
+  if (tabParam && isCampaignWorkspaceTabId(tabParam)) {
+    return tabParam;
+  }
+  return "overview";
+}
 
 /** Merge saved order with default — drops unknown ids and appends any new tabs. */
 export function normalizeCampaignWorkspaceTabOrder(saved: unknown): CampaignWorkspaceTabId[] {
