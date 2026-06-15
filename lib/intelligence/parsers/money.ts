@@ -21,7 +21,8 @@ function normalizeNumericInput(raw: string): string {
     .replace(/USD|US\$|SAR|AED|KWD|EGP/gi, "")
     .replace(/[\u066C,]/g, "")
     .replace(/\s+/g, "")
-    .replace(/^\$/, "");
+    .replace(/^\$/, "")
+    .replace(/\$$/, "");
 }
 
 /**

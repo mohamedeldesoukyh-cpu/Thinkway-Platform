@@ -150,6 +150,147 @@ function loadWorkbook(path: string) {
   return XLSX.read(buf, { type: "buffer", cellDates: true, dateNF: "yyyy-mm-dd" });
 }
 
+function influencerIdentityKey(
+  display: string | null | undefined,
+  username: string | null | undefined,
+  platform: string | null | undefined
+): string {
+  return `${String(display ?? "").trim().toLowerCase()}|${String(username ?? "").trim().toLowerCase()}|${String(platform ?? "").trim().toLowerCase()}`;
+}
+
+function clampWarehousePercent(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  if (value > 9999.9999) return 9999.9999;
+  if (value < -9999.9999) return -9999.9999;
+  return value;
+}
+
+function registerInfluencerDimension(opts: {
+  influencerMap: Map<string, string>;
+  influencerIdentityMap: Map<string, string>;
+  intInfluencers: Array<Record<string, unknown>>;
+  sourceKey: string;
+  display: string | null | undefined;
+  username: string | null | undefined;
+  platform: string | null | undefined;
+  record: Record<string, unknown>;
+}) {
+  const {
+    influencerMap,
+    influencerIdentityMap,
+    intInfluencers,
+    sourceKey,
+    display,
+    username,
+    platform,
+    record,
+  } = opts;
+  const identityKey = influencerIdentityKey(display, username, platform);
+  const existingId = influencerIdentityMap.get(identityKey);
+  if (existingId) {
+    influencerMap.set(sourceKey, existingId);
+    const existing = intInfluencers.find((row) => row.id === existingId);
+    if (existing) {
+      const keys = new Set([...(existing.source_keys as string[]), sourceKey]);
+      existing.source_keys = [...keys];
+    }
+    return;
+  }
+
+  const id = crypto.randomUUID();
+  influencerIdentityMap.set(identityKey, id);
+  influencerMap.set(sourceKey, id);
+  intInfluencers.push({ ...record, id });
+}
+
+type IntelligenceDb = {
+  from: (table: string) => {
+    select: (
+      columns: string,
+      opts?: { count?: "exact"; head?: boolean }
+    ) => {
+      range: (from: number, to: number) => Promise<{
+        data: Record<string, unknown>[] | null;
+        error: { message: string } | null;
+      }>;
+    } & Promise<{ data: Record<string, unknown>[] | null; error: { message: string } | null; count?: number | null }>;
+    upsert: (
+      rows: Record<string, unknown>[],
+      opts?: { onConflict?: string; ignoreDuplicates?: boolean }
+    ) => Promise<{ error: { message: string } | null }>;
+    insert: (rows: Record<string, unknown>[]) => Promise<{ error: { message: string } | null }>;
+    delete: () => {
+      neq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+    };
+  };
+};
+
+async function hydrateExistingWarehouse(
+  db: IntelligenceDb,
+  maps: {
+    clientMap: Map<string, string>;
+    brandMap: Map<string, string>;
+    influencerMap: Map<string, string>;
+    influencerIdentityMap: Map<string, string>;
+    campaignIdBySourceLine: Map<string, string>;
+  }
+) {
+  const { data: clients, error: clientError } = await db.from("int_clients").select("id, client_name_raw, group_name_raw");
+  if (clientError) throw new Error(`hydrate int_clients: ${clientError.message}`);
+  for (const row of clients ?? []) {
+    maps.clientMap.set(`${String(row.group_name_raw ?? "")}|${String(row.client_name_raw)}`, String(row.id));
+  }
+
+  const { data: brands, error: brandError } = await db.from("int_brands").select("id, brand_name_raw, client_name_raw");
+  if (brandError) throw new Error(`hydrate int_brands: ${brandError.message}`);
+  for (const row of brands ?? []) {
+    maps.brandMap.set(`${String(row.brand_name_raw)}|${String(row.client_name_raw ?? "")}`, String(row.id));
+  }
+
+  let influencerOffset = 0;
+  while (true) {
+    const { data: influencers, error: influencerError } = await db
+      .from("int_influencers")
+      .select("id, display_name_raw, username, platform, source_keys")
+      .range(influencerOffset, influencerOffset + BATCH_SIZE - 1);
+    if (influencerError) throw new Error(`hydrate int_influencers: ${influencerError.message}`);
+    if (!influencers?.length) break;
+    for (const row of influencers) {
+      const id = String(row.id);
+      const identityKey = influencerIdentityKey(
+        row.display_name_raw as string | null | undefined,
+        row.username as string | null | undefined,
+        row.platform as string | null | undefined
+      );
+      maps.influencerIdentityMap.set(identityKey, id);
+      for (const sourceKey of (row.source_keys as string[] | null) ?? []) {
+        maps.influencerMap.set(sourceKey, id);
+      }
+    }
+    if (influencers.length < BATCH_SIZE) break;
+    influencerOffset += BATCH_SIZE;
+  }
+
+  let offset = 0;
+  while (true) {
+    const { data, error } = await db
+      .from("int_campaigns")
+      .select("id, source_line_id")
+      .range(offset, offset + BATCH_SIZE - 1);
+    if (error) throw new Error(`hydrate int_campaigns: ${error.message}`);
+    if (!data?.length) break;
+    for (const row of data) {
+      maps.campaignIdBySourceLine.set(String(row.source_line_id), String(row.id));
+    }
+    if (data.length < BATCH_SIZE) break;
+    offset += BATCH_SIZE;
+  }
+
+  console.log(
+    `[intelligence-etl] Hydrated existing warehouse: ${maps.clientMap.size} clients, ${maps.brandMap.size} brands, ${maps.influencerIdentityMap.size} influencers, ${maps.campaignIdBySourceLine.size} campaigns`
+  );
+}
+
 async function loadMastersForRun(): Promise<LiveMasters> {
   if (dryRun) {
     try {
@@ -172,20 +313,7 @@ async function main() {
   }
 
   const supabase = dryRun ? null : createAdminClient();
-  const db = supabase
-    ? (intelligenceDb(supabase) as {
-        from: (table: string) => {
-          upsert: (
-            rows: Record<string, unknown>[],
-            opts?: { onConflict?: string; ignoreDuplicates?: boolean }
-          ) => Promise<{ error: { message: string } | null }>;
-          insert: (rows: Record<string, unknown>[]) => Promise<{ error: { message: string } | null }>;
-          delete: () => {
-            neq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
-          };
-        };
-      })
-    : null;
+  const db = supabase ? (intelligenceDb(supabase) as IntelligenceDb) : null;
 
   console.log(`[intelligence-etl] Reading ${excelPath}`);
   const wb = loadWorkbook(excelPath);
@@ -280,10 +408,22 @@ async function main() {
   const clientMap = new Map<string, string>();
   const brandMap = new Map<string, string>();
   const influencerMap = new Map<string, string>();
+  const influencerIdentityMap = new Map<string, string>();
 
   const intClients: Array<Record<string, unknown>> = [];
   const intBrands: Array<Record<string, unknown>> = [];
   const intInfluencers: Array<Record<string, unknown>> = [];
+  const campaignIdBySourceLine = new Map<string, string>();
+
+  if (!dryRun && db && process.env.INTELLIGENCE_ETL_TRUNCATE !== "1") {
+    await hydrateExistingWarehouse(db, {
+      clientMap,
+      brandMap,
+      influencerMap,
+      influencerIdentityMap,
+      campaignIdBySourceLine,
+    });
+  }
 
   for (const row of harmonized) {
     if (row.client_name_raw) {
@@ -340,15 +480,21 @@ async function main() {
       const key = `${row.influencer_name_raw}|`;
       if (!influencerMap.has(key)) {
         const resolved = resolveInfluencer(masters, row.influencer_name_raw, null);
-        const id = crypto.randomUUID();
-        influencerMap.set(key, id);
-        intInfluencers.push({
-          id,
-          display_name_raw: row.influencer_name_raw,
+        registerInfluencerDimension({
+          influencerMap,
+          influencerIdentityMap,
+          intInfluencers,
+          sourceKey: key,
+          display: row.influencer_name_raw,
+          username: null,
           platform: row.channel,
-          resolved_influencer_id: resolved.resolvedInfluencerId,
-          match_confidence: resolved.confidence,
-          source_keys: [key],
+          record: {
+            display_name_raw: row.influencer_name_raw,
+            platform: row.channel,
+            resolved_influencer_id: resolved.resolvedInfluencerId,
+            match_confidence: resolved.confidence,
+            source_keys: [key],
+          },
         });
       }
     }
@@ -366,22 +512,28 @@ async function main() {
       const key = `${display ?? ""}|${username ?? ""}`;
       if (influencerMap.has(key)) continue;
       const resolved = resolveInfluencer(masters, display, username);
-      const id = crypto.randomUUID();
-      influencerMap.set(key, id);
-      intInfluencers.push({
-        id,
-        display_name_raw: display ?? username ?? "Unknown",
-        legacy_name: String(row["Influencer OLD Name"] ?? "").trim() || null,
+      registerInfluencerDimension({
+        influencerMap,
+        influencerIdentityMap,
+        intInfluencers,
+        sourceKey: key,
+        display,
         username,
         platform: String(row.Platform ?? "").trim() || null,
-        country: String(row.Country ?? "").trim() || null,
-        nationality: String(row.Nationality ?? "").trim() || null,
-        gender: String(row.Gender ?? "").trim() || null,
-        tier: String(row["Influencer Type"] ?? "").trim() || null,
-        content_category: stripEmoji(String(row.Category ?? "").trim() || null),
-        resolved_influencer_id: resolved.resolvedInfluencerId,
-        match_confidence: resolved.confidence,
-        source_keys: [key],
+        record: {
+          display_name_raw: display ?? username ?? "Unknown",
+          legacy_name: String(row["Influencer OLD Name"] ?? "").trim() || null,
+          username,
+          platform: String(row.Platform ?? "").trim() || null,
+          country: String(row.Country ?? "").trim() || null,
+          nationality: String(row.Nationality ?? "").trim() || null,
+          gender: String(row.Gender ?? "").trim() || null,
+          tier: String(row["Influencer Type"] ?? "").trim() || null,
+          content_category: stripEmoji(String(row.Category ?? "").trim() || null),
+          resolved_influencer_id: resolved.resolvedInfluencerId,
+          match_confidence: resolved.confidence,
+          source_keys: [key],
+        },
       });
     }
   }
@@ -389,14 +541,11 @@ async function main() {
   for (const table of ["int_clients", "int_brands", "int_influencers"] as const) {
     const payload =
       table === "int_clients" ? intClients : table === "int_brands" ? intBrands : intInfluencers;
-    if (!dryRun && db) {
+    if (!dryRun && db && payload.length > 0) {
       for (let i = 0; i < payload.length; i += BATCH_SIZE) {
         const chunk = payload.slice(i, i + BATCH_SIZE);
-        const { error } = await db.from(table).upsert(chunk, { onConflict: "id" });
-        if (error) {
-          const { error: insertError } = await db.from(table).insert(chunk);
-          if (insertError) throw new Error(`${table}: ${insertError.message}`);
-        }
+        const { error } = await db.from(table).insert(chunk);
+        if (error) throw new Error(`${table}: ${error.message}`);
       }
     }
     console.log(`[intelligence-etl] ${table}: ${payload.length} rows`);
@@ -424,10 +573,12 @@ async function main() {
       campaignResolved.confidence,
     ]);
 
-    const campaignId = crypto.randomUUID();
+    const campaignId = campaignIdBySourceLine.get(row.source_line_id) ?? crypto.randomUUID();
     intCampaigns.push({
       id: campaignId,
       ...row,
+      margin_pct: clampWarehousePercent(row.margin_pct),
+      markup_pct: clampWarehousePercent(row.markup_pct),
       int_client_id: clientMap.get(clientKey) ?? null,
       int_brand_id: brandMap.get(brandKey) ?? null,
       int_influencer_id: influencerMap.get(influencerKey) ?? null,
@@ -443,8 +594,8 @@ async function main() {
         revenue_usd: row.revenue_usd,
         cost_usd: row.cost_usd,
         gp_usd: row.gp_usd,
-        margin_pct: row.margin_pct,
-        markup_pct: row.markup_pct,
+        margin_pct: clampWarehousePercent(row.margin_pct),
+        markup_pct: clampWarehousePercent(row.markup_pct),
         market_entity: row.market_entity,
         channel: row.channel,
         campaign_type: row.campaign_type,
@@ -517,10 +668,29 @@ async function main() {
   }
 
   if (!dryRun && db) {
-    for (let i = 0; i < intPricingHistory.length; i += BATCH_SIZE) {
-      const chunk = intPricingHistory.slice(i, i + BATCH_SIZE);
-      const { error } = await db.from("int_pricing_history").insert(chunk);
-      if (error) throw new Error(`int_pricing_history: ${error.message}`);
+    const skipPricingReload = process.env.INTELLIGENCE_ETL_TRUNCATE !== "1";
+    if (skipPricingReload) {
+      const { count, error: countError } = await db
+        .from("int_pricing_history")
+        .select("id", { count: "exact", head: true });
+      if (countError) throw new Error(`int_pricing_history count: ${countError.message}`);
+      if ((count ?? 0) > 0) {
+        console.log(
+          `[intelligence-etl] Skipping int_pricing_history insert (${count} rows already loaded; non-truncate re-run)`
+        );
+      } else {
+        for (let i = 0; i < intPricingHistory.length; i += BATCH_SIZE) {
+          const chunk = intPricingHistory.slice(i, i + BATCH_SIZE);
+          const { error } = await db.from("int_pricing_history").insert(chunk);
+          if (error) throw new Error(`int_pricing_history: ${error.message}`);
+        }
+      }
+    } else {
+      for (let i = 0; i < intPricingHistory.length; i += BATCH_SIZE) {
+        const chunk = intPricingHistory.slice(i, i + BATCH_SIZE);
+        const { error } = await db.from("int_pricing_history").insert(chunk);
+        if (error) throw new Error(`int_pricing_history: ${error.message}`);
+      }
     }
   }
 

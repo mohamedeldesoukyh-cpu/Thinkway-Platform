@@ -18,6 +18,7 @@
     "intelligence:etl:dry-run": "npx tsx scripts/intelligence-etl/run.ts --dry-run",
     "intelligence:preload-audit": "npx tsx scripts/intelligence-etl/preload-audit.ts",
     "intelligence:audit-2023": "npx tsx scripts/intelligence-etl/audit-2023-sheet.ts",
+    "intelligence:final-reconciliation": "npx tsx scripts/intelligence-etl/final-reconciliation.ts",
     "intelligence:test-parsers": "tsx lib/intelligence/parsers/intelligence-parsers.test.ts"
   },
   "dependencies": {

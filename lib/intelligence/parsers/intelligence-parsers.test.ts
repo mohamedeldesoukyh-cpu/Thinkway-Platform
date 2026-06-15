@@ -7,6 +7,8 @@ import { parsePercent } from "@/lib/intelligence/parsers/percent";
 import { isCampaignDataRow, isDatabaseDataRow } from "@/lib/intelligence/parsers/row-filter";
 
 assert.equal(parseMoney("$2,024 "), 2024);
+assert.equal(parseMoney("799$"), 799);
+assert.equal(parseMoney("1,333$"), 1333);
 assert.equal(parseMoney("8,325.50"), 8325.5);
 assert.equal(parseMoney("(1,200)"), -1200);
 assert.equal(parseMoney("١٬٢٠٠"), 1200);
