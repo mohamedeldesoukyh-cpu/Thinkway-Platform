@@ -14,7 +14,10 @@
     "discovery:worker:dev": "npm run dev --prefix services/discovery-worker",
     "discovery:verify": "node scripts/verify-local-discovery.mjs",
     "discovery:setup": "powershell -ExecutionPolicy Bypass -File scripts/setup-local-discovery.ps1",
-    "intelligence:etl": "tsx scripts/intelligence-etl/run.ts",
+    "intelligence:etl": "npx tsx scripts/intelligence-etl/run.ts",
+    "intelligence:etl:dry-run": "npx tsx scripts/intelligence-etl/run.ts --dry-run",
+    "intelligence:preload-audit": "npx tsx scripts/intelligence-etl/preload-audit.ts",
+    "intelligence:audit-2023": "npx tsx scripts/intelligence-etl/audit-2023-sheet.ts",
     "intelligence:test-parsers": "tsx lib/intelligence/parsers/intelligence-parsers.test.ts"
   },
   "dependencies": {

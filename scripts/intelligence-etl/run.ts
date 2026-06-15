@@ -9,6 +9,7 @@
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY (JWT eyJ…)
  *   INTELLIGENCE_ETL_TRUNCATE=1 — clear warehouse tables before load
+ *   INTELLIGENCE_ETL_DRY_RUN=1 — parse Excel and print stats; no database writes
  */
 import { readFileSync } from "node:fs";
 
@@ -25,6 +26,7 @@ import {
   resolveCampaign,
   resolveClient,
   resolveInfluencer,
+  type LiveMasters,
 } from "@/lib/intelligence/entity-resolution/matchers";
 import { parseMoney } from "@/lib/intelligence/parsers/money";
 import {
@@ -47,6 +49,62 @@ const DEFAULT_EXCEL_PATH =
 
 const CAMPAIGN_SHEETS: IntelligenceSheet[] = ["2023", "2024", "2025", "2026"];
 const BATCH_SIZE = 500;
+const dryRun =
+  process.env.INTELLIGENCE_ETL_DRY_RUN === "1" || process.argv.includes("--dry-run");
+
+const EMPTY_MASTERS: LiveMasters = {
+  groups: [],
+  clients: [],
+  brands: [],
+  influencers: [],
+  handles: [],
+  headers: [],
+  lines: [],
+  overrides: [],
+};
+
+type SheetStat = { totalRows: number; filteredRows: number };
+
+function printDryRunSummary(opts: {
+  excelPath: string;
+  sheetNames: string[];
+  sheetStats: Map<string, SheetStat>;
+  campaigns: number;
+  influencers: number;
+  clients: number;
+  brands: number;
+}) {
+  const { excelPath, sheetNames, sheetStats, campaigns, influencers, clients, brands } = opts;
+  const totalRaw = [...sheetStats.values()].reduce((sum, s) => sum + s.totalRows, 0);
+  const totalFiltered = [...sheetStats.values()].reduce((sum, s) => sum + s.filteredRows, 0);
+
+  console.log("");
+  console.log("=== Intelligence ETL Dry Run ===");
+  console.log("");
+  console.log(`Excel file:          ${excelPath}`);
+  console.log(`Sheets detected:     ${sheetNames.length} (${sheetNames.join(", ")})`);
+  console.log("");
+  console.log("Sheet                          | Raw rows | After filter");
+  console.log("-------------------------------|----------|-------------");
+  for (const name of sheetNames) {
+    const stat = sheetStats.get(name) ?? { totalRows: 0, filteredRows: 0 };
+    console.log(
+      `${name.padEnd(30)} | ${String(stat.totalRows).padStart(8)} | ${String(stat.filteredRows).padStart(11)}`
+    );
+  }
+  console.log("-------------------------------|----------|-------------");
+  console.log(
+    `${"TOTAL".padEnd(30)} | ${String(totalRaw).padStart(8)} | ${String(totalFiltered).padStart(11)}`
+  );
+  console.log("");
+  console.log(`Estimated campaigns:   ${campaigns}`);
+  console.log(`Estimated influencers: ${influencers}`);
+  console.log(`Estimated clients:     ${clients}`);
+  console.log(`Estimated brands:      ${brands}`);
+  console.log("");
+  console.log("Database writes:       NONE (dry run)");
+  console.log("");
+}
 
 function resolveServiceRoleKey(): string {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -92,26 +150,54 @@ function loadWorkbook(path: string) {
   return XLSX.read(buf, { type: "buffer", cellDates: true, dateNF: "yyyy-mm-dd" });
 }
 
+async function loadMastersForRun(): Promise<LiveMasters> {
+  if (dryRun) {
+    try {
+      return await loadLiveMasters(createAdminClient());
+    } catch {
+      console.log(
+        "[intelligence-etl] Dry-run: Supabase unavailable — entity resolution uses empty masters."
+      );
+      return EMPTY_MASTERS;
+    }
+  }
+  return loadLiveMasters(createAdminClient());
+}
+
 async function main() {
   const excelPath = process.env.INTELLIGENCE_EXCEL_PATH?.trim() || DEFAULT_EXCEL_PATH;
-  const supabase = createAdminClient();
-  const db = intelligenceDb(supabase) as {
-    from: (table: string) => {
-      upsert: (
-        rows: Record<string, unknown>[],
-        opts?: { onConflict?: string; ignoreDuplicates?: boolean }
-      ) => Promise<{ error: { message: string } | null }>;
-      insert: (rows: Record<string, unknown>[]) => Promise<{ error: { message: string } | null }>;
-      delete: () => { neq: (col: string, val: string) => Promise<{ error: { message: string } | null }> };
-    };
-  };
+
+  if (dryRun) {
+    console.log("[intelligence-etl] DRY RUN — no database writes");
+  }
+
+  const supabase = dryRun ? null : createAdminClient();
+  const db = supabase
+    ? (intelligenceDb(supabase) as {
+        from: (table: string) => {
+          upsert: (
+            rows: Record<string, unknown>[],
+            opts?: { onConflict?: string; ignoreDuplicates?: boolean }
+          ) => Promise<{ error: { message: string } | null }>;
+          insert: (rows: Record<string, unknown>[]) => Promise<{ error: { message: string } | null }>;
+          delete: () => {
+            neq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+          };
+        };
+      })
+    : null;
 
   console.log(`[intelligence-etl] Reading ${excelPath}`);
   const wb = loadWorkbook(excelPath);
+  const sheetStats = new Map<string, SheetStat>();
 
-  if (process.env.INTELLIGENCE_ETL_TRUNCATE === "1") {
+  for (const name of wb.SheetNames) {
+    sheetStats.set(name, { totalRows: 0, filteredRows: 0 });
+  }
+
+  if (!dryRun && process.env.INTELLIGENCE_ETL_TRUNCATE === "1") {
     console.log("[intelligence-etl] Truncating warehouse tables…");
-    await truncateWarehouse(supabase);
+    await truncateWarehouse(supabase!);
   }
 
   const loadedAt = new Date().toISOString();
@@ -144,15 +230,18 @@ async function main() {
       });
       harmonized.push(harmonizeCampaignRow(sheet, row, rowNumber));
     });
+    sheetStats.set(sheet, { totalRows: rows.length, filteredRows: kept });
     console.log(`[intelligence-etl] ${sheet}: ${kept}/${rows.length} data rows`);
   }
 
-  for (let i = 0; i < rawCampaignRows.length; i += BATCH_SIZE) {
-    const chunk = rawCampaignRows.slice(i, i + BATCH_SIZE);
-    const { error } = await db
-      .from("historical_campaigns_raw")
-      .upsert(chunk, { onConflict: "source_sheet,source_row_number,row_hash", ignoreDuplicates: true });
-    if (error) throw new Error(`historical_campaigns_raw: ${error.message}`);
+  if (!dryRun && db) {
+    for (let i = 0; i < rawCampaignRows.length; i += BATCH_SIZE) {
+      const chunk = rawCampaignRows.slice(i, i + BATCH_SIZE);
+      const { error } = await db
+        .from("historical_campaigns_raw")
+        .upsert(chunk, { onConflict: "source_sheet,source_row_number,row_hash", ignoreDuplicates: true });
+      if (error) throw new Error(`historical_campaigns_raw: ${error.message}`);
+    }
   }
 
   // --- Raw influencer database ---
@@ -171,17 +260,21 @@ async function main() {
         row_hash: hashRow("Database", rowNumber, payload),
       });
     });
-    for (let i = 0; i < rawInfluencerRows.length; i += BATCH_SIZE) {
-      const chunk = rawInfluencerRows.slice(i, i + BATCH_SIZE);
-      const { error } = await db
-        .from("historical_influencers_raw")
-        .upsert(chunk, { onConflict: "source_row_number,row_hash", ignoreDuplicates: true });
-      if (error) throw new Error(`historical_influencers_raw: ${error.message}`);
+    if (!dryRun && db) {
+      for (let i = 0; i < rawInfluencerRows.length; i += BATCH_SIZE) {
+        const chunk = rawInfluencerRows.slice(i, i + BATCH_SIZE);
+        const { error } = await db
+          .from("historical_influencers_raw")
+          .upsert(chunk, { onConflict: "source_row_number,row_hash", ignoreDuplicates: true });
+        if (error) throw new Error(`historical_influencers_raw: ${error.message}`);
+      }
     }
+    const dbRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: null, raw: false });
+    sheetStats.set("Database", { totalRows: dbRows.length, filteredRows: rawInfluencerRows.length });
     console.log(`[intelligence-etl] Database: ${rawInfluencerRows.length} vendor rows`);
   }
 
-  const masters = await loadLiveMasters(supabase);
+  const masters = await loadMastersForRun();
 
   // --- Dimension tables ---
   const clientMap = new Map<string, string>();
@@ -296,12 +389,14 @@ async function main() {
   for (const table of ["int_clients", "int_brands", "int_influencers"] as const) {
     const payload =
       table === "int_clients" ? intClients : table === "int_brands" ? intBrands : intInfluencers;
-    for (let i = 0; i < payload.length; i += BATCH_SIZE) {
-      const chunk = payload.slice(i, i + BATCH_SIZE);
-      const { error } = await db.from(table).upsert(chunk, { onConflict: "id" });
-      if (error) {
-        const { error: insertError } = await db.from(table).insert(chunk);
-        if (insertError) throw new Error(`${table}: ${insertError.message}`);
+    if (!dryRun && db) {
+      for (let i = 0; i < payload.length; i += BATCH_SIZE) {
+        const chunk = payload.slice(i, i + BATCH_SIZE);
+        const { error } = await db.from(table).upsert(chunk, { onConflict: "id" });
+        if (error) {
+          const { error: insertError } = await db.from(table).insert(chunk);
+          if (insertError) throw new Error(`${table}: ${insertError.message}`);
+        }
       }
     }
     console.log(`[intelligence-etl] ${table}: ${payload.length} rows`);
@@ -374,16 +469,18 @@ async function main() {
     }
   }
 
-  for (let i = 0; i < intCampaigns.length; i += BATCH_SIZE) {
-    const chunk = intCampaigns.slice(i, i + BATCH_SIZE);
-    const { error } = await db.from("int_campaigns").upsert(chunk, { onConflict: "source_line_id" });
-    if (error) throw new Error(`int_campaigns: ${error.message}`);
-  }
+  if (!dryRun && db) {
+    for (let i = 0; i < intCampaigns.length; i += BATCH_SIZE) {
+      const chunk = intCampaigns.slice(i, i + BATCH_SIZE);
+      const { error } = await db.from("int_campaigns").upsert(chunk, { onConflict: "source_line_id" });
+      if (error) throw new Error(`int_campaigns: ${error.message}`);
+    }
 
-  for (let i = 0; i < intMarginHistory.length; i += BATCH_SIZE) {
-    const chunk = intMarginHistory.slice(i, i + BATCH_SIZE);
-    const { error } = await db.from("int_margin_history").upsert(chunk, { onConflict: "int_campaign_id" });
-    if (error) throw new Error(`int_margin_history: ${error.message}`);
+    for (let i = 0; i < intMarginHistory.length; i += BATCH_SIZE) {
+      const chunk = intMarginHistory.slice(i, i + BATCH_SIZE);
+      const { error } = await db.from("int_margin_history").upsert(chunk, { onConflict: "int_campaign_id" });
+      if (error) throw new Error(`int_margin_history: ${error.message}`);
+    }
   }
 
   // Database rate text → pricing history
@@ -419,10 +516,12 @@ async function main() {
     }
   }
 
-  for (let i = 0; i < intPricingHistory.length; i += BATCH_SIZE) {
-    const chunk = intPricingHistory.slice(i, i + BATCH_SIZE);
-    const { error } = await db.from("int_pricing_history").insert(chunk);
-    if (error) throw new Error(`int_pricing_history: ${error.message}`);
+  if (!dryRun && db) {
+    for (let i = 0; i < intPricingHistory.length; i += BATCH_SIZE) {
+      const chunk = intPricingHistory.slice(i, i + BATCH_SIZE);
+      const { error } = await db.from("int_pricing_history").insert(chunk);
+      if (error) throw new Error(`int_pricing_history: ${error.message}`);
+    }
   }
 
   console.log(
@@ -451,13 +550,28 @@ async function main() {
     computed_at: loadedAt,
   }));
 
-  const { error: benchError } = await db.from("int_benchmarks").upsert(benchmarkRows, {
-    onConflict: "benchmark_key,period_year",
-  });
-  if (benchError) throw new Error(`int_benchmarks: ${benchError.message}`);
+  if (!dryRun && db) {
+    const { error: benchError } = await db.from("int_benchmarks").upsert(benchmarkRows, {
+      onConflict: "benchmark_key,period_year",
+    });
+    if (benchError) throw new Error(`int_benchmarks: ${benchError.message}`);
+  }
 
   console.log(`[intelligence-etl] int_benchmarks: ${benchmarkRows.length} slices`);
-  console.log("[intelligence-etl] Complete.");
+
+  if (dryRun) {
+    printDryRunSummary({
+      excelPath,
+      sheetNames: wb.SheetNames,
+      sheetStats,
+      campaigns: intCampaigns.length,
+      influencers: influencerMap.size,
+      clients: clientMap.size,
+      brands: brandMap.size,
+    });
+  } else {
+    console.log("[intelligence-etl] Complete.");
+  }
 }
 
 main().catch((err) => {

@@ -1,32 +1,14 @@
+import {
+  buildNormalizedRowLookup,
+  hasMoneyInRow,
+  lookupCell,
+} from "@/lib/intelligence/parsers/header-normalize";
 import type { IntelligenceSheet } from "@/types/intelligence";
 
-function cell(value: unknown): string | null {
-  if (value == null) return null;
-  const text = String(value).trim();
-  return text.length > 0 ? text : null;
-}
-
-function hasMoney(value: unknown): boolean {
-  if (value == null || value === "") return false;
-  if (typeof value === "number") return true;
-  return /\d/.test(String(value));
-}
-
-const INFLUENCER_KEYS = ["INFLUENCER", "Influencer NEW name", "Influencer OLD Name"] as const;
-const REVENUE_KEYS = [
-  "Revenue ($) ROI",
-  "Revenue ($)",
-  "Revenue",
-] as const;
-const CAMP_KEYS = ["Camp#", "Campaign Name"] as const;
-
-function firstPresent(row: Record<string, unknown>, keys: readonly string[]): string | null {
-  for (const key of keys) {
-    const value = cell(row[key]);
-    if (value) return value;
-  }
-  return null;
-}
+const INFLUENCER_ALIASES = ["INFLUENCER", "Influencer NEW name", "Influencer OLD Name"] as const;
+const REVENUE_ALIASES = ["Revenue ($) ROI", "Revenue ($)", "Revenue"] as const;
+const CAMP_ALIASES = ["Camp#", "Campaign Name"] as const;
+const COST_ALIASES = ["Cost ($)", "Our Cost ($)", "our cost"] as const;
 
 /**
  * Drops blank layout rows (2024 ~68%, 2026 ~50% padding).
@@ -36,18 +18,19 @@ export function isCampaignDataRow(
   row: Record<string, unknown>,
   sheet: IntelligenceSheet
 ): boolean {
-  const influencer = firstPresent(row, INFLUENCER_KEYS);
-  const revenue = REVENUE_KEYS.some((key) => hasMoney(row[key]));
-  const camp = firstPresent(row, CAMP_KEYS);
-  const code = cell(row["Code#"]);
-  const cost = hasMoney(row["Cost ($)"] ?? row["Our Cost ($)"] ?? row["our cost"]);
+  const normalized = buildNormalizedRowLookup(row);
+  const influencer = lookupCell(normalized, ...INFLUENCER_ALIASES);
+  const revenue = hasMoneyInRow(normalized, ...REVENUE_ALIASES);
+  const camp = lookupCell(normalized, ...CAMP_ALIASES);
+  const code = lookupCell(normalized, "Code#");
+  const cost = hasMoneyInRow(normalized, ...COST_ALIASES);
 
   if (influencer || revenue || cost) return true;
   if (camp && (code || influencer)) return true;
 
   if (sheet === "2023") {
-    const campaignName = cell(row["Campaign Name"]);
-    const month = cell(row["Month"]);
+    const campaignName = lookupCell(normalized, "Campaign Name");
+    const month = lookupCell(normalized, "Month");
     return Boolean(campaignName && month);
   }
 
@@ -55,10 +38,11 @@ export function isCampaignDataRow(
 }
 
 export function isDatabaseDataRow(row: Record<string, unknown>): boolean {
-  const newName = cell(row["Influencer NEW name"]);
-  const oldName = cell(row["Influencer OLD Name"]);
-  const username = cell(row["Username"]);
-  const platform = cell(row["Platform"]);
+  const normalized = buildNormalizedRowLookup(row);
+  const newName = lookupCell(normalized, "Influencer NEW name");
+  const oldName = lookupCell(normalized, "Influencer OLD Name");
+  const username = lookupCell(normalized, "Username");
+  const platform = lookupCell(normalized, "Platform");
   return Boolean(newName || oldName || username || platform);
 }
 
