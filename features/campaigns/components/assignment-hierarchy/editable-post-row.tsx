@@ -34,7 +34,7 @@ import {
   OperationalAmountField,
   OperationalQtyField,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-amount-field";
-import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import { formatOperationalAmount, roundOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import {
   OPERATIONAL_AMOUNT_CLASS,
   OPERATIONAL_TABLE_HEADER_CELL,
@@ -63,6 +63,7 @@ import {
   GRID_CELL,
   GRID_HIGHLIGHT_COST,
   GRID_HIGHLIGHT_REV,
+  GRID_HIGHLIGHT_TOTAL_BILLING,
   OPERATIONAL_GRID_LABELS,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-grid-columns";
 import { useOperationalCommercialDraft } from "@/features/campaigns/components/assignment-hierarchy/use-operational-commercial-draft";
@@ -207,6 +208,8 @@ export function EditablePostRow({
     deliverable.revenue_before_vat,
     deliverable.unit_cost,
     deliverable.cost_before_vat,
+    deliverable.usage_rights_cost,
+    deliverable.revenue_after_vat,
     deliverableScoped,
     defaultRevenueVatPercent,
   ]);
@@ -243,6 +246,21 @@ export function EditablePostRow({
   const canEditCommercial = canEdit;
   const showDeliverableCommercial =
     deliverableScoped || isFirstPost;
+
+  const computedTotalBilling = useMemo(() => {
+    if (showDeliverableCommercial) {
+      return deliverable.revenue_after_vat;
+    }
+    return roundOperationalAmount(
+      commercial.draft.rev + (revenueVatExempt ? 0 : computedVat)
+    );
+  }, [
+    showDeliverableCommercial,
+    deliverable.revenue_after_vat,
+    commercial.draft.rev,
+    revenueVatExempt,
+    computedVat,
+  ]);
 
   function persistLiveDate(nextLiveDate: string) {
     if (!canEditLiveDateField) return;
@@ -628,6 +646,13 @@ export function EditablePostRow({
           />
         </td>
         ) : null}
+        {col("usageRightsCost") ? (
+        <td className={cn(GRID_CELL.usageRightsCost, OPERATIONAL_AMOUNT_CLASS)}>
+          {showDeliverableCommercial
+            ? formatOperationalAmount(deliverable.usage_rights_cost)
+            : "—"}
+        </td>
+        ) : null}
         {col("vat") ? (
         <td className={GRID_CELL.vat}>
           {editing && !revenueVatExempt ? (
@@ -654,6 +679,11 @@ export function EditablePostRow({
               {formatOperationalAmount(computedVat)}
             </span>
           )}
+        </td>
+        ) : null}
+        {col("totalBilling") ? (
+        <td className={cn(GRID_HIGHLIGHT_TOTAL_BILLING)}>
+          {formatOperationalAmount(computedTotalBilling)}
         </td>
         ) : null}
         {col("postDate") ? (
@@ -1001,9 +1031,33 @@ export function OperationalGridHeader({
         {OPERATIONAL_GRID_LABELS.cost}
       </th>
       ) : null}
+      {col("usageRightsCost") ? (
+      <th
+        className={cn(
+          GRID_CELL.usageRightsCost,
+          OPERATIONAL_TABLE_HEADER_CELL,
+          OPERATIONAL_TABLE_HEADER_SURFACE,
+          "py-1.5"
+        )}
+      >
+        {OPERATIONAL_GRID_LABELS.usageRightsCost}
+      </th>
+      ) : null}
       {col("vat") ? (
       <th className={cn(GRID_CELL.vat, OPERATIONAL_TABLE_HEADER_CELL)}>
         {OPERATIONAL_GRID_LABELS.vat}
+      </th>
+      ) : null}
+      {col("totalBilling") ? (
+      <th
+        className={cn(
+          GRID_CELL.totalBilling,
+          OPERATIONAL_TABLE_HEADER_CELL,
+          OPERATIONAL_TABLE_HEADER_SURFACE,
+          "py-1.5"
+        )}
+      >
+        {OPERATIONAL_GRID_LABELS.totalBilling}
       </th>
       ) : null}
       {col("postDate") ? (

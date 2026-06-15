@@ -27,7 +27,9 @@ export const OPERATIONAL_GRID_LABELS = {
   agencyFeePercent: "AF %",
   agencyFee: "AF",
   cost: "COST",
+  usageRightsCost: "UR Cost",
   vat: "VAT",
+  totalBilling: "Total Billing",
   billing: "BILLING",
   invoice: "INV",
   collection: "COLL",
@@ -54,7 +56,9 @@ export const GRID_CELL = {
   agencyFeePercent: cn(ASSIGNMENT_GRID_VAT_COL, "px-1.5 py-1.5 align-middle text-center tabular-nums"),
   agencyFee: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1.5 py-1.5 align-middle text-center tabular-nums"),
   money: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1.5 py-1.5 align-middle"),
+  usageRightsCost: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1.5 py-1.5 align-middle text-center tabular-nums"),
   vat: cn(ASSIGNMENT_GRID_VAT_COL, "px-1.5 py-1.5 align-middle"),
+  totalBilling: cn(ASSIGNMENT_GRID_MONEY_COL, "px-1.5 py-1.5 align-middle text-center tabular-nums"),
   status: "w-[72px] px-1.5 py-1.5 text-center align-middle",
   invoice: "w-[64px] px-1.5 py-1.5 text-center align-middle",
   collection: "w-[40px] px-1.5 py-1.5 text-center align-middle text-[9px]",
@@ -74,4 +78,10 @@ export const GRID_HIGHLIGHT_COST = cn(
   GRID_CELL.money,
   OPERATIONAL_AMOUNT_CLASS,
   "bg-amber-500/5 font-semibold text-foreground dark:bg-amber-500/8"
+);
+
+export const GRID_HIGHLIGHT_TOTAL_BILLING = cn(
+  GRID_CELL.totalBilling,
+  OPERATIONAL_AMOUNT_CLASS,
+  "bg-sky-500/10 font-semibold text-foreground dark:bg-sky-500/12"
 );

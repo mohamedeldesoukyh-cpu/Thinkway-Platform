@@ -51,7 +51,9 @@ export const CHILD_GRID_TRAILING_COLUMNS = [
   { id: "agencyFeePercent", width: 56 },
   { id: "agencyFee", width: 76 },
   { id: "cost", width: 76 },
+  { id: "usageRightsCost", width: 76 },
   { id: "vat", width: 56 },
+  { id: "totalBilling", width: 76 },
   { id: "postDate", width: 100 },
   { id: "liveAdMonth", width: 84 },
   { id: "invoice", width: 64 },
@@ -70,6 +72,9 @@ export const CHILD_GRID_TRAILING_FINANCIAL_COLUMN_IDS = [
   "agencyFeePercent",
   "agencyFee",
   "cost",
+  "usageRightsCost",
+  "vat",
+  "totalBilling",
 ] as const satisfies readonly ChildGridTrailingColumnId[];
 
 export const CHILD_GRID_TRAILING_COL_WIDTHS = CHILD_GRID_TRAILING_COLUMNS.map(

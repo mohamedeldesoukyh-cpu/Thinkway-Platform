@@ -52,6 +52,36 @@ export function rowTotalRevenue(
   return Math.round(row.quantity * row.revenue_before_vat * 100) / 100;
 }
 
+function roundMoney(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** Splits a total across weights; remainder goes to the last bucket. */
+export function distributeAmountByWeights(total: number, weights: number[]): number[] {
+  if (weights.length === 0) return [];
+  const weightSum = weights.reduce((sum, weight) => sum + Math.max(0, weight), 0);
+  if (weightSum <= 0) {
+    const even = roundMoney(total / weights.length);
+    const amounts = weights.map(() => even);
+    const allocated = roundMoney(amounts.reduce((sum, value) => sum + value, 0));
+    const remainder = roundMoney(total - allocated);
+    if (remainder !== 0) {
+      amounts[amounts.length - 1] = roundMoney(amounts[amounts.length - 1] + remainder);
+    }
+    return amounts;
+  }
+
+  const amounts = weights.map((weight) =>
+    roundMoney((total * Math.max(0, weight)) / weightSum)
+  );
+  const allocated = roundMoney(amounts.reduce((sum, value) => sum + value, 0));
+  const remainder = roundMoney(total - allocated);
+  if (remainder !== 0) {
+    amounts[amounts.length - 1] = roundMoney(amounts[amounts.length - 1] + remainder);
+  }
+  return amounts;
+}
+
 function rowTotalUsageRights(
   row: Pick<CommercialDeliverableRow, "usage_rights_amount">
 ): number {
@@ -110,13 +140,24 @@ export function applyAssignmentTotalsToCommercialRows(
     summary.total_revenue_before_vat > 0
       ? targetRevenue / summary.total_revenue_before_vat
       : 0;
-  const costScale =
-    summary.total_cost_before_vat > 0 ? targetCost / summary.total_cost_before_vat : 0;
+  const costShares =
+    summary.total_cost_before_vat > 0
+      ? rows.map((row) => rowTotalCost(row) * (targetCost / summary.total_cost_before_vat))
+      : targetCost > 0.01
+        ? distributeAmountByWeights(
+            targetCost,
+            rows.map((row) =>
+              summary.total_revenue_before_vat > 0
+                ? rowTotalRevenue(row)
+                : Math.max(1, row.quantity)
+            )
+          )
+        : rows.map(() => 0);
 
-  return rows.map((row) => {
+  return rows.map((row, index) => {
     const quantity = Math.max(1, row.quantity);
     const scaledRevenue = rowTotalRevenue(row) * revenueScale;
-    const scaledCost = rowTotalCost(row) * costScale;
+    const scaledCost = costShares[index] ?? 0;
     return {
       ...row,
       revenue_before_vat: Math.round((scaledRevenue / quantity) * 100) / 100,

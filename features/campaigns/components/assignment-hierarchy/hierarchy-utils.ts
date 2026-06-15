@@ -78,6 +78,7 @@ export const CHILD_COLUMN_LABELS = {
   cost: "Cost",
   usageRightsCost: "UR Cost",
   vat: "VAT",
+  totalBilling: "Total Billing",
   billing: "Billing",
   invoice: "Invoice",
   collection: "Collection",
@@ -136,10 +137,13 @@ export const ASSIGNMENT_CHILD_TRAILING_PARENT_FINANCIAL_COLUMN_IDS = [
   "agencyFeePercent",
   "agencyFee",
   "cost",
+  "usageRightsCost",
+  "vat",
+  "totalBilling",
 ] as const;
 
-export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 22;
-export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 21;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 24;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 23;
 
 export function assignmentChildLeadingParentColumnIds(
   showExpandColumn: boolean

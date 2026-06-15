@@ -7,7 +7,6 @@ import {
 import {
   deliverableDisplayLabel,
   isDeliverableInvoiceEligible,
-  rollupAssignmentBilling,
 } from "@/lib/billing/deliverable-billing";
 import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";
 import { deliverableLabel } from "@/features/campaigns/line-assignment";
@@ -17,22 +16,23 @@ import type {
   AssignmentHierarchy,
   AssignmentHierarchyBillingContext,
   AssignmentHierarchyGroup,
-  AssignmentHierarchyRollups,
   AssignmentPostOperationalRow,
   DeliverableCollectionStatus,
 } from "@/features/campaigns/types/assignment-hierarchy";
-import { deliverableTagLabel } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { formatDeliverableHierarchyLabel } from "@/lib/campaigns/deliverable-display-label";
 import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import {
   isDeliverableCommercialLocked,
   isLiveAdDateLocked,
 } from "@/lib/campaigns/live-ad-date";
-import { formatMarginPercent } from "@/features/billing/types";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { logRevisionHierarchyKeys } from "@/lib/campaigns/assignment-row-debug";
 import { sanitizeAssignmentHierarchy } from "@/lib/campaigns/sanitize-assignment-hierarchy";
+import {
+  alignPackageLineCommercialToDeliverables,
+  buildAssignmentHierarchyRollups,
+} from "@/lib/campaigns/assignment-hierarchy-rollups";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 
 function lineAllowsDeliverableInvoice(line: CampaignLineWorkspace): boolean {
@@ -198,79 +198,6 @@ function buildVirtualPosts(input: {
     payout_status: input.payoutStatus,
     is_locked: input.isLocked,
   }));
-}
-
-function buildRollups(
-  deliverables: AssignmentDeliverableHierarchyRow[],
-  line: AssignmentHierarchyGroup["line"]
-): AssignmentHierarchyRollups {
-  if (deliverables.length === 0) {
-    const revenue = Number(line.revenue_before_vat ?? line.revenue) || 0;
-    const billingBase =
-      revenue +
-      Number(line.usage_rights_amount ?? 0) +
-      Number(line.agency_fee_amount ?? 0);
-    const cost = Number(line.cost_before_vat ?? line.cost) || 0;
-    const urCost = Number(line.usage_rights_cost ?? 0);
-    const gp = Number.isFinite(Number(line.gp))
-      ? Number(line.gp)
-      : billingBase - cost - urCost;
-    return {
-      deliverable_count: 0,
-      revenue,
-      cost,
-      gp,
-      margin_percent: line.margin_percent,
-      invoiced_value: 0,
-      remaining_value: Number(line.revenue_before_vat) || revenue,
-      collected_value: 0,
-    };
-  }
-
-  let revenue = deliverables.reduce((s, d) => s + d.revenue_before_vat, 0);
-  if (revenue <= 0.01) {
-    revenue = Number(line.revenue_before_vat ?? line.revenue) || 0;
-  }
-  const usageRights = deliverables.reduce((s, d) => s + (d.usage_rights_amount ?? 0), 0);
-  const usageRightsCost = deliverables.reduce((s, d) => s + (d.usage_rights_cost ?? 0), 0);
-  const agencyFees = deliverables.reduce((s, d) => s + (d.agency_fee_amount ?? 0), 0);
-  const billingBase = revenue + usageRights + agencyFees;
-  const cost = deliverables.reduce((s, d) => s + d.cost_before_vat, 0);
-  const gp = billingBase - cost - usageRightsCost;
-  const billingRollup = rollupAssignmentBilling(
-    deliverables.map((d) => ({
-      id: d.id,
-      campaign_line_id: d.campaign_line_id,
-      sort_order: 0,
-      platform: d.platform,
-      deliverable_type: d.deliverable_type,
-      quantity: d.quantity,
-      live_date: d.live_date,
-      billable_amount: d.revenue_before_vat,
-      invoiced_amount: d.invoiced_amount,
-      collected_amount: 0,
-      disputed_amount: 0,
-      remaining_amount: d.remaining_amount,
-      billing_status: d.billing_status,
-      invoice_line_item_id: null,
-      locked_at: null,
-      revenue_before_vat: d.revenue_before_vat,
-      revenue_vat_percent: 0,
-      revenue_vat_exempt: false,
-      label: d.label,
-    }))
-  );
-
-  return {
-    deliverable_count: deliverables.length,
-    revenue,
-    cost,
-    gp,
-    margin_percent: formatMarginPercent(billingBase, gp),
-    invoiced_value: billingRollup.invoiced_value,
-    remaining_value: billingRollup.remaining_value,
-    collected_value: billingRollup.collected_value,
-  };
 }
 
 export async function getCampaignAssignmentHierarchy(
@@ -662,8 +589,9 @@ async function loadCampaignAssignmentHierarchy(
   for (const line of workspace.lines) {
     const lineId = line.id;
     try {
-      const deliverables = deliverablesByLine.get(lineId) ?? [];
-      const rollups = buildRollups(deliverables, line);
+      const rawDeliverables = deliverablesByLine.get(lineId) ?? [];
+      const deliverables = alignPackageLineCommercialToDeliverables(rawDeliverables, line);
+      const rollups = buildAssignmentHierarchyRollups(deliverables, line);
       groups.push({ line, deliverables, rollups });
     } catch (error) {
       console.error("[assignment-hierarchy] group mapping failed — skipping row", {

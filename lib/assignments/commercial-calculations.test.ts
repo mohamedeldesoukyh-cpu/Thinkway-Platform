@@ -39,6 +39,45 @@ function testSingleRowSyncsAssignmentTotals() {
 
 testSingleRowSyncsAssignmentTotals();
 
+function testZeroChildCostDistributesByRevenueShare() {
+  const rows: CommercialDeliverableRow[] = [
+    {
+      id: "row-1",
+      platform: "instagram",
+      deliverable_type: "story",
+      quantity: 1,
+      unit_cost: 0,
+      revenue_before_vat: 90_000,
+      live_date: null,
+      notes: null,
+      schedule_mode: "single",
+      post_schedules: [],
+    },
+    {
+      id: "row-2",
+      platform: "instagram",
+      deliverable_type: "post",
+      quantity: 1,
+      unit_cost: 0,
+      revenue_before_vat: 60_000,
+      live_date: null,
+      notes: null,
+      schedule_mode: "single",
+      post_schedules: [],
+    },
+  ];
+
+  const synced = applyAssignmentTotalsToCommercialRows(rows, 150_000, 140_000);
+  const summary = summarizeCommercialRows(synced);
+
+  assert(summary.total_revenue_before_vat === 150_000, "revenue should match assignment input");
+  assert(summary.total_cost_before_vat === 140_000, "cost should distribute when children were zero");
+  assert(synced[0]!.unit_cost === 84_000, "cost should follow 60/40 revenue share");
+  assert(synced[1]!.unit_cost === 56_000, "cost should follow 60/40 revenue share");
+}
+
+testZeroChildCostDistributesByRevenueShare();
+
 function testUrAfDistributesByRevenueShare() {
   const rows: CommercialDeliverableRow[] = [
     {
@@ -169,4 +208,4 @@ function testGpDeductsUrCost() {
 
 testUrCostDistributesByRevenueShare();
 testGpDeductsUrCost();
-console.log("commercial-calculations: 5 passed");
+console.log("commercial-calculations: 6 passed");
