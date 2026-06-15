@@ -1,0 +1,1 @@
+export const INTELLIGENCE_MARGIN_THRESHOLD = 15;

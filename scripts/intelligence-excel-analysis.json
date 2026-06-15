@@ -1,0 +1,3359 @@
+{
+  "file": "c:\\Users\\X13 Yoga G3\\Documents\\Thinway\\Thinkway Intelligence Engine\\data 2023 - 2026.xlsx",
+  "sheet_names": [
+    "2023",
+    "2024",
+    "2025",
+    "2026",
+    "Database"
+  ],
+  "sheets": [
+    {
+      "name": "2023",
+      "row_count": 6575,
+      "column_count": 13,
+      "columns": [
+        {
+          "name": "Month",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 6575,
+          "samples": [
+            "Dec-22",
+            "Jan-23",
+            "Feb-23",
+            "Mar-23",
+            "Apr-23"
+          ]
+        },
+        {
+          "name": "Date",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 6575,
+          "samples": [
+            "2022-12-01",
+            "2023-01-03",
+            "2023-01-04",
+            "2023-01-05",
+            "2023-01-27"
+          ]
+        },
+        {
+          "name": "INFLUENCER",
+          "inferred_type": "string",
+          "missing_count": 8,
+          "missing_pct": 0.1,
+          "non_empty": 6567,
+          "samples": [
+            "Bashayer Hamad",
+            "Amona x",
+            "Lama Alakeel",
+            "Danah Awadh Almutairi",
+            "Abeer Fahd"
+          ]
+        },
+        {
+          "name": "Campaign Name",
+          "inferred_type": "string",
+          "missing_count": 5,
+          "missing_pct": 0.1,
+          "non_empty": 6570,
+          "samples": [
+            "FirstCry",
+            "Bath and Body Works GCC",
+            "ASQ",
+            "Cider",
+            "Oud Milano"
+          ]
+        },
+        {
+          "name": "Entity",
+          "inferred_type": "string",
+          "missing_count": 2113,
+          "missing_pct": 32.1,
+          "non_empty": 4462,
+          "samples": [
+            "KSA",
+            "UAE"
+          ]
+        },
+        {
+          "name": "Country Manager",
+          "inferred_type": "string",
+          "missing_count": 6,
+          "missing_pct": 0.1,
+          "non_empty": 6569,
+          "samples": [
+            "Mais Janakat"
+          ]
+        },
+        {
+          "name": "Team Leader",
+          "inferred_type": "string",
+          "missing_count": 5,
+          "missing_pct": 0.1,
+          "non_empty": 6570,
+          "samples": [
+            "Mais Janakat",
+            "kholoud Hendy",
+            "Randa Mohsen",
+            "randa Mohsen"
+          ]
+        },
+        {
+          "name": "Channel",
+          "inferred_type": "string",
+          "missing_count": 13,
+          "missing_pct": 0.2,
+          "non_empty": 6562,
+          "samples": [
+            "Snapchat",
+            "Insta Story",
+            "Twitter Campaign",
+            "snapchat",
+            "TikTok"
+          ]
+        },
+        {
+          "name": "Team Member",
+          "inferred_type": "string",
+          "missing_count": 369,
+          "missing_pct": 5.6,
+          "non_empty": 6206,
+          "samples": [
+            "Randa Mohsen",
+            "Kholoud Hendy",
+            "Christine Yassa",
+            "Mariam Ayman"
+          ]
+        },
+        {
+          "name": "Revenue ($) ROI",
+          "inferred_type": "string",
+          "missing_count": 18,
+          "missing_pct": 0.3,
+          "non_empty": 6557,
+          "samples": [
+            "$2,024 ",
+            "$2,452 ",
+            "$8,325 ",
+            "$3,837 ",
+            "$2,915 "
+          ]
+        },
+        {
+          "name": "our cost",
+          "inferred_type": "string",
+          "missing_count": 12,
+          "missing_pct": 0.2,
+          "non_empty": 6563,
+          "samples": [
+            "$1,687 ",
+            "$2,133 ",
+            "$5,506 ",
+            "$350 ",
+            "$2,150 "
+          ]
+        },
+        {
+          "name": "Went live",
+          "inferred_type": "string",
+          "missing_count": 6,
+          "missing_pct": 0.1,
+          "non_empty": 6569,
+          "samples": [
+            "Yes"
+          ]
+        },
+        {
+          "name": "Campaign Type",
+          "inferred_type": "string",
+          "missing_count": 7,
+          "missing_pct": 0.1,
+          "non_empty": 6568,
+          "samples": [
+            "ROI",
+            "Fixed Budget"
+          ]
+        }
+      ],
+      "headers": [
+        "Month",
+        "Date",
+        "INFLUENCER",
+        "Campaign Name",
+        "Entity",
+        "Country Manager",
+        "Team Leader",
+        "Channel",
+        "Team Member",
+        "Revenue ($) ROI",
+        "our cost",
+        "Went live",
+        "Campaign Type"
+      ]
+    },
+    {
+      "name": "2024",
+      "row_count": 6250,
+      "column_count": 41,
+      "columns": [
+        {
+          "name": "Month",
+          "inferred_type": "string",
+          "missing_count": 4242,
+          "missing_pct": 67.9,
+          "non_empty": 2008,
+          "samples": [
+            "Jan-24",
+            "Feb-24"
+          ]
+        },
+        {
+          "name": "Date",
+          "inferred_type": "string",
+          "missing_count": 4240,
+          "missing_pct": 67.8,
+          "non_empty": 2010,
+          "samples": [
+            "2024-01-01",
+            "2024-02-01",
+            "2024-03-01",
+            "2024-04-01",
+            "2024-05-01"
+          ]
+        },
+        {
+          "name": "INFLUENCER",
+          "inferred_type": "string",
+          "missing_count": 4244,
+          "missing_pct": 67.9,
+          "non_empty": 2006,
+          "samples": [
+            "Yasmeen Dakheel",
+            "iwaled575",
+            "Halaalammar0",
+            "s_6oo5h",
+            "z1111"
+          ]
+        },
+        {
+          "name": "Group Name",
+          "inferred_type": "string",
+          "missing_count": 5291,
+          "missing_pct": 84.7,
+          "non_empty": 959,
+          "samples": [
+            "landmark Group",
+            "Armada Group",
+            "Abdul Samad Al Qurashi Co.",
+            "Al Futtaim Trading LLC",
+            "Alshaya Group"
+          ]
+        },
+        {
+          "name": "Client Name",
+          "inferred_type": "string",
+          "missing_count": 4257,
+          "missing_pct": 68.1,
+          "non_empty": 1993,
+          "samples": [
+            "Trendyol",
+            "Landmark Central Market Co",
+            "Landmark Arabia Company",
+            "Max Retail Company",
+            "ROADGET BUSINESS PTE. LTD."
+          ]
+        },
+        {
+          "name": "Brand",
+          "inferred_type": "string",
+          "missing_count": 4257,
+          "missing_pct": 68.1,
+          "non_empty": 1993,
+          "samples": [
+            "Trendyol",
+            "Max KWT",
+            "Max KSA",
+            "Max-Qatar",
+            "Shein"
+          ]
+        },
+        {
+          "name": "Campaign Name",
+          "inferred_type": "string",
+          "missing_count": 4244,
+          "missing_pct": 67.9,
+          "non_empty": 2006,
+          "samples": [
+            "Trendyol",
+            "Max KWT",
+            "Max KSA",
+            "Max-Qatar",
+            "Shein"
+          ]
+        },
+        {
+          "name": "Entity",
+          "inferred_type": "string",
+          "missing_count": 4243,
+          "missing_pct": 67.9,
+          "non_empty": 2007,
+          "samples": [
+            "KSA",
+            "UAE"
+          ]
+        },
+        {
+          "name": "Campaign Type",
+          "inferred_type": "string",
+          "missing_count": 4243,
+          "missing_pct": 67.9,
+          "non_empty": 2007,
+          "samples": [
+            "Fixed",
+            "Hard ROI",
+            "ROI"
+          ]
+        },
+        {
+          "name": "Channel",
+          "inferred_type": "string",
+          "missing_count": 4255,
+          "missing_pct": 68.1,
+          "non_empty": 1995,
+          "samples": [
+            "Snapchat",
+            "Instagram"
+          ]
+        },
+        {
+          "name": "COO",
+          "inferred_type": "string",
+          "missing_count": 4845,
+          "missing_pct": 77.5,
+          "non_empty": 1405,
+          "samples": [
+            "SALAH MOSTAFA EISSA MOSTAFA"
+          ]
+        },
+        {
+          "name": "Country Manager",
+          "inferred_type": "string",
+          "missing_count": 3892,
+          "missing_pct": 62.3,
+          "non_empty": 2358,
+          "samples": [
+            "MOHAMED ASHRAF SAYED RADY AHMED",
+            "AYA ISMAIL IBRAHIM KHAFAGA"
+          ]
+        },
+        {
+          "name": "Team Leader",
+          "inferred_type": "string",
+          "missing_count": 4081,
+          "missing_pct": 65.3,
+          "non_empty": 2169,
+          "samples": [
+            "HODA SAYED ABDELRAHMAN SALEH",
+            "NOURAN NABIL MAHMOUD SAMY EL WAKIL"
+          ]
+        },
+        {
+          "name": "Team Member",
+          "inferred_type": "string",
+          "missing_count": 4244,
+          "missing_pct": 67.9,
+          "non_empty": 2006,
+          "samples": [
+            "Mariam Mahmoud Mohamed Abo Elsoud",
+            "MONA MOHAMED TAREK HUSSIEN MOHAMED GABER",
+            "CHRISTINE ASHRAF YASSI ISAAQ"
+          ]
+        },
+        {
+          "name": "Team Member 2",
+          "inferred_type": "string",
+          "missing_count": 6249,
+          "missing_pct": 100,
+          "non_empty": 1,
+          "samples": [
+            "Mohamed Waleed"
+          ]
+        },
+        {
+          "name": "Team Member 3",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Revenue ($) ROI",
+          "inferred_type": "string",
+          "missing_count": 4245,
+          "missing_pct": 67.9,
+          "non_empty": 2005,
+          "samples": [
+            "$5,000 ",
+            "$10,870 ",
+            "$4,783 ",
+            "$3,130 ",
+            "$4,348 "
+          ]
+        },
+        {
+          "name": "Our Cost ($)",
+          "inferred_type": "string",
+          "missing_count": 4244,
+          "missing_pct": 67.9,
+          "non_empty": 2006,
+          "samples": [
+            "$3,467 ",
+            "$8,000 ",
+            "$3,600 ",
+            "$1,333 ",
+            "$2,133 "
+          ]
+        },
+        {
+          "name": "Profit ($)",
+          "inferred_type": "string",
+          "missing_count": 2038,
+          "missing_pct": 32.6,
+          "non_empty": 4212,
+          "samples": [
+            "$1,533 ",
+            "$2,870 ",
+            "$1,183 ",
+            "$1,797 ",
+            "$2,215 "
+          ]
+        },
+        {
+          "name": "Profit Margin %",
+          "inferred_type": "string",
+          "missing_count": 4245,
+          "missing_pct": 67.9,
+          "non_empty": 2005,
+          "samples": [
+            "31%",
+            "26%",
+            "25%",
+            "57%",
+            "51%"
+          ]
+        },
+        {
+          "name": "Budget ($)",
+          "inferred_type": "string",
+          "missing_count": 6239,
+          "missing_pct": 99.8,
+          "non_empty": 11,
+          "samples": [
+            "Barter"
+          ]
+        },
+        {
+          "name": "Went live",
+          "inferred_type": "string",
+          "missing_count": 4245,
+          "missing_pct": 67.9,
+          "non_empty": 2005,
+          "samples": [
+            "Yes"
+          ]
+        },
+        {
+          "name": "Sales Person",
+          "inferred_type": "string",
+          "missing_count": 4258,
+          "missing_pct": 68.1,
+          "non_empty": 1992,
+          "samples": [
+            "Trendyol",
+            "Saurabh Mehta",
+            "Subhrangshu Choudhury",
+            "Bashaer Mubarek",
+            "Husam Al-Kailani"
+          ]
+        },
+        {
+          "name": "PO#",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Add live date",
+          "inferred_type": "string",
+          "missing_count": 6249,
+          "missing_pct": 100,
+          "non_empty": 1,
+          "samples": [
+            "11/30/2024"
+          ]
+        },
+        {
+          "name": "Artwork",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Paid Confirmation",
+          "inferred_type": "string",
+          "missing_count": 33,
+          "missing_pct": 0.5,
+          "non_empty": 6217,
+          "samples": [
+            "FALSE"
+          ]
+        },
+        {
+          "name": "Campaign Confirmation",
+          "inferred_type": "string",
+          "missing_count": 33,
+          "missing_pct": 0.5,
+          "non_empty": 6217,
+          "samples": [
+            "FALSE"
+          ]
+        },
+        {
+          "name": "Invoiced",
+          "inferred_type": "string",
+          "missing_count": 66,
+          "missing_pct": 1.1,
+          "non_empty": 12434,
+          "samples": [
+            "FALSE"
+          ]
+        },
+        {
+          "name": "Payment type",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Payment statuse",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Proof Of Payment",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Invoiced",
+          "inferred_type": "string",
+          "missing_count": 66,
+          "missing_pct": 1.1,
+          "non_empty": 12434,
+          "samples": [
+            "FALSE"
+          ]
+        },
+        {
+          "name": "Invoice #",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "comments",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Team Member 4",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Agency/Agent",
+          "inferred_type": "empty",
+          "missing_count": 6250,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Direct/Agency",
+          "inferred_type": "string",
+          "missing_count": 4258,
+          "missing_pct": 68.1,
+          "non_empty": 1992,
+          "samples": [
+            "Direct"
+          ]
+        },
+        {
+          "name": "Old/New",
+          "inferred_type": "string",
+          "missing_count": 4258,
+          "missing_pct": 68.1,
+          "non_empty": 1992,
+          "samples": [
+            "New Carryover",
+            "Old",
+            "New 2025"
+          ]
+        },
+        {
+          "name": "Owner",
+          "inferred_type": "string",
+          "missing_count": 4258,
+          "missing_pct": 68.1,
+          "non_empty": 1992,
+          "samples": [
+            "Iman",
+            "OPS"
+          ]
+        },
+        {
+          "name": "Reporting",
+          "inferred_type": "number",
+          "missing_count": 5001,
+          "missing_pct": 80,
+          "non_empty": 1249,
+          "samples": [
+            "2024",
+            "45658"
+          ]
+        }
+      ],
+      "headers": [
+        "Month",
+        "Date",
+        "INFLUENCER",
+        "Group Name",
+        "Client Name",
+        "Brand",
+        "Campaign Name",
+        "Entity",
+        "Campaign Type",
+        "Channel",
+        "COO",
+        "Country Manager",
+        "Team Leader",
+        "Team Member",
+        "Team Member 2",
+        "Team Member 3",
+        "Revenue ($) ROI",
+        "Our Cost ($)",
+        "Profit ($)",
+        "Profit Margin %",
+        "Budget ($)",
+        "Went live",
+        "Sales Person",
+        "PO#",
+        "Add live date",
+        "Artwork",
+        "Paid Confirmation",
+        "Campaign Confirmation",
+        "Invoiced",
+        "Payment type",
+        "Payment statuse",
+        "Proof Of Payment",
+        "Invoiced",
+        "Invoice #",
+        "comments",
+        "Team Member 4",
+        "Agency/Agent",
+        "Direct/Agency",
+        "Old/New",
+        "Owner",
+        "Reporting"
+      ]
+    },
+    {
+      "name": "2025",
+      "row_count": 199,
+      "column_count": 51,
+      "columns": [
+        {
+          "name": "Camp#",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Camp-75",
+            "Camp-76",
+            "Camp-102",
+            "Camp-249",
+            "Camp-77"
+          ]
+        },
+        {
+          "name": "Code#",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "MH-1",
+            "MH-2",
+            "MH-3",
+            "MH-4",
+            "MH-5"
+          ]
+        },
+        {
+          "name": "Month of ad live",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Jan-25",
+            "Feb-25",
+            "Mar-25",
+            "May-25",
+            "Apr-25"
+          ]
+        },
+        {
+          "name": "Date",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "2025-07-01",
+            "2025-06-01",
+            "2/20/2025",
+            "2025-08-01",
+            "1/16/2025"
+          ]
+        },
+        {
+          "name": "Budget Month",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Jan-25",
+            "Feb-25",
+            "Mar-25",
+            "May-25",
+            "Apr-25"
+          ]
+        },
+        {
+          "name": "Group Name",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Landmark Retail Investment Co. L.L.C",
+            "Armada Group",
+            "N/A",
+            "Assembly Global",
+            "Al Qalzam Group"
+          ]
+        },
+        {
+          "name": "Client Name",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Landmark Arabia Company",
+            "Landmark Central Market Co",
+            "Aramada",
+            "Sticky Ginger FZ-LLC",
+            "Max Retail Company"
+          ]
+        },
+        {
+          "name": "Brand",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Max KSA",
+            "Max KWT",
+            "Riva Home",
+            "Instax",
+            "Max-Qatar"
+          ]
+        },
+        {
+          "name": "Campaign Name",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Max KSA",
+            "Max KWT",
+            "Riva Home",
+            "Instax X Honor",
+            "Max-Qatar"
+          ]
+        },
+        {
+          "name": "Entity",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "KSA",
+            "UAE"
+          ]
+        },
+        {
+          "name": "Campaign Type",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "ROI",
+            "Fixed"
+          ]
+        },
+        {
+          "name": "INFLUENCER",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Hanan Al ghamdi",
+            "Bashayer Hamad",
+            "Saudi Stores",
+            "Lolo Shopping",
+            "Danah Awadh Almutairi"
+          ]
+        },
+        {
+          "name": "Agent / Agency",
+          "inferred_type": "string",
+          "missing_count": 196,
+          "missing_pct": 98.5,
+          "non_empty": 3,
+          "samples": [
+            "ARC",
+            "شركة وسق للخدمات التسويقیة",
+            "Moment gorup agency"
+          ]
+        },
+        {
+          "name": "Channel",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Snapchat",
+            "Instagram",
+            "TikTok",
+            "Multi Channels",
+            "Twitter"
+          ]
+        },
+        {
+          "name": "Country Manager",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Others",
+            "Hoda Saleh"
+          ]
+        },
+        {
+          "name": "Team Leader",
+          "inferred_type": "string",
+          "missing_count": 20,
+          "missing_pct": 10.1,
+          "non_empty": 179,
+          "samples": [
+            "Hoda Saleh"
+          ]
+        },
+        {
+          "name": "Team Member",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Mona Gaber",
+            "Mariam Abo Elsoud",
+            "Hamsa Ehab",
+            "Danial Emad",
+            "Hend Abdullah"
+          ]
+        },
+        {
+          "name": "Team Member 2",
+          "inferred_type": "empty",
+          "missing_count": 199,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Team Member 3",
+          "inferred_type": "empty",
+          "missing_count": 199,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Team Member 4",
+          "inferred_type": "empty",
+          "missing_count": 199,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "IO Currancy",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "SAR",
+            "KWT",
+            "AED",
+            "QAT",
+            "USD"
+          ]
+        },
+        {
+          "name": "IO Amount \r\nin Local Currancy",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "4,000",
+            "5,652",
+            "5,400",
+            "2,000",
+            "458"
+          ]
+        },
+        {
+          "name": "Revenue ($) ROI",
+          "inferred_type": "string",
+          "missing_count": 1,
+          "missing_pct": 0.5,
+          "non_empty": 198,
+          "samples": [
+            "$1,692 ",
+            "$2,389 ",
+            "$2,284 ",
+            "$845 ",
+            "$1,967 "
+          ]
+        },
+        {
+          "name": "Cost ($)",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "$1,066.67 ",
+            "$1,507.20 ",
+            "$1,440.00 ",
+            "$533.33 ",
+            "$1,500.38 "
+          ]
+        },
+        {
+          "name": "Profit ($)",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "$625 ",
+            "$882 ",
+            "$844 ",
+            "$312 ",
+            "$467 "
+          ]
+        },
+        {
+          "name": "Profit Margin %",
+          "inferred_type": "string",
+          "missing_count": 1,
+          "missing_pct": 0.5,
+          "non_empty": 198,
+          "samples": [
+            "37%",
+            "24%",
+            "45%",
+            "25%",
+            "23%"
+          ]
+        },
+        {
+          "name": "Markup Margin %",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "58.62%",
+            "58.51%",
+            "58.61%",
+            "58.44%",
+            "31.10%"
+          ]
+        },
+        {
+          "name": "Budget ($)",
+          "inferred_type": "empty",
+          "missing_count": 199,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Went live",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Yes"
+          ]
+        },
+        {
+          "name": "Sales Person",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Others - Ops",
+            "Majd Hussam",
+            "Bashaer Mubarek",
+            "Gayathri Satheesh",
+            "L'Oréal"
+          ]
+        },
+        {
+          "name": "Contract",
+          "inferred_type": "empty",
+          "missing_count": 199,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "PO#",
+          "inferred_type": "empty",
+          "missing_count": 199,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Add live date",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "2025-07-01",
+            "2025-06-01",
+            "2/20/2025",
+            "2025-08-01",
+            "1/16/2025"
+          ]
+        },
+        {
+          "name": "Influencer Invoice",
+          "inferred_type": "string",
+          "missing_count": 191,
+          "missing_pct": 96,
+          "non_empty": 8,
+          "samples": [
+            "Here"
+          ]
+        },
+        {
+          "name": "Moved/Not Moved\r\nto Billing",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Moved"
+          ]
+        },
+        {
+          "name": "Vendor Paid Confirmation",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Paid"
+          ]
+        },
+        {
+          "name": "Campaign Confirmation",
+          "inferred_type": "string",
+          "missing_count": 198,
+          "missing_pct": 99.5,
+          "non_empty": 1,
+          "samples": [
+            "Here"
+          ]
+        },
+        {
+          "name": "Invoiced",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Yes"
+          ]
+        },
+        {
+          "name": "Payment type",
+          "inferred_type": "empty",
+          "missing_count": 199,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Payment status",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Moved"
+          ]
+        },
+        {
+          "name": "Proof Of Payment",
+          "inferred_type": "empty",
+          "missing_count": 199,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Week",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Week 1",
+            "Week 3",
+            "Week 2",
+            "Week 4",
+            "Week 5"
+          ]
+        },
+        {
+          "name": "Direct/Agency",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Direct",
+            "Agency"
+          ]
+        },
+        {
+          "name": "Old/New",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Old",
+            "New 2025",
+            "New Carryover",
+            "L'Oréal"
+          ]
+        },
+        {
+          "name": "Report Client type",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Existing Business",
+            "New Business",
+            "L'Oréal"
+          ]
+        },
+        {
+          "name": "Team",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "OPS",
+            "Iman"
+          ]
+        },
+        {
+          "name": "Actual/Budget in Hand",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Actual"
+          ]
+        },
+        {
+          "name": "Category",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "🛍️ Retail & E-Commerce",
+            "🧠 Marketing, Advertising & Media Agencies",
+            "💄 Beauty & Personal Care"
+          ]
+        },
+        {
+          "name": "Sub Category",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 199,
+          "samples": [
+            "Retail Franchise Operator",
+            "Retail & Distribution",
+            "Creative Agency",
+            "Retail - Fashion",
+            "Digital Marketing"
+          ]
+        },
+        {
+          "name": "Influencer Country",
+          "inferred_type": "string",
+          "missing_count": 5,
+          "missing_pct": 2.5,
+          "non_empty": 194,
+          "samples": [
+            "Saudi Arabia",
+            "KWT",
+            "UAE",
+            "QTR",
+            "Bahrain"
+          ]
+        },
+        {
+          "name": "Influencer Nationality",
+          "inferred_type": "string",
+          "missing_count": 5,
+          "missing_pct": 2.5,
+          "non_empty": 194,
+          "samples": [
+            "Saudi",
+            "Kuwaiti",
+            "Egyptian",
+            "Sudanese",
+            "Palestinian"
+          ]
+        }
+      ],
+      "headers": [
+        "Camp#",
+        "Code#",
+        "Month of ad live",
+        "Date",
+        "Budget Month",
+        "Group Name",
+        "Client Name",
+        "Brand",
+        "Campaign Name",
+        "Entity",
+        "Campaign Type",
+        "INFLUENCER",
+        "Agent / Agency",
+        "Channel",
+        "Country Manager",
+        "Team Leader",
+        "Team Member",
+        "Team Member 2",
+        "Team Member 3",
+        "Team Member 4",
+        "IO Currancy",
+        "IO Amount \r\nin Local Currancy",
+        "Revenue ($) ROI",
+        "Cost ($)",
+        "Profit ($)",
+        "Profit Margin %",
+        "Markup Margin %",
+        "Budget ($)",
+        "Went live",
+        "Sales Person",
+        "Contract",
+        "PO#",
+        "Add live date",
+        "Influencer Invoice",
+        "Moved/Not Moved\r\nto Billing",
+        "Vendor Paid Confirmation",
+        "Campaign Confirmation",
+        "Invoiced",
+        "Payment type",
+        "Payment status",
+        "Proof Of Payment",
+        "Week",
+        "Direct/Agency",
+        "Old/New",
+        "Report Client type",
+        "Team",
+        "Actual/Budget in Hand",
+        "Category",
+        "Sub Category",
+        "Influencer Country",
+        "Influencer Nationality"
+      ]
+    },
+    {
+      "name": "2026",
+      "row_count": 10749,
+      "column_count": 49,
+      "columns": [
+        {
+          "name": "Camp#",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "(26) Camp-23",
+            "(26) Camp-29",
+            "(26) Camp-903",
+            "(26) Camp-30",
+            "(26) Camp-35"
+          ]
+        },
+        {
+          "name": "Code#",
+          "inferred_type": "string",
+          "missing_count": 5344,
+          "missing_pct": 49.7,
+          "non_empty": 5405,
+          "samples": [
+            "(26) HS-1",
+            "(26) HS-2",
+            "(26) HS-3",
+            "(26) HS-4",
+            "(26) HS-5"
+          ]
+        },
+        {
+          "name": "Month of ad live",
+          "inferred_type": "string",
+          "missing_count": 5795,
+          "missing_pct": 53.9,
+          "non_empty": 4954,
+          "samples": [
+            "Jan-26",
+            "May-26",
+            "Apr-26",
+            "Feb-26",
+            "Mar-26"
+          ]
+        },
+        {
+          "name": "Date",
+          "inferred_type": "string",
+          "missing_count": 5792,
+          "missing_pct": 53.9,
+          "non_empty": 4957,
+          "samples": [
+            "2026-05-01",
+            "1/18/2026",
+            "5/20/2026",
+            "4/20/2026",
+            "2026-06-01"
+          ]
+        },
+        {
+          "name": "Group Name",
+          "inferred_type": "string",
+          "missing_count": 5357,
+          "missing_pct": 49.8,
+          "non_empty": 5392,
+          "samples": [
+            "Armada Group",
+            "L'Oréal",
+            "Landmark Retail Investment Co. L.L.C",
+            "OMG",
+            "N/A"
+          ]
+        },
+        {
+          "name": "Client Name",
+          "inferred_type": "string",
+          "missing_count": 5354,
+          "missing_pct": 49.8,
+          "non_empty": 5395,
+          "samples": [
+            "Aramada",
+            "L'Oréal Middle East FZE",
+            "Landmark Arabia Company",
+            "Landmark Central Market Co",
+            "Max Retail Company"
+          ]
+        },
+        {
+          "name": "Brand",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "Wardrobe",
+            "Kérastase",
+            "Redken",
+            "Max KSA",
+            "Max KWT"
+          ]
+        },
+        {
+          "name": "Budget Month",
+          "inferred_type": "string",
+          "missing_count": 5344,
+          "missing_pct": 49.7,
+          "non_empty": 5405,
+          "samples": [
+            "Jan-26",
+            "May-26",
+            "Apr-26",
+            "Feb-26",
+            "Jun-26"
+          ]
+        },
+        {
+          "name": "Campaign Name",
+          "inferred_type": "string",
+          "missing_count": 5352,
+          "missing_pct": 49.8,
+          "non_empty": 5397,
+          "samples": [
+            "Wardrobe Jan",
+            "Kerastase tt summit Jan",
+            "Redken X Sephora",
+            "Redken tt summit Jan",
+            "RehamXKerastase 1"
+          ]
+        },
+        {
+          "name": "Entity",
+          "inferred_type": "string",
+          "missing_count": 5365,
+          "missing_pct": 49.9,
+          "non_empty": 5384,
+          "samples": [
+            "UAE",
+            "KSA",
+            "KWT"
+          ]
+        },
+        {
+          "name": "Campaign Type",
+          "inferred_type": "string",
+          "missing_count": 5406,
+          "missing_pct": 50.3,
+          "non_empty": 5343,
+          "samples": [
+            "Fixed",
+            "Hard ROI"
+          ]
+        },
+        {
+          "name": "INFLUENCER",
+          "inferred_type": "string",
+          "missing_count": 5377,
+          "missing_pct": 50,
+          "non_empty": 5372,
+          "samples": [
+            "xiv_xi_xii",
+            "Dalal Ahmad Alhadeyah",
+            "Noura Motlaq",
+            "Words With Dana",
+            "Kamelia"
+          ]
+        },
+        {
+          "name": "Agent / Agency",
+          "inferred_type": "string",
+          "missing_count": 10748,
+          "missing_pct": 100,
+          "non_empty": 1,
+          "samples": [
+            "Cube Agency"
+          ]
+        },
+        {
+          "name": "Channel",
+          "inferred_type": "string",
+          "missing_count": 6808,
+          "missing_pct": 63.3,
+          "non_empty": 3941,
+          "samples": [
+            "Instagram",
+            "TikTok",
+            "Snapchat",
+            "Multi Channels"
+          ]
+        },
+        {
+          "name": "Country Manager",
+          "inferred_type": "string",
+          "missing_count": 5354,
+          "missing_pct": 49.8,
+          "non_empty": 5395,
+          "samples": [
+            "Hoda Saleh"
+          ]
+        },
+        {
+          "name": "Team Leader",
+          "inferred_type": "string",
+          "missing_count": 7944,
+          "missing_pct": 73.9,
+          "non_empty": 2805,
+          "samples": [
+            "Mariam Abo Elsoud",
+            "Dina Saady"
+          ]
+        },
+        {
+          "name": "Team Member",
+          "inferred_type": "string",
+          "missing_count": 5613,
+          "missing_pct": 52.2,
+          "non_empty": 5136,
+          "samples": [
+            "Mariam Abo Elsoud",
+            "Danial Emad",
+            "Hamsa Ehab",
+            "Hend Abdullah"
+          ]
+        },
+        {
+          "name": "Team Member 2",
+          "inferred_type": "string",
+          "missing_count": 10101,
+          "missing_pct": 94,
+          "non_empty": 648,
+          "samples": [
+            "Mohammed Waleed",
+            "Christine Yassi",
+            "Nurhan Mohamed",
+            "Mariam Ayman",
+            "Salma Sherif"
+          ]
+        },
+        {
+          "name": "IO Currancy",
+          "inferred_type": "string",
+          "missing_count": 5349,
+          "missing_pct": 49.8,
+          "non_empty": 5400,
+          "samples": [
+            "KWT",
+            "USD",
+            "SAR"
+          ]
+        },
+        {
+          "name": "IO Amount \r\nin Local Currancy",
+          "inferred_type": "string",
+          "missing_count": 5371,
+          "missing_pct": 50,
+          "non_empty": 5378,
+          "samples": [
+            "$150 ",
+            "$251 ",
+            "180",
+            "3,500",
+            "3,000"
+          ]
+        },
+        {
+          "name": "Revenue ($) ROI",
+          "inferred_type": "string",
+          "missing_count": 5362,
+          "missing_pct": 49.9,
+          "non_empty": 5387,
+          "samples": [
+            "$653 ",
+            "$1,088 ",
+            "$784 ",
+            "$3,920 ",
+            "$3,360 "
+          ]
+        },
+        {
+          "name": "Cost ($)",
+          "inferred_type": "string",
+          "missing_count": 5371,
+          "missing_pct": 50,
+          "non_empty": 5378,
+          "samples": [
+            "$491 ",
+            "$822 ",
+            "$590 ",
+            "$3,500 ",
+            "$3,000 "
+          ]
+        },
+        {
+          "name": "Profit ($)",
+          "inferred_type": "string",
+          "missing_count": 5344,
+          "missing_pct": 49.7,
+          "non_empty": 5405,
+          "samples": [
+            "$162 ",
+            "$266 ",
+            "$194 ",
+            "$420 ",
+            "$360 "
+          ]
+        },
+        {
+          "name": "Profit Margin %",
+          "inferred_type": "string",
+          "missing_count": 5362,
+          "missing_pct": 49.9,
+          "non_empty": 5387,
+          "samples": [
+            "25%",
+            "24%",
+            "11%",
+            "20%",
+            "3%"
+          ]
+        },
+        {
+          "name": "Markup Margin %",
+          "inferred_type": "string",
+          "missing_count": 5635,
+          "missing_pct": 52.4,
+          "non_empty": 5114,
+          "samples": [
+            "33%",
+            "32%",
+            "32.96%",
+            "12.00%",
+            "12.02%"
+          ]
+        },
+        {
+          "name": "Went live",
+          "inferred_type": "string",
+          "missing_count": 5345,
+          "missing_pct": 49.7,
+          "non_empty": 5404,
+          "samples": [
+            "Yes",
+            "Pending"
+          ]
+        },
+        {
+          "name": "Add live date",
+          "inferred_type": "string",
+          "missing_count": 5792,
+          "missing_pct": 53.9,
+          "non_empty": 4957,
+          "samples": [
+            "2026-05-01",
+            "1/18/2026",
+            "5/20/2026",
+            "4/20/2026",
+            "2026-06-01"
+          ]
+        },
+        {
+          "name": "Influencer /Contract \r\nIO",
+          "inferred_type": "string",
+          "missing_count": 10649,
+          "missing_pct": 99.1,
+          "non_empty": 100,
+          "samples": [
+            "Here",
+            "HERE",
+            "Contract",
+            "MYRA JAN YSL AFTER SIGNATION .pdf",
+            "NOHA NABIL PAYMENT"
+          ]
+        },
+        {
+          "name": "Influencer Invoice",
+          "inferred_type": "string",
+          "missing_count": 10678,
+          "missing_pct": 99.3,
+          "non_empty": 71,
+          "samples": [
+            "VAT declaration",
+            "https://drive.google.com/file/d/1FNrUZaDMjVWRUoQZiJopV7K66_yZB4KK/view",
+            "https://drive.google.com/file/d/11bRfzjMkx8w61svhfsboaIGkzP7pu9zG/view?usp=sharing",
+            "https://drive.google.com/file/d/16B8geogrgXen6oRU8P9fjY7vTlclMfpH/view?usp=sharing",
+            "https://drive.google.com/file/d/1c0bZ61W9_q3s1bqwcB279VHTjg58n_J2/view?usp=drive_link"
+          ]
+        },
+        {
+          "name": "Client PO attachment",
+          "inferred_type": "string",
+          "missing_count": 7057,
+          "missing_pct": 65.7,
+          "non_empty": 3692,
+          "samples": [
+            "Here",
+            "Link"
+          ]
+        },
+        {
+          "name": "PO Number",
+          "inferred_type": "number",
+          "missing_count": 7682,
+          "missing_pct": 71.5,
+          "non_empty": 3067,
+          "samples": [
+            "9700896633",
+            "9700901622",
+            "9700896625",
+            "9700909439\r\n9700909448\r\n9700909481\r\n9700910405\r\n9700910406\r\n9700910524\r\n9700910598\r\n9700910599\r\n9700912716\r\n9700915420\r\n9700919039",
+            "RNA-100100054186"
+          ]
+        },
+        {
+          "name": "Sales Person",
+          "inferred_type": "string",
+          "missing_count": 5368,
+          "missing_pct": 49.9,
+          "non_empty": 5381,
+          "samples": [
+            "Others",
+            "L'Oréal",
+            "Ahmed Ghena",
+            "Maya Al Jamal",
+            "Gayathri Satheesh"
+          ]
+        },
+        {
+          "name": "Moved/Not Moved\r\nto Billing",
+          "inferred_type": "string",
+          "missing_count": 5344,
+          "missing_pct": 49.7,
+          "non_empty": 5405,
+          "samples": [
+            "Moved",
+            "Not Moved"
+          ]
+        },
+        {
+          "name": "Vendor Paid Confirmation",
+          "inferred_type": "string",
+          "missing_count": 5347,
+          "missing_pct": 49.7,
+          "non_empty": 5402,
+          "samples": [
+            "Not paid"
+          ]
+        },
+        {
+          "name": "Invoiced",
+          "inferred_type": "string",
+          "missing_count": 5347,
+          "missing_pct": 49.7,
+          "non_empty": 5402,
+          "samples": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "Invoice #",
+          "inferred_type": "string",
+          "missing_count": 6390,
+          "missing_pct": 59.4,
+          "non_empty": 4359,
+          "samples": [
+            "INV-17461",
+            "INV-17447",
+            "INV-19322",
+            "INV-18421",
+            "INV-18969"
+          ]
+        },
+        {
+          "name": "Payment status",
+          "inferred_type": "string",
+          "missing_count": 5347,
+          "missing_pct": 49.7,
+          "non_empty": 5402,
+          "samples": [
+            "Not Moved"
+          ]
+        },
+        {
+          "name": "Proof Of Payment",
+          "inferred_type": "empty",
+          "missing_count": 10749,
+          "missing_pct": 100,
+          "non_empty": 0,
+          "samples": []
+        },
+        {
+          "name": "Locked/Unlocked",
+          "inferred_type": "string",
+          "missing_count": 6184,
+          "missing_pct": 57.5,
+          "non_empty": 4565,
+          "samples": [
+            "🔒 Locked"
+          ]
+        },
+        {
+          "name": "Comments",
+          "inferred_type": "number",
+          "missing_count": 10735,
+          "missing_pct": 99.9,
+          "non_empty": 14,
+          "samples": [
+            "1",
+            "2"
+          ]
+        },
+        {
+          "name": "Week",
+          "inferred_type": "string",
+          "missing_count": 5860,
+          "missing_pct": 54.5,
+          "non_empty": 4889,
+          "samples": [
+            "Week 1",
+            "Week 3",
+            "Week 4",
+            "Week 2",
+            "Week 5"
+          ]
+        },
+        {
+          "name": "Direct/Agency",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "Direct",
+            "Agency"
+          ]
+        },
+        {
+          "name": "Old/New",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "UAE",
+            "KSA",
+            "KWT",
+            "QAT"
+          ]
+        },
+        {
+          "name": "Report Client type",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "Existing Business",
+            "L'Oréal"
+          ]
+        },
+        {
+          "name": "Team",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "OPS",
+            "Iman"
+          ]
+        },
+        {
+          "name": "Actual/Budget in Hand",
+          "inferred_type": "string",
+          "missing_count": 0,
+          "missing_pct": 0,
+          "non_empty": 10749,
+          "samples": [
+            "Actual",
+            "Budget in hand"
+          ]
+        },
+        {
+          "name": "Category",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "🛍️ Retail & E-Commerce",
+            "💄 Beauty & Personal Care",
+            "🧠 Marketing, Advertising & Media Agencies",
+            "📱 Telecommunications"
+          ]
+        },
+        {
+          "name": "Sub Category",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "Retail & Distribution",
+            "Beauty & Personal Care",
+            "Retail Franchise Operator",
+            "Retail - Fashion",
+            "Media Agency"
+          ]
+        },
+        {
+          "name": "Client Type",
+          "inferred_type": "string",
+          "missing_count": 5353,
+          "missing_pct": 49.8,
+          "non_empty": 5396,
+          "samples": [
+            "Existing Business",
+            "L'Oréal"
+          ]
+        }
+      ],
+      "headers": [
+        "Camp#",
+        "Code#",
+        "Month of ad live",
+        "Date",
+        "Group Name",
+        "Client Name",
+        "Brand",
+        "Budget Month",
+        "Campaign Name",
+        "Entity",
+        "Campaign Type",
+        "INFLUENCER",
+        "Agent / Agency",
+        "Channel",
+        "Country Manager",
+        "Team Leader",
+        "Team Member",
+        "Team Member 2",
+        "IO Currancy",
+        "IO Amount \r\nin Local Currancy",
+        "Revenue ($) ROI",
+        "Cost ($)",
+        "Profit ($)",
+        "Profit Margin %",
+        "Markup Margin %",
+        "Went live",
+        "Add live date",
+        "Influencer /Contract \r\nIO",
+        "Influencer Invoice",
+        "Client PO attachment",
+        "PO Number",
+        "Sales Person",
+        "Moved/Not Moved\r\nto Billing",
+        "Vendor Paid Confirmation",
+        "Invoiced",
+        "Invoice #",
+        "Payment status",
+        "Proof Of Payment",
+        "Locked/Unlocked",
+        "Comments",
+        "Week",
+        "Direct/Agency",
+        "Old/New",
+        "Report Client type",
+        "Team",
+        "Actual/Budget in Hand",
+        "Category",
+        "Sub Category",
+        "Client Type"
+      ]
+    },
+    {
+      "name": "Database",
+      "row_count": 8452,
+      "column_count": 46,
+      "columns": [
+        {
+          "name": "#",
+          "inferred_type": "number",
+          "missing_count": 195,
+          "missing_pct": 2.3,
+          "non_empty": 8257,
+          "samples": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        {
+          "name": "Influencer NEW name",
+          "inferred_type": "string",
+          "missing_count": 3935,
+          "missing_pct": 46.6,
+          "non_empty": 4517,
+          "samples": [
+            "Badr Family",
+            "Saud Homud",
+            "Sara Jamal Baker",
+            "muasasat dhawq alkhayal liltaswiq alalkitrunii",
+            "zahra abdullah Mohammed"
+          ]
+        },
+        {
+          "name": "Influencer OLD Name",
+          "inferred_type": "string",
+          "missing_count": 88,
+          "missing_pct": 1,
+          "non_empty": 8364,
+          "samples": [
+            "Mohamed Ghazy",
+            "Lama Km",
+            "Faisal Ghamdi",
+            "Mariam Ahmed",
+            "Soukaina Life"
+          ]
+        },
+        {
+          "name": "Username",
+          "inferred_type": "string",
+          "missing_count": 568,
+          "missing_pct": 6.7,
+          "non_empty": 7884,
+          "samples": [
+            "lio_",
+            "km_x_",
+            "faisalfad",
+            "faisal.9777",
+            "maryom_ahmads"
+          ]
+        },
+        {
+          "name": "Proof of bank details",
+          "inferred_type": "string",
+          "missing_count": 8291,
+          "missing_pct": 98.1,
+          "non_empty": 161,
+          "samples": [
+            "Cairo",
+            "Mazaya business office bb1 office 1605",
+            "ابوظبي، شارع فاطمة الزهراء، فيلا 32",
+            "Jabreya block 3A street 2 building name wafra",
+            "Silverene tower A, Dubai Marina, Apartment 601, Dubai, UAE"
+          ]
+        },
+        {
+          "name": "Profile Type",
+          "inferred_type": "string",
+          "missing_count": 391,
+          "missing_pct": 4.6,
+          "non_empty": 8061,
+          "samples": [
+            "Influencer"
+          ]
+        },
+        {
+          "name": "Platform",
+          "inferred_type": "string",
+          "missing_count": 281,
+          "missing_pct": 3.3,
+          "non_empty": 8171,
+          "samples": [
+            "IG"
+          ]
+        },
+        {
+          "name": "Owner",
+          "inferred_type": "string",
+          "missing_count": 372,
+          "missing_pct": 4.4,
+          "non_empty": 8080,
+          "samples": [
+            "Ahmed Yassien",
+            "Dana Moslem",
+            "Mostafa Halim",
+            "Mayada Dabbous",
+            "Chaimaa Agbi"
+          ]
+        },
+        {
+          "name": "Country",
+          "inferred_type": "string",
+          "missing_count": 2,
+          "missing_pct": 0,
+          "non_empty": 8450,
+          "samples": [
+            "Saudi Arabia",
+            "UAE",
+            "QTR",
+            "KWT",
+            "Egypt"
+          ]
+        },
+        {
+          "name": "Gender",
+          "inferred_type": "string",
+          "missing_count": 667,
+          "missing_pct": 7.9,
+          "non_empty": 7785,
+          "samples": [
+            "M",
+            "F",
+            "NA"
+          ]
+        },
+        {
+          "name": "Nationality",
+          "inferred_type": "string",
+          "missing_count": 2,
+          "missing_pct": 0,
+          "non_empty": 8450,
+          "samples": [
+            "Saudi",
+            "Asian",
+            "Emirati",
+            "Egyptian",
+            "Indian"
+          ]
+        },
+        {
+          "name": "Influencer Type",
+          "inferred_type": "string",
+          "missing_count": 1873,
+          "missing_pct": 22.2,
+          "non_empty": 6579,
+          "samples": [
+            "Macro"
+          ]
+        },
+        {
+          "name": "Category",
+          "inferred_type": "string",
+          "missing_count": 1573,
+          "missing_pct": 18.6,
+          "non_empty": 6879,
+          "samples": [
+            "Lifestyle",
+            "Art",
+            "Coupons",
+            "Fashion",
+            "Travel"
+          ]
+        },
+        {
+          "name": "Phone",
+          "inferred_type": "number",
+          "missing_count": 1850,
+          "missing_pct": 21.9,
+          "non_empty": 6602,
+          "samples": [
+            "9.66563E+11",
+            "9.66536E+11",
+            "9.66583E+11",
+            "9.66559E+11",
+            "9.6657E+11"
+          ]
+        },
+        {
+          "name": "Snapchat",
+          "inferred_type": "string",
+          "missing_count": 7898,
+          "missing_pct": 93.4,
+          "non_empty": 554,
+          "samples": [
+            "lio_7mood",
+            "la.m321",
+            "5aisal99",
+            "biq",
+            "sabaya_50"
+          ]
+        },
+        {
+          "name": "Agent",
+          "inferred_type": "string",
+          "missing_count": 8055,
+          "missing_pct": 95.3,
+          "non_empty": 397,
+          "samples": [
+            "Altafker LLtasweek Agency",
+            "EST Amal Mohammad Ghazi Hassan",
+            "AbdulWahab Sulaiman Mohammed AlDakhil Trading Est",
+            "AHMAD FIDA FOAUD AL ADEL ESTABLISHMENT FOR MARKETING SERVICES",
+            "LUNAMEDIA SOCIAL MEDIA MANAGEMENT"
+          ]
+        },
+        {
+          "name": "Legal Name",
+          "inferred_type": "string",
+          "missing_count": 8446,
+          "missing_pct": 99.9,
+          "non_empty": 6,
+          "samples": [
+            "-------",
+            "AGENCY NINETY FZ-LLC",
+            "شركه يوربان لينكس للستشارات التسويقيه",
+            "Jana Alhafar",
+            "Manal Ahmed"
+          ]
+        },
+        {
+          "name": "Email",
+          "inferred_type": "string",
+          "missing_count": 7299,
+          "missing_pct": 86.4,
+          "non_empty": 1153,
+          "samples": [
+            "absoukaina0@gmail.com",
+            "sbayatjarb@gmail.com",
+            "info@poojasolanki.com/ pooja.solanki@gmail.com",
+            "Badrfamily2017@gmail.com",
+            "dl_naz@linecorp.com"
+          ]
+        },
+        {
+          "name": "Seconady Contact",
+          "inferred_type": "number",
+          "missing_count": 8175,
+          "missing_pct": 96.7,
+          "non_empty": 277,
+          "samples": [
+            "9.66582E+11",
+            "9.71523E+11",
+            "966553434659‬",
+            "9.71559E+11",
+            "9.66599E+11"
+          ]
+        },
+        {
+          "name": "TikTok",
+          "inferred_type": "string",
+          "missing_count": 8215,
+          "missing_pct": 97.2,
+          "non_empty": 237,
+          "samples": [
+            "http:vm.tiktok.comREV1Yg",
+            "http:vm.tiktok.comRET4rB",
+            "http:vm.tiktok.comRoJQvt",
+            "http:vm.tiktok.comREnTnr",
+            "http:vm.tiktok.comREbV8m"
+          ]
+        },
+        {
+          "name": "Facebook",
+          "inferred_type": "string",
+          "missing_count": 8280,
+          "missing_pct": 98,
+          "non_empty": 172,
+          "samples": [
+            "Farhanabodi",
+            "what women wants",
+            "Asri Bendasha",
+            "https://www.facebook.com/groups/1778547762392838/?ref=br_rs",
+            "bakingandco"
+          ]
+        },
+        {
+          "name": "Telegram",
+          "inferred_type": "string",
+          "missing_count": 8401,
+          "missing_pct": 99.4,
+          "non_empty": 51,
+          "samples": [
+            "Sahar aahour",
+            "DH4PP",
+            "May mohaned",
+            "508417788",
+            "activity_toys"
+          ]
+        },
+        {
+          "name": "Youtube",
+          "inferred_type": "string",
+          "missing_count": 8322,
+          "missing_pct": 98.5,
+          "non_empty": 130,
+          "samples": [
+            "https://www.youtube.com/channel/UCUOKGC5TdhQ0CrR6HxBDuXA",
+            "https://www.youtube.com/channel/UCTcROPGv0RFWK_MSKXJ-cxQ",
+            "https://www.youtube.com/channel/UCSX0WfEWlEeJpQc4zNOem2Q",
+            "https://www.youtube.com/user/pepsiALARB",
+            "https://www.youtube.com/channel/UCBA_nLOERvrGchrHHxYTqXQ/about"
+          ]
+        },
+        {
+          "name": "Bank Name",
+          "inferred_type": "string",
+          "missing_count": 1594,
+          "missing_pct": 18.9,
+          "non_empty": 6858,
+          "samples": [
+            "RAJHI",
+            "مصرف الراجحي",
+            "بنك الراجحي",
+            "Alrajhi Bank",
+            "Emirates NBD"
+          ]
+        },
+        {
+          "name": "Account Name",
+          "inferred_type": "string",
+          "missing_count": 2178,
+          "missing_pct": 25.8,
+          "non_empty": 6274,
+          "samples": [
+            "mohamed ghazy alrofaiey",
+            "Alosh hashash ktiab alotibi",
+            "هشام محمد عادل صلاح",
+            "daif allah talla zabn al otaiby",
+            "Gul e Zahra Mirza"
+          ]
+        },
+        {
+          "name": "IBAN",
+          "inferred_type": "string",
+          "missing_count": 2263,
+          "missing_pct": 26.8,
+          "non_empty": 6189,
+          "samples": [
+            "SA5980000333608010608477",
+            "SA6280000359608010217765",
+            "SA74 8000 0-329 6080 1043 3807",
+            "SA1380000346608010195629",
+            "AE910260000959001396901"
+          ]
+        },
+        {
+          "name": "City",
+          "inferred_type": "string",
+          "missing_count": 2823,
+          "missing_pct": 33.4,
+          "non_empty": 5629,
+          "samples": [
+            "almadina",
+            "الدوادمي",
+            "الرياض",
+            "ALTAYEF",
+            "Dubai"
+          ]
+        },
+        {
+          "name": "Branch",
+          "inferred_type": "string",
+          "missing_count": 3199,
+          "missing_pct": 37.8,
+          "non_empty": 5253,
+          "samples": [
+            "alhejra",
+            "الرويضة",
+            "ALTAYEF",
+            "Emirates NBD Building, Al Barsha 2, Dubai BD",
+            "حي الموظفين"
+          ]
+        },
+        {
+          "name": "SWIFT",
+          "inferred_type": "string",
+          "missing_count": 2606,
+          "missing_pct": 30.8,
+          "non_empty": 5846,
+          "samples": [
+            "RJHISARI",
+            "EBILAEAD",
+            "INMASARI",
+            "NCBKSAJE",
+            "ABDIAEADXXX"
+          ]
+        },
+        {
+          "name": "Ref",
+          "inferred_type": "number",
+          "missing_count": 2523,
+          "missing_pct": 29.9,
+          "non_empty": 5929,
+          "samples": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        {
+          "name": "Bank Confirmation",
+          "inferred_type": "string",
+          "missing_count": 1422,
+          "missing_pct": 16.8,
+          "non_empty": 7030,
+          "samples": [
+            "Complete",
+            "Incomplete",
+            "complete",
+            "Incomplete/ Owes money Metro Brazil"
+          ]
+        },
+        {
+          "name": "Bank Acc Currency",
+          "inferred_type": "string",
+          "missing_count": 7483,
+          "missing_pct": 88.5,
+          "non_empty": 969,
+          "samples": [
+            "AED",
+            "LE",
+            "SAR",
+            "USD"
+          ]
+        },
+        {
+          "name": "Legal Status",
+          "inferred_type": "string",
+          "missing_count": 4132,
+          "missing_pct": 48.9,
+          "non_empty": 4320,
+          "samples": [
+            "Individual",
+            "NA",
+            "Company"
+          ]
+        },
+        {
+          "name": "Mode of Payment",
+          "inferred_type": "string",
+          "missing_count": 8447,
+          "missing_pct": 99.9,
+          "non_empty": 5,
+          "samples": [
+            "once per month",
+            "EOM",
+            "To be paid 3 days before the Ad date",
+            "Products only"
+          ]
+        },
+        {
+          "name": "( old ) rates for 1 ad",
+          "inferred_type": "string",
+          "missing_count": 8322,
+          "missing_pct": 98.5,
+          "non_empty": 130,
+          "samples": [
+            "IG story “up to 3 freams” ( 4500$) \r\nIG post of Real ( 8,000$) \r\nSnapchat story” (4000$)",
+            "\"Post 5000$ \r\nstories 3000$ \r\nvideo 6000$\"",
+            "اعلان بالسناب ٤٥٠ سناب وانستغرام بتصوير لوك ٦٥٠",
+            "Snapchat story’s and instagram story’s with one reel or post 13000 with reminder\r\n\r\nSnapchat story’s and instagram story’s only 10000\r\n\r\nInstagram story’s only 8000",
+            "5167.52$ for snapchat"
+          ]
+        },
+        {
+          "name": "New Rate",
+          "inferred_type": "string",
+          "missing_count": 8402,
+          "missing_pct": 99.4,
+          "non_empty": 50,
+          "samples": [
+            "إذا إعلان جميع المنصات سناب شات + تويتر + تيك توك 5000 ريال",
+            "1550$ Snapchat ( Maybe in Nov. Only )",
+            "1994.72$ for 1 ad or more",
+            "700 KWD",
+            "\r\nSnapchat stories\r\n5000$"
+          ]
+        },
+        {
+          "name": "Don't Use / Comments",
+          "inferred_type": "string",
+          "missing_count": 8425,
+          "missing_pct": 99.7,
+          "non_empty": 27,
+          "samples": [
+            "Paid ad wit Randa and Mais",
+            "Paid ad with Randa",
+            "Didn't want to send the report of the ad while she signed the io about this as well",
+            "Paid Ad with Randa & Mais",
+            "Paid Ad with Omnia"
+          ]
+        },
+        {
+          "name": "NEW PACKAGES",
+          "inferred_type": "string",
+          "missing_count": 8415,
+          "missing_pct": 99.6,
+          "non_empty": 37,
+          "samples": [
+            "5006.03$ for 10 ads",
+            "2745.24$ for 10 ads",
+            "If more than 3 ads 650 KWD",
+            "3391.18$ for 10 ads",
+            "3714.15$ for 10 ads\r\n3875.64$ for 4:5 ads"
+          ]
+        },
+        {
+          "name": "Added to Iconnect",
+          "inferred_type": "string",
+          "missing_count": 8450,
+          "missing_pct": 100,
+          "non_empty": 2,
+          "samples": [
+            "Yes"
+          ]
+        },
+        {
+          "name": "License",
+          "inferred_type": "string",
+          "missing_count": 8382,
+          "missing_pct": 99.2,
+          "non_empty": 70,
+          "samples": [
+            "Here",
+            "license",
+            "lisence",
+            "��رخصة يوربان استشارات�.pdf"
+          ]
+        },
+        {
+          "name": "Vat Certificate",
+          "inferred_type": "string",
+          "missing_count": 8393,
+          "missing_pct": 99.3,
+          "non_empty": 59,
+          "samples": [
+            "VAT",
+            "Vat",
+            "Here",
+            "HEre",
+            "Didn't apply yet"
+          ]
+        },
+        {
+          "name": "VAT %",
+          "inferred_type": "string",
+          "missing_count": 8366,
+          "missing_pct": 99,
+          "non_empty": 86,
+          "samples": [
+            "15%",
+            "5%",
+            "Didn't apply yet",
+            "15$",
+            "0%"
+          ]
+        },
+        {
+          "name": "Contract",
+          "inferred_type": "string",
+          "missing_count": 8451,
+          "missing_pct": 100,
+          "non_empty": 1,
+          "samples": [
+            "VAT"
+          ]
+        },
+        {
+          "name": "Passport",
+          "inferred_type": "string",
+          "missing_count": 8451,
+          "missing_pct": 100,
+          "non_empty": 1,
+          "samples": [
+            "ID no : 784-1989-16106945"
+          ]
+        },
+        {
+          "name": "Finance Statuse",
+          "inferred_type": "string",
+          "missing_count": 2602,
+          "missing_pct": 30.8,
+          "non_empty": 5850,
+          "samples": [
+            "Old to be Approved"
+          ]
+        },
+        {
+          "name": "Declaration Doc",
+          "inferred_type": "string",
+          "missing_count": 8386,
+          "missing_pct": 99.2,
+          "non_empty": 66,
+          "samples": [
+            "Authorization_for_Transfer_of_Funds Abbyar.pdf",
+            "Link",
+            "https://drive.google.com/file/d/1SnpVcP9eSqUNBhK7JdzpXjN-ll2aMPXJ/view?usp=sharing",
+            "Declaration",
+            "Sima Kawaf - Declaration - Aswaaq.pdf"
+          ]
+        }
+      ],
+      "headers": [
+        "#",
+        "Influencer NEW name",
+        "Influencer OLD Name",
+        "Username",
+        "",
+        "Proof of bank details",
+        "Profile Type",
+        "Platform",
+        "Owner",
+        "Country",
+        "Gender",
+        "Nationality",
+        "Influencer Type",
+        "Category",
+        "Phone",
+        "Snapchat",
+        "Agent",
+        "Legal Name",
+        "Email",
+        "Seconady Contact",
+        "TikTok",
+        "Facebook",
+        "Telegram",
+        "Youtube",
+        "",
+        "Bank Name",
+        "Account Name",
+        "IBAN",
+        "City",
+        "Branch",
+        "SWIFT",
+        "Ref",
+        "Bank Confirmation",
+        "Bank Acc Currency",
+        "Legal Status",
+        "Mode of Payment",
+        "( old ) rates for 1 ad",
+        "New Rate",
+        "Don't Use / Comments",
+        "NEW PACKAGES",
+        "Added to Iconnect",
+        "License",
+        "Vat Certificate",
+        "VAT %",
+        "Contract",
+        "Passport",
+        "Finance Statuse",
+        "Declaration Doc",
+        ""
+      ]
+    }
+  ],
+  "quality": {
+    "2023": {
+      "campaign_duplicates": {
+        "duplicate_keys": 106,
+        "top_duplicates": [
+          [
+            "trendyol",
+            3036
+          ],
+          [
+            "firstcry",
+            617
+          ],
+          [
+            "yoox",
+            323
+          ],
+          [
+            "the outnet",
+            225
+          ],
+          [
+            "max ksa",
+            207
+          ],
+          [
+            "asq",
+            189
+          ],
+          [
+            "max kwt",
+            162
+          ],
+          [
+            "level shoes",
+            105
+          ],
+          [
+            "farfetch",
+            94
+          ],
+          [
+            "babyshop",
+            86
+          ]
+        ]
+      },
+      "influencer_duplicates": {
+        "duplicate_keys": 521,
+        "top_duplicates": [
+          [
+            "sarah alrashdan",
+            144
+          ],
+          [
+            "arwa aldahlaan",
+            143
+          ],
+          [
+            "bashayer hamad",
+            139
+          ],
+          [
+            "saudi stores",
+            136
+          ],
+          [
+            "saudi malls",
+            112
+          ],
+          [
+            "fatma el eteiby",
+            97
+          ],
+          [
+            "amona x",
+            94
+          ],
+          [
+            "hanan al ghamdi",
+            92
+          ],
+          [
+            "abeer fahd",
+            87
+          ],
+          [
+            "nora alali",
+            74
+          ]
+        ]
+      },
+      "client_name_variants": 3,
+      "influencer_naming_inconsistencies": 93,
+      "influencer_naming_examples": [
+        {
+          "key": "bashayer hamad",
+          "variants": [
+            "Bashayer Hamad",
+            "bashayer hamad"
+          ]
+        },
+        {
+          "key": "amona x",
+          "variants": [
+            "Amona x",
+            "Amona X",
+            "amona x"
+          ]
+        },
+        {
+          "key": "lama alakeel",
+          "variants": [
+            "Lama Alakeel",
+            "Lama alakeel",
+            "lama alakeel"
+          ]
+        },
+        {
+          "key": "abeer fahd",
+          "variants": [
+            "Abeer Fahd",
+            "abeer fahd"
+          ]
+        },
+        {
+          "key": "bayan om hassan",
+          "variants": [
+            "Bayan Om Hassan",
+            "bayan om hassan",
+            "Bayan om hassan",
+            "Bayan om Hassan"
+          ]
+        }
+      ]
+    },
+    "2024": {
+      "campaign_duplicates": {
+        "duplicate_keys": 74,
+        "top_duplicates": [
+          [
+            "firstcry",
+            611
+          ],
+          [
+            "asq",
+            134
+          ],
+          [
+            "trendyol",
+            128
+          ],
+          [
+            "bath and body works gcc",
+            97
+          ],
+          [
+            "styli",
+            82
+          ],
+          [
+            "oud milano",
+            71
+          ],
+          [
+            "tdf",
+            68
+          ],
+          [
+            "al habib bedding",
+            58
+          ],
+          [
+            "in house",
+            54
+          ],
+          [
+            "l'oreal paris ha skin",
+            52
+          ]
+        ]
+      },
+      "influencer_duplicates": {
+        "duplicate_keys": 224,
+        "top_duplicates": [
+          [
+            "bashayer hamad",
+            67
+          ],
+          [
+            "fatma el eteiby",
+            64
+          ],
+          [
+            "arwa aldahlaan",
+            64
+          ],
+          [
+            "malak alanzi",
+            56
+          ],
+          [
+            "bayan om hassan",
+            53
+          ],
+          [
+            "hanan al ghamdi",
+            42
+          ],
+          [
+            "amani al hintti",
+            42
+          ],
+          [
+            "amona x",
+            32
+          ],
+          [
+            "abeer fahd",
+            32
+          ],
+          [
+            "amonah bent abdallah",
+            32
+          ]
+        ]
+      },
+      "client_name_variants": 15,
+      "brand_name_variants": 66,
+      "influencer_naming_inconsistencies": 21,
+      "influencer_naming_examples": [
+        {
+          "key": "arwa-sayegh",
+          "variants": [
+            "Arwa-sayegh",
+            "arwa-sayegh"
+          ]
+        },
+        {
+          "key": "youmna khoury",
+          "variants": [
+            "Youmna Khoury",
+            "Youmna khoury"
+          ]
+        },
+        {
+          "key": "malak alanzi",
+          "variants": [
+            "Malak Alanzi",
+            "Malak alanzi"
+          ]
+        },
+        {
+          "key": "saudi stores",
+          "variants": [
+            "Saudi stores",
+            "saudi stores",
+            "Saudi Stores",
+            "SAUDI STORES"
+          ]
+        },
+        {
+          "key": "amona x",
+          "variants": [
+            "Amona x",
+            "Amona X"
+          ]
+        }
+      ]
+    },
+    "2025": {
+      "campaign_duplicates": {
+        "duplicate_keys": 18,
+        "top_duplicates": [
+          [
+            "max ksa feb",
+            32
+          ],
+          [
+            "max kwt feb",
+            21
+          ],
+          [
+            "max ksa",
+            16
+          ],
+          [
+            "max kwt",
+            16
+          ],
+          [
+            "riva kids feb",
+            14
+          ],
+          [
+            "centrepoint feb",
+            13
+          ],
+          [
+            "instax x honor",
+            11
+          ],
+          [
+            "alqalzam",
+            11
+          ],
+          [
+            "max qatar feb",
+            9
+          ],
+          [
+            "max-qatar",
+            7
+          ]
+        ]
+      },
+      "influencer_duplicates": {
+        "duplicate_keys": 30,
+        "top_duplicates": [
+          [
+            "bashayer hamad",
+            6
+          ],
+          [
+            "sarah alrashdan",
+            6
+          ],
+          [
+            "hanan al ghamdi",
+            5
+          ],
+          [
+            "wasmya salem nasser",
+            5
+          ],
+          [
+            "almhawa",
+            5
+          ],
+          [
+            "arwa aldahlaan",
+            5
+          ],
+          [
+            "nouf fashion",
+            5
+          ],
+          [
+            "saudi stores",
+            4
+          ],
+          [
+            "lolo shopping",
+            4
+          ],
+          [
+            "asmaa aljeeran",
+            4
+          ]
+        ]
+      },
+      "client_name_variants": 7,
+      "brand_name_variants": 16,
+      "influencer_naming_inconsistencies": 0,
+      "influencer_naming_examples": []
+    },
+    "2026": {
+      "campaign_duplicates": {
+        "duplicate_keys": 534,
+        "top_duplicates": [
+          [
+            "kerastase creme seeding",
+            64
+          ],
+          [
+            "publicis - waw6",
+            60
+          ],
+          [
+            "nyx may barter",
+            56
+          ],
+          [
+            "asq - ramadan campaign",
+            56
+          ],
+          [
+            "asq - musk & news campaign",
+            56
+          ],
+          [
+            "iherb may'26",
+            54
+          ],
+          [
+            "iherb feb'26",
+            51
+          ],
+          [
+            "iherb apr'26",
+            51
+          ],
+          [
+            "publicis - waw7",
+            48
+          ],
+          [
+            "mixa jan26 / ae po",
+            46
+          ]
+        ]
+      },
+      "influencer_duplicates": {
+        "duplicate_keys": 848,
+        "top_duplicates": [
+          [
+            "nyx barter deal",
+            118
+          ],
+          [
+            "ysl barter deal",
+            77
+          ],
+          [
+            "maybelline barter deal",
+            49
+          ],
+          [
+            "sarah alrashdan",
+            45
+          ],
+          [
+            "fatma el eteiby",
+            43
+          ],
+          [
+            "awwskky",
+            42
+          ],
+          [
+            "bashar care",
+            42
+          ],
+          [
+            "bashayer hamad",
+            38
+          ],
+          [
+            "arwa aldahlaan",
+            33
+          ],
+          [
+            "saudi stores",
+            33
+          ]
+        ]
+      },
+      "client_name_variants": 17,
+      "brand_name_variants": 101,
+      "influencer_naming_inconsistencies": 143,
+      "influencer_naming_examples": [
+        {
+          "key": "dalal ahmad alhadeyah",
+          "variants": [
+            "Dalal Ahmad Alhadeyah",
+            "dalal ahmad alhadeyah"
+          ]
+        },
+        {
+          "key": "bashayer hamad",
+          "variants": [
+            "Bashayer Hamad",
+            "BASHAYER HAMAD"
+          ]
+        },
+        {
+          "key": "lolo shopping",
+          "variants": [
+            "Lolo Shopping",
+            "lolo shopping",
+            "Lolo shopping"
+          ]
+        },
+        {
+          "key": "malak alanzi",
+          "variants": [
+            "Malak Alanzi",
+            "Malak alanzi"
+          ]
+        },
+        {
+          "key": "saudi stores",
+          "variants": [
+            "Saudi Stores",
+            "saudi stores",
+            "SAUDI STORES"
+          ]
+        }
+      ]
+    },
+    "Database": {
+      "influencer_duplicates": {
+        "duplicate_keys": 111,
+        "top_duplicates": [
+          [
+            "the company alruaya dmcc agency",
+            2
+          ],
+          [
+            "latifa turki",
+            2
+          ],
+          [
+            "soho international management of restaurants and catering co agency",
+            2
+          ],
+          [
+            "aldanah beauty",
+            2
+          ],
+          [
+            "laila youssef",
+            2
+          ],
+          [
+            "sakshi narang",
+            2
+          ],
+          [
+            "amal almaqbali",
+            2
+          ],
+          [
+            "asmaa abdou salem soliman",
+            2
+          ],
+          [
+            "lilly samy",
+            2
+          ],
+          [
+            "hasna dakhil",
+            2
+          ]
+        ]
+      },
+      "client_name_variants": 6,
+      "influencer_naming_inconsistencies": 25,
+      "influencer_naming_examples": [
+        {
+          "key": "aldanah beauty",
+          "variants": [
+            "Aldanah Beauty",
+            "Aldanah beauty"
+          ]
+        },
+        {
+          "key": "laila youssef",
+          "variants": [
+            "Laila youssef",
+            "Laila Youssef"
+          ]
+        },
+        {
+          "key": "hasna dakhil",
+          "variants": [
+            "hasna dakhil",
+            "Hasna Dakhil"
+          ]
+        },
+        {
+          "key": "abaad faniya building contracting llc agency",
+          "variants": [
+            "Abaad faniya building contracting LLC agency",
+            "ABAAD FANIYA BUILDING CONTRACTING LLC Agency"
+          ]
+        },
+        {
+          "key": "asma abdul razzaq aber alanazi",
+          "variants": [
+            "Asma Abdul Razzaq Aber Alanazi",
+            "ASMA Abdul Razzaq ABER ALANAZI"
+          ]
+        }
+      ]
+    }
+  },
+  "date_ranges": {
+    "2023::Month": {
+      "min": "2001-01-22",
+      "max": "2001-12-22",
+      "count": 6575
+    },
+    "2023::Date": {
+      "min": "2022-12-01",
+      "max": "2023-12-31",
+      "count": 6575
+    },
+    "2024::Month": {
+      "min": "2001-01-23",
+      "max": "2001-12-23",
+      "count": 2008
+    },
+    "2024::Date": {
+      "min": "2024-01-01",
+      "max": "2025-01-30",
+      "count": 2010
+    },
+    "2024::Add live date": {
+      "min": "2024-11-29",
+      "max": "2024-11-29",
+      "count": 1
+    },
+    "2025::Month of ad live": {
+      "min": "2001-01-24",
+      "max": "2001-05-24",
+      "count": 199
+    },
+    "2025::Date": {
+      "min": "2025-01-01",
+      "max": "2025-12-02",
+      "count": 199
+    },
+    "2025::Budget Month": {
+      "min": "2001-01-24",
+      "max": "2001-05-24",
+      "count": 199
+    },
+    "2025::Add live date": {
+      "min": "2025-01-01",
+      "max": "2025-12-02",
+      "count": 199
+    },
+    "2026::Month of ad live": {
+      "min": "2001-01-25",
+      "max": "2001-06-25",
+      "count": 4954
+    },
+    "2026::Date": {
+      "min": "2024-05-22",
+      "max": "2026-12-06",
+      "count": 4957
+    },
+    "2026::Budget Month": {
+      "min": "2001-01-25",
+      "max": "2001-10-25",
+      "count": 5405
+    },
+    "2026::Add live date": {
+      "min": "2024-05-22",
+      "max": "2026-12-06",
+      "count": 4957
+    }
+  }
+}

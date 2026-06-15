@@ -1838,4 +1838,91 @@ export type Database = {
       business_function: BusinessFunction;
     };
   };
+  intelligence: {
+    Tables: {
+      historical_campaigns_raw: {
+        Row: import("@/types/intelligence").HistoricalCampaignsRawRow;
+        Insert: Partial<import("@/types/intelligence").HistoricalCampaignsRawRow>;
+        Update: Partial<import("@/types/intelligence").HistoricalCampaignsRawRow>;
+        Relationships: [];
+      };
+      historical_influencers_raw: {
+        Row: import("@/types/intelligence").HistoricalInfluencersRawRow;
+        Insert: Partial<import("@/types/intelligence").HistoricalInfluencersRawRow>;
+        Update: Partial<import("@/types/intelligence").HistoricalInfluencersRawRow>;
+        Relationships: [];
+      };
+      int_clients: {
+        Row: import("@/types/intelligence").IntClientRow;
+        Insert: Partial<import("@/types/intelligence").IntClientRow>;
+        Update: Partial<import("@/types/intelligence").IntClientRow>;
+        Relationships: [];
+      };
+      int_brands: {
+        Row: import("@/types/intelligence").IntBrandRow;
+        Insert: Partial<import("@/types/intelligence").IntBrandRow>;
+        Update: Partial<import("@/types/intelligence").IntBrandRow>;
+        Relationships: [];
+      };
+      int_influencers: {
+        Row: import("@/types/intelligence").IntInfluencerRow;
+        Insert: Partial<import("@/types/intelligence").IntInfluencerRow>;
+        Update: Partial<import("@/types/intelligence").IntInfluencerRow>;
+        Relationships: [];
+      };
+      int_campaigns: {
+        Row: import("@/types/intelligence").IntCampaignRow;
+        Insert: Partial<import("@/types/intelligence").IntCampaignRow>;
+        Update: Partial<import("@/types/intelligence").IntCampaignRow>;
+        Relationships: [];
+      };
+      int_pricing_history: {
+        Row: import("@/types/intelligence").IntPricingHistoryRow;
+        Insert: Partial<import("@/types/intelligence").IntPricingHistoryRow>;
+        Update: Partial<import("@/types/intelligence").IntPricingHistoryRow>;
+        Relationships: [];
+      };
+      int_margin_history: {
+        Row: import("@/types/intelligence").IntMarginHistoryRow;
+        Insert: Partial<import("@/types/intelligence").IntMarginHistoryRow>;
+        Update: Partial<import("@/types/intelligence").IntMarginHistoryRow>;
+        Relationships: [];
+      };
+      int_benchmarks: {
+        Row: import("@/types/intelligence").IntBenchmarkRow;
+        Insert: Partial<import("@/types/intelligence").IntBenchmarkRow>;
+        Update: Partial<import("@/types/intelligence").IntBenchmarkRow>;
+        Relationships: [];
+      };
+      entity_resolution_overrides: {
+        Row: {
+          id: string;
+          entity_type: string;
+          source_key: string;
+          resolved_id: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: Partial<{
+          id: string;
+          entity_type: string;
+          source_key: string;
+          resolved_id: string;
+          notes: string | null;
+          created_by: string | null;
+        }>;
+        Update: Partial<{
+          entity_type: string;
+          source_key: string;
+          resolved_id: string;
+          notes: string | null;
+        }>;
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+  };
 };

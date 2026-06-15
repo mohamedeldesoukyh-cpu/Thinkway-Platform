@@ -8,6 +8,7 @@ import {
   ActivityIcon,
   ArrowRightLeftIcon,
   BarChart3Icon,
+  BrainIcon,
   Building2Icon,
   CalendarClockIcon,
   CalendarRangeIcon,
@@ -153,6 +154,7 @@ const navGroups: NavGroup[] = [
     label: "Insights",
     items: [
       { kind: "link", href: "/reports", label: "Reports", icon: BarChart3Icon },
+      { kind: "link", href: "/intelligence", label: "Intelligence", icon: BrainIcon },
       { kind: "link", href: "/ai", label: "AI Analyst", icon: SparklesIcon },
       { kind: "link", href: "/links", label: "Link Generator", icon: Link2Icon },
     ],
