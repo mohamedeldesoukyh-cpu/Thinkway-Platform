@@ -12,6 +12,8 @@ import {
 } from "@/lib/vat/queries";
 import {
   getBrandsForCampaignForm,
+  getClientsForSelect,
+  getGroupsForSelect,
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
 import {
@@ -37,6 +39,8 @@ import {
   formatMarginPercent,
   mapDeliverableDisplayStatus,
   type BrandFormOption,
+  type ClientFormOption,
+  type GroupFormOption,
   type CampaignLineWorkspace,
   type CampaignWorkspace,
   type InfluencerAssignmentProfile,
@@ -61,6 +65,8 @@ export type CampaignsListResult = {
 };
 
 export type CampaignFormOptions = {
+  groups: GroupFormOption[];
+  clients: ClientFormOption[];
   brands: BrandFormOption[];
   accountManagers: {
     id: string;
@@ -299,7 +305,9 @@ export async function getCampaignsKpis(): Promise<CampaignsKpis> {
 export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
   const { supabase } = await requireUser();
 
-  const [brands, masterData, managersResult] = await Promise.all([
+  const [groups, clients, brands, masterData, managersResult] = await Promise.all([
+    getGroupsForSelect(),
+    getClientsForSelect(),
     getBrandsForCampaignForm(),
     getMasterDataOptions(),
     supabase
@@ -314,6 +322,8 @@ export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
   }
 
   return {
+    groups: groups ?? [],
+    clients: (clients ?? []) as ClientFormOption[],
     brands: brands as unknown as BrandFormOption[],
     masterData,
     accountManagers: managersResult.data ?? [],

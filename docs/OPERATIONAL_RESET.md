@@ -96,5 +96,6 @@ ORDER BY prefix;
 | Script | Purpose |
 | --- | --- |
 | `supabase/scripts/full_operational_reset.sql` | Wipe **all** campaigns + reseed sequences |
+| `supabase/scripts/master_data_reset.sql` | Wipe **all brands and clients** + reseed CLT/BRD (requires campaigns wiped first) |
 | `supabase/scripts/campaign_operational_reset.sql` | Wipe **one** campaign |
 | `supabase/migrations/20260609010000_campaign_document_sequence_reseed.sql` | `reseed_thinkway_campaign_sequence()` helper |

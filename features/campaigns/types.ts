@@ -10,6 +10,20 @@ import type {
   ClientIoSendRecipient,
 } from "@/features/io/types";
 
+export type GroupFormOption = {
+  id: string;
+  name: string;
+  document_number: string;
+};
+
+export type ClientFormOption = {
+  id: string;
+  name: string;
+  legal_name: string | null;
+  group_id: string | null;
+  document_number: string;
+};
+
 export type BrandFormOption = {
   id: string;
   name: string;

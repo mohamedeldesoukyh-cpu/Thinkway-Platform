@@ -1,7 +1,7 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -49,17 +49,19 @@ function FieldError({ messages }: { messages?: string[] }) {
   return <p className="text-xs text-destructive">{messages[0]}</p>;
 }
 
-type BrandOption = BrandFormOption;
-
 type NewCampaignDialogProps = CampaignFormOptions;
 
 export function NewCampaignDialog({
+  groups,
+  clients,
   brands,
   accountManagers,
   masterData,
 }: NewCampaignDialogProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const [open, setOpen] = useState(false);
+  const [groupId, setGroupId] = useState("");
+  const [clientId, setClientId] = useState("");
   const [brandId, setBrandId] = useState("");
   const [platform, setPlatform] = useState("");
   const [status, setStatus] = useState("draft");
@@ -75,6 +77,71 @@ export function NewCampaignDialog({
     [brands, brandId]
   );
 
+  const filteredClients = useMemo(() => {
+    if (!groupId) return clients;
+    return clients.filter((c) => c.group_id === groupId);
+  }, [clients, groupId]);
+
+  const filteredBrands = useMemo(() => {
+    if (clientId) return brands.filter((b) => b.client_id === clientId);
+    if (groupId) return brands.filter((b) => b.group_id === groupId);
+    return brands;
+  }, [brands, clientId, groupId]);
+
+  const resetHierarchy = useCallback(() => {
+    setGroupId("");
+    setClientId("");
+    setBrandId("");
+  }, []);
+
+  const handleGroupChange = useCallback(
+    (id: string) => {
+      setGroupId(id);
+      if (!id) return;
+      const client = clients.find((c) => c.id === clientId);
+      if (client && client.group_id !== id) {
+        setClientId("");
+        setBrandId("");
+        return;
+      }
+      const brand = brands.find((b) => b.id === brandId);
+      if (brand && brand.group_id !== id) {
+        setBrandId("");
+      }
+    },
+    [brands, clientId, brandId, clients]
+  );
+
+  const handleClientChange = useCallback(
+    (id: string) => {
+      setClientId(id);
+      if (!id) {
+        setBrandId("");
+        return;
+      }
+      const client = clients.find((c) => c.id === id);
+      if (client?.group_id) {
+        setGroupId(client.group_id);
+      }
+      const brand = brands.find((b) => b.id === brandId);
+      if (!brand || brand.client_id !== id) {
+        setBrandId("");
+      }
+    },
+    [brands, brandId, clients]
+  );
+
+  const handleBrandChange = useCallback(
+    (id: string) => {
+      setBrandId(id);
+      const brand = brands.find((b) => b.id === id);
+      if (!brand) return;
+      setClientId(brand.client_id);
+      setGroupId(brand.group_id);
+    },
+    [brands]
+  );
+
   useEffect(() => {
     if (selectedBrand?.currency_code) {
       setCurrency(selectedBrand.currency_code);
@@ -87,7 +154,7 @@ export function NewCampaignDialog({
     }
     if (state.ok) {
       toast.success(state.message);
-      setBrandId("");
+      resetHierarchy();
       setPlatform("");
       setStatus("draft");
       setCurrency(DEFAULT_PLATFORM_CURRENCY);
@@ -96,11 +163,21 @@ export function NewCampaignDialog({
       return;
     }
     toast.error(state.message);
-  }, [state]);
+  }, [state, resetHierarchy]);
 
-  const brandOptions = brands.map((b) => ({
+  const groupOptions = groups.map((g) => ({
+    value: g.id,
+    label: g.name,
+  }));
+
+  const clientOptions = filteredClients.map((c) => ({
+    value: c.id,
+    label: c.legal_name ? `${c.name} · ${c.legal_name}` : c.name,
+  }));
+
+  const brandOptions = filteredBrands.map((b) => ({
     value: b.id,
-    label: `${b.name} · ${(b.client as { name: string } | null)?.name ?? "Client"}`,
+    label: b.name,
   }));
 
   const hasBrands = brands.length > 0;
@@ -117,9 +194,9 @@ export function NewCampaignDialog({
         <DialogHeader>
           <DialogTitle>New campaign</DialogTitle>
           <DialogDescription>
-            Select a brand to auto-fill hierarchy and commercial terms. Only the
-            campaign header and PO budget are created — add assignments from the
-            Assignments tab.
+            Choose group, client, and brand — selections filter each other and
+            auto-fill when you pick a brand or client. Only the campaign header
+            and PO budget are created; add assignments from the Assignments tab.
           </DialogDescription>
         </DialogHeader>
         {!hasBrands ? (
@@ -138,16 +215,46 @@ export function NewCampaignDialog({
               value={accountManagerId === NONE_VALUE ? "" : accountManagerId}
             />
 
-            <div className="grid gap-2">
-              <Label>Brand</Label>
-              <SearchableSelect
-                value={brandId}
-                onValueChange={setBrandId}
-                options={brandOptions}
-                disabled={isPending}
-                placeholder="Select brand"
-              />
-              <FieldError messages={state.fieldErrors?.brand_id} />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-2">
+                <Label>Holding group</Label>
+                <SearchableSelect
+                  value={groupId}
+                  onValueChange={handleGroupChange}
+                  options={groupOptions}
+                  disabled={isPending}
+                  placeholder="Select group"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Client</Label>
+                <SearchableSelect
+                  value={clientId}
+                  onValueChange={handleClientChange}
+                  options={clientOptions}
+                  disabled={isPending || (groupId !== "" && filteredClients.length === 0)}
+                  placeholder={
+                    groupId && filteredClients.length === 0
+                      ? "No clients in group"
+                      : "Select client"
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Brand</Label>
+                <SearchableSelect
+                  value={brandId}
+                  onValueChange={handleBrandChange}
+                  options={brandOptions}
+                  disabled={isPending || filteredBrands.length === 0}
+                  placeholder={
+                    clientId && filteredBrands.length === 0
+                      ? "No brands for client"
+                      : "Select brand"
+                  }
+                />
+                <FieldError messages={state.fieldErrors?.brand_id} />
+              </div>
             </div>
 
             {selectedBrand ? (
@@ -157,7 +264,7 @@ export function NewCampaignDialog({
                   value={(selectedBrand.group as { name: string } | null)?.name}
                 />
                 <ReadonlyField
-                  label="Legal entity"
+                  label="Client"
                   value={(selectedBrand.client as { legal_name: string | null; name: string } | null)?.legal_name ??
                     (selectedBrand.client as { name: string } | null)?.name}
                 />
