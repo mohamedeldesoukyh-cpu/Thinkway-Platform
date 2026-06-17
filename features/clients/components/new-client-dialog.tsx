@@ -35,17 +35,9 @@ import {
 } from "@/features/clients/actions";
 import {
   AGENCY_OR_DIRECT_OPTIONS,
-  CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
 } from "@/features/clients/constants";
 import { checkClientNameAvailable } from "@/features/validation/actions";
-import { ClientIoTermsEditor } from "@/features/io/components/client-io-terms-editor";
-import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
-import {
-  serializeTermsText,
-  termsAreEqual,
-  type ClientIoTerm,
-} from "@/lib/io/client-io-terms";
 import type { AgencyOrDirect } from "@/types/database";
 
 const initialState: CreateClientFormState = { ok: false };
@@ -64,8 +56,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const [status, setStatus] = useState("prospect");
   const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
   const [country, setCountry] = useState("");
-  const [ioTerms, setIoTerms] = useState<ClientIoTerm[]>(CLIENT_IO_DEFAULT_TERMS);
-  const [usePlatformIoTerms, setUsePlatformIoTerms] = useState(true);
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
     entityName,
@@ -89,8 +79,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
       setStatus("prospect");
       setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setCountry("");
-      setIoTerms(CLIENT_IO_DEFAULT_TERMS);
-      setUsePlatformIoTerms(true);
       setOpen(false);
       if (state.clientId) {
         router.push(`/clients/${state.clientId}`);
@@ -101,10 +89,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   }, [state, router]);
 
   const groupOptions = groups.map((g) => ({ value: g.id, label: g.name }));
-  const clientIoTermsPayload =
-    usePlatformIoTerms || termsAreEqual(ioTerms, CLIENT_IO_DEFAULT_TERMS)
-      ? ""
-      : serializeTermsText(ioTerms);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -114,22 +98,22 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           New Client
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 border-b border-border/40 px-6 py-4">
           <DialogTitle>New client</DialogTitle>
           <DialogDescription>
             Add a client legal entity. Optionally link to a holding group now or
             assign one later from the client profile.
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction} className="grid gap-4">
+        <form action={formAction} className="flex min-h-0 flex-1 flex-col">
           <input type="hidden" name="group_id" value={groupId} />
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
           <input type="hidden" name="currency" value={currency} />
           <input type="hidden" name="country" value={country} />
-          <input type="hidden" name="client_io_terms_text" value={clientIoTermsPayload} />
 
+          <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4">
           <div className="grid gap-2">
             <Label>Holding group (optional)</Label>
             <SearchableSelect
@@ -223,27 +207,13 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             <Textarea id="notes" name="notes" rows={2} disabled={isPending} />
           </div>
 
-          <div className="grid gap-2 rounded-xl border border-border/60 bg-muted/10 p-3">
-            <Label>Default Client IO terms (optional)</Label>
-            <p className="text-xs text-muted-foreground">
-              Fixed Section 8 terms for all Client IOs on this client. Leave as platform
-              default or customize.
-            </p>
-            <ClientIoTermsEditor
-              terms={ioTerms}
-              onChange={(next) => {
-                setIoTerms(next);
-                setUsePlatformIoTerms(false);
-              }}
-              onRecover={() => {
-                setIoTerms(CLIENT_IO_DEFAULT_TERMS);
-                setUsePlatformIoTerms(true);
-              }}
-              disabled={isPending}
-            />
+          <p className="text-xs text-muted-foreground">
+            Client IO terms use the platform default. Customize them from the client
+            profile after creation.
+          </p>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t border-border/40 px-6 py-4">
             <Button
               type="submit"
               disabled={isPending || isDuplicate || checking}

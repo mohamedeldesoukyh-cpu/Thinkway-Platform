@@ -12,10 +12,15 @@ import { findDuplicateClient, findDuplicateGroup } from "@/lib/validation/checks
 import { friendlyActionError } from "@/lib/validation/hierarchy";
 import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
 
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
+
 import {
   archiveLegalEntitySchema,
   createGroupSchema,
   linkClientToGroupSchema,
+  parseCreateGroupFormData,
+  parseGroupInlineNewClients,
+  type GroupInlineNewClientInput,
   updateGroupLegalEntitySchema,
   updateGroupSchema,
   uploadGroupDocumentSchema,
@@ -49,11 +54,89 @@ async function requireAuthUser() {
   return { supabase, user, error: null };
 }
 
+async function linkClientsToGroup(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  groupId: string,
+  clientIds: string[]
+) {
+  for (const clientId of clientIds) {
+    const { data: client, error: clientError } = await supabase
+      .from("clients")
+      .select("group_id, status")
+      .eq("id", clientId)
+      .maybeSingle();
+
+    if (clientError || !client) {
+      throw new Error(clientError?.message ?? "Client not found.");
+    }
+
+    if (client.status === "archived") {
+      throw new Error("Archived clients cannot be linked to a group.");
+    }
+
+    if (client.group_id) {
+      throw new Error(
+        "One or more clients are already linked to a group. Refresh and try again."
+      );
+    }
+
+    const { error: updateError } = await supabase
+      .from("clients")
+      .update({ group_id: groupId })
+      .eq("id", clientId);
+
+    if (updateError) {
+      throw new Error(friendlyActionError(updateError, "client", updateError.message));
+    }
+
+    const { error: brandSyncError } = await supabase
+      .from("brands")
+      .update({ group_id: groupId })
+      .eq("client_id", clientId);
+
+    if (brandSyncError) {
+      throw new Error(brandSyncError.message);
+    }
+  }
+}
+
+async function createClientsUnderGroup(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string,
+  groupId: string,
+  clients: GroupInlineNewClientInput[]
+) {
+  for (const client of clients) {
+    const duplicate = await findDuplicateClient(
+      supabase,
+      client.name,
+      client.agency_or_direct
+    );
+    if (duplicate) {
+      throw new Error(duplicate);
+    }
+
+    const { error } = await supabase.from("clients").insert({
+      name: client.name,
+      legal_name: emptyToNull(client.legal_name),
+      group_id: groupId,
+      agency_or_direct: client.agency_or_direct,
+      status: "prospect",
+      currency: DEFAULT_PLATFORM_CURRENCY,
+      created_by: userId,
+    });
+
+    if (error) {
+      throw new Error(friendlyActionError(error, "client", error.message));
+    }
+  }
+}
+
 export async function createGroupAction(
   _prev: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
-  const parsed = createGroupSchema.safeParse(Object.fromEntries(formData.entries()));
+  const parsed = createGroupSchema.safeParse(parseCreateGroupFormData(formData));
   if (!parsed.success) {
     return {
       ok: false,
@@ -79,6 +162,19 @@ export async function createGroupAction(
     };
   }
 
+  let newClients: GroupInlineNewClientInput[] = [];
+  if (parsed.data.client_setup === "create_new") {
+    try {
+      newClients = parseGroupInlineNewClients(parsed.data.new_clients_json);
+    } catch (e) {
+      return {
+        ok: false,
+        message: e instanceof Error ? e.message : "Invalid client data.",
+        fieldErrors: { new_clients_json: ["Enter valid client details."] },
+      };
+    }
+  }
+
   const { data, error } = await supabase
     .from("groups")
     .insert({
@@ -99,8 +195,44 @@ export async function createGroupAction(
     };
   }
 
+  const groupId = data.id;
+
+  try {
+    if (parsed.data.client_setup === "link_existing") {
+      await linkClientsToGroup(supabase, groupId, parsed.data.linked_client_ids);
+    } else if (parsed.data.client_setup === "create_new") {
+      await createClientsUnderGroup(supabase, user.id, groupId, newClients);
+    }
+  } catch (e) {
+    revalidatePath("/groups");
+    revalidatePath(`/groups/${groupId}`);
+    return {
+      ok: false,
+      message:
+        e instanceof Error
+          ? `${e.message} The group was created — open it from Groups to finish linking clients.`
+          : "Group created but client setup failed.",
+      groupId,
+    };
+  }
+
   revalidatePath("/groups");
-  return { ok: true, message: "Group created.", groupId: data.id };
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath("/clients");
+
+  const linkedCount =
+    parsed.data.client_setup === "link_existing"
+      ? parsed.data.linked_client_ids.length
+      : parsed.data.client_setup === "create_new"
+        ? newClients.length
+        : 0;
+
+  const message =
+    linkedCount > 0
+      ? `Group created with ${linkedCount} client${linkedCount === 1 ? "" : "s"}.`
+      : "Group created.";
+
+  return { ok: true, message, groupId };
 }
 
 export async function updateGroupAction(
@@ -247,47 +379,13 @@ export async function linkClientToGroupAction(
     return { ok: false, message: authError };
   }
 
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .select("group_id, status")
-    .eq("id", parsed.data.client_id)
-    .maybeSingle();
-
-  if (clientError || !client) {
-    return { ok: false, message: clientError?.message ?? "Client not found." };
-  }
-
-  if (client.status === "archived") {
-    return { ok: false, message: "Archived clients cannot be linked to a group." };
-  }
-
-  if (client.group_id) {
+  try {
+    await linkClientsToGroup(supabase, parsed.data.group_id, [parsed.data.client_id]);
+  } catch (e) {
     return {
       ok: false,
-      message:
-        "Client is already linked to a group. Change the group from the client profile.",
+      message: e instanceof Error ? e.message : "Could not link client.",
     };
-  }
-
-  const { error: updateError } = await supabase
-    .from("clients")
-    .update({ group_id: parsed.data.group_id })
-    .eq("id", parsed.data.client_id);
-
-  if (updateError) {
-    return {
-      ok: false,
-      message: friendlyActionError(updateError, "client", updateError.message),
-    };
-  }
-
-  const { error: brandSyncError } = await supabase
-    .from("brands")
-    .update({ group_id: parsed.data.group_id })
-    .eq("client_id", parsed.data.client_id);
-
-  if (brandSyncError) {
-    return { ok: false, message: brandSyncError.message };
   }
 
   revalidatePath(`/groups/${parsed.data.group_id}`);

@@ -25,6 +25,8 @@ import { cn } from "@/lib/utils";
 export type OperationalConfigurableColumnDef<T> = OperationalTableColumnMeta & {
   headerClassName?: string;
   cellClassName?: string;
+  /** Optional `<col>` width (e.g. `"25%"`, `"120px"`). Defaults to equal share of remaining width. */
+  colWidth?: string;
   amountCell?: boolean;
   /** Semantic platform coloring for money cells (revenue, gp, cost, margin). */
   amountVariant?: OperationalAmountVariant;
@@ -98,6 +100,19 @@ export function OperationalConfigurableTable<T>({
   );
 }
 
+const OPERATIONAL_LIST_TABLE_CELL_PADDING = "!px-4";
+
+function resolveOperationalTableColumnWidths<T>(
+  columns: readonly OperationalConfigurableColumnDef<T>[]
+): string[] {
+  if (columns.length === 0) {
+    return [];
+  }
+
+  const equalWidth = `${100 / columns.length}%`;
+  return columns.map((column) => column.colWidth ?? equalWidth);
+}
+
 function OperationalConfigurableTableView<T>({
   columns,
   rows,
@@ -113,73 +128,86 @@ function OperationalConfigurableTableView<T>({
   rowClassName?: (row: T) => string | undefined;
   wrapRow?: (row: T, rowElement: ReactElement) => ReactNode;
 }) {
+  const columnWidths = resolveOperationalTableColumnWidths(columns);
+
   return (
-    <div className={cn("overflow-x-auto", className)}>
-      <CampaignOperationalTable>
-        <CampaignOperationalTableHeader>
-          <CampaignOperationalTableHeaderRow>
-            {columns.map((column) => (
-              <CampaignOperationalTableHead
-                key={column.id}
-                className={column.headerClassName}
-              >
-                {column.renderHeader ? column.renderHeader() : column.label}
-              </CampaignOperationalTableHead>
-            ))}
-          </CampaignOperationalTableHeaderRow>
-        </CampaignOperationalTableHeader>
-        <CampaignOperationalTableBody>
-          {rows.map((row) => {
-            const rowElement = (
-              <CampaignOperationalTableRow className={rowClassName?.(row)}>
-                {columns.map((column) => {
-                  const content = column.renderCell(row);
-                  if (column.amountCell) {
-                    const amountClassName = column.amountVariant
-                      ? operationalAmountVariantClass(
-                          column.amountVariant,
-                          column.amountValue?.(row)
-                        )
-                      : undefined;
-                    return (
-                      <CampaignOperationalTableCellAmount
-                        key={column.id}
-                        className={cn(amountClassName, column.cellClassName)}
-                      >
-                        {content}
-                      </CampaignOperationalTableCellAmount>
-                    );
-                  }
-                  if (column.monoCell) {
-                    return (
-                      <CampaignOperationalTableCellMono
-                        key={column.id}
-                        className={column.cellClassName}
-                      >
-                        {content}
-                      </CampaignOperationalTableCellMono>
-                    );
-                  }
+    <CampaignOperationalTable className={cn("table-fixed w-full", className)}>
+      <colgroup>
+        {columns.map((column, index) => (
+          <col key={column.id} style={{ width: columnWidths[index] }} />
+        ))}
+      </colgroup>
+      <CampaignOperationalTableHeader>
+        <CampaignOperationalTableHeaderRow>
+          {columns.map((column) => (
+            <CampaignOperationalTableHead
+              key={column.id}
+              className={cn(
+                OPERATIONAL_LIST_TABLE_CELL_PADDING,
+                column.amountCell ? "text-right" : "text-left",
+                column.headerClassName
+              )}
+            >
+              {column.renderHeader ? column.renderHeader() : column.label}
+            </CampaignOperationalTableHead>
+          ))}
+        </CampaignOperationalTableHeaderRow>
+      </CampaignOperationalTableHeader>
+      <CampaignOperationalTableBody>
+        {rows.map((row) => {
+          const rowElement = (
+            <CampaignOperationalTableRow className={rowClassName?.(row)}>
+              {columns.map((column) => {
+                const content = column.renderCell(row);
+                const sharedCellClassName = cn(
+                  OPERATIONAL_LIST_TABLE_CELL_PADDING,
+                  column.cellClassName
+                );
+                if (column.amountCell) {
+                  const amountClassName = column.amountVariant
+                    ? operationalAmountVariantClass(
+                        column.amountVariant,
+                        column.amountValue?.(row)
+                      )
+                    : undefined;
                   return (
-                    <CampaignOperationalTableCell
+                    <CampaignOperationalTableCellAmount
                       key={column.id}
-                      className={column.cellClassName}
+                      className={cn(amountClassName, sharedCellClassName)}
                     >
                       {content}
-                    </CampaignOperationalTableCell>
+                    </CampaignOperationalTableCellAmount>
                   );
-                })}
-              </CampaignOperationalTableRow>
-            );
+                }
+                if (column.monoCell) {
+                  return (
+                    <CampaignOperationalTableCellMono
+                      key={column.id}
+                      className={sharedCellClassName}
+                    >
+                      {content}
+                    </CampaignOperationalTableCellMono>
+                  );
+                }
+                return (
+                  <CampaignOperationalTableCell
+                    key={column.id}
+                    className={sharedCellClassName}
+                  >
+                    {content}
+                  </CampaignOperationalTableCell>
+                );
+              })}
+            </CampaignOperationalTableRow>
+          );
 
-            return (
-              <Fragment key={rowKey(row)}>
-                {wrapRow ? wrapRow(row, rowElement) : rowElement}
-              </Fragment>
-            );
-          })}
-        </CampaignOperationalTableBody>
-      </CampaignOperationalTable>
-    </div>
+          return (
+            <Fragment key={rowKey(row)}>
+              {wrapRow ? wrapRow(row, rowElement) : rowElement}
+            </Fragment>
+          );
+        })}
+      </CampaignOperationalTableBody>
+    </CampaignOperationalTable>
   );
 }

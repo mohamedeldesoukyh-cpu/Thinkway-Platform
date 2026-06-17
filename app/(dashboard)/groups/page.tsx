@@ -3,6 +3,7 @@ import { PageAlert } from "@/components/ui/page-alert";
 import { GroupsListSection } from "@/features/groups/components/groups-list-section";
 import { NewGroupDialog } from "@/features/groups/components/new-group-dialog";
 import { getGroupsList } from "@/features/groups/queries";
+import { getUnlinkedClientsForSelect } from "@/lib/master-data/queries";
 
 type GroupsPageProps = {
   searchParams: Promise<{ page?: string; search?: string }>;
@@ -14,10 +15,14 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const search = params.search ?? "";
 
   let result;
+  let unlinkedClients: Awaited<ReturnType<typeof getUnlinkedClientsForSelect>> = [];
   let errorMessage: string | null = null;
 
   try {
-    result = await getGroupsList({ page, search });
+    [result, unlinkedClients] = await Promise.all([
+      getGroupsList({ page, search }),
+      getUnlinkedClientsForSelect(),
+    ]);
   } catch (error) {
     errorMessage = error instanceof Error ? error.message : "Failed to load groups.";
   }
@@ -32,7 +37,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
     <DashboardShell
       title="Groups"
       description="Top-level holding groups. Link clients from the group workspace."
-      actions={<NewGroupDialog />}
+      actions={<NewGroupDialog unlinkedClients={unlinkedClients} />}
     >
       {errorMessage ? <PageAlert className="mb-4">{errorMessage}</PageAlert> : null}
       {result ? <GroupsListSection groups={result.groups} meta={meta} /> : null}
