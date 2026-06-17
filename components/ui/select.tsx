@@ -6,10 +6,17 @@ import { Select as SelectPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-function Select({
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+type SelectProps = React.ComponentProps<typeof SelectPrimitive.Root> & {
+  modal?: boolean
+}
+
+function Select({ modal, ...props }: SelectProps) {
+  const rootProps = {
+    ...props,
+    ...(modal !== undefined ? { modal } : {}),
+  } as React.ComponentProps<typeof SelectPrimitive.Root>
+
+  return <SelectPrimitive.Root data-slot="select" {...rootProps} />
 }
 
 function SelectGroup({
@@ -183,6 +190,7 @@ function SelectScrollDownButton({
 
 export {
   Select,
+  type SelectProps,
   SelectContent,
   SelectGroup,
   SelectItem,

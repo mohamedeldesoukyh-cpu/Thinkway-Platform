@@ -44,7 +44,14 @@ async function fetchAll<T>(
 
 async function main() {
   const [warehouse, infRes, handleRes, campaignLinkedRows] = await Promise.all([
-    fetchAll("int_influencers", (from, to) =>
+    fetchAll<{
+      id: string;
+      display_name_raw: string | null;
+      username: string | null;
+      match_confidence: number | null;
+      country: string | null;
+      tier: string | null;
+    }>("int_influencers", async (from, to) =>
       supabase
         .schema("intelligence")
         .from("int_influencers")
@@ -53,7 +60,7 @@ async function main() {
     ),
     supabase.from("influencers").select("id, display_name"),
     supabase.from("influencer_platform_accounts").select("influencer_id, handle"),
-    fetchAll("int_campaigns", (from, to) =>
+    fetchAll<{ int_influencer_id: string | null }>("int_campaigns", async (from, to) =>
       supabase
         .schema("intelligence")
         .from("int_campaigns")
