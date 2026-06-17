@@ -1,3 +1,4 @@
+import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CampaignsKpiStrip } from "@/features/campaigns/components/campaigns-kpi-strip";
@@ -48,20 +49,7 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
       pageSize: 10,
       totalPages: 1,
     };
-    formOptions = {
-      brands: [],
-      accountManagers: [],
-      masterData: {
-        categories: [],
-        subcategories: [],
-        currencies: [],
-        countries: [],
-        teams: [],
-        reportTypes: [],
-        paymentTerms: [],
-        vrRates: [],
-      },
-    };
+    formOptions = EMPTY_CAMPAIGN_FORM_OPTIONS;
   }
 
   const { campaigns, total, totalPages } = list;
