@@ -21,12 +21,13 @@ import {
 } from "@/lib/workspace/platform-workspace-tabs";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 import type { ClientDetail } from "@/types/database";
 
 import { ClientStatusBadge } from "./client-status-badge";
 import { ClientBrandsTab } from "./tabs/client-brands-tab";
 import { ClientCampaignsTab } from "./tabs/client-campaigns-tab";
-import { ClientDocumentsTab } from "./tabs/client-documents-tab";
+import { ClientClientIosTab } from "./tabs/client-client-ios-tab";
 import { ClientFinanceTab } from "./tabs/client-finance-tab";
 import { ClientLegalTab } from "./tabs/client-legal-tab";
 import { ClientOverviewTab } from "./tabs/client-overview-tab";
@@ -35,6 +36,8 @@ type ClientProfileProps = {
   client: ClientDetail;
   groups: { id: string; name: string; document_number: string }[];
   masterData: MasterDataOptions;
+  clientIos: ClientIoRow[];
+  clientIoRecipients: ClientIoSendRecipient[];
   clientAccessPanel?: React.ReactNode;
 };
 
@@ -42,6 +45,8 @@ export function ClientProfile({
   client,
   groups,
   masterData,
+  clientIos,
+  clientIoRecipients,
   clientAccessPanel,
 }: ClientProfileProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
@@ -57,10 +62,10 @@ export function ClientProfile({
       brands: { value: "brands", label: "Brands", count: client.brands.length },
       legal: { value: "legal", label: "Legal" },
       finance: { value: "finance", label: "Finance" },
-      documents: {
-        value: "documents",
-        label: "Documents",
-        count: client.documents.length,
+      "client-ios": {
+        value: "client-ios",
+        label: "Client IO",
+        count: clientIos.length,
       },
       campaigns: {
         value: "campaigns",
@@ -69,7 +74,7 @@ export function ClientProfile({
       },
       access: { value: "access", label: "Client access" },
     }),
-    [client.brands.length, client.documents.length, client.campaigns.length]
+    [client.brands.length, clientIos.length, client.campaigns.length]
   );
 
   return (
@@ -119,9 +124,15 @@ export function ClientProfile({
             <ClientFinanceTab client={client} currencyOptions={currencyOptions} />
           </OperationalWorkspaceTabPanel>
         </TabsContent>
-        <TabsContent value="documents" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
-            <ClientDocumentsTab client={client} />
+        <TabsContent value="client-ios" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+            <ClientClientIosTab
+              clientId={client.id}
+              clientName={client.name}
+              clientIoTermsText={client.client_io_terms_text}
+              rows={clientIos}
+              recipients={clientIoRecipients}
+            />
           </OperationalWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="campaigns" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>

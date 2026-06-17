@@ -127,6 +127,7 @@ export async function createClientAction(
       billing_email: emptyToNull(parsed.data.billing_email),
       currency: parsed.data.currency,
       country: emptyToNull(parsed.data.country),
+      city: emptyToNull(parsed.data.city),
       notes: emptyToNull(parsed.data.notes),
       client_io_terms_text: clientIoTermsText,
       created_by: user.id,

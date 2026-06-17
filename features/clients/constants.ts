@@ -9,8 +9,12 @@ import {
   getClientSubcategoryOptions,
   labelForOption,
 } from "@/lib/master-data/constants";
+import { getCityOptionsForCountry } from "@/lib/master-data/cities";
 
 export const CLIENTS_PAGE_SIZE = 10;
+
+/** Industry list for client legal entities (maps to `clients.industry`). */
+export const INDUSTRY_OPTIONS = CLIENT_CATEGORY_OPTIONS;
 
 export const CLIENT_STATUS_OPTIONS: {
   value: ClientStatus;
@@ -30,5 +34,6 @@ export {
   COUNTRY_OPTIONS,
   PAYMENT_TERMS_OPTIONS,
   getClientSubcategoryOptions,
+  getCityOptionsForCountry,
   labelForOption,
 };

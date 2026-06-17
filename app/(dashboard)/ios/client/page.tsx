@@ -5,12 +5,12 @@ import { IoSearchFilters } from "@/features/io/components/io-search-filters";
 import { getClientIos, getClientIoSendRecipients } from "@/features/io/queries";
 
 type Props = {
-  searchParams: Promise<{ q?: string; status?: string; io?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; io?: string; client?: string }>;
 };
 
 export default async function ClientIosPage({ searchParams }: Props) {
   const params = await searchParams;
-  const rows = await getClientIos({ status: params.status });
+  const rows = await getClientIos({ status: params.status, clientId: params.client });
   const selected = params.io ? rows.find((row) => row.id === params.io) ?? null : rows[0] ?? null;
   const clientIds = [...new Set(rows.map((row) => row.client_id))];
   const recipientEntries = await Promise.all(

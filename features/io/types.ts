@@ -90,4 +90,5 @@ export type VendorIoRow = {
 export type IoSearchFilters = {
   q?: string;
   status?: string;
+  clientId?: string;
 };

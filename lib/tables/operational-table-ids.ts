@@ -28,6 +28,7 @@ export const OPERATIONAL_TABLE_IDS = {
   campaignAssignmentGridChild: "campaign-assignment-grid-child",
 
   clientCampaigns: "client-campaigns",
+  clientClientIos: "client-client-ios",
   clientBrands: "client-brands",
   clientDocuments: "client-documents",
 

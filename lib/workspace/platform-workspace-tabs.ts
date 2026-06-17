@@ -3,7 +3,7 @@ export const CLIENT_PROFILE_TAB_ORDER = [
   "brands",
   "legal",
   "finance",
-  "documents",
+  "client-ios",
   "campaigns",
   "access",
 ] as const;

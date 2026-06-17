@@ -257,10 +257,24 @@ export async function getClientIos(filters: IoSearchFilters): Promise<ClientIoRo
         : undefined;
 
       return fetchClientIoRows(supabase, {
+        clientId: filters.clientId,
         status: filters.status,
         searchPattern: pattern,
         limit: 200,
       });
+    },
+    []
+  );
+
+  return result.data;
+}
+
+export async function getClientIosForClient(clientId: string): Promise<ClientIoRow[]> {
+  const result = await safeOperationalQuery(
+    "io:getClientIosForClient",
+    async () => {
+      const { supabase } = await requireUser();
+      return fetchClientIoRows(supabase, { clientId, limit: 500 });
     },
     []
   );

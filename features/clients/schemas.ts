@@ -106,6 +106,16 @@ const optionalEmail = z.preprocess(
     )
 );
 
+const optionalIndustry = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    return String(value).trim();
+  },
+  z.union([z.literal(""), clientCategorySchema])
+);
+
 export const createClientSchema = z.object({
   group_id: optionalGroupId,
   name: z
@@ -115,12 +125,13 @@ export const createClientSchema = z.object({
     .max(200, "Name is too long"),
   legal_name: optionalTrimmedString(200),
   agency_or_direct: agencyOrDirectSchema,
-  industry: optionalTrimmedString(120),
+  industry: optionalIndustry,
   website: optionalUrl,
   status: clientStatusSchema.default("prospect"),
   billing_email: optionalEmail,
   currency: currencyCodeSchema.default(DEFAULT_PLATFORM_CURRENCY),
   country: optionalTrimmedString(2),
+  city: optionalTrimmedString(120),
   notes: optionalTrimmedString(2000),
   client_io_terms_text: optionalTrimmedString(50000),
 });
@@ -129,44 +140,41 @@ export const updateClientOverviewSchema = z.object({
   client_id: z.string().uuid(),
   group_id: optionalGroupId,
   name: z.string().trim().min(1).max(200),
-  legal_name: z.string().trim().max(200).optional().or(z.literal("")),
+  legal_name: optionalTrimmedString(200),
   agency_or_direct: agencyOrDirectSchema,
-  industry: z.string().trim().max(120).optional().or(z.literal("")),
-  website: z
-    .string()
-    .trim()
-    .max(500)
-    .refine(
-      (value) => !value || z.string().url().safeParse(value).success,
-      "Enter a valid URL"
-    ),
+  industry: optionalIndustry,
+  website: optionalUrl,
   status: clientStatusSchema,
-  billing_email: z
-    .string()
-    .trim()
-    .max(320)
-    .refine(
-      (value) => !value || z.string().email().safeParse(value).success,
-      "Enter a valid email"
-    ),
-  billing_phone: z.string().trim().max(40).optional().or(z.literal("")),
-  country: z.string().trim().max(2).optional().or(z.literal("")),
-  city: z.string().trim().max(120).optional().or(z.literal("")),
-  notes: z.string().trim().max(2000).optional().or(z.literal("")),
-  client_io_terms_text: z.string().trim().max(50000).optional().or(z.literal("")),
+  billing_email: optionalEmail,
+  billing_phone: optionalTrimmedString(40),
+  country: optionalTrimmedString(2),
+  city: optionalTrimmedString(120),
+  notes: optionalTrimmedString(2000),
+  client_io_terms_text: optionalTrimmedString(50000),
 });
 
 export const updateClientLegalSchema = z.object({
   client_id: z.string().uuid(),
-  trade_license_number: z.string().trim().max(120).optional().or(z.literal("")),
-  trade_license_expiry: optionalDate,
-  vat_number: z.string().trim().max(120).optional().or(z.literal("")),
-  tax_id: z.string().trim().max(120).optional().or(z.literal("")),
-  legal_address_line1: z.string().trim().max(200).optional().or(z.literal("")),
-  legal_address_line2: z.string().trim().max(200).optional().or(z.literal("")),
-  legal_address_city: z.string().trim().max(120).optional().or(z.literal("")),
-  legal_address_country: z.string().trim().max(2).optional().or(z.literal("")),
-  legal_address_postal: z.string().trim().max(32).optional().or(z.literal("")),
+  trade_license_number: optionalTrimmedString(120),
+  trade_license_expiry: z.preprocess(
+    (value) => {
+      if (value === undefined || value === null) {
+        return "";
+      }
+      return String(value).trim();
+    },
+    z
+      .string()
+      .optional()
+      .transform((val) => (val ? val : null))
+  ),
+  vat_number: optionalTrimmedString(120),
+  tax_id: optionalTrimmedString(120),
+  legal_address_line1: optionalTrimmedString(200),
+  legal_address_line2: optionalTrimmedString(200),
+  legal_address_city: optionalTrimmedString(120),
+  legal_address_country: optionalTrimmedString(2),
+  legal_address_postal: optionalTrimmedString(32),
 });
 
 export const updateClientFinanceSchema = z.object({

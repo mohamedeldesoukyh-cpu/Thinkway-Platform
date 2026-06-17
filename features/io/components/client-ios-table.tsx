@@ -19,13 +19,22 @@ type Props = {
   selectedId?: string | null;
   onView: (ioId: string) => void;
   isNavigating?: boolean;
+  /** Hide client column when scoped to a single client workspace. */
+  showClientColumn?: boolean;
 };
 
 function buildClientIosColumns(
   onView: (ioId: string) => void,
-  isNavigating: boolean
+  isNavigating: boolean,
+  showClientColumn: boolean
 ): OperationalConfigurableColumnDef<ClientIoRow>[] {
-  return [
+  const columns: OperationalConfigurableColumnDef<ClientIoRow>[] = [
+    {
+      id: "io_number",
+      label: "IO #",
+      monoCell: true,
+      renderCell: (row) => <DocumentNumber value={row.document_number} />,
+    },
     {
       id: "campaign",
       label: "Campaign",
@@ -38,11 +47,17 @@ function buildClientIosColumns(
         </Link>
       ),
     },
-    {
+  ];
+
+  if (showClientColumn) {
+    columns.push({
       id: "client",
       label: "Client",
       renderCell: (row) => row.client_name,
-    },
+    });
+  }
+
+  columns.push(
     {
       id: "status",
       label: "Status",
@@ -85,11 +100,13 @@ function buildClientIosColumns(
           </Button>
         </div>
       ),
-    },
-  ];
+    }
+  );
+
+  return columns;
 }
 
-export const CLIENT_IOS_TABLE_COLUMNS = buildClientIosColumns(() => {}, false);
+export const CLIENT_IOS_TABLE_COLUMNS = buildClientIosColumns(() => {}, false, true);
 
 export const CLIENT_IOS_TABLE_COLUMN_METAS =
   getOperationalTableColumnMetas(CLIENT_IOS_TABLE_COLUMNS);
@@ -99,10 +116,11 @@ export function ClientIosTable({
   selectedId = null,
   onView,
   isNavigating = false,
+  showClientColumn = true,
 }: Props) {
   const columns = useMemo(
-    () => buildClientIosColumns(onView, isNavigating),
-    [onView, isNavigating]
+    () => buildClientIosColumns(onView, isNavigating, showClientColumn),
+    [onView, isNavigating, showClientColumn]
   );
 
   if (rows.length === 0) {

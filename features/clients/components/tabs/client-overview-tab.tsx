@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -36,6 +36,8 @@ import {
 import {
   CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
+  INDUSTRY_OPTIONS,
+  getCityOptionsForCountry,
 } from "@/features/clients/constants";
 import type { ClientDetail, ClientStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -52,6 +54,22 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
   const [status, setStatus] = useState(client.status);
   const [groupId, setGroupId] = useState(client.group_id ?? "");
   const [country, setCountry] = useState(client.country ?? "");
+  const [city, setCity] = useState(client.city ?? "");
+  const [industry, setIndustry] = useState(client.industry ?? "");
+  const cityOptions = useMemo(() => {
+    const options = getCityOptionsForCountry(country);
+    if (city && !options.some((option) => option.value === city)) {
+      return [{ value: city, label: city }, ...options];
+    }
+    return options;
+  }, [country, city]);
+
+  const industryOptions = useMemo(() => {
+    if (industry && !INDUSTRY_OPTIONS.some((option) => option.value === industry)) {
+      return [{ value: industry, label: industry }, ...INDUSTRY_OPTIONS];
+    }
+    return INDUSTRY_OPTIONS;
+  }, [industry]);
   const [ioTerms, setIoTerms] = useState<ClientIoTerm[]>(
     () => parseTermsText(client.client_io_terms_text) ?? CLIENT_IO_DEFAULT_TERMS
   );
@@ -100,6 +118,8 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
         <input type="hidden" name="status" value={status} />
         <input type="hidden" name="group_id" value={groupId} />
         <input type="hidden" name="country" value={country} />
+        <input type="hidden" name="city" value={city} />
+        <input type="hidden" name="industry" value={industry} />
         <input type="hidden" name="client_io_terms_text" value={clientIoTermsPayload} />
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -160,14 +180,24 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor="industry">Industry</Label>
-            <Input
-              id="industry"
-              name="industry"
-              className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={client.industry ?? ""}
+            <Label>Industry</Label>
+            <Select
+              value={industry || undefined}
+              onValueChange={setIndustry}
               disabled={isPending}
-            />
+            >
+              <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                <SelectValue placeholder="Select industry" />
+              </SelectTrigger>
+              <SelectContent>
+                {industryOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError messages={state.fieldErrors?.industry} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="website">Website</Label>
@@ -187,20 +217,24 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
             <Label>Country</Label>
             <SearchableSelect
               value={country}
-              onValueChange={setCountry}
+              onValueChange={(value) => {
+                setCountry(value);
+                setCity("");
+              }}
               options={COUNTRY_OPTIONS}
               disabled={isPending}
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="city">City</Label>
-            <Input
-              id="city"
-              name="city"
-              className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={client.city ?? ""}
-              disabled={isPending}
+            <Label>City</Label>
+            <SearchableSelect
+              value={city}
+              onValueChange={setCity}
+              options={cityOptions}
+              disabled={isPending || !country}
+              placeholder={country ? "Select city" : "Select country first"}
             />
+            <FieldError messages={state.fieldErrors?.city} />
           </div>
         </div>
 

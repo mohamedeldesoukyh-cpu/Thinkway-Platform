@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -11,10 +11,17 @@ import { Label } from "@/components/ui/label";
 import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
 import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operational-detail-panel";
 import {
+  ClientInlineDocumentAttach,
+  findClientDocumentByType,
+} from "@/features/clients/components/client-inline-document-attach";
+import {
   updateClientLegalAction,
   type FormActionState,
 } from "@/features/clients/actions";
-import { COUNTRY_OPTIONS } from "@/features/clients/constants";
+import {
+  COUNTRY_OPTIONS,
+  getCityOptionsForCountry,
+} from "@/features/clients/constants";
 import type { ClientDetail } from "@/types/database";
 
 function readAddress(
@@ -30,6 +37,21 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
   const [legalCountry, setLegalCountry] = useState(
     readAddress(legal, "country") || client.country || ""
   );
+  const [legalCity, setLegalCity] = useState(
+    readAddress(legal, "city") || client.city || ""
+  );
+
+  const cityOptions = useMemo(() => {
+    const options = getCityOptionsForCountry(legalCountry);
+    if (legalCity && !options.some((option) => option.value === legalCity)) {
+      return [{ value: legalCity, label: legalCity }, ...options];
+    }
+    return options;
+  }, [legalCountry, legalCity]);
+
+  const tradeLicenseDoc = findClientDocumentByType(client.documents, "trade_license");
+  const vatDoc = findClientDocumentByType(client.documents, "vat_certificate");
+  const taxDoc = findClientDocumentByType(client.documents, "tax_certificate");
 
   const [state, formAction, isPending] = useActionState(
     updateClientLegalAction,
@@ -50,6 +72,7 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
   return (
     <OperationalFormSection
       title="Legal & compliance"
+      description="Attach trade license, VAT, and tax certificates beside each registration field."
       footer={
         <Button type="submit" form="client-legal-form" disabled={isPending}>
           {isPending ? "Saving…" : "Save legal"}
@@ -59,10 +82,16 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
       <form id="client-legal-form" action={formAction} className="grid gap-4">
         <input type="hidden" name="client_id" value={client.id} />
         <input type="hidden" name="legal_address_country" value={legalCountry} />
+        <input type="hidden" name="legal_address_city" value={legalCity} />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="trade_license_number">Trade license / CR</Label>
+            <ClientInlineDocumentAttach
+              clientId={client.id}
+              documentType="trade_license"
+              document={tradeLicenseDoc}
+            />
             <Input
               id="trade_license_number"
               name="trade_license_number"
@@ -87,6 +116,11 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="vat_number">VAT number</Label>
+            <ClientInlineDocumentAttach
+              clientId={client.id}
+              documentType="vat_certificate"
+              document={vatDoc}
+            />
             <Input
               id="vat_number"
               name="vat_number"
@@ -97,6 +131,11 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="tax_id">Tax ID</Label>
+            <ClientInlineDocumentAttach
+              clientId={client.id}
+              documentType="tax_certificate"
+              document={taxDoc}
+            />
             <Input
               id="tax_id"
               name="tax_id"
@@ -132,20 +171,23 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="grid gap-2">
-            <Label htmlFor="legal_address_city">City</Label>
-            <Input
-              id="legal_address_city"
-              name="legal_address_city"
-              className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={readAddress(legal, "city") || client.city || ""}
-              disabled={isPending}
+            <Label>City</Label>
+            <SearchableSelect
+              value={legalCity}
+              onValueChange={setLegalCity}
+              options={cityOptions}
+              disabled={isPending || !legalCountry}
+              placeholder={legalCountry ? "Select city" : "Select country first"}
             />
           </div>
           <div className="grid gap-2">
             <Label>Country</Label>
             <SearchableSelect
               value={legalCountry}
-              onValueChange={setLegalCountry}
+              onValueChange={(value) => {
+                setLegalCountry(value);
+                setLegalCity("");
+              }}
               options={COUNTRY_OPTIONS}
               disabled={isPending}
             />

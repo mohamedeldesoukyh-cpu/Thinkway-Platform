@@ -4,6 +4,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ClientAccessTab } from "@/features/clients/components/tabs/client-access-tab";
 import { ClientProfile } from "@/features/clients/components/client-profile";
 import { getClientById } from "@/features/clients/queries";
+import { getClientIoSendRecipients, getClientIosForClient } from "@/features/io/queries";
 import { getGroupsForSelect, getMasterDataOptions } from "@/lib/master-data/queries";
 
 type ClientProfilePageProps = {
@@ -18,13 +19,17 @@ export default async function ClientProfilePage({
   let client;
   let groups: Awaited<ReturnType<typeof getGroupsForSelect>> = [];
   let masterData: Awaited<ReturnType<typeof getMasterDataOptions>> | null = null;
+  let clientIos: Awaited<ReturnType<typeof getClientIosForClient>> = [];
+  let clientIoRecipients: Awaited<ReturnType<typeof getClientIoSendRecipients>> = [];
   let errorMessage: string | null = null;
 
   try {
-    [client, groups, masterData] = await Promise.all([
-      getClientById(id),
+    client = await getClientById(id);
+    [groups, masterData, clientIos, clientIoRecipients] = await Promise.all([
       getGroupsForSelect(),
       getMasterDataOptions(),
+      getClientIosForClient(id),
+      getClientIoSendRecipients(id),
     ]);
   } catch (error) {
     errorMessage =
@@ -49,6 +54,8 @@ export default async function ClientProfilePage({
           client={client}
           groups={groups}
           masterData={masterData}
+          clientIos={clientIos}
+          clientIoRecipients={clientIoRecipients}
           clientAccessPanel={<ClientAccessTab clientId={client.id} />}
         />
       ) : null}

@@ -133,6 +133,7 @@ export async function fetchClientIoRows(
   supabase: SupabaseClient,
   options?: {
     campaignHeaderId?: string;
+    clientId?: string;
     limit?: number;
     status?: string;
     searchPattern?: string;
@@ -143,6 +144,10 @@ export async function fetchClientIoRows(
 
     if (options?.campaignHeaderId) {
       query = query.eq("campaign_header_id", options.campaignHeaderId);
+    }
+
+    if (options?.clientId) {
+      query = query.eq("client_id", options.clientId);
     }
 
     if (options?.status && options.status !== "all") {

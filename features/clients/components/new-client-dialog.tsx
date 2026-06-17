@@ -2,7 +2,7 @@
 
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -36,6 +36,8 @@ import {
 import {
   AGENCY_OR_DIRECT_OPTIONS,
   COUNTRY_OPTIONS,
+  INDUSTRY_OPTIONS,
+  getCityOptionsForCountry,
 } from "@/features/clients/constants";
 import { checkClientNameAvailable } from "@/features/validation/actions";
 import type { AgencyOrDirect } from "@/types/database";
@@ -56,6 +58,10 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const [status, setStatus] = useState("prospect");
   const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
   const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+  const [industry, setIndustry] = useState("");
+
+  const cityOptions = useMemo(() => getCityOptionsForCountry(country), [country]);
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
     entityName,
@@ -79,6 +85,8 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
       setStatus("prospect");
       setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setCountry("");
+      setCity("");
+      setIndustry("");
       setOpen(false);
       if (state.clientId) {
         router.push(`/clients/${state.clientId}`);
@@ -118,6 +126,8 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
           <input type="hidden" name="currency" value={currency} />
           <input type="hidden" name="country" value={country} />
+          <input type="hidden" name="city" value={city} />
+          <input type="hidden" name="industry" value={industry} />
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4">
             {state.fieldErrors && !state.ok ? (
@@ -186,32 +196,68 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             </Select>
           </div>
 
+          <div className="grid gap-2">
+            <Label>Industry</Label>
+            <Select
+              value={industry || undefined}
+              onValueChange={setIndustry}
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select industry (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {INDUSTRY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError messages={state.fieldErrors?.industry} />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Country</Label>
               <SearchableSelect
                 value={country}
-                onValueChange={setCountry}
+                onValueChange={(value) => {
+                  setCountry(value);
+                  setCity("");
+                }}
                 options={COUNTRY_OPTIONS}
                 disabled={isPending}
                 placeholder="Optional"
               />
             </div>
             <div className="grid gap-2">
-              <Label>Currency</Label>
-              <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {currencyOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>City</Label>
+              <SearchableSelect
+                value={city}
+                onValueChange={setCity}
+                options={cityOptions}
+                disabled={isPending || !country}
+                placeholder={country ? "Select city" : "Select country first"}
+              />
+              <FieldError messages={state.fieldErrors?.city} />
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Currency</Label>
+            <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {currencyOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-2">
