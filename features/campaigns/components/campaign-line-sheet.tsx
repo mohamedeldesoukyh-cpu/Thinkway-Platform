@@ -23,6 +23,7 @@ import {
   DetailFormScrollBody,
   DetailFormSection,
   DetailSheetFooter,
+  DETAIL_SHEET_SELECT_CONTENT_PROPS,
   OperationalDetailSheet,
   OperationalEditPanelHeader,
 } from "@/features/campaigns/components/operational-detail-panel";
@@ -739,6 +740,7 @@ export function CampaignLineSheet({
             hint="Alt+M to switch mode · Package = single creator cost · Per deliverable = row-level commercial planning"
           >
             <Select
+              modal={false}
               value={pricingMode}
               onValueChange={(v) => {
                 const next = v as AssignmentPricingMode;
@@ -776,7 +778,7 @@ export function CampaignLineSheet({
               <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent {...DETAIL_SHEET_SELECT_CONTENT_PROPS}>
                 <SelectItem value="package">Package pricing</SelectItem>
                 <SelectItem value="per_deliverable">Per deliverable pricing</SelectItem>
               </SelectContent>
@@ -849,6 +851,7 @@ export function CampaignLineSheet({
             </DetailFormSection>
             <DetailFormSection label="Assignment status">
               <Select
+                modal={false}
                 value={assignmentStatus}
                 onValueChange={(v) =>
                   setAssignmentStatus(v as CampaignLineAssignmentStatus)
@@ -858,7 +861,7 @@ export function CampaignLineSheet({
                 <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent {...DETAIL_SHEET_SELECT_CONTENT_PROPS}>
                   {ASSIGNMENT_STATUS_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
@@ -868,11 +871,16 @@ export function CampaignLineSheet({
               </Select>
             </DetailFormSection>
             <DetailFormSection label="Currency">
-              <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
+              <Select
+                modal={false}
+                value={currency}
+                onValueChange={setCurrency}
+                disabled={isPending}
+              >
                 <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent {...DETAIL_SHEET_SELECT_CONTENT_PROPS}>
                   {currencyOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}

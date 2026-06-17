@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DETAIL_SHEET_SELECT_CONTENT_PROPS } from "@/features/campaigns/components/operational-detail-panel";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { resolveExchangeRateAction } from "@/features/finance/exchange-rates/resolve-rate-action";
 import { convertAmount, formatFxRate } from "@/lib/finance/fx/conversion";
@@ -120,6 +121,7 @@ export function AssignmentMultiCurrencyCostFields({
         <div className="grid min-w-0 gap-2">
           <Label>Cost currency</Label>
           <Select
+            modal={false}
             value={costReceivedCurrency}
             onValueChange={onCostReceivedCurrencyChange}
             disabled={disabled}
@@ -127,7 +129,7 @@ export function AssignmentMultiCurrencyCostFields({
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent {...DETAIL_SHEET_SELECT_CONTENT_PROPS}>
               {currencyOptions.map((o) => (
                 <SelectItem key={o.value} value={o.value}>
                   {o.label}

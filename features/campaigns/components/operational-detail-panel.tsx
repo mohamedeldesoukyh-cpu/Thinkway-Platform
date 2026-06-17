@@ -40,7 +40,7 @@ export function OperationalDetailSheet({
   children,
 }: OperationalDetailSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent
         side="right"
         showCloseButton
@@ -244,6 +244,12 @@ export const DETAIL_FORM_INPUT_CLASS =
   "h-9 w-full border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1";
 
 export const DETAIL_FORM_SELECT_TRIGGER_CLASS = cn(DETAIL_FORM_INPUT_CLASS, "text-left");
+
+/** Portaled select menus must stack above operational sheets (z-[100]). */
+export const DETAIL_SHEET_SELECT_CONTENT_PROPS = {
+  position: "popper" as const,
+  className: "z-[110]",
+};
 
 export function OperationalEditPanelHeader({
   title,

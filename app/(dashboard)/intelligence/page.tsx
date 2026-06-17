@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -5,6 +6,7 @@ import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IntelligenceWorkspace } from "@/features/intelligence/components/intelligence-workspace";
 import { getIntelligenceWorkspace } from "@/features/intelligence/queries";
+import { isIntelligenceEnabled } from "@/lib/intelligence/feature-flag";
 
 type PageProps = {
   searchParams: Promise<{ tab?: string }>;
@@ -31,6 +33,10 @@ async function IntelligenceWorkspaceLoader({ tab }: { tab?: string }) {
 }
 
 export default async function IntelligencePage({ searchParams }: PageProps) {
+  if (!isIntelligenceEnabled()) {
+    redirect("/campaigns");
+  }
+
   const params = await searchParams;
 
   return (

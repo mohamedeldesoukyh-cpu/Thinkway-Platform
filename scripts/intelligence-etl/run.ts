@@ -20,6 +20,11 @@ import * as XLSX from "xlsx";
 import { buildBenchmarkAggregates } from "@/lib/intelligence/benchmarks/aggregate";
 import { intelligenceDb } from "@/lib/intelligence/client";
 import {
+  buildInfluencerEnrichmentLookup,
+  findEnrichedInfluencerId,
+  mergeInfluencerDimensions,
+} from "@/lib/intelligence/entity-resolution/influencer-merge";
+import {
   aggregateMatchConfidence,
   loadLiveMasters,
   resolveBrand,
@@ -291,6 +296,120 @@ async function hydrateExistingWarehouse(
   );
 }
 
+async function applyWarehouseInfluencerMerge(db: IntelligenceDb, masters: LiveMasters) {
+  const intInfluencers: Array<Record<string, unknown>> = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await db
+      .from("int_influencers")
+      .select(
+        "id, display_name_raw, legacy_name, username, platform, country, tier, nationality, gender, content_category, resolved_influencer_id, match_confidence, source_keys"
+      )
+      .range(offset, offset + BATCH_SIZE - 1);
+    if (error) throw new Error(`warehouse merge load influencers: ${error.message}`);
+    if (!data?.length) break;
+    intInfluencers.push(...data);
+    if (data.length < BATCH_SIZE) break;
+    offset += BATCH_SIZE;
+  }
+
+  const influencerMap = new Map<string, string>();
+  for (const row of intInfluencers) {
+    for (const sourceKey of (row.source_keys as string[] | null) ?? []) {
+      influencerMap.set(sourceKey, String(row.id));
+    }
+  }
+
+  const intCampaigns: Array<Record<string, unknown>> = [];
+  offset = 0;
+  while (true) {
+    const { data, error } = await db
+      .from("int_campaigns")
+      .select("id, int_influencer_id")
+      .range(offset, offset + BATCH_SIZE - 1);
+    if (error) throw new Error(`warehouse merge load campaigns: ${error.message}`);
+    if (!data?.length) break;
+    intCampaigns.push(...data);
+    if (data.length < BATCH_SIZE) break;
+    offset += BATCH_SIZE;
+  }
+
+  const intPricingHistory: Array<Record<string, unknown>> = [];
+  offset = 0;
+  while (true) {
+    const { data, error } = await db
+      .from("int_pricing_history")
+      .select("id, int_influencer_id")
+      .range(offset, offset + BATCH_SIZE - 1);
+    if (error) throw new Error(`warehouse merge load pricing: ${error.message}`);
+    if (!data?.length) break;
+    intPricingHistory.push(...data);
+    if (data.length < BATCH_SIZE) break;
+    offset += BATCH_SIZE;
+  }
+
+  const { merged, remapId, keptInfluencers } = mergeInfluencerDimensions({
+    influencerMap,
+    intInfluencers,
+    intCampaigns,
+    intPricingHistory,
+    masters,
+  });
+
+  if (merged === 0) return;
+
+  console.log(`[intelligence-etl] Warehouse merge: remapping ${merged} sparse influencer IDs`);
+
+  for (const [sparseId, keeperId] of remapId) {
+    const { error: campaignError } = await (db.from("int_campaigns") as {
+      update: (values: Record<string, unknown>) => {
+        eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+      };
+    })
+      .update({ int_influencer_id: keeperId })
+      .eq("int_influencer_id", sparseId);
+    if (campaignError) throw new Error(`warehouse merge campaigns: ${campaignError.message}`);
+
+    const { error: pricingError } = await (db.from("int_pricing_history") as {
+      update: (values: Record<string, unknown>) => {
+        eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+      };
+    })
+      .update({ int_influencer_id: keeperId })
+      .eq("int_influencer_id", sparseId);
+    if (pricingError) throw new Error(`warehouse merge pricing: ${pricingError.message}`);
+  }
+
+  for (const row of keptInfluencers) {
+    const { error } = await (db.from("int_influencers") as {
+      update: (values: Record<string, unknown>) => {
+        eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+      };
+    })
+      .update({
+        source_keys: row.source_keys,
+        match_confidence: row.match_confidence,
+        resolved_influencer_id: row.resolved_influencer_id,
+        username: row.username,
+        country: row.country,
+        tier: row.tier,
+      })
+      .eq("id", String(row.id));
+    if (error) throw new Error(`warehouse merge update influencer: ${error.message}`);
+  }
+
+  for (const sparseId of remapId.keys()) {
+    const { error: deleteError } = await (db.from("int_influencers") as {
+      delete: () => {
+        eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+      };
+    })
+      .delete()
+      .eq("id", sparseId);
+    if (deleteError) throw new Error(`warehouse merge delete sparse: ${deleteError.message}`);
+  }
+}
+
 async function loadMastersForRun(): Promise<LiveMasters> {
   if (dryRun) {
     try {
@@ -476,31 +595,9 @@ async function main() {
       }
     }
 
-    if (row.influencer_name_raw) {
-      const key = `${row.influencer_name_raw}|`;
-      if (!influencerMap.has(key)) {
-        const resolved = resolveInfluencer(masters, row.influencer_name_raw, null);
-        registerInfluencerDimension({
-          influencerMap,
-          influencerIdentityMap,
-          intInfluencers,
-          sourceKey: key,
-          display: row.influencer_name_raw,
-          username: null,
-          platform: row.channel,
-          record: {
-            display_name_raw: row.influencer_name_raw,
-            platform: row.channel,
-            resolved_influencer_id: resolved.resolvedInfluencerId,
-            match_confidence: resolved.confidence,
-            source_keys: [key],
-          },
-        });
-      }
-    }
   }
 
-  // Database sheet influencers
+  // Database sheet influencers (register before campaign-path so enrichment lookup is available)
   if (wb.SheetNames.includes("Database")) {
     const ws = wb.Sheets.Database;
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: null, raw: false });
@@ -538,23 +635,51 @@ async function main() {
     }
   }
 
-  for (const table of ["int_clients", "int_brands", "int_influencers"] as const) {
-    const payload =
-      table === "int_clients" ? intClients : table === "int_brands" ? intBrands : intInfluencers;
-    if (!dryRun && db && payload.length > 0) {
-      for (let i = 0; i < payload.length; i += BATCH_SIZE) {
-        const chunk = payload.slice(i, i + BATCH_SIZE);
-        const { error } = await db.from(table).insert(chunk);
-        if (error) throw new Error(`${table}: ${error.message}`);
+  const enrichmentLookup = buildInfluencerEnrichmentLookup(intInfluencers);
+
+  for (const row of harmonized) {
+    if (!row.influencer_name_raw) continue;
+    const key = `${row.influencer_name_raw}|`;
+    if (influencerMap.has(key)) continue;
+
+    const enrichedId = findEnrichedInfluencerId(
+      row.influencer_name_raw,
+      row.channel,
+      null,
+      enrichmentLookup
+    );
+    if (enrichedId) {
+      influencerMap.set(key, enrichedId);
+      const existing = intInfluencers.find((candidate) => candidate.id === enrichedId);
+      if (existing) {
+        const keys = new Set([...(existing.source_keys as string[]), key]);
+        existing.source_keys = [...keys];
       }
+      continue;
     }
-    console.log(`[intelligence-etl] ${table}: ${payload.length} rows`);
+
+    const resolved = resolveInfluencer(masters, row.influencer_name_raw, null);
+    registerInfluencerDimension({
+      influencerMap,
+      influencerIdentityMap,
+      intInfluencers,
+      sourceKey: key,
+      display: row.influencer_name_raw,
+      username: null,
+      platform: row.channel,
+      record: {
+        display_name_raw: row.influencer_name_raw,
+        platform: row.channel,
+        resolved_influencer_id: resolved.resolvedInfluencerId,
+        match_confidence: resolved.confidence,
+        source_keys: [key],
+      },
+    });
   }
 
-  // --- Campaign facts ---
+  // --- Campaign facts (built before dimension insert so merge can remap FKs) ---
   const intCampaigns: Array<Record<string, unknown>> = [];
   const intMarginHistory: Array<Record<string, unknown>> = [];
-  const intPricingHistory: Array<Record<string, unknown>> = [];
 
   for (const row of harmonized) {
     const clientKey = `${row.group_name_raw ?? ""}|${row.client_name_raw ?? ""}`;
@@ -563,7 +688,18 @@ async function main() {
 
     const clientResolved = resolveClient(masters, row.client_name_raw, row.group_name_raw);
     const brandResolved = resolveBrand(masters, row.brand_name_raw, clientResolved.resolvedClientId);
-    const influencerResolved = resolveInfluencer(masters, row.influencer_name_raw, null);
+    const enrichedId = row.influencer_name_raw
+      ? findEnrichedInfluencerId(row.influencer_name_raw, row.channel, null, enrichmentLookup)
+      : null;
+    const influencerUsername = enrichedId
+      ? ((intInfluencers.find((candidate) => candidate.id === enrichedId)?.username as string | null) ??
+        null)
+      : null;
+    const influencerResolved = resolveInfluencer(
+      masters,
+      row.influencer_name_raw,
+      influencerUsername
+    );
     const campaignResolved = resolveCampaign(masters, row);
 
     const matchConfidence = aggregateMatchConfidence([
@@ -605,19 +741,46 @@ async function main() {
         period_year: row.period_year,
       });
     }
+  }
 
-    if (row.cost_usd != null && row.cost_usd > 0 && row.influencer_name_raw) {
-      const infId = influencerMap.get(influencerKey);
-      if (infId) {
-        intPricingHistory.push({
-          int_influencer_id: infId,
-          parsed_rate_usd: row.cost_usd,
-          platform: row.channel,
-          effective_period: row.ad_live_month ?? String(row.period_year ?? ""),
-          source: "implied_from_line",
-        });
+  const intPricingHistory: Array<Record<string, unknown>> = [];
+
+  const { merged: mergedInfluencers } = mergeInfluencerDimensions({
+    influencerMap,
+    intInfluencers,
+    intCampaigns,
+    intPricingHistory,
+    masters,
+  });
+  if (mergedInfluencers > 0) {
+    console.log(`[intelligence-etl] Merged ${mergedInfluencers} sparse influencer identities`);
+  }
+
+  for (const table of ["int_clients", "int_brands", "int_influencers"] as const) {
+    const payload =
+      table === "int_clients" ? intClients : table === "int_brands" ? intBrands : intInfluencers;
+    if (!dryRun && db && payload.length > 0) {
+      for (let i = 0; i < payload.length; i += BATCH_SIZE) {
+        const chunk = payload.slice(i, i + BATCH_SIZE);
+        const { error } = await db.from(table).insert(chunk);
+        if (error) throw new Error(`${table}: ${error.message}`);
       }
     }
+    console.log(`[intelligence-etl] ${table}: ${payload.length} rows`);
+  }
+
+  for (const row of harmonized) {
+    if (row.cost_usd == null || row.cost_usd <= 0 || !row.influencer_name_raw) continue;
+    const influencerKey = `${row.influencer_name_raw}|`;
+    const infId = influencerMap.get(influencerKey);
+    if (!infId) continue;
+    intPricingHistory.push({
+      int_influencer_id: infId,
+      parsed_rate_usd: row.cost_usd,
+      platform: row.channel,
+      effective_period: row.ad_live_month ?? String(row.period_year ?? ""),
+      source: "implied_from_line",
+    });
   }
 
   if (!dryRun && db) {
@@ -692,6 +855,7 @@ async function main() {
         if (error) throw new Error(`int_pricing_history: ${error.message}`);
       }
     }
+    await applyWarehouseInfluencerMerge(db, masters);
   }
 
   console.log(

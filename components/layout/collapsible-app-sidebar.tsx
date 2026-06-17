@@ -43,6 +43,7 @@ import {
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { UserAccount } from "@/components/layout/user-account";
+import { isIntelligenceEnabled } from "@/lib/intelligence/feature-flag";
 import {
   APP_SIDEBAR_MARGIN,
   APP_SIDEBAR_WIDTH_COLLAPSED,
@@ -154,7 +155,10 @@ const navGroups: NavGroup[] = [
     label: "Insights",
     items: [
       { kind: "link", href: "/reports", label: "Reports", icon: BarChart3Icon },
-      { kind: "link", href: "/intelligence", label: "Intelligence", icon: BrainIcon },
+      // Intelligence — gated by INTELLIGENCE_ARCHIVED (see docs/INTELLIGENCE_ARCHIVE.md)
+      ...(isIntelligenceEnabled()
+        ? [{ kind: "link" as const, href: "/intelligence", label: "Intelligence", icon: BrainIcon }]
+        : []),
       { kind: "link", href: "/ai", label: "AI Analyst", icon: SparklesIcon },
       { kind: "link", href: "/links", label: "Link Generator", icon: Link2Icon },
     ],

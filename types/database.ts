@@ -1922,7 +1922,73 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_workspace_counts: {
+        Args: Record<string, never>;
+        Returns: {
+          campaigns: number;
+          influencers: number;
+          benchmarks: number;
+        }[];
+      };
+      get_campaign_financial_totals: {
+        Args: Record<string, never>;
+        Returns: {
+          total_revenue_usd: number;
+          total_cost_usd: number;
+          total_gp_usd: number;
+        }[];
+      };
+      get_margin_median: {
+        Args: Record<string, never>;
+        Returns: {
+          median_margin_pct: number | null;
+        }[];
+      };
+      get_top_influencers: {
+        Args: {
+          row_limit?: number;
+        };
+        Returns: {
+          id: string;
+          display_name_raw: string;
+          username: string | null;
+          platform: string | null;
+          country: string | null;
+          tier: string | null;
+          line_count: number;
+          total_cost_usd: number;
+          median_cost_usd: number;
+          median_margin_pct: number | null;
+          match_confidence: number;
+        }[];
+      };
+      get_low_margin_line_count: {
+        Args: Record<string, never>;
+        Returns: {
+          low_margin_line_count: number;
+        }[];
+      };
+      get_margin_alerts: {
+        Args: {
+          row_limit?: number;
+        };
+        Returns: {
+          id: string;
+          source_line_id: string;
+          margin_pct: number | null;
+          revenue_usd: number | null;
+          cost_usd: number | null;
+          market_entity: string | null;
+          channel: string | null;
+          period_year: number | null;
+          campaign_name: string | null;
+          brand_name_raw: string | null;
+          influencer_name_raw: string | null;
+          client_type_report: string | null;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
   };
 };

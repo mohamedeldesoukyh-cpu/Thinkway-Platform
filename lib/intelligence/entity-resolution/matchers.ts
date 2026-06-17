@@ -144,8 +144,12 @@ export function resolveInfluencer(
   const override = lookupOverride(masters, "influencer", sourceKey);
   if (override) return { resolvedInfluencerId: override, confidence: 1 };
 
-  if (username) {
-    const handle = normalizeHandle(username);
+  const handleCandidates = [
+    normalizeHandle(username),
+    normalizeHandle(displayName?.startsWith("@") ? displayName : null),
+  ].filter(Boolean);
+
+  for (const handle of handleCandidates) {
     const handleHit = masters.handles.find((h) => normalizeHandle(h.handle) === handle);
     if (handleHit) return { resolvedInfluencerId: handleHit.influencer_id, confidence: 0.97 };
   }
