@@ -2,6 +2,6 @@
 
 import { OperationalTableSearch } from "@/components/tables/operational-table-search";
 
-export function ClientsSearch() {
-  return <OperationalTableSearch placeholder="Search clients..." />;
+export function BrandsSearch() {
+  return <OperationalTableSearch placeholder="Search brands..." />;
 }

@@ -39,6 +39,7 @@ async function requireAuthUser() {
 }
 
 function revalidateBrandPaths(clientId: string, groupId: string | null) {
+  revalidatePath("/brands");
   revalidatePath("/clients");
   revalidatePath(`/clients/${clientId}`);
   if (groupId) {

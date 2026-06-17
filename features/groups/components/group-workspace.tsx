@@ -34,12 +34,14 @@ type GroupWorkspaceViewProps = {
   workspace: GroupWorkspace;
   accountDirectors: { id: string; full_name: string | null; email: string }[];
   masterData: MasterDataOptions;
+  unlinkedClients: { id: string; name: string; legal_name: string | null }[];
 };
 
 export function GroupWorkspaceView({
   workspace,
   accountDirectors,
   masterData,
+  unlinkedClients,
 }: GroupWorkspaceViewProps) {
   const { tabOrder, moveTab } = useWorkspaceTabOrder({
     storageKey: GROUP_WORKSPACE_TAB_STORAGE_KEY,
@@ -52,7 +54,7 @@ export function GroupWorkspaceView({
       overview: { value: "overview", label: "Overview" },
       "legal-entities": {
         value: "legal-entities",
-        label: "Legal entities",
+        label: "Clients",
         count: workspace.counts.legal_entities,
       },
       brands: { value: "brands", label: "Brands", count: workspace.counts.brands },
@@ -100,7 +102,11 @@ export function GroupWorkspaceView({
         </TabsContent>
         <TabsContent value="legal-entities" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
           <OperationalWorkspaceTabPanel>
-            <GroupLegalEntitiesTab workspace={workspace} masterData={masterData} />
+            <GroupLegalEntitiesTab
+              workspace={workspace}
+              masterData={masterData}
+              unlinkedClients={unlinkedClients}
+            />
           </OperationalWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="brands" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>

@@ -1,3 +1,4 @@
+import type { BrandsListResult } from "@/features/brands/queries";
 import type { CampaignListItem } from "@/types/database";
 import type { ClientsListResult } from "@/features/clients/queries";
 import type { getGroupsList } from "@/features/groups/queries";
@@ -37,6 +38,22 @@ export const CAMPAIGNS_ADDITIONAL_FILTER_FIELDS: OperationalTableFilterField<Cam
       filterAccessor: (row) => row.end_date,
     },
   ];
+
+type BrandRow = BrandsListResult["brands"][number];
+
+export const BRANDS_TABLE_FILTER_ACCESSORS: Partial<
+  Record<string, (row: BrandRow) => string | number | null | undefined>
+> = {
+  document_number: (row) => formatDocumentNumberForDisplay(row.document_number),
+  brand: (row) => row.name,
+  client: (row) => row.client_name,
+  group: (row) => row.group_name,
+  category: (row) => row.category_name,
+  vr_rate: (row) => row.vr_rate_percent,
+  currency: (row) => row.currency_code,
+  status: (row) => row.status,
+  campaigns: (row) => row.active_campaigns,
+};
 
 type ClientRow = ClientsListResult["clients"][number];
 

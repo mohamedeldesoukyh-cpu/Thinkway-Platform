@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArchiveIcon, PencilIcon, PlusIcon } from "lucide-react";
+import { ArchiveIcon, Link2Icon, PencilIcon } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -26,6 +26,7 @@ import {
   LegalEntitySheet,
   paymentTermsLabel,
 } from "@/features/groups/components/legal-entity-sheet";
+import { LinkClientSheet } from "@/features/groups/components/link-client-sheet";
 import type { GroupLegalEntityRow, GroupWorkspace } from "@/features/groups/types";
 import { formatGroupMoney } from "@/features/groups/utils";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
@@ -37,6 +38,7 @@ import { GROUP_LEGAL_ENTITIES_FILTER_ACCESSORS } from "@/lib/tables/workspace-ta
 type GroupLegalEntitiesTabProps = {
   workspace: GroupWorkspace;
   masterData: MasterDataOptions;
+  unlinkedClients: { id: string; name: string; legal_name: string | null }[];
 };
 
 type LegalEntityTableContext = {
@@ -50,7 +52,7 @@ function buildLegalEntityColumns(
   return [
     {
       id: "entity",
-      label: "Entity",
+      label: "Client",
       renderCell: (entity) => (
         <div className="space-y-0.5">
           <Link
@@ -116,9 +118,14 @@ function buildLegalEntityColumns(
   ];
 }
 
-export function GroupLegalEntitiesTab({ workspace, masterData }: GroupLegalEntitiesTabProps) {
+export function GroupLegalEntitiesTab({
+  workspace,
+  masterData,
+  unlinkedClients,
+}: GroupLegalEntitiesTabProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [linkSheetOpen, setLinkSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupLegalEntityRow | null>(null);
 
   const columns = useMemo(
@@ -127,17 +134,12 @@ export function GroupLegalEntitiesTab({ workspace, masterData }: GroupLegalEntit
         groupId: workspace.id,
         onEdit: (entity) => {
           setEditing(entity);
-          setSheetOpen(true);
+          setEditSheetOpen(true);
         },
       }),
     [workspace.id]
   );
   const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
-
-  function openCreate() {
-    setEditing(null);
-    setSheetOpen(true);
-  }
 
   return (
     <>
@@ -153,14 +155,14 @@ export function GroupLegalEntitiesTab({ workspace, masterData }: GroupLegalEntit
           cardSurface
           leading={
             <CampaignOperationalSectionHeader
-              title="Legal entities"
-              description="Contracting parties linked to this group."
+              title="Clients"
+              description="Clients linked to this holding group."
               actions={
                 <>
-                  <OperationalTableControlsSlot contextLabel="Group legal entities" />
-                  <Button size="sm" onClick={openCreate}>
-                    <PlusIcon data-icon="inline-start" />
-                    Add legal entity
+                  <OperationalTableControlsSlot contextLabel="Group clients" />
+                  <Button size="sm" variant="outline" onClick={() => setLinkSheetOpen(true)}>
+                    <Link2Icon data-icon="inline-start" />
+                    Link client
                   </Button>
                 </>
               }
@@ -168,9 +170,12 @@ export function GroupLegalEntitiesTab({ workspace, masterData }: GroupLegalEntit
           }
         >
           {workspace.legal_entities.length === 0 ? (
-            <p className="px-4 py-8 text-[11px] text-muted-foreground">
-              No legal entities yet. Create one to start adding brands and campaigns.
-            </p>
+            <div className="space-y-2 px-4 py-8 text-[11px] text-muted-foreground">
+              <p>No clients linked yet. Link an existing client or create one from the Clients page.</p>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/clients">Go to Clients</Link>
+              </Button>
+            </div>
           ) : (
             <OperationalConfigurableTable
               columns={columns}
@@ -181,12 +186,21 @@ export function GroupLegalEntitiesTab({ workspace, masterData }: GroupLegalEntit
         </OperationalTableSection>
       </OperationalTableSuiteProvider>
 
-      <LegalEntitySheet
+      {editing ? (
+        <LegalEntitySheet
+          groupId={workspace.id}
+          entity={editing}
+          currencyOptions={currencyOptions}
+          open={editSheetOpen}
+          onOpenChange={setEditSheetOpen}
+        />
+      ) : null}
+
+      <LinkClientSheet
         groupId={workspace.id}
-        entity={editing}
-        currencyOptions={currencyOptions}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        unlinkedClients={unlinkedClients}
+        open={linkSheetOpen}
+        onOpenChange={setLinkSheetOpen}
       />
     </>
   );

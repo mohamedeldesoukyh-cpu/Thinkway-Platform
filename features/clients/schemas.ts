@@ -49,12 +49,19 @@ const optionalNumber = z.preprocess((value) => {
   return Number.isNaN(parsed) ? undefined : parsed;
 }, z.number().min(0).nullable().optional());
 
+const optionalGroupId = z
+  .string()
+  .uuid("Select a valid group")
+  .optional()
+  .or(z.literal(""))
+  .transform((value) => (value?.trim() ? value.trim() : null));
+
 export const createClientSchema = z.object({
-  group_id: z.string().uuid("Select a group"),
+  group_id: optionalGroupId,
   name: z
     .string()
     .trim()
-    .min(1, "Legal entity name is required")
+    .min(1, "Client name is required")
     .max(200, "Name is too long"),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
   agency_or_direct: agencyOrDirectSchema,
@@ -84,7 +91,7 @@ export const createClientSchema = z.object({
 
 export const updateClientOverviewSchema = z.object({
   client_id: z.string().uuid(),
-  group_id: z.string().uuid(),
+  group_id: optionalGroupId,
   name: z.string().trim().min(1).max(200),
   legal_name: z.string().trim().max(200).optional().or(z.literal("")),
   agency_or_direct: agencyOrDirectSchema,

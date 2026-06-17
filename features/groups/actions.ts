@@ -15,6 +15,7 @@ import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
 import {
   archiveLegalEntitySchema,
   createGroupSchema,
+  linkClientToGroupSchema,
   updateGroupLegalEntitySchema,
   updateGroupSchema,
   uploadGroupDocumentSchema,
@@ -224,6 +225,77 @@ export async function updateGroupLegalEntityAction(
   revalidatePath(`/clients/${parsed.data.client_id}`);
   revalidatePath("/clients");
   return { ok: true, message: "Legal entity updated." };
+}
+
+export async function linkClientToGroupAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const parsed = linkClientToGroupSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Please fix the errors below.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const { data: client, error: clientError } = await supabase
+    .from("clients")
+    .select("group_id, status")
+    .eq("id", parsed.data.client_id)
+    .maybeSingle();
+
+  if (clientError || !client) {
+    return { ok: false, message: clientError?.message ?? "Client not found." };
+  }
+
+  if (client.status === "archived") {
+    return { ok: false, message: "Archived clients cannot be linked to a group." };
+  }
+
+  if (client.group_id) {
+    return {
+      ok: false,
+      message:
+        "Client is already linked to a group. Change the group from the client profile.",
+    };
+  }
+
+  const { error: updateError } = await supabase
+    .from("clients")
+    .update({ group_id: parsed.data.group_id })
+    .eq("id", parsed.data.client_id);
+
+  if (updateError) {
+    return {
+      ok: false,
+      message: friendlyActionError(updateError, "client", updateError.message),
+    };
+  }
+
+  const { error: brandSyncError } = await supabase
+    .from("brands")
+    .update({ group_id: parsed.data.group_id })
+    .eq("client_id", parsed.data.client_id);
+
+  if (brandSyncError) {
+    return { ok: false, message: brandSyncError.message };
+  }
+
+  revalidatePath(`/groups/${parsed.data.group_id}`);
+  revalidatePath("/groups");
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${parsed.data.client_id}`);
+  revalidatePath("/brands");
+  return { ok: true, message: "Client linked to group." };
 }
 
 export async function archiveLegalEntityAction(

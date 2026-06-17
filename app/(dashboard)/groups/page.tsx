@@ -31,7 +31,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   return (
     <DashboardShell
       title="Groups"
-      description="Top-level holding groups containing legal entities and brands."
+      description="Top-level holding groups. Link clients from the group workspace."
       actions={<NewGroupDialog />}
     >
       {errorMessage ? <PageAlert className="mb-4">{errorMessage}</PageAlert> : null}

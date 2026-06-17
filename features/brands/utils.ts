@@ -7,6 +7,11 @@ import type {
 
 export type BrandTableRow = ClientBrandRow;
 
+export type BrandsListRow = BrandTableRow & {
+  client_name: string;
+  group_name: string | null;
+};
+
 export function brandListItemToTableRow(
   brand: BrandListItem,
   activeCampaigns = 0

@@ -4,7 +4,7 @@ import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 export const createBrandSchema = z.object({
-  client_id: z.string().uuid("Select a legal entity"),
+  client_id: z.string().uuid("Select a client"),
   name: z.string().trim().min(1, "Brand name is required").max(200),
   category_id: z.string().uuid().optional().or(z.literal("")),
   subcategory_id: z.string().uuid().optional().or(z.literal("")),

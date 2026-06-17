@@ -85,6 +85,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
     if (state.ok) {
       toast.success(state.message);
       setGroupId("");
+      setEntityName("");
       setStatus("prospect");
       setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setCountry("");
@@ -99,7 +100,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
     toast.error(state.message);
   }, [state, router]);
 
-  const hasGroups = groups.length > 0;
   const groupOptions = groups.map((g) => ({ value: g.id, label: g.name }));
   const clientIoTermsPayload =
     usePlatformIoTerms || termsAreEqual(ioTerms, CLIENT_IO_DEFAULT_TERMS)
@@ -109,74 +109,106 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={!hasGroups}>
+        <Button>
           <PlusIcon data-icon="inline-start" />
-          New Legal Entity
+          New Client
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New legal entity</DialogTitle>
+          <DialogTitle>New client</DialogTitle>
           <DialogDescription>
-            Add a client legal entity under a group. Add brands on the profile
-            page.
+            Add a client legal entity. Optionally link to a holding group now or
+            assign one later from the client profile.
           </DialogDescription>
         </DialogHeader>
-        {!hasGroups ? (
-          <p className="text-sm text-muted-foreground">
-            Create a group first, then add legal entities.
-          </p>
-        ) : (
-          <form action={formAction} className="grid gap-4">
-            <input type="hidden" name="group_id" value={groupId} />
-            <input type="hidden" name="status" value={status} />
-            <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
-            <input type="hidden" name="currency" value={currency} />
-            <input type="hidden" name="country" value={country} />
-            <input type="hidden" name="client_io_terms_text" value={clientIoTermsPayload} />
+        <form action={formAction} className="grid gap-4">
+          <input type="hidden" name="group_id" value={groupId} />
+          <input type="hidden" name="status" value={status} />
+          <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
+          <input type="hidden" name="currency" value={currency} />
+          <input type="hidden" name="country" value={country} />
+          <input type="hidden" name="client_io_terms_text" value={clientIoTermsPayload} />
 
+          <div className="grid gap-2">
+            <Label>Holding group (optional)</Label>
+            <SearchableSelect
+              value={groupId}
+              onValueChange={setGroupId}
+              options={groupOptions}
+              disabled={isPending}
+              placeholder={groups.length > 0 ? "Link to group (optional)" : "No groups yet"}
+            />
+            <FieldError messages={state.fieldErrors?.group_id} />
+            {groups.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                You can create a client without a group and link one later.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="name">Client name</Label>
+            <Input
+              id="name"
+              name="name"
+              value={entityName}
+              onChange={(e) => setEntityName(e.target.value)}
+              required
+              disabled={isPending}
+            />
+            <FieldError messages={state.fieldErrors?.name} />
+            {duplicateMessage ? (
+              <p className="text-xs text-destructive">{duplicateMessage}</p>
+            ) : checking ? (
+              <p className="text-xs text-muted-foreground">Checking availability…</p>
+            ) : null}
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Relationship type</Label>
+            <Select
+              value={agencyOrDirect}
+              onValueChange={(v) => setAgencyOrDirect(v as AgencyOrDirect)}
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="legal_name">Legal name</Label>
+            <Input id="legal_name" name="legal_name" disabled={isPending} />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label>Group</Label>
+              <Label>Country</Label>
               <SearchableSelect
-                value={groupId}
-                onValueChange={setGroupId}
-                options={groupOptions}
+                value={country}
+                onValueChange={setCountry}
+                options={COUNTRY_OPTIONS}
                 disabled={isPending}
-                placeholder="Select group"
+                placeholder="Optional"
               />
-              <FieldError messages={state.fieldErrors?.group_id} />
             </div>
-
             <div className="grid gap-2">
-              <Label htmlFor="name">Entity name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={entityName}
-                onChange={(e) => setEntityName(e.target.value)}
-                required
-                disabled={isPending}
-              />
-              <FieldError messages={state.fieldErrors?.name} />
-              {duplicateMessage ? (
-                <p className="text-xs text-destructive">{duplicateMessage}</p>
-              ) : checking ? (
-                <p className="text-xs text-muted-foreground">Checking availability…</p>
-              ) : null}
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Relationship type</Label>
-              <Select
-                value={agencyOrDirect}
-                onValueChange={(v) => setAgencyOrDirect(v as AgencyOrDirect)}
-                disabled={isPending}
-              >
+              <Label>Currency</Label>
+              <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
+                  {currencyOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>
@@ -184,75 +216,42 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="legal_name">Legal name</Label>
-              <Input id="legal_name" name="legal_name" disabled={isPending} />
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea id="notes" name="notes" rows={2} disabled={isPending} />
+          </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Country</Label>
-                <SearchableSelect
-                  value={country}
-                  onValueChange={setCountry}
-                  options={COUNTRY_OPTIONS}
-                  disabled={isPending}
-                  placeholder="Optional"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Currency</Label>
-                <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencyOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          <div className="grid gap-2 rounded-xl border border-border/60 bg-muted/10 p-3">
+            <Label>Default Client IO terms (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Fixed Section 8 terms for all Client IOs on this client. Leave as platform
+              default or customize.
+            </p>
+            <ClientIoTermsEditor
+              terms={ioTerms}
+              onChange={(next) => {
+                setIoTerms(next);
+                setUsePlatformIoTerms(false);
+              }}
+              onRecover={() => {
+                setIoTerms(CLIENT_IO_DEFAULT_TERMS);
+                setUsePlatformIoTerms(true);
+              }}
+              disabled={isPending}
+            />
+          </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea id="notes" name="notes" rows={2} disabled={isPending} />
-            </div>
-
-            <div className="grid gap-2 rounded-xl border border-border/60 bg-muted/10 p-3">
-              <Label>Default Client IO terms (optional)</Label>
-              <p className="text-xs text-muted-foreground">
-                Fixed Section 8 terms for all Client IOs on this legal entity. Leave as platform
-                default or customize.
-              </p>
-              <ClientIoTermsEditor
-                terms={ioTerms}
-                onChange={(next) => {
-                  setIoTerms(next);
-                  setUsePlatformIoTerms(false);
-                }}
-                onRecover={() => {
-                  setIoTerms(CLIENT_IO_DEFAULT_TERMS);
-                  setUsePlatformIoTerms(true);
-                }}
-                disabled={isPending}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="submit"
-                disabled={isPending || !groupId || isDuplicate || checking}
-              >
-                {isPending ? "Creating…" : "Create entity"}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={isPending || isDuplicate || checking}
+            >
+              {isPending ? "Creating…" : "Create client"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

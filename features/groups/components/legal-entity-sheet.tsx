@@ -24,7 +24,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { createClientAction } from "@/features/clients/actions";
 import {
   AGENCY_OR_DIRECT_OPTIONS,
   CLIENT_STATUS_OPTIONS,
@@ -42,7 +41,7 @@ import type { AgencyOrDirect, ClientStatus, PaymentTerms } from "@/types/databas
 
 type LegalEntitySheetProps = {
   groupId: string;
-  entity: GroupLegalEntityRow | null;
+  entity: GroupLegalEntityRow;
   currencyOptions: { value: string; label: string }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,37 +54,26 @@ export function LegalEntitySheet({
   open,
   onOpenChange,
 }: LegalEntitySheetProps) {
-  const isEdit = entity !== null;
-  const [status, setStatus] = useState<ClientStatus>(entity?.status ?? "active");
-  const [entityName, setEntityName] = useState(entity?.name ?? "");
+  const [status, setStatus] = useState<ClientStatus>(entity.status);
+  const [entityName, setEntityName] = useState(entity.name);
   const [agencyOrDirect, setAgencyOrDirect] = useState<AgencyOrDirect>(
-    entity?.agency_or_direct ?? "agency"
+    entity.agency_or_direct ?? "agency"
   );
-  const [country, setCountry] = useState(entity?.country ?? "");
-  const [currency, setCurrency] = useState(entity?.currency ?? "USD");
-  const [paymentTerms, setPaymentTerms] = useState(entity?.payment_terms ?? "");
+  const [country, setCountry] = useState(entity.country ?? "");
+  const [currency, setCurrency] = useState(entity.currency ?? "USD");
+  const [paymentTerms, setPaymentTerms] = useState(entity.payment_terms ?? "");
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
     entityName,
     checkClientNameAvailable,
-    isEdit && entity
-      ? [agencyOrDirect, entity.id]
-      : [agencyOrDirect],
+    [agencyOrDirect, entity.id],
     open && Boolean(agencyOrDirect)
   );
 
-  const [createState, createAction, createPending] = useActionState(
-    createClientAction,
-    { ok: false }
-  );
-  const [updateState, updateAction, updatePending] = useActionState(
+  const [state, formAction, isPending] = useActionState(
     updateGroupLegalEntityAction,
     { ok: false } satisfies FormActionState
   );
-
-  const state = isEdit ? updateState : createState;
-  const formAction = isEdit ? updateAction : createAction;
-  const isPending = isEdit ? updatePending : createPending;
 
   useEffect(() => {
     if (!state.message) {
@@ -101,12 +89,12 @@ export function LegalEntitySheet({
 
   useEffect(() => {
     if (open) {
-      setStatus(entity?.status ?? "active");
-      setEntityName(entity?.name ?? "");
-      setAgencyOrDirect(entity?.agency_or_direct ?? "agency");
-      setCountry(entity?.country ?? "");
-      setCurrency(entity?.currency ?? "USD");
-      setPaymentTerms(entity?.payment_terms ?? "");
+      setStatus(entity.status);
+      setEntityName(entity.name);
+      setAgencyOrDirect(entity.agency_or_direct ?? "agency");
+      setCountry(entity.country ?? "");
+      setCurrency(entity.currency ?? "USD");
+      setPaymentTerms(entity.payment_terms ?? "");
     }
   }, [open, entity]);
 
@@ -114,32 +102,22 @@ export function LegalEntitySheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>
-            {isEdit ? "Edit legal entity" : "Create legal entity"}
-          </SheetTitle>
+          <SheetTitle>Edit client</SheetTitle>
           <SheetDescription>
-            Legal entities under this group for contracts, billing, and campaigns.
+            Update client details linked to this holding group.
           </SheetDescription>
         </SheetHeader>
         <form action={formAction} className="flex flex-1 flex-col gap-4 px-6 pb-6">
-          {isEdit ? (
-            <>
-              <input type="hidden" name="client_id" value={entity.id} />
-              <input type="hidden" name="group_id" value={groupId} />
-            </>
-          ) : (
-            <input type="hidden" name="group_id" value={groupId} />
-          )}
+          <input type="hidden" name="client_id" value={entity.id} />
+          <input type="hidden" name="group_id" value={groupId} />
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
           <input type="hidden" name="country" value={country} />
           <input type="hidden" name="currency" value={currency} />
-          {!isEdit ? null : (
-            <input type="hidden" name="payment_terms" value={paymentTerms} />
-          )}
+          <input type="hidden" name="payment_terms" value={paymentTerms} />
 
           <div className="grid gap-2">
-            <Label htmlFor="le_name">Legal entity name</Label>
+            <Label htmlFor="le_name">Client name</Label>
             <Input
               id="le_name"
               name="name"
@@ -181,7 +159,7 @@ export function LegalEntitySheet({
             <Input
               id="le_legal_name"
               name="legal_name"
-              defaultValue={entity?.legal_name ?? ""}
+              defaultValue={entity.legal_name ?? ""}
               disabled={isPending}
             />
           </div>
@@ -217,27 +195,25 @@ export function LegalEntitySheet({
             </div>
           </div>
 
-          {isEdit ? (
-            <div className="grid gap-2">
-              <Label>Payment terms</Label>
-              <Select
-                value={paymentTerms}
-                onValueChange={(v) => setPaymentTerms(v as PaymentTerms)}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select terms" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_TERMS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
+          <div className="grid gap-2">
+            <Label>Payment terms</Label>
+            <Select
+              value={paymentTerms}
+              onValueChange={(v) => setPaymentTerms(v as PaymentTerms)}
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select terms" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_TERMS_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="grid gap-2">
             <Label>Status</Label>
@@ -261,13 +237,7 @@ export function LegalEntitySheet({
 
           <SheetFooter className="px-0">
             <Button type="submit" disabled={isPending || isDuplicate || checking}>
-              {isPending
-                ? isEdit
-                  ? "Saving…"
-                  : "Creating…"
-                : isEdit
-                  ? "Save legal entity"
-                  : "Create legal entity"}
+              {isPending ? "Saving…" : "Save client"}
             </Button>
           </SheetFooter>
         </form>

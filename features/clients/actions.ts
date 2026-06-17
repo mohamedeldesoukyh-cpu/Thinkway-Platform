@@ -143,7 +143,9 @@ export async function createClientAction(
   }
 
   revalidatePath("/clients");
-  revalidatePath(`/groups/${parsed.data.group_id}`);
+  if (parsed.data.group_id) {
+    revalidatePath(`/groups/${parsed.data.group_id}`);
+  }
 
   return {
     ok: true,
@@ -229,8 +231,22 @@ export async function updateClientOverviewAction(
     };
   }
 
+  if (fields.group_id) {
+    const { error: brandSyncError } = await supabase
+      .from("brands")
+      .update({ group_id: fields.group_id })
+      .eq("client_id", client_id);
+
+    if (brandSyncError) {
+      return { ok: false, message: brandSyncError.message };
+    }
+  }
+
   revalidatePath("/clients");
   revalidatePath(`/clients/${client_id}`);
+  if (fields.group_id) {
+    revalidatePath(`/groups/${fields.group_id}`);
+  }
 
   return { ok: true, message: "Overview saved." };
 }

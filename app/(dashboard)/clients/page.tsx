@@ -48,13 +48,13 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   const hasSearch = Boolean(search);
   const meta =
     total === 1
-      ? "1 entity"
-      : `${total} entities` + (hasSearch ? ` matching "${search}"` : "");
+      ? "1 client"
+      : `${total} clients` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
     <DashboardShell
       title="Clients"
-      description="Legal entities within groups. Brands and campaigns hang off each entity."
+      description="Clients within holding groups. Brands and campaigns hang off each client."
       actions={<NewClientDialog groups={groups} currencyOptions={currencyOptions} />}
     >
       <ClientsListSection

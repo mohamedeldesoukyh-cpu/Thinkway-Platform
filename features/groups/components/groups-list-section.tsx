@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -45,11 +44,8 @@ export function GroupsListSection({ groups, meta, errorSlot }: GroupsListSection
 
         {groups.length === 0 ? (
           <p className="px-4 py-8 text-[11px] text-muted-foreground">
-            No groups yet.{" "}
-            <Link href="/clients" className="underline hover:text-primary">
-              Add legal entities
-            </Link>{" "}
-            under a group to build your hierarchy.
+            No groups yet. Create a group, then link clients from the group workspace or
+            Clients page.
           </p>
         ) : (
           <GroupsTable groups={groups} />

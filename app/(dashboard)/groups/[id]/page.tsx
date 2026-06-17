@@ -6,7 +6,7 @@ import {
   getAccountDirectorsForSelect,
   getGroupWorkspace,
 } from "@/features/groups/queries";
-import { getMasterDataOptions } from "@/lib/master-data/queries";
+import { getMasterDataOptions, getUnlinkedClientsForSelect } from "@/lib/master-data/queries";
 
 type GroupWorkspacePageProps = {
   params: Promise<{ id: string }>;
@@ -21,13 +21,15 @@ export default async function GroupWorkspacePage({
   let accountDirectors: Awaited<ReturnType<typeof getAccountDirectorsForSelect>> =
     [];
   let masterData: Awaited<ReturnType<typeof getMasterDataOptions>> | null = null;
+  let unlinkedClients: Awaited<ReturnType<typeof getUnlinkedClientsForSelect>> = [];
   let errorMessage: string | null = null;
 
   try {
-    [workspace, accountDirectors, masterData] = await Promise.all([
+    [workspace, accountDirectors, masterData, unlinkedClients] = await Promise.all([
       getGroupWorkspace(id),
       getAccountDirectorsForSelect(),
       getMasterDataOptions(),
+      getUnlinkedClientsForSelect(),
     ]);
   } catch (error) {
     errorMessage =
@@ -41,7 +43,7 @@ export default async function GroupWorkspacePage({
   return (
     <DashboardShell
       title="Group workspace"
-      description="Operational profile for group portfolio, legal entities, brands, and finance."
+      description="Operational profile for group portfolio, clients, brands, and finance."
     >
       {errorMessage ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -52,6 +54,7 @@ export default async function GroupWorkspacePage({
           workspace={workspace}
           accountDirectors={accountDirectors}
           masterData={masterData}
+          unlinkedClients={unlinkedClients}
         />
       ) : null}
     </DashboardShell>

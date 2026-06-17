@@ -2,6 +2,7 @@ export const OPERATIONAL_TABLE_IDS = {
   campaigns: "campaigns-list",
   clients: "clients-list",
   groups: "groups-list",
+  brands: "brands-list",
   vendors: "vendors-list",
 
   billingCampaignQueue: "billing-campaign-queue",

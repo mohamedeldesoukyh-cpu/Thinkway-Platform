@@ -29,9 +29,18 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboardIcon },
   { href: "/dashboard", label: "Executive", icon: LayoutDashboardIcon },
-  { href: "/groups", label: "Groups", icon: LayersIcon },
-  { href: "/clients", label: "Legal Entities", icon: Building2Icon },
   { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+  {
+    href: "/groups",
+    label: "Clients",
+    icon: Building2Icon,
+    children: [
+      { href: "/groups", label: "Holding Groups" },
+      { href: "/clients", label: "Clients" },
+      { href: "/brands", label: "Brands" },
+      { href: "/vendors", label: "Vendors" },
+    ],
+  },
   {
     href: "/ios",
     label: "IOs",
@@ -84,7 +93,6 @@ const navItems: NavItem[] = [
       { href: "/settings/email", label: "Email" },
     ],
   },
-  { href: "/vendors", label: "Vendors", icon: UsersIcon },
 ];
 
 type AppSidebarProps = {
@@ -106,11 +114,16 @@ export function AppSidebar({ userEmail }: AppSidebarProps) {
           const isActive =
             item.href === "/"
               ? pathname === "/"
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              : item.children
+                ? item.children.some(
+                    (child) =>
+                      pathname === child.href || pathname.startsWith(`${child.href}/`)
+                  )
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
 
           return (
-            <div key={item.href}>
+            <div key={item.label}>
               <Link
                 href={item.children?.[0]?.href ?? item.href}
                 className={cn(

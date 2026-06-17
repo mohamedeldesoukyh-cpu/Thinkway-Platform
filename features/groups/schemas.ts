@@ -34,6 +34,11 @@ export const archiveLegalEntitySchema = z.object({
   group_id: z.string().uuid(),
 });
 
+export const linkClientToGroupSchema = z.object({
+  client_id: z.string().uuid("Select a client"),
+  group_id: z.string().uuid(),
+});
+
 export const updateGroupLegalEntitySchema = z.object({
   client_id: z.string().uuid(),
   group_id: z.string().uuid(),

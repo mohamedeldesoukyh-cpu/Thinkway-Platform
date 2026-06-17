@@ -87,6 +87,14 @@ const navGroups: NavGroup[] = [
     items: [
       { kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
       { kind: "link", href: "/discovery", label: "Discovery", icon: RadarIcon },
+    ],
+  },
+  {
+    label: "Clients",
+    items: [
+      { kind: "link", href: "/groups", label: "Holding Groups", icon: LayersIcon },
+      { kind: "link", href: "/clients", label: "Clients", icon: Building2Icon },
+      { kind: "link", href: "/brands", label: "Brands", icon: SparklesIcon },
       { kind: "link", href: "/vendors", label: "Vendors", icon: UsersIcon },
     ],
   },
@@ -166,8 +174,6 @@ const navGroups: NavGroup[] = [
   {
     label: "Administration",
     items: [
-      { kind: "link", href: "/groups", label: "Groups", icon: LayersIcon },
-      { kind: "link", href: "/clients", label: "Legal Entities", icon: Building2Icon },
       { kind: "link", href: "/settings/users", label: "Users", icon: Settings2Icon },
       { kind: "link", href: "/settings/roles", label: "Roles", icon: UserCogIcon },
       { kind: "link", href: "/settings/permissions", label: "Permissions", icon: ShieldIcon },
@@ -192,7 +198,7 @@ const HOVER_TRIGGER_WIDTH = "0.75rem";
 
 /** Legacy section labels from pre-reorg sidebar — map into current groups. */
 const LEGACY_COLLAPSED_LABEL_MAP: Record<string, string[]> = {
-  Organization: ["Workspace", "Administration"],
+  Organization: ["Workspace", "Clients", "Administration"],
   System: ["Administration"],
 };
 

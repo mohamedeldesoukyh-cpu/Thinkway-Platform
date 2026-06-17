@@ -5,39 +5,41 @@ import { Suspense, type ReactNode } from "react";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OperationalTableToolbar } from "@/components/tables/operational-table-toolbar";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
-import { ClientsEmptyState } from "@/features/clients/components/clients-empty-state";
-import { ClientsPagination } from "@/features/clients/components/clients-pagination";
-import { ClientsSearch } from "@/features/clients/components/clients-search";
-import { CLIENTS_TABLE_COLUMNS, ClientsTable } from "@/features/clients/components/clients-table";
-import type { ClientsListResult } from "@/features/clients/queries";
-import { CLIENTS_TABLE_FILTER_ACCESSORS } from "@/lib/tables/list-table-filter-fields";
+import { BrandsEmptyState } from "@/features/brands/components/brands-empty-state";
+import { BrandsPagination } from "@/features/brands/components/brands-pagination";
+import { BrandsSearch } from "@/features/brands/components/brands-search";
+import { BRANDS_TABLE_COLUMNS, BrandsTable } from "@/features/brands/components/brands-table";
+import type { BrandsListResult } from "@/features/brands/queries";
+import { BRANDS_TABLE_FILTER_ACCESSORS } from "@/lib/tables/list-table-filter-fields";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
-type ClientsListSectionProps = {
-  clients: ClientsListResult["clients"];
+type BrandsListSectionProps = {
+  brands: BrandsListResult["brands"];
   meta: string;
   hasSearch: boolean;
+  hasClients: boolean;
   page: number;
   totalPages: number;
   search: string;
   errorSlot?: ReactNode;
 };
 
-export function ClientsListSection({
-  clients,
+export function BrandsListSection({
+  brands,
   meta,
   hasSearch,
+  hasClients,
   page,
   totalPages,
   search,
   errorSlot,
-}: ClientsListSectionProps) {
+}: BrandsListSectionProps) {
   return (
     <OperationalTableSuiteProvider
-      tableId={OPERATIONAL_TABLE_IDS.clients}
-      columns={CLIENTS_TABLE_COLUMNS}
-      rows={clients}
-      filterAccessors={CLIENTS_TABLE_FILTER_ACCESSORS}
+      tableId={OPERATIONAL_TABLE_IDS.brands}
+      columns={BRANDS_TABLE_COLUMNS}
+      rows={brands}
+      filterAccessors={BRANDS_TABLE_FILTER_ACCESSORS}
     >
       <OperationalTableSection
         wide
@@ -47,13 +49,13 @@ export function ClientsListSection({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 space-y-0.5">
               <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                All clients
+                All brands
               </h2>
               <p className="text-[11px] leading-snug text-muted-foreground">{meta}</p>
             </div>
             <Suspense fallback={null}>
-              <OperationalTableToolbar contextLabel="Clients">
-                <ClientsSearch />
+              <OperationalTableToolbar contextLabel="Brands">
+                <BrandsSearch />
               </OperationalTableToolbar>
             </Suspense>
           </div>
@@ -61,13 +63,13 @@ export function ClientsListSection({
       >
         {errorSlot}
 
-        {clients.length === 0 ? (
-          <ClientsEmptyState hasSearch={hasSearch} />
+        {brands.length === 0 ? (
+          <BrandsEmptyState hasSearch={hasSearch} hasClients={hasClients} />
         ) : (
           <>
-            <ClientsTable clients={clients} />
+            <BrandsTable brands={brands} />
             <div className="border-t border-border/40 px-4 py-3 md:px-5">
-              <ClientsPagination page={page} totalPages={totalPages} search={search} />
+              <BrandsPagination page={page} totalPages={totalPages} search={search} />
             </div>
           </>
         )}
