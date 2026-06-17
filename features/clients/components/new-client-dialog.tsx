@@ -132,7 +132,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="name">Client name</Label>
+            <Label htmlFor="name">Client legal name</Label>
             <Input
               id="name"
               name="name"
@@ -140,6 +140,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               onChange={(e) => setEntityName(e.target.value)}
               required
               disabled={isPending}
+              placeholder="Registered legal entity name"
             />
             <FieldError messages={state.fieldErrors?.name} />
             {duplicateMessage ? (
@@ -167,11 +168,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="legal_name">Legal name</Label>
-            <Input id="legal_name" name="legal_name" disabled={isPending} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

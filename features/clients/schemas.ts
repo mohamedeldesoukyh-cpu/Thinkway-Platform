@@ -56,37 +56,43 @@ const optionalGroupId = z
   .or(z.literal(""))
   .transform((value) => (value?.trim() ? value.trim() : null));
 
+const optionalText = z
+  .union([z.string(), z.undefined()])
+  .transform((value) => (typeof value === "string" ? value.trim() : ""));
+
 export const createClientSchema = z.object({
   group_id: optionalGroupId,
   name: z
     .string()
     .trim()
-    .min(1, "Client name is required")
+    .min(1, "Client legal name is required")
     .max(200, "Name is too long"),
-  legal_name: z.string().trim().max(200).optional().or(z.literal("")),
+  legal_name: optionalText.pipe(z.string().max(200)),
   agency_or_direct: agencyOrDirectSchema,
-  industry: z.string().trim().max(120).optional().or(z.literal("")),
-  website: z
-    .string()
-    .trim()
-    .max(500)
-    .refine(
-      (value) => !value || z.string().url().safeParse(value).success,
-      "Enter a valid URL"
-    ),
+  industry: optionalText.pipe(z.string().max(120)),
+  website: optionalText.pipe(
+    z
+      .string()
+      .max(500)
+      .refine(
+        (value) => !value || z.string().url().safeParse(value).success,
+        "Enter a valid URL"
+      )
+  ),
   status: clientStatusSchema.default("prospect"),
-  billing_email: z
-    .string()
-    .trim()
-    .max(320)
-    .refine(
-      (value) => !value || z.string().email().safeParse(value).success,
-      "Enter a valid email"
-    ),
+  billing_email: optionalText.pipe(
+    z
+      .string()
+      .max(320)
+      .refine(
+        (value) => !value || z.string().email().safeParse(value).success,
+        "Enter a valid email"
+      )
+  ),
   currency: currencyCodeSchema.default(DEFAULT_PLATFORM_CURRENCY),
-  country: z.string().trim().max(2).optional().or(z.literal("")),
-  notes: z.string().trim().max(2000).optional().or(z.literal("")),
-  client_io_terms_text: z.string().trim().max(50000).optional().or(z.literal("")),
+  country: optionalText.pipe(z.string().max(2)),
+  notes: optionalText.pipe(z.string().max(2000)),
+  client_io_terms_text: optionalText.pipe(z.string().max(50000)),
 });
 
 export const updateClientOverviewSchema = z.object({

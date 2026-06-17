@@ -118,7 +118,7 @@ export async function createClientAction(
     .from("clients")
     .insert({
       name: parsed.data.name,
-      legal_name: emptyToNull(parsed.data.legal_name),
+      legal_name: emptyToNull(parsed.data.legal_name) ?? parsed.data.name,
       group_id: parsed.data.group_id,
       agency_or_direct: parsed.data.agency_or_direct as AgencyOrDirect,
       industry: emptyToNull(parsed.data.industry),

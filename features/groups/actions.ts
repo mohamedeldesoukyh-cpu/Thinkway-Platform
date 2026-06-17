@@ -118,7 +118,7 @@ async function createClientsUnderGroup(
 
     const { error } = await supabase.from("clients").insert({
       name: client.name,
-      legal_name: emptyToNull(client.legal_name),
+      legal_name: client.name,
       group_id: groupId,
       agency_or_direct: client.agency_or_direct,
       status: "prospect",

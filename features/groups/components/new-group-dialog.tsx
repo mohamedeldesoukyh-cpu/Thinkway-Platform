@@ -47,7 +47,6 @@ type UnlinkedClientOption = {
 type NewClientDraft = {
   id: string;
   name: string;
-  legal_name: string;
   agency_or_direct: AgencyOrDirect;
 };
 
@@ -78,7 +77,6 @@ function createEmptyClientDraft(): NewClientDraft {
   return {
     id: crypto.randomUUID(),
     name: "",
-    legal_name: "",
     agency_or_direct: "agency",
   };
 }
@@ -107,9 +105,8 @@ export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
   const newClientsJson = useMemo(
     () =>
       JSON.stringify(
-        newClientDrafts.map(({ name, legal_name, agency_or_direct }) => ({
+        newClientDrafts.map(({ name, agency_or_direct }) => ({
           name,
-          legal_name,
           agency_or_direct,
         }))
       ),
@@ -332,7 +329,9 @@ export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
                       </div>
 
                       <div className="grid gap-2">
-                        <Label htmlFor={`new-client-name-${draft.id}`}>Client name</Label>
+                        <Label htmlFor={`new-client-name-${draft.id}`}>
+                          Client legal name
+                        </Label>
                         <Input
                           id={`new-client-name-${draft.id}`}
                           value={draft.name}
@@ -340,20 +339,7 @@ export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
                             updateClientDraft(draft.id, { name: e.target.value })
                           }
                           disabled={isPending}
-                          placeholder="Legal entity name"
-                        />
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor={`new-client-legal-${draft.id}`}>Legal name</Label>
-                        <Input
-                          id={`new-client-legal-${draft.id}`}
-                          value={draft.legal_name}
-                          onChange={(e) =>
-                            updateClientDraft(draft.id, { legal_name: e.target.value })
-                          }
-                          disabled={isPending}
-                          placeholder="Optional"
+                          placeholder="Registered legal entity name"
                         />
                       </div>
 

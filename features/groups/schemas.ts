@@ -5,8 +5,7 @@ import { currencyCodeSchema } from "@/lib/master-data/currency-schema";
 const agencyOrDirectSchema = z.enum(["agency", "direct", "hybrid"]);
 
 export const groupInlineNewClientSchema = z.object({
-  name: z.string().trim().min(1, "Client name is required").max(200),
-  legal_name: z.string().trim().max(200).optional().or(z.literal("")),
+  name: z.string().trim().min(1, "Client legal name is required").max(200),
   agency_or_direct: agencyOrDirectSchema.default("agency"),
 });
 
