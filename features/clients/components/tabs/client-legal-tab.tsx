@@ -23,6 +23,7 @@ import {
   getCityOptionsForCountry,
 } from "@/features/clients/constants";
 import type { ClientDetail } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 function readAddress(
   address: Record<string, unknown>,
@@ -72,7 +73,7 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
   return (
     <OperationalFormSection
       title="Legal & compliance"
-      description="Attach trade license, VAT, and tax certificates beside each registration field."
+      description="Enter registration numbers and attach certificates using the controls beside each field."
       footer={
         <Button type="submit" form="client-legal-form" disabled={isPending}>
           {isPending ? "Saving…" : "Save legal"}
@@ -87,18 +88,20 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="trade_license_number">Trade license / CR</Label>
-            <ClientInlineDocumentAttach
-              clientId={client.id}
-              documentType="trade_license"
-              document={tradeLicenseDoc}
-            />
-            <Input
-              id="trade_license_number"
-              name="trade_license_number"
-              className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={client.trade_license_number ?? ""}
-              disabled={isPending}
-            />
+            <div className="flex min-w-0 items-center gap-2">
+              <ClientInlineDocumentAttach
+                clientId={client.id}
+                documentType="trade_license"
+                document={tradeLicenseDoc}
+              />
+              <Input
+                id="trade_license_number"
+                name="trade_license_number"
+                className={cn(DETAIL_FORM_INPUT_CLASS, "min-w-0 flex-1")}
+                defaultValue={client.trade_license_number ?? ""}
+                disabled={isPending}
+              />
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="trade_license_expiry">Trade license expiry</Label>
@@ -116,33 +119,37 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="vat_number">VAT number</Label>
-            <ClientInlineDocumentAttach
-              clientId={client.id}
-              documentType="vat_certificate"
-              document={vatDoc}
-            />
-            <Input
-              id="vat_number"
-              name="vat_number"
-              className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={client.vat_number ?? ""}
-              disabled={isPending}
-            />
+            <div className="flex min-w-0 items-center gap-2">
+              <ClientInlineDocumentAttach
+                clientId={client.id}
+                documentType="vat_certificate"
+                document={vatDoc}
+              />
+              <Input
+                id="vat_number"
+                name="vat_number"
+                className={cn(DETAIL_FORM_INPUT_CLASS, "min-w-0 flex-1")}
+                defaultValue={client.vat_number ?? ""}
+                disabled={isPending}
+              />
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="tax_id">Tax ID</Label>
-            <ClientInlineDocumentAttach
-              clientId={client.id}
-              documentType="tax_certificate"
-              document={taxDoc}
-            />
-            <Input
-              id="tax_id"
-              name="tax_id"
-              className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={client.tax_id ?? ""}
-              disabled={isPending}
-            />
+            <div className="flex min-w-0 items-center gap-2">
+              <ClientInlineDocumentAttach
+                clientId={client.id}
+                documentType="tax_certificate"
+                document={taxDoc}
+              />
+              <Input
+                id="tax_id"
+                name="tax_id"
+                className={cn(DETAIL_FORM_INPUT_CLASS, "min-w-0 flex-1")}
+                defaultValue={client.tax_id ?? ""}
+                disabled={isPending}
+              />
+            </div>
           </div>
         </div>
 

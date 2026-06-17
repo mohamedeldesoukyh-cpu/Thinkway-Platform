@@ -90,7 +90,11 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
       toast.success(state.message);
       return;
     }
-    toast.error(state.message);
+
+    const fieldMessages = state.fieldErrors
+      ? Object.values(state.fieldErrors).flat().filter(Boolean)
+      : [];
+    toast.error(fieldMessages.length > 0 ? fieldMessages[0] : state.message);
   }, [state]);
 
   const groupOptions = groups.map((g) => ({
@@ -120,7 +124,22 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
         <input type="hidden" name="country" value={country} />
         <input type="hidden" name="city" value={city} />
         <input type="hidden" name="industry" value={industry} />
+        <input
+          type="hidden"
+          name="agency_or_direct"
+          value={client.agency_or_direct ?? "agency"}
+        />
         <input type="hidden" name="client_io_terms_text" value={clientIoTermsPayload} />
+
+        {state.fieldErrors && !state.ok ? (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            {Object.entries(state.fieldErrors)
+              .flatMap(([field, messages]) =>
+                (messages ?? []).map((message) => `${field}: ${message}`)
+              )
+              .join(" · ")}
+          </p>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
@@ -165,6 +184,7 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
               required
               disabled={isPending}
             />
+            <FieldError messages={state.fieldErrors?.name} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="legal_name">Legal name</Label>
@@ -175,6 +195,7 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
               defaultValue={client.legal_name ?? ""}
               disabled={isPending}
             />
+            <FieldError messages={state.fieldErrors?.legal_name} />
           </div>
         </div>
 
@@ -209,6 +230,7 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
               defaultValue={client.website ?? ""}
               disabled={isPending}
             />
+            <FieldError messages={state.fieldErrors?.website} />
           </div>
         </div>
 

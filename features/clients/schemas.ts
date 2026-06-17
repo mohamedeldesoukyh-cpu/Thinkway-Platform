@@ -113,7 +113,7 @@ const optionalIndustry = z.preprocess(
     }
     return String(value).trim();
   },
-  z.union([z.literal(""), clientCategorySchema])
+  z.union([z.literal(""), clientCategorySchema, z.string().max(120)])
 );
 
 export const createClientSchema = z.object({

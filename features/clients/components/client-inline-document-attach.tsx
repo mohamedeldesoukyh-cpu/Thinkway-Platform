@@ -1,12 +1,17 @@
 "use client";
 
-import { PaperclipIcon } from "lucide-react";
+import {
+  EyeIcon,
+  FileCheck2Icon,
+  Loader2Icon,
+  PaperclipIcon,
+  XIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   deleteClientDocumentAction,
   getClientDocumentDownloadUrlAction,
@@ -39,6 +44,7 @@ export function ClientInlineDocumentAttach({
 }: ClientInlineDocumentAttachProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadFormRef = useRef<HTMLFormElement>(null);
   const [isDownloading, startDownload] = useTransition();
   const [uploadState, uploadAction, isUploading] = useActionState(
     uploadClientDocumentAction,
@@ -48,6 +54,8 @@ export function ClientInlineDocumentAttach({
     deleteClientDocumentAction,
     { ok: false }
   );
+
+  const busy = isUploading || isDeleting || isDownloading;
 
   useEffect(() => {
     if (!uploadState.message) {
@@ -76,20 +84,42 @@ export function ClientInlineDocumentAttach({
     toast.error(deleteState.message);
   }, [deleteState, router]);
 
+  function openFilePicker() {
+    if (!busy) {
+      fileInputRef.current?.click();
+    }
+  }
+
+  function handleFileChange() {
+    const file = fileInputRef.current?.files?.[0];
+    if (file) {
+      uploadFormRef.current?.requestSubmit();
+    }
+  }
+
   return (
-    <div className={cn("flex min-w-0 flex-wrap items-center gap-2", className)}>
+    <div className={cn("shrink-0", className)}>
       {document ? (
-        <div className="flex min-w-0 items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1">
-          <PaperclipIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          <span className="max-w-[9rem] truncate text-[11px] text-foreground">
-            {document.file_name}
+        <div
+          className={cn(
+            "flex h-9 items-center gap-0.5 rounded-3xl border border-primary/30 bg-primary/10 px-1",
+            busy && "opacity-70"
+          )}
+          title={document.file_name}
+        >
+          <span className="flex items-center gap-1 pl-1.5 pr-0.5">
+            <FileCheck2Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <span className="hidden max-w-[4.5rem] truncate text-[10px] font-medium text-primary sm:inline">
+              {document.file_name}
+            </span>
           </span>
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-[11px]"
-            disabled={isDownloading}
+            size="icon"
+            className="h-7 w-7 shrink-0 text-primary hover:bg-primary/15 hover:text-primary"
+            disabled={busy}
+            title="View attachment"
             onClick={() => {
               startDownload(async () => {
                 const result = await getClientDocumentDownloadUrlAction(
@@ -106,38 +136,80 @@ export function ClientInlineDocumentAttach({
               });
             }}
           >
-            View
+            {isDownloading ? (
+              <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <EyeIcon className="h-3.5 w-3.5" />
+            )}
           </Button>
-          <form action={deleteAction}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-primary hover:bg-primary/15 hover:text-primary"
+            disabled={busy}
+            title="Replace attachment"
+            onClick={openFilePicker}
+          >
+            <PaperclipIcon className="h-3.5 w-3.5" />
+          </Button>
+          <form action={deleteAction} className="flex shrink-0">
             <input type="hidden" name="document_id" value={document.id} />
             <input type="hidden" name="client_id" value={clientId} />
             <Button
               type="submit"
               variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-[11px] text-destructive hover:text-destructive"
-              disabled={isDeleting}
+              size="icon"
+              className="h-7 w-7 shrink-0 text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+              disabled={busy}
+              title="Remove attachment"
             >
-              Remove
+              {isDeleting ? (
+                <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <XIcon className="h-3.5 w-3.5" />
+              )}
             </Button>
           </form>
         </div>
-      ) : null}
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className={cn(
+            "h-9 w-9 shrink-0 rounded-3xl border-primary/30 bg-primary/10 text-primary shadow-none",
+            "hover:border-primary/45 hover:bg-primary/15 hover:text-primary"
+          )}
+          disabled={busy}
+          title="Attach certificate"
+          onClick={openFilePicker}
+        >
+          {isUploading ? (
+            <Loader2Icon className="h-4 w-4 animate-spin" />
+          ) : (
+            <PaperclipIcon className="h-4 w-4" />
+          )}
+        </Button>
+      )}
 
-      <form action={uploadAction} className="flex min-w-0 items-center gap-2">
+      <form
+        ref={uploadFormRef}
+        action={uploadAction}
+        className="sr-only"
+        aria-hidden
+      >
         <input type="hidden" name="client_id" value={clientId} />
         <input type="hidden" name="document_type" value={documentType} />
-        <Input
+        <input
           ref={fileInputRef}
           name="file"
           type="file"
           accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
-          disabled={isUploading}
-          className="h-8 max-w-[11rem] text-[11px] file:mr-2 file:text-[11px]"
+          disabled={busy}
+          tabIndex={-1}
+          onChange={handleFileChange}
         />
-        <Button type="submit" variant="outline" size="sm" disabled={isUploading}>
-          {isUploading ? "Uploading…" : document ? "Replace" : "Attach"}
-        </Button>
       </form>
     </div>
   );
