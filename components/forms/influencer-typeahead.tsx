@@ -156,6 +156,45 @@ export function InfluencerTypeahead({
           {loading ? (
             <Loader2Icon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
           ) : null}
+          {open && displayList.length > 0 ? (
+            <ul
+              className="absolute top-full left-0 right-0 z-[110] mt-1 max-h-64 overflow-y-auto rounded-2xl border border-border bg-popover p-1 shadow-md"
+              role="listbox"
+            >
+              {!query.trim() && recent.length > 0 ? (
+                <li className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                  Recent
+                </li>
+              ) : null}
+              {displayList.map((item, index) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    className={cn(
+                      "w-full rounded-xl px-3 py-2 text-left text-sm transition-colors",
+                      index === activeIndex ? "bg-accent" : "hover:bg-accent/60"
+                    )}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => pick(item)}
+                  >
+                    <span className="font-medium">{item.display_name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      <DocumentNumber value={item.document_number} />
+                    </span>
+                    {item.platforms.length > 0 ? (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {item.platforms
+                          .map((p) => `@${p.handle} · ${p.platform}`)
+                          .join(" · ")}
+                      </p>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
         <Button
           type="button"
@@ -173,45 +212,7 @@ export function InfluencerTypeahead({
         onOpenChange={setBrowserOpen}
         onSelect={pick}
       />
-      {open && displayList.length > 0 ? (
-        <ul
-          className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-2xl border border-border bg-popover p-1 shadow-md"
-          role="listbox"
-        >
-          {!query.trim() && recent.length > 0 ? (
-            <li className="px-2 py-1 text-xs font-medium text-muted-foreground">
-              Recent
-            </li>
-          ) : null}
-          {displayList.map((item, index) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={index === activeIndex}
-                className={cn(
-                  "w-full rounded-xl px-3 py-2 text-left text-sm transition-colors",
-                  index === activeIndex ? "bg-accent" : "hover:bg-accent/60"
-                )}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => pick(item)}
-              >
-                <span className="font-medium">{item.display_name}</span>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  <DocumentNumber value={item.document_number} />
-                </span>
-                {item.platforms.length > 0 ? (
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {item.platforms
-                      .map((p) => `@${p.handle} · ${p.platform}`)
-                      .join(" · ")}
-                  </p>
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : open && query.trim() && !loading ? (
+      {open && query.trim() && !loading && displayList.length === 0 ? (
         <p className="text-xs text-muted-foreground">No creators match your search.</p>
       ) : null}
     </div>
