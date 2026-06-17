@@ -73,7 +73,7 @@ type NavGroup = {
   items: NavEntry[];
 };
 
-/** Global nav order — overview, workspace, commercial, operations, finance, insights, admin. */
+/** Global nav order — overview, workspace, commercial, finance, insights, admin. */
 const navGroups: NavGroup[] = [
   {
     label: "Overview",
@@ -90,7 +90,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Clients",
+    label: "Clients and vendors CRM",
     items: [
       { kind: "link", href: "/groups", label: "Holding Groups", icon: LayersIcon },
       { kind: "link", href: "/clients", label: "Clients", icon: Building2Icon },
@@ -105,18 +105,6 @@ const navGroups: NavGroup[] = [
       { kind: "link", href: "/ios/vendor", label: "Vendor IOs", icon: FileSignatureIcon },
       { kind: "link", href: "/billing", label: "Billing", icon: ReceiptIcon },
       { kind: "link", href: "/finance/po-tracker", label: "PO Tracker", icon: ReceiptIcon },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { kind: "link", href: "/operations/move", label: "Move", icon: ArrowRightLeftIcon },
-      {
-        kind: "link",
-        href: "/operations/reassignment",
-        label: "Reassignment",
-        icon: ArrowRightLeftIcon,
-      },
     ],
   },
   {
@@ -157,6 +145,14 @@ const navGroups: NavGroup[] = [
       { kind: "link", href: "/finance/exchange-rates", label: "Exchange rates", icon: RefreshCwIcon },
       { kind: "link", href: "/finance/periods", label: "Periods", icon: CalendarRangeIcon },
       { kind: "link", href: "/planning", label: "Planning", icon: CalendarClockIcon },
+      { kind: "subheader", label: "Move from Acc to another" },
+      { kind: "link", href: "/operations/move", label: "Move", icon: ArrowRightLeftIcon },
+      {
+        kind: "link",
+        href: "/operations/reassignment",
+        label: "Reassignment",
+        icon: ArrowRightLeftIcon,
+      },
     ],
   },
   {
@@ -198,7 +194,9 @@ const HOVER_TRIGGER_WIDTH = "0.75rem";
 
 /** Legacy section labels from pre-reorg sidebar — map into current groups. */
 const LEGACY_COLLAPSED_LABEL_MAP: Record<string, string[]> = {
-  Organization: ["Workspace", "Clients", "Administration"],
+  Organization: ["Workspace", "Clients and vendors CRM", "Administration"],
+  Clients: ["Clients and vendors CRM"],
+  Operations: ["Finance"],
   System: ["Administration"],
 };
 
