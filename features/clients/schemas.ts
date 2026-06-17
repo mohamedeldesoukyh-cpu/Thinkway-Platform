@@ -49,16 +49,62 @@ const optionalNumber = z.preprocess((value) => {
   return Number.isNaN(parsed) ? undefined : parsed;
 }, z.number().min(0).nullable().optional());
 
-const optionalGroupId = z
-  .string()
-  .uuid("Select a valid group")
-  .optional()
-  .or(z.literal(""))
-  .transform((value) => (value?.trim() ? value.trim() : null));
+const optionalGroupId = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    return String(value).trim();
+  },
+  z
+    .union([z.literal(""), z.string().uuid("Select a valid group")])
+    .transform((value) => (value === "" ? null : value))
+);
 
-const optionalText = z
-  .union([z.string(), z.undefined()])
-  .transform((value) => (typeof value === "string" ? value.trim() : ""));
+const optionalTrimmedString = (max: number, message?: string) =>
+  z.preprocess(
+    (value) => {
+      if (value === undefined || value === null) {
+        return "";
+      }
+      return String(value).trim();
+    },
+    message
+      ? z.string().max(max, message)
+      : z.string().max(max)
+  );
+
+const optionalUrl = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    return String(value).trim();
+  },
+  z
+    .string()
+    .max(500)
+    .refine(
+      (val) => !val || z.string().url().safeParse(val).success,
+      "Enter a valid URL"
+    )
+);
+
+const optionalEmail = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    return String(value).trim();
+  },
+  z
+    .string()
+    .max(320)
+    .refine(
+      (val) => !val || z.string().email().safeParse(val).success,
+      "Enter a valid email"
+    )
+);
 
 export const createClientSchema = z.object({
   group_id: optionalGroupId,
@@ -67,32 +113,16 @@ export const createClientSchema = z.object({
     .trim()
     .min(1, "Client legal name is required")
     .max(200, "Name is too long"),
-  legal_name: optionalText.pipe(z.string().max(200)),
+  legal_name: optionalTrimmedString(200),
   agency_or_direct: agencyOrDirectSchema,
-  industry: optionalText.pipe(z.string().max(120)),
-  website: optionalText.pipe(
-    z
-      .string()
-      .max(500)
-      .refine(
-        (value) => !value || z.string().url().safeParse(value).success,
-        "Enter a valid URL"
-      )
-  ),
+  industry: optionalTrimmedString(120),
+  website: optionalUrl,
   status: clientStatusSchema.default("prospect"),
-  billing_email: optionalText.pipe(
-    z
-      .string()
-      .max(320)
-      .refine(
-        (value) => !value || z.string().email().safeParse(value).success,
-        "Enter a valid email"
-      )
-  ),
+  billing_email: optionalEmail,
   currency: currencyCodeSchema.default(DEFAULT_PLATFORM_CURRENCY),
-  country: optionalText.pipe(z.string().max(2)),
-  notes: optionalText.pipe(z.string().max(2000)),
-  client_io_terms_text: optionalText.pipe(z.string().max(50000)),
+  country: optionalTrimmedString(2),
+  notes: optionalTrimmedString(2000),
+  client_io_terms_text: optionalTrimmedString(50000),
 });
 
 export const updateClientOverviewSchema = z.object({

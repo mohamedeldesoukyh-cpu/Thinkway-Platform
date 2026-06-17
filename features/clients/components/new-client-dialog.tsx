@@ -85,7 +85,13 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
       }
       return;
     }
-    toast.error(state.message);
+
+    const fieldMessages = state.fieldErrors
+      ? Object.values(state.fieldErrors).flat().filter(Boolean)
+      : [];
+    toast.error(
+      fieldMessages.length > 0 ? fieldMessages[0] : state.message
+    );
   }, [state, router]);
 
   const groupOptions = groups.map((g) => ({ value: g.id, label: g.name }));
@@ -114,6 +120,16 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           <input type="hidden" name="country" value={country} />
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4">
+            {state.fieldErrors && !state.ok ? (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                {Object.entries(state.fieldErrors)
+                  .flatMap(([field, messages]) =>
+                    (messages ?? []).map((message) => `${field}: ${message}`)
+                  )
+                  .join(" · ")}
+              </p>
+            ) : null}
+
           <div className="grid gap-2">
             <Label>Holding group (optional)</Label>
             <SearchableSelect
