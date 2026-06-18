@@ -6,6 +6,7 @@ import {
   getMissingClientColumnFromSchemaError,
   isMissingClientColumnSchemaError,
 } from "@/lib/clients/classification-audit-columns";
+import { fetchClientVrRateIdSafe } from "@/lib/clients/vr-rate-lookup";
 import { normalizeBrandVrRateId } from "@/lib/clients/vr-inheritance";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { findDuplicateBrand } from "@/lib/validation/checks";
@@ -68,30 +69,6 @@ function embeddedGroupId(group: unknown): string | null {
   return typeof id === "string" ? id : null;
 }
 
-async function fetchClientVrRateId(
-  supabase: SupabaseClient,
-  clientId: string
-): Promise<{ value: string | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from("clients")
-    .select("vr_rate_id")
-    .eq("id", clientId)
-    .maybeSingle();
-
-  if (!error) {
-    return { value: data?.vr_rate_id ?? null, error: null };
-  }
-
-  if (
-    isMissingClientColumnSchemaError(error) &&
-    getMissingClientColumnFromSchemaError(error) === "vr_rate_id"
-  ) {
-    return { value: null, error: null };
-  }
-
-  return { value: null, error: error.message };
-}
-
 async function fetchClientBrandContext(
   supabase: SupabaseClient,
   clientId: string
@@ -127,7 +104,7 @@ async function fetchClientBrandContext(
         };
       }
 
-      const vrRateId = await fetchClientVrRateId(supabase, clientId);
+      const vrRateId = await fetchClientVrRateIdSafe(supabase, clientId);
       if (vrRateId.error) {
         return { ok: false, message: vrRateId.error };
       }
@@ -153,7 +130,7 @@ async function fetchClientBrandContext(
     };
   }
 
-  const vrRateId = await fetchClientVrRateId(supabase, clientId);
+  const vrRateId = await fetchClientVrRateIdSafe(supabase, clientId);
   if (vrRateId.error) {
     return { ok: false, message: vrRateId.error };
   }

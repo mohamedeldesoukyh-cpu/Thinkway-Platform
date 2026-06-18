@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  fetchClientsForSelectWithOptionalVrRate,
   fetchVrRatesByIds,
   vrRatePercentFromMap,
 } from "@/lib/clients/vr-rate-lookup";
@@ -220,19 +221,10 @@ export async function getGroupsForSelect() {
 
 export async function getClientsForSelect(groupId?: string) {
   const supabase = await createSupabaseServerClient();
-  let query = supabase
-    .from("clients")
-    .select(
-      "id, name, legal_name, group_id, document_number, status, vr_rate_id"
-    )
-    .neq("status", "archived")
-    .order("name");
-
-  if (groupId) {
-    query = query.eq("group_id", groupId);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await fetchClientsForSelectWithOptionalVrRate(
+    supabase,
+    groupId
+  );
   if (error) {
     throw new Error(error.message);
   }
@@ -247,12 +239,12 @@ export async function getClientsForSelect(groupId?: string) {
       vr_rate_id: string | null;
     };
     return {
-      id: client.id,
-      name: client.name,
-      legal_name: client.legal_name,
-      group_id: client.group_id,
-      document_number: client.document_number,
-      status: client.status,
+      id: client.id as string,
+      name: client.name as string,
+      legal_name: client.legal_name as string | null,
+      group_id: client.group_id as string | null,
+      document_number: client.document_number as string,
+      status: client.status as string,
       vr_rate_id: client.vr_rate_id,
       vr_rate_percent: vrRatePercentFromMap(vrRateMap, client.vr_rate_id),
     };

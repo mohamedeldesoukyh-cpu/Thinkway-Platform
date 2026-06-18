@@ -17,7 +17,7 @@ export const CLIENT_FORM_SHORTCUT_SAVE_ATTR = "data-shortcut-save";
  *
  * Wired forms (when their tab is active):
  * - Overview: `#client-overview-form`
- * - Brands: add-brand sheet (`#client-add-brand-form` when open)
+ * - Brands: add-brand dialog (`#client-add-brand-form` when open)
  * - Legal: `#client-legal-form`
  * - Finance: `#client-finance-form`
  */

@@ -35,8 +35,33 @@ const MAX_OPTIONAL_COLUMN_RETRY_ATTEMPTS = 16;
 const PGRST204_MISSING_COLUMN_RE =
   /Could not find the '([^']+)' column of 'clients' in the schema cache/;
 
+/** PostgreSQL 42703 — column may be referenced as clients.col or public.clients.col */
+const PG_MISSING_CLIENT_COLUMN_RE =
+  /column\s+(?:[\w.]+\.)?(\w+)\s+does not exist/i;
+
 const INVALID_ENUM_VALUE_RE =
   /invalid input value for enum (?:\w+\.)?(\w+):/i;
+
+function parseMissingClientColumnFromMessage(message: string): string | null {
+  const pgrstMatch = message.match(PGRST204_MISSING_COLUMN_RE);
+  if (pgrstMatch?.[1]) {
+    return pgrstMatch[1];
+  }
+
+  if (message.includes("Could not find the '")) {
+    const legacyMatch = message.match(/Could not find the '([^']+)' column/);
+    if (legacyMatch?.[1]) {
+      return legacyMatch[1];
+    }
+  }
+
+  const pgMatch = message.match(PG_MISSING_CLIENT_COLUMN_RE);
+  if (pgMatch?.[1] && message.toLowerCase().includes("clients")) {
+    return pgMatch[1];
+  }
+
+  return null;
+}
 
 /** Parse the column name from a PostgreSQL invalid enum value error. */
 export function getInvalidClientEnumColumnFromError(
@@ -85,14 +110,13 @@ export function getMissingClientColumnFromSchemaError(
     return null;
   }
 
-  const match = error.message.match(PGRST204_MISSING_COLUMN_RE);
-  if (match?.[1]) {
-    return match[1];
+  const parsed = parseMissingClientColumnFromMessage(error.message);
+  if (parsed) {
+    return parsed;
   }
 
-  if (error.code === "PGRST204") {
-    const legacyMatch = error.message.match(/Could not find the '([^']+)' column/);
-    return legacyMatch?.[1] ?? null;
+  if (error.code === "42703" || error.code === "PGRST204") {
+    return parseMissingClientColumnFromMessage(error.message);
   }
 
   return null;
@@ -110,10 +134,18 @@ export function isMissingClientColumnSchemaError(
     return true;
   }
 
-  return (
+  if (
     error.message.includes("schema cache") &&
     error.message.includes("clients")
-  );
+  ) {
+    return true;
+  }
+
+  if (error.code === "42703" && error.message.toLowerCase().includes("clients")) {
+    return Boolean(parseMissingClientColumnFromMessage(error.message));
+  }
+
+  return false;
 }
 
 /** @deprecated Use isMissingClientColumnSchemaError */

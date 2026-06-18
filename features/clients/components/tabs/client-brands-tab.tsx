@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { archiveBrandAction } from "@/features/brands/actions";
+import { ClientAddBrandDialog } from "@/features/brands/components/client-add-brand-dialog";
 import {
   BrandRowActions,
   BrandStatusToggle,
@@ -51,7 +52,7 @@ const CLIENT_ADD_BRAND_FORM_ID = "client-add-brand-form";
 type ClientBrandsTabProps = {
   client: ClientDetail;
   masterData: MasterDataOptions;
-  /** When false, Ctrl+S is not wired to the add-brand sheet. */
+  /** When false, Ctrl+S is not wired to the add-brand dialog. */
   shortcutsEnabled?: boolean;
   onGoToOverview?: () => void;
 };
@@ -142,16 +143,16 @@ export function ClientBrandsTab({
     }),
     [client.vr_rate_id, client.vr_rate_percent]
   );
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupBrandRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ClientBrandRow | null>(null);
-  const isAddSheet = sheetOpen && editing === null;
 
   const columns = buildClientBrandsColumns({
     clientVr,
     onEdit: (brand) => {
       setEditing(brandTableRowToGroupBrandRow(brand, client.name));
-      setSheetOpen(true);
+      setEditSheetOpen(true);
     },
     onArchive: setArchiveTarget,
   });
@@ -174,16 +175,15 @@ export function ClientBrandsTab({
   const legalEntity = clientToLegalEntityRow(client);
   const vrHint = brandVrInheritanceHint(client.vr_rate_percent, false);
 
-  const openAddBrandSheet = () => {
-    setEditing(null);
-    setSheetOpen(true);
+  const openAddBrandDialog = () => {
+    setAddDialogOpen(true);
   };
 
   return (
     <>
       <ClientFormKeyboardShortcuts
         formId={CLIENT_ADD_BRAND_FORM_ID}
-        enabled={shortcutsEnabled && isAddSheet}
+        enabled={shortcutsEnabled && addDialogOpen}
       />
       <div className="space-y-4">
         {!hasGroup ? (
@@ -226,7 +226,7 @@ export function ClientBrandsTab({
                     <OperationalTableControlsSlot contextLabel="Client brands" />
                     <Button
                       size="sm"
-                      onClick={openAddBrandSheet}
+                      onClick={openAddBrandDialog}
                       disabled={!hasGroup}
                     >
                       <PlusIcon data-icon="inline-start" />
@@ -243,7 +243,7 @@ export function ClientBrandsTab({
                   No brands yet for this legal entity.
                 </p>
                 {hasGroup ? (
-                  <Button type="button" size="sm" variant="outline" onClick={openAddBrandSheet}>
+                  <Button type="button" size="sm" variant="outline" onClick={openAddBrandDialog}>
                     <PlusIcon data-icon="inline-start" />
                     Add new brand
                   </Button>
@@ -263,18 +263,32 @@ export function ClientBrandsTab({
           <p className="text-[11px] text-muted-foreground">
             {vrHint} Use <span className="font-medium">Add new brand</span> to
             create another brand after each save. {CLIENT_FORM_SAVE_SHORTCUT_HINT}{" "}
-            while the add sheet is open.
+            while the add dialog is open.
           </p>
         ) : null}
       </div>
+
+      {hasGroup ? (
+        <ClientAddBrandDialog
+          client={client}
+          masterData={masterData}
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          formId={CLIENT_ADD_BRAND_FORM_ID}
+        />
+      ) : null}
 
       <BrandSheet
         legalEntities={[legalEntity]}
         masterData={masterData}
         brand={editing}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        formId={isAddSheet ? CLIENT_ADD_BRAND_FORM_ID : undefined}
+        open={editSheetOpen}
+        onOpenChange={(open) => {
+          setEditSheetOpen(open);
+          if (!open) {
+            setEditing(null);
+          }
+        }}
       />
 
       <Dialog

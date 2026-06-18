@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  fetchGroupClientsWithOptionalVrRate,
   fetchVrRatesByIds,
   vrRatePercentFromMap,
 } from "@/lib/clients/vr-rate-lookup";
@@ -113,13 +114,7 @@ export async function getGroupWorkspace(
     auditResult,
     profilesResult,
   ] = await Promise.all([
-    supabase
-      .from("clients")
-      .select(
-        "id, document_number, name, legal_name, country, currency, payment_terms, agency_or_direct, status, vr_rate_id"
-      )
-      .eq("group_id", groupId)
-      .order("name"),
+    fetchGroupClientsWithOptionalVrRate(supabase, groupId),
     supabase
       .from("brands")
       .select(

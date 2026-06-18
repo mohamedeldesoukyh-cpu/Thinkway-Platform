@@ -18,6 +18,13 @@ function pgrst204(column: string) {
   };
 }
 
+function pg42703(column: string) {
+  return {
+    code: "42703",
+    message: `column clients.${column} does not exist`,
+  };
+}
+
 function invalidEnum(column: string, value: string) {
   return {
     code: "22P02",
@@ -34,9 +41,10 @@ function run() {
     "accept_credit_risk",
     ...CLASSIFICATION_AUDIT_COLUMN_NAMES,
   ]) {
-    const error = pgrst204(column);
-    assert.equal(getMissingClientColumnFromSchemaError(error), column);
-    assert.equal(isMissingClientColumnSchemaError(error), true);
+    for (const error of [pgrst204(column), pg42703(column)]) {
+      assert.equal(getMissingClientColumnFromSchemaError(error), column);
+      assert.equal(isMissingClientColumnSchemaError(error), true);
+    }
     assert.ok(
       (OPTIONAL_CLIENT_COLUMN_NAMES as readonly string[]).includes(column),
       `expected ${column} in OPTIONAL_CLIENT_COLUMN_NAMES`
