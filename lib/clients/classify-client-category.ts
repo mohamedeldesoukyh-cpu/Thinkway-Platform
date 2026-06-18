@@ -5,6 +5,7 @@ import {
 } from "@/lib/clients/client-category-taxonomy";
 import {
   buildCompanySearchQuery,
+  hasWebSearchApiKey,
   searchCompanyOnWeb,
 } from "@/lib/clients/company-web-search";
 
@@ -54,6 +55,16 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "supermarket",
     "mall",
     "grocery",
+    "fmcg",
+    "cpg",
+    "consumer goods",
+    "consumer packaged",
+    "household",
+    "hygiene",
+    "tissue",
+    "paper",
+    "diaper",
+    "detergent",
     "restaurant",
     "food",
     "beverage",
@@ -358,6 +369,58 @@ const COMPANY_HINTS: Record<string, { categorySlug: string; subcategorySlug: str
   fifa: { categorySlug: "government_sports_nonprofit", subcategorySlug: "sports_federations_leagues" },
   uefa: { categorySlug: "government_sports_nonprofit", subcategorySlug: "sports_federations_leagues" },
   olympic: { categorySlug: "government_sports_nonprofit", subcategorySlug: "national_olympic_sports_committees" },
+
+  // MENA / GCC — FMCG, retail & food
+  nuqul: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  "nuqul group": { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  almarai: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  savola: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  "savola group": { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  bindawood: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "bin dawood": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  panda: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "panda retail": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  tamimi: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "tamimi markets": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  americana: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  "americana group": { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  albaik: { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  "al baik": { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  danube: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "danube home": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  hyperone: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "hyper one": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  elaraby: { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  "el araby": { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  jumbo: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  seoudi: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "seoudi supermarket": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  kazyon: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "b tech": { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  btech: { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  majid: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "majid al futtaim": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  alshaya: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_franchise_operator" },
+  "al shaya": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_franchise_operator" },
+  landmark: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "landmark group": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  alghurair: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  "al ghurair": { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  iffco: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  hayat: { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  "hayat kimya": { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+
+  // MENA — agencies & media
+  memac: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  "memac ogilvy": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  impactbbdo: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  "impact bbdo": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  jwt: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  leo: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  "leo burnett": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  mccann: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  fp7: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  tpg: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
 };
 
 const LEGAL_SUFFIX_TOKENS = new Set([
@@ -405,6 +468,38 @@ const REGIONAL_SUFFIX_TOKENS = new Set([
 
 const MIN_RANK_SCORE = 1;
 
+const INDUSTRY_CORPUS_SIGNALS: Array<{
+  terms: string[];
+  categorySlug: string;
+  subcategorySlug?: string;
+  boost: number;
+}> = [
+  {
+    terms: ["fmcg", "consumer goods", "consumer packaged", "cpg", "fast-moving consumer"],
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "general_trading",
+    boost: 8,
+  },
+  {
+    terms: ["retail", "supermarket", "hypermarket", "grocery store"],
+    categorySlug: "retail_ecommerce",
+    boost: 5,
+  },
+  {
+    terms: ["advertising agency", "media agency", "marketing agency", "communications agency"],
+    categorySlug: "marketing_advertising_media_agencies",
+    boost: 6,
+  },
+  {
+    terms: ["hygiene", "tissue", "paper products", "household products", "personal hygiene"],
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "general_trading",
+    boost: 5,
+  },
+];
+
+let webSearchKeyWarned = false;
+
 const TAXONOMY_SUBCATEGORY_KEYWORDS: Record<string, string[]> = (() => {
   const map: Record<string, string[]> = {};
   for (const category of CLIENT_CATEGORY_TAXONOMY) {
@@ -419,14 +514,6 @@ const TAXONOMY_SUBCATEGORY_KEYWORDS: Record<string, string[]> = (() => {
   }
   return map;
 })();
-
-function hasWebSearchApiKey(): boolean {
-  return Boolean(
-    process.env.SERPER_API_KEY?.trim() ||
-      process.env.BRAVE_SEARCH_API_KEY?.trim() ||
-      process.env.TAVILY_API_KEY?.trim()
-  );
-}
 
 const SORTED_COMPANY_HINTS = Object.entries(COMPANY_HINTS).sort(
   (a, b) => b[0].length - a[0].length
@@ -498,25 +585,43 @@ function scoreSubcategory(
   return score;
 }
 
+function industryBoostForCandidate(corpus: string, candidate: ScoredCandidate): number {
+  let boost = 0;
+  for (const signal of INDUSTRY_CORPUS_SIGNALS) {
+    if (!signal.terms.some((term) => corpus.includes(term))) {
+      continue;
+    }
+    if (candidate.categorySlug !== signal.categorySlug) {
+      continue;
+    }
+    if (signal.subcategorySlug && candidate.subcategorySlug !== signal.subcategorySlug) {
+      continue;
+    }
+    boost += signal.boost;
+  }
+  return boost;
+}
+
 function rankCandidates(corpus: string): ScoredCandidate | null {
   const tokens = new Set(tokenizeForMatching(corpus));
   let best: ScoredCandidate | null = null;
 
   for (const category of CLIENT_CATEGORY_TAXONOMY) {
     for (const subcategory of category.subcategories) {
-      const score = scoreSubcategory(
-        category,
-        subcategory.label,
-        subcategory.slug,
-        corpus,
-        tokens
-      );
-      if (!best || score > best.score) {
-        best = {
-          categorySlug: category.slug,
-          subcategorySlug: subcategory.slug,
-          score,
-        };
+      const candidate: ScoredCandidate = {
+        categorySlug: category.slug,
+        subcategorySlug: subcategory.slug,
+        score: scoreSubcategory(
+          category,
+          subcategory.label,
+          subcategory.slug,
+          corpus,
+          tokens
+        ),
+      };
+      candidate.score += industryBoostForCandidate(corpus, candidate);
+      if (!best || candidate.score > best.score) {
+        best = candidate;
       }
     }
   }
@@ -556,8 +661,15 @@ function hintMatchesName(name: string, compact: string, key: string): boolean {
     return true;
   }
 
-  if (key.length < 4) {
+  const minLen = 4;
+  if (key.length < minLen) {
     return false;
+  }
+
+  if (compact.length >= minLen && keyCompact.length >= minLen) {
+    if (compact.startsWith(keyCompact) || keyCompact.startsWith(compact)) {
+      return true;
+    }
   }
 
   const wordBoundary = new RegExp(`(?:^|\\s)${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s|$)`);
@@ -579,9 +691,37 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
     }
 
     for (const token of tokens) {
-      const hint = hintFromKey(token);
-      if (hint) {
-        return hint;
+      if (token.length >= 4) {
+        const hint = hintFromKey(token);
+        if (hint) {
+          return hint;
+        }
+      }
+    }
+
+    for (const token of tokens) {
+      if (token.length < 4) {
+        const hint = hintFromKey(token);
+        if (hint) {
+          return hint;
+        }
+      }
+    }
+
+    if (tokens.length === 1 && tokens[0]!.length >= 4) {
+      const single = tokens[0]!;
+      for (const [key, hint] of SORTED_COMPANY_HINTS) {
+        const keyCompact = key.replace(/\s+/g, "");
+        if (keyCompact.length < 4) {
+          continue;
+        }
+        if (single.startsWith(keyCompact) || keyCompact.startsWith(single)) {
+          return {
+            ...hint,
+            confidence: single === keyCompact ? "high" : "medium",
+            source: "keyword",
+          };
+        }
       }
     }
 
@@ -620,15 +760,23 @@ export async function classifyClientCategory(input: {
     return null;
   }
 
-  const hint = matchCompanyHint(companyName);
-  if (hint) {
-    return hint;
+  const keywordHint = matchCompanyHint(companyName);
+  if (keywordHint?.confidence === "high") {
+    return keywordHint;
   }
 
   const nameVariants = companyNameVariants(companyName);
   const query = buildCompanySearchQuery(companyName, input.country, input.website);
-  const web =
-    hasWebSearchApiKey() ? await searchCompanyOnWeb(query) : { snippets: [], source: "none" as const };
+  const web = hasWebSearchApiKey()
+    ? await searchCompanyOnWeb(query)
+    : { snippets: [], source: "none" as const, apiKeyMissing: true };
+
+  if (web.apiKeyMissing && !webSearchKeyWarned) {
+    console.info(
+      "[classify-client-category] Web search skipped: no SERPER, BRAVE, or TAVILY API key configured."
+    );
+    webSearchKeyWarned = true;
+  }
 
   const webCorpus = web.snippets.join(" ");
   const webHint = webCorpus ? matchCompanyHint(`${companyName} ${webCorpus}`) : null;
@@ -655,7 +803,19 @@ export async function classifyClientCategory(input: {
         };
       }
     }
-    return null;
+    return keywordHint ?? null;
+  }
+
+  if (
+    keywordHint &&
+    keywordHint.categorySlug === ranked.categorySlug &&
+    keywordHint.subcategorySlug === ranked.subcategorySlug
+  ) {
+    return {
+      ...keywordHint,
+      confidence: confidenceFromScore(ranked.score, web.source !== "none"),
+      source: web.source === "none" ? "keyword" : "web_search",
+    };
   }
 
   return {

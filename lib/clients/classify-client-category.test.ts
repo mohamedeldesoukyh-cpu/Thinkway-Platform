@@ -78,6 +78,21 @@ async function run() {
     subcategorySlug: "beauty_personal_care",
   });
 
+  await expectClassification("Nuqul", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "general_trading",
+  });
+
+  await expectClassification("Nuqul Group", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "general_trading",
+  });
+
+  await expectClassification("Almarai", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "food_beverages",
+  });
+
   console.log("classify-client-category.test.ts: ok");
 }
 
