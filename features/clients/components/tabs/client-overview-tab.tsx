@@ -63,9 +63,7 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
   const [subcategorySlug, setSubcategorySlug] = useState(
     client.client_subcategory ?? ""
   );
-  const [categoryTouched, setCategoryTouched] = useState(
-    Boolean(client.client_category)
-  );
+  const [categoryManuallySet, setCategoryManuallySet] = useState(false);
   const [vrRateId, setVrRateId] = useState(client.vr_rate_id ?? "");
   const cityOptions = useMemo(() => {
     const options = getCityOptionsForCountry(country);
@@ -80,7 +78,7 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
       companyName: displayName,
       country,
       website: client.website ?? undefined,
-      enabled: !categoryTouched,
+      enabled: !categoryManuallySet,
       onClassified: ({ categorySlug: nextCategory, subcategorySlug: nextSubcategory }) => {
         setCategorySlug(nextCategory);
         setSubcategorySlug(nextSubcategory);
@@ -202,14 +200,14 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
               value={displayName}
               onChange={(e) => {
                 setDisplayName(e.target.value);
-                setCategoryTouched(false);
+                setCategoryManuallySet(false);
                 resetClassificationRequest();
               }}
               required
               disabled={isPending}
             />
             <FieldError messages={state.fieldErrors?.name} />
-            {categoryTouched ? (
+            {categoryManuallySet ? (
               <p className="text-xs text-muted-foreground">
                 {CLIENT_CATEGORY_PAUSE_MESSAGE}
               </p>
@@ -250,11 +248,11 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
           categorySlug={categorySlug}
           subcategorySlug={subcategorySlug}
           onCategoryChange={(value) => {
-            setCategoryTouched(true);
+            setCategoryManuallySet(true);
             setCategorySlug(value);
           }}
           onSubcategoryChange={(value) => {
-            setCategoryTouched(true);
+            setCategoryManuallySet(true);
             setSubcategorySlug(value);
           }}
           disabled={isPending}

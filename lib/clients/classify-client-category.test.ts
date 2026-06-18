@@ -179,6 +179,41 @@ async function run() {
     subcategorySlug: "home_furniture_interiors",
   });
 
+  await expectClassification("BYD", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "general_trading",
+  });
+
+  await expectClassification("Tesla", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "general_trading",
+  });
+
+  await expectClassification("Apple", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "consumer_electronics",
+  });
+
+  await expectClassification("Alibaba", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "online_marketplace",
+  });
+
+  await expectClassification("Middle East Communications Network MCN", {
+    categorySlug: "marketing_advertising_media_agencies",
+    subcategorySlug: "media_agency",
+  });
+
+  await expectClassification("MCN", {
+    categorySlug: "marketing_advertising_media_agencies",
+    subcategorySlug: "media_agency",
+  });
+
+  const mcnResult = await classifyClientCategory({ name: "Middle East Communications Network MCN" });
+  assert.ok(mcnResult);
+  assert.notEqual(mcnResult.categorySlug, "retail_ecommerce", "MCN must not be retail");
+  assert.notEqual(mcnResult.subcategorySlug, "home_shopping_network", "MCN must not be home shopping");
+
   console.log("classify-client-category.test.ts: ok");
 }
 

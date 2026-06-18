@@ -33,11 +33,17 @@ export function useClientCategoryClassification({
   const [message, setMessage] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const lastSuccessKeyRef = useRef("");
+  const prevCompanyNameRef = useRef(companyName);
   const onClassifiedRef = useRef(onClassified);
   onClassifiedRef.current = onClassified;
 
   useEffect(() => {
     const trimmed = companyName.trim();
+    if (prevCompanyNameRef.current.trim() !== trimmed) {
+      lastSuccessKeyRef.current = "";
+      prevCompanyNameRef.current = companyName;
+    }
+
     if (!enabled || trimmed.length < 3) {
       setClassifying(false);
       setMessage(null);
