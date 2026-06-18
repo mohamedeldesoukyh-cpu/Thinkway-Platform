@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import {
+  getAssignableClientProfiles,
+  getClientAccessForEntity,
+} from "@/features/client-access/queries";
 import { ClientProfile } from "@/features/clients/components/client-profile";
 import { getClientById } from "@/features/clients/queries";
 import { getClientIoSendRecipients, getClientIosForClient } from "@/features/io/queries";
@@ -20,15 +24,28 @@ export default async function ClientProfilePage({
   let masterData: Awaited<ReturnType<typeof getMasterDataOptions>> | null = null;
   let clientIos: Awaited<ReturnType<typeof getClientIosForClient>> = [];
   let clientIoRecipients: Awaited<ReturnType<typeof getClientIoSendRecipients>> = [];
+  let clientAccessEntity: Awaited<ReturnType<typeof getClientAccessForEntity>> = null;
+  let assignableClientProfiles: Awaited<
+    ReturnType<typeof getAssignableClientProfiles>
+  > = [];
   let errorMessage: string | null = null;
 
   try {
     client = await getClientById(id);
-    [groups, masterData, clientIos, clientIoRecipients] = await Promise.all([
+    [
+      groups,
+      masterData,
+      clientIos,
+      clientIoRecipients,
+      clientAccessEntity,
+      assignableClientProfiles,
+    ] = await Promise.all([
       getGroupsForSelect(),
       getMasterDataOptions(),
       getClientIosForClient(id),
       getClientIoSendRecipients(id),
+      getClientAccessForEntity(id),
+      getAssignableClientProfiles(id),
     ]);
   } catch (error) {
     errorMessage =
@@ -58,6 +75,8 @@ export default async function ClientProfilePage({
           masterData={masterData}
           clientIos={clientIos}
           clientIoRecipients={clientIoRecipients}
+          clientAccessEntity={clientAccessEntity}
+          assignableClientProfiles={assignableClientProfiles}
         />
       ) : null}
     </DashboardShell>

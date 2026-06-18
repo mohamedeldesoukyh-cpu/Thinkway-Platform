@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Tabs } from "@/components/ui/tabs";
@@ -18,6 +18,10 @@ import {
 } from "@/lib/workspace/platform-workspace-tabs";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import type {
+  AssignableClientProfileRow,
+  ClientAccessEntityRow,
+} from "@/features/client-access/types";
 import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 import type { ClientDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -37,6 +41,8 @@ type ClientProfileProps = {
   masterData: MasterDataOptions;
   clientIos: ClientIoRow[];
   clientIoRecipients: ClientIoSendRecipient[];
+  clientAccessEntity: ClientAccessEntityRow | null;
+  assignableClientProfiles: AssignableClientProfileRow[];
 };
 
 export function ClientProfile({
@@ -45,6 +51,8 @@ export function ClientProfile({
   masterData,
   clientIos,
   clientIoRecipients,
+  clientAccessEntity,
+  assignableClientProfiles,
 }: ClientProfileProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ClientProfileTabId>("overview");
@@ -148,13 +156,10 @@ export function ClientProfile({
             description="Manage portal users and roles for this legal entity."
             onCancel={handleCancel}
           >
-            <Suspense
-              fallback={
-                <p className="text-[13px] text-[#9099A8]">Loading client access…</p>
-              }
-            >
-              <ClientAccessTab clientId={client.id} />
-            </Suspense>
+            <ClientAccessTab
+              entity={clientAccessEntity}
+              assignable={assignableClientProfiles}
+            />
           </ClientProfileTabShell>
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>

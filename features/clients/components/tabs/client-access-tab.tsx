@@ -1,22 +1,20 @@
+"use client";
+
 import { UsersIcon } from "lucide-react";
 
 import { ClientFormSection } from "@/features/clients/components/client-form-ui";
 import { ClientAccessWorkspace } from "@/features/client-access/components/client-access-workspace";
-import {
-  getAssignableClientProfiles,
-  getClientAccessForEntity,
-} from "@/features/client-access/queries";
+import type {
+  AssignableClientProfileRow,
+  ClientAccessEntityRow,
+} from "@/features/client-access/types";
 
 type Props = {
-  clientId: string;
+  entity: ClientAccessEntityRow | null;
+  assignable: AssignableClientProfileRow[];
 };
 
-export async function ClientAccessTab({ clientId }: Props) {
-  const [entity, assignable] = await Promise.all([
-    getClientAccessForEntity(clientId),
-    getAssignableClientProfiles(clientId),
-  ]);
-
+export function ClientAccessTab({ entity, assignable }: Props) {
   if (!entity) {
     return (
       <p className="text-[13px] text-[#9099A8]">Legal entity not found.</p>
