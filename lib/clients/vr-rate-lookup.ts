@@ -16,6 +16,18 @@ export const CLIENT_GROUP_LIST_SELECT_CORE =
 
 export const CLIENT_GROUP_LIST_SELECT_WITH_VR = `${CLIENT_GROUP_LIST_SELECT_CORE}, vr_rate_id`;
 
+export type GroupClientListRow = {
+  id: string;
+  document_number: string;
+  name: string;
+  legal_name: string | null;
+  country: string | null;
+  currency: string;
+  payment_terms: string | null;
+  agency_or_direct: string | null;
+  status: string;
+};
+
 export const CLIENT_FORM_SELECT_CORE =
   "id, name, legal_name, group_id, document_number, status";
 
@@ -86,20 +98,23 @@ export async function fetchClientVrRateIdSafe(
 
 type ClientRowWithOptionalVr<T> = T & { vr_rate_id: string | null };
 
+type ClientQueryResult = {
+  data: Record<string, unknown>[] | null;
+  error: PostgrestError | null;
+};
+
 async function queryClientsWithOptionalVrRateColumn<T extends Record<string, unknown>>(
   supabase: SupabaseClient,
   selectWithVr: string,
   selectCore: string,
-  runQuery: (
-    select: string
-  ) => PromiseLike<{ data: T[] | null; error: PostgrestError | null }>
+  runQuery: (select: string) => PromiseLike<ClientQueryResult>
 ): Promise<{ data: ClientRowWithOptionalVr<T>[] | null; error: PostgrestError | null }> {
   const withVr = await runQuery(selectWithVr);
 
   if (!withVr.error) {
     return {
       data: (withVr.data ?? []).map((row) => ({
-        ...row,
+        ...(row as T),
         vr_rate_id: (row as T & { vr_rate_id?: string | null }).vr_rate_id ?? null,
       })),
       error: null,
@@ -116,7 +131,10 @@ async function queryClientsWithOptionalVrRateColumn<T extends Record<string, unk
   }
 
   return {
-    data: (fallback.data ?? []).map((row) => ({ ...row, vr_rate_id: null })),
+    data: (fallback.data ?? []).map((row) => ({
+      ...(row as T),
+      vr_rate_id: null,
+    })),
     error: null,
   };
 }
@@ -125,10 +143,10 @@ export async function fetchGroupClientsWithOptionalVrRate(
   supabase: SupabaseClient,
   groupId: string
 ): Promise<{
-  data: ClientRowWithOptionalVr<Record<string, unknown>>[] | null;
+  data: ClientRowWithOptionalVr<GroupClientListRow>[] | null;
   error: PostgrestError | null;
 }> {
-  return queryClientsWithOptionalVrRateColumn(
+  const result = await queryClientsWithOptionalVrRateColumn(
     supabase,
     CLIENT_GROUP_LIST_SELECT_WITH_VR,
     CLIENT_GROUP_LIST_SELECT_CORE,
@@ -137,8 +155,13 @@ export async function fetchGroupClientsWithOptionalVrRate(
         .from("clients")
         .select(select)
         .eq("group_id", groupId)
-        .order("name")
+        .order("name") as unknown as PromiseLike<ClientQueryResult>,
   );
+
+  return result as {
+    data: ClientRowWithOptionalVr<GroupClientListRow>[] | null;
+    error: PostgrestError | null;
+  };
 }
 
 export async function fetchClientsForSelectWithOptionalVrRate(
@@ -163,7 +186,7 @@ export async function fetchClientsForSelectWithOptionalVrRate(
         query = query.eq("group_id", groupId);
       }
 
-      return query;
+      return query as unknown as PromiseLike<ClientQueryResult>;
     }
   );
 }
