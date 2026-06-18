@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 
 import {
   friendlyClientDocumentError,
+  friendlyServerActionError,
   isMissingClientDocumentsBucket,
   isMissingClientDocumentsRelation,
+  isServerActionDecodeError,
   serializeClientDocumentRow,
+  serializeClientDocumentRows,
+  toJsonSafeFormActionState,
 } from "./client-document-utils";
 
 const baseRow = {
@@ -42,6 +46,44 @@ assert.equal(dateSerialized.created_at, "2026-06-19T00:00:00.000Z");
 assert.equal(dateSerialized.expires_at, "2027-01-15");
 
 assert.equal(JSON.stringify(dateSerialized), JSON.stringify(dateSerialized));
+
+const rows = serializeClientDocumentRows([
+  baseRow,
+  { ...baseRow, id: "44444444-4444-4444-4444-444444444444", file_size: BigInt(8192) },
+]);
+assert.equal(rows.length, 2);
+assert.equal(rows[1]?.file_size, 8192);
+
+const safeState = toJsonSafeFormActionState({
+  ok: true,
+  message: "Document uploaded.",
+});
+assert.equal(safeState.ok, true);
+assert.equal(safeState.document, undefined);
+assert.doesNotThrow(() => JSON.stringify(safeState));
+
+const safeWithErrors = toJsonSafeFormActionState({
+  ok: false,
+  message: "Please fix the errors below.",
+  fieldErrors: {
+    file: ["File is required"],
+    client_id: undefined,
+  },
+});
+assert.deepEqual(safeWithErrors.fieldErrors, { file: ["File is required"] });
+
+assert.equal(
+  isServerActionDecodeError(
+    new Error("An unexpected response was received from the server.")
+  ),
+  true
+);
+assert.equal(
+  friendlyServerActionError(
+    new Error("An unexpected response was received from the server.")
+  ),
+  "The upload may have completed, but the server response could not be read. Refreshing to confirm."
+);
 
 assert.equal(
   isMissingClientDocumentsRelation('relation "client_documents" does not exist'),

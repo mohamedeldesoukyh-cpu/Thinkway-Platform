@@ -86,3 +86,72 @@ export function serializeClientDocumentRow(
     updated_at: normalizeTimestamp(row.updated_at),
   };
 }
+
+export function serializeClientDocumentRows(
+  rows: readonly Record<string, unknown>[]
+): ClientDocumentRow[] {
+  return rows.map((row) => serializeClientDocumentRow(row));
+}
+
+function sanitizeFieldErrors(
+  fieldErrors: Record<string, string[] | undefined> | undefined
+): Record<string, string[]> | undefined {
+  if (!fieldErrors) {
+    return undefined;
+  }
+
+  const sanitized: Record<string, string[]> = {};
+  for (const [key, messages] of Object.entries(fieldErrors)) {
+    if (messages && messages.length > 0) {
+      sanitized[key] = messages;
+    }
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+}
+
+export type JsonSafeFormActionState = {
+  ok: boolean;
+  message?: string;
+  fieldErrors?: Record<string, string[]>;
+  document?: ClientDocumentRow;
+};
+
+/** Strip undefined keys and non-JSON values from server action payloads. */
+export function toJsonSafeFormActionState(
+  state: JsonSafeFormActionState
+): JsonSafeFormActionState {
+  const safe: JsonSafeFormActionState = { ok: state.ok };
+
+  if (state.message) {
+    safe.message = state.message;
+  }
+
+  const fieldErrors = sanitizeFieldErrors(state.fieldErrors);
+  if (fieldErrors) {
+    safe.fieldErrors = fieldErrors;
+  }
+
+  if (state.document) {
+    safe.document = serializeClientDocumentRow(
+      state.document as unknown as Record<string, unknown>
+    );
+  }
+
+  return JSON.parse(JSON.stringify(safe)) as JsonSafeFormActionState;
+}
+
+export function isServerActionDecodeError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /unexpected response was received from the server/i.test(error.message)
+  );
+}
+
+export function friendlyServerActionError(error: unknown): string {
+  if (isServerActionDecodeError(error)) {
+    return "The upload may have completed, but the server response could not be read. Refreshing to confirm.";
+  }
+
+  return error instanceof Error ? error.message : "Upload failed unexpectedly.";
+}

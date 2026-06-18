@@ -18,6 +18,10 @@ import {
   uploadClientDocumentAction,
 } from "@/features/clients/actions";
 import type { ClientDetail } from "@/types/database";
+import {
+  friendlyServerActionError,
+  isServerActionDecodeError,
+} from "@/lib/clients/client-document-utils";
 import { cn } from "@/lib/utils";
 
 type ClientDocumentType = ClientDetail["documents"][number]["document_type"];
@@ -78,6 +82,8 @@ export function ClientInlineDocumentAttach({
       return;
     }
 
+    event.stopPropagation();
+
     const formData = new FormData();
     formData.set("client_id", clientId);
     formData.set("document_type", documentType);
@@ -88,17 +94,17 @@ export function ClientInlineDocumentAttach({
         const result = await uploadClientDocumentAction({ ok: false }, formData);
         if (result.ok) {
           toast.success(result.message ?? "Document uploaded.");
-          if (result.document) {
-            setLocalDocument(result.document);
-          }
           refreshClientProfileSafely();
           return;
         }
         toast.error(result.message ?? "Upload failed.");
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Upload failed unexpectedly."
-        );
+        if (isServerActionDecodeError(error)) {
+          refreshClientProfileSafely();
+          toast.warning(friendlyServerActionError(error));
+          return;
+        }
+        toast.error(friendlyServerActionError(error));
       } finally {
         event.target.value = "";
       }
@@ -125,9 +131,12 @@ export function ClientInlineDocumentAttach({
         }
         toast.error(result.message ?? "Could not remove document.");
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Could not remove document."
-        );
+        if (isServerActionDecodeError(error)) {
+          refreshClientProfileSafely();
+          toast.warning(friendlyServerActionError(error));
+          return;
+        }
+        toast.error(friendlyServerActionError(error));
       }
     });
   }
@@ -242,6 +251,7 @@ export function ClientInlineDocumentAttach({
         className="sr-only"
         aria-hidden
         onChange={handleFileChange}
+        onClick={(event) => event.stopPropagation()}
       />
     </div>
   );

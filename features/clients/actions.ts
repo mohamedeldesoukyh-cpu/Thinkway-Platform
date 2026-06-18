@@ -19,7 +19,7 @@ import {
 import { upsertClientClassificationCache } from "@/lib/clients/client-classification-cache";
 import {
   friendlyClientDocumentError,
-  serializeClientDocumentRow,
+  toJsonSafeFormActionState,
 } from "@/lib/clients/client-document-utils";
 import type { AgencyOrDirect, ClientDocumentRow, PaymentTerms } from "@/types/database";
 
@@ -499,24 +499,27 @@ export async function uploadClientDocumentAction(
     });
 
     if (!parsed.success) {
-      return {
+      return toJsonSafeFormActionState({
         ok: false,
         message: "Please fix the errors below.",
         fieldErrors: parsed.error.flatten().fieldErrors,
-      };
+      });
     }
 
     if (!(file instanceof File) || file.size === 0) {
-      return {
+      return toJsonSafeFormActionState({
         ok: false,
         message: "Please choose a file to upload.",
         fieldErrors: { file: ["File is required"] },
-      };
+      });
     }
 
     const { supabase, user, error: authError } = await requireAuthUser();
     if (authError || !user) {
-      return { ok: false, message: authError ?? "Unauthorized" };
+      return toJsonSafeFormActionState({
+        ok: false,
+        message: authError ?? "Unauthorized",
+      });
     }
 
     const { data: existingDocs, error: existingError } = await supabase
@@ -526,10 +529,10 @@ export async function uploadClientDocumentAction(
       .eq("document_type", parsed.data.document_type);
 
     if (existingError) {
-      return {
+      return toJsonSafeFormActionState({
         ok: false,
         message: friendlyClientDocumentError(existingError.message),
-      };
+      });
     }
 
     const uploaded = await uploadEntityDocument({
@@ -565,12 +568,12 @@ export async function uploadClientDocumentAction(
       } catch {
         // Best-effort rollback when the DB row could not be created.
       }
-      return {
+      return toJsonSafeFormActionState({
         ok: false,
         message: friendlyClientDocumentError(
           error?.message ?? "Document record could not be created."
         ),
-      };
+      });
     }
 
     for (const existingDoc of existingDocs ?? []) {
@@ -596,20 +599,17 @@ export async function uploadClientDocumentAction(
 
     revalidatePath(`/clients/${parsed.data.client_id}`);
 
-    return {
+    return toJsonSafeFormActionState({
       ok: true,
       message: "Document uploaded.",
-      document: serializeClientDocumentRow(
-        insertedDoc as unknown as Record<string, unknown>
-      ),
-    };
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Upload failed unexpectedly.";
-    return {
+    return toJsonSafeFormActionState({
       ok: false,
       message: friendlyClientDocumentError(message),
-    };
+    });
   }
 }
 
@@ -622,12 +622,15 @@ export async function deleteClientDocumentAction(
     const clientId = String(formData.get("client_id") ?? "");
 
     if (!documentId || !clientId) {
-      return { ok: false, message: "Missing document reference." };
+      return toJsonSafeFormActionState({
+        ok: false,
+        message: "Missing document reference.",
+      });
     }
 
     const { supabase, error: authError } = await requireAuthUser();
     if (authError) {
-      return { ok: false, message: authError };
+      return toJsonSafeFormActionState({ ok: false, message: authError });
     }
 
     const { data: doc, error: fetchError } = await supabase
@@ -638,14 +641,14 @@ export async function deleteClientDocumentAction(
       .maybeSingle();
 
     if (fetchError) {
-      return {
+      return toJsonSafeFormActionState({
         ok: false,
         message: friendlyClientDocumentError(fetchError.message),
-      };
+      });
     }
 
     if (!doc) {
-      return { ok: false, message: "Document not found." };
+      return toJsonSafeFormActionState({ ok: false, message: "Document not found." });
     }
 
     const { error: deleteRowError } = await supabase
@@ -654,10 +657,10 @@ export async function deleteClientDocumentAction(
       .eq("id", documentId);
 
     if (deleteRowError) {
-      return {
+      return toJsonSafeFormActionState({
         ok: false,
         message: friendlyClientDocumentError(deleteRowError.message),
-      };
+      });
     }
 
     try {
@@ -672,14 +675,14 @@ export async function deleteClientDocumentAction(
 
     revalidatePath(`/clients/${clientId}`);
 
-    return { ok: true, message: "Document removed." };
+    return toJsonSafeFormActionState({ ok: true, message: "Document removed." });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Could not remove document.";
-    return {
+    return toJsonSafeFormActionState({
       ok: false,
       message: friendlyClientDocumentError(message),
-    };
+    });
   }
 }
 

@@ -1,6 +1,6 @@
 import { getBrandsByClientId } from "@/features/brands/queries";
 import { fetchClientDetailRowById } from "@/lib/clients/client-detail-query";
-import { isMissingClientDocumentsRelation } from "@/lib/clients/client-document-utils";
+import { isMissingClientDocumentsRelation, serializeClientDocumentRows } from "@/lib/clients/client-document-utils";
 import {
   fetchVrRatesByIds,
   vrRatePercentFromMap,
@@ -51,7 +51,7 @@ async function fetchClientDocumentsSafe(
     .order("created_at", { ascending: false });
 
   if (!error) {
-    return data ?? [];
+    return serializeClientDocumentRows((data ?? []) as Record<string, unknown>[]);
   }
 
   if (isMissingClientDocumentsRelation(error.message)) {
