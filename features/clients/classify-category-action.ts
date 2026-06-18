@@ -11,6 +11,7 @@ import { computeNeedsReview } from "@/lib/clients/client-classification-review";
 import { findHistoricalClientClassification } from "@/lib/clients/classify-client-category-historical";
 import type { ClientClassificationSource } from "@/lib/clients/classify-client-category-types";
 import { isValidClientCategoryPair } from "@/lib/clients/client-category-taxonomy";
+import { fetchClientRowSafe } from "@/lib/clients/safe-client-query";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -74,26 +75,36 @@ export async function classifyClientCategoryAction(input: {
     let approvedClassification = null;
 
     if (input.clientId && input.useStoredApproved) {
-      const { data: client } = await supabase
-        .from("clients")
-        .select(
-          "name, client_category, client_subcategory, classification_source, classification_confidence, classification_reason, approved_by_user"
-        )
-        .eq("id", input.clientId)
-        .maybeSingle();
+      const { row: client } = await fetchClientRowSafe(supabase, input.clientId, [
+        "name",
+        "client_category",
+        "client_subcategory",
+        "classification_source",
+        "classification_confidence",
+        "classification_reason",
+        "approved_by_user",
+      ]);
 
       if (
         client?.approved_by_user &&
         client.client_category &&
         client.client_subcategory &&
-        isValidClientCategoryPair(client.client_category, client.client_subcategory)
+        isValidClientCategoryPair(
+          String(client.client_category),
+          String(client.client_subcategory)
+        )
       ) {
         approvedClassification = {
-          categorySlug: client.client_category,
-          subcategorySlug: client.client_subcategory,
-          confidence: client.classification_confidence ?? 100,
-          source: (client.classification_source as ClientClassificationSource) ?? "approved",
-          reason: client.classification_reason ?? undefined,
+          categorySlug: String(client.client_category),
+          subcategorySlug: String(client.client_subcategory),
+          confidence: Number(client.classification_confidence ?? 100),
+          source:
+            (client.classification_source as ClientClassificationSource) ??
+            "approved",
+          reason:
+            client.classification_reason != null
+              ? String(client.classification_reason)
+              : undefined,
         };
       }
     }

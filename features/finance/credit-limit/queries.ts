@@ -1,3 +1,4 @@
+import { fetchClientCreditLimitListSafe } from "@/lib/clients/safe-client-query";
 import { getClientCreditExposure } from "@/lib/finance/client-credit-exposure";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -25,32 +26,16 @@ async function requireUser() {
   return supabase;
 }
 
-type ClientCreditLimitRecord = {
-  id: string;
-  document_number: string;
-  name: string;
-  legal_name: string | null;
-  currency: string;
-  credit_limit: number | null;
-  credit_limit_active: boolean;
-  accept_credit_risk: boolean;
-};
-
 export async function getCreditLimitWorkspace(): Promise<CreditLimitWorkspaceData> {
   const supabase = await requireUser();
 
-  const { data, error } = await supabase
-    .from("clients")
-    .select(
-      "id, document_number, name, legal_name, currency, credit_limit, credit_limit_active, accept_credit_risk"
-    )
-    .order("name", { ascending: true });
+  const { clients: records, error } = await fetchClientCreditLimitListSafe(
+    supabase
+  );
 
   if (error) {
     throw new Error(error.message);
   }
-
-  const records = (data ?? []) as ClientCreditLimitRecord[];
 
   const clients = await Promise.all(
     records.map(async (client): Promise<ClientCreditLimitRow> => {
@@ -68,8 +53,8 @@ export async function getCreditLimitWorkspace(): Promise<CreditLimitWorkspaceDat
         legal_name: client.legal_name,
         currency: client.currency ?? exposureResult.currency,
         credit_limit: limit,
-        credit_limit_active: Boolean(client.credit_limit_active),
-        accept_credit_risk: Boolean(client.accept_credit_risk),
+        credit_limit_active: client.credit_limit_active,
+        accept_credit_risk: client.accept_credit_risk,
         exposure,
         available,
       };

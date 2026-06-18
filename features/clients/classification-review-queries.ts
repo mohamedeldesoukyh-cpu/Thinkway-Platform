@@ -3,6 +3,7 @@ import {
   getClientSubcategoryLabel,
 } from "@/lib/clients/client-category-taxonomy";
 import { classificationSourceLabel } from "@/lib/clients/classify-client-category-types";
+import { fetchClientRowsSafe } from "@/lib/clients/safe-client-query";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ClientClassificationReviewRow = {
@@ -19,44 +20,86 @@ export type ClientClassificationReviewRow = {
   needs_review: boolean;
 };
 
+const CLASSIFICATION_REVIEW_COLUMNS = [
+  "id",
+  "name",
+  "client_category",
+  "client_subcategory",
+  "classification_confidence",
+  "classification_source",
+  "classification_reason",
+  "needs_review",
+] as const;
+
 export async function getClientClassificationReviewQueue(): Promise<{
   rows: ClientClassificationReviewRow[];
   error?: string;
 }> {
   const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from("clients")
-    .select(
-      "id, name, client_category, client_subcategory, classification_confidence, classification_source, classification_reason, needs_review"
-    )
-    .eq("needs_review", true)
-    .order("name", { ascending: true });
+  const { rows, error, strippedColumns } = await fetchClientRowsSafe(
+    supabase,
+    CLASSIFICATION_REVIEW_COLUMNS,
+    (select) =>
+      supabase
+        .from("clients")
+        .select(select)
+        .eq("needs_review", true)
+        .order("name", { ascending: true }) as unknown as PromiseLike<{
+        data: Record<string, unknown>[] | null;
+        error: import("@supabase/supabase-js").PostgrestError | null;
+      }>
+  );
 
   if (error) {
     return { rows: [], error: error.message };
   }
 
-  const rows = (data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    client_category: row.client_category,
-    client_subcategory: row.client_subcategory,
-    category_label: getClientCategoryLabel(row.client_category),
-    subcategory_label: getClientSubcategoryLabel(
-      row.client_category,
-      row.client_subcategory
+  const stripped = new Set(strippedColumns);
+
+  const mappedRows = rows.map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    client_category: stripped.has("client_category")
+      ? null
+      : ((row.client_category as string | null | undefined) ?? null),
+    client_subcategory: stripped.has("client_subcategory")
+      ? null
+      : ((row.client_subcategory as string | null | undefined) ?? null),
+    category_label: getClientCategoryLabel(
+      stripped.has("client_category")
+        ? null
+        : ((row.client_category as string | null | undefined) ?? null)
     ),
-    classification_confidence: row.classification_confidence,
-    classification_source: row.classification_source,
-    source_label: row.classification_source
-      ? classificationSourceLabel(
-          row.classification_source as Parameters<typeof classificationSourceLabel>[0]
-        )
-      : "—",
-    classification_reason: row.classification_reason,
-    needs_review: row.needs_review,
+    subcategory_label: getClientSubcategoryLabel(
+      stripped.has("client_category")
+        ? null
+        : ((row.client_category as string | null | undefined) ?? null),
+      stripped.has("client_subcategory")
+        ? null
+        : ((row.client_subcategory as string | null | undefined) ?? null)
+    ),
+    classification_confidence: stripped.has("classification_confidence")
+      ? null
+      : ((row.classification_confidence as number | null | undefined) ?? null),
+    classification_source: stripped.has("classification_source")
+      ? null
+      : ((row.classification_source as string | null | undefined) ?? null),
+    source_label:
+      !stripped.has("classification_source") && row.classification_source
+        ? classificationSourceLabel(
+            row.classification_source as Parameters<
+              typeof classificationSourceLabel
+            >[0]
+          )
+        : "—",
+    classification_reason: stripped.has("classification_reason")
+      ? null
+      : ((row.classification_reason as string | null | undefined) ?? null),
+    needs_review: stripped.has("needs_review")
+      ? false
+      : Boolean(row.needs_review),
   }));
 
-  return { rows };
+  return { rows: mappedRows };
 }

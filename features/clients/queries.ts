@@ -2,6 +2,11 @@ import { getBrandsByClientId } from "@/features/brands/queries";
 import { fetchClientDetailRowById } from "@/lib/clients/client-detail-query";
 import { isMissingClientDocumentsRelation, serializeClientDocumentRows } from "@/lib/clients/client-document-utils";
 import {
+  getMissingClientColumnFromSchemaError,
+  isMissingClientColumnSchemaError,
+  NAME_AR_COLUMN,
+} from "@/lib/clients/classification-audit-columns";
+import {
   fetchVrRatesByIds,
   vrRatePercentFromMap,
 } from "@/lib/clients/vr-rate-lookup";
@@ -126,24 +131,53 @@ export async function getClientsList(params: {
 
   const { supabase } = await requireUser();
 
-  let query = supabase
-    .from("clients")
-    .select("*, group:groups(id, name)", { count: "exact" })
-    .order("created_at", { ascending: false });
+  const searchFiltersWithNameAr = (pattern: string) =>
+    [
+      `name.ilike.${pattern}`,
+      `name_ar.ilike.${pattern}`,
+      `legal_name.ilike.${pattern}`,
+      `document_number.ilike.${pattern}`,
+    ].join(",");
 
-  if (search) {
-    const pattern = `%${escapeIlikePattern(search)}%`;
-    query = query.or(
-      [
-        `name.ilike.${pattern}`,
-        `name_ar.ilike.${pattern}`,
-        `legal_name.ilike.${pattern}`,
-        `document_number.ilike.${pattern}`,
-      ].join(",")
-    );
+  const searchFiltersCore = (pattern: string) =>
+    [
+      `name.ilike.${pattern}`,
+      `legal_name.ilike.${pattern}`,
+      `document_number.ilike.${pattern}`,
+    ].join(",");
+
+  async function runListQuery(includeNameArFilter: boolean) {
+    let query = supabase
+      .from("clients")
+      .select("*, group:groups(id, name)", { count: "exact" })
+      .order("created_at", { ascending: false });
+
+    if (search) {
+      const pattern = `%${escapeIlikePattern(search)}%`;
+      query = query.or(
+        includeNameArFilter
+          ? searchFiltersWithNameAr(pattern)
+          : searchFiltersCore(pattern)
+      );
+    }
+
+    return query.range(from, to);
   }
 
-  const { data, error, count } = await query.range(from, to);
+  let { data, error, count } = await runListQuery(true);
+
+  if (
+    error &&
+    search &&
+    isMissingClientColumnSchemaError(error) &&
+    getMissingClientColumnFromSchemaError(error) === NAME_AR_COLUMN
+  ) {
+    console.warn(
+      "[clients] name_ar column missing while searching clients; retrying without Arabic name filter:",
+      error.message
+    );
+    ({ data, error, count } = await runListQuery(false));
+  }
 
   if (error) {
     throw new Error(error.message);

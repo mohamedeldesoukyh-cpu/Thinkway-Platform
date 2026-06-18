@@ -1,3 +1,4 @@
+import { fetchClientCreditLimitFlagsSafe } from "@/lib/clients/safe-client-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function roundMoney(value: number): number {
@@ -129,23 +130,19 @@ export async function checkClientCreditLimit(
   supabase: SupabaseClient,
   input: { clientId: string; additionalAmount?: number }
 ): Promise<ClientCreditLimitCheck> {
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .select("credit_limit, credit_limit_active, accept_credit_risk, currency")
-    .eq("id", input.clientId)
-    .maybeSingle();
+  const client = await fetchClientCreditLimitFlagsSafe(supabase, input.clientId);
 
-  if (clientError) {
-    throw new Error(clientError.message);
+  if (client.error) {
+    throw new Error(client.error);
   }
-  if (!client) {
+  if (!client.found) {
     throw new Error("Client not found.");
   }
 
   const limit =
-    client.credit_limit != null ? roundMoney(Number(client.credit_limit)) : null;
-  const credit_limit_active = Boolean(client.credit_limit_active);
-  const accept_credit_risk = Boolean(client.accept_credit_risk);
+    client.credit_limit != null ? roundMoney(client.credit_limit) : null;
+  const credit_limit_active = client.credit_limit_active;
+  const accept_credit_risk = client.accept_credit_risk;
   const additional_amount = roundMoney(input.additionalAmount ?? 0);
 
   const exposureResult = await getClientCreditExposure(supabase, input.clientId);
