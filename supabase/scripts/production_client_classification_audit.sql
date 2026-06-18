@@ -1,5 +1,12 @@
--- Idempotent production patch: client classification audit + review + cache
--- Run once in Supabase SQL editor if migrations 20260627010000–20260628020000 are not applied.
+-- Idempotent production patch: client name_ar + classification audit + review + cache
+-- Run once in Supabase SQL editor if migrations 20260625010000–20260628020000 are not applied.
+
+-- 0) Arabic legal name
+ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS name_ar text;
+
+COMMENT ON COLUMN public.clients.name_ar IS
+  'Optional Arabic legal / display name for the client';
 
 -- 1) Audit columns on clients
 ALTER TABLE public.clients
