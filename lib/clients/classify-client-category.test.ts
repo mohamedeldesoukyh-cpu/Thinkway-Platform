@@ -93,6 +93,92 @@ async function run() {
     subcategorySlug: "food_beverages",
   });
 
+  // Egypt brand classification
+  await expectClassification("Memac Ogilvy Egypt", {
+    categorySlug: "marketing_advertising_media_agencies",
+    subcategorySlug: "advertising_agency",
+  });
+
+  await expectClassification("Tarek Nour Communications", {
+    categorySlug: "marketing_advertising_media_agencies",
+    subcategorySlug: "advertising_agency",
+  });
+
+  await expectClassification("Juhayna", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "food_beverages",
+  });
+
+  await expectClassification("Domty Egypt", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "food_beverages",
+  });
+
+  await expectClassification("Eva Cosmetics", {
+    categorySlug: "beauty_personal_care",
+    subcategorySlug: "cosmetics",
+  });
+
+  await expectClassification("Commercial International Bank", {
+    categorySlug: "financial_services_banking",
+    subcategorySlug: "banking",
+  });
+
+  await expectClassification("Fawry", {
+    categorySlug: "financial_services_banking",
+    subcategorySlug: "financial_services",
+  });
+
+  await expectClassification("Vodafone Egypt", {
+    categorySlug: "telecommunications",
+    subcategorySlug: "mobile_technology",
+  });
+
+  await expectClassification("Telecom Egypt", {
+    categorySlug: "telecommunications",
+    subcategorySlug: "mobile_technology",
+  });
+
+  await expectClassification("Swvl", {
+    categorySlug: "transportation_delivery",
+    subcategorySlug: "ride_hailing_app",
+  });
+
+  await expectClassification("Breadfast Egypt", {
+    categorySlug: "transportation_delivery",
+    subcategorySlug: "delivery_ecommerce_platform",
+  });
+
+  await expectClassification("Al Ahly SC", {
+    categorySlug: "government_sports_nonprofit",
+    subcategorySlug: "sports_federations_leagues",
+  });
+
+  await expectClassification("Egyptian Tourism Authority", {
+    categorySlug: "government_sports_nonprofit",
+    subcategorySlug: "government_authorities",
+  });
+
+  await expectClassification("EIPICO", {
+    categorySlug: "healthcare_wellness",
+    subcategorySlug: "healthcare_products",
+  });
+
+  await expectClassification("Concrete Store Egypt", {
+    categorySlug: "fashion_apparel",
+    subcategorySlug: "fashion",
+  });
+
+  await expectClassification("Pet's Land Egypt", {
+    categorySlug: "pet_animal_products",
+    subcategorySlug: "pet_retail_pet_products",
+  });
+
+  await expectClassification("IKEA Egypt", {
+    categorySlug: "home_furniture",
+    subcategorySlug: "home_furniture_interiors",
+  });
+
   console.log("classify-client-category.test.ts: ok");
 }
 
