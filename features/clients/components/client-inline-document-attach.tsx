@@ -89,7 +89,7 @@ export function ClientInlineDocumentAttach({
         if (result.ok) {
           toast.success(result.message ?? "Document uploaded.");
           if (result.document) {
-            setLocalDocument(result.document as ClientDocument);
+            setLocalDocument(result.document);
           }
           refreshClientProfileSafely();
           return;

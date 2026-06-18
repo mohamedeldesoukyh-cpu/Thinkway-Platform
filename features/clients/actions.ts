@@ -17,7 +17,11 @@ import {
   updateClientWithOptionalColumnRetry,
 } from "@/lib/clients/classification-audit-columns";
 import { upsertClientClassificationCache } from "@/lib/clients/client-classification-cache";
-import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
+import {
+  friendlyClientDocumentError,
+  serializeClientDocumentRow,
+} from "@/lib/clients/client-document-utils";
+import type { AgencyOrDirect, ClientDocumentRow, PaymentTerms } from "@/types/database";
 
 import {
   createClientSchema,
@@ -33,20 +37,7 @@ export type FormActionState = {
   ok: boolean;
   message?: string;
   fieldErrors?: Record<string, string[]>;
-  document?: {
-    id: string;
-    client_id: string;
-    document_type: string;
-    file_name: string;
-    storage_path: string;
-    mime_type: string | null;
-    file_size: number | null;
-    expires_at: string | null;
-    notes: string | null;
-    uploaded_by: string | null;
-    created_at: string;
-    updated_at: string;
-  };
+  document?: ClientDocumentRow;
 };
 
 export type CreateClientFormState = FormActionState & { clientId?: string };
@@ -495,49 +486,52 @@ export async function uploadClientDocumentAction(
   _prev: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
-  const clientId = String(formData.get("entity_id") ?? formData.get("client_id") ?? "");
-  const documentType = String(formData.get("document_type") ?? "");
-  const expiresAt = String(formData.get("expires_at") ?? "");
-  const file = formData.get("file");
-
-  const parsed = uploadClientDocumentSchema.safeParse({
-    client_id: clientId,
-    document_type: documentType,
-    expires_at: expiresAt,
-  });
-
-  if (!parsed.success) {
-    return {
-      ok: false,
-      message: "Please fix the errors below.",
-      fieldErrors: parsed.error.flatten().fieldErrors,
-    };
-  }
-
-  if (!(file instanceof File) || file.size === 0) {
-    return {
-      ok: false,
-      message: "Please choose a file to upload.",
-      fieldErrors: { file: ["File is required"] },
-    };
-  }
-
-  const { supabase, user, error: authError } = await requireAuthUser();
-  if (authError || !user) {
-    return { ok: false, message: authError ?? "Unauthorized" };
-  }
-
-  const { data: existingDocs, error: existingError } = await supabase
-    .from("client_documents")
-    .select("id, storage_path")
-    .eq("client_id", parsed.data.client_id)
-    .eq("document_type", parsed.data.document_type);
-
-  if (existingError) {
-    return { ok: false, message: existingError.message };
-  }
-
   try {
+    const clientId = String(formData.get("entity_id") ?? formData.get("client_id") ?? "");
+    const documentType = String(formData.get("document_type") ?? "");
+    const expiresAt = String(formData.get("expires_at") ?? "");
+    const file = formData.get("file");
+
+    const parsed = uploadClientDocumentSchema.safeParse({
+      client_id: clientId,
+      document_type: documentType,
+      expires_at: expiresAt,
+    });
+
+    if (!parsed.success) {
+      return {
+        ok: false,
+        message: "Please fix the errors below.",
+        fieldErrors: parsed.error.flatten().fieldErrors,
+      };
+    }
+
+    if (!(file instanceof File) || file.size === 0) {
+      return {
+        ok: false,
+        message: "Please choose a file to upload.",
+        fieldErrors: { file: ["File is required"] },
+      };
+    }
+
+    const { supabase, user, error: authError } = await requireAuthUser();
+    if (authError || !user) {
+      return { ok: false, message: authError ?? "Unauthorized" };
+    }
+
+    const { data: existingDocs, error: existingError } = await supabase
+      .from("client_documents")
+      .select("id, storage_path")
+      .eq("client_id", parsed.data.client_id)
+      .eq("document_type", parsed.data.document_type);
+
+    if (existingError) {
+      return {
+        ok: false,
+        message: friendlyClientDocumentError(existingError.message),
+      };
+    }
+
     const uploaded = await uploadEntityDocument({
       supabase,
       bucket: "client-documents",
@@ -562,14 +556,20 @@ export async function uploadClientDocumentAction(
       .single();
 
     if (error || !insertedDoc) {
-      await removeStorageObject({
-        supabase,
-        bucket: "client-documents",
-        storagePath: uploaded.storagePath,
-      });
+      try {
+        await removeStorageObject({
+          supabase,
+          bucket: "client-documents",
+          storagePath: uploaded.storagePath,
+        });
+      } catch {
+        // Best-effort rollback when the DB row could not be created.
+      }
       return {
         ok: false,
-        message: error?.message ?? "Document record could not be created.",
+        message: friendlyClientDocumentError(
+          error?.message ?? "Document record could not be created."
+        ),
       };
     }
 
@@ -599,12 +599,16 @@ export async function uploadClientDocumentAction(
     return {
       ok: true,
       message: "Document uploaded.",
-      document: insertedDoc,
+      document: serializeClientDocumentRow(
+        insertedDoc as unknown as Record<string, unknown>
+      ),
     };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Upload failed unexpectedly.";
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Upload failed.",
+      message: friendlyClientDocumentError(message),
     };
   }
 }
@@ -613,83 +617,106 @@ export async function deleteClientDocumentAction(
   _prev: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
-  const documentId = String(formData.get("document_id") ?? "");
-  const clientId = String(formData.get("client_id") ?? "");
-
-  if (!documentId || !clientId) {
-    return { ok: false, message: "Missing document reference." };
-  }
-
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { ok: false, message: authError };
-  }
-
-  const { data: doc, error: fetchError } = await supabase
-    .from("client_documents")
-    .select("storage_path")
-    .eq("id", documentId)
-    .eq("client_id", clientId)
-    .maybeSingle();
-
-  if (fetchError || !doc) {
-    return { ok: false, message: fetchError?.message ?? "Document not found." };
-  }
-
-  const { error: deleteRowError } = await supabase
-    .from("client_documents")
-    .delete()
-    .eq("id", documentId);
-
-  if (deleteRowError) {
-    return { ok: false, message: deleteRowError.message };
-  }
-
   try {
-    await removeStorageObject({
-      supabase,
-      bucket: "client-documents",
-      storagePath: doc.storage_path,
-    });
-  } catch {
-    // Row removed; storage cleanup is best-effort.
+    const documentId = String(formData.get("document_id") ?? "");
+    const clientId = String(formData.get("client_id") ?? "");
+
+    if (!documentId || !clientId) {
+      return { ok: false, message: "Missing document reference." };
+    }
+
+    const { supabase, error: authError } = await requireAuthUser();
+    if (authError) {
+      return { ok: false, message: authError };
+    }
+
+    const { data: doc, error: fetchError } = await supabase
+      .from("client_documents")
+      .select("storage_path")
+      .eq("id", documentId)
+      .eq("client_id", clientId)
+      .maybeSingle();
+
+    if (fetchError) {
+      return {
+        ok: false,
+        message: friendlyClientDocumentError(fetchError.message),
+      };
+    }
+
+    if (!doc) {
+      return { ok: false, message: "Document not found." };
+    }
+
+    const { error: deleteRowError } = await supabase
+      .from("client_documents")
+      .delete()
+      .eq("id", documentId);
+
+    if (deleteRowError) {
+      return {
+        ok: false,
+        message: friendlyClientDocumentError(deleteRowError.message),
+      };
+    }
+
+    try {
+      await removeStorageObject({
+        supabase,
+        bucket: "client-documents",
+        storagePath: doc.storage_path,
+      });
+    } catch {
+      // Row removed; storage cleanup is best-effort.
+    }
+
+    revalidatePath(`/clients/${clientId}`);
+
+    return { ok: true, message: "Document removed." };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not remove document.";
+    return {
+      ok: false,
+      message: friendlyClientDocumentError(message),
+    };
   }
-
-  revalidatePath(`/clients/${clientId}`);
-
-  return { ok: true, message: "Document removed." };
 }
 
 export async function getClientDocumentDownloadUrlAction(
   documentId: string,
   clientId: string
 ): Promise<{ url?: string; error?: string }> {
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { error: authError };
-  }
-
-  const { data: doc, error } = await supabase
-    .from("client_documents")
-    .select("storage_path")
-    .eq("id", documentId)
-    .eq("client_id", clientId)
-    .maybeSingle();
-
-  if (error || !doc) {
-    return { error: error?.message ?? "Document not found." };
-  }
-
   try {
+    const { supabase, error: authError } = await requireAuthUser();
+    if (authError) {
+      return { error: authError };
+    }
+
+    const { data: doc, error } = await supabase
+      .from("client_documents")
+      .select("storage_path")
+      .eq("id", documentId)
+      .eq("client_id", clientId)
+      .maybeSingle();
+
+    if (error) {
+      return { error: friendlyClientDocumentError(error.message) };
+    }
+
+    if (!doc) {
+      return { error: "Document not found." };
+    }
+
     const url = await createSignedDocumentUrl({
       supabase,
       bucket: "client-documents",
       storagePath: doc.storage_path,
     });
     return { url };
-  } catch (e) {
-    return {
-      error: e instanceof Error ? e.message : "Could not create download link.",
-    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not create download link.";
+    return { error: friendlyClientDocumentError(message) };
   }
 }

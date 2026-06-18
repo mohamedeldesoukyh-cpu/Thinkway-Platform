@@ -1,5 +1,6 @@
 import { getBrandsByClientId } from "@/features/brands/queries";
 import { fetchClientDetailRowById } from "@/lib/clients/client-detail-query";
+import { isMissingClientDocumentsRelation } from "@/lib/clients/client-document-utils";
 import {
   fetchVrRatesByIds,
   vrRatePercentFromMap,
@@ -37,16 +38,6 @@ async function requireUser() {
   }
 
   return { supabase, user };
-}
-
-function isMissingClientDocumentsRelation(message: string): boolean {
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("client_documents") &&
-    (normalized.includes("does not exist") ||
-      normalized.includes("schema cache") ||
-      normalized.includes("could not find"))
-  );
 }
 
 async function fetchClientDocumentsSafe(
