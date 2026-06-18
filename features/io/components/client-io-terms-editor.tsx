@@ -53,9 +53,9 @@ export function ClientIoTermsEditor({
           <div
             key={index}
             className={cn(
-              "space-y-2.5 rounded-[12px] border border-border/80 bg-muted/30 p-4",
-              "transition-[border-color,box-shadow] focus-within:border-[var(--brand-product)]/40",
-              "focus-within:ring-[3px] focus-within:ring-[var(--brand-product)]/15"
+              "space-y-2.5 rounded-[12px] border border-[#E6EAF2] bg-[#F5F8FD] p-4",
+              "transition-[border-color,box-shadow] focus-within:border-[#0057FF]",
+              "focus-within:ring-[3px] focus-within:ring-[#EEF4FF]"
             )}
           >
             <div className="flex items-center justify-between gap-2">
@@ -98,9 +98,9 @@ export function ClientIoTermsEditor({
         onClick={addTerm}
         disabled={disabled}
         className={cn(
-          "inline-flex w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-border/80",
-          "px-4 py-2.5 text-[13px] font-semibold text-[var(--brand-product)] transition-colors",
-          "hover:border-[var(--brand-product)] hover:bg-[var(--brand-product)]/5",
+          "inline-flex w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-[#E6EAF2]",
+          "px-4 py-2.5 text-[13px] font-semibold text-[#0057FF] transition-colors",
+          "hover:border-[#0057FF] hover:bg-[#EEF4FF]",
           "disabled:pointer-events-none disabled:opacity-50"
         )}
       >
