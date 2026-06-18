@@ -12,7 +12,6 @@ import {
   Building2Icon,
   CalendarClockIcon,
   CalendarRangeIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   CircleMinusIcon,
   CirclePlusIcon,
@@ -495,31 +494,37 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
 
       <nav
         className={cn(
-          "flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden",
-          displayExpanded ? "p-3" : "px-1 py-2"
+          "flex flex-1 flex-col overflow-y-auto overflow-x-hidden",
+          displayExpanded ? "gap-1 p-3" : "gap-0.5 px-1 py-2"
         )}
       >
         {navGroups.map((group, groupIndex) => {
           const groupCollapsed = collapsedGroups.has(group.label);
 
           return (
-            <div key={group.label} className="flex flex-col">
+            <div
+              key={group.label}
+              className={cn(
+                "flex flex-col",
+                groupIndex > 0 && displayExpanded && "mt-2 border-t border-sidebar-border/60 pt-2"
+              )}
+            >
               {groupIndex > 0 && !displayExpanded ? (
-                <div className="mx-auto my-0.5 h-px w-6 bg-sidebar-border" />
+                <div className="mx-auto my-1 h-px w-6 bg-sidebar-border" />
               ) : null}
 
               {displayExpanded ? (
-                <div className="flex items-center gap-1 rounded-lg px-2 py-1.5">
+                <div className="flex items-center gap-1 rounded-lg px-2 py-1">
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.label)}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm font-bold tracking-tight text-primary transition-colors hover:text-primary/80"
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left font-heading text-sm font-bold tracking-tight text-brand-product transition-colors hover:text-brand-product/80"
                     aria-expanded={!groupCollapsed}
                     aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
                   >
                     <ChevronRightIcon
                       className={cn(
-                        "size-4 shrink-0 text-primary/70 transition-transform",
+                        "size-3.5 shrink-0 text-brand-product/75 transition-transform",
                         !groupCollapsed && "rotate-90"
                       )}
                     />
@@ -555,14 +560,14 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                       href={item.href}
                       title={item.label}
                       className={cn(
-                        "flex items-center text-sm font-medium transition-colors",
+                        "flex items-center font-medium transition-colors",
                         displayExpanded
-                          ? "gap-3 rounded-2xl px-3 py-2"
-                          : "justify-center rounded-md px-1 py-1.5",
+                          ? "gap-3 rounded-2xl px-3 py-2 text-[13px]"
+                          : "justify-center rounded-md px-1 py-1.5 text-sm",
                         active
                           ? displayExpanded
-                            ? "border-l-2 border-primary bg-[var(--sidebar-active-bg)] pl-[calc(0.75rem-2px)] font-medium text-primary"
-                            : "bg-[var(--sidebar-active-bg)] text-primary"
+                            ? "border-l-2 border-brand-product bg-brand-product/8 pl-[calc(0.75rem-2px)] font-medium text-brand-product"
+                            : "bg-brand-product/10 text-brand-product"
                           : displayExpanded
                             ? "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                             : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
