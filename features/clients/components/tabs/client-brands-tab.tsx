@@ -14,7 +14,6 @@ import { OperationalTableSuiteProvider } from "@/components/tables/operational-t
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { SearchableSelect } from "@/components/forms/searchable-select";
-import { Button } from "@/components/ui/button";
 import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
 import {
   DETAIL_FORM_INPUT_CLASS,
@@ -61,13 +60,21 @@ import {
 } from "@/lib/clients/vr-inheritance";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
-import type { ClientBrandRow, ClientDetail } from "@/types/database";
-import { cn } from "@/lib/utils";
 import { CLIENT_BRANDS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
+import type { ClientBrandRow, ClientDetail } from "@/types/database";
+import {
+  CLIENT_FORM_SAVE_SHORTCUT_HINT,
+  ClientFormKeyboardShortcuts,
+  ClientProfileTabSaveButton,
+} from "@/features/clients/components/client-form-ui";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type ClientBrandsTabProps = {
   client: ClientDetail;
   masterData: MasterDataOptions;
+  /** When false, Ctrl+S is not wired to the add-brand form. */
+  shortcutsEnabled?: boolean;
 };
 
 type BrandTableContext = {
@@ -142,7 +149,11 @@ function buildClientBrandsColumns(
   ];
 }
 
-export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
+export function ClientBrandsTab({
+  client,
+  masterData,
+  shortcutsEnabled = true,
+}: ClientBrandsTabProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const clientVr = useMemo(
     () => ({
@@ -210,6 +221,11 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
 
   return (
     <>
+      <ClientFormKeyboardShortcuts
+        formId="client-add-brand-form"
+        enabled={shortcutsEnabled}
+        disabled={isPending || isDuplicate || checking}
+      />
       <div className="space-y-4">
         <OperationalTableSuiteProvider
           tableId={OPERATIONAL_TABLE_IDS.clientBrands}
@@ -247,10 +263,17 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
 
         <OperationalFormSection
           title="Add brand"
+          description="Fill in the fields below, then click Add brand to save this brand to the legal entity."
+          footerHint={CLIENT_FORM_SAVE_SHORTCUT_HINT}
           footer={
-            <Button type="submit" form="client-add-brand-form" disabled={isPending || isDuplicate || checking}>
-              {isPending ? "Creating…" : "Add brand"}
-            </Button>
+            <ClientProfileTabSaveButton
+              formId="client-add-brand-form"
+              label="Add brand"
+              pendingLabel="Creating…"
+              isPending={isPending}
+              disabled={isDuplicate || checking}
+              showSaveIcon={false}
+            />
           }
         >
             <form id="client-add-brand-form" action={formAction} className="grid gap-4">

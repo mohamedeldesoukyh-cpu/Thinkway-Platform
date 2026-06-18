@@ -4,7 +4,6 @@ import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,6 +24,11 @@ import {
   type FormActionState,
 } from "@/features/clients/actions";
 import {
+  CLIENT_FORM_SAVE_SHORTCUT_HINT,
+  ClientFormKeyboardShortcuts,
+  ClientProfileTabSaveButton,
+} from "@/features/clients/components/client-form-ui";
+import {
   PAYMENT_TERMS_OPTIONS,
 } from "@/features/clients/constants";
 import type { ClientDetail } from "@/types/database";
@@ -33,9 +37,11 @@ import { cn } from "@/lib/utils";
 export function ClientFinanceTab({
   client,
   currencyOptions,
+  shortcutsEnabled = true,
 }: {
   client: ClientDetail;
   currencyOptions: { value: string; label: string }[];
+  shortcutsEnabled?: boolean;
 }) {
   const [currency, setCurrency] = useState(client.currency);
   const [paymentTerms, setPaymentTerms] = useState(client.payment_terms ?? "");
@@ -63,14 +69,24 @@ export function ClientFinanceTab({
   }, [state]);
 
   return (
-    <OperationalFormSection
-      title="Finance"
-      footer={
-        <Button type="submit" form="client-finance-form" disabled={isPending}>
-          {isPending ? "Saving…" : "Save finance"}
-        </Button>
-      }
-    >
+    <>
+      <ClientFormKeyboardShortcuts
+        formId="client-finance-form"
+        enabled={shortcutsEnabled}
+        disabled={isPending}
+      />
+      <OperationalFormSection
+        title="Finance"
+        description="Billing defaults and credit settings for this legal entity."
+        footerHint={CLIENT_FORM_SAVE_SHORTCUT_HINT}
+        footer={
+          <ClientProfileTabSaveButton
+            formId="client-finance-form"
+            label="Save finance"
+            isPending={isPending}
+          />
+        }
+      >
       <form id="client-finance-form" action={formAction} className="grid gap-4">
         <input type="hidden" name="client_id" value={client.id} />
         <input type="hidden" name="currency" value={currency} />
@@ -199,5 +215,6 @@ export function ClientFinanceTab({
         </div>
       </form>
     </OperationalFormSection>
+    </>
   );
 }

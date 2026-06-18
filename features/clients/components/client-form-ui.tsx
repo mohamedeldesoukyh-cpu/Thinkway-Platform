@@ -12,6 +12,17 @@ import { cn } from "@/lib/utils";
 /** Marks a form as the Ctrl+S / Cmd+S save target (see KeyboardShortcutsProvider). */
 export const CLIENT_FORM_SHORTCUT_SAVE_ATTR = "data-shortcut-save";
 
+/**
+ * Footer hint for client profile tab forms that register `useClientFormSaveShortcut`.
+ *
+ * Wired forms (when their tab is active):
+ * - Overview: `#client-overview-form`
+ * - Brands: `#client-add-brand-form`
+ * - Legal: `#client-legal-form`
+ * - Finance: `#client-finance-form`
+ */
+export const CLIENT_FORM_SAVE_SHORTCUT_HINT = "Ctrl+S to save";
+
 /** Registers Ctrl+S / Cmd+S to submit a form when `enabled` (e.g. active tab or open dialog). */
 export function useClientFormSaveShortcut({
   formId,
@@ -88,6 +99,37 @@ export const CLIENT_FORM_PRIMARY_BUTTON_CLASS = cn(
   "hover:shadow-[0_6px_20px_rgba(0,87,255,0.42)]",
   "disabled:pointer-events-none disabled:opacity-50"
 );
+
+/** Form_4 primary submit for client profile tabs (Brands, Legal, Finance). */
+export function ClientProfileTabSaveButton({
+  formId,
+  label,
+  pendingLabel = "Saving…",
+  isPending = false,
+  disabled = false,
+  showSaveIcon = true,
+}: {
+  formId: string;
+  label: string;
+  pendingLabel?: string;
+  isPending?: boolean;
+  disabled?: boolean;
+  showSaveIcon?: boolean;
+}) {
+  return (
+    <button
+      type="submit"
+      form={formId}
+      className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
+      disabled={disabled || isPending}
+    >
+      {showSaveIcon ? (
+        <SaveIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
+      ) : null}
+      {isPending ? pendingLabel : label}
+    </button>
+  );
+}
 
 export const CLIENT_FORM_SECONDARY_BUTTON_CLASS = cn(
   "inline-flex h-auto items-center gap-1.5 rounded-[10px] border border-[#E6EAF2] bg-white px-3 py-1.5",

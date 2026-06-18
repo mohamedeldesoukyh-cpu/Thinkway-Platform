@@ -109,17 +109,28 @@ export function ClientProfile({
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="brands">
         <OperationalWorkspaceTabPanel>
-          <ClientBrandsTab client={client} masterData={masterData} />
+          <ClientBrandsTab
+            client={client}
+            masterData={masterData}
+            shortcutsEnabled={activeTab === "brands"}
+          />
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="legal">
         <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-          <ClientLegalTab client={client} />
+          <ClientLegalTab
+            client={client}
+            shortcutsEnabled={activeTab === "legal"}
+          />
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="finance">
         <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-          <ClientFinanceTab client={client} currencyOptions={currencyOptions} />
+          <ClientFinanceTab
+            client={client}
+            currencyOptions={currencyOptions}
+            shortcutsEnabled={activeTab === "finance"}
+          />
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="client-ios">

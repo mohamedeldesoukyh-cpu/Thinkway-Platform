@@ -5,11 +5,15 @@ import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { SearchableSelect } from "@/components/forms/searchable-select";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
 import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operational-detail-panel";
+import {
+  CLIENT_FORM_SAVE_SHORTCUT_HINT,
+  ClientFormKeyboardShortcuts,
+  ClientProfileTabSaveButton,
+} from "@/features/clients/components/client-form-ui";
 import {
   ClientInlineDocumentAttach,
   findClientDocumentByType,
@@ -33,7 +37,13 @@ function readAddress(
   return typeof value === "string" ? value : "";
 }
 
-export function ClientLegalTab({ client }: { client: ClientDetail }) {
+export function ClientLegalTab({
+  client,
+  shortcutsEnabled = true,
+}: {
+  client: ClientDetail;
+  shortcutsEnabled?: boolean;
+}) {
   const legal = client.legal_address ?? {};
   const [legalCountry, setLegalCountry] = useState(
     readAddress(legal, "country") || client.country || ""
@@ -71,15 +81,24 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
   }, [state]);
 
   return (
-    <OperationalFormSection
-      title="Legal & compliance"
-      description="Enter registration numbers and attach certificates using the controls beside each field."
-      footer={
-        <Button type="submit" form="client-legal-form" disabled={isPending}>
-          {isPending ? "Saving…" : "Save legal"}
-        </Button>
-      }
-    >
+    <>
+      <ClientFormKeyboardShortcuts
+        formId="client-legal-form"
+        enabled={shortcutsEnabled}
+        disabled={isPending}
+      />
+      <OperationalFormSection
+        title="Legal & compliance"
+        description="Enter registration numbers and attach certificates using the controls beside each field."
+        footerHint={CLIENT_FORM_SAVE_SHORTCUT_HINT}
+        footer={
+          <ClientProfileTabSaveButton
+            formId="client-legal-form"
+            label="Save legal"
+            isPending={isPending}
+          />
+        }
+      >
       <form id="client-legal-form" action={formAction} className="grid gap-4">
         <input type="hidden" name="client_id" value={client.id} />
         <input type="hidden" name="legal_address_country" value={legalCountry} />
@@ -212,5 +231,6 @@ export function ClientLegalTab({ client }: { client: ClientDetail }) {
         </div>
       </form>
     </OperationalFormSection>
+    </>
   );
 }

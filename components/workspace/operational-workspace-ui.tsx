@@ -259,6 +259,7 @@ export function OperationalFormSection({
   actions,
   children,
   footer,
+  footerHint,
   className,
 }: {
   title: string;
@@ -266,6 +267,7 @@ export function OperationalFormSection({
   actions?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  footerHint?: string;
   className?: string;
 }) {
   return (
@@ -283,7 +285,7 @@ export function OperationalFormSection({
       }
     >
       <div className="space-y-4 px-6 py-4">{children}</div>
-      {footer ? <DetailSheetFooter>{footer}</DetailSheetFooter> : null}
+      {footer ? <DetailSheetFooter hint={footerHint}>{footer}</DetailSheetFooter> : null}
     </OperationalTableSection>
   );
 }
