@@ -20,7 +20,6 @@ import {
   CLIENT_CATEGORY_PAUSE_MESSAGE,
 } from "@/components/forms/use-client-category-classification";
 import { SearchableSelect } from "@/components/forms/searchable-select";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -36,7 +35,10 @@ import {
   ClientFormPageHeader,
   ClientFormSaveBar,
   ClientFormSection,
+  ClientFormUnsavedStatus,
   CLIENT_FORM_INPUT_CLASS,
+  CLIENT_FORM_MAX_WIDTH,
+  CLIENT_FORM_PRIMARY_BUTTON_CLASS,
   CLIENT_FORM_SELECT_TRIGGER_CLASS,
   CLIENT_FORM_TEXTAREA_CLASS,
 } from "@/features/clients/components/client-form-ui";
@@ -136,6 +138,45 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
   const [usePlatformIoTerms, setUsePlatformIoTerms] = useState(
     () => !parseTermsText(client.client_io_terms_text)
   );
+  const [formKey, setFormKey] = useState(0);
+
+  function buildClassificationMetaFromClient(): ClientCategorySuggestionState | null {
+    if (
+      client.client_category &&
+      client.client_subcategory &&
+      client.approved_by_user
+    ) {
+      return {
+        categorySlug: client.client_category,
+        subcategorySlug: client.client_subcategory,
+        confidence: client.classification_confidence ?? 100,
+        source:
+          (client.classification_source as ClientCategorySuggestionState["source"]) ??
+          "approved",
+        reason: client.classification_reason ?? undefined,
+      };
+    }
+    return null;
+  }
+
+  function discardChanges() {
+    setStatus(client.status);
+    setGroupId(client.group_id ?? "");
+    setDisplayName(client.name);
+    setCountry(client.country ?? "");
+    setCity(client.city ?? "");
+    setCategorySlug(client.client_category ?? "");
+    setSubcategorySlug(client.client_subcategory ?? "");
+    setCategoryManuallySet(false);
+    setClassificationMeta(buildClassificationMetaFromClient());
+    setVrRateId(client.vr_rate_id ?? "");
+    setIoTerms(
+      parseTermsText(client.client_io_terms_text) ?? CLIENT_IO_DEFAULT_TERMS
+    );
+    setUsePlatformIoTerms(!parseTermsText(client.client_io_terms_text));
+    resetClassificationRequest();
+    setFormKey((key) => key + 1);
+  }
 
   const [state, formAction, isPending] = useActionState(
     updateClientOverviewAction,
@@ -176,13 +217,18 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
   ) : null;
 
   return (
-    <div className="mx-auto w-full max-w-[920px] pb-8">
+    <div className={cn("mx-auto w-full pb-[120px]", CLIENT_FORM_MAX_WIDTH)}>
       <ClientFormPageHeader
         title="Edit legal entity"
         description="Update the client's profile, billing, and default insertion-order terms."
       />
 
-      <form id="client-overview-form" action={formAction} className="grid gap-[18px]">
+      <form
+        key={formKey}
+        id="client-overview-form"
+        action={formAction}
+        className="grid gap-[18px]"
+      >
         <input type="hidden" name="client_id" value={client.id} />
         <input type="hidden" name="status" value={status} />
         <input type="hidden" name="group_id" value={groupId} />
@@ -278,29 +324,29 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
               <FieldError messages={state.fieldErrors?.name} />
               {classificationStatusHint}
             </ClientFormField>
-            <ClientFormField label="Legal name" htmlFor="legal_name">
+            <ClientFormField label="Client name (Arabic)" htmlFor="name_ar">
               <Input
-                id="legal_name"
-                name="legal_name"
+                id="name_ar"
+                name="name_ar"
                 className={CLIENT_FORM_INPUT_CLASS}
-                defaultValue={client.legal_name ?? ""}
+                defaultValue={client.name_ar ?? ""}
                 disabled={isPending}
+                placeholder="Optional Arabic legal name"
+                dir="rtl"
               />
-              <FieldError messages={state.fieldErrors?.legal_name} />
+              <FieldError messages={state.fieldErrors?.name_ar} />
             </ClientFormField>
           </ClientFormGrid>
 
-          <ClientFormField label="Client name (Arabic)" htmlFor="name_ar">
+          <ClientFormField label="Legal name" htmlFor="legal_name">
             <Input
-              id="name_ar"
-              name="name_ar"
+              id="legal_name"
+              name="legal_name"
               className={CLIENT_FORM_INPUT_CLASS}
-              defaultValue={client.name_ar ?? ""}
+              defaultValue={client.legal_name ?? ""}
               disabled={isPending}
-              placeholder="Optional Arabic legal name"
-              dir="rtl"
             />
-            <FieldError messages={state.fieldErrors?.name_ar} />
+            <FieldError messages={state.fieldErrors?.legal_name} />
           </ClientFormField>
 
           <ClientCategorySuggestion
@@ -460,16 +506,17 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
         </ClientFormSection>
 
         <ClientFormSaveBar
-          status={
-            <span className="inline-flex items-center gap-2">
-              <span className="size-1.5 rounded-full bg-amber-500" aria-hidden />
-              Save to apply changes
-            </span>
-          }
+          status={<ClientFormUnsavedStatus />}
+          onDiscard={discardChanges}
+          discardDisabled={isPending}
         >
-          <Button type="submit" disabled={isPending}>
+          <button
+            type="submit"
+            className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
+            disabled={isPending}
+          >
             {isPending ? "Saving…" : "Save changes"}
-          </Button>
+          </button>
         </ClientFormSaveBar>
       </form>
     </div>

@@ -53,9 +53,9 @@ export function ClientIoTermsEditor({
           <div
             key={index}
             className={cn(
-              "space-y-2.5 rounded-xl border border-border/80 bg-muted/20 p-4",
+              "space-y-2.5 rounded-[12px] border border-border/80 bg-muted/30 p-4",
               "transition-[border-color,box-shadow] focus-within:border-[var(--brand-product)]/40",
-              "focus-within:ring-[3px] focus-within:ring-[var(--brand-product)]/10"
+              "focus-within:ring-[3px] focus-within:ring-[var(--brand-product)]/15"
             )}
           >
             <div className="flex items-center justify-between gap-2">

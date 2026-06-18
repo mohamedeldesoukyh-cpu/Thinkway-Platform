@@ -51,7 +51,7 @@ export function ClientCategorySuggestion({
   return (
     <div
       className={cn(
-        "rounded-xl border px-4 py-3.5 text-sm",
+        "rounded-[12px] border px-4 py-3.5 text-sm",
         lowConfidence
           ? "border-amber-500/40 bg-amber-500/5"
           : "border-[var(--brand-product)]/30 bg-[var(--brand-product)]/5"

@@ -41,7 +41,10 @@ import {
   ClientFormField,
   ClientFormGrid,
   ClientFormSection,
+  CLIENT_FORM_FIELD_HINT_CLASS,
+  CLIENT_FORM_GHOST_BUTTON_CLASS,
   CLIENT_FORM_INPUT_CLASS,
+  CLIENT_FORM_PRIMARY_BUTTON_CLASS,
   CLIENT_FORM_SELECT_TRIGGER_CLASS,
   CLIENT_FORM_TEXTAREA_CLASS,
 } from "@/features/clients/components/client-form-ui";
@@ -175,12 +178,12 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           New Client
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
-        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
-          <DialogTitle className="text-lg font-bold tracking-tight">
+      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden rounded-[20px] border-border/80 p-0 shadow-[0_12px_32px_rgba(20,40,110,0.10)] sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b border-border/80 bg-background/70 px-6 py-4 backdrop-blur-md">
+          <DialogTitle className="text-[25px] font-extrabold tracking-[-0.02em]">
             New client
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="mt-[5px] text-sm">
             Add a client legal entity. Optionally link to a holding group now or
             assign one later from the client profile.
           </DialogDescription>
@@ -210,7 +213,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             value={classificationMeta?.reason ?? ""}
           />
 
-          <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4">
+          <div className="grid min-h-0 flex-1 gap-[18px] overflow-y-auto px-6 py-5">
             {state.fieldErrors && !state.ok ? (
               <p className="rounded-[10px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                 {Object.entries(state.fieldErrors)
@@ -240,47 +243,49 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                 />
                 <FieldError messages={state.fieldErrors?.group_id} />
                 {groups.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
+                  <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
                     You can create a client without a group and link one later.
                   </p>
                 ) : null}
               </ClientFormField>
 
-              <ClientFormField label="Client legal name" htmlFor="name">
-                <Input
-                  id="name"
-                  name="name"
-                  value={entityName}
-                  onChange={(e) => {
-                    setEntityName(e.target.value);
-                    setCategoryTouched(false);
-                    resetClassificationRequest();
-                  }}
-                  required
-                  disabled={isPending}
-                  placeholder="Registered legal entity name"
-                  className={CLIENT_FORM_INPUT_CLASS}
-                />
-                <FieldError messages={state.fieldErrors?.name} />
-                {duplicateMessage ? (
-                  <p className="text-xs text-destructive">{duplicateMessage}</p>
-                ) : checking ? (
-                  <p className="text-xs text-muted-foreground">Checking availability…</p>
-                ) : null}
-                {classificationStatusHint}
-              </ClientFormField>
+              <ClientFormGrid>
+                <ClientFormField label="Client legal name" htmlFor="name">
+                  <Input
+                    id="name"
+                    name="name"
+                    value={entityName}
+                    onChange={(e) => {
+                      setEntityName(e.target.value);
+                      setCategoryTouched(false);
+                      resetClassificationRequest();
+                    }}
+                    required
+                    disabled={isPending}
+                    placeholder="Registered legal entity name"
+                    className={CLIENT_FORM_INPUT_CLASS}
+                  />
+                  <FieldError messages={state.fieldErrors?.name} />
+                  {duplicateMessage ? (
+                    <p className="text-xs text-destructive">{duplicateMessage}</p>
+                  ) : checking ? (
+                    <p className="text-xs text-muted-foreground">Checking availability…</p>
+                  ) : null}
+                  {classificationStatusHint}
+                </ClientFormField>
 
-              <ClientFormField label="Client name (Arabic)" htmlFor="name_ar">
-                <Input
-                  id="name_ar"
-                  name="name_ar"
-                  disabled={isPending}
-                  placeholder="Optional Arabic legal name"
-                  dir="rtl"
-                  className={CLIENT_FORM_INPUT_CLASS}
-                />
-                <FieldError messages={state.fieldErrors?.name_ar} />
-              </ClientFormField>
+                <ClientFormField label="Client name (Arabic)" htmlFor="name_ar">
+                  <Input
+                    id="name_ar"
+                    name="name_ar"
+                    disabled={isPending}
+                    placeholder="Optional Arabic legal name"
+                    dir="rtl"
+                    className={CLIENT_FORM_INPUT_CLASS}
+                  />
+                  <FieldError messages={state.fieldErrors?.name_ar} />
+                </ClientFormField>
+              </ClientFormGrid>
 
               <ClientFormField label="Relationship type">
                 <Select
@@ -401,13 +406,22 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             </ClientFormSection>
           </div>
 
-          <DialogFooter className="shrink-0 border-t border-border/60 bg-background/85 px-6 py-4 backdrop-blur-md">
-            <Button
+          <DialogFooter className="shrink-0 gap-2.5 border-t border-border/80 bg-background/[0.88] px-6 py-3.5 backdrop-blur-[14px]">
+            <button
+              type="button"
+              className={CLIENT_FORM_GHOST_BUTTON_CLASS}
+              onClick={() => handleOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </button>
+            <button
               type="submit"
+              className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
               disabled={isPending || isDuplicate || checking}
             >
               {isPending ? "Creating…" : "Create client"}
-            </Button>
+            </button>
           </DialogFooter>
         </form>
       </DialogContent>
