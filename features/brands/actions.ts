@@ -2,10 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 
+import {
+  getMissingClientColumnFromSchemaError,
+  isMissingClientColumnSchemaError,
+} from "@/lib/clients/classification-audit-columns";
 import { normalizeBrandVrRateId } from "@/lib/clients/vr-inheritance";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { findDuplicateBrand } from "@/lib/validation/checks";
 import { friendlyActionError } from "@/lib/validation/hierarchy";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   archiveBrandSchema,
@@ -50,6 +55,115 @@ function revalidateBrandPaths(clientId: string, groupId: string | null) {
   revalidatePath("/reports/pnl");
 }
 
+type ClientBrandContext = {
+  group_id: string;
+  vr_rate_id: string | null;
+};
+
+function embeddedGroupId(group: unknown): string | null {
+  if (!group || typeof group !== "object") {
+    return null;
+  }
+  const id = (group as { id?: unknown }).id;
+  return typeof id === "string" ? id : null;
+}
+
+async function fetchClientVrRateId(
+  supabase: SupabaseClient,
+  clientId: string
+): Promise<{ value: string | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from("clients")
+    .select("vr_rate_id")
+    .eq("id", clientId)
+    .maybeSingle();
+
+  if (!error) {
+    return { value: data?.vr_rate_id ?? null, error: null };
+  }
+
+  if (
+    isMissingClientColumnSchemaError(error) &&
+    getMissingClientColumnFromSchemaError(error) === "vr_rate_id"
+  ) {
+    return { value: null, error: null };
+  }
+
+  return { value: null, error: error.message };
+}
+
+async function fetchClientBrandContext(
+  supabase: SupabaseClient,
+  clientId: string
+): Promise<
+  | { ok: true; client: ClientBrandContext }
+  | { ok: false; message: string }
+> {
+  const { data: clientRow, error: clientError } = await supabase
+    .from("clients")
+    .select("group_id, group:groups(id)")
+    .eq("id", clientId)
+    .maybeSingle();
+
+  if (clientError) {
+    const missingColumn = getMissingClientColumnFromSchemaError(clientError);
+    if (missingColumn && missingColumn !== "group_id") {
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("clients")
+        .select("group_id")
+        .eq("id", clientId)
+        .maybeSingle();
+
+      if (fallbackError) {
+        return { ok: false, message: fallbackError.message };
+      }
+      if (!fallback) {
+        return { ok: false, message: "Legal entity not found." };
+      }
+      if (!fallback.group_id) {
+        return {
+          ok: false,
+          message: "Client must belong to a group before adding brands.",
+        };
+      }
+
+      const vrRateId = await fetchClientVrRateId(supabase, clientId);
+      if (vrRateId.error) {
+        return { ok: false, message: vrRateId.error };
+      }
+
+      return {
+        ok: true,
+        client: { group_id: fallback.group_id, vr_rate_id: vrRateId.value },
+      };
+    }
+
+    return { ok: false, message: clientError.message };
+  }
+
+  if (!clientRow) {
+    return { ok: false, message: "Legal entity not found." };
+  }
+
+  const groupId = clientRow.group_id ?? embeddedGroupId(clientRow.group);
+  if (!groupId) {
+    return {
+      ok: false,
+      message: "Client must belong to a group before adding brands.",
+    };
+  }
+
+  const vrRateId = await fetchClientVrRateId(supabase, clientId);
+  if (vrRateId.error) {
+    return { ok: false, message: vrRateId.error };
+  }
+
+  return {
+    ok: true,
+    client: { group_id: groupId, vr_rate_id: vrRateId.value },
+  };
+}
+
 export async function createBrandAction(
   _prev: FormActionState,
   formData: FormData
@@ -69,18 +183,11 @@ export async function createBrandAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .select("group_id, vr_rate_id")
-    .eq("id", parsed.data.client_id)
-    .maybeSingle();
-
-  if (clientError || !client?.group_id) {
-    return {
-      ok: false,
-      message: "Client must belong to a group before adding brands.",
-    };
+  const clientResult = await fetchClientBrandContext(supabase, parsed.data.client_id);
+  if (!clientResult.ok) {
+    return { ok: false, message: clientResult.message };
   }
+  const client = clientResult.client;
 
   try {
     const duplicate = await findDuplicateBrand(
@@ -157,15 +264,17 @@ export async function updateBrandAction(
     return { ok: false, message: brandError?.message ?? "Brand not found." };
   }
 
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .select("group_id, vr_rate_id")
-    .eq("id", parsed.data.client_id)
-    .maybeSingle();
-
-  if (clientError || !client?.group_id) {
-    return { ok: false, message: "Invalid legal entity." };
+  const clientResult = await fetchClientBrandContext(supabase, parsed.data.client_id);
+  if (!clientResult.ok) {
+    return {
+      ok: false,
+      message:
+        clientResult.message === "Client must belong to a group before adding brands."
+          ? "Invalid legal entity."
+          : clientResult.message,
+    };
   }
+  const client = clientResult.client;
 
   try {
     const duplicate = await findDuplicateBrand(

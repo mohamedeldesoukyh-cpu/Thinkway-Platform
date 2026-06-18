@@ -113,6 +113,7 @@ export function ClientProfile({
             client={client}
             masterData={masterData}
             shortcutsEnabled={activeTab === "brands"}
+            onGoToOverview={() => setActiveTab("overview")}
           />
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>

@@ -40,6 +40,8 @@ type BrandSheetProps = {
   brand: GroupBrandRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When set, registers the sheet form for Ctrl+S shortcuts on client profile. */
+  formId?: string;
 };
 
 function resolveBrandFormVrRateId(
@@ -58,6 +60,7 @@ export function BrandSheet({
   brand,
   open,
   onOpenChange,
+  formId,
 }: BrandSheetProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const isEdit = brand !== null;
@@ -143,7 +146,11 @@ export function BrandSheet({
             Commercial brand profile — VR% and currency. Category lives on the legal entity overview.
           </SheetDescription>
         </SheetHeader>
-        <form action={formAction} className="flex flex-1 flex-col gap-4 px-6 pb-6">
+        <form
+          id={formId}
+          action={formAction}
+          className="flex flex-1 flex-col gap-4 px-6 pb-6"
+        >
           {isEdit ? <input type="hidden" name="brand_id" value={brand.id} /> : null}
           <input type="hidden" name="client_id" value={clientId} />
           <input type="hidden" name="vr_rate_id" value={vrRateId} />

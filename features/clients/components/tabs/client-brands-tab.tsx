@@ -1,24 +1,16 @@
 "use client";
 
+import { PlusIcon } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { FieldError } from "@/components/forms/field-error";
-import { useNameAvailability } from "@/components/forms/use-name-availability";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
-  getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { SearchableSelect } from "@/components/forms/searchable-select";
-import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
-import {
-  DETAIL_FORM_INPUT_CLASS,
-  DETAIL_FORM_SELECT_TRIGGER_CLASS,
-} from "@/features/campaigns/components/operational-detail-panel";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Dialog,
@@ -28,20 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
-import {
-  archiveBrandAction,
-  createBrandAction,
-} from "@/features/brands/actions";
+import { archiveBrandAction } from "@/features/brands/actions";
 import {
   BrandRowActions,
   BrandStatusToggle,
@@ -50,10 +30,8 @@ import {
   brandTableRowToGroupBrandRow,
   clientToLegalEntityRow,
 } from "@/features/brands/utils";
-import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { BrandSheet } from "@/features/groups/components/brand-sheet";
 import type { GroupBrandRow } from "@/features/groups/types";
-import { checkBrandNameAvailable } from "@/features/validation/actions";
 import {
   brandVrInheritanceHint,
   getEffectiveBrandVrPercent,
@@ -65,16 +43,17 @@ import type { ClientBrandRow, ClientDetail } from "@/types/database";
 import {
   CLIENT_FORM_SAVE_SHORTCUT_HINT,
   ClientFormKeyboardShortcuts,
-  ClientProfileTabSaveButton,
 } from "@/features/clients/components/client-form-ui";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+
+const CLIENT_ADD_BRAND_FORM_ID = "client-add-brand-form";
 
 type ClientBrandsTabProps = {
   client: ClientDetail;
   masterData: MasterDataOptions;
-  /** When false, Ctrl+S is not wired to the add-brand form. */
+  /** When false, Ctrl+S is not wired to the add-brand sheet. */
   shortcutsEnabled?: boolean;
+  onGoToOverview?: () => void;
 };
 
 type BrandTableContext = {
@@ -153,8 +132,9 @@ export function ClientBrandsTab({
   client,
   masterData,
   shortcutsEnabled = true,
+  onGoToOverview,
 }: ClientBrandsTabProps) {
-  const currencyOptions = buildCurrencyOptions(masterData.currencies);
+  const hasGroup = Boolean(client.group_id ?? client.group?.id);
   const clientVr = useMemo(
     () => ({
       vr_rate_id: client.vr_rate_id,
@@ -162,12 +142,10 @@ export function ClientBrandsTab({
     }),
     [client.vr_rate_id, client.vr_rate_percent]
   );
-  const [brandName, setBrandName] = useState("");
-  const [vrRateId, setVrRateId] = useState(client.vr_rate_id ?? "");
-  const [currency, setCurrency] = useState("USD");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupBrandRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ClientBrandRow | null>(null);
+  const isAddSheet = sheetOpen && editing === null;
 
   const columns = buildClientBrandsColumns({
     clientVr,
@@ -177,34 +155,11 @@ export function ClientBrandsTab({
     },
     onArchive: setArchiveTarget,
   });
-  const columnMetas = getOperationalTableColumnMetas(columns);
-
-  const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
-    brandName,
-    checkBrandNameAvailable,
-    [client.id],
-    Boolean(brandName.trim())
-  );
-
-  const [state, formAction, isPending] = useActionState(createBrandAction, {
-    ok: false,
-  });
 
   const [archiveState, archiveAction, archivePending] = useActionState(
     archiveBrandAction,
     { ok: false }
   );
-
-  useEffect(() => {
-    if (!state.message) return;
-    if (state.ok) {
-      toast.success(state.message);
-      setBrandName("");
-      setVrRateId(client.vr_rate_id ?? "");
-      return;
-    }
-    toast.error(state.message);
-  }, [state, client.vr_rate_id]);
 
   useEffect(() => {
     if (!archiveState.message) return;
@@ -217,16 +172,41 @@ export function ClientBrandsTab({
   }, [archiveState]);
 
   const legalEntity = clientToLegalEntityRow(client);
-  const vrHint = brandVrInheritanceHint(client.vr_rate_percent, Boolean(vrRateId && vrRateId !== client.vr_rate_id));
+  const vrHint = brandVrInheritanceHint(client.vr_rate_percent, false);
+
+  const openAddBrandSheet = () => {
+    setEditing(null);
+    setSheetOpen(true);
+  };
 
   return (
     <>
       <ClientFormKeyboardShortcuts
-        formId="client-add-brand-form"
-        enabled={shortcutsEnabled}
-        disabled={isPending || isDuplicate || checking}
+        formId={CLIENT_ADD_BRAND_FORM_ID}
+        enabled={shortcutsEnabled && isAddSheet}
       />
       <div className="space-y-4">
+        {!hasGroup ? (
+          <div className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
+            <p className="font-medium">Group required before adding brands</p>
+            <p className="mt-1 text-[12px] text-amber-900/80">
+              Link this legal entity to a holding group on the Overview tab, then
+              return here to add brands.
+            </p>
+            {onGoToOverview ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={onGoToOverview}
+              >
+                Go to Overview
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         <OperationalTableSuiteProvider
           tableId={OPERATIONAL_TABLE_IDS.clientBrands}
           columns={columns}
@@ -242,15 +222,33 @@ export function ClientBrandsTab({
                 title="Brands"
                 description="Commercial brands under this legal entity. VR% inherits from client overview unless overridden."
                 actions={
-                  <OperationalTableControlsSlot contextLabel="Client brands" />
+                  <>
+                    <OperationalTableControlsSlot contextLabel="Client brands" />
+                    <Button
+                      size="sm"
+                      onClick={openAddBrandSheet}
+                      disabled={!hasGroup}
+                    >
+                      <PlusIcon data-icon="inline-start" />
+                      Add new brand
+                    </Button>
+                  </>
                 }
               />
             }
           >
             {client.brands.length === 0 ? (
-              <p className="px-4 py-8 text-[11px] text-muted-foreground">
-                No brands yet for this legal entity.
-              </p>
+              <div className="space-y-3 px-4 py-8">
+                <p className="text-[11px] text-muted-foreground">
+                  No brands yet for this legal entity.
+                </p>
+                {hasGroup ? (
+                  <Button type="button" size="sm" variant="outline" onClick={openAddBrandSheet}>
+                    <PlusIcon data-icon="inline-start" />
+                    Add new brand
+                  </Button>
+                ) : null}
+              </div>
             ) : (
               <OperationalConfigurableTable
                 columns={columns}
@@ -261,79 +259,13 @@ export function ClientBrandsTab({
           </OperationalTableSection>
         </OperationalTableSuiteProvider>
 
-        <OperationalFormSection
-          title="Add brand"
-          description="Fill in the fields below, then click Add brand to save this brand to the legal entity."
-          footerHint={CLIENT_FORM_SAVE_SHORTCUT_HINT}
-          footer={
-            <ClientProfileTabSaveButton
-              formId="client-add-brand-form"
-              label="Add brand"
-              pendingLabel="Creating…"
-              isPending={isPending}
-              disabled={isDuplicate || checking}
-              showSaveIcon={false}
-            />
-          }
-        >
-            <form id="client-add-brand-form" action={formAction} className="grid gap-4">
-              <input type="hidden" name="client_id" value={client.id} />
-              <input type="hidden" name="vr_rate_id" value={vrRateId} />
-              <input type="hidden" name="currency_code" value={currency} />
-
-              <div className="grid gap-2">
-                <Label htmlFor="brand_name">Brand name</Label>
-                <Input
-                  id="brand_name"
-                  name="name"
-                  className={DETAIL_FORM_INPUT_CLASS}
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  required
-                  disabled={isPending}
-                />
-                <FieldError messages={state.fieldErrors?.name} />
-                {duplicateMessage ? (
-                  <p className="text-xs text-destructive">{duplicateMessage}</p>
-                ) : checking ? (
-                  <p className="text-xs text-muted-foreground">Checking availability…</p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label>VR%</Label>
-                  <SearchableSelect
-                    value={vrRateId}
-                    onValueChange={setVrRateId}
-                    options={masterData.vrRates.map((v) => ({
-                      value: v.id,
-                      label: v.name,
-                    }))}
-                    disabled={isPending}
-                    placeholder="Select VR rate"
-                  />
-                  <p className="text-xs text-muted-foreground">{vrHint}</p>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Currency</Label>
-                  <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
-                    <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {currencyOptions.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-            </form>
-        </OperationalFormSection>
+        {hasGroup ? (
+          <p className="text-[11px] text-muted-foreground">
+            {vrHint} Use <span className="font-medium">Add new brand</span> to
+            create another brand after each save. {CLIENT_FORM_SAVE_SHORTCUT_HINT}{" "}
+            while the add sheet is open.
+          </p>
+        ) : null}
       </div>
 
       <BrandSheet
@@ -342,6 +274,7 @@ export function ClientBrandsTab({
         brand={editing}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+        formId={isAddSheet ? CLIENT_ADD_BRAND_FORM_ID : undefined}
       />
 
       <Dialog
