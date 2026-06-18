@@ -5,6 +5,10 @@ import {
 } from "@/lib/clients/client-category-taxonomy";
 import { GLOBAL_COMPANY_HINTS } from "@/lib/clients/company-hints-global";
 import {
+  classifyClientCategoryWithAi,
+  hasOpenAiApiKey,
+} from "@/lib/clients/classify-client-category-ai";
+import {
   buildCompanySearchQuery,
   hasWebSearchApiKey,
   searchCompanyOnWeb,
@@ -14,7 +18,7 @@ export type ClientCategoryClassification = {
   categorySlug: string;
   subcategorySlug: string;
   confidence: "high" | "medium" | "low";
-  source: "web_search" | "keyword";
+  source: "ai" | "web_search" | "keyword";
 };
 
 type ScoredCandidate = {
@@ -972,34 +976,14 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
   return null;
 }
 
-export async function classifyClientCategory(input: {
-  name: string;
-  country?: string | null;
-  website?: string | null;
-}): Promise<ClientCategoryClassification | null> {
-  const companyName = input.name.trim();
-  if (companyName.length < 2) {
-    return null;
-  }
-
-  const keywordHint = matchCompanyHint(companyName);
-  if (keywordHint?.confidence === "high") {
-    return keywordHint;
-  }
-
+function classifyWithKeywordAndWeb(input: {
+  companyName: string;
+  keywordHint: ClientCategoryClassification | null;
+  web: { snippets: string[]; source: "serper" | "brave" | "tavily" | "none" };
+}): ClientCategoryClassification | null {
+  const { companyName, keywordHint, web } = input;
   const nameVariants = companyNameVariants(companyName);
-  const webSearchAvailable = hasWebSearchApiKey();
-  const query = buildCompanySearchQuery(companyName, input.country, input.website);
-  const web = webSearchAvailable
-    ? await searchCompanyOnWeb(query)
-    : { snippets: [], source: "none" as const, apiKeyMissing: true };
-
-  if (web.apiKeyMissing && !webSearchKeyWarned) {
-    console.info(
-      "[classify-client-category] Web search skipped: no SERPER, BRAVE, or TAVILY API key configured."
-    );
-    webSearchKeyWarned = true;
-  }
+  const webSearchAvailable = web.source !== "none";
 
   const webCorpus = web.snippets.join(" ");
   const webHint = webCorpus ? matchCompanyHint(`${companyName} ${webCorpus}`) : null;
@@ -1034,15 +1018,72 @@ export async function classifyClientCategory(input: {
   ) {
     return {
       ...keywordHint,
-      confidence: confidenceFromScore(ranked.score, web.source !== "none"),
-      source: web.source === "none" ? "keyword" : "web_search",
+      confidence: confidenceFromScore(ranked.score, webSearchAvailable),
+      source: webSearchAvailable ? "web_search" : "keyword",
     };
   }
 
   return {
     categorySlug: ranked.categorySlug,
     subcategorySlug: ranked.subcategorySlug,
-    confidence: confidenceFromScore(ranked.score, web.source !== "none"),
-    source: web.source === "none" ? "keyword" : "web_search",
+    confidence: confidenceFromScore(ranked.score, webSearchAvailable),
+    source: webSearchAvailable ? "web_search" : "keyword",
   };
+}
+
+export function isClientCategoryAiAvailable(): boolean {
+  return hasOpenAiApiKey();
+}
+
+export async function classifyClientCategory(input: {
+  name: string;
+  country?: string | null;
+  website?: string | null;
+}): Promise<ClientCategoryClassification | null> {
+  const companyName = input.name.trim();
+  if (companyName.length < 2) {
+    return null;
+  }
+
+  const keywordHint = matchCompanyHint(companyName);
+  if (keywordHint?.confidence === "high") {
+    return keywordHint;
+  }
+
+  const webSearchAvailable = hasWebSearchApiKey();
+  const query = buildCompanySearchQuery(companyName, input.country, input.website);
+  const web = webSearchAvailable
+    ? await searchCompanyOnWeb(query)
+    : { snippets: [], source: "none" as const, apiKeyMissing: true };
+
+  if (web.apiKeyMissing && !webSearchKeyWarned) {
+    console.info(
+      "[classify-client-category] Web search skipped: no SERPER, BRAVE, or TAVILY API key configured."
+    );
+    webSearchKeyWarned = true;
+  }
+
+  if (companyName.length >= 3 && hasOpenAiApiKey()) {
+    const aiResult = await classifyClientCategoryWithAi({
+      name: companyName,
+      country: input.country,
+      website: input.website,
+      webSnippets: web.snippets,
+    });
+
+    if (aiResult) {
+      return {
+        categorySlug: aiResult.categorySlug,
+        subcategorySlug: aiResult.subcategorySlug,
+        confidence: aiResult.confidence,
+        source: "ai",
+      };
+    }
+  }
+
+  return classifyWithKeywordAndWeb({
+    companyName,
+    keywordHint,
+    web,
+  });
 }

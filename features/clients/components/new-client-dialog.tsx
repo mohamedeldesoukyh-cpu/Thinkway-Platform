@@ -66,7 +66,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
 
   const cityOptions = useMemo(() => getCityOptionsForCountry(country), [country]);
 
-  const { classifying, message: classifyMessage, resetClassificationRequest } =
+  const { classifying, classifyingLabel, message: classifyMessage, resetClassificationRequest } =
     useClientCategoryClassification({
       companyName: entityName,
       country,
@@ -212,8 +212,8 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               <p className="text-xs text-muted-foreground">
                 {CLIENT_CATEGORY_PAUSE_MESSAGE}
               </p>
-            ) : classifying ? (
-              <p className="text-xs text-muted-foreground">Classifying…</p>
+            ) : classifyingLabel ? (
+              <p className="text-xs text-muted-foreground">{classifyingLabel}</p>
             ) : classifyMessage ? (
               <p className="text-xs text-muted-foreground">{classifyMessage}</p>
             ) : null}

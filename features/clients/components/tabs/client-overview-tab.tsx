@@ -73,7 +73,7 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
     return options;
   }, [country, city]);
 
-  const { classifying, message: classifyMessage, resetClassificationRequest } =
+  const { classifying, classifyingLabel, message: classifyMessage, resetClassificationRequest } =
     useClientCategoryClassification({
       companyName: displayName,
       country,
@@ -211,8 +211,8 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
               <p className="text-xs text-muted-foreground">
                 {CLIENT_CATEGORY_PAUSE_MESSAGE}
               </p>
-            ) : classifying ? (
-              <p className="text-xs text-muted-foreground">Classifying…</p>
+            ) : classifyingLabel ? (
+              <p className="text-xs text-muted-foreground">{classifyingLabel}</p>
             ) : classifyMessage ? (
               <p className="text-xs text-muted-foreground">{classifyMessage}</p>
             ) : null}

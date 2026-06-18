@@ -2,17 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { classifyClientCategoryAction } from "@/features/clients/classify-category-action";
+import {
+  classifyClientCategoryAction,
+  getClientCategoryClassificationCapabilitiesAction,
+} from "@/features/clients/classify-category-action";
 
 type ClassificationResult = {
   categorySlug: string;
   subcategorySlug: string;
   confidence: "high" | "medium" | "low";
-  source: "web_search" | "keyword";
+  source: "ai" | "web_search" | "keyword";
 };
 
 export const CLIENT_CATEGORY_PAUSE_MESSAGE =
   "Auto-suggest paused — change name to re-classify";
+
+function sourceLabel(source: ClassificationResult["source"]): string {
+  switch (source) {
+    case "ai":
+      return "AI analysis";
+    case "web_search":
+      return "web lookup";
+    default:
+      return "name matching";
+  }
+}
 
 type UseClientCategoryClassificationOptions = {
   companyName: string;
@@ -30,12 +44,27 @@ export function useClientCategoryClassification({
   onClassified,
 }: UseClientCategoryClassificationOptions) {
   const [classifying, setClassifying] = useState(false);
+  const [aiAvailable, setAiAvailable] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const lastSuccessKeyRef = useRef("");
   const prevCompanyNameRef = useRef(companyName);
   const onClassifiedRef = useRef(onClassified);
   onClassifiedRef.current = onClassified;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getClientCategoryClassificationCapabilitiesAction().then((capabilities) => {
+      if (!cancelled) {
+        setAiAvailable(capabilities.aiAvailable);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const trimmed = companyName.trim();
@@ -60,6 +89,8 @@ export function useClientCategoryClassification({
     setClassifying(true);
     setMessage(null);
 
+    const debounceMs = aiAvailable ? 900 : 700;
+
     const timer = window.setTimeout(async () => {
       try {
         const result = await classifyClientCategoryAction({
@@ -81,17 +112,16 @@ export function useClientCategoryClassification({
         }
 
         lastSuccessKeyRef.current = requestKey;
+        const source = result.source ?? "keyword";
         onClassifiedRef.current?.({
           categorySlug: result.categorySlug,
           subcategorySlug: result.subcategorySlug,
           confidence: result.confidence ?? "low",
-          source: result.source ?? "keyword",
+          source,
         });
 
-        const sourceLabel =
-          result.source === "web_search" ? "web lookup" : "name matching";
         setMessage(
-          `Suggested from ${sourceLabel}${
+          `Suggested from ${sourceLabel(source)}${
             result.confidence ? ` (${result.confidence} confidence)` : ""
           }. You can override below.`
         );
@@ -105,13 +135,13 @@ export function useClientCategoryClassification({
           setClassifying(false);
         }
       }
-    }, 700);
+    }, debounceMs);
 
     return () => {
       window.clearTimeout(timer);
       requestIdRef.current += 1;
     };
-  }, [companyName, country, website, enabled]);
+  }, [companyName, country, website, enabled, aiAvailable]);
 
   function resetClassificationRequest() {
     lastSuccessKeyRef.current = "";
@@ -120,5 +150,14 @@ export function useClientCategoryClassification({
     setMessage(null);
   }
 
-  return { classifying, message, resetClassificationRequest };
+  const classifyingLabel =
+    classifying && aiAvailable ? "Classifying with AI…" : classifying ? "Classifying…" : null;
+
+  return {
+    classifying,
+    classifyingLabel,
+    aiAvailable,
+    message,
+    resetClassificationRequest,
+  };
 }

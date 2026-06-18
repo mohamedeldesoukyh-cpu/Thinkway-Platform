@@ -1,6 +1,10 @@
 "use server";
 
-import { classifyClientCategory } from "@/lib/clients/classify-client-category";
+import {
+  classifyClientCategory,
+  isClientCategoryAiAvailable,
+} from "@/lib/clients/classify-client-category";
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ClassifyClientCategoryResult = {
@@ -8,9 +12,27 @@ export type ClassifyClientCategoryResult = {
   categorySlug?: string;
   subcategorySlug?: string;
   confidence?: "high" | "medium" | "low";
-  source?: "web_search" | "keyword";
+  source?: "ai" | "web_search" | "keyword";
   message?: string;
 };
+
+export type ClientCategoryClassificationCapabilities = {
+  aiAvailable: boolean;
+};
+
+export async function getClientCategoryClassificationCapabilitiesAction(): Promise<ClientCategoryClassificationCapabilities> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { aiAvailable: false };
+  }
+
+  return { aiAvailable: isClientCategoryAiAvailable() };
+}
 
 export async function classifyClientCategoryAction(input: {
   name: string;
