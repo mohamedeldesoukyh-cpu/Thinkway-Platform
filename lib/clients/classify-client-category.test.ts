@@ -48,6 +48,36 @@ async function run() {
     subcategorySlug: "media_investment_management",
   });
 
+  await expectClassification("carrefour", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "retail_general_merchandise",
+  });
+
+  await expectClassification("Carrefour Egypt", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "retail_general_merchandise",
+  });
+
+  await expectClassification("Lulu Hypermarket", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "retail_general_merchandise",
+  });
+
+  await expectClassification("Amazon", {
+    categorySlug: "retail_ecommerce",
+    subcategorySlug: "online_marketplace",
+  });
+
+  await expectClassification("Procter & Gamble", {
+    categorySlug: "beauty_personal_care",
+    subcategorySlug: "beauty_personal_care",
+  });
+
+  await expectClassification("Unilever", {
+    categorySlug: "beauty_personal_care",
+    subcategorySlug: "beauty_personal_care",
+  });
+
   console.log("classify-client-category.test.ts: ok");
 }
 

@@ -128,7 +128,8 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "uber",
     "careem",
     "talabat",
-    "noon",
+    "airline",
+    "aviation",
   ],
   home_furniture: [
     "furniture",
@@ -172,6 +173,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
 };
 
 const COMPANY_HINTS: Record<string, { categorySlug: string; subcategorySlug: string }> = {
+  // Marketing, advertising & media agencies
   google: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "technology_software" },
   meta: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "social_media_platform" },
   facebook: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "social_media_platform" },
@@ -196,21 +198,166 @@ const COMPANY_HINTS: Record<string, { categorySlug: string; subcategorySlug: str
   "wpp media": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
   publicis: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
   dentsu: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
-  nike: { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
-  adidas: { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
-  loreal: { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
-  "l'oreal": { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
-  unilever: { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  ipg: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  havas: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  accenture: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "consulting_services" },
+  deloitte: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "consulting_services" },
+
+  // Retail & e-commerce
   amazon: { categorySlug: "retail_ecommerce", subcategorySlug: "online_marketplace" },
   noon: { categorySlug: "retail_ecommerce", subcategorySlug: "online_marketplace" },
   namshi: { categorySlug: "retail_ecommerce", subcategorySlug: "online_fashion_retailer" },
+  jumia: { categorySlug: "retail_ecommerce", subcategorySlug: "online_marketplace" },
+  carrefour: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  walmart: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  tesco: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  target: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  lulu: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  "lulu hypermarket": { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  aldi: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  lidl: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  spinneys: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  choithrams: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  metro: { categorySlug: "retail_ecommerce", subcategorySlug: "retail_general_merchandise" },
+  ikea: { categorySlug: "home_furniture", subcategorySlug: "home_furniture_interiors" },
+  bestbuy: { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  "best buy": { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  sharaf: { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  "sharaf dg": { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  jarir: { categorySlug: "retail_ecommerce", subcategorySlug: "electronics_retail" },
+  shein: { categorySlug: "retail_ecommerce", subcategorySlug: "online_fashion_retailer" },
+  asos: { categorySlug: "retail_ecommerce", subcategorySlug: "online_fashion_retailer" },
+  zalando: { categorySlug: "retail_ecommerce", subcategorySlug: "online_fashion_retailer" },
+
+  // FMCG & food/beverage brands
+  unilever: { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  procter: { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  "procter gamble": { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  "procter & gamble": { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  pg: { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  "p&g": { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  nestle: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  nestlé: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  "coca cola": { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  cocacola: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  pepsi: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  pepsico: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  danone: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  heinz: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  kraft: { categorySlug: "retail_ecommerce", subcategorySlug: "food_beverages" },
+  mondelez: { categorySlug: "retail_ecommerce", subcategorySlug: "food_snacks" },
+  "johnson johnson": { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  jnj: { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+
+  // Beauty & personal care
+  loreal: { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  "l'oreal": { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  "estee lauder": { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  "estée lauder": { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  sephora: { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  maybelline: { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  nivea: { categorySlug: "beauty_personal_care", subcategorySlug: "skincare" },
+  olay: { categorySlug: "beauty_personal_care", subcategorySlug: "skincare" },
+  dove: { categorySlug: "beauty_personal_care", subcategorySlug: "beauty_personal_care" },
+  mac: { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  "mac cosmetics": { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  garnier: { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  clinique: { categorySlug: "beauty_personal_care", subcategorySlug: "cosmetics" },
+  chanel: { categorySlug: "beauty_personal_care", subcategorySlug: "fragrances" },
+  dior: { categorySlug: "beauty_personal_care", subcategorySlug: "fragrances" },
+
+  // Fashion & apparel
+  nike: { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
+  adidas: { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
+  zara: { categorySlug: "fashion_apparel", subcategorySlug: "fashion" },
+  hm: { categorySlug: "fashion_apparel", subcategorySlug: "fashion" },
+  "h&m": { categorySlug: "fashion_apparel", subcategorySlug: "fashion" },
+  gucci: { categorySlug: "fashion_apparel", subcategorySlug: "luxury_fashion" },
+  prada: { categorySlug: "fashion_apparel", subcategorySlug: "luxury_fashion" },
+  louisvuitton: { categorySlug: "fashion_apparel", subcategorySlug: "luxury_fashion" },
+  "louis vuitton": { categorySlug: "fashion_apparel", subcategorySlug: "luxury_fashion" },
+  puma: { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
+  underarmour: { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
+  "under armour": { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
+  uniqlo: { categorySlug: "fashion_apparel", subcategorySlug: "fashion" },
+  mango: { categorySlug: "fashion_apparel", subcategorySlug: "fashion" },
+
+  // Food & restaurant
+  mcdonalds: { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  "mcdonald's": { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  starbucks: { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  kfc: { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  "burger king": { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  subway: { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  "pizza hut": { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  dominos: { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  "domino's": { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  costa: { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+  "costa coffee": { categorySlug: "retail_ecommerce", subcategorySlug: "food_restaurant" },
+
+  // Automotive (mapped to retail general merchandise — no dedicated auto category)
+  toyota: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  bmw: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  mercedes: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  "mercedes benz": { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  ford: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  honda: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  nissan: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  audi: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  volkswagen: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+  hyundai: { categorySlug: "retail_ecommerce", subcategorySlug: "general_trading" },
+
+  // Telecommunications
+  stc: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+  etisalat: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+  vodafone: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+  orange: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+  du: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+  ooredoo: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+  zain: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+  "virgin mobile": { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+
+  // Financial services & banking
+  hsbc: { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  citi: { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  citibank: { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  adcb: { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  "emirates nbd": { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  enbd: { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  fab: { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  "standard chartered": { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  barclays: { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+  chase: { categorySlug: "financial_services_banking", subcategorySlug: "banking" },
+
+  // Transportation & delivery
   careem: { categorySlug: "transportation_delivery", subcategorySlug: "ride_hailing_app" },
   uber: { categorySlug: "transportation_delivery", subcategorySlug: "ride_hailing_app" },
   talabat: { categorySlug: "transportation_delivery", subcategorySlug: "delivery_services" },
-  stc: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
-  etisalat: { categorySlug: "telecommunications", subcategorySlug: "mobile_technology" },
+  deliveroo: { categorySlug: "transportation_delivery", subcategorySlug: "delivery_services" },
   emirates: { categorySlug: "transportation_delivery", subcategorySlug: "transportation_app" },
-  ikea: { categorySlug: "home_furniture", subcategorySlug: "home_furniture_interiors" },
+  etihad: { categorySlug: "transportation_delivery", subcategorySlug: "transportation_app" },
+  qatarairways: { categorySlug: "transportation_delivery", subcategorySlug: "transportation_app" },
+  "qatar airways": { categorySlug: "transportation_delivery", subcategorySlug: "transportation_app" },
+  fedex: { categorySlug: "transportation_delivery", subcategorySlug: "delivery_services" },
+  dhl: { categorySlug: "transportation_delivery", subcategorySlug: "delivery_services" },
+
+  // Healthcare & wellness
+  pfizer: { categorySlug: "healthcare_wellness", subcategorySlug: "healthcare_products" },
+  novartis: { categorySlug: "healthcare_wellness", subcategorySlug: "healthcare_products" },
+  roche: { categorySlug: "healthcare_wellness", subcategorySlug: "healthcare_products" },
+  gsk: { categorySlug: "healthcare_wellness", subcategorySlug: "healthcare_products" },
+  astrazeneca: { categorySlug: "healthcare_wellness", subcategorySlug: "healthcare_products" },
+
+  // Home & furniture
+  homecentre: { categorySlug: "home_furniture", subcategorySlug: "home_furniture_interiors" },
+  "home centre": { categorySlug: "home_furniture", subcategorySlug: "home_furniture_interiors" },
+  potterbarn: { categorySlug: "home_furniture", subcategorySlug: "home_furniture_interiors" },
+  "pottery barn": { categorySlug: "home_furniture", subcategorySlug: "home_furniture_interiors" },
+
+  // Government, sports & nonprofit
+  fifa: { categorySlug: "government_sports_nonprofit", subcategorySlug: "sports_federations_leagues" },
+  uefa: { categorySlug: "government_sports_nonprofit", subcategorySlug: "sports_federations_leagues" },
+  olympic: { categorySlug: "government_sports_nonprofit", subcategorySlug: "national_olympic_sports_committees" },
 };
 
 const LEGAL_SUFFIX_TOKENS = new Set([
@@ -256,7 +403,30 @@ const REGIONAL_SUFFIX_TOKENS = new Set([
   "emirates",
 ]);
 
-const MIN_RANK_SCORE = 2;
+const MIN_RANK_SCORE = 1;
+
+const TAXONOMY_SUBCATEGORY_KEYWORDS: Record<string, string[]> = (() => {
+  const map: Record<string, string[]> = {};
+  for (const category of CLIENT_CATEGORY_TAXONOMY) {
+    for (const subcategory of category.subcategories) {
+      const words = subcategory.label
+        .toLowerCase()
+        .replace(/[^a-z0-9\s&+-]/g, " ")
+        .split(/\s+/)
+        .filter((word) => word.length > 2);
+      map[subcategory.slug] = [...new Set(words)];
+    }
+  }
+  return map;
+})();
+
+function hasWebSearchApiKey(): boolean {
+  return Boolean(
+    process.env.SERPER_API_KEY?.trim() ||
+      process.env.BRAVE_SEARCH_API_KEY?.trim() ||
+      process.env.TAVILY_API_KEY?.trim()
+  );
+}
 
 const SORTED_COMPANY_HINTS = Object.entries(COMPANY_HINTS).sort(
   (a, b) => b[0].length - a[0].length
@@ -299,6 +469,7 @@ function scoreSubcategory(
   let score = 0;
   const labelTokens = tokenizeForMatching(subcategoryLabel);
   const categoryKeywords = CATEGORY_KEYWORDS[category.slug] ?? [];
+  const subcategoryKeywords = TAXONOMY_SUBCATEGORY_KEYWORDS[subcategorySlug] ?? [];
 
   for (const token of labelTokens) {
     if (tokens.has(token)) {
@@ -309,12 +480,13 @@ function scoreSubcategory(
     }
   }
 
-  for (const keyword of categoryKeywords) {
+  for (const keyword of [...categoryKeywords, ...subcategoryKeywords]) {
     const normalizedKeyword = keyword.toLowerCase();
     if (corpus.includes(normalizedKeyword)) {
       score += 2;
     }
-    if (tokens.has(normalizedKeyword.replace(/[^a-z0-9]/g, ""))) {
+    const keywordToken = normalizedKeyword.replace(/[^a-z0-9]/g, "");
+    if (keywordToken.length > 2 && tokens.has(keywordToken)) {
       score += 1;
     }
   }
@@ -378,10 +550,33 @@ function hintFromKey(key: string): ClientCategoryClassification | null {
   };
 }
 
+function hintMatchesName(name: string, compact: string, key: string): boolean {
+  const keyCompact = key.replace(/\s+/g, "");
+  if (name === key || compact === keyCompact) {
+    return true;
+  }
+
+  if (key.length < 4) {
+    return false;
+  }
+
+  const wordBoundary = new RegExp(`(?:^|\\s)${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s|$)`);
+  if (wordBoundary.test(name)) {
+    return true;
+  }
+
+  return name.includes(key) || compact.includes(keyCompact);
+}
+
 function matchCompanyHint(companyName: string): ClientCategoryClassification | null {
   for (const name of companyNameVariants(companyName)) {
     const compact = name.replace(/\s+/g, "");
     const tokens = name.split(" ").filter(Boolean);
+
+    const directHint = hintFromKey(name) ?? hintFromKey(compact);
+    if (directHint) {
+      return directHint;
+    }
 
     for (const token of tokens) {
       const hint = hintFromKey(token);
@@ -390,7 +585,7 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
       }
     }
 
-    for (let n = Math.min(3, tokens.length); n >= 1; n--) {
+    for (let n = Math.min(4, tokens.length); n >= 1; n--) {
       for (let i = 0; i <= tokens.length - n; i++) {
         const phrase = tokens.slice(i, i + n).join(" ");
         const phraseCompact = tokens.slice(i, i + n).join("");
@@ -402,12 +597,7 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
     }
 
     for (const [key, hint] of SORTED_COMPANY_HINTS) {
-      const keyCompact = key.replace(/\s+/g, "");
-      if (
-        name.includes(key) ||
-        compact.includes(keyCompact) ||
-        (keyCompact.length >= 4 && compact.includes(keyCompact))
-      ) {
+      if (hintMatchesName(name, compact, key)) {
         return {
           ...hint,
           confidence: "high",
@@ -435,9 +625,21 @@ export async function classifyClientCategory(input: {
     return hint;
   }
 
-  const query = buildCompanySearchQuery(companyName, input.country, input.website);
-  const web = await searchCompanyOnWeb(query);
   const nameVariants = companyNameVariants(companyName);
+  const query = buildCompanySearchQuery(companyName, input.country, input.website);
+  const web =
+    hasWebSearchApiKey() ? await searchCompanyOnWeb(query) : { snippets: [], source: "none" as const };
+
+  const webCorpus = web.snippets.join(" ");
+  const webHint = webCorpus ? matchCompanyHint(`${companyName} ${webCorpus}`) : null;
+  if (webHint) {
+    return {
+      ...webHint,
+      confidence: webHint.confidence === "high" ? "high" : "medium",
+      source: "web_search",
+    };
+  }
+
   const corpus = [...nameVariants, companyName, ...web.snippets].join(" ").toLowerCase();
   const ranked = rankCandidates(corpus);
 
@@ -448,8 +650,8 @@ export async function classifyClientCategory(input: {
         return {
           categorySlug: nameOnly.categorySlug,
           subcategorySlug: nameOnly.subcategorySlug,
-          confidence: confidenceFromScore(nameOnly.score, false),
-          source: "keyword",
+          confidence: confidenceFromScore(nameOnly.score, web.source !== "none"),
+          source: web.source === "none" ? "keyword" : "web_search",
         };
       }
     }
