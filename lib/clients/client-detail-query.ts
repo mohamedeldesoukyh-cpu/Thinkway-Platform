@@ -166,7 +166,7 @@ export async function fetchClientDetailRowById(
   supabase: SupabaseClient,
   id: string
 ): Promise<{ client: ClientDetailRow | null; error: PostgrestError | null }> {
-  let columns = [
+  let columns: string[] = [
     ...CLIENT_DETAIL_SELECT_BASE,
     ...CLIENT_DETAIL_SELECT_OPTIONAL,
   ];
