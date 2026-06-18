@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { classifyClientCategoryAction } from "@/features/clients/classify-category-action";
 import { upsertClientClassificationCache } from "@/lib/clients/client-classification-cache";
+import { updateClientWithOptionalColumnRetry } from "@/lib/clients/classification-audit-columns";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type ClassificationReviewActionState = {
@@ -62,14 +63,11 @@ export async function approveClientClassificationAction(
   }
 
   const now = new Date().toISOString();
-  const { error } = await supabase
-    .from("clients")
-    .update({
-      needs_review: false,
-      approved_by_user: user.id,
-      last_verified_at: now,
-    })
-    .eq("id", clientId);
+  const { error } = await updateClientWithOptionalColumnRetry(supabase, clientId, {
+    needs_review: false,
+    approved_by_user: user.id,
+    last_verified_at: now,
+  });
 
   if (error) {
     return { ok: false, message: error.message };
@@ -99,20 +97,17 @@ export async function rejectClientClassificationAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
-  const { error } = await supabase
-    .from("clients")
-    .update({
-      needs_review: false,
-      client_category: null,
-      client_subcategory: null,
-      classification_source: null,
-      classification_confidence: null,
-      classification_reason: null,
-      classified_at: null,
-      approved_by_user: null,
-      last_verified_at: null,
-    })
-    .eq("id", clientId);
+  const { error } = await updateClientWithOptionalColumnRetry(supabase, clientId, {
+    needs_review: false,
+    client_category: null,
+    client_subcategory: null,
+    classification_source: null,
+    classification_confidence: null,
+    classification_reason: null,
+    classified_at: null,
+    approved_by_user: null,
+    last_verified_at: null,
+  });
 
   if (error) {
     return { ok: false, message: error.message };
@@ -161,20 +156,17 @@ export async function reclassifyClientAction(
   const now = new Date().toISOString();
   const needsReview = result.needsReview ?? false;
 
-  const { error } = await supabase
-    .from("clients")
-    .update({
-      client_category: result.categorySlug,
-      client_subcategory: result.subcategorySlug,
-      classification_source: result.source ?? "fallback",
-      classification_confidence: result.confidence ?? null,
-      classification_reason: result.reason ?? null,
-      classified_at: now,
-      needs_review: needsReview,
-      approved_by_user: needsReview ? null : user.id,
-      last_verified_at: needsReview ? null : now,
-    })
-    .eq("id", clientId);
+  const { error } = await updateClientWithOptionalColumnRetry(supabase, clientId, {
+    client_category: result.categorySlug,
+    client_subcategory: result.subcategorySlug,
+    classification_source: result.source ?? "fallback",
+    classification_confidence: result.confidence ?? null,
+    classification_reason: result.reason ?? null,
+    classified_at: now,
+    needs_review: needsReview,
+    approved_by_user: needsReview ? null : user.id,
+    last_verified_at: needsReview ? null : now,
+  });
 
   if (error) {
     return { ok: false, message: error.message };

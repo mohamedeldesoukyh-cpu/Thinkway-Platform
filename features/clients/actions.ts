@@ -14,6 +14,7 @@ import { buildClassificationAuditPayload } from "@/lib/clients/build-classificat
 import {
   insertClientWithClassificationAudit,
   updateClientWithClassificationAudit,
+  updateClientWithOptionalColumnRetry,
 } from "@/lib/clients/classification-audit-columns";
 import { upsertClientClassificationCache } from "@/lib/clients/client-classification-cache";
 import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
@@ -368,16 +369,17 @@ export async function updateClientLegalAction(
     postal_code: parsed.data.legal_address_postal?.trim() || null,
   };
 
-  const { error } = await supabase
-    .from("clients")
-    .update({
+  const { error } = await updateClientWithOptionalColumnRetry(
+    supabase,
+    parsed.data.client_id,
+    {
       trade_license_number: emptyToNull(parsed.data.trade_license_number),
       trade_license_expiry: parsed.data.trade_license_expiry,
       vat_number: emptyToNull(parsed.data.vat_number),
       tax_id: emptyToNull(parsed.data.tax_id),
       legal_address,
-    })
-    .eq("id", parsed.data.client_id);
+    }
+  );
 
   if (error) {
     return { ok: false, message: error.message };
@@ -409,9 +411,10 @@ export async function updateClientFinanceAction(
     return { ok: false, message: authError };
   }
 
-  const { error } = await supabase
-    .from("clients")
-    .update({
+  const { error } = await updateClientWithOptionalColumnRetry(
+    supabase,
+    parsed.data.client_id,
+    {
       currency: parsed.data.currency,
       payment_terms: (emptyToNull(parsed.data.payment_terms) ??
         null) as PaymentTerms | null,
@@ -420,8 +423,8 @@ export async function updateClientFinanceAction(
       accept_credit_risk: parsed.data.accept_credit_risk,
       billing_email: emptyToNull(parsed.data.billing_email),
       billing_phone: emptyToNull(parsed.data.billing_phone),
-    })
-    .eq("id", parsed.data.client_id);
+    }
+  );
 
   if (error) {
     return { ok: false, message: error.message };
@@ -454,14 +457,15 @@ export async function updateClientCreditLimitAction(
     return { ok: false, message: authError };
   }
 
-  const { error } = await supabase
-    .from("clients")
-    .update({
+  const { error } = await updateClientWithOptionalColumnRetry(
+    supabase,
+    parsed.data.client_id,
+    {
       credit_limit: parsed.data.credit_limit ?? null,
       credit_limit_active: parsed.data.credit_limit_active,
       accept_credit_risk: parsed.data.accept_credit_risk,
-    })
-    .eq("id", parsed.data.client_id);
+    }
+  );
 
   if (error) {
     return { ok: false, message: error.message };

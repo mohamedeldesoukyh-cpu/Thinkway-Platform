@@ -14,56 +14,88 @@ export const CLASSIFICATION_AUDIT_COLUMN_NAMES = [
 
 export const NAME_AR_COLUMN = "name_ar" as const;
 
-function getMissingColumnFromPgrst204Error(
-  error: Pick<PostgrestError, "message" | "code">
+/** Optional client columns that may be absent on production until migrations run. */
+export const OPTIONAL_CLIENT_COLUMN_NAMES = [
+  NAME_AR_COLUMN,
+  "client_category",
+  "client_subcategory",
+  "vr_rate_id",
+  "credit_limit_active",
+  "accept_credit_risk",
+  ...CLASSIFICATION_AUDIT_COLUMN_NAMES,
+] as const;
+
+const MAX_OPTIONAL_COLUMN_RETRY_ATTEMPTS = 16;
+
+const PGRST204_MISSING_COLUMN_RE =
+  /Could not find the '([^']+)' column of 'clients' in the schema cache/;
+
+/** Parse the missing clients column name from a PostgREST PGRST204 schema-cache error. */
+export function getMissingClientColumnFromSchemaError(
+  error: Pick<PostgrestError, "message" | "code"> | null | undefined
 ): string | null {
-  if (error.code !== "PGRST204" || !error.message) {
+  if (!error?.message) {
     return null;
   }
 
-  const match = error.message.match(/Could not find the '([^']+)' column/);
-  return match?.[1] ?? null;
+  const match = error.message.match(PGRST204_MISSING_COLUMN_RE);
+  if (match?.[1]) {
+    return match[1];
+  }
+
+  if (error.code === "PGRST204") {
+    const legacyMatch = error.message.match(/Could not find the '([^']+)' column/);
+    return legacyMatch?.[1] ?? null;
+  }
+
+  return null;
 }
 
-/** PostgREST / schema-cache errors when name_ar is not migrated yet. */
-export function isMissingNameArColumnError(
+/** True when PostgREST reports a missing clients column in the schema cache. */
+export function isMissingClientColumnSchemaError(
   error: Pick<PostgrestError, "message" | "code"> | null | undefined
 ): boolean {
   if (!error?.message) {
     return false;
   }
 
-  const missingColumn = getMissingColumnFromPgrst204Error(error);
-  if (missingColumn === NAME_AR_COLUMN) {
+  if (getMissingClientColumnFromSchemaError(error)) {
     return true;
   }
 
   return (
     error.message.includes("schema cache") &&
-    error.message.includes(NAME_AR_COLUMN)
+    error.message.includes("clients")
   );
 }
 
-/** PostgREST / schema-cache errors when classification audit columns are not migrated yet. */
+/** @deprecated Use isMissingClientColumnSchemaError */
+export function isMissingNameArColumnError(
+  error: Pick<PostgrestError, "message" | "code"> | null | undefined
+): boolean {
+  const missingColumn = getMissingClientColumnFromSchemaError(error);
+  if (missingColumn === NAME_AR_COLUMN) {
+    return true;
+  }
+
+  return Boolean(
+    error?.message?.includes("schema cache") &&
+      error.message.includes(NAME_AR_COLUMN)
+  );
+}
+
+/** @deprecated Use isMissingClientColumnSchemaError */
 export function isMissingClassificationAuditColumnError(
   error: Pick<PostgrestError, "message" | "code"> | null | undefined
 ): boolean {
-  if (!error?.message) {
-    return false;
-  }
-
-  if (isMissingNameArColumnError(error)) {
-    return false;
-  }
-
-  const missingColumn = getMissingColumnFromPgrst204Error(error);
+  const missingColumn = getMissingClientColumnFromSchemaError(error);
   if (missingColumn) {
     return (CLASSIFICATION_AUDIT_COLUMN_NAMES as readonly string[]).includes(
       missingColumn
     );
   }
 
-  const message = error.message;
+  const message = error?.message ?? "";
   if (message.includes("schema cache") && message.includes("clients")) {
     return CLASSIFICATION_AUDIT_COLUMN_NAMES.some((column) =>
       message.includes(column)
@@ -73,57 +105,129 @@ export function isMissingClassificationAuditColumnError(
   return CLASSIFICATION_AUDIT_COLUMN_NAMES.some((column) => message.includes(column));
 }
 
-function isMissingOptionalClientColumnError(
-  error: Pick<PostgrestError, "message" | "code"> | null | undefined
-): boolean {
-  return (
-    isMissingNameArColumnError(error) ||
-    isMissingClassificationAuditColumnError(error)
+export function stripClientPayloadColumn(
+  payload: Record<string, unknown>,
+  column: string
+): Record<string, unknown> {
+  if (!(column in payload)) {
+    return payload;
+  }
+
+  const { [column]: _removed, ...rest } = payload;
+  return rest;
+}
+
+function stripMissingClientColumnFromPayload(
+  payload: Record<string, unknown>,
+  error: Pick<PostgrestError, "message" | "code">
+): { payload: Record<string, unknown>; strippedColumn: string | null } {
+  const missingColumn = getMissingClientColumnFromSchemaError(error);
+  if (!missingColumn || !(missingColumn in payload)) {
+    return { payload, strippedColumn: null };
+  }
+
+  console.warn(
+    `[clients] ${missingColumn} column missing; retrying without it:`,
+    error.message
+  );
+
+  return {
+    payload: stripClientPayloadColumn(payload, missingColumn),
+    strippedColumn: missingColumn,
+  };
+}
+
+function wasClassificationAuditStripped(strippedColumns: readonly string[]): boolean {
+  return strippedColumns.some((column) =>
+    (CLASSIFICATION_AUDIT_COLUMN_NAMES as readonly string[]).includes(column)
   );
 }
 
-function stripClassificationAuditFields(
-  payload: Record<string, unknown>
-): Record<string, unknown> {
-  const next = { ...payload };
-  for (const column of CLASSIFICATION_AUDIT_COLUMN_NAMES) {
-    delete next[column];
+async function runClientInsertWithOptionalColumnRetry(
+  supabase: SupabaseClient,
+  initialPayload: Record<string, unknown>
+): Promise<{
+  data: { id: string } | null;
+  error: PostgrestError | null;
+  strippedColumns: string[];
+}> {
+  let payload = initialPayload;
+  const strippedColumns: string[] = [];
+  let lastError: PostgrestError | null = null;
+
+  for (let attempt = 0; attempt < MAX_OPTIONAL_COLUMN_RETRY_ATTEMPTS; attempt += 1) {
+    const result = await supabase
+      .from("clients")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (!result.error) {
+      return { data: result.data, error: null, strippedColumns };
+    }
+
+    lastError = result.error;
+
+    if (!isMissingClientColumnSchemaError(result.error)) {
+      return { data: null, error: result.error, strippedColumns };
+    }
+
+    const stripped = stripMissingClientColumnFromPayload(payload, result.error);
+    if (!stripped.strippedColumn) {
+      return { data: null, error: result.error, strippedColumns };
+    }
+
+    payload = stripped.payload;
+    strippedColumns.push(stripped.strippedColumn);
   }
-  return next;
+
+  return { data: null, error: lastError, strippedColumns };
 }
 
-function stripOptionalClientColumns(
-  payload: Record<string, unknown>,
-  error: Pick<PostgrestError, "message" | "code">
-): {
-  payload: Record<string, unknown>;
-  auditSkipped: boolean;
-  nameArSkipped: boolean;
-} {
-  let next = payload;
-  let auditSkipped = false;
-  let nameArSkipped = false;
+export async function updateClientWithOptionalColumnRetry(
+  supabase: SupabaseClient,
+  clientId: string,
+  initialPayload: Record<string, unknown>,
+  options?: { eq?: Record<string, unknown> }
+): Promise<{
+  error: PostgrestError | null;
+  strippedColumns: string[];
+}> {
+  let payload = initialPayload;
+  const strippedColumns: string[] = [];
+  let lastError: PostgrestError | null = null;
 
-  if (NAME_AR_COLUMN in next && isMissingNameArColumnError(error)) {
-    const { [NAME_AR_COLUMN]: _removed, ...rest } = next;
-    next = rest;
-    nameArSkipped = true;
-    console.warn(
-      "[clients] name_ar column missing; saving client without Arabic name:",
-      error.message
-    );
+  for (let attempt = 0; attempt < MAX_OPTIONAL_COLUMN_RETRY_ATTEMPTS; attempt += 1) {
+    let query = supabase.from("clients").update(payload).eq("id", clientId);
+
+    if (options?.eq) {
+      for (const [column, value] of Object.entries(options.eq)) {
+        query = query.eq(column, value);
+      }
+    }
+
+    const result = await query;
+
+    if (!result.error) {
+      return { error: null, strippedColumns };
+    }
+
+    lastError = result.error;
+
+    if (!isMissingClientColumnSchemaError(result.error)) {
+      return { error: result.error, strippedColumns };
+    }
+
+    const stripped = stripMissingClientColumnFromPayload(payload, result.error);
+    if (!stripped.strippedColumn) {
+      return { error: result.error, strippedColumns };
+    }
+
+    payload = stripped.payload;
+    strippedColumns.push(stripped.strippedColumn);
   }
 
-  if (isMissingClassificationAuditColumnError(error)) {
-    next = stripClassificationAuditFields(next);
-    auditSkipped = true;
-    console.warn(
-      "[clients] classification audit columns missing; saving client without audit fields:",
-      error.message
-    );
-  }
-
-  return { payload: next, auditSkipped, nameArSkipped };
+  return { error: lastError, strippedColumns };
 }
 
 export async function insertClientWithClassificationAudit(
@@ -136,51 +240,16 @@ export async function insertClientWithClassificationAudit(
   auditSkipped: boolean;
   nameArSkipped: boolean;
 }> {
-  let payload: Record<string, unknown> = { ...corePayload, ...audit };
-  let auditSkipped = false;
-  let nameArSkipped = false;
-  let lastError: PostgrestError | null = null;
-
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const result = await supabase
-      .from("clients")
-      .insert(payload)
-      .select("id")
-      .single();
-
-    if (!result.error) {
-      return {
-        data: result.data,
-        error: null,
-        auditSkipped,
-        nameArSkipped,
-      };
-    }
-
-    lastError = result.error;
-
-    if (!isMissingOptionalClientColumnError(result.error)) {
-      return { data: null, error: result.error, auditSkipped, nameArSkipped };
-    }
-
-    const stripped = stripOptionalClientColumns(payload, result.error);
-    if (
-      stripped.payload === payload ||
-      (!stripped.auditSkipped && !stripped.nameArSkipped)
-    ) {
-      return { data: null, error: result.error, auditSkipped, nameArSkipped };
-    }
-
-    payload = stripped.payload;
-    auditSkipped = auditSkipped || stripped.auditSkipped;
-    nameArSkipped = nameArSkipped || stripped.nameArSkipped;
-  }
+  const result = await runClientInsertWithOptionalColumnRetry(supabase, {
+    ...corePayload,
+    ...audit,
+  });
 
   return {
-    data: null,
-    error: lastError,
-    auditSkipped,
-    nameArSkipped,
+    data: result.data,
+    error: result.error,
+    auditSkipped: wasClassificationAuditStripped(result.strippedColumns),
+    nameArSkipped: result.strippedColumns.includes(NAME_AR_COLUMN),
   };
 }
 
@@ -194,40 +263,14 @@ export async function updateClientWithClassificationAudit(
   auditSkipped: boolean;
   nameArSkipped: boolean;
 }> {
-  let payload: Record<string, unknown> = { ...corePayload, ...audit };
-  let auditSkipped = false;
-  let nameArSkipped = false;
-  let lastError: PostgrestError | null = null;
-
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const result = await supabase.from("clients").update(payload).eq("id", clientId);
-
-    if (!result.error) {
-      return { error: null, auditSkipped, nameArSkipped };
-    }
-
-    lastError = result.error;
-
-    if (!isMissingOptionalClientColumnError(result.error)) {
-      return { error: result.error, auditSkipped, nameArSkipped };
-    }
-
-    const stripped = stripOptionalClientColumns(payload, result.error);
-    if (
-      stripped.payload === payload ||
-      (!stripped.auditSkipped && !stripped.nameArSkipped)
-    ) {
-      return { error: result.error, auditSkipped, nameArSkipped };
-    }
-
-    payload = stripped.payload;
-    auditSkipped = auditSkipped || stripped.auditSkipped;
-    nameArSkipped = nameArSkipped || stripped.nameArSkipped;
-  }
+  const result = await updateClientWithOptionalColumnRetry(supabase, clientId, {
+    ...corePayload,
+    ...audit,
+  });
 
   return {
-    error: lastError,
-    auditSkipped,
-    nameArSkipped,
+    error: result.error,
+    auditSkipped: wasClassificationAuditStripped(result.strippedColumns),
+    nameArSkipped: result.strippedColumns.includes(NAME_AR_COLUMN),
   };
 }

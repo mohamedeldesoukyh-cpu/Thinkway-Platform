@@ -1,4 +1,4 @@
--- Idempotent production patch: client name_ar + classification audit + review + cache
+-- Idempotent production patch: optional client columns + classification audit + review + cache
 -- Run once in Supabase SQL editor if migrations 20260625010000–20260628020000 are not applied.
 
 -- 0) Arabic legal name
@@ -8,7 +8,76 @@ ALTER TABLE public.clients
 COMMENT ON COLUMN public.clients.name_ar IS
   'Optional Arabic legal / display name for the client';
 
--- 1) Audit columns on clients
+-- 1) Intelligence taxonomy (slug text; convert legacy enum if present)
+ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS client_subcategory text;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'client_category'
+  ) THEN
+    ALTER TABLE public.clients
+      ALTER COLUMN client_category DROP DEFAULT;
+
+    ALTER TABLE public.clients
+      ALTER COLUMN client_category TYPE text
+      USING client_category::text;
+
+    DROP TYPE IF EXISTS public.client_category;
+  END IF;
+END $$;
+
+ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS client_category text;
+
+COMMENT ON COLUMN public.clients.client_category IS
+  'Intelligence-engine category slug (see lib/clients/client-category-taxonomy.ts). Distinct from brand md_categories.';
+
+COMMENT ON COLUMN public.clients.client_subcategory IS
+  'Intelligence-engine subcategory slug paired with client_category.';
+
+CREATE INDEX IF NOT EXISTS clients_client_category_idx
+  ON public.clients (client_category);
+
+-- 2) Default VR% on legal entity
+ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS vr_rate_id uuid;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.clients'::regclass
+      AND conname = 'clients_vr_rate_id_fkey'
+  ) THEN
+    ALTER TABLE public.clients
+      ADD CONSTRAINT clients_vr_rate_id_fkey
+      FOREIGN KEY (vr_rate_id) REFERENCES public.md_vr_rates (id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS clients_vr_rate_id_idx ON public.clients (vr_rate_id);
+
+COMMENT ON COLUMN public.clients.vr_rate_id IS
+  'Default vendor rebate % for brands under this legal entity. Brands with vr_rate_id set override; null brand rate inherits this value.';
+
+-- 3) Credit limit enforcement toggles
+ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS credit_limit_active boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS accept_credit_risk boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.clients.credit_limit_active IS
+  'When true and credit_limit is set, campaign creation is blocked when exposure exceeds the limit.';
+COMMENT ON COLUMN public.clients.accept_credit_risk IS
+  'When true, users may acknowledge and proceed past credit limit exceedance.';
+
+-- 4) Classification audit columns on clients
 ALTER TABLE public.clients
   ADD COLUMN IF NOT EXISTS classification_source text,
   ADD COLUMN IF NOT EXISTS classification_confidence numeric(5, 2),
@@ -43,7 +112,7 @@ CREATE INDEX IF NOT EXISTS clients_approved_by_user_idx
   ON public.clients (approved_by_user)
   WHERE approved_by_user IS NOT NULL;
 
--- 2) Review queue flag
+-- 5) Review queue flag
 ALTER TABLE public.clients
   ADD COLUMN IF NOT EXISTS needs_review boolean NOT NULL DEFAULT false;
 
@@ -64,7 +133,7 @@ WHERE needs_review = false
     OR classification_source = 'ai_search'
   );
 
--- 3) Classification cache table
+-- 6) Classification cache table
 CREATE TABLE IF NOT EXISTS public.client_classification_cache (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   company_name_normalized text NOT NULL UNIQUE,
