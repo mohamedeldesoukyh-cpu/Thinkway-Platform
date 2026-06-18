@@ -212,6 +212,18 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             name="classification_reason"
             value={classificationMeta?.reason ?? ""}
           />
+          <input
+            type="hidden"
+            name="suggestion_accepted"
+            value={String(
+              !categoryTouched && Boolean(classificationMeta) ? true : false
+            )}
+          />
+          <input
+            type="hidden"
+            name="category_manually_set"
+            value={String(categoryTouched)}
+          />
 
           <div className="grid min-h-0 flex-1 gap-[18px] overflow-y-auto px-6 py-5">
             {state.fieldErrors && !state.ok ? (

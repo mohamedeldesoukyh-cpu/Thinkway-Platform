@@ -1,9 +1,13 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import {
   classifyClientCategory,
   isClientCategoryAiAvailable,
 } from "@/lib/clients/classify-client-category";
+import { lookupClientClassificationCache } from "@/lib/clients/client-classification-cache";
+import { computeNeedsReview } from "@/lib/clients/client-classification-review";
 import { findHistoricalClientClassification } from "@/lib/clients/classify-client-category-historical";
 import type { ClientClassificationSource } from "@/lib/clients/classify-client-category-types";
 import { isValidClientCategoryPair } from "@/lib/clients/client-category-taxonomy";
@@ -17,6 +21,7 @@ export type ClassifyClientCategoryResult = {
   confidence?: number;
   source?: ClientClassificationSource;
   reason?: string;
+  needsReview?: boolean;
   message?: string;
 };
 
@@ -93,20 +98,51 @@ export async function classifyClientCategoryAction(input: {
       }
     }
 
+    if (approvedClassification) {
+      const result = await classifyClientCategory({
+        name,
+        country: input.country,
+        website: input.website,
+        approvedClassification,
+      });
+      if (!result) {
+        return { ok: false, message: "No automatic match — choose category below if needed." };
+      }
+      return {
+        ok: true,
+        categorySlug: result.categorySlug,
+        subcategorySlug: result.subcategorySlug,
+        confidence: result.confidence,
+        source: result.source,
+        reason: result.reason,
+        needsReview: computeNeedsReview(result.confidence, result.source),
+      };
+    }
+
+    const cacheHit = await lookupClientClassificationCache(supabase, name);
+    if (cacheHit) {
+      return {
+        ok: true,
+        categorySlug: cacheHit.categorySlug,
+        subcategorySlug: cacheHit.subcategorySlug,
+        confidence: cacheHit.confidence,
+        source: cacheHit.source,
+        reason: cacheHit.reason ?? "Cached classification",
+        needsReview: computeNeedsReview(cacheHit.confidence, cacheHit.source),
+      };
+    }
+
     const historicalMatch =
-      !approvedClassification && input.clientId
+      input.clientId
         ? await findHistoricalClientClassification(supabase, name, {
             excludeClientId: input.clientId,
           })
-        : !approvedClassification
-          ? await findHistoricalClientClassification(supabase, name)
-          : null;
+        : await findHistoricalClientClassification(supabase, name);
 
     const result = await classifyClientCategory({
       name,
       country: input.country,
       website: input.website,
-      approvedClassification,
       historicalMatch,
     });
 
@@ -124,6 +160,7 @@ export async function classifyClientCategoryAction(input: {
       confidence: result.confidence,
       source: result.source,
       reason: result.reason,
+      needsReview: computeNeedsReview(result.confidence, result.source),
     };
   } catch (e) {
     return {

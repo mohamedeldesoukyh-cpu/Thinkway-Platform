@@ -4,6 +4,7 @@ import {
   CLIENT_CATEGORY_TAXONOMY,
   isValidClientCategoryPair,
 } from "@/lib/clients/client-category-taxonomy";
+import type { CompanyWebSearchContext } from "@/lib/clients/company-web-search";
 
 const AI_MODEL = "gpt-4o-mini";
 const AI_TIMEOUT_MS = 15_000;
@@ -55,11 +56,22 @@ export function hasOpenAiApiKey(): boolean {
   return Boolean(process.env.OPENAI_API_KEY?.trim());
 }
 
+export function hasExternalClassificationContext(
+  webContext: CompanyWebSearchContext
+): boolean {
+  return (
+    webContext.snippets.length > 0 ||
+    webContext.linkedInSnippets.length > 0 ||
+    webContext.companyDescriptions.length > 0 ||
+    Boolean(webContext.extractedWebsite)
+  );
+}
+
 export async function classifyClientCategoryWithAi(input: {
   name: string;
   country?: string | null;
   website?: string | null;
-  webSnippets?: string[];
+  webContext: CompanyWebSearchContext;
 }): Promise<AiClientCategoryClassification | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   const companyName = input.name.trim();
@@ -68,15 +80,29 @@ export async function classifyClientCategoryWithAi(input: {
     return null;
   }
 
+  const hasExternalContext = hasExternalClassificationContext(input.webContext);
+  const resolvedWebsite =
+    input.website?.trim() || input.webContext.extractedWebsite || undefined;
+
   const userPayload: Record<string, unknown> = {
     companyName,
     country: input.country?.trim() || undefined,
-    website: input.website?.trim() || undefined,
+    website: resolvedWebsite,
   };
 
-  if (input.webSnippets?.length) {
-    userPayload.webSearchSnippets = input.webSnippets.slice(0, 10);
+  if (input.webContext.snippets.length) {
+    userPayload.webSearchSnippets = input.webContext.snippets.slice(0, 10);
   }
+  if (input.webContext.linkedInSnippets.length) {
+    userPayload.linkedInSnippets = input.webContext.linkedInSnippets.slice(0, 6);
+  }
+  if (input.webContext.companyDescriptions.length) {
+    userPayload.companyDescriptions = input.webContext.companyDescriptions.slice(0, 8);
+  }
+
+  const contextInstruction = hasExternalContext
+    ? "You MUST base classification on industry, products, and services from the provided web snippets, LinkedIn results, and company descriptions — NOT the company name alone."
+    : "Limited external context available — use the company name carefully and keep confidence at 70-78.";
 
   try {
     const controller = new AbortController();
@@ -102,12 +128,12 @@ Return ONLY valid JSON with this shape:
 
 Rules:
 - Pick categorySlug and subcategorySlug ONLY from the taxonomy below. Never invent slugs.
-- confidence is 70-95 (integer). Use 85+ when web snippets clearly identify industry/products/services.
-- Base classification on industry, products, and services from webSearchSnippets — not company name alone.
+- confidence is 70-95 (integer). Use 85+ when external context clearly identifies industry/products/services.
+- ${contextInstruction}
 - If uncertain, use 70-78 confidence.
 - Automotive manufacturers (e.g. BYD, Tesla) → retail_ecommerce with general_trading or consumer_electronics as appropriate.
 - Media agencies, ad networks, and MCNs (multi-channel networks) → marketing_advertising_media_agencies.
-- Use webSearchSnippets when provided to disambiguate unknown brands.
+- Prefer extracted website and LinkedIn company descriptions when disambiguating unknown brands.
 
 Taxonomy:
 ${TAXONOMY_PROMPT}`,
@@ -162,10 +188,15 @@ ${TAXONOMY_PROMPT}`,
       return null;
     }
 
+    let normalizedConfidence = normalizeAiConfidence(confidence);
+    if (hasExternalContext && normalizedConfidence < 80) {
+      normalizedConfidence = 80;
+    }
+
     return {
       categorySlug,
       subcategorySlug,
-      confidence: normalizeAiConfidence(confidence),
+      confidence: normalizedConfidence,
       reasoning,
     };
   } catch (error) {

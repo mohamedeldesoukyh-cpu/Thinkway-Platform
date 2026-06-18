@@ -480,6 +480,7 @@ export type ClientRow = {
   classified_at: string | null;
   approved_by_user: string | null;
   last_verified_at: string | null;
+  needs_review: boolean;
   vr_rate_id: string | null;
   agency_or_direct: string | null;
   trade_license_expiry: string | null;
@@ -530,6 +531,7 @@ export type Database = {
           classified_at?: string | null;
           approved_by_user?: string | null;
           last_verified_at?: string | null;
+          needs_review?: boolean;
           vr_rate_id?: string | null;
           agency_or_direct?: string | null;
           trade_license_expiry?: string | null;
@@ -541,6 +543,36 @@ export type Database = {
           created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
+        Relationships: [];
+      };
+      client_classification_cache: {
+        Row: {
+          id: string;
+          company_name_normalized: string;
+          category_slug: string;
+          subcategory_slug: string;
+          confidence: number;
+          source: string;
+          classification_reason: string | null;
+          verified_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_name_normalized: string;
+          category_slug: string;
+          subcategory_slug: string;
+          confidence: number;
+          source: string;
+          classification_reason?: string | null;
+          verified_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["client_classification_cache"]["Insert"]
+        >;
         Relationships: [];
       };
       campaign_headers: {

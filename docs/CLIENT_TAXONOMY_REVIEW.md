@@ -49,6 +49,19 @@ The taxonomy grew from a historical intelligence workbook with 11 top-level cate
 **Before:** No category had an explicit Other subcategory.  
 **Applied:** Each category now includes `{category_slug}_other` (or `other_general` / `other_unknown` for top-level Other).
 
+**Re-verified June 2026:** All 19 categories retain an explicit Other subcategory. Top-level `other` uses `other_general` and `other_unknown`.
+
+### 5. Production taxonomy score
+
+| Dimension | Rating |
+|-----------|--------|
+| Structural completeness | Strong |
+| Naming consistency | Moderate (legacy retail prefixes) |
+| Cross-category overlap | Known, documented, slugs frozen |
+| Operational fit | Strong for MENA agency + retail ops |
+
+**Quality score: 4.0 / 5** — suitable for production with human review on AI/low-confidence paths.
+
 ## Applied taxonomy structure (19 categories)
 
 | # | Slug | Label |

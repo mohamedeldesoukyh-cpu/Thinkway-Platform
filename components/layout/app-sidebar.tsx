@@ -92,6 +92,8 @@ const navItems: NavItem[] = [
       { href: "/settings/roles", label: "Roles" },
       { href: "/settings/permissions", label: "Permissions" },
       { href: "/settings/access-control", label: "Access Control" },
+      { href: "/settings/client-access", label: "Client Access" },
+      { href: "/settings/client-classification-review", label: "Classification Review" },
       { href: "/settings/email", label: "Email" },
     ],
   },

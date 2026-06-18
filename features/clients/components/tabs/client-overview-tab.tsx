@@ -251,6 +251,18 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
           name="classification_reason"
           value={classificationMeta?.reason ?? ""}
         />
+        <input
+          type="hidden"
+          name="suggestion_accepted"
+          value={String(
+            !categoryManuallySet && Boolean(classificationMeta) ? true : false
+          )}
+        />
+        <input
+          type="hidden"
+          name="category_manually_set"
+          value={String(categoryManuallySet)}
+        />
         <input type="hidden" name="vr_rate_id" value={vrRateId} />
         <input
           type="hidden"

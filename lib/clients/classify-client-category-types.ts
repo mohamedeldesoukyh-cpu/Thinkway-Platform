@@ -38,8 +38,10 @@ export const CLASSIFICATION_CONFIDENCE = {
   approved: 100,
 } as const;
 
+import { REVIEW_CONFIDENCE_THRESHOLD } from "@/lib/clients/client-classification-review";
+
 export function isLowConfidenceClassification(confidence: number): boolean {
-  return confidence < 70;
+  return confidence < REVIEW_CONFIDENCE_THRESHOLD;
 }
 
 export function classificationSourceLabel(source: ClientClassificationSource): string {

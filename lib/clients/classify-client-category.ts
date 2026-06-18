@@ -3,6 +3,11 @@ import {
   tokenizeForMatching,
   type ClientCategoryTaxonomyEntry,
 } from "@/lib/clients/client-category-taxonomy";
+import {
+  companyNameVariants,
+  normalizeCompanyKey,
+  stripLegalSuffixes,
+} from "@/lib/clients/normalize-company-name";
 import { GLOBAL_COMPANY_HINTS } from "@/lib/clients/company-hints-global";
 import {
   classifyClientCategoryWithAi,
@@ -14,9 +19,9 @@ import {
   CLASSIFICATION_CONFIDENCE,
 } from "@/lib/clients/classify-client-category-types";
 import {
-  buildCompanySearchQuery,
+  gatherCompanyWebContext,
   hasWebSearchApiKey,
-  searchCompanyOnWeb,
+  type CompanyWebSearchContext,
 } from "@/lib/clients/company-web-search";
 
 export type { ClientCategoryClassification, ClientClassificationSource } from "@/lib/clients/classify-client-category-types";
@@ -553,49 +558,6 @@ const MEDIA_AGENCY_CORPUS_TERMS = [
   "marketing",
 ] as const;
 
-const LEGAL_SUFFIX_TOKENS = new Set([
-  "ltd",
-  "limited",
-  "llc",
-  "inc",
-  "incorporated",
-  "corp",
-  "corporation",
-  "plc",
-  "gmbh",
-  "bv",
-  "sa",
-  "ag",
-  "nv",
-  "lp",
-  "llp",
-  "co",
-  "company",
-  "pty",
-  "pte",
-  "srl",
-  "spa",
-  "ab",
-  "as",
-  "kg",
-]);
-
-const REGIONAL_SUFFIX_TOKENS = new Set([
-  "egypt",
-  "uae",
-  "ksa",
-  "qatar",
-  "kuwait",
-  "bahrain",
-  "oman",
-  "jordan",
-  "lebanon",
-  "morocco",
-  "tunisia",
-  "algeria",
-  "emirates",
-]);
-
 const MIN_RANK_SCORE = 1;
 
 const INDUSTRY_CORPUS_SIGNALS: Array<{
@@ -707,26 +669,7 @@ const SORTED_COMPANY_HINTS = Object.entries(COMPANY_HINTS).sort(
   (a, b) => b[0].length - a[0].length
 );
 
-function normalizeCompanyKey(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9'\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function stripLegalSuffixes(name: string): string {
-  const tokens = name.split(" ").filter(Boolean);
-  while (tokens.length > 1) {
-    const last = tokens[tokens.length - 1]!;
-    if (LEGAL_SUFFIX_TOKENS.has(last) || REGIONAL_SUFFIX_TOKENS.has(last)) {
-      tokens.pop();
-      continue;
-    }
-    break;
-  }
-  return tokens.join(" ");
-}
+export { normalizeCompanyKey, stripLegalSuffixes, companyNameVariants };
 
 function extractNameAcronyms(companyName: string): string[] {
   const acronyms: string[] = [];
@@ -737,12 +680,6 @@ function extractNameAcronyms(companyName: string): string[] {
     }
   }
   return acronyms;
-}
-
-function companyNameVariants(companyName: string): string[] {
-  const normalized = normalizeCompanyKey(companyName);
-  const stripped = stripLegalSuffixes(normalized);
-  return [...new Set([normalized, stripped].filter(Boolean))];
 }
 
 function mediaAgencyNameBoost(corpus: string, candidate: ScoredCandidate): number {
@@ -1005,13 +942,17 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
 function classifyWithKeywordAndWeb(input: {
   companyName: string;
   keywordHint: ClientCategoryClassification | null;
-  web: { snippets: string[]; source: "serper" | "brave" | "tavily" | "none" };
+  web: CompanyWebSearchContext;
 }): ClientCategoryClassification | null {
   const { companyName, keywordHint, web } = input;
   const nameVariants = companyNameVariants(companyName);
   const webSearchAvailable = web.source !== "none";
 
-  const webCorpus = web.snippets.join(" ");
+  const webCorpus = [
+    ...web.snippets,
+    ...web.linkedInSnippets,
+    ...web.companyDescriptions,
+  ].join(" ");
   const webHint = webCorpus ? matchCompanyHint(`${companyName} ${webCorpus}`) : null;
   if (webHint) {
     return {
@@ -1022,7 +963,15 @@ function classifyWithKeywordAndWeb(input: {
     };
   }
 
-  const corpus = [...nameVariants, companyName, ...web.snippets].join(" ").toLowerCase();
+  const corpus = [
+    ...nameVariants,
+    companyName,
+    ...web.snippets,
+    ...web.linkedInSnippets,
+    ...web.companyDescriptions,
+  ]
+    .join(" ")
+    .toLowerCase();
   let ranked = rankCandidates(corpus);
 
   if (!ranked && !webSearchAvailable) {
@@ -1113,10 +1062,16 @@ export async function classifyClientCategory(input: {
   }
 
   const webSearchAvailable = hasWebSearchApiKey();
-  const query = buildCompanySearchQuery(companyName, input.country, input.website);
   const web = webSearchAvailable
-    ? await searchCompanyOnWeb(query)
-    : { snippets: [], source: "none" as const, apiKeyMissing: true };
+    ? await gatherCompanyWebContext(companyName, input.country, input.website)
+    : {
+        snippets: [],
+        linkedInSnippets: [],
+        companyDescriptions: [],
+        extractedWebsite: input.website?.trim() || null,
+        source: "none" as const,
+        apiKeyMissing: true,
+      };
 
   if (web.apiKeyMissing && !webSearchKeyWarned) {
     console.info(
@@ -1129,8 +1084,8 @@ export async function classifyClientCategory(input: {
     const aiResult = await classifyClientCategoryWithAi({
       name: companyName,
       country: input.country,
-      website: input.website,
-      webSnippets: web.snippets,
+      website: input.website ?? web.extractedWebsite,
+      webContext: web,
     });
 
     if (aiResult) {

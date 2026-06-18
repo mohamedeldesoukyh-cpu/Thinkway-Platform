@@ -177,6 +177,11 @@ const optionalClassificationReason = z.preprocess(
     .transform((value) => (value === "" ? null : value))
 );
 
+const optionalBooleanFlag = z.preprocess(
+  (value) => value === true || value === "true" || value === "1",
+  z.boolean()
+);
+
 function validateClientCategoryPair(
   data: {
     client_category: string | null;
@@ -230,6 +235,8 @@ export const createClientSchema = z
   classification_source: optionalClassificationSource,
   classification_confidence: optionalClassificationConfidence,
   classification_reason: optionalClassificationReason,
+  suggestion_accepted: optionalBooleanFlag.default(false),
+  category_manually_set: optionalBooleanFlag.default(false),
   vr_rate_id: z.preprocess(
     (value) => {
       if (value === undefined || value === null) {
@@ -264,6 +271,8 @@ export const updateClientOverviewSchema = z
   classification_source: optionalClassificationSource,
   classification_confidence: optionalClassificationConfidence,
   classification_reason: optionalClassificationReason,
+  suggestion_accepted: optionalBooleanFlag.default(false),
+  category_manually_set: optionalBooleanFlag.default(false),
   vr_rate_id: z.preprocess(
     (value) => {
       if (value === undefined || value === null) {

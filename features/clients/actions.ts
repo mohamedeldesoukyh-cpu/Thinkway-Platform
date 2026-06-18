@@ -10,6 +10,8 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { findDuplicateClient } from "@/lib/validation/checks";
 import { friendlyActionError } from "@/lib/validation/hierarchy";
+import { buildClassificationAuditPayload } from "@/lib/clients/build-classification-audit";
+import { upsertClientClassificationCache } from "@/lib/clients/client-classification-cache";
 import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
 
 import {
@@ -116,27 +118,19 @@ export async function createClientAction(
   }
 
   const now = new Date().toISOString();
-  const hasCategory =
-    parsed.data.client_category && parsed.data.client_subcategory;
-  const classificationPayload = hasCategory
-    ? {
-        classification_source:
-          parsed.data.classification_source ?? "approved",
-        classification_confidence:
-          parsed.data.classification_confidence ?? 100,
-        classification_reason: parsed.data.classification_reason,
-        classified_at: now,
-        approved_by_user: user.id,
-        last_verified_at: now,
-      }
-    : {
-        classification_source: null,
-        classification_confidence: null,
-        classification_reason: null,
-        classified_at: null,
-        approved_by_user: null,
-        last_verified_at: null,
-      };
+  const audit = buildClassificationAuditPayload(
+    {
+      clientCategory: parsed.data.client_category,
+      clientSubcategory: parsed.data.client_subcategory,
+      suggestionAccepted: parsed.data.suggestion_accepted,
+      categoryManuallySet: parsed.data.category_manually_set,
+      suggestionSource: parsed.data.classification_source,
+      suggestionConfidence: parsed.data.classification_confidence,
+      suggestionReason: parsed.data.classification_reason,
+    },
+    user.id,
+    now
+  );
 
   const { data, error } = await supabase
     .from("clients")
@@ -149,7 +143,7 @@ export async function createClientAction(
       industry: emptyToNull(parsed.data.industry),
       client_category: parsed.data.client_category,
       client_subcategory: parsed.data.client_subcategory,
-      ...classificationPayload,
+      ...audit,
       vr_rate_id: parsed.data.vr_rate_id,
       website: emptyToNull(parsed.data.website),
       status: parsed.data.status,
@@ -170,6 +164,23 @@ export async function createClientAction(
       message: friendlyActionError(error, "client", error.message),
       fieldErrors: error.code === "23505" ? { name: [friendlyActionError(error, "client")] } : undefined,
     };
+  }
+
+  if (
+    parsed.data.client_category &&
+    parsed.data.client_subcategory &&
+    audit.classification_source &&
+    audit.classification_confidence != null
+  ) {
+    await upsertClientClassificationCache(supabase, {
+      companyName: parsed.data.name,
+      categorySlug: parsed.data.client_category,
+      subcategorySlug: parsed.data.client_subcategory,
+      confidence: audit.classification_confidence,
+      source: audit.classification_source,
+      classificationReason: audit.classification_reason,
+      verified: !audit.needs_review,
+    });
   }
 
   revalidatePath("/clients");
@@ -235,24 +246,19 @@ export async function updateClientOverviewAction(
   }
 
   const now = new Date().toISOString();
-  const hasCategory = fields.client_category && fields.client_subcategory;
-  const classificationPayload = hasCategory
-    ? {
-        classification_source: fields.classification_source ?? "approved",
-        classification_confidence: fields.classification_confidence ?? 100,
-        classification_reason: fields.classification_reason,
-        classified_at: now,
-        approved_by_user: user.id,
-        last_verified_at: now,
-      }
-    : {
-        classification_source: null,
-        classification_confidence: null,
-        classification_reason: null,
-        classified_at: null,
-        approved_by_user: null,
-        last_verified_at: null,
-      };
+  const audit = buildClassificationAuditPayload(
+    {
+      clientCategory: fields.client_category,
+      clientSubcategory: fields.client_subcategory,
+      suggestionAccepted: fields.suggestion_accepted,
+      categoryManuallySet: fields.category_manually_set,
+      suggestionSource: fields.classification_source,
+      suggestionConfidence: fields.classification_confidence,
+      suggestionReason: fields.classification_reason,
+    },
+    user.id,
+    now
+  );
 
   const { error } = await supabase
     .from("clients")
@@ -265,7 +271,7 @@ export async function updateClientOverviewAction(
       industry: emptyToNull(fields.industry),
       client_category: fields.client_category,
       client_subcategory: fields.client_subcategory,
-      ...classificationPayload,
+      ...audit,
       vr_rate_id: fields.vr_rate_id,
       website: emptyToNull(fields.website),
       status: fields.status,
@@ -286,6 +292,23 @@ export async function updateClientOverviewAction(
     };
   }
 
+  if (
+    fields.client_category &&
+    fields.client_subcategory &&
+    audit.classification_source &&
+    audit.classification_confidence != null
+  ) {
+    await upsertClientClassificationCache(supabase, {
+      companyName: fields.name,
+      categorySlug: fields.client_category,
+      subcategorySlug: fields.client_subcategory,
+      confidence: audit.classification_confidence,
+      source: audit.classification_source,
+      classificationReason: audit.classification_reason,
+      verified: !audit.needs_review,
+    });
+  }
+
   if (fields.group_id) {
     const { error: brandSyncError } = await supabase
       .from("brands")
@@ -299,6 +322,7 @@ export async function updateClientOverviewAction(
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${client_id}`);
+  revalidatePath("/settings/client-classification-review");
   if (fields.group_id) {
     revalidatePath(`/groups/${fields.group_id}`);
   }
