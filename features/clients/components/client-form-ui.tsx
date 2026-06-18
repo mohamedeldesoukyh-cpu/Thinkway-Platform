@@ -168,7 +168,9 @@ export function ClientFormLayout({
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       {topbar}
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+      <div className="h-0 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+        {children}
+      </div>
       {footer}
     </div>
   );

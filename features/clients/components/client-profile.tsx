@@ -83,7 +83,12 @@ export function ClientProfile({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-0">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-0",
+        isEditView && "overflow-hidden"
+      )}
+    >
       {!isEditView ? (
         <OperationalWorkspaceChrome
           backButton={
@@ -107,7 +112,10 @@ export function ClientProfile({
             setActiveTab(value);
           }
         }}
-        className={cn("flex min-h-0 flex-1 flex-col gap-0", isEditView ? "mt-0" : "mt-4")}
+        className={cn(
+          "flex min-h-0 flex-1 flex-col gap-0",
+          isEditView ? "mt-0 overflow-hidden" : "mt-4"
+        )}
       >
         {!isEditView ? (
           <OperationalWorkspaceSortableTabsBar
@@ -143,11 +151,18 @@ export function ClientProfile({
           </nav>
         )}
 
-        <OperationalWorkspaceTabContent value="overview">
+        <OperationalWorkspaceTabContent
+          value="overview"
+          className={
+            isEditView
+              ? "mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none focus-visible:outline-none"
+              : undefined
+          }
+        >
           <OperationalWorkspaceTabPanel
             className={cn(
               "flex min-h-0 flex-1 flex-col",
-              isEditView ? "mt-0 overflow-hidden" : undefined
+              isEditView ? "min-h-0 overflow-hidden" : undefined
             )}
           >
             <ClientOverviewTab
