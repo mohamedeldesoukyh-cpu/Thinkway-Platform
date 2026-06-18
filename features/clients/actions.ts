@@ -164,8 +164,13 @@ export async function createClientAction(
   if (error || !data) {
     return {
       ok: false,
-      message: friendlyActionError(error, "client", error?.message ?? "Client could not be created."),
-      fieldErrors: error?.code === "23505" ? { name: [friendlyActionError(error, "client")] } : undefined,
+      message: error
+        ? friendlyActionError(error, "client", error.message)
+        : "Client could not be created.",
+      fieldErrors:
+        error && error.code === "23505"
+          ? { name: [friendlyActionError(error, "client")] }
+          : undefined,
     };
   }
 
