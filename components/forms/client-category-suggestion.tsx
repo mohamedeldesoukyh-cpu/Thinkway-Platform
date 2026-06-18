@@ -51,10 +51,10 @@ export function ClientCategorySuggestion({
   return (
     <div
       className={cn(
-        "rounded-lg border px-3 py-3 text-sm",
+        "rounded-xl border px-4 py-3.5 text-sm",
         lowConfidence
           ? "border-amber-500/40 bg-amber-500/5"
-          : "border-primary/30 bg-primary/5"
+          : "border-[var(--brand-product)]/30 bg-[var(--brand-product)]/5"
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

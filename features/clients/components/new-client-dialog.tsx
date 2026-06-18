@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusIcon } from "lucide-react";
+import { Building2Icon, MapPinIcon, PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +11,10 @@ import {
   ClientCategorySuggestion,
   type ClientCategorySuggestionState,
 } from "@/components/forms/client-category-suggestion";
-import { useClientCategoryClassification, CLIENT_CATEGORY_PAUSE_MESSAGE } from "@/components/forms/use-client-category-classification";
+import {
+  useClientCategoryClassification,
+  CLIENT_CATEGORY_PAUSE_MESSAGE,
+} from "@/components/forms/use-client-category-classification";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -26,7 +29,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -35,6 +37,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  ClientFormField,
+  ClientFormGrid,
+  ClientFormSection,
+  CLIENT_FORM_INPUT_CLASS,
+  CLIENT_FORM_SELECT_TRIGGER_CLASS,
+  CLIENT_FORM_TEXTAREA_CLASS,
+} from "@/features/clients/components/client-form-ui";
 import {
   createClientAction,
   type CreateClientFormState,
@@ -46,6 +56,7 @@ import {
 } from "@/features/clients/constants";
 import { checkClientNameAvailable } from "@/features/validation/actions";
 import type { AgencyOrDirect } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 const initialState: CreateClientFormState = { ok: false };
 
@@ -72,17 +83,24 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
 
   const cityOptions = useMemo(() => getCityOptionsForCountry(country), [country]);
 
-  const { classifying, classifyingLabel, message: classifyMessage, suggestion, suggestionApplied, acceptSuggestion, overrideSuggestion, resetClassificationRequest } =
-    useClientCategoryClassification({
-      companyName: entityName,
-      country,
-      enabled: open && !categoryTouched,
-      onClassified: (result) => {
-        setCategorySlug(result.categorySlug);
-        setSubcategorySlug(result.subcategorySlug);
-        setClassificationMeta(result);
-      },
-    });
+  const {
+    classifyingLabel,
+    message: classifyMessage,
+    suggestion,
+    suggestionApplied,
+    acceptSuggestion,
+    overrideSuggestion,
+    resetClassificationRequest,
+  } = useClientCategoryClassification({
+    companyName: entityName,
+    country,
+    enabled: open && !categoryTouched,
+    onClassified: (result) => {
+      setCategorySlug(result.categorySlug);
+      setSubcategorySlug(result.subcategorySlug);
+      setClassificationMeta(result);
+    },
+  });
 
   function resetDialogForm() {
     setGroupId("");
@@ -141,6 +159,14 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
 
   const groupOptions = groups.map((g) => ({ value: g.id, label: g.name }));
 
+  const classificationStatusHint = categoryTouched ? (
+    <p className="text-xs text-muted-foreground">{CLIENT_CATEGORY_PAUSE_MESSAGE}</p>
+  ) : classifyingLabel ? (
+    <p className="text-xs text-muted-foreground">{classifyingLabel}</p>
+  ) : classifyMessage ? (
+    <p className="text-xs text-muted-foreground">{classifyMessage}</p>
+  ) : null;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -149,9 +175,11 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           New Client
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
-        <DialogHeader className="shrink-0 border-b border-border/40 px-6 py-4">
-          <DialogTitle>New client</DialogTitle>
+      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-4">
+          <DialogTitle className="text-lg font-bold tracking-tight">
+            New client
+          </DialogTitle>
           <DialogDescription>
             Add a client legal entity. Optionally link to a holding group now or
             assign one later from the client profile.
@@ -184,7 +212,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4">
             {state.fieldErrors && !state.ok ? (
-              <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              <p className="rounded-[10px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                 {Object.entries(state.fieldErrors)
                   .flatMap(([field, messages]) =>
                     (messages ?? []).map((message) => `${field}: ${message}`)
@@ -193,171 +221,187 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               </p>
             ) : null}
 
-          <div className="grid gap-2">
-            <Label>Holding group (optional)</Label>
-            <SearchableSelect
-              value={groupId}
-              onValueChange={setGroupId}
-              options={groupOptions}
-              disabled={isPending}
-              placeholder={groups.length > 0 ? "Link to group (optional)" : "No groups yet"}
-            />
-            <FieldError messages={state.fieldErrors?.group_id} />
-            {groups.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                You can create a client without a group and link one later.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="name">Client legal name</Label>
-            <Input
-              id="name"
-              name="name"
-              value={entityName}
-              onChange={(e) => {
-                setEntityName(e.target.value);
-                setCategoryTouched(false);
-                resetClassificationRequest();
-              }}
-              required
-              disabled={isPending}
-              placeholder="Registered legal entity name"
-            />
-            <FieldError messages={state.fieldErrors?.name} />
-            {duplicateMessage ? (
-              <p className="text-xs text-destructive">{duplicateMessage}</p>
-            ) : checking ? (
-              <p className="text-xs text-muted-foreground">Checking availability…</p>
-            ) : null}
-            {categoryTouched ? (
-              <p className="text-xs text-muted-foreground">
-                {CLIENT_CATEGORY_PAUSE_MESSAGE}
-              </p>
-            ) : classifyingLabel ? (
-              <p className="text-xs text-muted-foreground">{classifyingLabel}</p>
-            ) : classifyMessage ? (
-              <p className="text-xs text-muted-foreground">{classifyMessage}</p>
-            ) : null}
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="name_ar">Client name (Arabic)</Label>
-            <Input
-              id="name_ar"
-              name="name_ar"
-              disabled={isPending}
-              placeholder="Optional Arabic legal name"
-              dir="rtl"
-            />
-            <FieldError messages={state.fieldErrors?.name_ar} />
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Relationship type</Label>
-            <Select
-              value={agencyOrDirect}
-              onValueChange={(v) => setAgencyOrDirect(v as AgencyOrDirect)}
-              disabled={isPending}
+            <ClientFormSection
+              icon={Building2Icon}
+              title="Identity"
+              description="Legal name and classification"
+              className="shadow-none"
             >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <ClientFormField label="Holding group (optional)">
+                <SearchableSelect
+                  value={groupId}
+                  onValueChange={setGroupId}
+                  options={groupOptions}
+                  disabled={isPending}
+                  placeholder={
+                    groups.length > 0 ? "Link to group (optional)" : "No groups yet"
+                  }
+                  className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+                />
+                <FieldError messages={state.fieldErrors?.group_id} />
+                {groups.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    You can create a client without a group and link one later.
+                  </p>
+                ) : null}
+              </ClientFormField>
 
-          <ClientCategorySuggestion
-            suggestion={categoryTouched ? null : suggestion}
-            applied={suggestionApplied}
-            onAccept={acceptSuggestion}
-            onOverride={() => {
-              overrideSuggestion();
-              setCategoryTouched(true);
-            }}
-            disabled={isPending}
-          />
+              <ClientFormField label="Client legal name" htmlFor="name">
+                <Input
+                  id="name"
+                  name="name"
+                  value={entityName}
+                  onChange={(e) => {
+                    setEntityName(e.target.value);
+                    setCategoryTouched(false);
+                    resetClassificationRequest();
+                  }}
+                  required
+                  disabled={isPending}
+                  placeholder="Registered legal entity name"
+                  className={CLIENT_FORM_INPUT_CLASS}
+                />
+                <FieldError messages={state.fieldErrors?.name} />
+                {duplicateMessage ? (
+                  <p className="text-xs text-destructive">{duplicateMessage}</p>
+                ) : checking ? (
+                  <p className="text-xs text-muted-foreground">Checking availability…</p>
+                ) : null}
+                {classificationStatusHint}
+              </ClientFormField>
 
-          <ClientCategoryFields
-            categorySlug={categorySlug}
-            subcategorySlug={subcategorySlug}
-            onCategoryChange={(value) => {
-              setCategoryTouched(true);
-              setCategorySlug(value);
-              setClassificationMeta(null);
-            }}
-            onSubcategoryChange={(value) => {
-              setCategoryTouched(true);
-              setSubcategorySlug(value);
-              setClassificationMeta(null);
-            }}
-            disabled={isPending}
-          />
-          <FieldError messages={state.fieldErrors?.client_category} />
-          <FieldError messages={state.fieldErrors?.client_subcategory} />
+              <ClientFormField label="Client name (Arabic)" htmlFor="name_ar">
+                <Input
+                  id="name_ar"
+                  name="name_ar"
+                  disabled={isPending}
+                  placeholder="Optional Arabic legal name"
+                  dir="rtl"
+                  className={CLIENT_FORM_INPUT_CLASS}
+                />
+                <FieldError messages={state.fieldErrors?.name_ar} />
+              </ClientFormField>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Country</Label>
-              <SearchableSelect
-                value={country}
-                onValueChange={(value) => {
-                  setCountry(value);
-                  setCity("");
+              <ClientFormField label="Relationship type">
+                <Select
+                  value={agencyOrDirect}
+                  onValueChange={(v) => setAgencyOrDirect(v as AgencyOrDirect)}
+                  disabled={isPending}
+                >
+                  <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </ClientFormField>
+
+              <ClientCategorySuggestion
+                suggestion={categoryTouched ? null : suggestion}
+                applied={suggestionApplied}
+                onAccept={acceptSuggestion}
+                onOverride={() => {
+                  overrideSuggestion();
+                  setCategoryTouched(true);
                 }}
-                options={COUNTRY_OPTIONS}
                 disabled={isPending}
-                placeholder="Optional"
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>City</Label>
-              <SearchableSelect
-                value={city}
-                onValueChange={setCity}
-                options={cityOptions}
-                disabled={isPending || !country}
-                placeholder={country ? "Select city" : "Select country first"}
+
+              <ClientCategoryFields
+                categorySlug={categorySlug}
+                subcategorySlug={subcategorySlug}
+                onCategoryChange={(value) => {
+                  setCategoryTouched(true);
+                  setCategorySlug(value);
+                  setClassificationMeta(null);
+                }}
+                onSubcategoryChange={(value) => {
+                  setCategoryTouched(true);
+                  setSubcategorySlug(value);
+                  setClassificationMeta(null);
+                }}
+                disabled={isPending}
+                layout="grid"
               />
-              <FieldError messages={state.fieldErrors?.city} />
-            </div>
+              <FieldError messages={state.fieldErrors?.client_category} />
+              <FieldError messages={state.fieldErrors?.client_subcategory} />
+            </ClientFormSection>
+
+            <ClientFormSection
+              icon={MapPinIcon}
+              title="Location & defaults"
+              description="Region and billing currency"
+              className="shadow-none"
+            >
+              <ClientFormGrid>
+                <ClientFormField label="Country">
+                  <SearchableSelect
+                    value={country}
+                    onValueChange={(value) => {
+                      setCountry(value);
+                      setCity("");
+                    }}
+                    options={COUNTRY_OPTIONS}
+                    disabled={isPending}
+                    placeholder="Optional"
+                    className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+                  />
+                </ClientFormField>
+                <ClientFormField label="City">
+                  <SearchableSelect
+                    value={city}
+                    onValueChange={setCity}
+                    options={cityOptions}
+                    disabled={isPending || !country}
+                    placeholder={country ? "Select city" : "Select country first"}
+                    className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+                  />
+                  <FieldError messages={state.fieldErrors?.city} />
+                </ClientFormField>
+              </ClientFormGrid>
+
+              <ClientFormField label="Currency">
+                <Select
+                  value={currency}
+                  onValueChange={setCurrency}
+                  disabled={isPending}
+                >
+                  <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencyOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </ClientFormField>
+
+              <ClientFormField label="Notes" htmlFor="notes">
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  rows={2}
+                  disabled={isPending}
+                  className={CLIENT_FORM_TEXTAREA_CLASS}
+                />
+              </ClientFormField>
+
+              <p className="text-xs text-muted-foreground">
+                Client IO terms use the platform default. Customize them from the client
+                profile after creation.
+              </p>
+            </ClientFormSection>
           </div>
 
-          <div className="grid gap-2">
-            <Label>Currency</Label>
-            <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {currencyOptions.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" name="notes" rows={2} disabled={isPending} />
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Client IO terms use the platform default. Customize them from the client
-            profile after creation.
-          </p>
-          </div>
-
-          <DialogFooter className="shrink-0 border-t border-border/40 px-6 py-4">
+          <DialogFooter className="shrink-0 border-t border-border/60 bg-background/85 px-6 py-4 backdrop-blur-md">
             <Button
               type="submit"
               disabled={isPending || isDuplicate || checking}

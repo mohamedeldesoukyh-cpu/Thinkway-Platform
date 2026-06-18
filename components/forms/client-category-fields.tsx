@@ -1,6 +1,11 @@
 "use client";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
+import {
+  ClientFormField,
+  ClientFormGrid,
+  CLIENT_FORM_SELECT_TRIGGER_CLASS,
+} from "@/features/clients/components/client-form-ui";
 import { Label } from "@/components/ui/label";
 import {
   getClientCategoryOptions,
@@ -13,6 +18,7 @@ type ClientCategoryFieldsProps = {
   onCategoryChange: (categorySlug: string) => void;
   onSubcategoryChange: (subcategorySlug: string) => void;
   disabled?: boolean;
+  layout?: "stack" | "grid";
 };
 
 export function ClientCategoryFields({
@@ -21,6 +27,7 @@ export function ClientCategoryFields({
   onCategoryChange,
   onSubcategoryChange,
   disabled,
+  layout = "stack",
 }: ClientCategoryFieldsProps) {
   const categoryOptions = getClientCategoryOptions();
   const subcategoryOptions = getClientSubcategoryOptions(categorySlug);
@@ -28,6 +35,48 @@ export function ClientCategoryFields({
   function handleCategoryChange(value: string) {
     onCategoryChange(value);
     onSubcategoryChange("");
+  }
+
+  const categoryField = (
+    <ClientFormField label="Category">
+      <SearchableSelect
+        value={categorySlug}
+        onValueChange={handleCategoryChange}
+        options={categoryOptions}
+        placeholder="Select category"
+        disabled={disabled}
+        className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+      />
+    </ClientFormField>
+  );
+
+  const subcategoryField = (
+    <ClientFormField label="Subcategory">
+      <SearchableSelect
+        value={subcategorySlug}
+        onValueChange={onSubcategoryChange}
+        options={subcategoryOptions}
+        placeholder={
+          categorySlug ? "Select subcategory" : "Select a category first"
+        }
+        disabled={disabled || !categorySlug}
+        className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+      />
+      {categorySlug && subcategoryOptions.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No subcategories for this category.
+        </p>
+      ) : null}
+    </ClientFormField>
+  );
+
+  if (layout === "grid") {
+    return (
+      <ClientFormGrid>
+        {categoryField}
+        {subcategoryField}
+      </ClientFormGrid>
+    );
   }
 
   return (

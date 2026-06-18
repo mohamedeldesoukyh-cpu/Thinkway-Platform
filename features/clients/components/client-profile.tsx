@@ -105,7 +105,7 @@ export function ClientProfile({
         />
 
         <OperationalWorkspaceTabContent value="overview">
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+          <OperationalWorkspaceTabPanel className="bg-muted/20 p-4 md:p-6">
             <ClientOverviewTab client={client} groups={groups} masterData={masterData} />
           </OperationalWorkspaceTabPanel>
         </OperationalWorkspaceTabContent>

@@ -6,14 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  DETAIL_FORM_INPUT_CLASS,
-  DetailEditBlock,
-} from "@/features/campaigns/components/operational-detail-panel";
+  CLIENT_FORM_INPUT_CLASS,
+  CLIENT_FORM_TEXTAREA_CLASS,
+} from "@/features/clients/components/client-form-ui";
+import { DetailEditBlock } from "@/features/campaigns/components/operational-detail-panel";
 import type { ClientIoTerm } from "@/lib/io/client-io-terms";
 import { cn } from "@/lib/utils";
-
-const DETAIL_TEXTAREA_CLASS =
-  "min-h-[4.5rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1";
 
 type Props = {
   terms: ClientIoTerm[];
@@ -54,69 +52,75 @@ export function ClientIoTermsEditor({
         {terms.map((term, index) => (
           <div
             key={index}
-            className="rounded-xl border border-border/60 bg-muted/10 p-3 space-y-2"
+            className={cn(
+              "space-y-2.5 rounded-xl border border-border/80 bg-muted/20 p-4",
+              "transition-[border-color,box-shadow] focus-within:border-[var(--brand-product)]/40",
+              "focus-within:ring-[3px] focus-within:ring-[var(--brand-product)]/10"
+            )}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                 Term {index + 1}
               </span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                className="size-[30px] rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => removeTerm(index)}
                 disabled={disabled || terms.length <= 1}
                 aria-label={`Remove term ${index + 1}`}
               >
-                <Trash2Icon className="h-3.5 w-3.5" />
+                <Trash2Icon className="size-4" strokeWidth={1.8} />
               </Button>
             </div>
             <Input
               value={term.title}
               onChange={(e) => updateTerm(index, { title: e.target.value })}
-              placeholder="Term title (e.g. Payment Terms.)"
-              className={DETAIL_FORM_INPUT_CLASS}
+              placeholder="Term title (e.g. Payment)"
+              className={CLIENT_FORM_INPUT_CLASS}
               disabled={disabled}
             />
             <Textarea
               value={term.body}
               onChange={(e) => updateTerm(index, { body: e.target.value })}
-              placeholder="Term body text"
+              placeholder="Describe this term…"
               rows={3}
-              className={DETAIL_TEXTAREA_CLASS}
+              className={cn(CLIENT_FORM_TEXTAREA_CLASS, "min-h-[70px]")}
               disabled={disabled}
             />
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={addTerm}
+        disabled={disabled}
+        className={cn(
+          "inline-flex w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-border/80",
+          "px-4 py-2.5 text-[13px] font-semibold text-[var(--brand-product)] transition-colors",
+          "hover:border-[var(--brand-product)] hover:bg-[var(--brand-product)]/5",
+          "disabled:pointer-events-none disabled:opacity-50"
+        )}
+      >
+        <PlusIcon className="size-[15px]" strokeWidth={2.2} />
+        Add term
+      </button>
+
+      {showRecover && onRecover ? (
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
-          onClick={addTerm}
+          onClick={onRecover}
           disabled={disabled}
-          className="gap-1.5"
+          className="gap-1.5 text-muted-foreground"
         >
-          <PlusIcon className="h-3.5 w-3.5" />
-          Add term
+          <RotateCcwIcon className="size-3.5" />
+          Recover to default
         </Button>
-        {showRecover && onRecover ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onRecover}
-            disabled={disabled}
-            className={cn("gap-1.5 text-muted-foreground")}
-          >
-            <RotateCcwIcon className="h-3.5 w-3.5" />
-            Recover to default
-          </Button>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }
