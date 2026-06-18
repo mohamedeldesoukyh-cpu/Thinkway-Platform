@@ -135,6 +135,18 @@
   --sidebar-ring: var(--login-blue);
   --sidebar-muted-foreground: var(--muted-foreground);
   --sidebar-active-bg: rgba(0, 87, 255, 0.06);
+  /* Thinkway_Client_Form final.html — floating rail tokens */
+  --sidebar-rail-line: #e6eaf2;
+  --sidebar-rail-line-2: #d7deea;
+  --sidebar-rail-item-fg: #3a4254;
+  --sidebar-rail-hover-bg: #f5f8fd;
+  --sidebar-rail-badge-bg: #ecf1f9;
+  --sidebar-rail-grad: linear-gradient(135deg, #0057ff 0%, #2e74ff 55%, #1a6fff 100%);
+  --sidebar-rail-active-shadow: 0 6px 16px rgba(0, 87, 255, 0.28);
+  --sidebar-rail-float-shadow:
+    0 1px 2px rgba(11, 15, 26, 0.04),
+    0 12px 32px rgba(20, 40, 110, 0.1),
+    0 2px 8px rgba(20, 40, 110, 0.05);
   /* Collapsed rail default — updated when sidebar expands (CollapsibleAppSidebar). */
   --app-sidebar-width: 3.5rem;
   /* Reserve scroll space above OperationalFloatingActionBar (bar + bottom gap). */
@@ -251,6 +263,48 @@
 
   .dark .login-v2-logo-text span {
     color: #0057ff;
+  }
+
+  /* Thinkway_Client_Form final.html — sidebar rail item treatments */
+  .thinkway-sidebar-grp-icon {
+    @apply flex size-7 shrink-0 items-center justify-center rounded-lg;
+  }
+  .thinkway-sidebar-grp-icon-blue {
+    background: rgba(0, 87, 255, 0.1);
+    color: #0057ff;
+  }
+  .thinkway-sidebar-grp-icon-violet {
+    background: rgba(124, 92, 255, 0.12);
+    color: #7c5cff;
+  }
+  .thinkway-sidebar-grp-icon-teal {
+    background: rgba(14, 165, 164, 0.12);
+    color: #0ea5a4;
+  }
+  .thinkway-sidebar-grp-icon-amber {
+    background: rgba(224, 144, 27, 0.14);
+    color: #e0901b;
+  }
+  .thinkway-sidebar-grp-icon-navy {
+    background: rgba(11, 15, 26, 0.07);
+    color: #0b0f1a;
+  }
+  .thinkway-sidebar-item-dot {
+    @apply size-1.5 shrink-0 rounded-full bg-[var(--sidebar-rail-line-2)] transition-colors;
+    margin-left: 0.375rem;
+  }
+  .thinkway-sidebar-item-active {
+    background: var(--sidebar-rail-grad);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: var(--sidebar-rail-active-shadow);
+  }
+  .thinkway-sidebar-item-active .thinkway-sidebar-item-dot {
+    background: #fff;
+  }
+  .thinkway-sidebar-item-active:hover {
+    background: var(--sidebar-rail-grad);
+    color: #fff;
   }
 
 }

@@ -68,15 +68,29 @@ type NavSubheaderItem = {
 
 type NavEntry = NavLinkItem | NavSubheaderItem;
 
+type NavGroupIconTone = "blue" | "violet" | "teal" | "amber" | "navy";
+
 type NavGroup = {
   label: string;
+  icon: ComponentType<{ className?: string }>;
+  iconTone: NavGroupIconTone;
   items: NavEntry[];
+};
+
+const GROUP_ICON_TONE_CLASS: Record<NavGroupIconTone, string> = {
+  blue: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-blue",
+  violet: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-violet",
+  teal: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-teal",
+  amber: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-amber",
+  navy: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-navy",
 };
 
 /** Global nav order — overview, workspace, commercial, finance, insights, admin. */
 const navGroups: NavGroup[] = [
   {
     label: "Overview",
+    icon: LayoutDashboardIcon,
+    iconTone: "blue",
     items: [
       { kind: "link", href: "/", label: "Home", icon: LayoutDashboardIcon },
       { kind: "link", href: "/dashboard", label: "Executive", icon: LineChartIcon },
@@ -84,6 +98,8 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Workspace",
+    icon: MegaphoneIcon,
+    iconTone: "violet",
     items: [
       { kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
       { kind: "link", href: "/discovery", label: "Discovery", icon: RadarIcon },
@@ -91,6 +107,8 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Clients and vendors CRM",
+    icon: UsersIcon,
+    iconTone: "blue",
     items: [
       { kind: "link", href: "/groups", label: "Holding Groups", icon: LayersIcon },
       { kind: "link", href: "/clients", label: "Clients", icon: Building2Icon },
@@ -100,6 +118,8 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Commercial",
+    icon: FileSignatureIcon,
+    iconTone: "teal",
     items: [
       { kind: "link", href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
       { kind: "link", href: "/ios/vendor", label: "Vendor IOs", icon: FileSignatureIcon },
@@ -109,6 +129,8 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Finance",
+    icon: WalletIcon,
+    iconTone: "amber",
     items: [
       { kind: "subheader", label: "Billing & documents" },
       { kind: "link", href: "/finance/invoices", label: "Invoices", icon: FileTextIcon },
@@ -157,6 +179,8 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Insights",
+    icon: BarChart3Icon,
+    iconTone: "violet",
     items: [
       { kind: "link", href: "/reports", label: "Reports", icon: BarChart3Icon },
       // Intelligence — gated by INTELLIGENCE_ARCHIVED (see docs/INTELLIGENCE_ARCHIVE.md)
@@ -169,6 +193,8 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Administration",
+    icon: Settings2Icon,
+    iconTone: "navy",
     items: [
       { kind: "link", href: "/settings/users", label: "Users", icon: Settings2Icon },
       { kind: "link", href: "/settings/roles", label: "Roles", icon: UserCogIcon },
@@ -389,7 +415,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
   }, []);
 
   const sidebarControlButtonClass =
-    "rounded-lg p-1.5 text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground";
+    "flex size-[30px] items-center justify-center rounded-lg border-none bg-transparent text-[#9099A8] transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-[var(--login-navy)] active:scale-90";
 
   return (
     <>
@@ -410,7 +436,8 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       >
         <aside
           className={cn(
-            "absolute flex flex-col overflow-hidden rounded-r-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[var(--card-shadow)] transition-all duration-300 ease-in-out",
+            "absolute flex flex-col overflow-hidden rounded-[20px] border border-white/80 bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+            "shadow-[var(--sidebar-rail-float-shadow)]",
             isVisible
               ? "pointer-events-auto translate-x-0 opacity-100"
               : "pointer-events-none -translate-x-2 opacity-0"
@@ -424,10 +451,10 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
         >
       <div
         className={cn(
-          "flex h-16 items-center border-b",
+          "flex items-center",
           displayExpanded
-            ? "justify-between border-sidebar-border px-4"
-            : "justify-center border-sidebar-border px-1.5"
+            ? "justify-between px-[18px] pb-3 pt-[18px]"
+            : "justify-center px-1.5 py-3"
         )}
       >
         <Link href="/" className="min-w-0" title="Thinkway">
@@ -465,7 +492,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       </div>
 
           {!displayExpanded ? (
-            <div className="flex justify-center gap-1 border-b border-sidebar-border py-1">
+            <div className="flex justify-center gap-1 px-1.5 py-1">
               <button
                 type="button"
                 onClick={togglePin}
@@ -495,48 +522,41 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       <nav
         className={cn(
           "flex flex-1 flex-col overflow-y-auto overflow-x-hidden",
-          displayExpanded ? "gap-1 p-3" : "gap-0.5 px-1 py-2"
+          displayExpanded ? "gap-0.5 px-3 pb-3 pt-0.5" : "gap-0.5 px-1 py-2"
         )}
       >
-        {navGroups.map((group, groupIndex) => {
+        {navGroups.map((group) => {
           const groupCollapsed = collapsedGroups.has(group.label);
+          const GroupIcon = group.icon;
 
           return (
-            <div
-              key={group.label}
-              className={cn(
-                "flex flex-col",
-                groupIndex > 0 && displayExpanded && "mt-2 border-t border-sidebar-border/60 pt-2"
-              )}
-            >
-              {groupIndex > 0 && !displayExpanded ? (
-                <div className="mx-auto my-1 h-px w-6 bg-sidebar-border" />
-              ) : null}
-
+            <div key={group.label} className="mb-0.5 flex flex-col">
               {displayExpanded ? (
-                <div className="flex items-center gap-1 rounded-lg px-2 py-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.label)}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left font-heading text-sm font-bold tracking-tight text-brand-product transition-colors hover:text-brand-product/80"
-                    aria-expanded={!groupCollapsed}
-                    aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
-                  >
-                    <ChevronRightIcon
-                      className={cn(
-                        "size-3.5 shrink-0 text-brand-product/75 transition-transform",
-                        !groupCollapsed && "rotate-90"
-                      )}
-                    />
-                    <span className="truncate">{group.label}</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  className="flex w-full items-center gap-[11px] rounded-[11px] px-2.5 py-2.5 text-left text-[13px] font-semibold text-[var(--login-navy)] transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] active:scale-[0.99]"
+                  aria-expanded={!groupCollapsed}
+                  aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
+                >
+                  <span className={GROUP_ICON_TONE_CLASS[group.iconTone]}>
+                    <GroupIcon className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{group.label}</span>
+                  <ChevronRightIcon
+                    className={cn(
+                      "size-[15px] shrink-0 text-[#9099A8] transition-transform duration-200",
+                      !groupCollapsed && "rotate-90"
+                    )}
+                  />
+                </button>
               ) : null}
 
               <div
                 className={cn(
-                  "flex flex-col gap-0.5",
-                  displayExpanded && groupCollapsed && "hidden"
+                  "flex flex-col",
+                  displayExpanded && groupCollapsed && "hidden",
+                  displayExpanded && "pl-1"
                 )}
               >
                 {group.items.map((item) => {
@@ -545,7 +565,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                     return (
                       <div
                         key={`subheader-${item.label}`}
-                        className="px-3 pt-2 pb-0.5 text-[9px] font-medium uppercase tracking-wider text-sidebar-muted-foreground/70 first:pt-0"
+                        className="px-3 pt-2 pb-0.5 text-[11px] font-bold tracking-wide text-[#9099A8] uppercase first:pt-0"
                       >
                         {item.label}
                       </div>
@@ -560,24 +580,31 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                       href={item.href}
                       title={item.label}
                       className={cn(
-                        "flex items-center font-medium transition-colors",
+                        "relative flex items-center font-medium transition-[background-color,color] duration-[130ms]",
                         displayExpanded
-                          ? "gap-3 rounded-2xl px-3 py-2 text-[13px]"
-                          : "justify-center rounded-md px-1 py-1.5 text-sm",
+                          ? "my-px gap-2.5 rounded-[10px] py-2 pr-3 pl-4 text-[13px]"
+                          : "justify-center rounded-lg px-1 py-1.5 text-sm",
                         active
                           ? displayExpanded
-                            ? "border-l-2 border-brand-product bg-brand-product/8 pl-[calc(0.75rem-2px)] font-medium text-brand-product"
-                            : "bg-brand-product/10 text-brand-product"
+                            ? "thinkway-sidebar-item-active"
+                            : "text-white shadow-[var(--sidebar-rail-active-shadow)] [background:var(--sidebar-rail-grad)]"
                           : displayExpanded
-                            ? "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                            : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            ? "text-[var(--sidebar-rail-item-fg)] hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-[var(--login-navy)]"
+                            : "text-[#9099A8] hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-[var(--login-navy)]"
                       )}
                     >
-                      <Icon
-                        className={cn("shrink-0", displayExpanded ? "size-4" : "size-3.5")}
-                      />
                       {displayExpanded ? (
-                        <span className="truncate">{item.label}</span>
+                        <span
+                          className={cn(
+                            "thinkway-sidebar-item-dot",
+                            !active && "group-hover:bg-[#9099A8]"
+                          )}
+                        />
+                      ) : (
+                        <Icon className="size-3.5 shrink-0" />
+                      )}
+                      {displayExpanded ? (
+                        <span className="truncate font-medium">{item.label}</span>
                       ) : null}
                     </Link>
                   );
@@ -590,10 +617,8 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
 
       <div
         className={cn(
-          "border-t",
-          displayExpanded
-            ? "border-sidebar-border p-4"
-            : "border-sidebar-border p-1.5"
+          "border-t border-[var(--sidebar-rail-line)]",
+          displayExpanded ? "px-3.5 py-3" : "p-1.5"
         )}
       >
         {displayExpanded ? (

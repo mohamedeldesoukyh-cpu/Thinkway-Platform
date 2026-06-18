@@ -1,8 +1,8 @@
-/** Matches `w-64` / `w-14` on CollapsibleAppSidebar. */
-export const APP_SIDEBAR_WIDTH_EXPANDED = "16rem";
+/** Matches `--rail: 266px` in Thinkway_Client_Form final.html. */
+export const APP_SIDEBAR_WIDTH_EXPANDED = "16.625rem";
 export const APP_SIDEBAR_WIDTH_COLLAPSED = "3.5rem";
 export const APP_SIDEBAR_WIDTH_HIDDEN = "0px";
-export const APP_SIDEBAR_MARGIN = "0.5rem";
+export const APP_SIDEBAR_MARGIN = "0.875rem";
 export const APP_SIDEBAR_WIDTH_CSS_VAR = "--app-sidebar-width";
 
 /** Hover-reveal always uses full width; collapsed mode only when pinned. */

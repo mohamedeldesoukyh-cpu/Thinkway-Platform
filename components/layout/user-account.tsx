@@ -51,12 +51,10 @@ export function UserAccount({
   inSidebar = true,
 }: UserAccountProps) {
   const displayEmail = email ?? "Signed in";
-  const textPrimary = inSidebar ? "text-sidebar-foreground" : "text-foreground";
-  const textSecondary = inSidebar
-    ? "text-sidebar-foreground/60"
-    : "text-muted-foreground";
+  const textPrimary = inSidebar ? "text-[var(--login-navy)]" : "text-foreground";
+  const textSecondary = inSidebar ? "text-[#9099A8]" : "text-muted-foreground";
   const triggerSurface = inSidebar
-    ? "rounded-3xl bg-sidebar-accent/60 hover:bg-sidebar-accent"
+    ? "rounded-xl p-2 transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] active:scale-[0.99]"
     : "rounded-2xl hover:bg-muted";
   const focusRing = inSidebar
     ? "focus-visible:ring-sidebar-ring"
@@ -80,20 +78,27 @@ export function UserAccount({
           <span
             className={cn(
               "flex min-w-0 items-center gap-2",
-              compact
-                ? cn(inSidebar ? "justify-center" : "flex-1", triggerSurface, "p-1")
-                : cn("w-full px-3 py-2", triggerSurface)
+            compact
+              ? cn(inSidebar ? "justify-center" : "flex-1", triggerSurface)
+              : cn("w-full gap-[11px]", triggerSurface)
             )}
           >
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+            <span
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
+                inSidebar
+                  ? "bg-[linear-gradient(135deg,#0057FF,#7C5CFF)]"
+                  : "bg-primary text-primary-foreground"
+              )}
+            >
               {getInitials(email)}
             </span>
             {!compact ? (
               <span className="min-w-0 flex-1 text-left">
-                <span className={cn("block truncate text-sm font-medium", textPrimary)}>
+                <span className={cn("block truncate text-[13px] font-semibold", textPrimary)}>
                   {displayEmail}
                 </span>
-                <span className={cn("block text-xs", textSecondary)}>Account</span>
+                <span className={cn("block text-[11px]", textSecondary)}>Account</span>
               </span>
             ) : (
               <span
@@ -107,7 +112,7 @@ export function UserAccount({
             )}
             {!compact ? (
               <ChevronUpIcon
-                className={cn("size-4 shrink-0 opacity-60", textPrimary)}
+                className={cn("size-[15px] shrink-0", textSecondary)}
                 aria-hidden
               />
             ) : null}
