@@ -139,6 +139,7 @@ export async function insertClientWithClassificationAudit(
   let payload: Record<string, unknown> = { ...corePayload, ...audit };
   let auditSkipped = false;
   let nameArSkipped = false;
+  let lastError: PostgrestError | null = null;
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const result = await supabase
@@ -155,6 +156,8 @@ export async function insertClientWithClassificationAudit(
         nameArSkipped,
       };
     }
+
+    lastError = result.error;
 
     if (!isMissingOptionalClientColumnError(result.error)) {
       return { data: null, error: result.error, auditSkipped, nameArSkipped };
@@ -175,12 +178,7 @@ export async function insertClientWithClassificationAudit(
 
   return {
     data: null,
-    error: {
-      message: "Client could not be saved after retrying without optional columns.",
-      code: "PGRST204",
-      details: "",
-      hint: "",
-    },
+    error: lastError,
     auditSkipped,
     nameArSkipped,
   };
@@ -199,6 +197,7 @@ export async function updateClientWithClassificationAudit(
   let payload: Record<string, unknown> = { ...corePayload, ...audit };
   let auditSkipped = false;
   let nameArSkipped = false;
+  let lastError: PostgrestError | null = null;
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const result = await supabase.from("clients").update(payload).eq("id", clientId);
@@ -206,6 +205,8 @@ export async function updateClientWithClassificationAudit(
     if (!result.error) {
       return { error: null, auditSkipped, nameArSkipped };
     }
+
+    lastError = result.error;
 
     if (!isMissingOptionalClientColumnError(result.error)) {
       return { error: result.error, auditSkipped, nameArSkipped };
@@ -225,12 +226,7 @@ export async function updateClientWithClassificationAudit(
   }
 
   return {
-    error: {
-      message: "Client could not be saved after retrying without optional columns.",
-      code: "PGRST204",
-      details: "",
-      hint: "",
-    },
+    error: lastError,
     auditSkipped,
     nameArSkipped,
   };
