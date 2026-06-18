@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { format } from "date-fns";
+import { MegaphoneIcon } from "lucide-react";
 
 import {
   OperationalConfigurableTable,
@@ -11,8 +12,10 @@ import { OperationalTableControlsSlot } from "@/components/tables/operational-da
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { CLIENT_CAMPAIGNS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import {
+  ClientFormSection,
+  ClientProfileTabShell,
+} from "@/features/clients/components/client-form-ui";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import type { ClientDetail } from "@/types/database";
 
@@ -25,7 +28,7 @@ const CLIENT_CAMPAIGNS_COLUMNS: OperationalConfigurableColumnDef<CampaignRow>[] 
     renderCell: (campaign) => (
       <Link
         href={`/campaigns/${campaign.id}`}
-        className="font-medium hover:text-primary"
+        className="font-medium text-[#0057FF] hover:underline"
       >
         {campaign.name}
       </Link>
@@ -57,7 +60,7 @@ const CLIENT_CAMPAIGNS_COLUMNS: OperationalConfigurableColumnDef<CampaignRow>[] 
   {
     id: "dates",
     label: "Dates",
-    cellClassName: "text-muted-foreground",
+    cellClassName: "text-[#9099A8]",
     renderCell: (campaign) => (
       <>
         {campaign.start_date
@@ -74,40 +77,56 @@ const CLIENT_CAMPAIGNS_COLUMNS: OperationalConfigurableColumnDef<CampaignRow>[] 
 
 export const CLIENT_CAMPAIGNS_TABLE_COLUMNS = CLIENT_CAMPAIGNS_COLUMNS;
 
-export function ClientCampaignsTab({ client }: { client: ClientDetail }) {
+export function ClientCampaignsTab({
+  client,
+  onCancel,
+}: {
+  client: ClientDetail;
+  onCancel?: () => void;
+}) {
   return (
-    <OperationalTableSuiteProvider
-      tableId={OPERATIONAL_TABLE_IDS.clientCampaigns}
-      columns={CLIENT_CAMPAIGNS_TABLE_COLUMNS}
-      rows={client.campaigns}
-      filterAccessors={CLIENT_CAMPAIGNS_FILTER_ACCESSORS}
+    <ClientProfileTabShell
+      title="Campaign history"
+      description="Campaign headers linked to brands under this legal entity."
+      onCancel={onCancel}
     >
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <CampaignOperationalSectionHeader
-            title="Campaign history"
-            description="Campaign headers linked to brands under this legal entity."
-            actions={
-              <OperationalTableControlsSlot contextLabel="Client campaigns" />
-            }
-          />
-        }
+      <ClientFormSection
+        icon={MegaphoneIcon}
+        title="Campaigns"
+        description="Open a campaign workspace from the list below."
       >
-        {client.campaigns.length === 0 ? (
-          <p className="px-4 py-8 text-[11px] text-muted-foreground">
-            No campaigns yet for this client.
-          </p>
-        ) : (
-          <OperationalConfigurableTable
-            columns={CLIENT_CAMPAIGNS_COLUMNS}
+        <div className="flex justify-end pb-1">
+          <OperationalTableSuiteProvider
+            tableId={OPERATIONAL_TABLE_IDS.clientCampaigns}
+            columns={CLIENT_CAMPAIGNS_TABLE_COLUMNS}
             rows={client.campaigns}
-            rowKey={(campaign) => campaign.id}
-          />
-        )}
-      </OperationalTableSection>
-    </OperationalTableSuiteProvider>
+            filterAccessors={CLIENT_CAMPAIGNS_FILTER_ACCESSORS}
+          >
+            <OperationalTableControlsSlot contextLabel="Client campaigns" />
+          </OperationalTableSuiteProvider>
+        </div>
+
+        <OperationalTableSuiteProvider
+          tableId={OPERATIONAL_TABLE_IDS.clientCampaigns}
+          columns={CLIENT_CAMPAIGNS_TABLE_COLUMNS}
+          rows={client.campaigns}
+          filterAccessors={CLIENT_CAMPAIGNS_FILTER_ACCESSORS}
+        >
+          {client.campaigns.length === 0 ? (
+            <p className="py-6 text-[13px] text-[#9099A8]">
+              No campaigns yet for this client.
+            </p>
+          ) : (
+            <div className="-mx-[22px] overflow-x-auto">
+              <OperationalConfigurableTable
+                columns={CLIENT_CAMPAIGNS_COLUMNS}
+                rows={client.campaigns}
+                rowKey={(campaign) => campaign.id}
+              />
+            </div>
+          )}
+        </OperationalTableSuiteProvider>
+      </ClientFormSection>
+    </ClientProfileTabShell>
   );
 }

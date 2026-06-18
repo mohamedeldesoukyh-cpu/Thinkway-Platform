@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, TagIcon } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,7 +11,6 @@ import {
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { archiveBrandAction } from "@/features/brands/actions";
 import { ClientAddBrandDialog } from "@/features/brands/components/client-add-brand-dialog";
 import {
@@ -42,17 +40,22 @@ import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { CLIENT_BRANDS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import type { ClientBrandRow, ClientDetail } from "@/types/database";
 import {
+  CLIENT_FORM_GHOST_BUTTON_CLASS,
+  CLIENT_FORM_PRIMARY_BUTTON_CLASS,
   CLIENT_FORM_SAVE_SHORTCUT_HINT,
+  CLIENT_FORM_SECONDARY_BUTTON_CLASS,
   ClientFormKeyboardShortcuts,
+  ClientFormSection,
+  ClientProfileTabShell,
 } from "@/features/clients/components/client-form-ui";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const CLIENT_ADD_BRAND_FORM_ID = "client-add-brand-form";
 
 type ClientBrandsTabProps = {
   client: ClientDetail;
   masterData: MasterDataOptions;
-  /** When false, Ctrl+S is not wired to the add-brand dialog. */
+  onCancel?: () => void;
   shortcutsEnabled?: boolean;
   onGoToOverview?: () => void;
 };
@@ -132,6 +135,7 @@ function buildClientBrandsColumns(
 export function ClientBrandsTab({
   client,
   masterData,
+  onCancel,
   shortcutsEnabled = true,
   onGoToOverview,
 }: ClientBrandsTabProps) {
@@ -185,88 +189,92 @@ export function ClientBrandsTab({
         formId={CLIENT_ADD_BRAND_FORM_ID}
         enabled={shortcutsEnabled && addDialogOpen}
       />
-      <div className="space-y-4">
-        {!hasGroup ? (
-          <div className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
-            <p className="font-medium">Group required before adding brands</p>
-            <p className="mt-1 text-[12px] text-amber-900/80">
-              Link this legal entity to a holding group on the Overview tab, then
-              return here to add brands.
-            </p>
-            {onGoToOverview ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={onGoToOverview}
-              >
-                Go to Overview
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
+      <ClientProfileTabShell
+        title="Brands"
+        description="Commercial brands under this legal entity. VR% inherits from overview unless overridden."
+        onCancel={onCancel}
+      >
+        <div className="grid gap-[18px]">
+          {!hasGroup ? (
+            <div className="rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
+              <p className="font-medium">Group required before adding brands</p>
+              <p className="mt-1 text-[12px] text-amber-900/80">
+                Link this legal entity to a holding group on the Overview tab, then
+                return here to add brands.
+              </p>
+              {onGoToOverview ? (
+                <button
+                  type="button"
+                  className={cn(CLIENT_FORM_SECONDARY_BUTTON_CLASS, "mt-3")}
+                  onClick={onGoToOverview}
+                >
+                  Go to Overview
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
-        <OperationalTableSuiteProvider
-          tableId={OPERATIONAL_TABLE_IDS.clientBrands}
-          columns={columns}
-          rows={client.brands}
-          filterAccessors={CLIENT_BRANDS_FILTER_ACCESSORS}
-        >
-          <OperationalTableSection
-            wide
-            tableOnly
-            cardSurface
-            leading={
-              <CampaignOperationalSectionHeader
-                title="Brands"
-                description="Commercial brands under this legal entity. VR% inherits from client overview unless overridden."
-                actions={
-                  <>
-                    <OperationalTableControlsSlot contextLabel="Client brands" />
-                    <Button
-                      size="sm"
-                      onClick={openAddBrandDialog}
-                      disabled={!hasGroup}
-                    >
-                      <PlusIcon data-icon="inline-start" />
-                      Add new brand
-                    </Button>
-                  </>
-                }
-              />
-            }
+          <OperationalTableSuiteProvider
+            tableId={OPERATIONAL_TABLE_IDS.clientBrands}
+            columns={columns}
+            rows={client.brands}
+            filterAccessors={CLIENT_BRANDS_FILTER_ACCESSORS}
           >
-            {client.brands.length === 0 ? (
-              <div className="space-y-3 px-4 py-8">
-                <p className="text-[11px] text-muted-foreground">
-                  No brands yet for this legal entity.
-                </p>
-                {hasGroup ? (
-                  <Button type="button" size="sm" variant="outline" onClick={openAddBrandDialog}>
-                    <PlusIcon data-icon="inline-start" />
-                    Add new brand
-                  </Button>
-                ) : null}
+            <ClientFormSection
+              icon={TagIcon}
+              title="Brand portfolio"
+              description="Manage brands, VR overrides, and status for this legal entity."
+            >
+              <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
+                <OperationalTableControlsSlot contextLabel="Client brands" />
+                <button
+                  type="button"
+                  className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
+                  onClick={openAddBrandDialog}
+                  disabled={!hasGroup}
+                >
+                  <PlusIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
+                  Add new brand
+                </button>
               </div>
-            ) : (
-              <OperationalConfigurableTable
-                columns={columns}
-                rows={client.brands}
-                rowKey={(brand) => brand.id}
-              />
-            )}
-          </OperationalTableSection>
-        </OperationalTableSuiteProvider>
 
-        {hasGroup ? (
-          <p className="text-[11px] text-muted-foreground">
-            {vrHint} Use <span className="font-medium">Add new brand</span> to
-            create another brand after each save. {CLIENT_FORM_SAVE_SHORTCUT_HINT}{" "}
-            while the add dialog is open.
-          </p>
-        ) : null}
-      </div>
+              {client.brands.length === 0 ? (
+                <div className="space-y-3 py-6">
+                  <p className="text-[13px] text-[#9099A8]">
+                    No brands yet for this legal entity.
+                  </p>
+                  {hasGroup ? (
+                    <button
+                      type="button"
+                      className={CLIENT_FORM_SECONDARY_BUTTON_CLASS}
+                      onClick={openAddBrandDialog}
+                    >
+                      <PlusIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
+                      Add new brand
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="-mx-[22px] overflow-x-auto">
+                  <OperationalConfigurableTable
+                    columns={columns}
+                    rows={client.brands}
+                    rowKey={(brand) => brand.id}
+                  />
+                </div>
+              )}
+            </ClientFormSection>
+          </OperationalTableSuiteProvider>
+
+          {hasGroup ? (
+            <p className="text-[12px] text-[#9099A8]">
+              {vrHint} Use <span className="font-medium text-[#3A4254]">Add new brand</span>{" "}
+              to create another brand after each save. {CLIENT_FORM_SAVE_SHORTCUT_HINT} while
+              the add dialog is open.
+            </p>
+          ) : null}
+        </div>
+      </ClientProfileTabShell>
 
       {hasGroup ? (
         <ClientAddBrandDialog
@@ -311,20 +319,20 @@ export function ClientBrandsTab({
               <input type="hidden" name="brand_id" value={archiveTarget.id} />
               <input type="hidden" name="client_id" value={archiveTarget.client_id} />
               <DialogFooter>
-                <Button
+                <button
                   type="button"
-                  variant="outline"
+                  className={CLIENT_FORM_GHOST_BUTTON_CLASS}
                   onClick={() => setArchiveTarget(null)}
                 >
                   Cancel
-                </Button>
-                <Button
+                </button>
+                <button
                   type="submit"
-                  variant="destructive"
+                  className="inline-flex h-auto items-center gap-1.5 rounded-[10px] border-transparent bg-destructive px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
                   disabled={archivePending || archiveTarget.active_campaigns > 0}
                 >
                   {archivePending ? "Archiving…" : "Archive brand"}
-                </Button>
+                </button>
               </DialogFooter>
             </form>
           ) : null}

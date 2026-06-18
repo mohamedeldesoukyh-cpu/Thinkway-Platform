@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { ClientAccessTab } from "@/features/clients/components/tabs/client-access-tab";
 import { ClientProfile } from "@/features/clients/components/client-profile";
 import { getClientById } from "@/features/clients/queries";
 import { getClientIoSendRecipients, getClientIosForClient } from "@/features/io/queries";
@@ -59,7 +58,6 @@ export default async function ClientProfilePage({
           masterData={masterData}
           clientIos={clientIos}
           clientIoRecipients={clientIoRecipients}
-          clientAccessPanel={<ClientAccessTab clientId={client.id} />}
         />
       ) : null}
     </DashboardShell>

@@ -395,3 +395,82 @@ export function ClientFormUnsavedStatus() {
     </>
   );
 }
+
+export const CLIENT_PROFILE_BREADCRUMBS: ClientFormBreadcrumb[] = [
+  { label: "Clients", href: "/clients" },
+  { label: "Legal Entities", href: "/clients" },
+  { label: "Edit" },
+];
+
+/** Shared Form_4 shell for client profile tabs (topbar, scroll body, optional dirty footer). */
+export function ClientProfileTabShell({
+  title,
+  description,
+  children,
+  onCancel,
+  saveFormId,
+  saveLabel = "Save changes",
+  saveDisabled,
+  isSaving,
+  isDirty,
+  onDiscard,
+  discardDisabled,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+  onCancel?: () => void;
+  saveFormId?: string;
+  saveLabel?: string;
+  saveDisabled?: boolean;
+  isSaving?: boolean;
+  isDirty?: boolean;
+  onDiscard?: () => void;
+  discardDisabled?: boolean;
+}) {
+  return (
+    <ClientFormLayout
+      topbar={
+        <ClientFormTopbar
+          breadcrumbs={CLIENT_PROFILE_BREADCRUMBS}
+          onCancel={onCancel}
+          saveFormId={saveFormId}
+          saveLabel={saveLabel}
+          saveDisabled={saveDisabled}
+          isSaving={isSaving}
+        />
+      }
+      footer={
+        isDirty ? (
+          <ClientFormSaveBar
+            status={<ClientFormUnsavedStatus />}
+            onDiscard={onDiscard}
+            discardDisabled={discardDisabled}
+          >
+            {saveFormId ? (
+              <button
+                type="submit"
+                form={saveFormId}
+                className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
+                disabled={saveDisabled}
+              >
+                {isSaving ? "Saving…" : saveLabel}
+              </button>
+            ) : null}
+          </ClientFormSaveBar>
+        ) : null
+      }
+    >
+      <div
+        className={cn(
+          "mx-auto w-full",
+          CLIENT_FORM_MAX_WIDTH,
+          CLIENT_FORM_SCROLL_PADDING_CLASS
+        )}
+      >
+        <ClientFormPageHeader title={title} description={description} />
+        {children}
+      </div>
+    </ClientFormLayout>
+  );
+}

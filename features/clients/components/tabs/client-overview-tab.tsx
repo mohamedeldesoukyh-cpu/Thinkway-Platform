@@ -28,16 +28,9 @@ import {
   ClientFormField,
   ClientFormGrid,
   ClientFormKeyboardShortcuts,
-  ClientFormLayout,
-  ClientFormPageHeader,
-  ClientFormSaveBar,
   ClientFormSection,
-  ClientFormTopbar,
-  ClientFormUnsavedStatus,
+  ClientProfileTabShell,
   CLIENT_FORM_INPUT_CLASS,
-  CLIENT_FORM_MAX_WIDTH,
-  CLIENT_FORM_PRIMARY_BUTTON_CLASS,
-  CLIENT_FORM_SCROLL_PADDING_CLASS,
   CLIENT_FORM_SELECT_TRIGGER_CLASS,
   CLIENT_FORM_TEXTAREA_CLASS,
 } from "@/features/clients/components/client-form-ui";
@@ -258,45 +251,17 @@ export function ClientOverviewTab({
       enabled={shortcutsEnabled}
       disabled={isPending}
     />
-    <ClientFormLayout
-      topbar={
-        <ClientFormTopbar
-          breadcrumbs={[
-            { label: "Clients", href: "/clients" },
-            { label: "Legal Entities", href: "/clients" },
-            { label: "Edit" },
-          ]}
-          onCancel={handleCancel}
-          saveFormId="client-overview-form"
-          saveDisabled={isPending}
-          isSaving={isPending}
-        />
-      }
-      footer={
-        isDirty ? (
-          <ClientFormSaveBar
-            status={<ClientFormUnsavedStatus />}
-            onDiscard={discardChanges}
-            discardDisabled={isPending}
-          >
-            <button
-              type="submit"
-              form="client-overview-form"
-              className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
-              disabled={isPending}
-            >
-              {isPending ? "Saving…" : "Save changes"}
-            </button>
-          </ClientFormSaveBar>
-        ) : null
-      }
+    <ClientProfileTabShell
+      title="Edit legal entity"
+      description="Update the client's profile, billing, and default insertion-order terms."
+      onCancel={handleCancel}
+      saveFormId="client-overview-form"
+      saveDisabled={isPending}
+      isSaving={isPending}
+      isDirty={isDirty}
+      onDiscard={discardChanges}
+      discardDisabled={isPending}
     >
-      <div className={cn("mx-auto w-full", CLIENT_FORM_MAX_WIDTH, CLIENT_FORM_SCROLL_PADDING_CLASS)}>
-        <ClientFormPageHeader
-          title="Edit legal entity"
-          description="Update the client's profile, billing, and default insertion-order terms."
-        />
-
         <form
           key={formKey}
           id="client-overview-form"
@@ -634,8 +599,7 @@ export function ClientOverviewTab({
           />
         </ClientFormSection>
         </form>
-      </div>
-    </ClientFormLayout>
+    </ClientProfileTabShell>
     </>
   );
 }
