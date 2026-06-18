@@ -5,6 +5,7 @@ import {
   CoinsIcon,
   LineChartIcon,
   PercentIcon,
+  PieChartIcon,
   ReceiptIcon,
   TablePropertiesIcon,
   TrendingUpIcon,
@@ -18,6 +19,7 @@ export const REPORT_HUB_LINK_IDS = [
   "vr",
   "client-profitability",
   "revenue-by-function",
+  "spending-by-category",
   "top-clients",
   "top-influencers",
   "statements",
@@ -78,6 +80,15 @@ export const REPORT_HUB_LINKS: readonly ReportHubLink[] = [
       "Revenue and GP by OPS and Sales teams. Filter by function, user, and client type. Export as HTML, PDF, or Excel.",
     icon: UsersIcon,
     tint: "text-brand-blue",
+  },
+  {
+    id: "spending-by-category",
+    href: "/reports/spending-by-category",
+    title: "Spending by category",
+    description:
+      "Billable spending by client intelligence category with subcategory drill-down, KPIs, and client/campaign analysis. Export as CSV, HTML, PDF, or Excel.",
+    icon: PieChartIcon,
+    tint: "text-[var(--brand-product)]",
   },
   {
     id: "top-clients",
