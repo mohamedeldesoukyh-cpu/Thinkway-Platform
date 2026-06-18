@@ -11,6 +11,9 @@ type ClassificationResult = {
   source: "web_search" | "keyword";
 };
 
+export const CLIENT_CATEGORY_PAUSE_MESSAGE =
+  "Auto-suggest paused — change name to re-classify";
+
 type UseClientCategoryClassificationOptions = {
   companyName: string;
   country?: string;
@@ -37,9 +40,7 @@ export function useClientCategoryClassification({
     const trimmed = companyName.trim();
     if (!enabled || trimmed.length < 3) {
       setClassifying(false);
-      if (trimmed.length < 3) {
-        setMessage(null);
-      }
+      setMessage(null);
       return;
     }
 
@@ -51,7 +52,7 @@ export function useClientCategoryClassification({
 
     const requestId = ++requestIdRef.current;
     setClassifying(true);
-    setMessage("Classifying…");
+    setMessage(null);
 
     const timer = window.setTimeout(async () => {
       try {
@@ -67,7 +68,8 @@ export function useClientCategoryClassification({
 
         if (!result.ok || !result.categorySlug || !result.subcategorySlug) {
           setMessage(
-            result.message ?? "Could not classify — select category manually."
+            result.message ??
+              "No automatic match — choose category below if needed."
           );
           return;
         }
@@ -91,7 +93,7 @@ export function useClientCategoryClassification({
         if (requestId !== requestIdRef.current) {
           return;
         }
-        setMessage("Classification failed — select category manually.");
+        setMessage("Classification unavailable — choose category below.");
       } finally {
         if (requestId === requestIdRef.current) {
           setClassifying(false);

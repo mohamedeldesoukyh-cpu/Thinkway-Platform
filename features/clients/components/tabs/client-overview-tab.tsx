@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { ClientCategoryFields } from "@/components/forms/client-category-fields";
-import { useClientCategoryClassification } from "@/components/forms/use-client-category-classification";
+import { useClientCategoryClassification, CLIENT_CATEGORY_PAUSE_MESSAGE } from "@/components/forms/use-client-category-classification";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,10 +64,9 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
     client.client_subcategory ?? ""
   );
   const [categoryTouched, setCategoryTouched] = useState(
-    Boolean(client.client_category && client.client_subcategory)
+    Boolean(client.client_category)
   );
   const [vrRateId, setVrRateId] = useState(client.vr_rate_id ?? "");
-  const [nameEdited, setNameEdited] = useState(false);
   const cityOptions = useMemo(() => {
     const options = getCityOptionsForCountry(country);
     if (city && !options.some((option) => option.value === city)) {
@@ -81,7 +80,7 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
       companyName: displayName,
       country,
       website: client.website ?? undefined,
-      enabled: nameEdited && !categoryTouched,
+      enabled: !categoryTouched,
       onClassified: ({ categorySlug: nextCategory, subcategorySlug: nextSubcategory }) => {
         setCategorySlug(nextCategory);
         setSubcategorySlug(nextSubcategory);
@@ -203,7 +202,6 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
               value={displayName}
               onChange={(e) => {
                 setDisplayName(e.target.value);
-                setNameEdited(true);
                 setCategoryTouched(false);
                 resetClassificationRequest();
               }}
@@ -211,7 +209,11 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
               disabled={isPending}
             />
             <FieldError messages={state.fieldErrors?.name} />
-            {classifying ? (
+            {categoryTouched ? (
+              <p className="text-xs text-muted-foreground">
+                {CLIENT_CATEGORY_PAUSE_MESSAGE}
+              </p>
+            ) : classifying ? (
               <p className="text-xs text-muted-foreground">Classifying…</p>
             ) : classifyMessage ? (
               <p className="text-xs text-muted-foreground">{classifyMessage}</p>

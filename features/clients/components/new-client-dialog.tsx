@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { ClientCategoryFields } from "@/components/forms/client-category-fields";
-import { useClientCategoryClassification } from "@/components/forms/use-client-category-classification";
+import { useClientCategoryClassification, CLIENT_CATEGORY_PAUSE_MESSAGE } from "@/components/forms/use-client-category-classification";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -208,7 +208,11 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             ) : checking ? (
               <p className="text-xs text-muted-foreground">Checking availability…</p>
             ) : null}
-            {classifying ? (
+            {categoryTouched ? (
+              <p className="text-xs text-muted-foreground">
+                {CLIENT_CATEGORY_PAUSE_MESSAGE}
+              </p>
+            ) : classifying ? (
               <p className="text-xs text-muted-foreground">Classifying…</p>
             ) : classifyMessage ? (
               <p className="text-xs text-muted-foreground">{classifyMessage}</p>

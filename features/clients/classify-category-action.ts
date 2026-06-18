@@ -46,7 +46,7 @@ export async function classifyClientCategoryAction(input: {
     if (!result) {
       return {
         ok: false,
-        message: "Could not classify this company — select category manually.",
+        message: "No automatic match — choose category below if needed.",
       };
     }
 
@@ -63,7 +63,7 @@ export async function classifyClientCategoryAction(input: {
       message:
         e instanceof Error
           ? e.message
-          : "Classification failed — select category manually.",
+          : "Classification unavailable — choose category below.",
     };
   }
 }
