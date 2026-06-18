@@ -106,7 +106,7 @@ export function ClientProfile({
 
         <TabsContent value="overview" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
           <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <ClientOverviewTab client={client} groups={groups} />
+            <ClientOverviewTab client={client} groups={groups} masterData={masterData} />
           </OperationalWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="brands" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>

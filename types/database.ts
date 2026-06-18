@@ -444,6 +444,7 @@ export type ClientDetail = ClientRow & {
   campaigns: ClientCampaignSummary[];
   brands: ClientBrandRow[];
   group: { id: string; name: string; document_number: string } | null;
+  vr_rate_percent: number | null;
 };
 
 export type ClientRow = {
@@ -451,6 +452,7 @@ export type ClientRow = {
   document_number: string;
   group_id: string | null;
   name: string;
+  name_ar: string | null;
   name_normalized: string;
   legal_name: string | null;
   industry: string | null;
@@ -468,8 +470,11 @@ export type ClientRow = {
   city: string | null;
   payment_terms: PaymentTerms | null;
   credit_limit: number | null;
+  credit_limit_active: boolean;
+  accept_credit_risk: boolean;
   client_category: string | null;
   client_subcategory: string | null;
+  vr_rate_id: string | null;
   agency_or_direct: string | null;
   trade_license_expiry: string | null;
   currency: string;
@@ -492,6 +497,7 @@ export type Database = {
           document_number?: string;
           group_id?: string | null;
           name: string;
+          name_ar?: string | null;
           legal_name?: string | null;
           industry?: string | null;
           website?: string | null;
@@ -508,8 +514,11 @@ export type Database = {
           city?: string | null;
           payment_terms?: PaymentTerms | null;
           credit_limit?: number | null;
+          credit_limit_active?: boolean;
+          accept_credit_risk?: boolean;
           client_category?: string | null;
           client_subcategory?: string | null;
+          vr_rate_id?: string | null;
           agency_or_direct?: string | null;
           trade_license_expiry?: string | null;
           currency?: string;

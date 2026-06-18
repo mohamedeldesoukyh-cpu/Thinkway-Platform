@@ -506,13 +506,13 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.label)}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground transition-colors hover:text-sidebar-foreground"
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-sm font-bold tracking-tight text-primary transition-colors hover:text-primary/80"
                     aria-expanded={!groupCollapsed}
                     aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
                   >
                     <ChevronRightIcon
                       className={cn(
-                        "size-3.5 shrink-0 transition-transform",
+                        "size-4 shrink-0 text-primary/70 transition-transform",
                         !groupCollapsed && "rotate-90"
                       )}
                     />

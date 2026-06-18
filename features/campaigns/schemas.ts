@@ -19,6 +19,11 @@ const optionalDate = z
   .or(z.literal(""))
   .transform((value) => (value ? value : null));
 
+const formBooleanSchema = z
+  .union([z.literal("true"), z.literal("false"), z.boolean()])
+  .optional()
+  .transform((value) => value === true || value === "true");
+
 export const createCampaignSchema = z
   .object({
     brand_id: z.string().uuid("Select a brand"),
@@ -41,6 +46,7 @@ export const createCampaignSchema = z
       .uuid("Invalid account manager")
       .optional()
       .or(z.literal("")),
+    accept_credit_risk_confirmed: formBooleanSchema,
   })
   .refine(
     (data) => {

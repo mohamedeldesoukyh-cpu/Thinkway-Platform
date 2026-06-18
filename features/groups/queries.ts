@@ -112,7 +112,7 @@ export async function getGroupWorkspace(
     supabase
       .from("clients")
       .select(
-        "id, document_number, name, legal_name, country, currency, payment_terms, agency_or_direct, status"
+        "id, document_number, name, legal_name, country, currency, payment_terms, agency_or_direct, status, vr_rate_id, vr_rate:md_vr_rates(rate_percent)"
       )
       .eq("group_id", groupId)
       .order("name"),
@@ -299,19 +299,27 @@ export async function getGroupWorkspace(
         isActiveCampaignStatus(h.status)
       ).length,
     },
-    legal_entities: clients.map((c) => ({
-      id: c.id,
-      document_number: c.document_number,
-      name: c.name,
-      legal_name: c.legal_name,
-      country: c.country,
-      currency: c.currency,
-      payment_terms: c.payment_terms,
-      agency_or_direct: c.agency_or_direct as GroupWorkspace["legal_entities"][number]["agency_or_direct"],
-      status: c.status,
-      active_campaigns: activeCampaignsByClient.get(c.id) ?? 0,
-      revenue: revenueByClient.get(c.id) ?? 0,
-    })),
+    legal_entities: clients.map((c) => {
+      const row = c as typeof c & {
+        vr_rate_id: string | null;
+        vr_rate: { rate_percent: number } | null;
+      };
+      return {
+      id: row.id,
+      document_number: row.document_number,
+      name: row.name,
+      legal_name: row.legal_name,
+      country: row.country,
+      currency: row.currency,
+      payment_terms: row.payment_terms,
+      agency_or_direct: row.agency_or_direct as GroupWorkspace["legal_entities"][number]["agency_or_direct"],
+      status: row.status,
+      active_campaigns: activeCampaignsByClient.get(row.id) ?? 0,
+      revenue: revenueByClient.get(row.id) ?? 0,
+      vr_rate_id: row.vr_rate_id,
+      vr_rate_percent: row.vr_rate?.rate_percent ?? null,
+    };
+    }),
     brands: (brandsResult.data ?? []).map((b) => {
       const row = b as unknown as {
         id: string;

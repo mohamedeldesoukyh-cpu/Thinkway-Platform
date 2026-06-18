@@ -6,6 +6,8 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
+import { ClientCategoryFields } from "@/components/forms/client-category-fields";
+import { useClientCategoryClassification } from "@/components/forms/use-client-category-classification";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -36,7 +38,6 @@ import {
 import {
   AGENCY_OR_DIRECT_OPTIONS,
   COUNTRY_OPTIONS,
-  INDUSTRY_OPTIONS,
   getCityOptionsForCountry,
 } from "@/features/clients/constants";
 import { checkClientNameAvailable } from "@/features/validation/actions";
@@ -59,9 +60,22 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
-  const [industry, setIndustry] = useState("");
+  const [categorySlug, setCategorySlug] = useState("");
+  const [subcategorySlug, setSubcategorySlug] = useState("");
+  const [categoryTouched, setCategoryTouched] = useState(false);
 
   const cityOptions = useMemo(() => getCityOptionsForCountry(country), [country]);
+
+  const { classifying, message: classifyMessage, resetClassificationRequest } =
+    useClientCategoryClassification({
+      companyName: entityName,
+      country,
+      enabled: open && !categoryTouched,
+      onClassified: ({ categorySlug: nextCategory, subcategorySlug: nextSubcategory }) => {
+        setCategorySlug(nextCategory);
+        setSubcategorySlug(nextSubcategory);
+      },
+    });
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
     entityName,
@@ -86,7 +100,10 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
       setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setCountry("");
       setCity("");
-      setIndustry("");
+      setCategorySlug("");
+      setSubcategorySlug("");
+      setCategoryTouched(false);
+      resetClassificationRequest();
       setOpen(false);
       if (state.clientId) {
         router.push(`/clients/${state.clientId}`);
@@ -127,7 +144,8 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           <input type="hidden" name="currency" value={currency} />
           <input type="hidden" name="country" value={country} />
           <input type="hidden" name="city" value={city} />
-          <input type="hidden" name="industry" value={industry} />
+          <input type="hidden" name="client_category" value={categorySlug} />
+          <input type="hidden" name="client_subcategory" value={subcategorySlug} />
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4">
             {state.fieldErrors && !state.ok ? (
@@ -163,7 +181,11 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               id="name"
               name="name"
               value={entityName}
-              onChange={(e) => setEntityName(e.target.value)}
+              onChange={(e) => {
+                setEntityName(e.target.value);
+                setCategoryTouched(false);
+                resetClassificationRequest();
+              }}
               required
               disabled={isPending}
               placeholder="Registered legal entity name"
@@ -173,7 +195,23 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               <p className="text-xs text-destructive">{duplicateMessage}</p>
             ) : checking ? (
               <p className="text-xs text-muted-foreground">Checking availability…</p>
+            ) : classifying ? (
+              <p className="text-xs text-muted-foreground">Classifying…</p>
+            ) : classifyMessage ? (
+              <p className="text-xs text-muted-foreground">{classifyMessage}</p>
             ) : null}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="name_ar">Client name (Arabic)</Label>
+            <Input
+              id="name_ar"
+              name="name_ar"
+              disabled={isPending}
+              placeholder="Optional Arabic legal name"
+              dir="rtl"
+            />
+            <FieldError messages={state.fieldErrors?.name_ar} />
           </div>
 
           <div className="grid gap-2">
@@ -196,26 +234,21 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <Label>Industry</Label>
-            <Select
-              value={industry || undefined}
-              onValueChange={setIndustry}
-              disabled={isPending}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select industry (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {INDUSTRY_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FieldError messages={state.fieldErrors?.industry} />
-          </div>
+          <ClientCategoryFields
+            categorySlug={categorySlug}
+            subcategorySlug={subcategorySlug}
+            onCategoryChange={(value) => {
+              setCategoryTouched(true);
+              setCategorySlug(value);
+            }}
+            onSubcategoryChange={(value) => {
+              setCategoryTouched(true);
+              setSubcategorySlug(value);
+            }}
+            disabled={isPending}
+          />
+          <FieldError messages={state.fieldErrors?.client_category} />
+          <FieldError messages={state.fieldErrors?.client_subcategory} />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">

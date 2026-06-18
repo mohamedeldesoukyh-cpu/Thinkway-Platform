@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { classifyClientCategory } from "@/lib/clients/classify-client-category";
 import {
   createSignedDocumentUrl,
   removeStorageObject,
@@ -14,6 +15,7 @@ import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
 
 import {
   createClientSchema,
+  updateClientCreditLimitSchema,
   updateClientFinanceSchema,
   updateClientLegalSchema,
   updateClientOverviewSchema,
@@ -28,6 +30,15 @@ export type FormActionState = {
 };
 
 export type CreateClientFormState = FormActionState & { clientId?: string };
+
+export type ClassifyClientCategoryResult = {
+  ok: boolean;
+  categorySlug?: string;
+  subcategorySlug?: string;
+  confidence?: "high" | "medium" | "low";
+  source?: "web_search" | "keyword";
+  message?: string;
+};
 
 function emptyToNull(value: string | undefined): string | null {
   if (!value?.trim()) {
@@ -66,6 +77,53 @@ async function requireAuthUser() {
   }
 
   return { supabase, user, error: null };
+}
+
+export async function classifyClientCategoryAction(input: {
+  name: string;
+  country?: string;
+  website?: string;
+}): Promise<ClassifyClientCategoryResult> {
+  const { error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const name = input.name?.trim();
+  if (!name || name.length < 2) {
+    return { ok: false, message: "Enter a client name to classify." };
+  }
+
+  try {
+    const result = await classifyClientCategory({
+      name,
+      country: input.country,
+      website: input.website,
+    });
+
+    if (!result) {
+      return {
+        ok: false,
+        message: "Could not classify this company — select category manually.",
+      };
+    }
+
+    return {
+      ok: true,
+      categorySlug: result.categorySlug,
+      subcategorySlug: result.subcategorySlug,
+      confidence: result.confidence,
+      source: result.source,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      message:
+        e instanceof Error
+          ? e.message
+          : "Classification failed — select category manually.",
+    };
+  }
 }
 
 export async function createClientAction(
@@ -118,10 +176,14 @@ export async function createClientAction(
     .from("clients")
     .insert({
       name: parsed.data.name,
+      name_ar: emptyToNull(parsed.data.name_ar),
       legal_name: emptyToNull(parsed.data.legal_name) ?? parsed.data.name,
       group_id: parsed.data.group_id,
       agency_or_direct: parsed.data.agency_or_direct as AgencyOrDirect,
       industry: emptyToNull(parsed.data.industry),
+      client_category: parsed.data.client_category,
+      client_subcategory: parsed.data.client_subcategory,
+      vr_rate_id: parsed.data.vr_rate_id,
       website: emptyToNull(parsed.data.website),
       status: parsed.data.status,
       billing_email: emptyToNull(parsed.data.billing_email),
@@ -209,10 +271,14 @@ export async function updateClientOverviewAction(
     .from("clients")
     .update({
       name: fields.name,
+      name_ar: emptyToNull(fields.name_ar),
       legal_name: emptyToNull(fields.legal_name),
       group_id: fields.group_id,
       agency_or_direct: fields.agency_or_direct as AgencyOrDirect,
       industry: emptyToNull(fields.industry),
+      client_category: fields.client_category,
+      client_subcategory: fields.client_subcategory,
+      vr_rate_id: fields.vr_rate_id,
       website: emptyToNull(fields.website),
       status: fields.status,
       billing_email: emptyToNull(fields.billing_email),
@@ -329,6 +395,8 @@ export async function updateClientFinanceAction(
       payment_terms: (emptyToNull(parsed.data.payment_terms) ??
         null) as PaymentTerms | null,
       credit_limit: parsed.data.credit_limit ?? null,
+      credit_limit_active: parsed.data.credit_limit_active,
+      accept_credit_risk: parsed.data.accept_credit_risk,
       billing_email: emptyToNull(parsed.data.billing_email),
       billing_phone: emptyToNull(parsed.data.billing_phone),
     })
@@ -339,8 +407,49 @@ export async function updateClientFinanceAction(
   }
 
   revalidatePath(`/clients/${parsed.data.client_id}`);
+  revalidatePath("/finance/credit-limit");
 
   return { ok: true, message: "Finance settings saved." };
+}
+
+export async function updateClientCreditLimitAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const parsed = updateClientCreditLimitSchema.safeParse(
+    Object.fromEntries(formData.entries())
+  );
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Please fix the errors below.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const { error } = await supabase
+    .from("clients")
+    .update({
+      credit_limit: parsed.data.credit_limit ?? null,
+      credit_limit_active: parsed.data.credit_limit_active,
+      accept_credit_risk: parsed.data.accept_credit_risk,
+    })
+    .eq("id", parsed.data.client_id);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath(`/clients/${parsed.data.client_id}`);
+  revalidatePath("/finance/credit-limit");
+
+  return { ok: true, message: "Credit limit saved." };
 }
 
 export async function uploadClientDocumentAction(

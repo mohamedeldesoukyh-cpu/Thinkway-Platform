@@ -29,19 +29,26 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
   {
     id: "legal_entity",
     label: "Legal entity",
-    renderCell: (client) => (
-      <div className="flex flex-col">
-        <Link
-          href={`/clients/${client.id}`}
-          className="font-medium text-foreground hover:text-primary hover:underline"
-        >
-          {client.name}
-        </Link>
-        {client.legal_name ? (
-          <span className="text-[11px] text-muted-foreground">{client.legal_name}</span>
-        ) : null}
-      </div>
-    ),
+    renderCell: (client) => {
+      const legalName = client.legal_name?.trim();
+      const showLegalSubtitle =
+        Boolean(legalName) &&
+        legalName!.toLowerCase() !== client.name.trim().toLowerCase();
+
+      return (
+        <div className="flex flex-col">
+          <Link
+            href={`/clients/${client.id}`}
+            className="font-medium text-foreground hover:text-primary hover:underline"
+          >
+            {client.name}
+          </Link>
+          {showLegalSubtitle ? (
+            <span className="text-[11px] text-muted-foreground">{legalName}</span>
+          ) : null}
+        </div>
+      );
+    },
   },
   {
     id: "group",

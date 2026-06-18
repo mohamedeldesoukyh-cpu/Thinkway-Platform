@@ -52,6 +52,9 @@ export const OPERATIONAL_TABLE_IDS = {
   financeVatByEntity: "finance-vat-by-entity",
   financeVatByInvoice: "finance-vat-by-invoice",
   financePoTracker: "finance-po-tracker",
+  financeAgingSummary: "finance-aging-summary",
+  financeAgingDetail: "finance-aging-detail",
+  financeCreditLimit: "finance-credit-limit",
   financePostingDocuments: "finance-posting-documents",
   financePostingBatches: "finance-posting-batches",
 

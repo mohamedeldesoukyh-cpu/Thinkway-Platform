@@ -218,7 +218,9 @@ export async function getClientsForSelect(groupId?: string) {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("clients")
-    .select("id, name, legal_name, group_id, document_number, status")
+    .select(
+      "id, name, legal_name, group_id, document_number, status, vr_rate_id, vr_rate:md_vr_rates(rate_percent)"
+    )
     .neq("status", "archived")
     .order("name");
 
@@ -230,7 +232,22 @@ export async function getClientsForSelect(groupId?: string) {
   if (error) {
     throw new Error(error.message);
   }
-  return data ?? [];
+  return (data ?? []).map((row) => {
+    const client = row as typeof row & {
+      vr_rate_id: string | null;
+      vr_rate: { rate_percent: number } | null;
+    };
+    return {
+      id: client.id,
+      name: client.name,
+      legal_name: client.legal_name,
+      group_id: client.group_id,
+      document_number: client.document_number,
+      status: client.status,
+      vr_rate_id: client.vr_rate_id,
+      vr_rate_percent: client.vr_rate?.rate_percent ?? null,
+    };
+  });
 }
 
 export async function getUnlinkedClientsForSelect() {

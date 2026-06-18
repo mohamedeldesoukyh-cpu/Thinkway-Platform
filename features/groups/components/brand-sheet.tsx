@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { CategorySubcategoryFields } from "@/components/forms/category-subcategory-fields";
 import { FieldError } from "@/components/forms/field-error";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -29,6 +28,7 @@ import { createBrandAction, updateBrandAction } from "@/features/brands/actions"
 import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import type { GroupBrandRow, GroupLegalEntityRow } from "@/features/groups/types";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
+import { brandVrInheritanceHint } from "@/lib/clients/vr-inheritance";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
@@ -41,6 +41,16 @@ type BrandSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
+
+function resolveBrandFormVrRateId(
+  brand: GroupBrandRow | null,
+  clientVrRateId: string | null | undefined
+): string {
+  if (brand?.vr_rate_id) {
+    return brand.vr_rate_id;
+  }
+  return clientVrRateId ?? "";
+}
 
 export function BrandSheet({
   legalEntities,
@@ -55,13 +65,22 @@ export function BrandSheet({
 
   const [clientId, setClientId] = useState(defaultClientId);
   const [brandName, setBrandName] = useState(brand?.name ?? "");
-  const [categoryId, setCategoryId] = useState(brand?.category_id ?? "");
-  const [subcategoryId, setSubcategoryId] = useState(brand?.subcategory_id ?? "");
-  const [vrRateId, setVrRateId] = useState(brand?.vr_rate_id ?? "");
+  const [vrRateId, setVrRateId] = useState("");
   const [currency, setCurrency] = useState(
     brand?.currency_code ?? DEFAULT_PLATFORM_CURRENCY
   );
   const [status, setStatus] = useState<ClientStatus>(brand?.status ?? "active");
+
+  const selectedClient = useMemo(
+    () => legalEntities.find((entity) => entity.id === clientId),
+    [legalEntities, clientId]
+  );
+  const clientVrRateId = selectedClient?.vr_rate_id ?? null;
+  const brandHasOverride = Boolean(vrRateId) && vrRateId !== (clientVrRateId ?? "");
+  const vrHint = brandVrInheritanceHint(
+    selectedClient?.vr_rate_percent ?? null,
+    brandHasOverride
+  );
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
     brandName,
@@ -96,14 +115,19 @@ export function BrandSheet({
 
   useEffect(() => {
     if (!open) return;
-    setClientId(brand?.client_id ?? legalEntities[0]?.id ?? "");
+    const nextClientId = brand?.client_id ?? legalEntities[0]?.id ?? "";
+    const nextClient = legalEntities.find((entity) => entity.id === nextClientId);
+    setClientId(nextClientId);
     setBrandName(brand?.name ?? "");
-    setCategoryId(brand?.category_id ?? "");
-    setSubcategoryId(brand?.subcategory_id ?? "");
-    setVrRateId(brand?.vr_rate_id ?? "");
-    setCurrency(brand?.currency_code ?? "USD");
+    setVrRateId(resolveBrandFormVrRateId(brand, nextClient?.vr_rate_id));
+    setCurrency(brand?.currency_code ?? DEFAULT_PLATFORM_CURRENCY);
     setStatus(brand?.status ?? "active");
   }, [open, brand, legalEntities]);
+
+  useEffect(() => {
+    if (!open || isEdit) return;
+    setVrRateId(clientVrRateId ?? "");
+  }, [open, isEdit, clientVrRateId]);
 
   const clientOptions = legalEntities.map((le) => ({
     value: le.id,
@@ -116,14 +140,12 @@ export function BrandSheet({
         <SheetHeader>
           <SheetTitle>{isEdit ? "Edit brand" : "Create brand"}</SheetTitle>
           <SheetDescription>
-            Commercial brand profile — category, subcategory, VR%, and currency.
+            Commercial brand profile — VR% and currency. Category lives on the legal entity overview.
           </SheetDescription>
         </SheetHeader>
         <form action={formAction} className="flex flex-1 flex-col gap-4 px-6 pb-6">
           {isEdit ? <input type="hidden" name="brand_id" value={brand.id} /> : null}
           <input type="hidden" name="client_id" value={clientId} />
-          <input type="hidden" name="category_id" value={categoryId} />
-          <input type="hidden" name="subcategory_id" value={subcategoryId} />
           <input type="hidden" name="vr_rate_id" value={vrRateId} />
           <input type="hidden" name="currency_code" value={currency} />
           {isEdit ? <input type="hidden" name="status" value={status} /> : null}
@@ -158,14 +180,6 @@ export function BrandSheet({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <CategorySubcategoryFields
-              masterData={masterData}
-              categoryId={categoryId}
-              subcategoryId={subcategoryId}
-              onCategoryChange={setCategoryId}
-              onSubcategoryChange={setSubcategoryId}
-              disabled={isPending}
-            />
             <div className="grid gap-2">
               <Label>VR%</Label>
               <SearchableSelect
@@ -178,6 +192,7 @@ export function BrandSheet({
                 disabled={isPending}
                 placeholder="Select VR rate"
               />
+              <p className="text-xs text-muted-foreground">{vrHint}</p>
             </div>
             <div className="grid gap-2">
               <Label>Currency</Label>

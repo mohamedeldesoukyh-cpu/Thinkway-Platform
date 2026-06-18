@@ -1,7 +1,7 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
-import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -28,6 +28,7 @@ import {
   createCampaignAction,
   type CreateCampaignFormState,
 } from "@/features/campaigns/actions";
+import { CreditLimitExceededDialog } from "@/features/campaigns/components/credit-limit-exceeded-dialog";
 import {
   CAMPAIGN_STATUS_OPTIONS,
   PLATFORM_OPTIONS,
@@ -67,6 +68,9 @@ export function NewCampaignDialog({
   const [status, setStatus] = useState("draft");
   const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
   const [accountManagerId, setAccountManagerId] = useState(NONE_VALUE);
+  const [creditDialogOpen, setCreditDialogOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const acceptRiskRef = useRef<HTMLInputElement>(null);
   const [state, formAction, isPending] = useActionState(
     createCampaignAction,
     initialState
@@ -159,9 +163,23 @@ export function NewCampaignDialog({
       setStatus("draft");
       setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setAccountManagerId(NONE_VALUE);
+      if (acceptRiskRef.current) {
+        acceptRiskRef.current.value = "false";
+      }
+      setCreditDialogOpen(false);
       setOpen(false);
       return;
     }
+
+    if (
+      state.creditLimit?.exceeded &&
+      state.creditLimit.can_accept_risk &&
+      acceptRiskRef.current?.value !== "true"
+    ) {
+      setCreditDialogOpen(true);
+      return;
+    }
+
     toast.error(state.message);
   }, [state, resetHierarchy]);
 
@@ -182,7 +200,22 @@ export function NewCampaignDialog({
 
   const hasBrands = brands.length > 0;
 
+  const handleAcceptCreditRisk = useCallback(() => {
+    if (acceptRiskRef.current) {
+      acceptRiskRef.current.value = "true";
+    }
+    formRef.current?.requestSubmit();
+  }, []);
+
+  const handleCreditDialogCancel = useCallback(() => {
+    setCreditDialogOpen(false);
+    if (acceptRiskRef.current) {
+      acceptRiskRef.current.value = "false";
+    }
+  }, []);
+
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button disabled={!hasBrands} title={!hasBrands ? "Create a brand before creating campaigns." : undefined}>
@@ -204,11 +237,17 @@ export function NewCampaignDialog({
             Create a brand before creating campaigns.
           </p>
         ) : (
-          <form action={formAction} className="grid gap-4">
+          <form ref={formRef} action={formAction} className="grid gap-4">
             <input type="hidden" name="brand_id" value={brandId} />
             <input type="hidden" name="platform" value={platform} />
             <input type="hidden" name="status" value={status} />
             <input type="hidden" name="currency_code" value={currency} />
+            <input
+              ref={acceptRiskRef}
+              type="hidden"
+              name="accept_credit_risk_confirmed"
+              defaultValue="false"
+            />
             <input
               type="hidden"
               name="account_manager_id"
@@ -417,6 +456,17 @@ export function NewCampaignDialog({
         )}
       </DialogContent>
     </Dialog>
+      {state.creditLimit?.exceeded ? (
+        <CreditLimitExceededDialog
+          open={creditDialogOpen}
+          onOpenChange={setCreditDialogOpen}
+          creditLimit={state.creditLimit}
+          onAcceptRisk={handleAcceptCreditRisk}
+          onCancel={handleCreditDialogCancel}
+          pending={isPending}
+        />
+      ) : null}
+    </>
   );
 }
 

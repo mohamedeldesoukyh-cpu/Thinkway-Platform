@@ -44,11 +44,6 @@ export const BRANDS_TABLE_COLUMNS: OperationalConfigurableColumnDef<BrandRow>[] 
     renderCell: (brand) => brand.group_name ?? "—",
   },
   {
-    id: "category",
-    label: "Category",
-    renderCell: (brand) => brand.category_name ?? "—",
-  },
-  {
     id: "vr_rate",
     label: "VR%",
     renderCell: (brand) =>

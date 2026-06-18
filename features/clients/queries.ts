@@ -55,6 +55,7 @@ export async function getClientsList(params: {
     query = query.or(
       [
         `name.ilike.${pattern}`,
+        `name_ar.ilike.${pattern}`,
         `legal_name.ilike.${pattern}`,
         `document_number.ilike.${pattern}`,
       ].join(",")
@@ -83,7 +84,9 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
 
   const { data: client, error } = await supabase
     .from("clients")
-    .select("*, group:groups(id, name, document_number)")
+    .select(
+      "*, group:groups(id, name, document_number), vr_rate:md_vr_rates(id, name, rate_percent)"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -97,6 +100,7 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
 
   const clientRow = client as unknown as ClientRow & {
     group: ClientDetail["group"];
+    vr_rate: { id: string; name: string; rate_percent: number } | null;
   };
 
   const [documentsResult, campaignsResult, brands] = await Promise.all([
@@ -122,9 +126,12 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
     throw new Error(campaignsResult.error.message);
   }
 
+  const { vr_rate, ...clientWithoutJoin } = clientRow;
+
   return {
-    ...clientRow,
+    ...clientWithoutJoin,
     group: clientRow.group,
+    vr_rate_percent: vr_rate?.rate_percent ?? null,
     documents: documentsResult.data ?? [],
     campaigns: (campaignsResult.data ?? []) as unknown as ClientDetail["campaigns"],
     brands,

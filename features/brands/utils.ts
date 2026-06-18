@@ -72,5 +72,7 @@ export function clientToLegalEntityRow(
     status: client.status,
     active_campaigns: activeCampaigns,
     revenue,
+    vr_rate_id: client.vr_rate_id,
+    vr_rate_percent: client.vr_rate_percent,
   };
 }

@@ -36,7 +36,7 @@ function aggregateClientRows(
       group_id: string | null;
       group_name: string;
       revenue: number;
-      vr_weighted_sum: number;
+      vr_amount_sum: number;
       monthly_vr: Record<string, number>;
       total_vr: number;
     }
@@ -52,14 +52,15 @@ function aggregateClientRows(
         group_id: fact.group_id ?? null,
         group_name: resolveGroupName(fact),
         revenue: 0,
-        vr_weighted_sum: 0,
+        vr_amount_sum: 0,
         monthly_vr: Object.fromEntries(scopeMonths.map((month) => [month, 0])),
         total_vr: 0,
       };
 
     bucket.revenue = roundMoney(bucket.revenue + billable);
-    bucket.vr_weighted_sum = roundMoney(
-      bucket.vr_weighted_sum + fact.vr_rate_percent * billable
+    // Weighted client VR%: sum(spend × effective brand VR%) / total spend
+    bucket.vr_amount_sum = roundMoney(
+      bucket.vr_amount_sum + (billable * fact.vr_rate_percent) / 100
     );
     bucket.monthly_vr[monthKey] = roundMoney(
       (bucket.monthly_vr[monthKey] ?? 0) + fact.vr_refund
@@ -85,7 +86,7 @@ function aggregateClientRows(
     vr_rate_percent:
       row.revenue === 0
         ? 0
-        : roundMoney(row.vr_weighted_sum / row.revenue),
+        : roundMoney((row.vr_amount_sum / row.revenue) * 100),
     monthly_vr: row.monthly_vr,
     total_vr: row.total_vr,
   }));
@@ -146,6 +147,6 @@ export function buildVrReport(
     totals: buildTotals(rows, scopeMonths),
     period_note: `All amounts shown in ${displayCurrency} using effective exchange rates. Revenue is billable (deliverable + UR + agency fees). VR amount is the vendor rebate refund per line.`,
     data_scope_note:
-      "Includes active, paused, and completed campaigns only. Cancelled campaigns and lines are excluded. VR% is revenue-weighted from each brand's VR rate. VR amount uses applyVrRefundToLineCommercial on ex-VAT cost. Months use campaign start date, or created date when start is unset.",
+      "Includes active, paused, and completed campaigns only. Cancelled campaigns and lines are excluded. Client VR% is spending-weighted: sum(billable × effective brand VR%) ÷ total billable, where effective VR% is brand override or inherited client default. VR amount uses applyVrRefundToLineCommercial on ex-VAT cost. Months use campaign start date, or created date when start is unset.",
   };
 }

@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { CategorySubcategoryFields } from "@/components/forms/category-subcategory-fields";
 import { FieldError } from "@/components/forms/field-error";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import {
@@ -56,6 +55,10 @@ import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { BrandSheet } from "@/features/groups/components/brand-sheet";
 import type { GroupBrandRow } from "@/features/groups/types";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
+import {
+  brandVrInheritanceHint,
+  getEffectiveBrandVrPercent,
+} from "@/lib/clients/vr-inheritance";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import type { ClientBrandRow, ClientDetail } from "@/types/database";
@@ -68,9 +71,22 @@ type ClientBrandsTabProps = {
 };
 
 type BrandTableContext = {
+  clientVr: { vr_rate_id: string | null; vr_rate_percent: number | null };
   onEdit: (brand: ClientBrandRow) => void;
   onArchive: (brand: ClientBrandRow) => void;
 };
+
+function formatEffectiveVrLabel(
+  brand: ClientBrandRow,
+  clientVr: BrandTableContext["clientVr"]
+): string {
+  const effective = getEffectiveBrandVrPercent(brand, clientVr);
+  if (effective == null) {
+    return "—";
+  }
+  const inherited = !brand.vr_rate_id;
+  return inherited ? `${effective}% (inherited)` : `${effective}%`;
+}
 
 function buildClientBrandsColumns(
   context: BrandTableContext
@@ -88,20 +104,9 @@ function buildClientBrandsColumns(
       renderCell: (brand) => <span className="font-medium">{brand.name}</span>,
     },
     {
-      id: "category",
-      label: "Category",
-      renderCell: (brand) => brand.category_name ?? "—",
-    },
-    {
-      id: "subcategory",
-      label: "Subcategory",
-      renderCell: (brand) => brand.subcategory_name ?? "—",
-    },
-    {
       id: "vr_rate",
       label: "VR%",
-      renderCell: (brand) =>
-        brand.vr_rate_percent != null ? `${brand.vr_rate_percent}%` : "—",
+      renderCell: (brand) => formatEffectiveVrLabel(brand, context.clientVr),
     },
     {
       id: "currency",
@@ -139,16 +144,22 @@ function buildClientBrandsColumns(
 
 export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
+  const clientVr = useMemo(
+    () => ({
+      vr_rate_id: client.vr_rate_id,
+      vr_rate_percent: client.vr_rate_percent,
+    }),
+    [client.vr_rate_id, client.vr_rate_percent]
+  );
   const [brandName, setBrandName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [subcategoryId, setSubcategoryId] = useState("");
-  const [vrRateId, setVrRateId] = useState("");
+  const [vrRateId, setVrRateId] = useState(client.vr_rate_id ?? "");
   const [currency, setCurrency] = useState("USD");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupBrandRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ClientBrandRow | null>(null);
 
   const columns = buildClientBrandsColumns({
+    clientVr,
     onEdit: (brand) => {
       setEditing(brandTableRowToGroupBrandRow(brand, client.name));
       setSheetOpen(true);
@@ -178,13 +189,11 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
     if (state.ok) {
       toast.success(state.message);
       setBrandName("");
-      setCategoryId("");
-      setSubcategoryId("");
-      setVrRateId("");
+      setVrRateId(client.vr_rate_id ?? "");
       return;
     }
     toast.error(state.message);
-  }, [state]);
+  }, [state, client.vr_rate_id]);
 
   useEffect(() => {
     if (!archiveState.message) return;
@@ -197,6 +206,7 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
   }, [archiveState]);
 
   const legalEntity = clientToLegalEntityRow(client);
+  const vrHint = brandVrInheritanceHint(client.vr_rate_percent, Boolean(vrRateId && vrRateId !== client.vr_rate_id));
 
   return (
     <>
@@ -214,7 +224,7 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
             leading={
               <CampaignOperationalSectionHeader
                 title="Brands"
-                description="Commercial brands under this legal entity. Campaigns link to brands."
+                description="Commercial brands under this legal entity. VR% inherits from client overview unless overridden."
                 actions={
                   <OperationalTableControlsSlot contextLabel="Client brands" />
                 }
@@ -245,8 +255,6 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
         >
             <form id="client-add-brand-form" action={formAction} className="grid gap-4">
               <input type="hidden" name="client_id" value={client.id} />
-              <input type="hidden" name="category_id" value={categoryId} />
-              <input type="hidden" name="subcategory_id" value={subcategoryId} />
               <input type="hidden" name="vr_rate_id" value={vrRateId} />
               <input type="hidden" name="currency_code" value={currency} />
 
@@ -269,15 +277,7 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
                 ) : null}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <CategorySubcategoryFields
-                  masterData={masterData}
-                  categoryId={categoryId}
-                  subcategoryId={subcategoryId}
-                  onCategoryChange={setCategoryId}
-                  onSubcategoryChange={setSubcategoryId}
-                  disabled={isPending}
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>VR%</Label>
                   <SearchableSelect
@@ -290,6 +290,7 @@ export function ClientBrandsTab({ client, masterData }: ClientBrandsTabProps) {
                     disabled={isPending}
                     placeholder="Select VR rate"
                   />
+                  <p className="text-xs text-muted-foreground">{vrHint}</p>
                 </div>
                 <div className="grid gap-2">
                   <Label>Currency</Label>

@@ -73,6 +73,8 @@ const navItems: NavItem[] = [
       { href: "/finance/posting-center", label: "Posting center" },
       { href: "/collections", label: "Collections" },
       { href: "/treasury", label: "Treasury" },
+      { href: "/finance/aging", label: "Aging reports" },
+      { href: "/finance/credit-limit", label: "Credit limit" },
       { href: "/finance/vat", label: "VAT & tax" },
       { href: "/finance/po-tracker", label: "PO tracker" },
       { href: "/planning", label: "Planning" },

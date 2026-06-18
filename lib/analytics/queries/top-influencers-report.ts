@@ -147,11 +147,14 @@ export async function loadInfluencerSpendFacts(
         id, start_date, created_at, status,
         vr_rate:md_vr_rates(rate_percent),
         brand:brands(
+          vr_rate_id,
           vr_rate:md_vr_rates(rate_percent)
         ),
         client:clients(
           id,
-          name
+          name,
+          vr_rate_id,
+          vr_rate:md_vr_rates(rate_percent)
         )
       `
       )
@@ -182,15 +185,27 @@ export async function loadInfluencerSpendFacts(
     vr_rate: { rate_percent: number } | { rate_percent: number }[] | null;
     brand:
       | {
+          vr_rate_id: string | null;
           vr_rate: { rate_percent: number } | { rate_percent: number }[] | null;
         }
       | {
+          vr_rate_id: string | null;
           vr_rate: { rate_percent: number } | { rate_percent: number }[] | null;
         }[]
       | null;
     client:
-      | { id: string; name: string }
-      | { id: string; name: string }[]
+      | {
+          id: string;
+          name: string;
+          vr_rate_id: string | null;
+          vr_rate: { rate_percent: number } | { rate_percent: number }[] | null;
+        }
+      | {
+          id: string;
+          name: string;
+          vr_rate_id: string | null;
+          vr_rate: { rate_percent: number } | { rate_percent: number }[] | null;
+        }[]
       | null;
   };
 
@@ -261,7 +276,9 @@ export async function loadInfluencerSpendFacts(
     const brand = Array.isArray(header.brand) ? header.brand[0] : header.brand;
     const vrRatePercent = resolveCampaignVrRatePercent({
       headerVrRate: header.vr_rate,
+      brandVrRateId: brand?.vr_rate_id,
       brandVrRate: brand?.vr_rate,
+      clientVrRate: client?.vr_rate,
     });
     const vrAdjusted = applyVrRefundToLineCommercial({
       baseCost: commercial.cost,

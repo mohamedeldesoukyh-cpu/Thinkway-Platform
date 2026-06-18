@@ -11,6 +11,8 @@ import {
   copyAssignmentDeliverablesForDuplicate,
 } from "@/lib/campaigns/duplicate-campaign-lines";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
+import { checkClientCreditLimit } from "@/lib/finance/client-credit-exposure";
+import type { ClientCreditLimitCheck } from "@/lib/finance/client-credit-exposure";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import {
@@ -58,7 +60,9 @@ export type FormActionState = {
   campaignId?: string;
 };
 
-export type CreateCampaignFormState = FormActionState;
+export type CreateCampaignFormState = FormActionState & {
+  creditLimit?: ClientCreditLimitCheck;
+};
 
 function emptyToNull(value: string | undefined): string | null {
   if (!value?.trim()) {
@@ -262,6 +266,42 @@ export async function createCampaignAction(
     client: { agency_or_direct: AgencyOrDirect | null } | null;
   };
 
+  const poAmount = Number(parsed.data.po_amount) || 0;
+
+  try {
+    const creditCheck = await checkClientCreditLimit(supabase, {
+      clientId: brandRow.client_id,
+      additionalAmount: poAmount,
+    });
+
+    if (creditCheck.enforced && creditCheck.exceeded) {
+      if (creditCheck.can_accept_risk && parsed.data.accept_credit_risk_confirmed) {
+        // Acknowledged exceedance — proceed.
+      } else if (creditCheck.can_accept_risk) {
+        return {
+          ok: false,
+          message: "Client exceeded credit limit.",
+          creditLimit: creditCheck,
+        };
+      } else {
+        return {
+          ok: false,
+          message:
+            "Client exceeded credit limit. Enable Accept risk on the client finance profile to proceed with acknowledgment.",
+          creditLimit: creditCheck,
+        };
+      }
+    }
+  } catch (creditError) {
+    return {
+      ok: false,
+      message:
+        creditError instanceof Error
+          ? creditError.message
+          : "Unable to verify client credit limit.",
+    };
+  }
+
   const platform = emptyToNull(parsed.data.platform);
   const metadata = platform ? { [METADATA_PLATFORM_KEY]: platform } : {};
 
@@ -292,7 +332,6 @@ export async function createCampaignAction(
   }
 
   const currency = parsed.data.currency_code || brandRow.currency_code;
-  const poAmount = Number(parsed.data.po_amount) || 0;
   const fxRate = Number(parsed.data.fx_rate) || 1;
 
   const { error: poError } = await supabase

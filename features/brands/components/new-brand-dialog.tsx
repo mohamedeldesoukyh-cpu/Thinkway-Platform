@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { CategorySubcategoryFields } from "@/components/forms/category-subcategory-fields";
 import { FieldError } from "@/components/forms/field-error";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -30,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { createBrandAction, type FormActionState } from "@/features/brands/actions";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
+import { brandVrInheritanceHint } from "@/lib/clients/vr-inheritance";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
@@ -42,6 +42,8 @@ type NewBrandDialogProps = {
     group_id: string | null;
     document_number: string;
     status: string;
+    vr_rate_id?: string | null;
+    vr_rate_percent?: number | null;
   }[];
   masterData: MasterDataOptions;
 };
@@ -52,10 +54,19 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
   const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
   const [brandName, setBrandName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [subcategoryId, setSubcategoryId] = useState("");
   const [vrRateId, setVrRateId] = useState("");
   const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
+
+  const selectedClient = useMemo(
+    () => clients.find((client) => client.id === clientId),
+    [clients, clientId]
+  );
+  const clientVrRateId = selectedClient?.vr_rate_id ?? null;
+  const brandHasOverride = Boolean(vrRateId) && vrRateId !== (clientVrRateId ?? "");
+  const vrHint = brandVrInheritanceHint(
+    selectedClient?.vr_rate_percent ?? null,
+    brandHasOverride
+  );
 
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
     brandName,
@@ -73,8 +84,6 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
     if (state.ok) {
       toast.success(state.message);
       setBrandName("");
-      setCategoryId("");
-      setSubcategoryId("");
       setVrRateId("");
       setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setOpen(false);
@@ -85,20 +94,24 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
 
   useEffect(() => {
     if (!open) return;
-    setClientId(clients[0]?.id ?? "");
+    const nextClientId = clients[0]?.id ?? "";
+    const nextClient = clients.find((client) => client.id === nextClientId);
+    setClientId(nextClientId);
     setBrandName("");
-    setCategoryId("");
-    setSubcategoryId("");
-    setVrRateId("");
+    setVrRateId(nextClient?.vr_rate_id ?? "");
     setCurrency(DEFAULT_PLATFORM_CURRENCY);
   }, [open, clients]);
+
+  useEffect(() => {
+    if (!open) return;
+    setVrRateId(clientVrRateId ?? "");
+  }, [open, clientVrRateId]);
 
   const clientOptions = clients.map((client) => ({
     value: client.id,
     label: client.legal_name ? `${client.name} (${client.legal_name})` : client.name,
   }));
 
-  const selectedClient = clients.find((client) => client.id === clientId);
   const clientNeedsGroup = selectedClient && !selectedClient.group_id;
 
   return (
@@ -113,8 +126,8 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
         <DialogHeader>
           <DialogTitle>New brand</DialogTitle>
           <DialogDescription>
-            Add a commercial brand under an existing client. Category, VR%, and currency
-            auto-fill campaigns when this brand is selected.
+            Add a commercial brand under an existing client. VR% and currency auto-fill campaigns
+            when this brand is selected.
           </DialogDescription>
         </DialogHeader>
         {!hasClients ? (
@@ -127,8 +140,6 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
         ) : (
           <form action={formAction} className="grid gap-4">
             <input type="hidden" name="client_id" value={clientId} />
-            <input type="hidden" name="category_id" value={categoryId} />
-            <input type="hidden" name="subcategory_id" value={subcategoryId} />
             <input type="hidden" name="vr_rate_id" value={vrRateId} />
             <input type="hidden" name="currency_code" value={currency} />
 
@@ -172,14 +183,6 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <CategorySubcategoryFields
-                masterData={masterData}
-                categoryId={categoryId}
-                subcategoryId={subcategoryId}
-                onCategoryChange={setCategoryId}
-                onSubcategoryChange={setSubcategoryId}
-                disabled={isPending}
-              />
               <div className="grid gap-2">
                 <Label>VR%</Label>
                 <SearchableSelect
@@ -192,6 +195,7 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
                   disabled={isPending}
                   placeholder="Select VR rate"
                 />
+                <p className="text-xs text-muted-foreground">{vrHint}</p>
               </div>
               <div className="grid gap-2">
                 <Label>Currency</Label>

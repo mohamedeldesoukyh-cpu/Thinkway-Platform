@@ -37,9 +37,13 @@ export function applyVrRefundToLineCommercial(input: {
   };
 }
 
-type VrRateJoin = { rate_percent: number } | { rate_percent: number }[] | null | undefined;
+export type VrRateJoin =
+  | { rate_percent: number }
+  | { rate_percent: number }[]
+  | null
+  | undefined;
 
-function extractVrRatePercent(rate: VrRateJoin): number | null {
+export function extractVrRatePercent(rate: VrRateJoin): number | null {
   if (!rate) return null;
   const row = Array.isArray(rate) ? rate[0] : rate;
   if (!row) return null;
@@ -47,12 +51,19 @@ function extractVrRatePercent(rate: VrRateJoin): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-/** Prefer live brand VR%; fall back to campaign header snapshot when brand is unset. */
+/** Brand override → client default → campaign header snapshot. */
 export function resolveCampaignVrRatePercent(input: {
   headerVrRate?: VrRateJoin;
+  brandVrRateId?: string | null;
   brandVrRate?: VrRateJoin;
+  clientVrRate?: VrRateJoin;
 }): number {
-  const brandRate = extractVrRatePercent(input.brandVrRate);
-  if (brandRate != null) return brandRate;
+  if (input.brandVrRateId) {
+    return extractVrRatePercent(input.brandVrRate) ?? 0;
+  }
+  const clientRate = extractVrRatePercent(input.clientVrRate);
+  if (clientRate != null) {
+    return clientRate;
+  }
   return extractVrRatePercent(input.headerVrRate) ?? 0;
 }

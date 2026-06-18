@@ -70,16 +70,6 @@ function buildGroupBrandsColumns(
       renderCell: (brand) => brand.client_name,
     },
     {
-      id: "category",
-      label: "Category",
-      renderCell: (brand) => brand.category_name ?? "—",
-    },
-    {
-      id: "subcategory",
-      label: "Subcategory",
-      renderCell: (brand) => brand.subcategory_name ?? "—",
-    },
-    {
       id: "vr_rate",
       label: "VR%",
       renderCell: (brand) =>

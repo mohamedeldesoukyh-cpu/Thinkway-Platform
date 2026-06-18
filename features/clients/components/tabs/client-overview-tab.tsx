@@ -4,6 +4,8 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
+import { ClientCategoryFields } from "@/components/forms/client-category-fields";
+import { useClientCategoryClassification } from "@/components/forms/use-client-category-classification";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,9 +38,9 @@ import {
 import {
   CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
-  INDUSTRY_OPTIONS,
   getCityOptionsForCountry,
 } from "@/features/clients/constants";
+import type { MasterDataOptions } from "@/lib/master-data/queries";
 import type { ClientDetail, ClientStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -48,14 +50,24 @@ const DETAIL_TEXTAREA_CLASS =
 type ClientOverviewTabProps = {
   client: ClientDetail;
   groups: { id: string; name: string; document_number: string }[];
+  masterData: MasterDataOptions;
 };
 
-export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
+export function ClientOverviewTab({ client, groups, masterData }: ClientOverviewTabProps) {
   const [status, setStatus] = useState(client.status);
   const [groupId, setGroupId] = useState(client.group_id ?? "");
+  const [displayName, setDisplayName] = useState(client.name);
   const [country, setCountry] = useState(client.country ?? "");
   const [city, setCity] = useState(client.city ?? "");
-  const [industry, setIndustry] = useState(client.industry ?? "");
+  const [categorySlug, setCategorySlug] = useState(client.client_category ?? "");
+  const [subcategorySlug, setSubcategorySlug] = useState(
+    client.client_subcategory ?? ""
+  );
+  const [categoryTouched, setCategoryTouched] = useState(
+    Boolean(client.client_category && client.client_subcategory)
+  );
+  const [vrRateId, setVrRateId] = useState(client.vr_rate_id ?? "");
+  const [nameEdited, setNameEdited] = useState(false);
   const cityOptions = useMemo(() => {
     const options = getCityOptionsForCountry(country);
     if (city && !options.some((option) => option.value === city)) {
@@ -64,12 +76,18 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
     return options;
   }, [country, city]);
 
-  const industryOptions = useMemo(() => {
-    if (industry && !INDUSTRY_OPTIONS.some((option) => option.value === industry)) {
-      return [{ value: industry, label: industry }, ...INDUSTRY_OPTIONS];
-    }
-    return INDUSTRY_OPTIONS;
-  }, [industry]);
+  const { classifying, message: classifyMessage, resetClassificationRequest } =
+    useClientCategoryClassification({
+      companyName: displayName,
+      country,
+      website: client.website ?? undefined,
+      enabled: nameEdited && !categoryTouched,
+      onClassified: ({ categorySlug: nextCategory, subcategorySlug: nextSubcategory }) => {
+        setCategorySlug(nextCategory);
+        setSubcategorySlug(nextSubcategory);
+      },
+    });
+
   const [ioTerms, setIoTerms] = useState<ClientIoTerm[]>(
     () => parseTermsText(client.client_io_terms_text) ?? CLIENT_IO_DEFAULT_TERMS
   );
@@ -110,7 +128,7 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
   return (
     <OperationalFormSection
       title="Legal entity overview"
-      description="Commercial category, VR%, and agency/direct settings live on brands."
+      description="Intelligence category/subcategory and default VR% for reporting. Brand VR% overrides inherit from here."
       footer={
         <Button type="submit" form="client-overview-form" disabled={isPending}>
           {isPending ? "Saving…" : "Save overview"}
@@ -123,7 +141,9 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
         <input type="hidden" name="group_id" value={groupId} />
         <input type="hidden" name="country" value={country} />
         <input type="hidden" name="city" value={city} />
-        <input type="hidden" name="industry" value={industry} />
+        <input type="hidden" name="client_category" value={categorySlug} />
+        <input type="hidden" name="client_subcategory" value={subcategorySlug} />
+        <input type="hidden" name="vr_rate_id" value={vrRateId} />
         <input
           type="hidden"
           name="agency_or_direct"
@@ -180,11 +200,22 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
               id="name"
               name="name"
               className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={client.name}
+              value={displayName}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                setNameEdited(true);
+                setCategoryTouched(false);
+                resetClassificationRequest();
+              }}
               required
               disabled={isPending}
             />
             <FieldError messages={state.fieldErrors?.name} />
+            {classifying ? (
+              <p className="text-xs text-muted-foreground">Classifying…</p>
+            ) : classifyMessage ? (
+              <p className="text-xs text-muted-foreground">{classifyMessage}</p>
+            ) : null}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="legal_name">Legal name</Label>
@@ -199,39 +230,65 @@ export function ClientOverviewTab({ client, groups }: ClientOverviewTabProps) {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-2">
-            <Label>Industry</Label>
-            <Select
-              value={industry || undefined}
-              onValueChange={setIndustry}
-              disabled={isPending}
-            >
-              <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
-                <SelectValue placeholder="Select industry" />
-              </SelectTrigger>
-              <SelectContent>
-                {industryOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FieldError messages={state.fieldErrors?.industry} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              name="website"
-              type="url"
-              className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={client.website ?? ""}
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.website} />
-          </div>
+        <div className="grid gap-2">
+          <Label htmlFor="name_ar">Client name (Arabic)</Label>
+          <Input
+            id="name_ar"
+            name="name_ar"
+            className={DETAIL_FORM_INPUT_CLASS}
+            defaultValue={client.name_ar ?? ""}
+            disabled={isPending}
+            placeholder="Optional Arabic legal name"
+            dir="rtl"
+          />
+          <FieldError messages={state.fieldErrors?.name_ar} />
+        </div>
+
+        <ClientCategoryFields
+          categorySlug={categorySlug}
+          subcategorySlug={subcategorySlug}
+          onCategoryChange={(value) => {
+            setCategoryTouched(true);
+            setCategorySlug(value);
+          }}
+          onSubcategoryChange={(value) => {
+            setCategoryTouched(true);
+            setSubcategorySlug(value);
+          }}
+          disabled={isPending}
+        />
+        <FieldError messages={state.fieldErrors?.client_category} />
+        <FieldError messages={state.fieldErrors?.client_subcategory} />
+
+        <div className="grid gap-2 sm:max-w-md">
+          <Label>Default VR%</Label>
+          <SearchableSelect
+            value={vrRateId}
+            onValueChange={setVrRateId}
+            options={masterData.vrRates.map((rate) => ({
+              value: rate.id,
+              label: rate.name,
+            }))}
+            disabled={isPending}
+            placeholder="Select default VR rate"
+          />
+          <p className="text-xs text-muted-foreground">
+            Brands inherit this rate unless they set an explicit VR% override.
+          </p>
+          <FieldError messages={state.fieldErrors?.vr_rate_id} />
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="website">Website</Label>
+          <Input
+            id="website"
+            name="website"
+            type="url"
+            className={DETAIL_FORM_INPUT_CLASS}
+            defaultValue={client.website ?? ""}
+            disabled={isPending}
+          />
+          <FieldError messages={state.fieldErrors?.website} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

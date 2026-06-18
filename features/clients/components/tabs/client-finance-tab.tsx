@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
 import {
   DETAIL_FORM_INPUT_CLASS,
@@ -38,6 +39,12 @@ export function ClientFinanceTab({
 }) {
   const [currency, setCurrency] = useState(client.currency);
   const [paymentTerms, setPaymentTerms] = useState(client.payment_terms ?? "");
+  const [creditLimitActive, setCreditLimitActive] = useState(
+    client.credit_limit_active ?? false
+  );
+  const [acceptCreditRisk, setAcceptCreditRisk] = useState(
+    client.accept_credit_risk ?? false
+  );
 
   const [state, formAction, isPending] = useActionState(
     updateClientFinanceAction,
@@ -68,6 +75,16 @@ export function ClientFinanceTab({
         <input type="hidden" name="client_id" value={client.id} />
         <input type="hidden" name="currency" value={currency} />
         <input type="hidden" name="payment_terms" value={paymentTerms} />
+        <input
+          type="hidden"
+          name="credit_limit_active"
+          value={creditLimitActive ? "true" : "false"}
+        />
+        <input
+          type="hidden"
+          name="accept_credit_risk"
+          value={acceptCreditRisk ? "true" : "false"}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="grid gap-2">
@@ -123,6 +140,37 @@ export function ClientFinanceTab({
               disabled={isPending}
             />
             <FieldError messages={state.fieldErrors?.credit_limit} />
+          </div>
+        </div>
+
+        <div className="grid gap-3 rounded-3xl border border-border bg-muted/30 p-4 sm:grid-cols-2">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="credit_limit_active">CL Active</Label>
+              <p className="text-xs text-muted-foreground">
+                Enforce credit limit on new campaign creation when a limit is set.
+              </p>
+            </div>
+            <Switch
+              id="credit_limit_active"
+              checked={creditLimitActive}
+              onCheckedChange={setCreditLimitActive}
+              disabled={isPending}
+            />
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="accept_credit_risk">Accept risk</Label>
+              <p className="text-xs text-muted-foreground">
+                Allow users to acknowledge and proceed when exposure exceeds the limit.
+              </p>
+            </div>
+            <Switch
+              id="accept_credit_risk"
+              checked={acceptCreditRisk}
+              onCheckedChange={setAcceptCreditRisk}
+              disabled={isPending}
+            />
           </div>
         </div>
 

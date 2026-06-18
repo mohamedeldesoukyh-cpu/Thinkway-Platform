@@ -59,8 +59,6 @@ export const CLIENT_BRANDS_FILTER_ACCESSORS: Partial<
 > = {
   brand_number: (row) => formatDocumentNumberForDisplay(row.document_number),
   name: (row) => row.name,
-  category: (row) => row.category_name,
-  subcategory: (row) => row.subcategory_name,
   vr_rate: (row) => row.vr_rate_percent,
   currency: (row) => row.currency_code,
   campaigns: (row) => row.active_campaigns,
@@ -72,8 +70,6 @@ export const GROUP_BRANDS_FILTER_ACCESSORS: Partial<
 > = {
   brand: (row) => row.name,
   legal_entity: (row) => row.client_name,
-  category: (row) => row.category_name,
-  subcategory: (row) => row.subcategory_name,
   vr_rate: (row) => row.vr_rate_percent,
   currency: (row) => row.currency_code,
   campaigns: (row) => row.active_campaigns,

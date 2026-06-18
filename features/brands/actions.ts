@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { normalizeBrandVrRateId } from "@/lib/clients/vr-inheritance";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { findDuplicateBrand } from "@/lib/validation/checks";
 import { friendlyActionError } from "@/lib/validation/hierarchy";
@@ -70,7 +71,7 @@ export async function createBrandAction(
 
   const { data: client, error: clientError } = await supabase
     .from("clients")
-    .select("group_id")
+    .select("group_id, vr_rate_id")
     .eq("id", parsed.data.client_id)
     .maybeSingle();
 
@@ -97,13 +98,18 @@ export async function createBrandAction(
     };
   }
 
+  const vrRateId = normalizeBrandVrRateId(
+    emptyToNull(parsed.data.vr_rate_id),
+    client.vr_rate_id ?? null
+  );
+
   const { error } = await supabase.from("brands").insert({
     client_id: parsed.data.client_id,
     group_id: client.group_id,
     name: parsed.data.name,
     category_id: emptyToNull(parsed.data.category_id),
     subcategory_id: emptyToNull(parsed.data.subcategory_id),
-    vr_rate_id: emptyToNull(parsed.data.vr_rate_id),
+    vr_rate_id: vrRateId,
     currency_code: parsed.data.currency_code,
     country_code: emptyToNull(parsed.data.country_code),
     notes: emptyToNull(parsed.data.notes),
@@ -153,7 +159,7 @@ export async function updateBrandAction(
 
   const { data: client, error: clientError } = await supabase
     .from("clients")
-    .select("group_id")
+    .select("group_id, vr_rate_id")
     .eq("id", parsed.data.client_id)
     .maybeSingle();
 
@@ -178,6 +184,11 @@ export async function updateBrandAction(
     };
   }
 
+  const vrRateId = normalizeBrandVrRateId(
+    emptyToNull(parsed.data.vr_rate_id),
+    client.vr_rate_id ?? null
+  );
+
   const { error } = await supabase
     .from("brands")
     .update({
@@ -187,7 +198,7 @@ export async function updateBrandAction(
       status: parsed.data.status,
       category_id: emptyToNull(parsed.data.category_id),
       subcategory_id: emptyToNull(parsed.data.subcategory_id),
-      vr_rate_id: emptyToNull(parsed.data.vr_rate_id),
+      vr_rate_id: vrRateId,
       currency_code: parsed.data.currency_code,
       country_code: emptyToNull(parsed.data.country_code),
       notes: emptyToNull(parsed.data.notes),
@@ -202,7 +213,6 @@ export async function updateBrandAction(
     };
   }
 
-  const vrRateId = emptyToNull(parsed.data.vr_rate_id);
   const { error: campaignSyncError } = await supabase
     .from("campaign_headers")
     .update({ vr_rate_id: vrRateId })

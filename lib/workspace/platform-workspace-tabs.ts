@@ -123,6 +123,49 @@ export function isExchangeRatesTabId(value: string): value is ExchangeRatesTabId
   return EXCHANGE_RATES_TAB_SET.has(value);
 }
 
+export const AGING_WORKSPACE_TAB_ORDER = [
+  "client-summary",
+  "client-detailed",
+  "overdue-summary",
+  "overdue-detailed",
+] as const;
+
+export type AgingWorkspaceTabId = (typeof AGING_WORKSPACE_TAB_ORDER)[number];
+
+export const AGING_WORKSPACE_TAB_STORAGE_KEY = "thinkway:aging-workspace-tab-order:v1";
+
+const AGING_WORKSPACE_TAB_SET = new Set<string>(AGING_WORKSPACE_TAB_ORDER);
+
+export function isAgingWorkspaceTabId(value: string): value is AgingWorkspaceTabId {
+  return AGING_WORKSPACE_TAB_SET.has(value);
+}
+
+export function agingTabToQuery(tab: AgingWorkspaceTabId): {
+  mode: "client" | "overdue";
+  view: "summary" | "detailed";
+} {
+  switch (tab) {
+    case "client-detailed":
+      return { mode: "client", view: "detailed" };
+    case "overdue-summary":
+      return { mode: "overdue", view: "summary" };
+    case "overdue-detailed":
+      return { mode: "overdue", view: "detailed" };
+    default:
+      return { mode: "client", view: "summary" };
+  }
+}
+
+export function queryToAgingTab(
+  mode: "client" | "overdue",
+  view: "summary" | "detailed"
+): AgingWorkspaceTabId {
+  if (mode === "overdue") {
+    return view === "detailed" ? "overdue-detailed" : "overdue-summary";
+  }
+  return view === "detailed" ? "client-detailed" : "client-summary";
+}
+
 export const MOVE_OPERATIONS_TAB_ORDER = ["hierarchy", "vendor"] as const;
 
 export type MoveOperationsTabId = (typeof MOVE_OPERATIONS_TAB_ORDER)[number];

@@ -32,6 +32,8 @@ export type GroupLegalEntityRow = {
   status: ClientStatus;
   active_campaigns: number;
   revenue: number;
+  vr_rate_id?: string | null;
+  vr_rate_percent?: number | null;
 };
 
 export type GroupBrandRow = {
