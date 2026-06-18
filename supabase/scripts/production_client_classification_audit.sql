@@ -16,10 +16,11 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1
-    FROM pg_type t
-    JOIN pg_namespace n ON n.oid = t.typnamespace
-    WHERE n.nspname = 'public'
-      AND t.typname = 'client_category'
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'clients'
+      AND column_name = 'client_category'
+      AND udt_name = 'client_category'
   ) THEN
     ALTER TABLE public.clients
       ALTER COLUMN client_category DROP DEFAULT;
@@ -28,6 +29,15 @@ BEGIN
       ALTER COLUMN client_category TYPE text
       USING client_category::text;
 
+    DROP TYPE IF EXISTS public.client_category;
+  ELSIF EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public'
+      AND t.typname = 'client_category'
+  ) THEN
+    -- Column absent but orphaned enum type from partial migration
     DROP TYPE IF EXISTS public.client_category;
   END IF;
 END $$;

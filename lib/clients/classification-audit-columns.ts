@@ -14,11 +14,16 @@ export const CLASSIFICATION_AUDIT_COLUMN_NAMES = [
 
 export const NAME_AR_COLUMN = "name_ar" as const;
 
+/** Category columns that may still be legacy PostgreSQL enums on production. */
+export const CLIENT_TAXONOMY_COLUMN_NAMES = [
+  "client_category",
+  "client_subcategory",
+] as const;
+
 /** Optional client columns that may be absent on production until migrations run. */
 export const OPTIONAL_CLIENT_COLUMN_NAMES = [
   NAME_AR_COLUMN,
-  "client_category",
-  "client_subcategory",
+  ...CLIENT_TAXONOMY_COLUMN_NAMES,
   "vr_rate_id",
   "credit_limit_active",
   "accept_credit_risk",
@@ -29,6 +34,48 @@ const MAX_OPTIONAL_COLUMN_RETRY_ATTEMPTS = 16;
 
 const PGRST204_MISSING_COLUMN_RE =
   /Could not find the '([^']+)' column of 'clients' in the schema cache/;
+
+const INVALID_ENUM_VALUE_RE =
+  /invalid input value for enum (?:\w+\.)?(\w+):/i;
+
+/** Parse the column name from a PostgreSQL invalid enum value error. */
+export function getInvalidClientEnumColumnFromError(
+  error: Pick<PostgrestError, "message" | "code"> | null | undefined
+): string | null {
+  if (!error?.message) {
+    return null;
+  }
+
+  const match = error.message.match(INVALID_ENUM_VALUE_RE);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  const column = match[1];
+  if (!(CLIENT_TAXONOMY_COLUMN_NAMES as readonly string[]).includes(column)) {
+    return null;
+  }
+
+  return column;
+}
+
+/** True when PostgreSQL rejects a taxonomy slug against a legacy enum column. */
+export function isInvalidClientEnumValueError(
+  error: Pick<PostgrestError, "message" | "code"> | null | undefined
+): boolean {
+  if (!error?.message) {
+    return false;
+  }
+
+  if (getInvalidClientEnumColumnFromError(error)) {
+    return true;
+  }
+
+  return (
+    error.code === "22P02" &&
+    error.message.toLowerCase().includes("invalid input value for enum")
+  );
+}
 
 /** Parse the missing clients column name from a PostgREST PGRST204 schema-cache error. */
 export function getMissingClientColumnFromSchemaError(
@@ -117,24 +164,66 @@ export function stripClientPayloadColumn(
   return rest;
 }
 
-function stripMissingClientColumnFromPayload(
+function stripRetryableClientColumnFromPayload(
   payload: Record<string, unknown>,
   error: Pick<PostgrestError, "message" | "code">
 ): { payload: Record<string, unknown>; strippedColumn: string | null } {
   const missingColumn = getMissingClientColumnFromSchemaError(error);
-  if (!missingColumn || !(missingColumn in payload)) {
-    return { payload, strippedColumn: null };
+  if (missingColumn && missingColumn in payload) {
+    console.warn(
+      `[clients] ${missingColumn} column missing; retrying without it:`,
+      error.message
+    );
+
+    return {
+      payload: stripClientPayloadColumn(payload, missingColumn),
+      strippedColumn: missingColumn,
+    };
   }
 
-  console.warn(
-    `[clients] ${missingColumn} column missing; retrying without it:`,
-    error.message
-  );
+  const invalidEnumColumn = getInvalidClientEnumColumnFromError(error);
+  if (invalidEnumColumn && invalidEnumColumn in payload) {
+    console.warn(
+      `[clients] ${invalidEnumColumn} legacy enum mismatch; retrying without taxonomy columns:`,
+      error.message
+    );
 
-  return {
-    payload: stripClientPayloadColumn(payload, missingColumn),
-    strippedColumn: missingColumn,
-  };
+    let nextPayload = stripClientPayloadColumn(payload, invalidEnumColumn);
+    for (const column of CLIENT_TAXONOMY_COLUMN_NAMES) {
+      if (column !== invalidEnumColumn && column in nextPayload) {
+        nextPayload = stripClientPayloadColumn(nextPayload, column);
+      }
+    }
+
+    return {
+      payload: nextPayload,
+      strippedColumn: invalidEnumColumn,
+    };
+  }
+
+  if (
+    isInvalidClientEnumValueError(error) &&
+    CLIENT_TAXONOMY_COLUMN_NAMES.some((column) => column in payload)
+  ) {
+    console.warn(
+      "[clients] legacy client_category enum mismatch; retrying without taxonomy columns:",
+      error.message
+    );
+
+    let nextPayload = payload;
+    for (const column of CLIENT_TAXONOMY_COLUMN_NAMES) {
+      if (column in nextPayload) {
+        nextPayload = stripClientPayloadColumn(nextPayload, column);
+      }
+    }
+
+    return {
+      payload: nextPayload,
+      strippedColumn: "client_category",
+    };
+  }
+
+  return { payload, strippedColumn: null };
 }
 
 function wasClassificationAuditStripped(strippedColumns: readonly string[]): boolean {
@@ -168,11 +257,14 @@ async function runClientInsertWithOptionalColumnRetry(
 
     lastError = result.error;
 
-    if (!isMissingClientColumnSchemaError(result.error)) {
+    if (
+      !isMissingClientColumnSchemaError(result.error) &&
+      !isInvalidClientEnumValueError(result.error)
+    ) {
       return { data: null, error: result.error, strippedColumns };
     }
 
-    const stripped = stripMissingClientColumnFromPayload(payload, result.error);
+    const stripped = stripRetryableClientColumnFromPayload(payload, result.error);
     if (!stripped.strippedColumn) {
       return { data: null, error: result.error, strippedColumns };
     }
@@ -214,11 +306,14 @@ export async function updateClientWithOptionalColumnRetry(
 
     lastError = result.error;
 
-    if (!isMissingClientColumnSchemaError(result.error)) {
+    if (
+      !isMissingClientColumnSchemaError(result.error) &&
+      !isInvalidClientEnumValueError(result.error)
+    ) {
       return { error: result.error, strippedColumns };
     }
 
-    const stripped = stripMissingClientColumnFromPayload(payload, result.error);
+    const stripped = stripRetryableClientColumnFromPayload(payload, result.error);
     if (!stripped.strippedColumn) {
       return { error: result.error, strippedColumns };
     }
