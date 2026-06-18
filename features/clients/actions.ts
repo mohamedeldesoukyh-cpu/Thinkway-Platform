@@ -513,6 +513,16 @@ export async function uploadClientDocumentAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
+  const { data: existingDocs, error: existingError } = await supabase
+    .from("client_documents")
+    .select("id, storage_path")
+    .eq("client_id", parsed.data.client_id)
+    .eq("document_type", parsed.data.document_type);
+
+  if (existingError) {
+    return { ok: false, message: existingError.message };
+  }
+
   try {
     const uploaded = await uploadEntityDocument({
       supabase,
@@ -540,6 +550,27 @@ export async function uploadClientDocumentAction(
         storagePath: uploaded.storagePath,
       });
       return { ok: false, message: error.message };
+    }
+
+    for (const existingDoc of existingDocs ?? []) {
+      const { error: deleteRowError } = await supabase
+        .from("client_documents")
+        .delete()
+        .eq("id", existingDoc.id);
+
+      if (deleteRowError) {
+        continue;
+      }
+
+      try {
+        await removeStorageObject({
+          supabase,
+          bucket: "client-documents",
+          storagePath: existingDoc.storage_path,
+        });
+      } catch {
+        // Row removed; storage cleanup is best-effort.
+      }
     }
   } catch (error) {
     return {

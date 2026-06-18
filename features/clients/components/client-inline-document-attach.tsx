@@ -8,7 +8,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useTransition } from "react";
+import { useRef, useTransition, type ChangeEvent } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -44,45 +44,11 @@ export function ClientInlineDocumentAttach({
 }: ClientInlineDocumentAttachProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadFormRef = useRef<HTMLFormElement>(null);
   const [isDownloading, startDownload] = useTransition();
-  const [uploadState, uploadAction, isUploading] = useActionState(
-    uploadClientDocumentAction,
-    { ok: false }
-  );
-  const [deleteState, deleteAction, isDeleting] = useActionState(
-    deleteClientDocumentAction,
-    { ok: false }
-  );
+  const [isUploading, startUpload] = useTransition();
+  const [isDeleting, startDelete] = useTransition();
 
   const busy = isUploading || isDeleting || isDownloading;
-
-  useEffect(() => {
-    if (!uploadState.message) {
-      return;
-    }
-    if (uploadState.ok) {
-      toast.success(uploadState.message);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      router.refresh();
-      return;
-    }
-    toast.error(uploadState.message);
-  }, [uploadState, router]);
-
-  useEffect(() => {
-    if (!deleteState.message) {
-      return;
-    }
-    if (deleteState.ok) {
-      toast.success(deleteState.message);
-      router.refresh();
-      return;
-    }
-    toast.error(deleteState.message);
-  }, [deleteState, router]);
 
   function openFilePicker() {
     if (!busy) {
@@ -90,11 +56,48 @@ export function ClientInlineDocumentAttach({
     }
   }
 
-  function handleFileChange() {
-    const file = fileInputRef.current?.files?.[0];
-    if (file) {
-      uploadFormRef.current?.requestSubmit();
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
     }
+
+    const formData = new FormData();
+    formData.set("client_id", clientId);
+    formData.set("document_type", documentType);
+    formData.set("file", file);
+
+    startUpload(async () => {
+      const result = await uploadClientDocumentAction({ ok: false }, formData);
+      if (result.ok) {
+        toast.success(result.message ?? "Document uploaded.");
+        event.target.value = "";
+        router.refresh();
+        return;
+      }
+      toast.error(result.message ?? "Upload failed.");
+      event.target.value = "";
+    });
+  }
+
+  function handleDelete() {
+    if (!document) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("document_id", document.id);
+    formData.set("client_id", clientId);
+
+    startDelete(async () => {
+      const result = await deleteClientDocumentAction({ ok: false }, formData);
+      if (result.ok) {
+        toast.success(result.message ?? "Document removed.");
+        router.refresh();
+        return;
+      }
+      toast.error(result.message ?? "Could not remove document.");
+    });
   }
 
   return (
@@ -153,24 +156,21 @@ export function ClientInlineDocumentAttach({
           >
             <PaperclipIcon className="h-3.5 w-3.5" />
           </Button>
-          <form action={deleteAction} className="flex shrink-0">
-            <input type="hidden" name="document_id" value={document.id} />
-            <input type="hidden" name="client_id" value={clientId} />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0 text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
-              disabled={busy}
-              title="Remove attachment"
-            >
-              {isDeleting ? (
-                <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <XIcon className="h-3.5 w-3.5" />
-              )}
-            </Button>
-          </form>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+            disabled={busy}
+            title="Remove attachment"
+            onClick={handleDelete}
+          >
+            {isDeleting ? (
+              <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <XIcon className="h-3.5 w-3.5" />
+            )}
+          </Button>
         </div>
       ) : (
         <Button
@@ -193,24 +193,16 @@ export function ClientInlineDocumentAttach({
         </Button>
       )}
 
-      <form
-        ref={uploadFormRef}
-        action={uploadAction}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+        disabled={busy}
+        tabIndex={-1}
         className="sr-only"
         aria-hidden
-      >
-        <input type="hidden" name="client_id" value={clientId} />
-        <input type="hidden" name="document_type" value={documentType} />
-        <input
-          ref={fileInputRef}
-          name="file"
-          type="file"
-          accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
-          disabled={busy}
-          tabIndex={-1}
-          onChange={handleFileChange}
-        />
-      </form>
+        onChange={handleFileChange}
+      />
     </div>
   );
 }
