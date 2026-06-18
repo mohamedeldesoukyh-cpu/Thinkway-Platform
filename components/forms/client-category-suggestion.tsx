@@ -5,7 +5,7 @@ import { AlertTriangle, Check, Pencil } from "lucide-react";
 import {
   CLIENT_FORM_FIELD_HINT_CLASS,
   CLIENT_FORM_GHOST_BUTTON_CLASS,
-  CLIENT_FORM_PRIMARY_BUTTON_CLASS,
+  CLIENT_FORM_SECONDARY_BUTTON_CLASS,
 } from "@/features/clients/components/client-form-ui";
 import {
   getClientCategoryLabel,
@@ -55,18 +55,16 @@ export function ClientCategorySuggestion({
   return (
     <div
       className={cn(
-        "rounded-[12px] border bg-muted/30 px-4 py-3.5",
-        lowConfidence
-          ? "border-amber-500/40"
-          : "border-[var(--brand-product)]/25"
+        "rounded-[12px] border bg-[#F5F8FD] px-4 py-4",
+        lowConfidence ? "border-amber-500/40" : "border-[#E6EAF2]"
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid min-w-0 flex-1 gap-1">
-          <p className="text-[13px] font-semibold text-foreground">
+          <p className="text-[13px] font-semibold text-[#0B0F1A]">
             Suggested classification
           </p>
-          <p className="text-[13px] text-foreground/80">
+          <p className="text-[13px] text-[#3A4254]">
             {categoryLabel} · {subcategoryLabel}
           </p>
           <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
@@ -92,10 +90,7 @@ export function ClientCategorySuggestion({
           {!applied ? (
             <button
               type="button"
-              className={cn(
-                CLIENT_FORM_PRIMARY_BUTTON_CLASS,
-                "px-3 py-1.5 text-xs shadow-[0_2px_8px_rgba(29,158,117,0.25)]"
-              )}
+              className={CLIENT_FORM_SECONDARY_BUTTON_CLASS}
               onClick={onAccept}
               disabled={disabled}
             >
@@ -107,7 +102,7 @@ export function ClientCategorySuggestion({
             type="button"
             className={cn(
               CLIENT_FORM_GHOST_BUTTON_CLASS,
-              "border border-border/80 bg-background px-3 py-1.5 text-xs hover:bg-muted/40"
+              "px-3 py-1.5 text-xs"
             )}
             onClick={onOverride}
             disabled={disabled}
