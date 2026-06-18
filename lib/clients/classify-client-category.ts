@@ -184,6 +184,16 @@ const COMPANY_HINTS: Record<string, { categorySlug: string; subcategorySlug: str
   "mind share": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
   mediacom: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
   groupm: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_investment_management" },
+  "group m": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_investment_management" },
+  wavemaker: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
+  essence: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
+  hogarth: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_production" },
+  kantar: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "consulting_services" },
+  landor: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "creative_agency" },
+  mullenlowe: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  "mullen lowe": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  vmly: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "creative_agency" },
+  "wpp media": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
   publicis: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
   dentsu: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
   nike: { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
@@ -203,12 +213,80 @@ const COMPANY_HINTS: Record<string, { categorySlug: string; subcategorySlug: str
   ikea: { categorySlug: "home_furniture", subcategorySlug: "home_furniture_interiors" },
 };
 
+const LEGAL_SUFFIX_TOKENS = new Set([
+  "ltd",
+  "limited",
+  "llc",
+  "inc",
+  "incorporated",
+  "corp",
+  "corporation",
+  "plc",
+  "gmbh",
+  "bv",
+  "sa",
+  "ag",
+  "nv",
+  "lp",
+  "llp",
+  "co",
+  "company",
+  "pty",
+  "pte",
+  "srl",
+  "spa",
+  "ab",
+  "as",
+  "kg",
+]);
+
+const REGIONAL_SUFFIX_TOKENS = new Set([
+  "egypt",
+  "uae",
+  "ksa",
+  "qatar",
+  "kuwait",
+  "bahrain",
+  "oman",
+  "jordan",
+  "lebanon",
+  "morocco",
+  "tunisia",
+  "algeria",
+  "emirates",
+]);
+
+const MIN_RANK_SCORE = 2;
+
+const SORTED_COMPANY_HINTS = Object.entries(COMPANY_HINTS).sort(
+  (a, b) => b[0].length - a[0].length
+);
+
 function normalizeCompanyKey(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9'\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function stripLegalSuffixes(name: string): string {
+  const tokens = name.split(" ").filter(Boolean);
+  while (tokens.length > 1) {
+    const last = tokens[tokens.length - 1]!;
+    if (LEGAL_SUFFIX_TOKENS.has(last) || REGIONAL_SUFFIX_TOKENS.has(last)) {
+      tokens.pop();
+      continue;
+    }
+    break;
+  }
+  return tokens.join(" ");
+}
+
+function companyNameVariants(companyName: string): string[] {
+  const normalized = normalizeCompanyKey(companyName);
+  const stripped = stripLegalSuffixes(normalized);
+  return [...new Set([normalized, stripped].filter(Boolean))];
 }
 
 function scoreSubcategory(
@@ -271,7 +349,7 @@ function rankCandidates(corpus: string): ScoredCandidate | null {
     }
   }
 
-  if (!best || best.score < 3) {
+  if (!best || best.score < MIN_RANK_SCORE) {
     return null;
   }
 
@@ -288,34 +366,54 @@ function confidenceFromScore(score: number, usedWebSearch: boolean): ClientCateg
   return "low";
 }
 
-function matchCompanyHint(companyName: string): ClientCategoryClassification | null {
-  const normalized = normalizeCompanyKey(companyName);
-  const compact = normalized.replace(/\s+/g, "");
-  const tokens = normalized.split(" ").filter(Boolean);
-
-  for (const token of tokens) {
-    const hint = COMPANY_HINTS[token];
-    if (hint) {
-      return {
-        ...hint,
-        confidence: "high",
-        source: "keyword",
-      };
-    }
+function hintFromKey(key: string): ClientCategoryClassification | null {
+  const hint = COMPANY_HINTS[key];
+  if (!hint) {
+    return null;
   }
+  return {
+    ...hint,
+    confidence: "high",
+    source: "keyword",
+  };
+}
 
-  for (const [key, hint] of Object.entries(COMPANY_HINTS)) {
-    const keyCompact = key.replace(/\s+/g, "");
-    if (
-      normalized.includes(key) ||
-      compact.includes(keyCompact) ||
-      keyCompact.length >= 4 && compact.includes(keyCompact)
-    ) {
-      return {
-        ...hint,
-        confidence: "high",
-        source: "keyword",
-      };
+function matchCompanyHint(companyName: string): ClientCategoryClassification | null {
+  for (const name of companyNameVariants(companyName)) {
+    const compact = name.replace(/\s+/g, "");
+    const tokens = name.split(" ").filter(Boolean);
+
+    for (const token of tokens) {
+      const hint = hintFromKey(token);
+      if (hint) {
+        return hint;
+      }
+    }
+
+    for (let n = Math.min(3, tokens.length); n >= 1; n--) {
+      for (let i = 0; i <= tokens.length - n; i++) {
+        const phrase = tokens.slice(i, i + n).join(" ");
+        const phraseCompact = tokens.slice(i, i + n).join("");
+        const hint = hintFromKey(phrase) ?? hintFromKey(phraseCompact);
+        if (hint) {
+          return hint;
+        }
+      }
+    }
+
+    for (const [key, hint] of SORTED_COMPANY_HINTS) {
+      const keyCompact = key.replace(/\s+/g, "");
+      if (
+        name.includes(key) ||
+        compact.includes(keyCompact) ||
+        (keyCompact.length >= 4 && compact.includes(keyCompact))
+      ) {
+        return {
+          ...hint,
+          confidence: "high",
+          source: "keyword",
+        };
+      }
     }
   }
 
@@ -339,20 +437,23 @@ export async function classifyClientCategory(input: {
 
   const query = buildCompanySearchQuery(companyName, input.country, input.website);
   const web = await searchCompanyOnWeb(query);
-  const corpus = [companyName, ...web.snippets].join(" ").toLowerCase();
+  const nameVariants = companyNameVariants(companyName);
+  const corpus = [...nameVariants, companyName, ...web.snippets].join(" ").toLowerCase();
   const ranked = rankCandidates(corpus);
 
   if (!ranked) {
-    const nameOnly = rankCandidates(companyName.toLowerCase());
-    if (!nameOnly) {
-      return null;
+    for (const variant of nameVariants) {
+      const nameOnly = rankCandidates(variant);
+      if (nameOnly) {
+        return {
+          categorySlug: nameOnly.categorySlug,
+          subcategorySlug: nameOnly.subcategorySlug,
+          confidence: confidenceFromScore(nameOnly.score, false),
+          source: "keyword",
+        };
+      }
     }
-    return {
-      categorySlug: nameOnly.categorySlug,
-      subcategorySlug: nameOnly.subcategorySlug,
-      confidence: confidenceFromScore(nameOnly.score, false),
-      source: "keyword",
-    };
+    return null;
   }
 
   return {

@@ -33,6 +33,21 @@ async function run() {
     subcategorySlug: "media_agency",
   });
 
+  await expectClassification("Mind Share Egypt LTD", {
+    categorySlug: "marketing_advertising_media_agencies",
+    subcategorySlug: "media_agency",
+  });
+
+  await expectClassification("Mindshare", {
+    categorySlug: "marketing_advertising_media_agencies",
+    subcategorySlug: "media_agency",
+  });
+
+  await expectClassification("GroupM MENA", {
+    categorySlug: "marketing_advertising_media_agencies",
+    subcategorySlug: "media_investment_management",
+  });
+
   console.log("classify-client-category.test.ts: ok");
 }
 
