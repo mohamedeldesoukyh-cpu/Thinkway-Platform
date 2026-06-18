@@ -76,15 +76,13 @@ export function AgingWorkspace({ data }: AgingWorkspaceProps) {
 
   const tabsById = useMemo(
     (): Record<AgingWorkspaceTabId, OperationalWorkspaceTabDef> => ({
-      "client-summary": { id: "client-summary", label: TAB_LABELS["client-summary"] },
-      "client-detailed": { id: "client-detailed", label: TAB_LABELS["client-detailed"] },
-      "overdue-summary": { id: "overdue-summary", label: TAB_LABELS["overdue-summary"] },
-      "overdue-detailed": { id: "overdue-detailed", label: TAB_LABELS["overdue-detailed"] },
+      "client-summary": { value: "client-summary", label: TAB_LABELS["client-summary"] },
+      "client-detailed": { value: "client-detailed", label: TAB_LABELS["client-detailed"] },
+      "overdue-summary": { value: "overdue-summary", label: TAB_LABELS["overdue-summary"] },
+      "overdue-detailed": { value: "overdue-detailed", label: TAB_LABELS["overdue-detailed"] },
     }),
     []
   );
-
-  const orderedTabs = tabOrder.map((id) => tabsById[id]);
 
   function handleTabChange(tab: string) {
     if (!isAgingWorkspaceTabId(tab)) return;
@@ -130,9 +128,9 @@ export function AgingWorkspace({ data }: AgingWorkspaceProps) {
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <OperationalWorkspaceSortableTabsBar
-          tabs={orderedTabs}
-          activeTab={activeTab}
-          onMoveTab={moveTab}
+          tabOrder={tabOrder}
+          tabsById={tabsById}
+          onReorder={moveTab}
         />
 
         {AGING_WORKSPACE_TAB_ORDER.map((tabId) => (
