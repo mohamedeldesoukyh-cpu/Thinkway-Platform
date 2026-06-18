@@ -42,6 +42,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("tech_solutions", "Tech Solutions"),
       sub("technology_software", "Technology & Software"),
       sub("consulting_services", "Consulting Services"),
+      sub("marketing_advertising_media_agencies_other", "Other"),
     ],
   },
   {
@@ -84,6 +85,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
         "Home Improvement Products & Services Retailers"
       ),
       sub("entertainment_leisure_services", "Entertainment & Leisure Services"),
+      sub("retail_ecommerce_other", "Other"),
     ],
   },
   {
@@ -99,6 +101,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("skincare", "Skincare"),
       sub("oral_care", "Oral Care"),
       sub("pharmaceutical_distribution", "Pharmaceutical Distribution"),
+      sub("beauty_personal_care_other", "Other"),
     ],
   },
   {
@@ -113,6 +116,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("luxury_online_fashion_retailer", "Luxury Online Fashion Retailer"),
       sub("sustainable_fashion", "Sustainable Fashion"),
       sub("sportswear", "Sportswear"),
+      sub("fashion_apparel_other", "Other"),
     ],
   },
   {
@@ -122,6 +126,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("health_wellness_app", "Health & Wellness App"),
       sub("healthcare_products", "Healthcare Products"),
       sub("healthcare_services", "Healthcare Services"),
+      sub("healthcare_wellness_other", "Other"),
     ],
   },
   {
@@ -134,6 +139,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("government_sme_agency", "Government SME Agency"),
       sub("investment_holding", "Investment Holding"),
       sub("nonprofit_organization", "Nonprofit Organization"),
+      sub("financial_services_banking_other", "Other"),
     ],
   },
   {
@@ -144,6 +150,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("pet_construction_materials", "Construction Materials"),
       sub("pet_furniture_interiors", "Furniture & Interiors"),
       sub("pet_interior_design", "Interior Design"),
+      sub("pet_animal_products_other", "Other"),
     ],
   },
   {
@@ -156,6 +163,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("transportation_app", "Transportation App"),
       sub("loyalty_rewards_platform", "Loyalty & Rewards Platform"),
       sub("trading_distribution", "Trading & Distribution"),
+      sub("transportation_delivery_other", "Other"),
     ],
   },
   {
@@ -167,6 +175,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("home_interior_design", "Interior Design"),
       sub("general_contracting", "General Contracting"),
       sub("luxury_real_estate_development", "Luxury Real Estate Development"),
+      sub("home_furniture_other", "Other"),
     ],
   },
   {
@@ -175,6 +184,7 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
     subcategories: [
       sub("esim_solutions", "eSIM Solutions"),
       sub("mobile_technology", "Mobile Technology"),
+      sub("telecommunications_other", "Other"),
     ],
   },
   {
@@ -186,6 +196,93 @@ export const CLIENT_CATEGORY_TAXONOMY: ClientCategoryTaxonomyEntry[] = [
       sub("ngos_nonprofit_organizations", "NGOs & Nonprofit Organizations"),
       sub("sports_federations_leagues", "Sports Federations & Leagues"),
       sub("educational_institutions", "Educational Institutions"),
+      sub("government_sports_nonprofit_other", "Other"),
+    ],
+  },
+  {
+    slug: "food_beverage",
+    label: "🍔 Food & Beverage",
+    subcategories: [
+      sub("food_manufacturing", "Food Manufacturing"),
+      sub("beverages", "Beverages"),
+      sub("restaurants_qsr", "Restaurants & QSR"),
+      sub("dairy", "Dairy"),
+      sub("snacks_confectionery", "Snacks & Confectionery"),
+      sub("food_beverage_other", "Other"),
+    ],
+  },
+  {
+    slug: "travel_hospitality",
+    label: "✈️ Travel & Hospitality",
+    subcategories: [
+      sub("hotels_resorts", "Hotels & Resorts"),
+      sub("airlines", "Airlines"),
+      sub("tourism_boards", "Tourism Boards"),
+      sub("travel_agencies", "Travel Agencies"),
+      sub("hospitality_services", "Hospitality Services"),
+      sub("travel_hospitality_other", "Other"),
+    ],
+  },
+  {
+    slug: "automotive",
+    label: "🚗 Automotive",
+    subcategories: [
+      sub("auto_manufacturer", "Auto Manufacturer"),
+      sub("auto_dealer", "Auto Dealer"),
+      sub("auto_parts", "Auto Parts & Accessories"),
+      sub("mobility_services", "Mobility Services"),
+      sub("automotive_other", "Other"),
+    ],
+  },
+  {
+    slug: "real_estate",
+    label: "🏢 Real Estate",
+    subcategories: [
+      sub("residential_development", "Residential Development"),
+      sub("commercial_property", "Commercial Property"),
+      sub("property_management", "Property Management"),
+      sub("real_estate_other", "Other"),
+    ],
+  },
+  {
+    slug: "technology_software",
+    label: "💻 Technology & Software",
+    subcategories: [
+      sub("enterprise_software", "Enterprise Software"),
+      sub("saas", "SaaS"),
+      sub("hardware_technology", "Hardware & Technology"),
+      sub("it_services", "IT Services"),
+      sub("technology_software_other", "Other"),
+    ],
+  },
+  {
+    slug: "education",
+    label: "🎓 Education",
+    subcategories: [
+      sub("schools_universities", "Schools & Universities"),
+      sub("edtech", "EdTech"),
+      sub("training_corporate", "Corporate Training"),
+      sub("education_other", "Other"),
+    ],
+  },
+  {
+    slug: "entertainment_media",
+    label: "🎬 Entertainment & Media",
+    subcategories: [
+      sub("streaming", "Streaming"),
+      sub("film_tv", "Film & TV"),
+      sub("gaming", "Gaming"),
+      sub("publishing", "Publishing"),
+      sub("music", "Music"),
+      sub("entertainment_media_other", "Other"),
+    ],
+  },
+  {
+    slug: "other",
+    label: "📦 Other",
+    subcategories: [
+      sub("other_general", "General / Uncategorized"),
+      sub("other_unknown", "Unknown"),
     ],
   },
 ];

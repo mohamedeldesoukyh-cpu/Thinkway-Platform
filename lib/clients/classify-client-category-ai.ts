@@ -12,16 +12,33 @@ const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 export type AiClientCategoryClassification = {
   categorySlug: string;
   subcategorySlug: string;
-  confidence: "high" | "medium" | "low";
+  confidence: number;
   reasoning?: string;
 };
 
 const aiResponseSchema = z.object({
   categorySlug: z.string(),
   subcategorySlug: z.string(),
-  confidence: z.enum(["high", "medium", "low"]),
+  confidence: z.union([
+    z.number().min(0).max(100),
+    z.enum(["high", "medium", "low"]),
+  ]),
   reasoning: z.string().optional(),
 });
+
+function normalizeAiConfidence(value: number | "high" | "medium" | "low"): number {
+  if (typeof value === "number") {
+    return Math.min(95, Math.max(70, Math.round(value)));
+  }
+  switch (value) {
+    case "high":
+      return 90;
+    case "medium":
+      return 80;
+    default:
+      return 72;
+  }
+}
 
 const TAXONOMY_PROMPT = JSON.stringify(
   CLIENT_CATEGORY_TAXONOMY.map((category) => ({
@@ -81,11 +98,13 @@ export async function classifyClientCategoryWithAi(input: {
             content: `You classify companies into the Thinkway client category taxonomy for influencer marketing operations.
 
 Return ONLY valid JSON with this shape:
-{ "categorySlug": string, "subcategorySlug": string, "confidence": "high" | "medium" | "low", "reasoning": string }
+{ "categorySlug": string, "subcategorySlug": string, "confidence": number, "reasoning": string }
 
 Rules:
 - Pick categorySlug and subcategorySlug ONLY from the taxonomy below. Never invent slugs.
-- If uncertain, use "medium" or "low" confidence.
+- confidence is 70-95 (integer). Use 85+ when web snippets clearly identify industry/products/services.
+- Base classification on industry, products, and services from webSearchSnippets — not company name alone.
+- If uncertain, use 70-78 confidence.
 - Automotive manufacturers (e.g. BYD, Tesla) → retail_ecommerce with general_trading or consumer_electronics as appropriate.
 - Media agencies, ad networks, and MCNs (multi-channel networks) → marketing_advertising_media_agencies.
 - Use webSearchSnippets when provided to disambiguate unknown brands.
@@ -143,7 +162,12 @@ ${TAXONOMY_PROMPT}`,
       return null;
     }
 
-    return { categorySlug, subcategorySlug, confidence, reasoning };
+    return {
+      categorySlug,
+      subcategorySlug,
+      confidence: normalizeAiConfidence(confidence),
+      reasoning,
+    };
   } catch (error) {
     console.warn(
       "[classify-client-category-ai] AI classification failed:",

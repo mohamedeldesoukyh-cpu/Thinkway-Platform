@@ -4,6 +4,9 @@ import {
   classifyClientCategory,
   isClientCategoryAiAvailable,
 } from "@/lib/clients/classify-client-category";
+import { findHistoricalClientClassification } from "@/lib/clients/classify-client-category-historical";
+import type { ClientClassificationSource } from "@/lib/clients/classify-client-category-types";
+import { isValidClientCategoryPair } from "@/lib/clients/client-category-taxonomy";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -11,8 +14,9 @@ export type ClassifyClientCategoryResult = {
   ok: boolean;
   categorySlug?: string;
   subcategorySlug?: string;
-  confidence?: "high" | "medium" | "low";
-  source?: "ai" | "web_search" | "keyword";
+  confidence?: number;
+  source?: ClientClassificationSource;
+  reason?: string;
   message?: string;
 };
 
@@ -38,6 +42,9 @@ export async function classifyClientCategoryAction(input: {
   name: string;
   country?: string;
   website?: string;
+  clientId?: string;
+  /** Skip auto-classify when client already has user-approved classification */
+  useStoredApproved?: boolean;
 }): Promise<ClassifyClientCategoryResult> {
   const supabase = await createSupabaseServerClient();
   const {
@@ -59,10 +66,48 @@ export async function classifyClientCategoryAction(input: {
   }
 
   try {
+    let approvedClassification = null;
+
+    if (input.clientId && input.useStoredApproved) {
+      const { data: client } = await supabase
+        .from("clients")
+        .select(
+          "name, client_category, client_subcategory, classification_source, classification_confidence, classification_reason, approved_by_user"
+        )
+        .eq("id", input.clientId)
+        .maybeSingle();
+
+      if (
+        client?.approved_by_user &&
+        client.client_category &&
+        client.client_subcategory &&
+        isValidClientCategoryPair(client.client_category, client.client_subcategory)
+      ) {
+        approvedClassification = {
+          categorySlug: client.client_category,
+          subcategorySlug: client.client_subcategory,
+          confidence: client.classification_confidence ?? 100,
+          source: (client.classification_source as ClientClassificationSource) ?? "approved",
+          reason: client.classification_reason ?? undefined,
+        };
+      }
+    }
+
+    const historicalMatch =
+      !approvedClassification && input.clientId
+        ? await findHistoricalClientClassification(supabase, name, {
+            excludeClientId: input.clientId,
+          })
+        : !approvedClassification
+          ? await findHistoricalClientClassification(supabase, name)
+          : null;
+
     const result = await classifyClientCategory({
       name,
       country: input.country,
       website: input.website,
+      approvedClassification,
+      historicalMatch,
     });
 
     if (!result) {
@@ -78,6 +123,7 @@ export async function classifyClientCategoryAction(input: {
       subcategorySlug: result.subcategorySlug,
       confidence: result.confidence,
       source: result.source,
+      reason: result.reason,
     };
   } catch (e) {
     return {

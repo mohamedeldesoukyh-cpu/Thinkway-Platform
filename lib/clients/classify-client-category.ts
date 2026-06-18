@@ -9,17 +9,18 @@ import {
   hasOpenAiApiKey,
 } from "@/lib/clients/classify-client-category-ai";
 import {
+  type ClientCategoryClassification,
+  type HistoricalClassificationMatch,
+  CLASSIFICATION_CONFIDENCE,
+} from "@/lib/clients/classify-client-category-types";
+import {
   buildCompanySearchQuery,
   hasWebSearchApiKey,
   searchCompanyOnWeb,
 } from "@/lib/clients/company-web-search";
 
-export type ClientCategoryClassification = {
-  categorySlug: string;
-  subcategorySlug: string;
-  confidence: "high" | "medium" | "low";
-  source: "ai" | "web_search" | "keyword";
-};
+export type { ClientCategoryClassification, ClientClassificationSource } from "@/lib/clients/classify-client-category-types";
+export { classificationSourceLabel, isLowConfidenceClassification } from "@/lib/clients/classify-client-category-types";
 
 type ScoredCandidate = {
   categorySlug: string;
@@ -199,6 +200,14 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "school",
     "education",
   ],
+  food_beverage: ["food", "beverage", "restaurant", "dairy", "snacks", "fmcg", "cpg", "brewery"],
+  travel_hospitality: ["hotel", "resort", "airline", "tourism", "travel", "hospitality", "booking"],
+  automotive: ["automotive", "automobile", "vehicle", "car", "motor", "ev", "dealer"],
+  real_estate: ["real estate", "property", "developer", "residential", "commercial property"],
+  technology_software: ["software", "saas", "technology", "tech", "it services", "enterprise software"],
+  education: ["education", "school", "university", "edtech", "training", "academy"],
+  entertainment_media: ["entertainment", "streaming", "gaming", "film", "music", "media", "publishing"],
+  other: ["other", "general", "uncategorized", "unknown"],
 };
 
 const REGIONAL_COMPANY_HINTS: Record<string, { categorySlug: string; subcategorySlug: string }> = {
@@ -851,25 +860,36 @@ function rankCandidates(corpus: string): ScoredCandidate | null {
   return best;
 }
 
-function confidenceFromScore(score: number, usedWebSearch: boolean): ClientCategoryClassification["confidence"] {
+function confidenceFromScore(score: number, usedWebSearch: boolean): number {
   if (score >= 12) {
-    return "high";
+    return usedWebSearch ? 68 : 65;
   }
-  if (score >= 6 || usedWebSearch) {
-    return "medium";
+  if (score >= 6) {
+    return usedWebSearch ? 62 : 58;
   }
-  return "low";
+  return usedWebSearch ? 55 : 50;
 }
 
-function hintFromKey(key: string): ClientCategoryClassification | null {
+function ruleConfidenceForMatch(exact: boolean, partial: boolean): number {
+  if (exact) {
+    return 100;
+  }
+  if (partial) {
+    return 96;
+  }
+  return 98;
+}
+
+function hintFromKey(key: string, matchQuality: "exact" | "partial" | "token"): ClientCategoryClassification | null {
   const hint = COMPANY_HINTS[key];
   if (!hint) {
     return null;
   }
   return {
     ...hint,
-    confidence: "high",
-    source: "keyword",
+    confidence: ruleConfidenceForMatch(matchQuality === "exact", matchQuality === "partial"),
+    source: "rule",
+    reason: `Matched company rule: "${key}"`,
   };
 }
 
@@ -908,13 +928,14 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
     const compact = name.replace(/\s+/g, "");
     const tokens = name.split(" ").filter(Boolean);
 
-    const directHint = hintFromKey(name) ?? hintFromKey(compact);
+    const directHint =
+      hintFromKey(name, "exact") ?? hintFromKey(compact, "exact");
     if (directHint) {
       return directHint;
     }
 
     for (const acronym of extractNameAcronyms(companyName)) {
-      const hint = hintFromKey(acronym);
+      const hint = hintFromKey(acronym, "exact");
       if (hint) {
         return hint;
       }
@@ -923,7 +944,7 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
     for (const token of tokens) {
       const minLen = SHORT_HINT_KEYS.has(token) ? 3 : 4;
       if (token.length >= minLen) {
-        const hint = hintFromKey(token);
+        const hint = hintFromKey(token, "token");
         if (hint) {
           return hint;
         }
@@ -943,8 +964,9 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
           if (single.startsWith(keyCompact) || keyCompact.startsWith(single)) {
             return {
               ...hint,
-              confidence: single === keyCompact ? "high" : "medium",
-              source: "keyword",
+              confidence: ruleConfidenceForMatch(single === keyCompact, true),
+              source: "rule",
+              reason: `Matched company rule: "${key}"`,
             };
           }
         }
@@ -955,7 +977,8 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
       for (let i = 0; i <= tokens.length - n; i++) {
         const phrase = tokens.slice(i, i + n).join(" ");
         const phraseCompact = tokens.slice(i, i + n).join("");
-        const hint = hintFromKey(phrase) ?? hintFromKey(phraseCompact);
+        const hint =
+          hintFromKey(phrase, "exact") ?? hintFromKey(phraseCompact, "exact");
         if (hint) {
           return hint;
         }
@@ -964,10 +987,13 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
 
     for (const [key, hint] of SORTED_COMPANY_HINTS) {
       if (hintMatchesName(name, compact, key)) {
+        const keyCompact = key.replace(/\s+/g, "");
+        const exact = name === key || compact === keyCompact;
         return {
           ...hint,
-          confidence: "high",
-          source: "keyword",
+          confidence: ruleConfidenceForMatch(exact, !exact),
+          source: "rule",
+          reason: `Matched company rule: "${key}"`,
         };
       }
     }
@@ -990,8 +1016,9 @@ function classifyWithKeywordAndWeb(input: {
   if (webHint) {
     return {
       ...webHint,
-      confidence: webHint.confidence === "high" ? "high" : "medium",
-      source: "web_search",
+      source: "fallback",
+      confidence: Math.min(webHint.confidence, CLASSIFICATION_CONFIDENCE.fallback.max),
+      reason: webHint.reason ?? "Web corpus matched company rule",
     };
   }
 
@@ -1011,6 +1038,8 @@ function classifyWithKeywordAndWeb(input: {
     return keywordHint ?? null;
   }
 
+  const confidence = confidenceFromScore(ranked.score, webSearchAvailable);
+
   if (
     keywordHint &&
     keywordHint.categorySlug === ranked.categorySlug &&
@@ -1018,16 +1047,32 @@ function classifyWithKeywordAndWeb(input: {
   ) {
     return {
       ...keywordHint,
-      confidence: confidenceFromScore(ranked.score, webSearchAvailable),
-      source: webSearchAvailable ? "web_search" : "keyword",
+      confidence,
+      source: "fallback",
+      reason: "Keyword ranking aligned with partial rule match",
     };
   }
 
   return {
     categorySlug: ranked.categorySlug,
     subcategorySlug: ranked.subcategorySlug,
-    confidence: confidenceFromScore(ranked.score, webSearchAvailable),
-    source: webSearchAvailable ? "web_search" : "keyword",
+    confidence,
+    source: "fallback",
+    reason: webSearchAvailable
+      ? "Keyword ranking from company name and web snippets"
+      : "Keyword ranking from company name",
+  };
+}
+
+function historicalToClassification(
+  match: HistoricalClassificationMatch
+): ClientCategoryClassification {
+  return {
+    categorySlug: match.categorySlug,
+    subcategorySlug: match.subcategorySlug,
+    confidence: match.confidence,
+    source: "historical",
+    reason: `Similar approved client: "${match.matchedName}"`,
   };
 }
 
@@ -1039,15 +1084,32 @@ export async function classifyClientCategory(input: {
   name: string;
   country?: string | null;
   website?: string | null;
+  /** P1: stored approved classification for an existing client */
+  approvedClassification?: ClientCategoryClassification | null;
+  /** P3: pre-fetched historical match from similar clients */
+  historicalMatch?: HistoricalClassificationMatch | null;
 }): Promise<ClientCategoryClassification | null> {
   const companyName = input.name.trim();
   if (companyName.length < 2) {
     return null;
   }
 
-  const keywordHint = matchCompanyHint(companyName);
-  if (keywordHint?.confidence === "high") {
-    return keywordHint;
+  if (input.approvedClassification) {
+    return {
+      ...input.approvedClassification,
+      source: "approved",
+      confidence: CLASSIFICATION_CONFIDENCE.approved,
+      reason: input.approvedClassification.reason ?? "Stored approved classification",
+    };
+  }
+
+  const ruleMatch = matchCompanyHint(companyName);
+  if (ruleMatch) {
+    return ruleMatch;
+  }
+
+  if (input.historicalMatch) {
+    return historicalToClassification(input.historicalMatch);
   }
 
   const webSearchAvailable = hasWebSearchApiKey();
@@ -1076,14 +1138,15 @@ export async function classifyClientCategory(input: {
         categorySlug: aiResult.categorySlug,
         subcategorySlug: aiResult.subcategorySlug,
         confidence: aiResult.confidence,
-        source: "ai",
+        source: "ai_search",
+        reason: aiResult.reasoning,
       };
     }
   }
 
   return classifyWithKeywordAndWeb({
     companyName,
-    keywordHint,
+    keywordHint: null,
     web,
   });
 }

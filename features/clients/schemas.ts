@@ -138,6 +138,45 @@ const optionalClientSubcategorySlug = z.preprocess(
     .transform((value) => (value === "" ? null : value))
 );
 
+const optionalClassificationSource = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    return String(value).trim();
+  },
+  z
+    .union([
+      z.literal(""),
+      z.enum(["approved", "rule", "historical", "ai_search", "fallback"]),
+    ])
+    .transform((value) => (value === "" ? null : value))
+);
+
+const optionalClassificationConfidence = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null || value === "") {
+      return null;
+    }
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  },
+  z.number().min(0).max(100).nullable()
+);
+
+const optionalClassificationReason = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    return String(value).trim();
+  },
+  z
+    .string()
+    .max(2000)
+    .transform((value) => (value === "" ? null : value))
+);
+
 function validateClientCategoryPair(
   data: {
     client_category: string | null;
@@ -188,6 +227,9 @@ export const createClientSchema = z
   industry: optionalIndustry,
   client_category: optionalClientCategorySlug,
   client_subcategory: optionalClientSubcategorySlug,
+  classification_source: optionalClassificationSource,
+  classification_confidence: optionalClassificationConfidence,
+  classification_reason: optionalClassificationReason,
   vr_rate_id: z.preprocess(
     (value) => {
       if (value === undefined || value === null) {
@@ -219,6 +261,9 @@ export const updateClientOverviewSchema = z
   industry: optionalIndustry,
   client_category: optionalClientCategorySlug,
   client_subcategory: optionalClientSubcategorySlug,
+  classification_source: optionalClassificationSource,
+  classification_confidence: optionalClassificationConfidence,
+  classification_reason: optionalClassificationReason,
   vr_rate_id: z.preprocess(
     (value) => {
       if (value === undefined || value === null) {

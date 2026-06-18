@@ -2,50 +2,43 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import type { ClientCategorySuggestionState } from "@/components/forms/client-category-suggestion";
 import {
   classifyClientCategoryAction,
   getClientCategoryClassificationCapabilitiesAction,
 } from "@/features/clients/classify-category-action";
-
-type ClassificationResult = {
-  categorySlug: string;
-  subcategorySlug: string;
-  confidence: "high" | "medium" | "low";
-  source: "ai" | "web_search" | "keyword";
-};
+import type { ClientClassificationSource } from "@/lib/clients/classify-client-category-types";
 
 export const CLIENT_CATEGORY_PAUSE_MESSAGE =
   "Auto-suggest paused — change name to re-classify";
-
-function sourceLabel(source: ClassificationResult["source"]): string {
-  switch (source) {
-    case "ai":
-      return "AI analysis";
-    case "web_search":
-      return "web lookup";
-    default:
-      return "name matching";
-  }
-}
 
 type UseClientCategoryClassificationOptions = {
   companyName: string;
   country?: string;
   website?: string;
+  clientId?: string;
+  /** When true, return stored approved classification without re-running pipeline */
+  useStoredApproved?: boolean;
   enabled?: boolean;
-  onClassified?: (result: ClassificationResult) => void;
+  onClassified?: (result: ClientCategorySuggestionState) => void;
 };
+
+const sessionResultCache = new Map<string, ClientCategorySuggestionState>();
 
 export function useClientCategoryClassification({
   companyName,
   country,
   website,
+  clientId,
+  useStoredApproved = false,
   enabled = true,
   onClassified,
 }: UseClientCategoryClassificationOptions) {
   const [classifying, setClassifying] = useState(false);
   const [aiAvailable, setAiAvailable] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<ClientCategorySuggestionState | null>(null);
+  const [suggestionApplied, setSuggestionApplied] = useState(false);
   const requestIdRef = useRef(0);
   const lastSuccessKeyRef = useRef("");
   const prevCompanyNameRef = useRef(companyName);
@@ -70,16 +63,31 @@ export function useClientCategoryClassification({
     const trimmed = companyName.trim();
     if (prevCompanyNameRef.current.trim() !== trimmed) {
       lastSuccessKeyRef.current = "";
+      setSuggestionApplied(false);
       prevCompanyNameRef.current = companyName;
     }
 
     if (!enabled || trimmed.length < 3) {
       setClassifying(false);
       setMessage(null);
+      setSuggestion(null);
       return;
     }
 
-    const requestKey = `${trimmed}|${country ?? ""}|${website ?? ""}`;
+    const requestKey = `${trimmed}|${country ?? ""}|${website ?? ""}|${clientId ?? ""}|${useStoredApproved}`;
+    const cached = sessionResultCache.get(requestKey);
+    if (cached) {
+      setClassifying(false);
+      setSuggestion(cached);
+      if (requestKey !== lastSuccessKeyRef.current) {
+        lastSuccessKeyRef.current = requestKey;
+        if (!suggestionApplied) {
+          onClassifiedRef.current?.(cached);
+        }
+      }
+      return;
+    }
+
     if (requestKey === lastSuccessKeyRef.current) {
       setClassifying(false);
       return;
@@ -97,6 +105,8 @@ export function useClientCategoryClassification({
           name: trimmed,
           country: country || undefined,
           website: website || undefined,
+          clientId,
+          useStoredApproved,
         });
 
         if (requestId !== requestIdRef.current) {
@@ -104,6 +114,7 @@ export function useClientCategoryClassification({
         }
 
         if (!result.ok || !result.categorySlug || !result.subcategorySlug) {
+          setSuggestion(null);
           setMessage(
             result.message ??
               "No automatic match — choose category below if needed."
@@ -112,23 +123,25 @@ export function useClientCategoryClassification({
         }
 
         lastSuccessKeyRef.current = requestKey;
-        const source = result.source ?? "keyword";
-        onClassifiedRef.current?.({
+        const classified: ClientCategorySuggestionState = {
           categorySlug: result.categorySlug,
           subcategorySlug: result.subcategorySlug,
-          confidence: result.confidence ?? "low",
-          source,
-        });
+          confidence: result.confidence ?? 0,
+          source: (result.source ?? "fallback") as ClientClassificationSource,
+          reason: result.reason,
+        };
 
-        setMessage(
-          `Suggested from ${sourceLabel(source)}${
-            result.confidence ? ` (${result.confidence} confidence)` : ""
-          }. You can override below.`
-        );
+        sessionResultCache.set(requestKey, classified);
+        setSuggestion(classified);
+
+        if (!suggestionApplied) {
+          onClassifiedRef.current?.(classified);
+        }
       } catch {
         if (requestId !== requestIdRef.current) {
           return;
         }
+        setSuggestion(null);
         setMessage("Classification unavailable — choose category below.");
       } finally {
         if (requestId === requestIdRef.current) {
@@ -141,13 +154,37 @@ export function useClientCategoryClassification({
       window.clearTimeout(timer);
       requestIdRef.current += 1;
     };
-  }, [companyName, country, website, enabled, aiAvailable]);
+  }, [
+    companyName,
+    country,
+    website,
+    clientId,
+    useStoredApproved,
+    enabled,
+    aiAvailable,
+  ]);
 
   function resetClassificationRequest() {
     lastSuccessKeyRef.current = "";
     requestIdRef.current += 1;
     setClassifying(false);
     setMessage(null);
+    setSuggestion(null);
+    setSuggestionApplied(false);
+  }
+
+  function acceptSuggestion() {
+    if (!suggestion) {
+      return;
+    }
+    setSuggestionApplied(true);
+    onClassifiedRef.current?.(suggestion);
+  }
+
+  function overrideSuggestion() {
+    setSuggestionApplied(false);
+    setSuggestion(null);
+    lastSuccessKeyRef.current = "";
   }
 
   const classifyingLabel =
@@ -158,6 +195,10 @@ export function useClientCategoryClassification({
     classifyingLabel,
     aiAvailable,
     message,
+    suggestion,
+    suggestionApplied,
+    acceptSuggestion,
+    overrideSuggestion,
     resetClassificationRequest,
   };
 }

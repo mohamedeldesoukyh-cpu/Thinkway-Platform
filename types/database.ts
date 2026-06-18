@@ -474,6 +474,12 @@ export type ClientRow = {
   accept_credit_risk: boolean;
   client_category: string | null;
   client_subcategory: string | null;
+  classification_source: string | null;
+  classification_confidence: number | null;
+  classification_reason: string | null;
+  classified_at: string | null;
+  approved_by_user: string | null;
+  last_verified_at: string | null;
   vr_rate_id: string | null;
   agency_or_direct: string | null;
   trade_license_expiry: string | null;
@@ -518,6 +524,12 @@ export type Database = {
           accept_credit_risk?: boolean;
           client_category?: string | null;
           client_subcategory?: string | null;
+          classification_source?: string | null;
+          classification_confidence?: number | null;
+          classification_reason?: string | null;
+          classified_at?: string | null;
+          approved_by_user?: string | null;
+          last_verified_at?: string | null;
           vr_rate_id?: string | null;
           agency_or_direct?: string | null;
           trade_license_expiry?: string | null;

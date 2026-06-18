@@ -7,6 +7,10 @@ import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { ClientCategoryFields } from "@/components/forms/client-category-fields";
+import {
+  ClientCategorySuggestion,
+  type ClientCategorySuggestionState,
+} from "@/components/forms/client-category-suggestion";
 import { useClientCategoryClassification, CLIENT_CATEGORY_PAUSE_MESSAGE } from "@/components/forms/use-client-category-classification";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
@@ -63,17 +67,20 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const [categorySlug, setCategorySlug] = useState("");
   const [subcategorySlug, setSubcategorySlug] = useState("");
   const [categoryTouched, setCategoryTouched] = useState(false);
+  const [classificationMeta, setClassificationMeta] =
+    useState<ClientCategorySuggestionState | null>(null);
 
   const cityOptions = useMemo(() => getCityOptionsForCountry(country), [country]);
 
-  const { classifying, classifyingLabel, message: classifyMessage, resetClassificationRequest } =
+  const { classifying, classifyingLabel, message: classifyMessage, suggestion, suggestionApplied, acceptSuggestion, overrideSuggestion, resetClassificationRequest } =
     useClientCategoryClassification({
       companyName: entityName,
       country,
       enabled: open && !categoryTouched,
-      onClassified: ({ categorySlug: nextCategory, subcategorySlug: nextSubcategory }) => {
-        setCategorySlug(nextCategory);
-        setSubcategorySlug(nextSubcategory);
+      onClassified: (result) => {
+        setCategorySlug(result.categorySlug);
+        setSubcategorySlug(result.subcategorySlug);
+        setClassificationMeta(result);
       },
     });
 
@@ -88,6 +95,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
     setCategorySlug("");
     setSubcategorySlug("");
     setCategoryTouched(false);
+    setClassificationMeta(null);
     resetClassificationRequest();
   }
 
@@ -158,6 +166,21 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           <input type="hidden" name="city" value={city} />
           <input type="hidden" name="client_category" value={categorySlug} />
           <input type="hidden" name="client_subcategory" value={subcategorySlug} />
+          <input
+            type="hidden"
+            name="classification_source"
+            value={classificationMeta?.source ?? ""}
+          />
+          <input
+            type="hidden"
+            name="classification_confidence"
+            value={classificationMeta?.confidence ?? ""}
+          />
+          <input
+            type="hidden"
+            name="classification_reason"
+            value={classificationMeta?.reason ?? ""}
+          />
 
           <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-4">
             {state.fieldErrors && !state.ok ? (
@@ -251,16 +274,29 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             </Select>
           </div>
 
+          <ClientCategorySuggestion
+            suggestion={categoryTouched ? null : suggestion}
+            applied={suggestionApplied}
+            onAccept={acceptSuggestion}
+            onOverride={() => {
+              overrideSuggestion();
+              setCategoryTouched(true);
+            }}
+            disabled={isPending}
+          />
+
           <ClientCategoryFields
             categorySlug={categorySlug}
             subcategorySlug={subcategorySlug}
             onCategoryChange={(value) => {
               setCategoryTouched(true);
               setCategorySlug(value);
+              setClassificationMeta(null);
             }}
             onSubcategoryChange={(value) => {
               setCategoryTouched(true);
               setSubcategorySlug(value);
+              setClassificationMeta(null);
             }}
             disabled={isPending}
           />

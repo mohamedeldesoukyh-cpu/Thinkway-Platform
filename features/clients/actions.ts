@@ -115,6 +115,29 @@ export async function createClientAction(
     };
   }
 
+  const now = new Date().toISOString();
+  const hasCategory =
+    parsed.data.client_category && parsed.data.client_subcategory;
+  const classificationPayload = hasCategory
+    ? {
+        classification_source:
+          parsed.data.classification_source ?? "approved",
+        classification_confidence:
+          parsed.data.classification_confidence ?? 100,
+        classification_reason: parsed.data.classification_reason,
+        classified_at: now,
+        approved_by_user: user.id,
+        last_verified_at: now,
+      }
+    : {
+        classification_source: null,
+        classification_confidence: null,
+        classification_reason: null,
+        classified_at: null,
+        approved_by_user: null,
+        last_verified_at: null,
+      };
+
   const { data, error } = await supabase
     .from("clients")
     .insert({
@@ -126,6 +149,7 @@ export async function createClientAction(
       industry: emptyToNull(parsed.data.industry),
       client_category: parsed.data.client_category,
       client_subcategory: parsed.data.client_subcategory,
+      ...classificationPayload,
       vr_rate_id: parsed.data.vr_rate_id,
       website: emptyToNull(parsed.data.website),
       status: parsed.data.status,
@@ -176,12 +200,12 @@ export async function updateClientOverviewAction(
     };
   }
 
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { ok: false, message: authError };
-  }
-
   const { client_id, ...fields } = parsed.data;
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
 
   try {
     const duplicate = await findDuplicateClient(
@@ -210,6 +234,26 @@ export async function updateClientOverviewAction(
     };
   }
 
+  const now = new Date().toISOString();
+  const hasCategory = fields.client_category && fields.client_subcategory;
+  const classificationPayload = hasCategory
+    ? {
+        classification_source: fields.classification_source ?? "approved",
+        classification_confidence: fields.classification_confidence ?? 100,
+        classification_reason: fields.classification_reason,
+        classified_at: now,
+        approved_by_user: user.id,
+        last_verified_at: now,
+      }
+    : {
+        classification_source: null,
+        classification_confidence: null,
+        classification_reason: null,
+        classified_at: null,
+        approved_by_user: null,
+        last_verified_at: null,
+      };
+
   const { error } = await supabase
     .from("clients")
     .update({
@@ -221,6 +265,7 @@ export async function updateClientOverviewAction(
       industry: emptyToNull(fields.industry),
       client_category: fields.client_category,
       client_subcategory: fields.client_subcategory,
+      ...classificationPayload,
       vr_rate_id: fields.vr_rate_id,
       website: emptyToNull(fields.website),
       status: fields.status,

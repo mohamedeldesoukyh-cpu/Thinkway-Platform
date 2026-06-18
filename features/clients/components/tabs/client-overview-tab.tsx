@@ -5,6 +5,10 @@ import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { ClientCategoryFields } from "@/components/forms/client-category-fields";
+import {
+  ClientCategorySuggestion,
+  type ClientCategorySuggestionState,
+} from "@/components/forms/client-category-suggestion";
 import { useClientCategoryClassification, CLIENT_CATEGORY_PAUSE_MESSAGE } from "@/components/forms/use-client-category-classification";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
@@ -64,6 +68,25 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
     client.client_subcategory ?? ""
   );
   const [categoryManuallySet, setCategoryManuallySet] = useState(false);
+  const [classificationMeta, setClassificationMeta] =
+    useState<ClientCategorySuggestionState | null>(() => {
+      if (
+        client.client_category &&
+        client.client_subcategory &&
+        client.approved_by_user
+      ) {
+        return {
+          categorySlug: client.client_category,
+          subcategorySlug: client.client_subcategory,
+          confidence: client.classification_confidence ?? 100,
+          source:
+            (client.classification_source as ClientCategorySuggestionState["source"]) ??
+            "approved",
+          reason: client.classification_reason ?? undefined,
+        };
+      }
+      return null;
+    });
   const [vrRateId, setVrRateId] = useState(client.vr_rate_id ?? "");
   const cityOptions = useMemo(() => {
     const options = getCityOptionsForCountry(country);
@@ -73,15 +96,20 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
     return options;
   }, [country, city]);
 
-  const { classifying, classifyingLabel, message: classifyMessage, resetClassificationRequest } =
+  const { classifying, classifyingLabel, message: classifyMessage, suggestion, suggestionApplied, acceptSuggestion, overrideSuggestion, resetClassificationRequest } =
     useClientCategoryClassification({
       companyName: displayName,
       country,
       website: client.website ?? undefined,
+      clientId: client.id,
+      useStoredApproved:
+        !categoryManuallySet &&
+        Boolean(client.approved_by_user && client.client_category),
       enabled: !categoryManuallySet,
-      onClassified: ({ categorySlug: nextCategory, subcategorySlug: nextSubcategory }) => {
-        setCategorySlug(nextCategory);
-        setSubcategorySlug(nextSubcategory);
+      onClassified: (result) => {
+        setCategorySlug(result.categorySlug);
+        setSubcategorySlug(result.subcategorySlug);
+        setClassificationMeta(result);
       },
     });
 
@@ -140,6 +168,21 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
         <input type="hidden" name="city" value={city} />
         <input type="hidden" name="client_category" value={categorySlug} />
         <input type="hidden" name="client_subcategory" value={subcategorySlug} />
+        <input
+          type="hidden"
+          name="classification_source"
+          value={classificationMeta?.source ?? ""}
+        />
+        <input
+          type="hidden"
+          name="classification_confidence"
+          value={classificationMeta?.confidence ?? ""}
+        />
+        <input
+          type="hidden"
+          name="classification_reason"
+          value={classificationMeta?.reason ?? ""}
+        />
         <input type="hidden" name="vr_rate_id" value={vrRateId} />
         <input
           type="hidden"
@@ -244,16 +287,29 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
           <FieldError messages={state.fieldErrors?.name_ar} />
         </div>
 
+        <ClientCategorySuggestion
+          suggestion={categoryManuallySet ? null : suggestion}
+          applied={suggestionApplied}
+          onAccept={acceptSuggestion}
+          onOverride={() => {
+            overrideSuggestion();
+            setCategoryManuallySet(true);
+          }}
+          disabled={isPending}
+        />
+
         <ClientCategoryFields
           categorySlug={categorySlug}
           subcategorySlug={subcategorySlug}
           onCategoryChange={(value) => {
             setCategoryManuallySet(true);
             setCategorySlug(value);
+            setClassificationMeta(null);
           }}
           onSubcategoryChange={(value) => {
             setCategoryManuallySet(true);
             setSubcategorySlug(value);
+            setClassificationMeta(null);
           }}
           disabled={isPending}
         />

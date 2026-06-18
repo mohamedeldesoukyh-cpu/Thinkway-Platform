@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 
-import { classifyClientCategory } from "./classify-client-category";
+import {
+  classifyClientCategory,
+  getCompanyHintCount,
+} from "./classify-client-category";
+import { CLASSIFICATION_CONFIDENCE } from "./classify-client-category-types";
 
 async function expectClassification(
   name: string,
@@ -12,11 +16,28 @@ async function expectClassification(
   assert.equal(result.subcategorySlug, expected.subcategorySlug, name);
 }
 
+function assertConfidenceBand(
+  result: NonNullable<Awaited<ReturnType<typeof classifyClientCategory>>>,
+  source: typeof result.source,
+  min: number,
+  max: number
+) {
+  assert.equal(result.source, source);
+  assert.ok(
+    result.confidence >= min && result.confidence <= max,
+    `expected ${source} confidence ${min}-${max}, got ${result.confidence}`
+  );
+}
+
 async function run() {
   await expectClassification("Nike", {
     categorySlug: "fashion_apparel",
     subcategorySlug: "sportswear",
   });
+
+  const nikeResult = await classifyClientCategory({ name: "Nike" });
+  assert.ok(nikeResult);
+  assertConfidenceBand(nikeResult, "rule", 95, 100);
 
   await expectClassification("Omnicom Group", {
     categorySlug: "marketing_advertising_media_agencies",
@@ -93,7 +114,6 @@ async function run() {
     subcategorySlug: "food_beverages",
   });
 
-  // Egypt brand classification
   await expectClassification("Memac Ogilvy Egypt", {
     categorySlug: "marketing_advertising_media_agencies",
     subcategorySlug: "advertising_agency",
@@ -213,6 +233,55 @@ async function run() {
   assert.ok(mcnResult);
   assert.notEqual(mcnResult.categorySlug, "retail_ecommerce", "MCN must not be retail");
   assert.notEqual(mcnResult.subcategorySlug, "home_shopping_network", "MCN must not be home shopping");
+
+  // Priority 1: approved classification short-circuits pipeline
+  const approved = await classifyClientCategory({
+    name: "Unknown Startup XYZ",
+    approvedClassification: {
+      categorySlug: "technology_software",
+      subcategorySlug: "saas",
+      confidence: 100,
+      source: "approved",
+    },
+  });
+  assert.ok(approved);
+  assertConfidenceBand(approved, "approved", 100, 100);
+  assert.equal(approved.categorySlug, "technology_software");
+
+  // Priority 3: historical match before AI/fallback
+  const historical = await classifyClientCategory({
+    name: "New Brand Inc",
+    historicalMatch: {
+      categorySlug: "fashion_apparel",
+      subcategorySlug: "luxury_fashion",
+      matchedName: "Luxury Brand Inc",
+      confidence: 95,
+    },
+  });
+  assert.ok(historical);
+  assertConfidenceBand(
+    historical,
+    "historical",
+    CLASSIFICATION_CONFIDENCE.historical.min,
+    CLASSIFICATION_CONFIDENCE.historical.max
+  );
+  assert.match(historical.reason ?? "", /Luxury Brand Inc/);
+
+  // Rule beats historical when both would apply (pipeline order)
+  const ruleFirst = await classifyClientCategory({
+    name: "Nike",
+    historicalMatch: {
+      categorySlug: "retail_ecommerce",
+      subcategorySlug: "retail_general_merchandise",
+      matchedName: "Nike Store",
+      confidence: 92,
+    },
+  });
+  assert.ok(ruleFirst);
+  assert.equal(ruleFirst.source, "rule");
+  assert.equal(ruleFirst.categorySlug, "fashion_apparel");
+
+  assert.ok(getCompanyHintCount() > 100, "company hints should be populated");
 
   console.log("classify-client-category.test.ts: ok");
 }
