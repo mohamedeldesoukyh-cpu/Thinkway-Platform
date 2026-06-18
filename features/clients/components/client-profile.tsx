@@ -2,11 +2,11 @@
 
 import { useMemo } from "react";
 
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs } from "@/components/ui/tabs";
 import {
-  OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
   OperationalWorkspaceChrome,
   OperationalWorkspaceSortableTabsBar,
+  OperationalWorkspaceTabContent,
   OperationalWorkspaceTabPanel,
   type OperationalWorkspaceTabDef,
 } from "@/components/workspace/operational-workspace-ui";
@@ -104,27 +104,27 @@ export function ClientProfile({
           onReorder={moveTab}
         />
 
-        <TabsContent value="overview" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+        <OperationalWorkspaceTabContent value="overview">
           <OperationalWorkspaceTabPanel className="p-4 md:p-5">
             <ClientOverviewTab client={client} groups={groups} masterData={masterData} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="brands" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="brands">
           <OperationalWorkspaceTabPanel>
             <ClientBrandsTab client={client} masterData={masterData} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="legal" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="legal">
           <OperationalWorkspaceTabPanel className="p-4 md:p-5">
             <ClientLegalTab client={client} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="finance" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="finance">
           <OperationalWorkspaceTabPanel className="p-4 md:p-5">
             <ClientFinanceTab client={client} currencyOptions={currencyOptions} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="client-ios" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="client-ios">
           <OperationalWorkspaceTabPanel className="p-4 md:p-5">
             <ClientClientIosTab
               clientId={client.id}
@@ -134,19 +134,19 @@ export function ClientProfile({
               recipients={clientIoRecipients}
             />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="campaigns" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="campaigns">
           <OperationalWorkspaceTabPanel>
             <ClientCampaignsTab client={client} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="access" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="access">
           <OperationalWorkspaceTabPanel className="p-4 md:p-5">
             {clientAccessPanel ?? (
               <p className="text-[11px] text-muted-foreground">Client access is loading…</p>
             )}
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
+        </OperationalWorkspaceTabContent>
       </Tabs>
     </div>
   );

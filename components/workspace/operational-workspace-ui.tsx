@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { Tabs as TabsPrimitive } from "radix-ui";
@@ -12,11 +12,26 @@ import {
   DETAIL_FIELD_LABEL_CLASS,
   DetailSheetFooter,
 } from "@/features/campaigns/components/operational-detail-panel";
+import { TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 /** Tab body visibility — matches campaign workspace. */
 export const OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS =
   "mt-4 flex-none outline-none focus-visible:outline-none data-[state=inactive]:hidden";
+
+/** Keeps tab panels mounted so form state survives tab switches. */
+export function OperationalWorkspaceTabContent({
+  className,
+  ...props
+}: ComponentProps<typeof TabsContent>) {
+  return (
+    <TabsContent
+      forceMount
+      className={cn(OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS, className)}
+      {...props}
+    />
+  );
+}
 
 export type OperationalWorkspaceTabDef = {
   value: string;
