@@ -1,5 +1,9 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getBrandsByClientId } from "@/features/brands/queries";
+import {
+  fetchVrRatesByIds,
+  vrRatePercentFromMap,
+} from "@/lib/clients/vr-rate-lookup";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ClientDetail, ClientRow } from "@/types/database";
 
 import { CLIENTS_PAGE_SIZE } from "./constants";
@@ -84,9 +88,7 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
 
   const { data: client, error } = await supabase
     .from("clients")
-    .select(
-      "*, group:groups(id, name, document_number), vr_rate:md_vr_rates(id, name, rate_percent)"
-    )
+    .select("*, group:groups(id, name, document_number)")
     .eq("id", id)
     .maybeSingle();
 
@@ -100,10 +102,9 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
 
   const clientRow = client as unknown as ClientRow & {
     group: ClientDetail["group"];
-    vr_rate: { id: string; name: string; rate_percent: number } | null;
   };
 
-  const [documentsResult, campaignsResult, brands] = await Promise.all([
+  const [documentsResult, campaignsResult, brands, vrRateMap] = await Promise.all([
     supabase
       .from("client_documents")
       .select("*")
@@ -117,6 +118,7 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
       .eq("client_id", id)
       .order("created_at", { ascending: false }),
     getBrandsByClientId(id),
+    fetchVrRatesByIds(supabase, [clientRow.vr_rate_id]),
   ]);
 
   if (documentsResult.error) {
@@ -126,12 +128,10 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
     throw new Error(campaignsResult.error.message);
   }
 
-  const { vr_rate, ...clientWithoutJoin } = clientRow;
-
   return {
-    ...clientWithoutJoin,
+    ...clientRow,
     group: clientRow.group,
-    vr_rate_percent: vr_rate?.rate_percent ?? null,
+    vr_rate_percent: vrRatePercentFromMap(vrRateMap, clientRow.vr_rate_id),
     documents: documentsResult.data ?? [],
     campaigns: (campaignsResult.data ?? []) as unknown as ClientDetail["campaigns"],
     brands,

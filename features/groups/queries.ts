@@ -1,4 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  fetchVrRatesByIds,
+  vrRatePercentFromMap,
+} from "@/lib/clients/vr-rate-lookup";
 
 import {
   formatMargin,
@@ -112,7 +116,7 @@ export async function getGroupWorkspace(
     supabase
       .from("clients")
       .select(
-        "id, document_number, name, legal_name, country, currency, payment_terms, agency_or_direct, status, vr_rate_id, vr_rate:md_vr_rates(rate_percent)"
+        "id, document_number, name, legal_name, country, currency, payment_terms, agency_or_direct, status, vr_rate_id"
       )
       .eq("group_id", groupId)
       .order("name"),
@@ -178,6 +182,10 @@ export async function getGroupWorkspace(
 
   const clients = clientsResult.data ?? [];
   const clientIds = clients.map((c) => c.id);
+  const clientVrRateMap = await fetchVrRatesByIds(
+    supabase,
+    clients.map((c) => (c as { vr_rate_id: string | null }).vr_rate_id)
+  );
 
   let billingOutstanding = 0;
   if (clientIds.length > 0) {
@@ -302,7 +310,6 @@ export async function getGroupWorkspace(
     legal_entities: clients.map((c) => {
       const row = c as typeof c & {
         vr_rate_id: string | null;
-        vr_rate: { rate_percent: number } | null;
       };
       return {
       id: row.id,
@@ -317,7 +324,7 @@ export async function getGroupWorkspace(
       active_campaigns: activeCampaignsByClient.get(row.id) ?? 0,
       revenue: revenueByClient.get(row.id) ?? 0,
       vr_rate_id: row.vr_rate_id,
-      vr_rate_percent: row.vr_rate?.rate_percent ?? null,
+      vr_rate_percent: vrRatePercentFromMap(clientVrRateMap, row.vr_rate_id),
     };
     }),
     brands: (brandsResult.data ?? []).map((b) => {
