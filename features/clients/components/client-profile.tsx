@@ -82,13 +82,74 @@ export function ClientProfile({
     [client.brands.length, clientIos.length, client.campaigns.length]
   );
 
+  const tabPanels = (
+    <>
+      <OperationalWorkspaceTabContent
+        value="overview"
+        className={
+          isEditView
+            ? "mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none focus-visible:outline-none"
+            : undefined
+        }
+      >
+        <OperationalWorkspaceTabPanel
+          className={cn(
+            "flex min-h-0 flex-1 flex-col",
+            isEditView ? "min-h-0 overflow-hidden" : undefined
+          )}
+        >
+          <ClientOverviewTab
+            client={client}
+            groups={groups}
+            masterData={masterData}
+            onCancel={() => router.push("/clients")}
+            shortcutsEnabled={activeTab === "overview"}
+          />
+        </OperationalWorkspaceTabPanel>
+      </OperationalWorkspaceTabContent>
+      <OperationalWorkspaceTabContent value="brands">
+        <OperationalWorkspaceTabPanel>
+          <ClientBrandsTab client={client} masterData={masterData} />
+        </OperationalWorkspaceTabPanel>
+      </OperationalWorkspaceTabContent>
+      <OperationalWorkspaceTabContent value="legal">
+        <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+          <ClientLegalTab client={client} />
+        </OperationalWorkspaceTabPanel>
+      </OperationalWorkspaceTabContent>
+      <OperationalWorkspaceTabContent value="finance">
+        <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+          <ClientFinanceTab client={client} currencyOptions={currencyOptions} />
+        </OperationalWorkspaceTabPanel>
+      </OperationalWorkspaceTabContent>
+      <OperationalWorkspaceTabContent value="client-ios">
+        <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+          <ClientClientIosTab
+            clientId={client.id}
+            clientName={client.name}
+            clientIoTermsText={client.client_io_terms_text}
+            rows={clientIos}
+            recipients={clientIoRecipients}
+          />
+        </OperationalWorkspaceTabPanel>
+      </OperationalWorkspaceTabContent>
+      <OperationalWorkspaceTabContent value="campaigns">
+        <OperationalWorkspaceTabPanel>
+          <ClientCampaignsTab client={client} />
+        </OperationalWorkspaceTabPanel>
+      </OperationalWorkspaceTabContent>
+      <OperationalWorkspaceTabContent value="access">
+        <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+          {clientAccessPanel ?? (
+            <p className="text-[11px] text-muted-foreground">Client access is loading…</p>
+          )}
+        </OperationalWorkspaceTabPanel>
+      </OperationalWorkspaceTabContent>
+    </>
+  );
+
   return (
-    <div
-      className={cn(
-        "flex min-h-0 flex-1 flex-col gap-0",
-        isEditView && "overflow-hidden"
-      )}
-    >
+    <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
       {!isEditView ? (
         <OperationalWorkspaceChrome
           backButton={
@@ -113,8 +174,8 @@ export function ClientProfile({
           }
         }}
         className={cn(
-          "flex min-h-0 flex-1 flex-col gap-0",
-          isEditView ? "mt-0 overflow-hidden" : "mt-4"
+          "flex min-h-0 flex-1 flex-col gap-0 overflow-hidden",
+          isEditView ? "mt-0" : "mt-4"
         )}
       >
         {!isEditView ? (
@@ -151,67 +212,11 @@ export function ClientProfile({
           </nav>
         )}
 
-        <OperationalWorkspaceTabContent
-          value="overview"
-          className={
-            isEditView
-              ? "mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none focus-visible:outline-none"
-              : undefined
-          }
-        >
-          <OperationalWorkspaceTabPanel
-            className={cn(
-              "flex min-h-0 flex-1 flex-col",
-              isEditView ? "min-h-0 overflow-hidden" : undefined
-            )}
-          >
-            <ClientOverviewTab
-              client={client}
-              groups={groups}
-              masterData={masterData}
-              onCancel={() => router.push("/clients")}
-              shortcutsEnabled={activeTab === "overview"}
-            />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="brands">
-          <OperationalWorkspaceTabPanel>
-            <ClientBrandsTab client={client} masterData={masterData} />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="legal">
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <ClientLegalTab client={client} />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="finance">
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <ClientFinanceTab client={client} currencyOptions={currencyOptions} />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="client-ios">
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <ClientClientIosTab
-              clientId={client.id}
-              clientName={client.name}
-              clientIoTermsText={client.client_io_terms_text}
-              rows={clientIos}
-              recipients={clientIoRecipients}
-            />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="campaigns">
-          <OperationalWorkspaceTabPanel>
-            <ClientCampaignsTab client={client} />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="access">
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            {clientAccessPanel ?? (
-              <p className="text-[11px] text-muted-foreground">Client access is loading…</p>
-            )}
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
+        {isEditView ? tabPanels : (
+          <div className="h-0 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+            {tabPanels}
+          </div>
+        )}
       </Tabs>
     </div>
   );
