@@ -180,6 +180,10 @@ const COMPANY_HINTS: Record<string, { categorySlug: string; subcategorySlug: str
   snap: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "social_media_platform" },
   omnicom: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
   wpp: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
+  mindshare: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
+  "mind share": { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
+  mediacom: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
+  groupm: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_investment_management" },
   publicis: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "advertising_agency" },
   dentsu: { categorySlug: "marketing_advertising_media_agencies", subcategorySlug: "media_agency" },
   nike: { categorySlug: "fashion_apparel", subcategorySlug: "sportswear" },
@@ -286,7 +290,8 @@ function confidenceFromScore(score: number, usedWebSearch: boolean): ClientCateg
 
 function matchCompanyHint(companyName: string): ClientCategoryClassification | null {
   const normalized = normalizeCompanyKey(companyName);
-  const tokens = normalized.split(" ");
+  const compact = normalized.replace(/\s+/g, "");
+  const tokens = normalized.split(" ").filter(Boolean);
 
   for (const token of tokens) {
     const hint = COMPANY_HINTS[token];
@@ -300,7 +305,12 @@ function matchCompanyHint(companyName: string): ClientCategoryClassification | n
   }
 
   for (const [key, hint] of Object.entries(COMPANY_HINTS)) {
-    if (normalized.includes(key)) {
+    const keyCompact = key.replace(/\s+/g, "");
+    if (
+      normalized.includes(key) ||
+      compact.includes(keyCompact) ||
+      keyCompact.length >= 4 && compact.includes(keyCompact)
+    ) {
       return {
         ...hint,
         confidence: "high",

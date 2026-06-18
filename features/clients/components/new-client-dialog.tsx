@@ -77,6 +77,27 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
       },
     });
 
+  function resetDialogForm() {
+    setGroupId("");
+    setEntityName("");
+    setAgencyOrDirect("agency");
+    setStatus("prospect");
+    setCurrency(DEFAULT_PLATFORM_CURRENCY);
+    setCountry("");
+    setCity("");
+    setCategorySlug("");
+    setSubcategorySlug("");
+    setCategoryTouched(false);
+    resetClassificationRequest();
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      resetDialogForm();
+    }
+  }
+
   const { checking, message: duplicateMessage, isDuplicate } = useNameAvailability(
     entityName,
     checkClientNameAvailable,
@@ -94,16 +115,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
     }
     if (state.ok) {
       toast.success(state.message);
-      setGroupId("");
-      setEntityName("");
-      setStatus("prospect");
-      setCurrency(DEFAULT_PLATFORM_CURRENCY);
-      setCountry("");
-      setCity("");
-      setCategorySlug("");
-      setSubcategorySlug("");
-      setCategoryTouched(false);
-      resetClassificationRequest();
+      resetDialogForm();
       setOpen(false);
       if (state.clientId) {
         router.push(`/clients/${state.clientId}`);
@@ -122,7 +134,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const groupOptions = groups.map((g) => ({ value: g.id, label: g.name }));
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <PlusIcon data-icon="inline-start" />
@@ -195,7 +207,8 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               <p className="text-xs text-destructive">{duplicateMessage}</p>
             ) : checking ? (
               <p className="text-xs text-muted-foreground">Checking availability…</p>
-            ) : classifying ? (
+            ) : null}
+            {classifying ? (
               <p className="text-xs text-muted-foreground">Classifying…</p>
             ) : classifyMessage ? (
               <p className="text-xs text-muted-foreground">{classifyMessage}</p>

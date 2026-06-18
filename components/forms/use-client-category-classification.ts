@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { classifyClientCategoryAction } from "@/features/clients/actions";
+import { classifyClientCategoryAction } from "@/features/clients/classify-category-action";
 
 type ClassificationResult = {
   categorySlug: string;
@@ -28,7 +28,8 @@ export function useClientCategoryClassification({
 }: UseClientCategoryClassificationOptions) {
   const [classifying, setClassifying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const lastRequested = useRef("");
+  const requestIdRef = useRef(0);
+  const lastSuccessKeyRef = useRef("");
   const onClassifiedRef = useRef(onClassified);
   onClassifiedRef.current = onClassified;
 
@@ -36,21 +37,23 @@ export function useClientCategoryClassification({
     const trimmed = companyName.trim();
     if (!enabled || trimmed.length < 3) {
       setClassifying(false);
-      setMessage(null);
+      if (trimmed.length < 3) {
+        setMessage(null);
+      }
       return;
     }
 
     const requestKey = `${trimmed}|${country ?? ""}|${website ?? ""}`;
-    if (requestKey === lastRequested.current) {
+    if (requestKey === lastSuccessKeyRef.current) {
+      setClassifying(false);
       return;
     }
 
-    let cancelled = false;
+    const requestId = ++requestIdRef.current;
     setClassifying(true);
     setMessage("Classifying…");
 
     const timer = window.setTimeout(async () => {
-      lastRequested.current = requestKey;
       try {
         const result = await classifyClientCategoryAction({
           name: trimmed,
@@ -58,15 +61,18 @@ export function useClientCategoryClassification({
           website: website || undefined,
         });
 
-        if (cancelled) {
+        if (requestId !== requestIdRef.current) {
           return;
         }
 
         if (!result.ok || !result.categorySlug || !result.subcategorySlug) {
-          setMessage(result.message ?? null);
+          setMessage(
+            result.message ?? "Could not classify — select category manually."
+          );
           return;
         }
 
+        lastSuccessKeyRef.current = requestKey;
         onClassifiedRef.current?.({
           categorySlug: result.categorySlug,
           subcategorySlug: result.subcategorySlug,
@@ -82,24 +88,27 @@ export function useClientCategoryClassification({
           }. You can override below.`
         );
       } catch {
-        if (!cancelled) {
-          setMessage(null);
+        if (requestId !== requestIdRef.current) {
+          return;
         }
+        setMessage("Classification failed — select category manually.");
       } finally {
-        if (!cancelled) {
+        if (requestId === requestIdRef.current) {
           setClassifying(false);
         }
       }
     }, 700);
 
     return () => {
-      cancelled = true;
       window.clearTimeout(timer);
+      requestIdRef.current += 1;
     };
   }, [companyName, country, website, enabled]);
 
   function resetClassificationRequest() {
-    lastRequested.current = "";
+    lastSuccessKeyRef.current = "";
+    requestIdRef.current += 1;
+    setClassifying(false);
     setMessage(null);
   }
 
