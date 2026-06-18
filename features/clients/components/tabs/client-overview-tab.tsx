@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ClientFormField,
   ClientFormGrid,
+  ClientFormKeyboardShortcuts,
   ClientFormLayout,
   ClientFormPageHeader,
   ClientFormSaveBar,
@@ -66,6 +67,8 @@ type ClientOverviewTabProps = {
   groups: { id: string; name: string; document_number: string }[];
   masterData: MasterDataOptions;
   onCancel?: () => void;
+  /** When false, Ctrl+S is not wired to this form (e.g. another profile tab is active). */
+  shortcutsEnabled?: boolean;
 };
 
 export function ClientOverviewTab({
@@ -73,6 +76,7 @@ export function ClientOverviewTab({
   groups,
   masterData,
   onCancel,
+  shortcutsEnabled = true,
 }: ClientOverviewTabProps) {
   const [status, setStatus] = useState(client.status);
   const [groupId, setGroupId] = useState(client.group_id ?? "");
@@ -248,6 +252,12 @@ export function ClientOverviewTab({
       : serializeTermsText(ioTerms);
 
   return (
+    <>
+    <ClientFormKeyboardShortcuts
+      formId="client-overview-form"
+      enabled={shortcutsEnabled}
+      disabled={isPending}
+    />
     <ClientFormLayout
       topbar={
         <ClientFormTopbar
@@ -292,6 +302,11 @@ export function ClientOverviewTab({
           id="client-overview-form"
           action={formAction}
           className="grid gap-[18px]"
+          onSubmit={(event) => {
+            if (isPending) {
+              event.preventDefault();
+            }
+          }}
         >
         <input type="hidden" name="client_id" value={client.id} />
         <input type="hidden" name="status" value={status} />
@@ -621,5 +636,6 @@ export function ClientOverviewTab({
         </form>
       </div>
     </ClientFormLayout>
+    </>
   );
 }

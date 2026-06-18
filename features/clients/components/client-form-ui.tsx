@@ -6,7 +6,54 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Label } from "@/components/ui/label";
+import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 import { cn } from "@/lib/utils";
+
+/** Marks a form as the Ctrl+S / Cmd+S save target (see KeyboardShortcutsProvider). */
+export const CLIENT_FORM_SHORTCUT_SAVE_ATTR = "data-shortcut-save";
+
+/** Registers Ctrl+S / Cmd+S to submit a form when `enabled` (e.g. active tab or open dialog). */
+export function useClientFormSaveShortcut({
+  formId,
+  enabled = true,
+  disabled = false,
+}: {
+  formId: string;
+  enabled?: boolean;
+  disabled?: boolean;
+}) {
+  useRegisterShortcut(
+    enabled
+      ? {
+          id: `client-form-save-${formId}`,
+          keys: "ctrl+s",
+          label: "Save form",
+          group: "Forms",
+          global: true,
+          handler: () => {
+            if (disabled) return;
+            const form = document.getElementById(formId);
+            if (form instanceof HTMLFormElement) {
+              form.requestSubmit();
+            }
+          },
+        }
+      : null
+  );
+}
+
+export function ClientFormKeyboardShortcuts({
+  formId,
+  enabled = true,
+  disabled = false,
+}: {
+  formId: string;
+  enabled?: boolean;
+  disabled?: boolean;
+}) {
+  useClientFormSaveShortcut({ formId, enabled, disabled });
+  return null;
+}
 
 /** Form controls — Thinkway client form reference (Form_4: blue brand, neutral surfaces). */
 export const CLIENT_FORM_MAX_WIDTH = "max-w-[880px]";

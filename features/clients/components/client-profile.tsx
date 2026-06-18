@@ -170,6 +170,7 @@ export function ClientProfile({
               groups={groups}
               masterData={masterData}
               onCancel={() => router.push("/clients")}
+              shortcutsEnabled={activeTab === "overview"}
             />
           </OperationalWorkspaceTabPanel>
         </OperationalWorkspaceTabContent>

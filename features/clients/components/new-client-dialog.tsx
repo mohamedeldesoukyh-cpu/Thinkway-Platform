@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ClientFormField,
   ClientFormGrid,
+  ClientFormKeyboardShortcuts,
   ClientFormSection,
   CLIENT_FORM_FIELD_HINT_CLASS,
   CLIENT_FORM_GHOST_BUTTON_CLASS,
@@ -179,7 +180,21 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             assign one later from the client profile.
           </DialogDescription>
         </DialogHeader>
-        <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+        <ClientFormKeyboardShortcuts
+          formId="new-client-form"
+          enabled={open}
+          disabled={isPending || isDuplicate || checking}
+        />
+        <form
+          id="new-client-form"
+          action={formAction}
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={(event) => {
+            if (isPending || isDuplicate || checking) {
+              event.preventDefault();
+            }
+          }}
+        >
           <input type="hidden" name="group_id" value={groupId} />
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
