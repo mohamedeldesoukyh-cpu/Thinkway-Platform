@@ -11,6 +11,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { findDuplicateClient } from "@/lib/validation/checks";
 import { friendlyActionError } from "@/lib/validation/hierarchy";
 import { buildClassificationAuditPayload } from "@/lib/clients/build-classification-audit";
+import {
+  insertClientWithClassificationAudit,
+  updateClientWithClassificationAudit,
+} from "@/lib/clients/classification-audit-columns";
 import { upsertClientClassificationCache } from "@/lib/clients/client-classification-cache";
 import type { AgencyOrDirect, PaymentTerms } from "@/types/database";
 
@@ -132,9 +136,9 @@ export async function createClientAction(
     now
   );
 
-  const { data, error } = await supabase
-    .from("clients")
-    .insert({
+  const { data, error } = await insertClientWithClassificationAudit(
+    supabase,
+    {
       name: parsed.data.name,
       name_ar: emptyToNull(parsed.data.name_ar),
       legal_name: emptyToNull(parsed.data.legal_name) ?? parsed.data.name,
@@ -143,7 +147,6 @@ export async function createClientAction(
       industry: emptyToNull(parsed.data.industry),
       client_category: parsed.data.client_category,
       client_subcategory: parsed.data.client_subcategory,
-      ...audit,
       vr_rate_id: parsed.data.vr_rate_id,
       website: emptyToNull(parsed.data.website),
       status: parsed.data.status,
@@ -154,15 +157,15 @@ export async function createClientAction(
       notes: emptyToNull(parsed.data.notes),
       client_io_terms_text: clientIoTermsText,
       created_by: user.id,
-    })
-    .select("id")
-    .single();
+    },
+    audit
+  );
 
-  if (error) {
+  if (error || !data) {
     return {
       ok: false,
-      message: friendlyActionError(error, "client", error.message),
-      fieldErrors: error.code === "23505" ? { name: [friendlyActionError(error, "client")] } : undefined,
+      message: friendlyActionError(error, "client", error?.message ?? "Client could not be created."),
+      fieldErrors: error?.code === "23505" ? { name: [friendlyActionError(error, "client")] } : undefined,
     };
   }
 
@@ -260,9 +263,10 @@ export async function updateClientOverviewAction(
     now
   );
 
-  const { error } = await supabase
-    .from("clients")
-    .update({
+  const { error } = await updateClientWithClassificationAudit(
+    supabase,
+    client_id,
+    {
       name: fields.name,
       name_ar: emptyToNull(fields.name_ar),
       legal_name: emptyToNull(fields.legal_name),
@@ -271,7 +275,6 @@ export async function updateClientOverviewAction(
       industry: emptyToNull(fields.industry),
       client_category: fields.client_category,
       client_subcategory: fields.client_subcategory,
-      ...audit,
       vr_rate_id: fields.vr_rate_id,
       website: emptyToNull(fields.website),
       status: fields.status,
@@ -281,8 +284,9 @@ export async function updateClientOverviewAction(
       city: emptyToNull(fields.city),
       notes: emptyToNull(fields.notes),
       client_io_terms_text: clientIoTermsText,
-    })
-    .eq("id", client_id);
+    },
+    audit
+  );
 
   if (error) {
     return {
