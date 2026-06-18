@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2Icon, MapPinIcon, PlusIcon } from "lucide-react";
+import { ClipboardListIcon, MapPinIcon, PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -163,11 +163,11 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const groupOptions = groups.map((g) => ({ value: g.id, label: g.name }));
 
   const classificationStatusHint = categoryTouched ? (
-    <p className="text-xs text-muted-foreground">{CLIENT_CATEGORY_PAUSE_MESSAGE}</p>
+    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{CLIENT_CATEGORY_PAUSE_MESSAGE}</p>
   ) : classifyingLabel ? (
-    <p className="text-xs text-muted-foreground">{classifyingLabel}</p>
+    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{classifyingLabel}</p>
   ) : classifyMessage ? (
-    <p className="text-xs text-muted-foreground">{classifyMessage}</p>
+    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{classifyMessage}</p>
   ) : null;
 
   return (
@@ -237,30 +237,11 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             ) : null}
 
             <ClientFormSection
-              icon={Building2Icon}
+              icon={ClipboardListIcon}
               title="Identity"
               description="Legal name and classification"
               className="shadow-none"
             >
-              <ClientFormField label="Holding group (optional)">
-                <SearchableSelect
-                  value={groupId}
-                  onValueChange={setGroupId}
-                  options={groupOptions}
-                  disabled={isPending}
-                  placeholder={
-                    groups.length > 0 ? "Link to group (optional)" : "No groups yet"
-                  }
-                  className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
-                />
-                <FieldError messages={state.fieldErrors?.group_id} />
-                {groups.length === 0 ? (
-                  <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
-                    You can create a client without a group and link one later.
-                  </p>
-                ) : null}
-              </ClientFormField>
-
               <ClientFormGrid>
                 <ClientFormField label="Client legal name" htmlFor="name">
                   <Input
@@ -281,7 +262,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                   {duplicateMessage ? (
                     <p className="text-xs text-destructive">{duplicateMessage}</p>
                   ) : checking ? (
-                    <p className="text-xs text-muted-foreground">Checking availability…</p>
+                    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>Checking availability…</p>
                   ) : null}
                   {classificationStatusHint}
                 </ClientFormField>
@@ -298,25 +279,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                   <FieldError messages={state.fieldErrors?.name_ar} />
                 </ClientFormField>
               </ClientFormGrid>
-
-              <ClientFormField label="Relationship type">
-                <Select
-                  value={agencyOrDirect}
-                  onValueChange={(v) => setAgencyOrDirect(v as AgencyOrDirect)}
-                  disabled={isPending}
-                >
-                  <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </ClientFormField>
 
               <ClientCategorySuggestion
                 suggestion={categoryTouched ? null : suggestion}
@@ -347,6 +309,44 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               />
               <FieldError messages={state.fieldErrors?.client_category} />
               <FieldError messages={state.fieldErrors?.client_subcategory} />
+
+              <ClientFormField label="Holding group (optional)">
+                <SearchableSelect
+                  value={groupId}
+                  onValueChange={setGroupId}
+                  options={groupOptions}
+                  disabled={isPending}
+                  placeholder={
+                    groups.length > 0 ? "Link to group (optional)" : "No groups yet"
+                  }
+                  className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+                />
+                <FieldError messages={state.fieldErrors?.group_id} />
+                {groups.length === 0 ? (
+                  <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
+                    You can create a client without a group and link one later.
+                  </p>
+                ) : null}
+              </ClientFormField>
+
+              <ClientFormField label="Relationship type">
+                <Select
+                  value={agencyOrDirect}
+                  onValueChange={(v) => setAgencyOrDirect(v as AgencyOrDirect)}
+                  disabled={isPending}
+                >
+                  <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </ClientFormField>
             </ClientFormSection>
 
             <ClientFormSection

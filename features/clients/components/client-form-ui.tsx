@@ -55,15 +55,33 @@ export function ClientFormPageHeader({
 }) {
   return (
     <header className="mb-6">
-      <h2 className="text-[25px] font-extrabold tracking-[-0.02em] text-foreground">
+      <h1 className="text-[25px] font-extrabold tracking-[-0.035em] text-foreground">
         {title}
-      </h2>
+      </h1>
       {description ? (
         <p className="mt-[5px] text-sm text-muted-foreground">{description}</p>
       ) : null}
     </header>
   );
 }
+
+/** Scrollable form body + pinned footer (Form_3 save bar pattern). */
+export function ClientFormLayout({
+  children,
+  footer,
+}: {
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+      {footer}
+    </div>
+  );
+}
+
+export const CLIENT_FORM_SCROLL_PADDING_CLASS = "px-[26px] pt-7 pb-[120px]";
 
 export function ClientFormSection({
   icon: Icon,
@@ -159,7 +177,7 @@ export function ClientFormSaveBar({
   discardDisabled?: boolean;
 }) {
   return (
-    <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex flex-wrap items-center gap-3.5 border-t border-border/80 bg-background/[0.88] px-[26px] py-3.5 backdrop-blur-[14px] sm:-mx-5 md:-mx-0 md:rounded-b-[20px]">
+    <div className="z-10 flex shrink-0 flex-wrap items-center gap-3.5 border-t border-border/80 bg-background/[0.88] px-[26px] py-3.5 backdrop-blur-[14px]">
       {status ? (
         <div className="flex items-center gap-[7px] text-[12.5px] text-muted-foreground">
           {status}

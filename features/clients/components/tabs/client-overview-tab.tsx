@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import {
-  Building2Icon,
+  ClipboardListIcon,
   DollarSignIcon,
   FileTextIcon,
   MapPinIcon,
@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ClientFormField,
   ClientFormGrid,
+  ClientFormLayout,
   ClientFormPageHeader,
   ClientFormSaveBar,
   ClientFormSection,
@@ -39,8 +40,10 @@ import {
   CLIENT_FORM_INPUT_CLASS,
   CLIENT_FORM_MAX_WIDTH,
   CLIENT_FORM_PRIMARY_BUTTON_CLASS,
+  CLIENT_FORM_SCROLL_PADDING_CLASS,
   CLIENT_FORM_SELECT_TRIGGER_CLASS,
   CLIENT_FORM_TEXTAREA_CLASS,
+  CLIENT_FORM_FIELD_HINT_CLASS,
 } from "@/features/clients/components/client-form-ui";
 import {
   updateClientOverviewAction,
@@ -209,26 +212,44 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
       : serializeTermsText(ioTerms);
 
   const classificationStatusHint = categoryManuallySet ? (
-    <p className="text-xs text-muted-foreground">{CLIENT_CATEGORY_PAUSE_MESSAGE}</p>
+    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{CLIENT_CATEGORY_PAUSE_MESSAGE}</p>
   ) : classifyingLabel ? (
-    <p className="text-xs text-muted-foreground">{classifyingLabel}</p>
+    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{classifyingLabel}</p>
   ) : classifyMessage ? (
-    <p className="text-xs text-muted-foreground">{classifyMessage}</p>
+    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{classifyMessage}</p>
   ) : null;
 
   return (
-    <div className={cn("mx-auto w-full pb-[120px]", CLIENT_FORM_MAX_WIDTH)}>
-      <ClientFormPageHeader
-        title="Edit legal entity"
-        description="Update the client's profile, billing, and default insertion-order terms."
-      />
+    <ClientFormLayout
+      footer={
+        <ClientFormSaveBar
+          status={<ClientFormUnsavedStatus />}
+          onDiscard={discardChanges}
+          discardDisabled={isPending}
+        >
+          <button
+            type="submit"
+            form="client-overview-form"
+            className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
+            disabled={isPending}
+          >
+            {isPending ? "Saving…" : "Save changes"}
+          </button>
+        </ClientFormSaveBar>
+      }
+    >
+      <div className={cn("mx-auto w-full", CLIENT_FORM_MAX_WIDTH, CLIENT_FORM_SCROLL_PADDING_CLASS)}>
+        <ClientFormPageHeader
+          title="Edit legal entity"
+          description="Update the client's profile, billing, and default insertion-order terms."
+        />
 
-      <form
-        key={formKey}
-        id="client-overview-form"
-        action={formAction}
-        className="grid gap-[18px]"
-      >
+        <form
+          key={formKey}
+          id="client-overview-form"
+          action={formAction}
+          className="grid gap-[18px]"
+        >
         <input type="hidden" name="client_id" value={client.id} />
         <input type="hidden" name="status" value={status} />
         <input type="hidden" name="group_id" value={groupId} />
@@ -282,41 +303,10 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
         ) : null}
 
         <ClientFormSection
-          icon={Building2Icon}
+          icon={ClipboardListIcon}
           title="Identity"
           description="Legal name and classification"
         >
-          <ClientFormGrid>
-            <ClientFormField label="Group">
-              <SearchableSelect
-                value={groupId}
-                onValueChange={setGroupId}
-                options={groupOptions}
-                disabled={isPending}
-                className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
-              />
-              <FieldError messages={state.fieldErrors?.group_id} />
-            </ClientFormField>
-            <ClientFormField label="Status">
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as ClientStatus)}
-                disabled={isPending}
-              >
-                <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLIENT_STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </ClientFormField>
-          </ClientFormGrid>
-
           <ClientFormGrid>
             <ClientFormField label="Client name (English)" htmlFor="name">
               <Input
@@ -350,17 +340,6 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
             </ClientFormField>
           </ClientFormGrid>
 
-          <ClientFormField label="Legal name" htmlFor="legal_name">
-            <Input
-              id="legal_name"
-              name="legal_name"
-              className={CLIENT_FORM_INPUT_CLASS}
-              defaultValue={client.legal_name ?? ""}
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.legal_name} />
-          </ClientFormField>
-
           <ClientCategorySuggestion
             suggestion={categoryManuallySet ? null : suggestion}
             applied={suggestionApplied}
@@ -390,6 +369,48 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
           />
           <FieldError messages={state.fieldErrors?.client_category} />
           <FieldError messages={state.fieldErrors?.client_subcategory} />
+
+          <ClientFormField label="Legal name" htmlFor="legal_name">
+            <Input
+              id="legal_name"
+              name="legal_name"
+              className={CLIENT_FORM_INPUT_CLASS}
+              defaultValue={client.legal_name ?? ""}
+              disabled={isPending}
+            />
+            <FieldError messages={state.fieldErrors?.legal_name} />
+          </ClientFormField>
+
+          <ClientFormGrid>
+            <ClientFormField label="Group">
+              <SearchableSelect
+                value={groupId}
+                onValueChange={setGroupId}
+                options={groupOptions}
+                disabled={isPending}
+                className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+              />
+              <FieldError messages={state.fieldErrors?.group_id} />
+            </ClientFormField>
+            <ClientFormField label="Status">
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as ClientStatus)}
+                disabled={isPending}
+              >
+                <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLIENT_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </ClientFormField>
+          </ClientFormGrid>
         </ClientFormSection>
 
         <ClientFormSection
@@ -516,21 +537,8 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
             disabled={isPending}
           />
         </ClientFormSection>
-
-        <ClientFormSaveBar
-          status={<ClientFormUnsavedStatus />}
-          onDiscard={discardChanges}
-          discardDisabled={isPending}
-        >
-          <button
-            type="submit"
-            className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
-            disabled={isPending}
-          >
-            {isPending ? "Saving…" : "Save changes"}
-          </button>
-        </ClientFormSaveBar>
-      </form>
-    </div>
+        </form>
+      </div>
+    </ClientFormLayout>
   );
 }
