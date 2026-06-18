@@ -7,14 +7,8 @@ import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { ClientCategoryFields } from "@/components/forms/client-category-fields";
-import {
-  ClientCategorySuggestion,
-  type ClientCategorySuggestionState,
-} from "@/components/forms/client-category-suggestion";
-import {
-  useClientCategoryClassification,
-  CLIENT_CATEGORY_PAUSE_MESSAGE,
-} from "@/components/forms/use-client-category-classification";
+import type { ClientCategorySuggestionState } from "@/components/forms/client-category-suggestion";
+import { useClientCategoryClassification } from "@/components/forms/use-client-category-classification";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -87,23 +81,28 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const cityOptions = useMemo(() => getCityOptionsForCountry(country), [country]);
 
   const {
-    classifyingLabel,
-    message: classifyMessage,
     suggestion,
-    suggestionApplied,
-    acceptSuggestion,
-    overrideSuggestion,
     resetClassificationRequest,
   } = useClientCategoryClassification({
     companyName: entityName,
     country,
     enabled: open && !categoryTouched,
     onClassified: (result) => {
-      setCategorySlug(result.categorySlug);
-      setSubcategorySlug(result.subcategorySlug);
-      setClassificationMeta(result);
+      if (!categoryTouched) {
+        setCategorySlug(result.categorySlug);
+        setSubcategorySlug(result.subcategorySlug);
+        setClassificationMeta(result);
+      }
     },
   });
+
+  useEffect(() => {
+    if (open && !categoryTouched && suggestion && !categorySlug && !subcategorySlug) {
+      setCategorySlug(suggestion.categorySlug);
+      setSubcategorySlug(suggestion.subcategorySlug);
+      setClassificationMeta(suggestion);
+    }
+  }, [open, categoryTouched, suggestion, categorySlug, subcategorySlug]);
 
   function resetDialogForm() {
     setGroupId("");
@@ -161,14 +160,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   }, [state, router]);
 
   const groupOptions = groups.map((g) => ({ value: g.id, label: g.name }));
-
-  const classificationStatusHint = categoryTouched ? (
-    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{CLIENT_CATEGORY_PAUSE_MESSAGE}</p>
-  ) : classifyingLabel ? (
-    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{classifyingLabel}</p>
-  ) : classifyMessage ? (
-    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{classifyMessage}</p>
-  ) : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -243,7 +234,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               className="shadow-none"
             >
               <ClientFormGrid>
-                <ClientFormField label="Client legal name" htmlFor="name">
+                <ClientFormField label="Client name (English)" htmlFor="name">
                   <Input
                     id="name"
                     name="name"
@@ -255,7 +246,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                     }}
                     required
                     disabled={isPending}
-                    placeholder="Registered legal entity name"
+                    placeholder="e.g. Mindshare LTD"
                     className={CLIENT_FORM_INPUT_CLASS}
                   />
                   <FieldError messages={state.fieldErrors?.name} />
@@ -264,7 +255,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                   ) : checking ? (
                     <p className={CLIENT_FORM_FIELD_HINT_CLASS}>Checking availability…</p>
                   ) : null}
-                  {classificationStatusHint}
                 </ClientFormField>
 
                 <ClientFormField label="Client name (Arabic)" htmlFor="name_ar">
@@ -279,17 +269,6 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                   <FieldError messages={state.fieldErrors?.name_ar} />
                 </ClientFormField>
               </ClientFormGrid>
-
-              <ClientCategorySuggestion
-                suggestion={categoryTouched ? null : suggestion}
-                applied={suggestionApplied}
-                onAccept={acceptSuggestion}
-                onOverride={() => {
-                  overrideSuggestion();
-                  setCategoryTouched(true);
-                }}
-                disabled={isPending}
-              />
 
               <ClientCategoryFields
                 categorySlug={categorySlug}

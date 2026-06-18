@@ -1,12 +1,14 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import { SaveIcon } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-/** Form controls — Thinkway client form reference (Form_3: blue brand, neutral surfaces). */
+/** Form controls — Thinkway client form reference (Form_4: blue brand, neutral surfaces). */
 export const CLIENT_FORM_MAX_WIDTH = "max-w-[880px]";
 
 export const CLIENT_FORM_INPUT_CLASS = cn(
@@ -73,16 +75,99 @@ export function ClientFormPageHeader({
   );
 }
 
-/** Scrollable form body + pinned footer (Form_3 save bar pattern). */
+export type ClientFormBreadcrumb = {
+  label: string;
+  href?: string;
+};
+
+/** Top bar — Form_4 breadcrumbs + Cancel / Save actions. */
+export function ClientFormTopbar({
+  breadcrumbs,
+  onCancel,
+  saveFormId,
+  saveLabel = "Save changes",
+  saveDisabled,
+  isSaving,
+}: {
+  breadcrumbs: ClientFormBreadcrumb[];
+  onCancel?: () => void;
+  saveFormId?: string;
+  saveLabel?: string;
+  saveDisabled?: boolean;
+  isSaving?: boolean;
+}) {
+  return (
+    <div className="z-15 flex h-[62px] shrink-0 items-center gap-4 border-b border-[#E6EAF2] bg-white/70 px-[26px] backdrop-blur-md">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13.5px]">
+        {breadcrumbs.map((crumb, index) => {
+          const isLast = index === breadcrumbs.length - 1;
+          return (
+            <span key={`${crumb.label}-${index}`} className="flex items-center gap-2">
+              {index > 0 ? (
+                <span className="text-[#9099A8] opacity-50" aria-hidden>
+                  /
+                </span>
+              ) : null}
+              {crumb.href && !isLast ? (
+                <Link
+                  href={crumb.href}
+                  className="font-medium text-[#9099A8] transition-colors hover:text-[#3A4254]"
+                >
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span
+                  className={cn(
+                    isLast ? "font-semibold text-[#0B0F1A]" : "font-medium text-[#9099A8]"
+                  )}
+                >
+                  {crumb.label}
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </nav>
+      <div className="ml-auto flex shrink-0 items-center gap-2.5">
+        {onCancel ? (
+          <button
+            type="button"
+            className={CLIENT_FORM_GHOST_BUTTON_CLASS}
+            onClick={onCancel}
+            disabled={saveDisabled}
+          >
+            Cancel
+          </button>
+        ) : null}
+        {saveFormId ? (
+          <button
+            type="submit"
+            form={saveFormId}
+            className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
+            disabled={saveDisabled}
+          >
+            <SaveIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
+            {isSaving ? "Saving…" : saveLabel}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Scrollable form body + pinned footer (Form_4 save bar pattern). */
 export function ClientFormLayout({
   children,
   footer,
+  topbar,
 }: {
   children: ReactNode;
   footer?: ReactNode;
+  topbar?: ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      {topbar}
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       {footer}
     </div>

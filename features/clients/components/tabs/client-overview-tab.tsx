@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import {
+  ChevronDownIcon,
   ClipboardListIcon,
   DollarSignIcon,
   FileTextIcon,
@@ -11,14 +12,8 @@ import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { ClientCategoryFields } from "@/components/forms/client-category-fields";
-import {
-  ClientCategorySuggestion,
-  type ClientCategorySuggestionState,
-} from "@/components/forms/client-category-suggestion";
-import {
-  useClientCategoryClassification,
-  CLIENT_CATEGORY_PAUSE_MESSAGE,
-} from "@/components/forms/use-client-category-classification";
+import type { ClientCategorySuggestionState } from "@/components/forms/client-category-suggestion";
+import { useClientCategoryClassification } from "@/components/forms/use-client-category-classification";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +31,7 @@ import {
   ClientFormPageHeader,
   ClientFormSaveBar,
   ClientFormSection,
+  ClientFormTopbar,
   ClientFormUnsavedStatus,
   CLIENT_FORM_INPUT_CLASS,
   CLIENT_FORM_MAX_WIDTH,
@@ -43,7 +39,6 @@ import {
   CLIENT_FORM_SCROLL_PADDING_CLASS,
   CLIENT_FORM_SELECT_TRIGGER_CLASS,
   CLIENT_FORM_TEXTAREA_CLASS,
-  CLIENT_FORM_FIELD_HINT_CLASS,
 } from "@/features/clients/components/client-form-ui";
 import {
   updateClientOverviewAction,
@@ -70,9 +65,15 @@ type ClientOverviewTabProps = {
   client: ClientDetail;
   groups: { id: string; name: string; document_number: string }[];
   masterData: MasterDataOptions;
+  onCancel?: () => void;
 };
 
-export function ClientOverviewTab({ client, groups, masterData }: ClientOverviewTabProps) {
+export function ClientOverviewTab({
+  client,
+  groups,
+  masterData,
+  onCancel,
+}: ClientOverviewTabProps) {
   const [status, setStatus] = useState(client.status);
   const [groupId, setGroupId] = useState(client.group_id ?? "");
   const [displayName, setDisplayName] = useState(client.name);
@@ -103,6 +104,14 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
       return null;
     });
   const [vrRateId, setVrRateId] = useState(client.vr_rate_id ?? "");
+  const [legalName, setLegalName] = useState(client.legal_name ?? "");
+  const [nameAr, setNameAr] = useState(client.name_ar ?? "");
+  const [website, setWebsite] = useState(client.website ?? "");
+  const [billingEmail, setBillingEmail] = useState(client.billing_email ?? "");
+  const [billingPhone, setBillingPhone] = useState(client.billing_phone ?? "");
+  const [notes, setNotes] = useState(client.notes ?? "");
+  const [isDirty, setIsDirty] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const cityOptions = useMemo(() => {
     const options = getCityOptionsForCountry(country);
     if (city && !options.some((option) => option.value === city)) {
@@ -112,28 +121,39 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
   }, [country, city]);
 
   const {
-    classifyingLabel,
-    message: classifyMessage,
     suggestion,
-    suggestionApplied,
-    acceptSuggestion,
-    overrideSuggestion,
     resetClassificationRequest,
   } = useClientCategoryClassification({
     companyName: displayName,
     country,
-    website: client.website ?? undefined,
+    website: website || undefined,
     clientId: client.id,
     useStoredApproved:
       !categoryManuallySet &&
       Boolean(client.approved_by_user && client.client_category),
     enabled: !categoryManuallySet,
     onClassified: (result) => {
-      setCategorySlug(result.categorySlug);
-      setSubcategorySlug(result.subcategorySlug);
-      setClassificationMeta(result);
+      if (!categoryManuallySet) {
+        setCategorySlug(result.categorySlug);
+        setSubcategorySlug(result.subcategorySlug);
+        setClassificationMeta(result);
+      }
     },
   });
+
+  // Silently pre-fill category when classification returns and fields are empty.
+  useEffect(() => {
+    if (
+      !categoryManuallySet &&
+      suggestion &&
+      !categorySlug &&
+      !subcategorySlug
+    ) {
+      setCategorySlug(suggestion.categorySlug);
+      setSubcategorySlug(suggestion.subcategorySlug);
+      setClassificationMeta(suggestion);
+    }
+  }, [categoryManuallySet, suggestion, categorySlug, subcategorySlug]);
 
   const [ioTerms, setIoTerms] = useState<ClientIoTerm[]>(
     () => parseTermsText(client.client_io_terms_text) ?? CLIENT_IO_DEFAULT_TERMS
@@ -141,7 +161,10 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
   const [usePlatformIoTerms, setUsePlatformIoTerms] = useState(
     () => !parseTermsText(client.client_io_terms_text)
   );
-  const [formKey, setFormKey] = useState(0);
+
+  function markDirty() {
+    setIsDirty(true);
+  }
 
   function buildClassificationMetaFromClient(): ClientCategorySuggestionState | null {
     if (
@@ -173,12 +196,24 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
     setCategoryManuallySet(false);
     setClassificationMeta(buildClassificationMetaFromClient());
     setVrRateId(client.vr_rate_id ?? "");
+    setLegalName(client.legal_name ?? "");
+    setNameAr(client.name_ar ?? "");
+    setWebsite(client.website ?? "");
+    setBillingEmail(client.billing_email ?? "");
+    setBillingPhone(client.billing_phone ?? "");
+    setNotes(client.notes ?? "");
     setIoTerms(
       parseTermsText(client.client_io_terms_text) ?? CLIENT_IO_DEFAULT_TERMS
     );
     setUsePlatformIoTerms(!parseTermsText(client.client_io_terms_text));
     resetClassificationRequest();
+    setIsDirty(false);
     setFormKey((key) => key + 1);
+  }
+
+  function handleCancel() {
+    discardChanges();
+    onCancel?.();
   }
 
   const [state, formAction, isPending] = useActionState(
@@ -192,6 +227,7 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
     }
     if (state.ok) {
       toast.success(state.message);
+      setIsDirty(false);
       return;
     }
 
@@ -211,31 +247,38 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
       ? ""
       : serializeTermsText(ioTerms);
 
-  const classificationStatusHint = categoryManuallySet ? (
-    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{CLIENT_CATEGORY_PAUSE_MESSAGE}</p>
-  ) : classifyingLabel ? (
-    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{classifyingLabel}</p>
-  ) : classifyMessage ? (
-    <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{classifyMessage}</p>
-  ) : null;
-
   return (
     <ClientFormLayout
+      topbar={
+        <ClientFormTopbar
+          breadcrumbs={[
+            { label: "Clients", href: "/clients" },
+            { label: "Legal Entities", href: "/clients" },
+            { label: "Edit" },
+          ]}
+          onCancel={handleCancel}
+          saveFormId="client-overview-form"
+          saveDisabled={isPending}
+          isSaving={isPending}
+        />
+      }
       footer={
-        <ClientFormSaveBar
-          status={<ClientFormUnsavedStatus />}
-          onDiscard={discardChanges}
-          discardDisabled={isPending}
-        >
-          <button
-            type="submit"
-            form="client-overview-form"
-            className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
-            disabled={isPending}
+        isDirty ? (
+          <ClientFormSaveBar
+            status={<ClientFormUnsavedStatus />}
+            onDiscard={discardChanges}
+            discardDisabled={isPending}
           >
-            {isPending ? "Saving…" : "Save changes"}
-          </button>
-        </ClientFormSaveBar>
+            <button
+              type="submit"
+              form="client-overview-form"
+              className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
+              disabled={isPending}
+            >
+              {isPending ? "Saving…" : "Save changes"}
+            </button>
+          </ClientFormSaveBar>
+        ) : null
       }
     >
       <div className={cn("mx-auto w-full", CLIENT_FORM_MAX_WIDTH, CLIENT_FORM_SCROLL_PADDING_CLASS)}>
@@ -318,20 +361,24 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
                   setDisplayName(e.target.value);
                   setCategoryManuallySet(false);
                   resetClassificationRequest();
+                  markDirty();
                 }}
                 required
                 disabled={isPending}
                 placeholder="e.g. Mindshare LTD"
               />
               <FieldError messages={state.fieldErrors?.name} />
-              {classificationStatusHint}
             </ClientFormField>
             <ClientFormField label="Client name (Arabic)" htmlFor="name_ar">
               <Input
                 id="name_ar"
                 name="name_ar"
                 className={CLIENT_FORM_INPUT_CLASS}
-                defaultValue={client.name_ar ?? ""}
+                value={nameAr}
+                onChange={(e) => {
+                  setNameAr(e.target.value);
+                  markDirty();
+                }}
                 disabled={isPending}
                 placeholder="Optional Arabic legal name"
                 dir="rtl"
@@ -340,17 +387,6 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
             </ClientFormField>
           </ClientFormGrid>
 
-          <ClientCategorySuggestion
-            suggestion={categoryManuallySet ? null : suggestion}
-            applied={suggestionApplied}
-            onAccept={acceptSuggestion}
-            onOverride={() => {
-              overrideSuggestion();
-              setCategoryManuallySet(true);
-            }}
-            disabled={isPending}
-          />
-
           <ClientCategoryFields
             categorySlug={categorySlug}
             subcategorySlug={subcategorySlug}
@@ -358,11 +394,13 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
               setCategoryManuallySet(true);
               setCategorySlug(value);
               setClassificationMeta(null);
+              markDirty();
             }}
             onSubcategoryChange={(value) => {
               setCategoryManuallySet(true);
               setSubcategorySlug(value);
               setClassificationMeta(null);
+              markDirty();
             }}
             disabled={isPending}
             layout="grid"
@@ -370,47 +408,65 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
           <FieldError messages={state.fieldErrors?.client_category} />
           <FieldError messages={state.fieldErrors?.client_subcategory} />
 
-          <ClientFormField label="Legal name" htmlFor="legal_name">
-            <Input
-              id="legal_name"
-              name="legal_name"
-              className={CLIENT_FORM_INPUT_CLASS}
-              defaultValue={client.legal_name ?? ""}
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.legal_name} />
-          </ClientFormField>
+          <details className="group rounded-[12px] border border-[#E6EAF2] bg-[#F5F8FD] open:bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[13px] font-semibold text-[#3A4254] marker:content-none [&::-webkit-details-marker]:hidden">
+              <span>Administration</span>
+              <ChevronDownIcon className="size-4 text-[#9099A8] transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="space-y-[18px] border-t border-[#E6EAF2] px-4 py-4">
+              <ClientFormField label="Legal name" htmlFor="legal_name">
+                <Input
+                  id="legal_name"
+                  name="legal_name"
+                  className={CLIENT_FORM_INPUT_CLASS}
+                  value={legalName}
+                  onChange={(e) => {
+                    setLegalName(e.target.value);
+                    markDirty();
+                  }}
+                  disabled={isPending}
+                />
+                <FieldError messages={state.fieldErrors?.legal_name} />
+              </ClientFormField>
 
-          <ClientFormGrid>
-            <ClientFormField label="Group">
-              <SearchableSelect
-                value={groupId}
-                onValueChange={setGroupId}
-                options={groupOptions}
-                disabled={isPending}
-                className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
-              />
-              <FieldError messages={state.fieldErrors?.group_id} />
-            </ClientFormField>
-            <ClientFormField label="Status">
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as ClientStatus)}
-                disabled={isPending}
-              >
-                <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLIENT_STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </ClientFormField>
-          </ClientFormGrid>
+              <ClientFormGrid>
+                <ClientFormField label="Group">
+                  <SearchableSelect
+                    value={groupId}
+                    onValueChange={(value) => {
+                      setGroupId(value);
+                      markDirty();
+                    }}
+                    options={groupOptions}
+                    disabled={isPending}
+                    className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+                  />
+                  <FieldError messages={state.fieldErrors?.group_id} />
+                </ClientFormField>
+                <ClientFormField label="Status">
+                  <Select
+                    value={status}
+                    onValueChange={(v) => {
+                      setStatus(v as ClientStatus);
+                      markDirty();
+                    }}
+                    disabled={isPending}
+                  >
+                    <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLIENT_STATUS_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </ClientFormField>
+              </ClientFormGrid>
+            </div>
+          </details>
         </ClientFormSection>
 
         <ClientFormSection
@@ -425,7 +481,10 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
             >
               <SearchableSelect
                 value={vrRateId}
-                onValueChange={setVrRateId}
+                onValueChange={(value) => {
+                  setVrRateId(value);
+                  markDirty();
+                }}
                 options={masterData.vrRates.map((rate) => ({
                   value: rate.id,
                   label: rate.name,
@@ -442,7 +501,11 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
                 name="website"
                 type="url"
                 className={CLIENT_FORM_INPUT_CLASS}
-                defaultValue={client.website ?? ""}
+                value={website}
+                onChange={(e) => {
+                  setWebsite(e.target.value);
+                  markDirty();
+                }}
                 disabled={isPending}
                 placeholder="https://"
               />
@@ -463,6 +526,7 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
                 onValueChange={(value) => {
                   setCountry(value);
                   setCity("");
+                  markDirty();
                 }}
                 options={COUNTRY_OPTIONS}
                 disabled={isPending}
@@ -472,7 +536,10 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
             <ClientFormField label="City">
               <SearchableSelect
                 value={city}
-                onValueChange={setCity}
+                onValueChange={(value) => {
+                  setCity(value);
+                  markDirty();
+                }}
                 options={cityOptions}
                 disabled={isPending || !country}
                 placeholder={country ? "Select city" : "Select country first"}
@@ -489,7 +556,11 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
                 name="billing_email"
                 type="email"
                 className={CLIENT_FORM_INPUT_CLASS}
-                defaultValue={client.billing_email ?? ""}
+                value={billingEmail}
+                onChange={(e) => {
+                  setBillingEmail(e.target.value);
+                  markDirty();
+                }}
                 disabled={isPending}
                 placeholder="billing@company.com"
               />
@@ -499,7 +570,11 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
                 id="billing_phone"
                 name="billing_phone"
                 className={CLIENT_FORM_INPUT_CLASS}
-                defaultValue={client.billing_phone ?? ""}
+                value={billingPhone}
+                onChange={(e) => {
+                  setBillingPhone(e.target.value);
+                  markDirty();
+                }}
                 disabled={isPending}
                 placeholder="+20 1XX XXX XXXX"
               />
@@ -512,7 +587,11 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
               name="notes"
               rows={3}
               className={CLIENT_FORM_TEXTAREA_CLASS}
-              defaultValue={client.notes ?? ""}
+              value={notes}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                markDirty();
+              }}
               disabled={isPending}
               placeholder="Internal notes about this client…"
             />
@@ -529,10 +608,12 @@ export function ClientOverviewTab({ client, groups, masterData }: ClientOverview
             onChange={(next) => {
               setIoTerms(next);
               setUsePlatformIoTerms(false);
+              markDirty();
             }}
             onRecover={() => {
               setIoTerms(CLIENT_IO_DEFAULT_TERMS);
               setUsePlatformIoTerms(true);
+              markDirty();
             }}
             disabled={isPending}
           />

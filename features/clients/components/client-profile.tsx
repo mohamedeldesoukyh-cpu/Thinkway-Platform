@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Tabs } from "@/components/ui/tabs";
 import {
@@ -23,6 +24,7 @@ import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 import type { ClientDetail } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 import { ClientStatusBadge } from "./client-status-badge";
 import { ClientBrandsTab } from "./tabs/client-brands-tab";
@@ -49,6 +51,9 @@ export function ClientProfile({
   clientIoRecipients,
   clientAccessPanel,
 }: ClientProfileProps) {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ClientProfileTabId>("overview");
+  const isEditView = activeTab === "overview";
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const { tabOrder, moveTab } = useWorkspaceTabOrder({
     storageKey: CLIENT_PROFILE_TAB_STORAGE_KEY,
@@ -79,34 +84,78 @@ export function ClientProfile({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-0">
-      <OperationalWorkspaceChrome
-        backButton={
-          <PageBackButton fallbackHref="/clients" label="Back to clients" />
-        }
-        title={client.name}
-        badges={<ClientStatusBadge status={client.status} />}
-        meta={
-          <>
-            <DocumentNumber value={client.document_number} />
-            {client.group ? ` · ${client.group.name}` : null}
-          </>
-        }
-      />
+      {!isEditView ? (
+        <OperationalWorkspaceChrome
+          backButton={
+            <PageBackButton fallbackHref="/clients" label="Back to clients" />
+          }
+          title={client.name}
+          badges={<ClientStatusBadge status={client.status} />}
+          meta={
+            <>
+              <DocumentNumber value={client.document_number} />
+              {client.group ? ` · ${client.group.name}` : null}
+            </>
+          }
+        />
+      ) : null}
 
       <Tabs
-        defaultValue="overview"
-        className="mt-4 flex min-h-0 flex-1 flex-col gap-0"
+        value={activeTab}
+        onValueChange={(value) => {
+          if (isClientProfileTabId(value)) {
+            setActiveTab(value);
+          }
+        }}
+        className={cn("flex min-h-0 flex-1 flex-col gap-0", isEditView ? "mt-0" : "mt-4")}
       >
-        <OperationalWorkspaceSortableTabsBar
-          sectionLabel="Legal entity workspace"
-          tabOrder={tabOrder}
-          tabsById={tabsById}
-          onReorder={moveTab}
-        />
+        {!isEditView ? (
+          <OperationalWorkspaceSortableTabsBar
+            sectionLabel="Legal entity workspace"
+            tabOrder={tabOrder}
+            tabsById={tabsById}
+            onReorder={moveTab}
+          />
+        ) : (
+          <nav
+            aria-label="Legal entity workspace sections"
+            className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#E6EAF2] px-[26px] py-2.5"
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9099A8]">
+              Also view
+            </span>
+            {tabOrder
+              .filter((tabId) => tabId !== "overview")
+              .map((tabId) => {
+                const tab = tabsById[tabId];
+                return (
+                  <button
+                    key={tabId}
+                    type="button"
+                    onClick={() => setActiveTab(tabId)}
+                    className="text-[13px] font-medium text-[#5B6575] transition-colors hover:text-[#0057FF]"
+                  >
+                    {tab.label}
+                    {tab.count != null ? ` (${tab.count})` : ""}
+                  </button>
+                );
+              })}
+          </nav>
+        )}
 
         <OperationalWorkspaceTabContent value="overview">
-          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <ClientOverviewTab client={client} groups={groups} masterData={masterData} />
+          <OperationalWorkspaceTabPanel
+            className={cn(
+              "flex min-h-0 flex-1 flex-col",
+              isEditView ? "mt-0 overflow-hidden" : undefined
+            )}
+          >
+            <ClientOverviewTab
+              client={client}
+              groups={groups}
+              masterData={masterData}
+              onCancel={() => router.push("/clients")}
+            />
           </OperationalWorkspaceTabPanel>
         </OperationalWorkspaceTabContent>
         <OperationalWorkspaceTabContent value="brands">

@@ -44,6 +44,9 @@ export default async function ClientProfilePage({
     <DashboardShell
       title="Client profile"
       description="Master data, compliance documents, finance terms, and campaign history."
+      hidePageHeader
+      containedMain
+      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       {errorMessage ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
