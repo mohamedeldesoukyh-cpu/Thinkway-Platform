@@ -8,7 +8,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useTransition, type ChangeEvent } from "react";
+import { useRef, useState, useTransition, type ChangeEvent } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,12 @@ import type { ClientDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 type ClientDocumentType = ClientDetail["documents"][number]["document_type"];
+type ClientDocument = ClientDetail["documents"][number];
 
 type ClientInlineDocumentAttachProps = {
   clientId: string;
   documentType: ClientDocumentType;
-  document?: ClientDetail["documents"][number] | null;
+  document?: ClientDocument | null;
   className?: string;
 };
 
@@ -44,11 +45,26 @@ export function ClientInlineDocumentAttach({
 }: ClientInlineDocumentAttachProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [localDocument, setLocalDocument] = useState(document ?? null);
+  const [previousDocument, setPreviousDocument] = useState(document);
   const [isDownloading, startDownload] = useTransition();
   const [isUploading, startUpload] = useTransition();
   const [isDeleting, startDelete] = useTransition();
 
+  if (document !== previousDocument) {
+    setPreviousDocument(document);
+    setLocalDocument(document ?? null);
+  }
+
   const busy = isUploading || isDeleting || isDownloading;
+
+  function refreshClientProfileSafely() {
+    try {
+      router.refresh();
+    } catch {
+      toast.error("Document saved, but the page could not refresh. Reload if needed.");
+    }
+  }
 
   function openFilePicker() {
     if (!busy) {
@@ -68,52 +84,68 @@ export function ClientInlineDocumentAttach({
     formData.set("file", file);
 
     startUpload(async () => {
-      const result = await uploadClientDocumentAction({ ok: false }, formData);
-      if (result.ok) {
-        toast.success(result.message ?? "Document uploaded.");
+      try {
+        const result = await uploadClientDocumentAction({ ok: false }, formData);
+        if (result.ok) {
+          toast.success(result.message ?? "Document uploaded.");
+          if (result.document) {
+            setLocalDocument(result.document as ClientDocument);
+          }
+          refreshClientProfileSafely();
+          return;
+        }
+        toast.error(result.message ?? "Upload failed.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Upload failed unexpectedly."
+        );
+      } finally {
         event.target.value = "";
-        router.refresh();
-        return;
       }
-      toast.error(result.message ?? "Upload failed.");
-      event.target.value = "";
     });
   }
 
   function handleDelete() {
-    if (!document) {
+    if (!localDocument) {
       return;
     }
 
     const formData = new FormData();
-    formData.set("document_id", document.id);
+    formData.set("document_id", localDocument.id);
     formData.set("client_id", clientId);
 
     startDelete(async () => {
-      const result = await deleteClientDocumentAction({ ok: false }, formData);
-      if (result.ok) {
-        toast.success(result.message ?? "Document removed.");
-        router.refresh();
-        return;
+      try {
+        const result = await deleteClientDocumentAction({ ok: false }, formData);
+        if (result.ok) {
+          toast.success(result.message ?? "Document removed.");
+          setLocalDocument(null);
+          refreshClientProfileSafely();
+          return;
+        }
+        toast.error(result.message ?? "Could not remove document.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Could not remove document."
+        );
       }
-      toast.error(result.message ?? "Could not remove document.");
     });
   }
 
   return (
     <div className={cn("shrink-0", className)}>
-      {document ? (
+      {localDocument ? (
         <div
           className={cn(
             "flex h-9 items-center gap-0.5 rounded-3xl border border-primary/30 bg-primary/10 px-1",
             busy && "opacity-70"
           )}
-          title={document.file_name}
+          title={localDocument.file_name}
         >
           <span className="flex items-center gap-1 pl-1.5 pr-0.5">
             <FileCheck2Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
             <span className="hidden max-w-[4.5rem] truncate text-[10px] font-medium text-primary sm:inline">
-              {document.file_name}
+              {localDocument.file_name}
             </span>
           </span>
           <Button
@@ -125,16 +157,24 @@ export function ClientInlineDocumentAttach({
             title="View attachment"
             onClick={() => {
               startDownload(async () => {
-                const result = await getClientDocumentDownloadUrlAction(
-                  document.id,
-                  clientId
-                );
-                if (result.error) {
-                  toast.error(result.error);
-                  return;
-                }
-                if (result.url) {
-                  window.open(result.url, "_blank", "noopener,noreferrer");
+                try {
+                  const result = await getClientDocumentDownloadUrlAction(
+                    localDocument.id,
+                    clientId
+                  );
+                  if (result.error) {
+                    toast.error(result.error);
+                    return;
+                  }
+                  if (result.url) {
+                    window.open(result.url, "_blank", "noopener,noreferrer");
+                  }
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not open document."
+                  );
                 }
               });
             }}

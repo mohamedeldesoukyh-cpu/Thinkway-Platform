@@ -33,6 +33,20 @@ export type FormActionState = {
   ok: boolean;
   message?: string;
   fieldErrors?: Record<string, string[]>;
+  document?: {
+    id: string;
+    client_id: string;
+    document_type: string;
+    file_name: string;
+    storage_path: string;
+    mime_type: string | null;
+    file_size: number | null;
+    expires_at: string | null;
+    notes: string | null;
+    uploaded_by: string | null;
+    created_at: string;
+    updated_at: string;
+  };
 };
 
 export type CreateClientFormState = FormActionState & { clientId?: string };
@@ -532,24 +546,31 @@ export async function uploadClientDocumentAction(
       file,
     });
 
-    const { error } = await supabase.from("client_documents").insert({
-      client_id: parsed.data.client_id,
-      document_type: parsed.data.document_type,
-      file_name: file.name,
-      storage_path: uploaded.storagePath,
-      mime_type: uploaded.mimeType,
-      file_size: uploaded.fileSize,
-      expires_at: parsed.data.expires_at,
-      uploaded_by: user.id,
-    });
+    const { data: insertedDoc, error } = await supabase
+      .from("client_documents")
+      .insert({
+        client_id: parsed.data.client_id,
+        document_type: parsed.data.document_type,
+        file_name: file.name,
+        storage_path: uploaded.storagePath,
+        mime_type: uploaded.mimeType,
+        file_size: uploaded.fileSize,
+        expires_at: parsed.data.expires_at,
+        uploaded_by: user.id,
+      })
+      .select("*")
+      .single();
 
-    if (error) {
+    if (error || !insertedDoc) {
       await removeStorageObject({
         supabase,
         bucket: "client-documents",
         storagePath: uploaded.storagePath,
       });
-      return { ok: false, message: error.message };
+      return {
+        ok: false,
+        message: error?.message ?? "Document record could not be created.",
+      };
     }
 
     for (const existingDoc of existingDocs ?? []) {
@@ -572,16 +593,20 @@ export async function uploadClientDocumentAction(
         // Row removed; storage cleanup is best-effort.
       }
     }
+
+    revalidatePath(`/clients/${parsed.data.client_id}`);
+
+    return {
+      ok: true,
+      message: "Document uploaded.",
+      document: insertedDoc,
+    };
   } catch (error) {
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Upload failed.",
     };
   }
-
-  revalidatePath(`/clients/${parsed.data.client_id}`);
-
-  return { ok: true, message: "Document uploaded." };
 }
 
 export async function deleteClientDocumentAction(

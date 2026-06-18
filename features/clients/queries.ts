@@ -1,10 +1,11 @@
 import { getBrandsByClientId } from "@/features/brands/queries";
+import { fetchClientDetailRowById } from "@/lib/clients/client-detail-query";
 import {
   fetchVrRatesByIds,
   vrRatePercentFromMap,
 } from "@/lib/clients/vr-rate-lookup";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { ClientDetail, ClientRow } from "@/types/database";
+import type { ClientDetail, ClientDocumentRow, ClientRow } from "@/types/database";
 
 import { CLIENTS_PAGE_SIZE } from "./constants";
 
@@ -36,6 +37,91 @@ async function requireUser() {
   }
 
   return { supabase, user };
+}
+
+function isMissingClientDocumentsRelation(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("client_documents") &&
+    (normalized.includes("does not exist") ||
+      normalized.includes("schema cache") ||
+      normalized.includes("could not find"))
+  );
+}
+
+async function fetchClientDocumentsSafe(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  clientId: string
+): Promise<ClientDocumentRow[]> {
+  const { data, error } = await supabase
+    .from("client_documents")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
+
+  if (!error) {
+    return data ?? [];
+  }
+
+  if (isMissingClientDocumentsRelation(error.message)) {
+    console.warn(
+      `[clients] client_documents unavailable while loading client ${clientId}:`,
+      error.message
+    );
+    return [];
+  }
+
+  throw new Error(error.message);
+}
+
+async function fetchClientBrandsSafe(clientId: string): Promise<ClientDetail["brands"]> {
+  try {
+    return await getBrandsByClientId(clientId);
+  } catch (error) {
+    console.warn(
+      `[clients] brands query failed while loading client ${clientId}:`,
+      error instanceof Error ? error.message : error
+    );
+    return [];
+  }
+}
+
+async function fetchClientCampaignsSafe(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  clientId: string
+): Promise<ClientDetail["campaigns"]> {
+  const { data, error } = await supabase
+    .from("campaign_headers")
+    .select(
+      "id, name, document_number, status, currency_code, start_date, end_date, brand:brands(id, name)"
+    )
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
+
+  if (!error) {
+    return (data ?? []) as unknown as ClientDetail["campaigns"];
+  }
+
+  console.warn(
+    `[clients] campaigns query failed while loading client ${clientId}:`,
+    error.message
+  );
+  return [];
+}
+
+async function fetchClientVrRateMapSafe(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  vrRateId: string | null | undefined
+) {
+  try {
+    return await fetchVrRatesByIds(supabase, [vrRateId]);
+  } catch (error) {
+    console.warn(
+      "[clients] VR rate lookup failed while loading client:",
+      error instanceof Error ? error.message : error
+    );
+    return new Map();
+  }
 }
 
 export async function getClientsList(params: {
@@ -86,54 +172,32 @@ export async function getClientsList(params: {
 export async function getClientById(id: string): Promise<ClientDetail | null> {
   const { supabase } = await requireUser();
 
-  const { data: client, error } = await supabase
-    .from("clients")
-    .select("*, group:groups(id, name, document_number)")
-    .eq("id", id)
-    .maybeSingle();
+  const { client: clientRow, error: clientError } = await fetchClientDetailRowById(
+    supabase,
+    id
+  );
 
-  if (error) {
-    throw new Error(error.message);
+  if (clientError) {
+    throw new Error(clientError.message);
   }
 
-  if (!client) {
+  if (!clientRow) {
     return null;
   }
 
-  const clientRow = client as unknown as ClientRow & {
-    group: ClientDetail["group"];
-  };
-
-  const [documentsResult, campaignsResult, brands, vrRateMap] = await Promise.all([
-    supabase
-      .from("client_documents")
-      .select("*")
-      .eq("client_id", id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("campaign_headers")
-      .select(
-        "id, name, document_number, status, currency_code, start_date, end_date, brand:brands(id, name)"
-      )
-      .eq("client_id", id)
-      .order("created_at", { ascending: false }),
-    getBrandsByClientId(id),
-    fetchVrRatesByIds(supabase, [clientRow.vr_rate_id]),
+  const [documents, campaigns, brands, vrRateMap] = await Promise.all([
+    fetchClientDocumentsSafe(supabase, id),
+    fetchClientCampaignsSafe(supabase, id),
+    fetchClientBrandsSafe(id),
+    fetchClientVrRateMapSafe(supabase, clientRow.vr_rate_id),
   ]);
-
-  if (documentsResult.error) {
-    throw new Error(documentsResult.error.message);
-  }
-  if (campaignsResult.error) {
-    throw new Error(campaignsResult.error.message);
-  }
 
   return {
     ...clientRow,
     group: clientRow.group,
     vr_rate_percent: vrRatePercentFromMap(vrRateMap, clientRow.vr_rate_id),
-    documents: documentsResult.data ?? [],
-    campaigns: (campaignsResult.data ?? []) as unknown as ClientDetail["campaigns"],
+    documents,
+    campaigns,
     brands,
   };
 }
