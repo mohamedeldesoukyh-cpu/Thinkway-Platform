@@ -30,6 +30,7 @@ import {
 import { createBrandAction, type FormActionState } from "@/features/brands/actions";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
 import { brandVrInheritanceHint } from "@/lib/clients/vr-inheritance";
+import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
@@ -107,10 +108,7 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
     setVrRateId(clientVrRateId ?? "");
   }, [open, clientVrRateId]);
 
-  const clientOptions = clients.map((client) => ({
-    value: client.id,
-    label: client.legal_name ? `${client.name} (${client.legal_name})` : client.name,
-  }));
+  const clientOptions = buildClientSelectOptions(clients);
 
   const clientNeedsGroup = selectedClient && !selectedClient.group_id;
 

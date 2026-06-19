@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AGENCY_OR_DIRECT_OPTIONS, CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
+import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
 import {
   createGroupAction,
   type CreateGroupFormState,
@@ -277,14 +278,11 @@ export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
                     </p>
                   ) : (
                     <div className="max-h-44 space-y-2 overflow-y-auto rounded-lg border border-border/60 bg-background p-2">
-                      {unlinkedClients.map((client) => {
-                        const checked = linkedClientIds.includes(client.id);
-                        const label = client.legal_name
-                          ? `${client.name} (${client.legal_name})`
-                          : client.name;
+                      {buildClientSelectOptions(unlinkedClients).map((option) => {
+                        const checked = linkedClientIds.includes(option.value);
                         return (
                           <label
-                            key={client.id}
+                            key={option.value}
                             className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40"
                           >
                             <input
@@ -292,9 +290,16 @@ export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
                               className="mt-0.5"
                               checked={checked}
                               disabled={isPending}
-                              onChange={() => toggleLinkedClient(client.id)}
+                              onChange={() => toggleLinkedClient(option.value)}
                             />
-                            <span className="text-sm text-foreground">{label}</span>
+                            <span className="flex flex-col text-sm text-foreground">
+                              <span>{option.label}</span>
+                              {option.description ? (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {option.description}
+                                </span>
+                              ) : null}
+                            </span>
                           </label>
                         );
                       })}

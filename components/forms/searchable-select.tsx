@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-type Option = { value: string; label: string };
+type Option = { value: string; label: string; description?: string };
 
 type SearchableSelectProps = {
   id?: string;
@@ -47,6 +47,7 @@ export function SearchableSelect({
     return options.filter(
       (o) =>
         o.label.toLowerCase().includes(q) ||
+        o.description?.toLowerCase().includes(q) ||
         o.value.toLowerCase().includes(q)
     );
   }, [options, query]);
@@ -109,9 +110,16 @@ export function SearchableSelect({
                   }}
                   className="flex items-center justify-between"
                 >
-                  <span>{option.label}</span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span>{option.label}</span>
+                    {option.description ? (
+                      <span className="text-[11px] text-muted-foreground">
+                        {option.description}
+                      </span>
+                    ) : null}
+                  </span>
                   {value === option.value ? (
-                    <CheckIcon className="size-4" />
+                    <CheckIcon className="size-4 shrink-0" />
                   ) : null}
                 </DropdownMenuItem>
               ))

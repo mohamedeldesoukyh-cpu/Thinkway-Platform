@@ -20,6 +20,7 @@ import {
   linkClientToGroupAction,
   type FormActionState,
 } from "@/features/groups/actions";
+import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
 
 type LinkClientSheetProps = {
   groupId: string;
@@ -55,10 +56,7 @@ export function LinkClientSheet({
     }
   }, [open, unlinkedClients]);
 
-  const clientOptions = unlinkedClients.map((client) => ({
-    value: client.id,
-    label: client.legal_name ? `${client.name} (${client.legal_name})` : client.name,
-  }));
+  const clientOptions = buildClientSelectOptions(unlinkedClients);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

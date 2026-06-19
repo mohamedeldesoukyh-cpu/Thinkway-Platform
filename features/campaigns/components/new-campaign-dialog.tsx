@@ -40,6 +40,10 @@ import { resolveCommercialCategoryLabels } from "@/lib/master-data/commercial-ca
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { labelForOption } from "@/lib/master-data/constants";
 import { AGENCY_OR_DIRECT_OPTIONS } from "@/features/clients/constants";
+import {
+  buildClientSelectOptions,
+  dedupeClientsById,
+} from "@/lib/clients/client-select-options";
 
 const initialState: CreateCampaignFormState = { ok: false };
 const NONE_VALUE = "__none__";
@@ -94,10 +98,12 @@ export function NewCampaignDialog({
     });
   }, [selectedBrand]);
 
+  const uniqueClients = useMemo(() => dedupeClientsById(clients), [clients]);
+
   const filteredClients = useMemo(() => {
-    if (!groupId) return clients;
-    return clients.filter((c) => c.group_id === groupId);
-  }, [clients, groupId]);
+    if (!groupId) return uniqueClients;
+    return uniqueClients.filter((c) => c.group_id === groupId);
+  }, [uniqueClients, groupId]);
 
   const filteredBrands = useMemo(() => {
     if (clientId) return brands.filter((b) => b.client_id === clientId);
@@ -115,7 +121,7 @@ export function NewCampaignDialog({
     (id: string) => {
       setGroupId(id);
       if (!id) return;
-      const client = clients.find((c) => c.id === clientId);
+      const client = uniqueClients.find((c) => c.id === clientId);
       if (client && client.group_id !== id) {
         setClientId("");
         setBrandId("");
@@ -126,7 +132,7 @@ export function NewCampaignDialog({
         setBrandId("");
       }
     },
-    [brands, clientId, brandId, clients]
+    [brands, clientId, brandId, uniqueClients]
   );
 
   const handleClientChange = useCallback(
@@ -136,7 +142,7 @@ export function NewCampaignDialog({
         setBrandId("");
         return;
       }
-      const client = clients.find((c) => c.id === id);
+      const client = uniqueClients.find((c) => c.id === id);
       if (client?.group_id) {
         setGroupId(client.group_id);
       }
@@ -145,7 +151,7 @@ export function NewCampaignDialog({
         setBrandId("");
       }
     },
-    [brands, brandId, clients]
+    [brands, brandId, uniqueClients]
   );
 
   const handleBrandChange = useCallback(
@@ -201,10 +207,10 @@ export function NewCampaignDialog({
     label: g.name,
   }));
 
-  const clientOptions = filteredClients.map((c) => ({
-    value: c.id,
-    label: c.legal_name ? `${c.name} · ${c.legal_name}` : c.name,
-  }));
+  const clientOptions = useMemo(
+    () => buildClientSelectOptions(filteredClients),
+    [filteredClients]
+  );
 
   const brandOptions = filteredBrands.map((b) => ({
     value: b.id,

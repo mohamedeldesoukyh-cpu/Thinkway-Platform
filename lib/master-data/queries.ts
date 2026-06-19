@@ -10,6 +10,7 @@ import {
   fetchVrRatesByIds,
   vrRatePercentFromMap,
 } from "@/lib/clients/vr-rate-lookup";
+import { dedupeClientsById } from "@/lib/clients/client-select-options";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type MasterDataOptions = {
@@ -282,6 +283,12 @@ export async function getBrandsForCampaignForm() {
     throw new Error(result.error.message);
   }
 
+  if (strippedTaxonomy) {
+    console.warn(
+      "[brands] Client taxonomy columns stripped from nested brand query; campaign form will enrich via direct client lookup."
+    );
+  }
+
   return (result.data ?? []).map((row) => {
     const brand = row as Record<string, unknown> & {
       client: BrandCampaignFormClient | null;
@@ -322,21 +329,23 @@ export async function getClientsForSelect(groupId?: string) {
     (data ?? []).map((row) => row.vr_rate_id)
   );
 
-  return (data ?? []).map((row) => {
-    const client = row as typeof row & {
-      vr_rate_id: string | null;
-    };
-    return {
-      id: client.id as string,
-      name: client.name as string,
-      legal_name: client.legal_name as string | null,
-      group_id: client.group_id as string | null,
-      document_number: client.document_number as string,
-      status: client.status as string,
-      vr_rate_id: client.vr_rate_id,
-      vr_rate_percent: vrRatePercentFromMap(vrRateMap, client.vr_rate_id),
-    };
-  });
+  return dedupeClientsById(
+    (data ?? []).map((row) => {
+      const client = row as typeof row & {
+        vr_rate_id: string | null;
+      };
+      return {
+        id: client.id as string,
+        name: client.name as string,
+        legal_name: client.legal_name as string | null,
+        group_id: client.group_id as string | null,
+        document_number: client.document_number as string,
+        status: client.status as string,
+        vr_rate_id: client.vr_rate_id,
+        vr_rate_percent: vrRatePercentFromMap(vrRateMap, client.vr_rate_id),
+      };
+    })
+  );
 }
 
 export async function getUnlinkedClientsForSelect() {
