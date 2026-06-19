@@ -23,6 +23,12 @@ import type {
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 import type { FinanceAuditTimelineEntry } from "@/lib/finance/queries/finance-audit";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
+import { assignmentHierarchyBoundaryKey } from "@/lib/campaigns/assignment-row-debug";
+
+export const OPERATIONAL_BILLING_BUNDLES: CampaignDeferredBundle[] = [
+  "assignmentsBilling",
+  "billing",
+];
 
 type BundleStatus = "idle" | "loading" | "loaded" | "error";
 
@@ -96,6 +102,7 @@ export type CampaignTabDataState = {
   bundleErrors: Partial<Record<CampaignDeferredBundle, string>>;
   isTabLoading: (tabId: CampaignWorkspaceTabId) => boolean;
   tabLoadError: (tabId: CampaignWorkspaceTabId) => string | null;
+  reloadOperationalBilling: () => Promise<void>;
 };
 
 export function useCampaignTabData(
@@ -158,10 +165,10 @@ export function useCampaignTabData(
   };
 
   const loadBundle = useCallback(
-    async (bundle: CampaignDeferredBundle) => {
+    async (bundle: CampaignDeferredBundle, options?: { force?: boolean }) => {
       if (inFlightRef.current.has(bundle)) return;
       const status = bundleStatusesRef.current[bundle];
-      if (status === "loading" || status === "loaded") {
+      if (!options?.force && (status === "loading" || status === "loaded")) {
         return;
       }
 
@@ -223,6 +230,24 @@ export function useCampaignTabData(
     [campaignId, markBundleStatus]
   );
 
+  const reloadOperationalBilling = useCallback(async () => {
+    await Promise.all(
+      OPERATIONAL_BILLING_BUNDLES.map((bundle) => loadBundle(bundle, { force: true }))
+    );
+  }, [loadBundle]);
+
+  const prevHierarchyKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const hierarchyKey = assignmentHierarchyBoundaryKey(initialAssignmentHierarchy);
+    if (prevHierarchyKeyRef.current === null) {
+      prevHierarchyKeyRef.current = hierarchyKey;
+      return;
+    }
+    if (prevHierarchyKeyRef.current === hierarchyKey) return;
+    prevHierarchyKeyRef.current = hierarchyKey;
+    void reloadOperationalBilling();
+  }, [initialAssignmentHierarchy, reloadOperationalBilling]);
+
   useEffect(() => {
     return scheduleBackgroundPrefetch(() => {
       for (const bundle of PREFETCH_BUNDLES) {
@@ -271,5 +296,6 @@ export function useCampaignTabData(
     bundleErrors,
     isTabLoading,
     tabLoadError,
+    reloadOperationalBilling,
   };
 }

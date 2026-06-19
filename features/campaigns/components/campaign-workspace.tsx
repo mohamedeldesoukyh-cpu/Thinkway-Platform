@@ -12,16 +12,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs } from "@/components/ui/tabs";
 import { CampaignWorkspaceScrollShell } from "@/features/campaigns/components/campaign-workspace-scroll-shell";
 import {
   CampaignWorkspaceSortableTabsBar,
+  CampaignWorkspaceTabContent,
   CampaignWorkspaceTabPanel,
 } from "@/features/campaigns/components/campaign-workspace-tabs";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import { isCampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import { useCampaignWorkspaceTabOrder } from "@/features/campaigns/hooks/use-campaign-workspace-tab-order";
 import { useCampaignTabData } from "@/features/campaigns/hooks/use-campaign-tab-data";
+import { CampaignOperationalRefreshProvider } from "@/features/campaigns/hooks/campaign-operational-refresh";
+import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
 import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
@@ -88,6 +91,7 @@ export function CampaignWorkspaceView({
     isTabLoading,
     tabLoadError,
     bundleStatuses,
+    reloadOperationalBilling,
   } = tabData;
 
   useEffect(() => {
@@ -232,57 +236,9 @@ export function CampaignWorkspaceView({
     [tabCounts]
   );
 
-  const tabPanelClass =
-    "mt-4 flex-none outline-none focus-visible:outline-none data-[state=inactive]:hidden";
-
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "development") return;
-
-    console.debug("[sticky-header] campaign workspace sticky tabs mounted", {
-      campaignId: workspace.id,
-    });
-
-    const arrayChecks: Record<string, unknown> = {
-      lines: workspace.lines,
-      vendor_ios: workspace.vendor_ios,
-      approvals: workspace.approvals,
-      vendors: workspace.vendors,
-      deliverables: workspace.deliverables,
-    };
-    for (const [field, value] of Object.entries(arrayChecks)) {
-      if (!Array.isArray(value)) {
-        console.error("[campaign-workspace-trace] client:non-array-field", {
-          campaignId: workspace.id,
-          field,
-          valueType: typeof value,
-          keys: value != null && typeof value === "object" ? Object.keys(value as object) : [],
-          json: JSON.stringify(value).slice(0, 1000),
-        });
-      }
-    }
-
-    if (operationalBilling?.operational_rows) {
-      import("@/lib/billing/operational-billing-trace")
-        .then(({ traceOperationalTreeStage }) => {
-          traceOperationalTreeStage(
-            "CampaignWorkspaceView:client-operational-rows",
-            operationalBilling.operational_rows
-          );
-        })
-        .catch((error) => {
-          console.error("[campaign-workspace-trace] client operational tree check failed", error);
-        });
-    }
-  }, [workspace.id, operationalBilling, workspace]);
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.debug("[tab-highlight] active campaign tab", { tab: activeTab });
-    }
-  }, [activeTab]);
+  const tabPanelClass = OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS;
 
   const renderTabContent = (tabId: CampaignWorkspaceTabId, content: React.ReactNode) => {
-    if (activeTab !== tabId) return null;
     if (isTabLoading(tabId) || tabLoadError(tabId)) {
       return <CampaignWorkspaceTabLoading error={tabLoadError(tabId)} />;
     }
@@ -290,6 +246,7 @@ export function CampaignWorkspaceView({
   };
 
   return (
+    <CampaignOperationalRefreshProvider reloadOperationalBilling={reloadOperationalBilling}>
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
@@ -374,7 +331,7 @@ export function CampaignWorkspaceView({
             />
           }
         >
-        <TabsContent value="overview" className={tabPanelClass}>
+        <CampaignWorkspaceTabContent value="overview" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
             <CampaignOverviewTab
               workspace={workspace}
@@ -384,24 +341,22 @@ export function CampaignWorkspaceView({
               onOpenDetails={() => setDetailsOpen(true)}
             />
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="client-io" className={tabPanelClass}>
+        </CampaignWorkspaceTabContent>
+        <CampaignWorkspaceTabContent value="client-io" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            {activeTab === "client-io" ? (
-              <TabErrorBoundary tabName="Client IO">
-                <ClientIoTab
-                  campaignId={workspace.id}
-                  campaignName={workspace.name}
-                  io={workspace.client_io}
-                  recipients={workspace.client_io_send_recipients}
-                  sendHistory={workspace.client_io_send_history}
-                  senderName={workspace.client_io_sender_name}
-                />
-              </TabErrorBoundary>
-            ) : null}
+            <TabErrorBoundary tabName="Client IO">
+              <ClientIoTab
+                campaignId={workspace.id}
+                campaignName={workspace.name}
+                io={workspace.client_io}
+                recipients={workspace.client_io_send_recipients}
+                sendHistory={workspace.client_io_send_history}
+                senderName={workspace.client_io_sender_name}
+              />
+            </TabErrorBoundary>
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="lines" className={tabPanelClass}>
+        </CampaignWorkspaceTabContent>
+        <CampaignWorkspaceTabContent value="lines" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
             {tabLoadError("lines") ? (
               <CampaignWorkspaceTabLoading error={tabLoadError("lines")} />
@@ -416,8 +371,8 @@ export function CampaignWorkspaceView({
               />
             )}
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="deliverables" className={tabPanelClass}>
+        </CampaignWorkspaceTabContent>
+        <CampaignWorkspaceTabContent value="deliverables" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "deliverables",
@@ -430,17 +385,15 @@ export function CampaignWorkspaceView({
               </TabErrorBoundary>
             )}
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="vendor-io" className={tabPanelClass}>
+        </CampaignWorkspaceTabContent>
+        <CampaignWorkspaceTabContent value="vendor-io" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            {activeTab === "vendor-io" ? (
-              <TabErrorBoundary tabName="Vendor IO">
-                <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
-              </TabErrorBoundary>
-            ) : null}
+            <TabErrorBoundary tabName="Vendor IO">
+              <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
+            </TabErrorBoundary>
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="publications" className={tabPanelClass}>
+        </CampaignWorkspaceTabContent>
+        <CampaignWorkspaceTabContent value="publications" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "publications",
@@ -453,17 +406,15 @@ export function CampaignWorkspaceView({
               </TabErrorBoundary>
             )}
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="workflow" className={tabPanelClass}>
+        </CampaignWorkspaceTabContent>
+        <CampaignWorkspaceTabContent value="workflow" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
-            {activeTab === "workflow" ? (
-              <TabErrorBoundary tabName="Workflow">
-                <CampaignWorkflowTab workspace={workspace} />
-              </TabErrorBoundary>
-            ) : null}
+            <TabErrorBoundary tabName="Workflow">
+              <CampaignWorkflowTab workspace={workspace} />
+            </TabErrorBoundary>
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="billing" className={tabPanelClass}>
+        </CampaignWorkspaceTabContent>
+        <CampaignWorkspaceTabContent value="billing" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "billing",
@@ -478,8 +429,8 @@ export function CampaignWorkspaceView({
               </TabErrorBoundary>
             )}
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="timeline" className={tabPanelClass}>
+        </CampaignWorkspaceTabContent>
+        <CampaignWorkspaceTabContent value="timeline" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel className="p-4 md:p-5">
             {renderTabContent(
               "timeline",
@@ -492,7 +443,7 @@ export function CampaignWorkspaceView({
               </TabErrorBoundary>
             )}
           </CampaignWorkspaceTabPanel>
-        </TabsContent>
+        </CampaignWorkspaceTabContent>
         </CampaignWorkspaceScrollShell>
       </Tabs>
 
@@ -523,5 +474,6 @@ export function CampaignWorkspaceView({
         onOpenChange={setDuplicateOpen}
       />
     </div>
+    </CampaignOperationalRefreshProvider>
   );
 }

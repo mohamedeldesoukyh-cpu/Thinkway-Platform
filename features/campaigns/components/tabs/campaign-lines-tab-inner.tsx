@@ -2,8 +2,9 @@
 
 import dynamic from "next/dynamic";
 import { PlusIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+
+import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -98,7 +99,7 @@ export function CampaignLinesTabInner({
   billingGroups,
   operationalBilling,
 }: CampaignLinesTabInnerProps) {
-  const router = useRouter();
+  const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const uiLayer = getAssignmentsUiLayer();
   const enableLineSheet = assignmentsLayerAtLeast(uiLayer, "operational_actions");
   const hasAssignments = workspace.lines.length > 0;
@@ -386,7 +387,7 @@ export function CampaignLinesTabInner({
             initialExistingInvoiceId={appendInvoiceId}
             initialSelection={invoiceSelection}
             open={invoiceOpen}
-            onInvoiceComplete={() => router.refresh()}
+            onInvoiceComplete={refreshAfterOperationalMutation}
             onOpenChange={(open) => {
               setInvoiceOpen(open);
               if (!open) setInvoiceSelection(undefined);
@@ -415,7 +416,7 @@ export function CampaignLinesTabInner({
             if (!open) setRegenerateSelection(undefined);
           }}
           selection={regenerateSelection}
-          onComplete={() => router.refresh()}
+          onComplete={refreshAfterOperationalMutation}
         />
       ) : null}
     </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export function ClientIoCampaignChrome({ io, campaignId }: Props) {
+  const router = useRouter();
   const [ensureState, ensureAction, ensuring] = useActionState(
     ensureClientIoForCampaignAction,
     INITIAL_STATE
@@ -27,9 +29,11 @@ export function ClientIoCampaignChrome({ io, campaignId }: Props) {
 
   useEffect(() => {
     if (!ensureState.message) return;
-    if (ensureState.ok) toast.success(ensureState.message);
-    else toast.error(ensureState.message);
-  }, [ensureState]);
+    if (ensureState.ok) {
+      toast.success(ensureState.message);
+      router.refresh();
+    } else toast.error(ensureState.message);
+  }, [ensureState, router]);
 
   if (io) {
     return (

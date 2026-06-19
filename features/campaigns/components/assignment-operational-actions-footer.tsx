@@ -1,7 +1,7 @@
 "use client";
 
 import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -61,7 +61,7 @@ export function AssignmentOperationalActionsFooter({
   onGenerateInvoice,
   className,
 }: AssignmentOperationalActionsFooterProps) {
-  const router = useRouter();
+  const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const [ungenerateOpen, setUngenerateOpen] = useState(false);
   const [reviseOpen, setReviseOpen] = useState(false);
   const [ungenerateReason, setUngenerateReason] = useState("");
@@ -83,9 +83,9 @@ export function AssignmentOperationalActionsFooter({
     if (!vioState.message) return;
     if (vioState.ok) {
       toast.success(vioState.message);
-      router.refresh();
+      refreshAfterOperationalMutation();
     } else toast.error(vioState.message);
-  }, [vioState, router]);
+  }, [vioState, refreshAfterOperationalMutation]);
 
   useEffect(() => {
     if (!reviseState.message) return;
@@ -93,9 +93,9 @@ export function AssignmentOperationalActionsFooter({
       toast.success(reviseState.message);
       setReviseOpen(false);
       setReviseReason("");
-      router.refresh();
+      refreshAfterOperationalMutation();
     } else toast.error(reviseState.message);
-  }, [reviseState, router]);
+  }, [reviseState, refreshAfterOperationalMutation]);
 
   useEffect(() => {
     if (!ungenerateState.message) return;
@@ -103,9 +103,9 @@ export function AssignmentOperationalActionsFooter({
       toast.success(ungenerateState.message);
       setUngenerateOpen(false);
       setUngenerateReason("");
-      router.refresh();
+      refreshAfterOperationalMutation();
     } else toast.error(ungenerateState.message);
-  }, [ungenerateState, router]);
+  }, [ungenerateState, refreshAfterOperationalMutation]);
 
   const visible = selectedLineIds.length > 0;
 

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
+import { TabsContent } from "@/components/ui/tabs";
+import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import { cn } from "@/lib/utils";
 
@@ -185,6 +187,20 @@ export function CampaignWorkspaceTabsBar({ children }: { children: ReactNode }) 
         {children}
       </TabsPrimitive.List>
     </div>
+  );
+}
+
+/** Keeps tab panels mounted so deferred bundles stay warm and tab state survives switches. */
+export function CampaignWorkspaceTabContent({
+  className,
+  ...props
+}: ComponentProps<typeof TabsContent>) {
+  return (
+    <TabsContent
+      forceMount
+      className={cn(OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS, className)}
+      {...props}
+    />
   );
 }
 

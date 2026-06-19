@@ -1,9 +1,9 @@
 "use client";
 
 import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon, XIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { showErrorToastOnce, showSuccessToastOnce } from "@/lib/ui/toast-once";
+import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,7 +112,7 @@ export function FloatingSelectionBar({
   onGenerateInvoice,
   onAfterOperationalMutation,
 }: FloatingSelectionBarProps) {
-  const router = useRouter();
+  const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const [pending, startTransition] = useTransition();
   const [ungenerateOpen, setUngenerateOpen] = useState(false);
   const [reviseOpen, setReviseOpen] = useState(false);
@@ -135,7 +135,7 @@ export function FloatingSelectionBar({
           id: "assignment-vio-generate",
         });
         onAfterOperationalMutation?.();
-        router.refresh();
+        refreshAfterOperationalMutation();
       } else {
         showErrorToastOnce(result.message ?? "Vendor IO generation failed.", {
           id: "assignment-vio-generate",
@@ -159,7 +159,7 @@ export function FloatingSelectionBar({
         setReviseOpen(false);
         setReviseReason("");
         onAfterOperationalMutation?.();
-        router.refresh();
+        refreshAfterOperationalMutation();
       } else {
         showErrorToastOnce(result.message ?? "Revise Vendor IO failed.", {
           id: "assignment-vio-revise",
@@ -183,7 +183,7 @@ export function FloatingSelectionBar({
         setUngenerateOpen(false);
         setUngenerateReason("");
         onAfterOperationalMutation?.();
-        router.refresh();
+        refreshAfterOperationalMutation();
       } else {
         showErrorToastOnce(result.message ?? "Un-generate failed.", {
           id: "assignment-vio-ungenerate",

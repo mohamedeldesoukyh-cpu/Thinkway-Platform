@@ -1,8 +1,8 @@
 "use client";
 
 import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon, XIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { showErrorToastOnce, showSuccessToastOnce } from "@/lib/ui/toast-once";
 
 import { Badge } from "@/components/ui/badge";
@@ -110,7 +110,7 @@ export function AssignmentSafeActionsFooter({
   onAfterOperationalMutation,
   className,
 }: AssignmentSafeActionsFooterProps) {
-  const router = useRouter();
+  const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const [pending, startTransition] = useTransition();
   const [ungenerateOpen, setUngenerateOpen] = useState(false);
   const [reviseOpen, setReviseOpen] = useState(false);
@@ -133,7 +133,7 @@ export function AssignmentSafeActionsFooter({
           id: "assignment-safe-vio",
         });
         onAfterOperationalMutation?.();
-        router.refresh();
+        refreshAfterOperationalMutation();
       } else {
         showErrorToastOnce(result.message ?? "Vendor IO generation failed.", {
           id: "assignment-safe-vio",
@@ -163,7 +163,7 @@ export function AssignmentSafeActionsFooter({
         setReviseOpen(false);
         setReviseReason("");
         onAfterOperationalMutation?.();
-        router.refresh();
+        refreshAfterOperationalMutation();
       } else {
         showErrorToastOnce(result.message ?? "Revise Vendor IO failed.", {
           id: "assignment-safe-revise",
@@ -187,7 +187,7 @@ export function AssignmentSafeActionsFooter({
         setUngenerateOpen(false);
         setUngenerateReason("");
         onAfterOperationalMutation?.();
-        router.refresh();
+        refreshAfterOperationalMutation();
       } else {
         showErrorToastOnce(result.message ?? "Un-generate failed.", {
           id: "assignment-safe-ungenerate",

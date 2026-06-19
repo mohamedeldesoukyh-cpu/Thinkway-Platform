@@ -1,8 +1,8 @@
 "use client";
 
 import { FileStackIcon, FileTextIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { showErrorToastOnce, showSuccessToastOnce } from "@/lib/ui/toast-once";
 
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +61,7 @@ export function AssignmentSelectionSummaryBar({
   onAfterOperationalMutation,
   className,
 }: AssignmentSelectionSummaryBarProps) {
-  const router = useRouter();
+  const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const [pending, startTransition] = useTransition();
   const visible = totals.count > 0;
 
@@ -76,7 +76,7 @@ export function AssignmentSelectionSummaryBar({
           id: "assignment-vio-generate",
         });
         onAfterOperationalMutation?.();
-        router.refresh();
+        refreshAfterOperationalMutation();
       } else {
         showErrorToastOnce(result.message ?? "Vendor IO generation failed.", {
           id: "assignment-vio-generate",

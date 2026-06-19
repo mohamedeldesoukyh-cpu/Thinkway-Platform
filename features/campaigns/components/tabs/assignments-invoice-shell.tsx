@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
 import type {
   AssignmentBillingGroup,
@@ -45,7 +46,7 @@ export function AssignmentsInvoiceShell({
   onInvoiceOpenChange,
   invoiceSelection,
 }: AssignmentsInvoiceShellProps) {
-  const router = useRouter();
+  const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
 
   if (operationalBilling) {
     return (
@@ -59,7 +60,7 @@ export function AssignmentsInvoiceShell({
         targetMode="new"
         initialSelection={invoiceSelection}
         open={invoiceOpen}
-        onInvoiceComplete={() => router.refresh()}
+        onInvoiceComplete={refreshAfterOperationalMutation}
         onOpenChange={(open) => {
           onInvoiceOpenChange(open);
         }}

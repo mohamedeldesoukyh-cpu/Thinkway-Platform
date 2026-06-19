@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
 import { InvoiceDetailSheet } from "@/features/campaigns/components/detail-sheets/invoice-detail-sheet";
@@ -158,7 +158,7 @@ export function CampaignBillingTab({
   operationalBilling,
   campaignInvoiceRegister,
 }: CampaignBillingTabProps) {
-  const router = useRouter();
+  const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const { financials, po } = workspace;
   const currency = workspace.currency_code;
   const [legacyInvoiceOpen, setLegacyInvoiceOpen] = useState(false);
@@ -616,7 +616,7 @@ export function CampaignBillingTab({
             initialExistingInvoiceId={appendInvoiceId}
             initialSelection={invoiceSelection}
             open={operationalInvoiceOpen}
-            onInvoiceComplete={() => router.refresh()}
+            onInvoiceComplete={refreshAfterOperationalMutation}
             onOpenChange={(open) => {
               setOperationalInvoiceOpen(open);
               if (!open) setInvoiceSelection(undefined);
@@ -628,7 +628,7 @@ export function CampaignBillingTab({
               documentNumber={pendingRegenerationInvoice.document_number}
               open={regenerateInvoiceOpen}
               onOpenChange={setRegenerateInvoiceOpen}
-              onComplete={() => router.refresh()}
+              onComplete={refreshAfterOperationalMutation}
             />
           ) : null}
         </>
