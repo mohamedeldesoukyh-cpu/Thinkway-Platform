@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
+import {
+  createIoDocumentSignedUrl,
+  downloadIoDocumentBuffer,
+} from "@/lib/io/io-document-storage";
 import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
+import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -50,13 +55,23 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (format === "pdf") {
       if (typed.generated_pdf_url && !download) {
-        return NextResponse.redirect(typed.generated_pdf_url);
+        const signedUrl = await createIoDocumentSignedUrl(
+          supabase,
+          VENDOR_IO_DOCUMENTS_BUCKET,
+          typed.generated_pdf_url
+        );
+        if (signedUrl) {
+          return NextResponse.redirect(signedUrl);
+        }
       }
 
       if (typed.generated_pdf_url && download) {
-        const pdfResponse = await fetch(typed.generated_pdf_url);
-        if (pdfResponse.ok) {
-          const pdfBuffer = await pdfResponse.arrayBuffer();
+        const pdfBuffer = await downloadIoDocumentBuffer(
+          supabase,
+          VENDOR_IO_DOCUMENTS_BUCKET,
+          typed.generated_pdf_url
+        );
+        if (pdfBuffer) {
           return new NextResponse(pdfBuffer, {
             headers: {
               "Content-Type": "application/pdf",

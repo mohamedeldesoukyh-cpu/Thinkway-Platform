@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { requirePermission } from "@/lib/auth/permissions";
 import { enrichPlatformAccount } from "@/lib/social/enrich-platform-account";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const bodySchema = z.object({
   profile_url: z.string().trim().optional(),
@@ -13,6 +15,12 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, "influencers.write");
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
+  }
+
   try {
     const json = (await request.json()) as unknown;
     const parsed = bodySchema.safeParse(json);

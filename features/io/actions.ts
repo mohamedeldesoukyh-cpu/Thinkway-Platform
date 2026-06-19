@@ -8,10 +8,16 @@ import {
   buildClientIoEmailHtml,
   buildClientIoEmailPlainText,
   buildClientIoEmailSubject,
-  buildClientIoPdfAttachment,
+  buildClientIoPdfAttachmentFromBuffer,
 } from "@/lib/email/client-io-email";
 import { getGmailFromEmail } from "@/lib/email/gmail-config";
 import { sendGmailEmail } from "@/lib/email/gmail-send";
+import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
+import {
+  createIoDocumentSignedUrl,
+  downloadIoDocumentBuffer,
+  EMAIL_SIGNED_URL_SECONDS,
+} from "@/lib/io/io-document-storage";
 import { parseTermsText, serializeTermsText } from "@/lib/io/client-io-terms";
 import {
   parseSendRecipientsField,
@@ -178,18 +184,39 @@ export async function sendClientIoAction(
   const token = (data as string | null) ?? "";
   const approvalUrl = token ? buildIoEmailLink("client", token) : null;
 
+  const documentViewUrl =
+    (await createIoDocumentSignedUrl(
+      supabase,
+      CLIENT_IO_DOCUMENTS_BUCKET,
+      clientIo.generated_html_url,
+      EMAIL_SIGNED_URL_SECONDS
+    )) ??
+    (await createIoDocumentSignedUrl(
+      supabase,
+      CLIENT_IO_DOCUMENTS_BUCKET,
+      clientIo.generated_pdf_url,
+      EMAIL_SIGNED_URL_SECONDS
+    ));
+
   const subject = buildClientIoEmailSubject(clientIo);
   const html = buildClientIoEmailHtml({
     io: clientIo,
     senderName,
     approvalUrl,
+    documentViewUrl,
   });
   const emailText = buildClientIoEmailPlainText({
     io: clientIo,
     senderName,
     approvalUrl,
+    documentViewUrl,
   });
-  const pdfAttachment = await buildClientIoPdfAttachment(clientIo.generated_pdf_url);
+  const pdfBuffer = await downloadIoDocumentBuffer(
+    supabase,
+    CLIENT_IO_DOCUMENTS_BUCKET,
+    clientIo.generated_pdf_url
+  );
+  const pdfAttachment = buildClientIoPdfAttachmentFromBuffer(pdfBuffer);
   const gmailResult = await sendGmailEmail({
     to: recipients,
     subject,

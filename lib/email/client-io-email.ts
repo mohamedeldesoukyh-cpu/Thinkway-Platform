@@ -23,12 +23,14 @@ export function buildClientIoEmailPlainText(input: {
   >;
   senderName: string | null;
   approvalUrl?: string | null;
+  documentViewUrl?: string | null;
   includeAcknowledgmentNote?: boolean;
 }): string {
   const doc = input.io.document_number ?? "Client IO";
   const sender = input.senderName?.trim() || "Thinkway";
   const fromEmail = getGmailFromEmail();
-  const viewUrl = input.io.generated_html_url ?? input.io.generated_pdf_url;
+  const viewUrl =
+    input.documentViewUrl ?? input.io.generated_html_url ?? input.io.generated_pdf_url;
 
   const lines = [
     "Hello,",
@@ -65,6 +67,7 @@ export function buildClientIoEmailPreview(input: {
   >;
   senderName: string | null;
   approvalUrl?: string | null;
+  documentViewUrl?: string | null;
   isDraftPreview?: boolean;
 }): ClientIoEmailPreview {
   const subject = buildClientIoEmailSubject(input.io);
@@ -79,11 +82,13 @@ export function buildClientIoEmailPreview(input: {
       io: input.io,
       senderName: input.senderName,
       approvalUrl: input.approvalUrl ?? null,
+      documentViewUrl: input.documentViewUrl ?? null,
     }),
     plainText: buildClientIoEmailPlainText({
       io: input.io,
       senderName: input.senderName,
       approvalUrl: input.approvalUrl ?? null,
+      documentViewUrl: input.documentViewUrl ?? null,
       includeAcknowledgmentNote: Boolean(input.isDraftPreview && !input.approvalUrl),
     }),
     hasPdfAttachment: Boolean(input.io.generated_pdf_url),
@@ -97,9 +102,11 @@ export function buildClientIoEmailHtml(input: {
   >;
   senderName: string | null;
   approvalUrl?: string | null;
+  documentViewUrl?: string | null;
 }): string {
   const doc = input.io.document_number ?? "Client IO";
-  const viewUrl = input.io.generated_html_url ?? input.io.generated_pdf_url;
+  const viewUrl =
+    input.documentViewUrl ?? input.io.generated_html_url ?? input.io.generated_pdf_url;
   const sender = input.senderName?.trim() || "Thinkway";
   const fromEmail = getGmailFromEmail();
 
@@ -134,6 +141,19 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+export function buildClientIoPdfAttachmentFromBuffer(
+  buffer: Buffer | null
+): GmailAttachment | null {
+  if (!buffer?.length) return null;
+
+  return {
+    filename: "Client-IO.pdf",
+    mimeType: "application/pdf",
+    content: buffer,
+  };
+}
+
+/** @deprecated Prefer buildClientIoPdfAttachmentFromBuffer with storage download. */
 export async function buildClientIoPdfAttachment(
   pdfUrl: string | null
 ): Promise<GmailAttachment | null> {
@@ -143,11 +163,7 @@ export async function buildClientIoPdfAttachment(
     const response = await fetch(pdfUrl);
     if (!response.ok) return null;
     const buffer = Buffer.from(await response.arrayBuffer());
-    return {
-      filename: "Client-IO.pdf",
-      mimeType: "application/pdf",
-      content: buffer,
-    };
+    return buildClientIoPdfAttachmentFromBuffer(buffer);
   } catch {
     return null;
   }

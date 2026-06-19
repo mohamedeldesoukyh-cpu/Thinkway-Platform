@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { buildIoDocumentStoragePath } from "@/lib/io/io-document-storage";
 import { loadVendorIoDocumentData } from "@/lib/io/vendor-io-document-data";
 import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { renderVendorIoHtml } from "@/lib/io/vendor-io-template-render";
@@ -22,7 +23,7 @@ async function uploadDocument(
   body: Buffer | string,
   contentType: string
 ): Promise<string> {
-  const path = `${vendorIoId}/${fileName}`;
+  const path = buildIoDocumentStoragePath(vendorIoId, fileName);
   const payload = typeof body === "string" ? Buffer.from(body, "utf8") : body;
 
   const { error } = await supabase.storage.from(VENDOR_IO_DOCUMENTS_BUCKET).upload(path, payload, {
@@ -35,8 +36,7 @@ async function uploadDocument(
     throw new Error(`Storage upload failed: ${error.message}`);
   }
 
-  const { data } = supabase.storage.from(VENDOR_IO_DOCUMENTS_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return path;
 }
 
 export async function generateVendorIoDocument(

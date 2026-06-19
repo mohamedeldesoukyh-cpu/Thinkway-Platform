@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
 import { resolveClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
+import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
+import {
+  createIoDocumentSignedUrl,
+  downloadIoDocumentBuffer,
+} from "@/lib/io/io-document-storage";
 import { renderLiveClientIoHtml } from "@/lib/io/render-live-client-io-html";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -52,13 +57,23 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (format === "pdf") {
       if (typed.generated_pdf_url && !download && layout === "detailed") {
-        return NextResponse.redirect(typed.generated_pdf_url);
+        const signedUrl = await createIoDocumentSignedUrl(
+          supabase,
+          CLIENT_IO_DOCUMENTS_BUCKET,
+          typed.generated_pdf_url
+        );
+        if (signedUrl) {
+          return NextResponse.redirect(signedUrl);
+        }
       }
 
       if (typed.generated_pdf_url && download && layout === "detailed") {
-        const pdfResponse = await fetch(typed.generated_pdf_url);
-        if (pdfResponse.ok) {
-          const pdfBuffer = await pdfResponse.arrayBuffer();
+        const pdfBuffer = await downloadIoDocumentBuffer(
+          supabase,
+          CLIENT_IO_DOCUMENTS_BUCKET,
+          typed.generated_pdf_url
+        );
+        if (pdfBuffer) {
           return new NextResponse(pdfBuffer, {
             headers: {
               "Content-Type": "application/pdf",
