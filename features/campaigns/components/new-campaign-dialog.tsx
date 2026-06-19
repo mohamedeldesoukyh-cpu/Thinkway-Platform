@@ -29,12 +29,12 @@ import {
   type CreateCampaignFormState,
 } from "@/features/campaigns/actions";
 import { CreditLimitExceededDialog } from "@/features/campaigns/components/credit-limit-exceeded-dialog";
+import { CampaignCommercialSummaryCard } from "@/features/campaigns/components/campaign-commercial-summary-card";
 import {
   CAMPAIGN_STATUS_OPTIONS,
   PLATFORM_OPTIONS,
 } from "@/features/campaigns/constants";
 import type { CampaignFormOptions } from "@/features/campaigns/queries";
-import type { BrandFormOption } from "@/features/campaigns/types";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { resolveCommercialCategoryLabels } from "@/lib/master-data/commercial-category-labels";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
@@ -81,24 +81,36 @@ export function NewCampaignDialog({
     initialState
   );
 
+  const uniqueClients = useMemo(() => dedupeClientsById(clients), [clients]);
+
   const selectedBrand = useMemo(
     () => brands.find((b) => b.id === brandId),
     [brands, brandId]
+  );
+
+  const selectedClient = useMemo(
+    () => uniqueClients.find((c) => c.id === clientId),
+    [uniqueClients, clientId]
   );
 
   const commercialLabels = useMemo(() => {
     if (!selectedBrand) {
       return null;
     }
+
+    const clientCategorySlug =
+      selectedBrand.client?.client_category ?? selectedClient?.client_category;
+    const clientSubcategorySlug =
+      selectedBrand.client?.client_subcategory ??
+      selectedClient?.client_subcategory;
+
     return resolveCommercialCategoryLabels({
       brandCategoryName: selectedBrand.category?.name,
       brandSubcategoryName: selectedBrand.subcategory?.name,
-      clientCategorySlug: selectedBrand.client?.client_category,
-      clientSubcategorySlug: selectedBrand.client?.client_subcategory,
+      clientCategorySlug,
+      clientSubcategorySlug,
     });
-  }, [selectedBrand]);
-
-  const uniqueClients = useMemo(() => dedupeClientsById(clients), [clients]);
+  }, [selectedBrand, selectedClient]);
 
   const filteredClients = useMemo(() => {
     if (!groupId) return uniqueClients;
@@ -315,41 +327,26 @@ export function NewCampaignDialog({
               </div>
             </div>
 
-            {selectedBrand ? (
-              <div className="grid gap-3 rounded-3xl border border-border bg-muted/30 p-4 text-sm sm:grid-cols-2">
-                <ReadonlyField
-                  label="Group"
-                  value={(selectedBrand.group as { name: string } | null)?.name}
-                />
-                <ReadonlyField
-                  label="Client"
-                  value={(selectedBrand.client as { legal_name: string | null; name: string } | null)?.legal_name ??
-                    (selectedBrand.client as { name: string } | null)?.name}
-                />
-                <ReadonlyField
-                  label="Category"
-                  value={commercialLabels?.category}
-                />
-                <ReadonlyField
-                  label="Subcategory"
-                  value={commercialLabels?.subcategory}
-                />
-                <ReadonlyField
-                  label="Agency / Direct"
-                  value={labelForOption(
-                    AGENCY_OR_DIRECT_OPTIONS,
-                    selectedBrand.client?.agency_or_direct
-                  )}
-                />
-                <ReadonlyField
-                  label="VR%"
-                  value={
-                    selectedBrand.vr_rate
-                      ? `${(selectedBrand.vr_rate as { rate_percent: number }).rate_percent}%`
-                      : "—"
-                  }
-                />
-              </div>
+            {selectedBrand && commercialLabels ? (
+              <CampaignCommercialSummaryCard
+                groupName={(selectedBrand.group as { name: string } | null)?.name}
+                clientName={
+                  (selectedBrand.client as { legal_name: string | null; name: string } | null)
+                    ?.legal_name ??
+                  (selectedBrand.client as { name: string } | null)?.name
+                }
+                category={commercialLabels.category}
+                subcategory={commercialLabels.subcategory}
+                agencyOrDirect={labelForOption(
+                  AGENCY_OR_DIRECT_OPTIONS,
+                  selectedBrand.client?.agency_or_direct
+                )}
+                vrPercent={
+                  selectedBrand.vr_rate
+                    ? `${(selectedBrand.vr_rate as { rate_percent: number }).rate_percent}%`
+                    : "—"
+                }
+              />
             ) : null}
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -486,20 +483,5 @@ export function NewCampaignDialog({
         />
       ) : null}
     </>
-  );
-}
-
-function ReadonlyField({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null | undefined;
-}) {
-  return (
-    <div>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-0.5">{value || "—"}</p>
-    </div>
   );
 }

@@ -22,6 +22,8 @@ export type ClientFormOption = {
   legal_name: string | null;
   group_id: string | null;
   document_number: string;
+  client_category?: string | null;
+  client_subcategory?: string | null;
 };
 
 export type BrandFormOption = {

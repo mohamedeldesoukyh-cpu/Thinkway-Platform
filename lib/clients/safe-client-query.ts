@@ -289,6 +289,62 @@ export async function fetchClientCreditLimitFlagsSafe(
   };
 }
 
+export type ClientTaxonomySnapshot = {
+  client_category: string | null;
+  client_subcategory: string | null;
+};
+
+const CLIENT_TAXONOMY_SELECT_CORE = ["id"] as const;
+const CLIENT_TAXONOMY_SELECT_OPTIONAL = [
+  "client_category",
+  "client_subcategory",
+] as const;
+
+/** Bulk read of client taxonomy slugs when nested brand joins omit or strip them. */
+export async function fetchClientTaxonomyMapSafe(
+  supabase: SupabaseClient,
+  clientIds: string[]
+): Promise<Map<string, ClientTaxonomySnapshot>> {
+  const uniqueIds = [...new Set(clientIds.filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    return new Map();
+  }
+
+  const result = await queryClientRowsWithColumnRetry(
+    supabase,
+    [...CLIENT_TAXONOMY_SELECT_CORE, ...CLIENT_TAXONOMY_SELECT_OPTIONAL],
+    (select) =>
+      supabase
+        .from("clients")
+        .select(select)
+        .in("id", uniqueIds) as unknown as PromiseLike<ClientListQueryResult>
+  );
+
+  if (result.error) {
+    console.warn(
+      "[clients] Failed to load client taxonomy map; continuing without:",
+      result.error.message
+    );
+    return new Map();
+  }
+
+  const stripped = new Set(result.strippedColumns);
+  const map = new Map<string, ClientTaxonomySnapshot>();
+
+  for (const row of result.data ?? []) {
+    map.set(String(row.id), {
+      client_category: stripped.has("client_category")
+        ? null
+        : ((row.client_category as string | null | undefined) ?? null),
+      client_subcategory: stripped.has("client_subcategory")
+        ? null
+        : ((row.client_subcategory as string | null | undefined) ?? null),
+    });
+  }
+
+  return map;
+}
+
 /** Safe list of clients for the credit-limit workspace. */
 export async function fetchClientCreditLimitListSafe(
   supabase: SupabaseClient

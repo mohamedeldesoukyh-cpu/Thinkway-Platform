@@ -215,6 +215,19 @@ type BrandCampaignFormClient = {
   client_subcategory?: string | null;
 };
 
+export type BrandCampaignFormRow = {
+  id: string;
+  name: string;
+  client_id: string;
+  group_id: string;
+  currency_code: string;
+  group: { id: string; name: string } | null;
+  client: BrandCampaignFormClient | null;
+  category: { id: string; name: string } | null;
+  subcategory: { id: string; name: string } | null;
+  vr_rate: { id: string; name: string; rate_percent: number } | null;
+};
+
 function normalizeBrandCampaignFormClient(
   client: BrandCampaignFormClient | null,
   strippedTaxonomy: boolean
@@ -257,7 +270,7 @@ async function queryBrandsForCampaignForm(
     .order("name") as unknown as PromiseLike<BrandCampaignFormQueryResult>;
 }
 
-export async function getBrandsForCampaignForm() {
+export async function getBrandsForCampaignForm(): Promise<BrandCampaignFormRow[]> {
   let clientFields = BRAND_CAMPAIGN_FORM_CLIENT_WITH_TAXONOMY;
   let strippedTaxonomy = false;
 
@@ -296,7 +309,7 @@ export async function getBrandsForCampaignForm() {
     return {
       ...brand,
       client: normalizeBrandCampaignFormClient(brand.client, strippedTaxonomy),
-    };
+    } as BrandCampaignFormRow;
   });
 }
 
