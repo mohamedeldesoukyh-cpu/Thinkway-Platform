@@ -202,64 +202,63 @@ export function FloatingSelectionBar({
   return (
     <>
       <OperationalFloatingActionBar visible={visible} messages={coverageMessages}>
-        <div className="flex shrink-0 items-center gap-1.5 pr-1">
-          <Badge
-            variant="secondary"
-            className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-          >
-            {totals.count} selected
-          </Badge>
-          <Button
-            type="button"
-            size="icon-xs"
-            variant="ghost"
-            className="size-6 shrink-0 rounded-full text-muted-foreground"
-            disabled={!visible}
-            onClick={onClearSelection}
-            aria-label="Clear selection"
-          >
-            <XIcon className="size-3.5" />
-          </Button>
-          {selectableLineCount > 0 && selectedLineIds.length < selectableLineCount ? (
-            <Button
-              type="button"
-              size="xs"
-              variant="ghost"
-              className="hidden shrink-0 sm:inline-flex"
-              onClick={onSelectAll}
-            >
-              Select all
-            </Button>
-          ) : null}
-        </div>
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto text-xs [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden">
+            <div className="flex shrink-0 items-center gap-1.5 pr-1">
+              <Badge
+                variant="secondary"
+                className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
+              >
+                {totals.count} selected
+              </Badge>
+              <Button
+                type="button"
+                size="icon-xs"
+                variant="ghost"
+                className="size-6 shrink-0 rounded-full text-muted-foreground"
+                disabled={!visible}
+                onClick={onClearSelection}
+                aria-label="Clear selection"
+              >
+                <XIcon className="size-3.5" />
+              </Button>
+              {selectableLineCount > 0 && selectedLineIds.length < selectableLineCount ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  className="hidden shrink-0 sm:inline-flex"
+                  onClick={onSelectAll}
+                >
+                  Select all
+                </Button>
+              ) : null}
+            </div>
 
-        <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+            <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
 
-        <div className="flex shrink-0 items-center gap-2 text-xs sm:gap-3">
-          <SelectionMetric label="Revenue" value={formatMoney(totals.revenue, displayCurrency)} />
-          <SelectionMetric
-            label="Cost"
-            value={formatMoney(totals.cost, displayCurrency)}
-            className="hidden sm:inline"
-          />
-          <SelectionMetric
-            label="GP"
-            value={formatMoney(totals.gp, displayCurrency)}
-            className="hidden md:inline [&_span:last-child]:text-primary"
-          />
-          <SelectionMetric
-            label="Total billing"
-            value={formatMoney(totals.totalBilling, displayCurrency)}
-            className="hidden lg:inline"
-          />
-          <Badge variant="outline" className="h-5 shrink-0 text-[10px] font-medium">
-            {currencyLabel}
-          </Badge>
-        </div>
+            <SelectionMetric label="Revenue" value={formatMoney(totals.revenue, displayCurrency)} />
+            <SelectionMetric
+              label="Cost"
+              value={formatMoney(totals.cost, displayCurrency)}
+              className="hidden sm:inline"
+            />
+            <SelectionMetric
+              label="GP"
+              value={formatMoney(totals.gp, displayCurrency)}
+              className="hidden md:inline [&_span:last-child]:text-primary"
+            />
+            <SelectionMetric
+              label="Total billing"
+              value={formatMoney(totals.totalBilling, displayCurrency)}
+              className="hidden lg:inline"
+            />
+            <Badge variant="outline" className="h-5 shrink-0 text-[10px] font-medium">
+              {currencyLabel}
+            </Badge>
+          </div>
 
-        <div className="hidden h-5 w-px shrink-0 bg-border/70 md:block" aria-hidden />
-
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+          <div className="flex shrink-0 items-center justify-end gap-1.5 sm:border-l sm:border-border/70 sm:pl-2">
           {vioLineIds.length > 0 ? (
             <Button
               type="button"
@@ -322,6 +321,7 @@ export function FloatingSelectionBar({
               )}
             </Button>
           ) : null}
+          </div>
         </div>
       </OperationalFloatingActionBar>
 

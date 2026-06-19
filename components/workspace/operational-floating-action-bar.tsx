@@ -51,7 +51,7 @@ export function OperationalFloatingActionBar({
     >
       <div
         className={cn(
-          "pointer-events-auto w-full max-w-4xl transition-all duration-300 ease-out",
+          "pointer-events-auto w-full max-w-[calc(100vw-2rem)] transition-all duration-300 ease-out",
           visible
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-full opacity-0"
@@ -59,7 +59,7 @@ export function OperationalFloatingActionBar({
       >
         <div
           className={cn(
-            "mx-auto flex max-w-full items-center gap-2 overflow-x-auto rounded-full px-3 py-2",
+            "mx-auto flex w-full min-w-0 items-center gap-2 overflow-x-auto rounded-2xl px-3 py-2 sm:rounded-full",
             "border border-white/70 bg-white/80 shadow-[0_8px_32px_rgba(15,23,42,0.12)] backdrop-blur-xl backdrop-saturate-150",
             "ring-1 ring-black/[0.04]",
             "dark:border-white/[0.1] dark:bg-[rgba(24,24,27,0.72)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)_inset] dark:ring-white/[0.06] dark:backdrop-blur-2xl dark:backdrop-saturate-150",
