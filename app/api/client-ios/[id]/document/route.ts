@@ -74,12 +74,7 @@ export async function GET(request: Request, context: RouteContext) {
           typed.generated_pdf_url
         );
         if (pdfBuffer) {
-          return new NextResponse(pdfBuffer, {
-            headers: {
-              "Content-Type": "application/pdf",
-              "Content-Disposition": `${disposition}; filename="${baseName}.pdf"`,
-            },
-          });
+          return createPdfDocumentResponse(pdfBuffer, baseName, download);
         }
       }
 
