@@ -36,6 +36,7 @@ import {
 import type { CampaignFormOptions } from "@/features/campaigns/queries";
 import type { BrandFormOption } from "@/features/campaigns/types";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
+import { resolveCommercialCategoryLabels } from "@/lib/master-data/commercial-category-labels";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { labelForOption } from "@/lib/master-data/constants";
 import { AGENCY_OR_DIRECT_OPTIONS } from "@/features/clients/constants";
@@ -80,6 +81,18 @@ export function NewCampaignDialog({
     () => brands.find((b) => b.id === brandId),
     [brands, brandId]
   );
+
+  const commercialLabels = useMemo(() => {
+    if (!selectedBrand) {
+      return null;
+    }
+    return resolveCommercialCategoryLabels({
+      brandCategoryName: selectedBrand.category?.name,
+      brandSubcategoryName: selectedBrand.subcategory?.name,
+      clientCategorySlug: selectedBrand.client?.client_category,
+      clientSubcategorySlug: selectedBrand.client?.client_subcategory,
+    });
+  }, [selectedBrand]);
 
   const filteredClients = useMemo(() => {
     if (!groupId) return clients;
@@ -309,11 +322,11 @@ export function NewCampaignDialog({
                 />
                 <ReadonlyField
                   label="Category"
-                  value={(selectedBrand.category as { name: string } | null)?.name}
+                  value={commercialLabels?.category}
                 />
                 <ReadonlyField
                   label="Subcategory"
-                  value={(selectedBrand.subcategory as { name: string } | null)?.name}
+                  value={commercialLabels?.subcategory}
                 />
                 <ReadonlyField
                   label="Agency / Direct"

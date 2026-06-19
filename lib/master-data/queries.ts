@@ -1,9 +1,16 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { PostgrestError } from "@supabase/supabase-js";
+
+import {
+  CLIENT_TAXONOMY_COLUMN_NAMES,
+  getMissingClientColumnFromSchemaError,
+  isMissingClientColumnSchemaError,
+} from "@/lib/clients/classification-audit-columns";
 import {
   fetchClientsForSelectWithOptionalVrRate,
   fetchVrRatesByIds,
   vrRatePercentFromMap,
 } from "@/lib/clients/vr-rate-lookup";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type MasterDataOptions = {
   categories: { id: string; code: string; name: string }[];
@@ -178,12 +185,13 @@ export async function getBrandsForSelect(clientId?: string) {
   return data ?? [];
 }
 
-export async function getBrandsForCampaignForm() {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("brands")
-    .select(
-      `
+const BRAND_CAMPAIGN_FORM_CLIENT_CORE =
+  "id, name, legal_name, agency_or_direct";
+
+const BRAND_CAMPAIGN_FORM_CLIENT_WITH_TAXONOMY = `${BRAND_CAMPAIGN_FORM_CLIENT_CORE}, client_category, client_subcategory`;
+
+function buildBrandCampaignFormSelect(clientFields: string): string {
+  return `
       id,
       name,
       client_id,
@@ -193,16 +201,94 @@ export async function getBrandsForCampaignForm() {
       subcategory:md_subcategories(id, name),
       vr_rate:md_vr_rates(id, name, rate_percent),
       group:groups(id, name),
-      client:clients(id, name, legal_name, agency_or_direct)
-    `
-    )
+      client:clients(${clientFields})
+    `;
+}
+
+type BrandCampaignFormClient = {
+  id: string;
+  name: string;
+  legal_name: string | null;
+  agency_or_direct: string | null;
+  client_category?: string | null;
+  client_subcategory?: string | null;
+};
+
+function normalizeBrandCampaignFormClient(
+  client: BrandCampaignFormClient | null,
+  strippedTaxonomy: boolean
+): BrandCampaignFormClient | null {
+  if (!client) {
+    return null;
+  }
+
+  if (strippedTaxonomy) {
+    return {
+      id: client.id,
+      name: client.name,
+      legal_name: client.legal_name,
+      agency_or_direct: client.agency_or_direct,
+      client_category: null,
+      client_subcategory: null,
+    };
+  }
+
+  return {
+    ...client,
+    client_category: client.client_category ?? null,
+    client_subcategory: client.client_subcategory ?? null,
+  };
+}
+
+async function queryBrandsForCampaignForm(
+  clientFields: string
+): Promise<{
+  data: Record<string, unknown>[] | null;
+  error: PostgrestError | null;
+}> {
+  const supabase = await createSupabaseServerClient();
+  return supabase
+    .from("brands")
+    .select(buildBrandCampaignFormSelect(clientFields))
     .eq("status", "active")
     .order("name");
+}
 
-  if (error) {
-    throw new Error(error.message);
+export async function getBrandsForCampaignForm() {
+  let clientFields = BRAND_CAMPAIGN_FORM_CLIENT_WITH_TAXONOMY;
+  let strippedTaxonomy = false;
+
+  let result = await queryBrandsForCampaignForm(clientFields);
+
+  if (result.error && isMissingClientColumnSchemaError(result.error)) {
+    const missingColumn = getMissingClientColumnFromSchemaError(result.error);
+    if (
+      missingColumn &&
+      (CLIENT_TAXONOMY_COLUMN_NAMES as readonly string[]).includes(missingColumn)
+    ) {
+      console.warn(
+        `[brands] ${missingColumn} column missing while loading campaign form brands; retrying without client taxonomy:`,
+        result.error.message
+      );
+      clientFields = BRAND_CAMPAIGN_FORM_CLIENT_CORE;
+      strippedTaxonomy = true;
+      result = await queryBrandsForCampaignForm(clientFields);
+    }
   }
-  return data ?? [];
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return (result.data ?? []).map((row) => {
+    const brand = row as Record<string, unknown> & {
+      client: BrandCampaignFormClient | null;
+    };
+    return {
+      ...brand,
+      client: normalizeBrandCampaignFormClient(brand.client, strippedTaxonomy),
+    };
+  });
 }
 
 export async function getGroupsForSelect() {

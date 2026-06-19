@@ -36,6 +36,8 @@ export type BrandFormOption = {
     name: string;
     legal_name: string | null;
     agency_or_direct: AgencyOrDirect | null;
+    client_category?: string | null;
+    client_subcategory?: string | null;
   } | null;
   category: { id: string; name: string } | null;
   subcategory: { id: string; name: string } | null;
