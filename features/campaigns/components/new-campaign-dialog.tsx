@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/select";
 import {
   createCampaignAction,
-  getClientTaxonomyAction,
   type CreateCampaignFormState,
 } from "@/features/campaigns/actions";
 import { CreditLimitExceededDialog } from "@/features/campaigns/components/credit-limit-exceeded-dialog";
@@ -75,10 +74,6 @@ export function NewCampaignDialog({
   const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
   const [accountManagerId, setAccountManagerId] = useState(NONE_VALUE);
   const [creditDialogOpen, setCreditDialogOpen] = useState(false);
-  const [fetchedClientTaxonomy, setFetchedClientTaxonomy] = useState<{
-    client_category: string | null;
-    client_subcategory: string | null;
-  } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const acceptRiskRef = useRef<HTMLInputElement>(null);
   const [state, formAction, isPending] = useActionState(
@@ -100,18 +95,16 @@ export function NewCampaignDialog({
 
   const resolvedClientTaxonomy = useMemo(() => {
     const clientCategorySlug =
-      fetchedClientTaxonomy?.client_category ??
-      selectedBrand?.client?.client_category ??
       selectedClient?.client_category ??
+      selectedBrand?.client?.client_category ??
       null;
     const clientSubcategorySlug =
-      fetchedClientTaxonomy?.client_subcategory ??
-      selectedBrand?.client?.client_subcategory ??
       selectedClient?.client_subcategory ??
+      selectedBrand?.client?.client_subcategory ??
       null;
 
     return { clientCategorySlug, clientSubcategorySlug };
-  }, [fetchedClientTaxonomy, selectedBrand, selectedClient]);
+  }, [selectedBrand, selectedClient]);
 
   const commercialLabels = useMemo(() => {
     if (!selectedBrand) {
@@ -194,30 +187,6 @@ export function NewCampaignDialog({
       setCurrency(selectedBrand.currency_code);
     }
   }, [selectedBrand]);
-
-  useEffect(() => {
-    if (!open || !clientId) {
-      setFetchedClientTaxonomy(null);
-      return;
-    }
-
-    setFetchedClientTaxonomy(null);
-    let cancelled = false;
-
-    void getClientTaxonomyAction(clientId).then((result) => {
-      if (cancelled || !result.ok) {
-        return;
-      }
-      setFetchedClientTaxonomy({
-        client_category: result.client_category,
-        client_subcategory: result.client_subcategory,
-      });
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, clientId]);
 
   useEffect(() => {
     if (!state.message) {

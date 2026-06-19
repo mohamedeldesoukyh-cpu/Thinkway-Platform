@@ -5,8 +5,8 @@ import {
   getMissingClientColumnFromSchemaError,
   isMissingClientColumnSchemaError,
 } from "@/lib/clients/classification-audit-columns";
+import { fetchClientsForSelectSafe } from "@/lib/clients/safe-client-query";
 import {
-  fetchClientsForSelectWithOptionalVrRate,
   fetchVrRatesByIds,
   vrRatePercentFromMap,
 } from "@/lib/clients/vr-rate-lookup";
@@ -329,35 +329,29 @@ export async function getGroupsForSelect() {
 
 export async function getClientsForSelect(groupId?: string) {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await fetchClientsForSelectWithOptionalVrRate(
-    supabase,
-    groupId
-  );
+  const { clients, error } = await fetchClientsForSelectSafe(supabase, groupId);
   if (error) {
     throw new Error(error.message);
   }
 
   const vrRateMap = await fetchVrRatesByIds(
     supabase,
-    (data ?? []).map((row) => row.vr_rate_id)
+    clients.map((row) => row.vr_rate_id)
   );
 
   return dedupeClientsById(
-    (data ?? []).map((row) => {
-      const client = row as typeof row & {
-        vr_rate_id: string | null;
-      };
-      return {
-        id: client.id as string,
-        name: client.name as string,
-        legal_name: client.legal_name as string | null,
-        group_id: client.group_id as string | null,
-        document_number: client.document_number as string,
-        status: client.status as string,
-        vr_rate_id: client.vr_rate_id,
-        vr_rate_percent: vrRatePercentFromMap(vrRateMap, client.vr_rate_id),
-      };
-    })
+    clients.map((client) => ({
+      id: client.id,
+      name: client.name,
+      legal_name: client.legal_name,
+      group_id: client.group_id,
+      document_number: client.document_number,
+      status: client.status,
+      vr_rate_id: client.vr_rate_id,
+      vr_rate_percent: vrRatePercentFromMap(vrRateMap, client.vr_rate_id),
+      client_category: client.client_category,
+      client_subcategory: client.client_subcategory,
+    }))
   );
 }
 

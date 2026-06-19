@@ -247,6 +247,106 @@ export async function fetchClientRowsSafe(
   };
 }
 
+export type ClientTaxonomySnapshot = {
+  client_category: string | null;
+  client_subcategory: string | null;
+};
+
+const CLIENT_TAXONOMY_SELECT_CORE = ["id"] as const;
+const CLIENT_TAXONOMY_SELECT_OPTIONAL = [
+  "client_category",
+  "client_subcategory",
+] as const;
+
+export const CLIENT_SELECT_LIST_CORE = [
+  "id",
+  "name",
+  "legal_name",
+  "group_id",
+  "document_number",
+  "status",
+] as const;
+
+export const CLIENT_SELECT_LIST_OPTIONAL = [
+  "vr_rate_id",
+  ...CLIENT_TAXONOMY_SELECT_OPTIONAL,
+] as const;
+
+export type ClientForSelectRow = {
+  id: string;
+  name: string;
+  legal_name: string | null;
+  group_id: string | null;
+  document_number: string;
+  status: string;
+  vr_rate_id: string | null;
+  client_category: string | null;
+  client_subcategory: string | null;
+};
+
+function normalizeClientForSelectRow(
+  row: Record<string, unknown>,
+  strippedColumns: readonly string[]
+): ClientForSelectRow {
+  const stripped = new Set(strippedColumns);
+
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    legal_name: (row.legal_name as string | null | undefined) ?? null,
+    group_id: (row.group_id as string | null | undefined) ?? null,
+    document_number: String(row.document_number),
+    status: String(row.status),
+    vr_rate_id: stripped.has("vr_rate_id")
+      ? null
+      : ((row.vr_rate_id as string | null | undefined) ?? null),
+    client_category: stripped.has("client_category")
+      ? null
+      : ((row.client_category as string | null | undefined) ?? null),
+    client_subcategory: stripped.has("client_subcategory")
+      ? null
+      : ((row.client_subcategory as string | null | undefined) ?? null),
+  };
+}
+
+/** Client list for dropdowns with optional vr_rate and taxonomy columns stripped on schema lag. */
+export async function fetchClientsForSelectSafe(
+  supabase: SupabaseClient,
+  groupId?: string
+): Promise<{
+  clients: ClientForSelectRow[];
+  error: PostgrestError | null;
+}> {
+  const result = await queryClientRowsWithColumnRetry(
+    supabase,
+    [...CLIENT_SELECT_LIST_CORE, ...CLIENT_SELECT_LIST_OPTIONAL],
+    (select) => {
+      let query = supabase
+        .from("clients")
+        .select(select)
+        .neq("status", "archived")
+        .order("name");
+
+      if (groupId) {
+        query = query.eq("group_id", groupId);
+      }
+
+      return query as unknown as PromiseLike<ClientListQueryResult>;
+    }
+  );
+
+  if (result.error) {
+    return { clients: [], error: result.error };
+  }
+
+  return {
+    clients: (result.data ?? []).map((row) =>
+      normalizeClientForSelectRow(row, result.strippedColumns)
+    ),
+    error: null,
+  };
+}
+
 /** Safe read of credit-limit enforcement flags when columns may be absent. */
 export async function fetchClientCreditLimitFlagsSafe(
   supabase: SupabaseClient,
@@ -288,17 +388,6 @@ export async function fetchClientCreditLimitFlagsSafe(
     error: null,
   };
 }
-
-export type ClientTaxonomySnapshot = {
-  client_category: string | null;
-  client_subcategory: string | null;
-};
-
-const CLIENT_TAXONOMY_SELECT_CORE = ["id"] as const;
-const CLIENT_TAXONOMY_SELECT_OPTIONAL = [
-  "client_category",
-  "client_subcategory",
-] as const;
 
 /** Bulk read of client taxonomy slugs when nested brand joins omit or strip them. */
 export async function fetchClientTaxonomyMapSafe(

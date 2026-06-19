@@ -16,7 +16,6 @@ import {
   getGroupsForSelect,
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
-import { fetchClientTaxonomyMapSafe } from "@/lib/clients/safe-client-query";
 import {
   syncCampaignHeaderStatus,
   syncCampaignHeaderStatusesForList,
@@ -322,41 +321,20 @@ export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
     throw new Error(managersResult.error.message);
   }
 
-  const clientIds = [
-    ...new Set([
-      ...(clients ?? []).map((client) => client.id),
-      ...(brands ?? []).map((brand) => brand.client_id),
-    ]),
-  ];
-  const taxonomyMap = await fetchClientTaxonomyMapSafe(supabase, clientIds);
-
-  if (taxonomyMap.size > 0) {
-    const enrichedCount = clientIds.filter((id) => {
-      const taxonomy = taxonomyMap.get(id);
-      return Boolean(taxonomy?.client_category || taxonomy?.client_subcategory);
-    }).length;
-    if (enrichedCount > 0) {
-      console.info(
-        `[campaigns] Loaded client taxonomy for ${enrichedCount} legal entit${enrichedCount === 1 ? "y" : "ies"} in new campaign form.`
-      );
-    }
-  }
-
-  const enrichedClients = (clients ?? []).map((client) => {
-    const taxonomy = taxonomyMap.get(client.id);
-    if (!taxonomy) {
-      return client;
-    }
-    return {
-      ...client,
-      client_category: taxonomy.client_category,
-      client_subcategory: taxonomy.client_subcategory,
-    };
-  });
+  const clientList = (clients ?? []) as ClientFormOption[];
+  const taxonomyByClientId = new Map(
+    clientList.map((client) => [
+      client.id,
+      {
+        client_category: client.client_category ?? null,
+        client_subcategory: client.client_subcategory ?? null,
+      },
+    ])
+  );
 
   const enrichedBrands = (brands ?? []).map((brand) => {
     const row = brand as BrandFormOption;
-    const taxonomy = taxonomyMap.get(row.client_id);
+    const taxonomy = taxonomyByClientId.get(row.client_id);
     if (!taxonomy || !row.client) {
       return row;
     }
@@ -374,7 +352,7 @@ export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
 
   return {
     groups: groups ?? [],
-    clients: enrichedClients as ClientFormOption[],
+    clients: clientList,
     brands: enrichedBrands,
     masterData,
     accountManagers: managersResult.data ?? [],
