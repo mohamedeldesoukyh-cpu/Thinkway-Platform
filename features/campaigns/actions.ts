@@ -23,18 +23,6 @@ import { syncAssignmentDeliverablesForLine } from "@/lib/assignments/sync-assign
 import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
-  createSignedDocumentUrl,
-} from "@/lib/supabase/storage";
-import {
-  CAMPAIGN_CLIENT_BO_TYPE,
-  friendlyCampaignDocumentError,
-  toJsonSafeCampaignDocumentActionState,
-} from "@/lib/campaigns/campaign-document-utils";
-import {
-  parseOptionalClientBoFile,
-  uploadCampaignDocument,
-} from "@/lib/campaigns/upload-campaign-document";
-import {
   buildLineVatPayload,
   buildVendorCostVatPayload,
   defaultCostVatPercentForVendor,
@@ -334,7 +322,6 @@ export async function createCampaignAction(
       end_date: parsed.data.end_date,
       account_manager_id: emptyToNull(parsed.data.account_manager_id),
       metadata,
-      client_bo_number: emptyToNull(parsed.data.client_bo_number),
       created_by: user.id,
     })
     .select("id, document_number")
@@ -368,32 +355,11 @@ export async function createCampaignAction(
     documentNumber: header.document_number,
   });
 
-  const clientBoFile = parseOptionalClientBoFile(formData);
-  if (clientBoFile) {
-    const uploadResult = await uploadCampaignDocument({
-      supabase,
-      userId: user.id,
-      campaignHeaderId: header.id,
-      documentType: CAMPAIGN_CLIENT_BO_TYPE,
-      file: clientBoFile,
-    });
-
-    if (!uploadResult.ok) {
-      revalidateCampaign(header.id, brandRow.client_id);
-      return {
-        ok: true,
-        message: `Campaign ${header.document_number} created, but Client BO upload failed: ${uploadResult.message}`,
-        campaignId: header.id,
-      };
-    }
-  }
-
   revalidateCampaign(header.id, brandRow.client_id);
 
-  const boAttached = clientBoFile ? " Client BO attached." : "";
   return {
     ok: true,
-    message: `Campaign ${header.document_number} created. Add assignments when ready.${boAttached}`,
+    message: `Campaign ${header.document_number} created. Add assignments when ready.`,
     campaignId: header.id,
   };
 }
@@ -442,7 +408,6 @@ export async function updateCampaignHeaderAction(
       end_date: parsed.data.end_date,
       account_manager_id: emptyToNull(parsed.data.account_manager_id),
       team_id: emptyToNull(parsed.data.team_id),
-      client_bo_number: emptyToNull(parsed.data.client_bo_number),
       metadata,
     })
     .eq("id", parsed.data.campaign_id);
@@ -1353,7 +1318,6 @@ export async function duplicateCampaignAction(
       end_date: parsed.data.end_date,
       account_manager_id: parsed.data.copy_workflow ? src.account_manager_id : null,
       objectives: parsed.data.copy_notes ? src.objectives : null,
-      client_bo_number: emptyToNull(parsed.data.client_bo_number),
       metadata,
       created_by: user.id,
     })
@@ -1484,109 +1448,4 @@ export async function duplicateCampaignAction(
     message: `Campaign duplicated as ${newHeader.document_number}.`,
     campaignId: newHeader.id,
   };
-}
-
-export async function getCampaignDocumentDownloadUrlAction(
-  documentId: string,
-  campaignHeaderId: string
-): Promise<{ url?: string; error?: string }> {
-  try {
-    const { supabase, error: authError } = await requireAuthUser();
-    if (authError) {
-      return { error: authError };
-    }
-
-    const { data: doc, error } = await supabase
-      .from("campaign_documents")
-      .select("storage_path")
-      .eq("id", documentId)
-      .eq("campaign_header_id", campaignHeaderId)
-      .maybeSingle();
-
-    if (error) {
-      return { error: friendlyCampaignDocumentError(error.message) };
-    }
-
-    if (!doc) {
-      return { error: "Document not found." };
-    }
-
-    const url = await createSignedDocumentUrl({
-      supabase,
-      bucket: "campaign-documents",
-      storagePath: doc.storage_path,
-    });
-    return { url };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not create download link.";
-    return { error: friendlyCampaignDocumentError(message) };
-  }
-}
-
-export async function uploadCampaignClientBoAction(
-  _prev: FormActionState,
-  formData: FormData
-): Promise<FormActionState> {
-  try {
-    const campaignHeaderId = String(formData.get("campaign_header_id") ?? "");
-    const file = formData.get("file");
-
-    if (!campaignHeaderId) {
-      return toJsonSafeCampaignDocumentActionState({
-        ok: false,
-        message: "Missing campaign reference.",
-      });
-    }
-
-    if (!(file instanceof File) || file.size === 0) {
-      return toJsonSafeCampaignDocumentActionState({
-        ok: false,
-        message: "Please choose a file to upload.",
-      });
-    }
-
-    const { supabase, user, error: authError } = await requireAuthUser();
-    if (authError || !user) {
-      return toJsonSafeCampaignDocumentActionState({
-        ok: false,
-        message: authError ?? "Unauthorized",
-      });
-    }
-
-    const uploadResult = await uploadCampaignDocument({
-      supabase,
-      userId: user.id,
-      campaignHeaderId,
-      documentType: CAMPAIGN_CLIENT_BO_TYPE,
-      file,
-    });
-
-    if (!uploadResult.ok) {
-      return toJsonSafeCampaignDocumentActionState({
-        ok: false,
-        message: uploadResult.message,
-      });
-    }
-
-    const { data: header } = await supabase
-      .from("campaign_headers")
-      .select("client_id")
-      .eq("id", campaignHeaderId)
-      .maybeSingle();
-
-    revalidateCampaign(campaignHeaderId, header?.client_id);
-
-    return toJsonSafeCampaignDocumentActionState({
-      ok: true,
-      message: "Client BO uploaded.",
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Upload failed unexpectedly.";
-    return toJsonSafeCampaignDocumentActionState({
-      ok: false,
-      message: friendlyCampaignDocumentError(message),
-    });
-  }
 }

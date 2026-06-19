@@ -110,10 +110,6 @@ export function DuplicateCampaignDialog({
               <Label htmlFor="dup_po">PO number</Label>
               <Input id="dup_po" name="po_number" disabled={pending} />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="dup_client_bo">Client BO number</Label>
-              <Input id="dup_client_bo" name="client_bo_number" disabled={pending} />
-            </div>
           </div>
 
           <div className="grid gap-2 rounded-2xl border p-3">

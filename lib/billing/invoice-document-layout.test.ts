@@ -37,11 +37,9 @@ const sample: InvoiceDocumentData = {
     endDate: "2026-06-30",
     brandName: "Brand X",
     poNumber: "PO-12345",
-    clientBoNumber: "BO-98765",
     clientIoReferences: ["CIO-2026-0001"],
     clientIoReferenceDisplay: "CIO-2026-0001",
     poReferenceDisplay: "PO-12345",
-    clientBoReferenceDisplay: "BO-98765",
     internalReference: "TW-2026-0001",
   },
   commercialBreakdown: {

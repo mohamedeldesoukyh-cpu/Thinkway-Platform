@@ -116,11 +116,6 @@ export function CampaignOverviewDetails({
         <div className={bodyClass}>
           <DetailRow
             compact={compactTypography}
-            label="Client BO number"
-            value={workspace.client_bo_number ?? "—"}
-          />
-          <DetailRow
-            compact={compactTypography}
             label="Dates"
             value={`${formatDate(displayDates.start)} – ${formatDate(displayDates.end)}`}
           />

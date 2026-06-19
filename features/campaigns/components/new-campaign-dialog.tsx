@@ -163,9 +163,6 @@ export function NewCampaignDialog({
       setStatus("draft");
       setCurrency(DEFAULT_PLATFORM_CURRENCY);
       setAccountManagerId(NONE_VALUE);
-      if (formRef.current) {
-        formRef.current.reset();
-      }
       if (acceptRiskRef.current) {
         acceptRiskRef.current.value = "false";
       }
@@ -240,7 +237,7 @@ export function NewCampaignDialog({
             Create a brand before creating campaigns.
           </p>
         ) : (
-          <form ref={formRef} action={formAction} encType="multipart/form-data" className="grid gap-4">
+          <form ref={formRef} action={formAction} className="grid gap-4">
             <input type="hidden" name="brand_id" value={brandId} />
             <input type="hidden" name="platform" value={platform} />
             <input type="hidden" name="status" value={status} />
@@ -444,29 +441,6 @@ export function NewCampaignDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="grid gap-2 sm:col-span-2">
-                <Label htmlFor="client_bo_number">Client BO number</Label>
-                <Input
-                  id="client_bo_number"
-                  name="client_bo_number"
-                  placeholder="Optional client booking order reference"
-                  disabled={isPending}
-                />
-              </div>
-              <div className="grid gap-2 sm:col-span-2">
-                <Label htmlFor="client_bo_file">Client BO attachment</Label>
-                <Input
-                  id="client_bo_file"
-                  name="client_bo_file"
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
-                  disabled={isPending}
-                  className="cursor-pointer file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-muted file:px-3 file:py-1 file:text-xs file:font-medium"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Optional booking order attachment — viewable from the campaign overview after creation.
-                </p>
               </div>
             </div>
 

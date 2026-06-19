@@ -360,9 +360,6 @@ export function CampaignWorkspaceView({
                   {workspace.platform
                     ? ` · ${formatPlatformLabel(workspace.platform)}`
                     : null}
-                  {workspace.client_bo_number
-                    ? ` · Client BO ${workspace.client_bo_number}`
-                    : null}
                 </p>
               </div>
 
