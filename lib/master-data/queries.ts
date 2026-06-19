@@ -240,18 +240,20 @@ function normalizeBrandCampaignFormClient(
   };
 }
 
-async function queryBrandsForCampaignForm(
-  clientFields: string
-): Promise<{
+type BrandCampaignFormQueryResult = {
   data: Record<string, unknown>[] | null;
   error: PostgrestError | null;
-}> {
+};
+
+async function queryBrandsForCampaignForm(
+  clientFields: string
+): Promise<BrandCampaignFormQueryResult> {
   const supabase = await createSupabaseServerClient();
   return supabase
     .from("brands")
     .select(buildBrandCampaignFormSelect(clientFields))
     .eq("status", "active")
-    .order("name");
+    .order("name") as unknown as PromiseLike<BrandCampaignFormQueryResult>;
 }
 
 export async function getBrandsForCampaignForm() {
