@@ -21,7 +21,9 @@ import {
 import { resolveLineCommercialInput } from "@/lib/assignments/resolve-line-commercial-input";
 import { syncAssignmentDeliverablesForLine } from "@/lib/assignments/sync-assignment-deliverables-for-line";
 import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
+import { fetchClientRowSafe } from "@/lib/clients/safe-client-query";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/validation/uuid";
 import {
   buildLineVatPayload,
   buildVendorCostVatPayload,
@@ -1447,5 +1449,62 @@ export async function duplicateCampaignAction(
     ok: true,
     message: `Campaign duplicated as ${newHeader.document_number}.`,
     campaignId: newHeader.id,
+  };
+}
+
+export type ClientTaxonomyActionResult = {
+  ok: boolean;
+  client_category: string | null;
+  client_subcategory: string | null;
+  message?: string;
+};
+
+/** Load legal-entity taxonomy slugs for the new campaign commercial summary. */
+export async function getClientTaxonomyAction(
+  clientId: string
+): Promise<ClientTaxonomyActionResult> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return {
+      ok: false,
+      client_category: null,
+      client_subcategory: null,
+      message: authError?.message ?? "Unauthorized",
+    };
+  }
+
+  if (!isUuid(clientId)) {
+    return {
+      ok: false,
+      client_category: null,
+      client_subcategory: null,
+      message: "Invalid client.",
+    };
+  }
+
+  const { row, error } = await fetchClientRowSafe(supabase, clientId, [
+    "client_category",
+    "client_subcategory",
+  ]);
+
+  if (error) {
+    return {
+      ok: false,
+      client_category: null,
+      client_subcategory: null,
+      message: error.message,
+    };
+  }
+
+  return {
+    ok: true,
+    client_category: (row?.client_category as string | null | undefined) ?? null,
+    client_subcategory:
+      (row?.client_subcategory as string | null | undefined) ?? null,
   };
 }

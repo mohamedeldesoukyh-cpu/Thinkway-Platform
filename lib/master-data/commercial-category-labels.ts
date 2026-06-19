@@ -41,3 +41,14 @@ export function resolveCommercialCategoryLabels(
 
   return { category, subcategory };
 }
+
+/** Display labels for legal-entity taxonomy slugs (client Overview tab). */
+export function resolveClientTaxonomyDisplayLabels(
+  clientCategorySlug: string | null | undefined,
+  clientSubcategorySlug: string | null | undefined
+): { category: string; subcategory: string } {
+  return resolveCommercialCategoryLabels({
+    clientCategorySlug,
+    clientSubcategorySlug,
+  });
+}

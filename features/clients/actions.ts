@@ -337,6 +337,7 @@ export async function updateClientOverviewAction(
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${client_id}`);
+  revalidatePath("/campaigns");
   revalidatePath("/settings/client-classification-review");
   if (fields.group_id) {
     revalidatePath(`/groups/${fields.group_id}`);

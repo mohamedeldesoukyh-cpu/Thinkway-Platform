@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import {
   createCampaignAction,
+  getClientTaxonomyAction,
   type CreateCampaignFormState,
 } from "@/features/campaigns/actions";
 import { CreditLimitExceededDialog } from "@/features/campaigns/components/credit-limit-exceeded-dialog";
@@ -36,7 +37,7 @@ import {
 } from "@/features/campaigns/constants";
 import type { CampaignFormOptions } from "@/features/campaigns/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
-import { resolveCommercialCategoryLabels } from "@/lib/master-data/commercial-category-labels";
+import { resolveClientTaxonomyDisplayLabels } from "@/lib/master-data/commercial-category-labels";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { labelForOption } from "@/lib/master-data/constants";
 import { AGENCY_OR_DIRECT_OPTIONS } from "@/features/clients/constants";
@@ -74,6 +75,10 @@ export function NewCampaignDialog({
   const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
   const [accountManagerId, setAccountManagerId] = useState(NONE_VALUE);
   const [creditDialogOpen, setCreditDialogOpen] = useState(false);
+  const [fetchedClientTaxonomy, setFetchedClientTaxonomy] = useState<{
+    client_category: string | null;
+    client_subcategory: string | null;
+  } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const acceptRiskRef = useRef<HTMLInputElement>(null);
   const [state, formAction, isPending] = useActionState(
@@ -93,24 +98,31 @@ export function NewCampaignDialog({
     [uniqueClients, clientId]
   );
 
+  const resolvedClientTaxonomy = useMemo(() => {
+    const clientCategorySlug =
+      fetchedClientTaxonomy?.client_category ??
+      selectedBrand?.client?.client_category ??
+      selectedClient?.client_category ??
+      null;
+    const clientSubcategorySlug =
+      fetchedClientTaxonomy?.client_subcategory ??
+      selectedBrand?.client?.client_subcategory ??
+      selectedClient?.client_subcategory ??
+      null;
+
+    return { clientCategorySlug, clientSubcategorySlug };
+  }, [fetchedClientTaxonomy, selectedBrand, selectedClient]);
+
   const commercialLabels = useMemo(() => {
     if (!selectedBrand) {
       return null;
     }
 
-    const clientCategorySlug =
-      selectedBrand.client?.client_category ?? selectedClient?.client_category;
-    const clientSubcategorySlug =
-      selectedBrand.client?.client_subcategory ??
-      selectedClient?.client_subcategory;
-
-    return resolveCommercialCategoryLabels({
-      brandCategoryName: selectedBrand.category?.name,
-      brandSubcategoryName: selectedBrand.subcategory?.name,
-      clientCategorySlug,
-      clientSubcategorySlug,
-    });
-  }, [selectedBrand, selectedClient]);
+    return resolveClientTaxonomyDisplayLabels(
+      resolvedClientTaxonomy.clientCategorySlug,
+      resolvedClientTaxonomy.clientSubcategorySlug
+    );
+  }, [selectedBrand, resolvedClientTaxonomy]);
 
   const filteredClients = useMemo(() => {
     if (!groupId) return uniqueClients;
@@ -182,6 +194,30 @@ export function NewCampaignDialog({
       setCurrency(selectedBrand.currency_code);
     }
   }, [selectedBrand]);
+
+  useEffect(() => {
+    if (!open || !clientId) {
+      setFetchedClientTaxonomy(null);
+      return;
+    }
+
+    setFetchedClientTaxonomy(null);
+    let cancelled = false;
+
+    void getClientTaxonomyAction(clientId).then((result) => {
+      if (cancelled || !result.ok) {
+        return;
+      }
+      setFetchedClientTaxonomy({
+        client_category: result.client_category,
+        client_subcategory: result.client_subcategory,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, clientId]);
 
   useEffect(() => {
     if (!state.message) {

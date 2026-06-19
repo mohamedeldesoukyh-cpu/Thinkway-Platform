@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { resolveCommercialCategoryLabels } from "./commercial-category-labels";
+import { resolveCommercialCategoryLabels, resolveClientTaxonomyDisplayLabels } from "./commercial-category-labels";
 
 const brandOnly = resolveCommercialCategoryLabels({
   brandCategoryName: "Banking",
@@ -22,6 +22,17 @@ assert.equal(
   "🧠 Marketing, Advertising & Media Agencies"
 );
 assert.equal(clientFallback.subcategory, "Media Agency");
+
+const clientTaxonomyDisplay = resolveClientTaxonomyDisplayLabels(
+  "marketing_advertising_media_agencies",
+  "media_agency"
+);
+
+assert.equal(
+  clientTaxonomyDisplay.category,
+  "🧠 Marketing, Advertising & Media Agencies"
+);
+assert.equal(clientTaxonomyDisplay.subcategory, "Media Agency");
 
 const empty = resolveCommercialCategoryLabels({});
 assert.equal(empty.category, "—");
