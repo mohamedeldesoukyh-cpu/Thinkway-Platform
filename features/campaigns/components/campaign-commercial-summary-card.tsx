@@ -51,10 +51,13 @@ function SummaryField({
   label: string;
   value: string | null | undefined;
 }) {
+  const display = value?.trim();
   return (
     <div className="grid gap-[7px]">
       <p className={CLIENT_FORM_FIELD_LABEL_CLASS}>{label}</p>
-      <p className="text-[13.5px] leading-snug text-[#0B0F1A]">{value || "—"}</p>
+      <p className="text-[13.5px] leading-snug text-[#0B0F1A]">
+        {display && display !== "—" ? display : "—"}
+      </p>
     </div>
   );
 }

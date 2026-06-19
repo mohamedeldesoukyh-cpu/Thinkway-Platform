@@ -6,6 +6,7 @@ import {
   isMissingClientColumnSchemaError,
 } from "@/lib/clients/classification-audit-columns";
 import { fetchClientsForSelectSafe } from "@/lib/clients/safe-client-query";
+import { enrichClientsWithTaxonomyFallback } from "@/lib/clients/client-taxonomy-enrich";
 import {
   fetchVrRatesByIds,
   vrRatePercentFromMap,
@@ -334,13 +335,15 @@ export async function getClientsForSelect(groupId?: string) {
     throw new Error(error.message);
   }
 
+  const enrichedClients = await enrichClientsWithTaxonomyFallback(supabase, clients);
+
   const vrRateMap = await fetchVrRatesByIds(
     supabase,
-    clients.map((row) => row.vr_rate_id)
+    enrichedClients.map((row) => row.vr_rate_id)
   );
 
   return dedupeClientsById(
-    clients.map((client) => ({
+    enrichedClients.map((client) => ({
       id: client.id,
       name: client.name,
       legal_name: client.legal_name,

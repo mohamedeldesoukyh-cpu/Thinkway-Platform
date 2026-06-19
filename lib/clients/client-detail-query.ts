@@ -8,6 +8,7 @@ import {
   NAME_AR_COLUMN,
   OPTIONAL_CLIENT_COLUMN_NAMES,
 } from "@/lib/clients/classification-audit-columns";
+import { resolveClientTaxonomyFromRow } from "@/lib/clients/client-taxonomy-resolve";
 
 const MAX_OPTIONAL_COLUMN_RETRY_ATTEMPTS = 16;
 import type { ClientDetail, ClientRow } from "@/types/database";
@@ -92,18 +93,27 @@ function normalizeClientDetailRow(
   strippedColumns: readonly string[]
 ): ClientDetailRow {
   const stripped = new Set(strippedColumns);
-
-  return {
-    ...(row as unknown as ClientRow),
-    name_ar: stripped.has(NAME_AR_COLUMN)
-      ? null
-      : ((row.name_ar as string | null | undefined) ?? null),
+  const metadata =
+    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
+      : ((row.metadata as Record<string, unknown> | null | undefined) ?? {});
+  const taxonomy = resolveClientTaxonomyFromRow({
     client_category: stripped.has("client_category")
       ? null
       : ((row.client_category as string | null | undefined) ?? null),
     client_subcategory: stripped.has("client_subcategory")
       ? null
       : ((row.client_subcategory as string | null | undefined) ?? null),
+    metadata,
+  });
+
+  return {
+    ...(row as unknown as ClientRow),
+    name_ar: stripped.has(NAME_AR_COLUMN)
+      ? null
+      : ((row.name_ar as string | null | undefined) ?? null),
+    client_category: taxonomy.client_category,
+    client_subcategory: taxonomy.client_subcategory,
     vr_rate_id: stripped.has("vr_rate_id")
       ? null
       : ((row.vr_rate_id as string | null | undefined) ?? null),

@@ -36,7 +36,7 @@ import {
 } from "@/features/campaigns/constants";
 import type { CampaignFormOptions } from "@/features/campaigns/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
-import { resolveClientTaxonomyDisplayLabels } from "@/lib/master-data/commercial-category-labels";
+import { resolveCommercialCategoryLabels } from "@/lib/master-data/commercial-category-labels";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { labelForOption } from "@/lib/master-data/constants";
 import { AGENCY_OR_DIRECT_OPTIONS } from "@/features/clients/constants";
@@ -107,15 +107,57 @@ export function NewCampaignDialog({
   }, [selectedBrand, selectedClient]);
 
   const commercialLabels = useMemo(() => {
-    if (!selectedBrand) {
+    if (!selectedBrand && !selectedClient) {
       return null;
     }
 
-    return resolveClientTaxonomyDisplayLabels(
-      resolvedClientTaxonomy.clientCategorySlug,
-      resolvedClientTaxonomy.clientSubcategorySlug
-    );
-  }, [selectedBrand, resolvedClientTaxonomy]);
+    return resolveCommercialCategoryLabels({
+      brandCategoryName: selectedBrand?.category?.name,
+      brandSubcategoryName: selectedBrand?.subcategory?.name,
+      clientCategorySlug: resolvedClientTaxonomy.clientCategorySlug,
+      clientSubcategorySlug: resolvedClientTaxonomy.clientSubcategorySlug,
+    });
+  }, [selectedBrand, selectedClient, resolvedClientTaxonomy]);
+
+  const commercialGroupName = useMemo(() => {
+    if (selectedBrand?.group) {
+      return (selectedBrand.group as { name: string }).name;
+    }
+    if (selectedClient?.group_id) {
+      return groups.find((group) => group.id === selectedClient.group_id)?.name ?? null;
+    }
+    return null;
+  }, [groups, selectedBrand, selectedClient]);
+
+  const commercialClientName = useMemo(() => {
+    const brandClient = selectedBrand?.client;
+    if (brandClient?.legal_name?.trim()) {
+      return brandClient.legal_name;
+    }
+    if (brandClient?.name) {
+      return brandClient.name;
+    }
+    if (selectedClient?.legal_name?.trim()) {
+      return selectedClient.legal_name;
+    }
+    return selectedClient?.name ?? null;
+  }, [selectedBrand, selectedClient]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development" || !selectedClient) {
+      return;
+    }
+
+    if (
+      !resolvedClientTaxonomy.clientCategorySlug &&
+      !resolvedClientTaxonomy.clientSubcategorySlug
+    ) {
+      console.warn("[new-campaign-dialog] client taxonomy missing at runtime", {
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+      });
+    }
+  }, [resolvedClientTaxonomy, selectedClient]);
 
   const filteredClients = useMemo(() => {
     if (!groupId) return uniqueClients;
@@ -332,22 +374,18 @@ export function NewCampaignDialog({
               </div>
             </div>
 
-            {selectedBrand && commercialLabels ? (
+            {(selectedBrand || selectedClient) && commercialLabels ? (
               <CampaignCommercialSummaryCard
-                groupName={(selectedBrand.group as { name: string } | null)?.name}
-                clientName={
-                  (selectedBrand.client as { legal_name: string | null; name: string } | null)
-                    ?.legal_name ??
-                  (selectedBrand.client as { name: string } | null)?.name
-                }
+                groupName={commercialGroupName}
+                clientName={commercialClientName}
                 category={commercialLabels.category}
                 subcategory={commercialLabels.subcategory}
                 agencyOrDirect={labelForOption(
                   AGENCY_OR_DIRECT_OPTIONS,
-                  selectedBrand.client?.agency_or_direct
+                  selectedBrand?.client?.agency_or_direct
                 )}
                 vrPercent={
-                  selectedBrand.vr_rate
+                  selectedBrand?.vr_rate
                     ? `${(selectedBrand.vr_rate as { rate_percent: number }).rate_percent}%`
                     : "—"
                 }

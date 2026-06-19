@@ -5,6 +5,7 @@ import {
   isMissingClientColumnSchemaError,
   OPTIONAL_CLIENT_COLUMN_NAMES,
 } from "@/lib/clients/classification-audit-columns";
+import { resolveClientTaxonomyFromRow } from "@/lib/clients/client-taxonomy-resolve";
 
 const MAX_OPTIONAL_COLUMN_RETRY_ATTEMPTS = 16;
 
@@ -252,7 +253,7 @@ export type ClientTaxonomySnapshot = {
   client_subcategory: string | null;
 };
 
-const CLIENT_TAXONOMY_SELECT_CORE = ["id"] as const;
+const CLIENT_TAXONOMY_SELECT_CORE = ["id", "metadata"] as const;
 const CLIENT_TAXONOMY_SELECT_OPTIONAL = [
   "client_category",
   "client_subcategory",
@@ -265,6 +266,7 @@ export const CLIENT_SELECT_LIST_CORE = [
   "group_id",
   "document_number",
   "status",
+  "metadata",
 ] as const;
 
 export const CLIENT_SELECT_LIST_OPTIONAL = [
@@ -282,6 +284,7 @@ export type ClientForSelectRow = {
   vr_rate_id: string | null;
   client_category: string | null;
   client_subcategory: string | null;
+  metadata: Record<string, unknown>;
 };
 
 function normalizeClientForSelectRow(
@@ -289,6 +292,20 @@ function normalizeClientForSelectRow(
   strippedColumns: readonly string[]
 ): ClientForSelectRow {
   const stripped = new Set(strippedColumns);
+  const metadata =
+    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
+      : {};
+
+  const taxonomy = resolveClientTaxonomyFromRow({
+    client_category: stripped.has("client_category")
+      ? null
+      : ((row.client_category as string | null | undefined) ?? null),
+    client_subcategory: stripped.has("client_subcategory")
+      ? null
+      : ((row.client_subcategory as string | null | undefined) ?? null),
+    metadata,
+  });
 
   return {
     id: String(row.id),
@@ -300,12 +317,9 @@ function normalizeClientForSelectRow(
     vr_rate_id: stripped.has("vr_rate_id")
       ? null
       : ((row.vr_rate_id as string | null | undefined) ?? null),
-    client_category: stripped.has("client_category")
-      ? null
-      : ((row.client_category as string | null | undefined) ?? null),
-    client_subcategory: stripped.has("client_subcategory")
-      ? null
-      : ((row.client_subcategory as string | null | undefined) ?? null),
+    client_category: taxonomy.client_category,
+    client_subcategory: taxonomy.client_subcategory,
+    metadata,
   };
 }
 
@@ -421,13 +435,23 @@ export async function fetchClientTaxonomyMapSafe(
   const map = new Map<string, ClientTaxonomySnapshot>();
 
   for (const row of result.data ?? []) {
-    map.set(String(row.id), {
+    const metadata =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const taxonomy = resolveClientTaxonomyFromRow({
       client_category: stripped.has("client_category")
         ? null
         : ((row.client_category as string | null | undefined) ?? null),
       client_subcategory: stripped.has("client_subcategory")
         ? null
         : ((row.client_subcategory as string | null | undefined) ?? null),
+      metadata,
+    });
+
+    map.set(String(row.id), {
+      client_category: taxonomy.client_category,
+      client_subcategory: taxonomy.client_subcategory,
     });
   }
 

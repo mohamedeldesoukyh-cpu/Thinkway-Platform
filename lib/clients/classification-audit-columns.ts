@@ -1,6 +1,8 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 import type { ClassificationAuditPayload } from "@/lib/clients/build-classification-audit";
+import { persistClientTaxonomyMetadataFallback } from "@/lib/clients/client-taxonomy-metadata";
+import { wasClientTaxonomyColumnStripped } from "@/lib/clients/client-taxonomy-resolve";
 
 export const CLASSIFICATION_AUDIT_COLUMN_NAMES = [
   "classification_source",
@@ -264,6 +266,46 @@ function wasClassificationAuditStripped(strippedColumns: readonly string[]): boo
   );
 }
 
+function readTaxonomySlugsFromPayload(
+  payload: Record<string, unknown>
+): { categorySlug: string; subcategorySlug: string } | null {
+  const categorySlug =
+    typeof payload.client_category === "string" ? payload.client_category.trim() : "";
+  const subcategorySlug =
+    typeof payload.client_subcategory === "string"
+      ? payload.client_subcategory.trim()
+      : "";
+
+  if (!categorySlug || !subcategorySlug) {
+    return null;
+  }
+
+  return { categorySlug, subcategorySlug };
+}
+
+async function persistTaxonomyMetadataIfStripped(
+  supabase: SupabaseClient,
+  clientId: string,
+  payload: Record<string, unknown>,
+  strippedColumns: readonly string[]
+): Promise<void> {
+  if (!wasClientTaxonomyColumnStripped(strippedColumns)) {
+    return;
+  }
+
+  const slugs = readTaxonomySlugsFromPayload(payload);
+  if (!slugs) {
+    return;
+  }
+
+  await persistClientTaxonomyMetadataFallback(
+    supabase,
+    clientId,
+    slugs.categorySlug,
+    slugs.subcategorySlug
+  );
+}
+
 async function runClientInsertWithOptionalColumnRetry(
   supabase: SupabaseClient,
   initialPayload: Record<string, unknown>
@@ -284,6 +326,14 @@ async function runClientInsertWithOptionalColumnRetry(
       .single();
 
     if (!result.error) {
+      if (result.data?.id) {
+        await persistTaxonomyMetadataIfStripped(
+          supabase,
+          result.data.id,
+          payload,
+          strippedColumns
+        );
+      }
       return { data: result.data, error: null, strippedColumns };
     }
 
@@ -333,6 +383,12 @@ export async function updateClientWithOptionalColumnRetry(
     const result = await query;
 
     if (!result.error) {
+      await persistTaxonomyMetadataIfStripped(
+        supabase,
+        clientId,
+        payload,
+        strippedColumns
+      );
       return { error: null, strippedColumns };
     }
 
