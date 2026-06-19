@@ -1,4 +1,4 @@
-import type { AgencyOrDirect, CampaignStatus } from "@/types/database";
+import type { AgencyOrDirect, CampaignDocumentRow, CampaignStatus } from "@/types/database";
 import type { PoHealth } from "@/lib/finance/po/calculations";
 import type { PoStatus } from "@/lib/finance/po/status";
 
@@ -309,6 +309,8 @@ export type CampaignWorkspace = {
     client_country_code: string | null;
     default_revenue_vat_percent: number;
   };
+  client_bo_number: string | null;
+  client_bo: CampaignDocumentRow | null;
 };
 
 export type InfluencerSearchResult = {

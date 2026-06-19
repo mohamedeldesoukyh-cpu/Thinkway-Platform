@@ -51,9 +51,11 @@ export type InvoiceDocumentData = {
     endDate: string | null;
     brandName: string | null;
     poNumber: string | null;
+    clientBoNumber: string | null;
     clientIoReferences: string[];
     clientIoReferenceDisplay: string;
     poReferenceDisplay: string;
+    clientBoReferenceDisplay: string;
     internalReference: string | null;
   } | null;
   commercialBreakdown: InvoiceCommercialBreakdown;

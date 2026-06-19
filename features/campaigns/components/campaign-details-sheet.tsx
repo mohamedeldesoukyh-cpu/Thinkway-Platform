@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CampaignClientBoAttach } from "@/features/campaigns/components/campaign-client-bo-attach";
 import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import {
@@ -123,6 +124,20 @@ function CampaignParticipationTab({ workspace }: { workspace: CampaignWorkspace 
         <span className={cn(financials.po_exceeded && "font-medium text-red-600 dark:text-red-400")}>
           {formatMoney(financials.budget, currency)}
         </span>
+      </DetailField>
+      <DetailField label="Client BO number">
+        {workspace.client_bo_number ?? "—"}
+      </DetailField>
+      <DetailField label="Client BO">
+        {workspace.client_bo ? (
+          <CampaignClientBoAttach
+            campaignHeaderId={workspace.id}
+            document={workspace.client_bo}
+            variant="inline"
+          />
+        ) : (
+          <span className="text-muted-foreground">Not attached</span>
+        )}
       </DetailField>
       <DetailField label="Currency">{currency}</DetailField>
     </div>

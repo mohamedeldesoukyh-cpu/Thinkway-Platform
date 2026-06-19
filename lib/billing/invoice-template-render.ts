@@ -103,6 +103,7 @@ export function renderInvoiceHtml(data: InvoiceDocumentData): string {
   const dueDateLong = formatLongDueDate(data.dueDate);
   const ioRef = display(data.campaign?.clientIoReferenceDisplay ?? "—");
   const poRef = display(data.campaign?.poReferenceDisplay ?? "—");
+  const clientBoRef = display(data.campaign?.clientBoReferenceDisplay ?? "—");
   const internalRef = display(data.campaign?.internalReference ?? "—");
   const clientName = display(data.client.billingName);
   const clientLegalName = display(data.client.legalName ?? data.client.name);
@@ -128,6 +129,10 @@ export function renderInvoiceHtml(data: InvoiceDocumentData): string {
   html = html.replace(
     /<div class="meta-row"><strong>IO Reference<\/strong> &nbsp; VIO-2026-\[N\]<\/div>/,
     `<div class="meta-row"><strong>IO Reference</strong> &nbsp; ${ioRef}</div>`
+  );
+  html = html.replace(
+    /<div class="meta-row"><strong>Client BO Reference<\/strong> &nbsp; BO-\[N\]<\/div>/,
+    `<div class="meta-row"><strong>Client BO Reference</strong> &nbsp; ${clientBoRef}</div>`
   );
   html = html.replace(
     /<div class="meta-row"><strong>Internal Reference<\/strong> &nbsp; TW-2026-\[N\]<\/div>/,

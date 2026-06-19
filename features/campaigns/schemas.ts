@@ -47,6 +47,7 @@ export const createCampaignSchema = z
       .optional()
       .or(z.literal("")),
     accept_credit_risk_confirmed: formBooleanSchema,
+    client_bo_number: z.string().trim().max(120).optional().or(z.literal("")),
   })
   .refine(
     (data) => {
@@ -74,6 +75,7 @@ export const updateCampaignHeaderSchema = z
     end_date: optionalDate,
     account_manager_id: z.string().uuid().optional().or(z.literal("")),
     team_id: z.string().uuid().optional().or(z.literal("")),
+    client_bo_number: z.string().trim().max(120).optional().or(z.literal("")),
   })
   .refine(
     (data) => {
@@ -228,6 +230,7 @@ export const duplicateCampaignSchema = z.object({
   live_date: optionalDate,
   budget_month: z.string().trim().max(20).optional().or(z.literal("")),
   po_number: z.string().trim().max(120).optional().or(z.literal("")),
+  client_bo_number: z.string().trim().max(120).optional().or(z.literal("")),
   copy_influencers: z
     .string()
     .optional()

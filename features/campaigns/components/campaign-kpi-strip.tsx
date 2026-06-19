@@ -6,6 +6,7 @@ import {
   PackageIcon,
   PercentIcon,
   ReceiptIcon,
+  ScrollTextIcon,
   TrendingUpIcon,
   UsersIcon,
   WalletIcon,
@@ -48,6 +49,17 @@ export function CampaignKpiStrip({
         : undefined;
 
   const items = [
+    ...(workspace.client_bo_number
+      ? [
+          {
+            id: "client-bo",
+            label: "Client BO",
+            value: workspace.client_bo_number,
+            icon: ScrollTextIcon,
+            accentClass: ACCENT_TILE.blue,
+          },
+        ]
+      : []),
     {
       id: "budget",
       label: "Budget (PO)",

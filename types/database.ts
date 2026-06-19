@@ -20,6 +20,8 @@ export type GroupDocumentType =
   | "tax_document"
   | "group_contract";
 
+export type CampaignDocumentType = "client_bo";
+
 export type GroupRow = {
   id: string;
   document_number: string;
@@ -44,6 +46,20 @@ export type GroupDocumentRow = {
   mime_type: string | null;
   file_size: number | null;
   expires_at: string | null;
+  notes: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampaignDocumentRow = {
+  id: string;
+  campaign_header_id: string;
+  document_type: CampaignDocumentType;
+  file_name: string;
+  storage_path: string;
+  mime_type: string | null;
+  file_size: number | null;
   notes: string | null;
   uploaded_by: string | null;
   created_at: string;
@@ -141,6 +157,7 @@ export type CampaignHeaderRow = {
   objectives: unknown[];
   metadata: Record<string, unknown>;
   po_number: string | null;
+  client_bo_number: string | null;
   po_currency: string | null;
   po_exchange_rate: number | null;
   po_amount_original: number;
@@ -599,6 +616,7 @@ export type Database = {
           report_type_id?: string | null;
           objectives?: unknown;
           metadata?: Record<string, unknown>;
+          client_bo_number?: string | null;
           created_by?: string | null;
         };
         Update: Partial<
@@ -692,6 +710,21 @@ export type Database = {
           uploaded_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["group_documents"]["Insert"]>;
+        Relationships: [];
+      };
+      campaign_documents: {
+        Row: CampaignDocumentRow;
+        Insert: {
+          campaign_header_id: string;
+          document_type: CampaignDocumentType;
+          file_name: string;
+          storage_path: string;
+          mime_type?: string | null;
+          file_size?: number | null;
+          notes?: string | null;
+          uploaded_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["campaign_documents"]["Insert"]>;
         Relationships: [];
       };
       brands: {

@@ -55,6 +55,10 @@ import {
 } from "./line-assignment";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
+import {
+  CAMPAIGN_CLIENT_BO_TYPE,
+  serializeCampaignDocumentRow,
+} from "@/lib/campaigns/campaign-document-utils";
 
 export type CampaignsListResult = {
   campaigns: CampaignListItem[];
@@ -87,6 +91,7 @@ type HeaderWithRelations = {
   start_date: string | null;
   end_date: string | null;
   metadata: Record<string, unknown>;
+  client_bo_number: string | null;
   brand: { id: string; name: string; document_number: string } | null;
   client: {
     id: string;
@@ -382,6 +387,7 @@ export async function getCampaignWorkspace(
     auditResult,
     clientIo,
     vendorIos,
+    clientBoResult,
   ] = await Promise.all([
     supabase
       .from("campaign_lines")
@@ -443,6 +449,12 @@ export async function getCampaignWorkspace(
       .limit(50),
     getCampaignClientIo(campaignId),
     getCampaignVendorIos(campaignId),
+    supabase
+      .from("campaign_documents")
+      .select("*")
+      .eq("campaign_header_id", campaignId)
+      .eq("document_type", CAMPAIGN_CLIENT_BO_TYPE)
+      .maybeSingle(),
   ]);
 
   if (linesResult.error) {
@@ -892,6 +904,7 @@ export async function getCampaignWorkspace(
   const headerRow = header as unknown as HeaderWithRelations & {
     client: { country: string | null } | null;
     po_number?: string | null;
+    client_bo_number?: string | null;
     po_currency?: string | null;
     po_exchange_rate?: number | null;
     po_amount_original?: number;
@@ -1053,6 +1066,12 @@ export async function getCampaignWorkspace(
       client_country_code: clientCountryCode,
       default_revenue_vat_percent: defaultRevenueVatPercent,
     },
+    client_bo_number: headerRow.client_bo_number ?? null,
+    client_bo: clientBoResult.data
+      ? serializeCampaignDocumentRow(
+          clientBoResult.data as unknown as Record<string, unknown>
+        )
+      : null,
   };
 
   if (process.env.NODE_ENV === "development") {

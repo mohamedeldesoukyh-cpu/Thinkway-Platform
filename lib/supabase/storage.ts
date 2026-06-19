@@ -20,7 +20,8 @@ const ALLOWED_MIME_TYPES = new Set([
 export type DocumentBucket =
   | "client-documents"
   | "influencer-documents"
-  | "group-documents";
+  | "group-documents"
+  | "campaign-documents";
 
 export function buildDocumentStoragePath(
   entityId: string,

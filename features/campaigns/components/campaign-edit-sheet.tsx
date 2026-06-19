@@ -214,6 +214,17 @@ export function CampaignEditSheet({
             />
           </DetailFormSection>
 
+          <DetailFormSection label="Client BO number">
+            <Input
+              id="client_bo_number"
+              name="client_bo_number"
+              className={DETAIL_FORM_INPUT_CLASS}
+              defaultValue={workspace.client_bo_number ?? ""}
+              placeholder="Optional client booking order reference"
+              disabled={isPending}
+            />
+          </DetailFormSection>
+
           <DetailFormSection label="Description">
             <Textarea
               id="description"

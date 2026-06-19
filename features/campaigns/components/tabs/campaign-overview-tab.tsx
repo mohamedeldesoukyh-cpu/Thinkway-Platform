@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { CampaignClientBoAttach } from "@/features/campaigns/components/campaign-client-bo-attach";
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
 import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
 import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
@@ -48,6 +49,28 @@ export function CampaignOverviewTab({
         </div>
 
         <CampaignOverviewDetails workspace={workspace} layout="grid" compactTypography />
+
+        <CampaignFlatSection title="Client BO">
+          <div className="space-y-3">
+            {workspace.client_bo_number ? (
+              <p className="text-sm">
+                <span className="text-muted-foreground">Client BO number: </span>
+                <span className="font-medium tabular-nums">{workspace.client_bo_number}</span>
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                {workspace.client_bo
+                  ? "Client booking order attached at campaign creation or uploaded later."
+                  : "Optional client booking order — attach the signed BO for this campaign."}
+              </p>
+              <CampaignClientBoAttach
+                campaignHeaderId={workspace.id}
+                document={workspace.client_bo}
+              />
+            </div>
+          </div>
+        </CampaignFlatSection>
 
         <CampaignFlatSection title="Client IO">
           <div className="flex flex-wrap items-center justify-between gap-3">

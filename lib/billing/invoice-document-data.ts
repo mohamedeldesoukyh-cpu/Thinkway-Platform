@@ -96,6 +96,10 @@ function resolvePoReferenceDisplay(poNumber: string | null): string {
   return poNumber?.trim() || "—";
 }
 
+function resolveClientBoReferenceDisplay(clientBoNumber: string | null): string {
+  return clientBoNumber?.trim() || "—";
+}
+
 type CampaignLineCommercial = {
   revenueBeforeVat: number;
   usageRightsAmount: number;
@@ -209,6 +213,7 @@ export async function loadInvoiceDocumentData(
         start_date,
         end_date,
         po_number,
+        client_bo_number,
         po_exchange_rate,
         brands:brand_id(name)
       )
@@ -268,6 +273,7 @@ export async function loadInvoiceDocumentData(
           start_date: string | null;
           end_date: string | null;
           po_number: string | null;
+          client_bo_number: string | null;
           po_exchange_rate: number | null;
           brands: { name: string } | Array<{ name: string }> | null;
         }
@@ -278,6 +284,7 @@ export async function loadInvoiceDocumentData(
           start_date: string | null;
           end_date: string | null;
           po_number: string | null;
+          client_bo_number: string | null;
           po_exchange_rate: number | null;
           brands: { name: string } | Array<{ name: string }> | null;
         }>
@@ -397,6 +404,9 @@ export async function loadInvoiceDocumentData(
 
   const clientIoReferenceDisplay = resolveClientIoReferenceDisplay(clientIoReferences);
   const poReferenceDisplay = resolvePoReferenceDisplay(campaignRaw?.po_number ?? null);
+  const clientBoReferenceDisplay = resolveClientBoReferenceDisplay(
+    campaignRaw?.client_bo_number ?? null
+  );
   const internalReference = campaignRaw?.document_number?.trim() || null;
 
   return {
@@ -434,9 +444,11 @@ export async function loadInvoiceDocumentData(
           endDate: campaignRaw.end_date,
           brandName: brand?.name ?? null,
           poNumber: campaignRaw.po_number,
+          clientBoNumber: campaignRaw.client_bo_number,
           clientIoReferences,
           clientIoReferenceDisplay,
           poReferenceDisplay,
+          clientBoReferenceDisplay,
           internalReference,
         }
       : null,
