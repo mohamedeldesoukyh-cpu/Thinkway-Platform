@@ -1,5 +1,7 @@
 "use client";
 
+import { BriefcaseIcon } from "lucide-react";
+
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -7,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
-  getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
@@ -17,6 +18,10 @@ import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components
 import { AssignmentStatusBadge } from "@/features/campaigns/components/assignment-status-badge";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { LINE_BILLING_STATUS_LABELS, VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
+import {
+  VendorFormSection,
+  VendorProfileTabShell,
+} from "@/features/vendors/components/vendor-form-ui";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import { formatMoney, formatPercent } from "@/features/vendors/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
@@ -137,67 +142,67 @@ function buildVendorAssignmentsColumns(
   ];
 }
 
-export function VendorAssignmentsTab({ workspace }: { workspace: VendorWorkspace }) {
+export function VendorAssignmentsTab({
+  workspace,
+  onCancel,
+}: {
+  workspace: VendorWorkspace;
+  onCancel?: () => void;
+}) {
   const currency =
     (workspace.payment_details as { currency?: string })?.currency ?? "USD";
   const columns = useMemo(
     () => buildVendorAssignmentsColumns(currency),
     [currency]
   );
-  const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
   return (
-    <div className="space-y-4">
-      <OperationalTableSuiteProvider
-        tableId={OPERATIONAL_TABLE_IDS.vendorAssignments}
-        columns={columns}
-        rows={workspace.assignments}
-        filterAccessors={VENDOR_ASSIGNMENTS_FILTER_ACCESSORS}
-      >
-        <OperationalTableSection
-          wide
-          tableOnly
-          cardSurface
-          leading={
-            <CampaignOperationalSectionHeader
-              title="Assignment history"
-              description="Campaign lines, deliverables, commercial terms, and operational status."
-              actions={
-                <OperationalTableControlsSlot contextLabel="Vendor assignments" />
-              }
-            />
-          }
+    <VendorProfileTabShell
+      title="Assignments"
+      description="Campaign lines, deliverables, commercial terms, and operational status."
+      onCancel={onCancel}
+    >
+      <div className="grid gap-[18px]">
+        <VendorFormSection
+          icon={BriefcaseIcon}
+          title="Assignment history"
+          description="All campaign assignments linked to this creator."
         >
-          {workspace.assignments.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[11px] text-muted-foreground md:px-5">
-              No campaign assignments yet.
-            </p>
-          ) : (
-            <OperationalConfigurableTable
-              columns={columns}
-              rows={workspace.assignments}
-              rowKey={(assignment) => assignment.id}
-            />
-          )}
-        </OperationalTableSection>
-      </OperationalTableSuiteProvider>
+          <OperationalTableSuiteProvider
+            tableId={OPERATIONAL_TABLE_IDS.vendorAssignments}
+            columns={columns}
+            rows={workspace.assignments}
+            filterAccessors={VENDOR_ASSIGNMENTS_FILTER_ACCESSORS}
+          >
+            <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
+              <OperationalTableControlsSlot contextLabel="Vendor assignments" />
+            </div>
+            {workspace.assignments.length === 0 ? (
+              <p className="py-8 text-center text-[13px] text-[#9099A8]">
+                No campaign assignments yet.
+              </p>
+            ) : (
+              <OperationalConfigurableTable
+                columns={columns}
+                rows={workspace.assignments}
+                rowKey={(assignment) => assignment.id}
+              />
+            )}
+          </OperationalTableSuiteProvider>
+        </VendorFormSection>
 
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">
-            Platform performance summary
-          </h2>
-        }
-      >
-        <p className="px-4 py-4 text-[11px] leading-snug text-muted-foreground md:px-5">
-          GP contribution: {formatMoney(workspace.financials.total_gp, currency)} (
-          {formatPercent(workspace.financials.margin_percent)} margin) across{" "}
-          {workspace.counts.assignments} assignment(s).
-        </p>
-      </OperationalTableSection>
-    </div>
+        <VendorFormSection
+          icon={BriefcaseIcon}
+          title="Platform performance summary"
+          description="Aggregate GP contribution across assignments."
+        >
+          <p className="text-[13px] leading-relaxed text-[#5B6575]">
+            GP contribution: {formatMoney(workspace.financials.total_gp, currency)} (
+            {formatPercent(workspace.financials.margin_percent)} margin) across{" "}
+            {workspace.counts.assignments} assignment(s).
+          </p>
+        </VendorFormSection>
+      </div>
+    </VendorProfileTabShell>
   );
 }

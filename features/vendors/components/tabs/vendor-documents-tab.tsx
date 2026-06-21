@@ -8,13 +8,13 @@ import { DocumentUploadForm } from "@/components/forms/document-upload-form";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
-  getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Button } from "@/components/ui/button";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
+import { VendorFormSection, VendorProfileTabShell } from "@/features/vendors/components/vendor-form-ui";
+import { FileStackIcon } from "lucide-react";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
   deleteInfluencerDocumentAction,
@@ -73,24 +73,38 @@ function buildVendorDocumentsColumns(
   ];
 }
 
-export function VendorDocumentsTab({ vendor }: { vendor: VendorDetail }) {
+export function VendorDocumentsTab({
+  vendor,
+  onCancel,
+}: {
+  vendor: VendorDetail;
+  onCancel?: () => void;
+}) {
   const columns = useMemo(
     () => buildVendorDocumentsColumns(vendor.id),
     [vendor.id]
   );
-  const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
   return (
-    <div className="space-y-4">
-      <OperationalFormSection title="Upload document">
-        <DocumentUploadForm
-          entityId={vendor.id}
-          documentTypeOptions={INFLUENCER_DOCUMENT_TYPE_OPTIONS}
-          action={uploadInfluencerDocumentWrapper}
-        />
-      </OperationalFormSection>
+    <VendorProfileTabShell
+      title="Documents"
+      description="Upload and manage compliance documents for this creator."
+      onCancel={onCancel}
+    >
+      <div className="grid gap-[18px]">
+        <VendorFormSection
+          icon={FileStackIcon}
+          title="Upload document"
+          description="Attach trade licenses, IDs, and other vendor files."
+        >
+          <DocumentUploadForm
+            entityId={vendor.id}
+            documentTypeOptions={INFLUENCER_DOCUMENT_TYPE_OPTIONS}
+            action={uploadInfluencerDocumentWrapper}
+          />
+        </VendorFormSection>
 
-      <OperationalTableSuiteProvider
+        <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.vendorDocuments}
         columns={columns}
         rows={vendor.documents}
@@ -122,7 +136,8 @@ export function VendorDocumentsTab({ vendor }: { vendor: VendorDetail }) {
           )}
         </OperationalTableSection>
       </OperationalTableSuiteProvider>
-    </div>
+      </div>
+    </VendorProfileTabShell>
   );
 }
 

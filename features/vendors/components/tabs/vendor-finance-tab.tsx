@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { DollarSignIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { FieldError } from "@/components/forms/field-error";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -15,18 +14,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useFormActionWithToast } from "@/hooks/use-form-action-with-toast";
-import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
-import {
-  DETAIL_FORM_INPUT_CLASS,
-  DETAIL_FORM_SELECT_TRIGGER_CLASS,
-} from "@/features/campaigns/components/operational-detail-panel";
 import {
   updateVendorFinanceAction,
   type FormActionState,
 } from "@/features/vendors/actions";
+import { PAYMENT_TERMS_OPTIONS } from "@/features/vendors/constants";
 import {
-  PAYMENT_TERMS_OPTIONS,
-} from "@/features/vendors/constants";
+  VendorFormField,
+  VendorFormGrid,
+  VendorFormSection,
+  VendorProfileTabShell,
+  VENDOR_FORM_INPUT_CLASS,
+  VENDOR_FORM_SELECT_TRIGGER_CLASS,
+} from "@/features/vendors/components/vendor-form-ui";
 import { parseRateCard } from "@/features/vendors/utils";
 import type { VendorDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -36,12 +36,16 @@ export function VendorFinanceTab({
   currencyOptions = [],
   sectionTitle = "Rate card & tax",
   hidePaymentTerms = false,
+  embedded = false,
+  onCancel,
 }: {
   vendor: VendorDetail;
   currencyOptions?: { value: string; label: string }[];
   sectionTitle?: string;
   /** Billing tab already edits payment terms via bank details. */
   hidePaymentTerms?: boolean;
+  embedded?: boolean;
+  onCancel?: () => void;
 }) {
   const rate = parseRateCard(vendor.rate_card);
   const [paymentTerms, setPaymentTerms] = useState(vendor.payment_terms ?? "");
@@ -55,32 +59,34 @@ export function VendorFinanceTab({
     { ok: false } satisfies FormActionState
   );
 
-  return (
-    <OperationalFormSection
-      title={sectionTitle}
-      actions={
-        vatRegistered ? (
-          <Badge variant="secondary">VAT Registered</Badge>
-        ) : (
-          <Badge variant="outline">Non-VAT</Badge>
-        )
-      }
-    >
-      <form action={formAction} className="grid gap-4">
-        <input type="hidden" name="influencer_id" value={vendor.id} />
-        <input type="hidden" name="payment_terms" value={paymentTerms} />
-        <input type="hidden" name="pricing_currency" value={currency} />
+  const form = (
+    <form action={formAction} className="grid gap-[18px]">
+      <input type="hidden" name="influencer_id" value={vendor.id} />
+      <input type="hidden" name="payment_terms" value={paymentTerms} />
+      <input type="hidden" name="pricing_currency" value={currency} />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <VendorFormSection
+        icon={DollarSignIcon}
+        title={sectionTitle}
+        description="Base rates, currency, and tax registration."
+      >
+        <div className="flex flex-wrap items-center gap-2 pb-1">
+          {vatRegistered ? (
+            <Badge variant="secondary">VAT Registered</Badge>
+          ) : (
+            <Badge variant="outline">Non-VAT</Badge>
+          )}
+        </div>
+
+        <VendorFormGrid className="lg:grid-cols-3">
           {hidePaymentTerms ? null : (
-            <div className="grid gap-2">
-              <Label>Payment terms</Label>
+            <VendorFormField label="Payment terms">
               <Select
                 value={paymentTerms}
                 onValueChange={setPaymentTerms}
                 disabled={isPending}
               >
-                <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                <SelectTrigger className={cn(VENDOR_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
                   <SelectValue placeholder="Select terms" />
                 </SelectTrigger>
                 <SelectContent>
@@ -91,16 +97,11 @@ export function VendorFinanceTab({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </VendorFormField>
           )}
-          <div className="grid gap-2">
-            <Label>Rate card currency</Label>
-            <Select
-              value={currency}
-              onValueChange={setCurrency}
-              disabled={isPending}
-            >
-              <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+          <VendorFormField label="Rate card currency">
+            <Select value={currency} onValueChange={setCurrency} disabled={isPending}>
+              <SelectTrigger className={cn(VENDOR_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -111,26 +112,23 @@ export function VendorFinanceTab({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="pricing_amount">Base rate</Label>
+          </VendorFormField>
+          <VendorFormField label="Base rate" htmlFor="pricing_amount">
             <Input
               id="pricing_amount"
               name="pricing_amount"
               type="number"
               min={0}
               step="0.01"
-              className={DETAIL_FORM_INPUT_CLASS}
-              defaultValue={
-                rate.base_rate != null ? String(rate.base_rate) : ""
-              }
+              className={VENDOR_FORM_INPUT_CLASS}
+              defaultValue={rate.base_rate != null ? String(rate.base_rate) : ""}
               disabled={isPending}
             />
             <FieldError messages={state.fieldErrors?.pricing_amount} />
-          </div>
-        </div>
+          </VendorFormField>
+        </VendorFormGrid>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <VendorFormGrid className="lg:grid-cols-3">
           <label className="flex items-center gap-2 text-sm sm:col-span-3">
             <input
               type="checkbox"
@@ -141,13 +139,8 @@ export function VendorFinanceTab({
             />
             VAT registered vendor
           </label>
-          <input
-            type="hidden"
-            name="vat_registered"
-            value={vatRegistered ? "1" : "0"}
-          />
-          <div className="grid gap-2">
-            <Label htmlFor="default_vat_percent">Default VAT %</Label>
+          <input type="hidden" name="vat_registered" value={vatRegistered ? "1" : "0"} />
+          <VendorFormField label="Default VAT %" htmlFor="default_vat_percent">
             <Input
               id="default_vat_percent"
               name="default_vat_percent"
@@ -155,34 +148,57 @@ export function VendorFinanceTab({
               min={0}
               max={100}
               step="0.001"
-              className={DETAIL_FORM_INPUT_CLASS}
+              className={VENDOR_FORM_INPUT_CLASS}
               defaultValue={String(
                 (vendor as { default_vat_percent?: number }).default_vat_percent ?? 0
               )}
               disabled={isPending || !vatRegistered}
             />
-          </div>
-          <div className="grid gap-2 sm:col-span-2">
-            <Label htmlFor="tax_registration_number">Tax registration number</Label>
+          </VendorFormField>
+          <VendorFormField
+            label="Tax registration number"
+            htmlFor="tax_registration_number"
+            className="sm:col-span-2"
+          >
             <Input
               id="tax_registration_number"
               name="tax_registration_number"
-              className={DETAIL_FORM_INPUT_CLASS}
+              className={VENDOR_FORM_INPUT_CLASS}
               defaultValue={
                 (vendor as { tax_registration_number?: string | null })
                   .tax_registration_number ?? ""
               }
               disabled={isPending || !vatRegistered}
             />
-          </div>
-        </div>
+          </VendorFormField>
+        </VendorFormGrid>
 
-        <div className="flex justify-end border-t border-border/40 pt-4">
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Saving…" : "Save rate card"}
-          </Button>
-        </div>
-      </form>
-    </OperationalFormSection>
+        {!embedded ? (
+          <div className="flex justify-end border-t border-[#E6EAF2] pt-4">
+            <button
+              type="submit"
+              className="inline-flex h-auto items-center rounded-[10px] border-transparent bg-[linear-gradient(135deg,#0057FF_0%,#2E74FF_55%,#1A6FFF_100%)] px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(0,87,255,0.3)] disabled:opacity-50"
+              disabled={isPending}
+            >
+              {isPending ? "Saving…" : "Save rate card"}
+            </button>
+          </div>
+        ) : null}
+      </VendorFormSection>
+    </form>
+  );
+
+  if (embedded) {
+    return form;
+  }
+
+  return (
+    <VendorProfileTabShell
+      title="Finance"
+      description="Rate card, currency, and tax registration for this creator."
+      onCancel={onCancel}
+    >
+      {form}
+    </VendorProfileTabShell>
   );
 }

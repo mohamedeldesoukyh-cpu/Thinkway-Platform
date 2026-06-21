@@ -1,17 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs } from "@/components/ui/tabs";
 import {
-  OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
-  OperationalWorkspaceChrome,
-  OperationalWorkspaceSortableTabsBar,
+  OperationalWorkspaceTabContent,
   OperationalWorkspaceTabPanel,
   type OperationalWorkspaceTabDef,
 } from "@/components/workspace/operational-workspace-ui";
-import { PageBackButton } from "@/components/navigation/page-back-button";
-import { DocumentNumber } from "@/components/ui/document-number";
 import { useWorkspaceTabOrder } from "@/hooks/use-workspace-tab-order";
 import {
   VENDOR_PROFILE_TAB_ORDER,
@@ -20,8 +17,8 @@ import {
   type VendorProfileTabId,
 } from "@/lib/workspace/platform-workspace-tabs";
 import type { VendorDetail } from "@/types/database";
+import { cn } from "@/lib/utils";
 
-import { VendorStatusBadge } from "./vendor-status-badge";
 import { VendorCampaignsTab } from "./tabs/vendor-campaigns-tab";
 import { VendorDocumentsTab } from "./tabs/vendor-documents-tab";
 import { VendorFinanceTab } from "./tabs/vendor-finance-tab";
@@ -34,11 +31,15 @@ type VendorProfileProps = {
 };
 
 export function VendorProfile({ vendor }: VendorProfileProps) {
-  const { tabOrder, moveTab } = useWorkspaceTabOrder({
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<VendorProfileTabId>("overview");
+  const { tabOrder } = useWorkspaceTabOrder({
     storageKey: VENDOR_PROFILE_TAB_STORAGE_KEY,
     defaultOrder: VENDOR_PROFILE_TAB_ORDER,
     isValidId: isVendorProfileTabId,
   });
+
+  const handleCancel = () => router.push("/vendors");
 
   const tabsById = useMemo(
     (): Record<VendorProfileTabId, OperationalWorkspaceTabDef> => ({
@@ -56,58 +57,88 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
     [vendor.campaign_assignments.length]
   );
 
+  const tabPanelClassName =
+    "mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none focus-visible:outline-none";
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-0">
-      <OperationalWorkspaceChrome
-        backButton={
-          <PageBackButton fallbackHref="/vendors" label="Back to vendors" />
-        }
-        title={vendor.display_name}
-        badges={<VendorStatusBadge status={vendor.status} />}
-        meta={<DocumentNumber value={vendor.document_number} />}
-      />
-
+    <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
       <Tabs
-        defaultValue="overview"
-        className="mt-4 flex min-h-0 flex-1 flex-col gap-0"
+        value={activeTab}
+        onValueChange={(value) => {
+          if (isVendorProfileTabId(value)) {
+            setActiveTab(value);
+          }
+        }}
+        className="mt-0 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
       >
-        <OperationalWorkspaceSortableTabsBar
-          sectionLabel="Vendor workspace"
-          tabOrder={tabOrder}
-          tabsById={tabsById}
-          onReorder={moveTab}
-        />
+        <nav
+          aria-label="Creator workspace sections"
+          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#E6EAF2] px-[26px] py-2.5"
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9099A8]">
+            Also view
+          </span>
+          {tabOrder.map((tabId) => {
+            const tab = tabsById[tabId];
+            const isActive = activeTab === tabId;
+            return (
+              <button
+                key={tabId}
+                type="button"
+                onClick={() => setActiveTab(tabId)}
+                className={cn(
+                  "text-[13px] font-medium transition-colors",
+                  isActive
+                    ? "font-semibold text-[#0057FF]"
+                    : "text-[#5B6575] hover:text-[#0057FF]"
+                )}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {tab.label}
+                {tab.count != null ? ` (${tab.count})` : ""}
+              </button>
+            );
+          })}
+        </nav>
 
-        <TabsContent value="overview" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <VendorOverviewTab vendor={vendor} />
+        <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
+          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <VendorOverviewTab
+              vendor={vendor}
+              onCancel={handleCancel}
+              shortcutsEnabled={activeTab === "overview"}
+            />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="legal" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <VendorLegalTab vendor={vendor} />
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="legal" className={tabPanelClassName}>
+          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <VendorLegalTab
+              vendor={vendor}
+              onCancel={handleCancel}
+              shortcutsEnabled={activeTab === "legal"}
+            />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="finance" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <VendorFinanceTab vendor={vendor} />
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="finance" className={tabPanelClassName}>
+          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <VendorFinanceTab vendor={vendor} onCancel={handleCancel} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="documents" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
-            <VendorDocumentsTab vendor={vendor} />
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="documents" className={tabPanelClassName}>
+          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <VendorDocumentsTab vendor={vendor} onCancel={handleCancel} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="platforms" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <VendorPlatformsTab vendor={vendor} />
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="platforms" className={tabPanelClassName}>
+          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <VendorPlatformsTab vendor={vendor} onCancel={handleCancel} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
-        <TabsContent value="campaigns" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
-            <VendorCampaignsTab vendor={vendor} />
+        </OperationalWorkspaceTabContent>
+        <OperationalWorkspaceTabContent value="campaigns" className={tabPanelClassName}>
+          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <VendorCampaignsTab vendor={vendor} onCancel={handleCancel} />
           </OperationalWorkspaceTabPanel>
-        </TabsContent>
+        </OperationalWorkspaceTabContent>
       </Tabs>
     </div>
   );

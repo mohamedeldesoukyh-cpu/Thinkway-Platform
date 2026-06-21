@@ -10,21 +10,22 @@ import { Badge } from "@/components/ui/badge";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
-  getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { KpiCarousel } from "@/components/ui/kpi-carousel";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
-import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { VendorBankDetailsSection } from "@/features/vendors/components/tabs/vendor-bank-details-section";
 import { VendorFinanceTab } from "@/features/vendors/components/tabs/vendor-finance-tab";
+import {
+  VendorFormSection,
+  VendorProfileTabShell,
+} from "@/features/vendors/components/vendor-form-ui";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import { formatMoney, hasVendorBankDetails } from "@/features/vendors/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
+import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { VENDOR_PAYOUTS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 
 const ACCENT_TILE = {
@@ -63,14 +64,14 @@ const VENDOR_BILLING_COLUMNS: OperationalConfigurableColumnDef<PayoutRow>[] = [
   },
 ];
 
-const VENDOR_BILLING_COLUMN_METAS = getOperationalTableColumnMetas(VENDOR_BILLING_COLUMNS);
-
 export function VendorBillingTab({
   workspace,
   currencyOptions = [],
+  onCancel,
 }: {
   workspace: VendorWorkspace;
   currencyOptions?: { value: string; label: string }[];
+  onCancel?: () => void;
 }) {
   const currency =
     (workspace.payment_details as { currency?: string })?.currency ?? "USD";
@@ -124,63 +125,55 @@ export function VendorBillingTab({
   const bankConfigured = hasVendorBankDetails(workspace.payment_details);
 
   return (
-    <div className="space-y-4 pb-4">
-      <div className="px-4 pt-4 md:px-5">
-        <CampaignOperationalSectionHeader
-          title="Billing & Payments"
-          description={
-            bankConfigured
-              ? "Vendor payout bank details are on file and linked to Vendor IO Section 6."
-              : "Add vendor bank details below — they flow into Vendor IO payment terms automatically."
-          }
-        />
-      </div>
+    <VendorProfileTabShell
+      title="Billing & Payments"
+      description={
+        bankConfigured
+          ? "Vendor payout bank details are on file and linked to Vendor IO Section 6."
+          : "Add vendor bank details below — they flow into Vendor IO payment terms automatically."
+      }
+      onCancel={onCancel}
+    >
+      <div className="grid gap-[18px]">
+        <VendorBankDetailsSection workspace={workspace} />
 
-      <VendorBankDetailsSection workspace={workspace} />
-
-      <div className="px-4 md:px-5">
         <VendorFinanceTab
           vendor={workspace}
           currencyOptions={currencyOptions}
           hidePaymentTerms
+          embedded
         />
-      </div>
 
-      <KpiCarousel items={summaryItems} showNavigation={false} className="px-4 md:px-5" />
+        <KpiCarousel items={summaryItems} showNavigation={false} />
 
-      <OperationalTableSuiteProvider
-        tableId={OPERATIONAL_TABLE_IDS.vendorBilling}
-        columns={VENDOR_BILLING_COLUMNS}
-        rows={workspace.payouts}
-        filterAccessors={VENDOR_PAYOUTS_FILTER_ACCESSORS}
-      >
-        <OperationalTableSection
-          wide
-          tableOnly
-          cardSurface
-          leading={
-            <CampaignOperationalSectionHeader
-              title="Payout history"
-              description="Creator payouts linked to campaign assignments and payment batches."
-              actions={
-                <OperationalTableControlsSlot contextLabel="Vendor billing" />
-              }
-            />
-          }
+        <VendorFormSection
+          icon={ReceiptIcon}
+          title="Payout history"
+          description="Creator payouts linked to campaign assignments and payment batches."
         >
-          {workspace.payouts.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[11px] text-muted-foreground md:px-5">
-              No payout records.
-            </p>
-          ) : (
-            <OperationalConfigurableTable
-              columns={VENDOR_BILLING_COLUMNS}
-              rows={workspace.payouts}
-              rowKey={(payout) => payout.id}
-            />
-          )}
-        </OperationalTableSection>
-      </OperationalTableSuiteProvider>
-    </div>
+          <OperationalTableSuiteProvider
+            tableId={OPERATIONAL_TABLE_IDS.vendorBilling}
+            columns={VENDOR_BILLING_COLUMNS}
+            rows={workspace.payouts}
+            filterAccessors={VENDOR_PAYOUTS_FILTER_ACCESSORS}
+          >
+            <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
+              <OperationalTableControlsSlot contextLabel="Vendor billing" />
+            </div>
+            {workspace.payouts.length === 0 ? (
+              <p className="py-8 text-center text-[13px] text-[#9099A8]">
+                No payout records.
+              </p>
+            ) : (
+              <OperationalConfigurableTable
+                columns={VENDOR_BILLING_COLUMNS}
+                rows={workspace.payouts}
+                rowKey={(payout) => payout.id}
+              />
+            )}
+          </OperationalTableSuiteProvider>
+        </VendorFormSection>
+      </div>
+    </VendorProfileTabShell>
   );
 }

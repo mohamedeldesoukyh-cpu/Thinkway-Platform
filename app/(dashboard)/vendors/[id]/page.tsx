@@ -44,7 +44,7 @@ export default async function VendorProfilePage({
       title="Creator workspace"
       hidePageHeader
       containedMain
-      mainClassName="min-h-0 flex-1 flex-col p-3 md:px-6 md:py-4"
+      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       {errorMessage ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[11px] text-destructive">

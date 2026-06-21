@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { HistoryIcon } from "lucide-react";
 
 import {
   OperationalConfigurableTable,
@@ -10,8 +11,10 @@ import { OperationalTableControlsSlot } from "@/components/tables/operational-da
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { VENDOR_CAMPAIGNS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import {
+  VendorFormSection,
+  VendorProfileTabShell,
+} from "@/features/vendors/components/vendor-form-ui";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import type { VendorDetail } from "@/types/database";
 
@@ -66,40 +69,46 @@ const VENDOR_CAMPAIGNS_COLUMNS: OperationalConfigurableColumnDef<AssignmentRow>[
 
 export const VENDOR_CAMPAIGNS_TABLE_COLUMNS = VENDOR_CAMPAIGNS_COLUMNS;
 
-export function VendorCampaignsTab({ vendor }: { vendor: VendorDetail }) {
+export function VendorCampaignsTab({
+  vendor,
+  onCancel,
+}: {
+  vendor: VendorDetail;
+  onCancel?: () => void;
+}) {
   return (
-    <OperationalTableSuiteProvider
-      tableId={OPERATIONAL_TABLE_IDS.vendorCampaigns}
-      columns={VENDOR_CAMPAIGNS_TABLE_COLUMNS}
-      rows={vendor.campaign_assignments}
-      filterAccessors={VENDOR_CAMPAIGNS_FILTER_ACCESSORS}
+    <VendorProfileTabShell
+      title="Campaign history"
+      description="Campaign assignments for this creator."
+      onCancel={onCancel}
     >
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <CampaignOperationalSectionHeader
-            title="Campaign history"
-            description="Campaign assignments for this creator."
-            actions={
-              <OperationalTableControlsSlot contextLabel="Vendor campaigns" />
-            }
-          />
-        }
+      <VendorFormSection
+        icon={HistoryIcon}
+        title="Assignments"
+        description="Historical campaign links and agreed fees."
       >
-        {vendor.campaign_assignments.length === 0 ? (
-          <p className="px-4 py-8 text-[11px] text-muted-foreground">
-            Not assigned to any campaigns yet.
-          </p>
-        ) : (
-          <OperationalConfigurableTable
-            columns={VENDOR_CAMPAIGNS_COLUMNS}
-            rows={vendor.campaign_assignments}
-            rowKey={(assignment) => assignment.id}
-          />
-        )}
-      </OperationalTableSection>
-    </OperationalTableSuiteProvider>
+        <OperationalTableSuiteProvider
+          tableId={OPERATIONAL_TABLE_IDS.vendorCampaigns}
+          columns={VENDOR_CAMPAIGNS_TABLE_COLUMNS}
+          rows={vendor.campaign_assignments}
+          filterAccessors={VENDOR_CAMPAIGNS_FILTER_ACCESSORS}
+        >
+          <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
+            <OperationalTableControlsSlot contextLabel="Vendor campaigns" />
+          </div>
+          {vendor.campaign_assignments.length === 0 ? (
+            <p className="py-8 text-center text-[13px] text-[#9099A8]">
+              Not assigned to any campaigns yet.
+            </p>
+          ) : (
+            <OperationalConfigurableTable
+              columns={VENDOR_CAMPAIGNS_COLUMNS}
+              rows={vendor.campaign_assignments}
+              rowKey={(assignment) => assignment.id}
+            />
+          )}
+        </OperationalTableSuiteProvider>
+      </VendorFormSection>
+    </VendorProfileTabShell>
   );
 }

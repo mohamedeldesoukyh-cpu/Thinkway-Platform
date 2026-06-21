@@ -1,16 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { UserIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { SearchableSelect } from "@/components/forms/searchable-select";
-import { Button } from "@/components/ui/button";
-import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
-import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -29,14 +25,29 @@ import {
   NATIONALITY_OPTIONS,
   VENDOR_STATUS_OPTIONS,
 } from "@/features/vendors/constants";
+import {
+  VendorFormField,
+  VendorFormGrid,
+  VendorFormKeyboardShortcuts,
+  VendorFormSection,
+  VendorProfileTabShell,
+  VENDOR_FORM_INPUT_CLASS,
+  VENDOR_FORM_SELECT_TRIGGER_CLASS,
+  VENDOR_FORM_TEXTAREA_CLASS,
+} from "@/features/vendors/components/vendor-form-ui";
 import type { InfluencerStatus, VendorDetail } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 export function VendorOverviewTab({
   vendor,
   portalAccessPanel,
+  onCancel,
+  shortcutsEnabled = true,
 }: {
   vendor: VendorDetail;
   portalAccessPanel?: React.ReactNode;
+  onCancel?: () => void;
+  shortcutsEnabled?: boolean;
 }) {
   const [status, setStatus] = useState(vendor.status);
   const [country, setCountry] = useState(vendor.country_code ?? "");
@@ -60,199 +71,208 @@ export function VendorOverviewTab({
   }, [state]);
 
   return (
-    <div className={cn("space-y-4", OPERATIONAL_TABLE_FONT)}>
-      {portalAccessPanel}
-      <CampaignFlatSection title="Overview">
-        <form action={formAction} className="grid gap-4">
+    <>
+      <VendorFormKeyboardShortcuts
+        formId="vendor-overview-form"
+        enabled={shortcutsEnabled}
+        disabled={isPending}
+      />
+      <VendorProfileTabShell
+        title="Creator overview"
+        description="Profile details, contact information, and operational status."
+        onCancel={onCancel}
+        saveFormId="vendor-overview-form"
+        saveLabel="Save overview"
+        saveDisabled={isPending}
+        isSaving={isPending}
+      >
+        {portalAccessPanel ? <div className="mb-[18px]">{portalAccessPanel}</div> : null}
+        <form id="vendor-overview-form" action={formAction} className="grid gap-[18px]">
           <input type="hidden" name="influencer_id" value={vendor.id} />
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="country_code" value={country} />
           <input type="hidden" name="nationality" value={nationality} />
           <input type="hidden" name="gender" value={gender} />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="display_name">Creator name</Label>
+          <VendorFormSection
+            icon={UserIcon}
+            title="Profile"
+            description="Core creator identity and contact details."
+          >
+            <VendorFormGrid>
+              <VendorFormField label="Creator name" htmlFor="display_name">
+                <Input
+                  id="display_name"
+                  name="display_name"
+                  className={VENDOR_FORM_INPUT_CLASS}
+                  defaultValue={vendor.display_name}
+                  required
+                  disabled={isPending}
+                />
+                <FieldError messages={state.fieldErrors?.display_name} />
+              </VendorFormField>
+              <VendorFormField label="Management agency" htmlFor="legal_name">
+                <Input
+                  id="legal_name"
+                  name="legal_name"
+                  className={VENDOR_FORM_INPUT_CLASS}
+                  defaultValue={vendor.legal_name ?? ""}
+                  disabled={isPending}
+                />
+              </VendorFormField>
+            </VendorFormGrid>
+
+            <VendorFormGrid className="lg:grid-cols-3">
+              <VendorFormField label="Status">
+                <Select
+                  value={status}
+                  onValueChange={(v) => setStatus(v as InfluencerStatus)}
+                  disabled={isPending}
+                >
+                  <SelectTrigger className={cn(VENDOR_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VENDOR_STATUS_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </VendorFormField>
+              <VendorFormField label="Gender">
+                <Select
+                  value={gender}
+                  onValueChange={setGender}
+                  disabled={isPending}
+                >
+                  <SelectTrigger className={cn(VENDOR_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GENDER_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </VendorFormField>
+              <VendorFormField label="City" htmlFor="city">
+                <Input
+                  id="city"
+                  name="city"
+                  className={VENDOR_FORM_INPUT_CLASS}
+                  defaultValue={vendor.city ?? ""}
+                  disabled={isPending}
+                />
+              </VendorFormField>
+            </VendorFormGrid>
+
+            <VendorFormGrid>
+              <VendorFormField label="Country">
+                <SearchableSelect
+                  value={country}
+                  onValueChange={setCountry}
+                  options={COUNTRY_OPTIONS}
+                  disabled={isPending}
+                />
+              </VendorFormField>
+              <VendorFormField label="Nationality">
+                <SearchableSelect
+                  value={nationality}
+                  onValueChange={setNationality}
+                  options={NATIONALITY_OPTIONS}
+                  disabled={isPending}
+                />
+              </VendorFormField>
+            </VendorFormGrid>
+
+            <VendorFormGrid>
+              <VendorFormField label="Email" htmlFor="email">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  className={VENDOR_FORM_INPUT_CLASS}
+                  defaultValue={vendor.email ?? ""}
+                  disabled={isPending}
+                />
+              </VendorFormField>
+              <VendorFormField label="Phone" htmlFor="phone">
+                <Input
+                  id="phone"
+                  name="phone"
+                  className={VENDOR_FORM_INPUT_CLASS}
+                  defaultValue={vendor.phone ?? ""}
+                  disabled={isPending}
+                />
+              </VendorFormField>
+            </VendorFormGrid>
+
+            <VendorFormField label="Portfolio / URL" htmlFor="influencer_url">
               <Input
-                id="display_name"
-                name="display_name"
-                defaultValue={vendor.display_name}
-                required
+                id="influencer_url"
+                name="influencer_url"
+                type="url"
+                className={VENDOR_FORM_INPUT_CLASS}
+                defaultValue={vendor.influencer_url ?? ""}
                 disabled={isPending}
               />
-              <FieldError messages={state.fieldErrors?.display_name} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="legal_name">Management agency</Label>
+              <FieldError messages={state.fieldErrors?.influencer_url} />
+            </VendorFormField>
+
+            <VendorFormField label="Agency contact name" htmlFor="management_agency">
               <Input
-                id="legal_name"
-                name="legal_name"
-                defaultValue={vendor.legal_name ?? ""}
+                id="management_agency"
+                name="management_agency"
+                className={VENDOR_FORM_INPUT_CLASS}
+                defaultValue={vendor.management_agency ?? ""}
                 disabled={isPending}
               />
-            </div>
-          </div>
+            </VendorFormField>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="grid gap-2">
-              <Label>Status</Label>
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as InfluencerStatus)}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {VENDOR_STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Gender</Label>
-              <Select
-                value={gender}
-                onValueChange={setGender}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {GENDER_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                name="city"
-                defaultValue={vendor.city ?? ""}
+            <VendorFormGrid>
+              <VendorFormField label="Categories / niche" htmlFor="categories">
+                <Input
+                  id="categories"
+                  name="categories"
+                  className={VENDOR_FORM_INPUT_CLASS}
+                  defaultValue={vendor.categories?.join(", ") ?? ""}
+                  placeholder="beauty, lifestyle"
+                  disabled={isPending}
+                />
+                <p className="text-[11.5px] text-[#9099A8]">Comma-separated</p>
+              </VendorFormField>
+              <VendorFormField label="Languages" htmlFor="languages">
+                <Input
+                  id="languages"
+                  name="languages"
+                  className={VENDOR_FORM_INPUT_CLASS}
+                  defaultValue={vendor.languages?.join(", ") ?? ""}
+                  placeholder="en, ar"
+                  disabled={isPending}
+                />
+                <p className="text-[11.5px] text-[#9099A8]">
+                  Comma-separated language codes (e.g. en, ar)
+                </p>
+              </VendorFormField>
+            </VendorFormGrid>
+
+            <VendorFormField label="Notes" htmlFor="notes">
+              <Textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                className={VENDOR_FORM_TEXTAREA_CLASS}
+                defaultValue={vendor.notes ?? ""}
                 disabled={isPending}
               />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Country</Label>
-              <SearchableSelect
-                value={country}
-                onValueChange={setCountry}
-                options={COUNTRY_OPTIONS}
-                disabled={isPending}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Nationality</Label>
-              <SearchableSelect
-                value={nationality}
-                onValueChange={setNationality}
-                options={NATIONALITY_OPTIONS}
-                disabled={isPending}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                defaultValue={vendor.email ?? ""}
-                disabled={isPending}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                name="phone"
-                defaultValue={vendor.phone ?? ""}
-                disabled={isPending}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="influencer_url">Portfolio / URL</Label>
-            <Input
-              id="influencer_url"
-              name="influencer_url"
-              type="url"
-              defaultValue={vendor.influencer_url ?? ""}
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.influencer_url} />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="management_agency">Agency contact name</Label>
-            <Input
-              id="management_agency"
-              name="management_agency"
-              defaultValue={vendor.management_agency ?? ""}
-              disabled={isPending}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="categories">Categories / niche</Label>
-              <Input
-                id="categories"
-                name="categories"
-                defaultValue={vendor.categories?.join(", ") ?? ""}
-                placeholder="beauty, lifestyle"
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">Comma-separated</p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="languages">Languages</Label>
-              <Input
-                id="languages"
-                name="languages"
-                defaultValue={vendor.languages?.join(", ") ?? ""}
-                placeholder="en, ar"
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                Comma-separated language codes (e.g. en, ar)
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              rows={3}
-              defaultValue={vendor.notes ?? ""}
-              disabled={isPending}
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : "Save overview"}
-            </Button>
-          </div>
+            </VendorFormField>
+          </VendorFormSection>
         </form>
-      </CampaignFlatSection>
-    </div>
+      </VendorProfileTabShell>
+    </>
   );
 }
