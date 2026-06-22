@@ -26,6 +26,7 @@
     "@sparticuz/chromium-min": "^149.0.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
+    "@tanstack/react-virtual": "^3.14.3",
     "bullmq": "^5.78.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

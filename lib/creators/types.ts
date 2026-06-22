@@ -86,6 +86,9 @@ export type UnifiedCreatorBrowseFilters = {
   minThinkwayScore?: number;
   verifiedOnly?: boolean;
   source?: CreatorSourceType | "all";
+  /** When true, hides mock / demo / unverified discovery placeholders. */
+  productionOnly?: boolean;
+  platforms?: string[];
   page?: number;
   pageSize?: number;
 };

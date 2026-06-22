@@ -20,6 +20,7 @@ import type {
   UnifiedCreatorMetrics,
   UnifiedCreatorResult,
 } from "@/lib/creators/types";
+import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 
 function escapeIlikePattern(value: string): string {
@@ -419,9 +420,20 @@ export async function browseUnifiedCreators(
     fetchDiscoveryCreators(supabase, filters),
   ]);
 
-  const merged = [...internal, ...discovery].sort(
+  let merged = [...internal, ...discovery].sort(
     (a, b) => b.thinkway_score - a.thinkway_score
   );
+
+  if (filters.productionOnly !== false) {
+    merged = merged.filter(passesProductionCreatorGate);
+  }
+
+  if (filters.platforms?.length) {
+    const set = new Set(filters.platforms.map((p) => p.toLowerCase()));
+    merged = merged.filter((c) =>
+      c.platforms.some((p) => set.has(p.platform.toLowerCase()))
+    );
+  }
 
   const total = merged.length;
   const from = (page - 1) * pageSize;

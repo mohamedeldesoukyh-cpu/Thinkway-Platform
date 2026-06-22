@@ -102,7 +102,7 @@ const navGroups: NavGroup[] = [
     iconTone: "violet",
     items: [
       { kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
-      { kind: "link", href: "/discovery", label: "Discovery", icon: RadarIcon },
+      { kind: "link", href: "/discovery/search", label: "Discovery", icon: RadarIcon },
     ],
   },
   {

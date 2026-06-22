@@ -1022,7 +1022,22 @@ export type Database = {
         Update: Partial<
           Database["public"]["Tables"]["campaign_publications"]["Insert"]
         >;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "campaign_publications_influencer_id_fkey";
+            columns: ["influencer_id"];
+            isOneToOne: false;
+            referencedRelation: "influencers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "campaign_publications_campaign_header_id_fkey";
+            columns: ["campaign_header_id"];
+            isOneToOne: false;
+            referencedRelation: "campaign_headers";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       md_platform_deliverable_types: {
         Row: {
