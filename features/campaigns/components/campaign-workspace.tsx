@@ -34,7 +34,7 @@ import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplica
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
 import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/campaign-deliverables-tab";
 import { CampaignAssignmentsTab } from "@/features/campaigns/components/tabs/campaign-assignments-tab";
-import { CampaignPublicationsTab } from "@/features/campaigns/components/tabs/campaign-publications-tab";
+import { CampaignPerformanceCenterTab } from "@/features/campaigns/components/performance/campaign-performance-center-tab";
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
@@ -86,6 +86,8 @@ export function CampaignWorkspaceView({
     billingLines,
     campaignInvoiceRegister,
     publications,
+    performanceSummary,
+    performanceCharts,
     publicationsLoadError,
     financeAudit,
     isTabLoading,
@@ -222,7 +224,7 @@ export function CampaignWorkspaceView({
       },
       publications: {
         value: "publications",
-        label: "Publications",
+        label: "Performance",
         count: tabCounts.publications,
       },
       workflow: { value: "workflow", label: "Workflow", count: tabCounts.workflow },
@@ -397,10 +399,12 @@ export function CampaignWorkspaceView({
           <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "publications",
-              <TabErrorBoundary tabName="Publications">
-                <CampaignPublicationsTab
+              <TabErrorBoundary tabName="Performance">
+                <CampaignPerformanceCenterTab
                   workspace={workspace}
                   publications={publications}
+                  summary={performanceSummary}
+                  charts={performanceCharts}
                   loadError={publicationsLoadError}
                 />
               </TabErrorBoundary>

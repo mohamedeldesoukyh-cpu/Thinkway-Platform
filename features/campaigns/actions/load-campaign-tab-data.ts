@@ -1,7 +1,11 @@
 "use server";
 
 import { getCampaignFormOptions } from "@/features/campaigns/queries";
-import { getCampaignPublications } from "@/features/campaigns/queries/publications";
+import {
+  getCampaignPerformanceBundle,
+  type CampaignPerformanceCharts,
+  type CampaignPerformanceSummary,
+} from "@/features/campaigns/queries/publications";
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import {
   getCampaignBillingGroups,
@@ -48,7 +52,9 @@ export type CampaignBillingPayload = {
 };
 
 export type CampaignPublicationsPayload = {
-  publications: Awaited<ReturnType<typeof getCampaignPublications>>["publications"];
+  publications: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["publications"];
+  summary: CampaignPerformanceSummary;
+  charts: CampaignPerformanceCharts;
   loadError: string | null;
 };
 
@@ -194,11 +200,13 @@ export async function loadCampaignPublicationsBundle(
   if (!isUuid(campaignId)) return invalidCampaignResult();
 
   try {
-    const result = await getCampaignPublications(campaignId);
+    const result = await getCampaignPerformanceBundle(campaignId);
     return {
       ok: true,
       data: {
         publications: result.publications,
+        summary: result.summary,
+        charts: result.charts,
         loadError: result.load_error,
       },
     };
@@ -208,7 +216,32 @@ export async function loadCampaignPublicationsBundle(
     console.error("[campaign-tab-data] publications failed", { campaignId, message });
     return {
       ok: true,
-      data: { publications: [], loadError: message },
+      data: {
+        publications: [],
+        summary: {
+          total_publications: 0,
+          total_reach: 0,
+          total_impressions: 0,
+          total_views: 0,
+          total_engagements: 0,
+          average_engagement_rate: null,
+          average_cpm: null,
+          average_cpv: null,
+          top_creator_name: null,
+          top_creator_engagements: 0,
+          currency: "USD",
+        },
+        charts: {
+          performance_over_time: [],
+          platform_split: [],
+          content_type_split: [],
+          top_creators_by_engagement: [],
+          reach_by_creator: [],
+          views_by_publication: [],
+          engagement_distribution: [],
+        },
+        loadError: message,
+      },
     };
   }
 }

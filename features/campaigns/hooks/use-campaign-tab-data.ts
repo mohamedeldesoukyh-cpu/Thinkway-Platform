@@ -22,7 +22,11 @@ import type {
 } from "@/features/billing/types";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 import type { FinanceAuditTimelineEntry } from "@/lib/finance/queries/finance-audit";
-import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
+import type {
+  CampaignPerformanceCharts,
+  CampaignPerformanceSummary,
+  CampaignPublicationRow,
+} from "@/features/campaigns/queries/publications";
 import { assignmentHierarchyBoundaryKey } from "@/lib/campaigns/assignment-row-debug";
 
 export const OPERATIONAL_BILLING_BUNDLES: CampaignDeferredBundle[] = [
@@ -96,6 +100,8 @@ export type CampaignTabDataState = {
   billingLines: BillingLineRow[];
   campaignInvoiceRegister: FinanceInvoiceRegisterRow[];
   publications: CampaignPublicationRow[];
+  performanceSummary: CampaignPerformanceSummary;
+  performanceCharts: CampaignPerformanceCharts;
   publicationsLoadError: string | null;
   financeAudit: FinanceAuditTimelineEntry[];
   bundleStatuses: BundleStatuses;
@@ -126,6 +132,28 @@ export function useCampaignTabData(
     FinanceInvoiceRegisterRow[]
   >([]);
   const [publications, setPublications] = useState<CampaignPublicationRow[]>([]);
+  const [performanceSummary, setPerformanceSummary] = useState<CampaignPerformanceSummary>({
+    total_publications: 0,
+    total_reach: 0,
+    total_impressions: 0,
+    total_views: 0,
+    total_engagements: 0,
+    average_engagement_rate: null,
+    average_cpm: null,
+    average_cpv: null,
+    top_creator_name: null,
+    top_creator_engagements: 0,
+    currency: "USD",
+  });
+  const [performanceCharts, setPerformanceCharts] = useState<CampaignPerformanceCharts>({
+    performance_over_time: [],
+    platform_split: [],
+    content_type_split: [],
+    top_creators_by_engagement: [],
+    reach_by_creator: [],
+    views_by_publication: [],
+    engagement_distribution: [],
+  });
   const [publicationsLoadError, setPublicationsLoadError] = useState<string | null>(null);
   const [financeAudit, setFinanceAudit] = useState<FinanceAuditTimelineEntry[]>([]);
   const [bundleStatuses, setBundleStatuses] =
@@ -206,6 +234,8 @@ export function useCampaignTabData(
             return;
           }
           setPublications(result.data.publications);
+          setPerformanceSummary(result.data.summary);
+          setPerformanceCharts(result.data.charts);
           setPublicationsLoadError(result.data.loadError);
         } else if (bundle === "financeAudit") {
           const result = await loadCampaignFinanceAuditBundle(campaignId);
@@ -290,6 +320,8 @@ export function useCampaignTabData(
     billingLines,
     campaignInvoiceRegister,
     publications,
+    performanceSummary,
+    performanceCharts,
     publicationsLoadError,
     financeAudit,
     bundleStatuses,
