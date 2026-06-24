@@ -28,19 +28,29 @@ import {
 import { CampaignPublicationSheet } from "@/features/campaigns/components/campaign-publication-sheet";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { CampaignPerformanceCharts as PerformanceChartsSection } from "@/features/campaigns/components/performance/campaign-performance-charts";
-import { CampaignPerformanceDetailDrawer } from "@/features/campaigns/components/performance/campaign-performance-detail-drawer";
+import { PublicationWorkspace } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace";
 import { CampaignPerformanceGrid } from "@/features/campaigns/components/performance/campaign-performance-grid";
 import { CampaignPerformanceKpiStrip } from "@/features/campaigns/components/performance/campaign-performance-kpi-strip";
 import {
   bulkImportPublicationsAction,
   bulkUpdatePublicationStatusAction,
+  deleteCampaignPublicationAction,
+  importPublicationMetricsAction,
+  refreshCampaignMetricsAction,
+  refreshPublicationMetricsAction,
   requestPublicationMetricsSyncAction,
 } from "@/features/campaigns/actions/performance-actions";
+import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
+import {
+  notifyMetricsSyncQueued,
+} from "@/features/campaigns/hooks/use-metrics-sync-toasts";
+import { CampaignPerformanceSyncHealth } from "@/features/campaigns/components/performance/campaign-performance-sync-health";
 import type {
   CampaignPerformanceCharts,
   CampaignPerformanceSummary,
   CampaignPublicationRow,
 } from "@/features/campaigns/queries/publications";
+import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 
 const ALL_STATUSES = "all";
@@ -50,7 +60,9 @@ type Props = {
   publications: CampaignPublicationRow[];
   summary: CampaignPerformanceSummary;
   charts: CampaignPerformanceCharts;
+  syncHealth: CampaignMetricsSyncHealth;
   loadError?: string | null;
+  schemaWarnings?: string[];
 };
 
 export function CampaignPerformanceCenterTab({
@@ -58,7 +70,9 @@ export function CampaignPerformanceCenterTab({
   publications,
   summary,
   charts,
+  syncHealth,
   loadError,
+  schemaWarnings = [],
 }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
@@ -79,6 +93,8 @@ export function CampaignPerformanceCenterTab({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [isPending, startTransition] = useTransition();
   const importRef = useRef<HTMLInputElement>(null);
+  const metricsImportRef = useRef<HTMLInputElement>(null);
+  const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
 
   const lines = (workspace.lines ?? []).filter((l) => l.influencer_id);
 
@@ -97,10 +113,17 @@ export function CampaignPerformanceCenterTab({
     });
   }, [publications, search, statusFilter, platformFilter]);
 
-  const detailRow = useMemo(
-    () => (detailId ? (publications.find((r) => r.id === detailId) ?? null) : null),
-    [detailId, publications]
-  );
+  const detailSnapshotRef = useRef<CampaignPublicationRow | null>(null);
+
+  const detailRow = useMemo(() => {
+    if (!detailId) return null;
+    const live = publications.find((r) => r.id === detailId);
+    if (live) {
+      detailSnapshotRef.current = live;
+      return live;
+    }
+    return detailSnapshotRef.current;
+  }, [detailId, publications]);
 
   const platforms = useMemo(
     () => [...new Set(publications.map((p) => p.platform))].sort(),
@@ -183,6 +206,13 @@ export function CampaignPerformanceCenterTab({
     URL.revokeObjectURL(url);
   }
 
+  function queueMetricsSyncToasts(publicationIds: string[]) {
+    for (const id of publicationIds) {
+      const row = publications.find((p) => p.id === id);
+      notifyMetricsSyncQueued(id, row?.influencer_name);
+    }
+  }
+
   function bulkStatus(status: string) {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
@@ -192,21 +222,86 @@ export function CampaignPerformanceCenterTab({
         publicationIds: ids,
         status,
       });
-      if (result.ok) toast.success(result.message);
-      else toast.error(result.message);
+      if (result.ok) {
+        toast.success(result.message);
+        refreshAfterPublicationMutation();
+      } else toast.error(result.message);
     });
   }
 
   function bulkSync() {
     const ids = [...selectedIds];
-    if (ids.length === 0) return;
+    const targetIds = ids.length > 0 ? ids : publications.map((p) => p.id);
     startTransition(async () => {
       const result = await requestPublicationMetricsSyncAction({
         campaignId: workspace.id,
-        publicationIds: ids,
+        publicationIds: targetIds,
       });
-      if (result.ok) toast.success(result.message);
-      else toast.error(result.message);
+      if (result.ok) {
+        queueMetricsSyncToasts(targetIds);
+        refreshAfterPublicationMutation();
+      } else toast.error(result.message);
+    });
+  }
+
+  function refreshAllCampaignMetrics() {
+    startTransition(async () => {
+      const result = await refreshCampaignMetricsAction({ campaignId: workspace.id });
+      if (result.ok) {
+        if (result.message.toLowerCase().includes("queued")) {
+          queueMetricsSyncToasts(publications.map((p) => p.id));
+        } else {
+          toast.success(result.message);
+        }
+        refreshAfterPublicationMutation();
+      } else toast.error(result.message);
+    });
+  }
+
+  async function handleMetricsImport(file: File) {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) {
+      toast.error("Import file must include a header row and at least one data row.");
+      return;
+    }
+    const headers = lines[0]!.split(",").map((h) => h.replace(/^"|"$/g, "").trim().toLowerCase());
+    const rows = lines.slice(1).map((line) => {
+      const cells = line.match(/("([^"]|"")*"|[^,]*)/g) ?? [];
+      const record: Record<string, string> = {};
+      headers.forEach((h, i) => {
+        record[h] = (cells[i] ?? "").replace(/^"|"$/g, "").replace(/""/g, '"').trim();
+      });
+      return record;
+    });
+
+    startTransition(async () => {
+      const result = await importPublicationMetricsAction({
+        campaignId: workspace.id,
+        rows,
+      });
+      if (result.ok) {
+        toast.success(result.message);
+        refreshAfterPublicationMutation();
+      } else toast.error(result.message);
+    });
+  }
+
+  function handleRefreshPublication(publicationId: string) {
+    startTransition(async () => {
+      const result = await refreshPublicationMetricsAction({
+        campaignId: workspace.id,
+        publicationId,
+      });
+      if (result.ok) {
+        if (result.status === "queued") {
+          const row = publications.find((p) => p.id === publicationId);
+          notifyMetricsSyncQueued(publicationId, row?.influencer_name);
+        } else {
+          toast.success(result.message);
+        }
+        refreshAfterPublicationMutation();
+      } else toast.error(result.message);
     });
   }
 
@@ -232,8 +327,36 @@ export function CampaignPerformanceCenterTab({
         campaignId: workspace.id,
         rows,
       });
-      if (result.ok) toast.success(result.message);
-      else toast.error(result.message);
+      if (result.ok) {
+        toast.success(result.message);
+        refreshAfterPublicationMutation();
+      } else toast.error(result.message);
+    });
+  }
+
+  function handleRemovePublication(publicationId: string) {
+    const row = publications.find((r) => r.id === publicationId);
+    const label = row?.influencer_name ?? row?.publication_type_label ?? "this publication";
+    if (!window.confirm(`Remove ${label} from the campaign? This cannot be undone.`)) return;
+
+    startTransition(async () => {
+      const result = await deleteCampaignPublicationAction({
+        campaignId: workspace.id,
+        publicationId,
+      });
+      if (result.ok) {
+        toast.success(result.message);
+        refreshAfterPublicationMutation();
+        setSelectedIds((prev) => {
+          if (!prev.has(publicationId)) return prev;
+          const next = new Set(prev);
+          next.delete(publicationId);
+          return next;
+        });
+        if (detailId === publicationId) setDetailId(null);
+      } else {
+        toast.error(result.message);
+      }
     });
   }
 
@@ -256,7 +379,13 @@ export function CampaignPerformanceCenterTab({
             <Button size="sm" variant="outline" asChild>
               <a href={`${reportBase}?format=pdf&download=1`}>
                 <DownloadIcon data-icon="inline-start" className="size-3.5" />
-                PDF
+                Combined PDF
+              </a>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <a href={`${reportBase}?format=pdf&variant=influencers&download=1`}>
+                <DownloadIcon data-icon="inline-start" className="size-3.5" />
+                Influencer PDF
               </a>
             </Button>
             <Button size="sm" variant="outline" asChild>
@@ -265,8 +394,20 @@ export function CampaignPerformanceCenterTab({
                 Excel
               </a>
             </Button>
-            <Button size="sm" variant="outline" disabled title="PowerPoint export coming soon">
-              PPT
+            <Button size="sm" variant="outline" asChild>
+              <a href={`${reportBase}?format=pptx&download=1`}>
+                <FileTextIcon data-icon="inline-start" className="size-3.5" />
+                PPT
+              </a>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={refreshAllCampaignMetrics}
+              disabled={isPending || publications.length === 0}
+            >
+              <RefreshCwIcon data-icon="inline-start" className="size-3.5" />
+              Refresh all metrics
             </Button>
             <Button size="sm" onClick={() => setSheetOpen(true)} disabled={lines.length === 0}>
               <PlusIcon data-icon="inline-start" />
@@ -278,11 +419,20 @@ export function CampaignPerformanceCenterTab({
 
       {loadError ? (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-          Performance data could not be loaded fully. {loadError}
+          Performance data could not be loaded. {loadError}
+        </div>
+      ) : null}
+
+      {!loadError && schemaWarnings.length > 0 ? (
+        <div className="rounded-lg border border-[#E6EAF2] bg-[#FAFBFD] px-3 py-2 text-xs text-[#5B6575]">
+          Some metrics columns are not migrated yet — counts show as — until{" "}
+          <code className="font-mono">20260623120000_campaign_publications_full_schema_reconcile.sql</code>{" "}
+          is applied.
         </div>
       ) : null}
 
       <CampaignPerformanceKpiStrip summary={summary} />
+      <CampaignPerformanceSyncHealth health={syncHealth} />
       <PerformanceChartsSection charts={charts} />
 
       {selectedCount > 0 ? (
@@ -295,7 +445,7 @@ export function CampaignPerformanceCenterTab({
             <ArchiveIcon className="mr-1 size-3" /> Archive
           </Button>
           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={bulkSync} disabled={isPending}>
-            <RefreshCwIcon className="mr-1 size-3" /> Sync metrics
+            <RefreshCwIcon className="mr-1 size-3" /> Refresh metrics
           </Button>
           <Button size="sm" variant="ghost" className="ml-auto h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
             Clear
@@ -319,8 +469,28 @@ export function CampaignPerformanceCenterTab({
               onClick={() => importRef.current?.click()}
               disabled={isPending}
             >
-              <UploadIcon className="mr-1 size-3" /> Import CSV
+              <UploadIcon className="mr-1 size-3" /> Import publications CSV
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => metricsImportRef.current?.click()}
+              disabled={isPending}
+            >
+              <UploadIcon className="mr-1 size-3" /> Import metrics CSV
+            </Button>
+            <input
+              ref={metricsImportRef}
+              type="file"
+              accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleMetricsImport(file);
+                e.target.value = "";
+              }}
+            />
             <input
               ref={importRef}
               type="file"
@@ -390,6 +560,8 @@ export function CampaignPerformanceCenterTab({
         onToggleSelect={toggleSelect}
         onToggleSelectAll={toggleSelectAll}
         onOpenDetail={setDetailId}
+        onRemovePublication={handleRemovePublication}
+        onRefreshMetrics={handleRefreshPublication}
         sortKey={sortKey}
         sortDir={sortDir}
         onSort={handleSort}
@@ -402,13 +574,21 @@ export function CampaignPerformanceCenterTab({
         onOpenChange={setSheetOpen}
       />
 
-      <CampaignPerformanceDetailDrawer
+      <PublicationWorkspace
         open={detailId != null}
         onOpenChange={(open) => {
-          if (!open) setDetailId(null);
+          if (!open) {
+            setDetailId(null);
+            detailSnapshotRef.current = null;
+          }
         }}
         row={detailRow}
+        campaignId={workspace.id}
         campaignName={workspace.name}
+        onRefreshMetrics={handleRefreshPublication}
+        onRemovePublication={handleRemovePublication}
+        onPublicationUpdated={refreshAfterPublicationMutation}
+        isRefreshing={isPending}
       />
     </div>
   );
