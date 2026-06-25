@@ -83,7 +83,7 @@ flowchart TB
 | Row math | `features/quotations/quotation-row-math.ts` |
 | Totals engine | `features/quotations/quotation-engine.ts` → `fx-aggregation.ts` |
 | Commercial core | `lib/commercial/commercial-engine.ts` |
-| Migrations | `20260703010000_quotations_commercial.sql`, `20260704010000_commercial_markup_mode.sql`, **`20260705010000_quotations_enterprise.sql`** |
+| Migrations | `20260703010000_quotations_commercial.sql`, `20260704010000_commercial_markup_mode.sql`, **`20260705020000_quotations_enterprise.sql`** |
 
 ---
 
@@ -144,7 +144,7 @@ Pre-existing: `client_visible` mirrored by `shared_with_client`.
 
 | Item | Notes |
 |------|-------|
-| Migration not auto-applied | Run `20260705010000_quotations_enterprise.sql` manually |
+| Migration not auto-applied | Run `20260705020000_quotations_enterprise.sql` manually |
 | Deliverables inline edit | Column shows snapshot; edit via shortlist/commercial tab (future) |
 | Client portal UI | Schema only (`shared_with_client`, timestamps) |
 | Inline client/brand create | Select existing only; use Clients module to create |
