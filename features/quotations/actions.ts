@@ -79,7 +79,7 @@ async function buildItemRows(
       rate = await resolveRateToEgp(supabase, currency);
       rateCache.set(currency, rate);
     }
-    const mode: CommercialInputMode = seed.commercial_input_mode ?? "cost_gp_pct";
+    const mode: CommercialInputMode = seed.commercial_input_mode ?? "cost_markup_pct";
     const line = normalizeCommercialLine({
       mode,
       cost: seed.cost,
@@ -494,7 +494,12 @@ export async function updateQuotationItemCommercials(input: {
   revenue?: number | null;
   gp_value?: number | null;
   deliverables?: QuotationDeliverable[];
-}): Promise<ActionResult<{ totals: ReturnType<typeof computeQuotationTotals> }>> {
+}): Promise<
+  ActionResult<{
+    totals: ReturnType<typeof computeQuotationTotals>;
+    fx_rate_to_egp: number;
+  }>
+> {
   const actor = await getActor();
   if (!actor.ok) return actor;
 
@@ -531,7 +536,10 @@ export async function updateQuotationItemCommercials(input: {
 
   const totals = await recomputeTotals(actor.supabase, input.quotation_id);
   revalidate(input.quotation_id);
-  return { ok: true, data: { totals } };
+  return {
+    ok: true,
+    data: { totals, fx_rate_to_egp: line.fx_rate_to_egp },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -596,6 +604,57 @@ export async function removeQuotationItem(input: {
   await recomputeTotals(actor.supabase, input.quotation_id);
   revalidate(input.quotation_id);
   return { ok: true, message: "Creator removed." };
+}
+
+export async function duplicateQuotationItems(input: {
+  quotation_id: string;
+  item_ids: string[];
+}): Promise<ActionResult<{ duplicated: number }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  if (!input.item_ids.length) {
+    return { ok: false, message: "Select at least one creator to duplicate." };
+  }
+
+  const { data: existing, error: loadError } = await actor.supabase
+    .from("quotation_items")
+    .select("*")
+    .eq("quotation_id", input.quotation_id)
+    .in("id", input.item_ids);
+  if (loadError) return { ok: false, message: loadError.message };
+
+  const rows = (existing ?? []) as Array<Record<string, unknown>>;
+  if (rows.length === 0) return { ok: false, message: "No matching creators found." };
+
+  const { data: maxSortRow } = await actor.supabase
+    .from("quotation_items")
+    .select("sort_order")
+    .eq("quotation_id", input.quotation_id)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  let sort = Number((maxSortRow as { sort_order?: number } | null)?.sort_order ?? -1) + 1;
+
+  const inserts = rows.map((row) => {
+    const {
+      id: _id,
+      created_at: _created,
+      updated_at: _updated,
+      ...rest
+    } = row;
+    return { ...rest, quotation_id: input.quotation_id, sort_order: sort++ };
+  });
+
+  const { error } = await actor.supabase.from("quotation_items").insert(inserts as never);
+  if (error) return { ok: false, message: error.message };
+
+  await recomputeTotals(actor.supabase, input.quotation_id);
+  revalidate(input.quotation_id);
+  return {
+    ok: true,
+    data: { duplicated: inserts.length },
+    message: `Duplicated ${inserts.length} creator${inserts.length === 1 ? "" : "s"}.`,
+  };
 }
 
 export async function archiveQuotation(id: string): Promise<ActionResult> {

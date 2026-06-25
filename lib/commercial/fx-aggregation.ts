@@ -81,7 +81,9 @@ export type CommercialTotals = {
 export function aggregateEgpTotals(lines: CommercialLineEgp[]): CommercialTotals {
   const totalCostEgp = round2(lines.reduce((sum, l) => sum + safe(l.costEgp), 0));
   const totalRevenueEgp = round2(lines.reduce((sum, l) => sum + safe(l.revenueEgp), 0));
-  const totalGpValueEgp = round2(lines.reduce((sum, l) => sum + safe(l.gpValueEgp), 0));
+  // Header GP must match Total Revenue − Total Cost (not a naive sum of line GP values,
+  // which can drift when FX rounding is applied per field).
+  const totalGpValueEgp = round2(totalRevenueEgp - totalCostEgp);
   const totalGpPct =
     totalRevenueEgp === 0 ? 0 : round4((totalGpValueEgp / totalRevenueEgp) * 100);
 

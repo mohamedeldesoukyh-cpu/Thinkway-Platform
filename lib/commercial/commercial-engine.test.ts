@@ -13,6 +13,18 @@ import {
 } from "@/lib/commercial/fx-aggregation";
 
 // ---------------------------------------------------------------------------
+// Mode A2: cost + markup% → revenue, GP value
+// ---------------------------------------------------------------------------
+{
+  const r = computeCommercials({ mode: "cost_markup_pct", cost: 1000, gpPct: 25 });
+  assert.equal(r.valid, true);
+  assert.equal(r.revenue, 1250);
+  assert.equal(r.gpValue, 250);
+  // Margin on revenue = 250/1250 = 20%
+  assert.equal(r.gpPct, 20);
+}
+
+// ---------------------------------------------------------------------------
 // Mode A: cost + GP% → revenue, GP value
 // ---------------------------------------------------------------------------
 {

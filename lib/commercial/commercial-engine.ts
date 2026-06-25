@@ -2,22 +2,30 @@
  * Pure commercial calculation engine (no UI, no DB) for Discovery / Shortlist /
  * Quotation commercials. Unit-tested in `commercial-engine.test.ts`.
  *
- * Three input modes (spec §5):
- *   A) cost_gp_pct   : Cost + GP%      → Revenue, GP Value
- *   B) cost_revenue  : Cost + Revenue  → GP%, GP Value
- *   C) cost_gp_value : Cost + GP Value → Revenue, GP%
+ * Four input modes (spec §5 + quotation markup):
+ *   A) cost_markup_pct : Cost + Markup% → Revenue, GP Value (Revenue = Cost × (1 + Markup%))
+ *   B) cost_gp_pct     : Cost + GP Margin% → Revenue, GP Value (Revenue = Cost / (1 - GP%))
+ *   C) cost_revenue    : Cost + Revenue → GP%, GP Value
+ *   D) cost_gp_value   : Cost + GP Value → Revenue, GP%
  *
- * Canonical formulas:
+ * Margin formula (cost_gp_pct):
  *   Revenue  = Cost / (1 - GP%)        (GP% as a fraction, 0..<1)
+ * Markup formula (cost_markup_pct):
+ *   Revenue  = Cost × (1 + Markup%)
+ * Shared:
  *   GP Value = Revenue - Cost
- *   GP%      = GP Value / Revenue      (margin on revenue, not markup on cost)
+ *   GP%      = GP Value / Revenue      (margin on revenue)
  *
  * GP% is stored/exchanged as a PERCENT number (e.g. 25 means 25%). Internally we
  * convert to a fraction for math. GP% must be in [0, 100) — 100%+ implies
  * infinite/negative revenue and is rejected.
  */
 
-export type CommercialInputMode = "cost_gp_pct" | "cost_revenue" | "cost_gp_value";
+export type CommercialInputMode =
+  | "cost_markup_pct"
+  | "cost_gp_pct"
+  | "cost_revenue"
+  | "cost_gp_value";
 
 export type CommercialInput = {
   mode: CommercialInputMode;
@@ -74,6 +82,17 @@ export function computeCommercials(input: CommercialInput): CommercialResult {
   }
 
   switch (input.mode) {
+    case "cost_markup_pct": {
+      const markupPct = round4(toNumber(input.gpPct));
+      if (markupPct < 0) {
+        return { ...EMPTY, cost, gpPct: markupPct, warning: "Markup% cannot be negative." };
+      }
+      const revenue = round2(cost === 0 ? 0 : cost * (1 + markupPct / 100));
+      const gpValue = round2(revenue - cost);
+      const gpPct = revenue === 0 ? 0 : round4((gpValue / revenue) * 100);
+      return { cost, revenue, gpPct, gpValue, valid: true, warning: null };
+    }
+
     case "cost_gp_pct": {
       const gpPct = round4(toNumber(input.gpPct));
       if (gpPct >= MAX_GP_PCT) {

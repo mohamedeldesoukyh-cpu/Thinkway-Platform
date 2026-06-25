@@ -37,7 +37,11 @@ export type Json =
   | { [key: string]: Json }
   | Json[];
 
-export type CommercialInputMode = "cost_gp_pct" | "cost_revenue" | "cost_gp_value";
+export type CommercialInputMode =
+  | "cost_markup_pct"
+  | "cost_gp_pct"
+  | "cost_revenue"
+  | "cost_gp_value";
 
 export type QuotationStatus =
   | "draft"

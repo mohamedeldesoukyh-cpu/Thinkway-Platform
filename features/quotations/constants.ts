@@ -30,9 +30,18 @@ export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
 };
 
 export const COMMERCIAL_INPUT_MODE_LABELS: Record<CommercialInputMode, string> = {
-  cost_gp_pct: "Cost + GP%",
+  cost_markup_pct: "Cost + Markup%",
+  cost_gp_pct: "Cost + GP Margin%",
   cost_revenue: "Cost + Revenue",
   cost_gp_value: "Cost + GP Value",
+};
+
+/** Default GP% target for healthy/orange warning styling in the quotation workspace. */
+export const DEFAULT_GP_TARGET_PCT = 25;
+
+export const CALCULATION_MODE_LABELS: Record<"markup" | "margin", string> = {
+  markup: "Markup %",
+  margin: "GP Margin %",
 };
 
 export const QUOTATIONS_LIST_PATH = "/discovery/quotations";

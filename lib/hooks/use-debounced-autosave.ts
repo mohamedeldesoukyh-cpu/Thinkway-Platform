@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type AutosaveStatus = "idle" | "saving" | "saved" | "error";
+export type AutosaveStatus = "idle" | "pending" | "saving" | "saved" | "error";
 
 /**
  * Debounced autosave: call `schedule(payload)` on every change; the latest
@@ -45,7 +45,7 @@ export function useDebouncedAutosave<T>(
   const schedule = useCallback(
     (payload: T) => {
       latest.current = payload;
-      setStatus("saving");
+      setStatus("pending");
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         void flush();
