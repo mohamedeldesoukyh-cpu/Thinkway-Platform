@@ -15,6 +15,8 @@ import {
   describeAddOutcome,
 } from "@/features/discovery/shortlists/add-to-shortlist-client";
 import type { ShortlistCampaignOption } from "@/features/discovery/queries";
+import { createQuotationFromSelection } from "@/features/quotations/actions";
+import { quotationDetailPath } from "@/features/quotations/constants";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 
@@ -248,6 +250,56 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     }
   }
 
+  function handleGenerateQuotation() {
+    if (selectedCreators.length === 0) {
+      toast.error("Select creators to quote");
+      return;
+    }
+    startTransition(async () => {
+      const res = await createQuotationFromSelection({
+        creators: selectedCreators.map((c) => {
+          const p = c.platforms[0];
+          return {
+            influencer_id: c.influencer_id,
+            profile_id: c.discovered_profile_id,
+            unified_id: c.unified_id,
+            creator_name: c.display_name,
+            platform: p?.platform ?? null,
+            handle: p?.handle ?? null,
+            followers: c.metrics.followers.value ?? p?.follower_count ?? null,
+            engagement_rate: c.metrics.engagement_rate.value ?? p?.engagement_rate ?? null,
+            country_code: c.country_code ?? c.estimated_country ?? null,
+            cost_currency: c.suggested_currency ?? "EGP",
+          };
+        }),
+      });
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
+      toast.success(res.message ?? "Quotation created.");
+      if (res.data?.id) router.push(quotationDetailPath(res.data.id));
+    });
+  }
+
+  const selectionStats = useMemo(() => {
+    if (selectedCreators.length === 0) {
+      return { followers: 0, reach: 0, engagement: 0 };
+    }
+    const followers = selectedCreators.reduce(
+      (sum, c) => sum + (c.metrics.followers.value ?? c.platforms[0]?.follower_count ?? 0),
+      0
+    );
+    const erValues = selectedCreators
+      .map((c) => c.metrics.engagement_rate.value)
+      .filter((v): v is number => typeof v === "number");
+    const engagement =
+      erValues.length > 0 ? erValues.reduce((a, b) => a + b, 0) / erValues.length : 0;
+    // Estimated reach ≈ followers × average ER (rough planning heuristic).
+    const reach = Math.round(followers * (engagement / 100));
+    return { followers, reach, engagement };
+  }, [selectedCreators]);
+
   function clearAllFilters() {
     setFilters(DEFAULT_CREATOR_SEARCH_FILTERS);
     setSearch("");
@@ -302,6 +354,10 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
         onCompare={handleBulkCompare}
         onExport={handleBulkExport}
         onShare={handleBulkShare}
+        onGenerateQuotation={handleGenerateQuotation}
+        estFollowers={selectionStats.followers}
+        estReach={selectionStats.reach}
+        estEngagement={selectionStats.engagement}
         onAiMatch={() => {
           if (selectedCreators.length === 0) {
             toast.info("Select creators, then run AI Match from AI Analyst");

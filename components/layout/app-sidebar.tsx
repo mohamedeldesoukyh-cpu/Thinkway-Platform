@@ -10,9 +10,14 @@ import {
   FileSignatureIcon,
   LayoutDashboardIcon,
   LayersIcon,
+  ListIcon,
   MegaphoneIcon,
+  RadarIcon,
   ReceiptIcon,
+  SearchIcon,
   Settings2Icon,
+  TargetIcon,
+  UploadIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -30,6 +35,18 @@ const navItems: NavItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboardIcon },
   { href: "/dashboard", label: "Executive", icon: LayoutDashboardIcon },
   { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+  {
+    href: "/discovery/search",
+    label: "Discovery",
+    icon: RadarIcon,
+    children: [
+      { href: "/discovery/search", label: "Search" },
+      { href: "/discovery/shortlists", label: "Shortlists" },
+      { href: "/discovery/quotations", label: "Client Quotations" },
+      { href: "/discovery/campaign-match", label: "Campaign Match" },
+      { href: "/discovery/import", label: "Import Center" },
+    ],
+  },
   {
     href: "/groups",
     label: "Clients",

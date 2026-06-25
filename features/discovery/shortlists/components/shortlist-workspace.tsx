@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import {
   DownloadIcon,
+  FileTextIcon,
   GitCompareArrowsIcon,
   SendIcon,
   UserPlusIcon,
@@ -44,6 +45,8 @@ import type {
   ShortlistCampaignOption,
   ShortlistDetail,
 } from "../types";
+import { createQuotationFromShortlist } from "@/features/quotations/actions";
+import { quotationDetailPath } from "@/features/quotations/constants";
 import { AddCreatorsDrawer } from "./add-creators-drawer";
 import { MoveToCampaignDialog } from "./move-to-campaign-dialog";
 import {
@@ -145,6 +148,18 @@ export function ShortlistWorkspace({
     a.click();
     URL.revokeObjectURL(url);
     toast.success(`Exported ${pool.length} creator(s)`);
+  }
+
+  function handleGenerateQuotation() {
+    startTransition(async () => {
+      const res = await createQuotationFromShortlist(detail.id);
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
+      toast.success(res.message ?? "Quotation created.");
+      if (res.data?.id) router.push(quotationDetailPath(res.data.id));
+    });
   }
 
   function runAction(action: () => Promise<{ ok: boolean; message?: string }>) {
@@ -317,6 +332,15 @@ export function ShortlistWorkspace({
               >
                 <DownloadIcon className="size-4" />
                 Export
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleGenerateQuotation}
+                disabled={detail.creators.length === 0 || isPending}
+              >
+                <FileTextIcon className="size-4" />
+                Generate Quotation
               </Button>
             </div>
           </div>

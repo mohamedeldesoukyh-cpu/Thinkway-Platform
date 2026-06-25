@@ -22,6 +22,7 @@ import {
   LineChartIcon,
   LayersIcon,
   Link2Icon,
+  ListIcon,
   MegaphoneIcon,
   RadarIcon,
   PanelLeftCloseIcon,
@@ -31,11 +32,14 @@ import {
   PercentIcon,
   ReceiptIcon,
   RefreshCwIcon,
+  SearchIcon,
   Settings2Icon,
   ShieldIcon,
   SparklesIcon,
   SendIcon,
   TagsIcon,
+  TargetIcon,
+  UploadIcon,
   UserCogIcon,
   UsersIcon,
   WalletIcon,
@@ -100,9 +104,28 @@ const navGroups: NavGroup[] = [
     label: "Workspace",
     icon: MegaphoneIcon,
     iconTone: "violet",
+    items: [{ kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon }],
+  },
+  {
+    label: "Discovery",
+    icon: RadarIcon,
+    iconTone: "teal",
     items: [
-      { kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
-      { kind: "link", href: "/discovery/search", label: "Discovery", icon: RadarIcon },
+      { kind: "link", href: "/discovery/search", label: "Search", icon: SearchIcon },
+      { kind: "link", href: "/discovery/shortlists", label: "Shortlists", icon: ListIcon },
+      {
+        kind: "link",
+        href: "/discovery/quotations",
+        label: "Client Quotations",
+        icon: FileTextIcon,
+      },
+      {
+        kind: "link",
+        href: "/discovery/campaign-match",
+        label: "Campaign Match",
+        icon: TargetIcon,
+      },
+      { kind: "link", href: "/discovery/import", label: "Import Center", icon: UploadIcon },
     ],
   },
   {
@@ -415,7 +438,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
   }, []);
 
   const sidebarControlButtonClass =
-    "flex size-[30px] items-center justify-center rounded-lg border-none bg-transparent text-[#9099A8] transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-[var(--login-navy)] active:scale-90";
+    "flex size-[30px] items-center justify-center rounded-lg border-none bg-transparent text-sidebar-muted-foreground transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-sidebar-foreground active:scale-90";
 
   return (
     <>
@@ -436,7 +459,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       >
         <aside
           className={cn(
-            "absolute flex flex-col overflow-hidden rounded-[20px] border border-white/80 bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+            "absolute flex flex-col overflow-hidden rounded-[20px] border border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
             "shadow-[var(--sidebar-rail-float-shadow)]",
             isVisible
               ? "pointer-events-auto translate-x-0 opacity-100"
@@ -535,7 +558,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.label)}
-                  className="flex w-full items-center gap-[11px] rounded-[11px] px-2.5 py-2.5 text-left text-[13px] font-semibold text-[var(--login-navy)] transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] active:scale-[0.99]"
+                  className="flex w-full items-center gap-[11px] rounded-[11px] px-2.5 py-2.5 text-left text-[13px] font-semibold text-sidebar-foreground transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] active:scale-[0.99]"
                   aria-expanded={!groupCollapsed}
                   aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
                 >
@@ -545,7 +568,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                   <span className="min-w-0 flex-1 truncate">{group.label}</span>
                   <ChevronRightIcon
                     className={cn(
-                      "size-[15px] shrink-0 text-[#9099A8] transition-transform duration-200",
+                      "size-[15px] shrink-0 text-sidebar-muted-foreground transition-transform duration-200",
                       !groupCollapsed && "rotate-90"
                     )}
                   />
@@ -565,7 +588,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                     return (
                       <div
                         key={`subheader-${item.label}`}
-                        className="px-3 pt-2 pb-0.5 text-[11px] font-bold tracking-wide text-[#9099A8] uppercase first:pt-0"
+                        className="px-3 pt-2 pb-0.5 text-[11px] font-bold tracking-wide text-sidebar-muted-foreground uppercase first:pt-0"
                       >
                         {item.label}
                       </div>
@@ -589,15 +612,15 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                             ? "thinkway-sidebar-item-active"
                             : "text-white shadow-[var(--sidebar-rail-active-shadow)] [background:var(--sidebar-rail-grad)]"
                           : displayExpanded
-                            ? "text-[var(--sidebar-rail-item-fg)] hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-[var(--login-navy)]"
-                            : "text-[#9099A8] hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-[var(--login-navy)]"
+                            ? "text-[var(--sidebar-rail-item-fg)] hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-sidebar-foreground"
+                            : "text-sidebar-muted-foreground hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-sidebar-foreground"
                       )}
                     >
                       {displayExpanded ? (
                         <span
                           className={cn(
                             "thinkway-sidebar-item-dot",
-                            !active && "group-hover:bg-[#9099A8]"
+                            !active && "group-hover:bg-sidebar-muted-foreground"
                           )}
                         />
                       ) : (

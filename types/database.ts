@@ -21,6 +21,26 @@ export type ShortlistStatus =
 
 export type ShortlistVisibilityV2 = "private" | "team" | "client_shared";
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[];
+
+export type CommercialInputMode = "cost_gp_pct" | "cost_revenue" | "cost_gp_value";
+
+export type QuotationStatus =
+  | "draft"
+  | "under_review"
+  | "approved"
+  | "sent"
+  | "accepted"
+  | "rejected"
+  | "cancelled"
+  | "archived";
+
 export type CreatorMovementAction =
   | "discovery_to_shortlist"
   | "shortlist_to_campaign"
@@ -2004,6 +2024,18 @@ export type Database = {
           sort_order: number;
           added_by: string | null;
           added_at: string;
+          commercial_input_mode: CommercialInputMode;
+          cost: number | null;
+          cost_currency: string | null;
+          gp_pct: number | null;
+          gp_value: number | null;
+          revenue: number | null;
+          fx_rate_to_egp: number | null;
+          cost_egp: number | null;
+          revenue_egp: number | null;
+          gp_value_egp: number | null;
+          deliverables: Json;
+          commercial_updated_at: string | null;
         };
         Insert: {
           id?: string;
@@ -2015,9 +2047,195 @@ export type Database = {
           match_score?: number | null;
           sort_order?: number;
           added_by?: string | null;
+          commercial_input_mode?: CommercialInputMode;
+          cost?: number | null;
+          cost_currency?: string | null;
+          gp_pct?: number | null;
+          gp_value?: number | null;
+          revenue?: number | null;
+          fx_rate_to_egp?: number | null;
+          cost_egp?: number | null;
+          revenue_egp?: number | null;
+          gp_value_egp?: number | null;
+          deliverables?: Json;
+          commercial_updated_at?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["discovery_shortlist_items"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      quotations: {
+        Row: {
+          id: string;
+          serial_number: string | null;
+          name: string;
+          status: QuotationStatus;
+          shortlist_id: string | null;
+          client_id: string | null;
+          brand_id: string | null;
+          campaign_header_id: string | null;
+          owner_id: string | null;
+          created_by: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          currency: string;
+          total_cost_egp: number;
+          total_revenue_egp: number;
+          total_gp_value_egp: number;
+          total_gp_pct: number;
+          notes: string | null;
+          terms: string | null;
+          prepared_by_name: string | null;
+          prepared_by_signature: string | null;
+          client_signature_name: string | null;
+          client_signed_at: string | null;
+          client_visible: boolean;
+          client_shared_at: string | null;
+          client_shared_by: string | null;
+          client_approval_status: string | null;
+          client_comment: string | null;
+          is_archived: boolean;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          serial_number?: string | null;
+          name: string;
+          status?: QuotationStatus;
+          shortlist_id?: string | null;
+          client_id?: string | null;
+          brand_id?: string | null;
+          campaign_header_id?: string | null;
+          owner_id?: string | null;
+          created_by?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          currency?: string;
+          total_cost_egp?: number;
+          total_revenue_egp?: number;
+          total_gp_value_egp?: number;
+          total_gp_pct?: number;
+          notes?: string | null;
+          terms?: string | null;
+          prepared_by_name?: string | null;
+          prepared_by_signature?: string | null;
+          client_signature_name?: string | null;
+          client_signed_at?: string | null;
+          client_visible?: boolean;
+          client_shared_at?: string | null;
+          client_shared_by?: string | null;
+          client_approval_status?: string | null;
+          client_comment?: string | null;
+          is_archived?: boolean;
+          metadata?: Json;
+        };
+        Update: Partial<Database["public"]["Tables"]["quotations"]["Insert"]>;
+        Relationships: [];
+      };
+      quotation_items: {
+        Row: {
+          id: string;
+          quotation_id: string;
+          influencer_id: string | null;
+          profile_id: string | null;
+          unified_id: string | null;
+          source_shortlist_item_id: string | null;
+          creator_name: string | null;
+          platform: string | null;
+          handle: string | null;
+          followers: number | null;
+          engagement_rate: number | null;
+          country_code: string | null;
+          deliverables: Json;
+          commercial_input_mode: CommercialInputMode;
+          cost: number;
+          cost_currency: string;
+          revenue: number;
+          gp_pct: number;
+          gp_value: number;
+          fx_rate_to_egp: number;
+          cost_egp: number;
+          revenue_egp: number;
+          gp_value_egp: number;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          quotation_id: string;
+          influencer_id?: string | null;
+          profile_id?: string | null;
+          unified_id?: string | null;
+          source_shortlist_item_id?: string | null;
+          creator_name?: string | null;
+          platform?: string | null;
+          handle?: string | null;
+          followers?: number | null;
+          engagement_rate?: number | null;
+          country_code?: string | null;
+          deliverables?: Json;
+          commercial_input_mode?: CommercialInputMode;
+          cost?: number;
+          cost_currency?: string;
+          revenue?: number;
+          gp_pct?: number;
+          gp_value?: number;
+          fx_rate_to_egp?: number;
+          cost_egp?: number;
+          revenue_egp?: number;
+          gp_value_egp?: number;
+          sort_order?: number;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["quotation_items"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      discovery_saved_filters: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          scope: string;
+          filters: Json;
+          is_pinned: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          scope?: string;
+          filters?: Json;
+          is_pinned?: boolean;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["discovery_saved_filters"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      discovery_recent_searches: {
+        Row: {
+          id: string;
+          owner_id: string;
+          query: string | null;
+          filters: Json;
+          searched_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          query?: string | null;
+          filters?: Json;
+          searched_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["discovery_recent_searches"]["Insert"]
         >;
         Relationships: [];
       };
