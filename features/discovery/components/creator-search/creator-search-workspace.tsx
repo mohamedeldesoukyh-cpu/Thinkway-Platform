@@ -7,43 +7,60 @@ import { toast } from "sonner";
 
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
-import { addToShortlistAction } from "@/features/discovery/actions";
+import {
+  addUnifiedCreatorsToShortlist,
+  describeAddOutcome,
+} from "@/features/discovery/shortlists/add-to-shortlist-client";
+import type { ShortlistCampaignOption } from "@/features/discovery/queries";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 
+import { CreateListDialog, type CreatedShortlist } from "./create-list-dialog";
+import { CreatorSearchActiveFilters } from "./creator-search-active-filters";
 import { applyCreatorSearchClientFilters } from "./creator-search-client-filters";
 import { CreatorSearchBulkBar } from "./creator-search-bulk-bar";
-import { CreatorSearchDataGrid } from "./creator-search-data-grid";
-import { CreatorSearchFilterSidebar } from "./creator-search-filter-sidebar";
+import { CreatorSearchFilterBar } from "./creator-search-filter-bar";
+import { CreatorSearchFilterPanel } from "./creator-search-filter-panel";
+import { CreatorSearchResultList } from "./creator-search-result-list";
 import { CreatorSearchTopBar } from "./creator-search-top-bar";
 import {
   DEFAULT_CREATOR_SEARCH_FILTERS,
+  DEFAULT_CREATOR_SEARCH_SORT,
   filtersToBrowseParams,
   type CreatorSearchFilters,
+  type CreatorSearchSort,
 } from "./creator-search-types";
-import { exportCreatorsCsv, stashCompareQueue } from "./creator-search-utils";
+import { exportCreatorsCsv, sortCreators, stashCompareQueue } from "./creator-search-utils";
 
 const PAGE_SIZE = 50;
 const SAVED_SEARCH_KEY = "thinkway:creator-search-saved:v1";
 
 type Props = {
   shortlists: Array<{ id: string; name: string }>;
+  campaigns: ShortlistCampaignOption[];
 };
 
-export function CreatorSearchWorkspace({ shortlists }: Props) {
+export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaigns }: Props) {
   const router = useRouter();
+  const [shortlists, setShortlists] = useState(initialShortlists);
   const [filters, setFilters] = useState<CreatorSearchFilters>(DEFAULT_CREATOR_SEARCH_FILTERS);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<CreatorSearchSort>(DEFAULT_CREATOR_SEARCH_SORT);
   const [page, setPage] = useState(1);
   const [creators, setCreators] = useState<UnifiedCreatorResult[]>([]);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
   const [selectedShortlist, setSelectedShortlist] = useState(shortlists[0]?.id ?? "");
+  const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
+  const [createListOpen, setCreateListOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const loadMoreObserver = useRef<IntersectionObserver | null>(null);
   const filtersRef = useRef(filters);
@@ -57,9 +74,12 @@ export function CreatorSearchWorkspace({ shortlists }: Props) {
     [creators, selectedIds]
   );
 
+  const sortedCreators = useMemo(() => sortCreators(creators, sort), [creators, sort]);
+
   const fetchPage = useCallback(async (pageNum: number, append: boolean) => {
     if (append) setLoadingMore(true);
     else setLoading(true);
+    setError(null);
 
     try {
       const mergedFilters: CreatorSearchFilters = {
@@ -78,8 +98,10 @@ export function CreatorSearchWorkspace({ shortlists }: Props) {
         return [...unique.values()];
       });
       setHasMore(pageNum * PAGE_SIZE < result.total);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Search failed");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Search failed";
+      if (!append) setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -148,26 +170,42 @@ export function CreatorSearchWorkspace({ shortlists }: Props) {
     });
   }
 
-  function addCreatorsToList(targets: UnifiedCreatorResult[]) {
-    if (!selectedShortlist) {
+  function addCreatorsToList(targets: UnifiedCreatorResult[], listId?: string) {
+    const targetList = listId ?? selectedShortlist;
+    if (!targetList) {
       toast.error("Select a target list first.");
       return;
     }
-    const eligible = targets.filter((c) => c.discovered_profile_id);
-    if (eligible.length === 0) {
-      toast.error("Selected creators cannot be added to discovery lists.");
+    if (targets.length === 0) {
+      toast.error("Select at least one creator.");
       return;
     }
     startTransition(async () => {
       try {
-        await Promise.all(
-          eligible.map((c) => addToShortlistAction(selectedShortlist, c.discovered_profile_id!))
-        );
-        toast.success(`Added ${eligible.length} creator(s) to list`);
+        const outcome = await addUnifiedCreatorsToShortlist(targetList, targets);
+        if (outcome.added > 0) {
+          toast.success(describeAddOutcome(outcome));
+        } else if (outcome.failed > 0) {
+          toast.error(outcome.firstError ?? "Failed to add to list");
+        } else if (outcome.ineligible > 0 && outcome.alreadyOnList === 0) {
+          toast.error("Selected creators cannot be added to discovery lists.");
+        } else {
+          toast.info(describeAddOutcome(outcome));
+        }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to add to list");
       }
     });
+  }
+
+  function handleListCreated(created: CreatedShortlist) {
+    setShortlists((prev) =>
+      prev.some((s) => s.id === created.id) ? prev : [{ id: created.id, name: created.name }, ...prev]
+    );
+    setSelectedShortlist(created.id);
+    if (selectedCreators.length > 0) {
+      addCreatorsToList(selectedCreators, created.id);
+    }
   }
 
   function handleBulkCompare() {
@@ -200,7 +238,7 @@ export function CreatorSearchWorkspace({ shortlists }: Props) {
     if (selectedCreators.length === 0) return;
     const lines = selectedCreators.map((c) => {
       const p = c.platforms[0];
-      return `${c.display_name} (${p?.handle ?? "—"}) ${p?.profile_url ?? ""}`.trim();
+      return `${c.display_name} (${p?.handle ?? "—"}) ${resolveCreatorProfileUrl(p) ?? ""}`.trim();
     });
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
@@ -208,6 +246,11 @@ export function CreatorSearchWorkspace({ shortlists }: Props) {
     } catch {
       toast.error("Could not copy to clipboard");
     }
+  }
+
+  function clearAllFilters() {
+    setFilters(DEFAULT_CREATOR_SEARCH_FILTERS);
+    setSearch("");
   }
 
   function handleSaveSearch() {
@@ -228,11 +271,25 @@ export function CreatorSearchWorkspace({ shortlists }: Props) {
         search={search}
         onSearchChange={setSearch}
         onSearchSubmit={runSearch}
+        sort={sort}
+        onSortChange={setSort}
         total={total}
         loadedCount={creators.length}
         onSaveSearch={handleSaveSearch}
-        onCreateList={() => toast.info("Create lists in Discovery hub")}
+        onCreateList={() => setCreateListOpen(true)}
         loading={loading || isPending}
+      />
+
+      <CreatorSearchFilterBar
+        filters={filters}
+        onChange={setFilters}
+        onOpenAllFilters={() => setFiltersDrawerOpen(true)}
+      />
+
+      <CreatorSearchActiveFilters
+        filters={filters}
+        onChange={setFilters}
+        onClearAll={clearAllFilters}
       />
 
       <CreatorSearchBulkBar
@@ -264,21 +321,36 @@ export function CreatorSearchWorkspace({ shortlists }: Props) {
       />
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <CreatorSearchFilterSidebar filters={filters} onChange={setFilters} />
-
-        <CreatorSearchDataGrid
-          creators={creators}
+        <CreatorSearchResultList
+          creators={sortedCreators}
           loading={loading}
           loadingMore={loadingMore}
           hasMore={hasMore}
+          error={error}
+          total={total}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onToggleSelectAll={toggleSelectAll}
           onOpenCreator={setDetailCreator}
           onAddToList={(c) => addCreatorsToList([c])}
+          onRetry={runSearch}
           loadMoreRef={loadMoreRef}
         />
       </div>
+
+      <Sheet open={filtersDrawerOpen} onOpenChange={setFiltersDrawerOpen}>
+        <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+          <SheetTitle className="sr-only">Search filters</SheetTitle>
+          <CreatorSearchFilterPanel
+            filters={filters}
+            onChange={setFilters}
+            onClearAll={clearAllFilters}
+            onClose={() => setFiltersDrawerOpen(false)}
+            total={total}
+            loading={loading || isPending}
+          />
+        </SheetContent>
+      </Sheet>
 
       <CreatorDetailSheet
         creator={detailCreator}
@@ -286,6 +358,13 @@ export function CreatorSearchWorkspace({ shortlists }: Props) {
         onOpenChange={(open) => {
           if (!open) setDetailCreator(null);
         }}
+      />
+
+      <CreateListDialog
+        open={createListOpen}
+        onOpenChange={setCreateListOpen}
+        campaigns={campaigns}
+        onCreated={handleListCreated}
       />
     </div>
   );

@@ -3,7 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
-import { SendIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  GitCompareArrowsIcon,
+  SendIcon,
+  UserPlusIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +21,12 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import {
+  exportCreatorsCsv,
+  stashCompareQueue,
+} from "@/features/discovery/components/creator-search/creator-search-utils";
+import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CreatorMovementAction } from "@/types/database";
 
 import {
@@ -33,6 +44,7 @@ import type {
   ShortlistCampaignOption,
   ShortlistDetail,
 } from "../types";
+import { AddCreatorsDrawer } from "./add-creators-drawer";
 import { MoveToCampaignDialog } from "./move-to-campaign-dialog";
 import {
   AssignmentStatusBadge,
@@ -68,14 +80,72 @@ export function ShortlistWorkspace({
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [moveOpen, setMoveOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   const editable = canEditCreators(detail.status) && !detail.is_archived;
   const movable = canMoveToCampaign(detail.status);
+  // Selection drives move (approved), compare, and export across active states.
+  const selectable = (editable || movable) && detail.creators.length > 0;
 
   const selectedItemIds = useMemo(
     () => Object.keys(selected).filter((id) => selected[id]),
     [selected]
   );
+
+  const existingItems = useMemo(
+    () =>
+      detail.creators.map((item) => ({
+        unified_id: item.unified_id,
+        profile_id: item.profile_id,
+        influencer_id: item.influencer_id,
+      })),
+    [detail.creators]
+  );
+
+  function selectedCreators(): UnifiedCreatorResult[] {
+    return detail.creators
+      .filter((item) => selected[item.item_id] && item.creator)
+      .map((item) => item.creator as UnifiedCreatorResult);
+  }
+
+  function handleCompare() {
+    const chosen = selectedCreators();
+    const pool =
+      chosen.length >= 2
+        ? chosen
+        : (detail.creators
+            .map((item) => item.creator)
+            .filter(Boolean) as UnifiedCreatorResult[]);
+    if (pool.length < 2) {
+      toast.error("Select at least 2 creators with resolved profiles to compare.");
+      return;
+    }
+    stashCompareQueue(pool.slice(0, MAX_CREATOR_COMPARE));
+    router.push("/discovery/compare");
+  }
+
+  function handleExport() {
+    const chosen = selectedCreators();
+    const pool =
+      chosen.length > 0
+        ? chosen
+        : (detail.creators
+            .map((item) => item.creator)
+            .filter(Boolean) as UnifiedCreatorResult[]);
+    if (pool.length === 0) {
+      toast.error("No creator data available to export.");
+      return;
+    }
+    const csv = exportCreatorsCsv(pool);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${detail.serial_number ?? "shortlist"}-creators.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${pool.length} creator(s)`);
+  }
 
   function runAction(action: () => Promise<{ ok: boolean; message?: string }>) {
     startTransition(async () => {
@@ -212,24 +282,61 @@ export function ShortlistWorkspace({
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle>Creators ({detail.creators.length})</CardTitle>
               <CardDescription>
                 {movable
                   ? "Select creators, then move them to a campaign."
                   : editable
-                    ? "Add creators from Search or Compare, then submit for review."
+                    ? "Search and add creators, compare, then submit for review."
                     : "Creators are locked in the current status."}
               </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {editable ? (
+                <Button size="sm" onClick={() => setAddOpen(true)} disabled={isPending}>
+                  <UserPlusIcon className="size-4" />
+                  Add creators
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCompare}
+                disabled={detail.creators.length < 2}
+              >
+                <GitCompareArrowsIcon className="size-4" />
+                Compare
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExport}
+                disabled={detail.creators.length === 0}
+              >
+                <DownloadIcon className="size-4" />
+                Export
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {detail.creators.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No creators yet. Add creators from Creator Search or Compare.
-            </p>
+            <div className="space-y-3 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No creators yet.
+                {editable
+                  ? " Click “Add creators” to search and build this shortlist."
+                  : " This shortlist is locked in its current status."}
+              </p>
+              {editable ? (
+                <Button size="sm" onClick={() => setAddOpen(true)}>
+                  <UserPlusIcon className="size-4" />
+                  Add creators
+                </Button>
+              ) : null}
+            </div>
           ) : (
             detail.creators.map((item) => {
               const platform = item.creator?.platforms?.[0];
@@ -238,7 +345,7 @@ export function ShortlistWorkspace({
                   key={item.item_id}
                   className="flex items-center gap-3 rounded-2xl border border-border px-3 py-2"
                 >
-                  {movable ? (
+                  {selectable ? (
                     <Checkbox
                       checked={Boolean(selected[item.item_id])}
                       onCheckedChange={(value) =>
@@ -365,6 +472,14 @@ export function ShortlistWorkspace({
         selectedItemIds={selectedItemIds}
         campaigns={campaigns}
         brands={brands}
+      />
+
+      <AddCreatorsDrawer
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        shortlistId={detail.id}
+        existingItems={existingItems}
+        onAdded={() => router.refresh()}
       />
     </div>
   );

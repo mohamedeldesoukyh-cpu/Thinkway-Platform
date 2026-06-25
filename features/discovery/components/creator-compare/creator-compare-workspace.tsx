@@ -21,7 +21,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
-import { addToShortlistAction } from "@/features/discovery/actions";
+import {
+  addUnifiedCreatorsToShortlist,
+  describeAddOutcome,
+} from "@/features/discovery/shortlists/add-to-shortlist-client";
 import { loadCreatorCompareBundleAction } from "@/features/discovery/actions/creator-compare-actions";
 import type { CreatorCompareBundle } from "@/lib/creators/creator-compare-bundle";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
@@ -109,17 +112,22 @@ export function CreatorCompareWorkspace({ shortlists }: Props) {
       toast.error("Select a target list first.");
       return;
     }
-    const eligible = creators.filter((c) => c.discovered_profile_id);
-    if (eligible.length === 0) {
-      toast.error("Compared creators cannot be added to discovery lists.");
+    if (creators.length === 0) {
+      toast.error("No creators to add.");
       return;
     }
     startTransition(async () => {
       try {
-        await Promise.all(
-          eligible.map((c) => addToShortlistAction(selectedShortlist, c.discovered_profile_id!))
-        );
-        toast.success(`Added ${eligible.length} creator(s) to list`);
+        const outcome = await addUnifiedCreatorsToShortlist(selectedShortlist, creators);
+        if (outcome.added > 0) {
+          toast.success(describeAddOutcome(outcome));
+        } else if (outcome.failed > 0) {
+          toast.error(outcome.firstError ?? "Failed to add to list");
+        } else if (outcome.ineligible > 0 && outcome.alreadyOnList === 0) {
+          toast.error("Compared creators cannot be added to discovery lists.");
+        } else {
+          toast.info(describeAddOutcome(outcome));
+        }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to add to list");
       }
@@ -166,10 +174,10 @@ export function CreatorCompareWorkspace({ shortlists }: Props) {
   if (!bundle || bundle.entries.length < 2) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
-        <GitCompareArrowsIcon className="size-10 text-[#0057FF]/40" />
+        <GitCompareArrowsIcon className="size-10 text-primary/40" />
         <div>
-          <p className="text-[15px] font-semibold text-[#0B0F1A]">No creators to compare</p>
-          <p className="mt-1 max-w-md text-[13px] text-[#5B6575]">
+          <p className="text-[15px] font-semibold text-foreground">No creators to compare</p>
+          <p className="mt-1 max-w-md text-[13px] text-muted-foreground">
             Select 2–{MAX_CREATOR_COMPARE} creators in Creator Search and click Compare.
           </p>
         </div>
@@ -182,7 +190,7 @@ export function CreatorCompareWorkspace({ shortlists }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[#E6EAF2] bg-white px-4 py-3 md:px-5">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-background px-4 py-3 md:px-5">
         <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" asChild>
           <Link href="/discovery/search">
             <ArrowLeftIcon className="size-3.5" />
@@ -190,12 +198,12 @@ export function CreatorCompareWorkspace({ shortlists }: Props) {
           </Link>
         </Button>
         <div className="h-4 w-px bg-[#E6EAF2]" aria-hidden />
-        <span className="text-[12px] font-semibold text-[#0B0F1A]">
+        <span className="text-[12px] font-semibold text-foreground">
           {bundle.entries.length} creators compared
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Select value={selectedShortlist} onValueChange={setSelectedShortlist}>
-            <SelectTrigger className="h-8 w-[160px] border-[#E6EAF2] bg-white text-xs">
+            <SelectTrigger className="h-8 w-[160px] border-border bg-card text-xs">
               <SelectValue placeholder="Target list" />
             </SelectTrigger>
             <SelectContent>

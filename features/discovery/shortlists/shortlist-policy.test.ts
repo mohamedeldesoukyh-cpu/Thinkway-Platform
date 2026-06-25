@@ -19,6 +19,12 @@ import {
   shouldWarnNameMismatch,
   validateMoveToCampaign,
 } from "@/features/discovery/shortlists/move-policy";
+import {
+  applyAddResult,
+  describeAddOutcome,
+  emptyOutcome,
+  isAddableCreator,
+} from "@/features/discovery/shortlists/add-to-shortlist-policy";
 
 // ---------------------------------------------------------------------------
 // Serial format (spec §1)
@@ -136,5 +142,45 @@ assert.match(
   buildNameMismatchWarning("TW-2026-0009"),
   /shortlist name will not replace the campaign name/
 );
+
+// ---------------------------------------------------------------------------
+// Add-to-shortlist source-type handling (Part B — both source types addable)
+// ---------------------------------------------------------------------------
+// Imported / internal influencer (no discovered_profile_id) MUST be addable —
+// this was the original bug.
+assert.equal(
+  isAddableCreator({ influencer_id: "inf-1", discovered_profile_id: null }),
+  true,
+  "imported influencer must be addable"
+);
+// Public discovery profile (no influencer_id) is addable.
+assert.equal(
+  isAddableCreator({ influencer_id: null, discovered_profile_id: "dis-1" }),
+  true,
+  "discovered profile must be addable"
+);
+// Promoted creator with both ids is addable.
+assert.equal(
+  isAddableCreator({ influencer_id: "inf-1", discovered_profile_id: "dis-1" }),
+  true
+);
+// Neither reference => not addable.
+assert.equal(
+  isAddableCreator({ influencer_id: null, discovered_profile_id: null }),
+  false
+);
+
+// Outcome folding from V2 action results.
+let outcome = emptyOutcome();
+outcome = applyAddResult(outcome, { ok: true, message: "Creator added to shortlist." });
+outcome = applyAddResult(outcome, { ok: true, message: "Creator is already on this shortlist." });
+outcome = applyAddResult(outcome, { ok: false, message: "Shortlist not found." });
+assert.equal(outcome.added, 1);
+assert.equal(outcome.alreadyOnList, 1);
+assert.equal(outcome.failed, 1);
+assert.equal(outcome.firstError, "Shortlist not found.");
+assert.match(describeAddOutcome(outcome), /1 added/);
+assert.match(describeAddOutcome(outcome), /already on list/);
+assert.equal(describeAddOutcome(emptyOutcome()), "No creators added");
 
 console.log("discovery shortlist policy tests passed");
