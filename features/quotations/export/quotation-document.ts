@@ -2,7 +2,10 @@
  * Pure quotation document model (no DB, no rendering deps).
  */
 import { formatDualCurrency, REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
-import { QUOTATION_STATUS_LABELS } from "@/features/quotations/constants";
+import {
+  QUOTATION_CLIENT_LABELS,
+  QUOTATION_STATUS_LABELS,
+} from "@/features/quotations/constants";
 import { parseQuotationTermsText } from "@/features/quotations/quotation-default-terms";
 import { gpHealthExportColor } from "@/features/quotations/quotation-gp-health";
 import {
@@ -23,12 +26,14 @@ export type QuotationDocRow = {
   revenue: string;
   gp: string;
   gpPct: string;
+  gpColor: string;
   currency: string;
 };
 
 export type QuotationDocumentKpi = {
   label: string;
   value: string;
+  valueColor?: string;
 };
 
 export type QuotationDocument = {
@@ -89,28 +94,36 @@ export function buildQuotationDocument(detail: QuotationDetail): QuotationDocume
       ? "Expired"
       : QUOTATION_STATUS_LABELS[detail.status] ?? detail.status;
 
-  const rows: QuotationDocRow[] = detail.items.map((item) => ({
-    creator: item.creator_name ?? item.handle ?? "Creator",
-    platform: item.platform ?? "—",
-    followers: item.followers != null ? num(item.followers) : "—",
-    engagementRate:
-      item.engagement_rate != null ? `${num(item.engagement_rate, 2)}%` : "—",
-    country: item.country_code ?? "—",
-    deliverables: deliverablesLabel(item),
-    unitCost: formatDualCurrency({
-      amount: item.cost,
+  const rows: QuotationDocRow[] = detail.items.map((item) => {
+    const rowGpColor = gpHealthExportColor({
+      gpValueEgp: item.gp_value_egp,
+      gpPct: item.gp_pct,
+      targetPct: detail.gp_target_pct,
+    });
+    return {
+      creator: item.creator_name ?? item.handle ?? "Creator",
+      platform: item.platform ?? "—",
+      followers: item.followers != null ? num(item.followers) : "—",
+      engagementRate:
+        item.engagement_rate != null ? `${num(item.engagement_rate, 2)}%` : "—",
+      country: item.country_code ?? "—",
+      deliverables: deliverablesLabel(item),
+      unitCost: formatDualCurrency({
+        amount: item.cost,
+        currency: item.cost_currency,
+        egpAmount: item.cost_egp,
+      }),
+      revenue: formatDualCurrency({
+        amount: item.revenue,
+        currency: item.cost_currency,
+        egpAmount: item.revenue_egp,
+      }),
+      gp: `${num(item.gp_value_egp, 2)} ${REPORTING_CURRENCY}`,
+      gpPct: `${num(item.gp_pct, 1)}%`,
+      gpColor: rowGpColor,
       currency: item.cost_currency,
-      egpAmount: item.cost_egp,
-    }),
-    revenue: formatDualCurrency({
-      amount: item.revenue,
-      currency: item.cost_currency,
-      egpAmount: item.revenue_egp,
-    }),
-    gp: `${num(item.gp_value_egp, 2)} ${REPORTING_CURRENCY}`,
-    gpPct: `${num(item.gp_pct, 1)}%`,
-    currency: item.cost_currency,
-  }));
+    };
+  });
 
   const gpColor = gpHealthExportColor({
     gpValueEgp: detail.total_gp_value_egp,
@@ -152,12 +165,16 @@ export function buildQuotationDocument(detail: QuotationDetail): QuotationDocume
       { label: "Est. Reach", value: num(detail.estimated_reach) },
       { label: "Est. Engagement", value: avgEr },
       { label: "Total Cost", value: `${num(detail.total_cost_egp, 2)} ${REPORTING_CURRENCY}` },
-      { label: "Total Revenue", value: `${num(detail.total_revenue_egp, 2)} ${REPORTING_CURRENCY}` },
+      {
+        label: QUOTATION_CLIENT_LABELS.totalClientCost,
+        value: `${num(detail.total_revenue_egp, 2)} ${REPORTING_CURRENCY}`,
+      },
       {
         label: "Gross Profit",
         value: `${num(detail.total_gp_value_egp, 2)} ${REPORTING_CURRENCY}`,
+        valueColor: gpColor,
       },
-      { label: "GP %", value: `${num(detail.total_gp_pct, 1)}%` },
+      { label: "GP %", value: `${num(detail.total_gp_pct, 1)}%`, valueColor: gpColor },
     ],
     summary: {
       totalCost: `${num(detail.total_cost_egp, 2)} ${REPORTING_CURRENCY}`,

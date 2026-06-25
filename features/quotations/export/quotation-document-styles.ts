@@ -16,6 +16,7 @@ export const QUOTATION_DOCUMENT_CSS = `
     --success: #1D9E75;
     --warning: #D97706;
     --danger: #DC2626;
+    --destructive: var(--danger);
   }
 
   @page {
@@ -136,7 +137,7 @@ export const QUOTATION_DOCUMENT_CSS = `
   .summary-box table { width: 280px; border-collapse: collapse; }
   .summary-box td { padding: 6px 8px; border-bottom: 1px solid var(--rule); }
   .summary-box tr.total td { font-weight: 700; border-top: 2px solid var(--brand); }
-  .summary-box tr.gp td { font-weight: 700; }
+  .summary-box tr.gp td.num { font-weight: 700; }
 
   .terms-list { list-style: none; }
   .terms-list li { margin-bottom: 10px; }

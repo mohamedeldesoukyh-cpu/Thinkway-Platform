@@ -18,8 +18,12 @@ export type KpiCarouselItem = {
   valueSemantic?: OperationalKpiValueSemantic;
   /** Numeric value for gp/margin semantic coloring. */
   valueNumeric?: number;
+  /** Optional secondary line under the value (e.g. reach breakdown). */
+  subtext?: string;
   /** Tint value text only — card chrome stays uniform. */
   valueAlert?: "warning" | "danger";
+  /** Explicit value text class (overrides valueSemantic / valueAlert). */
+  valueClassName?: string;
   /** @deprecated Use valueAlert */
   alert?: "warning" | "danger";
 };
@@ -85,13 +89,19 @@ export function KpiCarousel({ items, className, showNavigation = true }: KpiCaro
                 <p
                   className={cn(
                     "truncate font-heading text-sm font-bold tracking-tight tabular-nums",
-                    semanticClass,
-                    valueTone === "danger" && "text-destructive",
-                    valueTone === "warning" && "text-warning"
+                    item.valueClassName ??
+                      cn(
+                        semanticClass,
+                        valueTone === "danger" && "text-destructive",
+                        valueTone === "warning" && "text-warning"
+                      )
                   )}
                 >
                   {item.value}
                 </p>
+                {item.subtext ? (
+                  <p className="truncate text-[10px] text-muted-foreground">{item.subtext}</p>
+                ) : null}
               </div>
             </div>
           );

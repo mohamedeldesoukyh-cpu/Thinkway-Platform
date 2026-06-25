@@ -2,6 +2,7 @@
  * Enterprise client quotation HTML — cover, commercial grid, summary, terms, signatures.
  * Preview / Word / PDF share this renderer (puppeteer via vendor-io-pdf).
  */
+import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import type { QuotationDocument } from "./quotation-document";
 import { QUOTATION_DOCUMENT_CSS } from "./quotation-document-styles";
 
@@ -28,8 +29,8 @@ function renderRows(doc: QuotationDocument): string {
         <td>${esc(r.deliverables)}</td>
         <td class="num">${esc(r.unitCost)}</td>
         <td class="num">${esc(r.revenue)}</td>
-        <td class="num">${esc(r.gp)}</td>
-        <td class="num">${esc(r.gpPct)}</td>
+        <td class="num" style="color:${r.gpColor}">${esc(r.gp)}</td>
+        <td class="num" style="color:${r.gpColor}">${esc(r.gpPct)}</td>
       </tr>`
     )
     .join("");
@@ -49,12 +50,11 @@ function renderTerms(doc: QuotationDocument): string {
 
 function renderKpiStrip(kpis: QuotationDocument["commercialKpis"]): string {
   return kpis
-    .slice(0, 3)
     .map(
       (k) => `
       <div class="kpi avoid-break">
         <div class="label">${esc(k.label)}</div>
-        <div class="value">${esc(k.value)}</div>
+        <div class="value"${k.valueColor ? ` style="color:${k.valueColor}"` : ""}>${esc(k.value)}</div>
       </div>`
     )
     .join("");
@@ -102,7 +102,7 @@ export function buildQuotationHtml(doc: QuotationDocument): string {
         <div class="hero-kpi avoid-break"><div class="label">Campaign</div><div class="value">${esc(doc.campaignName === "—" ? doc.name : doc.campaignName)}</div></div>
         <div class="hero-kpi avoid-break"><div class="label">Creators</div><div class="value">${doc.summary.creatorCount}</div></div>
         <div class="hero-kpi avoid-break"><div class="label">Est. Reach</div><div class="value">${esc(doc.summary.estimatedReach)}</div></div>
-        <div class="hero-kpi avoid-break"><div class="label">Budget (Revenue)</div><div class="value">${esc(doc.summary.totalRevenue)}</div></div>
+        <div class="hero-kpi avoid-break"><div class="label">${esc(QUOTATION_CLIENT_LABELS.clientInvestment)}</div><div class="value">${esc(doc.summary.totalRevenue)}</div></div>
       </div>
     </section>
 
@@ -112,26 +112,15 @@ export function buildQuotationHtml(doc: QuotationDocument): string {
         <h2>Commercial Summary</h2>
         <span class="serial">${esc(doc.serial)}</span>
       </div>
-      <div class="kpi-strip">${renderKpiStrip(doc.commercialKpis)}</div>
-      <div class="kpi-strip">
-        ${doc.commercialKpis
-          .slice(3)
-          .map(
-            (k) => `
-        <div class="kpi avoid-break">
-          <div class="label">${esc(k.label)}</div>
-          <div class="value" ${k.label === "GP %" ? `style="color:${doc.summary.gpColor}"` : ""}>${esc(k.value)}</div>
-        </div>`
-          )
-          .join("")}
-      </div>
+      <div class="kpi-strip">${renderKpiStrip(doc.commercialKpis.slice(0, 3))}</div>
+      <div class="kpi-strip">${renderKpiStrip(doc.commercialKpis.slice(3))}</div>
 
       <table class="data">
         <thead>
           <tr>
             <th>Creator</th><th>Platform</th><th class="num">Followers</th>
             <th class="num">ER</th><th>Country</th><th>Deliverables</th>
-            <th class="num">Unit Cost</th><th class="num">Revenue</th>
+            <th class="num">Unit Cost</th><th class="num">${esc(QUOTATION_CLIENT_LABELS.clientCost)}</th>
             <th class="num">GP</th><th class="num">GP%</th>
           </tr>
         </thead>
@@ -141,7 +130,7 @@ export function buildQuotationHtml(doc: QuotationDocument): string {
       <div class="summary-box avoid-break">
         <table>
           <tr><td>Total Cost</td><td class="num">${esc(doc.summary.totalCost)}</td></tr>
-          <tr class="total"><td>Total Revenue</td><td class="num">${esc(doc.summary.totalRevenue)}</td></tr>
+          <tr class="total"><td>${esc(QUOTATION_CLIENT_LABELS.totalClientCost)}</td><td class="num">${esc(doc.summary.totalRevenue)}</td></tr>
           <tr class="gp"><td>Gross Profit</td><td class="num" style="color:${doc.summary.gpColor}">${esc(doc.summary.totalGpValue)}</td></tr>
           <tr class="gp"><td>GP %</td><td class="num" style="color:${doc.summary.gpColor}">${esc(doc.summary.totalGpPct)}</td></tr>
         </table>

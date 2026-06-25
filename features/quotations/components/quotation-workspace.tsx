@@ -69,10 +69,11 @@ import {
   CALCULATION_MODE_LABELS,
   COMMERCIAL_INPUT_MODE_LABELS,
   DEFAULT_GP_TARGET_PCT,
+  QUOTATION_CLIENT_LABELS,
   QUOTATION_STATUS_LABELS,
 } from "@/features/quotations/constants";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
-import { QuotationBreadcrumbs } from "@/features/quotations/components/quotation-breadcrumbs";
+import { QuotationKpiStrip } from "@/features/quotations/components/quotation-kpi-strip";
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
@@ -154,7 +155,7 @@ function exportSelectedCsv(
     "Cost",
     "Currency",
     "Cost EGP",
-    "Revenue EGP",
+    QUOTATION_CLIENT_LABELS.clientCostEgp,
     "GP EGP",
     "GP%",
   ];
@@ -364,7 +365,6 @@ export function QuotationWorkspace({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <QuotationBreadcrumbs serial={detail.serial_number} />
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <div className="shrink-0 border-b border-border bg-background px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -414,28 +414,16 @@ export function QuotationWorkspace({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
-          <Stat label="Creators" value={String(detail.items.length)} />
-          <Stat label="Est. Reach" value={formatCreatorCount(detail.estimated_reach)} />
-          <Stat
-            label="Est. Engagement"
-            value={
-              detail.estimated_engagement_rate != null
-                ? `${detail.estimated_engagement_rate.toFixed(1)}%`
-                : "—"
-            }
-          />
-          <Stat label="Total Cost" value={egp(totals.totalCostEgp)} />
-          <Stat label="Total Revenue" value={egp(totals.totalRevenueEgp)} />
-          <Stat
-            label="Gross Profit"
-            value={egp(totals.totalGpValueEgp)}
-            className={gpHealthClass(totals.totalGpValueEgp, totals.totalGpPct, detail.gp_target_pct)}
-          />
-          <Stat
-            label="GP %"
-            value={`${totals.totalGpPct.toFixed(1)}%`}
-            className={gpHealthClass(totals.totalGpValueEgp, totals.totalGpPct, detail.gp_target_pct)}
+        <div className="mt-4">
+          <QuotationKpiStrip
+            creatorCount={detail.items.length}
+            estimatedReach={detail.estimated_reach}
+            estimatedEngagementRate={detail.estimated_engagement_rate}
+            totalCostEgp={totals.totalCostEgp}
+            totalRevenueEgp={totals.totalRevenueEgp}
+            totalGpValueEgp={totals.totalGpValueEgp}
+            totalGpPct={totals.totalGpPct}
+            gpTargetPct={detail.gp_target_pct}
           />
         </div>
       </div>
@@ -528,7 +516,7 @@ export function QuotationWorkspace({
                     <TableHead className="w-[96px]">Unit Cost</TableHead>
                     <TableHead className="w-[88px]">Currency</TableHead>
                     <TableHead className="min-w-[130px]">Calculation</TableHead>
-                    <TableHead className="w-[120px] text-right">Revenue</TableHead>
+                    <TableHead className="w-[120px] text-right">{QUOTATION_CLIENT_LABELS.clientCost}</TableHead>
                     <TableHead className="w-[100px] text-right">GP</TableHead>
                     <TableHead className="w-[88px] text-right">GP%</TableHead>
                     <TableHead className="w-[72px]">Status</TableHead>
@@ -540,6 +528,7 @@ export function QuotationWorkspace({
                     <CommercialRow
                       key={item.id}
                       quotationId={detail.id}
+                      gpTargetPct={detail.gp_target_pct}
                       item={item}
                       draft={drafts[item.id]}
                       zebra={index % 2 === 1}
@@ -566,7 +555,11 @@ export function QuotationWorkspace({
                     <TableCell
                       className={cn(
                         "text-right tabular-nums text-sm",
-                        gpHealthClass(totals.totalGpValueEgp, totals.totalGpPct)
+                        gpHealthClass(
+                          totals.totalGpValueEgp,
+                          totals.totalGpPct,
+                          detail.gp_target_pct
+                        )
                       )}
                     >
                       {egp(totals.totalGpValueEgp)}
@@ -574,7 +567,11 @@ export function QuotationWorkspace({
                     <TableCell
                       className={cn(
                         "text-right tabular-nums text-sm",
-                        gpHealthClass(totals.totalGpValueEgp, totals.totalGpPct)
+                        gpHealthClass(
+                          totals.totalGpValueEgp,
+                          totals.totalGpPct,
+                          detail.gp_target_pct
+                        )
                       )}
                     >
                       {totals.totalGpPct.toFixed(1)}%
@@ -590,33 +587,6 @@ export function QuotationWorkspace({
         <QuotationDocumentMetaPanel detail={detail} />
         <HeaderNotes detail={detail} onStatusChange={setNotesSaveStatus} />
       </div>
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  accent,
-  className,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  className?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-card px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "mt-0.5 text-base font-semibold tabular-nums",
-          accent && "text-primary",
-          className
-        )}
-      >
-        {value}
-      </p>
     </div>
   );
 }
@@ -804,6 +774,7 @@ function BulkToolbar({
 
 function CommercialRow({
   quotationId,
+  gpTargetPct,
   item,
   draft,
   zebra,
@@ -814,6 +785,7 @@ function CommercialRow({
   onRemoved,
 }: {
   quotationId: string;
+  gpTargetPct: number;
   item: QuotationItemRow;
   draft: QuotationRowDraft | undefined;
   zebra: boolean;
@@ -932,7 +904,7 @@ function CommercialRow({
   }
 
   const flag = countryFlag(item.country_code);
-  const gpClass = gpHealthClass(computed.gpValueEgp, computed.gpPct);
+  const gpClass = gpHealthClass(computed.gpValueEgp, computed.gpPct, gpTargetPct);
 
   return (
     <TableRow
