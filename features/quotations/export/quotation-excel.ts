@@ -1,6 +1,5 @@
 /**
- * Quotation → styled Excel workbook, reusing the shared Thinkway report builder
- * (`lib/reports/document/excel-report-builder.ts`) for consistent branding.
+ * Quotation → styled Excel workbook (spreadsheet-optimized layout).
  */
 import {
   buildStyledExcelBuffer,
@@ -19,8 +18,10 @@ export async function buildQuotationExcel(doc: QuotationDocument): Promise<Buffe
       r.engagementRate,
       r.country,
       r.deliverables,
-      r.cost,
+      r.unitCost,
       r.revenue,
+      r.gp,
+      r.gpPct,
     ],
   }));
 
@@ -29,17 +30,15 @@ export async function buildQuotationExcel(doc: QuotationDocument): Promise<Buffe
     values: [
       "Totals (EGP)",
       "",
+      doc.summary.estimatedReach,
+      doc.summary.estimatedEngagement,
       "",
-      "",
-      "",
-      "",
+      `${doc.summary.creatorCount} creators`,
       doc.summary.totalCost,
       doc.summary.totalRevenue,
+      doc.summary.totalGpValue,
+      doc.summary.totalGpPct,
     ],
-  });
-  rows.push({
-    kind: "emphasis",
-    values: ["Gross profit", "", "", "", "", "", doc.summary.totalGpValue, doc.summary.totalGpPct],
   });
 
   const sheet: StyledSheetConfig = {
@@ -50,17 +49,41 @@ export async function buildQuotationExcel(doc: QuotationDocument): Promise<Buffe
       meta: [
         { label: "Quotation", value: doc.name },
         { label: "Campaign", value: doc.campaignName },
-        { label: "Status", value: doc.status },
-        { label: "Date", value: doc.dateLabel },
+        { label: "Issue / Valid", value: `${doc.issueDateLabel} → ${doc.validityDateLabel}` },
+        { label: "Version / Status", value: `${doc.version} · ${doc.statusLabel}` },
+        { label: "Prepared for", value: doc.preparedForLine },
+        { label: "Department", value: doc.department },
       ],
       generatedAt: new Date(),
       notes: doc.notes ? [doc.notes] : undefined,
     },
     columnHeaders: [
-      ["Creator", "Platform", "Followers", "ER", "Country", "Deliverables", "Cost", "Revenue"],
+      [
+        "Creator",
+        "Platform",
+        "Followers",
+        "ER",
+        "Country",
+        "Deliverables",
+        "Unit Cost",
+        "Revenue",
+        "GP",
+        "GP%",
+      ],
     ],
     rows,
-    columnFormats: ["text", "text", "text", "text", "text", "text", "text", "text"],
+    columnFormats: [
+      "text",
+      "text",
+      "text",
+      "text",
+      "text",
+      "text",
+      "text",
+      "text",
+      "text",
+      "text",
+    ],
   };
 
   return buildStyledExcelBuffer([sheet]);

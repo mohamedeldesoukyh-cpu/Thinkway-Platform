@@ -19,6 +19,8 @@ import {
   type ShortlistItemForSeed,
 } from "./shortlist-seeds";
 import { QUOTATION_PERMISSIONS, QUOTATIONS_LIST_PATH, quotationDetailPath } from "./constants";
+import { formatQuotationTermsText } from "./quotation-default-terms";
+import { defaultValidityDateFromIssue } from "./quotation-validity";
 import type { ActionResult, QuotationDeliverable } from "./types";
 
 type Supabase = SupabaseClient<Database>;
@@ -146,17 +148,54 @@ async function recomputeTotals(supabase: Supabase, quotationId: string) {
   return totals;
 }
 
+async function appendQuotationRevision(
+  supabase: Supabase,
+  input: {
+    quotationId: string;
+    userId: string;
+    version: string;
+    changeSummary: string;
+    updatedByName?: string | null;
+  }
+) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", input.userId)
+    .maybeSingle();
+
+  await supabase.from("quotation_revisions").insert({
+    quotation_id: input.quotationId,
+    version: input.version,
+    updated_by: input.userId,
+    updated_by_name:
+      input.updatedByName ??
+      (profile as { full_name: string } | null)?.full_name ??
+      null,
+    change_summary: input.changeSummary,
+  } as never);
+}
+
 async function insertQuotationHeader(
   supabase: Supabase,
   userId: string,
   patch: Partial<Database["public"]["Tables"]["quotations"]["Insert"]> & { name: string }
 ): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  const issueDate = patch.issue_date ?? new Date().toISOString().slice(0, 10);
+  const validityDate =
+    patch.validity_date ?? defaultValidityDateFromIssue(issueDate);
+
   const { data, error } = await supabase
     .from("quotations")
     .insert({
       owner_id: userId,
       created_by: userId,
       currency: REPORTING_CURRENCY,
+      issue_date: issueDate,
+      validity_date: validityDate,
+      terms: patch.terms ?? formatQuotationTermsText(),
+      version: patch.version ?? "v1.0",
+      department: patch.department ?? "Influencer Marketing",
       ...patch,
     } as never)
     .select("id")
@@ -164,7 +203,14 @@ async function insertQuotationHeader(
   if (error || !data) {
     return { ok: false, message: error?.message ?? "Failed to create quotation." };
   }
-  return { ok: true, id: (data as { id: string }).id };
+  const id = (data as { id: string }).id;
+  await appendQuotationRevision(supabase, {
+    quotationId: id,
+    userId,
+    version: (patch.version as string) ?? "v1.0",
+    changeSummary: "Initial quotation created",
+  });
+  return { ok: true, id };
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +226,12 @@ export async function createBlankQuotation(input: {
   if (!actor.ok) return actor;
   const name = input.name?.trim();
   if (!name) return { ok: false, message: "Quotation name is required." };
+  if (!input.client_id || !input.brand_id) {
+    return {
+      ok: false,
+      message: "Client and brand are required to create a quotation.",
+    };
+  }
 
   const created = await insertQuotationHeader(actor.supabase, actor.userId, {
     name,
@@ -554,7 +606,15 @@ export async function updateQuotationHeader(input: {
   brand_id?: string | null;
   campaign_header_id?: string | null;
   prepared_by_name?: string | null;
+  reviewed_by_name?: string | null;
   client_signature_name?: string | null;
+  issue_date?: string;
+  validity_date?: string | null;
+  version?: string;
+  department?: string | null;
+  change_summary?: string | null;
+  status?: Database["public"]["Tables"]["quotations"]["Row"]["status"];
+  shared_with_client?: boolean;
 }): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor.ok) return actor;
@@ -572,17 +632,46 @@ export async function updateQuotationHeader(input: {
     "brand_id",
     "campaign_header_id",
     "prepared_by_name",
+    "reviewed_by_name",
     "client_signature_name",
+    "issue_date",
+    "validity_date",
+    "version",
+    "department",
+    "change_summary",
+    "status",
+    "shared_with_client",
   ] as const) {
     if (input[key] !== undefined) patch[key] = input[key];
   }
+  if (input.shared_with_client !== undefined) {
+    patch.client_visible = input.shared_with_client;
+  }
   if (Object.keys(patch).length === 0) return { ok: true };
+
+  if (patch.client_id !== undefined || patch.brand_id !== undefined) {
+    const clientId = (patch.client_id as string | null) ?? undefined;
+    const brandId = (patch.brand_id as string | null) ?? undefined;
+    if (clientId === null || brandId === null) {
+      return { ok: false, message: "Client and brand are required." };
+    }
+  }
 
   const { error } = await actor.supabase
     .from("quotations")
     .update(patch as never)
     .eq("id", input.id);
   if (error) return { ok: false, message: error.message };
+
+  if (input.version || input.change_summary) {
+    await appendQuotationRevision(actor.supabase, {
+      quotationId: input.id,
+      userId: actor.userId,
+      version: (input.version as string) ?? "v1.0",
+      changeSummary: input.change_summary ?? "Quotation updated",
+    });
+  }
+
   revalidate(input.id);
   return { ok: true };
 }

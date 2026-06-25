@@ -3,17 +3,23 @@ import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { DiscoverySubNav } from "@/features/discovery-import/components/discovery-sub-nav";
 import { CreateQuotationDialog } from "@/features/quotations/components/create-quotation-dialog";
 import { QuotationsList } from "@/features/quotations/components/quotations-list";
-import { getQuotationsList } from "@/features/quotations/queries";
+import { getQuotationFormOptions, getQuotationsList } from "@/features/quotations/queries";
 import type { QuotationListRow } from "@/features/quotations/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function DiscoveryQuotationsPage() {
   let quotations: QuotationListRow[] = [];
+  let formOptions: Awaited<ReturnType<typeof getQuotationFormOptions>> | null = null;
   let errorMessage: string | null = null;
 
   try {
-    quotations = await getQuotationsList();
+    const [list, options] = await Promise.all([
+      getQuotationsList(),
+      getQuotationFormOptions(),
+    ]);
+    quotations = list;
+    formOptions = options;
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load quotations.";
@@ -40,7 +46,7 @@ export default async function DiscoveryQuotationsPage() {
                   Serial-numbered quotations (QT-YYYY-NNNN). Totals reported in EGP.
                 </p>
               </div>
-              <CreateQuotationDialog />
+              <CreateQuotationDialog options={formOptions ?? { clients: [], brands: [], campaigns: [] }} />
             </section>
 
             {errorMessage ? (

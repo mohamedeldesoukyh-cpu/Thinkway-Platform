@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { QuotationWorkspace } from "@/features/quotations/components/quotation-workspace";
-import { getQuotationDetail } from "@/features/quotations/queries";
+import {
+  getQuotationDetail,
+  getQuotationFormOptions,
+} from "@/features/quotations/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +16,10 @@ type PageProps = {
 
 export default async function QuotationDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const detail = await getQuotationDetail(id);
+  const [detail, formOptions] = await Promise.all([
+    getQuotationDetail(id),
+    getQuotationFormOptions(),
+  ]);
   if (!detail) notFound();
 
   return (
@@ -25,7 +31,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
     >
       <PlatformErrorBoundary surface="generic">
-        <QuotationWorkspace detail={detail} />
+        <QuotationWorkspace detail={detail} formOptions={formOptions} />
       </PlatformErrorBoundary>
     </DashboardShell>
   );

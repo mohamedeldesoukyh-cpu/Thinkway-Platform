@@ -36,8 +36,23 @@ export const COMMERCIAL_INPUT_MODE_LABELS: Record<CommercialInputMode, string> =
   cost_gp_value: "Cost + GP Value",
 };
 
-/** Default GP% target for healthy/orange warning styling in the quotation workspace. */
+/** Default GP% target for healthy/warning styling in the quotation workspace. */
 export const DEFAULT_GP_TARGET_PCT = 25;
+
+/** GP% below this threshold uses danger styling. */
+export const GP_DANGER_THRESHOLD_PCT = 15;
+
+/** Default quotation validity window from issue date. */
+export const DEFAULT_VALIDITY_DAYS = 15;
+
+export const QUOTATION_VERSION_PRESETS = ["v1.0", "v1.1", "v2.0"] as const;
+
+export const QUOTATION_DEPARTMENTS = [
+  "Influencer Marketing",
+  "Account Management",
+  "Strategy",
+  "Operations",
+] as const;
 
 export const CALCULATION_MODE_LABELS: Record<"markup" | "margin", string> = {
   markup: "Markup %",

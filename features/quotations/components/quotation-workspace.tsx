@@ -72,6 +72,12 @@ import {
   QUOTATION_STATUS_LABELS,
 } from "@/features/quotations/constants";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
+import { QuotationBreadcrumbs } from "@/features/quotations/components/quotation-breadcrumbs";
+import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
+import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
+import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
+import { gpHealthTextClass } from "@/features/quotations/quotation-gp-health";
+import { formatValidityLabel } from "@/features/quotations/quotation-validity";
 import {
   duplicateQuotationItems,
   removeQuotationItem,
@@ -88,7 +94,7 @@ import {
   type CalculationModePreference,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
-import type { QuotationDetail, QuotationItemRow } from "@/features/quotations/types";
+import type { QuotationDetail, QuotationFormOptions, QuotationItemRow } from "@/features/quotations/types";
 
 function egp(n: number, decimals = 0): string {
   return `${new Intl.NumberFormat("en-US", {
@@ -99,7 +105,7 @@ function egp(n: number, decimals = 0): string {
 
 function SaveIndicator({ status }: { status: AutosaveStatus }) {
   if (status === "pending")
-    return <span className="text-xs text-amber-600">Unsaved changes</span>;
+    return <span className="text-xs text-warning">Unsaved changes</span>;
   if (status === "saving")
     return (
       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -117,10 +123,15 @@ function SaveIndicator({ status }: { status: AutosaveStatus }) {
   return null;
 }
 
-function gpHealthClass(gpValueEgp: number, gpPct: number): string {
-  if (gpValueEgp < 0) return "text-destructive";
-  if (gpPct < DEFAULT_GP_TARGET_PCT) return "text-amber-600";
-  return "text-primary";
+function gpHealthClass(gpValueEgp: number, gpPct: number, targetPct = DEFAULT_GP_TARGET_PCT): string {
+  return gpHealthTextClass({ gpValueEgp, gpPct, targetPct });
+}
+
+function deliverablesSummary(item: QuotationItemRow): string {
+  if (!item.deliverables.length) return "—";
+  return item.deliverables
+    .map((d) => `${d.quantity}× ${d.type}`)
+    .join(", ");
 }
 
 function parseNum(value: string): number {
@@ -178,7 +189,13 @@ function exportSelectedCsv(
   URL.revokeObjectURL(url);
 }
 
-export function QuotationWorkspace({ detail }: { detail: QuotationDetail }) {
+export function QuotationWorkspace({
+  detail,
+  formOptions,
+}: {
+  detail: QuotationDetail;
+  formOptions: QuotationFormOptions;
+}) {
   const router = useRouter();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -347,12 +364,19 @@ export function QuotationWorkspace({ detail }: { detail: QuotationDetail }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <QuotationBreadcrumbs serial={detail.serial_number} />
+      <QuotationSetupWizard detail={detail} options={formOptions} />
       <div className="shrink-0 border-b border-border bg-background px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-heading text-xl font-semibold tracking-tight">{detail.name}</h1>
               <Badge variant="secondary">{QUOTATION_STATUS_LABELS[detail.status]}</Badge>
+              {detail.is_expired ? (
+                <Badge variant="destructive">Expired</Badge>
+              ) : (
+                <Badge variant="outline">{formatValidityLabel(detail.validity_date)}</Badge>
+              )}
               <SaveIndicator status={workspaceSaveStatus} />
             </div>
             <p className="font-mono text-xs text-muted-foreground">
@@ -390,25 +414,38 @@ export function QuotationWorkspace({ detail }: { detail: QuotationDetail }) {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+          <Stat label="Creators" value={String(detail.items.length)} />
+          <Stat label="Est. Reach" value={formatCreatorCount(detail.estimated_reach)} />
+          <Stat
+            label="Est. Engagement"
+            value={
+              detail.estimated_engagement_rate != null
+                ? `${detail.estimated_engagement_rate.toFixed(1)}%`
+                : "—"
+            }
+          />
           <Stat label="Total Cost" value={egp(totals.totalCostEgp)} />
           <Stat label="Total Revenue" value={egp(totals.totalRevenueEgp)} />
           <Stat
             label="Gross Profit"
             value={egp(totals.totalGpValueEgp)}
-            accent
-            className={gpHealthClass(totals.totalGpValueEgp, totals.totalGpPct)}
+            className={gpHealthClass(totals.totalGpValueEgp, totals.totalGpPct, detail.gp_target_pct)}
           />
           <Stat
             label="GP %"
             value={`${totals.totalGpPct.toFixed(1)}%`}
-            accent
-            className={gpHealthClass(totals.totalGpValueEgp, totals.totalGpPct)}
+            className={gpHealthClass(totals.totalGpValueEgp, totals.totalGpPct, detail.gp_target_pct)}
           />
         </div>
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
+        <QuotationClientBrandPanel
+          detail={detail}
+          options={formOptions}
+          disabled={!detail.canManage}
+        />
         {detail.items.length === 0 ? (
           <EmptyState quotationId={detail.id} onAdded={() => router.refresh()} />
         ) : (
@@ -487,7 +524,8 @@ export function QuotationWorkspace({ detail }: { detail: QuotationDetail }) {
                     <TableHead className="w-[100px]">Platform</TableHead>
                     <TableHead className="w-[88px] text-right">Followers</TableHead>
                     <TableHead className="w-[72px]">Country</TableHead>
-                    <TableHead className="w-[96px]">Cost</TableHead>
+                    <TableHead className="min-w-[120px]">Deliverables</TableHead>
+                    <TableHead className="w-[96px]">Unit Cost</TableHead>
                     <TableHead className="w-[88px]">Currency</TableHead>
                     <TableHead className="min-w-[130px]">Calculation</TableHead>
                     <TableHead className="w-[120px] text-right">Revenue</TableHead>
@@ -515,7 +553,7 @@ export function QuotationWorkspace({ detail }: { detail: QuotationDetail }) {
                 </TableBody>
                 <TableFooter className="sticky bottom-0 z-10 bg-muted/95 font-medium backdrop-blur">
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={5} className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <TableCell colSpan={6} className="text-xs uppercase tracking-wide text-muted-foreground">
                       Totals ({draftList.length} creators)
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-sm">
@@ -549,6 +587,7 @@ export function QuotationWorkspace({ detail }: { detail: QuotationDetail }) {
           </>
         )}
 
+        <QuotationDocumentMetaPanel detail={detail} />
         <HeaderNotes detail={detail} onStatusChange={setNotesSaveStatus} />
       </div>
     </div>
@@ -939,6 +978,9 @@ function CommercialRow({
       </TableCell>
       <TableCell className="text-xs text-muted-foreground">
         {flag ? `${flag} ${item.country_code}` : item.country_code ?? "—"}
+      </TableCell>
+      <TableCell className="max-w-[120px] truncate text-[11px] text-muted-foreground">
+        {deliverablesSummary(item)}
       </TableCell>
       <TableCell>
         <Input

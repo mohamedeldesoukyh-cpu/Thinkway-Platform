@@ -36,6 +36,14 @@ export type QuotationItemRow = {
   sort_order: number;
 };
 
+export type QuotationRevisionRow = {
+  id: string;
+  version: string;
+  updated_by_name: string | null;
+  change_summary: string | null;
+  created_at: string;
+};
+
 export type QuotationListRow = {
   id: string;
   serial_number: string | null;
@@ -51,6 +59,9 @@ export type QuotationListRow = {
   total_gp_pct: number;
   item_count: number;
   is_archived: boolean;
+  issue_date: string | null;
+  validity_date: string | null;
+  version: string;
   created_at: string;
   updated_at: string;
 };
@@ -76,14 +87,35 @@ export type QuotationDetail = {
   total_revenue_egp: number;
   total_gp_value_egp: number;
   total_gp_pct: number;
+  gp_target_pct: number;
   notes: string | null;
   terms: string | null;
   prepared_by_name: string | null;
+  reviewed_by_name: string | null;
   client_signature_name: string | null;
+  client_signed_at: string | null;
+  issue_date: string;
+  validity_date: string | null;
+  version: string;
+  department: string | null;
+  change_summary: string | null;
+  shared_with_client: boolean;
   client_visible: boolean;
   is_archived: boolean;
+  is_expired: boolean;
+  valid_days_remaining: number | null;
   created_at: string;
   updated_at: string;
   items: QuotationItemRow[];
+  revisions: QuotationRevisionRow[];
   canManage: boolean;
+  /** Aggregated reach / engagement for cover & summary KPIs. */
+  estimated_reach: number;
+  estimated_engagement_rate: number | null;
+};
+
+export type QuotationFormOptions = {
+  clients: Array<{ id: string; name: string; legal_name: string | null }>;
+  brands: Array<{ id: string; name: string; client_id: string }>;
+  campaigns: Array<{ id: string; name: string; document_number: string | null }>;
 };

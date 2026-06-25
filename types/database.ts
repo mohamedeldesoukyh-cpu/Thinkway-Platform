@@ -2260,6 +2260,15 @@ export type Database = {
           prepared_by_signature: string | null;
           client_signature_name: string | null;
           client_signed_at: string | null;
+          issue_date: string;
+          validity_date: string | null;
+          version: string;
+          department: string | null;
+          reviewed_by_name: string | null;
+          reviewed_by: string | null;
+          gp_target_pct: number;
+          shared_with_client: boolean;
+          change_summary: string | null;
           client_visible: boolean;
           client_shared_at: string | null;
           client_shared_by: string | null;
@@ -2294,6 +2303,15 @@ export type Database = {
           prepared_by_signature?: string | null;
           client_signature_name?: string | null;
           client_signed_at?: string | null;
+          issue_date?: string;
+          validity_date?: string | null;
+          version?: string;
+          department?: string | null;
+          reviewed_by_name?: string | null;
+          reviewed_by?: string | null;
+          gp_target_pct?: number;
+          shared_with_client?: boolean;
+          change_summary?: string | null;
           client_visible?: boolean;
           client_shared_at?: string | null;
           client_shared_by?: string | null;
@@ -2303,6 +2321,28 @@ export type Database = {
           metadata?: Json;
         };
         Update: Partial<Database["public"]["Tables"]["quotations"]["Insert"]>;
+        Relationships: [];
+      };
+      quotation_revisions: {
+        Row: {
+          id: string;
+          quotation_id: string;
+          version: string;
+          updated_by: string | null;
+          updated_by_name: string | null;
+          change_summary: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          quotation_id: string;
+          version: string;
+          updated_by?: string | null;
+          updated_by_name?: string | null;
+          change_summary?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["quotation_revisions"]["Insert"]>;
         Relationships: [];
       };
       quotation_items: {
