@@ -3,11 +3,16 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { DownloadIcon, RadarIcon, SparklesIcon } from "lucide-react";
 
+import {
+  CreatorProfileLink,
+  creatorProfileSourceFromUnified,
+} from "@/components/creator/creator-profile-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { CreatorBrowserDialog } from "@/features/campaigns/components/creator-browser-dialog";
 import { CreatorUnifiedCard } from "@/features/campaigns/components/creator-unified-card";
+import { CampaignShortlistAssignmentsPanel } from "@/features/discovery/shortlists/components/campaign-shortlist-assignments-panel";
 import {
   exportCampaignShortlistCsvAction,
   getCampaignShortlistAction,
@@ -90,8 +95,13 @@ export function CampaignCreatorDiscoveryPanel({
                   key={match.unified_id}
                   className="rounded-xl border border-border/50 bg-muted/20 p-3"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium">{match.display_name}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <CreatorProfileLink
+                      source={creatorProfileSourceFromUnified(match.creator)}
+                      size="sm"
+                      showHandle={false}
+                      stopPropagation
+                    />
                     <p className="text-sm font-semibold tabular-nums text-[var(--brand-product)]">
                       {match.match_score}
                     </p>
@@ -162,6 +172,10 @@ export function CampaignCreatorDiscoveryPanel({
           )}
         </CardContent>
       </Card>
+
+      <div className="xl:col-span-2">
+        <CampaignShortlistAssignmentsPanel campaignHeaderId={campaignHeaderId} />
+      </div>
 
       <CreatorBrowserDialog
         open={browserOpen}

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isSyntheticCreatorUsername } from "@/lib/discovery/demo-data";
 import type {
   DiscoverySearchFilters,
   DiscoverySearchResult,
@@ -92,6 +93,12 @@ export async function searchDiscoveredProfiles(
       latest_ai_score: ai,
     };
   });
+
+  // Defensive guard (review item 9): synthetic/demo/mock/seed creators must never
+  // surface in discovery, in ANY environment, even if a legacy row exists.
+  profiles = profiles.filter(
+    (p) => !isSyntheticCreatorUsername((p as { username?: string | null }).username)
+  );
 
   if (filters.minFollowers != null) {
     profiles = profiles.filter(

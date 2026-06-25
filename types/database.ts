@@ -12,6 +12,38 @@ export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted
 
 export type AgencyOrDirect = "agency" | "direct" | "hybrid";
 
+export type ShortlistStatus =
+  | "draft"
+  | "under_review"
+  | "approved"
+  | "cancelled"
+  | "archived";
+
+export type ShortlistVisibilityV2 = "private" | "team" | "client_shared";
+
+export type CreatorMovementAction =
+  | "discovery_to_shortlist"
+  | "shortlist_to_campaign"
+  | "campaign_to_shortlist"
+  | "campaign_to_removed"
+  | "creator_added"
+  | "creator_removed"
+  | "shortlist_submitted"
+  | "shortlist_approved"
+  | "shortlist_rejected"
+  | "shortlist_cancelled"
+  | "shortlist_reopened"
+  | "shortlist_archived";
+
+export type CampaignShortlistAssignmentStatus =
+  | "suggested"
+  | "invited"
+  | "approved"
+  | "contracted"
+  | "published"
+  | "rejected"
+  | "removed";
+
 export type BusinessFunction = "ops" | "sales";
 
 export type GroupDocumentType =
@@ -350,6 +382,8 @@ export type InfluencerPlatformAccountRow = {
   profile_display_name: string | null;
   profile_bio: string | null;
   profile_picture_url: string | null;
+  avatar_source: "manual" | "apify" | "discovery" | "uploaded";
+  avatar_last_synced_at: string | null;
   follower_count: number | null;
   following_count: number | null;
   engagement_rate: number | null;
@@ -1567,6 +1601,8 @@ export type Database = {
           profile_display_name?: string | null;
           profile_bio?: string | null;
           profile_picture_url?: string | null;
+          avatar_source?: InfluencerPlatformAccountRow["avatar_source"];
+          avatar_last_synced_at?: string | null;
           follower_count?: number | null;
           following_count?: number | null;
           engagement_rate?: number | null;
@@ -1609,6 +1645,10 @@ export type Database = {
           vendor_payment_status: string;
           vendor_paid_at: string | null;
           payment_batch_id: string | null;
+          shortlist_assignment_status: CampaignShortlistAssignmentStatus | null;
+          source_shortlist_id: string | null;
+          source_shortlist_item_id: string | null;
+          returned_to_shortlist_at: string | null;
         };
         Insert: {
           campaign_id: string;
@@ -1629,6 +1669,10 @@ export type Database = {
           vendor_paid_at?: string | null;
           payment_batch_id?: string | null;
           created_by?: string | null;
+          shortlist_assignment_status?: CampaignShortlistAssignmentStatus | null;
+          source_shortlist_id?: string | null;
+          source_shortlist_item_id?: string | null;
+          returned_to_shortlist_at?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["campaign_influencers"]["Insert"]
@@ -1834,9 +1878,25 @@ export type Database = {
       discovery_shortlists: {
         Row: {
           id: string;
+          serial_number: string | null;
           name: string;
           description: string | null;
-          owner_id: string;
+          status: ShortlistStatus;
+          visibility: ShortlistVisibilityV2;
+          client_id: string | null;
+          brand_id: string | null;
+          owner_id: string | null;
+          created_by: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          submitted_at: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          cancellation_reason: string | null;
+          is_archived: boolean;
+          client_visible: boolean;
+          client_shared_at: string | null;
+          client_shared_by: string | null;
           campaign_header_id: string | null;
           metadata: Record<string, unknown>;
           created_at: string;
@@ -1844,13 +1904,92 @@ export type Database = {
         };
         Insert: {
           id?: string;
+          serial_number?: string | null;
           name: string;
           description?: string | null;
-          owner_id: string;
+          status?: ShortlistStatus;
+          visibility?: ShortlistVisibilityV2;
+          client_id?: string | null;
+          brand_id?: string | null;
+          owner_id?: string | null;
+          created_by?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          submitted_at?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          cancellation_reason?: string | null;
+          is_archived?: boolean;
+          client_visible?: boolean;
+          client_shared_at?: string | null;
+          client_shared_by?: string | null;
           campaign_header_id?: string | null;
           metadata?: Record<string, unknown>;
         };
         Update: Partial<Database["public"]["Tables"]["discovery_shortlists"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_movements: {
+        Row: {
+          id: string;
+          creator_id: string | null;
+          influencer_id: string | null;
+          discovered_profile_id: string | null;
+          unified_id: string | null;
+          source_type: string;
+          source_id: string | null;
+          destination_type: string;
+          destination_id: string | null;
+          action: CreatorMovementAction;
+          performed_by: string | null;
+          performed_at: string;
+          notes: string | null;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          creator_id?: string | null;
+          influencer_id?: string | null;
+          discovered_profile_id?: string | null;
+          unified_id?: string | null;
+          source_type: string;
+          source_id?: string | null;
+          destination_type: string;
+          destination_id?: string | null;
+          action: CreatorMovementAction;
+          performed_by?: string | null;
+          performed_at?: string;
+          notes?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_movements"]["Insert"]>;
+        Relationships: [];
+      };
+      shortlist_notifications: {
+        Row: {
+          id: string;
+          shortlist_id: string;
+          recipient_id: string | null;
+          event: string;
+          title: string;
+          body: string | null;
+          is_read: boolean;
+          created_by: string | null;
+          created_at: string;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          shortlist_id: string;
+          recipient_id?: string | null;
+          event: string;
+          title: string;
+          body?: string | null;
+          is_read?: boolean;
+          created_by?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<Database["public"]["Tables"]["shortlist_notifications"]["Insert"]>;
         Relationships: [];
       };
       discovery_shortlist_items: {
@@ -1907,6 +2046,76 @@ export type Database = {
         Update: Partial<
           Database["public"]["Tables"]["discovery_campaign_matches"]["Insert"]
         >;
+        Relationships: [];
+      };
+      creator_import_files: {
+        Row: {
+          id: string;
+          filename: string;
+          source_name: string | null;
+          file_type: string;
+          storage_path: string | null;
+          uploaded_by: string | null;
+          status: string;
+          total_creators: number;
+          imported_creators: number;
+          updated_creators: number;
+          duplicate_creators: number;
+          failed_creators: number;
+          extracted_text_length: number | null;
+          parser_strategy: string | null;
+          extraction_method: string | null;
+          warning_message: string | null;
+          processing_log: Record<string, unknown>;
+          metadata: Record<string, unknown>;
+          processing_started_at: string | null;
+          processing_completed_at: string | null;
+          error_message: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          filename: string;
+          source_name?: string | null;
+          file_type: string;
+          storage_path?: string | null;
+          uploaded_by?: string | null;
+          status?: string;
+          total_creators?: number;
+          imported_creators?: number;
+          updated_creators?: number;
+          duplicate_creators?: number;
+          failed_creators?: number;
+          extracted_text_length?: number | null;
+          parser_strategy?: string | null;
+          extraction_method?: string | null;
+          warning_message?: string | null;
+          processing_log?: Record<string, unknown>;
+          metadata?: Record<string, unknown>;
+          processing_started_at?: string | null;
+          processing_completed_at?: string | null;
+          error_message?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_import_files"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_sources: {
+        Row: {
+          id: string;
+          influencer_id: string;
+          source_name: string;
+          source_file_id: string | null;
+          imported_at: string;
+        };
+        Insert: {
+          id?: string;
+          influencer_id: string;
+          source_name: string;
+          source_file_id?: string | null;
+          imported_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_sources"]["Insert"]>;
         Relationships: [];
       };
     };
