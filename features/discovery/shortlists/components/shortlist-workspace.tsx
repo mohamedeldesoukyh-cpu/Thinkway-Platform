@@ -1,9 +1,12 @@
 "use client";
 
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import {
+  DownloadIcon,
+  FileTextIcon,
+  GitCompareArrowsIcon,
   SendIcon,
   UserPlusIcon,
 } from "lucide-react";
@@ -23,6 +26,11 @@ import {
   exportCreatorsCsv,
   stashCompareQueue,
 } from "@/features/discovery/components/creator-search/creator-search-utils";
+import {
+  addShortlistCreatorsToQuotation,
+  createQuotationFromShortlist,
+} from "@/features/quotations/actions";
+import { quotationDetailPath } from "@/features/quotations/constants";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CreatorMovementAction } from "@/types/database";
@@ -59,15 +67,14 @@ import type {
   ShortlistCampaignOption,
   ShortlistDetail,
 } from "../types";
-import { createQuotationFromSelection } from "@/features/quotations/actions";
-import { quotationDetailPath } from "@/features/quotations/constants";
 import { AddCreatorsDrawer } from "./add-creators-drawer";
+import { GenerateQuotationShortlistDialog } from "./generate-quotation-shortlist-dialog";
 import { MoveToCampaignDialog } from "./move-to-campaign-dialog";
 import { ShortlistBulkToolbar } from "./shortlist-bulk-toolbar";
+import { ShortlistCreatorList } from "./shortlist-creator-list";
 import { SubmitShortlistDialog } from "./submit-shortlist-dialog";
 import {
   AssignmentStatusBadge,
-  ShortlistItemStatusBadge,
   ShortlistStatusBadge,
   ShortlistVisibilityBadge,
 } from "./shortlist-badges";
@@ -102,6 +109,7 @@ export function ShortlistWorkspace({
   const [moveOpen, setMoveOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [submitAllOpen, setSubmitAllOpen] = useState(false);
+  const [quoteAllOpen, setQuoteAllOpen] = useState(false);
 
   const editable = canEditCreators(detail.status) && !detail.is_archived;
   const movable = canMoveToCampaign(detail.status);
@@ -152,19 +160,19 @@ export function ShortlistWorkspace({
   }
 
   function handleCompare() {
-    const chosen = selectedCreators();
-    if (chosen.length < 2) {
+    const pool = selectedCount > 0 ? selectedCreators() : detail.creators.filter((i) => i.creator).map((i) => i.creator!);
+    if (pool.length < 2) {
       toast.error("Select at least 2 creators with resolved profiles to compare.");
       return;
     }
-    stashCompareQueue(chosen.slice(0, MAX_CREATOR_COMPARE));
+    stashCompareQueue(pool.slice(0, MAX_CREATOR_COMPARE));
     router.push("/discovery/compare");
   }
 
   function handleExport() {
-    const pool = selectedCreators();
+    const pool = selectedCount > 0 ? selectedCreators() : detail.creators.filter((i) => i.creator).map((i) => i.creator!);
     if (pool.length === 0) {
-      toast.error("Select creators to export.");
+      toast.error("No creators with resolved profiles to export.");
       return;
     }
     const csv = exportCreatorsCsv(pool);
@@ -178,41 +186,47 @@ export function ShortlistWorkspace({
     toast.success(`Exported ${pool.length} creator(s)`);
   }
 
+  const runQuotation = useCallback(
+    (itemIds?: string[]) => {
+      startTransition(async () => {
+        const res = itemIds?.length
+          ? await createQuotationFromShortlist(detail.id, { itemIds })
+          : await createQuotationFromShortlist(detail.id);
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+        toast.success(res.message ?? "Quotation created.");
+        if (res.data?.id) router.push(quotationDetailPath(res.data.id));
+      });
+    },
+    [detail.id, router]
+  );
+
   function handleGenerateQuotation() {
-    const targets = selectedItems.length > 0 ? selectedItems : detail.creators;
-    if (targets.length === 0) {
-      toast.error("Select creators to quote.");
+    if (detail.creators.length === 0) {
+      toast.error("Add creators to this shortlist first.");
       return;
     }
+    if (selectedCount > 0) {
+      runQuotation(selectedItemIdList);
+      return;
+    }
+    setQuoteAllOpen(true);
+  }
+
+  function handleAddToQuotation(itemId: string) {
     startTransition(async () => {
-      const res = await createQuotationFromSelection({
-        name: `Quotation — ${detail.name}`,
-        client_id: detail.client_id,
-        brand_id: detail.brand_id,
-        creators: targets.map((item) => {
-          const c = item.creator;
-          const p = c?.platforms?.[0];
-          return {
-            influencer_id: item.influencer_id,
-            profile_id: item.profile_id,
-            unified_id: item.unified_id,
-            source_shortlist_item_id: item.item_id,
-            creator_name: c?.display_name ?? null,
-            platform: p?.platform ?? null,
-            handle: p?.handle ?? null,
-            followers: c?.metrics.followers.value ?? p?.follower_count ?? null,
-            engagement_rate: c?.metrics.engagement_rate.value ?? p?.engagement_rate ?? null,
-            country_code: c?.country_code ?? c?.estimated_country ?? null,
-            cost_currency: c?.suggested_currency ?? "EGP",
-          };
-        }),
+      const res = await addShortlistCreatorsToQuotation({
+        shortlistId: detail.id,
+        itemIds: [itemId],
       });
       if (!res.ok) {
         toast.error(res.message);
         return;
       }
-      toast.success(res.message ?? "Quotation created.");
-      if (res.data?.id) router.push(quotationDetailPath(res.data.id));
+      toast.success(res.message ?? "Added to quotation.");
+      if (res.data?.quotationId) router.push(quotationDetailPath(res.data.quotationId));
     });
   }
 
@@ -422,11 +436,31 @@ export function ShortlistWorkspace({
                 ) : null}
               </div>
               <CardDescription>
-                Select creators for bulk actions. Status badges show each creator&apos;s
-                review progress.
+                Discovery-style creator rows with review status. Select creators for bulk actions.
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {detail.creators.length > 0 ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleGenerateQuotation}
+                    disabled={isPending}
+                  >
+                    <FileTextIcon className="size-4" />
+                    Generate quotation
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleCompare} disabled={isPending}>
+                    <GitCompareArrowsIcon className="size-4" />
+                    Compare
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleExport} disabled={isPending}>
+                    <DownloadIcon className="size-4" />
+                    Export
+                  </Button>
+                </>
+              ) : null}
               {editable ? (
                 <Button size="sm" onClick={() => setAddOpen(true)} disabled={isPending}>
                   <UserPlusIcon className="size-4" />
@@ -472,69 +506,26 @@ export function ShortlistWorkspace({
               ) : null}
             </div>
           ) : (
-            detail.creators.map((item) => {
-              const platform = item.creator?.platforms?.[0];
-              const isSelected = effectiveSelectedIds.has(item.item_id);
-              return (
-                <div
-                  key={item.item_id}
-                  className={`flex items-center gap-3 rounded-2xl border px-3 py-2 transition ${
-                    isSelected
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-border"
-                  }`}
-                >
-                  {selectable ? (
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(value) =>
-                        setSelectedIds(
-                          toggleItemSelection(effectiveSelectedIds, item.item_id, Boolean(value))
-                        )
-                      }
-                      aria-label={`Select ${item.creator?.display_name ?? "creator"}`}
-                    />
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-medium">
-                        {item.creator?.display_name ?? "Unknown creator"}
-                      </p>
-                      <ShortlistItemStatusBadge status={item.item_status} />
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {platform
-                        ? `${platform.platform} · @${platform.handle}`
-                        : item.unified_id ?? "—"}
-                      {item.notes ? ` · ${item.notes}` : ""}
-                    </p>
-                  </div>
-                  {item.creator?.metrics?.followers?.value != null ? (
-                    <span className="hidden text-xs tabular-nums text-muted-foreground sm:inline">
-                      {Intl.NumberFormat().format(
-                        item.creator.metrics.followers.value
-                      )}{" "}
-                      followers
-                    </span>
-                  ) : null}
-                  {editable ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive"
-                      onClick={() =>
-                        runAction(() =>
-                          removeCreatorFromShortlistV2(detail.id, item.item_id)
-                        )
-                      }
-                      disabled={isPending}
-                    >
-                      Remove
-                    </Button>
-                  ) : null}
-                </div>
-              );
-            })
+            <ShortlistCreatorList
+              items={detail.creators}
+              selectedIds={effectiveSelectedIds}
+              selectable={selectable}
+              editable={editable}
+              busy={isPending}
+              onToggleSelect={(itemId) =>
+                setSelectedIds(
+                  toggleItemSelection(
+                    effectiveSelectedIds,
+                    itemId,
+                    !effectiveSelectedIds.has(itemId)
+                  )
+                )
+              }
+              onRemove={(itemId) =>
+                runAction(() => removeCreatorFromShortlistV2(detail.id, itemId))
+              }
+              onAddToQuotation={handleAddToQuotation}
+            />
           )}
         </CardContent>
       </Card>
@@ -624,6 +615,18 @@ export function ShortlistWorkspace({
         onOpenChange={setSubmitAllOpen}
         creatorCount={detail.creators.length}
         onConfirm={handleSubmitEntireShortlist}
+        busy={isPending}
+      />
+
+      <GenerateQuotationShortlistDialog
+        open={quoteAllOpen}
+        onOpenChange={setQuoteAllOpen}
+        creatorCount={detail.creators.length}
+        shortlistName={detail.name}
+        onConfirm={() => {
+          setQuoteAllOpen(false);
+          runQuotation();
+        }}
         busy={isPending}
       />
 

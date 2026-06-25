@@ -36,6 +36,7 @@ import {
   type CreatorSearchSort,
 } from "./creator-search-types";
 import { exportCreatorsCsv, sortCreators, stashCompareQueue } from "./creator-search-utils";
+import { stashDiscoverySelection } from "./discovery-selection-storage";
 
 const PAGE_SIZE = 50;
 const SAVED_SEARCH_KEY = "thinkway:creator-search-saved:v1";
@@ -75,6 +76,10 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     () => creators.filter((c) => selectedIds.has(c.unified_id)),
     [creators, selectedIds]
   );
+
+  useEffect(() => {
+    stashDiscoverySelection(selectedCreators);
+  }, [selectedCreators]);
 
   const sortedCreators = useMemo(() => sortCreators(creators, sort), [creators, sort]);
 

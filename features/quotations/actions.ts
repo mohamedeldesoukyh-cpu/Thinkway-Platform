@@ -13,6 +13,11 @@ import {
   computeQuotationTotals,
   normalizeCommercialLine,
 } from "./quotation-engine";
+import {
+  buildSeedsFromShortlistItems,
+  filterNewShortlistImportItems,
+  type ShortlistItemForSeed,
+} from "./shortlist-seeds";
 import { QUOTATION_PERMISSIONS, QUOTATIONS_LIST_PATH, quotationDetailPath } from "./constants";
 import type { ActionResult, QuotationDeliverable } from "./types";
 
@@ -224,11 +229,69 @@ export async function createQuotationFromSelection(input: {
   };
 }
 
+async function loadShortlistItemsForSeeds(
+  supabase: Supabase,
+  shortlistId: string,
+  itemIds?: string[]
+): Promise<{ ok: true; items: ShortlistItemForSeed[] } | { ok: false; message: string }> {
+  let query = supabase
+    .from("discovery_shortlist_items")
+    .select(
+      "id, influencer_id, profile_id, unified_id, commercial_input_mode, cost, cost_currency, gp_pct, revenue, gp_value, deliverables, sort_order"
+    )
+    .eq("shortlist_id", shortlistId)
+    .order("sort_order", { ascending: true });
+
+  if (itemIds?.length) {
+    query = query.in("id", itemIds);
+  }
+
+  const { data, error } = await query;
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, items: (data ?? []) as ShortlistItemForSeed[] };
+}
+
+async function insertQuotationSeeds(
+  supabase: Supabase,
+  quotationId: string,
+  seeds: QuotationItemSeed[],
+  startSort = 0
+): Promise<ActionResult<{ inserted: number }>> {
+  if (!seeds.length) return { ok: true, data: { inserted: 0 } };
+  const rows = await buildItemRows(supabase, quotationId, seeds, startSort);
+  const { error } = await supabase.from("quotation_items").insert(rows as never);
+  if (error) return { ok: false, message: error.message };
+  await recomputeTotals(supabase, quotationId);
+  return { ok: true, data: { inserted: rows.length } };
+}
+
+/** Latest non-archived draft quotation linked to a shortlist, if any. */
+export async function findOpenQuotationForShortlist(
+  shortlistId: string
+): Promise<ActionResult<{ id: string | null }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const { data, error } = await actor.supabase
+    .from("quotations")
+    .select("id")
+    .eq("shortlist_id", shortlistId)
+    .eq("is_archived", false)
+    .neq("status", "archived")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, data: { id: (data as { id: string } | null)?.id ?? null } };
+}
+
 // ---------------------------------------------------------------------------
 // Create: from a Shortlist (carries per-item commercials, spec §7)
 // ---------------------------------------------------------------------------
 export async function createQuotationFromShortlist(
-  shortlistId: string
+  shortlistId: string,
+  options?: { itemIds?: string[] }
 ): Promise<ActionResult<{ id: string }>> {
   const actor = await getActor();
   if (!actor.ok) return actor;
@@ -248,14 +311,17 @@ export async function createQuotationFromShortlist(
     campaign_header_id: string | null;
   };
 
-  const { data: items, error: itemsError } = await actor.supabase
-    .from("discovery_shortlist_items")
-    .select(
-      "id, influencer_id, profile_id, unified_id, commercial_input_mode, cost, cost_currency, gp_pct, revenue, gp_value, deliverables, sort_order"
-    )
-    .eq("shortlist_id", shortlistId)
-    .order("sort_order", { ascending: true });
-  if (itemsError) return { ok: false, message: itemsError.message };
+  const loaded = await loadShortlistItemsForSeeds(
+    actor.supabase,
+    shortlistId,
+    options?.itemIds
+  );
+  if (!loaded.ok) return loaded;
+  if (loaded.items.length === 0) {
+    return { ok: false, message: "No creators to quote on this shortlist." };
+  }
+
+  const seeds = await buildSeedsFromShortlistItems(actor.supabase, loaded.items);
 
   const created = await insertQuotationHeader(actor.supabase, actor.userId, {
     name: `Quotation — ${sl.name}`,
@@ -266,51 +332,116 @@ export async function createQuotationFromShortlist(
   });
   if (!created.ok) return created;
 
-  const seeds: QuotationItemSeed[] = (items ?? []).map((raw) => {
-    const item = raw as {
-      id: string;
-      influencer_id: string | null;
-      profile_id: string | null;
-      unified_id: string | null;
-      commercial_input_mode: CommercialInputMode;
-      cost: number | null;
-      cost_currency: string | null;
-      gp_pct: number | null;
-      revenue: number | null;
-      gp_value: number | null;
-      deliverables: unknown;
-    };
-    return {
-      influencer_id: item.influencer_id,
-      profile_id: item.profile_id,
-      unified_id: item.unified_id,
-      source_shortlist_item_id: item.id,
-      deliverables: Array.isArray(item.deliverables)
-        ? (item.deliverables as QuotationDeliverable[])
-        : [],
-      commercial_input_mode: item.commercial_input_mode ?? "cost_gp_pct",
-      cost: item.cost,
-      cost_currency: item.cost_currency,
-      gp_pct: item.gp_pct,
-      revenue: item.revenue,
-      gp_value: item.gp_value,
-    };
-  });
-
-  if (seeds.length) {
-    const rows = await buildItemRows(actor.supabase, created.id, seeds, 0);
-    const { error } = await actor.supabase
-      .from("quotation_items")
-      .insert(rows as never);
-    if (error) return { ok: false, message: error.message };
-    await recomputeTotals(actor.supabase, created.id);
-  }
+  const inserted = await insertQuotationSeeds(actor.supabase, created.id, seeds, 0);
+  if (!inserted.ok) return inserted;
 
   revalidate(created.id);
   return {
     ok: true,
     data: { id: created.id },
-    message: `Quotation created from shortlist (${seeds.length} creators).`,
+    message: `Quotation created with ${inserted.data?.inserted ?? seeds.length} creator${
+      (inserted.data?.inserted ?? seeds.length) === 1 ? "" : "s"
+    }.`,
+  };
+}
+
+/** Append shortlist creators to an existing quotation (dedupes by source_shortlist_item_id). */
+export async function importShortlistItemsToQuotation(input: {
+  quotationId: string;
+  shortlistId: string;
+  itemIds?: string[];
+}): Promise<ActionResult<{ added: number }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const loaded = await loadShortlistItemsForSeeds(
+    actor.supabase,
+    input.shortlistId,
+    input.itemIds
+  );
+  if (!loaded.ok) return loaded;
+  if (loaded.items.length === 0) {
+    return { ok: false, message: "No creators selected to import." };
+  }
+
+  const { data: existingRows } = await actor.supabase
+    .from("quotation_items")
+    .select("source_shortlist_item_id")
+    .eq("quotation_id", input.quotationId);
+
+  const pendingItems = filterNewShortlistImportItems(
+    loaded.items,
+    ((existingRows ?? []) as Array<{ source_shortlist_item_id: string | null }>)
+      .map((r) => r.source_shortlist_item_id)
+      .filter((id): id is string => Boolean(id))
+  );
+  if (pendingItems.length === 0) {
+    return { ok: false, message: "All selected creators are already on this quotation." };
+  }
+
+  const seeds = await buildSeedsFromShortlistItems(actor.supabase, pendingItems);
+
+  const { data: maxRow } = await actor.supabase
+    .from("quotation_items")
+    .select("sort_order")
+    .eq("quotation_id", input.quotationId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const startSort = ((maxRow as { sort_order: number } | null)?.sort_order ?? -1) + 1;
+
+  const inserted = await insertQuotationSeeds(
+    actor.supabase,
+    input.quotationId,
+    seeds,
+    startSort
+  );
+  if (!inserted.ok) return inserted;
+
+  revalidate(input.quotationId);
+  return {
+    ok: true,
+    data: { added: inserted.data?.inserted ?? 0 },
+    message: `Added ${inserted.data?.inserted ?? 0} creator(s).`,
+  };
+}
+
+/** Per-row shortlist action: append to open quotation or create one. */
+export async function addShortlistCreatorsToQuotation(input: {
+  shortlistId: string;
+  itemIds: string[];
+}): Promise<ActionResult<{ quotationId: string; added: number }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  if (!input.itemIds.length) {
+    return { ok: false, message: "No creators selected." };
+  }
+
+  const open = await findOpenQuotationForShortlist(input.shortlistId);
+  if (!open.ok) return open;
+
+  if (open.data?.id) {
+    const imported = await importShortlistItemsToQuotation({
+      quotationId: open.data.id,
+      shortlistId: input.shortlistId,
+      itemIds: input.itemIds,
+    });
+    if (!imported.ok) return imported;
+    return {
+      ok: true,
+      data: { quotationId: open.data.id, added: imported.data?.added ?? 0 },
+      message: imported.message,
+    };
+  }
+
+  const created = await createQuotationFromShortlist(input.shortlistId, {
+    itemIds: input.itemIds,
+  });
+  if (!created.ok) return created;
+  return {
+    ok: true,
+    data: { quotationId: created.data!.id, added: input.itemIds.length },
+    message: created.message,
   };
 }
 
@@ -334,15 +465,20 @@ export async function addItemsToQuotation(
     .maybeSingle();
   const startSort = ((maxRow as { sort_order: number } | null)?.sort_order ?? -1) + 1;
 
-  const rows = await buildItemRows(actor.supabase, quotationId, creators, startSort);
-  const { error } = await actor.supabase
-    .from("quotation_items")
-    .insert(rows as never);
-  if (error) return { ok: false, message: error.message };
+  const inserted = await insertQuotationSeeds(
+    actor.supabase,
+    quotationId,
+    creators,
+    startSort
+  );
+  if (!inserted.ok) return inserted;
 
-  await recomputeTotals(actor.supabase, quotationId);
   revalidate(quotationId);
-  return { ok: true, data: { added: rows.length }, message: "Creators added." };
+  return {
+    ok: true,
+    data: { added: inserted.data?.inserted ?? 0 },
+    message: "Creators added.",
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -472,4 +608,157 @@ export async function archiveQuotation(id: string): Promise<ActionResult> {
   if (error) return { ok: false, message: error.message };
   revalidate(id);
   return { ok: true, message: "Quotation archived." };
+}
+
+// ---------------------------------------------------------------------------
+// Import helpers (Add creators modal)
+// ---------------------------------------------------------------------------
+export type ImportCreatorOption = {
+  item_id: string;
+  label: string;
+  platform: string | null;
+  followers: number | null;
+};
+
+export async function listShortlistsForImport(): Promise<
+  ActionResult<{ shortlists: Array<{ id: string; name: string; creator_count: number }> }>
+> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const { data, error } = await actor.supabase
+    .from("discovery_shortlists")
+    .select("id, name, discovery_shortlist_items(count)")
+    .eq("is_archived", false)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) return { ok: false, message: error.message };
+
+  const shortlists = ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+    const itemsAgg = row.discovery_shortlist_items as Array<{ count: number }> | undefined;
+    return {
+      id: row.id as string,
+      name: row.name as string,
+      creator_count: itemsAgg?.[0]?.count ?? 0,
+    };
+  });
+
+  return { ok: true, data: { shortlists } };
+}
+
+export async function listCampaignsForImport(): Promise<
+  ActionResult<{ campaigns: Array<{ id: string; name: string; document_number: string | null }> }>
+> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const { data, error } = await actor.supabase
+    .from("campaign_headers")
+    .select("id, name, document_number")
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  if (error) return { ok: false, message: error.message };
+
+  return {
+    ok: true,
+    data: {
+      campaigns: ((data ?? []) as Array<{
+        id: string;
+        name: string;
+        document_number: string | null;
+      }>) ?? [],
+    },
+  };
+}
+
+export async function listShortlistImportCreators(
+  shortlistId: string
+): Promise<ActionResult<{ creators: ImportCreatorOption[] }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const loaded = await loadShortlistItemsForSeeds(actor.supabase, shortlistId);
+  if (!loaded.ok) return loaded;
+
+  const resolved = await buildSeedsFromShortlistItems(actor.supabase, loaded.items);
+  const creators = loaded.items.map((item, index) => {
+    const seed = resolved[index];
+    return {
+      item_id: item.id,
+      label: seed?.creator_name ?? seed?.handle ?? "Creator",
+      platform: seed?.platform ?? null,
+      followers: seed?.followers ?? null,
+    };
+  });
+
+  return { ok: true, data: { creators } };
+}
+
+export async function listCampaignImportCreators(
+  campaignHeaderId: string
+): Promise<ActionResult<{ creators: ImportCreatorOption[] }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const { data, error } = await actor.supabase
+    .from("campaign_influencers")
+    .select("id, influencer_id, influencers: influencer_id(display_name)")
+    .eq("campaign_header_id", campaignHeaderId);
+
+  if (error) return { ok: false, message: error.message };
+
+  const creators = ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+    const influencer = row.influencers as { display_name: string | null } | null;
+    return {
+      item_id: row.id as string,
+      label: influencer?.display_name ?? "Creator",
+      platform: null,
+      followers: null,
+    };
+  });
+
+  return { ok: true, data: { creators } };
+}
+
+export async function addManualQuotationItem(
+  quotationId: string,
+  input?: { creator_name?: string }
+): Promise<ActionResult<{ added: number }>> {
+  return addItemsToQuotation(quotationId, [
+    {
+      creator_name: input?.creator_name?.trim() || "New creator",
+      cost_currency: "EGP",
+    },
+  ]);
+}
+
+export async function importCampaignAssignmentsToQuotation(input: {
+  quotationId: string;
+  assignmentIds: string[];
+}): Promise<ActionResult<{ added: number }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  if (!input.assignmentIds.length) {
+    return { ok: false, message: "No campaign assignments selected." };
+  }
+
+  const { data, error } = await actor.supabase
+    .from("campaign_influencers")
+    .select("id, influencer_id")
+    .in("id", input.assignmentIds);
+
+  if (error) return { ok: false, message: error.message };
+
+  const seeds: QuotationItemSeed[] = ((data ?? []) as Array<{
+    id: string;
+    influencer_id: string;
+  }>).map((row) => ({
+    influencer_id: row.influencer_id,
+    creator_name: null,
+    cost_currency: "EGP",
+  }));
+
+  return addItemsToQuotation(input.quotationId, seeds);
 }

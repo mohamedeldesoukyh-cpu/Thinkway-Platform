@@ -43,9 +43,17 @@ import {
 } from "@/lib/commercial/fx-aggregation";
 import { useDebouncedAutosave, type AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import {
+  creatorProfileSourceFromPlatformAccount,
+  CreatorIdentityCell,
+} from "@/components/creator/creator-profile-link";
+import { platformLabel } from "@/features/campaigns/line-assignment";
+import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
+import {
   COMMERCIAL_INPUT_MODE_LABELS,
   QUOTATION_STATUS_LABELS,
 } from "@/features/quotations/constants";
+import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import {
   removeQuotationItem,
   updateQuotationHeader,
@@ -122,6 +130,10 @@ export function QuotationWorkspace({ detail }: { detail: QuotationDetail }) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <AddCreatorsToQuotationButton
+              quotationId={detail.id}
+              onAdded={() => router.refresh()}
+            />
             <Button variant="outline" size="sm" asChild>
               <a href={exportHref("preview", false)} target="_blank" rel="noreferrer">
                 <FileTextIcon className="size-4" /> Preview
@@ -160,21 +172,30 @@ export function QuotationWorkspace({ detail }: { detail: QuotationDetail }) {
           <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
             <p className="text-sm font-medium">No creators yet</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Add creators from a shortlist or Discovery selection to start pricing.
+              Add creators from a shortlist, Discovery selection, campaign, or manual entry.
             </p>
+            <div className="mt-4 flex justify-center">
+              <AddCreatorsToQuotationButton
+                quotationId={detail.id}
+                onAdded={() => router.refresh()}
+              />
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12" />
                   <TableHead>Creator</TableHead>
-                  <TableHead>Mode</TableHead>
+                  <TableHead>Platform</TableHead>
+                  <TableHead className="text-right">Followers</TableHead>
                   <TableHead>Cost</TableHead>
                   <TableHead>Currency</TableHead>
-                  <TableHead>GP % / Rev / GP</TableHead>
-                  <TableHead className="text-right">Revenue (EGP)</TableHead>
-                  <TableHead className="text-right">GP (EGP)</TableHead>
+                  <TableHead className="text-right">Cost EGP</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">GP</TableHead>
+                  <TableHead className="text-right">GP%</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -304,50 +325,90 @@ function CommercialRow({
 
   return (
     <TableRow>
-      <TableCell>
-        <div className="font-medium">{item.creator_name ?? item.handle ?? "Creator"}</div>
-        <div className="text-xs text-muted-foreground">
-          {[item.platform, item.country_code].filter(Boolean).join(" · ") || "—"}
-        </div>
+      <TableCell className="align-top">
+        <CreatorIdentityCell
+          source={creatorProfileSourceFromPlatformAccount(
+            item.creator_name ?? item.handle ?? "Creator",
+            item.platform
+              ? {
+                  platform: item.platform,
+                  handle: item.handle ?? "",
+                }
+              : null
+          )}
+          size="sm"
+          showName={false}
+          showHandle={false}
+        />
+      </TableCell>
+      <TableCell className="align-top">
+        <CreatorIdentityCell
+          source={creatorProfileSourceFromPlatformAccount(
+            item.creator_name ?? item.handle ?? "Creator",
+            item.platform
+              ? {
+                  platform: item.platform,
+                  handle: item.handle ?? "",
+                }
+              : null
+          )}
+          size="sm"
+          showAvatar={false}
+          showName
+          showHandle
+        />
         <div className="mt-1">
           <SaveIndicator status={status} />
         </div>
       </TableCell>
-      <TableCell>
-        <Select
-          value={mode}
-          onValueChange={(v) => {
-            const m = v as CommercialInputMode;
-            setMode(m);
-            triggerSave({ mode: m });
-          }}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(COMMERCIAL_INPUT_MODE_LABELS) as CommercialInputMode[]).map(
-              (m) => (
-                <SelectItem key={m} value={m}>
-                  {COMMERCIAL_INPUT_MODE_LABELS[m]}
-                </SelectItem>
-              )
-            )}
-          </SelectContent>
-        </Select>
+      <TableCell className="align-top">
+        {item.platform ? (
+          <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
+            <PlatformIcon platform={item.platform} size="xs" className="size-4 rounded-full" />
+            <span className="truncate capitalize">{platformLabel(item.platform)}</span>
+          </div>
+        ) : (
+          "—"
+        )}
       </TableCell>
-      <TableCell>
-        <Input
-          className="w-24"
-          inputMode="decimal"
-          value={cost}
-          onChange={(e) => {
-            setCost(e.target.value);
-            triggerSave({});
-          }}
-        />
+      <TableCell className="align-top text-right tabular-nums text-sm">
+        {formatCreatorCount(item.followers)}
       </TableCell>
-      <TableCell>
+      <TableCell className="align-top">
+        <div className="space-y-1">
+          <Input
+            className="w-24"
+            inputMode="decimal"
+            value={cost}
+            onChange={(e) => {
+              setCost(e.target.value);
+              triggerSave({});
+            }}
+          />
+          <Select
+            value={mode}
+            onValueChange={(v) => {
+              const m = v as CommercialInputMode;
+              setMode(m);
+              triggerSave({ mode: m });
+            }}
+          >
+            <SelectTrigger className="h-7 w-[130px] text-[10px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(COMMERCIAL_INPUT_MODE_LABELS) as CommercialInputMode[]).map(
+                (m) => (
+                  <SelectItem key={m} value={m}>
+                    {COMMERCIAL_INPUT_MODE_LABELS[m]}
+                  </SelectItem>
+                )
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      </TableCell>
+      <TableCell className="align-top">
         <Select
           value={currency}
           onValueChange={(v) => {
@@ -367,9 +428,50 @@ function CommercialRow({
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell>
-        {mode === "cost_gp_pct" && (
-          <div className="flex items-center gap-1">
+      <TableCell className="align-top text-right tabular-nums text-sm">
+        {egp(toEgp(Number(cost) || 0, effectiveRate))}
+      </TableCell>
+      <TableCell className="align-top text-right">
+        {mode === "cost_revenue" ? (
+          <Input
+            className="ml-auto w-24"
+            inputMode="decimal"
+            value={revenue}
+            onChange={(e) => {
+              setRevenue(e.target.value);
+              triggerSave({});
+            }}
+          />
+        ) : (
+          <span className="tabular-nums text-sm">
+            {formatDualCurrency({
+              amount: preview.revenue,
+              currency,
+              egpAmount: toEgp(preview.revenue, effectiveRate),
+            })}
+          </span>
+        )}
+      </TableCell>
+      <TableCell className="align-top text-right">
+        {mode === "cost_gp_value" ? (
+          <Input
+            className="ml-auto w-24"
+            inputMode="decimal"
+            value={gpValue}
+            onChange={(e) => {
+              setGpValue(e.target.value);
+              triggerSave({});
+            }}
+          />
+        ) : (
+          <span className="tabular-nums text-sm">
+            {egp(toEgp(preview.gpValue, effectiveRate))}
+          </span>
+        )}
+      </TableCell>
+      <TableCell className="align-top text-right">
+        {mode === "cost_gp_pct" ? (
+          <div className="flex items-center justify-end gap-1">
             <Input
               className="w-20"
               inputMode="decimal"
@@ -381,46 +483,14 @@ function CommercialRow({
             />
             <span className="text-xs text-muted-foreground">%</span>
           </div>
+        ) : (
+          <span className="tabular-nums text-sm">{preview.gpPct.toFixed(1)}%</span>
         )}
-        {mode === "cost_revenue" && (
-          <Input
-            className="w-24"
-            inputMode="decimal"
-            value={revenue}
-            onChange={(e) => {
-              setRevenue(e.target.value);
-              triggerSave({});
-            }}
-          />
-        )}
-        {mode === "cost_gp_value" && (
-          <Input
-            className="w-24"
-            inputMode="decimal"
-            value={gpValue}
-            onChange={(e) => {
-              setGpValue(e.target.value);
-              triggerSave({});
-            }}
-          />
-        )}
-        {preview.warning && (
+        {preview.warning ? (
           <p className="mt-1 text-[11px] text-amber-600">{preview.warning}</p>
-        )}
+        ) : null}
       </TableCell>
-      <TableCell className="text-right">
-        <div className="tabular-nums">
-          {formatDualCurrency({
-            amount: preview.revenue,
-            currency,
-            egpAmount: toEgp(preview.revenue, effectiveRate),
-          })}
-        </div>
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {egp(toEgp(preview.gpValue, effectiveRate))} · {preview.gpPct.toFixed(1)}%
-      </TableCell>
-      <TableCell>
+      <TableCell className="align-top">
         <Button
           variant="ghost"
           size="icon"
