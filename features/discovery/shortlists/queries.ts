@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
-import type { Database } from "@/types/database";
+import type { Database, ShortlistItemStatus } from "@/types/database";
 import {
   getAuthContext,
   hasPermission,
@@ -133,7 +133,7 @@ async function loadShortlistCreators(
 ): Promise<ShortlistCreatorItem[]> {
   const { data: items, error } = await supabase
     .from("discovery_shortlist_items")
-    .select("id, profile_id, influencer_id, unified_id, notes, match_score, sort_order")
+    .select("id, profile_id, influencer_id, unified_id, notes, match_score, sort_order, item_status")
     .eq("shortlist_id", shortlistId)
     .order("sort_order", { ascending: true });
 
@@ -162,6 +162,7 @@ async function loadShortlistCreators(
 
     return {
       item_id: item.id as string,
+      item_status: ((item.item_status as ShortlistItemStatus) ?? "draft"),
       notes: (item.notes as string) ?? null,
       match_score: (item.match_score as number) ?? null,
       unified_id: (item.unified_id as string) ?? creator?.unified_id ?? null,

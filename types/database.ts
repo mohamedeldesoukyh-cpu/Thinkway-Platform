@@ -19,6 +19,14 @@ export type ShortlistStatus =
   | "cancelled"
   | "archived";
 
+export type ShortlistItemStatus =
+  | "draft"
+  | "under_review"
+  | "approved"
+  | "rejected"
+  | "moved_to_campaign"
+  | "cancelled";
+
 export type ShortlistVisibilityV2 = "private" | "team" | "client_shared";
 
 export type Json =
@@ -388,6 +396,74 @@ export type InfluencerRow = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // Phase 3 — creator enrichment orchestration metadata.
+  last_enriched_at: string | null;
+  enrichment_status: CreatorEnrichmentStatus;
+  enrichment_source: string | null;
+  enrichment_priority: number | null;
+  next_refresh_at: string | null;
+  apify_run_id: string | null;
+  profile_data_version: number;
+  field_sources: Record<string, EnrichmentFieldSource>;
+  // Phase 3 — audience demographics (NULL until a real provider supplies them).
+  audience_age_13_17: number | null;
+  audience_age_18_24: number | null;
+  audience_age_25_34: number | null;
+  audience_age_35_44: number | null;
+  audience_age_45_54: number | null;
+  audience_age_55_plus: number | null;
+  audience_gender_male: number | null;
+  audience_gender_female: number | null;
+  audience_gender_unknown: number | null;
+  audience_top_countries: Array<{ code?: string; name?: string; percent?: number }> | null;
+  audience_top_cities: Array<{ name?: string; percent?: number }> | null;
+  demographic_source: CreatorDemographicSource;
+};
+
+export type CreatorEnrichmentStatus =
+  | "never"
+  | "queued"
+  | "running"
+  | "enriched"
+  | "partial"
+  | "failed"
+  | "skipped";
+
+export type EnrichmentFieldSource =
+  | "actual"
+  | "forecast"
+  | "manual"
+  | "imported"
+  | "apify";
+
+export type CreatorDemographicSource =
+  | "unavailable"
+  | "modash"
+  | "hypeauditor"
+  | "creatoriq"
+  | "apify"
+  | "manual";
+
+export type CreatorEnrichmentRunRow = {
+  id: string;
+  influencer_id: string | null;
+  platform_account_id: string | null;
+  discovered_profile_id: string | null;
+  trigger: string;
+  priority: number;
+  status: string;
+  source: string | null;
+  apify_run_id: string | null;
+  forced: boolean;
+  skipped_reason: string | null;
+  fields_updated: string[];
+  attempt: number;
+  error_message: string | null;
+  job_id: string | null;
+  requested_by: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
 };
 
 export type InfluencerPlatformAccountRow = {
@@ -422,6 +498,32 @@ export type InfluencerPlatformAccountRow = {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  // Phase 3 — per-platform enriched fields + state.
+  posts_count: number | null;
+  avg_likes: number | null;
+  avg_comments: number | null;
+  recent_publications:
+    | Array<{
+        url: string | null;
+        thumbnail: string | null;
+        likes: number | null;
+        comments: number | null;
+        views: number | null;
+        posted_at: string | null;
+        caption: string | null;
+      }>
+    | null;
+  hashtags: string[] | null;
+  mentions: string[] | null;
+  interest_categories: string[] | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  contact_links: string[] | null;
+  last_enriched_at: string | null;
+  enrichment_status: CreatorEnrichmentStatus;
+  apify_run_id: string | null;
+  profile_data_version: number;
+  field_sources: Record<string, EnrichmentFieldSource>;
 };
 
 export type ClientDocumentRow = {
@@ -1603,6 +1705,26 @@ export type Database = {
           tax_registration_number?: string | null;
           notes?: string | null;
           created_by?: string | null;
+          last_enriched_at?: string | null;
+          enrichment_status?: CreatorEnrichmentStatus;
+          enrichment_source?: string | null;
+          enrichment_priority?: number | null;
+          next_refresh_at?: string | null;
+          apify_run_id?: string | null;
+          profile_data_version?: number;
+          field_sources?: Record<string, EnrichmentFieldSource>;
+          audience_age_13_17?: number | null;
+          audience_age_18_24?: number | null;
+          audience_age_25_34?: number | null;
+          audience_age_35_44?: number | null;
+          audience_age_45_54?: number | null;
+          audience_age_55_plus?: number | null;
+          audience_gender_male?: number | null;
+          audience_gender_female?: number | null;
+          audience_gender_unknown?: number | null;
+          audience_top_countries?: Array<{ code?: string; name?: string; percent?: number }> | null;
+          audience_top_cities?: Array<{ name?: string; percent?: number }> | null;
+          demographic_source?: CreatorDemographicSource;
         };
         Update: Partial<Database["public"]["Tables"]["influencers"]["Insert"]>;
         Relationships: [];
@@ -1639,9 +1761,51 @@ export type Database = {
           metrics_last_synced_at?: string | null;
           metrics_is_manual_override?: boolean;
           metadata?: Record<string, unknown>;
+          posts_count?: number | null;
+          avg_likes?: number | null;
+          avg_comments?: number | null;
+          recent_publications?: InfluencerPlatformAccountRow["recent_publications"];
+          hashtags?: string[] | null;
+          mentions?: string[] | null;
+          interest_categories?: string[] | null;
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          contact_links?: string[] | null;
+          last_enriched_at?: string | null;
+          enrichment_status?: CreatorEnrichmentStatus;
+          apify_run_id?: string | null;
+          profile_data_version?: number;
+          field_sources?: Record<string, EnrichmentFieldSource>;
         };
         Update: Partial<
           Database["public"]["Tables"]["influencer_platform_accounts"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      creator_enrichment_runs: {
+        Row: CreatorEnrichmentRunRow;
+        Insert: {
+          id?: string;
+          influencer_id?: string | null;
+          platform_account_id?: string | null;
+          discovered_profile_id?: string | null;
+          trigger: string;
+          priority: number;
+          status?: string;
+          source?: string | null;
+          apify_run_id?: string | null;
+          forced?: boolean;
+          skipped_reason?: string | null;
+          fields_updated?: string[];
+          attempt?: number;
+          error_message?: string | null;
+          job_id?: string | null;
+          requested_by?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["creator_enrichment_runs"]["Insert"]
         >;
         Relationships: [];
       };
@@ -2036,6 +2200,7 @@ export type Database = {
           gp_value_egp: number | null;
           deliverables: Json;
           commercial_updated_at: string | null;
+          item_status: ShortlistItemStatus;
         };
         Insert: {
           id?: string;
@@ -2047,6 +2212,7 @@ export type Database = {
           match_score?: number | null;
           sort_order?: number;
           added_by?: string | null;
+          item_status?: ShortlistItemStatus;
           commercial_input_mode?: CommercialInputMode;
           cost?: number | null;
           cost_currency?: string | null;

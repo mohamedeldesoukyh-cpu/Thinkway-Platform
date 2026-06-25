@@ -7,16 +7,21 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   CampaignShortlistAssignmentStatus,
   Database,
+  ShortlistItemStatus,
   ShortlistStatus,
   ShortlistVisibilityV2,
 } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { enqueueCreatorEnrichmentBestEffort } from "@/lib/creator-enrichment/queue";
+import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
 import { getCampaignShortlistAssignments } from "./queries";
 import { logCreatorMovement, logShortlistLifecycle } from "./movements";
 import { notifyShortlistEvent } from "./notifications";
 import { promoteDiscoveredProfileToInfluencer } from "./promote";
+import { canMoveItemToCampaign } from "./item-transitions";
 import {
   assertTransition,
   canEditCreators,
@@ -287,6 +292,12 @@ export async function approveShortlist(shortlistId: string): Promise<ActionResul
   });
   if (!result.ok) return result;
 
+  await actor.supabase
+    .from("discovery_shortlist_items")
+    .update({ item_status: "approved" } as never)
+    .eq("shortlist_id", shortlistId)
+    .eq("item_status", "under_review");
+
   await logShortlistLifecycle(actor.supabase, {
     action: "shortlist_approved",
     shortlistId,
@@ -313,6 +324,12 @@ export async function rejectShortlist(
 
   const result = await transitionStatus(actor.supabase, shortlistId, "draft");
   if (!result.ok) return result;
+
+  await actor.supabase
+    .from("discovery_shortlist_items")
+    .update({ item_status: "rejected" } as never)
+    .eq("shortlist_id", shortlistId)
+    .eq("item_status", "under_review");
 
   await logShortlistLifecycle(actor.supabase, {
     action: "shortlist_rejected",
@@ -473,6 +490,20 @@ export async function addCreatorToShortlistV2(
     discoveredProfileId: input.discoveredProfileId,
     unifiedId: input.unifiedId,
   });
+
+  // Phase 3 trigger (spec §4): enqueue background enrichment when a real creator
+  // is added. Non-blocking & best-effort — never delays or fails shortlist add.
+  // The worker honors the 30-day skip (only enriches if never enriched OR stale).
+  if (input.influencerId) {
+    enqueueCreatorEnrichmentBestEffort({
+      influencerId: input.influencerId,
+      discoveredProfileId: input.discoveredProfileId ?? null,
+      trigger: "shortlist",
+      priority: priorityForTrigger("shortlist"),
+      force: false,
+      requestedBy: actor.userId,
+    });
+  }
 
   revalidateShortlist(input.shortlistId);
   return { ok: true, message: "Creator added to shortlist." };
@@ -678,7 +709,7 @@ export async function moveShortlistToCampaign(
   // Load only the SELECTED items (spec §7: only selected creators move).
   const { data: items, error: itemsError } = await actor.supabase
     .from("discovery_shortlist_items")
-    .select("id, profile_id, influencer_id, unified_id")
+    .select("id, profile_id, influencer_id, unified_id, item_status")
     .eq("shortlist_id", input.shortlistId)
     .in("id", input.itemIds);
 
@@ -695,7 +726,13 @@ export async function moveShortlistToCampaign(
     profile_id: string | null;
     influencer_id: string | null;
     unified_id: string | null;
+    item_status: ShortlistItemStatus;
   }>) {
+    if (!canMoveItemToCampaign(item.item_status)) {
+      failures.push("Creator must be approved before moving to a campaign.");
+      continue;
+    }
+
     let influencerId = item.influencer_id;
 
     if (!influencerId && item.profile_id) {
@@ -757,6 +794,12 @@ export async function moveShortlistToCampaign(
     }
 
     moved += 1;
+
+    await actor.supabase
+      .from("discovery_shortlist_items")
+      .update({ item_status: "moved_to_campaign" } as never)
+      .eq("id", item.id);
+
     await logCreatorMovement(actor.supabase, {
       action: "shortlist_to_campaign",
       sourceType: "shortlist",
@@ -768,6 +811,18 @@ export async function moveShortlistToCampaign(
       discoveredProfileId: item.profile_id,
       unifiedId: item.unified_id,
       notes: `Moved to ${documentNumber} as Suggested.`,
+    });
+
+    // Phase 3 trigger (spec §5): creator moved Approved shortlist -> campaign is
+    // the highest-value signal, so enqueue HIGH priority (1) enrichment.
+    // Non-blocking & best-effort; the worker still honors the 30-day skip.
+    enqueueCreatorEnrichmentBestEffort({
+      influencerId,
+      discoveredProfileId: item.profile_id,
+      trigger: "campaign",
+      priority: priorityForTrigger("campaign"),
+      force: false,
+      requestedBy: actor.userId,
     });
   }
 

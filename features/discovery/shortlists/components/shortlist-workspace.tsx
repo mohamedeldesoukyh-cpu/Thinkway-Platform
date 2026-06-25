@@ -4,9 +4,6 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import {
-  DownloadIcon,
-  FileTextIcon,
-  GitCompareArrowsIcon,
   SendIcon,
   UserPlusIcon,
 } from "lucide-react";
@@ -31,13 +28,30 @@ import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CreatorMovementAction } from "@/types/database";
 
 import {
+  bulkApproveCreators,
+  bulkCancelCreators,
+  bulkRejectCreators,
+  bulkRemoveCreatorsFromShortlist,
+  bulkSubmitCreatorsForReview,
+  submitEntireShortlistForReview,
+} from "../bulk-actions";
+import {
+  countSelected,
+  filterEligibleForMove,
+  filterSelectedItems,
+  isAllVisibleSelected,
+  isIndeterminateSelection,
+  pruneSelection,
+  toggleItemSelection,
+  toggleSelectAll,
+} from "../bulk-selection-policy";
+import {
   approveShortlist,
   archiveShortlist,
   cancelShortlist,
   rejectShortlist,
   reopenShortlist,
   removeCreatorFromShortlistV2,
-  submitShortlistForReview,
 } from "../actions";
 import { canEditCreators, canMoveToCampaign } from "../transitions";
 import type {
@@ -45,12 +59,15 @@ import type {
   ShortlistCampaignOption,
   ShortlistDetail,
 } from "../types";
-import { createQuotationFromShortlist } from "@/features/quotations/actions";
+import { createQuotationFromSelection } from "@/features/quotations/actions";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import { AddCreatorsDrawer } from "./add-creators-drawer";
 import { MoveToCampaignDialog } from "./move-to-campaign-dialog";
+import { ShortlistBulkToolbar } from "./shortlist-bulk-toolbar";
+import { SubmitShortlistDialog } from "./submit-shortlist-dialog";
 import {
   AssignmentStatusBadge,
+  ShortlistItemStatusBadge,
   ShortlistStatusBadge,
   ShortlistVisibilityBadge,
 } from "./shortlist-badges";
@@ -81,18 +98,37 @@ export function ShortlistWorkspace({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [moveOpen, setMoveOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [submitAllOpen, setSubmitAllOpen] = useState(false);
 
   const editable = canEditCreators(detail.status) && !detail.is_archived;
   const movable = canMoveToCampaign(detail.status);
-  // Selection drives move (approved), compare, and export across active states.
-  const selectable = (editable || movable) && detail.creators.length > 0;
+  const selectable = !detail.is_archived && detail.creators.length > 0;
 
-  const selectedItemIds = useMemo(
-    () => Object.keys(selected).filter((id) => selected[id]),
-    [selected]
+  const visibleItemIds = useMemo(
+    () => detail.creators.map((item) => item.item_id),
+    [detail.creators]
+  );
+
+  const effectiveSelectedIds = useMemo(
+    () => pruneSelection(selectedIds, visibleItemIds),
+    [selectedIds, visibleItemIds]
+  );
+
+  const selectedCount = countSelected(effectiveSelectedIds);
+  const allSelected = isAllVisibleSelected(visibleItemIds, effectiveSelectedIds);
+  const indeterminate = isIndeterminateSelection(visibleItemIds, effectiveSelectedIds);
+
+  const selectedItems = useMemo(
+    () => filterSelectedItems(detail.creators, effectiveSelectedIds),
+    [detail.creators, effectiveSelectedIds]
+  );
+
+  const selectedItemIdList = useMemo(
+    () => selectedItems.map((item) => item.item_id),
+    [selectedItems]
   );
 
   const existingItems = useMemo(
@@ -106,37 +142,29 @@ export function ShortlistWorkspace({
   );
 
   function selectedCreators(): UnifiedCreatorResult[] {
-    return detail.creators
-      .filter((item) => selected[item.item_id] && item.creator)
+    return selectedItems
+      .filter((item) => item.creator)
       .map((item) => item.creator as UnifiedCreatorResult);
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
   }
 
   function handleCompare() {
     const chosen = selectedCreators();
-    const pool =
-      chosen.length >= 2
-        ? chosen
-        : (detail.creators
-            .map((item) => item.creator)
-            .filter(Boolean) as UnifiedCreatorResult[]);
-    if (pool.length < 2) {
+    if (chosen.length < 2) {
       toast.error("Select at least 2 creators with resolved profiles to compare.");
       return;
     }
-    stashCompareQueue(pool.slice(0, MAX_CREATOR_COMPARE));
+    stashCompareQueue(chosen.slice(0, MAX_CREATOR_COMPARE));
     router.push("/discovery/compare");
   }
 
   function handleExport() {
-    const chosen = selectedCreators();
-    const pool =
-      chosen.length > 0
-        ? chosen
-        : (detail.creators
-            .map((item) => item.creator)
-            .filter(Boolean) as UnifiedCreatorResult[]);
+    const pool = selectedCreators();
     if (pool.length === 0) {
-      toast.error("No creator data available to export.");
+      toast.error("Select creators to export.");
       return;
     }
     const csv = exportCreatorsCsv(pool);
@@ -151,8 +179,34 @@ export function ShortlistWorkspace({
   }
 
   function handleGenerateQuotation() {
+    const targets = selectedItems.length > 0 ? selectedItems : detail.creators;
+    if (targets.length === 0) {
+      toast.error("Select creators to quote.");
+      return;
+    }
     startTransition(async () => {
-      const res = await createQuotationFromShortlist(detail.id);
+      const res = await createQuotationFromSelection({
+        name: `Quotation — ${detail.name}`,
+        client_id: detail.client_id,
+        brand_id: detail.brand_id,
+        creators: targets.map((item) => {
+          const c = item.creator;
+          const p = c?.platforms?.[0];
+          return {
+            influencer_id: item.influencer_id,
+            profile_id: item.profile_id,
+            unified_id: item.unified_id,
+            source_shortlist_item_id: item.item_id,
+            creator_name: c?.display_name ?? null,
+            platform: p?.platform ?? null,
+            handle: p?.handle ?? null,
+            followers: c?.metrics.followers.value ?? p?.follower_count ?? null,
+            engagement_rate: c?.metrics.engagement_rate.value ?? p?.engagement_rate ?? null,
+            country_code: c?.country_code ?? c?.estimated_country ?? null,
+            cost_currency: c?.suggested_currency ?? "EGP",
+          };
+        }),
+      });
       if (!res.ok) {
         toast.error(res.message);
         return;
@@ -160,6 +214,56 @@ export function ShortlistWorkspace({
       toast.success(res.message ?? "Quotation created.");
       if (res.data?.id) router.push(quotationDetailPath(res.data.id));
     });
+  }
+
+  function handleSubmitForReview() {
+    if (selectedCount > 0) {
+      runAction(async () =>
+        bulkSubmitCreatorsForReview(detail.id, selectedItemIdList)
+      );
+      return;
+    }
+    setSubmitAllOpen(true);
+  }
+
+  function handleSubmitEntireShortlist() {
+    runAction(async () => {
+      const result = await submitEntireShortlistForReview(detail.id);
+      if (result.ok) {
+        setSubmitAllOpen(false);
+        clearSelection();
+      }
+      return result;
+    });
+  }
+
+  function handleBulkRemove() {
+    runAction(async () => {
+      const result = await bulkRemoveCreatorsFromShortlist(detail.id, selectedItemIdList);
+      if (result.ok) clearSelection();
+      return result;
+    });
+  }
+
+  function handleBulkMove() {
+    const eligible = filterEligibleForMove(selectedItems);
+    if (eligible.length === 0) {
+      toast.error("Selected creators must be approved before moving to a campaign.");
+      return;
+    }
+    setMoveOpen(true);
+  }
+
+  function handleBulkApprove() {
+    runAction(() => bulkApproveCreators(detail.id, selectedItemIdList));
+  }
+
+  function handleBulkReject() {
+    runAction(() => bulkRejectCreators(detail.id, selectedItemIdList));
+  }
+
+  function handleBulkCancel() {
+    runAction(() => bulkCancelCreators(detail.id, selectedItemIdList));
   }
 
   function runAction(action: () => Promise<{ ok: boolean; message?: string }>) {
@@ -223,8 +327,8 @@ export function ShortlistWorkspace({
               {detail.status === "draft" ? (
                 <Button
                   size="sm"
-                  onClick={() => runAction(() => submitShortlistForReview(detail.id))}
-                  disabled={isPending}
+                  onClick={handleSubmitForReview}
+                  disabled={isPending || detail.creators.length === 0}
                 >
                   <SendIcon className="size-4" />
                   Submit for review
@@ -249,13 +353,9 @@ export function ShortlistWorkspace({
                   </Button>
                 </>
               ) : null}
-              {detail.status === "approved" ? (
-                <Button
-                  size="sm"
-                  onClick={() => setMoveOpen(true)}
-                  disabled={isPending || selectedItemIds.length === 0}
-                >
-                  Move to campaign ({selectedItemIds.length})
+              {detail.status === "approved" && selectedCount > 0 ? (
+                <Button size="sm" onClick={handleBulkMove} disabled={isPending}>
+                  Move to campaign ({selectedCount})
                 </Button>
               ) : null}
               {detail.status === "cancelled" ? (
@@ -298,14 +398,32 @@ export function ShortlistWorkspace({
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle>Creators ({detail.creators.length})</CardTitle>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <CardTitle>Creators ({detail.creators.length})</CardTitle>
+                {selectable ? (
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={allSelected ? true : indeterminate ? "indeterminate" : false}
+                      onCheckedChange={(value) =>
+                        setSelectedIds(
+                          toggleSelectAll(visibleItemIds, effectiveSelectedIds, Boolean(value))
+                        )
+                      }
+                      aria-label="Select all creators"
+                    />
+                    Select all
+                  </label>
+                ) : null}
+                {selectedCount > 0 ? (
+                  <span className="text-xs font-medium text-primary">
+                    {selectedCount} selected
+                  </span>
+                ) : null}
+              </div>
               <CardDescription>
-                {movable
-                  ? "Select creators, then move them to a campaign."
-                  : editable
-                    ? "Search and add creators, compare, then submit for review."
-                    : "Creators are locked in the current status."}
+                Select creators for bulk actions. Status badges show each creator&apos;s
+                review progress.
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -315,37 +433,29 @@ export function ShortlistWorkspace({
                   Add creators
                 </Button>
               ) : null}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCompare}
-                disabled={detail.creators.length < 2}
-              >
-                <GitCompareArrowsIcon className="size-4" />
-                Compare
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleExport}
-                disabled={detail.creators.length === 0}
-              >
-                <DownloadIcon className="size-4" />
-                Export
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleGenerateQuotation}
-                disabled={detail.creators.length === 0 || isPending}
-              >
-                <FileTextIcon className="size-4" />
-                Generate Quotation
-              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
+          <ShortlistBulkToolbar
+            selectedCount={selectedCount}
+            showSubmit={editable}
+            showStatusActions={detail.status === "under_review" && detail.canApprove}
+            showMove={movable}
+            busy={isPending}
+            onSubmitSelected={() =>
+              runAction(() => bulkSubmitCreatorsForReview(detail.id, selectedItemIdList))
+            }
+            onRemoveSelected={handleBulkRemove}
+            onCompareSelected={handleCompare}
+            onExportSelected={handleExport}
+            onMoveSelected={handleBulkMove}
+            onGenerateQuotation={handleGenerateQuotation}
+            onApproveSelected={handleBulkApprove}
+            onRejectSelected={handleBulkReject}
+            onCancelSelected={handleBulkCancel}
+            onClearSelection={clearSelection}
+          />
           {detail.creators.length === 0 ? (
             <div className="space-y-3 py-10 text-center">
               <p className="text-sm text-muted-foreground">
@@ -364,27 +474,34 @@ export function ShortlistWorkspace({
           ) : (
             detail.creators.map((item) => {
               const platform = item.creator?.platforms?.[0];
+              const isSelected = effectiveSelectedIds.has(item.item_id);
               return (
                 <div
                   key={item.item_id}
-                  className="flex items-center gap-3 rounded-2xl border border-border px-3 py-2"
+                  className={`flex items-center gap-3 rounded-2xl border px-3 py-2 transition ${
+                    isSelected
+                      ? "border-primary/40 bg-primary/5"
+                      : "border-border"
+                  }`}
                 >
                   {selectable ? (
                     <Checkbox
-                      checked={Boolean(selected[item.item_id])}
+                      checked={isSelected}
                       onCheckedChange={(value) =>
-                        setSelected((prev) => ({
-                          ...prev,
-                          [item.item_id]: Boolean(value),
-                        }))
+                        setSelectedIds(
+                          toggleItemSelection(effectiveSelectedIds, item.item_id, Boolean(value))
+                        )
                       }
-                      aria-label="Select creator"
+                      aria-label={`Select ${item.creator?.display_name ?? "creator"}`}
                     />
                   ) : null}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {item.creator?.display_name ?? "Unknown creator"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-medium">
+                        {item.creator?.display_name ?? "Unknown creator"}
+                      </p>
+                      <ShortlistItemStatusBadge status={item.item_status} />
+                    </div>
                     <p className="truncate text-xs text-muted-foreground">
                       {platform
                         ? `${platform.platform} · @${platform.handle}`
@@ -493,9 +610,21 @@ export function ShortlistWorkspace({
         onOpenChange={setMoveOpen}
         shortlistId={detail.id}
         shortlistName={detail.name}
-        selectedItemIds={selectedItemIds}
+        selectedItemIds={
+          selectedItemIdList.length > 0
+            ? filterEligibleForMove(selectedItems).map((item) => item.item_id)
+            : []
+        }
         campaigns={campaigns}
         brands={brands}
+      />
+
+      <SubmitShortlistDialog
+        open={submitAllOpen}
+        onOpenChange={setSubmitAllOpen}
+        creatorCount={detail.creators.length}
+        onConfirm={handleSubmitEntireShortlist}
+        busy={isPending}
       />
 
       <AddCreatorsDrawer

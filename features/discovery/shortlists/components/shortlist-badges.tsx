@@ -2,12 +2,14 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type {
   CampaignShortlistAssignmentStatus,
+  ShortlistItemStatus,
   ShortlistStatus,
   ShortlistVisibilityV2,
 } from "@/types/database";
 
 import {
   ASSIGNMENT_STATUS_LABELS,
+  SHORTLIST_ITEM_STATUS_LABELS,
   SHORTLIST_STATUS_LABELS,
   SHORTLIST_VISIBILITY_LABELS,
 } from "../constants";
@@ -36,6 +38,27 @@ export function ShortlistVisibilityBadge({
   return (
     <Badge variant="outline" className="text-muted-foreground">
       {SHORTLIST_VISIBILITY_LABELS[visibility]}
+    </Badge>
+  );
+}
+
+const ITEM_STATUS_CLASSES: Record<ShortlistItemStatus, string> = {
+  draft: "bg-muted text-muted-foreground",
+  under_review: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  approved: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  rejected: "bg-destructive/10 text-destructive",
+  moved_to_campaign: "bg-primary/15 text-primary",
+  cancelled: "bg-muted text-muted-foreground line-through",
+};
+
+export function ShortlistItemStatusBadge({
+  status,
+}: {
+  status: ShortlistItemStatus;
+}) {
+  return (
+    <Badge variant="ghost" className={cn(ITEM_STATUS_CLASSES[status])}>
+      {SHORTLIST_ITEM_STATUS_LABELS[status]}
     </Badge>
   );
 }

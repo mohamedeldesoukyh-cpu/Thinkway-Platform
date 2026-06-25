@@ -55,6 +55,27 @@ export const ASSIGNMENT_STATUS_LABELS: Record<
   removed: "Removed",
 };
 
+export const SHORTLIST_ITEM_STATUSES = [
+  "draft",
+  "under_review",
+  "approved",
+  "rejected",
+  "moved_to_campaign",
+  "cancelled",
+] as const;
+
+export const SHORTLIST_ITEM_STATUS_LABELS: Record<
+  (typeof SHORTLIST_ITEM_STATUSES)[number],
+  string
+> = {
+  draft: "Draft",
+  under_review: "Under Review",
+  approved: "Approved",
+  rejected: "Rejected",
+  moved_to_campaign: "Moved To Campaign",
+  cancelled: "Cancelled",
+};
+
 /** Permission slugs powering shortlist authorization (spec §16). */
 export const SHORTLIST_PERMISSIONS = {
   /** Discovery User — create/edit own drafts, add creators. */

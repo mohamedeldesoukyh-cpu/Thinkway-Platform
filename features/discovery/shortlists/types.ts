@@ -1,6 +1,7 @@
 import type {
   CampaignShortlistAssignmentStatus,
   CreatorMovementAction,
+  ShortlistItemStatus,
   ShortlistStatus,
   ShortlistVisibilityV2,
 } from "@/types/database";
@@ -28,6 +29,7 @@ export type ShortlistListRow = {
 
 export type ShortlistCreatorItem = {
   item_id: string;
+  item_status: ShortlistItemStatus;
   notes: string | null;
   match_score: number | null;
   unified_id: string | null;
