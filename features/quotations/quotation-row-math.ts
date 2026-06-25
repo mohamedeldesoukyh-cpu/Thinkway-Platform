@@ -4,6 +4,7 @@
  * always match the visible row values.
  */
 import {
+  computeAgencyFee,
   computeCommercials,
   type CommercialInputMode,
 } from "@/lib/commercial/commercial-engine";
@@ -20,6 +21,7 @@ export type QuotationRowDraft = {
   gpPct: number;
   revenue: number;
   gpValue: number;
+  afPct: number;
   fxRateToEgp: number;
 };
 
@@ -30,6 +32,11 @@ export type QuotationRowComputed = {
   gpPct: number;
   revenue: number;
   gpValue: number;
+  afPct: number;
+  afValue: number;
+  afValueEgp: number;
+  agencyMargin: number;
+  agencyMarginEgp: number;
   valid: boolean;
   warning: string | null;
 };
@@ -51,6 +58,7 @@ export function draftFromQuotationItem(item: QuotationItemRow): QuotationRowDraf
     gpPct: item.gp_pct,
     revenue: item.revenue,
     gpValue: item.gp_value,
+    afPct: item.af_pct,
     fxRateToEgp: item.fx_rate_to_egp,
   };
 }
@@ -74,7 +82,14 @@ export function computeQuotationRowComputed(draft: QuotationRowDraft): Quotation
     revenue: draft.revenue,
     gpValue: draft.gpValue,
   });
+  const af = computeAgencyFee({
+    revenue: r.revenue,
+    afPct: draft.afPct,
+    gpValue: r.gpValue,
+  });
   const rate = effectiveFxRate(draft);
+  const afValueEgp = toEgp(af.afValue, rate);
+  const agencyMarginEgp = toEgp(af.agencyMargin, rate);
   return {
     costEgp: toEgp(r.cost, rate),
     revenueEgp: toEgp(r.revenue, rate),
@@ -82,6 +97,11 @@ export function computeQuotationRowComputed(draft: QuotationRowDraft): Quotation
     gpPct: r.gpPct,
     revenue: r.revenue,
     gpValue: r.gpValue,
+    afPct: af.afPct,
+    afValue: af.afValue,
+    afValueEgp,
+    agencyMargin: af.agencyMargin,
+    agencyMarginEgp,
     valid: r.valid,
     warning: r.warning,
   };
@@ -97,6 +117,7 @@ export function computeLiveQuotationTotals(
       cost_egp: row.costEgp,
       revenue_egp: row.revenueEgp,
       gp_value_egp: row.gpValueEgp,
+      af_value_egp: row.afValueEgp,
     };
   });
   return computeQuotationTotals(lines);

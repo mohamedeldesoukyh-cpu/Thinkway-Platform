@@ -16,6 +16,10 @@
  *   GP Value = Revenue - Cost
  *   GP%      = GP Value / Revenue      (margin on revenue)
  *
+ * Agency Fee (AF) on quotations / client cost:
+ *   AF Value         = Revenue × (AF% / 100)
+ *   Agency Margin    = GP Value + AF Value   (total agency earnings on the line)
+ *
  * GP% is stored/exchanged as a PERCENT number (e.g. 25 means 25%). Internally we
  * convert to a fraction for math. GP% must be in [0, 100) — 100%+ implies
  * infinite/negative revenue and is rejected.
@@ -73,6 +77,38 @@ const EMPTY: CommercialResult = {
 
 /** GP% upper guard: must be strictly below 100% (revenue would be ∞/negative). */
 export const MAX_GP_PCT = 100;
+
+export type AgencyFeeInput = {
+  /** Client cost (revenue) in line currency. */
+  revenue: number | null | undefined;
+  /** Percent value 0..100 (e.g. 10 = 10%). */
+  afPct?: number | null | undefined;
+};
+
+export type AgencyFeeResult = {
+  afPct: number;
+  afValue: number;
+  /** GP Value + AF Value (total agency margin on the line). */
+  agencyMargin: number;
+};
+
+/**
+ * Agency Fee (AF) from client cost (revenue).
+ * AF Value = Revenue × (AF% / 100); Agency Margin = GP Value + AF Value.
+ */
+export function computeAgencyFee(
+  input: AgencyFeeInput & { gpValue?: number | null | undefined }
+): AgencyFeeResult {
+  const revenue = round2(toNumber(input.revenue));
+  const afPct = round4(Math.max(0, toNumber(input.afPct)));
+  const afValue = round2(revenue === 0 || afPct === 0 ? 0 : (revenue * afPct) / 100);
+  const gpValue = round2(toNumber(input.gpValue));
+  return {
+    afPct,
+    afValue,
+    agencyMargin: round2(gpValue + afValue),
+  };
+}
 
 export function computeCommercials(input: CommercialInput): CommercialResult {
   const cost = round2(toNumber(input.cost));

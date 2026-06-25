@@ -62,6 +62,7 @@ export type QuotationItemSeed = {
   gp_pct?: number | null;
   revenue?: number | null;
   gp_value?: number | null;
+  af_pct?: number | null;
 };
 
 async function buildItemRows(
@@ -89,6 +90,7 @@ async function buildItemRows(
       gpPct: seed.gp_pct,
       revenue: seed.revenue,
       gpValue: seed.gp_value,
+      afPct: seed.af_pct,
       fxRateToEgp: rate,
     });
     rows.push({
@@ -110,10 +112,13 @@ async function buildItemRows(
       revenue: line.revenue,
       gp_pct: line.gp_pct,
       gp_value: line.gp_value,
+      af_pct: line.af_pct,
+      af_value: line.af_value,
       fx_rate_to_egp: line.fx_rate_to_egp,
       cost_egp: line.cost_egp,
       revenue_egp: line.revenue_egp,
       gp_value_egp: line.gp_value_egp,
+      af_value_egp: line.af_value_egp,
       sort_order: sort++,
     });
   }
@@ -124,7 +129,7 @@ async function buildItemRows(
 async function recomputeTotals(supabase: Supabase, quotationId: string) {
   const { data } = await supabase
     .from("quotation_items")
-    .select("cost_egp, revenue_egp, gp_value_egp")
+    .select("cost_egp, revenue_egp, gp_value_egp, af_value_egp")
     .eq("quotation_id", quotationId);
 
   const totals = computeQuotationTotals(
@@ -132,6 +137,7 @@ async function recomputeTotals(supabase: Supabase, quotationId: string) {
       cost_egp: Number((r as { cost_egp: number }).cost_egp ?? 0),
       revenue_egp: Number((r as { revenue_egp: number }).revenue_egp ?? 0),
       gp_value_egp: Number((r as { gp_value_egp: number }).gp_value_egp ?? 0),
+      af_value_egp: Number((r as { af_value_egp: number }).af_value_egp ?? 0),
     }))
   );
 
@@ -142,6 +148,8 @@ async function recomputeTotals(supabase: Supabase, quotationId: string) {
       total_revenue_egp: totals.totalRevenueEgp,
       total_gp_value_egp: totals.totalGpValueEgp,
       total_gp_pct: totals.totalGpPct,
+      total_af_egp: totals.totalAfValueEgp,
+      total_agency_margin_egp: totals.totalAgencyMarginEgp,
     } as never)
     .eq("id", quotationId);
 
@@ -545,6 +553,7 @@ export async function updateQuotationItemCommercials(input: {
   gp_pct?: number | null;
   revenue?: number | null;
   gp_value?: number | null;
+  af_pct?: number | null;
   deliverables?: QuotationDeliverable[];
 }): Promise<
   ActionResult<{
@@ -563,6 +572,7 @@ export async function updateQuotationItemCommercials(input: {
     gpPct: input.gp_pct,
     revenue: input.revenue,
     gpValue: input.gp_value,
+    afPct: input.af_pct,
     fxRateToEgp: rate,
   });
 
@@ -573,10 +583,13 @@ export async function updateQuotationItemCommercials(input: {
     revenue: line.revenue,
     gp_pct: line.gp_pct,
     gp_value: line.gp_value,
+    af_pct: line.af_pct,
+    af_value: line.af_value,
     fx_rate_to_egp: line.fx_rate_to_egp,
     cost_egp: line.cost_egp,
     revenue_egp: line.revenue_egp,
     gp_value_egp: line.gp_value_egp,
+    af_value_egp: line.af_value_egp,
   };
   if (input.deliverables) patch.deliverables = input.deliverables;
 

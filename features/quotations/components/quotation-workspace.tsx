@@ -158,6 +158,9 @@ function exportSelectedCsv(
     QUOTATION_CLIENT_LABELS.clientCostEgp,
     "GP EGP",
     "GP%",
+    "AF%",
+    "AF EGP",
+    "Agency Margin EGP",
   ];
   const rows = items
     .filter((item) => selectedIds.has(item.id))
@@ -176,6 +179,9 @@ function exportSelectedCsv(
         computed?.revenueEgp ?? item.revenue_egp,
         computed?.gpValueEgp ?? item.gp_value_egp,
         computed?.gpPct ?? item.gp_pct,
+        computed?.afPct ?? item.af_pct,
+        computed?.afValueEgp ?? item.af_value_egp,
+        computed?.agencyMarginEgp ?? item.gp_value_egp + item.af_value_egp,
       ];
     });
   const csv = [headers, ...rows]
@@ -423,6 +429,8 @@ export function QuotationWorkspace({
             totalRevenueEgp={totals.totalRevenueEgp}
             totalGpValueEgp={totals.totalGpValueEgp}
             totalGpPct={totals.totalGpPct}
+            totalAfEgp={totals.totalAfValueEgp}
+            totalAgencyMarginEgp={totals.totalAgencyMarginEgp}
             gpTargetPct={detail.gp_target_pct}
           />
         </div>
@@ -519,6 +527,11 @@ export function QuotationWorkspace({
                     <TableHead className="w-[120px] text-right">{QUOTATION_CLIENT_LABELS.clientCost}</TableHead>
                     <TableHead className="w-[100px] text-right">GP</TableHead>
                     <TableHead className="w-[88px] text-right">GP%</TableHead>
+                    <TableHead className="w-[72px] text-right">AF%</TableHead>
+                    <TableHead className="w-[100px] text-right">AF</TableHead>
+                    <TableHead className="w-[110px] text-right">
+                      {QUOTATION_CLIENT_LABELS.totalAgencyMargin}
+                    </TableHead>
                     <TableHead className="w-[72px]">Status</TableHead>
                     <TableHead className="w-[56px]" />
                   </TableRow>
@@ -575,6 +588,13 @@ export function QuotationWorkspace({
                       )}
                     >
                       {totals.totalGpPct.toFixed(1)}%
+                    </TableCell>
+                    <TableCell />
+                    <TableCell className="text-right tabular-nums text-sm">
+                      {egp(totals.totalAfValueEgp)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-sm font-semibold">
+                      {egp(totals.totalAgencyMarginEgp)}
                     </TableCell>
                     <TableCell colSpan={2} />
                   </TableRow>
@@ -806,6 +826,7 @@ function CommercialRow({
   const gpPct = draft?.gpPct ?? item.gp_pct;
   const revenue = draft?.revenue ?? item.revenue;
   const gpValue = draft?.gpValue ?? item.gp_value;
+  const afPct = draft?.afPct ?? item.af_pct;
   const fxRate = draft?.fxRateToEgp ?? item.fx_rate_to_egp;
 
   const computed = useMemo(
@@ -818,9 +839,10 @@ function CommercialRow({
         gpPct,
         revenue,
         gpValue,
+        afPct,
         fxRateToEgp: fxRate,
       }),
-    [item.id, mode, cost, costCurrency, gpPct, revenue, gpValue, fxRate]
+    [item.id, mode, cost, costCurrency, gpPct, revenue, gpValue, afPct, fxRate]
   );
 
   const { status, schedule } = useDebouncedAutosave<{
@@ -830,6 +852,7 @@ function CommercialRow({
     gp_pct?: number | null;
     revenue?: number | null;
     gp_value?: number | null;
+    af_pct?: number | null;
   }>(async (payload) => {
     const res = await updateQuotationItemCommercials({
       item_id: item.id,
@@ -855,6 +878,7 @@ function CommercialRow({
         gpPct: patch.gpPct ?? gpPct,
         revenue: patch.revenue ?? revenue,
         gpValue: patch.gpValue ?? gpValue,
+        afPct: patch.afPct ?? afPct,
         fxRateToEgp:
           patch.costCurrency && patch.costCurrency !== "EGP" && patch.costCurrency !== costCurrency
             ? 1
@@ -868,6 +892,7 @@ function CommercialRow({
         gp_pct: next.gpPct,
         revenue: next.revenue,
         gp_value: next.gpValue,
+        af_pct: next.afPct,
       });
     },
     [
@@ -877,6 +902,7 @@ function CommercialRow({
       gpPct,
       revenue,
       gpValue,
+      afPct,
       fxRate,
       item.id,
       onDraftChange,
@@ -1043,6 +1069,23 @@ function CommercialRow({
         ) : (
           <span className="tabular-nums">{computed.gpPct.toFixed(1)}%</span>
         )}
+      </TableCell>
+      <TableCell className="text-right text-xs">
+        <div className="flex items-center justify-end gap-0.5">
+          <Input
+            className="h-8 w-[56px] text-xs"
+            inputMode="decimal"
+            value={String(afPct || "")}
+            onChange={(e) => triggerSave({ afPct: parseNum(e.target.value) })}
+          />
+          <span className="text-[10px] text-muted-foreground">%</span>
+        </div>
+      </TableCell>
+      <TableCell className="text-right tabular-nums text-xs">
+        {egp(computed.afValueEgp, 2)}
+      </TableCell>
+      <TableCell className="text-right tabular-nums text-xs font-medium">
+        {egp(computed.agencyMarginEgp, 2)}
       </TableCell>
       <TableCell>
         <SaveIndicator status={status} />

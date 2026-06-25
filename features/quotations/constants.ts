@@ -42,6 +42,10 @@ export const QUOTATION_CLIENT_LABELS = {
   clientCostEgp: "Client cost EGP",
   totalClientCost: "Total client cost",
   clientInvestment: "Client investment",
+  agencyFee: "Agency fee (AF)",
+  agencyFeePct: "AF %",
+  totalAgencyFee: "Total agency fee",
+  totalAgencyMargin: "Total agency margin",
 } as const;
 
 /** Default GP% target for healthy/warning styling in the quotation workspace. */

@@ -33,6 +33,9 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     cost_egp: 1000,
     revenue_egp: 1250,
     gp_value_egp: 250,
+    af_pct: 0,
+    af_value: 0,
+    af_value_egp: 0,
     sort_order: 0,
     ...overrides,
   };
@@ -71,6 +74,7 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     gpPct: 25,
     revenue: 0,
     gpValue: 0,
+    afPct: 0,
     fxRateToEgp: 50,
   };
   const b: QuotationRowDraft = {
@@ -81,6 +85,7 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     gpPct: 0,
     revenue: 0,
     gpValue: 4000,
+    afPct: 0,
     fxRateToEgp: 1,
   };
   const rowA = computeQuotationRowComputed(a);
@@ -105,6 +110,7 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     gpPct: 20,
     revenue: 0,
     gpValue: 0,
+    afPct: 0,
     fxRateToEgp: 48.5,
   };
   const row = computeQuotationRowComputed(draft);
@@ -139,6 +145,7 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     gpPct: 0,
     revenue: 1200,
     gpValue: 0,
+    afPct: 0,
     fxRateToEgp: 1,
   };
   const row = computeQuotationRowComputed(draft);
@@ -159,6 +166,7 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     gpPct: 25,
     revenue: 0,
     gpValue: 0,
+    afPct: 0,
     fxRateToEgp: 1, // optimistic until server responds
   };
   const optimistic = computeQuotationRowComputed(before);
@@ -170,6 +178,27 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
   assert.equal(refreshed.revenueEgp, 6666.5);
   const totals = computeLiveQuotationTotals([afterSave]);
   assert.equal(totals.totalCostEgp, refreshed.costEgp);
+}
+
+// AF from revenue × AF%
+{
+  const draft: QuotationRowDraft = {
+    id: "af",
+    mode: "cost_revenue",
+    cost: 800,
+    costCurrency: "EGP",
+    gpPct: 0,
+    revenue: 1200,
+    gpValue: 0,
+    afPct: 10,
+    fxRateToEgp: 1,
+  };
+  const row = computeQuotationRowComputed(draft);
+  assert.equal(row.afValueEgp, 120);
+  assert.equal(row.agencyMarginEgp, 520);
+  const totals = computeLiveQuotationTotals([draft]);
+  assert.equal(totals.totalAfValueEgp, 120);
+  assert.equal(totals.totalAgencyMarginEgp, totals.totalGpValueEgp + 120);
 }
 
 console.log("quotation-row-math.test.ts: all assertions passed");

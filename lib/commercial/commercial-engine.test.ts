@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  computeAgencyFee,
   computeCommercials,
   MAX_GP_PCT,
 } from "@/lib/commercial/commercial-engine";
@@ -159,16 +160,25 @@ assert.equal(toEgp(500, null), 500);
 assert.equal(formatDualCurrency({ amount: 500, currency: "USD", egpAmount: 25000 }), "500 USD / 25,000 EGP");
 assert.equal(formatDualCurrency({ amount: 1000, currency: "EGP", egpAmount: 1000 }), "1,000 EGP");
 
+// Agency fee from client cost (revenue)
+{
+  const af = computeAgencyFee({ revenue: 10000, afPct: 10, gpValue: 2500 });
+  assert.equal(af.afValue, 1000);
+  assert.equal(af.agencyMargin, 3500);
+}
+
 // Blended totals across mixed currencies (already converted to EGP)
 {
   const totals = aggregateEgpTotals([
-    { costEgp: 25000, revenueEgp: 33333.33, gpValueEgp: 8333.33 }, // 500 USD line
-    { costEgp: 6000, revenueEgp: 10000, gpValueEgp: 4000 }, // 6000 EGP line
+    { costEgp: 25000, revenueEgp: 33333.33, gpValueEgp: 8333.33, afValueEgp: 3333.33 },
+    { costEgp: 6000, revenueEgp: 10000, gpValueEgp: 4000, afValueEgp: 1000 },
   ]);
   assert.equal(totals.lineCount, 2);
   assert.equal(totals.totalCostEgp, 31000);
   assert.equal(totals.totalRevenueEgp, 43333.33);
   assert.equal(totals.totalGpValueEgp, 12333.33);
+  assert.equal(totals.totalAfValueEgp, 4333.33);
+  assert.equal(totals.totalAgencyMarginEgp, 16666.66);
   // Blended GP% = 12333.33 / 43333.33 * 100 ≈ 28.4615
   assert.ok(Math.abs(totals.totalGpPct - 28.4615) < 0.01);
 }
@@ -178,6 +188,8 @@ assert.equal(formatDualCurrency({ amount: 1000, currency: "EGP", egpAmount: 1000
   const totals = aggregateEgpTotals([]);
   assert.equal(totals.totalRevenueEgp, 0);
   assert.equal(totals.totalGpPct, 0);
+  assert.equal(totals.totalAfValueEgp, 0);
+  assert.equal(totals.totalAgencyMarginEgp, 0);
   assert.equal(totals.lineCount, 0);
 }
 

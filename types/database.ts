@@ -2254,6 +2254,8 @@ export type Database = {
           total_revenue_egp: number;
           total_gp_value_egp: number;
           total_gp_pct: number;
+          total_af_egp: number;
+          total_agency_margin_egp: number;
           notes: string | null;
           terms: string | null;
           prepared_by_name: string | null;
@@ -2297,6 +2299,8 @@ export type Database = {
           total_revenue_egp?: number;
           total_gp_value_egp?: number;
           total_gp_pct?: number;
+          total_af_egp?: number;
+          total_agency_margin_egp?: number;
           notes?: string | null;
           terms?: string | null;
           prepared_by_name?: string | null;
@@ -2370,6 +2374,9 @@ export type Database = {
           cost_egp: number;
           revenue_egp: number;
           gp_value_egp: number;
+          af_pct: number;
+          af_value: number;
+          af_value_egp: number;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -2398,6 +2405,9 @@ export type Database = {
           cost_egp?: number;
           revenue_egp?: number;
           gp_value_egp?: number;
+          af_pct?: number;
+          af_value?: number;
+          af_value_egp?: number;
           sort_order?: number;
         };
         Update: Partial<

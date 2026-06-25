@@ -142,6 +142,9 @@ function mapItem(raw: Record<string, unknown>): QuotationItemRow {
     cost_egp: Number(raw.cost_egp ?? 0),
     revenue_egp: Number(raw.revenue_egp ?? 0),
     gp_value_egp: Number(raw.gp_value_egp ?? 0),
+    af_pct: Number(raw.af_pct ?? 0),
+    af_value: Number(raw.af_value ?? 0),
+    af_value_egp: Number(raw.af_value_egp ?? 0),
     sort_order: Number(raw.sort_order ?? 0),
   };
 }
@@ -172,6 +175,7 @@ export async function getQuotationDetail(
       `id, serial_number, name, status, shortlist_id, client_id, brand_id,
        campaign_header_id, owner_id, approved_by, approved_at, currency,
        total_cost_egp, total_revenue_egp, total_gp_value_egp, total_gp_pct,
+       total_af_egp, total_agency_margin_egp,
        gp_target_pct, notes, terms, prepared_by_name, reviewed_by_name,
        client_signature_name, client_signed_at, client_visible, shared_with_client,
        issue_date, validity_date, version, department, change_summary,
@@ -227,6 +231,8 @@ export async function getQuotationDetail(
     total_revenue_egp: Number(row.total_revenue_egp ?? 0),
     total_gp_value_egp: Number(row.total_gp_value_egp ?? 0),
     total_gp_pct: Number(row.total_gp_pct ?? 0),
+    total_af_egp: Number(row.total_af_egp ?? 0),
+    total_agency_margin_egp: Number(row.total_agency_margin_egp ?? 0),
     gp_target_pct: Number(row.gp_target_pct ?? 25),
     notes: (row.notes as string | null) ?? null,
     terms: (row.terms as string | null) ?? null,

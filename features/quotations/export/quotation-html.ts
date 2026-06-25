@@ -13,13 +13,24 @@ function esc(value: string | null | undefined): string {
     .replace(/>/g, "&gt;");
 }
 
+function clientColumnCount(doc: QuotationDocument): number {
+  return doc.audience === "internal" ? 12 : 9;
+}
+
 function renderRows(doc: QuotationDocument): string {
+  const colspan = clientColumnCount(doc);
   if (!doc.rows.length) {
-    return `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No creators added yet.</td></tr>`;
+    return `<tr><td colspan="${colspan}" style="text-align:center;color:var(--muted);padding:24px">No creators added yet.</td></tr>`;
   }
   return doc.rows
-    .map(
-      (r) => `
+    .map((r) => {
+      const internalCells =
+        doc.audience === "internal"
+          ? `<td class="num">${esc(r.unitCost)}</td>
+        <td class="num" style="color:${r.gpColor}">${esc(r.gp)}</td>
+        <td class="num" style="color:${r.gpColor}">${esc(r.gpPct)}</td>`
+          : "";
+      return `
       <tr class="avoid-break">
         <td class="creator">${esc(r.creator)}</td>
         <td>${esc(r.platform)}</td>
@@ -27,13 +38,40 @@ function renderRows(doc: QuotationDocument): string {
         <td class="num">${esc(r.engagementRate)}</td>
         <td>${esc(r.country)}</td>
         <td>${esc(r.deliverables)}</td>
-        <td class="num">${esc(r.unitCost)}</td>
-        <td class="num">${esc(r.revenue)}</td>
-        <td class="num" style="color:${r.gpColor}">${esc(r.gp)}</td>
-        <td class="num" style="color:${r.gpColor}">${esc(r.gpPct)}</td>
-      </tr>`
-    )
+        ${internalCells}
+        <td class="num">${esc(r.clientCost)}</td>
+        <td class="num">${esc(r.af)}</td>
+        <td class="num">${esc(r.afPct)}</td>
+      </tr>`;
+    })
     .join("");
+}
+
+function renderTableHead(doc: QuotationDocument): string {
+  const internalHeaders =
+    doc.audience === "internal"
+      ? `<th class="num">Unit Cost</th><th class="num">GP</th><th class="num">GP%</th>`
+      : "";
+  return `
+            <th>Creator</th><th>Platform</th><th class="num">Followers</th>
+            <th class="num">ER</th><th>Country</th><th>Deliverables</th>
+            ${internalHeaders}
+            <th class="num">${esc(QUOTATION_CLIENT_LABELS.clientCost)}</th>
+            <th class="num">${esc(QUOTATION_CLIENT_LABELS.agencyFee)}</th>
+            <th class="num">${esc(QUOTATION_CLIENT_LABELS.agencyFeePct)}</th>`;
+}
+
+function renderSummaryRows(doc: QuotationDocument): string {
+  const internalRows =
+    doc.audience === "internal" && doc.summary.totalCost
+      ? `<tr><td>Total Cost</td><td class="num">${esc(doc.summary.totalCost)}</td></tr>
+          <tr class="gp"><td>Gross Profit</td><td class="num" style="color:${doc.summary.gpColor}">${esc(doc.summary.totalGpValue)}</td></tr>
+          <tr class="gp"><td>GP %</td><td class="num" style="color:${doc.summary.gpColor}">${esc(doc.summary.totalGpPct)}</td></tr>`
+      : "";
+  return `${internalRows}
+          <tr class="total"><td>${esc(QUOTATION_CLIENT_LABELS.totalClientCost)}</td><td class="num">${esc(doc.summary.totalClientCost)}</td></tr>
+          <tr><td>${esc(QUOTATION_CLIENT_LABELS.totalAgencyFee)}</td><td class="num">${esc(doc.summary.totalAf)}</td></tr>
+          <tr class="total"><td>${esc(QUOTATION_CLIENT_LABELS.totalAgencyMargin)}</td><td class="num">${esc(doc.summary.totalAgencyMargin)}</td></tr>`;
 }
 
 function renderTerms(doc: QuotationDocument): string {
@@ -102,7 +140,7 @@ export function buildQuotationHtml(doc: QuotationDocument): string {
         <div class="hero-kpi avoid-break"><div class="label">Campaign</div><div class="value">${esc(doc.campaignName === "—" ? doc.name : doc.campaignName)}</div></div>
         <div class="hero-kpi avoid-break"><div class="label">Creators</div><div class="value">${doc.summary.creatorCount}</div></div>
         <div class="hero-kpi avoid-break"><div class="label">Est. Reach</div><div class="value">${esc(doc.summary.estimatedReach)}</div></div>
-        <div class="hero-kpi avoid-break"><div class="label">${esc(QUOTATION_CLIENT_LABELS.clientInvestment)}</div><div class="value">${esc(doc.summary.totalRevenue)}</div></div>
+        <div class="hero-kpi avoid-break"><div class="label">${esc(QUOTATION_CLIENT_LABELS.clientInvestment)}</div><div class="value">${esc(doc.summary.totalClientCost)}</div></div>
       </div>
     </section>
 
@@ -117,23 +155,13 @@ export function buildQuotationHtml(doc: QuotationDocument): string {
 
       <table class="data">
         <thead>
-          <tr>
-            <th>Creator</th><th>Platform</th><th class="num">Followers</th>
-            <th class="num">ER</th><th>Country</th><th>Deliverables</th>
-            <th class="num">Unit Cost</th><th class="num">${esc(QUOTATION_CLIENT_LABELS.clientCost)}</th>
-            <th class="num">GP</th><th class="num">GP%</th>
-          </tr>
+          <tr>${renderTableHead(doc)}</tr>
         </thead>
         <tbody>${renderRows(doc)}</tbody>
       </table>
 
       <div class="summary-box avoid-break">
-        <table>
-          <tr><td>Total Cost</td><td class="num">${esc(doc.summary.totalCost)}</td></tr>
-          <tr class="total"><td>${esc(QUOTATION_CLIENT_LABELS.totalClientCost)}</td><td class="num">${esc(doc.summary.totalRevenue)}</td></tr>
-          <tr class="gp"><td>Gross Profit</td><td class="num" style="color:${doc.summary.gpColor}">${esc(doc.summary.totalGpValue)}</td></tr>
-          <tr class="gp"><td>GP %</td><td class="num" style="color:${doc.summary.gpColor}">${esc(doc.summary.totalGpPct)}</td></tr>
-        </table>
+        <table>${renderSummaryRows(doc)}</table>
       </div>
     </section>
 

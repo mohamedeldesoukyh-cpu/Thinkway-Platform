@@ -22,6 +22,8 @@ type QuotationKpiStripProps = {
   totalRevenueEgp: number;
   totalGpValueEgp: number;
   totalGpPct: number;
+  totalAfEgp: number;
+  totalAgencyMarginEgp: number;
   gpTargetPct: number;
 };
 
@@ -51,6 +53,8 @@ export function QuotationKpiStrip({
   totalRevenueEgp,
   totalGpValueEgp,
   totalGpPct,
+  totalAfEgp,
+  totalAgencyMarginEgp,
   gpTargetPct,
 }: QuotationKpiStripProps) {
   const gpHealthInput = {
@@ -119,6 +123,22 @@ export function QuotationKpiStrip({
       icon: PercentIcon,
       accentClass: ACCENT_TILE.blue,
       valueClassName: gpValueClass,
+    },
+    {
+      id: "af",
+      label: QUOTATION_CLIENT_LABELS.totalAgencyFee,
+      value: egp(totalAfEgp),
+      icon: ReceiptIcon,
+      accentClass: ACCENT_TILE.purple,
+      valueClassName: NEUTRAL_VALUE,
+    },
+    {
+      id: "agency_margin",
+      label: QUOTATION_CLIENT_LABELS.totalAgencyMargin,
+      value: egp(totalAgencyMarginEgp),
+      icon: TrendingUpIcon,
+      accentClass: ACCENT_TILE.green,
+      valueClassName: NEUTRAL_VALUE,
     },
   ] satisfies {
     id: string;

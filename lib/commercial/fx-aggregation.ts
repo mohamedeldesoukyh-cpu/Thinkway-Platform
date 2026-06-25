@@ -62,6 +62,7 @@ export type CommercialLineEgp = {
   costEgp: number;
   revenueEgp: number;
   gpValueEgp: number;
+  afValueEgp?: number;
 };
 
 export type CommercialTotals = {
@@ -70,6 +71,10 @@ export type CommercialTotals = {
   totalGpValueEgp: number;
   /** Blended GP% = total GP value / total revenue, as a percent. 0 when no revenue. */
   totalGpPct: number;
+  /** Sum of line AF values (EGP). */
+  totalAfValueEgp: number;
+  /** Total GP + total AF (full agency margin). */
+  totalAgencyMarginEgp: number;
   lineCount: number;
 };
 
@@ -86,12 +91,18 @@ export function aggregateEgpTotals(lines: CommercialLineEgp[]): CommercialTotals
   const totalGpValueEgp = round2(totalRevenueEgp - totalCostEgp);
   const totalGpPct =
     totalRevenueEgp === 0 ? 0 : round4((totalGpValueEgp / totalRevenueEgp) * 100);
+  const totalAfValueEgp = round2(
+    lines.reduce((sum, l) => sum + safe(l.afValueEgp ?? 0), 0)
+  );
+  const totalAgencyMarginEgp = round2(totalGpValueEgp + totalAfValueEgp);
 
   return {
     totalCostEgp,
     totalRevenueEgp,
     totalGpValueEgp,
     totalGpPct,
+    totalAfValueEgp,
+    totalAgencyMarginEgp,
     lineCount: lines.length,
   };
 }

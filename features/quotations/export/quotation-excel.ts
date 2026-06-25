@@ -1,5 +1,6 @@
 /**
  * Quotation → styled Excel workbook (spreadsheet-optimized layout).
+ * Excel is internal-facing: includes Cost/GP plus AF columns.
  */
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import {
@@ -7,9 +8,13 @@ import {
   type StyledDataRow,
   type StyledSheetConfig,
 } from "@/lib/reports/document/excel-report-builder";
-import type { QuotationDocument } from "./quotation-document";
+import { buildQuotationDocument } from "./quotation-document";
 
-export async function buildQuotationExcel(doc: QuotationDocument): Promise<Buffer> {
+export async function buildQuotationExcel(
+  detail: import("../types").QuotationDetail
+): Promise<Buffer> {
+  const doc = buildQuotationDocument(detail, { audience: "internal" });
+
   const rows: StyledDataRow[] = doc.rows.map((r) => ({
     kind: "data",
     values: [
@@ -19,10 +24,12 @@ export async function buildQuotationExcel(doc: QuotationDocument): Promise<Buffe
       r.engagementRate,
       r.country,
       r.deliverables,
-      r.unitCost,
-      r.revenue,
-      r.gp,
-      r.gpPct,
+      r.unitCost ?? "",
+      r.clientCost,
+      r.gp ?? "",
+      r.gpPct ?? "",
+      r.af,
+      r.afPct,
     ],
   }));
 
@@ -35,10 +42,12 @@ export async function buildQuotationExcel(doc: QuotationDocument): Promise<Buffe
       doc.summary.estimatedEngagement,
       "",
       `${doc.summary.creatorCount} creators`,
-      doc.summary.totalCost,
-      doc.summary.totalRevenue,
-      doc.summary.totalGpValue,
-      doc.summary.totalGpPct,
+      doc.summary.totalCost ?? "",
+      doc.summary.totalClientCost,
+      doc.summary.totalGpValue ?? "",
+      doc.summary.totalGpPct ?? "",
+      doc.summary.totalAf,
+      "",
     ],
   });
 
@@ -70,10 +79,14 @@ export async function buildQuotationExcel(doc: QuotationDocument): Promise<Buffe
         QUOTATION_CLIENT_LABELS.clientCost,
         "GP",
         "GP%",
+        QUOTATION_CLIENT_LABELS.agencyFee,
+        QUOTATION_CLIENT_LABELS.agencyFeePct,
       ],
     ],
     rows,
     columnFormats: [
+      "text",
+      "text",
       "text",
       "text",
       "text",

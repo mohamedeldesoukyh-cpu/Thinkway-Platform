@@ -15,6 +15,8 @@ import {
 } from "@/features/quotations/quotation-validity";
 import type { QuotationDetail, QuotationItemRow } from "../types";
 
+export type QuotationDocumentAudience = "client" | "internal";
+
 export type QuotationDocRow = {
   creator: string;
   platform: string;
@@ -22,11 +24,16 @@ export type QuotationDocRow = {
   engagementRate: string;
   country: string;
   deliverables: string;
-  unitCost: string;
-  revenue: string;
-  gp: string;
-  gpPct: string;
-  gpColor: string;
+  /** Internal only — unit influencer cost. */
+  unitCost?: string;
+  /** Client cost (revenue). */
+  clientCost: string;
+  /** Internal only. */
+  gp?: string;
+  gpPct?: string;
+  gpColor?: string;
+  af: string;
+  afPct: string;
   currency: string;
 };
 
@@ -37,6 +44,7 @@ export type QuotationDocumentKpi = {
 };
 
 export type QuotationDocument = {
+  audience: QuotationDocumentAudience;
   serial: string;
   name: string;
   status: string;
@@ -58,11 +66,15 @@ export type QuotationDocument = {
   rows: QuotationDocRow[];
   commercialKpis: QuotationDocumentKpi[];
   summary: {
-    totalCost: string;
-    totalRevenue: string;
-    totalGpValue: string;
-    totalGpPct: string;
-    gpColor: string;
+    /** Internal only. */
+    totalCost?: string;
+    totalClientCost: string;
+    /** Internal only. */
+    totalGpValue?: string;
+    totalGpPct?: string;
+    gpColor?: string;
+    totalAf: string;
+    totalAgencyMargin: string;
     creatorCount: number;
     estimatedReach: string;
     estimatedEngagement: string;
@@ -87,7 +99,11 @@ function deliverablesLabel(item: QuotationItemRow): string {
     .join(", ");
 }
 
-export function buildQuotationDocument(detail: QuotationDetail): QuotationDocument {
+export function buildQuotationDocument(
+  detail: QuotationDetail,
+  options?: { audience?: QuotationDocumentAudience }
+): QuotationDocument {
+  const audience = options?.audience ?? "client";
   const expired = detail.is_expired || isQuotationExpired(detail.validity_date);
   const statusLabel =
     expired && detail.status === "draft"
@@ -100,7 +116,7 @@ export function buildQuotationDocument(detail: QuotationDetail): QuotationDocume
       gpPct: item.gp_pct,
       targetPct: detail.gp_target_pct,
     });
-    return {
+    const row: QuotationDocRow = {
       creator: item.creator_name ?? item.handle ?? "Creator",
       platform: item.platform ?? "—",
       followers: item.followers != null ? num(item.followers) : "—",
@@ -108,21 +124,30 @@ export function buildQuotationDocument(detail: QuotationDetail): QuotationDocume
         item.engagement_rate != null ? `${num(item.engagement_rate, 2)}%` : "—",
       country: item.country_code ?? "—",
       deliverables: deliverablesLabel(item),
-      unitCost: formatDualCurrency({
-        amount: item.cost,
-        currency: item.cost_currency,
-        egpAmount: item.cost_egp,
-      }),
-      revenue: formatDualCurrency({
+      clientCost: formatDualCurrency({
         amount: item.revenue,
         currency: item.cost_currency,
         egpAmount: item.revenue_egp,
       }),
-      gp: `${num(item.gp_value_egp, 2)} ${REPORTING_CURRENCY}`,
-      gpPct: `${num(item.gp_pct, 1)}%`,
-      gpColor: rowGpColor,
+      af: formatDualCurrency({
+        amount: item.af_value,
+        currency: item.cost_currency,
+        egpAmount: item.af_value_egp,
+      }),
+      afPct: `${num(item.af_pct, 1)}%`,
       currency: item.cost_currency,
     };
+    if (audience === "internal") {
+      row.unitCost = formatDualCurrency({
+        amount: item.cost,
+        currency: item.cost_currency,
+        egpAmount: item.cost_egp,
+      });
+      row.gp = `${num(item.gp_value_egp, 2)} ${REPORTING_CURRENCY}`;
+      row.gpPct = `${num(item.gp_pct, 1)}%`;
+      row.gpColor = rowGpColor;
+    }
+    return row;
   });
 
   const gpColor = gpHealthExportColor({
@@ -136,7 +161,33 @@ export function buildQuotationDocument(detail: QuotationDetail): QuotationDocume
       ? `${num(detail.estimated_engagement_rate, 2)}%`
       : "—";
 
+  const totalClientCost = `${num(detail.total_revenue_egp, 2)} ${REPORTING_CURRENCY}`;
+  const totalAf = `${num(detail.total_af_egp, 2)} ${REPORTING_CURRENCY}`;
+  const totalAgencyMargin = `${num(detail.total_agency_margin_egp, 2)} ${REPORTING_CURRENCY}`;
+
+  const clientKpis: QuotationDocumentKpi[] = [
+    { label: "Creators", value: String(detail.items.length) },
+    { label: "Est. Reach", value: num(detail.estimated_reach) },
+    { label: "Est. Engagement", value: avgEr },
+    { label: QUOTATION_CLIENT_LABELS.totalClientCost, value: totalClientCost },
+    { label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf },
+    { label: QUOTATION_CLIENT_LABELS.totalAgencyMargin, value: totalAgencyMargin },
+  ];
+
+  const internalKpis: QuotationDocumentKpi[] = [
+    ...clientKpis.slice(0, 3),
+    { label: "Total Cost", value: `${num(detail.total_cost_egp, 2)} ${REPORTING_CURRENCY}` },
+    ...clientKpis.slice(3),
+    {
+      label: "Gross Profit",
+      value: `${num(detail.total_gp_value_egp, 2)} ${REPORTING_CURRENCY}`,
+      valueColor: gpColor,
+    },
+    { label: "GP %", value: `${num(detail.total_gp_pct, 1)}%`, valueColor: gpColor },
+  ];
+
   return {
+    audience,
     serial: detail.serial_number ?? "QT-PENDING",
     name: detail.name,
     status: detail.status,
@@ -160,28 +211,19 @@ export function buildQuotationDocument(detail: QuotationDetail): QuotationDocume
       : "Prepared exclusively for the named Client",
     dateLabel: formatDateLabel(detail.issue_date),
     rows,
-    commercialKpis: [
-      { label: "Creators", value: String(detail.items.length) },
-      { label: "Est. Reach", value: num(detail.estimated_reach) },
-      { label: "Est. Engagement", value: avgEr },
-      { label: "Total Cost", value: `${num(detail.total_cost_egp, 2)} ${REPORTING_CURRENCY}` },
-      {
-        label: QUOTATION_CLIENT_LABELS.totalClientCost,
-        value: `${num(detail.total_revenue_egp, 2)} ${REPORTING_CURRENCY}`,
-      },
-      {
-        label: "Gross Profit",
-        value: `${num(detail.total_gp_value_egp, 2)} ${REPORTING_CURRENCY}`,
-        valueColor: gpColor,
-      },
-      { label: "GP %", value: `${num(detail.total_gp_pct, 1)}%`, valueColor: gpColor },
-    ],
+    commercialKpis: audience === "internal" ? internalKpis : clientKpis,
     summary: {
-      totalCost: `${num(detail.total_cost_egp, 2)} ${REPORTING_CURRENCY}`,
-      totalRevenue: `${num(detail.total_revenue_egp, 2)} ${REPORTING_CURRENCY}`,
-      totalGpValue: `${num(detail.total_gp_value_egp, 2)} ${REPORTING_CURRENCY}`,
-      totalGpPct: `${num(detail.total_gp_pct, 1)}%`,
-      gpColor,
+      ...(audience === "internal"
+        ? {
+            totalCost: `${num(detail.total_cost_egp, 2)} ${REPORTING_CURRENCY}`,
+            totalGpValue: `${num(detail.total_gp_value_egp, 2)} ${REPORTING_CURRENCY}`,
+            totalGpPct: `${num(detail.total_gp_pct, 1)}%`,
+            gpColor,
+          }
+        : {}),
+      totalClientCost,
+      totalAf,
+      totalAgencyMargin,
       creatorCount: detail.items.length,
       estimatedReach: num(detail.estimated_reach),
       estimatedEngagement: avgEr,

@@ -39,7 +39,7 @@ export async function GET(request: Request, context: RouteContext) {
     const disposition = download ? "attachment" : "inline";
 
     if (format === "excel") {
-      const buffer = await buildQuotationExcel(doc);
+      const buffer = await buildQuotationExcel(detail);
       return new NextResponse(buffer as unknown as BodyInit, {
         headers: {
           "Content-Type":

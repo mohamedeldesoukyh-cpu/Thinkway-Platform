@@ -33,6 +33,9 @@ export type QuotationItemRow = {
   cost_egp: number;
   revenue_egp: number;
   gp_value_egp: number;
+  af_pct: number;
+  af_value: number;
+  af_value_egp: number;
   sort_order: number;
 };
 
@@ -87,6 +90,8 @@ export type QuotationDetail = {
   total_revenue_egp: number;
   total_gp_value_egp: number;
   total_gp_pct: number;
+  total_af_egp: number;
+  total_agency_margin_egp: number;
   gp_target_pct: number;
   notes: string | null;
   terms: string | null;
