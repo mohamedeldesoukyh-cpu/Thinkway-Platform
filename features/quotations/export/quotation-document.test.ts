@@ -59,6 +59,14 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.equal(doc.serial, "QT-2026-0001");
   assert.ok(doc.preparedForLine.includes("Acme Corp"));
   assert.ok(doc.termsSections.length >= 5);
+  assert.ok(
+    doc.commercialKpis.some((k) => k.label === "Total client cost"),
+    "KPI strip uses client-facing total label"
+  );
+  assert.ok(
+    !doc.commercialKpis.some((k) => k.label === "Total Revenue"),
+    "Agency revenue label must not appear in document KPIs"
+  );
 }
 
 {
@@ -68,6 +76,12 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("Prepared exclusively for Acme Corp"));
   assert.ok(html.includes("page-break"));
   assert.ok(html.includes("avoid-break"));
+  assert.ok(html.includes("Client investment"));
+  assert.ok(html.includes("Client cost"));
+  assert.ok(html.includes("Total client cost"));
+  assert.ok(!html.includes(">Revenue<"), "Revenue column header must not appear in HTML");
+  assert.ok(!html.includes("Total Revenue"), "Total Revenue label must not appear in HTML");
+  assert.ok(!html.includes("Budget (Revenue)"), "Cover hero must not use Budget (Revenue)");
 }
 
 console.log("quotation-document.test.ts passed");

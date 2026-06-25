@@ -32,9 +32,17 @@ export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
 export const COMMERCIAL_INPUT_MODE_LABELS: Record<CommercialInputMode, string> = {
   cost_markup_pct: "Cost + Markup%",
   cost_gp_pct: "Cost + GP Margin%",
-  cost_revenue: "Cost + Revenue",
+  cost_revenue: "Cost + Client cost",
   cost_gp_value: "Cost + GP Value",
 };
+
+/** Client-facing labels for quotation revenue (agency revenue = client cost). */
+export const QUOTATION_CLIENT_LABELS = {
+  clientCost: "Client cost",
+  clientCostEgp: "Client cost EGP",
+  totalClientCost: "Total client cost",
+  clientInvestment: "Client investment",
+} as const;
 
 /** Default GP% target for healthy/warning styling in the quotation workspace. */
 export const DEFAULT_GP_TARGET_PCT = 25;

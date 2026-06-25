@@ -1,6 +1,7 @@
 /**
  * Quotation → styled Excel workbook (spreadsheet-optimized layout).
  */
+import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import {
   buildStyledExcelBuffer,
   type StyledDataRow,
@@ -66,7 +67,7 @@ export async function buildQuotationExcel(doc: QuotationDocument): Promise<Buffe
         "Country",
         "Deliverables",
         "Unit Cost",
-        "Revenue",
+        QUOTATION_CLIENT_LABELS.clientCost,
         "GP",
         "GP%",
       ],

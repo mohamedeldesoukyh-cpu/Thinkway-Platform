@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { QUOTATION_STATUS_LABELS, quotationDetailPath } from "@/features/quotations/constants";
+import { QUOTATION_CLIENT_LABELS, QUOTATION_STATUS_LABELS, quotationDetailPath } from "@/features/quotations/constants";
 import type { QuotationListRow } from "@/features/quotations/types";
 
 function egp(n: number): string {
@@ -29,7 +29,7 @@ export function QuotationsList({ quotations }: { quotations: QuotationListRow[] 
             <TableHead>Client / Brand</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Creators</TableHead>
-            <TableHead className="text-right">Revenue (EGP)</TableHead>
+            <TableHead className="text-right">{QUOTATION_CLIENT_LABELS.clientCost} (EGP)</TableHead>
             <TableHead className="text-right">GP %</TableHead>
           </TableRow>
         </TableHeader>
