@@ -12,6 +12,8 @@ import {
 import type { ClientsListResult } from "@/features/clients/queries";
 
 import { ClientStatusBadge } from "./client-status-badge";
+import { OnboardingStatusBadge } from "./onboarding-status-badge";
+import { isClientOnboardingStatus } from "@/lib/clients/onboarding-status";
 
 type ClientsTableProps = {
   clients: ClientsListResult["clients"];
@@ -58,7 +60,16 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
   {
     id: "status",
     label: "Status",
-    renderCell: (client) => <ClientStatusBadge status={client.status} />,
+    renderCell: (client) => (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <ClientStatusBadge status={client.status} />
+        {"onboarding_status" in client &&
+        client.onboarding_status &&
+        isClientOnboardingStatus(client.onboarding_status) ? (
+          <OnboardingStatusBadge status={client.onboarding_status} />
+        ) : null}
+      </div>
+    ),
   },
   {
     id: "billing_email",

@@ -31,6 +31,13 @@ export const OPTIONAL_CLIENT_COLUMN_NAMES = [
   "accept_credit_risk",
   "client_owner_id",
   "country_manager_id",
+  "onboarding_status",
+  "onboarding_updated_by",
+  "onboarding_completed_by",
+  "legal_completed_at",
+  "finance_completed_at",
+  "contracts_completed_at",
+  "tax_completed_at",
   ...CLASSIFICATION_AUDIT_COLUMN_NAMES,
 ] as const;
 

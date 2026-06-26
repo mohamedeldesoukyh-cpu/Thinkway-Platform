@@ -34,6 +34,9 @@ import { ClientClientIosTab } from "./tabs/client-client-ios-tab";
 import { ClientFinanceTab } from "./tabs/client-finance-tab";
 import { ClientLegalTab } from "./tabs/client-legal-tab";
 import { ClientOverviewTab } from "./tabs/client-overview-tab";
+import { OnboardingProgressTracker } from "./onboarding-progress-tracker";
+import { OnboardingStatusBadge } from "./onboarding-status-badge";
+import { isClientOnboardingStatus } from "@/lib/clients/onboarding-status";
 
 type ClientProfileProps = {
   client: ClientDetail;
@@ -93,6 +96,17 @@ export function ClientProfile({
     <>
       <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 border-b border-border px-[26px] py-4">
+            <OnboardingProgressTracker
+              status={client.onboarding_status}
+              completion={{
+                legal_completed_at: client.legal_completed_at,
+                finance_completed_at: client.finance_completed_at,
+                contracts_completed_at: client.contracts_completed_at,
+                tax_completed_at: client.tax_completed_at,
+              }}
+            />
+          </div>
           <ClientOverviewTab
             client={client}
             groups={groups}
@@ -179,8 +193,14 @@ export function ClientProfile({
       >
         <nav
           aria-label="Legal entity workspace sections"
-          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#E6EAF2] px-[26px] py-2.5"
+          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-[26px] py-2.5"
         >
+          <div className="mr-2 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">{client.name}</span>
+            {isClientOnboardingStatus(client.onboarding_status) ? (
+              <OnboardingStatusBadge status={client.onboarding_status} />
+            ) : null}
+          </div>
           <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9099A8]">
             Also view
           </span>
@@ -195,8 +215,8 @@ export function ClientProfile({
                 className={cn(
                   "text-[13px] font-medium transition-colors",
                   isActive
-                    ? "font-semibold text-[#0057FF]"
-                    : "text-[#5B6575] hover:text-[#0057FF]"
+                    ? "font-semibold text-primary"
+                    : "text-muted-foreground hover:text-primary"
                 )}
                 aria-current={isActive ? "page" : undefined}
               >

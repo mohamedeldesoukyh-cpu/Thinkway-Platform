@@ -76,6 +76,8 @@ import {
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import { buildExportHref } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationKpiStrip } from "@/features/quotations/components/quotation-kpi-strip";
+import { OnboardingStatusBadge } from "@/features/clients/components/onboarding-status-badge";
+import { isClientOnboardingStatus } from "@/lib/clients/onboarding-status";
 import { QuotationLifecyclePanel } from "@/features/quotations/components/quotation-lifecycle-panel";
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
@@ -403,6 +405,11 @@ export function QuotationWorkspace({
               ) : (
                 <Badge variant="outline">{formatValidityLabel(detail.validity_date)}</Badge>
               )}
+              {!detail.is_temporary_client &&
+              detail.client_onboarding_status &&
+              isClientOnboardingStatus(detail.client_onboarding_status) ? (
+                <OnboardingStatusBadge status={detail.client_onboarding_status} />
+              ) : null}
               <SaveIndicator status={workspaceSaveStatus} />
             </div>
             <p className="font-mono text-xs text-muted-foreground">

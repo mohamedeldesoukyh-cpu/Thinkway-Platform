@@ -14,6 +14,9 @@ import { promoteDiscoveredProfileToInfluencer } from "@/features/discovery/short
 import {
   checkPromoteMasterDataDuplicates,
   executePromoteMasterData,
+  searchPromoteDuplicateBrands,
+  searchPromoteDuplicateClients,
+  writePromoteMasterDataAuditEvents,
 } from "@/features/quotations/promote-master-data";
 import {
   promoteMasterDataSchema,
@@ -216,6 +219,22 @@ export async function checkPromoteMasterDataDuplicateWarnings(
   return checkPromoteMasterDataDuplicates(input);
 }
 
+export async function searchPromoteWizardDuplicateClients(input: {
+  query: string;
+  agencyOrDirect?: "agency" | "direct" | "hybrid";
+  excludeClientId?: string | null;
+}) {
+  return searchPromoteDuplicateClients(input);
+}
+
+export async function searchPromoteWizardDuplicateBrands(input: {
+  query: string;
+  clientId?: string | null;
+  excludeBrandId?: string | null;
+}) {
+  return searchPromoteDuplicateBrands(input);
+}
+
 export async function promoteQuotationToMasterData(
   input: PromoteMasterDataInput
 ): Promise<
@@ -263,7 +282,7 @@ export async function promoteQuotationToMasterData(
 
   if (!result.ok || !result.data) return result;
 
-  const { clientId, brandId, case: promoteCase } = result.data;
+  const { clientId, brandId, case: promoteCase, auditFlags } = result.data;
 
   await logQuotationLifecycleEvent(actor.supabase, {
     quotationId: parsed.data.quotationId,
@@ -277,6 +296,8 @@ export async function promoteQuotationToMasterData(
       groupId: parsed.data.groupId,
       clientMode: parsed.data.clientMode,
       brandMode: parsed.data.brandMode,
+      clientDuplicateOverride: parsed.data.clientDuplicateOverride,
+      brandDuplicateOverride: parsed.data.brandDuplicateOverride,
     },
     oldData,
     newData: {
@@ -285,6 +306,15 @@ export async function promoteQuotationToMasterData(
       is_temporary_client: false,
       is_temporary_brand: false,
     },
+  });
+
+  await writePromoteMasterDataAuditEvents(actor.supabase, {
+    actorId: actor.userId,
+    quotationId: parsed.data.quotationId,
+    clientId,
+    brandId,
+    promoteCase,
+    auditFlags,
   });
 
   revalidateQuotation(parsed.data.quotationId, row.shortlist_id as string | null);

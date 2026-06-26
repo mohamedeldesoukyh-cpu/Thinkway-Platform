@@ -91,6 +91,7 @@ export type QuotationDetail = {
   shortlist_serial: string | null;
   client_id: string | null;
   client_name: string | null;
+  client_onboarding_status: import("@/types/database").ClientOnboardingStatus | null;
   is_temporary_client: boolean;
   is_temporary_brand: boolean;
   temporary_client_name: string | null;

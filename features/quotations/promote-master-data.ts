@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { logClientOnboardingEvent } from "@/lib/clients/onboarding-audit";
+import { DEFAULT_PROMOTED_ONBOARDING_STATUS } from "@/lib/clients/onboarding-status";
 import { insertClientWithClassificationAudit, updateClientWithOptionalColumnRetry } from "@/lib/clients/classification-audit-columns";
 import { normalizeBrandVrRateId } from "@/lib/clients/vr-inheritance";
 import { fetchClientVrRateIdSafe } from "@/lib/clients/vr-rate-lookup";
@@ -15,7 +17,14 @@ import type { AgencyOrDirect, Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
-  promoteMasterDataSchema,
+  rankDuplicateResults,
+  scoreBrandDuplicate,
+  scoreClientDuplicate,
+  type BrandDuplicateCandidate,
+  type ClientDuplicateCandidate,
+  type DuplicateSearchResult,
+} from "./duplicate-search";
+import {
   resolvePromoteCase,
   type PromoteMasterDataInput,
 } from "./promote-master-data-schema";
@@ -28,9 +37,22 @@ export type PromoteDuplicateWarning = {
   message: string;
 };
 
+export type PromoteDuplicateSuggestion = {
+  id: string;
+  primaryLabel: string;
+  secondaryLabel: string | null;
+  matchType: DuplicateSearchResult<ClientDuplicateCandidate | BrandDuplicateCandidate>["matchType"];
+  score: number;
+  clientId?: string;
+};
+
 function emptyToNull(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function escapeIlikePattern(value: string): string {
+  return value.replace(/[%_\\,]/g, "\\$&");
 }
 
 async function findSimilarClientByLegalName(
@@ -63,6 +85,123 @@ async function findSimilarClientByLegalName(
   return null;
 }
 
+export async function searchPromoteDuplicateClients(input: {
+  query: string;
+  agencyOrDirect?: AgencyOrDirect;
+  excludeClientId?: string | null;
+}): Promise<ActionResult<{ suggestions: PromoteDuplicateSuggestion[] }>> {
+  const query = input.query.trim();
+  if (query.length < 2) {
+    return { ok: true, data: { suggestions: [] } };
+  }
+
+  const supabase = (await createSupabaseServerClient()) as Supabase;
+  const pattern = `%${escapeIlikePattern(query)}%`;
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id, name, legal_name, document_number, agency_or_direct, name_ar")
+    .neq("status", "archived")
+    .or(
+      [
+        `name.ilike.${pattern}`,
+        `legal_name.ilike.${pattern}`,
+        `document_number.ilike.${pattern}`,
+        `name_ar.ilike.${pattern}`,
+      ].join(",")
+    )
+    .limit(20);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  const scored = rankDuplicateResults(
+    ((data ?? []) as ClientDuplicateCandidate[])
+      .filter((row) => !input.excludeClientId || row.id !== input.excludeClientId)
+      .map((row) => scoreClientDuplicate(query, row, input.agencyOrDirect))
+      .filter((row): row is DuplicateSearchResult<ClientDuplicateCandidate> => row !== null)
+  ).slice(0, 5);
+
+  return {
+    ok: true,
+    data: {
+      suggestions: scored.map((row) => ({
+        id: row.id,
+        primaryLabel: row.name,
+        secondaryLabel: [row.document_number, row.legal_name].filter(Boolean).join(" · ") || null,
+        matchType: row.matchType,
+        score: row.score,
+      })),
+    },
+  };
+}
+
+export async function searchPromoteDuplicateBrands(input: {
+  query: string;
+  clientId?: string | null;
+  excludeBrandId?: string | null;
+}): Promise<ActionResult<{ suggestions: PromoteDuplicateSuggestion[] }>> {
+  const query = input.query.trim();
+  if (query.length < 2) {
+    return { ok: true, data: { suggestions: [] } };
+  }
+
+  const supabase = (await createSupabaseServerClient()) as Supabase;
+  const pattern = `%${escapeIlikePattern(query)}%`;
+
+  let dbQuery = supabase
+    .from("brands")
+    .select("id, name, document_number, client_id, client:clients(name)")
+    .neq("status", "archived")
+    .or([`name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(","))
+    .limit(20);
+
+  if (input.clientId) {
+    dbQuery = dbQuery.eq("client_id", input.clientId);
+  }
+
+  const { data, error } = await dbQuery;
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  const scored = rankDuplicateResults(
+    ((data ?? []) as Array<Record<string, unknown>>)
+      .map((row) => {
+        const clientEmbed = row.client as { name: string } | { name: string }[] | null;
+        const clientName = Array.isArray(clientEmbed)
+          ? clientEmbed[0]?.name ?? null
+          : clientEmbed?.name ?? null;
+        const candidate: BrandDuplicateCandidate = {
+          id: row.id as string,
+          name: row.name as string,
+          document_number: row.document_number as string,
+          client_id: row.client_id as string,
+          client_name: clientName,
+        };
+        if (input.excludeBrandId && candidate.id === input.excludeBrandId) return null;
+        return scoreBrandDuplicate(query, candidate);
+      })
+      .filter((row): row is DuplicateSearchResult<BrandDuplicateCandidate> => row !== null)
+  ).slice(0, 5);
+
+  return {
+    ok: true,
+    data: {
+      suggestions: scored.map((row) => ({
+        id: row.id,
+        primaryLabel: row.name,
+        secondaryLabel:
+          [row.document_number, row.client_name].filter(Boolean).join(" · ") || null,
+        matchType: row.matchType,
+        score: row.score,
+        clientId: row.client_id,
+      })),
+    },
+  };
+}
+
 export async function checkPromoteMasterDataDuplicates(
   input: Omit<PromoteMasterDataInput, "quotationId" | "acknowledged">
 ): Promise<ActionResult<{ warnings: PromoteDuplicateWarning[] }>> {
@@ -71,7 +210,7 @@ export async function checkPromoteMasterDataDuplicates(
   const warnings: PromoteDuplicateWarning[] = [];
 
   try {
-    if (input.clientMode === "create" && input.clientName) {
+    if (input.clientMode === "create" && input.clientName && !input.clientDuplicateOverride) {
       const duplicate = await findDuplicateClient(
         supabase,
         input.clientName,
@@ -88,7 +227,7 @@ export async function checkPromoteMasterDataDuplicates(
       }
     }
 
-    if (input.brandMode === "create" && input.brandName) {
+    if (input.brandMode === "create" && input.brandName && !input.brandDuplicateOverride) {
       const clientId =
         input.clientMode === "link" ? input.existingClientId : null;
       if (clientId) {
@@ -108,10 +247,11 @@ export async function checkPromoteMasterDataDuplicates(
   return { ok: true, data: { warnings } };
 }
 
-async function fetchClientGroupContext(
+async function resolveBrandGroupContext(
   supabase: Supabase,
-  clientId: string
-): Promise<{ ok: true; groupId: string; vrRateId: string | null } | { ok: false; message: string }> {
+  clientId: string,
+  inputGroupId: string | null
+): Promise<{ groupId: string | null; vrRateId: string | null }> {
   const { data, error } = await supabase
     .from("clients")
     .select("group_id")
@@ -119,23 +259,20 @@ async function fetchClientGroupContext(
     .maybeSingle();
 
   if (error || !data) {
-    return { ok: false, message: error?.message ?? "Legal entity not found." };
+    throw new Error(error?.message ?? "Legal entity not found.");
   }
 
-  const groupId = (data as { group_id: string | null }).group_id;
-  if (!groupId) {
-    return {
-      ok: false,
-      message: "Legal entity must belong to a group before adding brands.",
-    };
+  let groupId = (data as { group_id: string | null }).group_id ?? inputGroupId;
+  if (!groupId && inputGroupId) {
+    groupId = inputGroupId;
   }
 
   const vrRateId = await fetchClientVrRateIdSafe(supabase, clientId);
   if (vrRateId.error) {
-    return { ok: false, message: vrRateId.error };
+    throw new Error(vrRateId.error);
   }
 
-  return { ok: true, groupId, vrRateId: vrRateId.value };
+  return { groupId, vrRateId: vrRateId.value };
 }
 
 async function applyClientOwnershipPatch(
@@ -164,6 +301,11 @@ export async function executePromoteMasterData(
     clientId: string;
     brandId: string | null;
     case: ReturnType<typeof resolvePromoteCase>;
+    auditFlags: {
+      clientDuplicateOverridden: boolean;
+      brandDuplicateOverridden: boolean;
+      existingClientLinked: boolean;
+    };
   }>
 > {
   const promoteCase = resolvePromoteCase(input);
@@ -176,6 +318,10 @@ export async function executePromoteMasterData(
   const tempBrandName = String(quotationRow.temporary_brand_name ?? "").trim();
   const quotationCurrency = (quotationRow.currency as string) ?? "EGP";
 
+  let clientDuplicateOverridden = false;
+  let brandDuplicateOverridden = false;
+  const existingClientLinked = input.clientMode === "link";
+
   if (input.clientMode === "create") {
     const clientName = input.clientName?.trim() || tempClientName;
     if (!clientName) {
@@ -187,8 +333,8 @@ export async function executePromoteMasterData(
       clientName,
       input.agencyOrDirect as AgencyOrDirect
     );
-    if (duplicate) {
-      return { ok: false, message: duplicate };
+    if (duplicate && input.clientDuplicateOverride) {
+      clientDuplicateOverridden = true;
     }
 
     const { data: client, error: clientError } = await insertClientWithClassificationAudit(
@@ -202,6 +348,8 @@ export async function executePromoteMasterData(
         website: emptyToNull(input.website),
         country: emptyToNull(input.country),
         status: "prospect",
+        onboarding_status: DEFAULT_PROMOTED_ONBOARDING_STATUS,
+        onboarding_updated_by: userId,
         client_owner_id: input.clientOwnerId,
         country_manager_id: input.countryManagerId,
         account_manager_id: input.commercialOwnerId,
@@ -241,35 +389,29 @@ export async function executePromoteMasterData(
       return { ok: false, message: "Brand name is required." };
     }
 
-    let groupContext = await fetchClientGroupContext(supabase, clientId);
-    if (!groupContext.ok && input.clientMode === "create" && input.groupId) {
-      await supabase
-        .from("clients")
-        .update({ group_id: input.groupId } as never)
-        .eq("id", clientId);
-      groupContext = await fetchClientGroupContext(supabase, clientId);
-    }
-    if (!groupContext.ok) {
-      return groupContext;
-    }
-
     const duplicateBrand = await findDuplicateBrand(supabase, brandName, clientId);
-    if (duplicateBrand) {
-      return { ok: false, message: duplicateBrand };
+    if (duplicateBrand && input.brandDuplicateOverride) {
+      brandDuplicateOverridden = true;
     }
 
-    const vrRateId = normalizeBrandVrRateId(null, groupContext.vrRateId);
+    const { groupId, vrRateId } = await resolveBrandGroupContext(
+      supabase,
+      clientId,
+      input.groupId
+    );
+
+    const vrRateIdNormalized = normalizeBrandVrRateId(null, vrRateId);
 
     const { data: brand, error: brandError } = await supabase
       .from("brands")
       .insert({
         client_id: clientId,
-        group_id: groupContext.groupId,
+        group_id: groupId,
         name: brandName,
         status: "prospect",
         category_id: input.categoryId,
         subcategory_id: input.subcategoryId,
-        vr_rate_id: vrRateId,
+        vr_rate_id: vrRateIdNormalized,
         currency_code: quotationCurrency,
         created_by: userId,
       } as never)
@@ -311,6 +453,75 @@ export async function executePromoteMasterData(
 
   return {
     ok: true,
-    data: { clientId, brandId, case: promoteCase },
+    data: {
+      clientId,
+      brandId,
+      case: promoteCase,
+      auditFlags: {
+        clientDuplicateOverridden,
+        brandDuplicateOverridden,
+        existingClientLinked,
+      },
+    },
   };
+}
+
+export async function writePromoteMasterDataAuditEvents(
+  supabase: Supabase,
+  input: {
+    actorId: string;
+    quotationId: string;
+    clientId: string;
+    brandId: string | null;
+    promoteCase: ReturnType<typeof resolvePromoteCase>;
+    auditFlags: {
+      clientDuplicateOverridden: boolean;
+      brandDuplicateOverridden: boolean;
+      existingClientLinked: boolean;
+    };
+  }
+) {
+  await logClientOnboardingEvent(supabase, {
+    clientId: input.clientId,
+    actorId: input.actorId,
+    event: "client.promoted",
+    summary: `Promoted quotation to master data (${input.promoteCase.replaceAll("_", " ")}).`,
+    quotationId: input.quotationId,
+    brandId: input.brandId,
+    newStatus: DEFAULT_PROMOTED_ONBOARDING_STATUS,
+    metadata: { promoteCase: input.promoteCase },
+  });
+
+  if (input.auditFlags.existingClientLinked) {
+    await logClientOnboardingEvent(supabase, {
+      clientId: input.clientId,
+      actorId: input.actorId,
+      event: "client.existing_linked",
+      summary: "Linked quotation to existing legal entity during promote wizard.",
+      quotationId: input.quotationId,
+      brandId: input.brandId,
+    });
+  }
+
+  if (input.auditFlags.clientDuplicateOverridden) {
+    await logClientOnboardingEvent(supabase, {
+      clientId: input.clientId,
+      actorId: input.actorId,
+      event: "client.duplicate_overridden",
+      summary: "User continued creating legal entity despite duplicate suggestion.",
+      quotationId: input.quotationId,
+    });
+  }
+
+  if (input.auditFlags.brandDuplicateOverridden) {
+    await logClientOnboardingEvent(supabase, {
+      clientId: input.clientId,
+      actorId: input.actorId,
+      event: "client.duplicate_overridden",
+      summary: "User continued creating brand despite duplicate suggestion.",
+      quotationId: input.quotationId,
+      brandId: input.brandId,
+      metadata: { entity: "brand" },
+    });
+  }
 }

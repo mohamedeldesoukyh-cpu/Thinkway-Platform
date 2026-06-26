@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  DEFAULT_PROMOTED_ONBOARDING_STATUS,
+  ONBOARDING_STATUS_LABELS,
+  type ClientOnboardingStatus,
+} from "@/lib/clients/onboarding-status";
+
 export const PROMOTE_WIZARD_STEPS = [
   "client",
   "brand",
@@ -11,10 +17,8 @@ export const PROMOTE_WIZARD_STEPS = [
 export type PromoteWizardStep = (typeof PROMOTE_WIZARD_STEPS)[number];
 
 const optionalUuid = z
-  .string()
-  .uuid()
+  .union([z.string().uuid(), z.literal(""), z.null()])
   .optional()
-  .or(z.literal(""))
   .transform((v) => (v ? v : null));
 
 const optionalTrimmed = (max: number) =>
@@ -46,6 +50,8 @@ export const promoteMasterDataSchema = z
     clientOwnerId: optionalUuid,
     countryManagerId: optionalUuid,
     commercialOwnerId: optionalUuid,
+    clientDuplicateOverride: z.boolean().optional().default(false),
+    brandDuplicateOverride: z.boolean().optional().default(false),
     acknowledged: z
       .boolean()
       .refine((val) => val === true, "You must acknowledge onboarding responsibilities."),
@@ -73,13 +79,6 @@ export const promoteMasterDataSchema = z
           code: z.ZodIssueCode.custom,
           message: "Brand name is required.",
           path: ["brandName"],
-        });
-      }
-      if (data.clientMode === "create" && !data.groupId && !data.existingClientId) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Select a group before creating a brand (brands require a group).",
-          path: ["groupId"],
         });
       }
     } else if (data.brandMode === "link" && !data.existingBrandId) {
@@ -131,16 +130,9 @@ export function canAdvancePromoteStep(
           ? { ok: true }
           : { ok: false, message: "Select an existing brand." };
       }
-      if (!draft.brandName?.trim()) {
-        return { ok: false, message: "Brand name is required." };
-      }
-      if (draft.clientMode === "create" && !draft.groupId) {
-        return {
-          ok: false,
-          message: "Group is required when creating a brand for a new client.",
-        };
-      }
-      return { ok: true };
+      return draft.brandName?.trim()
+        ? { ok: true }
+        : { ok: false, message: "Brand name is required." };
     case "ownership":
       return { ok: true };
     case "checklist":
@@ -172,9 +164,11 @@ export function buildPromoteReviewSummary(
   groupLabel: string;
   ownersLabel: string;
   statusLabel: string;
+  onboardingStatusLabel: string;
   caseLabel: string;
 } {
   const promoteCase = resolvePromoteCase(input);
+  const onboardingStatus: ClientOnboardingStatus = DEFAULT_PROMOTED_ONBOARDING_STATUS;
   const caseLabels: Record<PromoteMasterDataCase, string> = {
     new_client_new_brand: "New legal entity + new brand",
     new_client_no_brand: "New legal entity only",
@@ -202,6 +196,7 @@ export function buildPromoteReviewSummary(
       .filter(Boolean)
       .join(", ") || "None assigned",
     statusLabel: "Draft (prospect)",
+    onboardingStatusLabel: ONBOARDING_STATUS_LABELS[onboardingStatus],
     caseLabel: caseLabels[promoteCase],
   };
 }

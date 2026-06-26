@@ -6,13 +6,14 @@ import {
   promoteMasterDataSchema,
   resolvePromoteCase,
 } from "@/features/quotations/promote-master-data-schema";
+import { DEFAULT_PROMOTED_ONBOARDING_STATUS } from "@/lib/clients/onboarding-status";
 
 const quotationId = "00000000-0000-4000-8000-000000000001";
 const clientId = "00000000-0000-4000-8000-000000000002";
 const brandId = "00000000-0000-4000-8000-000000000003";
 const groupId = "00000000-0000-4000-8000-000000000004";
 
-// create new client
+// 1. New client without group
 assert.equal(
   canAdvancePromoteStep("client", { clientMode: "create", clientName: "Unilever" }).ok,
   true
@@ -22,7 +23,7 @@ assert.equal(
   false
 );
 
-// link existing client
+// 2. Existing client without group
 assert.equal(
   canAdvancePromoteStep("client", {
     clientMode: "link",
@@ -30,23 +31,8 @@ assert.equal(
   }).ok,
   true
 );
-assert.equal(
-  canAdvancePromoteStep("client", { clientMode: "link" }).ok,
-  false
-);
 
-// create brand under existing client
-assert.equal(
-  canAdvancePromoteStep("brand", {
-    clientMode: "link",
-    existingClientId: clientId,
-    brandMode: "create",
-    brandName: "Dove",
-  }).ok,
-  true
-);
-
-// new client + new brand requires group
+// 3. New brand without group (new client + new brand, no group)
 assert.equal(
   canAdvancePromoteStep("brand", {
     clientMode: "create",
@@ -55,15 +41,17 @@ assert.equal(
     brandName: "Acme Brand",
     groupId: null,
   }).ok,
-  false
+  true
 );
+
+// create brand under existing client without group on draft
 assert.equal(
   canAdvancePromoteStep("brand", {
-    clientMode: "create",
-    clientName: "Acme",
+    clientMode: "link",
+    existingClientId: clientId,
     brandMode: "create",
-    brandName: "Acme Brand",
-    groupId,
+    brandName: "Dove",
+    groupId: null,
   }).ok,
   true
 );
@@ -106,6 +94,18 @@ const parsed = promoteMasterDataSchema.safeParse({
 });
 assert.equal(parsed.success, true);
 
+const newClientNewBrandNoGroup = promoteMasterDataSchema.safeParse({
+  quotationId,
+  clientMode: "create",
+  clientName: "Standalone Co",
+  brandMode: "create",
+  brandName: "Standalone Brand",
+  groupId: null,
+  acknowledged: true,
+  agencyOrDirect: "agency",
+});
+assert.equal(newClientNewBrandNoGroup.success, true);
+
 const missingAck = promoteMasterDataSchema.safeParse({
   quotationId,
   clientMode: "create",
@@ -116,6 +116,21 @@ const missingAck = promoteMasterDataSchema.safeParse({
 });
 assert.equal(missingAck.success, false);
 
+// duplicate override flags accepted
+const withOverrides = promoteMasterDataSchema.safeParse({
+  quotationId,
+  clientMode: "create",
+  clientName: "Duplicate Inc",
+  brandMode: "create",
+  brandName: "Duplicate Brand",
+  acknowledged: true,
+  agencyOrDirect: "agency",
+  clientDuplicateOverride: true,
+  brandDuplicateOverride: true,
+});
+assert.equal(withOverrides.success, true);
+
+// 7. onboarding default status in review summary
 const summary = buildPromoteReviewSummary({
   clientMode: "create",
   clientName: "Unilever",
@@ -128,5 +143,7 @@ const summary = buildPromoteReviewSummary({
 });
 assert.match(summary.caseLabel, /New legal entity/);
 assert.equal(summary.statusLabel, "Draft (prospect)");
+assert.equal(summary.onboardingStatusLabel, "Legal pending");
+assert.equal(DEFAULT_PROMOTED_ONBOARDING_STATUS, "legal_pending");
 
 console.log("promote-master-data.test.ts: all assertions passed");

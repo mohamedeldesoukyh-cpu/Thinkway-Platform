@@ -225,7 +225,7 @@ export async function getQuotationDetail(
        is_archived, created_at, updated_at,
        is_temporary_client, is_temporary_brand, temporary_client_name, temporary_brand_name,
        parent_quotation_id, version_number, revision_notes,
-       clients:client_id(name),
+       clients:client_id(name, onboarding_status),
        brands:brand_id(name),
        campaign_headers:campaign_header_id(name, document_number),
        discovery_shortlists:shortlist_id(serial_number),
@@ -291,6 +291,11 @@ export async function getQuotationDetail(
     client_name: isTemporaryClient
       ? tempClientName
       : unwrap(row.clients as { name: string } | null)?.name ?? null,
+    client_onboarding_status: isTemporaryClient
+      ? null
+      : (unwrap(row.clients as { onboarding_status: string | null } | null)
+          ?.onboarding_status as import("@/types/database").ClientOnboardingStatus | null) ??
+        null,
     is_temporary_client: isTemporaryClient,
     is_temporary_brand: isTemporaryBrand,
     temporary_client_name: tempClientName,

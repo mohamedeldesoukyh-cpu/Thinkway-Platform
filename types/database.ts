@@ -118,7 +118,7 @@ export type BrandRow = {
   id: string;
   document_number: string;
   client_id: string;
-  group_id: string;
+  group_id: string | null;
   name: string;
   name_normalized: string;
   status: ClientStatus;
@@ -609,6 +609,13 @@ export type ClientDetail = ClientRow & {
   vr_rate_percent: number | null;
 };
 
+export type ClientOnboardingStatus =
+  | "draft"
+  | "legal_pending"
+  | "finance_pending"
+  | "ready"
+  | "active";
+
 export type ClientRow = {
   id: string;
   document_number: string;
@@ -621,6 +628,13 @@ export type ClientRow = {
   website: string | null;
   logo_url: string | null;
   status: ClientStatus;
+  onboarding_status: ClientOnboardingStatus;
+  legal_completed_at: string | null;
+  finance_completed_at: string | null;
+  contracts_completed_at: string | null;
+  tax_completed_at: string | null;
+  onboarding_completed_by: string | null;
+  onboarding_updated_by: string | null;
   billing_email: string | null;
   billing_phone: string | null;
   billing_address: Record<string, unknown>;
@@ -674,6 +688,13 @@ export type Database = {
           website?: string | null;
           logo_url?: string | null;
           status?: ClientStatus;
+          onboarding_status?: ClientOnboardingStatus;
+          legal_completed_at?: string | null;
+          finance_completed_at?: string | null;
+          contracts_completed_at?: string | null;
+          tax_completed_at?: string | null;
+          onboarding_completed_by?: string | null;
+          onboarding_updated_by?: string | null;
           billing_email?: string | null;
           billing_phone?: string | null;
           billing_address?: Record<string, unknown>;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2Icon, ChevronLeftIcon, ChevronRightIcon, Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
@@ -32,7 +32,12 @@ import { CLIENT_INDUSTRY_OPTIONS } from "@/lib/master-data/constants";
 import {
   checkPromoteMasterDataDuplicateWarnings,
   promoteQuotationToMasterData,
+  searchPromoteWizardDuplicateBrands,
+  searchPromoteWizardDuplicateClients,
 } from "@/features/quotations/lifecycle-actions";
+import { DuplicateSuggestionPanel } from "@/features/quotations/components/duplicate-suggestion-panel";
+import { OnboardingStatusBadge } from "@/features/clients/components/onboarding-status-badge";
+import { DEFAULT_PROMOTED_ONBOARDING_STATUS } from "@/lib/clients/onboarding-status";
 import {
   PROMOTE_WIZARD_STEPS,
   buildPromoteReviewSummary,
@@ -57,6 +62,17 @@ type Props = {
   options: PromoteWizardOptions;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+};
+
+const DUPLICATE_DEBOUNCE_MS = 400;
+
+type DuplicateSuggestion = {
+  id: string;
+  primaryLabel: string;
+  secondaryLabel: string | null;
+  matchType: "exact" | "fuzzy" | "legal_name" | "alias" | "code";
+  score: number;
+  clientId?: string;
 };
 
 function stepIndex(step: PromoteWizardStep): number {
@@ -93,6 +109,20 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
   const [countryManagerId, setCountryManagerId] = useState("");
   const [commercialOwnerId, setCommercialOwnerId] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
+  const [clientDuplicateOverride, setClientDuplicateOverride] = useState(false);
+  const [brandDuplicateOverride, setBrandDuplicateOverride] = useState(false);
+  const [clientDuplicateSuggestions, setClientDuplicateSuggestions] = useState<
+    DuplicateSuggestion[]
+  >([]);
+  const [brandDuplicateSuggestions, setBrandDuplicateSuggestions] = useState<
+    DuplicateSuggestion[]
+  >([]);
+  const [clientDuplicateLoading, setClientDuplicateLoading] = useState(false);
+  const [brandDuplicateLoading, setBrandDuplicateLoading] = useState(false);
+  const [clientDuplicateDismissed, setClientDuplicateDismissed] = useState(false);
+  const [brandDuplicateDismissed, setBrandDuplicateDismissed] = useState(false);
+  const clientDuplicateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const brandDuplicateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -103,8 +133,64 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
     setBrandMode(detail.temporary_brand_name ? "create" : "skip");
     setAcknowledged(false);
     setDuplicateWarnings([]);
+    setClientDuplicateOverride(false);
+    setBrandDuplicateOverride(false);
+    setClientDuplicateSuggestions([]);
+    setBrandDuplicateSuggestions([]);
+    setClientDuplicateDismissed(false);
+    setBrandDuplicateDismissed(false);
     setSuccessOpen(false);
   }, [open, detail.temporary_brand_name, detail.temporary_client_name]);
+
+  useEffect(() => {
+    if (!open || clientMode !== "create") return;
+    if (clientDuplicateTimerRef.current) clearTimeout(clientDuplicateTimerRef.current);
+    if (clientName.trim().length < 2) {
+      setClientDuplicateSuggestions([]);
+      return;
+    }
+    setClientDuplicateLoading(true);
+    clientDuplicateTimerRef.current = setTimeout(() => {
+      void searchPromoteWizardDuplicateClients({
+        query: clientName,
+        agencyOrDirect,
+      }).then((res) => {
+        setClientDuplicateLoading(false);
+        if (res.ok && res.data) {
+          setClientDuplicateSuggestions(res.data.suggestions as DuplicateSuggestion[]);
+          setClientDuplicateDismissed(false);
+        }
+      });
+    }, DUPLICATE_DEBOUNCE_MS);
+    return () => {
+      if (clientDuplicateTimerRef.current) clearTimeout(clientDuplicateTimerRef.current);
+    };
+  }, [open, clientMode, clientName, agencyOrDirect]);
+
+  useEffect(() => {
+    if (!open || brandMode !== "create") return;
+    if (brandDuplicateTimerRef.current) clearTimeout(brandDuplicateTimerRef.current);
+    if (brandName.trim().length < 2) {
+      setBrandDuplicateSuggestions([]);
+      return;
+    }
+    setBrandDuplicateLoading(true);
+    brandDuplicateTimerRef.current = setTimeout(() => {
+      void searchPromoteWizardDuplicateBrands({
+        query: brandName,
+        clientId: clientMode === "link" ? existingClientId || null : null,
+      }).then((res) => {
+        setBrandDuplicateLoading(false);
+        if (res.ok && res.data) {
+          setBrandDuplicateSuggestions(res.data.suggestions as DuplicateSuggestion[]);
+          setBrandDuplicateDismissed(false);
+        }
+      });
+    }, DUPLICATE_DEBOUNCE_MS);
+    return () => {
+      if (brandDuplicateTimerRef.current) clearTimeout(brandDuplicateTimerRef.current);
+    };
+  }, [open, brandMode, brandName, clientMode, existingClientId]);
 
   const clientOptions = useMemo(
     () =>
@@ -172,6 +258,8 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
       countryManagerId: countryManagerId || null,
       commercialOwnerId: commercialOwnerId || null,
       acknowledged,
+      clientDuplicateOverride,
+      brandDuplicateOverride,
     }),
     [
       acknowledged,
@@ -191,8 +279,30 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
       legalName,
       subcategoryId,
       website,
+      clientDuplicateOverride,
+      brandDuplicateOverride,
     ]
   );
+
+  function handleUseExistingClient(id: string) {
+    setClientMode("link");
+    setExistingClientId(id);
+    setExistingBrandId("");
+    setClientDuplicateSuggestions([]);
+    setClientDuplicateDismissed(true);
+  }
+
+  function handleUseExistingBrand(id: string) {
+    const match = brandDuplicateSuggestions.find((s) => s.id === id);
+    if (match?.clientId) {
+      setClientMode("link");
+      setExistingClientId(match.clientId);
+    }
+    setBrandMode("link");
+    setExistingBrandId(id);
+    setBrandDuplicateSuggestions([]);
+    setBrandDuplicateDismissed(true);
+  }
 
   const reviewSummary = useMemo(() => {
     if (step !== "review" && !successOpen) return null;
@@ -242,6 +352,8 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
       clientOwnerId: nextDraft.clientOwnerId ?? null,
       countryManagerId: nextDraft.countryManagerId ?? null,
       commercialOwnerId: nextDraft.commercialOwnerId ?? null,
+      clientDuplicateOverride: nextDraft.clientDuplicateOverride ?? false,
+      brandDuplicateOverride: nextDraft.brandDuplicateOverride ?? false,
     }).then((res) => {
       if (res.ok && res.data) setDuplicateWarnings(res.data.warnings);
     });
@@ -294,6 +406,8 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
         countryManagerId: countryManagerId || null,
         commercialOwnerId: commercialOwnerId || null,
         acknowledged: true,
+        clientDuplicateOverride,
+        brandDuplicateOverride,
       };
 
       const res = await promoteQuotationToMasterData(payload);
@@ -362,10 +476,28 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
                       <Label>Client name (required)</Label>
                       <Input
                         value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
+                        onChange={(e) => {
+                          setClientName(e.target.value);
+                          setClientDuplicateDismissed(false);
+                          setClientDuplicateOverride(false);
+                        }}
                         placeholder="e.g. L'Oreal Middle East"
+                        aria-autocomplete="list"
                       />
                     </div>
+                    <DuplicateSuggestionPanel
+                      entityLabel="legal entity"
+                      query={clientName}
+                      loading={clientDuplicateLoading}
+                      suggestions={clientDuplicateSuggestions}
+                      dismissed={clientDuplicateDismissed}
+                      onUseExisting={handleUseExistingClient}
+                      onContinueCreating={() => {
+                        setClientDuplicateDismissed(true);
+                        setClientDuplicateOverride(true);
+                      }}
+                      className="md:col-span-2"
+                    />
                     <div className="space-y-1.5">
                       <Label>Legal entity name</Label>
                       <Input
@@ -431,8 +563,8 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
                       />
                     </div>
                     <p className="md:col-span-2 text-xs text-muted-foreground">
-                      New legal entities are created in <strong>Draft (prospect)</strong> status until
-                      finance onboarding completes.
+                      New legal entities are created in <strong>Draft (prospect)</strong> status with{" "}
+                      <strong>Legal pending</strong> onboarding until finance approval completes.
                     </p>
                   </div>
                 ) : (
@@ -485,10 +617,28 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
                       <Label>Brand name</Label>
                       <Input
                         value={brandName}
-                        onChange={(e) => setBrandName(e.target.value)}
+                        onChange={(e) => {
+                          setBrandName(e.target.value);
+                          setBrandDuplicateDismissed(false);
+                          setBrandDuplicateOverride(false);
+                        }}
                         placeholder="Brand name"
+                        aria-autocomplete="list"
                       />
                     </div>
+                    <DuplicateSuggestionPanel
+                      entityLabel="brand"
+                      query={brandName}
+                      loading={brandDuplicateLoading}
+                      suggestions={brandDuplicateSuggestions}
+                      dismissed={brandDuplicateDismissed}
+                      onUseExisting={handleUseExistingBrand}
+                      onContinueCreating={() => {
+                        setBrandDuplicateDismissed(true);
+                        setBrandDuplicateOverride(true);
+                      }}
+                      className="md:col-span-2"
+                    />
                     <div className="space-y-1.5">
                       <Label>Category</Label>
                       <SearchableSelect
@@ -519,8 +669,8 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
                     </div>
                     {clientMode === "create" ? (
                       <p className="md:col-span-2 text-xs text-muted-foreground">
-                        Creating a brand for a new client requires a group (set in the next step).
-                        Brand status remains <strong>Draft (prospect)</strong> until onboarding completes.
+                        Group assignment is optional. Brand status remains{" "}
+                        <strong>Draft (prospect)</strong> until onboarding completes.
                       </p>
                     ) : null}
                   </div>
@@ -637,7 +787,16 @@ export function PromoteMasterDataWizard({ detail, options, open, onOpenChange }:
                       <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         Status
                       </dt>
-                      <dd>{reviewSummary.statusLabel}</dd>
+                      <dd className="flex flex-wrap items-center gap-2">
+                        <span>{reviewSummary.statusLabel}</span>
+                        <OnboardingStatusBadge status={DEFAULT_PROMOTED_ONBOARDING_STATUS} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Onboarding
+                      </dt>
+                      <dd>{reviewSummary.onboardingStatusLabel}</dd>
                     </div>
                     <div>
                       <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
