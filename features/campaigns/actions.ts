@@ -6,6 +6,7 @@ import {
   METADATA_PLATFORM_KEY,
 } from "@/features/campaigns/constants";
 import { logCampaignGroupAssignmentChange } from "@/lib/campaigns/campaign-group-audit";
+import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
 import {
   buildDuplicatedCampaignLineInsert,
   copyAssignmentDeliverablesForDuplicate,
