@@ -5,7 +5,6 @@ import { Loader2Icon, UserPlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QuotationCreatorPicker } from "@/features/creators/picker/quotation-creator-picker";
 import { readDiscoverySelection } from "@/features/discovery/components/creator-search/discovery-selection-storage";
 import {
   addItemsToQuotation,
@@ -128,15 +128,6 @@ export function AddCreatorsToQuotationModal({
     });
   }, [campaignId]);
 
-  function toggleSet(setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) {
-    setter((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   function runImport(action: () => Promise<{ ok: boolean; message?: string }>) {
     startTransition(async () => {
       const res = await action();
@@ -175,35 +166,14 @@ export function AddCreatorsToQuotationModal({
               </p>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    {discoverySelection.length} creator(s) in selection
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs"
-                    onClick={() =>
-                      setSelectedDiscoveryIds(new Set(discoverySelection.map((c) => c.unified_id)))
-                    }
-                  >
-                    Select all
-                  </Button>
-                </div>
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border p-2">
-                  {discoverySelection.map((creator) => (
-                    <label
-                      key={creator.unified_id}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50"
-                    >
-                      <Checkbox
-                        checked={selectedDiscoveryIds.has(creator.unified_id)}
-                        onCheckedChange={() => toggleSet(setSelectedDiscoveryIds, creator.unified_id)}
-                      />
-                      <span className="truncate text-sm">{creator.display_name}</span>
-                    </label>
-                  ))}
-                </div>
+                <QuotationCreatorPicker
+                  items={discoverySelection.map((c) => ({
+                    id: c.unified_id,
+                    label: c.display_name,
+                  }))}
+                  selectedIds={selectedDiscoveryIds}
+                  onSelectedIdsChange={setSelectedDiscoveryIds}
+                />
                 <Button
                   disabled={pending || selectedDiscoveryIds.size === 0}
                   onClick={() =>
@@ -242,33 +212,14 @@ export function AddCreatorsToQuotationModal({
             </div>
             {shortlistCreators.length > 0 ? (
               <>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">{shortlistCreators.length} creators</p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs"
-                    onClick={() =>
-                      setSelectedShortlistIds(new Set(shortlistCreators.map((c) => c.item_id)))
-                    }
-                  >
-                    Select all
-                  </Button>
-                </div>
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border p-2">
-                  {shortlistCreators.map((creator) => (
-                    <label
-                      key={creator.item_id}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50"
-                    >
-                      <Checkbox
-                        checked={selectedShortlistIds.has(creator.item_id)}
-                        onCheckedChange={() => toggleSet(setSelectedShortlistIds, creator.item_id)}
-                      />
-                      <span className="truncate text-sm">{creator.label}</span>
-                    </label>
-                  ))}
-                </div>
+                <QuotationCreatorPicker
+                  items={shortlistCreators.map((c) => ({
+                    id: c.item_id,
+                    label: c.label,
+                  }))}
+                  selectedIds={selectedShortlistIds}
+                  onSelectedIdsChange={setSelectedShortlistIds}
+                />
                 <Button
                   disabled={pending || !shortlistId || selectedShortlistIds.size === 0}
                   onClick={() =>
@@ -310,33 +261,14 @@ export function AddCreatorsToQuotationModal({
             </div>
             {campaignCreators.length > 0 ? (
               <>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">{campaignCreators.length} assignments</p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs"
-                    onClick={() =>
-                      setSelectedCampaignIds(new Set(campaignCreators.map((c) => c.item_id)))
-                    }
-                  >
-                    Select all
-                  </Button>
-                </div>
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border p-2">
-                  {campaignCreators.map((creator) => (
-                    <label
-                      key={creator.item_id}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50"
-                    >
-                      <Checkbox
-                        checked={selectedCampaignIds.has(creator.item_id)}
-                        onCheckedChange={() => toggleSet(setSelectedCampaignIds, creator.item_id)}
-                      />
-                      <span className="truncate text-sm">{creator.label}</span>
-                    </label>
-                  ))}
-                </div>
+                <QuotationCreatorPicker
+                  items={campaignCreators.map((c) => ({
+                    id: c.item_id,
+                    label: c.label,
+                  }))}
+                  selectedIds={selectedCampaignIds}
+                  onSelectedIdsChange={setSelectedCampaignIds}
+                />
                 <Button
                   disabled={pending || selectedCampaignIds.size === 0}
                   onClick={() =>
