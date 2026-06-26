@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ClientTypeFilter } from "@/lib/analytics/filters/client-type-filter";
+import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
+import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
 import type {
   StatementEntityOption,
   StatementGroupOption,
@@ -81,7 +83,7 @@ export async function searchStatementClientsByGroup(
     .order("name");
 
   if (options.groupId) {
-    query = query.eq("group_id", options.groupId);
+    query = applyGroupIdColumnFilter(query, options.groupId);
   }
 
   if (clientType === "agency") {

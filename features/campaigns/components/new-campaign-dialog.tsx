@@ -44,6 +44,12 @@ import {
   buildClientSelectOptions,
   dedupeClientsById,
 } from "@/lib/clients/client-select-options";
+import {
+  buildGroupFilterSelectOptions,
+  isIndependentGroupFilter,
+  matchesGroupFilter,
+} from "@/lib/groups/group-filter";
+import { formatGroupDisplayName } from "@/lib/groups/group-display";
 
 const initialState: CreateCampaignFormState = { ok: false };
 const NONE_VALUE = "__none__";
@@ -126,6 +132,9 @@ export function NewCampaignDialog({
     if (selectedClient?.group_id) {
       return groups.find((group) => group.id === selectedClient.group_id)?.name ?? null;
     }
+    if (selectedBrand || selectedClient) {
+      return formatGroupDisplayName(null);
+    }
     return null;
   }, [groups, selectedBrand, selectedClient]);
 
@@ -160,12 +169,18 @@ export function NewCampaignDialog({
   }, [resolvedClientTaxonomy, selectedClient]);
 
   const filteredClients = useMemo(() => {
+    if (isIndependentGroupFilter(groupId)) {
+      return uniqueClients.filter((c) => c.group_id == null);
+    }
     if (!groupId) return uniqueClients;
     return uniqueClients.filter((c) => c.group_id === groupId);
   }, [uniqueClients, groupId]);
 
   const filteredBrands = useMemo(() => {
     if (clientId) return brands.filter((b) => b.client_id === clientId);
+    if (isIndependentGroupFilter(groupId)) {
+      return brands.filter((b) => b.group_id == null);
+    }
     if (groupId) return brands.filter((b) => b.group_id === groupId);
     return brands;
   }, [brands, clientId, groupId]);
@@ -181,13 +196,13 @@ export function NewCampaignDialog({
       setGroupId(id);
       if (!id) return;
       const client = uniqueClients.find((c) => c.id === clientId);
-      if (client && client.group_id !== id) {
+      if (client && !matchesGroupFilter(client.group_id, id)) {
         setClientId("");
         setBrandId("");
         return;
       }
       const brand = brands.find((b) => b.id === brandId);
-      if (brand && brand.group_id !== id) {
+      if (brand && !matchesGroupFilter(brand.group_id, id)) {
         setBrandId("");
       }
     },
@@ -219,7 +234,7 @@ export function NewCampaignDialog({
       const brand = brands.find((b) => b.id === id);
       if (!brand) return;
       setClientId(brand.client_id);
-      setGroupId(brand.group_id);
+      setGroupId(brand.group_id ?? "");
     },
     [brands]
   );
@@ -261,10 +276,7 @@ export function NewCampaignDialog({
     toast.error(state.message);
   }, [state, resetHierarchy]);
 
-  const groupOptions = groups.map((g) => ({
-    value: g.id,
-    label: g.name,
-  }));
+  const groupOptions = buildGroupFilterSelectOptions(groups);
 
   const clientOptions = useMemo(
     () => buildClientSelectOptions(filteredClients),
@@ -305,9 +317,10 @@ export function NewCampaignDialog({
         <DialogHeader>
           <DialogTitle>New campaign</DialogTitle>
           <DialogDescription>
-            Choose group, client, and brand — selections filter each other and
-            auto-fill when you pick a brand or client. Only the campaign header
-            and PO budget are created; add assignments from the Assignments tab.
+            Choose client and brand — selections filter each other and
+            auto-fill when you pick a brand or client. Holding group is optional.
+            Only the campaign header and PO budget are created; add assignments
+            from the Assignments tab.
           </DialogDescription>
         </DialogHeader>
         {!hasBrands ? (
@@ -334,13 +347,13 @@ export function NewCampaignDialog({
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="grid gap-2">
-                <Label>Holding group</Label>
+                <Label>Holding group (optional)</Label>
                 <SearchableSelect
                   value={groupId}
                   onValueChange={handleGroupChange}
                   options={groupOptions}
                   disabled={isPending}
-                  placeholder="Select group"
+                  placeholder="All groups"
                 />
               </div>
               <div className="grid gap-2">
@@ -352,7 +365,9 @@ export function NewCampaignDialog({
                   disabled={isPending || (groupId !== "" && filteredClients.length === 0)}
                   placeholder={
                     groupId && filteredClients.length === 0
-                      ? "No clients in group"
+                      ? isIndependentGroupFilter(groupId)
+                        ? "No independent clients"
+                        : "No clients in group"
                       : "Select client"
                   }
                 />

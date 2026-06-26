@@ -10,6 +10,7 @@ import { CampaignFlatSection } from "@/features/campaigns/components/campaign-fl
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import {
   resolveCampaignDisplayDates,
   resolveCampaignDisplayGroup,
@@ -78,7 +79,7 @@ export function CampaignOverviewDetails({
                   {displayGroup.name}
                 </Link>
               ) : (
-                "—"
+                formatGroupDisplayName(null)
               )
             }
           />

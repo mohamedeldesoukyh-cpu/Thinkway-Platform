@@ -30,7 +30,7 @@ import {
 } from "@/lib/finance/po/status";
 import { formatMoney } from "@/features/campaigns/utils";
 import type { PoTrackerWorkspaceData } from "@/features/finance/po-tracker/types";
-import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import { buildGroupFilterSelectOptions } from "@/lib/groups/group-filter";
 
 const NONE = "__all__";
 
@@ -171,10 +171,12 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
             label="Group"
             value={searchParams.get("group_id") ?? NONE}
             onChange={(v) => setFilter("group_id", v)}
-            options={data.filter_options.groups.map((g) => ({
-              value: g.id,
-              label: g.name,
-            }))}
+            options={buildGroupFilterSelectOptions(data.filter_options.groups).map(
+              (option) => ({
+                value: option.value || NONE,
+                label: option.label,
+              })
+            )}
           />
           <FilterSelect
             label="Client"

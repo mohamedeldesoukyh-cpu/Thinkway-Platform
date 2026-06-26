@@ -1,4 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
+import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 
 import type {
@@ -87,7 +88,9 @@ export async function getPoTrackerWorkspace(
     )
     .order("document_number");
 
-  if (filters.group_id) query = query.eq("group_id", filters.group_id);
+  if (filters.group_id) {
+    query = applyGroupIdColumnFilter(query, filters.group_id);
+  }
   if (filters.client_id) query = query.eq("client_id", filters.client_id);
   if (filters.brand_id) query = query.eq("brand_id", filters.brand_id);
   if (filters.campaign_id) query = query.eq("id", filters.campaign_id);
@@ -120,7 +123,7 @@ export async function getPoTrackerWorkspace(
     campaign_name: row.name,
     campaign_document_number: row.document_number,
     group_id: row.group?.id ?? "",
-    group_name: row.group?.name ?? "—",
+    group_name: formatGroupDisplayName(row.group?.name),
     client_id: row.client?.id ?? "",
     client_name: row.client?.name ?? "—",
     brand_id: row.brand?.id ?? "",

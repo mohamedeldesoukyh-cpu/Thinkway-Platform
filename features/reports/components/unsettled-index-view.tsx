@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import type { ClientTypeFilter } from "@/lib/analytics/filters/client-type-filter";
+import { buildGroupFilterSelectOptions, isIndependentGroupFilter, INDEPENDENT_CLIENTS_FILTER_LABEL } from "@/lib/groups/group-filter";
 import type { UnsettledIndexData } from "@/lib/reports/statements/unsettled-types";
 
 type Props = {
@@ -38,15 +39,13 @@ export function UnsettledIndexView({ data }: Props) {
   const hasSearch = data.search.trim().length > 0;
   const hasGroupFilter = Boolean(data.groupId);
   const hasResults = data.clients.length > 0;
-  const selectedGroupName =
-    data.groups.find((group) => group.id === data.groupId)?.name ?? null;
+  const selectedGroupName = isIndependentGroupFilter(data.groupId)
+    ? INDEPENDENT_CLIENTS_FILTER_LABEL
+    : data.groups.find((group) => group.id === data.groupId)?.name ?? null;
   const showGroupColumn = !hasGroupFilter;
 
   const groupSelectOptions = useMemo(
-    () => [
-      { value: "", label: "All groups" },
-      ...data.groups.map((group) => ({ value: group.id, label: group.name })),
-    ],
+    () => buildGroupFilterSelectOptions(data.groups),
     [data.groups]
   );
 

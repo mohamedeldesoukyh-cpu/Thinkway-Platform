@@ -189,7 +189,7 @@ export type CampaignHeaderRow = {
   description: string | null;
   brief: string | null;
   status: CampaignStatus;
-  group_id: string;
+  group_id: string | null;
   client_id: string;
   brand_id: string;
   team_id: string | null;
@@ -773,7 +773,7 @@ export type Database = {
           description?: string | null;
           brief?: string | null;
           brand_id: string;
-          group_id?: string;
+          group_id?: string | null;
           client_id?: string;
           team_id?: string | null;
           status?: CampaignStatus;

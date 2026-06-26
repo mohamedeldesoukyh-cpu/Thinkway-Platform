@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   loadCampaignAssignmentsBillingBundle,
@@ -22,11 +22,21 @@ import type {
 } from "@/features/billing/types";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 import type { FinanceAuditTimelineEntry } from "@/lib/finance/queries/finance-audit";
+import { emptyCampaignPerformanceSummary } from "@/features/campaigns/queries/campaign-performance-defaults";
 import type {
   CampaignPerformanceCharts,
   CampaignPerformanceSummary,
   CampaignPublicationRow,
 } from "@/features/campaigns/queries/publications";
+import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
+import {
+  isSilentDeferredBundleRefresh,
+  shouldFetchDeferredBundle,
+} from "@/features/campaigns/hooks/deferred-bundle-policy";
+import {
+  METRICS_SYNC_POLL_INTERVAL_MS,
+  publicationsNeedMetricsSyncPoll,
+} from "@/features/campaigns/hooks/metrics-sync-poll-policy";
 import { assignmentHierarchyBoundaryKey } from "@/lib/campaigns/assignment-row-debug";
 
 export const OPERATIONAL_BILLING_BUNDLES: CampaignDeferredBundle[] = [
@@ -93,6 +103,7 @@ function scheduleBackgroundPrefetch(run: () => void): () => void {
 export type CampaignTabDataState = {
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
+  groups: { id: string; name: string; document_number: string }[];
   currencyOptions: { value: string; label: string }[];
   assignmentHierarchy: AssignmentHierarchy;
   billingGroups: AssignmentBillingGroup[];
@@ -102,6 +113,8 @@ export type CampaignTabDataState = {
   publications: CampaignPublicationRow[];
   performanceSummary: CampaignPerformanceSummary;
   performanceCharts: CampaignPerformanceCharts;
+  publicationsSyncHealth: CampaignMetricsSyncHealth;
+  publicationsSchemaWarnings: string[];
   publicationsLoadError: string | null;
   financeAudit: FinanceAuditTimelineEntry[];
   bundleStatuses: BundleStatuses;
@@ -109,6 +122,7 @@ export type CampaignTabDataState = {
   isTabLoading: (tabId: CampaignWorkspaceTabId) => boolean;
   tabLoadError: (tabId: CampaignWorkspaceTabId) => string | null;
   reloadOperationalBilling: () => Promise<void>;
+  reloadPublications: () => Promise<void>;
 };
 
 export function useCampaignTabData(
@@ -119,6 +133,7 @@ export function useCampaignTabData(
     CampaignFormOptionsPayload["accountManagers"]
   >([]);
   const [teams, setTeams] = useState<CampaignFormOptionsPayload["teams"]>([]);
+  const [groups, setGroups] = useState<CampaignFormOptionsPayload["groups"]>([]);
   const [currencyOptions, setCurrencyOptions] = useState<
     CampaignFormOptionsPayload["currencyOptions"]
   >([]);
@@ -132,19 +147,9 @@ export function useCampaignTabData(
     FinanceInvoiceRegisterRow[]
   >([]);
   const [publications, setPublications] = useState<CampaignPublicationRow[]>([]);
-  const [performanceSummary, setPerformanceSummary] = useState<CampaignPerformanceSummary>({
-    total_publications: 0,
-    total_reach: 0,
-    total_impressions: 0,
-    total_views: 0,
-    total_engagements: 0,
-    average_engagement_rate: null,
-    average_cpm: null,
-    average_cpv: null,
-    top_creator_name: null,
-    top_creator_engagements: 0,
-    currency: "USD",
-  });
+  const [performanceSummary, setPerformanceSummary] = useState<CampaignPerformanceSummary>(
+    emptyCampaignPerformanceSummary()
+  );
   const [performanceCharts, setPerformanceCharts] = useState<CampaignPerformanceCharts>({
     performance_over_time: [],
     platform_split: [],
@@ -154,6 +159,17 @@ export function useCampaignTabData(
     views_by_publication: [],
     engagement_distribution: [],
   });
+  const [publicationsSyncHealth, setPublicationsSyncHealth] =
+    useState<CampaignMetricsSyncHealth>({
+      synced: 0,
+      partial: 0,
+      failed: 0,
+      manual_required: 0,
+      queued: 0,
+      collecting: 0,
+      total: 0,
+    });
+  const [publicationsSchemaWarnings, setPublicationsSchemaWarnings] = useState<string[]>([]);
   const [publicationsLoadError, setPublicationsLoadError] = useState<string | null>(null);
   const [financeAudit, setFinanceAudit] = useState<FinanceAuditTimelineEntry[]>([]);
   const [bundleStatuses, setBundleStatuses] =
@@ -196,12 +212,15 @@ export function useCampaignTabData(
     async (bundle: CampaignDeferredBundle, options?: { force?: boolean }) => {
       if (inFlightRef.current.has(bundle)) return;
       const status = bundleStatusesRef.current[bundle];
-      if (!options?.force && (status === "loading" || status === "loaded")) {
+      if (!shouldFetchDeferredBundle(status, options)) {
         return;
       }
 
       inFlightRef.current.add(bundle);
-      markBundleStatus(bundle, "loading");
+      const silentRefresh = isSilentDeferredBundleRefresh(status, options);
+      if (!silentRefresh) {
+        markBundleStatus(bundle, "loading");
+      }
 
       try {
         if (bundle === "formOptions") {
@@ -212,6 +231,7 @@ export function useCampaignTabData(
           }
           setAccountManagers(result.data.accountManagers);
           setTeams(result.data.teams);
+          setGroups(result.data.groups);
           setCurrencyOptions(result.data.currencyOptions);
         } else if (bundle === "assignmentsBilling") {
           const result = await loadCampaignAssignmentsBillingBundle(campaignId);
@@ -236,6 +256,8 @@ export function useCampaignTabData(
           setPublications(result.data.publications);
           setPerformanceSummary(result.data.summary);
           setPerformanceCharts(result.data.charts);
+          setPublicationsSyncHealth(result.data.syncHealth);
+          setPublicationsSchemaWarnings(result.data.schemaWarnings);
           setPublicationsLoadError(result.data.loadError);
         } else if (bundle === "financeAudit") {
           const result = await loadCampaignFinanceAuditBundle(campaignId);
@@ -266,6 +288,10 @@ export function useCampaignTabData(
     );
   }, [loadBundle]);
 
+  const reloadPublications = useCallback(async () => {
+    await loadBundle("publications", { force: true });
+  }, [loadBundle]);
+
   const prevHierarchyKeyRef = useRef<string | null>(null);
   useEffect(() => {
     const hierarchyKey = assignmentHierarchyBoundaryKey(initialAssignmentHierarchy);
@@ -285,6 +311,21 @@ export function useCampaignTabData(
       }
     });
   }, [campaignId, loadBundle]);
+
+  const needsMetricsSyncPoll = useMemo(
+    () => publicationsNeedMetricsSyncPoll(publications),
+    [publications]
+  );
+
+  useEffect(() => {
+    if (!needsMetricsSyncPoll) return;
+
+    const timer = window.setInterval(() => {
+      void loadBundle("publications", { force: true });
+    }, METRICS_SYNC_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [needsMetricsSyncPoll, loadBundle]);
 
   const isTabLoading = useCallback(
     (tabId: CampaignWorkspaceTabId) => {
@@ -313,6 +354,7 @@ export function useCampaignTabData(
   return {
     accountManagers,
     teams,
+    groups,
     currencyOptions,
     assignmentHierarchy,
     billingGroups,
@@ -322,6 +364,8 @@ export function useCampaignTabData(
     publications,
     performanceSummary,
     performanceCharts,
+    publicationsSyncHealth,
+    publicationsSchemaWarnings,
     publicationsLoadError,
     financeAudit,
     bundleStatuses,
@@ -329,5 +373,6 @@ export function useCampaignTabData(
     isTabLoading,
     tabLoadError,
     reloadOperationalBilling,
+    reloadPublications,
   };
 }

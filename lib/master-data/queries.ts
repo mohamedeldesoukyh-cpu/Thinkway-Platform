@@ -220,7 +220,7 @@ export type BrandCampaignFormRow = {
   id: string;
   name: string;
   client_id: string;
-  group_id: string;
+  group_id: string | null;
   currency_code: string;
   group: { id: string; name: string } | null;
   client: BrandCampaignFormClient | null;

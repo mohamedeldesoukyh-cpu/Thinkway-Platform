@@ -17,6 +17,7 @@ type CampaignOverviewTabProps = {
   workspace: CampaignWorkspace;
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
+  groups: { id: string; name: string; document_number: string }[];
   currencyOptions: { value: string; label: string }[];
   onOpenDetails?: () => void;
 };
@@ -25,6 +26,7 @@ export function CampaignOverviewTab({
   workspace,
   accountManagers,
   teams,
+  groups,
   currencyOptions,
   onOpenDetails,
 }: CampaignOverviewTabProps) {
@@ -79,6 +81,7 @@ export function CampaignOverviewTab({
         workspace={workspace}
         accountManagers={accountManagers}
         teams={teams}
+        groups={groups}
         currencyOptions={currencyOptions}
         open={editOpen}
         onOpenChange={setEditOpen}

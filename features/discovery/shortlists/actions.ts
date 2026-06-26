@@ -605,7 +605,7 @@ async function createCampaignHeaderFromBrand(
   const brandRow = brand as unknown as {
     id: string;
     client_id: string;
-    group_id: string;
+    group_id: string | null;
     category_id: string | null;
     subcategory_id: string | null;
     vr_rate_id: string | null;

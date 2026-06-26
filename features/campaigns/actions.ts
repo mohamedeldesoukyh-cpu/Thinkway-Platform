@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   METADATA_PLATFORM_KEY,
 } from "@/features/campaigns/constants";
-import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
+import { logCampaignGroupAssignmentChange } from "@/lib/campaigns/campaign-group-audit";
 import {
   buildDuplicatedCampaignLineInsert,
   copyAssignmentDeliverablesForDuplicate,
@@ -55,12 +55,8 @@ import {
   type LinePlatformSelection,
 } from "./line-assignment";
 
-export type FormActionState = {
-  ok: boolean;
-  message?: string;
-  fieldErrors?: Record<string, string[]>;
-  campaignId?: string;
-};
+export type { FormActionState } from "./form-action-state";
+import type { FormActionState } from "./form-action-state";
 
 export type CreateCampaignFormState = FormActionState & {
   creditLimit?: ClientCreditLimitCheck;
@@ -260,7 +256,7 @@ export async function createCampaignAction(
   const brandRow = brand as unknown as {
     id: string;
     client_id: string;
-    group_id: string;
+    group_id: string | null;
     category_id: string | null;
     subcategory_id: string | null;
     vr_rate_id: string | null;
@@ -381,22 +377,32 @@ export async function updateCampaignHeaderAction(
     };
   }
 
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { ok: false, message: authError };
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
   }
 
   const platform = emptyToNull(parsed.data.platform);
-  const { data: existing } = await supabase
+  const groupId =
+    parsed.data.group_id !== undefined
+      ? emptyToNull(parsed.data.group_id)
+      : undefined;
+  const { data: existing, error: existingError } = await supabase
     .from("campaign_headers")
-    .select("metadata, client_id")
+    .select("metadata, client_id, group_id")
     .eq("id", parsed.data.campaign_id)
     .maybeSingle();
+
+  if (existingError) {
+    return { ok: false, message: existingError.message };
+  }
 
   const metadata = {
     ...((existing?.metadata as Record<string, unknown>) ?? {}),
     ...(platform ? { [METADATA_PLATFORM_KEY]: platform } : {}),
   };
+
+  const previousGroupId = (existing?.group_id as string | null) ?? null;
 
   const { error } = await supabase
     .from("campaign_headers")
@@ -410,12 +416,38 @@ export async function updateCampaignHeaderAction(
       end_date: parsed.data.end_date,
       account_manager_id: emptyToNull(parsed.data.account_manager_id),
       team_id: emptyToNull(parsed.data.team_id),
+      ...(groupId !== undefined ? { group_id: groupId } : {}),
       metadata,
     })
     .eq("id", parsed.data.campaign_id);
 
   if (error) {
     return { ok: false, message: error.message };
+  }
+
+  if (groupId !== undefined && previousGroupId !== groupId) {
+    const groupIds = [previousGroupId, groupId].filter(Boolean) as string[];
+    const groupNameById = new Map<string, string>();
+    if (groupIds.length > 0) {
+      const { data: groupRows } = await supabase
+        .from("groups")
+        .select("id, name")
+        .in("id", groupIds);
+      for (const row of groupRows ?? []) {
+        groupNameById.set(row.id, row.name);
+      }
+    }
+
+    await logCampaignGroupAssignmentChange(supabase, {
+      campaignId: parsed.data.campaign_id,
+      actorId: user.id,
+      previousGroupId,
+      newGroupId: groupId,
+      previousGroupName: previousGroupId
+        ? groupNameById.get(previousGroupId)
+        : null,
+      newGroupName: groupId ? groupNameById.get(groupId) : null,
+    });
   }
 
   revalidateCampaign(parsed.data.campaign_id, existing?.client_id);
@@ -1249,7 +1281,7 @@ export async function duplicateCampaignAction(
     id: string;
     brand_id: string;
     client_id: string;
-    group_id: string;
+    group_id: string | null;
     description: string | null;
     brief: string | null;
     currency_code: string;

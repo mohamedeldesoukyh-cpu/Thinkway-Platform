@@ -69,6 +69,7 @@
     "test:quotation-engine": "npx tsx features/quotations/quotation-engine.test.ts",
     "test:quotation-serial": "npx tsx features/quotations/serial.test.ts",
     "test:quotations": "npx tsx lib/commercial/commercial-engine.test.ts && npx tsx lib/commercial-sync/rules.test.ts && npx tsx features/quotations/commercial-lifecycle.test.ts && npx tsx features/quotations/quotation-engine.test.ts && npx tsx features/quotations/quotation-row-math.test.ts && npx tsx features/quotations/serial.test.ts && npx tsx features/quotations/shortlist-seeds.test.ts && npx tsx features/quotations/quotation-gp-health.test.ts && npx tsx features/quotations/quotation-validity.test.ts && npx tsx features/quotations/quotation-default-terms.test.ts && npx tsx features/quotations/export/quotation-document.test.ts",
+    "test:campaign-group-policy": "npx tsx lib/campaigns/campaign-group-policy.test.ts",
     "test:creator-enrichment-policy": "npx tsx lib/creator-enrichment/policy.test.ts",
     "test:creator-enrichment-merge": "npx tsx lib/creator-enrichment/merge.test.ts",
     "test:creator-enrichment-audience-filters": "npx tsx features/discovery/enrichment/audience-filters.test.ts",

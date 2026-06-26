@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
 import { REL } from "@/lib/supabase/relation-hints";
 import { governanceDb } from "@/lib/supabase/governance-client";
 
@@ -129,7 +129,7 @@ export async function getCampaignsForMovement(params: {
   } else if (params.clientId) {
     query = query.eq("client_id", params.clientId);
   } else if (params.groupId) {
-    query = query.eq("group_id", params.groupId);
+    query = applyGroupIdColumnFilter(query, params.groupId);
   }
 
   const search = params.search?.trim();

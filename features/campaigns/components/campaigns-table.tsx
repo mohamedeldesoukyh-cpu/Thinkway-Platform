@@ -22,7 +22,7 @@ import {
   resolvePoAlertStatus,
 } from "@/lib/finance/po/status";
 import type { CampaignListItem } from "@/types/database";
-import { cn } from "@/lib/utils";
+import { formatGroupDisplayName } from "@/lib/groups/group-display";
 
 type CampaignsTableProps = {
   campaigns: CampaignListItem[];
@@ -85,7 +85,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     label: "Group · Legal entity",
     renderCell: (campaign) => (
       <>
-        {campaign.group?.name ?? "—"}
+        {formatGroupDisplayName(campaign.group?.name)}
         {campaign.client?.legal_name || campaign.client?.name
           ? ` · ${campaign.client.legal_name ?? campaign.client.name}`
           : ""}

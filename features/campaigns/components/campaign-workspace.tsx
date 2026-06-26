@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CopyIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
+import { CopyIcon, FileTextIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
 
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { isCampaignWorkspaceTabId } from "@/features/campaigns/constants/campaig
 import { useCampaignWorkspaceTabOrder } from "@/features/campaigns/hooks/use-campaign-workspace-tab-order";
 import { useCampaignTabData } from "@/features/campaigns/hooks/use-campaign-tab-data";
 import { CampaignOperationalRefreshProvider } from "@/features/campaigns/hooks/campaign-operational-refresh";
+import { useMetricsSyncCompletionToasts } from "@/features/campaigns/hooks/use-metrics-sync-toasts";
 import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
@@ -79,6 +80,7 @@ export function CampaignWorkspaceView({
   const {
     accountManagers,
     teams,
+    groups,
     currencyOptions,
     assignmentHierarchy,
     billingGroups,
@@ -88,13 +90,18 @@ export function CampaignWorkspaceView({
     publications,
     performanceSummary,
     performanceCharts,
+    publicationsSyncHealth,
     publicationsLoadError,
+    publicationsSchemaWarnings,
     financeAudit,
     isTabLoading,
     tabLoadError,
     bundleStatuses,
     reloadOperationalBilling,
+    reloadPublications,
   } = tabData;
+
+  useMetricsSyncCompletionToasts(publications);
 
   useEffect(() => {
     setActiveTab(defaultTab);
@@ -248,7 +255,10 @@ export function CampaignWorkspaceView({
   };
 
   return (
-    <CampaignOperationalRefreshProvider reloadOperationalBilling={reloadOperationalBilling}>
+    <CampaignOperationalRefreshProvider
+      reloadOperationalBilling={reloadOperationalBilling}
+      reloadPublications={reloadPublications}
+    >
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
@@ -301,6 +311,14 @@ export function CampaignWorkspaceView({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <a
+                            href={`/api/campaigns/${workspace.id}/performance/document?format=pdf&download=1`}
+                          >
+                            <FileTextIcon className="size-4" />
+                            Generate Performance Report
+                          </a>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
                           <CopyIcon className="size-4" />
                           Duplicate campaign
@@ -339,6 +357,7 @@ export function CampaignWorkspaceView({
               workspace={workspace}
               accountManagers={accountManagers}
               teams={teams}
+              groups={groups}
               currencyOptions={currencyOptions}
               onOpenDetails={() => setDetailsOpen(true)}
             />
@@ -405,7 +424,9 @@ export function CampaignWorkspaceView({
                   publications={publications}
                   summary={performanceSummary}
                   charts={performanceCharts}
+                  syncHealth={publicationsSyncHealth}
                   loadError={publicationsLoadError}
+                  schemaWarnings={publicationsSchemaWarnings}
                 />
               </TabErrorBoundary>
             )}
@@ -455,6 +476,7 @@ export function CampaignWorkspaceView({
         workspace={workspace}
         accountManagers={accountManagers}
         teams={teams}
+        groups={groups}
         currencyOptions={currencyOptions}
         tabCounts={{
           lines: tabCounts.lines,

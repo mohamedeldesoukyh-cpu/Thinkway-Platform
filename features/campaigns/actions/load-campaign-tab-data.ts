@@ -6,7 +6,9 @@ import {
   type CampaignPerformanceCharts,
   type CampaignPerformanceSummary,
 } from "@/features/campaigns/queries/publications";
+import { emptyCampaignPerformanceSummary } from "@/features/campaigns/queries/campaign-performance-defaults";
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
+import { traceCampaignRouteError } from "@/lib/performance/campaign-route-trace";
 import {
   getCampaignBillingGroups,
   getCampaignBillingLines,
@@ -36,6 +38,7 @@ export type CampaignDeferredBundle =
 export type CampaignFormOptionsPayload = {
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
+  groups: { id: string; name: string; document_number: string }[];
   currencyOptions: { value: string; label: string }[];
 };
 
@@ -53,8 +56,10 @@ export type CampaignBillingPayload = {
 
 export type CampaignPublicationsPayload = {
   publications: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["publications"];
-  summary: CampaignPerformanceSummary;
-  charts: CampaignPerformanceCharts;
+  summary: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["summary"];
+  charts: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["charts"];
+  syncHealth: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["sync_health"];
+  schemaWarnings: string[];
   loadError: string | null;
 };
 
@@ -80,6 +85,7 @@ export async function loadCampaignFormOptionsBundle(
       data: {
         accountManagers: formOptions.accountManagers,
         teams: formOptions.masterData.teams,
+        groups: formOptions.groups,
         currencyOptions: buildCurrencyOptions(formOptions.masterData.currencies),
       },
     };
@@ -93,6 +99,7 @@ export async function loadCampaignFormOptionsBundle(
       data: {
         accountManagers: fallback.accountManagers,
         teams: fallback.masterData.teams,
+        groups: fallback.groups,
         currencyOptions: buildCurrencyOptions(fallback.masterData.currencies),
       },
     };
@@ -207,30 +214,24 @@ export async function loadCampaignPublicationsBundle(
         publications: result.publications,
         summary: result.summary,
         charts: result.charts,
+        syncHealth: result.sync_health,
+        schemaWarnings: result.schema_warnings,
         loadError: result.load_error,
       },
     };
   } catch (error) {
+    traceCampaignRouteError("tab-data:publications:failed", error, { campaignId });
     const message =
       error instanceof Error ? error.message : "Failed to load publications.";
     console.error("[campaign-tab-data] publications failed", { campaignId, message });
+    if (process.env.NODE_ENV === "development") {
+      throw error;
+    }
     return {
       ok: true,
       data: {
         publications: [],
-        summary: {
-          total_publications: 0,
-          total_reach: 0,
-          total_impressions: 0,
-          total_views: 0,
-          total_engagements: 0,
-          average_engagement_rate: null,
-          average_cpm: null,
-          average_cpv: null,
-          top_creator_name: null,
-          top_creator_engagements: 0,
-          currency: "USD",
-        },
+        summary: emptyCampaignPerformanceSummary(),
         charts: {
           performance_over_time: [],
           platform_split: [],
@@ -239,6 +240,16 @@ export async function loadCampaignPublicationsBundle(
           reach_by_creator: [],
           views_by_publication: [],
           engagement_distribution: [],
+        },
+        schemaWarnings: [],
+        syncHealth: {
+          synced: 0,
+          partial: 0,
+          failed: 0,
+          manual_required: 0,
+          queued: 0,
+          collecting: 0,
+          total: 0,
         },
         loadError: message,
       },

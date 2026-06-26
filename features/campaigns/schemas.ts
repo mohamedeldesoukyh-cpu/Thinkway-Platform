@@ -74,6 +74,7 @@ export const updateCampaignHeaderSchema = z
     end_date: optionalDate,
     account_manager_id: z.string().uuid().optional().or(z.literal("")),
     team_id: z.string().uuid().optional().or(z.literal("")),
+    group_id: z.string().uuid().optional().or(z.literal("")),
   })
   .refine(
     (data) => {

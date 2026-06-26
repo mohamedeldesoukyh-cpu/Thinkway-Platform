@@ -1,4 +1,4 @@
-import { roundMoney } from "@/lib/analytics/aggregations/round";
+import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import {
   formatPnLMonthLabel,
   monthsForScope,
@@ -18,7 +18,7 @@ function billableRevenue(fact: PnlLineFact): number {
 }
 
 function resolveGroupName(fact: PnlLineFact): string {
-  return fact.group_name?.trim() || "Ungrouped";
+  return formatGroupDisplayName(fact.group_name);
 }
 
 function aggregateClientRows(
@@ -67,7 +67,7 @@ function aggregateClientRows(
     );
     bucket.total_vr = roundMoney(bucket.total_vr + fact.vr_refund);
 
-    if (!bucket.group_name || bucket.group_name === "Ungrouped") {
+    if (!bucket.group_name || bucket.group_name === formatGroupDisplayName(null)) {
       bucket.group_name = resolveGroupName(fact);
     }
     if (!bucket.group_id && fact.group_id) {

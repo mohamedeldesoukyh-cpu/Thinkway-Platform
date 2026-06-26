@@ -34,12 +34,13 @@ import {
   OperationalEditPanelHeader,
 } from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
-import type { CampaignStatus } from "@/types/database";
+import { formatGroupDisplayName } from "@/lib/groups/group-display";
 
 type CampaignEditSheetProps = {
   workspace: CampaignWorkspace;
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
+  groups: { id: string; name: string }[];
   currencyOptions: { value: string; label: string }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +50,7 @@ export function CampaignEditSheet({
   workspace,
   accountManagers,
   teams,
+  groups,
   currencyOptions,
   open,
   onOpenChange,
@@ -60,6 +62,7 @@ export function CampaignEditSheet({
     workspace.account_manager?.id ?? ""
   );
   const [teamId, setTeamId] = useState(workspace.team?.id ?? "");
+  const [groupId, setGroupId] = useState(workspace.group?.id ?? "");
 
   const [state, formAction, isPending] = useActionState(
     updateCampaignHeaderAction,
@@ -83,6 +86,7 @@ export function CampaignEditSheet({
     setCurrency(workspace.currency_code);
     setAccountManagerId(workspace.account_manager?.id ?? "");
     setTeamId(workspace.team?.id ?? "");
+    setGroupId(workspace.group?.id ?? "");
   }, [open, workspace]);
 
   const campaignLabel = formatDocumentNumberForDisplay(workspace.document_number);
@@ -107,6 +111,7 @@ export function CampaignEditSheet({
           <input type="hidden" name="currency_code" value={currency} />
           <input type="hidden" name="account_manager_id" value={accountManagerId} />
           <input type="hidden" name="team_id" value={teamId} />
+          <input type="hidden" name="group_id" value={groupId} />
 
           <DetailFormSection label="Campaign name">
             <Input
@@ -210,6 +215,29 @@ export function CampaignEditSheet({
               onValueChange={setTeamId}
               options={teams.map((t) => ({ value: t.id, label: t.name }))}
               placeholder="Select team"
+              disabled={isPending}
+            />
+          </DetailFormSection>
+
+          <DetailFormSection
+            label="Holding group"
+            hint={
+              !groupId
+                ? `Currently ${formatGroupDisplayName(null)}`
+                : undefined
+            }
+          >
+            <SearchableSelect
+              value={groupId}
+              onValueChange={setGroupId}
+              options={[
+                { value: "", label: formatGroupDisplayName(null) },
+                ...groups.map((group) => ({
+                  value: group.id,
+                  label: group.name,
+                })),
+              ]}
+              placeholder={formatGroupDisplayName(null)}
               disabled={isPending}
             />
           </DetailFormSection>
