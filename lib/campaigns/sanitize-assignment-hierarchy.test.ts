@@ -48,7 +48,7 @@ function testFullyInvoicedDeliverablesShowInvoicedLineBilling() {
         invoice_eligible: false,
         is_locked: true,
         posts: [],
-      },
+      } as unknown as AssignmentHierarchyGroup["deliverables"][number],
       {
         id: "del-2",
         campaign_line_id: "line-1",
@@ -73,7 +73,7 @@ function testFullyInvoicedDeliverablesShowInvoicedLineBilling() {
         invoice_eligible: false,
         is_locked: true,
         posts: [],
-      },
+      } as unknown as AssignmentHierarchyGroup["deliverables"][number],
     ],
     rollups: {
       deliverable_count: 2,
@@ -89,13 +89,14 @@ function testFullyInvoicedDeliverablesShowInvoicedLineBilling() {
 
   const sanitized = sanitizeAssignmentHierarchyGroup(group);
   assert(sanitized != null, "group should sanitize");
+  const result = sanitized!;
   assert(
-    sanitized.line.billing_status === "invoiced",
-    `expected invoiced billing display, got ${sanitized.line.billing_status}`
+    result.line.billing_status === "invoiced",
+    `expected invoiced billing display, got ${result.line.billing_status}`
   );
   assert(
-    sanitized.line.invoice_id === "inv-1",
-    `expected derived invoice_id inv-1, got ${sanitized.line.invoice_id}`
+    result.line.invoice_id === "inv-1",
+    `expected derived invoice_id inv-1, got ${result.line.invoice_id}`
   );
 }
 
@@ -141,7 +142,7 @@ function testInvoicedDeliverableStatusWithoutInvoiceLinkStaysMovedToBilling() {
         invoice_eligible: false,
         is_locked: true,
         posts: [],
-      } as AssignmentHierarchyGroup["deliverables"][number],
+      } as unknown as AssignmentHierarchyGroup["deliverables"][number],
     ],
     rollups: {
       deliverable_count: 1,
@@ -157,9 +158,10 @@ function testInvoicedDeliverableStatusWithoutInvoiceLinkStaysMovedToBilling() {
 
   const sanitized = sanitizeAssignmentHierarchyGroup(group);
   assert(sanitized != null, "group should sanitize");
+  const result = sanitized!;
   assert(
-    sanitized.line.billing_status === "moved_to_billing",
-    `orphan invoiced deliverable must not upgrade line display, got ${sanitized.line.billing_status}`
+    result.line.billing_status === "moved_to_billing",
+    `orphan invoiced deliverable must not upgrade line display, got ${result.line.billing_status}`
   );
 }
 

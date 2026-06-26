@@ -2,8 +2,7 @@ import {
   resolveCreatorAvatarUrl,
   resolvePublicationContentPreviewUrl,
   resolvePublicationCreatorAvatar,
-  resolvePublicationRowCreatorAvatar,
-  type CreatorAvatarInput,
+  resolvePublicationRowCreatorAvatar, resolveCreatorAvatarDisplay, initialsFromCreatorName, type CreatorAvatarInput,
   type PublicationContentPreviewInput,
 } from "@/lib/performance/creator-avatar";
 

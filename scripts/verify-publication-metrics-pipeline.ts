@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { Queue } from "bullmq";
 import { config } from "dotenv";
 import IORedis from "ioredis";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import {
   enqueuePublicationMetricsJob,
@@ -128,7 +128,7 @@ type SyncLogRow = {
 };
 
 async function fetchPublication(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   publicationId: string
 ): Promise<PublicationSnapshot | null> {
   const { data, error } = await supabase
@@ -144,7 +144,7 @@ async function fetchPublication(
 }
 
 async function fetchSyncLogsSince(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   publicationId: string,
   sinceIso: string
 ): Promise<SyncLogRow[]> {
@@ -165,8 +165,7 @@ async function waitForJob(
   redisUrl: string,
   jobId: string
 ): Promise<{ state: string; returnvalue?: unknown; failedReason?: string }> {
-  const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
-  const queue = new Queue(PUBLICATION_METRICS_QUEUE, { connection });
+  const queue = new Queue(PUBLICATION_METRICS_QUEUE, { connection: { url: redisUrl } });
   const deadline = Date.now() + JOB_TIMEOUT_MS;
 
   try {
@@ -193,7 +192,6 @@ async function waitForJob(
     return { state: `timeout (${state})` };
   } finally {
     await queue.close();
-    connection.disconnect();
   }
 }
 

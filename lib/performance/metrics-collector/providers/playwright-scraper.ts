@@ -7,7 +7,7 @@ type Ctx = {
   playwrightExtract?: (
     url: string,
     platform: string
-  ) => Promise<import("@/lib/performance/metrics-collector/types").Partial<
+  ) => Promise<Partial<
     import("@/lib/performance/metrics-collector/types").CollectedMetrics
   > | null>;
 };
@@ -41,7 +41,9 @@ export async function tryPlaywrightProvider(ctx: Ctx): Promise<ProviderAttemptRe
     };
   }
 
-  const { publicationDate, ...metrics } = raw;
+  const { publicationDate, ...metrics } = raw as typeof raw & {
+    publicationDate?: string | null;
+  };
 
   return {
     provider: "playwright",

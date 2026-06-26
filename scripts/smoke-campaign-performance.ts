@@ -6,7 +6,6 @@
 import "@/lib/performance/script-env-preload";
 
 import { Queue } from "bullmq";
-import IORedis from "ioredis";
 
 import {
   buildPerformanceReportExcelBuffer,
@@ -32,8 +31,7 @@ function record(step: string, ok: boolean, detail: string) {
 }
 
 async function waitForJob(redisUrl: string, jobId: string): Promise<void> {
-  const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
-  const queue = new Queue(PUBLICATION_METRICS_QUEUE, { connection });
+  const queue = new Queue(PUBLICATION_METRICS_QUEUE, { connection: { url: redisUrl } });
   const deadline = Date.now() + JOB_TIMEOUT_MS;
 
   try {
@@ -53,7 +51,6 @@ async function waitForJob(redisUrl: string, jobId: string): Promise<void> {
     throw new Error("job timeout");
   } finally {
     await queue.close();
-    connection.disconnect();
   }
 }
 

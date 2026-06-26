@@ -6,6 +6,7 @@ import {
   type PnlPeriodScope,
 } from "@/lib/analytics/pnl/pnl-periods";
 import type { PnlLineFact } from "@/lib/analytics/pnl/pnl-report-types";
+import { roundMoney } from "@/lib/analytics/aggregations/round";
 import type {
   VrReportColumn,
   VrReportData,

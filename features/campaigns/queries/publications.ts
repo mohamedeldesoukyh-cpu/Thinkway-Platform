@@ -638,7 +638,11 @@ async function loadApifyAuthorAvatarsFromSyncLogs(
     return avatars;
   }
 
-  for (const row of data ?? []) {
+  for (const row of (data ?? []) as Array<{
+    publication_id: string;
+    response_summary: unknown;
+    created_at: string;
+  }>) {
     const publicationId = row.publication_id as string;
     if (avatars.has(publicationId)) continue;
     const url = authorAvatarFromSyncLogSummary(row.response_summary);

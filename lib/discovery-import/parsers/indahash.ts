@@ -1,7 +1,7 @@
 import { parseCompactCount } from "@/lib/social/parse-compact-count";
 import { isSocialPlatform } from "@/lib/social/platforms";
 
-import type { ParsedCreatorRow } from "./types";
+import type { ParsedCreatorRow } from "../types";
 
 const PLATFORM_ALIASES: Record<string, string> = {
   instagram: "instagram",

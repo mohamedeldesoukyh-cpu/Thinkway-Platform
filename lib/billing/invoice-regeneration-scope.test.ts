@@ -69,3 +69,5 @@ function testScopeExcludesUnselectedCampaignLines() {
 testScopeFromDeliverableLineItems();
 testScopeExcludesUnselectedCampaignLines();
 console.log("invoice-regeneration-scope: 2 passed");
+
+export {};

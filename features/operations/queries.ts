@@ -1,6 +1,7 @@
 import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
 import { REL } from "@/lib/supabase/relation-hints";
 import { governanceDb } from "@/lib/supabase/governance-client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import type {
   HierarchyOption,
@@ -70,17 +71,17 @@ export async function getHierarchyOptions(): Promise<{
   if (brandsResult.error) throw new Error(brandsResult.error.message);
 
   return {
-    groups: (groupsResult.data ?? []).map((g) => ({
+    groups: (groupsResult.data ?? []).map((g: { id: string; name: string; document_number: string }) => ({
       id: g.id,
       label: g.name,
       sublabel: g.document_number,
     })),
-    clients: (clientsResult.data ?? []).map((c) => ({
+    clients: (clientsResult.data ?? []).map((c: { id: string; name: string; document_number: string }) => ({
       id: c.id,
       label: c.name,
       sublabel: c.document_number,
     })),
-    brands: (brandsResult.data ?? []).map((b) => ({
+    brands: (brandsResult.data ?? []).map((b: { id: string; name: string; document_number: string }) => ({
       id: b.id,
       label: b.name,
       sublabel: b.document_number,
@@ -142,7 +143,7 @@ export async function getCampaignsForMovement(params: {
   const { data, error, count } = await query.range(from, to);
   if (error) throw new Error(error.message);
 
-  const campaigns: MovementCampaignRow[] = (data ?? []).map((row) => {
+  const campaigns: MovementCampaignRow[] = (data ?? []).map((row: Record<string, unknown>) => {
     const r = row as unknown as {
       id: string;
       document_number: string;
@@ -333,7 +334,7 @@ export async function getVendorsForMovement(): Promise<
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((v) => ({
+  return (data ?? []).map((v: { id: string; display_name: string; document_number: string }) => ({
     id: v.id,
     label: v.display_name,
     sublabel: v.document_number,
@@ -361,7 +362,7 @@ export async function getVendorAssignmentsForMovement(
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row) => {
+  return (data ?? []).map((row: Record<string, unknown>) => {
     const r = row as unknown as {
       id: string;
       campaign_line_id: string | null;

@@ -87,6 +87,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     reviewed_by_name: null,
     client_signature_name: null,
     client_signed_at: null,
+    client_onboarding_status: null,
     issue_date: "2026-06-01",
     validity_date: "2026-06-16",
     version: "v1.0",

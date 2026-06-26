@@ -984,8 +984,8 @@ export async function persistCollectedMetrics(
         : "metrics_collected");
 
   const metricsChanged = metricsPayloadChanged(
-    storedBeforePersist as Record<string, number | null | undefined>,
-    sanitized as Record<string, number | null | undefined>
+    storedBeforePersist as unknown as Record<string, number | null | undefined>,
+    sanitized as unknown as Record<string, number | null | undefined>
   );
 
   const nextEr = sanitized.engagement_rate;

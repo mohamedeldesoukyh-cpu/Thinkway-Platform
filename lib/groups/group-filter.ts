@@ -41,9 +41,9 @@ export function applyGroupIdColumnFilter<T extends GroupFilterQuery>(
   const parsed = parseGroupFilterParam(groupFilter);
   if (!parsed) return query;
   if (isIndependentGroupFilter(parsed)) {
-    return query.is(column, null);
+    return query.is(column, null) as T;
   }
-  return query.eq(column, parsed);
+  return query.eq(column, parsed) as T;
 }
 
 export function matchesGroupFilter(

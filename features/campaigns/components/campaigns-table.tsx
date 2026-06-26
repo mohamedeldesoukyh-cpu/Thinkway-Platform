@@ -23,6 +23,7 @@ import {
 } from "@/lib/finance/po/status";
 import type { CampaignListItem } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
+import { cn } from "@/lib/utils";
 
 type CampaignsTableProps = {
   campaigns: CampaignListItem[];

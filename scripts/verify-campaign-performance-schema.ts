@@ -11,7 +11,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 
 import {
@@ -123,7 +123,7 @@ async function fetchColumnsViaCli(): Promise<Set<string> | null> {
 }
 
 async function fetchColumnsViaRest(
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient
 ): Promise<{ columns: Set<string> | null; rpcError?: string }> {
   const { data, error } = await supabase.rpc("list_public_table_columns", {
     p_table: CAMPAIGN_PUBLICATIONS_TABLE,
@@ -159,7 +159,7 @@ async function fetchColumnsViaRest(
 }
 
 async function checkTableViaRest(
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient
 ): Promise<{ ok: boolean; error?: string; permissionDenied?: boolean }> {
   const { error } = await supabase.from(CAMPAIGN_PUBLICATIONS_TABLE).select("id").limit(1);
 
