@@ -11,6 +11,14 @@ import {
   stripQuotationVersionSuffix,
 } from "@/lib/commercial-sync/rules";
 import { promoteDiscoveredProfileToInfluencer } from "@/features/discovery/shortlists/promote";
+import {
+  checkPromoteMasterDataDuplicates,
+  executePromoteMasterData,
+} from "@/features/quotations/promote-master-data";
+import {
+  promoteMasterDataSchema,
+  type PromoteMasterDataInput,
+} from "@/features/quotations/promote-master-data-schema";
 import { computeQuotationTotals } from "@/features/quotations/quotation-engine";
 import {
   QUOTATION_PERMISSIONS,
@@ -202,97 +210,87 @@ export async function updateQuotationClientBrand(input: {
   return { ok: true };
 }
 
-export async function promoteQuotationToMasterData(input: {
-  quotationId: string;
-  groupId: string;
-  agencyOrDirect?: "agency" | "direct" | "hybrid";
-}): Promise<ActionResult<{ clientId: string; brandId: string }>> {
+export async function checkPromoteMasterDataDuplicateWarnings(
+  input: Omit<PromoteMasterDataInput, "quotationId" | "acknowledged">
+): Promise<ActionResult<{ warnings: Array<{ field: string; message: string }> }>> {
+  return checkPromoteMasterDataDuplicates(input);
+}
+
+export async function promoteQuotationToMasterData(
+  input: PromoteMasterDataInput
+): Promise<
+  ActionResult<{
+    clientId: string;
+    brandId: string | null;
+    case: string;
+  }>
+> {
+  const parsed = promoteMasterDataSchema.safeParse(input);
+  if (!parsed.success) {
+    const first = parsed.error.flatten().fieldErrors;
+    const message =
+      Object.values(first).flat()[0] ?? "Invalid promotion request.";
+    return { ok: false, message };
+  }
+
   const actor = await getActor();
   if (!actor.ok) return actor;
 
   const promoteAuth = await requireMasterDataPromote(actor.supabase);
   if (!promoteAuth.ok) return promoteAuth;
 
-  const row = await loadQuotationRow(actor.supabase, input.quotationId);
+  const row = await loadQuotationRow(actor.supabase, parsed.data.quotationId);
   if (!row) return { ok: false, message: "Quotation not found." };
   if (!row.is_temporary_client && !row.is_temporary_brand) {
     return { ok: false, message: "This quotation already uses master client/brand data." };
   }
 
-  const clientName = String(row.temporary_client_name ?? "").trim();
-  const brandName = String(row.temporary_brand_name ?? "").trim();
-  if (!clientName || !brandName) {
-    return { ok: false, message: "Temporary client and brand names are required to promote." };
-  }
+  const oldData = {
+    is_temporary_client: row.is_temporary_client,
+    is_temporary_brand: row.is_temporary_brand,
+    temporary_client_name: row.temporary_client_name,
+    temporary_brand_name: row.temporary_brand_name,
+    client_id: row.client_id,
+    brand_id: row.brand_id,
+  };
 
-  const { data: client, error: clientError } = await actor.supabase
-    .from("clients")
-    .insert({
-      group_id: input.groupId,
-      name: clientName,
-      legal_name: clientName,
-      status: "prospect",
-      agency_or_direct: input.agencyOrDirect ?? "agency",
-      created_by: actor.userId,
-    } as never)
-    .select("id, group_id")
-    .single();
+  const result = await executePromoteMasterData(
+    actor.supabase,
+    actor.userId,
+    parsed.data,
+    row
+  );
 
-  if (clientError || !client) {
-    return { ok: false, message: clientError?.message ?? "Failed to create legal entity." };
-  }
+  if (!result.ok || !result.data) return result;
 
-  const clientRow = client as { id: string; group_id: string };
+  const { clientId, brandId, case: promoteCase } = result.data;
 
-  const { data: brand, error: brandError } = await actor.supabase
-    .from("brands")
-    .insert({
-      client_id: clientRow.id,
-      group_id: clientRow.group_id,
-      name: brandName,
-      currency_code: (row.currency as string) ?? "EGP",
-      created_by: actor.userId,
-    } as never)
-    .select("id")
-    .single();
-
-  if (brandError || !brand) {
-    return { ok: false, message: brandError?.message ?? "Failed to create brand." };
-  }
-
-  const brandId = (brand as { id: string }).id;
-
-  await actor.supabase
-    .from("quotations")
-    .update({
-      client_id: clientRow.id,
+  await logQuotationLifecycleEvent(actor.supabase, {
+    quotationId: parsed.data.quotationId,
+    actorId: actor.userId,
+    event: "quotation.client_promoted",
+    summary: `Promoted quotation to master data (${promoteCase.replaceAll("_", " ")}).`,
+    metadata: {
+      promoteCase,
+      clientId,
+      brandId,
+      groupId: parsed.data.groupId,
+      clientMode: parsed.data.clientMode,
+      brandMode: parsed.data.brandMode,
+    },
+    oldData,
+    newData: {
+      client_id: clientId,
       brand_id: brandId,
       is_temporary_client: false,
       is_temporary_brand: false,
-      temporary_client_name: null,
-      temporary_brand_name: null,
-    } as never)
-    .eq("id", input.quotationId);
-
-  if (row.shortlist_id) {
-    await actor.supabase
-      .from("discovery_shortlists")
-      .update({ client_id: clientRow.id, brand_id: brandId } as never)
-      .eq("id", row.shortlist_id as string);
-  }
-
-  await logQuotationLifecycleEvent(actor.supabase, {
-    quotationId: input.quotationId,
-    actorId: actor.userId,
-    event: "quotation.client_promoted",
-    summary: `Promoted temporary client "${clientName}" and brand "${brandName}" to master data.`,
-    metadata: { clientId: clientRow.id, brandId },
+    },
   });
 
-  revalidateQuotation(input.quotationId, row.shortlist_id as string | null);
+  revalidateQuotation(parsed.data.quotationId, row.shortlist_id as string | null);
   return {
     ok: true,
-    data: { clientId: clientRow.id, brandId },
+    data: { clientId, brandId, case: promoteCase },
     message: "Promoted to master data.",
   };
 }

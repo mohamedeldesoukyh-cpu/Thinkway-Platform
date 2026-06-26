@@ -148,3 +148,17 @@ export type QuotationFormOptions = {
   brands: Array<{ id: string; name: string; client_id: string }>;
   campaigns: Array<{ id: string; name: string; document_number: string | null }>;
 };
+
+export type PromoteWizardOptions = {
+  groups: Array<{ id: string; name: string }>;
+  clients: Array<{
+    id: string;
+    name: string;
+    legal_name: string | null;
+    document_number: string;
+  }>;
+  brands: Array<{ id: string; name: string; client_id: string }>;
+  categories: Array<{ id: string; name: string }>;
+  subcategories: Array<{ id: string; category_id: string; name: string }>;
+  owners: Array<{ id: string; full_name: string | null; email: string }>;
+};

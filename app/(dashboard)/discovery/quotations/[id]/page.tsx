@@ -6,22 +6,12 @@ import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Button } from "@/components/ui/button";
 import { DiscoverySubNav } from "@/features/discovery-import/components/discovery-sub-nav";
 import { QUOTATIONS_LIST_PATH } from "@/features/quotations/constants";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { QuotationWorkspace } from "@/features/quotations/components/quotation-workspace";
 import {
+  getPromoteWizardOptions,
   getQuotationDetail,
   getQuotationFormOptions,
 } from "@/features/quotations/queries";
-
-async function getGroupOptionsForPromote() {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from("groups")
-    .select("id, name")
-    .order("name", { ascending: true })
-    .limit(200);
-  return ((data ?? []) as Array<{ id: string; name: string }>) ?? [];
-}
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +21,10 @@ type PageProps = {
 
 export default async function QuotationDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const [detail, formOptions, groupOptions] = await Promise.all([
+  const [detail, formOptions, promoteOptions] = await Promise.all([
     getQuotationDetail(id),
     getQuotationFormOptions(),
-    getGroupOptionsForPromote(),
+    getPromoteWizardOptions(),
   ]);
   if (!detail) notFound();
 
@@ -58,7 +48,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
             <QuotationWorkspace
               detail={detail}
               formOptions={formOptions}
-              groupOptions={groupOptions}
+              promoteOptions={promoteOptions}
             />
           </div>
         </div>

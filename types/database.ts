@@ -648,6 +648,8 @@ export type ClientRow = {
   trade_license_expiry: string | null;
   currency: string;
   account_manager_id: string | null;
+  client_owner_id: string | null;
+  country_manager_id: string | null;
   notes: string | null;
   client_io_terms_text: string | null;
   metadata: Record<string, unknown>;
@@ -699,6 +701,8 @@ export type Database = {
           trade_license_expiry?: string | null;
           currency?: string;
           account_manager_id?: string | null;
+          client_owner_id?: string | null;
+          country_manager_id?: string | null;
           notes?: string | null;
           client_io_terms_text?: string | null;
           metadata?: Record<string, unknown>;

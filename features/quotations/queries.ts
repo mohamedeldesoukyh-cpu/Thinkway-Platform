@@ -1,6 +1,6 @@
 import { getAuthContext, hasPermission } from "@/lib/auth/permissions";
 import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
-import { getBrandsForSelect, getClientsForSelect } from "@/lib/master-data/queries";
+import { getBrandsForSelect, getClientsForSelect, getMasterDataOptions } from "@/lib/master-data/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database, QuotationStatus, CommercialInputMode } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -16,6 +16,7 @@ import type {
   QuotationDeliverable,
   QuotationDetail,
   QuotationFormOptions,
+  PromoteWizardOptions,
   QuotationItemRow,
   QuotationListRow,
   QuotationRevisionRow,
@@ -68,6 +69,46 @@ export async function getQuotationFormOptions(): Promise<QuotationFormOptions> {
       id: string;
       name: string;
       document_number: string | null;
+    }>) ?? [],
+  };
+}
+
+export async function getPromoteWizardOptions(): Promise<PromoteWizardOptions> {
+  const supabase = (await createSupabaseServerClient()) as Supabase;
+  const [groups, clients, brands, masterData, ownersResult] = await Promise.all([
+    supabase.from("groups").select("id, name").order("name").limit(200),
+    getClientsForSelect(),
+    getBrandsForSelect(),
+    getMasterDataOptions(),
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("is_active", true)
+      .order("full_name", { ascending: true }),
+  ]);
+
+  if (groups.error) throw new Error(groups.error.message);
+  if (ownersResult.error) throw new Error(ownersResult.error.message);
+
+  return {
+    groups: ((groups.data ?? []) as Array<{ id: string; name: string }>) ?? [],
+    clients: (clients ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      legal_name: c.legal_name,
+      document_number: c.document_number,
+    })),
+    brands: (brands ?? []).map((b) => ({
+      id: b.id,
+      name: b.name,
+      client_id: b.client_id,
+    })),
+    categories: masterData.categories,
+    subcategories: masterData.subcategories,
+    owners: ((ownersResult.data ?? []) as Array<{
+      id: string;
+      full_name: string | null;
+      email: string;
     }>) ?? [],
   };
 }

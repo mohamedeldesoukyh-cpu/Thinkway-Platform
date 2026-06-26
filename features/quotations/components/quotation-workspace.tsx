@@ -103,7 +103,7 @@ import {
   QUOTATION_TEMPLATE_OPTIONS,
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
-import type { QuotationDetail, QuotationFormOptions, QuotationItemRow } from "@/features/quotations/types";
+import type { PromoteWizardOptions, QuotationDetail, QuotationFormOptions, QuotationItemRow } from "@/features/quotations/types";
 
 function egp(n: number, decimals = 0): string {
   return `${new Intl.NumberFormat("en-US", {
@@ -207,11 +207,11 @@ function exportSelectedCsv(
 export function QuotationWorkspace({
   detail,
   formOptions,
-  groupOptions,
+  promoteOptions,
 }: {
   detail: QuotationDetail;
   formOptions: QuotationFormOptions;
-  groupOptions: Array<{ id: string; name: string }>;
+  promoteOptions: PromoteWizardOptions;
 }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
@@ -483,7 +483,7 @@ export function QuotationWorkspace({
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
-        <QuotationLifecyclePanel detail={detail} groupOptions={groupOptions} />
+        <QuotationLifecyclePanel detail={detail} promoteOptions={promoteOptions} />
         <QuotationClientBrandPanel
           detail={detail}
           options={formOptions}

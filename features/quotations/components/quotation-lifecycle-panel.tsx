@@ -28,10 +28,10 @@ import {
   generateQuotationVersion,
   getQuotationLifecycleActivity,
   moveQuotationToShortlist,
-  promoteQuotationToMasterData,
 } from "@/features/quotations/lifecycle-actions";
+import { PromoteMasterDataWizard } from "@/features/quotations/components/promote-master-data-wizard";
 import { quotationDetailPath } from "@/features/quotations/constants";
-import type { QuotationDetail } from "@/features/quotations/types";
+import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
 
 type ActivityEvent = {
   id: string;
@@ -43,10 +43,10 @@ type ActivityEvent = {
 
 type Props = {
   detail: QuotationDetail;
-  groupOptions: Array<{ id: string; name: string }>;
+  promoteOptions: PromoteWizardOptions;
 };
 
-export function QuotationLifecyclePanel({ detail, groupOptions }: Props) {
+export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [tab, setTab] = useState<"links" | "activity">("links");
@@ -54,7 +54,6 @@ export function QuotationLifecyclePanel({ detail, groupOptions }: Props) {
   const [versionOpen, setVersionOpen] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState("");
   const [promoteOpen, setPromoteOpen] = useState(false);
-  const [groupId, setGroupId] = useState(groupOptions[0]?.id ?? "");
 
   useEffect(() => {
     if (tab !== "activity") return;
@@ -69,9 +68,7 @@ export function QuotationLifecyclePanel({ detail, groupOptions }: Props) {
   const canCreateCampaign =
     detail.canManage && canCreateCampaignFromQuotation(detail.status);
   const canPromote =
-    detail.canManage &&
-    (detail.is_temporary_client || detail.is_temporary_brand) &&
-    groupOptions.length > 0;
+    detail.canManage && (detail.is_temporary_client || detail.is_temporary_brand);
 
   function run(action: () => Promise<{ ok: boolean; message?: string }>) {
     startTransition(async () => {
@@ -273,48 +270,12 @@ export function QuotationLifecyclePanel({ detail, groupOptions }: Props) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Promote to master data</DialogTitle>
-            <DialogDescription>
-              Creates legal entity &quot;{detail.temporary_client_name}&quot; and brand
-              &quot;{detail.temporary_brand_name}&quot; in the selected group.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label>Group</Label>
-            <select
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-            >
-              {groupOptions.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <DialogFooter>
-            <Button
-              disabled={pending || !groupId}
-              onClick={() =>
-                run(async () => {
-                  const res = await promoteQuotationToMasterData({
-                    quotationId: detail.id,
-                    groupId,
-                  });
-                  if (res.ok) setPromoteOpen(false);
-                  return res;
-                })
-              }
-            >
-              Promote
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PromoteMasterDataWizard
+        detail={detail}
+        options={promoteOptions}
+        open={promoteOpen}
+        onOpenChange={setPromoteOpen}
+      />
     </div>
   );
 }

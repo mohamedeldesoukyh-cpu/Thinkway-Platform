@@ -29,6 +29,8 @@ export const OPTIONAL_CLIENT_COLUMN_NAMES = [
   "vr_rate_id",
   "credit_limit_active",
   "accept_credit_risk",
+  "client_owner_id",
+  "country_manager_id",
   ...CLASSIFICATION_AUDIT_COLUMN_NAMES,
 ] as const;
 
