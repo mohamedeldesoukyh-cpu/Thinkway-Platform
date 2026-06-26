@@ -1,16 +1,9 @@
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status/status-badge";
 import { cn } from "@/lib/utils";
-import { STATUS_TONE_CLASS, type StatusTone } from "@/lib/ui/status-tone";
 import type { ClientStatus } from "@/types/database";
 
 import { CLIENT_STATUS_OPTIONS } from "../constants";
-
-const statusTone: Record<ClientStatus, StatusTone> = {
-  prospect: "info",
-  active: "success",
-  inactive: "neutral",
-  archived: "neutral",
-};
+import { resolveStatusTone } from "@/components/shared/status/status-utils";
 
 type ClientStatusBadgeProps = {
   status: ClientStatus;
@@ -23,11 +16,10 @@ export function ClientStatusBadge({ status, className }: ClientStatusBadgeProps)
     status;
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("font-medium", STATUS_TONE_CLASS[statusTone[status]], className)}
-    >
-      {label}
-    </Badge>
+    <StatusBadge
+      label={label}
+      tone={resolveStatusTone("client", status)}
+      className={cn("font-medium", className)}
+    />
   );
 }

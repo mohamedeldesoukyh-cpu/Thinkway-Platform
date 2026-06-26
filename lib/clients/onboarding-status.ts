@@ -1,4 +1,7 @@
-import type { StatusTone } from "@/lib/ui/status-tone";
+import {
+  ONBOARDING_STATUS_TONE as ONBOARDING_STATUS_TONE_MAP,
+  type SemanticStatusTone,
+} from "@/components/shared/status/status-config";
 import type { ClientStatus } from "@/types/database";
 
 export const CLIENT_ONBOARDING_STATUSES = [
@@ -49,13 +52,10 @@ export const ONBOARDING_STATUS_LABELS: Record<ClientOnboardingStatus, string> = 
   active: "Active",
 };
 
-export const ONBOARDING_STATUS_TONE: Record<ClientOnboardingStatus, StatusTone> = {
-  draft: "neutral",
-  legal_pending: "warning",
-  finance_pending: "info",
-  ready: "success",
-  active: "success",
-};
+export const ONBOARDING_STATUS_TONE: Record<
+  ClientOnboardingStatus,
+  SemanticStatusTone
+> = ONBOARDING_STATUS_TONE_MAP;
 
 const SECTION_LABELS: Record<OnboardingChecklistSection, string> = {
   legal: "Legal",

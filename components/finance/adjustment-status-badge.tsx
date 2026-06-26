@@ -1,19 +1,10 @@
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status/status-badge";
 import {
   FINANCE_ADJUSTMENT_STATUS_LABELS,
   type FinanceAdjustmentStatus,
 } from "@/lib/finance/status/adjustment-status";
-import { STATUS_TONE_CLASS, type StatusTone } from "@/lib/ui/status-tone";
+import { ADJUSTMENT_STATUS_TONE } from "@/components/shared/status/status-config";
 import { cn } from "@/lib/utils";
-
-const adjustmentTone: Record<FinanceAdjustmentStatus, StatusTone> = {
-  draft: "neutral",
-  approved: "info",
-  posted: "success",
-  cancelled: "danger",
-  void: "danger",
-  pending_repost: "warning",
-};
 
 type AdjustmentStatusBadgeProps = {
   status: FinanceAdjustmentStatus | string;
@@ -26,15 +17,14 @@ export function AdjustmentStatusBadge({ status, className }: AdjustmentStatusBad
     ? FINANCE_ADJUSTMENT_STATUS_LABELS[status as FinanceAdjustmentStatus]
     : status;
   const tone = known
-    ? adjustmentTone[status as FinanceAdjustmentStatus]
+    ? ADJUSTMENT_STATUS_TONE[status as FinanceAdjustmentStatus]
     : "neutral";
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("text-[10px] font-medium", STATUS_TONE_CLASS[tone], className)}
-    >
-      {label}
-    </Badge>
+    <StatusBadge
+      label={label}
+      tone={tone}
+      className={cn("text-[10px] font-medium", className)}
+    />
   );
 }

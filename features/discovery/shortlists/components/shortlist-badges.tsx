@@ -1,3 +1,5 @@
+import { StatusBadge } from "@/components/shared/status/status-badge";
+import { resolveStatusTone } from "@/components/shared/status/status-utils";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type {
@@ -14,19 +16,14 @@ import {
   SHORTLIST_VISIBILITY_LABELS,
 } from "../constants";
 
-const STATUS_CLASSES: Record<ShortlistStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  under_review: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  approved: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  cancelled: "bg-destructive/10 text-destructive",
-  archived: "bg-muted text-muted-foreground line-through",
-};
-
 export function ShortlistStatusBadge({ status }: { status: ShortlistStatus }) {
   return (
-    <Badge variant="ghost" className={cn(STATUS_CLASSES[status])}>
-      {SHORTLIST_STATUS_LABELS[status]}
-    </Badge>
+    <StatusBadge
+      label={SHORTLIST_STATUS_LABELS[status]}
+      tone={resolveStatusTone("shortlist", status)}
+      appearance="ghost"
+      className={cn(status === "archived" && "line-through")}
+    />
   );
 }
 
@@ -42,36 +39,20 @@ export function ShortlistVisibilityBadge({
   );
 }
 
-const ITEM_STATUS_CLASSES: Record<ShortlistItemStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  under_review: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  approved: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  rejected: "bg-destructive/10 text-destructive",
-  moved_to_campaign: "bg-primary/15 text-primary",
-  cancelled: "bg-muted text-muted-foreground line-through",
-};
-
 export function ShortlistItemStatusBadge({
   status,
 }: {
   status: ShortlistItemStatus;
 }) {
   return (
-    <Badge variant="ghost" className={cn(ITEM_STATUS_CLASSES[status])}>
-      {SHORTLIST_ITEM_STATUS_LABELS[status]}
-    </Badge>
+    <StatusBadge
+      label={SHORTLIST_ITEM_STATUS_LABELS[status]}
+      tone={resolveStatusTone("shortlistItem", status)}
+      appearance="ghost"
+      className={cn(status === "cancelled" && "line-through")}
+    />
   );
 }
-
-const ASSIGNMENT_CLASSES: Record<CampaignShortlistAssignmentStatus, string> = {
-  suggested: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
-  invited: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  approved: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  contracted: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  published: "bg-primary/15 text-primary",
-  rejected: "bg-destructive/10 text-destructive",
-  removed: "bg-muted text-muted-foreground line-through",
-};
 
 export function AssignmentStatusBadge({
   status,
@@ -80,8 +61,11 @@ export function AssignmentStatusBadge({
 }) {
   if (!status) return null;
   return (
-    <Badge variant="ghost" className={cn(ASSIGNMENT_CLASSES[status])}>
-      {ASSIGNMENT_STATUS_LABELS[status]}
-    </Badge>
+    <StatusBadge
+      label={ASSIGNMENT_STATUS_LABELS[status]}
+      tone={resolveStatusTone("shortlistAssignment", status)}
+      appearance="ghost"
+      className={cn(status === "removed" && "line-through")}
+    />
   );
 }

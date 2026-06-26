@@ -1,17 +1,9 @@
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status/status-badge";
+import { resolveStatusTone } from "@/components/shared/status/status-utils";
 import { cn } from "@/lib/utils";
-import { STATUS_TONE_CLASS, type StatusTone } from "@/lib/ui/status-tone";
 import type { InfluencerStatus } from "@/types/database";
 
 import { VENDOR_STATUS_OPTIONS } from "../constants";
-
-const statusTone: Record<InfluencerStatus, StatusTone> = {
-  prospect: "info",
-  active: "success",
-  inactive: "neutral",
-  blacklisted: "danger",
-  archived: "neutral",
-};
 
 type VendorStatusBadgeProps = {
   status: InfluencerStatus;
@@ -24,11 +16,10 @@ export function VendorStatusBadge({ status, className }: VendorStatusBadgeProps)
     status;
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("font-medium", STATUS_TONE_CLASS[statusTone[status]], className)}
-    >
-      {label}
-    </Badge>
+    <StatusBadge
+      label={label}
+      tone={resolveStatusTone("vendor", status)}
+      className={cn("font-medium", className)}
+    />
   );
 }

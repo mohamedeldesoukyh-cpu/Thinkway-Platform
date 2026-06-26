@@ -1,17 +1,10 @@
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status/status-badge";
 import {
   POSTING_BATCH_STATUS_LABELS,
   type FinancePostingBatchStatus,
 } from "@/lib/finance/status/posting-status";
-import { STATUS_TONE_CLASS, type StatusTone } from "@/lib/ui/status-tone";
+import { POSTING_BATCH_STATUS_TONE } from "@/components/shared/status/status-config";
 import { cn } from "@/lib/utils";
-
-const postingTone: Record<FinancePostingBatchStatus, StatusTone> = {
-  draft: "neutral",
-  posted: "success",
-  reversed: "warning",
-  failed: "danger",
-};
 
 type PostingBatchStatusBadgeProps = {
   status: FinancePostingBatchStatus | string;
@@ -23,14 +16,13 @@ export function PostingBatchStatusBadge({ status, className }: PostingBatchStatu
   const label = known
     ? POSTING_BATCH_STATUS_LABELS[status as FinancePostingBatchStatus]
     : status;
-  const tone = known ? postingTone[status as FinancePostingBatchStatus] : "neutral";
+  const tone = known ? POSTING_BATCH_STATUS_TONE[status as FinancePostingBatchStatus] : "neutral";
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("text-[10px] font-medium", STATUS_TONE_CLASS[tone], className)}
-    >
-      {label}
-    </Badge>
+    <StatusBadge
+      label={label}
+      tone={tone}
+      className={cn("text-[10px] font-medium", className)}
+    />
   );
 }
