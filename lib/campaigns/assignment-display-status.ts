@@ -1,4 +1,4 @@
-import type { CampaignLineBillingStatus } from "@/features/billing/types";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import type {
   AssignmentHierarchyRollups,
 } from "@/features/campaigns/types/assignment-hierarchy";

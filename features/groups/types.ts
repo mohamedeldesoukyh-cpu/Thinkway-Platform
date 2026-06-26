@@ -3,12 +3,9 @@ import type {
   ClientStatus,
   PaymentTerms,
 } from "@/types/database";
+import type { GroupDocumentType } from "@/lib/domains/document/types";
 
-export type GroupDocumentType =
-  | "nda"
-  | "agreement"
-  | "tax_document"
-  | "group_contract";
+export type { GroupDocumentType } from "@/lib/domains/document/types";
 
 export type GroupFinancialSummary = {
   total_revenue: number;

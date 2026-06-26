@@ -5,7 +5,7 @@ import {
 import { roundMoney } from "@/lib/analytics/aggregations/round";
 import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 import type { FinancialMetrics } from "@/lib/analytics/types/metrics";
-import type { CampaignLineBillingStatus } from "@/features/billing/types";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 
 export type LineFinancialInput = {
   revenue: number;

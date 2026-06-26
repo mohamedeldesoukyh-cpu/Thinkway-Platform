@@ -15,12 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldError } from "@/components/forms/field-error";
+import type { DocumentUploadFormState } from "@/lib/domains/document/types";
 
-export type DocumentUploadFormState = {
-  ok: boolean;
-  message?: string;
-  fieldErrors?: Record<string, string[]>;
-};
+export type { DocumentUploadFormState } from "@/lib/domains/document/types";
 
 type DocumentUploadFormProps = {
   entityId: string;

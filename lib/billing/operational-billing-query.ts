@@ -2,9 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   AssignmentBillingGroup,
-  CampaignLineBillingStatus,
   DeliverableBillingRow,
 } from "@/features/billing/types";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import {
   queryAssignmentDeliverables,
   resolveDeliverableVatExempt,

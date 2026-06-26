@@ -1,4 +1,4 @@
-import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
+import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type {
   OperationalDeliverableExplorerRow,

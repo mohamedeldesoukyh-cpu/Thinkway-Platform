@@ -7,7 +7,7 @@ import type {
   AssignmentPostOperationalRow,
 } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-import type { AssignmentPricingMode } from "@/features/campaigns/line-assignment";
+import type { AssignmentPricingMode } from "@/lib/domains/commercial/types";
 import { rollupAssignmentBilling } from "@/lib/billing/deliverable-billing";
 
 function roundMoney(value: number): number {

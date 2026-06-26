@@ -1,24 +1,19 @@
 import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
+import type {
+  AssignmentDeliverableBillingStatus,
+  CampaignLineBillingStatus,
+  CollectionStatus,
+  FinancialApprovalStage,
+  VendorPaymentStatus,
+} from "@/lib/domains/campaign/types";
 
-export type CampaignLineBillingStatus =
-  | "draft"
-  | "approved"
-  | "moved_to_billing"
-  | "partially_invoiced"
-  | "invoiced"
-  | "partially_paid"
-  | "paid"
-  | "closed";
-
-export type AssignmentDeliverableBillingStatus =
-  | "draft"
-  | "ready_to_invoice"
-  | "partially_invoiced"
-  | "invoiced"
-  | "partially_collected"
-  | "collected"
-  | "disputed"
-  | "cancelled";
+export type {
+  AssignmentDeliverableBillingStatus,
+  CampaignLineBillingStatus,
+  CollectionStatus,
+  FinancialApprovalStage,
+  VendorPaymentStatus,
+} from "@/lib/domains/campaign/types";
 
 export type DeliverableBillingRow = {
   id: string;
@@ -70,19 +65,6 @@ export type AssignmentBillingGroup = {
   po_consumed: number;
 };
 
-export type CollectionStatus =
-  | "pending"
-  | "partial"
-  | "collected"
-  | "overdue"
-  | "written_off";
-
-export type VendorPaymentStatus = "unpaid" | "pending" | "paid" | "cancelled";
-
-export type FinancialApprovalStage =
-  | "campaign_manager"
-  | "finance"
-  | "cfo_admin";
 
 export type { AgingBucket } from "@/lib/collections/aging";
 import type { AgingBucket } from "@/lib/collections/aging";

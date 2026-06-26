@@ -5,32 +5,19 @@ import {
   PLATFORM_DELIVERABLE_CODES,
   deliverableTypeLabel,
 } from "@/lib/campaigns/deliverable-taxonomy";
+import type {
+  LineInfluencerAssignment,
+  LinePlatformSelection,
+} from "@/lib/domains/campaign/types";
+import type { AssignmentPricingMode } from "@/lib/domains/commercial/types";
+
+export type { AssignmentPricingMode } from "@/lib/domains/commercial/types";
+export type {
+  LineInfluencerAssignment,
+  LinePlatformSelection,
+} from "@/lib/domains/campaign/types";
 
 export const LINE_ASSIGNMENT_META_KEY = "influencer_assignment";
-
-export type AssignmentPricingMode = "package" | "per_deliverable";
-
-export type LinePlatformSelection = {
-  account_id: string;
-  platform: string;
-  handle: string;
-  profile_url: string | null;
-  follower_count: number | null;
-  engagement_rate: number | null;
-  audience_country: string | null;
-  deliverables: string[];
-};
-
-export type LineInfluencerAssignment = {
-  influencer_id: string;
-  influencer_name: string;
-  influencer_document_number: string;
-  platforms: LinePlatformSelection[];
-  title_user_edited?: boolean;
-  /** Defaults to package for legacy assignments. */
-  pricing_mode?: AssignmentPricingMode;
-  commercial_rows?: import("@/lib/assignments/commercial-calculations").CommercialDeliverableRow[];
-};
 
 /** @deprecated Use getDeliverableTypeCodesForPlatform from deliverable-taxonomy */
 export const PLATFORM_DELIVERABLES = PLATFORM_DELIVERABLE_CODES;

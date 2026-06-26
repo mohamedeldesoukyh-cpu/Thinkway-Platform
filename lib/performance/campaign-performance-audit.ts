@@ -7,6 +7,15 @@ import {
   storedMetricsFromPublication,
 } from "@/lib/performance/metrics-collector/merge-metrics";
 import { PLATFORM_ICON_STYLES } from "@/lib/performance/platform-icon";
+import type {
+  AuditVerdict,
+  AuditVerdictResult,
+} from "@/lib/domains/audit/types";
+
+export type {
+  AuditVerdict,
+  AuditVerdictResult,
+} from "@/lib/domains/audit/types";
 
 export type CampaignPerformanceAuditPublication = {
   id: string;
@@ -66,14 +75,6 @@ export type CampaignPerformanceExtendedAudit = CampaignPerformanceAuditSummary &
   orphanScreenshots: number;
   reportGenerationFailures: number;
   queueStats: import("@/lib/performance/campaign-performance-queues").QueueStats[];
-};
-
-export type AuditVerdict = "PASS" | "WARN" | "FAIL";
-
-export type AuditVerdictResult = {
-  verdict: AuditVerdict;
-  failReasons: string[];
-  warnReasons: string[];
 };
 
 export type MetricsIntegrityFinding = {

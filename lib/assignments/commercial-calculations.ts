@@ -2,45 +2,19 @@ import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commerc
 import {
   getDeliverableTypeCodesForPlatform,
 } from "@/lib/campaigns/deliverable-taxonomy";
+import type {
+  AssignmentPricingMode,
+  CommercialDeliverableRow,
+  CommercialSummary,
+  PostScheduleEntry,
+} from "@/lib/domains/commercial/types";
 
-export type AssignmentPricingMode = "package" | "per_deliverable";
-
-export type PostScheduleEntry = {
-  sequence: number;
-  live_date: string | null;
-  notes?: string | null;
-  status?: string;
-  platform?: string;
-  deliverable_type?: string;
-  revenue_per_post?: number;
-  cost_per_post?: number;
-  revenue_vat_percent?: number;
-};
-
-export type CommercialDeliverableRow = {
-  /** Client-side stable id for React keys */
-  id: string;
-  platform: string;
-  deliverable_type: string;
-  quantity: number;
-  unit_cost: number;
-  revenue_before_vat: number;
-  usage_rights_amount?: number;
-  usage_rights_cost?: number;
-  agency_fee_percent?: number;
-  live_date: string | null;
-  notes: string | null;
-  schedule_mode: "single" | "expanded";
-  post_schedules: PostScheduleEntry[];
-};
-
-export type CommercialSummary = {
-  total_cost_before_vat: number;
-  total_revenue_before_vat: number;
-  gp: number;
-  margin_percent: number;
-  deliverable_units: number;
-};
+export type {
+  AssignmentPricingMode,
+  CommercialDeliverableRow,
+  CommercialSummary,
+  PostScheduleEntry,
+} from "@/lib/domains/commercial/types";
 
 export function rowTotalCost(row: Pick<CommercialDeliverableRow, "quantity" | "unit_cost">): number {
   return Math.round(row.quantity * row.unit_cost * 100) / 100;

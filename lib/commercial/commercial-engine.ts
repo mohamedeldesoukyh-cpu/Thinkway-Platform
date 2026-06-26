@@ -25,33 +25,17 @@
  * infinite/negative revenue and is rejected.
  */
 
-export type CommercialInputMode =
-  | "cost_markup_pct"
-  | "cost_gp_pct"
-  | "cost_revenue"
-  | "cost_gp_value";
+import type {
+  CommercialInput,
+  CommercialInputMode,
+  CommercialResult,
+} from "@/lib/domains/commercial/types";
 
-export type CommercialInput = {
-  mode: CommercialInputMode;
-  cost: number | null | undefined;
-  /** Percent value 0..<100 (e.g. 25 = 25%). Required for cost_gp_pct. */
-  gpPct?: number | null;
-  /** Required for cost_revenue. */
-  revenue?: number | null;
-  /** Required for cost_gp_value. */
-  gpValue?: number | null;
-};
-
-export type CommercialResult = {
-  cost: number;
-  revenue: number;
-  gpPct: number;
-  gpValue: number;
-  /** True when inputs were valid and a full result was computed. */
-  valid: boolean;
-  /** Non-fatal note explaining a guard/clamp (e.g. GP% >= 100). */
-  warning: string | null;
-};
+export type {
+  CommercialInput,
+  CommercialInputMode,
+  CommercialResult,
+} from "@/lib/domains/commercial/types";
 
 /** Money rounds to 2 dp; percentages to 4 dp (matches numeric(7,4) column). */
 function round2(value: number): number {

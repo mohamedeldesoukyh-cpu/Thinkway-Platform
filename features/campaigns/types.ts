@@ -1,14 +1,35 @@
 import type { AgencyOrDirect, CampaignStatus } from "@/types/database";
 import type { PoHealth } from "@/lib/finance/po/calculations";
 import type { PoStatus } from "@/lib/finance/po/status";
-
-import type { LineInfluencerAssignment } from "./line-assignment";
+import type {
+  CampaignLineAssignmentStatus,
+  LineInfluencerAssignment,
+  LinePaymentStatus,
+  VendorPaymentStatus,
+  WorkflowStage,
+} from "@/lib/domains/campaign/types";
 import type {
   ClientIoRow,
   ClientIoSendHistoryEntry,
   VendorIoRow,
   ClientIoSendRecipient,
 } from "@/features/io/types";
+
+export type {
+  CampaignLineAssignmentStatus,
+  LinePaymentStatus,
+  VendorPaymentStatus,
+  WorkflowStage,
+} from "@/lib/domains/campaign/types";
+
+export type {
+  CreatorBrowseFilters,
+  CreatorBrowseResult,
+  InfluencerAssignmentProfile,
+  InfluencerSearchResult,
+} from "@/lib/domains/creator/types";
+
+export type { CampaignLineBillingStatus as LineBillingStatus } from "@/lib/domains/campaign/types";
 
 export type GroupFormOption = {
   id: string;
@@ -45,36 +66,6 @@ export type BrandFormOption = {
   subcategory: { id: string; name: string } | null;
   vr_rate: { id: string; name: string; rate_percent: number } | null;
 };
-
-export type WorkflowStage =
-  | "planning"
-  | "negotiation"
-  | "live"
-  | "completed"
-  | "invoicing"
-  | "closed";
-
-export type { CampaignLineBillingStatus as LineBillingStatus } from "@/features/billing/types";
-
-export type LinePaymentStatus =
-  | "pending"
-  | "partial"
-  | "paid";
-
-export type CampaignLineAssignmentStatus =
-  | "draft"
-  | "assigned"
-  | "awaiting_content"
-  | "submitted"
-  | "approved"
-  | "scheduled"
-  | "posted"
-  | "verified"
-  | "invoiced"
-  | "paid"
-  | "closed";
-
-export type VendorPaymentStatus = "unpaid" | "pending" | "paid" | "cancelled";
 
 export type CampaignPoSummary = {
   po_number: string | null;
@@ -313,60 +304,6 @@ export type CampaignWorkspace = {
     client_country_code: string | null;
     default_revenue_vat_percent: number;
   };
-};
-
-export type InfluencerSearchResult = {
-  id: string;
-  document_number: string;
-  display_name: string;
-  status: string;
-  country_code: string | null;
-  suggested_currency: string;
-  categories?: string[];
-  notes?: string | null;
-  platforms: {
-    id: string;
-    platform: string;
-    handle: string;
-    profile_url: string | null;
-    follower_count: number | null;
-    engagement_rate: number | null;
-    audience_country: string | null;
-    is_verified?: boolean;
-  }[];
-};
-
-export type CreatorBrowseFilters = {
-  search?: string;
-  platform?: string;
-  country?: string;
-  category?: string;
-  minFollowers?: number;
-  maxFollowers?: number;
-  minEngagement?: number;
-  page?: number;
-  pageSize?: number;
-};
-
-export type CreatorBrowseResult = {
-  creators: InfluencerSearchResult[];
-  unified_creators?: import("@/lib/creators/types").UnifiedCreatorResult[];
-  total: number;
-  page: number;
-  pageSize: number;
-  internal_count?: number;
-  discovery_count?: number;
-};
-
-export type InfluencerAssignmentProfile = InfluencerSearchResult & {
-  rate_card: Record<string, unknown>;
-  payment_details: Record<string, unknown>;
-  suggested_cost: number;
-  vat_registered: boolean;
-  default_vat_percent: number;
-  tax_registration_number: string | null;
-  suggested_cost_vat_percent: number;
-  notes?: string | null;
 };
 
 export function formatMarginPercent(revenue: number, gp: number): number {

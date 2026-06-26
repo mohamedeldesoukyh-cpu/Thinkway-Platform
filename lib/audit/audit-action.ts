@@ -12,7 +12,9 @@ export const AUDIT_ACTIONS = {
   EXPORT: "export",
 } as const;
 
-export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
+import type { AuditAction } from "@/lib/domains/audit/types";
+
+export type { AuditAction } from "@/lib/domains/audit/types";
 
 const VALID_AUDIT_ACTIONS = new Set<string>(Object.values(AUDIT_ACTIONS));
 

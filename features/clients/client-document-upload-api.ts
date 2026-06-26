@@ -1,8 +1,9 @@
-export type ClientDocumentUploadApiResult = {
-  ok: boolean;
-  message?: string;
-  fieldErrors?: Record<string, string[]>;
-};
+import type { ClientDocumentUploadApiResult } from "@/lib/domains/document/types";
+
+export type {
+  ClientDocumentUploadApiResult,
+  EntityDocumentUploadResult,
+} from "@/lib/domains/document/types";
 
 export async function uploadClientDocumentViaApi(
   clientId: string,

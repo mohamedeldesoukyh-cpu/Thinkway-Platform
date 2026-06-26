@@ -1,13 +1,6 @@
-export type CampaignLineOperationalStatus =
-  | "draft"
-  | "io_generated"
-  | "io_revised"
-  | "locked"
-  | "moved_to_billing"
-  | "partially_invoiced"
-  | "invoiced"
-  | "reopened"
-  | "closed";
+import type { CampaignLineOperationalStatus } from "@/lib/domains/campaign/types";
+
+export type { CampaignLineOperationalStatus } from "@/lib/domains/campaign/types";
 
 const INVOICE_ELIGIBLE_OPERATIONAL: ReadonlySet<CampaignLineOperationalStatus> =
   new Set(["io_generated", "io_revised", "partially_invoiced"]);

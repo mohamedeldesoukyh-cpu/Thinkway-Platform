@@ -1,4 +1,4 @@
-import type { CampaignLineBillingStatus } from "@/features/billing/types";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 
 /**
  * Canonical metric definitions for Thinkway executive analytics.

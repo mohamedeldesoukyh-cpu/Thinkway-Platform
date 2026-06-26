@@ -1,16 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
+import type { ClientOnboardingAuditEvent } from "@/lib/domains/audit/types";
 import type { ClientOnboardingStatus } from "@/lib/clients/onboarding-status";
 import type { Database } from "@/types/database";
 
 type Supabase = SupabaseClient<Database>;
 
-export type ClientOnboardingAuditEvent =
-  | "client.promoted"
-  | "client.onboarding_status_changed"
-  | "client.duplicate_overridden"
-  | "client.existing_linked";
+export type { ClientOnboardingAuditEvent } from "@/lib/domains/audit/types";
 
 export async function logClientOnboardingEvent(
   supabase: Supabase,

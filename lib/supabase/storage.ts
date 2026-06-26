@@ -3,6 +3,9 @@ import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
+import type { DocumentBucket } from "@/lib/domains/document/types";
+
+export type { DocumentBucket } from "@/lib/domains/document/types";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -16,11 +19,6 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
-
-export type DocumentBucket =
-  | "client-documents"
-  | "influencer-documents"
-  | "group-documents";
 
 export type CreatorImportBucket = "creator-imports";
 

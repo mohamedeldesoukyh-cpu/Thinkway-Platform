@@ -1,7 +1,7 @@
 import type {
   AssignmentDeliverableBillingStatus,
   CampaignLineBillingStatus,
-} from "@/features/billing/types";
+} from "@/lib/domains/campaign/types";
 import { effectiveLineOperationalStatus } from "@/lib/campaigns/effective-operational-status";
 import {
   getRemainingRevenue,

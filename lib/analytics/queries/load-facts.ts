@@ -18,7 +18,7 @@ import { devLog } from "@/lib/platform/logger";
 import { safeSelect } from "@/lib/platform/schema-validation";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import type { CampaignAnalyticsFact } from "@/lib/analytics/types/metrics";
-import type { CampaignLineBillingStatus } from "@/features/billing/types";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 
 type HeaderRow = {
   id: string;

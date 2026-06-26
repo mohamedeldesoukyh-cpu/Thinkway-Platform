@@ -8,14 +8,9 @@ import {
 } from "@/lib/supabase/storage";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PersistClientDocumentUploadResult } from "@/lib/domains/document/types";
 
-export type PersistClientDocumentUploadResult =
-  | { ok: true; message: string }
-  | {
-      ok: false;
-      message: string;
-      fieldErrors?: Record<string, string[]>;
-    };
+export type { PersistClientDocumentUploadResult } from "@/lib/domains/document/types";
 
 export async function persistClientDocumentUpload(params: {
   supabase: SupabaseClient<Database>;

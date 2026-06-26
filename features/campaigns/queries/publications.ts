@@ -1,3 +1,17 @@
+import type {
+  CampaignPerformanceBundle,
+  CampaignPerformanceCharts,
+  CampaignPerformanceSummary,
+  CampaignPublicationRow,
+} from "@/lib/domains/campaign/types";
+
+export type {
+  CampaignPerformanceBundle,
+  CampaignPerformanceCharts,
+  CampaignPerformanceSummary,
+  CampaignPublicationRow,
+} from "@/lib/domains/campaign/types";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -27,132 +41,6 @@ import {
   totalEngagements,
   type PerformanceMetricInput,
 } from "@/lib/campaigns/performance-calculations";
-
-export type CampaignPublicationRow = {
-  id: string;
-  campaign_header_id: string;
-  campaign_line_id: string | null;
-  assignment_deliverable_id: string | null;
-  assignment_post_schedule_id: string | null;
-  influencer_id: string | null;
-  influencer_name: string | null;
-  influencer_handle: string | null;
-  influencer_profile_url: string | null;
-  creator_profile_image_url: string | null;
-  influencer_avatar_url: string | null;
-  social_profile_picture_url: string | null;
-  apify_author_avatar_url: string | null;
-  creator_avatar_url: string | null;
-  platform: string;
-  publication_type: string;
-  publication_type_label: string;
-  platform_label: string;
-  content_url: string | null;
-  publication_date: string | null;
-  status: string;
-  assignee_id: string | null;
-  assignee_name: string | null;
-  caption: string | null;
-  hashtags: string | null;
-  mentions: string | null;
-  hashtag_count: number | null;
-  mention_count: number | null;
-  thumbnail_url: string | null;
-  screenshot_url: string | null;
-  screenshot_captured_at: string | null;
-  screenshot_source: string | null;
-  notes: string | null;
-  auto_detected: boolean;
-  created_at: string;
-  updated_at: string | null;
-  last_synced_at: string | null;
-  sync_status: string | null;
-  sync_source: string | null;
-  metrics_refresh_status: string | null;
-  metrics_refresh_attempted_at: string | null;
-  metrics_collection_source: string | null;
-  metrics_provider: string | null;
-  metrics_confidence: number | null;
-  stored_engagements: number | null;
-  impressions: number | null;
-  impressions_source: string | null;
-  actual_impressions: number | null;
-  forecast_impressions: number | null;
-  forecast_impressions_formula: string | null;
-  reach: number | null;
-  reach_source: string | null;
-  actual_reach: number | null;
-  forecast_reach: number | null;
-  views: number | null;
-  unique_views: number | null;
-  likes: number | null;
-  comments: number | null;
-  shares: number | null;
-  saves: number | null;
-  clicks: number | null;
-  plays: number | null;
-  watch_time_seconds: number | null;
-  average_watch_time_seconds: number | null;
-  completion_rate: number | null;
-  engagement_rate: number | null;
-  engagement_rate_method: string | null;
-  platform_follower_count: number | null;
-  view_rate: number | null;
-  cpm: number | null;
-  cpv: number | null;
-  cpe: number | null;
-  cpc: number | null;
-  sentiment_score: number | null;
-  brand_safety_score: number | null;
-  authenticity_score: number | null;
-  cost: number | null;
-  currency: string | null;
-  total_engagements: number;
-};
-
-export type CampaignPerformanceSummary = {
-  total_publications: number;
-  total_reach: number;
-  total_actual_reach: number;
-  total_forecast_reach: number;
-  total_manual_reach: number;
-  total_impressions: number;
-  total_actual_impressions: number;
-  total_forecast_impressions: number;
-  total_manual_impressions: number;
-  total_views: number;
-  total_engagements: number;
-  average_engagement_rate: number | null;
-  average_cpm: number | null;
-  average_cpv: number | null;
-  top_creator_name: string | null;
-  top_creator_engagements: number;
-  currency: string;
-};
-
-export type CampaignPerformanceCharts = {
-  performance_over_time: Array<{
-    date: string;
-    views: number;
-    engagements: number;
-    reach: number;
-  }>;
-  platform_split: Array<{ platform: string; label: string; count: number; engagements: number }>;
-  content_type_split: Array<{ type: string; label: string; count: number }>;
-  top_creators_by_engagement: Array<{ name: string; engagements: number; views: number }>;
-  reach_by_creator: Array<{ name: string; reach: number }>;
-  views_by_publication: Array<{ id: string; label: string; views: number }>;
-  engagement_distribution: Array<{ bucket: string; count: number }>;
-};
-
-export type CampaignPerformanceBundle = {
-  publications: CampaignPublicationRow[];
-  summary: CampaignPerformanceSummary;
-  charts: CampaignPerformanceCharts;
-  sync_health: CampaignMetricsSyncHealth;
-  load_error: string | null;
-  schema_warnings: string[];
-};
 
 type PublicationRecord = Partial<{
   id: string;

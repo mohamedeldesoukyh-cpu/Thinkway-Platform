@@ -6,7 +6,7 @@ import type {
   AssignmentHierarchyRollups,
   AssignmentPostOperationalRow,
 } from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignLineBillingStatus } from "@/features/billing/types";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";

@@ -19,7 +19,17 @@ export const COMMERCIAL_CURRENCIES = [
   "GBP",
 ] as const;
 
-export type CommercialCurrency = (typeof COMMERCIAL_CURRENCIES)[number];
+import type {
+  CommercialCurrency,
+  CommercialLineEgp,
+  CommercialTotals,
+} from "@/lib/domains/commercial/types";
+
+export type {
+  CommercialCurrency,
+  CommercialLineEgp,
+  CommercialTotals,
+} from "@/lib/domains/commercial/types";
 
 export function isCommercialCurrency(code: string): code is CommercialCurrency {
   return (COMMERCIAL_CURRENCIES as readonly string[]).includes(code);
@@ -57,26 +67,6 @@ export function formatDualCurrency(input: {
   }
   return `${fmt(input.amount)} ${input.currency} / ${fmt(input.egpAmount)} EGP`;
 }
-
-export type CommercialLineEgp = {
-  costEgp: number;
-  revenueEgp: number;
-  gpValueEgp: number;
-  afValueEgp?: number;
-};
-
-export type CommercialTotals = {
-  totalCostEgp: number;
-  totalRevenueEgp: number;
-  totalGpValueEgp: number;
-  /** Blended GP% = total GP value / total revenue, as a percent. 0 when no revenue. */
-  totalGpPct: number;
-  /** Sum of line AF values (EGP). */
-  totalAfValueEgp: number;
-  /** Total GP + total AF (full agency margin). */
-  totalAgencyMarginEgp: number;
-  lineCount: number;
-};
 
 /**
  * Aggregate already-converted EGP line values into quotation/shortlist totals.

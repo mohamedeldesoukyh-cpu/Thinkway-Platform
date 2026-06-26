@@ -1,5 +1,8 @@
 import { labelForBillingStatus } from "@/features/billing/constants";
-import type { AssignmentDeliverableBillingStatus, CampaignLineBillingStatus } from "@/features/billing/types";
+import type {
+  AssignmentDeliverableBillingStatus,
+  CampaignLineBillingStatus,
+} from "@/lib/domains/campaign/types";
 import { LINE_OPERATIONAL_STATUS_LABELS } from "@/features/campaigns/constants/operational-status";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";

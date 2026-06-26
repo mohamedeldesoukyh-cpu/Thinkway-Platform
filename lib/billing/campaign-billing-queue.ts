@@ -1,4 +1,5 @@
-import type { BillingLineRow, CampaignLineBillingStatus } from "@/features/billing/types";
+import type { BillingLineRow } from "@/features/billing/types";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import {
   deriveCampaignBillingStatus,
   flattenOperationalLeaves,

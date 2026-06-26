@@ -1,10 +1,11 @@
-import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";
+import type { AssignmentDeliverableBillingStatus } from "@/lib/domains/campaign/types";
 import type {
-  CampaignLineWorkspace,
+  DeliverableCollectionStatus,
   VendorPaymentStatus,
-} from "@/features/campaigns/types";
+} from "@/lib/domains/campaign/types";
+import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 
-export type DeliverableCollectionStatus = "pending" | "partial" | "collected" | null;
+export type { DeliverableCollectionStatus } from "@/lib/domains/campaign/types";
 
 /** Level 3 — individual operational post row (assignment_post_schedule). */
 export type AssignmentPostOperationalRow = {

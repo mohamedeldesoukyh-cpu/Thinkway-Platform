@@ -6,7 +6,7 @@ import {
   CreatorProfileLink,
   type CreatorProfileSource,
 } from "@/components/creator/creator-profile-link";
-import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
+import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import {
   initialsFromCreatorName,
   resolveCreatorAvatarDisplay,

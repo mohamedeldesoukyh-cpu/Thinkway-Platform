@@ -1,22 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
+import type { QuotationLifecycleAuditEvent } from "@/lib/domains/audit/types";
 import type { Database } from "@/types/database";
 
 type Supabase = SupabaseClient<Database>;
 
-export type QuotationLifecycleAuditEvent =
-  | "quotation.creator_added"
-  | "quotation.creator_removed"
-  | "quotation.commercial_updated"
-  | "quotation.deliverables_updated"
-  | "quotation.version_created"
-  | "quotation.campaign_created"
-  | "quotation.shortlist_created"
-  | "quotation.client_promoted"
-  | "quotation.brand_promoted"
-  | "quotation.sync_shortlist_to_quotation"
-  | "quotation.sync_quotation_to_shortlist";
+export type { QuotationLifecycleAuditEvent } from "@/lib/domains/audit/types";
 
 export async function logQuotationLifecycleEvent(
   supabase: Supabase,

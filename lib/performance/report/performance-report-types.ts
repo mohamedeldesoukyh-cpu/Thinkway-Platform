@@ -1,4 +1,4 @@
-import type { CampaignPerformanceBundle } from "@/features/campaigns/queries/publications";
+import type { CampaignPerformanceBundle } from "@/lib/domains/campaign/types";
 
 export type PerformanceReportVariant = "combined" | "influencers";
 

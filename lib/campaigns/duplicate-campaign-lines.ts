@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { AssignmentPricingMode } from "@/features/campaigns/line-assignment";
+import type { AssignmentPricingMode } from "@/lib/domains/commercial/types";
 import type { Database } from "@/types/database";
 
 type CampaignLineInsert = Database["public"]["Tables"]["campaign_lines"]["Insert"];

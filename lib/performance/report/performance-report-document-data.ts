@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   CampaignPerformanceBundle,
   CampaignPublicationRow,
-} from "@/features/campaigns/queries/publications";
+} from "@/lib/domains/campaign/types";
 import { getCampaignPerformanceBundle } from "@/features/campaigns/queries/publications";
 import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";

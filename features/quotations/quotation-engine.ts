@@ -5,48 +5,27 @@
  * given a pre-resolved FX rate. Used by both shortlist Commercial tab and
  * quotation items so the math is identical everywhere. Unit-tested.
  */
+import type {
+  CommercialInput,
+  CommercialInputMode,
+  CommercialTotals,
+  NormalizeLineInput,
+  NormalizedCommercialLine,
+} from "@/lib/domains/commercial/types";
 import {
   computeAgencyFee,
   computeCommercials,
-  type CommercialInput,
-  type CommercialInputMode,
 } from "@/lib/commercial/commercial-engine";
 import {
   aggregateEgpTotals,
   REPORTING_CURRENCY,
   toEgp,
-  type CommercialTotals,
 } from "@/lib/commercial/fx-aggregation";
 
-export type NormalizeLineInput = {
-  mode: CommercialInputMode;
-  cost: number | null | undefined;
-  costCurrency: string;
-  gpPct?: number | null;
-  revenue?: number | null;
-  gpValue?: number | null;
-  afPct?: number | null;
-  /** Pre-resolved rate from cost currency → EGP (1 when already EGP). */
-  fxRateToEgp: number;
-};
-
-export type NormalizedCommercialLine = {
-  commercial_input_mode: CommercialInputMode;
-  cost: number;
-  cost_currency: string;
-  revenue: number;
-  gp_pct: number;
-  gp_value: number;
-  af_pct: number;
-  af_value: number;
-  fx_rate_to_egp: number;
-  cost_egp: number;
-  revenue_egp: number;
-  gp_value_egp: number;
-  af_value_egp: number;
-  valid: boolean;
-  warning: string | null;
-};
+export type {
+  NormalizeLineInput,
+  NormalizedCommercialLine,
+} from "@/lib/domains/commercial/types";
 
 export function normalizeCommercialLine(
   input: NormalizeLineInput

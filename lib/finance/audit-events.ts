@@ -28,10 +28,12 @@ export const FINANCE_AUDIT_EVENTS = {
   erp_sync_failed: "erp_sync_failed",
 } as const;
 
-export type FinanceAuditEvent =
-  (typeof FINANCE_AUDIT_EVENTS)[keyof typeof FINANCE_AUDIT_EVENTS];
+export type { FinanceAuditEvent } from "@/lib/domains/audit/types";
 
-export const FINANCE_AUDIT_EVENT_LABELS: Record<FinanceAuditEvent, string> = {
+export const FINANCE_AUDIT_EVENT_LABELS: Record<
+  import("@/lib/domains/audit/types").FinanceAuditEvent,
+  string
+> = {
   cn_created: "CN Created",
   cn_approved: "CN Approved",
   cn_posted: "CN Posted",

@@ -1,4 +1,4 @@
-import type { InfluencerSearchResult } from "@/features/campaigns/types";
+import type { InfluencerSearchResult } from "@/lib/domains/creator/types";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
