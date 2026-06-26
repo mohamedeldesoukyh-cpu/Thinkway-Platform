@@ -26,15 +26,24 @@ export function QuotationSetupWizard({ detail, options }: Props) {
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
 
-  const needsSetup = !detail.client_id || !detail.brand_id;
+  const needsSetup =
+    !detail.canManage
+      ? false
+      : detail.is_temporary_client
+        ? !detail.temporary_client_name || !detail.temporary_brand_name
+        : !detail.client_id || !detail.brand_id;
 
   useEffect(() => {
     setOpen(needsSetup && detail.canManage);
   }, [needsSetup, detail.canManage]);
 
   function handleContinue() {
-    if (!detail.client_id || !detail.brand_id) {
-      toast.error("Select both client and brand to continue.");
+    const ready =
+      detail.is_temporary_client
+        ? detail.temporary_client_name && detail.temporary_brand_name
+        : detail.client_id && detail.brand_id;
+    if (!ready) {
+      toast.error("Select or enter client and brand to continue.");
       return;
     }
     startTransition(() => {
@@ -57,7 +66,14 @@ export function QuotationSetupWizard({ detail, options }: Props) {
         </DialogHeader>
         <QuotationClientBrandPanel detail={detail} options={options} />
         <DialogFooter>
-          <Button onClick={handleContinue} disabled={!detail.client_id || !detail.brand_id}>
+          <Button
+            onClick={handleContinue}
+            disabled={
+              detail.is_temporary_client
+                ? !detail.temporary_client_name || !detail.temporary_brand_name
+                : !detail.client_id || !detail.brand_id
+            }
+          >
             Continue to workspace
           </Button>
         </DialogFooter>

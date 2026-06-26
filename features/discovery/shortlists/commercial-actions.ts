@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requirePermission } from "@/lib/auth/permissions";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
+import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
 import { normalizeCommercialLine } from "@/features/quotations/quotation-engine";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CommercialInputMode, Database } from "@/types/database";
@@ -34,9 +35,13 @@ export async function updateShortlistItemCommercials(input: {
 }): Promise<ActionResult> {
   const supabase = (await createSupabaseServerClient()) as Supabase;
   const auth = await requirePermission(supabase, SHORTLIST_PERMISSIONS.write);
+  let actorId: string;
   if ("error" in auth) {
     const admin = await requirePermission(supabase, SHORTLIST_PERMISSIONS.admin);
     if ("error" in admin) return { ok: false, message: auth.error };
+    actorId = admin.userId;
+  } else {
+    actorId = auth.userId;
   }
 
   const rate = await resolveRateToEgp(supabase, input.cost_currency);
@@ -70,6 +75,14 @@ export async function updateShortlistItemCommercials(input: {
     .update(patch as never)
     .eq("id", input.item_id);
   if (error) return { ok: false, message: error.message };
+
+  if (actorId) {
+    await syncShortlistChangeToQuotation(supabase, {
+      shortlistId: input.shortlist_id,
+      actorId,
+      shortlistItemId: input.item_id,
+    });
+  }
 
   revalidatePath(`/discovery/shortlists/${input.shortlist_id}`);
   return { ok: true };

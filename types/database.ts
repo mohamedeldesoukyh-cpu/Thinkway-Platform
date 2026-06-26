@@ -217,6 +217,8 @@ export type CampaignHeaderRow = {
   po_override_approved: boolean;
   po_override_reason: string | null;
   fx_snapshot_at: string | null;
+  shortlist_id: string | null;
+  quotation_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -759,6 +761,8 @@ export type Database = {
           report_type_id?: string | null;
           objectives?: unknown;
           metadata?: Record<string, unknown>;
+          shortlist_id?: string | null;
+          quotation_id?: string | null;
           created_by?: string | null;
         };
         Update: Partial<
@@ -2086,6 +2090,7 @@ export type Database = {
           client_shared_at: string | null;
           client_shared_by: string | null;
           campaign_header_id: string | null;
+          quotation_id: string | null;
           metadata: Record<string, unknown>;
           created_at: string;
           updated_at: string;
@@ -2112,6 +2117,7 @@ export type Database = {
           client_shared_at?: string | null;
           client_shared_by?: string | null;
           campaign_header_id?: string | null;
+          quotation_id?: string | null;
           metadata?: Record<string, unknown>;
         };
         Update: Partial<Database["public"]["Tables"]["discovery_shortlists"]["Insert"]>;
@@ -2278,6 +2284,13 @@ export type Database = {
           client_comment: string | null;
           is_archived: boolean;
           metadata: Json;
+          parent_quotation_id: string | null;
+          version_number: number;
+          revision_notes: string | null;
+          is_temporary_client: boolean;
+          is_temporary_brand: boolean;
+          temporary_client_name: string | null;
+          temporary_brand_name: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -2323,8 +2336,42 @@ export type Database = {
           client_comment?: string | null;
           is_archived?: boolean;
           metadata?: Json;
+          parent_quotation_id?: string | null;
+          version_number?: number;
+          revision_notes?: string | null;
+          is_temporary_client?: boolean;
+          is_temporary_brand?: boolean;
+          temporary_client_name?: string | null;
+          temporary_brand_name?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["quotations"]["Insert"]>;
+        Relationships: [];
+      };
+      quotation_version_history: {
+        Row: {
+          id: string;
+          quotation_id: string;
+          parent_quotation_id: string | null;
+          version_number: number;
+          serial_number: string;
+          revision_notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          metadata: Json;
+        };
+        Insert: {
+          id?: string;
+          quotation_id: string;
+          parent_quotation_id?: string | null;
+          version_number: number;
+          serial_number: string;
+          revision_notes?: string | null;
+          created_by?: string | null;
+          metadata?: Json;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["quotation_version_history"]["Insert"]
+        >;
         Relationships: [];
       };
       quotation_revisions: {

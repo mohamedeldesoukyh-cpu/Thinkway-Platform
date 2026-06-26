@@ -5,6 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database, QuotationStatus, CommercialInputMode } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isCommercialSyncEnabled } from "@/lib/commercial-sync/rules";
+
 import { QUOTATION_PERMISSIONS } from "./constants";
 import {
   isQuotationExpired,
@@ -180,9 +182,12 @@ export async function getQuotationDetail(
        client_signature_name, client_signed_at, client_visible, shared_with_client,
        issue_date, validity_date, version, department, change_summary,
        is_archived, created_at, updated_at,
+       is_temporary_client, is_temporary_brand, temporary_client_name, temporary_brand_name,
+       parent_quotation_id, version_number, revision_notes,
        clients:client_id(name),
        brands:brand_id(name),
-       campaign_headers:campaign_header_id(name),
+       campaign_headers:campaign_header_id(name, document_number),
+       discovery_shortlists:shortlist_id(serial_number),
        owner:owner_id(full_name),
        quotation_items(*),
        quotation_revisions(id, version, updated_by_name, change_summary, created_at)`
@@ -208,20 +213,72 @@ export async function getQuotationDetail(
   const issueDate =
     (row.issue_date as string | null) ??
     (row.created_at as string).slice(0, 10);
+  const status = row.status as QuotationStatus;
+  const isTemporaryClient = Boolean(row.is_temporary_client);
+  const isTemporaryBrand = Boolean(row.is_temporary_brand);
+  const tempClientName = (row.temporary_client_name as string | null) ?? null;
+  const tempBrandName = (row.temporary_brand_name as string | null) ?? null;
+  const serialNumber = (row.serial_number as string | null) ?? null;
+  const versionNumber = Number(row.version_number ?? 1);
+
+  const baseSerial = serialNumber?.replace(/-V\d+$/, "") ?? "";
+  let versionChain: import("./types").QuotationVersionSummary[] = [];
+  if (baseSerial) {
+    const { data: siblings } = await supabase
+      .from("quotations")
+      .select("id, serial_number, version_number, status")
+      .ilike("serial_number", `${baseSerial}%`)
+      .order("version_number", { ascending: true });
+    versionChain = ((siblings ?? []) as Array<Record<string, unknown>>).map((s) => ({
+      id: s.id as string,
+      serial_number: (s.serial_number as string | null) ?? null,
+      version_number: Number(s.version_number ?? 1),
+      status: s.status as QuotationStatus,
+    }));
+  }
 
   return {
     id: row.id as string,
-    serial_number: (row.serial_number as string | null) ?? null,
+    serial_number: serialNumber,
     name: row.name as string,
-    status: row.status as QuotationStatus,
+    status,
     shortlist_id: (row.shortlist_id as string | null) ?? null,
+    shortlist_serial:
+      unwrap(row.discovery_shortlists as { serial_number: string | null } | null)
+        ?.serial_number ?? null,
     client_id: (row.client_id as string | null) ?? null,
-    client_name: unwrap(row.clients as { name: string } | null)?.name ?? null,
+    client_name: isTemporaryClient
+      ? tempClientName
+      : unwrap(row.clients as { name: string } | null)?.name ?? null,
+    is_temporary_client: isTemporaryClient,
+    is_temporary_brand: isTemporaryBrand,
+    temporary_client_name: tempClientName,
+    temporary_brand_name: tempBrandName,
     brand_id: (row.brand_id as string | null) ?? null,
-    brand_name: unwrap(row.brands as { name: string } | null)?.name ?? null,
+    brand_name: isTemporaryBrand
+      ? tempBrandName
+      : unwrap(row.brands as { name: string } | null)?.name ?? null,
     campaign_header_id: (row.campaign_header_id as string | null) ?? null,
     campaign_name:
       unwrap(row.campaign_headers as { name: string } | null)?.name ?? null,
+    campaign_document_number:
+      unwrap(
+        row.campaign_headers as { document_number: string | null } | null
+      )?.document_number ?? null,
+    parent_quotation_id: (row.parent_quotation_id as string | null) ?? null,
+    version_number: versionNumber,
+    revision_notes: (row.revision_notes as string | null) ?? null,
+    sync_enabled: isCommercialSyncEnabled(status),
+    version_chain: versionChain.length
+      ? versionChain
+      : [
+          {
+            id: row.id as string,
+            serial_number: serialNumber,
+            version_number: versionNumber,
+            status,
+          },
+        ],
     owner_id: (row.owner_id as string | null) ?? null,
     owner_name: unwrap(row.owner as { full_name: string } | null)?.full_name ?? null,
     approved_by: (row.approved_by as string | null) ?? null,

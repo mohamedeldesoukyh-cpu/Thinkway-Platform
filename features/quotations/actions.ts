@@ -10,6 +10,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import {
+  syncQuotationChangeToShortlist,
+} from "@/lib/commercial-sync/engine";
+import {
   computeQuotationTotals,
   normalizeCommercialLine,
 } from "./quotation-engine";
@@ -600,6 +603,12 @@ export async function updateQuotationItemCommercials(input: {
   if (error) return { ok: false, message: error.message };
 
   const totals = await recomputeTotals(actor.supabase, input.quotation_id);
+  await syncQuotationChangeToShortlist(actor.supabase, {
+    quotationId: input.quotation_id,
+    actorId: actor.userId,
+    quotationItemId: input.item_id,
+    event: input.deliverables ? "deliverables" : "commercial",
+  });
   revalidate(input.quotation_id);
   return {
     ok: true,
@@ -698,6 +707,12 @@ export async function removeQuotationItem(input: {
 }): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor.ok) return actor;
+  await syncQuotationChangeToShortlist(actor.supabase, {
+    quotationId: input.quotation_id,
+    actorId: actor.userId,
+    quotationItemId: input.item_id,
+    event: "remove",
+  });
   const { error } = await actor.supabase
     .from("quotation_items")
     .delete()

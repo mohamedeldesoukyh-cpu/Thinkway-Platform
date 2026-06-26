@@ -15,6 +15,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { enqueueCreatorEnrichmentBestEffort } from "@/lib/creator-enrichment/queue";
 import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
+import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
 import { getCampaignShortlistAssignments } from "./queries";
@@ -468,7 +469,7 @@ export async function addCreatorToShortlistV2(
     return { ok: true, message: "Creator is already on this shortlist." };
   }
 
-  const { error } = await actor.supabase.from("discovery_shortlist_items").insert({
+  const { data: inserted, error } = await actor.supabase.from("discovery_shortlist_items").insert({
     shortlist_id: input.shortlistId,
     profile_id: input.discoveredProfileId || null,
     influencer_id: input.influencerId || null,
@@ -476,8 +477,16 @@ export async function addCreatorToShortlistV2(
     notes: input.notes?.trim() || null,
     match_score: input.matchScore ?? null,
     added_by: actor.userId,
-  });
+  }).select("id").single();
   if (error) return { ok: false, message: error.message };
+
+  if (inserted?.id) {
+    await syncShortlistChangeToQuotation(actor.supabase, {
+      shortlistId: input.shortlistId,
+      actorId: actor.userId,
+      shortlistItemId: (inserted as { id: string }).id,
+    });
+  }
 
   await logCreatorMovement(actor.supabase, {
     action: "discovery_to_shortlist",
@@ -539,6 +548,12 @@ export async function removeCreatorFromShortlistV2(
     .eq("shortlist_id", shortlistId);
 
   if (error) return { ok: false, message: error.message };
+
+  await syncShortlistChangeToQuotation(actor.supabase, {
+    shortlistId,
+    actorId: actor.userId,
+    removedShortlistItemId: itemId,
+  });
 
   const removed = item as
     | { profile_id: string | null; influencer_id: string | null; unified_id: string | null }

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 
 import { computeAgencyFee } from "@/lib/commercial/commercial-engine";
+import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
-import { buildQuotationHtml } from "@/features/quotations/export/quotation-html";
+import { buildQuotationHtml, renderMoney } from "@/features/quotations/export/quotation-html";
+import { resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
 import type { QuotationDetail, QuotationItemRow } from "@/features/quotations/types";
 import {
   computeLiveQuotationTotals,
@@ -50,12 +52,23 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     name: "Test Quotation",
     status: "draft",
     shortlist_id: null,
+    shortlist_serial: null,
     client_id: "c-1",
     client_name: "Acme Corp",
+    is_temporary_client: false,
+    is_temporary_brand: false,
+    temporary_client_name: null,
+    temporary_brand_name: null,
     brand_id: "b-1",
     brand_name: "Acme Brand",
     campaign_header_id: null,
     campaign_name: null,
+    campaign_document_number: null,
+    parent_quotation_id: null,
+    version_number: 1,
+    revision_notes: null,
+    sync_enabled: true,
+    version_chain: [],
     owner_id: null,
     owner_name: "Alex",
     approved_by: null,
@@ -95,6 +108,22 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   };
 }
 
+// Template resolver
+{
+  assert.equal(resolveQuotationTemplate(undefined), "detailed");
+  assert.equal(resolveQuotationTemplate("detailed"), "detailed");
+  assert.equal(resolveQuotationTemplate("lump-sum"), "lump-sum");
+}
+
+// Money renderer keeps amount and currency inline
+{
+  const html = renderMoney("1,333.33 EGP");
+  assert.ok(html.includes('class="money-amount"'));
+  assert.ok(html.includes('class="money-currency"'));
+  assert.ok(html.includes("1,333.33"));
+  assert.ok(html.includes("EGP"));
+}
+
 // AF = revenue × (AF% / 100)
 {
   const af = computeAgencyFee({ revenue: 1333.33, afPct: 10, gpValue: 333.33 });
@@ -129,6 +158,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 {
   const doc = buildQuotationDocument(mockDetail());
   assert.equal(doc.serial, "QT-2026-0001");
+  assert.equal(doc.template, "detailed");
   assert.ok(doc.preparedForLine.includes("Acme Corp"));
   assert.ok(doc.termsSections.length >= 5);
   assert.ok(
@@ -140,14 +170,28 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     "Client KPIs include AF total"
   );
   assert.ok(
+    !doc.commercialKpis.some((k) => k.label === QUOTATION_CLIENT_LABELS.totalAgencyMargin),
+    "Agency margin must not appear in client document KPIs"
+  );
+  assert.ok(
     !doc.commercialKpis.some((k) => k.label === "Total Revenue"),
     "Agency revenue label must not appear in document KPIs"
   );
   assert.ok(
     !doc.commercialKpis.some((k) => k.label === "Total Cost"),
-    "Internal cost KPI must not appear in client document"
+    "Internal cost KPI must not appear in detailed client document"
   );
   assert.equal(doc.rows[0]?.afPct, "10.0%");
+  assert.equal(doc.summary.grandTotal, "1,466.66 EGP");
+}
+
+{
+  const lumpDoc = buildQuotationDocument(mockDetail(), { template: "lump-sum" });
+  assert.equal(lumpDoc.template, "lump-sum");
+  assert.ok(
+    lumpDoc.commercialKpis.some((k) => k.label === QUOTATION_CLIENT_LABELS.lumpSumCost)
+  );
+  assert.ok(lumpDoc.commercialKpis.some((k) => k.label === QUOTATION_CLIENT_LABELS.totalCost));
 }
 
 {
@@ -162,6 +206,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("Total client cost"));
   assert.ok(html.includes("Agency fee (AF)"));
   assert.ok(html.includes("AF %"));
+  assert.ok(html.includes('class="money"'));
   assert.ok(!html.includes(">Revenue<"), "Revenue column header must not appear in HTML");
   assert.ok(!html.includes("Total Revenue"), "Total Revenue label must not appear in HTML");
   assert.ok(!html.includes("Budget (Revenue)"), "Cover hero must not use Budget (Revenue)");
@@ -169,6 +214,22 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(!html.includes(">GP<"), "GP column must not appear in client preview");
   assert.ok(!html.includes(">GP%<"), "GP% column must not appear in client preview");
   assert.ok(!html.includes("Gross Profit"), "Gross Profit must not appear in client preview");
+  assert.ok(
+    !html.includes(QUOTATION_CLIENT_LABELS.totalAgencyMargin),
+    "Agency margin must not appear in detailed client export"
+  );
+}
+
+{
+  const lumpHtml = buildQuotationHtml(
+    buildQuotationDocument(mockDetail(), { template: "lump-sum" })
+  );
+  assert.ok(lumpHtml.includes("Lump Sum"));
+  assert.ok(lumpHtml.includes("Included creators (1)"));
+  assert.ok(lumpHtml.includes("Creator A"));
+  assert.ok(lumpHtml.includes(QUOTATION_CLIENT_LABELS.lumpSumCost));
+  assert.ok(lumpHtml.includes(QUOTATION_CLIENT_LABELS.totalCost));
+  assert.ok(!lumpHtml.includes(">AF %<"), "Lump sum must not show per-line AF % table");
 }
 
 console.log("quotation-document.test.ts passed");

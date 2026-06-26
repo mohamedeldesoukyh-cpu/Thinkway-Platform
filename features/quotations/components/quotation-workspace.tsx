@@ -10,6 +10,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   CheckIcon,
   CopyIcon,
@@ -73,11 +74,14 @@ import {
   QUOTATION_STATUS_LABELS,
 } from "@/features/quotations/constants";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
+import { buildExportHref } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationKpiStrip } from "@/features/quotations/components/quotation-kpi-strip";
+import { QuotationLifecyclePanel } from "@/features/quotations/components/quotation-lifecycle-panel";
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
 import { gpHealthTextClass } from "@/features/quotations/quotation-gp-health";
+import { formatQuotationTermsText } from "@/features/quotations/quotation-default-terms";
 import { formatValidityLabel } from "@/features/quotations/quotation-validity";
 import {
   duplicateQuotationItems,
@@ -95,6 +99,10 @@ import {
   type CalculationModePreference,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
+import {
+  QUOTATION_TEMPLATE_OPTIONS,
+  type QuotationTemplateVariant,
+} from "@/features/quotations/export/quotation-template";
 import type { QuotationDetail, QuotationFormOptions, QuotationItemRow } from "@/features/quotations/types";
 
 function egp(n: number, decimals = 0): string {
@@ -199,9 +207,11 @@ function exportSelectedCsv(
 export function QuotationWorkspace({
   detail,
   formOptions,
+  groupOptions,
 }: {
   detail: QuotationDetail;
   formOptions: QuotationFormOptions;
+  groupOptions: Array<{ id: string; name: string }>;
 }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
@@ -212,6 +222,7 @@ export function QuotationWorkspace({
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [rowSaveStatuses, setRowSaveStatuses] = useState<Record<string, AutosaveStatus>>({});
   const [notesSaveStatus, setNotesSaveStatus] = useState<AutosaveStatus>("idle");
+  const [exportTemplate, setExportTemplate] = useState<QuotationTemplateVariant>("detailed");
   const [bulkPending, startBulkTransition] = useTransition();
 
   // Sync drafts when items are added/removed server-side (preserve in-flight edits).
@@ -365,9 +376,18 @@ export function QuotationWorkspace({
 
   const exportHref = useCallback(
     (format: string, download = true) =>
-      `/api/quotations/${detail.id}/export?format=${format}${download ? "&download=1" : ""}`,
-    [detail.id]
+      buildExportHref(detail.id, format, exportTemplate, { download }),
+    [detail.id, exportTemplate]
   );
+
+  const previewHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (exportTemplate === "lump-sum") {
+      params.set("template", "lump-sum");
+    }
+    const query = params.toString();
+    return `/discovery/quotations/${detail.id}/preview${query ? `?${query}` : ""}`;
+  }, [detail.id, exportTemplate]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -397,10 +417,36 @@ export function QuotationWorkspace({
               quotationId={detail.id}
               onAdded={() => router.refresh()}
             />
+            <div
+              className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5"
+              role="tablist"
+              aria-label="Export template"
+            >
+              {QUOTATION_TEMPLATE_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={exportTemplate === option.id}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    exportTemplate === option.id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => setExportTemplate(option.id)}
+                >
+                  {option.label}
+                  <span className="ml-1.5 hidden text-[10px] font-normal text-muted-foreground sm:inline">
+                    · {option.hint}
+                  </span>
+                </button>
+              ))}
+            </div>
             <Button variant="outline" size="sm" asChild>
-              <a href={exportHref("preview", false)} target="_blank" rel="noreferrer">
+              <Link href={previewHref} target="_blank" rel="noreferrer">
                 <FileTextIcon className="size-4" /> Preview
-              </a>
+              </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
               <a href={exportHref("excel")}>
@@ -437,6 +483,7 @@ export function QuotationWorkspace({
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
+        <QuotationLifecyclePanel detail={detail} groupOptions={groupOptions} />
         <QuotationClientBrandPanel
           detail={detail}
           options={formOptions}
@@ -1114,7 +1161,7 @@ function HeaderNotes({
   onStatusChange: (status: AutosaveStatus) => void;
 }) {
   const [notes, setNotes] = useState(detail.notes ?? "");
-  const [terms, setTerms] = useState(detail.terms ?? "");
+  const [terms, setTerms] = useState(detail.terms ?? formatQuotationTermsText());
 
   const { status, schedule } = useDebouncedAutosave<{
     notes?: string;

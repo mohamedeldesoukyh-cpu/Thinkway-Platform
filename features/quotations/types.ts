@@ -69,18 +69,42 @@ export type QuotationListRow = {
   updated_at: string;
 };
 
+export type QuotationLinkedEntity = {
+  id: string;
+  serial_number: string | null;
+  document_number?: string | null;
+};
+
+export type QuotationVersionSummary = {
+  id: string;
+  serial_number: string | null;
+  version_number: number;
+  status: QuotationStatus;
+};
+
 export type QuotationDetail = {
   id: string;
   serial_number: string | null;
   name: string;
   status: QuotationStatus;
   shortlist_id: string | null;
+  shortlist_serial: string | null;
   client_id: string | null;
   client_name: string | null;
+  is_temporary_client: boolean;
+  is_temporary_brand: boolean;
+  temporary_client_name: string | null;
+  temporary_brand_name: string | null;
   brand_id: string | null;
   brand_name: string | null;
   campaign_header_id: string | null;
   campaign_name: string | null;
+  campaign_document_number: string | null;
+  parent_quotation_id: string | null;
+  version_number: number;
+  revision_notes: string | null;
+  sync_enabled: boolean;
+  version_chain: QuotationVersionSummary[];
   owner_id: string | null;
   owner_name: string | null;
   approved_by: string | null;
