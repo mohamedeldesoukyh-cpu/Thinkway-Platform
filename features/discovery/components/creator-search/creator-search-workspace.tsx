@@ -37,6 +37,10 @@ import {
 } from "./creator-search-types";
 import { exportCreatorsCsv, sortCreators, stashCompareQueue } from "./creator-search-utils";
 import { stashDiscoverySelection } from "./discovery-selection-storage";
+import {
+  filterSelectedCreators,
+  useCreatorSelection,
+} from "@/features/creators/picker/creator-selection-hooks";
 
 const PAGE_SIZE = 50;
 const SAVED_SEARCH_KEY = "thinkway:creator-search-saved:v1";
@@ -59,7 +63,12 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const {
+    selectedIds,
+    setSelectedIds,
+    toggle,
+    toggleAllVisible,
+  } = useCreatorSelection({ mode: "multi" });
   const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
   const [selectedShortlist, setSelectedShortlist] = useState(shortlists[0]?.id ?? "");
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
@@ -73,7 +82,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   searchRef.current = search;
 
   const selectedCreators = useMemo(
-    () => creators.filter((c) => selectedIds.has(c.unified_id)),
+    () => filterSelectedCreators(creators, selectedIds),
     [creators, selectedIds]
   );
 
@@ -82,6 +91,10 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   }, [selectedCreators]);
 
   const sortedCreators = useMemo(() => sortCreators(creators, sort), [creators, sort]);
+  const visibleCreatorIds = useMemo(
+    () => sortedCreators.map((c) => c.unified_id),
+    [sortedCreators]
+  );
 
   const fetchPage = useCallback(async (pageNum: number, append: boolean) => {
     if (append) setLoadingMore(true);
@@ -155,26 +168,12 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     [hasMore, loading, loadingMore]
   );
 
-  function toggleSelect(creator: UnifiedCreatorResult) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(creator.unified_id)) next.delete(creator.unified_id);
-      else next.add(creator.unified_id);
-      return next;
-    });
+  function handleToggleSelect(creator: UnifiedCreatorResult) {
+    toggle(creator.unified_id);
   }
 
-  function toggleSelectAll() {
-    const allOnPage = creators.every((c) => selectedIds.has(c.unified_id));
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (allOnPage) {
-        for (const c of creators) next.delete(c.unified_id);
-      } else {
-        for (const c of creators) next.add(c.unified_id);
-      }
-      return next;
-    });
+  function handleToggleSelectAll() {
+    toggleAllVisible(visibleCreatorIds);
   }
 
   function addCreatorsToList(targets: UnifiedCreatorResult[], listId?: string) {
@@ -390,8 +389,8 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
           error={error}
           total={total}
           selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onToggleSelectAll={toggleSelectAll}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectAll={handleToggleSelectAll}
           onOpenCreator={setDetailCreator}
           onAddToList={(c) => addCreatorsToList([c])}
           onRetry={runSearch}

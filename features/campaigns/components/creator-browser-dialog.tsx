@@ -30,6 +30,10 @@ import {
 import { isAssignableCreator, unifiedToInfluencerSearch } from "@/lib/creators/adapters";
 import type { InfluencerSearchResult } from "@/features/campaigns/types";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import {
+  filterSelectedCreators,
+  useCreatorSelection,
+} from "@/features/creators/picker/creator-selection-hooks";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
 
 type CreatorBrowserDialogProps = {
@@ -65,7 +69,9 @@ export function CreatorBrowserDialog({
   const [internalCount, setInternalCount] = useState(0);
   const [discoveryCount, setDiscoveryCount] = useState(0);
   const [page, setPage] = useState(1);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { selectedIds, setSelectedIds, toggle: toggleSelected } = useCreatorSelection({
+    mode: "multi",
+  });
   const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -143,7 +149,7 @@ export function CreatorBrowserDialog({
   ]);
 
   const selectedCreators = useMemo(
-    () => creators.filter((c) => selectedIds.has(c.unified_id)),
+    () => filterSelectedCreators(creators, selectedIds),
     [creators, selectedIds]
   );
 
@@ -373,12 +379,13 @@ export function CreatorBrowserDialog({
                     onToggleSelect={
                       campaignHeaderId || compareMode
                         ? (checked) => {
-                            setSelectedIds((prev) => {
-                              const next = new Set(prev);
-                              if (checked) next.add(creator.unified_id);
-                              else next.delete(creator.unified_id);
-                              return next;
-                            });
+                            if (checked) toggleSelected(creator.unified_id);
+                            else
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                next.delete(creator.unified_id);
+                                return next;
+                              });
                           }
                         : undefined
                     }

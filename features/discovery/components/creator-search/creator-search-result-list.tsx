@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { resolveCreatorCheckboxState } from "@/features/creators/picker/creator-selection-hooks";
 
 import {
   CreatorResultGridHeader,
@@ -77,14 +78,16 @@ export function CreatorSearchResultList({
     overscan: 12,
   });
 
-  const allSelected = creators.length > 0 && creators.every((c) => selectedIds.has(c.unified_id));
-  const someSelected = creators.some((c) => selectedIds.has(c.unified_id));
+  const allSelected = resolveCreatorCheckboxState(
+    creators.map((c) => c.unified_id),
+    selectedIds
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-card">
       <div className="flex shrink-0 items-center gap-3 border-b border-border bg-muted/40 px-4 py-2 md:px-5">
         <Checkbox
-          checked={allSelected ? true : someSelected ? "indeterminate" : false}
+          checked={allSelected}
           onCheckedChange={onToggleSelectAll}
           aria-label="Select all loaded creators"
           disabled={creators.length === 0}
