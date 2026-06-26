@@ -34,9 +34,10 @@ import { ClientClientIosTab } from "./tabs/client-client-ios-tab";
 import { ClientFinanceTab } from "./tabs/client-finance-tab";
 import { ClientLegalTab } from "./tabs/client-legal-tab";
 import { ClientOverviewTab } from "./tabs/client-overview-tab";
-import { OnboardingProgressTracker } from "./onboarding-progress-tracker";
+import { OnboardingWorkspace } from "./onboarding-workspace";
 import { OnboardingStatusBadge } from "./onboarding-status-badge";
 import { isClientOnboardingStatus } from "@/lib/clients/onboarding-status";
+import type { ClientOnboardingTimelineEvent } from "@/features/clients/onboarding-queries";
 
 type ClientProfileProps = {
   client: ClientDetail;
@@ -46,6 +47,9 @@ type ClientProfileProps = {
   clientIoRecipients: ClientIoSendRecipient[];
   clientAccessEntity: ClientAccessEntityRow | null;
   assignableClientProfiles: AssignableClientProfileRow[];
+  onboardingTimeline?: ClientOnboardingTimelineEvent[];
+  canEditOnboardingChecklist?: boolean;
+  canOverrideOnboardingStatus?: boolean;
 };
 
 export function ClientProfile({
@@ -56,6 +60,9 @@ export function ClientProfile({
   clientIoRecipients,
   clientAccessEntity,
   assignableClientProfiles,
+  onboardingTimeline = [],
+  canEditOnboardingChecklist = false,
+  canOverrideOnboardingStatus = false,
 }: ClientProfileProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ClientProfileTabId>("overview");
@@ -97,7 +104,8 @@ export function ClientProfile({
       <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
           <div className="shrink-0 border-b border-border px-[26px] py-4">
-            <OnboardingProgressTracker
+            <OnboardingWorkspace
+              clientId={client.id}
               status={client.onboarding_status}
               completion={{
                 legal_completed_at: client.legal_completed_at,
@@ -105,6 +113,10 @@ export function ClientProfile({
                 contracts_completed_at: client.contracts_completed_at,
                 tax_completed_at: client.tax_completed_at,
               }}
+              activatedAt={client.activated_at ?? null}
+              timeline={onboardingTimeline}
+              canEditChecklist={canEditOnboardingChecklist}
+              canOverrideStatus={canOverrideOnboardingStatus}
             />
           </div>
           <ClientOverviewTab

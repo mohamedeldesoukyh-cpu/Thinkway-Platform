@@ -6,7 +6,10 @@ import {
   getClientAccessForEntity,
 } from "@/features/client-access/queries";
 import { ClientProfile } from "@/features/clients/components/client-profile";
-import { getClientById } from "@/features/clients/queries";
+import {
+  getClientOnboardingPermissions,
+  getClientOnboardingTimeline,
+} from "@/features/clients/onboarding-queries";
 import { getClientIoSendRecipients, getClientIosForClient } from "@/features/io/queries";
 import { getGroupsForSelect, getMasterDataOptions } from "@/lib/master-data/queries";
 
@@ -28,6 +31,11 @@ export default async function ClientProfilePage({
   let assignableClientProfiles: Awaited<
     ReturnType<typeof getAssignableClientProfiles>
   > = [];
+  let onboardingTimeline: Awaited<ReturnType<typeof getClientOnboardingTimeline>> = [];
+  let onboardingPermissions: Awaited<ReturnType<typeof getClientOnboardingPermissions>> = {
+    canEditChecklist: false,
+    canOverrideStatus: false,
+  };
   let errorMessage: string | null = null;
 
   try {
@@ -39,6 +47,8 @@ export default async function ClientProfilePage({
       clientIoRecipients,
       clientAccessEntity,
       assignableClientProfiles,
+      onboardingTimeline,
+      onboardingPermissions,
     ] = await Promise.all([
       getGroupsForSelect(),
       getMasterDataOptions(),
@@ -46,6 +56,8 @@ export default async function ClientProfilePage({
       getClientIoSendRecipients(id),
       getClientAccessForEntity(id),
       getAssignableClientProfiles(id),
+      getClientOnboardingTimeline(id),
+      getClientOnboardingPermissions(),
     ]);
   } catch (error) {
     errorMessage =
@@ -77,6 +89,9 @@ export default async function ClientProfilePage({
           clientIoRecipients={clientIoRecipients}
           clientAccessEntity={clientAccessEntity}
           assignableClientProfiles={assignableClientProfiles}
+          onboardingTimeline={onboardingTimeline}
+          canEditOnboardingChecklist={onboardingPermissions.canEditChecklist}
+          canOverrideOnboardingStatus={onboardingPermissions.canOverrideStatus}
         />
       ) : null}
     </DashboardShell>

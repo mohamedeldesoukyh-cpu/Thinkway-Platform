@@ -122,10 +122,19 @@ export function deriveOnboardingStatusFromCompletion(
   current: ClientOnboardingStatus = DEFAULT_PROMOTED_ONBOARDING_STATUS
 ): ClientOnboardingStatus {
   const progress = computeOnboardingProgress(input);
-  if (progress.percentage >= 100) return "ready";
-  if (input.finance_completed_at) return "finance_pending";
+
+  // Rule 4: all sections complete → active
+  if (progress.percentage >= 100) return "active";
+
+  // Rule 3: finance complete → ready
+  if (input.finance_completed_at) return "ready";
+
+  // Rule 2: legal complete → finance_pending
   if (input.legal_completed_at) return "finance_pending";
+
   if (current === "draft") return "draft";
+  if (current === "active") return "active";
+
   return "legal_pending";
 }
 

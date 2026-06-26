@@ -633,6 +633,7 @@ export type ClientRow = {
   finance_completed_at: string | null;
   contracts_completed_at: string | null;
   tax_completed_at: string | null;
+  activated_at: string | null;
   onboarding_completed_by: string | null;
   onboarding_updated_by: string | null;
   billing_email: string | null;
@@ -695,6 +696,7 @@ export type Database = {
           tax_completed_at?: string | null;
           onboarding_completed_by?: string | null;
           onboarding_updated_by?: string | null;
+          activated_at?: string | null;
           billing_email?: string | null;
           billing_phone?: string | null;
           billing_address?: Record<string, unknown>;

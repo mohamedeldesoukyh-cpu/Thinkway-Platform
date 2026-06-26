@@ -43,4 +43,22 @@ assert.equal(
   "finance_pending"
 );
 
+assert.equal(
+  deriveOnboardingStatusFromCompletion({
+    legal_completed_at: "2026-06-01T00:00:00.000Z",
+    finance_completed_at: "2026-06-02T00:00:00.000Z",
+  }),
+  "ready"
+);
+
+assert.equal(
+  deriveOnboardingStatusFromCompletion({
+    legal_completed_at: "2026-06-01T00:00:00.000Z",
+    finance_completed_at: "2026-06-02T00:00:00.000Z",
+    contracts_completed_at: "2026-06-03T00:00:00.000Z",
+    tax_completed_at: "2026-06-04T00:00:00.000Z",
+  }),
+  "active"
+);
+
 console.log("onboarding-status.test.ts: all assertions passed");

@@ -58,6 +58,16 @@ export const CLIENT_DETAIL_SELECT_OPTIONAL = [
   "vr_rate_id",
   "credit_limit_active",
   "accept_credit_risk",
+  "client_owner_id",
+  "country_manager_id",
+  "onboarding_status",
+  "legal_completed_at",
+  "finance_completed_at",
+  "contracts_completed_at",
+  "tax_completed_at",
+  "onboarding_updated_by",
+  "onboarding_completed_by",
+  "activated_at",
   ...CLASSIFICATION_AUDIT_COLUMN_NAMES,
 ] as const;
 
@@ -144,6 +154,30 @@ function normalizeClientDetailRow(
     needs_review: stripped.has("needs_review")
       ? false
       : Boolean(row.needs_review),
+    onboarding_status: stripped.has("onboarding_status")
+      ? "legal_pending"
+      : ((row.onboarding_status as ClientRow["onboarding_status"]) ?? "legal_pending"),
+    legal_completed_at: stripped.has("legal_completed_at")
+      ? null
+      : ((row.legal_completed_at as string | null | undefined) ?? null),
+    finance_completed_at: stripped.has("finance_completed_at")
+      ? null
+      : ((row.finance_completed_at as string | null | undefined) ?? null),
+    contracts_completed_at: stripped.has("contracts_completed_at")
+      ? null
+      : ((row.contracts_completed_at as string | null | undefined) ?? null),
+    tax_completed_at: stripped.has("tax_completed_at")
+      ? null
+      : ((row.tax_completed_at as string | null | undefined) ?? null),
+    onboarding_updated_by: stripped.has("onboarding_updated_by")
+      ? null
+      : ((row.onboarding_updated_by as string | null | undefined) ?? null),
+    onboarding_completed_by: stripped.has("onboarding_completed_by")
+      ? null
+      : ((row.onboarding_completed_by as string | null | undefined) ?? null),
+    activated_at: stripped.has("activated_at")
+      ? null
+      : ((row.activated_at as string | null | undefined) ?? null),
     group: (row.group as ClientDetail["group"]) ?? null,
   };
 }

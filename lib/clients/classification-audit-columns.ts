@@ -38,6 +38,7 @@ export const OPTIONAL_CLIENT_COLUMN_NAMES = [
   "finance_completed_at",
   "contracts_completed_at",
   "tax_completed_at",
+  "activated_at",
   ...CLASSIFICATION_AUDIT_COLUMN_NAMES,
 ] as const;
 
