@@ -1,20 +1,18 @@
 "use client";
 
 import {
-  ThemeProvider as NextThemesProvider,
+  ThemeProvider as ThinkwayThemeProvider,
   type ThemeProviderProps,
-} from "next-themes";
+  useTheme,
+} from "@/lib/theme/provider";
 
 /**
- * Wraps next-themes. Color scheme is driven by CSS (.dark on html), not inline
- * styles, so server HTML stays aligned with the blocking theme script on hydrate.
+ * Theme context without an inline client script. ThemeHeadScript in the root
+ * layout applies the persisted class before paint (React 19 / Next.js 16 safe).
  */
-export function ThemeProvider({
-  children,
-  ...props
-}: ThemeProviderProps) {
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
-    <NextThemesProvider
+    <ThinkwayThemeProvider
       attribute="class"
       defaultTheme="system"
       enableSystem
@@ -23,6 +21,8 @@ export function ThemeProvider({
       {...props}
     >
       {children}
-    </NextThemesProvider>
+    </ThinkwayThemeProvider>
   );
 }
+
+export { useTheme, type ThemeProviderProps };

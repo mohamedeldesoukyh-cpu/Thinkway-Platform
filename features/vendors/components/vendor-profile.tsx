@@ -73,9 +73,9 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
       >
         <nav
           aria-label="Creator workspace sections"
-          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#E6EAF2] px-[26px] py-2.5"
+          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-[26px] py-2.5"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9099A8]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Also view
           </span>
           {tabOrder.map((tabId) => {
@@ -89,8 +89,8 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
                 className={cn(
                   "text-[13px] font-medium transition-colors",
                   isActive
-                    ? "font-semibold text-[#0057FF]"
-                    : "text-[#5B6575] hover:text-[#0057FF]"
+                    ? "font-semibold text-primary"
+                    : "text-muted-foreground hover:text-primary"
                 )}
                 aria-current={isActive ? "page" : undefined}
               >

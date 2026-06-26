@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
 import { buildQuotationExcel } from "@/features/quotations/export/quotation-excel";
 import { buildQuotationHtml } from "@/features/quotations/export/quotation-html";
+import { resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -19,6 +20,7 @@ export async function GET(request: Request, context: RouteContext) {
   const { searchParams } = new URL(request.url);
   const format = searchParams.get("format") ?? "preview";
   const download = searchParams.get("download") === "1";
+  const template = resolveQuotationTemplate(searchParams.get("template"));
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -34,9 +36,10 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
 
-    const doc = buildQuotationDocument(detail);
+    const doc = buildQuotationDocument(detail, { template });
     const baseName = doc.serial;
     const disposition = download ? "attachment" : "inline";
+    const templateSuffix = template === "lump-sum" ? "-lump-sum" : "";
 
     if (format === "excel") {
       const buffer = await buildQuotationExcel(detail);
@@ -56,7 +59,7 @@ export async function GET(request: Request, context: RouteContext) {
       return new NextResponse(html, {
         headers: {
           "Content-Type": "application/msword",
-          "Content-Disposition": `attachment; filename="${baseName}.doc"`,
+          "Content-Disposition": `attachment; filename="${baseName}${templateSuffix}.doc"`,
         },
       });
     }
@@ -72,7 +75,7 @@ export async function GET(request: Request, context: RouteContext) {
       return new NextResponse(pdfResult.buffer as unknown as BodyInit, {
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `${disposition}; filename="${baseName}.pdf"`,
+          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pdf"`,
         },
       });
     }
@@ -81,7 +84,7 @@ export async function GET(request: Request, context: RouteContext) {
     return new NextResponse(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `${disposition}; filename="${baseName}.html"`,
+        "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.html"`,
       },
     });
   } catch (error) {

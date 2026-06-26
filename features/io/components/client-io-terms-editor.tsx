@@ -53,7 +53,7 @@ export function ClientIoTermsEditor({
           <div
             key={index}
             className={cn(
-              "space-y-2.5 rounded-[12px] border border-[#E6EAF2] bg-[#F5F8FD] p-4",
+              "space-y-2.5 rounded-[12px] border border-border bg-muted p-4",
               "transition-[border-color,box-shadow] focus-within:border-[#0057FF]",
               "focus-within:ring-[3px] focus-within:ring-[#EEF4FF]"
             )}
@@ -98,7 +98,7 @@ export function ClientIoTermsEditor({
         onClick={addTerm}
         disabled={disabled}
         className={cn(
-          "inline-flex w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-[#E6EAF2]",
+          "inline-flex w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-border",
           "px-4 py-2.5 text-[13px] font-semibold text-[#0057FF] transition-colors",
           "hover:border-[#0057FF] hover:bg-[#EEF4FF]",
           "disabled:pointer-events-none disabled:opacity-50"

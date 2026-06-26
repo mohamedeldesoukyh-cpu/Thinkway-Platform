@@ -36,6 +36,9 @@ function aggregateFactsByInfluencer(
   {
     influencer_name: string;
     document_number: string;
+    platform: string | null;
+    handle: string | null;
+    profile_url: string | null;
     spending: number;
     revenue: number;
     gp: number;
@@ -46,6 +49,9 @@ function aggregateFactsByInfluencer(
     {
       influencer_name: string;
       document_number: string;
+      platform: string | null;
+      handle: string | null;
+      profile_url: string | null;
       spending: number;
       revenue: number;
       gp: number;
@@ -67,6 +73,9 @@ function aggregateFactsByInfluencer(
       {
         influencer_name: fact.influencer_name,
         document_number: fact.document_number,
+        platform: fact.platform,
+        handle: fact.handle,
+        profile_url: fact.profile_url,
         spending: 0,
         revenue: 0,
         gp: 0,
@@ -144,6 +153,9 @@ export function buildTopInfluencersReport(
       influencer_id: influencerId,
       influencer_name: totals.influencer_name,
       document_number: totals.document_number,
+      platform: totals.platform,
+      handle: totals.handle,
+      profile_url: totals.profile_url,
       spending: totals.spending,
       revenue: totals.revenue,
       gp: totals.gp,

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
@@ -169,6 +171,7 @@ export function shortlistToCsv(
     "display_name",
     "username",
     "platform",
+    "profile_url",
     "source",
     "followers",
     "engagement_rate",
@@ -187,6 +190,7 @@ export function shortlistToCsv(
       c.display_name,
       p?.handle ?? "",
       p?.platform ?? "",
+      resolveCreatorProfileUrl(p) ?? "",
       c.source_type,
       c.metrics.followers.value ?? "",
       c.metrics.engagement_rate.value ?? "",

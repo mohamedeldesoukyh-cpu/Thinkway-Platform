@@ -227,45 +227,66 @@ export function AddCreatorsDrawer({
               {creators.map((creator) => {
                 const onList = isOnList(creator);
                 const addable = isAddableCreator(creator);
+                const disabled = onList || !addable;
                 const checked = selected.has(creator.unified_id);
                 const platformInfo = creator.platforms[0];
                 return (
                   <li key={creator.unified_id}>
-                    <button
-                      type="button"
-                      onClick={() => toggle(creator)}
-                      disabled={onList || !addable}
-                      className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-border hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
+                    <div
+                      className={`flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2 text-left transition ${
+                        disabled
+                          ? "cursor-not-allowed opacity-60"
+                          : "hover:border-border hover:bg-muted/50"
+                      }`}
                     >
                       <Checkbox
                         checked={checked}
-                        disabled={onList || !addable}
+                        disabled={disabled}
+                        onCheckedChange={() => toggle(creator)}
                         aria-label={`Select ${creator.display_name}`}
-                        className="pointer-events-none"
                       />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {creator.display_name}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {platformInfo
-                            ? `${platformInfo.platform} · @${platformInfo.handle}`
-                            : creator.source_type}
-                        </p>
+                      <div
+                        role={disabled ? undefined : "button"}
+                        tabIndex={disabled ? undefined : 0}
+                        aria-disabled={disabled || undefined}
+                        className={`flex min-w-0 flex-1 items-center gap-3 text-left outline-none ${
+                          disabled ? "" : "cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/25 rounded-lg"
+                        }`}
+                        onClick={() => {
+                          if (!disabled) toggle(creator);
+                        }}
+                        onKeyDown={(event) => {
+                          if (disabled) return;
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            toggle(creator);
+                          }
+                        }}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {creator.display_name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {platformInfo
+                              ? `${platformInfo.platform} · @${platformInfo.handle}`
+                              : creator.source_type}
+                          </p>
+                        </div>
+                        {creator.metrics.followers.value != null ? (
+                          <span className="hidden text-xs tabular-nums text-muted-foreground sm:inline">
+                            {Intl.NumberFormat().format(creator.metrics.followers.value)}
+                          </span>
+                        ) : null}
+                        {onList ? (
+                          <Badge variant="secondary" className="gap-1">
+                            <CheckIcon className="size-3" /> On list
+                          </Badge>
+                        ) : !addable ? (
+                          <Badge variant="outline">Not addable</Badge>
+                        ) : null}
                       </div>
-                      {creator.metrics.followers.value != null ? (
-                        <span className="hidden text-xs tabular-nums text-muted-foreground sm:inline">
-                          {Intl.NumberFormat().format(creator.metrics.followers.value)}
-                        </span>
-                      ) : null}
-                      {onList ? (
-                        <Badge variant="secondary" className="gap-1">
-                          <CheckIcon className="size-3" /> On list
-                        </Badge>
-                      ) : !addable ? (
-                        <Badge variant="outline">Not addable</Badge>
-                      ) : null}
-                    </button>
+                    </div>
                   </li>
                 );
               })}

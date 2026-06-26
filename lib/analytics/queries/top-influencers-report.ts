@@ -34,6 +34,7 @@ import {
   TOP_INFLUENCERS_MAX_LIMIT,
   TOP_INFLUENCERS_MIN_LIMIT,
 } from "@/lib/analytics/top-influencers/top-influencers-types";
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { parseLineAssignment } from "@/features/campaigns/line-assignment";
 import { resolveEffectiveExchangeRate } from "@/features/finance/exchange-rates/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -133,7 +134,8 @@ async function loadTopInfluencersClientMeta(
 export async function loadInfluencerSpendFacts(
   supabase: SupabaseClient
 ): Promise<InfluencerSpendFact[]> {
-  const [linesResult, headersResult, vendorLinksResult, influencersResult] = await Promise.all([
+  const [linesResult, headersResult, vendorLinksResult, influencersResult, platformAccountsResult] =
+    await Promise.all([
     supabase
       .from("campaign_lines")
       .select(
@@ -170,12 +172,17 @@ export async function loadInfluencerSpendFacts(
       .select("id, display_name, document_number")
       .neq("status", "archived")
       .limit(5000),
+    supabase
+      .from("influencer_platform_accounts")
+      .select("influencer_id, platform, handle, profile_url, is_primary")
+      .limit(10000),
   ]);
 
   if (linesResult.error) throw new Error(linesResult.error.message);
   if (headersResult.error) throw new Error(headersResult.error.message);
   if (vendorLinksResult.error) throw new Error(vendorLinksResult.error.message);
   if (influencersResult.error) throw new Error(influencersResult.error.message);
+  if (platformAccountsResult.error) throw new Error(platformAccountsResult.error.message);
 
   type HeaderRow = {
     id: string;
@@ -250,6 +257,28 @@ export async function loadInfluencerSpendFacts(
     });
   }
 
+  const primaryPlatformByInfluencer = new Map<
+    string,
+    { platform: string; handle: string; profile_url: string | null }
+  >();
+  for (const account of platformAccountsResult.data ?? []) {
+    const row = account as {
+      influencer_id: string;
+      platform: string;
+      handle: string;
+      profile_url: string | null;
+      is_primary?: boolean | null;
+    };
+    const existing = primaryPlatformByInfluencer.get(row.influencer_id);
+    if (!existing || row.is_primary) {
+      primaryPlatformByInfluencer.set(row.influencer_id, {
+        platform: row.platform,
+        handle: row.handle,
+        profile_url: resolveCreatorProfileUrl(row),
+      });
+    }
+  }
+
   const facts: InfluencerSpendFact[] = [];
 
   for (const line of (linesResult.data ?? []) as unknown as LineRow[]) {
@@ -286,6 +315,8 @@ export async function loadInfluencerSpendFacts(
       vrRatePercent,
     });
 
+    const platformMeta = primaryPlatformByInfluencer.get(influencerId);
+
     facts.push({
       influencer_id: influencerId,
       influencer_name:
@@ -296,6 +327,9 @@ export async function loadInfluencerSpendFacts(
         meta?.document_number ??
         assignment?.influencer_document_number ??
         "",
+      platform: platformMeta?.platform ?? null,
+      handle: platformMeta?.handle ?? null,
+      profile_url: platformMeta?.profile_url ?? null,
       client_id: client.id,
       period_month: resolvePeriodMonth(header),
       spending: vrAdjusted.cost,

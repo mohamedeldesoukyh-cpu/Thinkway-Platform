@@ -19,6 +19,7 @@ import {
   createCampaignPublicationAction,
 } from "@/features/campaigns/actions/publication-actions";
 import type { FormActionState } from "@/features/campaigns/actions";
+import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { DeliverableTypeSelect, PlatformSelect } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
 import {
   DETAIL_FORM_INPUT_CLASS,
@@ -56,6 +57,7 @@ export function CampaignPublicationSheet({
   open,
   onOpenChange,
 }: CampaignPublicationSheetProps) {
+  const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
   const [lineId, setLineId] = useState("");
   const [platform, setPlatform] = useState("instagram");
   const [publicationType, setPublicationType] = useState("instagram_post");
@@ -85,11 +87,12 @@ export function CampaignPublicationSheet({
     if (!state.message) return;
     if (state.ok) {
       toast.success(state.message);
+      refreshAfterPublicationMutation();
       onOpenChange(false);
       return;
     }
     toast.error(state.message);
-  }, [state, onOpenChange]);
+  }, [state, onOpenChange, refreshAfterPublicationMutation]);
 
   useEffect(() => {
     if (!open) return;

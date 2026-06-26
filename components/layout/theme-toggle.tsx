@@ -1,7 +1,7 @@
 "use client";
 
 import { MoonIcon, SunIcon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/providers/theme-provider";
 import { useEffect, useState } from "react";
 
 import { Switch } from "@/components/ui/switch";

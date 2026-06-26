@@ -15,14 +15,18 @@ import { Button } from "@/components/ui/button";
 import {
   deleteClientDocumentAction,
   getClientDocumentDownloadUrlAction,
-  uploadClientDocumentAction,
 } from "@/features/clients/actions";
+import { uploadClientDocumentViaApi } from "@/features/clients/client-document-upload-api";
 import type { ClientDetail } from "@/types/database";
 import {
   friendlyServerActionError,
   isServerActionDecodeError,
 } from "@/lib/clients/client-document-utils";
 import { cn } from "@/lib/utils";
+
+/** File inputs use this id so they are not associated with profile tab save forms. */
+export const CLIENT_INLINE_DOCUMENT_FILE_FORM_ID =
+  "client-inline-document-file-form";
 
 type ClientDocumentType = ClientDetail["documents"][number]["document_type"];
 type ClientDocument = ClientDetail["documents"][number];
@@ -91,7 +95,7 @@ export function ClientInlineDocumentAttach({
 
     startUpload(async () => {
       try {
-        const result = await uploadClientDocumentAction({ ok: false }, formData);
+        const result = await uploadClientDocumentViaApi(clientId, formData);
         if (result.ok) {
           toast.success(result.message ?? "Document uploaded.");
           refreshClientProfileSafely();
@@ -99,11 +103,6 @@ export function ClientInlineDocumentAttach({
         }
         toast.error(result.message ?? "Upload failed.");
       } catch (error) {
-        if (isServerActionDecodeError(error)) {
-          refreshClientProfileSafely();
-          toast.warning(friendlyServerActionError(error));
-          return;
-        }
         toast.error(friendlyServerActionError(error));
       } finally {
         event.target.value = "";
@@ -245,6 +244,7 @@ export function ClientInlineDocumentAttach({
       <input
         ref={fileInputRef}
         type="file"
+        form={CLIENT_INLINE_DOCUMENT_FILE_FORM_ID}
         accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
         disabled={busy}
         tabIndex={-1}

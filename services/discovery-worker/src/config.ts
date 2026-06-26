@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env.js";
 
 function required(name: string): string {
   const value = process.env[name];
@@ -21,9 +21,6 @@ export const config = {
   userAgent:
     process.env.DISCOVERY_USER_AGENT ??
     "Mozilla/5.0 (compatible; ThinkwayDiscovery/1.0)",
-  /** Sample creator fallback when live crawl is empty/blocked. Off in production unless explicitly enabled. */
-  mockSeedFallback:
-    process.env.DISCOVERY_MOCK_SEED_FALLBACK === "true" ||
-    (process.env.DISCOVERY_MOCK_SEED_FALLBACK !== "false" &&
-      process.env.NODE_ENV !== "production"),
+  /** Mock creator fallback permanently disabled in every environment. */
+  mockSeedFallback: false,
 };

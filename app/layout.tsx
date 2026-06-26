@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
+import { ThemeHeadScript } from "@/lib/theme/theme-head-script";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
@@ -37,6 +38,9 @@ export default function RootLayout({
         dmMono.variable
       )}
     >
+      <head>
+        <ThemeHeadScript />
+      </head>
       <body
         suppressHydrationWarning
         className="flex min-h-full flex-col bg-background text-foreground"

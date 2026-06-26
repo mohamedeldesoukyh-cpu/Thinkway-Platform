@@ -2,8 +2,6 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
-  ArchiveIcon,
-  CheckIcon,
   DownloadIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
@@ -25,20 +23,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { OperationalTableColumnsProvider } from "@/components/tables/operational-table-column-context";
+import { OperationalTableSettingsButton } from "@/components/tables/operational-table-settings-button";
+import { operationalFloatingBarContentClass } from "@/components/workspace/operational-floating-action-bar";
 import { CampaignPublicationSheet } from "@/features/campaigns/components/campaign-publication-sheet";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { CampaignPerformanceCharts as PerformanceChartsSection } from "@/features/campaigns/components/performance/campaign-performance-charts";
 import { PublicationWorkspace } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace";
 import { CampaignPerformanceGrid } from "@/features/campaigns/components/performance/campaign-performance-grid";
 import { CampaignPerformanceKpiStrip } from "@/features/campaigns/components/performance/campaign-performance-kpi-strip";
+import { PerformanceSelectionFlyout } from "@/features/campaigns/components/performance/performance-selection-flyout";
 import {
   bulkImportPublicationsAction,
-  bulkUpdatePublicationStatusAction,
   deleteCampaignPublicationAction,
   importPublicationMetricsAction,
   refreshCampaignMetricsAction,
   refreshPublicationMetricsAction,
-  requestPublicationMetricsSyncAction,
 } from "@/features/campaigns/actions/performance-actions";
 import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import {
@@ -52,6 +52,10 @@ import type {
 } from "@/features/campaigns/queries/publications";
 import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import {
+  PERFORMANCE_GRID_COLUMN_METAS,
+  PERFORMANCE_GRID_TABLE_ID,
+} from "@/lib/tables/performance-grid-column-metas";
 
 const ALL_STATUSES = "all";
 
@@ -108,7 +112,9 @@ export function CampaignPerformanceCenterTab({
         (row.influencer_name ?? "").toLowerCase().includes(q) ||
         (row.content_url ?? "").toLowerCase().includes(q) ||
         (row.publication_type_label ?? "").toLowerCase().includes(q) ||
-        (row.caption ?? "").toLowerCase().includes(q)
+        (row.caption ?? "").toLowerCase().includes(q) ||
+        (row.hashtags ?? "").toLowerCase().includes(q) ||
+        (row.mentions ?? "").toLowerCase().includes(q)
       );
     });
   }, [publications, search, statusFilter, platformFilter]);
@@ -147,6 +153,10 @@ export function CampaignPerformanceCenterTab({
       else ids.forEach((id) => next.add(id));
       return next;
     });
+  }
+
+  function selectAllFiltered() {
+    setSelectedIds(new Set(filtered.map((row) => row.id)));
   }
 
   function handleSort(key: typeof sortKey) {
@@ -211,37 +221,6 @@ export function CampaignPerformanceCenterTab({
       const row = publications.find((p) => p.id === id);
       notifyMetricsSyncQueued(id, row?.influencer_name);
     }
-  }
-
-  function bulkStatus(status: string) {
-    const ids = [...selectedIds];
-    if (ids.length === 0) return;
-    startTransition(async () => {
-      const result = await bulkUpdatePublicationStatusAction({
-        campaignId: workspace.id,
-        publicationIds: ids,
-        status,
-      });
-      if (result.ok) {
-        toast.success(result.message);
-        refreshAfterPublicationMutation();
-      } else toast.error(result.message);
-    });
-  }
-
-  function bulkSync() {
-    const ids = [...selectedIds];
-    const targetIds = ids.length > 0 ? ids : publications.map((p) => p.id);
-    startTransition(async () => {
-      const result = await requestPublicationMetricsSyncAction({
-        campaignId: workspace.id,
-        publicationIds: targetIds,
-      });
-      if (result.ok) {
-        queueMetricsSyncToasts(targetIds);
-        refreshAfterPublicationMutation();
-      } else toast.error(result.message);
-    });
   }
 
   function refreshAllCampaignMetrics() {
@@ -362,16 +341,24 @@ export function CampaignPerformanceCenterTab({
 
   const selectedCount = selectedIds.size;
   const reportBase = `/api/campaigns/${workspace.id}/performance/document`;
+  const selectedRows = useMemo(
+    () => publications.filter((row) => selectedIds.has(row.id)),
+    [publications, selectedIds]
+  );
 
   return (
-    <div className="space-y-4">
+    <div className={operationalFloatingBarContentClass(selectedCount > 0, "space-y-4")}>
       <CampaignOperationalSectionHeader
         title="Campaign Performance Center"
         description="Central reporting workspace for live content, metrics, and client-ready exports."
         actions={
           <>
             <Button size="sm" variant="outline" asChild>
-              <a href={`${reportBase}?format=html`} target="_blank" rel="noopener noreferrer">
+              <a
+                href={`/campaigns/${workspace.id}/performance/preview`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <FileTextIcon data-icon="inline-start" className="size-3.5" />
                 Preview report
               </a>
@@ -424,7 +411,7 @@ export function CampaignPerformanceCenterTab({
       ) : null}
 
       {!loadError && schemaWarnings.length > 0 ? (
-        <div className="rounded-lg border border-[#E6EAF2] bg-[#FAFBFD] px-3 py-2 text-xs text-[#5B6575]">
+        <div className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
           Some metrics columns are not migrated yet — counts show as — until{" "}
           <code className="font-mono">20260623120000_campaign_publications_full_schema_reconcile.sql</code>{" "}
           is applied.
@@ -435,30 +422,16 @@ export function CampaignPerformanceCenterTab({
       <CampaignPerformanceSyncHealth health={syncHealth} />
       <PerformanceChartsSection charts={charts} />
 
-      {selectedCount > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#0057FF]/20 bg-[#EEF4FF] px-3 py-2">
-          <span className="text-xs font-semibold text-[#0057FF]">{selectedCount} selected</span>
-          <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={() => bulkStatus("verified")} disabled={isPending}>
-            <CheckIcon className="mr-1 size-3" /> Approve
-          </Button>
-          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("archived")} disabled={isPending}>
-            <ArchiveIcon className="mr-1 size-3" /> Archive
-          </Button>
-          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={bulkSync} disabled={isPending}>
-            <RefreshCwIcon className="mr-1 size-3" /> Refresh metrics
-          </Button>
-          <Button size="sm" variant="ghost" className="ml-auto h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
-            Clear
-          </Button>
-        </div>
-      ) : null}
-
-      <div className="space-y-3 rounded-xl border border-[#E6EAF2] bg-[#FAFBFD] p-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            Publications grid · {filtered.length} of {publications.length}
-          </p>
-          <div className="flex flex-wrap gap-2">
+      <OperationalTableColumnsProvider
+        tableId={PERFORMANCE_GRID_TABLE_ID}
+        columns={PERFORMANCE_GRID_COLUMN_METAS}
+      >
+        <div className="space-y-3 rounded-xl border border-border bg-muted p-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Publications grid · {filtered.length} of {publications.length}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" className="h-8 text-xs" onClick={exportCsv} disabled={filtered.length === 0}>
               <DownloadIcon className="mr-1 size-3" /> Export CSV
             </Button>
@@ -505,14 +478,14 @@ export function CampaignPerformanceCenterTab({
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
           <div className="grid gap-1.5">
             <Label htmlFor="perf_search">
               <SearchIcon className="mr-1 inline size-3.5" /> Search
             </Label>
             <Input
               id="perf_search"
-              placeholder="Creator, URL, caption…"
+              placeholder="Creator, URL, caption, hashtags, mentions…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -551,20 +524,34 @@ export function CampaignPerformanceCenterTab({
               </SelectContent>
             </Select>
           </div>
+          <div className="flex justify-end">
+            <OperationalTableSettingsButton contextLabel="Publications grid" />
+          </div>
         </div>
-      </div>
 
-      <CampaignPerformanceGrid
-        rows={filtered}
-        selectedIds={selectedIds}
-        onToggleSelect={toggleSelect}
-        onToggleSelectAll={toggleSelectAll}
-        onOpenDetail={setDetailId}
-        onRemovePublication={handleRemovePublication}
-        onRefreshMetrics={handleRefreshPublication}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        onSort={handleSort}
+        <CampaignPerformanceGrid
+          rows={filtered}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
+          onOpenDetail={setDetailId}
+          onRemovePublication={handleRemovePublication}
+          onRefreshMetrics={handleRefreshPublication}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={handleSort}
+        />
+        </div>
+      </OperationalTableColumnsProvider>
+
+      <PerformanceSelectionFlyout
+        campaignId={workspace.id}
+        documentNumber={workspace.document_number ?? workspace.id}
+        selectedIds={[...selectedIds]}
+        selectedRows={selectedRows}
+        selectableCount={filtered.length}
+        onSelectAll={selectAllFiltered}
+        onClearSelection={() => setSelectedIds(new Set())}
       />
 
       <CampaignPublicationSheet

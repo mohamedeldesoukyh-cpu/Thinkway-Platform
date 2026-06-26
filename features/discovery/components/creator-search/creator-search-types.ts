@@ -48,6 +48,137 @@ export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
   minBrandFit: "",
 };
 
+export const CREATOR_SEARCH_SORTS = [
+  { value: "relevance", label: "Relevance" },
+  { value: "followers", label: "Followers" },
+  { value: "engagement", label: "Engagement rate" },
+  { value: "views", label: "Avg views" },
+  { value: "name", label: "Name (A–Z)" },
+] as const;
+
+export type CreatorSearchSort = (typeof CREATOR_SEARCH_SORTS)[number]["value"];
+
+export const DEFAULT_CREATOR_SEARCH_SORT: CreatorSearchSort = "relevance";
+
+/** A removable filter pill shown above the result list. */
+export type ActiveFilterChip = {
+  id: string;
+  label: string;
+  /** Patch applied to clear this single chip. */
+  clear: Partial<CreatorSearchFilters>;
+};
+
+const PLATFORM_CHIP_LABELS: Record<string, string> = {
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+  twitter: "X (Twitter)",
+};
+
+function rangeLabel(prefix: string, min: string, max: string): string {
+  if (min && max) return `${prefix}: ${min}–${max}`;
+  if (min) return `${prefix}: ≥ ${min}`;
+  return `${prefix}: ≤ ${max}`;
+}
+
+/** Derives the set of removable chips from the current filter state. */
+export function buildActiveFilterChips(filters: CreatorSearchFilters): ActiveFilterChip[] {
+  const chips: ActiveFilterChip[] = [];
+
+  if (filters.handle.trim()) {
+    chips.push({ id: "handle", label: `Handle: ${filters.handle.trim()}`, clear: { handle: "" } });
+  }
+  for (const platform of filters.platforms) {
+    chips.push({
+      id: `platform:${platform}`,
+      label: PLATFORM_CHIP_LABELS[platform] ?? platform,
+      clear: { platforms: filters.platforms.filter((p) => p !== platform) },
+    });
+  }
+  if (filters.country.trim()) {
+    chips.push({ id: "country", label: `Country: ${filters.country.trim()}`, clear: { country: "" } });
+  }
+  if (filters.language.trim()) {
+    chips.push({ id: "language", label: `Language: ${filters.language.trim()}`, clear: { language: "" } });
+  }
+  if (filters.audienceCountry.trim()) {
+    chips.push({
+      id: "audienceCountry",
+      label: `Audience: ${filters.audienceCountry.trim()}`,
+      clear: { audienceCountry: "" },
+    });
+  }
+  if (filters.audienceInterests.trim()) {
+    chips.push({
+      id: "audienceInterests",
+      label: `Interests: ${filters.audienceInterests.trim()}`,
+      clear: { audienceInterests: "" },
+    });
+  }
+  if (filters.gender.trim()) {
+    chips.push({ id: "gender", label: `Gender: ${filters.gender.trim()}`, clear: { gender: "" } });
+  }
+  if (filters.ageMin || filters.ageMax) {
+    chips.push({
+      id: "age",
+      label: rangeLabel("Age", filters.ageMin, filters.ageMax),
+      clear: { ageMin: "", ageMax: "" },
+    });
+  }
+  if (filters.minFollowers || filters.maxFollowers) {
+    chips.push({
+      id: "followers",
+      label: rangeLabel("Followers", filters.minFollowers, filters.maxFollowers),
+      clear: { minFollowers: "", maxFollowers: "" },
+    });
+  }
+  if (filters.minEngagement) {
+    chips.push({
+      id: "engagement",
+      label: `Eng. ≥ ${filters.minEngagement}%`,
+      clear: { minEngagement: "" },
+    });
+  }
+  if (filters.minViews) {
+    chips.push({ id: "views", label: `Views ≥ ${filters.minViews}`, clear: { minViews: "" } });
+  }
+  if (filters.category.trim()) {
+    chips.push({ id: "category", label: `Category: ${filters.category.trim()}`, clear: { category: "" } });
+  }
+  if (filters.minBrandSafety) {
+    chips.push({
+      id: "brandSafety",
+      label: `Safety ≥ ${filters.minBrandSafety}`,
+      clear: { minBrandSafety: "" },
+    });
+  }
+  if (filters.aiNiche.trim()) {
+    chips.push({ id: "aiNiche", label: `Niche: ${filters.aiNiche.trim()}`, clear: { aiNiche: "" } });
+  }
+  if (filters.minThinkwayScore) {
+    chips.push({
+      id: "thinkway",
+      label: `TW AI ≥ ${filters.minThinkwayScore}`,
+      clear: { minThinkwayScore: "" },
+    });
+  }
+  if (filters.minBrandFit) {
+    chips.push({
+      id: "brandFit",
+      label: `Brand fit ≥ ${filters.minBrandFit}`,
+      clear: { minBrandFit: "" },
+    });
+  }
+  if (filters.minAiScore) {
+    chips.push({
+      id: "aiQuality",
+      label: `AI quality ≥ ${filters.minAiScore}`,
+      clear: { minAiScore: "" },
+    });
+  }
+  return chips;
+}
+
 export function filtersToBrowseParams(filters: CreatorSearchFilters, page: number, pageSize: number) {
   const search = [filters.search.trim(), filters.handle.trim()].filter(Boolean).join(" ");
   const minAi = [filters.minAiScore, filters.minBrandFit]

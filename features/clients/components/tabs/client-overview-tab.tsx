@@ -388,12 +388,12 @@ export function ClientOverviewTab({
           <FieldError messages={state.fieldErrors?.client_category} />
           <FieldError messages={state.fieldErrors?.client_subcategory} />
 
-          <details className="group rounded-[12px] border border-[#E6EAF2] bg-[#F5F8FD] open:bg-white">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[13px] font-semibold text-[#3A4254] marker:content-none [&::-webkit-details-marker]:hidden">
+          <details className="group rounded-[12px] border border-border bg-muted open:bg-card">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[13px] font-semibold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
               <span>Administration</span>
-              <ChevronDownIcon className="size-4 text-[#9099A8] transition-transform group-open:rotate-180" />
+              <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
-            <div className="space-y-[18px] border-t border-[#E6EAF2] px-4 py-4">
+            <div className="space-y-[18px] border-t border-border px-4 py-4">
               <ClientFormField label="Legal name" htmlFor="legal_name">
                 <Input
                   id="legal_name"

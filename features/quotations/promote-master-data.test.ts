@@ -116,6 +116,88 @@ const missingAck = promoteMasterDataSchema.safeParse({
 });
 assert.equal(missingAck.success, false);
 
+// wizard submit payload uses null for empty optional strings (not omitted keys)
+const wizardNullOptionals = promoteMasterDataSchema.safeParse({
+  quotationId,
+  clientMode: "create",
+  clientName: "Test Client",
+  legalName: null,
+  agencyOrDirect: "agency",
+  industry: null,
+  country: null,
+  website: null,
+  existingClientId: null,
+  brandMode: "create",
+  brandName: "Test Brand",
+  categoryId: null,
+  subcategoryId: null,
+  existingBrandId: null,
+  groupId: null,
+  clientOwnerId: null,
+  countryManagerId: null,
+  commercialOwnerId: null,
+  acknowledged: true,
+  clientDuplicateOverride: false,
+  brandDuplicateOverride: false,
+});
+assert.equal(wizardNullOptionals.success, true);
+if (wizardNullOptionals.success) {
+  assert.equal(wizardNullOptionals.data.legalName, null);
+  assert.equal(wizardNullOptionals.data.groupId, null);
+}
+
+// empty strings from cleared inputs normalize to null (same as wizard || null)
+const wizardEmptyStringOptionals = promoteMasterDataSchema.safeParse({
+  quotationId,
+  clientMode: "create",
+  clientName: "Test Client",
+  legalName: "",
+  agencyOrDirect: "agency",
+  industry: "",
+  country: "",
+  website: "",
+  existingClientId: "",
+  brandMode: "create",
+  brandName: "Test Brand",
+  categoryId: "",
+  subcategoryId: "",
+  existingBrandId: "",
+  groupId: "",
+  clientOwnerId: "",
+  countryManagerId: "",
+  commercialOwnerId: "",
+  acknowledged: true,
+});
+assert.equal(wizardEmptyStringOptionals.success, true);
+if (wizardEmptyStringOptionals.success) {
+  assert.equal(wizardEmptyStringOptionals.data.website, null);
+  assert.equal(wizardEmptyStringOptionals.data.categoryId, null);
+}
+
+// link existing client + brand with null ownership fields
+const linkExistingWithNulls = promoteMasterDataSchema.safeParse({
+  quotationId,
+  clientMode: "link",
+  existingClientId: clientId,
+  brandMode: "link",
+  existingBrandId: brandId,
+  clientName: null,
+  legalName: null,
+  industry: null,
+  country: null,
+  website: null,
+  brandName: null,
+  categoryId: null,
+  subcategoryId: null,
+  groupId: null,
+  clientOwnerId: null,
+  countryManagerId: null,
+  commercialOwnerId: null,
+  acknowledged: true,
+  agencyOrDirect: "agency",
+});
+assert.equal(linkExistingWithNulls.success, true);
+
 // duplicate override flags accepted
 const withOverrides = promoteMasterDataSchema.safeParse({
   quotationId,

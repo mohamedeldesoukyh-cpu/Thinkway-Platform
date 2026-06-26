@@ -51,8 +51,8 @@ export function UserAccount({
   inSidebar = true,
 }: UserAccountProps) {
   const displayEmail = email ?? "Signed in";
-  const textPrimary = inSidebar ? "text-[var(--login-navy)]" : "text-foreground";
-  const textSecondary = inSidebar ? "text-[#9099A8]" : "text-muted-foreground";
+  const textPrimary = inSidebar ? "text-sidebar-foreground" : "text-foreground";
+  const textSecondary = inSidebar ? "text-sidebar-muted-foreground" : "text-muted-foreground";
   const triggerSurface = inSidebar
     ? "rounded-xl p-2 transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] active:scale-[0.99]"
     : "rounded-2xl hover:bg-muted";

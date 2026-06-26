@@ -98,6 +98,9 @@ export function applyProfileEnrichment<T extends EnrichableProfileFields>(
   }
   if (enrichment.profile_picture_url && !account.profile_picture_url.trim()) {
     next.profile_picture_url = enrichment.profile_picture_url;
+    (next as { avatar_source?: string }).avatar_source = "discovery";
+    (next as { avatar_last_synced_at?: string }).avatar_last_synced_at =
+      new Date().toISOString();
   }
   if (enrichment.is_verified != null) {
     next.is_verified = enrichment.is_verified;

@@ -70,9 +70,9 @@ export function ClientFormKeyboardShortcuts({
 export const CLIENT_FORM_MAX_WIDTH = "max-w-[880px]";
 
 export const CLIENT_FORM_INPUT_CLASS = cn(
-  "h-auto min-h-9 w-full rounded-[10px] border-[#E6EAF2] bg-[#F5F8FD] px-[13px] py-[11px] text-[13.5px] text-[#0B0F1A] shadow-none",
-  "placeholder:text-[#9099A8]",
-  "focus-visible:border-[#0057FF] focus-visible:bg-white focus-visible:ring-[3px] focus-visible:ring-[#EEF4FF]"
+  "h-auto min-h-9 w-full rounded-[10px] border-border bg-muted px-[13px] py-[11px] text-[13.5px] text-foreground shadow-none",
+  "placeholder:text-muted-foreground",
+  "focus-visible:border-primary focus-visible:bg-background focus-visible:ring-[3px] focus-visible:ring-primary/20"
 );
 
 export const CLIENT_FORM_SELECT_TRIGGER_CLASS = cn(
@@ -86,10 +86,10 @@ export const CLIENT_FORM_TEXTAREA_CLASS = cn(
 );
 
 export const CLIENT_FORM_FIELD_LABEL_CLASS =
-  "text-[12.5px] font-semibold text-[#3A4254]";
+  "text-[12.5px] font-semibold text-foreground";
 
 export const CLIENT_FORM_FIELD_HINT_CLASS =
-  "text-[11.5px] leading-relaxed text-[#9099A8]";
+  "text-[11.5px] leading-relaxed text-muted-foreground";
 
 export const CLIENT_FORM_PRIMARY_BUTTON_CLASS = cn(
   "inline-flex h-auto items-center gap-1.5 rounded-[10px] border-transparent px-4 py-2.5",
@@ -132,16 +132,16 @@ export function ClientProfileTabSaveButton({
 }
 
 export const CLIENT_FORM_SECONDARY_BUTTON_CLASS = cn(
-  "inline-flex h-auto items-center gap-1.5 rounded-[10px] border border-[#E6EAF2] bg-white px-3 py-1.5",
-  "text-xs font-semibold text-[#0B0F1A] transition-[border-color,background-color,transform]",
-  "hover:border-[#D7DEEA] active:scale-[0.97]",
+  "inline-flex h-auto items-center gap-1.5 rounded-[10px] border border-border bg-card px-3 py-1.5",
+  "text-xs font-semibold text-foreground transition-[border-color,background-color,transform]",
+  "hover:border-border/80 active:scale-[0.97]",
   "disabled:pointer-events-none disabled:opacity-50"
 );
 
 export const CLIENT_FORM_GHOST_BUTTON_CLASS = cn(
   "inline-flex h-auto items-center gap-1.5 rounded-[10px] border-transparent bg-transparent px-4 py-2.5",
-  "text-[13px] font-semibold text-[#5B6575] transition-colors",
-  "hover:bg-[#F5F8FD] hover:text-[#0B0F1A] active:scale-[0.97]",
+  "text-[13px] font-semibold text-muted-foreground transition-colors",
+  "hover:bg-muted hover:text-foreground active:scale-[0.97]",
   "disabled:pointer-events-none disabled:opacity-50"
 );
 
@@ -158,7 +158,7 @@ export function ClientFormPageHeader({
         {title}
       </h1>
       {description ? (
-        <p className="mt-[5px] text-sm text-[#5B6575]">{description}</p>
+        <p className="mt-[5px] text-sm text-muted-foreground">{description}</p>
       ) : null}
     </header>
   );
@@ -186,28 +186,28 @@ export function ClientFormTopbar({
   isSaving?: boolean;
 }) {
   return (
-    <div className="z-15 flex h-[62px] shrink-0 items-center gap-4 border-b border-[#E6EAF2] bg-white/70 px-[26px] backdrop-blur-md">
+    <div className="z-15 flex h-[62px] shrink-0 items-center gap-4 border-b border-border bg-background/70 px-[26px] backdrop-blur-md">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-[13.5px]">
         {breadcrumbs.map((crumb, index) => {
           const isLast = index === breadcrumbs.length - 1;
           return (
             <span key={`${crumb.label}-${index}`} className="flex items-center gap-2">
               {index > 0 ? (
-                <span className="text-[#9099A8] opacity-50" aria-hidden>
+                <span className="text-muted-foreground opacity-50" aria-hidden>
                   /
                 </span>
               ) : null}
               {crumb.href && !isLast ? (
                 <Link
                   href={crumb.href}
-                  className="font-medium text-[#9099A8] transition-colors hover:text-[#3A4254]"
+                  className="font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {crumb.label}
                 </Link>
               ) : (
                 <span
                   className={cn(
-                    isLast ? "font-semibold text-[#0B0F1A]" : "font-medium text-[#9099A8]"
+                    isLast ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
                   )}
                 >
                   {crumb.label}
@@ -283,12 +283,12 @@ export function ClientFormSection({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-[#E6EAF2] bg-white shadow-[0_1px_2px_rgba(11,15,26,0.03)]",
+        "overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--card-shadow)]",
         className
       )}
     >
-      <header className="flex items-center gap-3 border-b border-[#E6EAF2] px-[22px] py-[18px]">
-        <div className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[#EEF4FF] text-[#0057FF]">
+      <header className="flex items-center gap-3 border-b border-border px-[22px] py-[18px]">
+        <div className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] bg-primary/10 text-primary">
           <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden />
         </div>
         <div className="min-w-0">
@@ -296,7 +296,7 @@ export function ClientFormSection({
             {title}
           </h3>
           {description ? (
-            <p className="mt-px text-xs text-[#9099A8]">{description}</p>
+            <p className="mt-px text-xs text-muted-foreground">{description}</p>
           ) : null}
         </div>
       </header>
@@ -361,9 +361,9 @@ export function ClientFormSaveBar({
   discardDisabled?: boolean;
 }) {
   return (
-    <div className="z-10 flex shrink-0 flex-wrap items-center gap-3.5 border-t border-[#E6EAF2] bg-white/[0.88] px-[26px] py-3.5 backdrop-blur-[14px]">
+    <div className="z-10 flex shrink-0 flex-wrap items-center gap-3.5 border-t border-border bg-background/90 px-[26px] py-3.5 backdrop-blur-[14px]">
       {status ? (
-        <div className="flex items-center gap-[7px] text-[12.5px] text-[#9099A8]">
+        <div className="flex items-center gap-[7px] text-[12.5px] text-muted-foreground">
           {status}
         </div>
       ) : null}

@@ -9,6 +9,7 @@ import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/ass
 import { toPlainAssignmentHierarchy } from "@/lib/campaigns/serialize-assignment-hierarchy";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { devLog } from "@/lib/dev-log";
+import { traceCampaignRoute, traceCampaignRouteError } from "@/lib/performance/campaign-route-trace";
 import { isBillingRepairOnLoadEnabled } from "@/lib/billing/billing-repair-on-load";
 import {
   repairActiveInvoiceOperationalRelock,
@@ -66,23 +67,39 @@ export default async function CampaignWorkspacePage({
   let assignmentHierarchy;
   let errorMessage: string | null = null;
 
+  traceCampaignRoute("page:load:start", { campaignId: id, tab: defaultTab });
+
   try {
     workspace = await getCampaignWorkspace(id);
+    traceCampaignRoute("page:workspace:loaded", {
+      campaignId: id,
+      found: Boolean(workspace),
+    });
     if (workspace) {
       assignmentHierarchy = toPlainAssignmentHierarchy(
         await getCampaignAssignmentHierarchy(id, workspace)
       );
+      traceCampaignRoute("page:assignment-hierarchy:loaded", {
+        campaignId: id,
+        groupCount: assignmentHierarchy.groups?.length ?? 0,
+        loadError: assignmentHierarchy.load_error ?? null,
+      });
     }
   } catch (error) {
+    traceCampaignRouteError("page:load:failed", error, { campaignId: id });
     const { logCampaignWorkspaceLoadError } = await import(
       "@/lib/billing/operational-billing-trace"
     );
     logCampaignWorkspaceLoadError("getCampaignWorkspace", error, { campaignId: id });
+    if (process.env.NODE_ENV === "development") {
+      throw error;
+    }
     errorMessage =
       error instanceof Error ? error.message : "Failed to load campaign workspace.";
   }
 
   if (!workspace && !errorMessage) {
+    traceCampaignRoute("page:not-found", { campaignId: id, reason: "workspace-null" });
     notFound();
   }
 
@@ -110,10 +127,6 @@ export default async function CampaignWorkspacePage({
         devLog("[campaign-page] orphaned invoice repair skipped", error);
       }
     }
-  }
-
-  if (!workspace && !errorMessage) {
-    notFound();
   }
 
   return (

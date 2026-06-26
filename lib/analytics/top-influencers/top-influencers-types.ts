@@ -10,6 +10,9 @@ export type TopInfluencersRow = {
   influencer_id: string;
   influencer_name: string;
   document_number: string;
+  platform: string | null;
+  handle: string | null;
+  profile_url: string | null;
   spending: number;
   revenue: number;
   gp: number;

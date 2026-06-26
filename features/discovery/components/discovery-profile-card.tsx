@@ -3,6 +3,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  CreatorProfileLink,
+  type CreatorProfileSource,
+} from "@/components/creator/creator-profile-link";
 import type { DiscoverySearchResult } from "@/lib/discovery/types";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +17,16 @@ function formatCount(value: number | null | undefined): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return String(value);
+}
+
+function profileSourceFromDiscoveryProfile(profile: Profile): CreatorProfileSource {
+  return {
+    displayName: profile.display_name ?? profile.username,
+    avatarUrl: profile.profile_image_url,
+    platform: profile.platform,
+    handle: profile.username,
+    profile_url: profile.profile_url,
+  };
 }
 
 type Props = {
@@ -30,14 +44,14 @@ export function DiscoveryProfileCard({ profile, onEnrich, onSave, enriching }: P
     <Card className="overflow-hidden border-border/60">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {profile.display_name ?? profile.username}
-              </p>
-              <Badge variant="outline" className="text-[10px] uppercase">
-                {profile.platform}
-              </Badge>
+              <CreatorProfileLink
+                source={profileSourceFromDiscoveryProfile(profile)}
+                size="md"
+                showHandle={false}
+                stopPropagation
+              />
               <Badge variant="secondary" className="text-[10px]">
                 {profile.stage.replaceAll("_", " ")}
               </Badge>
@@ -49,14 +63,6 @@ export function DiscoveryProfileCard({ profile, onEnrich, onSave, enriching }: P
               </p>
             ) : null}
           </div>
-          {profile.profile_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.profile_image_url}
-              alt=""
-              className="size-12 shrink-0 rounded-full border border-border/50 object-cover"
-            />
-          ) : null}
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
@@ -96,11 +102,6 @@ export function DiscoveryProfileCard({ profile, onEnrich, onSave, enriching }: P
         )}
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
-            <a href={profile.profile_url} target="_blank" rel="noreferrer">
-              View profile
-            </a>
-          </Button>
           {onEnrich ? (
             <Button
               size="sm"

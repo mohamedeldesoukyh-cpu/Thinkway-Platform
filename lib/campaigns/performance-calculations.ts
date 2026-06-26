@@ -1,3 +1,9 @@
+import {
+  computeEngagements as engineComputeEngagements,
+  computeEngagementRate as engineComputeEngagementRate,
+  type EngagementRateInput,
+} from "@/lib/performance/engagement-rate-engine";
+
 export type PerformanceMetricInput = {
   impressions: number | null;
   reach: number | null;
@@ -8,22 +14,31 @@ export type PerformanceMetricInput = {
   saves: number | null;
   clicks: number | null;
   cost: number | null;
+  followers?: number | null;
+  manualEngagementRate?: number | null;
 };
 
-export function totalEngagements(metrics: PerformanceMetricInput): number {
-  return (
-    (metrics.likes ?? 0) +
-    (metrics.comments ?? 0) +
-    (metrics.shares ?? 0) +
-    (metrics.saves ?? 0)
-  );
+function toEngagementInput(metrics: PerformanceMetricInput): EngagementRateInput {
+  return {
+    views: metrics.views,
+    reach: metrics.reach,
+    likes: metrics.likes,
+    comments: metrics.comments,
+    shares: metrics.shares,
+    saves: metrics.saves,
+    followers: metrics.followers ?? null,
+    manualEngagementRate: metrics.manualEngagementRate ?? null,
+  };
 }
 
+/** @deprecated Use computeEngagements from engagement-rate-engine directly. */
+export function totalEngagements(metrics: PerformanceMetricInput): number {
+  return engineComputeEngagements(toEngagementInput(metrics));
+}
+
+/** @deprecated Use computeEngagementRate from engagement-rate-engine directly. */
 export function calculateEngagementRate(metrics: PerformanceMetricInput): number | null {
-  const engagements = totalEngagements(metrics);
-  const denominator = metrics.reach ?? metrics.impressions ?? metrics.views;
-  if (!denominator || denominator <= 0) return null;
-  return (engagements / denominator) * 100;
+  return engineComputeEngagementRate(toEngagementInput(metrics)).engagement_rate;
 }
 
 export function calculateViewRate(metrics: PerformanceMetricInput): number | null {
@@ -71,7 +86,7 @@ export function deriveCalculatedMetrics(
   cpc: number | null;
 } {
   return {
-    engagement_rate: calculateEngagementRate(input),
+    engagement_rate: engineComputeEngagementRate(toEngagementInput(input)).engagement_rate,
     view_rate: calculateViewRate(input),
     cpm: calculateCpm(input.cost, input.impressions),
     cpv: calculateCpv(input.cost, input.views),

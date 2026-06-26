@@ -5,6 +5,7 @@ import {
   computeOnboardingProgress,
   DEFAULT_PROMOTED_ONBOARDING_STATUS,
   deriveOnboardingStatusFromCompletion,
+  resolveClientListStatusBadges,
 } from "@/lib/clients/onboarding-status";
 
 // 7. onboarding default status
@@ -59,6 +60,21 @@ assert.equal(
     tax_completed_at: "2026-06-04T00:00:00.000Z",
   }),
   "active"
+);
+
+assert.deepEqual(
+  resolveClientListStatusBadges({ status: "active", onboardingStatus: "active" }),
+  { operationalStatus: "active", onboardingStatus: null }
+);
+
+assert.deepEqual(
+  resolveClientListStatusBadges({ status: "prospect", onboardingStatus: "legal_pending" }),
+  { operationalStatus: "prospect", onboardingStatus: "legal_pending" }
+);
+
+assert.deepEqual(
+  resolveClientListStatusBadges({ status: "active", onboardingStatus: "ready" }),
+  { operationalStatus: "active", onboardingStatus: "ready" }
 );
 
 console.log("onboarding-status.test.ts: all assertions passed");

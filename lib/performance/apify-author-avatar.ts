@@ -1,0 +1,99 @@
+import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
+
+function httpUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.startsWith("http") ? trimmed : null;
+}
+
+function firstHttpUrl(candidates: unknown[]): string | null {
+  for (const candidate of candidates) {
+    const url = httpUrl(candidate);
+    if (url) return url;
+  }
+  return null;
+}
+
+function nestedRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function tiktokAuthorAvatarCandidates(row: Record<string, unknown>): unknown[] {
+  const authorMeta = nestedRecord(row.authorMeta);
+  const author = nestedRecord(row.author);
+  return [
+    authorMeta?.originalAvatarUrl,
+    authorMeta?.avatar,
+    authorMeta?.avatarMedium,
+    author?.avatar,
+    author?.originalAvatarUrl,
+    row.authorAvatar,
+    row.authorProfilePicUrl,
+  ];
+}
+
+function instagramAuthorAvatarCandidates(row: Record<string, unknown>): unknown[] {
+  const owner = nestedRecord(row.owner);
+  const author = nestedRecord(row.author);
+  return [
+    row.ownerProfilePicUrl,
+    row.owner_profile_pic_url,
+    owner?.profilePicUrl,
+    owner?.profile_pic_url,
+    owner?.profilePictureUrl,
+    author?.profilePicUrl,
+    author?.profile_pic_url,
+    author?.profilePictureUrl,
+    row.profilePicUrl,
+    row.profile_pic_url,
+  ];
+}
+
+function genericAuthorAvatarCandidates(row: Record<string, unknown>): unknown[] {
+  const channel = nestedRecord(row.channel);
+  const author = nestedRecord(row.author);
+  return [
+    row.channelAvatarUrl,
+    row.channelAvatar,
+    channel?.avatarUrl,
+    channel?.avatar,
+    channel?.profileImageUrl,
+    author?.avatarUrl,
+    author?.avatar,
+    author?.profileImageUrl,
+    row.authorAvatarUrl,
+    row.authorAvatar,
+  ];
+}
+
+/**
+ * Extract creator profile photo URL from Apify post-scraper payloads.
+ * TikTok: clockworks/tiktok-scraper `authorMeta.avatar` / `originalAvatarUrl`.
+ * Instagram: apify/instagram-scraper `ownerProfilePicUrl` and nested owner/author fields.
+ */
+/** Read authorAvatarUrl from a publication_metric_sync_logs.response_summary row. */
+export function authorAvatarFromSyncLogSummary(summary: unknown): string | null {
+  if (!summary || typeof summary !== "object") return null;
+  const url = (summary as Record<string, unknown>).authorAvatarUrl;
+  return typeof url === "string" && url.startsWith("http") ? url : null;
+}
+
+export function pickApifyAuthorAvatarUrl(
+  platform: string,
+  payload: unknown
+): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const row = payload as Record<string, unknown>;
+
+  const normalized = platform.trim().toLowerCase();
+  const candidates =
+    normalized === "tiktok"
+      ? tiktokAuthorAvatarCandidates(row)
+      : normalized === "instagram"
+        ? instagramAuthorAvatarCandidates(row)
+        : [...instagramAuthorAvatarCandidates(row), ...tiktokAuthorAvatarCandidates(row), ...genericAuthorAvatarCandidates(row)];
+
+  const url = firstHttpUrl(candidates);
+  if (!url) return null;
+  return isAvatarUrlAllowedForPlatform(normalized, url) ? url : null;
+}

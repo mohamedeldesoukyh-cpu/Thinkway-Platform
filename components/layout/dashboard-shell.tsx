@@ -10,6 +10,7 @@ import {
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { CollapsibleAppSidebar } from "@/components/layout/collapsible-app-sidebar";
+import { DashboardHelpButton } from "@/components/layout/dashboard-help-button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { UserAccount } from "@/components/layout/user-account";
@@ -89,12 +90,14 @@ export async function DashboardShell({
             })}
           </nav>
           <div className="flex items-center gap-2">
+            <DashboardHelpButton />
             <ThemeToggle />
             <UserAccount email={userEmail} compact inSidebar={false} />
           </div>
         </div>
         {hidePageHeader ? (
-          <header className="thinkway-shell-header hidden justify-end px-4 py-3 md:flex md:px-8">
+          <header className="thinkway-shell-header hidden justify-end gap-2 px-4 py-3 md:flex md:px-8">
+            <DashboardHelpButton />
             <ThemeToggle />
           </header>
         ) : (
@@ -120,6 +123,7 @@ export async function DashboardShell({
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <DashboardHelpButton />
               <ThemeToggle />
               {actions}
             </div>

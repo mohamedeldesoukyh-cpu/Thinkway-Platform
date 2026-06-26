@@ -318,6 +318,9 @@ export function DetailPanelHeader({
   breadcrumb,
   actions,
   avatarInitials,
+  avatarUrl,
+  profileUrl,
+  profileTooltip,
   title,
   subtitle,
   badges,
@@ -325,10 +328,26 @@ export function DetailPanelHeader({
   breadcrumb: ReactNode;
   actions?: ReactNode;
   avatarInitials: string;
+  avatarUrl?: string | null;
+  profileUrl?: string | null;
+  profileTooltip?: string;
   title: ReactNode;
   subtitle?: ReactNode;
   badges?: ReactNode;
 }) {
+  const avatarContent = avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={avatarUrl}
+      alt=""
+      className="size-14 shrink-0 rounded-full border border-border object-cover"
+    />
+  ) : (
+    <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/40 text-base font-semibold text-foreground">
+      {avatarInitials}
+    </span>
+  );
+
   return (
     <div className="shrink-0 border-b border-border/60 px-6 pb-4 pt-5">
       <div className="flex items-start justify-between gap-3 pr-10">
@@ -336,9 +355,20 @@ export function DetailPanelHeader({
         {actions}
       </div>
       <div className="mt-4 flex items-center gap-3">
-        <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/40 text-base font-semibold text-foreground">
-          {avatarInitials}
-        </span>
+        {profileUrl ? (
+          <a
+            href={profileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={profileTooltip ?? "Open social profile"}
+            title={profileTooltip ?? "Open social profile"}
+            className="shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+          >
+            {avatarContent}
+          </a>
+        ) : (
+          avatarContent
+        )}
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <h2 className="truncate text-lg font-semibold tracking-tight">{title}</h2>

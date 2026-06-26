@@ -1,4 +1,53 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+
+import type { CreatorSearchSort } from "./creator-search-types";
+
+/** Converts an ISO 3166-1 alpha-2 code (e.g. "AE") to its flag emoji. */
+export function countryFlag(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const trimmed = code.trim().toUpperCase();
+  if (trimmed.length !== 2 || !/^[A-Z]{2}$/.test(trimmed)) return null;
+  const base = 127397; // 0x1F1E6 - 'A'.codePointAt(0)
+  return String.fromCodePoint(
+    base + trimmed.charCodeAt(0),
+    base + trimmed.charCodeAt(1)
+  );
+}
+
+/** Distinct audience-interest / category tags for a creator. */
+export function audienceInterestList(creator: UnifiedCreatorResult): string[] {
+  const parts = [creator.ai_category, creator.ai_niche, ...creator.categories]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+  return [...new Set(parts.map((value) => value.toLowerCase()))]
+    .map((lower) => parts.find((value) => value.toLowerCase() === lower) ?? lower);
+}
+
+const SORT_VALUE: Record<
+  Exclude<CreatorSearchSort, "name">,
+  (creator: UnifiedCreatorResult) => number
+> = {
+  relevance: (c) => thinkwayAiScore(c) ?? 0,
+  followers: (c) => c.metrics.followers.value ?? 0,
+  engagement: (c) => c.metrics.engagement_rate.value ?? 0,
+  views: (c) => c.metrics.avg_views.value ?? 0,
+};
+
+/** Stable client-side sort applied on top of the server result set. */
+export function sortCreators(
+  creators: UnifiedCreatorResult[],
+  sort: CreatorSearchSort
+): UnifiedCreatorResult[] {
+  const next = [...creators];
+  if (sort === "name") {
+    next.sort((a, b) => a.display_name.localeCompare(b.display_name));
+    return next;
+  }
+  const getValue = SORT_VALUE[sort];
+  next.sort((a, b) => getValue(b) - getValue(a));
+  return next;
+}
 
 export function formatCreatorCount(value: number | null | undefined): string {
   if (value == null) return "—";
@@ -75,7 +124,7 @@ export function exportCreatorsCsv(creators: UnifiedCreatorResult[]): string {
       esc(categoriesLabel(c)),
       String(thinkwayAiScore(c) ?? ""),
       String(c.authenticity_score ?? ""),
-      esc(p?.profile_url ?? ""),
+      esc(resolveCreatorProfileUrl(p) ?? ""),
     ].join(",");
   });
   return [header.join(","), ...rows].join("\n");

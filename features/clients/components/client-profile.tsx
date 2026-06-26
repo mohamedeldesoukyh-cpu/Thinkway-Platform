@@ -103,7 +103,7 @@ export function ClientProfile({
     <>
       <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
-          <div className="shrink-0 border-b border-border px-[26px] py-4">
+          <div className="shrink-0 border-b border-border px-[26px] py-2">
             <OnboardingWorkspace
               clientId={client.id}
               status={client.onboarding_status}
@@ -117,6 +117,7 @@ export function ClientProfile({
               timeline={onboardingTimeline}
               canEditChecklist={canEditOnboardingChecklist}
               canOverrideStatus={canOverrideOnboardingStatus}
+              collapsible
             />
           </div>
           <ClientOverviewTab

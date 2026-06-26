@@ -1,7 +1,9 @@
 "use client";
 
-import { BadgeCheckIcon, UserIcon } from "lucide-react";
-
+import {
+  CreatorProfileLink,
+  creatorProfileSourceFromUnified,
+} from "@/components/creator/creator-profile-link";
 import { CreatorSourceBadge } from "@/features/campaigns/components/creator-source-badge";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { platformLabel } from "@/features/campaigns/line-assignment";
@@ -88,35 +90,28 @@ export function CreatorUnifiedCard({
           />
         ) : null}
 
-        {creator.profile_image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={creator.profile_image_url}
-            alt=""
-            className="size-11 shrink-0 rounded-full border border-border/50 object-cover"
-          />
-        ) : (
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted">
-            <UserIcon className="size-5 text-muted-foreground" />
-          </div>
-        )}
-
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              className="text-left text-sm font-semibold hover:underline"
-              onClick={onOpenDetail}
-            >
-              {creator.display_name}
-            </button>
-            {creator.is_platform_verified ? (
-              <BadgeCheckIcon className="size-3.5 text-sky-500" aria-label="Platform verified" />
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <CreatorProfileLink
+              source={creatorProfileSourceFromUnified(creator)}
+              size="md"
+              showExternalIcon
+              showHandle={false}
+              stopPropagation
+              trailing={<CreatorSourceBadge source={creator.source_type} />}
+            />
+            {onOpenDetail ? (
+              <button
+                type="button"
+                className="shrink-0 text-[10px] font-medium text-muted-foreground hover:text-primary hover:underline"
+                onClick={onOpenDetail}
+              >
+                View details
+              </button>
             ) : null}
-            <CreatorSourceBadge source={creator.source_type} />
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="mt-1 text-[11px] text-muted-foreground">
             {primary ? `${platformLabel(primary.platform)} · @${primary.handle}` : "—"}
             {creator.document_number ? (
               <>

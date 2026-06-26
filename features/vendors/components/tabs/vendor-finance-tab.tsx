@@ -174,7 +174,7 @@ export function VendorFinanceTab({
         </VendorFormGrid>
 
         {!embedded ? (
-          <div className="flex justify-end border-t border-[#E6EAF2] pt-4">
+          <div className="flex justify-end border-t border-border pt-4">
             <button
               type="submit"
               className="inline-flex h-auto items-center rounded-[10px] border-transparent bg-[linear-gradient(135deg,#0057FF_0%,#2E74FF_55%,#1A6FFF_100%)] px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_rgba(0,87,255,0.3)] disabled:opacity-50"

@@ -101,7 +101,7 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
         <iframe
           title={`Client IO ${typed.document_number ?? id}`}
           srcDoc={html}
-          className="min-h-[1200px] w-full rounded-xl border border-border bg-white"
+          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
         />
       )}
     </DashboardShell>

@@ -1,22 +1,39 @@
 import { NextResponse } from "next/server";
 
-import { getCampaignPerformanceBundle } from "@/features/campaigns/queries/publications";
 import {
-  buildCampaignPerformanceExcelBuffer,
-  renderCampaignPerformanceReportHtml,
-} from "@/lib/campaigns/performance-report-document";
+  buildPerformanceReportExcelBuffer,
+  buildPerformanceReportFileBaseName,
+  buildPerformanceReportPptxBuffer,
+  loadPerformanceReportDocumentData,
+  renderPerformanceReportHtml,
+  type PerformanceReportVariant,
+} from "@/lib/performance/report";
 import {
   createHtmlDocumentResponse,
   createPdfFromHtmlResponse,
+  createPptxDocumentResponse,
   createXlsxDocumentResponse,
   parseReportDocumentFormat,
-  sanitizeFileNameSegment,
 } from "@/lib/reports/document/report-document-response";
+import { PERFORMANCE_REPORT_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/validation/uuid";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
+
+function parseVariant(raw: string | null): PerformanceReportVariant {
+  return raw === "influencers" ? "influencers" : "combined";
+}
+
+function parsePublicationIds(raw: string | null): string[] | undefined {
+  if (!raw?.trim()) return undefined;
+  const ids = raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => isUuid(id));
+  return ids.length > 0 ? ids : undefined;
+}
 
 export async function GET(
   request: Request,
@@ -26,6 +43,8 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const format = parseReportDocumentFormat(searchParams.get("format"));
   const download = searchParams.get("download") === "1";
+  const variant = parseVariant(searchParams.get("variant"));
+  const publicationIds = parsePublicationIds(searchParams.get("publicationIds"));
 
   if (!format) {
     return NextResponse.json({ error: "Unsupported format" }, { status: 400 });
@@ -45,7 +64,7 @@ export async function GET(
 
   const { data: campaign, error: campaignError } = await supabase
     .from("campaign_headers")
-    .select("id, name, document_number")
+    .select("id, document_number")
     .eq("id", campaignId)
     .maybeSingle();
 
@@ -53,33 +72,30 @@ export async function GET(
     return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
   }
 
-  const bundle = await getCampaignPerformanceBundle(campaignId);
-  const baseName = sanitizeFileNameSegment(
-    `${campaign.document_number}-performance-report`
+  const reportData = await loadPerformanceReportDocumentData(supabase, campaignId, variant, {
+    publicationIds,
+  });
+  const baseName = buildPerformanceReportFileBaseName(
+    reportData.campaign.name,
+    reportData.campaign.documentNumber,
+    variant
   );
 
   if (format === "html") {
-    const html = renderCampaignPerformanceReportHtml(
-      campaign.name,
-      campaign.document_number,
-      bundle
-    );
+    const html = renderPerformanceReportHtml(reportData);
     return createHtmlDocumentResponse(html, baseName, download);
   }
 
   if (format === "xlsx") {
-    const buffer = await buildCampaignPerformanceExcelBuffer(
-      campaign.name,
-      campaign.document_number,
-      bundle
-    );
+    const buffer = await buildPerformanceReportExcelBuffer(reportData);
     return createXlsxDocumentResponse(buffer, baseName, true);
   }
 
-  const html = renderCampaignPerformanceReportHtml(
-    campaign.name,
-    campaign.document_number,
-    bundle
-  );
-  return createPdfFromHtmlResponse(html, baseName, download);
+  if (format === "pptx") {
+    const buffer = await buildPerformanceReportPptxBuffer(reportData);
+    return createPptxDocumentResponse(buffer, baseName, true);
+  }
+
+  const html = renderPerformanceReportHtml(reportData);
+  return createPdfFromHtmlResponse(html, baseName, download, PERFORMANCE_REPORT_PDF_OPTIONS);
 }

@@ -21,24 +21,24 @@ export default async function CreatorComparePage() {
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <nav
             aria-label="Discovery"
-            className="flex shrink-0 items-center gap-4 border-b border-[#E6EAF2] bg-white px-4 py-2 text-[12px] md:px-5"
+            className="flex shrink-0 items-center gap-4 border-b border-border bg-background px-4 py-2 text-[12px] md:px-5"
           >
             <Link
               href="/discovery/search"
-              className="font-medium text-[#5B6575] hover:text-[#0057FF]"
+              className="font-medium text-muted-foreground hover:text-primary"
             >
               Creator Search
             </Link>
             <Link
               href="/discovery/compare"
-              className={cn("font-semibold text-[#0057FF]")}
+              className={cn("font-semibold text-primary")}
               aria-current="page"
             >
               Compare
             </Link>
             <Link
               href="/discovery"
-              className="font-medium text-[#5B6575] hover:text-[#0057FF]"
+              className="font-medium text-muted-foreground hover:text-primary"
             >
               Discovery hub
             </Link>

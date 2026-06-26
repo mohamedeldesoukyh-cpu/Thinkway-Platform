@@ -133,7 +133,16 @@ export function ClientLegalTab({
         onDiscard={discardChanges}
         discardDisabled={isPending}
       >
-        <form id="client-legal-form" action={formAction} className="grid gap-[18px]">
+        <form
+          id="client-legal-form"
+          action={formAction}
+          className="grid gap-[18px]"
+          onSubmit={(event) => {
+            if (isPending) {
+              event.preventDefault();
+            }
+          }}
+        >
           <input type="hidden" name="client_id" value={client.id} />
           <input type="hidden" name="legal_address_country" value={legalCountry} />
           <input type="hidden" name="legal_address_city" value={legalCity} />

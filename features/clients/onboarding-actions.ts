@@ -12,7 +12,6 @@ import {
 } from "@/lib/clients/onboarding-permissions";
 import {
   isClientOnboardingStatus,
-  ONBOARDING_CHECKLIST_SECTIONS,
   ONBOARDING_STATUS_LABELS,
   type ClientOnboardingStatus,
 } from "@/lib/clients/onboarding-status";
@@ -236,9 +235,4 @@ export async function overrideClientOnboardingStatusAction(
     message: `Status updated to ${ONBOARDING_STATUS_LABELS[nextStatus]}.`,
     onboardingStatus: nextStatus,
   };
-}
-
-/** Exported for tests — validates all checklist section keys are present. */
-export function onboardingChecklistSectionsForTests() {
-  return ONBOARDING_CHECKLIST_SECTIONS;
 }

@@ -23,11 +23,8 @@ const optionalUuid = z
 
 const optionalTrimmed = (max: number) =>
   z
-    .string()
-    .trim()
-    .max(max)
+    .union([z.string().trim().max(max), z.literal(""), z.null()])
     .optional()
-    .or(z.literal(""))
     .transform((v) => (v ? v : null));
 
 export const promoteMasterDataSchema = z

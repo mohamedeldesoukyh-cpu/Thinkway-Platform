@@ -148,9 +148,9 @@ export function DiscoveryWorkspace({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E6EAF2] bg-[#FAFBFD] px-4 py-3">
-        <p className="text-sm text-[#5B6575]">
-          Use <strong className="font-semibold text-[#0B0F1A]">Creator Search</strong> for
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted px-4 py-3">
+        <p className="text-sm text-muted-foreground">
+          Use <strong className="font-semibold text-foreground">Creator Search</strong> for
           high-volume browsing with filters and compact results.
         </p>
         <a

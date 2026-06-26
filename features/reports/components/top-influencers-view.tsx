@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 
+import {
+  CreatorIdentityCell,
+  creatorProfileSourceFromAccounts,
+} from "@/components/creator/creator-profile-link";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { TopInfluencersControls } from "@/features/reports/components/top-influencers-controls";
 import type { TopInfluencersReportData } from "@/lib/analytics/top-influencers/top-influencers-types";
@@ -80,12 +84,27 @@ export function TopInfluencersView({ report }: Props) {
                         {row.rank}
                       </td>
                       <td className="px-4 py-2.5">
-                        <Link
-                          href={`/vendors/${row.influencer_id}`}
-                          className="font-medium text-foreground underline-offset-2 hover:text-brand-blue hover:underline"
-                        >
-                          {row.influencer_name}
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <CreatorIdentityCell
+                            source={creatorProfileSourceFromAccounts(row.influencer_name, [
+                              {
+                                platform: row.platform ?? "",
+                                handle: row.handle ?? "",
+                                profile_url: row.profile_url,
+                              },
+                            ])}
+                            size="sm"
+                            showAvatar={false}
+                            showHandle={false}
+                            stopPropagation
+                          />
+                          <Link
+                            href={`/vendors/${row.influencer_id}`}
+                            className="text-[10px] text-muted-foreground underline-offset-2 hover:text-brand-blue hover:underline"
+                          >
+                            Thinkway
+                          </Link>
+                        </div>
                       </td>
                       <td className="px-4 py-2.5 tabular-nums text-muted-foreground">
                         {row.document_number || "—"}

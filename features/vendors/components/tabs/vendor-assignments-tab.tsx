@@ -178,7 +178,7 @@ export function VendorAssignmentsTab({
               <OperationalTableControlsSlot contextLabel="Vendor assignments" />
             </div>
             {workspace.assignments.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-[#9099A8]">
+              <p className="py-8 text-center text-[13px] text-muted-foreground">
                 No campaign assignments yet.
               </p>
             ) : (

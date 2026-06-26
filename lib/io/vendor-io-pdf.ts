@@ -11,6 +11,21 @@ const PDF_OPTIONS = {
   margin: { top: "12mm", right: "12mm", bottom: "12mm", left: "12mm" },
 };
 
+/** A4 portrait with CSS @page margins (performance reports). */
+export const PERFORMANCE_REPORT_PDF_OPTIONS = {
+  format: "A4" as const,
+  printBackground: true,
+  preferCSSPageSize: true,
+  margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+};
+
+export type HtmlToPdfOptions = {
+  format: "A4";
+  printBackground: boolean;
+  preferCSSPageSize?: boolean;
+  margin: { top: string; right: string; bottom: string; left: string };
+};
+
 const PDF_VIEWPORT = {
   deviceScaleFactor: 1,
   hasTouch: false,
@@ -124,14 +139,17 @@ async function launchBrowser() {
 }
 
 /** Server-side HTML → PDF via headless Chrome (local or Vercel serverless). */
-export async function renderHtmlToPdf(html: string): Promise<PdfRenderResult> {
+export async function renderHtmlToPdf(
+  html: string,
+  options: HtmlToPdfOptions = PDF_OPTIONS
+): Promise<PdfRenderResult> {
   let browser: Awaited<ReturnType<typeof launchBrowser>> | null = null;
 
   try {
     browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "load", timeout: 30_000 });
-    const pdf = await page.pdf(PDF_OPTIONS);
+    const pdf = await page.pdf(options);
     return { ok: true, buffer: Buffer.from(pdf) };
   } catch (error) {
     const message = formatError(error);

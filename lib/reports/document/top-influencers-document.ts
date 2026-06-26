@@ -19,6 +19,9 @@ function renderTopInfluencersTable(report: TopInfluencersReportData): string {
       <tr>
         <td class="num">${row.rank}</td>
         <td>${row.influencer_name}</td>
+        <td>${row.platform ?? "—"}</td>
+        <td>${row.handle ?? "—"}</td>
+        <td>${row.profile_url ?? "—"}</td>
         <td>${row.document_number || "—"}</td>
         <td class="num">${formatReportAmount(row.spending)}</td>
         <td class="num">${formatReportAmount(row.revenue)}</td>
@@ -34,6 +37,9 @@ function renderTopInfluencersTable(report: TopInfluencersReportData): string {
         <tr>
           <th class="num">#</th>
           <th>Influencer name</th>
+          <th>Platform</th>
+          <th>Handle</th>
+          <th>Profile URL</th>
           <th>Code</th>
           <th class="num">Spending</th>
           <th class="num">Revenue</th>
@@ -88,6 +94,9 @@ function buildTopInfluencersExcelSheet(report: TopInfluencersReportData): Styled
     values: [
       row.rank,
       row.influencer_name,
+      row.platform ?? "",
+      row.handle ?? "",
+      row.profile_url ?? "",
       row.document_number,
       row.spending,
       row.revenue,
@@ -105,9 +114,9 @@ function buildTopInfluencersExcelSheet(report: TopInfluencersReportData): Styled
       generatedAt: new Date(),
       notes: [report.period_note, report.data_scope_note],
     },
-    columnHeaders: [["#", "Influencer name", "Code", "Spending", "Revenue", "GP", "GP %"]],
+    columnHeaders: [["#", "Influencer name", "Platform", "Handle", "Profile URL", "Code", "Spending", "Revenue", "GP", "GP %"]],
     rows,
-    columnFormats: ["text", "text", "text", "money", "money", "money", "percent"],
+    columnFormats: ["text", "text", "text", "text", "text", "text", "money", "money", "money", "percent"],
   };
 }
 

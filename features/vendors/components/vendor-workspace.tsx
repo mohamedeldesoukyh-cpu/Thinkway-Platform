@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageBackButton } from "@/components/navigation/page-back-button";
+import {
+  CreatorIdentityCell,
+  creatorProfileSourceFromAccounts,
+} from "@/components/creator/creator-profile-link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MoreHorizontalIcon } from "lucide-react";
 
@@ -22,7 +26,6 @@ import {
   OPERATIONAL_CHROME_LABEL,
   OPERATIONAL_CHROME_META,
   OPERATIONAL_CHROME_STATUS_BADGE,
-  OPERATIONAL_CHROME_TITLE,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { VendorDependencyDialog } from "@/features/vendors/components/vendor-dependency-dialog";
 import { VendorKpiStrip } from "@/features/vendors/components/vendor-kpi-strip";
@@ -146,7 +149,15 @@ export function VendorWorkspaceView({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <PageBackButton fallbackHref="/vendors" label="Back to vendors" />
-              <h1 className={OPERATIONAL_CHROME_TITLE}>{workspace.display_name}</h1>
+              <CreatorIdentityCell
+                source={creatorProfileSourceFromAccounts(
+                  workspace.display_name,
+                  workspace.platform_accounts
+                )}
+                size="md"
+                showHandle={false}
+                stopPropagation
+              />
               <VendorStatusBadge
                 status={workspace.status}
                 className={OPERATIONAL_CHROME_STATUS_BADGE}
@@ -191,9 +202,9 @@ export function VendorWorkspaceView({
       >
         <nav
           aria-label="Creator workspace sections"
-          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-[#E6EAF2] px-[26px] py-2.5"
+          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-[26px] py-2.5"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9099A8]">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Also view
           </span>
           {tabs.map((tab) => {
@@ -207,7 +218,7 @@ export function VendorWorkspaceView({
                   "text-[13px] font-medium transition-colors",
                   isActive
                     ? "font-semibold text-[#0057FF]"
-                    : "text-[#5B6575] hover:text-[#0057FF]"
+                    : "text-muted-foreground hover:text-primary"
                 )}
                 aria-current={isActive ? "page" : undefined}
               >

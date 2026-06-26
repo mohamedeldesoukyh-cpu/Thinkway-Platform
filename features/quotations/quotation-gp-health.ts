@@ -41,11 +41,11 @@ export function gpHealthBgClass(input: GpHealthInput): string {
   return GP_HEALTH_BG_CLASS[resolveGpHealthTone(input)];
 }
 
-/** Inline CSS color for PDF/HTML exports — uses document semantic variables. */
+/** Inline CSS color for PDF/HTML exports — IO-aligned document palette. */
 export function gpHealthExportColor(input: GpHealthInput): string {
   const tone = resolveGpHealthTone(input);
-  if (tone === "success") return "var(--success)";
-  if (tone === "warning") return "var(--warning)";
-  if (tone === "danger") return "var(--destructive)";
-  return "var(--muted)";
+  if (tone === "success") return "#059669";
+  if (tone === "warning") return "#D97706";
+  if (tone === "danger") return "#DC2626";
+  return "#6B7280";
 }

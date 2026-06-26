@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import type { FormActionState } from "@/features/campaigns/actions";
+import type { FormActionState } from "@/features/campaigns/form-action-state";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { requestMetricsCollection } from "@/lib/performance/metrics-collector";
+import { validateInstagramPublicationUrl } from "@/lib/performance/metrics-collector/instagram-content-url";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const publicationSchema = z.object({
@@ -54,26 +57,57 @@ export async function createCampaignPublicationAction(
     return { ok: false, message: authError?.message ?? "Unauthorized" };
   }
 
-  const { error } = await supabase.from("campaign_publications").insert({
-    campaign_header_id: parsed.data.campaign_id,
-    campaign_line_id: parsed.data.campaign_line_id || null,
-    influencer_id: parsed.data.influencer_id || null,
-    platform: parsed.data.platform,
-    publication_type: parsed.data.publication_type,
-    content_url: parsed.data.content_url,
-    publication_date: parsed.data.publication_date || null,
-    status: parsed.data.status,
-    assignee_id: parsed.data.assignee_id || null,
-    caption: parsed.data.caption || null,
-    hashtags: parsed.data.hashtags || null,
-    notes: parsed.data.notes || null,
-    auto_detected: false,
-    detected_by: "manual",
-  });
+  if (parsed.data.content_url && canonicalPlatformKey(parsed.data.platform) === "instagram") {
+    const urlError = validateInstagramPublicationUrl(
+      parsed.data.publication_type,
+      parsed.data.content_url
+    );
+    if (urlError) {
+      return {
+        ok: false,
+        message: urlError,
+        fieldErrors: { content_url: [urlError] },
+      };
+    }
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("campaign_publications")
+    .insert({
+      campaign_header_id: parsed.data.campaign_id,
+      campaign_line_id: parsed.data.campaign_line_id || null,
+      influencer_id: parsed.data.influencer_id || null,
+      platform: parsed.data.platform,
+      publication_type: parsed.data.publication_type,
+      content_url: parsed.data.content_url,
+      publication_date: parsed.data.publication_date || null,
+      status: parsed.data.status,
+      assignee_id: parsed.data.assignee_id || null,
+      caption: parsed.data.caption || null,
+      hashtags: parsed.data.hashtags || null,
+      notes: parsed.data.notes || null,
+      auto_detected: false,
+      detected_by: "manual",
+      metrics_refresh_status: "pending",
+    })
+    .select("id")
+    .single();
 
   if (error) {
     console.error("[publications] create failed", { message: error.message });
     return { ok: false, message: error.message };
+  }
+
+  if (inserted?.id && parsed.data.content_url) {
+    try {
+      await requestMetricsCollection(supabase, {
+        publicationId: inserted.id,
+        campaignHeaderId: parsed.data.campaign_id,
+        triggeredBy: "auto_create",
+      });
+    } catch (collectError) {
+      console.warn("[publications] auto metrics collection failed", collectError);
+    }
   }
 
   revalidateCampaign(parsed.data.campaign_id);

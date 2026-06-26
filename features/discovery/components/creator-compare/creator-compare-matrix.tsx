@@ -1,11 +1,11 @@
 "use client";
 
-import {
-  BadgeCheckIcon,
-  UserIcon,
-  XIcon,
-} from "lucide-react";
+import { XIcon } from "lucide-react";
 
+import {
+  CreatorProfileLink,
+  creatorProfileSourceFromUnified,
+} from "@/components/creator/creator-profile-link";
 import { Button } from "@/components/ui/button";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import type { CreatorCompareBundle } from "@/lib/creators/creator-compare-bundle";
@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 
 import {
   buildCompareMetricRows,
-  creatorHandle,
   getBestIndexesForRow,
 } from "./compare-matrix-utils";
 
@@ -39,7 +38,7 @@ export function CreatorCompareMatrix({ bundle, onRemove, onOpenCreator }: Props)
         style={{ display: "grid", gridTemplateColumns: gridTemplate }}
       >
         {/* Sticky header row */}
-        <div className="sticky top-0 z-20 border-b border-[#E6EAF2] bg-[#FAFBFD] px-3 py-3 text-[10px] font-semibold tracking-wide text-[#9099A8] uppercase">
+        <div className="sticky top-0 z-20 border-b border-border bg-muted px-3 py-3 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
           Metric
         </div>
         {entries.map((entry) => {
@@ -47,51 +46,25 @@ export function CreatorCompareMatrix({ bundle, onRemove, onOpenCreator }: Props)
           return (
             <div
               key={entry.creator.unified_id}
-              className="sticky top-0 z-20 border-b border-l border-[#E6EAF2] bg-[#FAFBFD] px-3 py-3"
+              className="sticky top-0 z-20 border-b border-l border-border bg-muted px-3 py-3"
             >
               <div className="flex items-start gap-2">
-                <button
-                  type="button"
-                  onClick={() => onOpenCreator(entry.creator.unified_id)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                >
-                  <div className="relative shrink-0">
-                    {entry.creator.profile_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={entry.creator.profile_image_url}
-                        alt=""
-                        className="size-10 rounded-full border border-[#E6EAF2] object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-10 items-center justify-center rounded-full border border-[#E6EAF2] bg-white">
-                        <UserIcon className="size-4 text-[#9099A8]" />
-                      </div>
-                    )}
-                    {entry.creator.is_platform_verified ? (
-                      <BadgeCheckIcon
-                        className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full bg-white text-[#0057FF]"
-                        aria-label="Verified"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-bold text-[#0B0F1A] hover:text-[#0057FF]">
-                      {entry.creator.display_name}
-                    </p>
-                    <p className="truncate text-[10px] text-[#9099A8]">
-                      {creatorHandle(entry.creator)}
-                    </p>
-                    <p className="truncate text-[10px] capitalize text-[#5B6575]">
-                      {p ? platformLabel(p.platform) : "—"}
-                    </p>
-                  </div>
-                </button>
+                <div className="min-w-0 flex-1">
+                  <CreatorProfileLink
+                    source={creatorProfileSourceFromUnified(entry.creator)}
+                    size="sm"
+                    showHandle
+                    stopPropagation
+                  />
+                  <p className="mt-1 truncate text-[10px] capitalize text-muted-foreground">
+                    {p ? platformLabel(p.platform) : "—"}
+                  </p>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 shrink-0 p-0 text-[#9099A8]"
+                  className="h-7 w-7 shrink-0 p-0 text-muted-foreground"
                   onClick={() => onRemove(entry.creator.unified_id)}
                   aria-label={`Remove ${entry.creator.display_name}`}
                 >
@@ -107,15 +80,15 @@ export function CreatorCompareMatrix({ bundle, onRemove, onOpenCreator }: Props)
           const best = getBestIndexesForRow(row);
           return (
             <div key={row.id} className="contents">
-              <div className="border-b border-[#E6EAF2] bg-[#FAFBFD] px-3 py-3 text-[10px] font-semibold tracking-wide text-[#9099A8] uppercase">
+              <div className="border-b border-border bg-muted px-3 py-3 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
                 {row.label}
               </div>
               {row.cells.map((cell, colIndex) => (
                 <div
                   key={`${row.id}-${colIndex}`}
                   className={cn(
-                    "border-b border-l border-[#E6EAF2] px-3 py-3 text-[12px] text-[#0B0F1A]",
-                    best.has(colIndex) && "bg-[#EEF4FF] font-semibold text-[#0057FF]"
+                    "border-b border-l border-border px-3 py-3 text-[12px] text-foreground",
+                    best.has(colIndex) && "bg-[#EEF4FF] font-semibold text-primary"
                   )}
                   title={cell}
                 >

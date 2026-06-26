@@ -243,7 +243,7 @@ export function VendorOverviewTab({
                   placeholder="beauty, lifestyle"
                   disabled={isPending}
                 />
-                <p className="text-[11.5px] text-[#9099A8]">Comma-separated</p>
+                <p className="text-[11.5px] text-muted-foreground">Comma-separated</p>
               </VendorFormField>
               <VendorFormField label="Languages" htmlFor="languages">
                 <Input
@@ -254,7 +254,7 @@ export function VendorOverviewTab({
                   placeholder="en, ar"
                   disabled={isPending}
                 />
-                <p className="text-[11.5px] text-[#9099A8]">
+                <p className="text-[11.5px] text-muted-foreground">
                   Comma-separated language codes (e.g. en, ar)
                 </p>
               </VendorFormField>

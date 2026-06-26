@@ -10,6 +10,7 @@ import {
   getClientOnboardingPermissions,
   getClientOnboardingTimeline,
 } from "@/features/clients/onboarding-queries";
+import { getClientById } from "@/features/clients/queries";
 import { getClientIoSendRecipients, getClientIosForClient } from "@/features/io/queries";
 import { getGroupsForSelect, getMasterDataOptions } from "@/lib/master-data/queries";
 

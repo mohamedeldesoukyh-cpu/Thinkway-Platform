@@ -25,6 +25,24 @@ export async function getDiscoveryShortlists() {
   return data ?? [];
 }
 
+export type ShortlistCampaignOption = {
+  id: string;
+  name: string;
+  document_number: string | null;
+};
+
+export async function getCampaignOptionsForShortlist(): Promise<ShortlistCampaignOption[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("campaign_headers")
+    .select("id, name, document_number")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) throw new Error(error.message);
+  return (data as ShortlistCampaignOption[]) ?? [];
+}
+
 export async function getDiscoveryStats(): Promise<DiscoveryJobStats> {
   const supabase = await createSupabaseServerClient();
   const todayStart = new Date();

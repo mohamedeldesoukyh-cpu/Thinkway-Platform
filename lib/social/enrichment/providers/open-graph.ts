@@ -1,3 +1,5 @@
+import { parseCompactCount } from "@/lib/social/parse-compact-count";
+
 import {
   API_METRICS_PLATFORMS,
 } from "../metrics-status";
@@ -46,21 +48,6 @@ function decodeHtmlEntities(value: string): string {
     .replace(/&gt;/g, ">");
 }
 
-function parseCompactNumber(value: string): number | null {
-  const cleaned = value.trim().toLowerCase().replace(/,/g, "");
-  const match = cleaned.match(/^([\d.]+)\s*([kmb])?/i);
-  if (!match) return null;
-
-  const base = Number(match[1]);
-  if (Number.isNaN(base)) return null;
-
-  const suffix = match[2]?.toLowerCase();
-  if (suffix === "k") return Math.round(base * 1_000);
-  if (suffix === "m") return Math.round(base * 1_000_000);
-  if (suffix === "b") return Math.round(base * 1_000_000_000);
-  return Math.round(base);
-}
-
 function parseCountsFromHtml(html: string): {
   follower_count: number | null;
   following_count: number | null;
@@ -68,7 +55,7 @@ function parseCountsFromHtml(html: string): {
   const subscriberMatch = html.match(/"subscriberCountText":\s*"([^"]+)"/i);
   if (subscriberMatch) {
     return {
-      follower_count: parseCompactNumber(subscriberMatch[1]),
+      follower_count: parseCompactCount(subscriberMatch[1]),
       following_count: null,
     };
   }
@@ -81,12 +68,16 @@ function parseCountsFromHtml(html: string): {
     };
   }
 
-  const followerMatch = html.match(/"followerCount":\s*(\d+)/i);
-  const followingMatch = html.match(/"followingCount":\s*(\d+)/i);
+  const followerMatch =
+    html.match(/"followerCount"\s*:\s*"?([\d,]+)"?/i) ??
+    html.match(/([\d,.]+[kmb]?)\s+followers/i);
+  const followingMatch =
+    html.match(/"followingCount"\s*:\s*"?([\d,]+)"?/i) ??
+    html.match(/([\d,.]+[kmb]?)\s+following/i);
 
   return {
-    follower_count: followerMatch ? Number(followerMatch[1]) : null,
-    following_count: followingMatch ? Number(followingMatch[1]) : null,
+    follower_count: followerMatch ? parseCompactCount(followerMatch[1]) : null,
+    following_count: followingMatch ? parseCompactCount(followingMatch[1]) : null,
   };
 }
 

@@ -58,16 +58,36 @@ export async function enrichDiscoveredProfileAction(profileId: string) {
   return { jobId: job.id as string, queued };
 }
 
-export async function createShortlistAction(name: string, description?: string) {
+export type ShortlistVisibility = "private" | "shared";
+
+export type CreateShortlistInput = {
+  name: string;
+  description?: string | null;
+  campaignHeaderId?: string | null;
+  visibility?: ShortlistVisibility;
+};
+
+export async function createShortlistAction(input: CreateShortlistInput) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
+  const name = input.name?.trim();
+  if (!name) throw new Error("List name is required");
+
+  const visibility: ShortlistVisibility = input.visibility ?? "private";
+
   const { data, error } = await supabase
     .from("discovery_shortlists")
-    .insert({ name, description: description ?? null, owner_id: user.id })
+    .insert({
+      name,
+      description: input.description?.trim() || null,
+      owner_id: user.id,
+      campaign_header_id: input.campaignHeaderId || null,
+      metadata: { visibility },
+    })
     .select("id, name")
     .single();
 

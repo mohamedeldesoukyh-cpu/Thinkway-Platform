@@ -1,0 +1,204 @@
+﻿Γùç injected env (10) from .env // tip: Γîÿ suppress logs { quiet: true }
+Γùç injected env (11) from services\discovery-worker\.env // tip: Γùê encrypted .env [www.dotenvx.com]
+[
+  {
+    "publication_id": "b85c2d31-e696-4d46-8b04-fa87bdb8d9e7",
+    "provider": "engagement_engine",
+    "status": "reach_source_changed",
+    "response_summary": {
+      "new_reach": 21502,
+      "new_value": 21502,
+      "old_value": null,
+      "new_source": "actual",
+      "old_source": "actual",
+      "reach_audit": true,
+      "forecast_reach": null,
+      "previous_reach": null,
+      "source_provider": "apify"
+    },
+    "metrics_snapshot": {
+      "likes": 1524,
+      "reach": 21502,
+      "views": 25559,
+      "comments": 133
+    },
+    "created_at": "2026-06-24T06:10:25.611376+00:00"
+  },
+  {
+    "publication_id": "b85c2d31-e696-4d46-8b04-fa87bdb8d9e7",
+    "provider": "apify",
+    "status": "success",
+    "response_summary": {
+      "fields": [
+        "views",
+        "likes",
+        "comments"
+      ],
+      "success": true,
+      "itemCount": 1,
+      "metricsSummary": "views=25559, likes=1524, comments=133",
+      "authorAvatarUrl": null,
+      "previewImageUrl": "https://scontent-det1-1.cdninstagram.com/v/t51.82787-15/684152333_18582073981014865_8628888703716216248_n.jpg?stp=dst-jpg_e35_p1080x1080_sh2.08_tt6&_nc_ht=scontent-det1-1.cdninstagram.com&_nc_cat=101&_nc_oc=Q6cZ2gHEqxtrRQPtE0EXyrQ6_YhPRURY4DaZ4R5p_b1Ru0PaO7P2mELFqN5W3LTVzcN-_Lo&_nc_ohc=rKFMcMK6vJgQ7kNvwFLJ37a&_nc_gid=5FNZSqlb4tp7eHV-oVZFGw&edm=APs17CUBAAAA&ccb=7-5&oh=00_Af8ZHAyA04pBswOynk8nqaKTkoFne8_srMgI1UEtstBNQA&oe=6A416261&_nc_sid=10d13b",
+      "publicationDate": "2026-04-30"
+    },
+    "metrics_snapshot": {
+      "likes": 1524,
+      "reach": null,
+      "saves": null,
+      "views": 25559,
+      "shares": null,
+      "comments": 133,
+      "impressions": null
+    },
+    "created_at": "2026-06-24T06:10:25.029005+00:00"
+  },
+  {
+    "publication_id": "db27068e-8ffb-46e7-b558-13207ac9fbbb",
+    "provider": "apify",
+    "status": "success",
+    "response_summary": {
+      "fields": [
+        "views",
+        "likes",
+        "comments"
+      ],
+      "success": true,
+      "itemCount": 1,
+      "metricsSummary": "views=557424, likes=47521, comments=329",
+      "authorAvatarUrl": null,
+      "previewImageUrl": "https://instagram.fagc3-2.fna.fbcdn.net/v/t51.82787-15/688432891_18583981738014865_6401976704234068632_n.jpg?stp=dst-jpg_e35_p1080x1080_sh2.08_tt6&_nc_ht=instagram.fagc3-2.fna.fbcdn.net&_nc_cat=101&_nc_oc=Q6cZ2gGtzPE9IOovLGlwUJB18NTRXjbYfAke_62R8IHQv3ebuhD177trUitW9mpCaEBPEIo&_nc_ohc=b5JAef5jBIsQ7kNvwGUmDsP&_nc_gid=bbgf5DXS9cv2ysyYgPtcTQ&edm=APs17CUBAAAA&ccb=7-5&oh=00_Af_BwFE3umKtKK1XQafMPZB_Y2rEt9A5R4D_2mTeiGcD9g&oe=6A415820&_nc_sid=10d13b",
+      "publicationDate": "2026-05-07"
+    },
+    "metrics_snapshot": {
+      "likes": 47521,
+      "reach": null,
+      "saves": null,
+      "views": 557424,
+      "shares": null,
+      "comments": 329,
+      "impressions": null
+    },
+    "created_at": "2026-06-24T06:10:17.338706+00:00"
+  },
+  {
+    "publication_id": "db27068e-8ffb-46e7-b558-13207ac9fbbb",
+    "provider": "engagement_engine",
+    "status": "reach_source_changed",
+    "response_summary": {
+      "new_reach": 21502,
+      "new_value": 21502,
+      "old_value": null,
+      "new_source": "actual",
+      "old_source": "actual",
+      "reach_audit": true,
+      "forecast_reach": null,
+      "previous_reach": null,
+      "source_provider": "apify"
+    },
+    "metrics_snapshot": {
+      "likes": 47521,
+      "reach": 21502,
+      "views": 557422,
+      "comments": 329
+    },
+    "created_at": "2026-06-24T06:09:40.700242+00:00"
+  },
+  {
+    "publication_id": "db27068e-8ffb-46e7-b558-13207ac9fbbb",
+    "provider": "apify",
+    "status": "success",
+    "response_summary": {
+      "fields": [
+        "views",
+        "likes",
+        "comments"
+      ],
+      "success": true,
+      "itemCount": 1,
+      "metricsSummary": "views=557422, likes=47521, comments=329",
+      "authorAvatarUrl": null,
+      "previewImageUrl": "https://scontent-ord5-1.cdninstagram.com/v/t51.82787-15/688432891_18583981738014865_6401976704234068632_n.jpg?stp=dst-jpg_e35_p1080x1080_sh2.08_tt6&_nc_ht=scontent-ord5-1.cdninstagram.com&_nc_cat=101&_nc_oc=Q6cZ2gH1mVB9h5i7Pb1BIA0Dvck_B9i-UJkDR-MtQ4xJ4ymGvY9AH4ODMOSyjtuF7tp6e9s&_nc_ohc=b5JAef5jBIsQ7kNvwGb1u80&_nc_gid=TwshmVPilgFj292j9XZ1bA&edm=APs17CUBAAAA&ccb=7-5&oh=00_Af8gnyIlXznBbvDOe5yoOiFDSEbtL4nabNT4LehbYi-eTw&oe=6A415820&_nc_sid=10d13b",
+      "publicationDate": "2026-05-07"
+    },
+    "metrics_snapshot": {
+      "likes": 47521,
+      "reach": null,
+      "saves": null,
+      "views": 557422,
+      "shares": null,
+      "comments": 329,
+      "impressions": null
+    },
+    "created_at": "2026-06-24T06:09:40.037721+00:00"
+  },
+  {
+    "publication_id": "db27068e-8ffb-46e7-b558-13207ac9fbbb",
+    "provider": "engagement_engine",
+    "status": "er_recalculated",
+    "response_summary": {
+      "new_er": 8.584135253636449,
+      "new_method": "views",
+      "previous_er": null,
+      "previous_method": null,
+      "source_provider": "apify"
+    },
+    "metrics_snapshot": {
+      "likes": 47520,
+      "reach": null,
+      "views": 557412,
+      "comments": 329,
+      "engagements": 47849,
+      "engagement_rate": 8.584135253636449
+    },
+    "created_at": "2026-06-24T06:01:18.855361+00:00"
+  },
+  {
+    "publication_id": "db27068e-8ffb-46e7-b558-13207ac9fbbb",
+    "provider": "apify",
+    "status": "success",
+    "response_summary": {
+      "fields": [
+        "views",
+        "likes",
+        "comments"
+      ],
+      "success": true,
+      "itemCount": 1,
+      "metricsSummary": "views=557412, likes=47520, comments=329",
+      "authorAvatarUrl": null,
+      "previewImageUrl": "https://scontent-ord5-1.cdninstagram.com/v/t51.82787-15/688432891_18583981738014865_6401976704234068632_n.jpg?stp=dst-jpg_e35_p1080x1080_sh2.08_tt6&_nc_ht=scontent-ord5-1.cdninstagram.com&_nc_cat=101&_nc_oc=Q6cZ2gFpfZC2EduyZo6jtglTi1Z8Ku6E4_xYX9CpwcP32ODnfPTTmcdjQjc5scqJwVBKGoE&_nc_ohc=b5JAef5jBIsQ7kNvwEwUolT&_nc_gid=MYCBNR0nFWEmD_q5XvatWQ&edm=APs17CUBAAAA&ccb=7-5&oh=00_Af9A0yFrFIY_OJN8BT0aFjpDbwWDwW9yuZJ1MYp8Ow4Bcw&oe=6A415820&_nc_sid=10d13b",
+      "publicationDate": "2026-05-07"
+    },
+    "metrics_snapshot": {
+      "likes": 47520,
+      "reach": null,
+      "saves": null,
+      "views": 557412,
+      "shares": null,
+      "comments": 329,
+      "impressions": null
+    },
+    "created_at": "2026-06-24T06:01:18.333474+00:00"
+  },
+  {
+    "publication_id": "b85c2d31-e696-4d46-8b04-fa87bdb8d9e7",
+    "provider": "engagement_engine",
+    "status": "er_recalculated",
+    "response_summary": {
+      "new_er": 6.483039242536876,
+      "new_method": "views",
+      "previous_er": null,
+      "previous_method": null,
+      "source_provider": "apify"
+    },
+    "metrics_snapshot": {
+      "likes": 1524,
+      "reach": null,
+      "views": 25559,
+      "comments": 133,
+      "engagements": 1657,
+      "engagement_rate": 6.483039242536876
+    },
+    "created_at": "2026-06-24T06:01:13.072335+00:00"
+  }
+]

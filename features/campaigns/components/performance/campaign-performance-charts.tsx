@@ -24,8 +24,8 @@ function BarChart({
   const max = Math.max(...items.map((i) => Number(i[valueKey] ?? 0)), 1);
 
   return (
-    <div className={cn("rounded-xl border border-[#E6EAF2] bg-white p-4", className)}>
-      <h3 className="mb-3 text-[11px] font-semibold tracking-wide text-[#9099A8] uppercase">
+    <div className={cn("rounded-xl border border-border bg-card p-4", className)}>
+      <h3 className="mb-3 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
         {title}
       </h3>
       {items.length === 0 ? (
@@ -37,16 +37,16 @@ function BarChart({
             const label = String(item[labelKey] ?? "");
             return (
               <div key={`${label}-${i}`} className="grid grid-cols-[100px_1fr_48px] items-center gap-2">
-                <span className="truncate text-[11px] text-[#5B6575]" title={label}>
+                <span className="truncate text-[11px] text-muted-foreground" title={label}>
                   {label}
                 </span>
-                <div className="h-2 rounded-full bg-[#F5F8FD]">
+                <div className="h-2 rounded-full bg-muted">
                   <div
-                    className="h-2 rounded-full bg-[#0057FF]"
+                    className="h-2 rounded-full bg-primary"
                     style={{ width: `${Math.max(4, (value / max) * 100)}%` }}
                   />
                 </div>
-                <span className="text-right text-[10px] font-medium tabular-nums text-[#0B0F1A]">
+                <span className="text-right text-[10px] font-medium tabular-nums text-foreground">
                   {formatCompactCount(value)}
                 </span>
               </div>

@@ -11,7 +11,7 @@ export const QUOTATION_DEFAULT_TERMS: QuotationTermSection[] = [
   },
   {
     title: "Payment Terms",
-    body: "Unless otherwise agreed in writing, 50% of the quoted amount is due upon campaign confirmation and the balance prior to campaign launch. All amounts are exclusive of applicable taxes unless stated otherwise.",
+    body: "Full payment is due in advance prior to campaign launch unless otherwise agreed in writing. Thinkway reserves the right to suspend any campaign activity in the event of payment delay, without further liability. All amounts are exclusive of applicable taxes unless stated otherwise.",
   },
   {
     title: "Content Approval",

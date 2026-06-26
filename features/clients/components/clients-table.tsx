@@ -11,9 +11,7 @@ import {
 } from "@/components/tables/operational-configurable-table";
 import type { ClientsListResult } from "@/features/clients/queries";
 
-import { ClientStatusBadge } from "./client-status-badge";
-import { OnboardingStatusBadge } from "./onboarding-status-badge";
-import { isClientOnboardingStatus } from "@/lib/clients/onboarding-status";
+import { ClientListStatusCell } from "./client-list-status-cell";
 
 type ClientsTableProps = {
   clients: ClientsListResult["clients"];
@@ -25,12 +23,22 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
   {
     id: "document_number",
     label: "Client #",
+    colWidth: "96px",
     monoCell: true,
-    renderCell: (client) => <DocumentNumber value={client.document_number} />,
+    renderCell: (client) => (
+      <Link
+        href={`/clients/${client.id}`}
+        className="text-muted-foreground hover:text-foreground hover:underline"
+      >
+        <DocumentNumber value={client.document_number} />
+      </Link>
+    ),
+    cellClassName: "text-muted-foreground",
   },
   {
     id: "legal_entity",
     label: "Legal entity",
+    colWidth: "24%",
     renderCell: (client) => {
       const legalName = client.legal_name?.trim();
       const showLegalSubtitle =
@@ -38,15 +46,15 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
         legalName!.toLowerCase() !== client.name.trim().toLowerCase();
 
       return (
-        <div className="flex flex-col">
+        <div className="min-w-0 flex flex-col gap-0.5">
           <Link
             href={`/clients/${client.id}`}
-            className="font-medium text-foreground hover:text-primary hover:underline"
+            className="truncate font-medium text-foreground hover:text-primary hover:underline"
           >
             {client.name}
           </Link>
           {showLegalSubtitle ? (
-            <span className="text-[11px] text-muted-foreground">{legalName}</span>
+            <span className="truncate text-[11px] text-muted-foreground">{legalName}</span>
           ) : null}
         </div>
       );
@@ -55,33 +63,39 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
   {
     id: "group",
     label: "Group",
-    renderCell: (client) => client.group?.name ?? "—",
+    colWidth: "16%",
+    renderCell: (client) => (
+      <span className="block truncate text-muted-foreground">
+        {client.group?.name ?? "—"}
+      </span>
+    ),
   },
   {
     id: "status",
     label: "Status",
+    colWidth: "18%",
     renderCell: (client) => (
-      <div className="flex flex-wrap items-center gap-1.5">
-        <ClientStatusBadge status={client.status} />
-        {"onboarding_status" in client &&
-        client.onboarding_status &&
-        isClientOnboardingStatus(client.onboarding_status) ? (
-          <OnboardingStatusBadge status={client.onboarding_status} />
-        ) : null}
-      </div>
+      <ClientListStatusCell
+        status={client.status}
+        onboardingStatus={client.onboarding_status}
+      />
     ),
   },
   {
     id: "billing_email",
     label: "Billing email",
-    renderCell: (client) => client.billing_email ?? "—",
+    colWidth: "20%",
+    renderCell: (client) => (
+      <span className="block truncate">{client.billing_email ?? "—"}</span>
+    ),
     cellClassName: "text-muted-foreground",
   },
   {
     id: "created",
     label: "Created",
+    colWidth: "112px",
     renderCell: (client) => format(new Date(client.created_at), "MMM d, yyyy"),
-    cellClassName: "text-muted-foreground",
+    cellClassName: "whitespace-nowrap text-muted-foreground",
   },
 ];
 

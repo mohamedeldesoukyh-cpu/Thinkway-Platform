@@ -19,8 +19,8 @@ import { CampaignOperationalSectionHeader } from "@/features/campaigns/component
 import {
   deleteClientDocumentAction,
   getClientDocumentDownloadUrlAction,
-  uploadClientDocumentAction,
 } from "@/features/clients/actions";
+import { uploadClientDocumentViaApi } from "@/features/clients/client-document-upload-api";
 import {
   CLIENT_DOCUMENT_TYPE_OPTIONS,
   labelForOption,
@@ -84,7 +84,7 @@ export function ClientDocumentsTab({ client }: { client: ClientDetail }) {
         <DocumentUploadForm
           entityId={client.id}
           documentTypeOptions={CLIENT_DOCUMENT_TYPE_OPTIONS}
-          action={uploadClientDocumentWrapper}
+          uploadDocument={uploadClientDocumentFromForm}
         />
       </OperationalFormSection>
 
@@ -124,19 +124,19 @@ export function ClientDocumentsTab({ client }: { client: ClientDetail }) {
   );
 }
 
-async function uploadClientDocumentWrapper(
-  prev: { ok: boolean; message?: string; fieldErrors?: Record<string, string[]> },
+async function uploadClientDocumentFromForm(
+  entityId: string,
   formData: FormData
 ) {
   const mapped = new FormData();
-  mapped.set("client_id", String(formData.get("entity_id") ?? ""));
+  mapped.set("client_id", entityId);
   mapped.set("document_type", String(formData.get("document_type") ?? ""));
   mapped.set("expires_at", String(formData.get("expires_at") ?? ""));
   const file = formData.get("file");
   if (file) {
     mapped.set("file", file);
   }
-  return uploadClientDocumentAction(prev, mapped);
+  return uploadClientDocumentViaApi(entityId, mapped);
 }
 
 function DocumentActionsCell({

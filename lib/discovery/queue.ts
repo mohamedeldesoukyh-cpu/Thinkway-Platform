@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
 
+import { CAMPAIGN_PERFORMANCE_JOB_OPTIONS } from "@/lib/performance/campaign-performance-queue-options";
 import type { DiscoveryJobPayload, EnrichmentJobPayload } from "@/lib/discovery/types";
 
 const QUEUES = {
@@ -27,10 +28,7 @@ export async function enqueueDiscoveryJob(
   }
 
   const queue = new Queue(QUEUES.discovery, { connection });
-  await queue.add("discovery-run", { ...payload, jobId }, {
-    removeOnComplete: 100,
-    removeOnFail: 50,
-  });
+  await queue.add("discovery-run", { ...payload, jobId }, CAMPAIGN_PERFORMANCE_JOB_OPTIONS);
   await queue.close();
   return { queued: true };
 }
@@ -45,10 +43,7 @@ export async function enqueueEnrichmentJob(
   }
 
   const queue = new Queue(QUEUES.enrichment, { connection });
-  await queue.add("enrich-profile", { ...payload, jobId }, {
-    removeOnComplete: 100,
-    removeOnFail: 50,
-  });
+  await queue.add("enrich-profile", { ...payload, jobId }, CAMPAIGN_PERFORMANCE_JOB_OPTIONS);
   await queue.close();
   return { queued: true };
 }

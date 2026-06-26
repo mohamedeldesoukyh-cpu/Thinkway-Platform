@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import {
   createSignedDocumentUrl,
   removeStorageObject,
-  uploadEntityDocument,
 } from "@/lib/supabase/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { findDuplicateClient } from "@/lib/validation/checks";
@@ -21,6 +20,7 @@ import {
   friendlyClientDocumentError,
   toJsonSafeFormActionState,
 } from "@/lib/clients/client-document-utils";
+import { persistClientDocumentUpload } from "@/lib/clients/persist-client-document-upload";
 import type { AgencyOrDirect, ClientDocumentRow, PaymentTerms } from "@/types/database";
 
 import {
@@ -523,87 +523,16 @@ export async function uploadClientDocumentAction(
       });
     }
 
-    const { data: existingDocs, error: existingError } = await supabase
-      .from("client_documents")
-      .select("id, storage_path")
-      .eq("client_id", parsed.data.client_id)
-      .eq("document_type", parsed.data.document_type);
-
-    if (existingError) {
-      return toJsonSafeFormActionState({
-        ok: false,
-        message: friendlyClientDocumentError(existingError.message),
-      });
-    }
-
-    const uploaded = await uploadEntityDocument({
+    const result = await persistClientDocumentUpload({
       supabase,
-      bucket: "client-documents",
-      entityId: parsed.data.client_id,
+      userId: user.id,
+      clientId: parsed.data.client_id,
       documentType: parsed.data.document_type,
       file,
+      expiresAt: parsed.data.expires_at,
     });
 
-    const { data: insertedDoc, error } = await supabase
-      .from("client_documents")
-      .insert({
-        client_id: parsed.data.client_id,
-        document_type: parsed.data.document_type,
-        file_name: file.name,
-        storage_path: uploaded.storagePath,
-        mime_type: uploaded.mimeType,
-        file_size: uploaded.fileSize,
-        expires_at: parsed.data.expires_at,
-        uploaded_by: user.id,
-      })
-      .select("*")
-      .single();
-
-    if (error || !insertedDoc) {
-      try {
-        await removeStorageObject({
-          supabase,
-          bucket: "client-documents",
-          storagePath: uploaded.storagePath,
-        });
-      } catch {
-        // Best-effort rollback when the DB row could not be created.
-      }
-      return toJsonSafeFormActionState({
-        ok: false,
-        message: friendlyClientDocumentError(
-          error?.message ?? "Document record could not be created."
-        ),
-      });
-    }
-
-    for (const existingDoc of existingDocs ?? []) {
-      const { error: deleteRowError } = await supabase
-        .from("client_documents")
-        .delete()
-        .eq("id", existingDoc.id);
-
-      if (deleteRowError) {
-        continue;
-      }
-
-      try {
-        await removeStorageObject({
-          supabase,
-          bucket: "client-documents",
-          storagePath: existingDoc.storage_path,
-        });
-      } catch {
-        // Row removed; storage cleanup is best-effort.
-      }
-    }
-
-    revalidatePath(`/clients/${parsed.data.client_id}`);
-
-    return toJsonSafeFormActionState({
-      ok: true,
-      message: "Document uploaded.",
-    });
+    return toJsonSafeFormActionState(result);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Upload failed unexpectedly.";

@@ -71,11 +71,11 @@ export function VendorActivityTab({
           description="Recent profile and operational events."
         >
           {workspace.activity.length === 0 ? (
-            <p className="py-8 text-center text-[13px] text-[#9099A8]">
+            <p className="py-8 text-center text-[13px] text-muted-foreground">
               No activity recorded yet.
             </p>
           ) : (
-            <ul className="divide-y divide-[#E6EAF2]">
+            <ul className="divide-y divide-border">
               {workspace.activity.map((item) => (
                 <li
                   key={item.id}
@@ -85,11 +85,11 @@ export function VendorActivityTab({
                     <p className="text-[13px] font-medium capitalize text-foreground">
                       {item.summary}
                     </p>
-                    <p className="text-[11px] text-[#9099A8]">
+                    <p className="text-[11px] text-muted-foreground">
                       {item.actor?.full_name ?? item.actor?.email ?? "System"}
                     </p>
                   </div>
-                  <time className="shrink-0 text-[11px] text-[#9099A8]">
+                  <time className="shrink-0 text-[11px] text-muted-foreground">
                     {format(new Date(item.created_at), "MMM d, yyyy HH:mm")}
                   </time>
                 </li>
@@ -113,7 +113,7 @@ export function VendorActivityTab({
               <OperationalTableControlsSlot contextLabel="Vendor deliverables" />
             </div>
             {workspace.deliverables.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-[#9099A8]">
+              <p className="py-8 text-center text-[13px] text-muted-foreground">
                 No deliverables.
               </p>
             ) : (

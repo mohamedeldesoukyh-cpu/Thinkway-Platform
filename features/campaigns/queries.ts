@@ -1,4 +1,5 @@
 import { filterUuids, isUuid } from "@/lib/validation/uuid";
+import { traceCampaignRoute, traceCampaignRouteError } from "@/lib/performance/campaign-route-trace";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
 import {
@@ -366,6 +367,8 @@ export async function getCampaignWorkspace(
     return null;
   }
 
+  traceCampaignRoute("workspace:load:start", { campaignId });
+
   const { supabase, user } = await requireUser();
 
   const { data: header, error: headerError } = await supabase
@@ -387,9 +390,11 @@ export async function getCampaignWorkspace(
     .maybeSingle();
 
   if (headerError) {
+    traceCampaignRouteError("workspace:header-query", headerError, { campaignId });
     throw new Error(headerError.message);
   }
   if (!header) {
+    traceCampaignRoute("workspace:header-not-found", { campaignId });
     return null;
   }
 

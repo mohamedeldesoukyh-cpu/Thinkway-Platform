@@ -1,13 +1,17 @@
-import Link from "next/link";
-
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { CreatorSearchWorkspace } from "@/features/discovery/components/creator-search/creator-search-workspace";
-import { getDiscoveryShortlists } from "@/features/discovery/queries";
-import { cn } from "@/lib/utils";
+import { DiscoverySubNav } from "@/features/discovery-import/components/discovery-sub-nav";
+import {
+  getCampaignOptionsForShortlist,
+  getDiscoveryShortlists,
+} from "@/features/discovery/queries";
 
 export default async function CreatorSearchPage() {
-  const shortlists = await getDiscoveryShortlists();
+  const [shortlists, campaigns] = await Promise.all([
+    getDiscoveryShortlists(),
+    getCampaignOptionsForShortlist(),
+  ]);
 
   return (
     <DashboardShell
@@ -18,32 +22,9 @@ export default async function CreatorSearchPage() {
     >
       <PlatformErrorBoundary surface="generic">
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <nav
-            aria-label="Discovery"
-            className="flex shrink-0 items-center gap-4 border-b border-[#E6EAF2] bg-white px-4 py-2 text-[12px] md:px-5"
-          >
-            <Link
-              href="/discovery/search"
-              className={cn("font-semibold text-[#0057FF]")}
-              aria-current="page"
-            >
-              Creator Search
-            </Link>
-            <Link
-              href="/discovery/compare"
-              className="font-medium text-[#5B6575] hover:text-[#0057FF]"
-            >
-              Compare
-            </Link>
-            <Link
-              href="/discovery"
-              className="font-medium text-[#5B6575] hover:text-[#0057FF]"
-            >
-              Discovery hub
-            </Link>
-          </nav>
+          <DiscoverySubNav activeHref="/discovery/search" />
           <div className="min-h-0 flex-1 overflow-hidden">
-            <CreatorSearchWorkspace shortlists={shortlists} />
+            <CreatorSearchWorkspace shortlists={shortlists} campaigns={campaigns} />
           </div>
         </div>
       </PlatformErrorBoundary>

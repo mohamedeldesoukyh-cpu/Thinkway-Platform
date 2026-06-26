@@ -1,5 +1,17 @@
 {
   "functions": {
+    "app/api/cron/publication-metrics/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/campaign-performance-monitor/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/admin/campaign-performance/health/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/admin/campaign-performance/dashboard/route.ts": {
+      "maxDuration": 120
+    },
     "app/api/vendor-ios/[id]/document/route.ts": {
       "memory": 1024,
       "maxDuration": 60
@@ -8,5 +20,15 @@
       "memory": 1024,
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/publication-metrics",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/campaign-performance-monitor",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

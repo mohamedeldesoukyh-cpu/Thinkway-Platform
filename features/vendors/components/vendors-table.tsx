@@ -1,7 +1,9 @@
 "use client";
 
-import Link from "next/link";
-
+import {
+  CreatorIdentityCell,
+  creatorProfileSourceFromAccounts,
+} from "@/components/creator/creator-profile-link";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
@@ -39,12 +41,12 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
     id: "creator",
     label: "Creator",
     renderCell: (vendor) => (
-      <Link
-        href={`/vendors/${vendor.id}`}
-        className="font-medium text-foreground hover:text-primary hover:underline"
-      >
-        {vendor.display_name}
-      </Link>
+      <CreatorIdentityCell
+        source={creatorProfileSourceFromAccounts(vendor.display_name, vendor.platform_accounts)}
+        size="sm"
+        showHandle={false}
+        stopPropagation
+      />
     ),
   },
   {

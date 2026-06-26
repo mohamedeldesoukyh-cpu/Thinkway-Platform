@@ -23,7 +23,7 @@ export function InvoiceHtmlPreview({ invoice, backHref }: InvoiceHtmlPreviewProp
     : "—";
 
   return (
-    <article className="mx-auto max-w-3xl rounded-2xl border border-border bg-white p-8 text-foreground shadow-sm print:border-0 print:shadow-none">
+    <article className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-8 text-foreground shadow-sm print:border-0 print:shadow-none print:bg-white">
       {backHref ? (
         <div className="mb-6 print:hidden">
           <PageBackButton

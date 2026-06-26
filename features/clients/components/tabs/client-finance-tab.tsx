@@ -192,7 +192,7 @@ export function ClientFinanceTab({
               </ClientFormField>
             </ClientFormGrid>
 
-            <div className="grid gap-[18px] rounded-[12px] border border-[#E6EAF2] bg-[#F5F8FD] p-[18px] sm:grid-cols-2">
+            <div className="grid gap-[18px] rounded-[12px] border border-border bg-muted p-[18px] sm:grid-cols-2">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <p className={CLIENT_FORM_FIELD_LABEL_CLASS}>CL Active</p>

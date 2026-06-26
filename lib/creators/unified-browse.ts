@@ -21,10 +21,20 @@ import type {
   UnifiedCreatorResult,
 } from "@/lib/creators/types";
 import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
+import { mergeImportedStringArrays } from "@/lib/discovery-import/normalize";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 
 function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
+}
+
+function tagsFromImportMetadata(
+  metadata: Record<string, unknown> | null | undefined
+): string[] {
+  return mergeImportedStringArrays(
+    (metadata?.categories as string[] | undefined) ?? [],
+    (metadata?.audience_interests as string[] | undefined) ?? []
+  );
 }
 
 function resolveInternalSourceType(account: {
@@ -183,7 +193,7 @@ async function fetchInternalCreators(
   const { data: accounts } = await supabase
     .from("influencer_platform_accounts")
     .select(
-      "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, audience_country, is_verified, is_primary, profile_picture_url, metrics_source, sync_status, metrics_is_manual_override"
+      "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, audience_country, is_verified, is_primary, profile_picture_url, metrics_source, sync_status, metrics_is_manual_override, metadata"
     )
     .in("influencer_id", ids)
     .order("is_primary", { ascending: false });
@@ -211,6 +221,10 @@ async function fetchInternalCreators(
     };
     const platformRows = accountsByInfluencer.get(r.id) ?? [];
     const primary = platformRows[0];
+    const importTags = tagsFromImportMetadata(
+      (primary?.metadata as Record<string, unknown> | null | undefined) ?? null
+    );
+    const categories = mergeImportedStringArrays(r.categories ?? [], importTags);
     const sourceType: CreatorSourceType = discoveryByInfluencer.has(r.id)
       ? "imported"
       : primary
@@ -231,7 +245,7 @@ async function fetchInternalCreators(
       profile_image_url: primary?.profile_picture_url ?? null,
       platforms_count: platformRows.length,
       country_code: r.country_code,
-      categories: r.categories ?? [],
+      categories,
     });
 
     const thinkwayScore =
@@ -241,7 +255,7 @@ async function fetchInternalCreators(
         authenticity_score: null,
         brand_fit_score: null,
         profile_completeness: completeness,
-        ai_category: r.categories?.[0] ?? null,
+        ai_category: categories[0] ?? null,
         ai_niche: null,
         bio: null,
         profile_image_url: primary?.profile_picture_url ?? null,
@@ -266,12 +280,12 @@ async function fetchInternalCreators(
       country_code: r.country_code,
       estimated_country: primary?.audience_country ?? r.country_code,
       city: null,
-      categories: r.categories ?? [],
+      categories,
       language_codes: [],
       profile_image_url: primary?.profile_picture_url ?? null,
       bio: null,
       metrics,
-      ai_category: r.categories?.[0] ?? null,
+      ai_category: categories[0] ?? null,
       ai_niche: null,
       authenticity_score: null,
       thinkway_score: thinkwayScore,

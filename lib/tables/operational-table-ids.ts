@@ -21,6 +21,7 @@ export const OPERATIONAL_TABLE_IDS = {
   campaignPayments: "campaign-payments",
   campaignDeliverables: "campaign-deliverables",
   campaignPublications: "campaign-publications",
+  campaignPerformanceGrid: "campaign-performance-grid",
   campaignApprovals: "campaign-approvals",
   campaignTimelineVendors: "campaign-timeline-vendors",
   campaignInvoiceRegister: "campaign-invoice-register",

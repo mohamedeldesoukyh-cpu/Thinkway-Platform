@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ClientTypeFilter } from "@/lib/analytics/filters/client-type-filter";
 import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
-import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
 import type {
   StatementEntityOption,
   StatementGroupOption,

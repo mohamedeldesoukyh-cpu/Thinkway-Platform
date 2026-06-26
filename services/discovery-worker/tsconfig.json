@@ -9,7 +9,11 @@
     "resolveJsonModule": true,
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": "../..",
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

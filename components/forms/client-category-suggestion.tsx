@@ -55,8 +55,8 @@ export function ClientCategorySuggestion({
   return (
     <div
       className={cn(
-        "rounded-[12px] border bg-[#F5F8FD] px-4 py-4",
-        lowConfidence ? "border-amber-500/40" : "border-[#E6EAF2]"
+        "rounded-[12px] border bg-muted px-4 py-4",
+        lowConfidence ? "border-amber-500/40" : "border-border"
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

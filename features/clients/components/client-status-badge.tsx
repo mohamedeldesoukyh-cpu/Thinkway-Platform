@@ -14,15 +14,19 @@ const statusTone: Record<ClientStatus, StatusTone> = {
 
 type ClientStatusBadgeProps = {
   status: ClientStatus;
+  className?: string;
 };
 
-export function ClientStatusBadge({ status }: ClientStatusBadgeProps) {
+export function ClientStatusBadge({ status, className }: ClientStatusBadgeProps) {
   const label =
     CLIENT_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
     status;
 
   return (
-    <Badge variant="outline" className={cn("font-medium", STATUS_TONE_CLASS[statusTone[status]])}>
+    <Badge
+      variant="outline"
+      className={cn("font-medium", STATUS_TONE_CLASS[statusTone[status]], className)}
+    >
       {label}
     </Badge>
   );

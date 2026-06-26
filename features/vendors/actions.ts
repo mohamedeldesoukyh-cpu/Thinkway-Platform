@@ -249,6 +249,12 @@ export async function createVendorAction(
         metrics_last_synced_at: normalized.metrics_last_synced_at,
         metrics_is_manual_override: normalized.metrics_is_manual_override,
         is_primary: true,
+        ...(normalized.profile_picture_url
+          ? {
+              avatar_source: enrichment?.profile_picture_url ? "discovery" : "manual",
+              avatar_last_synced_at: new Date().toISOString(),
+            }
+          : {}),
       });
 
     if (platformError) {
@@ -609,6 +615,9 @@ export async function savePlatformAccountsAction(
       metrics_source: normalized.metrics_source,
       metrics_last_synced_at: normalized.metrics_last_synced_at,
       metrics_is_manual_override: normalized.metrics_is_manual_override,
+      ...(normalized.profile_picture_url
+        ? { avatar_source: "manual" as const, avatar_last_synced_at: new Date().toISOString() }
+        : {}),
     };
 
     if (account.id) {

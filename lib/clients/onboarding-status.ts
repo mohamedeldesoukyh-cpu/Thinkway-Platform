@@ -1,4 +1,5 @@
 import type { StatusTone } from "@/lib/ui/status-tone";
+import type { ClientStatus } from "@/types/database";
 
 export const CLIENT_ONBOARDING_STATUSES = [
   "draft",
@@ -140,4 +141,51 @@ export function deriveOnboardingStatusFromCompletion(
 
 export function onboardingStatusReviewLabel(status: ClientOnboardingStatus): string {
   return ONBOARDING_STATUS_LABELS[status];
+}
+
+const CLIENT_OPERATIONAL_STATUS_LABELS: Record<ClientStatus, string> = {
+  prospect: "Prospect",
+  active: "Active",
+  inactive: "Inactive",
+  archived: "Archived",
+};
+
+export type ClientListStatusBadges = {
+  operationalStatus: ClientStatus;
+  /** When null, onboarding adds no extra badge (missing, invalid, or redundant with operational). */
+  onboardingStatus: ClientOnboardingStatus | null;
+};
+
+/** List tables: one badge when labels match (e.g. Active + Active); both when they differ. */
+export function resolveClientListStatusBadges(input: {
+  status: ClientStatus;
+  onboardingStatus: string | null | undefined;
+}): ClientListStatusBadges {
+  const operationalLabel =
+    CLIENT_OPERATIONAL_STATUS_LABELS[input.status] ?? input.status;
+
+  if (
+    !input.onboardingStatus ||
+    !isClientOnboardingStatus(input.onboardingStatus)
+  ) {
+    return {
+      operationalStatus: input.status,
+      onboardingStatus: null,
+    };
+  }
+
+  const onboardingStatus = input.onboardingStatus;
+  const onboardingLabel = ONBOARDING_STATUS_LABELS[onboardingStatus];
+
+  if (operationalLabel === onboardingLabel) {
+    return {
+      operationalStatus: input.status,
+      onboardingStatus: null,
+    };
+  }
+
+  return {
+    operationalStatus: input.status,
+    onboardingStatus,
+  };
 }

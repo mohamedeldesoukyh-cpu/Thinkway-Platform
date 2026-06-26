@@ -12,6 +12,7 @@ import {
   type DiscoveryJobResult,
 } from "../discovery/job-observability.js";
 import { seedMockProfiles } from "../discovery/mock-seed.js";
+import { resolveMockSeedDecision } from "../discovery/mock-seed-policy.js";
 import { config } from "../config.js";
 import type { DiscoveryPlatform } from "../crawlers/types.js";
 
@@ -112,26 +113,53 @@ export function startDiscoveryWorker(): Worker<DiscoveryJobData> {
       let seeded = false;
       let usernames = crawlResult.usernames ?? [];
 
-      if (crawlDiscovered === 0) {
-        if (config.mockSeedFallback) {
-          const seedReason = crawlError ? "crawl_failed" : "crawl_empty";
-          const seedResult = await seedMockProfiles({
-            method: job.data.method,
-            platform: job.data.platform,
-            hashtag: job.data.hashtag,
-            locationCountry: job.data.locationCountry,
-            locationQuery: job.data.locationQuery,
-            trendKey: job.data.trendKey,
-            reason: seedReason,
-            tracker,
-          });
-          seeded = true;
-          seedCount = seedResult.seed_count;
-          usernames = seedResult.usernames;
-          crawlResult = { discovered: seedResult.discovered, usernames };
-        } else {
-          tracker.log("warn", "Mock seed fallback disabled — job will complete with zero profiles");
-        }
+      const seedDecision = resolveMockSeedDecision({
+        crawlDiscovered,
+        demoEnabled: config.mockSeedFallback,
+        crawlError,
+      });
+
+      if (seedDecision.attemptSeed) {
+        const seedReason = crawlError ? "crawl_failed" : "crawl_empty";
+        const seedResult = await seedMockProfiles({
+          method: job.data.method,
+          platform: job.data.platform,
+          hashtag: job.data.hashtag,
+          locationCountry: job.data.locationCountry,
+          locationQuery: job.data.locationQuery,
+          trendKey: job.data.trendKey,
+          reason: seedReason,
+          tracker,
+        });
+        seeded = true;
+        seedCount = seedResult.seed_count;
+        usernames = seedResult.usernames;
+        crawlResult = { discovered: seedResult.discovered, usernames };
+      } else if (seedDecision.markFailed && seedDecision.failureReason) {
+        tracker.log(
+          "error",
+          `Discovery failed with zero profiles — mock seed disabled (${seedDecision.failureReason})`
+        );
+        const failedResult: DiscoveryJobResult = {
+          discovered: 0,
+          profiles_added: 0,
+          crawl_discovered: 0,
+          seeded: false,
+          seed_count: 0,
+          outcome: "crawl_blocked",
+          crawl_error: seedDecision.failureReason,
+          usernames: [],
+          logs: tracker.getLogs(),
+          method: job.data.method,
+          platform: job.data.platform,
+        };
+        await tracker.markFailed(seedDecision.failureReason, failedResult);
+        return failedResult;
+      } else if (crawlDiscovered === 0) {
+        tracker.log(
+          "warn",
+          "Live crawl returned zero profiles — mock seed disabled; job completes empty"
+        );
       }
 
       const profilesAdded = seeded ? seedCount : crawlDiscovered;

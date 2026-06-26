@@ -2,14 +2,10 @@ import IORedis from "ioredis";
 
 import { config } from "../config.js";
 
-let connection: IORedis | null = null;
-
+/** BullMQ workers need dedicated blocking connections — do not share one client. */
 export function getRedisConnection(): IORedis {
-  if (!connection) {
-    connection = new IORedis(config.redisUrl, {
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-    });
-  }
-  return connection;
+  return new IORedis(config.redisUrl, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+  });
 }

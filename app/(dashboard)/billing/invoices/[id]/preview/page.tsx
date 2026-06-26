@@ -92,7 +92,7 @@ export default async function InvoicePreviewPage({
         <iframe
           title={`Invoice ${typed.document_number ?? id}`}
           srcDoc={html}
-          className="min-h-[1200px] w-full rounded-xl border border-border bg-white"
+          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
         />
       )}
     </DashboardShell>

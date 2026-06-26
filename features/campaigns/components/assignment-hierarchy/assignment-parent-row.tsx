@@ -1,8 +1,12 @@
 "use client";
 
-import { PencilIcon, UserIcon } from "lucide-react";
+import { PencilIcon } from "lucide-react";
 import { memo, useEffect, useRef } from "react";
 
+import {
+  CreatorIdentityCell,
+  creatorProfileSourceFromAccounts,
+} from "@/components/creator/creator-profile-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -135,12 +139,18 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           </p>
         </div>
       </TableCell>
-      <TableCell {...assignmentParentColDataAttr("creator")} className="px-1.5 py-1.5 text-muted-foreground">
+      <TableCell {...assignmentParentColDataAttr("creator")} className="px-1.5 py-1.5">
         {line.influencer_name ? (
-          <div className="flex items-center gap-1">
-            <UserIcon className="size-3 text-muted-foreground" />
-            <span>{line.influencer_name}</span>
-          </div>
+          <CreatorIdentityCell
+            source={creatorProfileSourceFromAccounts(
+              line.influencer_name,
+              line.creator_platform_accounts
+            )}
+            size="xs"
+            showAvatar={false}
+            showHandle={false}
+            stopPropagation
+          />
         ) : (
           <span className="text-muted-foreground">—</span>
         )}

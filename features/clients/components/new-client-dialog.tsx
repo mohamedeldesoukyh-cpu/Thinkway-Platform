@@ -170,8 +170,8 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           New Client
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden rounded-[20px] border-[#E6EAF2] p-0 shadow-[0_12px_32px_rgba(20,40,110,0.10)] sm:max-w-xl">
-        <DialogHeader className="shrink-0 border-b border-[#E6EAF2] bg-white/70 px-6 py-4 backdrop-blur-md">
+      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden rounded-[20px] border-border p-0 shadow-[var(--card-shadow)] sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b border-border bg-background/70 px-6 py-4 backdrop-blur-md">
           <DialogTitle className="text-[25px] font-extrabold tracking-[-0.02em]">
             New client
           </DialogTitle>
@@ -412,7 +412,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             </ClientFormSection>
           </div>
 
-          <DialogFooter className="shrink-0 gap-2.5 border-t border-[#E6EAF2] bg-white/[0.88] px-6 py-3.5 backdrop-blur-[14px]">
+          <DialogFooter className="shrink-0 gap-2.5 border-t border-border bg-background/90 px-6 py-3.5 backdrop-blur-[14px]">
             <button
               type="button"
               className={CLIENT_FORM_GHOST_BUTTON_CLASS}

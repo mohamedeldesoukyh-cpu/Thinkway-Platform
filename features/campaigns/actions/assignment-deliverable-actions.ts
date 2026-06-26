@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import type { FormActionState } from "@/features/campaigns/actions";
+import type { FormActionState } from "@/features/campaigns/form-action-state";
 import {
   loadLineVatForDeliverable,
   syncDeliverableRollupFromPosts,

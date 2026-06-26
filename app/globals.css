@@ -202,6 +202,16 @@
   --sidebar-ring: #0057ff;
   --sidebar-muted-foreground: #a1a1aa;
   --sidebar-active-bg: rgba(0, 87, 255, 0.12);
+  /* Sidebar rail — dark tier (mirrors light tokens above) */
+  --sidebar-rail-line: rgba(255, 255, 255, 0.08);
+  --sidebar-rail-line-2: rgba(255, 255, 255, 0.14);
+  --sidebar-rail-item-fg: #d4d4d8;
+  --sidebar-rail-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-rail-badge-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-rail-float-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    0 12px 32px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 @layer base {
@@ -288,6 +298,10 @@
   .thinkway-sidebar-grp-icon-navy {
     background: rgba(11, 15, 26, 0.07);
     color: #0b0f1a;
+  }
+  .dark .thinkway-sidebar-grp-icon-navy {
+    background: rgba(255, 255, 255, 0.08);
+    color: #d4d4d8;
   }
   .thinkway-sidebar-item-dot {
     @apply size-1.5 shrink-0 rounded-full bg-[var(--sidebar-rail-line-2)] transition-colors;

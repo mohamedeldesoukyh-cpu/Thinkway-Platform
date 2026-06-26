@@ -14,6 +14,7 @@ import {
   isQuotationExpired,
 } from "@/features/quotations/quotation-validity";
 import type { QuotationDetail, QuotationItemRow } from "../types";
+import type { QuotationTemplateVariant } from "./quotation-template";
 
 export type QuotationDocumentAudience = "client" | "internal";
 
@@ -45,6 +46,7 @@ export type QuotationDocumentKpi = {
 
 export type QuotationDocument = {
   audience: QuotationDocumentAudience;
+  template: QuotationTemplateVariant;
   serial: string;
   name: string;
   status: string;
@@ -74,6 +76,8 @@ export type QuotationDocument = {
     totalGpPct?: string;
     gpColor?: string;
     totalAf: string;
+    /** Client investment = client cost + AF. */
+    grandTotal: string;
     totalAgencyMargin: string;
     creatorCount: number;
     estimatedReach: string;
@@ -101,9 +105,10 @@ function deliverablesLabel(item: QuotationItemRow): string {
 
 export function buildQuotationDocument(
   detail: QuotationDetail,
-  options?: { audience?: QuotationDocumentAudience }
+  options?: { audience?: QuotationDocumentAudience; template?: QuotationTemplateVariant }
 ): QuotationDocument {
   const audience = options?.audience ?? "client";
+  const template = options?.template ?? "detailed";
   const expired = detail.is_expired || isQuotationExpired(detail.validity_date);
   const statusLabel =
     expired && detail.status === "draft"
@@ -164,14 +169,22 @@ export function buildQuotationDocument(
   const totalClientCost = `${num(detail.total_revenue_egp, 2)} ${REPORTING_CURRENCY}`;
   const totalAf = `${num(detail.total_af_egp, 2)} ${REPORTING_CURRENCY}`;
   const totalAgencyMargin = `${num(detail.total_agency_margin_egp, 2)} ${REPORTING_CURRENCY}`;
+  const grandTotal = `${num(detail.total_revenue_egp + detail.total_af_egp, 2)} ${REPORTING_CURRENCY}`;
 
   const clientKpis: QuotationDocumentKpi[] = [
     { label: "Creators", value: String(detail.items.length) },
     { label: "Est. Reach", value: num(detail.estimated_reach) },
     { label: "Est. Engagement", value: avgEr },
-    { label: QUOTATION_CLIENT_LABELS.totalClientCost, value: totalClientCost },
-    { label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf },
-    { label: QUOTATION_CLIENT_LABELS.totalAgencyMargin, value: totalAgencyMargin },
+    ...(template === "lump-sum"
+      ? [
+          { label: QUOTATION_CLIENT_LABELS.lumpSumCost, value: totalClientCost },
+          { label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf },
+          { label: QUOTATION_CLIENT_LABELS.totalCost, value: grandTotal },
+        ]
+      : [
+          { label: QUOTATION_CLIENT_LABELS.totalClientCost, value: totalClientCost },
+          { label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf },
+        ]),
   ];
 
   const internalKpis: QuotationDocumentKpi[] = [
@@ -188,6 +201,7 @@ export function buildQuotationDocument(
 
   return {
     audience,
+    template,
     serial: detail.serial_number ?? "QT-PENDING",
     name: detail.name,
     status: detail.status,
@@ -223,6 +237,7 @@ export function buildQuotationDocument(
         : {}),
       totalClientCost,
       totalAf,
+      grandTotal,
       totalAgencyMargin,
       creatorCount: detail.items.length,
       estimatedReach: num(detail.estimated_reach),
