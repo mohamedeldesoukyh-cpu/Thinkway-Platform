@@ -2,7 +2,6 @@
 
 import {
   FileTextIcon,
-  type LucideIcon,
   PackageIcon,
   PercentIcon,
   ReceiptIcon,
@@ -12,22 +11,13 @@ import {
 } from "lucide-react";
 
 import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
-import { KpiCarousel } from "@/components/ui/kpi-carousel";
+import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 
 type CampaignKpiStripProps = {
   workspace: CampaignWorkspace;
   operationalDeliverableCount?: number;
-};
-
-type KpiAccent = "blue" | "purple" | "pink" | "green";
-
-const ACCENT_TILE: Record<KpiAccent, string> = {
-  blue: "bg-brand-blue/10 text-brand-blue",
-  purple: "bg-brand-purple/10 text-brand-purple",
-  pink: "bg-brand-pink/10 text-brand-pink",
-  green: "bg-success/10 text-success",
 };
 
 export function CampaignKpiStrip({
@@ -47,13 +37,13 @@ export function CampaignKpiStrip({
         ? "warning"
         : undefined;
 
-  const items = [
+  const items: KpiCarouselItem[] = [
     {
       id: "budget",
       label: "Budget (PO)",
       value: formatMoney(financials.budget, currency),
       icon: WalletIcon,
-      accentClass: ACCENT_TILE.blue,
+      accentKey: "blue",
       valueAlert: budgetAlert,
     },
     {
@@ -61,7 +51,7 @@ export function CampaignKpiStrip({
       label: "Revenue",
       value: formatMoney(financials.revenue, currency),
       icon: TrendingUpIcon,
-      accentClass: ACCENT_TILE.purple,
+      accentKey: "purple",
       valueSemantic: "revenue",
     },
     {
@@ -69,7 +59,7 @@ export function CampaignKpiStrip({
       label: "Cost",
       value: formatMoney(financials.cost, currency),
       icon: ReceiptIcon,
-      accentClass: ACCENT_TILE.pink,
+      accentKey: "pink",
       valueSemantic: "cost",
     },
     {
@@ -77,7 +67,7 @@ export function CampaignKpiStrip({
       label: "GP",
       value: formatMoney(financials.gp, currency),
       icon: TrendingUpIcon,
-      accentClass: ACCENT_TILE.green,
+      accentKey: "green",
       valueSemantic: "gp",
       valueNumeric: financials.gp,
     },
@@ -86,7 +76,7 @@ export function CampaignKpiStrip({
       label: "Margin",
       value: formatPercent(financials.margin_percent),
       icon: PercentIcon,
-      accentClass: ACCENT_TILE.blue,
+      accentKey: "blue",
       valueSemantic: "margin",
       valueNumeric: financials.margin_percent,
     },
@@ -95,7 +85,7 @@ export function CampaignKpiStrip({
       label: "Assignments",
       value: String(assignedLines.length),
       icon: UsersIcon,
-      accentClass: ACCENT_TILE.purple,
+      accentKey: "purple",
       valueSemantic: "count",
     },
     {
@@ -103,7 +93,7 @@ export function CampaignKpiStrip({
       label: "Deliverables",
       value: String(deliverableKpi),
       icon: PackageIcon,
-      accentClass: ACCENT_TILE.pink,
+      accentKey: "pink",
       valueSemantic: "count",
     },
     {
@@ -111,19 +101,10 @@ export function CampaignKpiStrip({
       label: "Outstanding billing",
       value: formatMoney(financials.billing_outstanding, currency),
       icon: FileTextIcon,
-      accentClass: ACCENT_TILE.green,
+      accentKey: "green",
       valueSemantic: "revenue",
     },
-  ] satisfies {
-    id: string;
-    label: string;
-    value: string;
-    icon: LucideIcon;
-    accentClass: string;
-    valueSemantic?: "revenue" | "gp" | "cost" | "margin" | "count";
-    valueNumeric?: number;
-    valueAlert?: "warning" | "danger";
-  }[];
+  ];
 
   return (
     <div className="space-y-3 pb-8">
@@ -140,7 +121,7 @@ export function CampaignKpiStrip({
         </div>
       ) : null}
 
-      <KpiCarousel items={items} showNavigation={false} />
+      <KpiStrip items={items} showNavigation={false} />
     </div>
   );
 }

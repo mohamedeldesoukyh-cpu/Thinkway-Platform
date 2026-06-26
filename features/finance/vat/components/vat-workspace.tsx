@@ -31,6 +31,7 @@ import {
   type OperationalWorkspaceTabDef,
 } from "@/components/workspace/operational-workspace-ui";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { MetricCard } from "@/components/shared/kpi/metric-card";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { buildVatAuditCsv } from "@/features/finance/vat/export";
@@ -260,18 +261,29 @@ export function VatWorkspace({ data }: VatWorkspaceProps) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard
-          label="Revenue (ex-VAT)"
+        <MetricCard
+          layout="section"
+          title="Revenue (ex-VAT)"
           value={formatBillingMoney(data.kpis.revenue_before_vat, "USD")}
         />
-        <KpiCard label="Output VAT" value={formatBillingMoney(data.kpis.output_vat, "USD")} />
-        <KpiCard label="Input VAT" value={formatBillingMoney(data.kpis.input_vat, "USD")} />
-        <KpiCard
-          label="Net VAT payable"
+        <MetricCard
+          layout="section"
+          title="Output VAT"
+          value={formatBillingMoney(data.kpis.output_vat, "USD")}
+        />
+        <MetricCard
+          layout="section"
+          title="Input VAT"
+          value={formatBillingMoney(data.kpis.input_vat, "USD")}
+        />
+        <MetricCard
+          layout="section"
+          title="Net VAT payable"
           value={formatBillingMoney(data.kpis.net_vat_payable, "USD")}
         />
-        <KpiCard
-          label="VAT reclaimable"
+        <MetricCard
+          layout="section"
+          title="VAT reclaimable"
           value={formatBillingMoney(data.kpis.vat_reclaimable, "USD")}
         />
       </div>
@@ -361,13 +373,5 @@ export function VatWorkspace({ data }: VatWorkspaceProps) {
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-function KpiCard({ label, value }: { label: string; value: string }) {
-  return (
-    <CampaignFlatSection title={label}>
-      <p className="text-lg font-semibold">{value}</p>
-    </CampaignFlatSection>
   );
 }

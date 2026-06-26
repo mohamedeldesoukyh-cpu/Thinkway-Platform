@@ -5,7 +5,6 @@ import {
   BanknoteIcon,
   CoinsIcon,
   FileTextIcon,
-  type LucideIcon,
   PercentIcon,
   PiggyBankIcon,
   ReceiptIcon,
@@ -13,10 +12,12 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { KpiCarousel } from "@/components/ui/kpi-carousel";
+import { KPI_ACCENT_CLASS } from "@/components/shared/kpi/kpi-config";
+import { KpiStrip } from "@/components/shared/kpi/kpi-strip";
 import type { BillingKpiSummary } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { formatPercent } from "@/features/campaigns/utils";
+import { formatKpiCurrency } from "@/components/shared/kpi/kpi-utils";
 
 type BillingKpiStripProps = {
   kpis: BillingKpiSummary;
@@ -24,49 +25,16 @@ type BillingKpiStripProps = {
   mixedCurrency?: boolean;
 };
 
-type KpiAccent = "blue" | "purple" | "pink" | "green";
-
-const ACCENT_TILE: Record<KpiAccent, string> = {
-  blue: "bg-brand-blue/10 text-brand-blue",
-  purple: "bg-brand-purple/10 text-brand-purple",
-  pink: "bg-brand-pink/10 text-brand-pink",
-  green: "bg-success/10 text-success",
-};
-
-const KPI_ITEMS: {
-  key:
-    | "revenue"
-    | "cost"
-    | "gp"
-    | "margin"
-    | "billed"
-    | "collected"
-    | "outstanding"
-    | "unpaid_vendor"
-    | "po_remaining";
-  label: string;
-  icon: LucideIcon;
-  accent: KpiAccent;
-}[] = [
-  { key: "revenue", label: "Revenue", icon: TrendingUpIcon, accent: "blue" },
-  { key: "cost", label: "Cost", icon: ReceiptIcon, accent: "purple" },
-  { key: "gp", label: "Gross profit", icon: PiggyBankIcon, accent: "pink" },
-  { key: "margin", label: "Margin", icon: PercentIcon, accent: "green" },
-  { key: "billed", label: "Billed revenue", icon: FileTextIcon, accent: "blue" },
-  { key: "collected", label: "Collected", icon: BanknoteIcon, accent: "purple" },
-  {
-    key: "outstanding",
-    label: "Outstanding invoices",
-    icon: CoinsIcon,
-    accent: "pink",
-  },
-  {
-    key: "unpaid_vendor",
-    label: "Unpaid vendor cost",
-    icon: WalletIcon,
-    accent: "green",
-  },
-  { key: "po_remaining", label: "PO remaining", icon: CoinsIcon, accent: "blue" },
+const KPI_ITEMS = [
+  { key: "revenue" as const, label: "Revenue", icon: TrendingUpIcon, accentKey: "blue" as const },
+  { key: "cost" as const, label: "Cost", icon: ReceiptIcon, accentKey: "purple" as const },
+  { key: "gp" as const, label: "Gross profit", icon: PiggyBankIcon, accentKey: "pink" as const },
+  { key: "margin" as const, label: "Margin", icon: PercentIcon, accentKey: "green" as const },
+  { key: "billed" as const, label: "Billed revenue", icon: FileTextIcon, accentKey: "blue" as const },
+  { key: "collected" as const, label: "Collected", icon: BanknoteIcon, accentKey: "purple" as const },
+  { key: "outstanding" as const, label: "Outstanding invoices", icon: CoinsIcon, accentKey: "pink" as const },
+  { key: "unpaid_vendor" as const, label: "Unpaid vendor cost", icon: WalletIcon, accentKey: "green" as const },
+  { key: "po_remaining" as const, label: "PO remaining", icon: CoinsIcon, accentKey: "blue" as const },
 ];
 
 export function BillingKpiStrip({
@@ -74,15 +42,10 @@ export function BillingKpiStrip({
   currency,
   mixedCurrency = false,
 }: BillingKpiStripProps) {
-  const formatKpiAmount = (amount: number) => {
-    if (mixedCurrency || !currency) {
-      return new Intl.NumberFormat("en-US", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount);
-    }
-    return formatBillingMoney(amount, currency);
-  };
+  const formatKpiAmount = (amount: number) =>
+    mixedCurrency || !currency
+      ? formatKpiCurrency(amount, null, { mixed: true })
+      : formatBillingMoney(amount, currency);
 
   const values: Record<(typeof KPI_ITEMS)[number]["key"], string> = {
     revenue: formatKpiAmount(kpis.revenue),
@@ -101,7 +64,7 @@ export function BillingKpiStrip({
     label: item.label,
     value: values[item.key],
     icon: item.icon,
-    accentClass: ACCENT_TILE[item.accent],
+    accentClass: KPI_ACCENT_CLASS[item.accentKey],
     valueSemantic:
       item.key === "revenue" || item.key === "billed" || item.key === "collected"
         ? ("revenue" as const)
@@ -125,21 +88,22 @@ export function BillingKpiStrip({
   }));
 
   return (
-    <div className="space-y-2">
-      {mixedCurrency ? (
-        <p className="text-[11px] text-muted-foreground">
-          KPI totals combine multiple currencies — row-level amounts use each campaign&apos;s
-          currency.
-        </p>
-      ) : null}
+    <KpiStrip
+      items={items}
+      showNavigation={false}
+      mixedCurrencyNotice={
+        mixedCurrency
+          ? "KPI totals combine multiple currencies — row-level amounts use each campaign's currency."
+          : undefined
+      }
+    >
       {kpis.po_over_consumed_count > 0 ? (
-        <div className="flex items-center gap-2 rounded-xl border-2 border-red-500/70 bg-red-500/10 px-3 py-2 text-[11px] text-red-950 dark:text-red-50">
+        <div className="flex items-center gap-2 rounded-xl border-2 border-destructive/70 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
           <AlertTriangleIcon className="size-4 shrink-0" />
           {kpis.po_over_consumed_count} campaign
           {kpis.po_over_consumed_count === 1 ? "" : "s"} exceed approved PO.
         </div>
       ) : null}
-      <KpiCarousel items={items} showNavigation={false} />
-    </div>
+    </KpiStrip>
   );
 }

@@ -11,7 +11,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
-import { KpiCarousel, type KpiCarouselItem } from "@/components/ui/kpi-carousel";
+import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IntelligenceBenchmarksTab } from "@/features/intelligence/components/intelligence-benchmarks-tab";
 import { IntelligenceInfluencersTab } from "@/features/intelligence/components/intelligence-influencers-tab";
@@ -40,14 +40,14 @@ export function IntelligenceWorkspace({ data }: Props) {
       label: "Hist. revenue",
       value: formatUsd(data.stats.totalRevenueUsd),
       icon: TrendingUpIcon,
-      accentClass: "bg-brand-blue/10 text-brand-blue",
+      accentKey: "blue",
     },
     {
       id: "margin",
       label: "Median margin",
       value: data.stats.medianMarginPct != null ? `${data.stats.medianMarginPct.toFixed(1)}%` : "—",
       icon: PercentIcon,
-      accentClass: "bg-brand-purple/10 text-brand-purple",
+      accentKey: "purple",
       valueSemantic: "margin",
       valueNumeric: data.stats.medianMarginPct ?? undefined,
     },
@@ -56,21 +56,21 @@ export function IntelligenceWorkspace({ data }: Props) {
       label: "Vendors",
       value: String(data.stats.totalInfluencers),
       icon: UsersIcon,
-      accentClass: "bg-brand-pink/10 text-brand-pink",
+      accentKey: "pink",
     },
     {
       id: "lines",
       label: "Campaign lines",
       value: String(data.stats.totalCampaignLines),
       icon: DatabaseIcon,
-      accentClass: "bg-success/10 text-success",
+      accentKey: "green",
     },
     {
       id: "low-margin",
       label: `< ${INTELLIGENCE_MARGIN_THRESHOLD}% lines`,
       value: String(data.stats.lowMarginLineCount),
       icon: AlertTriangleIcon,
-      accentClass: "bg-amber-500/10 text-amber-600",
+      accentKey: "amber",
       valueAlert: data.stats.lowMarginLineCount > 0 ? "warning" : undefined,
     },
     {
@@ -78,7 +78,7 @@ export function IntelligenceWorkspace({ data }: Props) {
       label: "Benchmark slices",
       value: String(data.stats.benchmarkSliceCount),
       icon: BarChart3Icon,
-      accentClass: "bg-muted text-muted-foreground",
+      accentKey: "neutral",
     },
   ];
 
@@ -114,7 +114,7 @@ export function IntelligenceWorkspace({ data }: Props) {
         </div>
       ) : null}
 
-      <KpiCarousel items={kpiItems} />
+      <KpiStrip items={kpiItems} />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="h-auto w-full justify-start gap-1 rounded-2xl bg-muted/50 p-1">

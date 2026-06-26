@@ -13,6 +13,7 @@ import { OperationalTableSuiteProvider } from "@/components/tables/operational-t
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Badge } from "@/components/ui/badge";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { MetricCard } from "@/components/shared/kpi/metric-card";
 import { cn } from "@/lib/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { Label } from "@/components/ui/label";
@@ -147,19 +148,23 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
+        <MetricCard
+          layout="section"
           title="Total PO (converted)"
           value={formatMoney(data.summary.total_po_amount, "USD")}
         />
-        <KpiCard
+        <MetricCard
+          layout="section"
           title="Consumed"
           value={formatMoney(data.summary.total_consumed, "USD")}
         />
-        <KpiCard
+        <MetricCard
+          layout="section"
           title="Remaining"
           value={formatMoney(data.summary.total_remaining, "USD")}
         />
-        <KpiCard
+        <MetricCard
+          layout="section"
           title="Over-consumed"
           value={String(data.summary.over_consumed_count)}
           alert={data.summary.over_consumed_count > 0}
@@ -298,27 +303,6 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
         </OperationalTableSection>
       </OperationalTableSuiteProvider>
     </div>
-  );
-}
-
-function KpiCard({
-  title,
-  value,
-  alert,
-}: {
-  title: string;
-  value: string;
-  alert?: boolean;
-}) {
-  return (
-    <CampaignFlatSection
-      title={title}
-      className={cn(alert ? "border-destructive/40" : undefined)}
-    >
-      <p className={cn("text-2xl font-semibold", alert && "text-destructive")}>
-        {value}
-      </p>
-    </CampaignFlatSection>
   );
 }
 

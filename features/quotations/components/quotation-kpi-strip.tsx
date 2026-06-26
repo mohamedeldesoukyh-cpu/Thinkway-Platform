@@ -6,10 +6,10 @@ import {
   ReceiptIcon,
   TrendingUpIcon,
   UsersIcon,
-  type LucideIcon,
 } from "lucide-react";
 
-import { KpiCarousel, type KpiCarouselItem } from "@/components/ui/kpi-carousel";
+import { KPI_ACCENT_CLASS } from "@/components/shared/kpi/kpi-config";
+import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import { gpHealthTextClass } from "@/features/quotations/quotation-gp-health";
@@ -25,15 +25,6 @@ type QuotationKpiStripProps = {
   totalAfEgp: number;
   totalAgencyMarginEgp: number;
   gpTargetPct: number;
-};
-
-type KpiAccent = "blue" | "purple" | "pink" | "green";
-
-const ACCENT_TILE: Record<KpiAccent, string> = {
-  blue: "bg-brand-blue/10 text-brand-blue",
-  purple: "bg-brand-purple/10 text-brand-purple",
-  pink: "bg-brand-pink/10 text-brand-pink",
-  green: "bg-success/10 text-success",
 };
 
 const NEUTRAL_VALUE = "text-foreground";
@@ -64,13 +55,13 @@ export function QuotationKpiStrip({
   };
   const gpValueClass = gpHealthTextClass(gpHealthInput);
 
-  const items = [
+  const items: KpiCarouselItem[] = [
     {
       id: "creators",
       label: "Creators",
       value: String(creatorCount),
       icon: UsersIcon,
-      accentClass: ACCENT_TILE.blue,
+      accentKey: "blue",
       valueClassName: NEUTRAL_VALUE,
     },
     {
@@ -78,7 +69,7 @@ export function QuotationKpiStrip({
       label: "Est. Reach",
       value: formatCreatorCount(estimatedReach),
       icon: UsersIcon,
-      accentClass: ACCENT_TILE.green,
+      accentKey: "green",
       valueClassName: NEUTRAL_VALUE,
     },
     {
@@ -89,7 +80,7 @@ export function QuotationKpiStrip({
           ? `${estimatedEngagementRate.toFixed(1)}%`
           : "—",
       icon: HeartIcon,
-      accentClass: ACCENT_TILE.purple,
+      accentKey: "purple",
       valueClassName: NEUTRAL_VALUE,
     },
     {
@@ -97,7 +88,7 @@ export function QuotationKpiStrip({
       label: "Total Cost",
       value: egp(totalCostEgp),
       icon: ReceiptIcon,
-      accentClass: ACCENT_TILE.pink,
+      accentKey: "pink",
       valueClassName: NEUTRAL_VALUE,
     },
     {
@@ -105,7 +96,7 @@ export function QuotationKpiStrip({
       label: QUOTATION_CLIENT_LABELS.totalClientCost,
       value: egp(totalRevenueEgp),
       icon: TrendingUpIcon,
-      accentClass: ACCENT_TILE.purple,
+      accentKey: "purple",
       valueClassName: NEUTRAL_VALUE,
     },
     {
@@ -113,7 +104,7 @@ export function QuotationKpiStrip({
       label: "Gross Profit",
       value: egp(totalGpValueEgp),
       icon: TrendingUpIcon,
-      accentClass: ACCENT_TILE.green,
+      accentKey: "green",
       valueClassName: gpValueClass,
     },
     {
@@ -121,7 +112,7 @@ export function QuotationKpiStrip({
       label: "GP %",
       value: `${totalGpPct.toFixed(1)}%`,
       icon: PercentIcon,
-      accentClass: ACCENT_TILE.blue,
+      accentKey: "blue",
       valueClassName: gpValueClass,
     },
     {
@@ -129,7 +120,7 @@ export function QuotationKpiStrip({
       label: QUOTATION_CLIENT_LABELS.totalAgencyFee,
       value: egp(totalAfEgp),
       icon: ReceiptIcon,
-      accentClass: ACCENT_TILE.purple,
+      accentKey: "purple",
       valueClassName: NEUTRAL_VALUE,
     },
     {
@@ -137,17 +128,10 @@ export function QuotationKpiStrip({
       label: QUOTATION_CLIENT_LABELS.totalAgencyMargin,
       value: egp(totalAgencyMarginEgp),
       icon: TrendingUpIcon,
-      accentClass: ACCENT_TILE.green,
+      accentKey: "green",
       valueClassName: NEUTRAL_VALUE,
     },
-  ] satisfies {
-    id: string;
-    label: string;
-    value: string;
-    icon: LucideIcon;
-    accentClass: string;
-    valueClassName: string;
-  }[];
+  ];
 
-  return <KpiCarousel items={items as KpiCarouselItem[]} showNavigation={false} />;
+  return <KpiStrip items={items} showNavigation={false} />;
 }

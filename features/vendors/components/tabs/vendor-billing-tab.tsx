@@ -13,7 +13,7 @@ import {
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
-import { KpiCarousel } from "@/components/ui/kpi-carousel";
+import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { VendorBankDetailsSection } from "@/features/vendors/components/tabs/vendor-bank-details-section";
 import { VendorFinanceTab } from "@/features/vendors/components/tabs/vendor-finance-tab";
@@ -27,13 +27,6 @@ import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
 import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { VENDOR_PAYOUTS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
-
-const ACCENT_TILE = {
-  blue: "bg-brand-blue/10 text-brand-blue",
-  purple: "bg-brand-purple/10 text-brand-purple",
-  pink: "bg-brand-pink/10 text-brand-pink",
-  green: "bg-success/10 text-success",
-} as const;
 
 type PayoutRow = VendorWorkspace["payouts"][number];
 
@@ -77,48 +70,48 @@ export function VendorBillingTab({
     (workspace.payment_details as { currency?: string })?.currency ?? "USD";
   const { financials } = workspace;
 
-  const summaryItems = [
+  const summaryItems: KpiCarouselItem[] = [
     {
       id: "revenue",
       label: "Assignment revenue",
       value: formatMoney(financials.total_revenue, currency),
       icon: TrendingUpIcon,
-      accentClass: ACCENT_TILE.purple,
+      accentKey: "purple",
     },
     {
       id: "cost",
       label: "Creator cost",
       value: formatMoney(financials.total_cost, currency),
       icon: WalletIcon,
-      accentClass: ACCENT_TILE.pink,
+      accentKey: "pink",
     },
     {
       id: "gp",
       label: "GP contribution",
       value: formatMoney(financials.total_gp, currency),
       icon: TrendingUpIcon,
-      accentClass: ACCENT_TILE.green,
+      accentKey: "green",
     },
     {
       id: "invoiced",
       label: "Invoiced",
       value: formatMoney(financials.invoiced_amount, currency),
       icon: ReceiptIcon,
-      accentClass: ACCENT_TILE.blue,
+      accentKey: "blue",
     },
     {
       id: "paid",
       label: "Paid out",
       value: formatMoney(financials.paid_out, currency),
       icon: WalletIcon,
-      accentClass: ACCENT_TILE.green,
+      accentKey: "green",
     },
     {
       id: "pending",
       label: "Pending payout",
       value: formatMoney(financials.pending_payout, currency),
       icon: ReceiptIcon,
-      accentClass: ACCENT_TILE.pink,
+      accentKey: "pink",
     },
   ];
 
@@ -144,7 +137,7 @@ export function VendorBillingTab({
           embedded
         />
 
-        <KpiCarousel items={summaryItems} showNavigation={false} />
+        <KpiStrip items={summaryItems} showNavigation={false} />
 
         <VendorFormSection
           icon={ReceiptIcon}

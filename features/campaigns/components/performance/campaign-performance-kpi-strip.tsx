@@ -8,10 +8,10 @@ import {
   PercentIcon,
   TrendingUpIcon,
   UsersIcon,
-  type LucideIcon,
 } from "lucide-react";
 
-import { KpiCarousel, type KpiCarouselItem } from "@/components/ui/kpi-carousel";
+import { KPI_ACCENT_CLASS, KPI_PERFORMANCE_ACCENT } from "@/components/shared/kpi/kpi-config";
+import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import type { CampaignPerformanceSummary } from "@/features/campaigns/queries/publications";
 import {
   formatCompactCount,
@@ -23,13 +23,6 @@ type Props = {
   summary: CampaignPerformanceSummary;
 };
 
-const ACCENT = {
-  blue: "bg-[#EEF4FF] text-[#0057FF]",
-  green: "bg-[#E8F8F3] text-[#1D9E75]",
-  purple: "bg-brand-purple/10 text-brand-purple",
-  amber: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-} as const;
-
 export function CampaignPerformanceKpiStrip({ summary }: Props) {
   const items: KpiCarouselItem[] = [
     {
@@ -37,7 +30,7 @@ export function CampaignPerformanceKpiStrip({ summary }: Props) {
       label: "Total Publications",
       value: String(summary.total_publications),
       icon: MegaphoneIcon,
-      accentClass: ACCENT.blue,
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.blue],
     },
     {
       id: "reach",
@@ -45,7 +38,7 @@ export function CampaignPerformanceKpiStrip({ summary }: Props) {
       value: formatCompactCount(summary.total_reach),
       subtext: `Actual ${formatCompactCount(summary.total_actual_reach)} · Forecast ${formatCompactCount(summary.total_forecast_reach)}`,
       icon: UsersIcon,
-      accentClass: ACCENT.green,
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.green],
     },
     {
       id: "impressions",
@@ -53,50 +46,51 @@ export function CampaignPerformanceKpiStrip({ summary }: Props) {
       value: formatCompactCount(summary.total_impressions),
       subtext: `Actual ${formatCompactCount(summary.total_actual_impressions)} · Forecast ${formatCompactCount(summary.total_forecast_impressions)}`,
       icon: EyeIcon,
-      accentClass: ACCENT.purple,
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.purple],
     },
     {
       id: "views",
       label: "Total Views",
       value: formatCompactCount(summary.total_views),
       icon: BarChart3Icon,
-      accentClass: ACCENT.blue,
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.blue],
     },
     {
       id: "engagements",
       label: "Total Engagements",
       value: formatCompactCount(summary.total_engagements),
       icon: HeartIcon,
-      accentClass: ACCENT.green,
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.green],
     },
     {
       id: "er",
       label: "Average ER",
       value: formatPercent(summary.average_engagement_rate),
       icon: PercentIcon,
-      accentClass: ACCENT.amber,
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.amber],
     },
     {
       id: "cpm",
       label: "CPM",
       value: formatMoneyValue(summary.average_cpm, summary.currency),
       icon: TrendingUpIcon,
-      accentClass: ACCENT.purple,
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.purple],
     },
     {
       id: "cpv",
       label: "CPV",
       value: formatMoneyValue(summary.average_cpv, summary.currency),
       icon: TrendingUpIcon,
-      accentClass: ACCENT.blue,
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.blue],
     },
     {
       id: "top",
       label: "Top Performing Creator",
       value: summary.top_creator_name ?? "—",
       icon: UsersIcon,
-      accentClass: ACCENT.green,
-    },  ];
+      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.green],
+    },
+  ];
 
-  return <KpiCarousel items={items} />;
+  return <KpiStrip items={items} />;
 }

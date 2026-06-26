@@ -7,7 +7,7 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { KpiCarousel, type KpiCarouselItem } from "@/components/ui/kpi-carousel";
+import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import type { CampaignsKpis } from "@/features/campaigns/queries";
 import { formatMoney } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
@@ -17,13 +17,6 @@ type CampaignsKpiStripProps = {
   className?: string;
 };
 
-const ACCENT_TILE = {
-  blue: "bg-brand-blue/10 text-brand-blue",
-  purple: "bg-brand-purple/10 text-brand-purple",
-  pink: "bg-brand-pink/10 text-brand-pink",
-  green: "bg-success/10 text-success",
-} as const;
-
 export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
   const items: KpiCarouselItem[] = [
     {
@@ -31,7 +24,7 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
       label: "Total campaigns",
       value: String(kpis.total_campaigns),
       icon: MegaphoneIcon,
-      accentClass: ACCENT_TILE.blue,
+      accentKey: "blue",
       valueSemantic: "count",
     },
     {
@@ -39,7 +32,7 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
       label: "Total revenue",
       value: formatMoney(kpis.total_revenue, kpis.currency_code),
       icon: WalletIcon,
-      accentClass: ACCENT_TILE.purple,
+      accentKey: "purple",
       valueSemantic: "revenue",
     },
     {
@@ -47,7 +40,7 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
       label: "Avg margin",
       value: `${kpis.avg_margin.toFixed(1)}%`,
       icon: TrendingUpIcon,
-      accentClass: ACCENT_TILE.pink,
+      accentKey: "pink",
       valueSemantic: "margin",
       valueNumeric: kpis.avg_margin,
     },
@@ -56,13 +49,13 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
       label: "Assignments",
       value: String(kpis.assignments),
       icon: UsersIcon,
-      accentClass: ACCENT_TILE.green,
+      accentKey: "green",
       valueSemantic: "count",
     },
   ];
 
   return (
-    <KpiCarousel
+    <KpiStrip
       items={items}
       showNavigation={false}
       className={cn("pb-1", className)}

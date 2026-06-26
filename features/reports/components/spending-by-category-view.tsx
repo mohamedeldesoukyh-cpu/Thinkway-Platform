@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 
+import { MetricCard } from "@/components/shared/kpi/metric-card";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   SpendingByCategoryControls,
@@ -35,30 +36,6 @@ function formatPercent(value: number): string {
 
 function formatAmountOrDash(value: number): string {
   return value === 0 ? "—" : formatAmount(value);
-}
-
-function KpiCard({
-  label,
-  value,
-  subtext,
-}: {
-  label: string;
-  value: string;
-  subtext?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border/70 bg-card px-4 py-3 shadow-sm">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-foreground">
-        {value}
-      </p>
-      {subtext ? (
-        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{subtext}</p>
-      ) : null}
-    </div>
-  );
 }
 
 function SummaryTable({
@@ -299,23 +276,23 @@ export function SpendingByCategoryView({ report }: Props) {
   const kpiStrip = useMemo(
     () => (
       <div className="grid gap-3 sm:grid-cols-3">
-        <KpiCard
-          label="Total spending"
+        <MetricCard
+          title="Total spending"
           value={`${formatAmount(report.kpis.total_spending)} ${report.display_currency}`}
         />
-        <KpiCard
-          label="Categories"
+        <MetricCard
+          title="Categories"
           value={String(report.kpis.category_count)}
-          subtext={
+          subtitle={
             report.group_by === "subcategory"
               ? `${report.summary_rows.length} subcategory rows`
               : undefined
           }
         />
-        <KpiCard
-          label="Top category share"
+        <MetricCard
+          title="Top category share"
           value={formatPercent(report.kpis.top_category_share_percent)}
-          subtext={report.kpis.top_category_label ?? "No data"}
+          subtitle={report.kpis.top_category_label ?? "No data"}
         />
       </div>
     ),

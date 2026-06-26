@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { TreasuryTrendChart } from "@/components/collections/charts/treasury-trend-chart";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { MetricCard } from "@/components/shared/kpi/metric-card";
 import type { TreasuryDashboardPayload } from "@/lib/treasury/load-treasury-dashboard";
 import { devLog } from "@/lib/platform/logger";
 
@@ -30,12 +30,12 @@ export function TreasuryDashboardView({ data }: TreasuryDashboardViewProps) {
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {data.kpis.map((kpi) => (
-          <Card key={kpi.id} className="shadow-sm">
-            <CardContent className="p-3">
-              <p className="text-xs text-muted-foreground">{kpi.label}</p>
-              <p className="font-heading text-lg font-semibold">{kpi.formatted}</p>
-            </CardContent>
-          </Card>
+          <MetricCard
+            key={kpi.id}
+            layout="card"
+            title={kpi.label}
+            value={kpi.formatted}
+          />
         ))}
       </div>
 
