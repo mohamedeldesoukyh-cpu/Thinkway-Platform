@@ -34,6 +34,7 @@ import {
   OperationalEditPanelHeader,
 } from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import type { CampaignStatus } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 
 type CampaignEditSheetProps = {

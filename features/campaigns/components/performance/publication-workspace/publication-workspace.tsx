@@ -255,10 +255,12 @@ export function PublicationWorkspace({
     );
   }
 
+  const publicationRow = row;
+
   const previewUrl = resolvePublicationContentPreviewUrl(row);
   const provider = row.metrics_provider ?? row.metrics_collection_source ?? "—";
   const lastSync = row.last_synced_at ?? row.metrics_refresh_attempted_at;
-  const sourceBadge = metricsSourceBadge(row.metrics_provider, row.engagement_rate_method);
+  const sourceBadge = metricsSourceBadge(row.metrics_provider, row.engagement_rate_method as EngagementRateMethod | null);
   const sourceBadgeLabel = metricsSourceBadgeLabel(sourceBadge);
   const igPhotoNoViews =
     isInstagramPhotoOrCarousel(row.platform, row.publication_type) && row.views == null;
@@ -284,7 +286,7 @@ export function PublicationWorkspace({
     startTransition(async () => {
       const result = await savePublicationDetailsAction({
         campaignId,
-        publicationId: row.id,
+        publicationId: publicationRow.id,
         details: {
           publication_date:
             publicationDetails.publication_date.trim() === ""
@@ -304,7 +306,7 @@ export function PublicationWorkspace({
       const parseNum = (v: string) => (v.trim() === "" ? null : Number(v.replace(/,/g, "")));
       const result = await saveManualPublicationMetricsAction({
         campaignId,
-        publicationId: row.id,
+        publicationId: publicationRow.id,
         metrics: {
           views: parseNum(manualMetrics.views),
           reach: parseNum(manualMetrics.reach),
@@ -326,7 +328,7 @@ export function PublicationWorkspace({
     startTransition(async () => {
       const result = await restoreAutomaticPublicationMetricsAction({
         campaignId,
-        publicationId: row.id,
+        publicationId: publicationRow.id,
       });
       if (result.ok) {
         toast.success(result.message);
@@ -339,7 +341,7 @@ export function PublicationWorkspace({
     startTransition(async () => {
       const result = await requestPublicationScreenshotAction({
         campaignId,
-        publicationId: row.id,
+        publicationId: publicationRow.id,
       });
       if (result.ok) toast.success(result.message);
       else toast.error(result.message);
@@ -683,7 +685,7 @@ export function PublicationWorkspace({
               {kpiCards
                 .filter(([label]) => label !== "Reach" && label !== "Impressions")
                 .map(([label, value]) => (
-                <MetricCard key={label} label={label} value={value} sub={`Provider: ${provider}`} />
+                <MetricCard key={label} label={label} value={value ?? "-"} sub={`Provider: ${provider}`} />
               ))}
             </div>
           </TabsContent>

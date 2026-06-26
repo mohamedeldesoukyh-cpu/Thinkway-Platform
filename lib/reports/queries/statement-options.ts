@@ -82,7 +82,7 @@ export async function searchStatementClientsByGroup(
     .order("name");
 
   if (options.groupId) {
-    query = applyGroupIdColumnFilter(query, options.groupId);
+    query = applyGroupIdColumnFilter(query as never, options.groupId) as typeof query;
   }
 
   if (clientType === "agency") {

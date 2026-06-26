@@ -102,6 +102,9 @@ type ShortlistCommercialRow = {
   gp_pct: number | null;
   revenue: number | null;
   gp_value: number | null;
+  cost_egp?: number | null;
+  revenue_egp?: number | null;
+  gp_value_egp?: number | null;
   deliverables: unknown;
   sort_order: number;
 };

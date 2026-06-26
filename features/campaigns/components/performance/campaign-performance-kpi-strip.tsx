@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { KpiCarousel } from "@/components/ui/kpi-carousel";
+import { KpiCarousel, type KpiCarouselItem } from "@/components/ui/kpi-carousel";
 import type { CampaignPerformanceSummary } from "@/features/campaigns/queries/publications";
 import {
   formatCompactCount,
@@ -31,7 +31,7 @@ const ACCENT = {
 } as const;
 
 export function CampaignPerformanceKpiStrip({ summary }: Props) {
-  const items = [
+  const items: KpiCarouselItem[] = [
     {
       id: "pubs",
       label: "Total Publications",
@@ -96,14 +96,7 @@ export function CampaignPerformanceKpiStrip({ summary }: Props) {
       value: summary.top_creator_name ?? "—",
       icon: UsersIcon,
       accentClass: ACCENT.green,
-    },
-  ] satisfies {
-    id: string;
-    label: string;
-    value: string;
-    icon: LucideIcon;
-    accentClass: string;
-  }[];
+    },  ];
 
   return <KpiCarousel items={items} />;
 }

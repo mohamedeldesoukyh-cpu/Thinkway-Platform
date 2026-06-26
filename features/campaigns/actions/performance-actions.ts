@@ -368,7 +368,7 @@ export async function importPublicationMetricsAction(input: {
     const metrics = parseMetricsImportRow(row);
     if (!hasImportMetrics(metrics)) continue;
 
-    let targetId = publicationId;
+    let targetId: string | undefined = publicationId || undefined;
     if (!targetId && contentUrl) {
       const { data: match } = await supabase
         .from("campaign_publications")
@@ -376,7 +376,7 @@ export async function importPublicationMetricsAction(input: {
         .eq("campaign_header_id", input.campaignId)
         .eq("content_url", contentUrl)
         .maybeSingle();
-      targetId = match?.id;
+      targetId = match?.id ?? undefined;
     }
 
     if (!targetId) continue;
@@ -538,9 +538,10 @@ export async function loadPublicationSyncLogsAction(input: {
 
   if (error) return { ok: false, logs: [], error: error.message };
 
+  const rows = (data ?? []) as PublicationMetricSyncLogRow[];
   return {
     ok: true,
-    logs: (data ?? []).map((row) => ({
+    logs: rows.map((row) => ({
       id: row.id,
       created_at: row.created_at,
       provider: row.provider,

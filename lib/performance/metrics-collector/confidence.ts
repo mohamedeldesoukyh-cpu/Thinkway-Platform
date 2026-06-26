@@ -16,6 +16,8 @@ export const PROVIDER_CONFIDENCE: Record<MetricsProviderId, number> = {
   playwright: 70,
   youtube_public_metadata: 75,
   manual_import: 100,
+  manual: 100,
+  engagement_engine: 85,
 };
 
 export function confidenceForProvider(provider: MetricsProviderId | null): number | null {

@@ -15,3 +15,5 @@ function testAllowedLineFilter() {
 
 testAllowedLineFilter();
 console.log("invoice-regeneration-selection: 1 passed");
+
+export {};

@@ -42,6 +42,16 @@ const PROVIDERS: Record<
     available: false,
     skippedReason: "Manual import is not an automated provider.",
   }),
+  manual: async () => ({
+    provider: "manual",
+    available: false,
+    skippedReason: "Manual entry is not an automated provider.",
+  }),
+  engagement_engine: async () => ({
+    provider: "engagement_engine",
+    available: false,
+    skippedReason: "Engagement engine runs outside the provider chain.",
+  }),
 };
 
 export async function runProvider(

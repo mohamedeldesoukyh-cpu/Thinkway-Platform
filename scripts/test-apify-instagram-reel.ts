@@ -87,6 +87,9 @@ async function main() {
       apifyToken: env.apifyToken,
       apifyInstagramActorId: env.apifyInstagramActorId,
       apifyTikTokActorId: env.apifyTikTokActorId,
+      apifyFacebookActorId: env.apifyFacebookActorId ?? null,
+      apifyYouTubeActorId: env.apifyYouTubeActorId ?? null,
+      apifySnapchatActorId: env.apifySnapchatActorId ?? null,
     },
   });
   const durationMs = Date.now() - started;

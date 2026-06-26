@@ -71,8 +71,8 @@ export function isRedisConfigured(): boolean {
   return Boolean(getRedisUrl());
 }
 
-function createQueueConnection(url: string): IORedis {
-  return new IORedis(url, { maxRetriesPerRequest: null });
+function createQueueConnection(url: string): { url: string } {
+  return { url };
 }
 
 export async function checkRedisHealth(): Promise<RedisHealth> {
@@ -164,7 +164,6 @@ export async function getQueueStats(queueName: string): Promise<QueueStats> {
     };
   } finally {
     await queue.close();
-    connection.disconnect();
   }
 }
 
@@ -233,7 +232,6 @@ export async function getQueueFailureBreakdown(queueName: string): Promise<Queue
     };
   } finally {
     await queue.close();
-    connection.disconnect();
   }
 }
 
@@ -263,15 +261,15 @@ export async function cleanCampaignPerformanceQueue(queueName: string): Promise<
   const queue = new Queue(queueName, { connection });
 
   try {
-    const cleanedFailed = await queue.clean(0, 10_000, "failed");
-    const cleanedCompleted = await queue.clean(0, 10_000, "completed");
-    const cleanedDelayed = await queue.clean(DELAYED_JOB_MAX_AGE_MS, 10_000, "delayed");
+    const cleanedFailedJobs = await queue.clean(0, 10_000, "failed");
+    const cleanedCompletedJobs = await queue.clean(0, 10_000, "completed");
+    const cleanedDelayedJobs = await queue.clean(DELAYED_JOB_MAX_AGE_MS, 10_000, "delayed");
 
     return {
       name: queueName,
-      cleanedFailed,
-      cleanedCompleted,
-      cleanedDelayed,
+      cleanedFailed: cleanedFailedJobs.length,
+      cleanedCompleted: cleanedCompletedJobs.length,
+      cleanedDelayed: cleanedDelayedJobs.length,
     };
   } catch (error) {
     return {
@@ -283,7 +281,6 @@ export async function cleanCampaignPerformanceQueue(queueName: string): Promise<
     };
   } finally {
     await queue.close();
-    connection.disconnect();
   }
 }
 

@@ -1207,6 +1207,20 @@ export type Database = {
           engagement_likes: number | null;
           engagement_comments: number | null;
           engagement_shares: number | null;
+          metrics_refresh_status: string;
+          metrics_refresh_attempted_at: string | null;
+          metrics_collection_source: string | null;
+          engagements: number | null;
+          metrics_provider: string | null;
+          metrics_confidence: number | null;
+          metrics_next_refresh_at: string | null;
+          engagement_rate_method: string | null;
+          screenshot_url: string | null;
+          screenshot_captured_at: string | null;
+          screenshot_source: string | null;
+          reach_source: string | null;
+          forecast_reach: number | null;
+          actual_reach: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -1237,6 +1251,20 @@ export type Database = {
           engagement_likes?: number | null;
           engagement_comments?: number | null;
           engagement_shares?: number | null;
+          metrics_refresh_status?: string;
+          metrics_refresh_attempted_at?: string | null;
+          metrics_collection_source?: string | null;
+          engagements?: number | null;
+          metrics_provider?: string | null;
+          metrics_confidence?: number | null;
+          metrics_next_refresh_at?: string | null;
+          engagement_rate_method?: string | null;
+          screenshot_url?: string | null;
+          screenshot_captured_at?: string | null;
+          screenshot_source?: string | null;
+          reach_source?: string | null;
+          forecast_reach?: number | null;
+          actual_reach?: number | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["campaign_publications"]["Insert"]
@@ -1251,6 +1279,69 @@ export type Database = {
           },
           {
             foreignKeyName: "campaign_publications_campaign_header_id_fkey";
+            columns: ["campaign_header_id"];
+            isOneToOne: false;
+            referencedRelation: "campaign_headers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      publication_metric_sync_logs: {
+        Row: {
+          id: string;
+          publication_id: string;
+          campaign_header_id: string;
+          status: string;
+          metrics_refresh_status: string | null;
+          provider: string;
+          attempt_order: number;
+          message: string | null;
+          error_code: string | null;
+          metrics_snapshot: Json | null;
+          triggered_by: string | null;
+          created_at: string;
+          completed_at: string | null;
+          response_summary: Json | null;
+          duration_ms: number | null;
+          previous_er: number | null;
+          new_er: number | null;
+          previous_method: string | null;
+          new_method: string | null;
+        };
+        Insert: {
+          id?: string;
+          publication_id: string;
+          campaign_header_id: string;
+          status: string;
+          metrics_refresh_status?: string | null;
+          provider: string;
+          attempt_order?: number;
+          message?: string | null;
+          error_code?: string | null;
+          metrics_snapshot?: Json | null;
+          triggered_by?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+          response_summary?: Json | null;
+          duration_ms?: number | null;
+          previous_er?: number | null;
+          new_er?: number | null;
+          previous_method?: string | null;
+          new_method?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["publication_metric_sync_logs"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "publication_metric_sync_logs_publication_id_fkey";
+            columns: ["publication_id"];
+            isOneToOne: false;
+            referencedRelation: "campaign_publications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "publication_metric_sync_logs_campaign_header_id_fkey";
             columns: ["campaign_header_id"];
             isOneToOne: false;
             referencedRelation: "campaign_headers";
@@ -1683,7 +1774,9 @@ export type Database = {
           entity_type: string;
           entity_id: string | null;
           actor_id: string | null;
+          old_data: Record<string, unknown> | null;
           new_data: Record<string, unknown> | null;
+          metadata: Record<string, unknown> | null;
           created_at: string;
         };
         Insert: {
@@ -2644,6 +2737,10 @@ export type Database = {
       sync_campaign_header_po_consumption: {
         Args: { p_header_id: string };
         Returns: undefined;
+      };
+      list_public_table_columns: {
+        Args: { p_table: string };
+        Returns: { column_name: string }[];
       };
     };
     Enums: {

@@ -4,6 +4,7 @@ import {
   METRICS_SYNC_POLL_INTERVAL_MS,
   publicationsNeedMetricsSyncPoll,
   SCREENSHOT_CAPTURE_POLL_WINDOW_MS,
+  type PublicationSyncPollRow,
 } from "@/features/campaigns/hooks/metrics-sync-poll-policy";
 import { resolvePublicationCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { PLATFORM_ICON_STYLES } from "@/lib/performance/platform-icon";
@@ -93,26 +94,34 @@ assert.notEqual(PLATFORM_ICON_STYLES.tiktok?.imageUrl, PLATFORM_ICON_STYLES.inst
 
 // --- Collecting / queued statuses should keep polling active ---
 assert.equal(
-  publicationsNeedMetricsSyncPoll([{ metrics_refresh_status: "collecting" }]),
+  publicationsNeedMetricsSyncPoll([
+    { metrics_refresh_status: "collecting" },
+  ] as PublicationSyncPollRow[]),
   true
 );
 assert.equal(
-  publicationsNeedMetricsSyncPoll([{ metrics_refresh_status: "queued" }]),
+  publicationsNeedMetricsSyncPoll([
+    { metrics_refresh_status: "queued" },
+  ] as PublicationSyncPollRow[]),
   true
 );
 assert.equal(
-  publicationsNeedMetricsSyncPoll([{ metrics_refresh_status: "pending" }]),
+  publicationsNeedMetricsSyncPoll([
+    { metrics_refresh_status: "pending" },
+  ] as PublicationSyncPollRow[]),
   true
 );
 assert.equal(
-  publicationsNeedMetricsSyncPoll([{ metrics_refresh_status: "completed" }]),
+  publicationsNeedMetricsSyncPoll([
+    { metrics_refresh_status: "completed" },
+  ] as PublicationSyncPollRow[]),
   false
 );
 assert.equal(
   publicationsNeedMetricsSyncPoll([
     { metrics_refresh_status: "completed" },
     { metrics_refresh_status: "collecting" },
-  ]),
+  ] as PublicationSyncPollRow[]),
   true
 );
 assert.equal(METRICS_SYNC_POLL_INTERVAL_MS, 4_000);

@@ -1,5 +1,4 @@
 import { Queue } from "bullmq";
-import IORedis from "ioredis";
 
 import { CAMPAIGN_PERFORMANCE_JOB_OPTIONS } from "@/lib/performance/campaign-performance-queue-options";
 
@@ -29,7 +28,7 @@ function getQueue(): Queue<PublicationMetricsJobData> | null {
 
   if (!queue) {
     queue = new Queue(PUBLICATION_METRICS_QUEUE, {
-      connection: new IORedis(redisUrl, { maxRetriesPerRequest: null }),
+      connection: { url: redisUrl },
     });
   }
   return queue;

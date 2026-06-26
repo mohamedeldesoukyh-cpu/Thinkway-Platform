@@ -44,7 +44,9 @@ export type ScreenshotCaptureTrigger =
   | "metrics_collected"
   | "manual_refresh"
   | "bulk_refresh"
-  | "scheduled_worker";
+  | "scheduled_worker"
+  | "screenshot_audit_requeue"
+  | "refresh_affected_creator_metrics";
 
 export type PublicationScreenshotJobData = {
   publicationId: string;

@@ -14,6 +14,7 @@ import { OperationalTableControlsSlot } from "@/components/tables/operational-da
 import { Badge } from "@/components/ui/badge";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { cn } from "@/lib/utils";
+import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { Label } from "@/components/ui/label";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {

@@ -173,7 +173,7 @@ async function main(): Promise<void> {
       triggeredBy: "refresh_affected_creator_metrics",
     });
 
-    let outcomeStatus = queueResult.mode;
+    let outcomeStatus: string = queueResult.mode;
     if (queueResult.mode === "inline" && queueResult.outcome) {
       outcomeStatus = queueResult.outcome.status;
     }

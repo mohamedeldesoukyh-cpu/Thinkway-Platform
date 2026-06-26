@@ -79,7 +79,13 @@ export async function getClientOnboardingTimeline(
     return [];
   }
 
-  const actorIds = [...new Set((logs ?? []).map((log) => log.actor_id).filter(Boolean))];
+  const actorIds = [
+    ...new Set(
+      (logs ?? [])
+        .map((log) => log.actor_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
   const actorNameById = new Map<string, string>();
 
   if (actorIds.length > 0) {

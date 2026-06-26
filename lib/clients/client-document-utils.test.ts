@@ -67,7 +67,6 @@ const safeWithErrors = toJsonSafeFormActionState({
   message: "Please fix the errors below.",
   fieldErrors: {
     file: ["File is required"],
-    client_id: undefined,
   },
 });
 assert.deepEqual(safeWithErrors.fieldErrors, { file: ["File is required"] });

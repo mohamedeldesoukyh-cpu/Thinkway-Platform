@@ -158,7 +158,6 @@ export async function upsertImportedCreators(
             sync_source: "discovery_import",
             metrics_source: normalized.metrics_source,
             metrics_is_manual_override: normalized.metrics_is_manual_override,
-            updated_at: new Date().toISOString(),
           })
           .eq("id", existing.id);
 
@@ -179,7 +178,9 @@ export async function upsertImportedCreators(
         if (Object.keys(influencerPatch).length > 0) {
           const { error: influencerError } = await ctx.supabase
             .from("influencers")
-            .update(influencerPatch)
+            .update(
+              influencerPatch as Database["public"]["Tables"]["influencers"]["Update"]
+            )
             .eq("id", existing.influencer_id);
           if (influencerError) throw new Error(influencerError.message);
         }

@@ -137,7 +137,7 @@ export function storedReachContextFromPublication(
     normalizedSource = null;
   }
   return {
-    reach_source: normalizedSource,
+    reach_source: normalizedSource as ReachSource | null,
     stored_actual_reach: storedActualReach,
     stored_forecast_reach: sanitizeMetricValue(row.forecast_reach),
     stored_reach: storedReach,
@@ -170,7 +170,7 @@ export function storedImpressionsContextFromPublication(
     normalizedSource = null;
   }
   return {
-    impressions_source: normalizedSource,
+    impressions_source: normalizedSource as ImpressionsSource | null,
     stored_actual_impressions: storedActualImpressions,
     stored_forecast_impressions: sanitizeMetricValue(row.forecast_impressions),
     stored_impressions: storedImpressions,

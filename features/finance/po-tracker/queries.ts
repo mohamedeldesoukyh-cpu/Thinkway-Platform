@@ -1,4 +1,5 @@
 import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
 
@@ -183,7 +184,7 @@ export async function getPoTrackerWorkspace(
       clients: clientsRes.data ?? [],
       brands: brandsRes.data ?? [],
       campaigns: campaignsRes.data ?? [],
-      currencies: masterData.currencies.map((c) => ({
+      currencies: masterData.currencies.map((c: { code: string; name: string }) => ({
         code: c.code,
         name: c.name,
       })),
