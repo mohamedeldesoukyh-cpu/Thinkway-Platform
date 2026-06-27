@@ -31,6 +31,8 @@ import {
   createQuotationFromShortlist,
 } from "@/features/quotations/actions";
 import { quotationDetailPath } from "@/features/quotations/constants";
+import { generateQuotationVersion } from "@/features/quotations/lifecycle-actions";
+import { canGenerateQuotationVersion } from "@/lib/commercial-sync/rules";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CreatorMovementAction } from "@/types/database";
@@ -70,6 +72,10 @@ import type {
 import { AddCreatorsDrawer } from "./add-creators-drawer";
 import { GenerateQuotationShortlistDialog } from "./generate-quotation-shortlist-dialog";
 import { MoveToCampaignDialog } from "./move-to-campaign-dialog";
+import {
+  ShortlistQuotationActions,
+  ShortlistQuotationPanel,
+} from "./shortlist-quotation-panel";
 import { ShortlistBulkToolbar } from "./shortlist-bulk-toolbar";
 import { ShortlistCreatorList } from "./shortlist-creator-list";
 import { SubmitShortlistDialog } from "./submit-shortlist-dialog";
@@ -114,6 +120,9 @@ export function ShortlistWorkspace({
   const editable = canEditCreators(detail.status) && !detail.is_archived;
   const movable = canMoveToCampaign(detail.status);
   const selectable = !detail.is_archived && detail.creators.length > 0;
+  const linkedQuotations = detail.linkedQuotations;
+  const hasLinkedQuotation = linkedQuotations.length > 0;
+  const latestQuotation = linkedQuotations[0] ?? null;
 
   const visibleItemIds = useMemo(
     () => detail.creators.map((item) => item.item_id),
@@ -215,6 +224,30 @@ export function ShortlistWorkspace({
     setQuoteAllOpen(true);
   }
 
+  function handleGenerateNewVersion() {
+    if (!latestQuotation) {
+      handleGenerateQuotation();
+      return;
+    }
+    if (canGenerateQuotationVersion(latestQuotation.status)) {
+      startTransition(async () => {
+        const res = await generateQuotationVersion({ quotationId: latestQuotation.id });
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+        toast.success(res.message ?? "New version created.");
+        if (res.data?.newQuotationId) {
+          router.push(quotationDetailPath(res.data.newQuotationId));
+        } else {
+          router.refresh();
+        }
+      });
+      return;
+    }
+    handleGenerateQuotation();
+  }
+
   function handleAddToQuotation(itemId: string) {
     startTransition(async () => {
       const res = await addShortlistCreatorsToQuotation({
@@ -299,7 +332,7 @@ export function ShortlistWorkspace({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <p className="font-mono text-xs text-muted-foreground">
@@ -406,6 +439,13 @@ export function ShortlistWorkspace({
               ) : null}
             </div>
           </div>
+          {hasLinkedQuotation ? (
+            <ShortlistQuotationPanel
+              quotations={linkedQuotations}
+              onGenerateNewVersion={handleGenerateNewVersion}
+              busy={isPending}
+            />
+          ) : null}
         </CardHeader>
       </Card>
 
@@ -442,15 +482,23 @@ export function ShortlistWorkspace({
             <div className="flex flex-wrap items-center gap-2">
               {detail.creators.length > 0 ? (
                 <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleGenerateQuotation}
-                    disabled={isPending}
-                  >
-                    <FileTextIcon className="size-4" />
-                    Generate quotation
-                  </Button>
+                  {hasLinkedQuotation ? (
+                    <ShortlistQuotationActions
+                      quotations={linkedQuotations}
+                      onGenerateNewVersion={handleGenerateNewVersion}
+                      busy={isPending}
+                    />
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleGenerateQuotation}
+                      disabled={isPending}
+                    >
+                      <FileTextIcon className="size-4" />
+                      Generate quotation
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={handleCompare} disabled={isPending}>
                     <GitCompareArrowsIcon className="size-4" />
                     Compare

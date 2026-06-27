@@ -402,6 +402,18 @@ export async function findOpenQuotationForShortlistQuery(
     .maybeSingle();
 }
 
+export async function listQuotationsByShortlistQuery(
+  supabase: SupabaseClient<Database>,
+  shortlistId: string
+) {
+  return supabase
+    .from("quotations")
+    .select("id, serial_number, name, status, version_number, created_at")
+    .eq("shortlist_id", shortlistId)
+    .eq("is_archived", false)
+    .order("created_at", { ascending: false });
+}
+
 export async function loadQuotationRow(
   supabase: SupabaseClient<Database>,
   id: string

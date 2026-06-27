@@ -40,9 +40,12 @@ import type { ActionResult, QuotationDeliverable } from "./types";
 
 type Supabase = SupabaseClient<Database>;
 
-function revalidate(id?: string) {
+const SHORTLIST_LIST_PATH = "/discovery/shortlists";
+
+function revalidate(id?: string, shortlistId?: string) {
   revalidatePath(QUOTATIONS_LIST_PATH);
   if (id) revalidatePath(quotationDetailPath(id));
+  if (shortlistId) revalidatePath(`${SHORTLIST_LIST_PATH}/${shortlistId}`);
 }
 
 async function getActor(): Promise<
@@ -105,7 +108,7 @@ export async function createQuotationFromShortlist(
     shortlistId,
     options
   );
-  if (result.ok && result.data?.id) revalidate(result.data.id);
+  if (result.ok && result.data?.id) revalidate(result.data.id, shortlistId);
   return result;
 }
 
@@ -117,7 +120,7 @@ export async function importShortlistItemsToQuotation(input: {
   const actor = await getActor();
   if (!actor.ok) return actor;
   const result = await importShortlistItemsToQuotationService(actor.supabase, input);
-  if (result.ok) revalidate(input.quotationId);
+  if (result.ok) revalidate(input.quotationId, input.shortlistId);
   return result;
 }
 
@@ -132,7 +135,9 @@ export async function addShortlistCreatorsToQuotation(input: {
     actor.userId,
     input
   );
-  if (result.ok && result.data?.quotationId) revalidate(result.data.quotationId);
+  if (result.ok && result.data?.quotationId) {
+    revalidate(result.data.quotationId, input.shortlistId);
+  }
   return result;
 }
 

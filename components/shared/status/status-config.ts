@@ -208,6 +208,17 @@ export const CREATOR_ENRICHMENT_STATUS_TONE = {
   skipped: "neutral",
 } as const satisfies Record<string, SemanticStatusTone>;
 
+export const QUOTATION_STATUS_TONE = {
+  draft: "neutral",
+  under_review: "warning",
+  approved: "success",
+  sent: "foreground",
+  accepted: "success",
+  rejected: "destructive",
+  cancelled: "destructive",
+  archived: "neutral",
+} as const satisfies Record<string, SemanticStatusTone>;
+
 export const SHORTLIST_STATUS_TONE = {
   draft: "neutral",
   under_review: "warning",
@@ -265,6 +276,7 @@ export const STATUS_TONE_MAPS = {
   import: IMPORT_STATUS_TONE,
   platformSync: PLATFORM_SYNC_STATUS_TONE,
   creatorEnrichment: CREATOR_ENRICHMENT_STATUS_TONE,
+  quotation: QUOTATION_STATUS_TONE,
   shortlist: SHORTLIST_STATUS_TONE,
   shortlistItem: SHORTLIST_ITEM_STATUS_TONE,
   shortlistAssignment: SHORTLIST_ASSIGNMENT_STATUS_TONE,

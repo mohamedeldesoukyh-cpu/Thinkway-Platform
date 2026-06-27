@@ -1,6 +1,7 @@
 import type {
   CampaignShortlistAssignmentStatus,
   CreatorMovementAction,
+  QuotationStatus,
   ShortlistItemStatus,
   ShortlistStatus,
   ShortlistVisibilityV2,
@@ -52,6 +53,15 @@ export type ShortlistMovementRow = {
   performed_by_name: string | null;
 };
 
+export type ShortlistLinkedQuotation = {
+  id: string;
+  serial_number: string | null;
+  name: string;
+  status: QuotationStatus;
+  version_number: number;
+  created_at: string;
+};
+
 export type ShortlistMovedAssignment = {
   assignment_id: string;
   campaign_header_id: string;
@@ -88,6 +98,7 @@ export type ShortlistDetail = {
   creators: ShortlistCreatorItem[];
   movements: ShortlistMovementRow[];
   movedAssignments: ShortlistMovedAssignment[];
+  linkedQuotations: ShortlistLinkedQuotation[];
   canManage: boolean;
   canApprove: boolean;
 };

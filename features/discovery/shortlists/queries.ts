@@ -9,6 +9,8 @@ import {
   hasPermission,
 } from "@/lib/auth/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { listQuotationsByShortlistQuery } from "@/lib/services/quotations/repositories/quotation-repository";
+import type { QuotationStatus } from "@/types/database";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
 import type {
@@ -16,6 +18,7 @@ import type {
   ShortlistCampaignOption,
   ShortlistCreatorItem,
   ShortlistDetail,
+  ShortlistLinkedQuotation,
   ShortlistListRow,
   ShortlistMovedAssignment,
   ShortlistMovementRow,
@@ -269,6 +272,30 @@ async function loadMovedAssignments(
   });
 }
 
+async function loadLinkedQuotations(
+  supabase: Supabase,
+  shortlistId: string
+): Promise<ShortlistLinkedQuotation[]> {
+  const { data, error } = await listQuotationsByShortlistQuery(supabase, shortlistId);
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as Array<{
+    id: string;
+    serial_number: string | null;
+    name: string;
+    status: QuotationStatus;
+    version_number: number;
+    created_at: string;
+  }>).map((row) => ({
+    id: row.id,
+    serial_number: row.serial_number,
+    name: row.name,
+    status: row.status,
+    version_number: row.version_number ?? 1,
+    created_at: row.created_at,
+  }));
+}
+
 export async function getShortlistDetail(
   shortlistId: string
 ): Promise<ShortlistDetail | null> {
@@ -304,12 +331,14 @@ export async function getShortlistDetail(
     cancellation_reason: string | null;
   };
 
-  const [auth, isAdmin, creators, movements, movedAssignments] = await Promise.all([
+  const [auth, isAdmin, creators, movements, movedAssignments, linkedQuotations] =
+    await Promise.all([
     getAuthContext(supabase),
     hasPermission(supabase, SHORTLIST_PERMISSIONS.admin),
     loadShortlistCreators(supabase, shortlistId),
     loadShortlistMovements(supabase, shortlistId),
     loadMovedAssignments(supabase, shortlistId),
+    loadLinkedQuotations(supabase, shortlistId),
   ]);
 
   const names = await nameMap(
@@ -351,6 +380,7 @@ export async function getShortlistDetail(
     creators,
     movements,
     movedAssignments,
+    linkedQuotations,
     canManage: isOwner || isAdmin || isPrivilegedRole,
     canApprove: isAdmin || isPrivilegedRole,
   };
