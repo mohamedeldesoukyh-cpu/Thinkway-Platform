@@ -84,4 +84,20 @@ assert.equal(
 
 assert.equal(pickApifyAuthorAvatarUrl("tiktok", { playCount: 100 }), null);
 
+assert.equal(
+  pickApifyAuthorAvatarUrl("tiktok", {
+    authorMeta: { profilePictureUrl: TT_CDN },
+  }),
+  TT_CDN,
+  "profilePictureUrl from TikTok authorMeta"
+);
+
+assert.equal(
+  pickApifyAuthorAvatarUrl("tiktok", {
+    authorAvatarThumbUrl: TT_CDN,
+  }),
+  TT_CDN,
+  "authorAvatarThumbUrl root field"
+);
+
 console.log("apify-author-avatar tests passed");

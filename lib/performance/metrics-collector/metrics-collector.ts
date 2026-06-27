@@ -87,25 +87,13 @@ function resolveAvatarPlatformForPublication(
   );
 }
 
-async function runPostMetricsSideEffects(
+/** Persist Apify author avatar before metrics job completes so the performance grid can load it. */
+async function syncAvatarAfterMetrics(
   supabase: SupabaseClient,
   input: PostMetricsSideEffectInput
 ): Promise<void> {
   const avatarPlatform = resolveAvatarPlatformForPublication(input);
-  const { publication, engagementContext, apifyAuthorAvatarUrl, apifyAuthorFollowerCount, winningSource } =
-    input;
-
-  if (engagementContext.influencer_id && engagementContext.followers == null && avatarPlatform !== "unknown") {
-    try {
-      await syncCreatorFollowersIfMissing(supabase, {
-        influencerId: engagementContext.influencer_id,
-        platform: avatarPlatform,
-        followerCountFromProvider: apifyAuthorFollowerCount,
-      });
-    } catch (error) {
-      console.warn("[metrics-collector] follower sync failed", error);
-    }
-  }
+  const { publication, engagementContext, apifyAuthorAvatarUrl, winningSource } = input;
 
   if (apifyAuthorAvatarUrl && engagementContext.influencer_id && avatarPlatform !== "unknown") {
     try {
@@ -118,11 +106,18 @@ async function runPostMetricsSideEffects(
         console.log(
           `[metrics-collector] profile picture saved influencer=${engagementContext.influencer_id} platform=${avatarPlatform}`
         );
+      } else if (persistResult.reason !== "policy_blocked") {
+        console.warn(
+          `[metrics-collector] avatar persist skipped influencer=${engagementContext.influencer_id} platform=${avatarPlatform} reason=${persistResult.reason}`
+        );
       }
     } catch (error) {
       console.warn("[metrics-collector] profile picture persist failed", error);
     }
-  } else if (
+    return;
+  }
+
+  if (
     winningSource === "apify" &&
     engagementContext.influencer_id &&
     !apifyAuthorAvatarUrl &&
@@ -149,6 +144,26 @@ async function runPostMetricsSideEffects(
     console.warn(
       `[metrics-collector] Apify metrics saved but authorAvatarUrl missing publication=${publication.id} platform=${input.resolvedPlatform} — check actor payload fields`
     );
+  }
+}
+
+async function runDeferredPostMetricsSideEffects(
+  supabase: SupabaseClient,
+  input: PostMetricsSideEffectInput
+): Promise<void> {
+  const avatarPlatform = resolveAvatarPlatformForPublication(input);
+  const { publication, engagementContext, apifyAuthorFollowerCount } = input;
+
+  if (engagementContext.influencer_id && engagementContext.followers == null && avatarPlatform !== "unknown") {
+    try {
+      await syncCreatorFollowersIfMissing(supabase, {
+        influencerId: engagementContext.influencer_id,
+        platform: avatarPlatform,
+        followerCountFromProvider: apifyAuthorFollowerCount,
+      });
+    } catch (error) {
+      console.warn("[metrics-collector] follower sync failed", error);
+    }
   }
 
   try {
@@ -391,7 +406,16 @@ export async function metricsCollector(
       publicationContent: resolvedPublicationContent,
     });
 
-    void runPostMetricsSideEffects(supabase, {
+    await syncAvatarAfterMetrics(supabase, {
+      publication,
+      engagementContext,
+      resolvedPlatform,
+      apifyAuthorAvatarUrl,
+      apifyAuthorFollowerCount,
+      winningSource,
+    });
+
+    void runDeferredPostMetricsSideEffects(supabase, {
       publication,
       engagementContext,
       resolvedPlatform,
@@ -399,7 +423,7 @@ export async function metricsCollector(
       apifyAuthorFollowerCount,
       winningSource,
     }).catch((error) => {
-      console.warn("[metrics-collector] post-metrics side effects failed", error);
+      console.warn("[metrics-collector] deferred post-metrics side effects failed", error);
     });
   } else {
     await markPublicationRefreshStatus(supabase, {

@@ -58,6 +58,45 @@ export function publicationsNeedScreenshotCapturePoll(
   return publications.some((row) => publicationNeedsScreenshotCapturePoll(row));
 }
 
+/** Keep polling briefly after metrics finish while avatar sync may still be running. */
+export const AVATAR_SYNC_POLL_WINDOW_MS = 2 * 60 * 1000;
+
+export type PublicationAvatarPollRow = PublicationSyncPollRow & {
+  influencer_id?: string | null;
+  creator_avatar_url?: string | null;
+  metrics_provider?: string | null;
+  metrics_collection_source?: string | null;
+};
+
+function metricsCollectedViaApify(row: PublicationAvatarPollRow): boolean {
+  return row.metrics_provider === "apify" || row.metrics_collection_source === "apify";
+}
+
+function publicationNeedsAvatarSyncPoll(
+  row: PublicationAvatarPollRow,
+  nowMs: number = Date.now()
+): boolean {
+  if (!row.influencer_id?.trim()) return false;
+  if (row.creator_avatar_url?.trim()) return false;
+  if (isSyncInFlight(row.metrics_refresh_status)) return false;
+
+  const status = row.metrics_refresh_status;
+  if (!status || !METRICS_DONE_STATUSES.has(status)) return false;
+  if (!metricsCollectedViaApify(row)) return false;
+
+  const anchor = row.metrics_refresh_attempted_at ?? row.created_at;
+  if (!anchor) return false;
+
+  return nowMs - new Date(anchor).getTime() < AVATAR_SYNC_POLL_WINDOW_MS;
+}
+
+/** Poll while Apify metrics finished recently but creator avatar is still unresolved. */
+export function publicationsNeedAvatarSyncPoll(
+  publications: PublicationAvatarPollRow[]
+): boolean {
+  return publications.some((row) => publicationNeedsAvatarSyncPoll(row));
+}
+
 /** Poll publications bundle while metrics collection jobs are in flight (queued/collecting only). */
 export function publicationsNeedMetricsSyncPoll(
   publications: PublicationSyncPollRow[]

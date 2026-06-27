@@ -35,6 +35,7 @@ import {
 } from "@/features/campaigns/hooks/deferred-bundle-policy";
 import {
   METRICS_SYNC_POLL_INTERVAL_MS,
+  publicationsNeedAvatarSyncPoll,
   publicationsNeedMetricsSyncPoll,
   publicationsNeedScreenshotCapturePoll,
   SCREENSHOT_CAPTURE_POLL_INTERVAL_MS,
@@ -319,6 +320,11 @@ export function useCampaignTabData(
     [publications]
   );
 
+  const needsAvatarSyncPoll = useMemo(
+    () => publicationsNeedAvatarSyncPoll(publications),
+    [publications]
+  );
+
   const needsScreenshotCapturePoll = useMemo(
     () => publicationsNeedScreenshotCapturePoll(publications),
     [publications]
@@ -328,14 +334,14 @@ export function useCampaignTabData(
   loadBundleRef.current = loadBundle;
 
   useEffect(() => {
-    if (!needsMetricsSyncPoll) return;
+    if (!needsMetricsSyncPoll && !needsAvatarSyncPoll) return;
 
     const timer = window.setInterval(() => {
       void loadBundleRef.current("publications", { force: true });
     }, METRICS_SYNC_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
-  }, [needsMetricsSyncPoll]);
+  }, [needsMetricsSyncPoll, needsAvatarSyncPoll]);
 
   useEffect(() => {
     if (!needsScreenshotCapturePoll) return;

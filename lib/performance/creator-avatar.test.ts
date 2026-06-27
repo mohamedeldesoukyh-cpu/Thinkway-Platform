@@ -23,6 +23,14 @@ const YT_CDN = "https://yt3.ggpht.com/ytc/default.jpg";
 assert.equal(isInstagramHostedAvatarUrl(IG_CDN), true);
 assert.equal(isTikTokHostedAvatarUrl(TT_CDN), true);
 assert.equal(isTikTokHostedAvatarUrl(TT_IBYTEIMG), true);
+assert.equal(
+  isTikTokHostedAvatarUrl("https://p16-sign-va.tiktokcdn-eu.com/avatar.jpg"),
+  true
+);
+assert.equal(
+  isTikTokHostedAvatarUrl("https://sf16-website-login.neutral.ttwstatic.com/obj/avatar.jpg"),
+  true
+);
 assert.equal(isYouTubeHostedAvatarUrl(YT_CDN), true);
 assert.equal(
   isInstagramHostedAvatarUrl("https://p16-sign-va.tiktokcdn.com/avatar.jpg"),

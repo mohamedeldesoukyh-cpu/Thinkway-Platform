@@ -4,10 +4,12 @@ import {
   isSyncInFlight,
   isSyncPending,
   METRICS_SYNC_POLL_INTERVAL_MS,
+  publicationsNeedAvatarSyncPoll,
   publicationsNeedMetricsSyncPoll,
   publicationsNeedScreenshotCapturePoll,
   SCREENSHOT_CAPTURE_POLL_INTERVAL_MS,
   SCREENSHOT_CAPTURE_POLL_WINDOW_MS,
+  AVATAR_SYNC_POLL_WINDOW_MS,
   shouldShowMetricsSyncLoadingToast,
   type PublicationSyncPollRow,
 } from "@/features/campaigns/hooks/metrics-sync-poll-policy";
@@ -149,6 +151,58 @@ assert.equal(
 assert.equal(METRICS_SYNC_POLL_INTERVAL_MS, 4_000);
 assert.equal(SCREENSHOT_CAPTURE_POLL_INTERVAL_MS, 30_000);
 assert.equal(SCREENSHOT_CAPTURE_POLL_WINDOW_MS, 10 * 60 * 1000);
+assert.equal(AVATAR_SYNC_POLL_WINDOW_MS, 2 * 60 * 1000);
+
+// --- Avatar poll after Apify metrics when creator avatar still missing ---
+const recentMetricsAttempt = new Date(Date.now() - 30_000).toISOString();
+assert.equal(
+  publicationsNeedAvatarSyncPoll([
+    {
+      metrics_refresh_status: "completed",
+      metrics_provider: "apify",
+      influencer_id: "inf-1",
+      creator_avatar_url: null,
+      metrics_refresh_attempted_at: recentMetricsAttempt,
+      created_at: recentMetricsAttempt,
+      content_url: "https://www.tiktok.com/@shimasaber8/video/1",
+      screenshot_captured_at: null,
+    },
+  ]),
+  true,
+  "recent Apify sync without avatar should keep polling"
+);
+assert.equal(
+  publicationsNeedAvatarSyncPoll([
+    {
+      metrics_refresh_status: "completed",
+      metrics_provider: "apify",
+      influencer_id: "inf-1",
+      creator_avatar_url: "https://p16-va.tiktokcdn.com/avatar.jpg",
+      metrics_refresh_attempted_at: recentMetricsAttempt,
+      created_at: recentMetricsAttempt,
+      content_url: "https://www.tiktok.com/@shimasaber8/video/1",
+      screenshot_captured_at: null,
+    },
+  ]),
+  false,
+  "avatar resolved should stop avatar poll"
+);
+assert.equal(
+  publicationsNeedAvatarSyncPoll([
+    {
+      metrics_refresh_status: "collecting",
+      metrics_provider: "apify",
+      influencer_id: "inf-1",
+      creator_avatar_url: null,
+      metrics_refresh_attempted_at: recentMetricsAttempt,
+      created_at: recentMetricsAttempt,
+      content_url: "https://www.tiktok.com/@shimasaber8/video/1",
+      screenshot_captured_at: null,
+    },
+  ]),
+  false,
+  "in-flight metrics poll covers collecting state"
+);
 
 // --- Loading toast only on transition into in-flight ---
 assert.equal(shouldShowMetricsSyncLoadingToast(null, "queued"), true);

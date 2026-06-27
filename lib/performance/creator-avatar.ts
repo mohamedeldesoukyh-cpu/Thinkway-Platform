@@ -73,11 +73,14 @@ export function isTikTokHostedAvatarUrl(url: string | null | undefined): boolean
   const host = hostFromUrl(trimmed);
   if (!host) return false;
   if (host.includes("tiktokcdn")) return true;
+  if (host.includes("tiktokcdn-eu.com")) return true;
+  if (host.includes("tiktokcdn-us.com")) return true;
   if (host.includes("tiktokv.com")) return true;
   if (host.includes("ibyteimg.com")) return true;
   if (host.includes("ibytedtos.com")) return true;
   if (host.includes("byteoversea.com")) return true;
   if (host.includes("muscdn.com")) return true;
+  if (host.includes("ttwstatic.com")) return true;
   if (host.endsWith("tiktok.com") || host === "tiktok.com") return true;
   return false;
 }
@@ -93,7 +96,8 @@ export function stabilizeTikTokAvatarUrl(url: string): string {
     const isStabilizable =
       host.includes("tiktokcdn") ||
       host.includes("ibyteimg.com") ||
-      host.includes("ibytedtos.com");
+      host.includes("ibytedtos.com") ||
+      host.includes("ttwstatic.com");
     if (!isStabilizable) return url;
 
     const stabilizedHost = host.replace(/-sign-/g, "-").replace(/-sign\./g, ".");
