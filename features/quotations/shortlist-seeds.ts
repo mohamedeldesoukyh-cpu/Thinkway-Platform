@@ -4,7 +4,7 @@ import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CommercialInputMode, Database } from "@/types/database";
 
-import type { QuotationItemSeed } from "./actions";
+import type { QuotationItemSeed } from "@/lib/services/quotations/quotation-helpers";
 
 type Supabase = SupabaseClient<Database>;
 
