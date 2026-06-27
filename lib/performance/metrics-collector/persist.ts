@@ -43,6 +43,7 @@ import {
 } from "@/lib/performance/avatar-sync-policy";
 import {
   isAvatarUrlAllowedForPlatform,
+  prepareCreatorAvatarUrlForDisplay,
   resolvePublicationEffectivePlatform,
 } from "@/lib/performance/creator-avatar";
 import { logMetricsQueueEvent } from "@/lib/performance/metrics-collector/metrics-queue-log";
@@ -425,10 +426,11 @@ export async function persistInfluencerPlatformAvatarDetailed(
     }
     return { saved: false, reason: "invalid_url" };
   }
-  if (!isAvatarUrlAllowedForPlatform(platformKey, url)) {
+  const normalizedUrl = prepareCreatorAvatarUrlForDisplay(platformKey, url) ?? url;
+  if (!isAvatarUrlAllowedForPlatform(platformKey, normalizedUrl)) {
     if (logSkips) {
       console.warn(
-        `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=cdn_platform_mismatch url=${url.slice(0, 72)}`
+        `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=cdn_platform_mismatch url=${normalizedUrl.slice(0, 72)}`
       );
     }
     return { saved: false, reason: "cdn_platform_mismatch" };
@@ -497,7 +499,7 @@ export async function persistInfluencerPlatformAvatarDetailed(
   const { error: updateError } = await supabase
     .from("influencer_platform_accounts")
     .update({
-      profile_picture_url: url,
+      profile_picture_url: normalizedUrl,
       avatar_source: input.source ?? "apify",
       avatar_last_synced_at: syncedAt,
       updated_at: syncedAt,

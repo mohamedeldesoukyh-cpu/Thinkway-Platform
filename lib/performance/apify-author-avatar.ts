@@ -24,12 +24,20 @@ function tiktokAuthorAvatarCandidates(row: Record<string, unknown>): unknown[] {
   const author = nestedRecord(row.author);
   return [
     authorMeta?.originalAvatarUrl,
-    authorMeta?.avatar,
+    authorMeta?.avatarLarger,
     authorMeta?.avatarMedium,
+    authorMeta?.avatar,
+    authorMeta?.avatarThumb,
+    author?.avatarLarger,
+    author?.avatarMedium,
     author?.avatar,
+    author?.avatarThumb,
     author?.originalAvatarUrl,
     row.authorAvatar,
+    row.authorAvatarUrl,
     row.authorProfilePicUrl,
+    row.avatarThumb,
+    row.avatarLarger,
   ];
 }
 

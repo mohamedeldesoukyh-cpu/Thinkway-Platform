@@ -34,7 +34,7 @@ export type PublicationCreatorAvatarInput = {
 };
 
 export type CreatorAvatarDisplay =
-  | { kind: "image"; url: string }
+  | { kind: "image"; url: string; fallbackUrl?: string | null }
   | { kind: "initials"; name: string; platform: string }
   | { kind: "placeholder"; platform: string };
 
@@ -221,13 +221,16 @@ export function isAvatarUrlAllowedForPlatform(
 
 function firstAllowedAvatarUrl(
   platform: string,
-  candidates: Array<string | null | undefined>
+  candidates: Array<string | null | undefined>,
+  options?: { normalize?: boolean }
 ): string | null {
   for (const candidate of candidates) {
     const trimmed = candidate?.trim();
     if (!trimmed || isAvatarUrlNeedsRefresh(trimmed)) continue;
     if (isAvatarUrlAllowedForPlatform(platform, trimmed)) {
-      return normalizeAvatarUrlForPlatform(platform, trimmed);
+      return options?.normalize === false
+        ? trimmed
+        : normalizeAvatarUrlForPlatform(platform, trimmed);
     }
   }
   return null;
@@ -243,21 +246,48 @@ function isGenericAvatarAllowedForPlatform(platform: string, url: string): boole
   return detectAvatarCdn(url) !== "unknown";
 }
 
-function normalizeAvatarUrlForPlatform(platform: string, url: string): string {
+export function normalizeAvatarUrlForPlatform(platform: string, url: string): string {
   const key = resolvePublicationEffectivePlatform({ platform });
   if (key === "tiktok") return stabilizeTikTokAvatarUrl(url);
   return url;
 }
 
+/** Normalize a raw avatar URL for `<img src>` (TikTok signing stripped when applicable). */
+export function prepareCreatorAvatarUrlForDisplay(
+  platform: string | null | undefined,
+  url: string | null | undefined
+): string | null {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  return normalizeAvatarUrlForPlatform(
+    resolvePublicationEffectivePlatform({ platform: platform ?? "" }),
+    trimmed
+  );
+}
+
+/** Primary display URL plus optional signed/original fallback when stabilization changes the URL. */
+export function creatorAvatarDisplayUrls(
+  platform: string | null | undefined,
+  url: string | null | undefined
+): { primary: string; fallback: string | null } | null {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  const primary = prepareCreatorAvatarUrlForDisplay(platform, trimmed) ?? trimmed;
+  return { primary, fallback: primary !== trimmed ? trimmed : null };
+}
+
 function firstGenericAvatarUrl(
   platform: string,
-  candidates: Array<string | null | undefined>
+  candidates: Array<string | null | undefined>,
+  options?: { normalize?: boolean }
 ): string | null {
   for (const candidate of candidates) {
     const trimmed = candidate?.trim();
     if (!trimmed || isAvatarUrlNeedsRefresh(trimmed)) continue;
     if (isGenericAvatarAllowedForPlatform(platform, trimmed)) {
-      return normalizeAvatarUrlForPlatform(platform, trimmed);
+      return options?.normalize === false
+        ? trimmed
+        : normalizeAvatarUrlForPlatform(platform, trimmed);
     }
   }
   return null;
@@ -334,7 +364,18 @@ export function resolveCreatorAvatarDisplay(input: {
   const url = resolvePublicationRowCreatorAvatar(input);
 
   if (url) {
-    return { kind: "image", url };
+    const raw =
+      firstAllowedAvatarUrl(platform, [input.social_profile_picture_url], { normalize: false }) ??
+      firstGenericAvatarUrl(platform, [input.influencer_avatar_url], { normalize: false }) ??
+      firstGenericAvatarUrl(platform, [input.apify_author_avatar_url], { normalize: false }) ??
+      (shouldUseGenericCreatorAvatar(platform)
+        ? firstGenericAvatarUrl(platform, [input.creator_profile_image_url], { normalize: false })
+        : null);
+    return {
+      kind: "image",
+      url,
+      fallbackUrl: raw && raw !== url ? raw : null,
+    };
   }
 
   const name = input.influencer_name?.trim();

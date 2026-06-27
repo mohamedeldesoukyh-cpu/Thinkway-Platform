@@ -3,6 +3,9 @@
 import { useState, type ReactNode } from "react";
 
 import {
+  CreatorAvatarImage,
+} from "@/components/creator/creator-avatar-image";
+import {
   CreatorProfileLink,
   type CreatorProfileSource,
 } from "@/components/creator/creator-profile-link";
@@ -106,15 +109,12 @@ export function PublicationCreatorAvatar({
 
   if (display.kind === "image" && !imageFailed) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={display.url}
-        alt=""
-        className={cn("shrink-0 rounded-full border border-border object-cover", dim, className)}
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          setImageFailed(true);
-        }}
+      <CreatorAvatarImage
+        avatarUrl={display.url}
+        platform={row.platform}
+        fallbackUrl={display.fallbackUrl}
+        sizeClassName={cn("shrink-0", dim, className)}
+        onFailed={() => setImageFailed(true)}
       />
     );
   }

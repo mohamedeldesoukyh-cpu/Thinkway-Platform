@@ -74,6 +74,14 @@ assert.equal(
   "tt platform alias must use TikTok avatar candidates"
 );
 
+assert.equal(
+  pickApifyAuthorAvatarUrl("tiktok", {
+    authorMeta: { avatarLarger: TT_CDN },
+  }),
+  TT_CDN,
+  "avatarLarger from TikTok authorMeta"
+);
+
 assert.equal(pickApifyAuthorAvatarUrl("tiktok", { playCount: 100 }), null);
 
 console.log("apify-author-avatar tests passed");

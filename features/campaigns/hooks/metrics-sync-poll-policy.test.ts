@@ -40,7 +40,7 @@ assert.equal(
   null
 );
 
-// --- TikTok row must not use Instagram discovered profile ---
+// TikTok row uses influencer-level avatar (unknown CDN ok), but not discovery profile.
 assert.equal(
   resolvePublicationCreatorAvatar({
     platform: "tiktok",
@@ -48,7 +48,7 @@ assert.equal(
     influencer_avatar_url: "https://cdn.example.com/ig-meta.jpg",
     platform_profile_picture_url: null,
   }),
-  null
+  "https://cdn.example.com/ig-meta.jpg"
 );
 
 assert.equal(

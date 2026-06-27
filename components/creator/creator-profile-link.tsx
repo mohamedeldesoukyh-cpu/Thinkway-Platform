@@ -1,7 +1,9 @@
 "use client";
 
-import { BadgeCheckIcon, ExternalLinkIcon, UserIcon } from "lucide-react";
+import { BadgeCheckIcon, ExternalLinkIcon } from "lucide-react";
 import type { ReactNode } from "react";
+
+import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 
 import {
   Tooltip,
@@ -127,36 +129,6 @@ function formatHandle(handle: string | null | undefined): string | null {
   return trimmed ? `@${trimmed}` : null;
 }
 
-function CreatorAvatarImage({
-  avatarUrl,
-  size,
-}: {
-  avatarUrl: string | null | undefined;
-  size: keyof typeof AVATAR_SIZE_CLASS;
-}) {
-  const dim = AVATAR_SIZE_CLASS[size];
-  if (avatarUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={avatarUrl}
-        alt=""
-        className={cn("rounded-full border border-border object-cover", dim)}
-      />
-    );
-  }
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-center rounded-full border border-border bg-muted",
-        dim
-      )}
-    >
-      <UserIcon className={cn(size === "xs" ? "size-3" : "size-5", "text-muted-foreground")} />
-    </div>
-  );
-}
-
 function ProfileExternalLink({
   href,
   tooltip,
@@ -211,7 +183,7 @@ export function CreatorProfileLink({
   const badgeDim = BADGE_SIZE_CLASS[size];
 
   const avatarNode = (
-    <CreatorAvatarImage avatarUrl={source.avatarUrl} size={size} />
+    <CreatorAvatarImage avatarUrl={source.avatarUrl} platform={source.platform} size={size} />
   );
 
   const avatarBlock = showAvatar ? (

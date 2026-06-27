@@ -11,6 +11,8 @@ import {
   resolvePublicationEffectivePlatform,
   resolvePublicationRowCreatorAvatar,
   stabilizeTikTokAvatarUrl,
+  prepareCreatorAvatarUrlForDisplay,
+  creatorAvatarDisplayUrls,
 } from "@/lib/performance/creator-avatar";
 
 const IG_CDN = "https://scontent-lhr8-1.cdninstagram.com/v/t51.2885-19/abc.jpg";
@@ -184,14 +186,22 @@ assert.equal(
   "initials"
 );
 
-assert.equal(
-  resolveCreatorAvatarDisplay({
-    platform: "tiktok",
-    influencer_name: null,
-    social_profile_picture_url: TT_CDN,
-  }).kind,
-  "image"
-);
+const ttDisplay = resolveCreatorAvatarDisplay({
+  platform: "tiktok",
+  influencer_name: null,
+  social_profile_picture_url: TT_CDN,
+});
+assert.equal(ttDisplay.kind, "image");
+if (ttDisplay.kind === "image") {
+  assert.equal(ttDisplay.url, "https://p16-va.tiktokcdn.com/avatar.jpg");
+  assert.equal(ttDisplay.fallbackUrl, TT_CDN);
+}
+
+assert.deepEqual(creatorAvatarDisplayUrls("tiktok", TT_CDN), {
+  primary: "https://p16-va.tiktokcdn.com/avatar.jpg",
+  fallback: TT_CDN,
+});
+assert.equal(prepareCreatorAvatarUrlForDisplay("tt", TT_CDN), "https://p16-va.tiktokcdn.com/avatar.jpg");
 
 assert.equal(
   resolveCreatorAvatarDisplay({
