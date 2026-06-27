@@ -1,0 +1,357 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { CAMPAIGNS_PAGE_SIZE } from "@/features/campaigns/constants";
+import {
+  syncCampaignHeaderStatusesForList,
+} from "@/lib/campaigns/sync-campaign-header-status";
+import {
+  getBrandsForCampaignForm,
+  getClientsForSelect,
+  getGroupsForSelect,
+  getMasterDataOptions,
+} from "@/lib/master-data/queries";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
+import type { AgencyOrDirect } from "@/types/database";
+import type { CampaignListItem } from "@/types/database";
+
+import { escapeIlikePattern } from "../campaign-commercial";
+
+export type BrandForCampaignCreate = {
+  id: string;
+  client_id: string;
+  group_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  vr_rate_id: string | null;
+  currency_code: string;
+  client: { agency_or_direct: AgencyOrDirect | null } | null;
+};
+
+export async function fetchBrandForCampaignCreate(
+  supabase: SupabaseClient,
+  brandId: string
+): Promise<{ brand: BrandForCampaignCreate | null; error: string | null }> {
+  const { data: brand, error: brandError } = await supabase
+    .from("brands")
+    .select(
+      "id, client_id, group_id, category_id, subcategory_id, vr_rate_id, currency_code, client:clients(agency_or_direct)"
+    )
+    .eq("id", brandId)
+    .maybeSingle();
+
+  if (brandError) {
+    return { brand: null, error: brandError.message };
+  }
+  if (!brand) {
+    return { brand: null, error: "Brand not found." };
+  }
+
+  return { brand: brand as unknown as BrandForCampaignCreate, error: null };
+}
+
+export async function insertCampaignHeader(
+  supabase: SupabaseClient,
+  input: {
+    name: string;
+    brand: BrandForCampaignCreate;
+    status: string;
+    currency_code: string;
+    start_date: string | null;
+    end_date: string | null;
+    account_manager_id: string | null;
+    metadata: Record<string, unknown>;
+    created_by: string;
+  }
+) {
+  return supabase
+    .from("campaign_headers")
+    .insert({
+      name: input.name,
+      brand_id: input.brand.id,
+      client_id: input.brand.client_id,
+      group_id: input.brand.group_id,
+      status: input.status,
+      currency_code: input.currency_code,
+      category_id: input.brand.category_id,
+      subcategory_id: input.brand.subcategory_id,
+      agency_or_direct: input.brand.client?.agency_or_direct ?? null,
+      vr_rate_id: input.brand.vr_rate_id,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      account_manager_id: input.account_manager_id,
+      metadata: input.metadata,
+      created_by: input.created_by,
+    })
+    .select("id, document_number")
+    .single();
+}
+
+export async function updateCampaignPoFields(
+  supabase: SupabaseClient,
+  campaignId: string,
+  input: {
+    currency: string;
+    fxRate: number;
+    poAmount: number;
+  }
+) {
+  return supabase
+    .from("campaign_headers")
+    .update({
+      po_currency: input.currency,
+      po_exchange_rate: input.fxRate,
+      po_amount_original: input.poAmount,
+      po_amount_campaign_currency: input.poAmount,
+      po_status: input.poAmount > 0 ? "active" : "draft",
+    } as never)
+    .eq("id", campaignId);
+}
+
+export async function deleteCampaignHeader(supabase: SupabaseClient, campaignId: string) {
+  return supabase.from("campaign_headers").delete().eq("id", campaignId);
+}
+
+export async function fetchCampaignHeaderForUpdate(
+  supabase: SupabaseClient,
+  campaignId: string
+) {
+  return supabase
+    .from("campaign_headers")
+    .select("metadata, client_id, group_id")
+    .eq("id", campaignId)
+    .maybeSingle();
+}
+
+export async function updateCampaignHeaderFields(
+  supabase: SupabaseClient,
+  campaignId: string,
+  fields: Record<string, unknown>
+) {
+  return supabase.from("campaign_headers").update(fields).eq("id", campaignId);
+}
+
+export async function fetchGroupNamesByIds(
+  supabase: SupabaseClient,
+  groupIds: string[]
+) {
+  if (groupIds.length === 0) {
+    return new Map<string, string>();
+  }
+  const { data: groupRows } = await supabase
+    .from("groups")
+    .select("id, name")
+    .in("id", groupIds);
+  const groupNameById = new Map<string, string>();
+  for (const row of groupRows ?? []) {
+    groupNameById.set(row.id, row.name);
+  }
+  return groupNameById;
+}
+
+export async function fetchCampaignHeaderContext(
+  supabase: SupabaseClient,
+  campaignId: string
+) {
+  return supabase
+    .from("campaign_headers")
+    .select("client_id, currency_code")
+    .eq("id", campaignId)
+    .maybeSingle();
+}
+
+export async function listCampaignHeaders(
+  supabase: SupabaseClient,
+  params: { page: number; search: string }
+) {
+  const from = (params.page - 1) * CAMPAIGNS_PAGE_SIZE;
+  const to = from + CAMPAIGNS_PAGE_SIZE - 1;
+
+  let query = supabase
+    .from("campaign_headers")
+    .select(
+      `
+      *,
+      brand:brands(id, name),
+      client:clients(id, name, document_number, legal_name),
+      group:groups(id, name),
+      account_manager:profiles!campaign_headers_account_manager_id_fkey(id, full_name, email),
+      lines:campaign_lines(id, document_number, name, po_amount, revenue, cost, profit, billing_status, invoice_id)
+    `,
+      { count: "exact" }
+    )
+    .order("created_at", { ascending: false });
+
+  if (params.search) {
+    const pattern = `%${escapeIlikePattern(params.search)}%`;
+    query = query.or(
+      [`name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(",")
+    );
+  }
+
+  return query.range(from, to);
+}
+
+export async function syncListCampaignStatuses(
+  supabase: SupabaseClient,
+  campaigns: CampaignListItem[]
+) {
+  try {
+    await syncCampaignHeaderStatusesForList(supabase, campaigns);
+  } catch (syncError) {
+    console.warn("[campaigns-list] syncCampaignHeaderStatusesForList failed", syncError);
+  }
+}
+
+export async function fetchCampaignKpiSourceData(supabase: SupabaseClient) {
+  return Promise.all([
+    supabase.from("campaign_headers").select("id, status, currency_code").limit(2000),
+    supabase
+      .from("campaign_lines")
+      .select("campaign_header_id, revenue, profit")
+      .limit(5000),
+    supabase
+      .from("campaign_influencers")
+      .select("id, campaign_header_id")
+      .limit(20000),
+  ]);
+}
+
+export async function fetchCampaignFormOptionsData(supabase: SupabaseClient) {
+  return Promise.all([
+    getGroupsForSelect(),
+    getClientsForSelect(),
+    getBrandsForCampaignForm(),
+    getMasterDataOptions(),
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("is_active", true)
+      .order("full_name", { ascending: true }),
+  ]);
+}
+
+export type SourceCampaignHeader = {
+  id: string;
+  brand_id: string;
+  client_id: string;
+  group_id: string | null;
+  description: string | null;
+  brief: string | null;
+  currency_code: string;
+  category_id: string | null;
+  subcategory_id: string | null;
+  agency_or_direct: AgencyOrDirect | null;
+  vr_rate_id: string | null;
+  team_id: string | null;
+  report_type_id: string | null;
+  account_manager_id: string | null;
+  objectives: string | null;
+  metadata: Record<string, unknown>;
+};
+
+export async function fetchSourceCampaign(
+  supabase: SupabaseClient,
+  sourceId: string
+) {
+  return supabase.from("campaign_headers").select("*").eq("id", sourceId).maybeSingle();
+}
+
+export async function fetchSourceCampaignLines(
+  supabase: SupabaseClient,
+  sourceId: string
+) {
+  return supabase
+    .from("campaign_lines")
+    .select("*")
+    .eq("campaign_header_id", sourceId)
+    .order("document_number");
+}
+
+export async function fetchCampaignInfluencersForDuplicate(
+  supabase: SupabaseClient,
+  sourceId: string
+) {
+  return supabase
+    .from("campaign_influencers")
+    .select("*")
+    .or(`campaign_header_id.eq.${sourceId},campaign_id.eq.${sourceId}`);
+}
+
+export async function fetchSourceDeliverables(
+  supabase: SupabaseClient,
+  sourceId: string
+) {
+  return supabase.from("deliverables").select("*").eq("campaign_id", sourceId);
+}
+
+export async function fetchCampaignLineById(
+  supabase: SupabaseClient,
+  lineId: string,
+  campaignId: string
+) {
+  return supabase
+    .from("campaign_lines")
+    .select(
+      "revenue_locked, cost_locked, revenue, cost, revenue_before_vat, cost_before_vat, vat_locked, document_number, finance_override_until, vendor_io_id, vendor_assignment_locked, metadata, operational_status, invoice_id"
+    )
+    .eq("id", lineId)
+    .eq("campaign_header_id", campaignId)
+    .maybeSingle();
+}
+
+export async function insertCampaignLine(
+  supabase: SupabaseClient,
+  payload: Record<string, unknown>
+) {
+  return supabase.from("campaign_lines").insert(payload).select("id, document_number").single();
+}
+
+export async function updateCampaignLine(
+  supabase: SupabaseClient,
+  lineId: string,
+  campaignId: string,
+  payload: Record<string, unknown>
+) {
+  return supabase
+    .from("campaign_lines")
+    .update(payload)
+    .eq("id", lineId)
+    .eq("campaign_header_id", campaignId);
+}
+
+export async function unlockCampaignLineFinanceFields(
+  supabase: SupabaseClient,
+  lineId: string
+) {
+  return supabase
+    .from("campaign_lines")
+    .update({
+      revenue_locked: false,
+      cost_locked: false,
+      vendor_assignment_locked: false,
+      vat_locked: false,
+    } as never)
+    .eq("id", lineId);
+}
+
+export async function fetchInvoiceRegenerationStatus(
+  supabase: SupabaseClient,
+  invoiceId: string
+) {
+  return supabase
+    .from("invoices")
+    .select("regeneration_status")
+    .eq("id", invoiceId)
+    .maybeSingle();
+}
+
+export async function deleteCampaignLine(supabase: SupabaseClient, lineId: string) {
+  return supabase.from("campaign_lines").delete().eq("id", lineId);
+}
+
+export async function deleteCampaignInfluencer(
+  supabase: SupabaseClient,
+  assignmentId: string
+) {
+  return supabase.from("campaign_influencers").delete().eq("id", assignmentId);
+}

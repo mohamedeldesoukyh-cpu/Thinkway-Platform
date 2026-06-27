@@ -9,18 +9,7 @@ import {
 import type { PoStatus } from "@/lib/finance/po/status";
 import {
   resolveVatRateForCountry,
-  resolveVendorDefaultVatPercent,
 } from "@/lib/vat/queries";
-import {
-  getBrandsForCampaignForm,
-  getClientsForSelect,
-  getGroupsForSelect,
-  getMasterDataOptions,
-} from "@/lib/master-data/queries";
-import {
-  syncCampaignHeaderStatus,
-  syncCampaignHeaderStatusesForList,
-} from "@/lib/campaigns/sync-campaign-header-status";
 import {
   getCampaignClientIo,
   getCampaignVendorIos,
@@ -29,10 +18,20 @@ import {
 } from "@/features/io/queries";
 import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
+import {
+  getCampaignFormOptions as loadCampaignFormOptions,
+  getCampaignsKpis as loadCampaignsKpis,
+  getCampaignsList as loadCampaignsList,
+} from "@/lib/services/campaigns/campaign-service";
+import {
+  browseInfluencersForCampaign as browseInfluencersViaService,
+  getInfluencerForAssignment as getInfluencerForAssignmentViaService,
+  searchInfluencersForCampaign as searchInfluencersViaService,
+} from "@/lib/services/campaigns/campaign-assignment-service";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import type { CampaignListItem } from "@/types/database";
 
 import type { CampaignLineBillingStatus } from "@/features/billing/types";
-import { isCancelledCampaignStatus } from "@/features/groups/types";
 import { CAMPAIGNS_PAGE_SIZE, METADATA_PLATFORM_KEY } from "./constants";
 import {
   deriveLinePaymentStatus,
@@ -51,31 +50,13 @@ import {
   countLineDeliverables,
   parseLineAssignment,
   platformLabel,
-  suggestCostFromRateCard,
-  suggestCurrencyFromPaymentDetails,
 } from "./line-assignment";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 
-export type CampaignsListResult = {
-  campaigns: CampaignListItem[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
+export type CampaignsListResult = import("@/lib/services/campaigns/campaign-service").CampaignsListResult;
 
-export type CampaignFormOptions = {
-  groups: GroupFormOption[];
-  clients: ClientFormOption[];
-  brands: BrandFormOption[];
-  accountManagers: {
-    id: string;
-    full_name: string | null;
-    email: string;
-  }[];
-  masterData: Awaited<ReturnType<typeof getMasterDataOptions>>;
-};
+export type CampaignFormOptions = import("@/lib/services/campaigns/campaign-service").CampaignFormOptions;
 
 type HeaderWithRelations = {
   id: string;
@@ -146,10 +127,6 @@ type LineRow = {
   vendor_io_id?: string | null;
 };
 
-function escapeIlikePattern(value: string): string {
-  return value.replace(/[%_\\,]/g, "\\$&");
-}
-
 async function requireUser() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -172,192 +149,20 @@ export async function getCampaignsList(params: {
   page?: number;
   search?: string;
 }): Promise<CampaignsListResult> {
-  const page = Math.max(1, params.page ?? 1);
-  const search = params.search?.trim() ?? "";
-  const from = (page - 1) * CAMPAIGNS_PAGE_SIZE;
-  const to = from + CAMPAIGNS_PAGE_SIZE - 1;
-
   const { supabase } = await requireUser();
-
-  let query = supabase
-    .from("campaign_headers")
-    .select(
-      `
-      *,
-      brand:brands(id, name),
-      client:clients(id, name, document_number, legal_name),
-      group:groups(id, name),
-      account_manager:profiles!campaign_headers_account_manager_id_fkey(id, full_name, email),
-      lines:campaign_lines(id, document_number, name, po_amount, revenue, cost, profit, billing_status, invoice_id)
-    `,
-      { count: "exact" }
-    )
-    .order("created_at", { ascending: false });
-
-  if (search) {
-    const pattern = `%${escapeIlikePattern(search)}%`;
-    query = query.or(
-      [`name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(",")
-    );
-  }
-
-  const { data, error, count } = await query.range(from, to);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const campaigns = (data ?? []) as unknown as CampaignListItem[];
-
-  try {
-    await syncCampaignHeaderStatusesForList(supabase, campaigns);
-  } catch (syncError) {
-    console.warn("[campaigns-list] syncCampaignHeaderStatusesForList failed", syncError);
-  }
-
-  const total = count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / CAMPAIGNS_PAGE_SIZE));
-
-  return {
-    campaigns,
-    total,
-    page,
-    pageSize: CAMPAIGNS_PAGE_SIZE,
-    totalPages,
-  };
+  return loadCampaignsList(supabase, params);
 }
 
-export type CampaignsKpis = {
-  total_campaigns: number;
-  total_revenue: number;
-  avg_margin: number;
-  assignments: number;
-  currency_code: string;
-};
+export type CampaignsKpis = import("@/lib/services/campaigns/campaign-service").CampaignsKpis;
 
 export async function getCampaignsKpis(): Promise<CampaignsKpis> {
   const { supabase } = await requireUser();
-
-  const [headersResult, linesResult, assignmentsResult] = await Promise.all([
-    supabase.from("campaign_headers").select("id, status, currency_code").limit(2000),
-    supabase
-      .from("campaign_lines")
-      .select("campaign_header_id, revenue, profit")
-      .limit(5000),
-    supabase
-      .from("campaign_influencers")
-      .select("id, campaign_header_id")
-      .limit(20000),
-  ]);
-
-  const headers = (headersResult.data ?? []) as {
-    id: string;
-    status: string;
-    currency_code: string | null;
-  }[];
-  const operationalHeaderIds = new Set(
-    headers.filter((h) => !isCancelledCampaignStatus(h.status)).map((h) => h.id)
-  );
-  const lines = (linesResult.data ?? []) as {
-    campaign_header_id: string;
-    revenue: number | null;
-    profit: number | null;
-  }[];
-  const assignments = (assignmentsResult.data ?? []) as {
-    id: string;
-    campaign_header_id: string | null;
-  }[];
-
-  const operationalLines = lines.filter((l) =>
-    operationalHeaderIds.has(l.campaign_header_id)
-  );
-  const totalRevenue = operationalLines.reduce(
-    (sum, l) => sum + Number(l.revenue ?? 0),
-    0
-  );
-  const totalProfit = operationalLines.reduce(
-    (sum, l) => sum + Number(l.profit ?? 0),
-    0
-  );
-  const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-
-  const currencyCounts = new Map<string, number>();
-  for (const header of headers.filter((h) => !isCancelledCampaignStatus(h.status))) {
-    const code = header.currency_code ?? DEFAULT_PLATFORM_CURRENCY;
-    currencyCounts.set(code, (currencyCounts.get(code) ?? 0) + 1);
-  }
-  const currencyCode =
-    [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
-      DEFAULT_PLATFORM_CURRENCY;
-
-  const assignmentCount = assignments.filter(
-    (a) => a.campaign_header_id && operationalHeaderIds.has(a.campaign_header_id)
-  ).length;
-
-  return {
-    total_campaigns: operationalHeaderIds.size,
-    total_revenue: totalRevenue,
-    avg_margin: avgMargin,
-    assignments: assignmentCount,
-    currency_code: currencyCode,
-  };
+  return loadCampaignsKpis(supabase);
 }
 
 export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
   const { supabase } = await requireUser();
-
-  const [groups, clients, brands, masterData, managersResult] = await Promise.all([
-    getGroupsForSelect(),
-    getClientsForSelect(),
-    getBrandsForCampaignForm(),
-    getMasterDataOptions(),
-    supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .eq("is_active", true)
-      .order("full_name", { ascending: true }),
-  ]);
-
-  if (managersResult.error) {
-    throw new Error(managersResult.error.message);
-  }
-
-  const clientList = (clients ?? []) as ClientFormOption[];
-  const taxonomyByClientId = new Map(
-    clientList.map((client) => [
-      client.id,
-      {
-        client_category: client.client_category ?? null,
-        client_subcategory: client.client_subcategory ?? null,
-      },
-    ])
-  );
-
-  const enrichedBrands = (brands ?? []).map((brand) => {
-    const row = brand as BrandFormOption;
-    const taxonomy = taxonomyByClientId.get(row.client_id);
-    if (!taxonomy || !row.client) {
-      return row;
-    }
-    return {
-      ...row,
-      client: {
-        ...row.client,
-        client_category:
-          row.client.client_category ?? taxonomy.client_category ?? null,
-        client_subcategory:
-          row.client.client_subcategory ?? taxonomy.client_subcategory ?? null,
-      },
-    };
-  });
-
-  return {
-    groups: groups ?? [],
-    clients: clientList,
-    brands: enrichedBrands,
-    masterData,
-    accountManagers: managersResult.data ?? [],
-  };
+  return loadCampaignFormOptions(supabase);
 }
 
 export async function getCampaignWorkspace(
@@ -1132,351 +937,21 @@ export async function searchInfluencersForCampaign(params: {
   limit?: number;
 }): Promise<InfluencerSearchResult[]> {
   const { supabase } = await requireUser();
-  const search = params.search?.trim() ?? "";
-  const platform = params.platform?.trim() ?? "";
-  const limit = params.limit ?? 20;
-
-  let influencerIds: string[] | null = null;
-
-  if (platform) {
-    const { data: platformMatches, error } = await supabase
-      .from("influencer_platform_accounts")
-      .select("influencer_id")
-      .eq("platform", platform);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    influencerIds = [
-      ...new Set(platformMatches?.map((r) => r.influencer_id) ?? []),
-    ];
-    if (influencerIds.length === 0) {
-      return [];
-    }
-  }
-
-  let query = supabase
-    .from("influencers")
-    .select("id, document_number, display_name, status, country_code, rate_card, payment_details")
-    .eq("status", "active")
-    .order("display_name")
-    .limit(limit);
-
-  if (search) {
-    const pattern = `%${escapeIlikePattern(search)}%`;
-    query = query.or(
-      [`display_name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(
-        ","
-      )
-    );
-  }
-
-  if (influencerIds) {
-    query = query.in("id", influencerIds);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  const ids = (data ?? []).map((r) => r.id);
-  if (ids.length === 0) {
-    return [];
-  }
-
-  const { data: accounts } = await supabase
-    .from("influencer_platform_accounts")
-    .select(
-      "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, audience_country"
-    )
-    .in("influencer_id", ids);
-
-  const accountsByInfluencer = new Map<
-    string,
-    InfluencerSearchResult["platforms"]
-  >();
-  for (const account of accounts ?? []) {
-    const list = accountsByInfluencer.get(account.influencer_id) ?? [];
-    list.push({
-      id: account.id,
-      platform: account.platform,
-      handle: account.handle,
-      profile_url: account.profile_url,
-      follower_count: account.follower_count,
-      engagement_rate: account.engagement_rate,
-      audience_country: account.audience_country ?? null,
-    });
-    accountsByInfluencer.set(account.influencer_id, list);
-  }
-
-  return (data ?? []).map((row) => {
-    const r = row as unknown as {
-      id: string;
-      document_number: string;
-      display_name: string;
-      status: string;
-      country_code: string | null;
-      rate_card: Record<string, unknown>;
-      payment_details: Record<string, unknown>;
-    };
-    return {
-      id: r.id,
-      document_number: r.document_number,
-      display_name: r.display_name,
-      status: r.status,
-      country_code: r.country_code,
-      suggested_currency: suggestCurrencyFromPaymentDetails(
-        r.payment_details,
-        DEFAULT_PLATFORM_CURRENCY
-      ),
-      platforms: accountsByInfluencer.get(r.id) ?? [],
-    };
-  });
+  return searchInfluencersViaService(supabase, params);
 }
 
 export async function getInfluencerForAssignment(
   influencerId: string
 ): Promise<InfluencerAssignmentProfile | null> {
   const { supabase } = await requireUser();
-
-  const { data: influencer, error } = await supabase
-    .from("influencers")
-    .select(
-      "id, document_number, display_name, status, country_code, rate_card, payment_details, vat_registered, default_vat_percent, tax_registration_number, notes"
-    )
-    .eq("id", influencerId)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  if (!influencer) return null;
-
-  const { data: accounts } = await supabase
-    .from("influencer_platform_accounts")
-    .select(
-      "id, platform, handle, profile_url, follower_count, engagement_rate, audience_country"
-    )
-    .eq("influencer_id", influencerId)
-    .order("is_primary", { ascending: false });
-
-  const platforms = (accounts ?? []).map((a) => ({
-    id: a.id,
-    platform: a.platform,
-    handle: a.handle,
-    profile_url: a.profile_url,
-    follower_count: a.follower_count,
-    engagement_rate: a.engagement_rate,
-    audience_country: a.audience_country ?? null,
-  }));
-
-  const inf = influencer as unknown as {
-    id: string;
-    document_number: string;
-    display_name: string;
-    status: string;
-    country_code: string | null;
-    rate_card: Record<string, unknown>;
-    payment_details: Record<string, unknown>;
-    vat_registered: boolean;
-    default_vat_percent: number;
-    tax_registration_number: string | null;
-    notes: string | null;
-  };
-
-  const suggested_currency = suggestCurrencyFromPaymentDetails(
-    inf.payment_details,
-    DEFAULT_PLATFORM_CURRENCY
-  );
-  const countryVatRate = await resolveVatRateForCountry(supabase, inf.country_code);
-  const suggested_cost_vat_percent = resolveVendorDefaultVatPercent({
-    vatRegistered: inf.vat_registered,
-    defaultVatPercent: Number(inf.default_vat_percent ?? 0),
-    countryCode: inf.country_code,
-    countryVatRate,
-  });
-
-  return {
-    id: inf.id,
-    document_number: inf.document_number,
-    display_name: inf.display_name,
-    status: inf.status,
-    country_code: inf.country_code,
-    suggested_currency,
-    platforms,
-    rate_card: inf.rate_card,
-    payment_details: inf.payment_details,
-    suggested_cost: suggestCostFromRateCard(inf.rate_card, []),
-    vat_registered: inf.vat_registered,
-    default_vat_percent: Number(inf.default_vat_percent ?? 0),
-    tax_registration_number: inf.tax_registration_number,
-    notes: inf.notes,
-    suggested_cost_vat_percent,
-  };
+  return getInfluencerForAssignmentViaService(supabase, influencerId);
 }
 
 export async function browseInfluencersForCampaign(
   params: import("./types").CreatorBrowseFilters
 ): Promise<import("./types").CreatorBrowseResult> {
   const { supabase } = await requireUser();
-  const page = Math.max(1, params.page ?? 1);
-  const pageSize = Math.min(50, params.pageSize ?? 20);
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-  const search = params.search?.trim() ?? "";
-  const platform = params.platform?.trim() ?? "";
-  const country = params.country?.trim().toUpperCase() ?? "";
-  const category = params.category?.trim() ?? "";
-
-  let influencerIds: string[] | null = null;
-
-  if (platform || params.minFollowers != null || params.maxFollowers != null || params.minEngagement != null) {
-    let accountQuery = supabase
-      .from("influencer_platform_accounts")
-      .select("influencer_id, follower_count, engagement_rate, handle, profile_url, platform");
-
-    if (platform) {
-      accountQuery = accountQuery.eq("platform", platform);
-    }
-    if (params.minFollowers != null) {
-      accountQuery = accountQuery.gte("follower_count", params.minFollowers);
-    }
-    if (params.maxFollowers != null) {
-      accountQuery = accountQuery.lte("follower_count", params.maxFollowers);
-    }
-    if (params.minEngagement != null) {
-      accountQuery = accountQuery.gte("engagement_rate", params.minEngagement);
-    }
-
-    const { data: platformMatches, error: platformError } = await accountQuery;
-    if (platformError) throw new Error(platformError.message);
-
-    let ids = [...new Set(platformMatches?.map((r) => r.influencer_id) ?? [])];
-
-    if (search) {
-      const pattern = `%${escapeIlikePattern(search)}%`;
-      const handleMatches = (platformMatches ?? []).filter(
-        (a) =>
-          a.handle?.toLowerCase().includes(search.toLowerCase()) ||
-          a.profile_url?.toLowerCase().includes(search.toLowerCase())
-      );
-      const handleIds = new Set(handleMatches.map((a) => a.influencer_id));
-
-      const { data: nameMatches } = await supabase
-        .from("influencers")
-        .select("id")
-        .eq("status", "active")
-        .or(
-          [`display_name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(",")
-        );
-
-      const nameIds = new Set(nameMatches?.map((r) => r.id) ?? []);
-      ids = ids.filter((id) => handleIds.has(id) || nameIds.has(id));
-      for (const id of nameIds) {
-        if (!ids.includes(id)) ids.push(id);
-      }
-    }
-
-    influencerIds = ids;
-    if (influencerIds.length === 0) {
-      return { creators: [], total: 0, page, pageSize };
-    }
-  }
-
-  let query = supabase
-    .from("influencers")
-    .select(
-      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details",
-      { count: "exact" }
-    )
-    .eq("status", "active")
-    .order("display_name");
-
-  if (country) {
-    query = query.eq("country_code", country);
-  }
-
-  if (category) {
-    query = query.contains("categories", [category]);
-  }
-
-  if (search && !platform && params.minFollowers == null && params.maxFollowers == null) {
-    const pattern = `%${escapeIlikePattern(search)}%`;
-    query = query.or(
-      [`display_name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(",")
-    );
-  }
-
-  if (influencerIds) {
-    query = query.in("id", influencerIds);
-  }
-
-  const { data, error, count } = await query.range(from, to);
-  if (error) throw new Error(error.message);
-
-  const ids = (data ?? []).map((r) => r.id);
-  if (ids.length === 0) {
-    return { creators: [], total: count ?? 0, page, pageSize };
-  }
-
-  const { data: accounts } = await supabase
-    .from("influencer_platform_accounts")
-    .select(
-      "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, audience_country, is_verified, is_primary"
-    )
-    .in("influencer_id", ids)
-    .order("is_primary", { ascending: false });
-
-  const accountsByInfluencer = new Map<string, InfluencerSearchResult["platforms"]>();
-  for (const account of accounts ?? []) {
-    const list = accountsByInfluencer.get(account.influencer_id) ?? [];
-    list.push({
-      id: account.id,
-      platform: account.platform,
-      handle: account.handle,
-      profile_url: account.profile_url,
-      follower_count: account.follower_count,
-      engagement_rate: account.engagement_rate,
-      audience_country: account.audience_country ?? null,
-      is_verified: account.is_verified ?? false,
-    });
-    accountsByInfluencer.set(account.influencer_id, list);
-  }
-
-  const creators: InfluencerSearchResult[] = (data ?? []).map((row) => {
-    const r = row as unknown as {
-      id: string;
-      document_number: string;
-      display_name: string;
-      status: string;
-      country_code: string | null;
-      categories: string[];
-      notes: string | null;
-      rate_card: Record<string, unknown>;
-      payment_details: Record<string, unknown>;
-    };
-    return {
-      id: r.id,
-      document_number: r.document_number,
-      display_name: r.display_name,
-      status: r.status,
-      country_code: r.country_code,
-      categories: r.categories ?? [],
-      notes: r.notes,
-      suggested_currency: suggestCurrencyFromPaymentDetails(
-        r.payment_details,
-        DEFAULT_PLATFORM_CURRENCY
-      ),
-      platforms: accountsByInfluencer.get(r.id) ?? [],
-    };
-  });
-
-  return {
-    creators,
-    total: count ?? creators.length,
-    page,
-    pageSize,
-  };
+  return browseInfluencersViaService(supabase, params);
 }
 
 export { getBrandHierarchySnapshot } from "@/lib/master-data/queries";
