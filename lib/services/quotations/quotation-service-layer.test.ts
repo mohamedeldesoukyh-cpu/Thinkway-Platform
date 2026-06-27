@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { computeQuotationTotals } from "@/features/quotations/quotation-engine";
 import { stripQuotationVersionSuffix } from "@/lib/commercial-sync/rules";
 
-import type { QuotationItemSeed } from "./quotation-helpers";
+import type { QuotationItemSeed } from "@/lib/domains/commercial/quotation-types";
 
 async function main() {
   const totals = computeQuotationTotals([

@@ -1,4 +1,8 @@
-export type { QuotationItemSeed, ImportCreatorOption, QuotationMutationResult } from "./quotation-helpers";
+export type {
+  ImportCreatorOption,
+  QuotationItemSeed,
+  QuotationMutationResult,
+} from "@/lib/domains/commercial/quotation-types";
 export {
   createBlankQuotation,
   createQuotationFromSelection,

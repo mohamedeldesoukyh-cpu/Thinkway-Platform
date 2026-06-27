@@ -30,7 +30,10 @@ import {
   removeQuotationItemWithSync,
   updateQuotationItemCommercials as updateQuotationItemCommercialsService,
 } from "@/lib/services/quotations/quotation-commercial-service";
-import type { ImportCreatorOption, QuotationItemSeed } from "@/lib/services/quotations/quotation-helpers";
+import type {
+  ImportCreatorOption,
+  QuotationItemSeed,
+} from "@/lib/domains/commercial/quotation-types";
 
 import { QUOTATION_PERMISSIONS, QUOTATIONS_LIST_PATH, quotationDetailPath } from "./constants";
 import type { ActionResult, QuotationDeliverable } from "./types";

@@ -5,7 +5,7 @@ import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { normalizeCommercialLine, computeQuotationTotals } from "@/features/quotations/quotation-engine";
 import type { CommercialInputMode, Database } from "@/types/database";
 
-import type { QuotationDeliverable } from "@/features/quotations/types";
+import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 
 import {
   fetchQuotationItemEgpTotals,

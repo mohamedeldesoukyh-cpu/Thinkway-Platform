@@ -1,14 +1,12 @@
 import type { CommercialInputMode, QuotationStatus } from "@/types/database";
 
+import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
+
 export type ActionResult<T = undefined> =
   | { ok: true; message?: string; data?: T }
   | { ok: false; message: string };
 
-export type QuotationDeliverable = {
-  platform: string;
-  type: string;
-  quantity: number;
-};
+export type { QuotationDeliverable };
 
 export type QuotationItemRow = {
   id: string;
