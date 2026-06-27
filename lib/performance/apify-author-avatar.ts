@@ -1,3 +1,4 @@
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
 
 function httpUrl(value: unknown): string | null {
@@ -85,15 +86,15 @@ export function pickApifyAuthorAvatarUrl(
   if (!payload || typeof payload !== "object") return null;
   const row = payload as Record<string, unknown>;
 
-  const normalized = platform.trim().toLowerCase();
+  const platformKey = canonicalPlatformKey(platform);
   const candidates =
-    normalized === "tiktok"
+    platformKey === "tiktok"
       ? tiktokAuthorAvatarCandidates(row)
-      : normalized === "instagram"
+      : platformKey === "instagram"
         ? instagramAuthorAvatarCandidates(row)
         : [...instagramAuthorAvatarCandidates(row), ...tiktokAuthorAvatarCandidates(row), ...genericAuthorAvatarCandidates(row)];
 
   const url = firstHttpUrl(candidates);
   if (!url) return null;
-  return isAvatarUrlAllowedForPlatform(normalized, url) ? url : null;
+  return isAvatarUrlAllowedForPlatform(platformKey, url) ? url : null;
 }

@@ -65,7 +65,7 @@ export function isInstagramHostedAvatarUrl(url: string | null | undefined): bool
   return false;
 }
 
-/** True when URL is hosted on TikTok CDN. */
+/** True when URL is hosted on TikTok / ByteDance CDN. */
 export function isTikTokHostedAvatarUrl(url: string | null | undefined): boolean {
   const trimmed = url?.trim();
   if (!trimmed) return false;
@@ -74,8 +74,37 @@ export function isTikTokHostedAvatarUrl(url: string | null | undefined): boolean
   if (!host) return false;
   if (host.includes("tiktokcdn")) return true;
   if (host.includes("tiktokv.com")) return true;
+  if (host.includes("ibyteimg.com")) return true;
+  if (host.includes("ibytedtos.com")) return true;
+  if (host.includes("byteoversea.com")) return true;
+  if (host.includes("muscdn.com")) return true;
   if (host.endsWith("tiktok.com") || host === "tiktok.com") return true;
   return false;
+}
+
+/**
+ * Strip TikTok CDN signing (x-expires / x-signature) so avatars stay loadable after tokens expire.
+ * p16-sign-va.tiktokcdn.com → p16-va.tiktokcdn.com with query params removed.
+ */
+export function stabilizeTikTokAvatarUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const isStabilizable =
+      host.includes("tiktokcdn") ||
+      host.includes("ibyteimg.com") ||
+      host.includes("ibytedtos.com");
+    if (!isStabilizable) return url;
+
+    const stabilizedHost = host.replace(/-sign-/g, "-").replace(/-sign\./g, ".");
+    if (stabilizedHost === host && !parsed.search) return url;
+
+    parsed.hostname = stabilizedHost;
+    parsed.search = "";
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }
 
 /** True when URL is hosted on YouTube / Google avatar CDN. */
@@ -197,7 +226,9 @@ function firstAllowedAvatarUrl(
   for (const candidate of candidates) {
     const trimmed = candidate?.trim();
     if (!trimmed || isAvatarUrlNeedsRefresh(trimmed)) continue;
-    if (isAvatarUrlAllowedForPlatform(platform, trimmed)) return trimmed;
+    if (isAvatarUrlAllowedForPlatform(platform, trimmed)) {
+      return normalizeAvatarUrlForPlatform(platform, trimmed);
+    }
   }
   return null;
 }
@@ -205,7 +236,17 @@ function firstAllowedAvatarUrl(
 function isGenericAvatarAllowedForPlatform(platform: string, url: string): boolean {
   if (!isAvatarUrlAllowedForPlatform(platform, url)) return false;
   if (shouldUseGenericCreatorAvatar(platform)) return true;
+  const key = resolvePublicationEffectivePlatform({ platform });
+  // Cross-platform CDN rules already applied — TikTok/YouTube/etc. may use vendor CDNs
+  // (ibyteimg, tiktokcdn, …) that are not Instagram discovery photos.
+  if (key !== "instagram" && key !== "unknown") return true;
   return detectAvatarCdn(url) !== "unknown";
+}
+
+function normalizeAvatarUrlForPlatform(platform: string, url: string): string {
+  const key = resolvePublicationEffectivePlatform({ platform });
+  if (key === "tiktok") return stabilizeTikTokAvatarUrl(url);
+  return url;
 }
 
 function firstGenericAvatarUrl(
@@ -215,7 +256,9 @@ function firstGenericAvatarUrl(
   for (const candidate of candidates) {
     const trimmed = candidate?.trim();
     if (!trimmed || isAvatarUrlNeedsRefresh(trimmed)) continue;
-    if (isGenericAvatarAllowedForPlatform(platform, trimmed)) return trimmed;
+    if (isGenericAvatarAllowedForPlatform(platform, trimmed)) {
+      return normalizeAvatarUrlForPlatform(platform, trimmed);
+    }
   }
   return null;
 }

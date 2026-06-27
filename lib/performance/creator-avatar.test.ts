@@ -10,14 +10,17 @@ import {
   resolvePublicationCreatorAvatar,
   resolvePublicationEffectivePlatform,
   resolvePublicationRowCreatorAvatar,
+  stabilizeTikTokAvatarUrl,
 } from "@/lib/performance/creator-avatar";
 
 const IG_CDN = "https://scontent-lhr8-1.cdninstagram.com/v/t51.2885-19/abc.jpg";
 const TT_CDN = "https://p16-sign-va.tiktokcdn.com/avatar.jpg";
+const TT_IBYTEIMG = "https://p16-sign-va.ibyteimg.com/tos-maliva-avt-0068/avatar.jpeg";
 const YT_CDN = "https://yt3.ggpht.com/ytc/default.jpg";
 
 assert.equal(isInstagramHostedAvatarUrl(IG_CDN), true);
 assert.equal(isTikTokHostedAvatarUrl(TT_CDN), true);
+assert.equal(isTikTokHostedAvatarUrl(TT_IBYTEIMG), true);
 assert.equal(isYouTubeHostedAvatarUrl(YT_CDN), true);
 assert.equal(
   isInstagramHostedAvatarUrl("https://p16-sign-va.tiktokcdn.com/avatar.jpg"),
@@ -26,7 +29,38 @@ assert.equal(
 
 assert.equal(detectAvatarCdn(IG_CDN), "instagram");
 assert.equal(detectAvatarCdn(TT_CDN), "tiktok");
+assert.equal(detectAvatarCdn(TT_IBYTEIMG), "tiktok");
 assert.equal(detectAvatarCdn(YT_CDN), "youtube");
+
+// Signed TikTok CDN URLs are stabilized for display (strip x-expires / -sign host).
+assert.equal(
+  stabilizeTikTokAvatarUrl(
+    "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/abc.webp?x-expires=1661893200&x-signature=abc"
+  ),
+  "https://p16-va.tiktokcdn.com/tos-maliva-avt-0068/abc.webp"
+);
+
+// Apify author avatar on ibyteimg must resolve for TikTok rows (not only tiktokcdn.com).
+assert.equal(
+  resolvePublicationCreatorAvatar({
+    platform: "tiktok",
+    platform_profile_picture_url: null,
+    influencer_avatar_url: null,
+    apify_author_avatar_url: TT_IBYTEIMG,
+  }),
+  "https://p16-va.ibyteimg.com/tos-maliva-avt-0068/avatar.jpeg",
+  "ibyteimg Apify avatar on TikTok row"
+);
+
+// TikTok alias tt resolves the same as tiktok for avatar fallbacks.
+assert.equal(
+  resolvePublicationCreatorAvatar({
+    platform: "tt",
+    apify_author_avatar_url: TT_CDN,
+  }),
+  "https://p16-va.tiktokcdn.com/avatar.jpg",
+  "tt alias + stabilized tiktokcdn URL"
+);
 
 // TikTok row must not use Instagram CDN on platform account picture.
 assert.equal(
@@ -51,7 +85,7 @@ assert.equal(
     platform: "tiktok",
     platform_profile_picture_url: TT_CDN,
   }),
-  TT_CDN
+  "https://p16-va.tiktokcdn.com/avatar.jpg"
 );
 
 // Priority: platform account → influencer avatar → apify → discovery (IG only).
@@ -126,7 +160,7 @@ assert.equal(
     influencer_avatar_url: TT_CDN,
     social_profile_picture_url: null,
   }),
-  TT_CDN,
+  "https://p16-va.tiktokcdn.com/avatar.jpg",
   "platform-safe influencer avatar on TikTok row"
 );
 
