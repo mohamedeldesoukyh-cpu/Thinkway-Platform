@@ -7,11 +7,15 @@ import { publicationHasInflightMetricsJob } from "@/lib/performance/metrics-coll
 /** Rows in `collecting` longer than this are candidates for forced failure. */
 export const STUCK_COLLECTING_THRESHOLD_MS = 15 * 60 * 1000;
 
+/** Rows in `queued` longer than this with no BullMQ job are candidates for forced failure. */
+export const STUCK_QUEUED_THRESHOLD_MS = 10 * 60 * 1000;
+
 export type StuckCollectingRow = {
   id: string;
   campaign_header_id: string;
   metrics_refresh_status: string;
   metrics_refresh_attempted_at: string | null;
+  updated_at?: string | null;
 };
 
 export function isStuckCollectingRow(
@@ -35,10 +39,34 @@ export function shouldMarkStuckCollectingAsFailed(
   return isStuckCollectingRow(row, nowMs, thresholdMs) && !hasActiveJob;
 }
 
+export function isStuckQueuedRow(
+  row: StuckCollectingRow,
+  nowMs: number,
+  thresholdMs = STUCK_QUEUED_THRESHOLD_MS
+): boolean {
+  if (row.metrics_refresh_status !== "queued") return false;
+  const anchor = row.updated_at ?? row.metrics_refresh_attempted_at;
+  if (!anchor) return true;
+  const anchorMs = Date.parse(anchor);
+  if (Number.isNaN(anchorMs)) return true;
+  return nowMs - anchorMs >= thresholdMs;
+}
+
+export function shouldMarkStuckQueuedAsFailed(
+  row: StuckCollectingRow,
+  nowMs: number,
+  hasActiveJob: boolean,
+  thresholdMs = STUCK_QUEUED_THRESHOLD_MS
+): boolean {
+  return isStuckQueuedRow(row, nowMs, thresholdMs) && !hasActiveJob;
+}
+
 export type RecoverStuckMetricCollectionsResult = {
   scanned: number;
   markedFailed: number;
   skippedActiveJob: number;
+  queuedScanned: number;
+  queuedMarkedFailed: number;
 };
 
 /**
@@ -94,5 +122,48 @@ export async function recoverStuckMetricCollections(
     markedFailed += 1;
   }
 
-  return { scanned: rows.length, markedFailed, skippedActiveJob };
+  const queuedCutoffIso = new Date(nowMs - STUCK_QUEUED_THRESHOLD_MS).toISOString();
+  const { data: queuedData, error: queuedError } = await supabase
+    .from("campaign_publications")
+    .select("id, campaign_header_id, metrics_refresh_status, metrics_refresh_attempted_at, updated_at")
+    .eq("metrics_refresh_status", "queued")
+    .lt("updated_at", queuedCutoffIso)
+    .limit(limit);
+
+  if (queuedError) throw new Error(queuedError.message);
+
+  const queuedRows = (queuedData ?? []) as StuckCollectingRow[];
+  let queuedMarkedFailed = 0;
+
+  for (const row of queuedRows) {
+    if (!isStuckQueuedRow(row, nowMs)) continue;
+
+    const hasActiveJob = await publicationHasInflightMetricsJob(row.id);
+    if (!shouldMarkStuckQueuedAsFailed(row, nowMs, hasActiveJob)) {
+      skippedActiveJob += 1;
+      continue;
+    }
+
+    await markPublicationRefreshStatus(supabase, {
+      publicationId: row.id,
+      campaignHeaderId: row.campaign_header_id,
+      status: "failed",
+    });
+
+    logMetricsQueueEvent("STATUS_UPDATED", {
+      publicationId: row.id,
+      status: "failed",
+      error: "stuck_queued_recovery",
+    });
+
+    queuedMarkedFailed += 1;
+  }
+
+  return {
+    scanned: rows.length,
+    markedFailed,
+    skippedActiveJob,
+    queuedScanned: queuedRows.length,
+    queuedMarkedFailed,
+  };
 }

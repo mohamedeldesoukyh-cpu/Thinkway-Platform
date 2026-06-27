@@ -50,18 +50,22 @@ export async function requestMetricsCollection(
     playwrightExtract?: MetricsCollectorOptions["playwrightExtract"];
   }
 ): Promise<{ mode: "queued" | "inline"; outcome?: CollectionOutcome }> {
-  await queuePublicationForMetrics(supabase, {
-    publicationId: input.publicationId,
-    campaignHeaderId: input.campaignHeaderId,
-  });
-
   if (isMetricsQueueAvailable()) {
-    await enqueuePublicationMetricsJob({
+    const { enqueued } = await enqueuePublicationMetricsJob({
       publicationId: input.publicationId,
       campaignHeaderId: input.campaignHeaderId,
       triggeredBy: input.triggeredBy,
     });
-    return { mode: "queued" };
+    if (enqueued) {
+      await queuePublicationForMetrics(supabase, {
+        publicationId: input.publicationId,
+        campaignHeaderId: input.campaignHeaderId,
+      });
+      return { mode: "queued" };
+    }
+    console.warn(
+      `[metrics-collector] REDIS_URL set but enqueue failed publication=${input.publicationId} — inline fallback`
+    );
   }
 
   const outcome = await metricsCollectorById(supabase, input);
@@ -94,12 +98,6 @@ export async function requestCampaignMetricsCollection(
   let inline = 0;
 
   if (isMetricsQueueAvailable()) {
-    for (const row of rows) {
-      await queuePublicationForMetrics(supabase, {
-        publicationId: row.id,
-        campaignHeaderId: row.campaign_header_id,
-      });
-    }
     const result = await enqueuePublicationMetricsBulk(
       rows.map((row) => ({
         publicationId: row.id,
@@ -107,8 +105,24 @@ export async function requestCampaignMetricsCollection(
         triggeredBy: input.triggeredBy,
       }))
     );
-    queued = result.enqueued;
-  } else {
+    if (result.enqueued > 0) {
+      await Promise.all(
+        rows.map((row) =>
+          queuePublicationForMetrics(supabase, {
+            publicationId: row.id,
+            campaignHeaderId: row.campaign_header_id,
+          })
+        )
+      );
+      queued = result.enqueued;
+    } else {
+      console.warn(
+        `[metrics-collector] bulk enqueue failed campaign=${input.campaignHeaderId} — inline fallback`
+      );
+    }
+  }
+
+  if (queued === 0) {
     for (const row of rows) {
       await metricsCollectorById(supabase, {
         publicationId: row.id,
@@ -146,20 +160,25 @@ export async function collectScheduledMetricsRefresh(
   ).slice(0, limit);
 
   if (isMetricsQueueAvailable()) {
-    for (const row of due) {
-      await queuePublicationForMetrics(supabase, {
-        publicationId: row.id,
-        campaignHeaderId: row.campaign_header_id,
-      });
-    }
-    await enqueuePublicationMetricsBulk(
+    const result = await enqueuePublicationMetricsBulk(
       due.map((row) => ({
         publicationId: row.id,
         campaignHeaderId: row.campaign_header_id,
         triggeredBy: "scheduled_worker",
       }))
     );
-    return { processed: due.length, outcomes: [] };
+    if (result.enqueued > 0) {
+      await Promise.all(
+        due.map((row) =>
+          queuePublicationForMetrics(supabase, {
+            publicationId: row.id,
+            campaignHeaderId: row.campaign_header_id,
+          })
+        )
+      );
+      return { processed: due.length, outcomes: [] };
+    }
+    console.warn("[metrics-collector] scheduled bulk enqueue failed — inline fallback");
   }
 
   const outcomes: CollectionOutcome[] = [];

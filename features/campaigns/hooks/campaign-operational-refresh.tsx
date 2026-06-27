@@ -55,11 +55,9 @@ export function useRefreshCampaignAfterOperationalMutation() {
 
 /** Refetch publications bundle (grid, KPIs, sync health) after publication mutations. */
 export function useRefreshCampaignAfterPublicationMutation() {
-  const router = useRouter();
   const reloadPublications = useCampaignPublicationsRefresh();
 
   return useCallback(() => {
     void reloadPublications?.();
-    router.refresh();
-  }, [reloadPublications, router]);
+  }, [reloadPublications]);
 }

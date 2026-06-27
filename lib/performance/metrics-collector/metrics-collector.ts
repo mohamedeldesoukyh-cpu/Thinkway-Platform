@@ -62,6 +62,115 @@ function attemptStatusLabel(attempt: ProviderAttemptResult): string {
   return "failed";
 }
 
+type PostMetricsSideEffectInput = {
+  publication: PublicationForCollection;
+  engagementContext: Awaited<ReturnType<typeof loadPublicationEngagementContext>>;
+  resolvedPlatform: ReturnType<typeof detectPublicationPlatform>["platform"];
+  apifyAuthorAvatarUrl: string | null;
+  apifyAuthorFollowerCount: number | null;
+  winningSource: MetricsProviderId | null;
+};
+
+function resolveAvatarPlatformForPublication(
+  input: PostMetricsSideEffectInput
+): ReturnType<typeof resolvePublicationEffectivePlatform> {
+  const { publication, engagementContext, resolvedPlatform } = input;
+  return (
+    engagementContext.effective_platform ??
+    (resolvedPlatform !== "unknown"
+      ? resolvedPlatform
+      : resolvePublicationEffectivePlatform({
+          platform: publication.platform,
+          publication_type: publication.publication_type,
+          content_url: publication.content_url,
+        }))
+  );
+}
+
+async function runPostMetricsSideEffects(
+  supabase: SupabaseClient,
+  input: PostMetricsSideEffectInput
+): Promise<void> {
+  const avatarPlatform = resolveAvatarPlatformForPublication(input);
+  const { publication, engagementContext, apifyAuthorAvatarUrl, apifyAuthorFollowerCount, winningSource } =
+    input;
+
+  if (engagementContext.influencer_id && engagementContext.followers == null && avatarPlatform !== "unknown") {
+    try {
+      await syncCreatorFollowersIfMissing(supabase, {
+        influencerId: engagementContext.influencer_id,
+        platform: avatarPlatform,
+        followerCountFromProvider: apifyAuthorFollowerCount,
+      });
+    } catch (error) {
+      console.warn("[metrics-collector] follower sync failed", error);
+    }
+  }
+
+  if (apifyAuthorAvatarUrl && engagementContext.influencer_id && avatarPlatform !== "unknown") {
+    try {
+      const persistResult = await persistInfluencerPlatformAvatarDetailed(supabase, {
+        influencerId: engagementContext.influencer_id,
+        platform: avatarPlatform,
+        profilePictureUrl: apifyAuthorAvatarUrl,
+      });
+      if (persistResult.saved) {
+        console.log(
+          `[metrics-collector] profile picture saved influencer=${engagementContext.influencer_id} platform=${avatarPlatform}`
+        );
+      }
+    } catch (error) {
+      console.warn("[metrics-collector] profile picture persist failed", error);
+    }
+  } else if (
+    winningSource === "apify" &&
+    engagementContext.influencer_id &&
+    !apifyAuthorAvatarUrl &&
+    avatarPlatform !== "unknown"
+  ) {
+    try {
+      const enrichResult = await enrichAndPersistPlatformAvatar(supabase, {
+        influencerId: engagementContext.influencer_id,
+        platform: avatarPlatform,
+      });
+      if (enrichResult.saved) {
+        console.log(
+          `[metrics-collector] profile picture enriched influencer=${engagementContext.influencer_id} platform=${avatarPlatform}`
+        );
+      } else {
+        console.warn(
+          `[metrics-collector] Apify metrics saved but authorAvatarUrl missing publication=${publication.id} platform=${input.resolvedPlatform} — enrichment ${enrichResult.reason}`
+        );
+      }
+    } catch (error) {
+      console.warn("[metrics-collector] profile picture enrichment failed", error);
+    }
+  } else if (winningSource === "apify" && engagementContext.influencer_id && !apifyAuthorAvatarUrl) {
+    console.warn(
+      `[metrics-collector] Apify metrics saved but authorAvatarUrl missing publication=${publication.id} platform=${input.resolvedPlatform} — check actor payload fields`
+    );
+  }
+
+  try {
+    const { enqueued, jobId } = await enqueuePublicationScreenshotJob({
+      publicationId: publication.id,
+      campaignHeaderId: publication.campaign_header_id,
+      triggeredBy: "metrics_collected",
+    });
+    if (!enqueued) {
+      console.warn(
+        `[metrics-collector] screenshot not enqueued publication=${publication.id} — REDIS_URL missing`
+      );
+    } else {
+      console.log(
+        `[metrics-collector] screenshot enqueued publication=${publication.id} job=${jobId ?? "n/a"}`
+      );
+    }
+  } catch (error) {
+    console.warn("[metrics-collector] screenshot enqueue failed", error);
+  }
+}
+
 /**
  * Production metrics collector orchestrator.
  * detect platform → run provider chain → merge → persist best available values.
@@ -265,30 +374,6 @@ export async function metricsCollector(
   );
 
   if (hasAnyMetric(merged)) {
-    if (engagementContext.influencer_id && engagementContext.followers == null) {
-      const avatarPlatform =
-        engagementContext.effective_platform ??
-        (resolvedPlatform !== "unknown"
-          ? resolvedPlatform
-          : resolvePublicationEffectivePlatform({
-              platform: publication.platform,
-              publication_type: publication.publication_type,
-              content_url: publication.content_url,
-            }));
-
-      if (avatarPlatform !== "unknown") {
-        try {
-          await syncCreatorFollowersIfMissing(supabase, {
-            influencerId: engagementContext.influencer_id,
-            platform: avatarPlatform,
-            followerCountFromProvider: apifyAuthorFollowerCount,
-          });
-        } catch (error) {
-          console.warn("[metrics-collector] follower sync failed", error);
-        }
-      }
-    }
-
     await persistCollectedMetrics(supabase, {
       publicationId: publication.id,
       campaignHeaderId: publication.campaign_header_id,
@@ -306,94 +391,16 @@ export async function metricsCollector(
       publicationContent: resolvedPublicationContent,
     });
 
-    if (
-      apifyAuthorAvatarUrl &&
-      engagementContext.influencer_id
-    ) {
-      const avatarPlatform =
-        engagementContext.effective_platform ??
-        (resolvedPlatform !== "unknown"
-          ? resolvedPlatform
-          : resolvePublicationEffectivePlatform({
-              platform: publication.platform,
-              publication_type: publication.publication_type,
-              content_url: publication.content_url,
-            }));
-
-      if (avatarPlatform !== "unknown") {
-        try {
-          const persistResult = await persistInfluencerPlatformAvatarDetailed(supabase, {
-            influencerId: engagementContext.influencer_id,
-            platform: avatarPlatform,
-            profilePictureUrl: apifyAuthorAvatarUrl,
-          });
-          if (persistResult.saved) {
-            console.log(
-              `[metrics-collector] profile picture saved influencer=${engagementContext.influencer_id} platform=${avatarPlatform}`
-            );
-          }
-        } catch (error) {
-          console.warn("[metrics-collector] profile picture persist failed", error);
-        }
-      }
-    } else if (
-      winningSource === "apify" &&
-      engagementContext.influencer_id &&
-      !apifyAuthorAvatarUrl
-    ) {
-      const avatarPlatform =
-        engagementContext.effective_platform ??
-        (resolvedPlatform !== "unknown"
-          ? resolvedPlatform
-          : resolvePublicationEffectivePlatform({
-              platform: publication.platform,
-              publication_type: publication.publication_type,
-              content_url: publication.content_url,
-            }));
-
-      if (avatarPlatform !== "unknown") {
-        try {
-          const enrichResult = await enrichAndPersistPlatformAvatar(supabase, {
-            influencerId: engagementContext.influencer_id,
-            platform: avatarPlatform,
-          });
-          if (enrichResult.saved) {
-            console.log(
-              `[metrics-collector] profile picture enriched influencer=${engagementContext.influencer_id} platform=${avatarPlatform}`
-            );
-          } else {
-            console.warn(
-              `[metrics-collector] Apify metrics saved but authorAvatarUrl missing publication=${publication.id} platform=${resolvedPlatform} — enrichment ${enrichResult.reason}`
-            );
-          }
-        } catch (error) {
-          console.warn("[metrics-collector] profile picture enrichment failed", error);
-        }
-      } else {
-        console.warn(
-          `[metrics-collector] Apify metrics saved but authorAvatarUrl missing publication=${publication.id} platform=${resolvedPlatform} — check actor payload fields`
-        );
-      }
-    }
-
-    try {
-      const { enqueued, jobId } = await enqueuePublicationScreenshotJob({
-        publicationId: publication.id,
-        campaignHeaderId: publication.campaign_header_id,
-        triggeredBy: "metrics_collected",
-      });
-      if (!enqueued) {
-        console.warn(
-          `[metrics-collector] screenshot not enqueued publication=${publication.id} — REDIS_URL missing`
-        );
-      } else {
-        console.log(
-          `[metrics-collector] screenshot enqueued publication=${publication.id} job=${jobId ?? "n/a"}`
-        );
-      }
-    } catch (error) {
-      console.warn("[metrics-collector] screenshot enqueue failed", error);
-    }
+    void runPostMetricsSideEffects(supabase, {
+      publication,
+      engagementContext,
+      resolvedPlatform,
+      apifyAuthorAvatarUrl,
+      apifyAuthorFollowerCount,
+      winningSource,
+    }).catch((error) => {
+      console.warn("[metrics-collector] post-metrics side effects failed", error);
+    });
   } else {
     await markPublicationRefreshStatus(supabase, {
       publicationId: publication.id,

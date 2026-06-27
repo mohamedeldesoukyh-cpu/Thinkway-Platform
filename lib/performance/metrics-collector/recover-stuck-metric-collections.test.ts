@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 
 import {
   STUCK_COLLECTING_THRESHOLD_MS,
+  STUCK_QUEUED_THRESHOLD_MS,
   isStuckCollectingRow,
+  isStuckQueuedRow,
   shouldMarkStuckCollectingAsFailed,
+  shouldMarkStuckQueuedAsFailed,
 } from "@/lib/performance/metrics-collector/recover-stuck-metric-collections";
 import { isMetricsJobAttemptsExhausted } from "@/lib/performance/metrics-collector/job-failure";
 
@@ -15,6 +18,7 @@ function row(
     campaign_header_id: string;
     metrics_refresh_status: string;
     metrics_refresh_attempted_at: string | null;
+    updated_at: string | null;
   }> = {}
 ) {
   return {
@@ -22,6 +26,7 @@ function row(
     campaign_header_id: "camp-1",
     metrics_refresh_status: "collecting",
     metrics_refresh_attempted_at: "2026-06-27T11:30:00.000Z",
+    updated_at: "2026-06-27T11:30:00.000Z",
     ...overrides,
   };
 }
@@ -64,7 +69,28 @@ function row(
 }
 
 {
+  const staleQueued = row({
+    metrics_refresh_status: "queued",
+    metrics_refresh_attempted_at: null,
+    updated_at: "2026-06-27T11:40:00.000Z",
+  });
+  assert.equal(isStuckQueuedRow(staleQueued, NOW), true);
+  assert.equal(shouldMarkStuckQueuedAsFailed(staleQueued, NOW, false), true);
+  assert.equal(shouldMarkStuckQueuedAsFailed(staleQueued, NOW, true), false);
+}
+
+{
+  const recentQueued = row({
+    metrics_refresh_status: "queued",
+    metrics_refresh_attempted_at: null,
+    updated_at: "2026-06-27T11:55:00.000Z",
+  });
+  assert.equal(isStuckQueuedRow(recentQueued, NOW), false);
+}
+
+{
   assert.equal(STUCK_COLLECTING_THRESHOLD_MS, 15 * 60 * 1000);
+  assert.equal(STUCK_QUEUED_THRESHOLD_MS, 10 * 60 * 1000);
 }
 
 console.log("recover-stuck-metric-collections tests passed");

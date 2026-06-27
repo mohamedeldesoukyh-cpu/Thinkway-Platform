@@ -15,8 +15,12 @@ export function startPublicationMetricsScheduler(): Worker {
     QUEUES.publicationMetricsScheduler,
     async () => {
       const recovery = await recoverStuckMetricCollections(supabase);
-      if (recovery.markedFailed > 0 || recovery.skippedActiveJob > 0) {
-        console.log("[publication-metrics-scheduler] stuck collecting recovery", recovery);
+      if (
+        recovery.markedFailed > 0 ||
+        recovery.queuedMarkedFailed > 0 ||
+        recovery.skippedActiveJob > 0
+      ) {
+        console.log("[publication-metrics-scheduler] stuck metrics recovery", recovery);
       }
 
       const { data, error } = await supabase

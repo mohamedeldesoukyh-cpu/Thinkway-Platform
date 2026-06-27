@@ -59,7 +59,7 @@ export function startPublicationMetricsWorker(): Worker<PublicationMetricsJobDat
     },
     {
       connection: getRedisConnection(),
-      concurrency: 2,
+      concurrency: 4,
     }
   );
 
