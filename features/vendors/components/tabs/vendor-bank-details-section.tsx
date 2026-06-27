@@ -2,8 +2,7 @@
 
 import { format } from "date-fns";
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useEffect, useMemo, useState } from "react";
 
 import { useFormActionWithToast } from "@/hooks/use-form-action-with-toast";
 
@@ -25,6 +24,7 @@ import {
   DETAIL_FORM_INPUT_CLASS,
   DETAIL_FORM_SELECT_TRIGGER_CLASS,
 } from "@/features/campaigns/components/operational-detail-panel";
+import { DocumentDownloadButton } from "@/features/documents";
 import {
   getInfluencerDocumentDownloadUrlAction,
   updateVendorBankDetailsAction,
@@ -251,9 +251,10 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
                 Uploaded {format(new Date(latestBankLetter.created_at), "MMM d, yyyy")}
               </p>
             </div>
-            <BankLetterDownloadButton
+            <DocumentDownloadButton
               documentId={latestBankLetter.id}
-              influencerId={workspace.id}
+              entityId={workspace.id}
+              getDownloadUrl={getInfluencerDocumentDownloadUrlAction}
             />
           </div>
         ) : (
@@ -286,40 +287,4 @@ async function uploadBankLetterWrapper(
     mapped.set("file", file);
   }
   return uploadInfluencerDocumentAction(prev, mapped);
-}
-
-function BankLetterDownloadButton({
-  documentId,
-  influencerId,
-}: {
-  documentId: string;
-  influencerId: string;
-}) {
-  const [isPending, startTransition] = useTransition();
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={isPending}
-      onClick={() => {
-        startTransition(async () => {
-          const result = await getInfluencerDocumentDownloadUrlAction(
-            documentId,
-            influencerId
-          );
-          if (result.error) {
-            toast.error(result.error);
-            return;
-          }
-          if (result.url) {
-            window.open(result.url, "_blank", "noopener,noreferrer");
-          }
-        });
-      }}
-    >
-      Download
-    </Button>
-  );
 }
