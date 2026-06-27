@@ -59,8 +59,6 @@ async function getActor(): Promise<
   return { ok: true, supabase, userId: auth.userId };
 }
 
-export type { QuotationItemSeed, ImportCreatorOption };
-
 export async function createBlankQuotation(input: {
   name: string;
   client_id?: string | null;

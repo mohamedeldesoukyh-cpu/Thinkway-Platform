@@ -34,8 +34,8 @@ import {
   listCampaignsForImport,
   listShortlistImportCreators,
   listShortlistsForImport,
-  type ImportCreatorOption,
 } from "@/features/quotations/actions";
+import type { ImportCreatorOption } from "@/lib/domains/commercial/quotation-types";
 import { buildQuotationSeedFromCreator } from "@/features/quotations/shortlist-seeds";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
