@@ -33,7 +33,37 @@ export {
 
 export { updateLegacyDeliverableStatus } from "./campaign-workflow-service";
 
-export { getCampaignPublicationCount } from "./campaign-performance-service";
+export {
+  bulkImportPublications,
+  bulkUpdatePublicationStatus,
+  deleteCampaignPublication,
+  getCampaignPublicationCount,
+  importPublicationMetrics,
+  loadPublicationSyncLogs,
+  refreshCampaignMetrics,
+  refreshPublicationMetrics,
+  restoreAutomaticPublicationMetrics,
+  saveManualPublicationMetrics,
+  savePublicationDetails,
+  updateCampaignPublication,
+} from "./campaign-performance-service";
+
+export {
+  getCampaignPerformanceBundle,
+  getCampaignPublications,
+  formatCompactCount,
+} from "./campaign-publication-service";
+
+export { getCampaignWorkspace } from "./campaign-workspace-service";
+
+export {
+  addPostToDeliverable,
+  createAssignmentDeliverable,
+  deleteAssignmentDeliverable,
+  updateAssignmentDeliverable,
+  updateDeliverablePlatformType,
+  updatePostSchedule,
+} from "./campaign-deliverable-service";
 
 export {
   resolveAssignmentCommercialBilling,
