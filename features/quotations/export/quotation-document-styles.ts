@@ -167,6 +167,7 @@ export function buildQuotationDocumentStyles(generatedLabel: string): string {
   .summary-box table { width: 300px; border-collapse: collapse; font-size: 11px; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
   .summary-box td { padding: 8px 12px; border-bottom: 1px solid var(--rule); }
   .summary-box tr.total td { font-weight: 700; background: ${P.secondary}; color: #fff; border-bottom: none; }
+  .summary-box tr.sub td:first-child { padding-left: 20px; font-size: 10px; color: var(--muted); }
   .summary-box tr.gp td.num { font-weight: 700; }
   .summary-box td.num { text-align: right; font-variant-numeric: tabular-nums; }
 

@@ -181,10 +181,7 @@ export function buildQuotationDocument(
           { label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf },
           { label: QUOTATION_CLIENT_LABELS.totalCost, value: grandTotal },
         ]
-      : [
-          { label: QUOTATION_CLIENT_LABELS.totalClientCost, value: totalClientCost },
-          { label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf },
-        ]),
+      : [{ label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf }]),
   ];
 
   const internalKpis: QuotationDocumentKpi[] = [

@@ -40,7 +40,7 @@ export const COMMERCIAL_INPUT_MODE_LABELS: Record<CommercialInputMode, string> =
 export const QUOTATION_CLIENT_LABELS = {
   clientCost: "Client cost",
   clientCostEgp: "Client cost EGP",
-  totalClientCost: "Total client cost",
+  totalClientCost: "Client Cost",
   clientInvestment: "Client investment",
   agencyFee: "Agency fee (AF)",
   agencyFeePct: "AF %",

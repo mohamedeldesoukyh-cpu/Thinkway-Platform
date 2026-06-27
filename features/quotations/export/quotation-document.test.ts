@@ -163,8 +163,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(doc.preparedForLine.includes("Acme Corp"));
   assert.ok(doc.termsSections.length >= 5);
   assert.ok(
-    doc.commercialKpis.some((k) => k.label === "Total client cost"),
-    "KPI strip uses client-facing total label"
+    !doc.commercialKpis.some((k) => k.label === QUOTATION_CLIENT_LABELS.totalClientCost),
+    "Client cost belongs in AF summary, not KPI strip"
   );
   assert.ok(
     doc.commercialKpis.some((k) => k.label === "Total agency fee"),
@@ -204,7 +204,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("avoid-break"));
   assert.ok(html.includes("Client investment"));
   assert.ok(html.includes("Client cost"));
-  assert.ok(html.includes("Total client cost"));
+  assert.ok(html.includes("Client Cost"));
+  assert.ok(!html.includes("Total client cost"));
   assert.ok(html.includes("Agency fee (AF)"));
   assert.ok(html.includes("AF %"));
   assert.ok(html.includes('class="money"'));
