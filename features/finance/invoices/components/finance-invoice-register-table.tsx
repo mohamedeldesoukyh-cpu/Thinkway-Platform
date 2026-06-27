@@ -27,6 +27,8 @@ type FinanceInvoiceRegisterTableProps = {
   showUngenerate?: boolean;
   /** When set, invoice numbers open the campaign detail drawer instead of navigating away. */
   onOpenDetail?: (row: FinanceInvoiceRegisterRow) => void;
+  /** Campaign workspace styling (reference HTML data-table). */
+  appearance?: "default" | "campaign";
 };
 
 function formatRegisterDate(value: string): string {
@@ -35,11 +37,24 @@ function formatRegisterDate(value: string): string {
   return format(date, "MMM d, yyyy");
 }
 
-const FINANCE_INVOICE_REGISTER_BASE_COLUMNS: OperationalConfigurableColumnDef<FinanceInvoiceRegisterRow>[] =
-  [
+function campaignInvoiceColumnLabel(
+  id: string,
+  defaultLabel: string,
+  appearance: "default" | "campaign"
+): string {
+  if (appearance !== "campaign") return defaultLabel;
+  if (id === "invoice_number") return "Invoice #";
+  if (id === "invoice_status") return "Status";
+  return defaultLabel;
+}
+
+function buildFinanceInvoiceRegisterBaseColumns(
+  appearance: "default" | "campaign"
+): OperationalConfigurableColumnDef<FinanceInvoiceRegisterRow>[] {
+  return [
     {
       id: "invoice_number",
-      label: "Invoice number",
+      label: campaignInvoiceColumnLabel("invoice_number", "Invoice number", appearance),
       renderCell: () => null,
     },
     {
@@ -59,11 +74,27 @@ const FINANCE_INVOICE_REGISTER_BASE_COLUMNS: OperationalConfigurableColumnDef<Fi
         row.campaign_name ? (
           <div>
             {row.campaign_document_number ? (
-              <p className="text-[11px] tabular-nums text-muted-foreground">
+              <p
+                className={cn(
+                  "text-[11px] tabular-nums",
+                  appearance === "campaign"
+                    ? "text-[var(--camp-blue)]"
+                    : "text-muted-foreground"
+                )}
+              >
                 <DocumentNumber value={row.campaign_document_number} />
               </p>
             ) : null}
-            <p className="max-w-[160px] truncate font-medium">{row.campaign_name}</p>
+            <p
+              className={cn(
+                "max-w-[160px] truncate",
+                appearance === "campaign"
+                  ? "text-[10px] text-[var(--camp-text-3)]"
+                  : "font-medium"
+              )}
+            >
+              {row.campaign_name}
+            </p>
           </div>
         ) : (
           "—"
@@ -92,44 +123,58 @@ const FINANCE_INVOICE_REGISTER_BASE_COLUMNS: OperationalConfigurableColumnDef<Fi
     },
     {
       id: "invoice_status",
-      label: "Invoice status",
+      label: campaignInvoiceColumnLabel("invoice_status", "Invoice status", appearance),
       renderCell: (row) => (
         <InvoiceStatusBadge
           status={row.status}
           regeneration_status={row.regeneration_status}
           metadata={row.metadata}
+          appearance={appearance}
         />
       ),
     },
     {
       id: "locked",
       label: "Locked",
-      renderCell: (row) => (
-        <Badge
-          variant={row.locked_status === "Locked" ? "secondary" : "outline"}
-          className="text-[10px]"
-        >
-          {row.locked_status}
-        </Badge>
-      ),
+      renderCell: (row) =>
+        appearance === "campaign" ? (
+          <span className="text-[11px]">{row.locked_status}</span>
+        ) : (
+          <Badge
+            variant={row.locked_status === "Locked" ? "secondary" : "outline"}
+            className="text-[10px]"
+          >
+            {row.locked_status}
+          </Badge>
+        ),
     },
     {
       id: "created",
       label: "Created",
-      cellClassName: "text-muted-foreground",
+      cellClassName:
+        appearance === "campaign"
+          ? "text-[11px] text-[var(--camp-text-3)]"
+          : "text-muted-foreground",
       renderCell: (row) => formatRegisterDate(row.created_date),
     },
   ];
+}
 
-const FINANCE_INVOICE_REGISTER_ACTIONS_COLUMN: OperationalConfigurableColumnDef<FinanceInvoiceRegisterRow> =
-  {
+function buildFinanceInvoiceRegisterActionsColumn(
+  appearance: "default" | "campaign"
+): OperationalConfigurableColumnDef<FinanceInvoiceRegisterRow> {
+  return {
     id: "actions",
     label: "Actions",
     locked: true,
     headerClassName: "w-[100px]",
     renderCell: (row) =>
       isInvoiceUngenerateEligible(row) ? (
-        <InvoiceUngenerateTrigger invoiceId={row.id} documentNumber={row.document_number} />
+        <InvoiceUngenerateTrigger
+          invoiceId={row.id}
+          documentNumber={row.document_number}
+          variant={appearance === "campaign" ? "link" : "button"}
+        />
       ) : (
         <span
           className="text-[10px] text-muted-foreground"
@@ -139,17 +184,24 @@ const FINANCE_INVOICE_REGISTER_ACTIONS_COLUMN: OperationalConfigurableColumnDef<
         </span>
       ),
   };
+}
 
 function onOpenDetailCell(
   row: FinanceInvoiceRegisterRow,
-  onOpenDetail: FinanceInvoiceRegisterTableProps["onOpenDetail"]
+  onOpenDetail: FinanceInvoiceRegisterTableProps["onOpenDetail"],
+  appearance: "default" | "campaign"
 ) {
   if (onOpenDetail) {
     return (
       <button
         type="button"
         onClick={() => onOpenDetail(row)}
-        className="text-[11px] font-medium tabular-nums transition-colors hover:text-primary hover:underline"
+        className={cn(
+          "text-[11px] font-medium tabular-nums transition-colors hover:underline",
+          appearance === "campaign"
+            ? "thinkway-campaign-link-btn"
+            : "hover:text-primary"
+        )}
       >
         <DocumentNumber value={row.document_number} />
       </button>
@@ -159,7 +211,10 @@ function onOpenDetailCell(
   return (
     <Link
       href={`/billing/invoices/${row.id}`}
-      className="text-[11px] font-medium tabular-nums hover:underline"
+      className={cn(
+        "text-[11px] font-medium tabular-nums hover:underline",
+        appearance === "campaign" && "thinkway-campaign-link"
+      )}
     >
       <DocumentNumber value={row.document_number} />
     </Link>
@@ -168,29 +223,32 @@ function onOpenDetailCell(
 
 function buildFinanceInvoiceRegisterColumns(
   onOpenDetail?: FinanceInvoiceRegisterTableProps["onOpenDetail"],
-  showUngenerate = false
+  showUngenerate = false,
+  appearance: "default" | "campaign" = "default"
 ): OperationalConfigurableColumnDef<FinanceInvoiceRegisterRow>[] {
-  const columns = FINANCE_INVOICE_REGISTER_BASE_COLUMNS.map((column) =>
+  const columns = buildFinanceInvoiceRegisterBaseColumns(appearance).map((column) =>
     column.id === "invoice_number"
       ? {
           ...column,
-          renderCell: (row: FinanceInvoiceRegisterRow) => onOpenDetailCell(row, onOpenDetail),
+          renderCell: (row: FinanceInvoiceRegisterRow) =>
+            onOpenDetailCell(row, onOpenDetail, appearance),
         }
       : column
   );
 
   if (showUngenerate) {
-    return [...columns, FINANCE_INVOICE_REGISTER_ACTIONS_COLUMN];
+    return [...columns, buildFinanceInvoiceRegisterActionsColumn(appearance)];
   }
 
   return columns;
 }
 
 export function getFinanceInvoiceRegisterColumnMetas(
-  showUngenerate = false
+  showUngenerate = false,
+  appearance: "default" | "campaign" = "default"
 ): OperationalTableColumnMeta[] {
   return getOperationalTableColumnMetas(
-    buildFinanceInvoiceRegisterColumns(undefined, showUngenerate)
+    buildFinanceInvoiceRegisterColumns(undefined, showUngenerate, appearance)
   );
 }
 
@@ -202,14 +260,19 @@ export function FinanceInvoiceRegisterTable({
   rows,
   showUngenerate = false,
   onOpenDetail,
+  appearance = "default",
 }: FinanceInvoiceRegisterTableProps) {
   const columns = useMemo(
-    () => buildFinanceInvoiceRegisterColumns(onOpenDetail, showUngenerate),
-    [onOpenDetail, showUngenerate]
+    () => buildFinanceInvoiceRegisterColumns(onOpenDetail, showUngenerate, appearance),
+    [onOpenDetail, showUngenerate, appearance]
   );
 
   if (rows.length === 0) {
-    return (
+    return appearance === "campaign" ? (
+      <div className="thinkway-campaign-empty-state">
+        <p>No invoices in the register yet.</p>
+      </div>
+    ) : (
       <p className="px-4 py-8 text-[11px] text-muted-foreground">
         No invoices in the register yet.
       </p>

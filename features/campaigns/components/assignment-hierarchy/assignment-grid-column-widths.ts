@@ -7,10 +7,11 @@ export const ASSIGNMENT_GRID_VAT_COL =
 
 /** Fixed pixel widths for parent safe-grid colgroup (matches Tailwind min/max above). */
 export const ASSIGNMENT_GRID_COLUMN_WIDTH_PX = {
-  expand: 36,
-  select: 36,
+  /** Chevron lives in assignment cell — reserve no column width. */
+  expand: 0,
+  select: 24,
   assignment: 140,
-  creator: 120,
+  creator: 140,
   platforms: 90,
   deliverables: 56,
   postingDates: 84,
@@ -22,19 +23,19 @@ export const ASSIGNMENT_GRID_COLUMN_WIDTH_PX = {
   cost: 76,
   usageRightsCost: 76,
   vat: 56,
-  totalBilling: 76,
+  totalBilling: 96,
   gp: 76,
   margin: 56,
   opsStatus: 72,
   billing: 72,
-  payout: 52,
+  payout: 88,
   actions: 40,
 } as const;
 
 export type AssignmentGridColumnWidthId = keyof typeof ASSIGNMENT_GRID_COLUMN_WIDTH_PX;
 
-/** Child leading cols — widths come from parent measurement (Assignment … Rev). */
-export const CHILD_GRID_LEADING_COLUMN_COUNT = 9;
+/** Child leading cols — widths come from parent measurement (select … Rev). */
+export const CHILD_GRID_LEADING_COLUMN_COUNT = 8;
 
 /** Width from colgroup; padding matches parent SAFE_GRID_TD. */
 export const CHILD_GRID_LEADING_CELL =
@@ -81,9 +82,8 @@ export const CHILD_GRID_TRAILING_COL_WIDTHS = CHILD_GRID_TRAILING_COLUMNS.map(
   (column) => column.width
 );
 
-/** Fallback leading widths when expand + select + assign… + Rev are all visible. */
+/** Fallback leading widths when select + assign… + Rev are all visible. */
 export const CHILD_GRID_FALLBACK_LEADING_WIDTHS = [
-  ASSIGNMENT_GRID_COLUMN_WIDTH_PX.expand,
   ASSIGNMENT_GRID_COLUMN_WIDTH_PX.select,
   ASSIGNMENT_GRID_COLUMN_WIDTH_PX.assignment,
   ASSIGNMENT_GRID_COLUMN_WIDTH_PX.creator,

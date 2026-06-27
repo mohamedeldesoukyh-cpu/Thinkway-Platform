@@ -3,15 +3,13 @@
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
 
-import { ChartCard } from "@/components/dashboard/charts/chart-card";
 import { ChartSkeleton } from "@/components/dashboard/charts/chart-skeleton";
 import type { ExecutiveDashboardCharts } from "@/lib/analytics/queries/dashboard-charts";
+import { cn } from "@/lib/utils";
 
-const TrendLineChart = dynamic(
+const TrendBarChart = dynamic(
   () =>
-    import("@/components/dashboard/charts/trend-line-chart").then(
-      (m) => m.TrendLineChart
-    ),
+    import("@/components/dashboard/charts/trend-bar-chart").then((m) => m.TrendBarChart),
   { loading: () => <ChartSkeleton />, ssr: false }
 );
 
@@ -27,55 +25,56 @@ export function ExecutiveChartsGrid({ charts }: ExecutiveChartsGridProps) {
         title: "Revenue trend",
         description: "Planned revenue by campaign start month",
         data: charts.revenue_trend,
-        stroke: "stroke-emerald-600 dark:stroke-emerald-400",
+        barColor: "#2563eb",
+        wide: false,
       },
       {
         key: "gp",
         title: "GP trend",
         description: "Gross profit by campaign start month",
         data: charts.gp_trend,
-        stroke: "stroke-sky-600 dark:stroke-sky-400",
+        barColor: "#a855f7",
+        wide: false,
       },
       {
         key: "billing",
         title: "Billing trend",
         description: "Invoiced amount by issue month",
         data: charts.billing_trend,
-        stroke: "stroke-violet-600 dark:stroke-violet-400",
+        barColor: "#10b981",
+        wide: false,
       },
       {
         key: "collections",
         title: "Collections trend",
         description: "Cash collected by payment month",
         data: charts.collections_trend,
-        stroke: "stroke-amber-600 dark:stroke-amber-400",
+        barColor: "#f59e0b",
+        wide: true,
       },
       {
         key: "po",
         title: "PO consumption trend",
         description: "PO consumed by campaign start month",
         data: charts.po_consumption_trend,
-        stroke: "stroke-rose-600 dark:stroke-rose-400",
+        barColor: "#3b82f6",
+        wide: false,
       },
     ],
     [charts]
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+    <div className="platform-v6-trend-grid">
       {series.map((item) => (
-        <ChartCard
+        <div
           key={item.key}
-          title={item.title}
-          description={item.description}
-          className={item.key === "po" ? "xl:col-span-1" : undefined}
+          className={cn("platform-v6-trend-card", item.wide && "platform-v6-trend-card-wide")}
         >
-          <TrendLineChart
-            data={item.data}
-            strokeClassName={item.stroke}
-            ariaLabel={item.title}
-          />
-        </ChartCard>
+          <h4>{item.title}</h4>
+          <p>{item.description}</p>
+          <TrendBarChart data={item.data} barColor={item.barColor} ariaLabel={item.title} />
+        </div>
       ))}
     </div>
   );

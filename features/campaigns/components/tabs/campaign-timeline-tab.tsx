@@ -62,7 +62,7 @@ function buildTimelineVendorColumns(
           <button
             type="button"
             onClick={() => onOpenLine(v.campaign_line_id!)}
-            className="transition-colors hover:text-primary hover:underline"
+            className="thinkway-campaign-link font-mono text-[11px]"
           >
             <DocumentNumber value={v.line_document_number} />
           </button>
@@ -79,7 +79,7 @@ function buildTimelineVendorColumns(
     {
       id: "confirmed",
       label: "Confirmed",
-      cellClassName: "text-muted-foreground",
+      cellClassName: "text-[var(--camp-text-3)]",
       renderCell: (v) =>
         v.confirmed_at ? format(new Date(v.confirmed_at), "MMM d, yyyy") : "—",
     },
@@ -134,28 +134,29 @@ export function CampaignTimelineTab({
 
   return (
     <>
-      <div className={cn("grid gap-4 xl:grid-cols-2", OPERATIONAL_TABLE_FONT)}>
+      <div className={cn("thinkway-campaign-two-col", OPERATIONAL_TABLE_FONT)}>
         <CampaignFlatSection
           title="Finance audit"
           description="Invoice, CN/DN, posting, and cancellation events."
+          flushBody
         >
           {financeAudit.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No finance audit events yet.</p>
+            <div className="thinkway-campaign-empty-state">
+              <p>No finance audit events yet.</p>
+            </div>
           ) : (
-            <ul className="space-y-3">
+            <div className="thinkway-campaign-activity-scroll">
               {financeAudit.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-start justify-between gap-3 border-b border-border/40 pb-3 last:border-0 last:pb-0"
-                >
-                  <div className="space-y-0.5">
+                <div key={entry.id} className="thinkway-campaign-activity-item">
+                  <div>
                     <DetailClickableLabel
                       onClick={() => setDetailAuditId(entry.id)}
                       title={`View ${entry.label} details`}
+                      className="thinkway-campaign-act-name"
                     >
                       {entry.label}
                     </DetailClickableLabel>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="thinkway-campaign-act-by">
                       {entry.actor_name ?? "System"}
                       {entry.payload.document_number ? (
                         <span className="ml-1 font-mono">
@@ -164,46 +165,46 @@ export function CampaignTimelineTab({
                       ) : null}
                     </p>
                   </div>
-                  <time className="shrink-0 text-xs text-muted-foreground">
+                  <time className="thinkway-campaign-act-date">
                     {format(new Date(entry.created_at), "MMM d, yyyy HH:mm")}
                   </time>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </CampaignFlatSection>
 
         <CampaignFlatSection
           title="Activity feed"
           description="Edits, uploads, approvals, status changes, and assignments."
+          flushBody
         >
           {workspace.activity.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No activity recorded yet.</p>
+            <div className="thinkway-campaign-empty-state">
+              <p>No activity recorded yet.</p>
+            </div>
           ) : (
-            <ul className="space-y-3">
+            <div className="thinkway-campaign-activity-scroll">
               {workspace.activity.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex items-start justify-between gap-3 border-b border-border/40 pb-3 last:border-0 last:pb-0"
-                >
-                  <div className="space-y-0.5">
+                <div key={item.id} className="thinkway-campaign-activity-item">
+                  <div>
                     <DetailClickableLabel
                       onClick={() => setDetailActivityId(item.id)}
-                      title={`View activity details`}
-                      className="capitalize"
+                      title="View activity details"
+                      className="thinkway-campaign-act-name capitalize"
                     >
                       {item.summary}
                     </DetailClickableLabel>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="thinkway-campaign-act-by">
                       {item.actor?.full_name ?? item.actor?.email ?? "System"}
                     </p>
                   </div>
-                  <time className="shrink-0 text-xs text-muted-foreground">
+                  <time className="thinkway-campaign-act-date">
                     {format(new Date(item.created_at), "MMM d, yyyy HH:mm")}
                   </time>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </CampaignFlatSection>
 
@@ -222,6 +223,7 @@ export function CampaignTimelineTab({
             wide
             tableOnly
             cardSurface
+            className="xl:col-span-2"
             leading={
               <CampaignOperationalSectionHeader
                 title="Recent assignments"
@@ -231,7 +233,9 @@ export function CampaignTimelineTab({
             }
           >
             {vendorRows.length === 0 ? (
-              <p className="px-4 py-8 text-sm text-muted-foreground">No vendor assignments.</p>
+              <div className="thinkway-campaign-empty-state">
+                <p>No vendor assignments.</p>
+              </div>
             ) : (
               <OperationalConfigurableTable
                 columns={columns}

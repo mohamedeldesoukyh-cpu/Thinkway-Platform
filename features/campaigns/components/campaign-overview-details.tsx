@@ -1,8 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
-import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { DocumentNumber } from "@/components/ui/document-number";
@@ -25,182 +25,156 @@ import { cn } from "@/lib/utils";
 type CampaignOverviewDetailsProps = {
   workspace: CampaignWorkspace;
   layout?: "stack" | "grid";
-  /** Align label/value rhythm with assignment operational tables */
+  /** @deprecated Typography now uses shared operational detail rows. */
   compactTypography?: boolean;
 };
 
-export function CampaignOverviewDetails({
-  workspace,
-  layout = "grid",
-  compactTypography = false,
-}: CampaignOverviewDetailsProps) {
-  const currency = workspace.currency_code;
-  const bodyClass = cn("space-y-3", compactTypography ? "text-[11px]" : "text-sm");
-  const displayGroup = resolveCampaignDisplayGroup(workspace);
-  const displayPlatform = resolveCampaignDisplayPlatform(workspace);
-  const displayDates = resolveCampaignDisplayDates(workspace);
-
+function InfoRow({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: ReactNode;
+  valueClassName?: string;
+}) {
   return (
-    <div
-      className={cn(
-        "gap-4",
-        layout === "grid" ? "grid md:grid-cols-1" : "flex flex-col"
-      )}
-    >
-      <CampaignFlatSection title="Campaign header">
-        <div className={bodyClass}>
-          <DetailRow
-            compact={compactTypography}
-            label="Campaign #"
-            value={<DocumentNumber value={workspace.document_number} />}
-          />
-          <DetailRow compact={compactTypography} label="Name" value={workspace.name} />
-          <DetailRow
-            compact={compactTypography}
-            label="Status"
-            value={<CampaignStatusBadge status={workspace.status} />}
-          />
-          <DetailRow compact={compactTypography} label="Platform" value={displayPlatform} />
-          <DetailRow compact={compactTypography} label="Currency" value={workspace.currency_code} />
-        </div>
-      </CampaignFlatSection>
-
-      <CampaignFlatSection title="Hierarchy">
-        <div className={bodyClass}>
-          <DetailRow
-            compact={compactTypography}
-            label="Group"
-            value={
-              displayGroup ? (
-                <Link
-                  href={`/groups/${displayGroup.id}`}
-                  className="text-primary hover:underline"
-                >
-                  {displayGroup.name}
-                </Link>
-              ) : (
-                formatGroupDisplayName(null)
-              )
-            }
-          />
-          <DetailRow
-            compact={compactTypography}
-            label="Legal entity"
-            value={
-              workspace.client ? (
-                <Link
-                  href={`/clients/${workspace.client.id}`}
-                  className="text-primary hover:underline"
-                >
-                  {workspace.client.name}
-                </Link>
-              ) : (
-                "—"
-              )
-            }
-          />
-          <DetailRow compact={compactTypography} label="Brand" value={workspace.brand?.name ?? "—"} />
-          <DetailRow compact={compactTypography} label="Team" value={workspace.team?.name ?? "—"} />
-          <DetailRow
-            compact={compactTypography}
-            label="Account manager"
-            value={
-              workspace.account_manager?.full_name ??
-              workspace.account_manager?.email ??
-              "—"
-            }
-          />
-        </div>
-      </CampaignFlatSection>
-
-      <CampaignFlatSection title="Commercial">
-        <div className={bodyClass}>
-          <DetailRow
-            compact={compactTypography}
-            label="Dates"
-            value={`${formatDate(displayDates.start)} – ${formatDate(displayDates.end)}`}
-          />
-          <DetailRow
-            compact={compactTypography}
-            label="Budget (PO)"
-            value={
-              <span
-                className={cn(
-                  workspace.financials.po_exceeded &&
-                    "font-medium text-red-600 dark:text-red-400"
-                )}
-              >
-                {formatMoney(workspace.financials.budget, currency)}
-              </span>
-            }
-          />
-          {workspace.financials.po_exceeded ||
-          workspace.po.po_status === "near_limit" ? (
-            <DetailRow
-              compact={compactTypography}
-              label="PO utilization"
-              value={
-                <Badge variant={PO_STATUS_VARIANT[workspace.po.po_status]}>
-                  {PO_STATUS_LABELS[workspace.po.po_status]} ·{" "}
-                  {formatMoney(workspace.financials.po_banner_consumed, currency)} /{" "}
-                  {formatMoney(workspace.financials.budget, currency)}
-                </Badge>
-              }
-            />
-          ) : null}
-          <DetailRow
-            compact={compactTypography}
-            label="Revenue"
-            value={formatMoney(workspace.financials.revenue, currency)}
-          />
-          <DetailRow
-            compact={compactTypography}
-            label="Cost"
-            value={formatMoney(workspace.financials.cost, currency)}
-          />
-          <DetailRow
-            compact={compactTypography}
-            label="GP"
-            value={formatMoney(workspace.financials.gp, currency)}
-          />
-          <DetailRow
-            compact={compactTypography}
-            label="Margin"
-            value={formatPercent(workspace.financials.margin_percent)}
-          />
-        </div>
-      </CampaignFlatSection>
+    <div className="thinkway-campaign-info-row">
+      <span className="thinkway-campaign-info-lbl">{label}</span>
+      <span className={cn("thinkway-campaign-info-val tabular-nums", valueClassName)}>
+        {value}
+      </span>
     </div>
   );
 }
 
-function DetailRow({
-  label,
-  value,
-  compact = false,
-}: {
-  label: string;
-  value: ReactNode;
-  compact?: boolean;
-}) {
+export function CampaignOverviewDetails({
+  workspace,
+  layout = "grid",
+}: CampaignOverviewDetailsProps) {
+  const currency = workspace.currency_code;
+  const displayGroup = resolveCampaignDisplayGroup(workspace);
+  const displayPlatform = resolveCampaignDisplayPlatform(workspace);
+  const displayDates = resolveCampaignDisplayDates(workspace);
+
+  const gridClass =
+    layout === "grid" ? "thinkway-campaign-overview-grid" : "flex flex-col gap-3.5";
+
   return (
-    <div className="grid grid-cols-1 gap-1 sm:grid-cols-[minmax(6.5rem,38%)_minmax(0,1fr)] sm:items-start sm:gap-x-4">
-      <span
-        className={cn(
-          "shrink-0 text-muted-foreground",
-          compact ? "text-[11px] font-normal" : "text-sm"
-        )}
-      >
-        {label}
-      </span>
-      <div
-        className={cn(
-          "min-w-0 break-words text-foreground sm:text-right",
-          compact ? "text-[11px] font-normal" : "text-sm font-medium"
-        )}
-      >
-        {value ?? "—"}
-      </div>
+    <div className={gridClass}>
+      <CampaignFlatSection title="Campaign header" variant="info-card">
+        <InfoRow
+          label="Campaign #"
+          value={
+            <DocumentNumber
+              value={workspace.document_number}
+              className="text-[var(--camp-blue)] hover:underline"
+            />
+          }
+        />
+        <InfoRow label="Name" value={workspace.name} />
+        <InfoRow
+          label="Status"
+          value={<CampaignStatusBadge status={workspace.status} />}
+        />
+        <InfoRow label="Platform" value={displayPlatform} />
+        <InfoRow label="Currency" value={workspace.currency_code} />
+      </CampaignFlatSection>
+
+      <CampaignFlatSection title="Hierarchy" variant="info-card">
+        <InfoRow
+          label="Group"
+          value={
+            displayGroup ? (
+              <Link href={`/groups/${displayGroup.id}`} className="text-[var(--camp-blue)] hover:underline">
+                {displayGroup.name}
+              </Link>
+            ) : (
+              formatGroupDisplayName(null)
+            )
+          }
+        />
+        <InfoRow
+          label="Legal entity"
+          value={
+            workspace.client ? (
+              <Link
+                href={`/clients/${workspace.client.id}`}
+                className="text-[var(--camp-blue)] hover:underline"
+              >
+                {workspace.client.name}
+              </Link>
+            ) : (
+              "—"
+            )
+          }
+        />
+        <InfoRow label="Brand" value={workspace.brand?.name ?? "—"} />
+        <InfoRow label="Team" value={workspace.team?.name ?? "—"} />
+        <InfoRow
+          label="Account manager"
+          value={
+            workspace.account_manager?.full_name ??
+            workspace.account_manager?.email ??
+            "—"
+          }
+          valueClassName={
+            !workspace.account_manager ? "thinkway-campaign-c-gray" : undefined
+          }
+        />
+      </CampaignFlatSection>
+
+      <CampaignFlatSection title="Commercial" variant="info-card">
+        <InfoRow
+          label="Dates"
+          value={`${formatDate(displayDates.start)} – ${formatDate(displayDates.end)}`}
+        />
+        <InfoRow
+          label="Budget (PO)"
+          value={formatMoney(workspace.financials.budget, currency)}
+          valueClassName={cn(
+            "thinkway-campaign-c-amber",
+            workspace.financials.po_exceeded && "thinkway-campaign-c-red"
+          )}
+        />
+        {workspace.financials.po_exceeded ||
+        workspace.po.po_status === "near_limit" ? (
+          <InfoRow
+            label="PO utilization"
+            value={
+              <Badge variant={PO_STATUS_VARIANT[workspace.po.po_status]}>
+                {PO_STATUS_LABELS[workspace.po.po_status]} ·{" "}
+                {formatMoney(workspace.financials.po_banner_consumed, currency)} /{" "}
+                {formatMoney(workspace.financials.budget, currency)}
+              </Badge>
+            }
+          />
+        ) : null}
+        <InfoRow
+          label="Revenue"
+          value={formatMoney(workspace.financials.revenue, currency)}
+          valueClassName="thinkway-campaign-c-blue"
+        />
+        <InfoRow
+          label="Cost"
+          value={formatMoney(workspace.financials.cost, currency)}
+        />
+        <InfoRow
+          label="GP"
+          value={formatMoney(workspace.financials.gp, currency)}
+          valueClassName={cn(
+            workspace.financials.gp < 0
+              ? "thinkway-campaign-c-red"
+              : workspace.financials.gp > 0
+                ? "thinkway-campaign-c-green"
+                : undefined
+          )}
+        />
+        <InfoRow
+          label="Margin"
+          value={formatPercent(workspace.financials.margin_percent)}
+        />
+      </CampaignFlatSection>
     </div>
   );
 }

@@ -61,7 +61,12 @@ export function CampaignOperationalTable({ className, ...props }: TableProps) {
   return (
     <Table
       variant="flush"
-      className={cn(OPERATIONAL_TABLE_FONT, OPERATIONAL_TABLE_SURFACE, className)}
+      className={cn(
+        "thinkway-campaign-data-table",
+        OPERATIONAL_TABLE_FONT,
+        OPERATIONAL_TABLE_SURFACE,
+        className
+      )}
       {...props}
     />
   );
@@ -73,12 +78,7 @@ export function CampaignOperationalTableHeader({
 }: ComponentProps<typeof TableHeader>) {
   return (
     <TableHeader
-      className={cn(
-        "sticky top-0 z-20 border-b border-border/50",
-        OPERATIONAL_TABLE_HEADER_SURFACE,
-        "[&_th]:h-auto [&_th]:align-middle [&_th]:py-2 [&_th]:font-semibold",
-        className
-      )}
+      className={cn("thinkway-campaign-op-table-header", OPERATIONAL_TABLE_HEADER_SURFACE, className)}
       {...props}
     />
   );
@@ -88,19 +88,17 @@ export function CampaignOperationalTableHead({
   className,
   ...props
 }: ComponentProps<typeof TableHead>) {
-  return <TableHead className={cn("px-1.5", OPERATIONAL_TABLE_HEADER_CELL, className)} {...props} />;
+  return (
+    <TableHead className={cn("thinkway-campaign-op-table-head", OPERATIONAL_TABLE_HEADER_CELL, className)} {...props} />
+  );
 }
-
-/** Alternating row backgrounds for scanability (white / light grey). */
-export const OPERATIONAL_TABLE_ZEBRA_BODY =
-  "[&_tr:nth-child(odd)]:bg-card [&_tr:nth-child(even)]:bg-muted/30";
 
 export function CampaignOperationalTableBody({
   className,
   ...props
 }: ComponentProps<typeof TableBody>) {
   return (
-    <TableBody className={cn(OPERATIONAL_TABLE_ZEBRA_BODY, className)} {...props} />
+    <TableBody className={cn("thinkway-campaign-op-table-body", className)} {...props} />
   );
 }
 
@@ -109,13 +107,7 @@ export function CampaignOperationalTableRow({
   ...props
 }: ComponentProps<typeof TableRow>) {
   return (
-    <TableRow
-      className={cn(
-        "border-b border-border/25 bg-inherit text-[11px] font-normal hover:bg-muted/45",
-        className
-      )}
-      {...props}
-    />
+    <TableRow className={cn("thinkway-campaign-op-table-row", className)} {...props} />
   );
 }
 
@@ -125,7 +117,7 @@ export function CampaignOperationalTableCell({
 }: ComponentProps<typeof TableCell>) {
   return (
     <TableCell
-      className={cn("px-1.5 py-1.5 text-[11px] font-normal align-middle", className)}
+      className={cn("thinkway-campaign-op-table-cell", className)}
       {...props}
     />
   );
@@ -140,7 +132,7 @@ export function CampaignOperationalTableCellMono({
   const formatted = formatMonoCellChildren(children);
   return (
     <CampaignOperationalTableCell
-      className={cn("text-[11px] tabular-nums text-muted-foreground", className)}
+      className={cn("tabular-nums", className)}
       title={title ?? formatted.title}
       {...props}
     >

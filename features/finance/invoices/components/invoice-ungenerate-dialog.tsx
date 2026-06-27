@@ -101,6 +101,7 @@ type InvoiceUngenerateTriggerProps = {
   documentNumber: string;
   disabled?: boolean;
   title?: string;
+  variant?: "button" | "link";
 };
 
 export function InvoiceUngenerateTrigger({
@@ -108,23 +109,36 @@ export function InvoiceUngenerateTrigger({
   documentNumber,
   disabled,
   title,
+  variant = "button",
 }: InvoiceUngenerateTriggerProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-7 text-[10px]"
-        disabled={disabled}
-        title={title}
-        onClick={() => setOpen(true)}
-      >
-        <Undo2Icon className="size-3" />
-        Ungenerate
-      </Button>
+      {variant === "link" ? (
+        <button
+          type="button"
+          className="thinkway-campaign-link-btn inline-flex items-center gap-0.5 text-[11px] disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={disabled}
+          title={title}
+          onClick={() => setOpen(true)}
+        >
+          ↺ Ungenerate
+        </button>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-[10px]"
+          disabled={disabled}
+          title={title}
+          onClick={() => setOpen(true)}
+        >
+          <Undo2Icon className="size-3" />
+          Ungenerate
+        </Button>
+      )}
       <InvoiceUngenerateDialog
         invoiceId={invoiceId}
         documentNumber={documentNumber}

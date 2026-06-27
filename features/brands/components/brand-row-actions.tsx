@@ -25,18 +25,66 @@ import {
 } from "@/features/brands/actions";
 import type { BrandTableRow } from "@/features/brands/utils";
 import type { ClientStatus } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 type BrandRowActionsProps = {
   brand: BrandTableRow;
   onEdit: () => void;
   onArchive: () => void;
+  triggerClassName?: string;
 };
 
 export function BrandStatusCell({ status }: { status: ClientStatus }) {
   return <ClientStatusBadge status={status} />;
 }
 
-export function BrandRowActions({ brand, onEdit, onArchive }: BrandRowActionsProps) {
+export function BrandDeactivateButton({
+  brand,
+  className,
+}: {
+  brand: BrandTableRow;
+  className?: string;
+}) {
+  const [statusState, statusAction, statusPending] = useActionState(
+    updateBrandStatusAction,
+    { ok: false } satisfies FormActionState
+  );
+
+  useEffect(() => {
+    if (!statusState.message) return;
+    if (statusState.ok) toast.success(statusState.message);
+    else toast.error(statusState.message);
+  }, [statusState]);
+
+  if (brand.status === "archived" || brand.status === "prospect") {
+    return null;
+  }
+
+  const nextStatus = brand.status === "active" ? "inactive" : "active";
+  const label = brand.status === "active" ? "Deactivate" : "Activate";
+
+  return (
+    <form action={statusAction} className={cn("inline-flex", className)}>
+      <input type="hidden" name="brand_id" value={brand.id} />
+      <input type="hidden" name="client_id" value={brand.client_id} />
+      <input type="hidden" name="status" value={nextStatus} />
+      <button
+        type="submit"
+        className="platform-v6-btn platform-v6-btn-sm"
+        disabled={statusPending}
+      >
+        {label}
+      </button>
+    </form>
+  );
+}
+
+export function BrandRowActions({
+  brand,
+  onEdit,
+  onArchive,
+  triggerClassName,
+}: BrandRowActionsProps) {
   const [statusState, statusAction, statusPending] = useActionState(
     updateBrandStatusAction,
     { ok: false } satisfies FormActionState
@@ -55,15 +103,25 @@ export function BrandRowActions({ brand, onEdit, onArchive }: BrandRowActionsPro
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="shrink-0"
-          aria-label={`Actions for ${brand.name}`}
-        >
-          <MoreHorizontalIcon className="size-4" />
-        </Button>
+        {triggerClassName ? (
+          <button
+            type="button"
+            className={triggerClassName}
+            aria-label={`Actions for ${brand.name}`}
+          >
+            <MoreHorizontalIcon className="size-4" />
+          </button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0"
+            aria-label={`Actions for ${brand.name}`}
+          >
+            <MoreHorizontalIcon className="size-4" />
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem onClick={onEdit}>

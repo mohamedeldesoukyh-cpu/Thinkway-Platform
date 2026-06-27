@@ -14,7 +14,7 @@ export function OperationalTableToolbar({
   children,
 }: OperationalTableToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3 platform-v6-toolbar-inner">
       {children ? <div className="min-w-0 flex-1 sm:flex-none">{children}</div> : null}
       <OperationalTableControls contextLabel={contextLabel} />
     </div>

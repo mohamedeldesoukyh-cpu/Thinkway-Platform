@@ -18,7 +18,7 @@ type ClientCategoryFieldsProps = {
   onCategoryChange: (categorySlug: string) => void;
   onSubcategoryChange: (subcategorySlug: string) => void;
   disabled?: boolean;
-  layout?: "stack" | "grid";
+  layout?: "stack" | "grid" | "inline";
 };
 
 export function ClientCategoryFields({
@@ -69,6 +69,15 @@ export function ClientCategoryFields({
       ) : null}
     </ClientFormField>
   );
+
+  if (layout === "inline") {
+    return (
+      <>
+        {categoryField}
+        {subcategoryField}
+      </>
+    );
+  }
 
   if (layout === "grid") {
     return (

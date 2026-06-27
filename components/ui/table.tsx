@@ -12,6 +12,20 @@ type TableProps = React.ComponentProps<"table"> & {
 function Table({ className, variant = "default", ...props }: TableProps) {
   const flush = variant === "flush"
 
+  if (flush) {
+    return (
+      <table
+        data-slot="table"
+        data-variant={variant}
+        className={cn(
+          "w-full caption-bottom border-collapse text-sm",
+          className
+        )}
+        {...props}
+      />
+    )
+  }
+
   return (
     <div
       data-slot="table-container"

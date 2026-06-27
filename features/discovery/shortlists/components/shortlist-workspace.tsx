@@ -13,6 +13,8 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { glassFlyoutContentClass } from "@/components/shared/navigation/glass-selection-flyout";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -469,11 +471,6 @@ export function ShortlistWorkspace({
                     Select all
                   </label>
                 ) : null}
-                {selectedCount > 0 ? (
-                  <span className="text-xs font-medium text-primary">
-                    {selectedCount} selected
-                  </span>
-                ) : null}
               </div>
               <CardDescription>
                 Discovery-style creator rows with review status. Select creators for bulk actions.
@@ -518,26 +515,7 @@ export function ShortlistWorkspace({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <ShortlistBulkToolbar
-            selectedCount={selectedCount}
-            showSubmit={editable}
-            showStatusActions={detail.status === "under_review" && detail.canApprove}
-            showMove={movable}
-            busy={isPending}
-            onSubmitSelected={() =>
-              runAction(() => bulkSubmitCreatorsForReview(detail.id, selectedItemIdList))
-            }
-            onRemoveSelected={handleBulkRemove}
-            onCompareSelected={handleCompare}
-            onExportSelected={handleExport}
-            onMoveSelected={handleBulkMove}
-            onGenerateQuotation={handleGenerateQuotation}
-            onApproveSelected={handleBulkApprove}
-            onRejectSelected={handleBulkReject}
-            onCancelSelected={handleBulkCancel}
-            onClearSelection={clearSelection}
-          />
+        <CardContent className={cn("space-y-2", glassFlyoutContentClass(selectedCount > 0))}>
           {detail.creators.length === 0 ? (
             <div className="space-y-3 py-10 text-center">
               <p className="text-sm text-muted-foreground">
@@ -684,6 +662,26 @@ export function ShortlistWorkspace({
         shortlistId={detail.id}
         existingItems={existingItems}
         onAdded={() => router.refresh()}
+      />
+
+      <ShortlistBulkToolbar
+        selectedCount={selectedCount}
+        showSubmit={editable}
+        showStatusActions={detail.status === "under_review" && detail.canApprove}
+        showMove={movable}
+        busy={isPending}
+        onSubmitSelected={() =>
+          runAction(() => bulkSubmitCreatorsForReview(detail.id, selectedItemIdList))
+        }
+        onRemoveSelected={handleBulkRemove}
+        onCompareSelected={handleCompare}
+        onExportSelected={handleExport}
+        onMoveSelected={handleBulkMove}
+        onGenerateQuotation={handleGenerateQuotation}
+        onApproveSelected={handleBulkApprove}
+        onRejectSelected={handleBulkReject}
+        onCancelSelected={handleBulkCancel}
+        onClearSelection={clearSelection}
       />
     </div>
   );

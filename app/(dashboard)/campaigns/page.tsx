@@ -1,6 +1,7 @@
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PlatformV6Page, PlatformV6PageHeader } from "@/components/platform/platform-v6-layout";
 import { CampaignsKpiStrip } from "@/features/campaigns/components/campaigns-kpi-strip";
 import { CampaignsListSection } from "@/features/campaigns/components/campaigns-list-section";
 import { NewCampaignDialog } from "@/features/campaigns/components/new-campaign-dialog";
@@ -58,28 +59,33 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
     total === 1 ? "1 campaign" : `${total} campaigns` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
-    <DashboardShell
-      title="Campaigns"
-      description="Plan and manage campaign headers and lines across the brand hierarchy."
-      actions={<NewCampaignDialog {...formOptions} />}
-    >
-      {kpis ? <CampaignsKpiStrip kpis={kpis} className="mb-4" /> : null}
+    <DashboardShell title="Campaigns" platformV6>
+      <PlatformV6Page>
+        <PlatformV6PageHeader
+          inline
+          title="Campaigns"
+          description="Plan and manage campaign headers and lines across the brand hierarchy."
+          actions={<NewCampaignDialog {...formOptions} />}
+        />
 
-      <CampaignsListSection
-        campaigns={campaigns}
-        meta={meta}
-        hasSearch={hasSearch}
-        page={list.page}
-        totalPages={totalPages}
-        search={search}
-        errorSlot={
-          errorMessage ? (
-            <div className="border-b border-border/40 px-4 py-3">
-              <PageAlert>{errorMessage}</PageAlert>
-            </div>
-          ) : null
-        }
-      />
+        {kpis ? <CampaignsKpiStrip kpis={kpis} /> : null}
+
+        <CampaignsListSection
+          campaigns={campaigns}
+          meta={meta}
+          hasSearch={hasSearch}
+          page={list.page}
+          totalPages={totalPages}
+          search={search}
+          errorSlot={
+            errorMessage ? (
+              <div className="border-b px-4 py-3">
+                <PageAlert>{errorMessage}</PageAlert>
+              </div>
+            ) : null
+          }
+        />
+      </PlatformV6Page>
     </DashboardShell>
   );
 }

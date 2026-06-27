@@ -4,13 +4,16 @@ import { useMemo, useState } from "react";
 import { ArrowDownAZIcon, ArrowUpAZIcon } from "lucide-react";
 
 import {
+  PlatformV6PageSectionHeader,
+  PlatformV6SectionHead,
+  PlatformV6SectionWrap,
+} from "@/components/platform/platform-v6-layout";
+import {
   OperationalConfigurableTable,
-  getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
-import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-table-controls";
 import { Button } from "@/components/ui/button";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import type { AnalyticsRollupNode } from "@/lib/analytics/types/metrics";
 import { cn } from "@/lib/utils";
 import type { ExecutiveDashboardPayload } from "@/features/analytics/load-executive-dashboard";
@@ -32,6 +35,7 @@ const PROFITABILITY_TABLES = [
     tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityClients,
     contextLabel: "Top clients",
     defaultSort: "revenue" as ProfitabilitySortKey,
+    grid: true,
   },
   {
     title: "Lowest margin clients",
@@ -40,6 +44,7 @@ const PROFITABILITY_TABLES = [
     tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityLowMarginClients,
     contextLabel: "Low margin clients",
     defaultSort: "margin" as ProfitabilitySortKey,
+    grid: true,
   },
   {
     title: "Top campaigns",
@@ -48,6 +53,7 @@ const PROFITABILITY_TABLES = [
     tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityCampaigns,
     contextLabel: "Top campaigns",
     defaultSort: "revenue" as ProfitabilitySortKey,
+    grid: true,
   },
   {
     title: "Country profitability",
@@ -56,6 +62,7 @@ const PROFITABILITY_TABLES = [
     tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityCountries,
     contextLabel: "Country profitability",
     defaultSort: "gp" as ProfitabilitySortKey,
+    grid: true,
   },
   {
     title: "Brand profitability",
@@ -64,6 +71,7 @@ const PROFITABILITY_TABLES = [
     tableId: OPERATIONAL_TABLE_IDS.executiveProfitabilityBrands,
     contextLabel: "Brand profitability",
     defaultSort: "margin" as ProfitabilitySortKey,
+    grid: false,
   },
 ] as const;
 
@@ -173,23 +181,15 @@ function ProfitabilityTable({
         margin: (row) => row.metrics.margin_percent,
       }}
     >
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0 space-y-0.5">
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
-              <p className="text-[11px] leading-snug text-muted-foreground">{description}</p>
-            </div>
-            <OperationalTableControlsSlot contextLabel={contextLabel} />
-          </div>
-        }
-      >
+      <PlatformV6SectionWrap>
+        <PlatformV6SectionHead
+          title={title}
+          description={description}
+          actions={<OperationalTableControlsSlot contextLabel={contextLabel} />}
+        />
         <div className="overflow-x-auto">
           {sorted.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[11px] text-muted-foreground">
+            <p className="px-4 py-8 text-center text-[11px] text-[var(--tw-text-3,#94a3b8)]">
               No rows for current filters
             </p>
           ) : (
@@ -200,24 +200,24 @@ function ProfitabilityTable({
             />
           )}
         </div>
-      </OperationalTableSection>
+      </PlatformV6SectionWrap>
     </OperationalTableSuiteProvider>
   );
 }
 
 export function ProfitabilitySection({ tables }: ProfitabilitySectionProps) {
+  const gridTables = PROFITABILITY_TABLES.filter((t) => t.grid);
+  const fullWidthTables = PROFITABILITY_TABLES.filter((t) => !t.grid);
+
   return (
-    <section className="space-y-4">
-      <div className="min-w-0 space-y-0.5">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">
-          Profitability analysis
-        </h2>
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          Client, campaign, country, and brand performance — sortable and pagination-ready.
-        </p>
-      </div>
-      <div className="grid gap-4 xl:grid-cols-2">
-        {PROFITABILITY_TABLES.map((config) => (
+    <section>
+      <PlatformV6PageSectionHeader
+        compact
+        title="Profitability analysis"
+        description="Client, campaign, country, and brand performance — sortable and pagination-ready."
+      />
+      <div className="platform-v6-pa-grid">
+        {gridTables.map((config) => (
           <ProfitabilityTable
             key={config.tableId}
             title={config.title}
@@ -229,6 +229,17 @@ export function ProfitabilitySection({ tables }: ProfitabilitySectionProps) {
           />
         ))}
       </div>
+      {fullWidthTables.map((config) => (
+        <ProfitabilityTable
+          key={config.tableId}
+          title={config.title}
+          description={config.description}
+          rows={tables[config.rowsKey]}
+          tableId={config.tableId}
+          contextLabel={config.contextLabel}
+          defaultSort={config.defaultSort}
+        />
+      ))}
     </section>
   );
 }

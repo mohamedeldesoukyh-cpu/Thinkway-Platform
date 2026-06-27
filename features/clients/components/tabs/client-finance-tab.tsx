@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { DollarSignIcon } from "lucide-react";
+import { DollarSignIcon, MailIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
+import { PlatformV6ToggleRow } from "@/components/platform/platform-v6-layout";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,10 +21,11 @@ import {
   ClientFormKeyboardShortcuts,
   ClientFormSection,
   ClientProfileTabShell,
-  CLIENT_FORM_FIELD_LABEL_CLASS,
   CLIENT_FORM_FIELD_HINT_CLASS,
+  CLIENT_FORM_FIELD_LABEL_CLASS,
   CLIENT_FORM_INPUT_CLASS,
   CLIENT_FORM_SELECT_TRIGGER_CLASS,
+  useClientProfilePlatformV6,
 } from "@/features/clients/components/client-form-ui";
 import {
   updateClientFinanceAction,
@@ -32,6 +34,78 @@ import {
 import { PAYMENT_TERMS_OPTIONS } from "@/features/clients/constants";
 import type { ClientDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
+
+function CreditLimitToggleFields({
+  creditLimitActive,
+  acceptCreditRisk,
+  onCreditLimitActiveChange,
+  onAcceptCreditRiskChange,
+  disabled,
+}: {
+  creditLimitActive: boolean;
+  acceptCreditRisk: boolean;
+  onCreditLimitActiveChange: (value: boolean) => void;
+  onAcceptCreditRiskChange: (value: boolean) => void;
+  disabled?: boolean;
+}) {
+  const platformV6 = useClientProfilePlatformV6();
+
+  if (platformV6) {
+    return (
+      <div className="platform-v6-toggle-grid">
+        <PlatformV6ToggleRow
+          id="credit_limit_active"
+          title="CL Active"
+          description="Enforce credit limit on new campaign creation when a limit is set."
+          checked={creditLimitActive}
+          onCheckedChange={onCreditLimitActiveChange}
+          disabled={disabled}
+        />
+        <PlatformV6ToggleRow
+          id="accept_credit_risk"
+          title="Accept risk"
+          description="Allow users to acknowledge and proceed when exposure exceeds the limit."
+          checked={acceptCreditRisk}
+          onCheckedChange={onAcceptCreditRiskChange}
+          disabled={disabled}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-[18px] rounded-[12px] border border-border bg-muted p-[18px] sm:grid-cols-2">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <p className={CLIENT_FORM_FIELD_LABEL_CLASS}>CL Active</p>
+          <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
+            Enforce credit limit on new campaign creation when a limit is set.
+          </p>
+        </div>
+        <Switch
+          id="credit_limit_active"
+          checked={creditLimitActive}
+          onCheckedChange={onCreditLimitActiveChange}
+          disabled={disabled}
+        />
+      </div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <p className={CLIENT_FORM_FIELD_LABEL_CLASS}>Accept risk</p>
+          <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
+            Allow users to acknowledge and proceed when exposure exceeds the limit.
+          </p>
+        </div>
+        <Switch
+          id="accept_credit_risk"
+          checked={acceptCreditRisk}
+          onCheckedChange={onAcceptCreditRiskChange}
+          disabled={disabled}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function ClientFinanceTab({
   client,
@@ -44,6 +118,7 @@ export function ClientFinanceTab({
   onCancel?: () => void;
   shortcutsEnabled?: boolean;
 }) {
+  const platformV6 = useClientProfilePlatformV6();
   const [currency, setCurrency] = useState(client.currency);
   const [paymentTerms, setPaymentTerms] = useState(client.payment_terms ?? "");
   const [creditLimit, setCreditLimit] = useState(
@@ -130,7 +205,10 @@ export function ClientFinanceTab({
             title="Billing defaults"
             description="Currency, payment terms, and credit limit."
           >
-            <ClientFormGrid className="lg:grid-cols-3">
+            <ClientFormGrid
+              columns={platformV6 ? 4 : undefined}
+              className={cn(!platformV6 && "lg:grid-cols-3", platformV6 && "mb-5")}
+            >
               <ClientFormField label="Currency">
                 <Select
                   value={currency}
@@ -190,52 +268,30 @@ export function ClientFinanceTab({
                 />
                 <FieldError messages={state.fieldErrors?.credit_limit} />
               </ClientFormField>
+              {platformV6 ? <div className="hidden md:block" aria-hidden /> : null}
             </ClientFormGrid>
 
-            <div className="grid gap-[18px] rounded-[12px] border border-border bg-muted p-[18px] sm:grid-cols-2">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <p className={CLIENT_FORM_FIELD_LABEL_CLASS}>CL Active</p>
-                  <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
-                    Enforce credit limit on new campaign creation when a limit is set.
-                  </p>
-                </div>
-                <Switch
-                  id="credit_limit_active"
-                  checked={creditLimitActive}
-                  onCheckedChange={(value) => {
-                    setCreditLimitActive(value);
-                    markDirty();
-                  }}
-                  disabled={isPending}
-                />
-              </div>
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <p className={CLIENT_FORM_FIELD_LABEL_CLASS}>Accept risk</p>
-                  <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
-                    Allow users to acknowledge and proceed when exposure exceeds the limit.
-                  </p>
-                </div>
-                <Switch
-                  id="accept_credit_risk"
-                  checked={acceptCreditRisk}
-                  onCheckedChange={(value) => {
-                    setAcceptCreditRisk(value);
-                    markDirty();
-                  }}
-                  disabled={isPending}
-                />
-              </div>
-            </div>
+            <CreditLimitToggleFields
+              creditLimitActive={creditLimitActive}
+              acceptCreditRisk={acceptCreditRisk}
+              onCreditLimitActiveChange={(value) => {
+                setCreditLimitActive(value);
+                markDirty();
+              }}
+              onAcceptCreditRiskChange={(value) => {
+                setAcceptCreditRisk(value);
+                markDirty();
+              }}
+              disabled={isPending}
+            />
           </ClientFormSection>
 
           <ClientFormSection
-            icon={DollarSignIcon}
+            icon={MailIcon}
             title="Billing contacts"
             description="Where invoices and payment notices are sent."
           >
-            <ClientFormGrid>
+            <ClientFormGrid columns={platformV6 ? 3 : undefined}>
               <ClientFormField label="Billing email" htmlFor="billing_email">
                 <Input
                   id="billing_email"
@@ -263,6 +319,7 @@ export function ClientFinanceTab({
                   disabled={isPending}
                 />
               </ClientFormField>
+              {platformV6 ? <div className="hidden md:block" aria-hidden /> : null}
             </ClientFormGrid>
           </ClientFormSection>
         </form>

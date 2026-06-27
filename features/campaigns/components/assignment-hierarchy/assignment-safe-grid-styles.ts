@@ -2,9 +2,6 @@ import {
   OPERATIONAL_AMOUNT_CLASS,
   OPERATIONAL_COST_AMOUNT_CLASS,
   OPERATIONAL_REVENUE_AMOUNT_CLASS,
-  OPERATIONAL_TABLE_HEADER_CELL,
-  OPERATIONAL_TABLE_HEADER_SURFACE,
-  OPERATIONAL_TABLE_SURFACE,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { cn } from "@/lib/utils";
 
@@ -12,45 +9,45 @@ import { cn } from "@/lib/utils";
 export const ASSIGNMENT_SAFE_GRID_COL_SPAN = 18;
 
 export const SAFE_GRID_SHELL = cn(
-  OPERATIONAL_TABLE_SURFACE,
-  "overflow-hidden rounded-xl border border-border/60 shadow-sm"
+  "thinkway-campaign-asgn-table-root min-w-0 border-0 bg-transparent shadow-none"
 );
 
-export const SAFE_GRID_TABLE = "w-full min-w-[1120px] table-fixed border-collapse text-sm";
+export const SAFE_GRID_TABLE =
+  "thinkway-campaign-asgn-table min-w-[1300px] w-max border-collapse";
 
 export const SAFE_GRID_HEAD = cn(
-  OPERATIONAL_TABLE_HEADER_SURFACE,
-  "sticky top-0 z-10 border-b border-border/60"
+  "thinkway-campaign-asgn-col-hdrs sticky top-0 z-10 border-b border-[var(--camp-border)] bg-[var(--camp-surface)]"
 );
 
 export const SAFE_GRID_TH = cn(
-  OPERATIONAL_TABLE_HEADER_CELL,
-  "border-b border-border/50 px-1.5 py-2.5 align-middle text-center"
+  "thinkway-campaign-asgn-th align-middle text-left"
 );
 
-export const SAFE_GRID_TD = cn(
-  "border-b border-border/40 px-1.5 py-1.5 align-middle text-center text-[11px]"
-);
+export const SAFE_GRID_TD = cn("thinkway-campaign-asgn-td align-middle");
 
-export const SAFE_GRID_CONTROL_CELL = cn(SAFE_GRID_TD, "w-9 px-1.5 text-center");
+export const SAFE_GRID_CONTROL_CELL = cn(SAFE_GRID_TD, "w-6 px-0 text-center");
 
 export const SAFE_GRID_PARENT_ROW = cn(
-  "border-b border-border/45 transition-colors",
-  "hover:bg-muted/35"
+  "thinkway-campaign-asgn-parent border-b border-[var(--camp-border)] transition-colors"
 );
 
 export const SAFE_GRID_PARENT_ROW_EXPANDED = cn(
-  "sticky top-[41px] z-[5] border-b-0 shadow-sm",
-  OPERATIONAL_TABLE_SURFACE
+  "thinkway-campaign-asgn-parent-open border-b-0"
 );
 
-export const SAFE_GRID_CHILD_GROUP_ROW = "border-b border-border/50 bg-muted/20";
+/** Visually hidden expand column — chevron lives in the assignment cell. */
+export const SAFE_GRID_EXPAND_CELL = cn(
+  SAFE_GRID_CONTROL_CELL,
+  "w-0 max-w-0 overflow-hidden border-0 p-0"
+);
+
+export const SAFE_GRID_CHILD_GROUP_ROW = "thinkway-campaign-asgn-child-hdr";
 
 /** Child expansion cell — left border aligns with parent row accent (no extra inset). */
-export const SAFE_GRID_CHILD_GROUP_CELL = cn("bg-muted/20 p-0");
+export const SAFE_GRID_CHILD_GROUP_CELL = cn("thinkway-campaign-asgn-child-group-cell bg-[var(--camp-child-hdr)] p-0");
 
 /** Full-width rule between child block and the next parent row. */
-export const SAFE_GRID_CHILD_GROUP_BOTTOM_RULE = "border-b-2 border-black";
+export const SAFE_GRID_CHILD_GROUP_BOTTOM_RULE = "border-b border-[var(--camp-border)]";
 
 export const SAFE_GRID_AMOUNT = OPERATIONAL_AMOUNT_CLASS;
 
@@ -58,26 +55,26 @@ export const SAFE_GRID_AMOUNT = OPERATIONAL_AMOUNT_CLASS;
 export const SAFE_GRID_HIGHLIGHT_REV = cn(
   SAFE_GRID_TD,
   OPERATIONAL_REVENUE_AMOUNT_CLASS,
-  "bg-primary/8 font-semibold"
+  "thinkway-campaign-cell-rev font-semibold"
 );
 
 export const SAFE_GRID_HIGHLIGHT_COST = cn(
   SAFE_GRID_TD,
   OPERATIONAL_COST_AMOUNT_CLASS,
-  "bg-amber-500/10 font-semibold dark:bg-amber-500/15"
+  "thinkway-campaign-cell-cost font-semibold"
 );
 
 export const SAFE_GRID_HIGHLIGHT_TOTAL_BILLING = cn(
   SAFE_GRID_TD,
   OPERATIONAL_REVENUE_AMOUNT_CLASS,
-  "bg-sky-500/10 font-semibold dark:bg-sky-500/12"
+  "thinkway-campaign-cell-billing-total font-semibold"
 );
 
 export const SAFE_GRID_HIGHLIGHT_GP = cn(
   SAFE_GRID_TD,
   SAFE_GRID_AMOUNT,
-  "font-semibold"
+  "thinkway-campaign-cell-gp font-semibold"
 );
 
 export const SAFE_GRID_CHECKBOX =
-  "size-3.5 shrink-0 rounded border-border accent-primary";
+  "size-3.5 shrink-0 rounded border-[var(--camp-border)] accent-[var(--camp-blue)]";

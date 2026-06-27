@@ -1,24 +1,44 @@
 "use client";
 
-import {
-  FileTextIcon,
-  PackageIcon,
-  PercentIcon,
-  ReceiptIcon,
-  TrendingUpIcon,
-  UsersIcon,
-  WalletIcon,
-} from "lucide-react";
-
-import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
-import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { cn } from "@/lib/utils";
 
 type CampaignKpiStripProps = {
   workspace: CampaignWorkspace;
   operationalDeliverableCount?: number;
 };
+
+type MetricDef = {
+  id: string;
+  label: string;
+  value: string;
+  tone?: "amber" | "blue" | "green" | "red" | "gray";
+};
+
+const TONE_CLASS = {
+  amber: "thinkway-campaign-c-amber",
+  blue: "thinkway-campaign-c-blue",
+  green: "thinkway-campaign-c-green",
+  red: "thinkway-campaign-c-red",
+  gray: "thinkway-campaign-c-gray",
+} as const;
+
+function MetricItem({ label, value, tone }: MetricDef) {
+  return (
+    <div className="thinkway-campaign-metric-item">
+      <div className="thinkway-campaign-metric-lbl">{label}</div>
+      <div
+        className={cn(
+          "thinkway-campaign-metric-val tabular-nums",
+          tone ? TONE_CLASS[tone] : undefined
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
 
 export function CampaignKpiStrip({
   workspace,
@@ -26,102 +46,82 @@ export function CampaignKpiStrip({
 }: CampaignKpiStripProps) {
   const { financials, lines, deliverables } = workspace;
   const currency = workspace.currency_code;
-  const assignedLines = lines;
-  const deliverableKpi =
-    operationalDeliverableCount ?? deliverables.length;
+  const deliverableKpi = operationalDeliverableCount ?? deliverables.length;
 
-  const budgetAlert =
-    financials.po_exceeded
-      ? "danger"
-      : workspace.po.po_status === "near_limit"
-        ? "warning"
-        : undefined;
+  const budgetTone: MetricDef["tone"] = financials.po_exceeded
+    ? "red"
+    : workspace.po.po_status === "near_limit"
+      ? "amber"
+      : "amber";
 
-  const items: KpiCarouselItem[] = [
+  const financialMetrics: MetricDef[] = [
     {
       id: "budget",
       label: "Budget (PO)",
       value: formatMoney(financials.budget, currency),
-      icon: WalletIcon,
-      accentKey: "blue",
-      valueAlert: budgetAlert,
+      tone: budgetTone,
     },
     {
       id: "revenue",
       label: "Revenue",
       value: formatMoney(financials.revenue, currency),
-      icon: TrendingUpIcon,
-      accentKey: "purple",
-      valueSemantic: "revenue",
+      tone: "blue",
     },
     {
       id: "cost",
       label: "Cost",
       value: formatMoney(financials.cost, currency),
-      icon: ReceiptIcon,
-      accentKey: "pink",
-      valueSemantic: "cost",
     },
     {
       id: "gp",
       label: "GP",
       value: formatMoney(financials.gp, currency),
-      icon: TrendingUpIcon,
-      accentKey: "green",
-      valueSemantic: "gp",
-      valueNumeric: financials.gp,
+      tone: financials.gp < 0 ? "red" : "green",
     },
     {
       id: "margin",
       label: "Margin",
       value: formatPercent(financials.margin_percent),
-      icon: PercentIcon,
-      accentKey: "blue",
-      valueSemantic: "margin",
-      valueNumeric: financials.margin_percent,
     },
+  ];
+
+  const operationalMetrics: MetricDef[] = [
     {
       id: "assignments",
       label: "Assignments",
-      value: String(assignedLines.length),
-      icon: UsersIcon,
-      accentKey: "purple",
-      valueSemantic: "count",
+      value: String(lines.length),
     },
     {
       id: "deliverables",
       label: "Deliverables",
       value: String(deliverableKpi),
-      icon: PackageIcon,
-      accentKey: "pink",
-      valueSemantic: "count",
     },
     {
-      id: "billing",
-      label: "Outstanding billing",
+      id: "outstanding",
+      label: "Outstanding",
       value: formatMoney(financials.billing_outstanding, currency),
-      icon: FileTextIcon,
-      accentKey: "green",
-      valueSemantic: "revenue",
+      tone: financials.billing_outstanding > 0 ? "red" : undefined,
     },
   ];
 
   return (
-    <div className="space-y-3 pb-8">
-      {financials.budget > 0 ? (
-        <div className="flex w-full justify-end">
-          <PoConsumptionBanner
-            consumed={financials.po_banner_consumed}
-            po_amount={financials.budget}
-            currency={currency}
-            formatMoney={formatMoney}
-            po_exceeded={financials.po_exceeded}
-            className="w-fit max-w-full"
-          />
+    <div className="thinkway-campaign-metrics-band">
+      <div className="thinkway-campaign-metrics-section">
+        <div className="thinkway-campaign-metrics-label">Financials</div>
+        <div className="thinkway-campaign-metrics-row">
+          {financialMetrics.map((metric) => (
+            <MetricItem key={metric.id} {...metric} />
+          ))}
         </div>
-      ) : null}
-
-      <KpiStrip items={items} showNavigation={false} />
+      </div>
+      <div className="thinkway-campaign-metrics-section">
+        <div className="thinkway-campaign-metrics-label">Operations</div>
+        <div className="thinkway-campaign-metrics-row">
+          {operationalMetrics.map((metric) => (
+            <MetricItem key={metric.id} {...metric} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

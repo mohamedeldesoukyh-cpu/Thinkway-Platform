@@ -1,12 +1,18 @@
 "use client";
 
-import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon, XIcon } from "lucide-react";
+import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { showErrorToastOnce, showSuccessToastOnce } from "@/lib/ui/toast-once";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  OperationalFloatingActionBar,
+  PlatformFloatingBarDivider,
+  PlatformFloatingBarPrimaryButton,
+  PlatformFloatingBarSecondaryLink,
+  PlatformFloatingBarSelection,
+} from "@/components/workspace/operational-floating-action-bar";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { OperationalFloatingActionBar } from "@/components/workspace/operational-floating-action-bar";
 import {
   generateVendorIosFromLinesAction,
   type GenerateVendorIoState,
@@ -202,126 +207,116 @@ export function FloatingSelectionBar({
   return (
     <>
       <OperationalFloatingActionBar visible={visible} messages={coverageMessages}>
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto text-xs [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden">
-            <div className="flex shrink-0 items-center gap-1.5 pr-1">
-              <Badge
-                variant="secondary"
-                className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-              >
-                {totals.count} selected
-              </Badge>
-              <Button
-                type="button"
-                size="icon-xs"
-                variant="ghost"
-                className="size-6 shrink-0 rounded-full text-muted-foreground"
-                disabled={!visible}
-                onClick={onClearSelection}
-                aria-label="Clear selection"
-              >
-                <XIcon className="size-3.5" />
-              </Button>
-              {selectableLineCount > 0 && selectedLineIds.length < selectableLineCount ? (
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="ghost"
-                  className="hidden shrink-0 sm:inline-flex"
-                  onClick={onSelectAll}
-                >
-                  Select all
-                </Button>
-              ) : null}
-            </div>
+        <PlatformFloatingBarSelection
+          selectedCount={totals.count}
+          selectionLabel="line"
+          onClearSelection={onClearSelection}
+          onSelectAll={onSelectAll}
+          selectableCount={selectableLineCount}
+          busy={pending}
+        />
 
-            <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+        <PlatformFloatingBarDivider />
 
-            <SelectionMetric label="Revenue" value={formatMoney(totals.revenue, displayCurrency)} />
-            <SelectionMetric
-              label="Cost"
-              value={formatMoney(totals.cost, displayCurrency)}
-              className="hidden sm:inline"
-            />
-            <SelectionMetric
-              label="GP"
-              value={formatMoney(totals.gp, displayCurrency)}
-              className="hidden md:inline [&_span:last-child]:text-primary"
-            />
-            <SelectionMetric
-              label="Total billing"
-              value={formatMoney(totals.totalBilling, displayCurrency)}
-              className="hidden lg:inline"
-            />
-            <Badge variant="outline" className="h-5 shrink-0 text-[10px] font-medium">
-              {currencyLabel}
-            </Badge>
-          </div>
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-2 text-xs [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden">
+          <SelectionMetric label="Revenue" value={formatMoney(totals.revenue, displayCurrency)} />
+          <SelectionMetric
+            label="Cost"
+            value={formatMoney(totals.cost, displayCurrency)}
+            className="hidden sm:inline"
+          />
+          <SelectionMetric
+            label="GP"
+            value={formatMoney(totals.gp, displayCurrency)}
+            className="hidden md:inline [&_span:last-child]:text-primary"
+          />
+          <SelectionMetric
+            label="Total billing"
+            value={formatMoney(totals.totalBilling, displayCurrency)}
+            className="hidden lg:inline"
+          />
+          <span className="shrink-0 rounded-md border border-border/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {currencyLabel}
+          </span>
+        </div>
 
-          <div className="flex shrink-0 items-center justify-end gap-1.5 sm:border-l sm:border-border/70 sm:pl-2">
+        <PlatformFloatingBarDivider className="ml-auto" />
+
+        <div className="flex shrink-0 items-center gap-1 pl-2">
           {vioLineIds.length > 0 ? (
-            <Button
-              type="button"
-              size="sm"
-              variant={primaryAction === "vio" ? "default" : "outline"}
-              className="h-8 shrink-0 rounded-full text-xs"
-              disabled={pending}
-              onClick={runVioGenerate}
-            >
-              <FileStackIcon data-icon="inline-start" />
-              {pending ? "Generating…" : "Generate Vendor IO"}
-            </Button>
+            primaryAction === "vio" ? (
+              <PlatformFloatingBarPrimaryButton
+                busy={pending}
+                action={{
+                  id: "vio",
+                  label: pending ? "Generating…" : "Generate Vendor IO",
+                  icon: FileStackIcon,
+                  disabled: pending,
+                  onClick: runVioGenerate,
+                }}
+              />
+            ) : (
+              <PlatformFloatingBarSecondaryLink
+                busy={pending}
+                action={{
+                  id: "vio",
+                  label: "Generate Vendor IO",
+                  icon: FileStackIcon,
+                  disabled: pending,
+                  onClick: runVioGenerate,
+                }}
+              />
+            )
           ) : null}
           {reviseVioLineIds.length > 0 ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 shrink-0 rounded-full text-xs"
-              onClick={() => setReviseOpen(true)}
-            >
-              <GitBranchIcon data-icon="inline-start" />
-              <span className="hidden sm:inline">Revise Vendor IO</span>
-              <span className="sm:hidden">Revise IO</span>
-            </Button>
+            <PlatformFloatingBarSecondaryLink
+              action={{
+                id: "revise",
+                label: "Revise Vendor IO",
+                icon: GitBranchIcon,
+                onClick: () => setReviseOpen(true),
+              }}
+            />
           ) : null}
           {ungenerateIoLineIds.length > 0 ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 shrink-0 rounded-full text-xs"
-              onClick={() => setUngenerateOpen(true)}
-            >
-              <Undo2Icon data-icon="inline-start" />
-              <span className="hidden sm:inline">Ungenerate IO</span>
-              <span className="sm:hidden">Ungenerate</span>
-            </Button>
+            <PlatformFloatingBarSecondaryLink
+              action={{
+                id: "ungenerate",
+                label: "Ungenerate IO",
+                icon: Undo2Icon,
+                onClick: () => setUngenerateOpen(true),
+              }}
+            />
           ) : null}
           {hasInvoiceSelection ? (
-            <Button
-              type="button"
-              size="sm"
-              variant={primaryAction === "invoice" ? "default" : "outline"}
-              className="h-8 shrink-0 rounded-full text-xs"
-              disabled={ioCoverage?.case === "blocked"}
-              onClick={onGenerateInvoice}
-            >
-              <FileTextIcon data-icon="inline-start" />
-              {invoiceActionLabel === "regenerate" ? (
-                <>
-                  <span className="hidden sm:inline">Regenerate invoice</span>
-                  <span className="sm:hidden">Regenerate</span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden sm:inline">Generate invoice</span>
-                  <span className="sm:hidden">Invoice</span>
-                </>
-              )}
-            </Button>
+            primaryAction === "invoice" ? (
+              <PlatformFloatingBarPrimaryButton
+                action={{
+                  id: "invoice",
+                  label:
+                    invoiceActionLabel === "regenerate"
+                      ? "Regenerate invoice"
+                      : "Generate invoice",
+                  icon: FileTextIcon,
+                  disabled: ioCoverage?.case === "blocked",
+                  onClick: onGenerateInvoice,
+                }}
+              />
+            ) : (
+              <PlatformFloatingBarSecondaryLink
+                action={{
+                  id: "invoice",
+                  label:
+                    invoiceActionLabel === "regenerate"
+                      ? "Regenerate invoice"
+                      : "Generate invoice",
+                  icon: FileTextIcon,
+                  disabled: ioCoverage?.case === "blocked",
+                  onClick: onGenerateInvoice,
+                }}
+              />
+            )
           ) : null}
-          </div>
         </div>
       </OperationalFloatingActionBar>
 

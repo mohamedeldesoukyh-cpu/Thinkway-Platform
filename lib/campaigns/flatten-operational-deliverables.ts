@@ -40,6 +40,7 @@ function mapLegacyDeliverable(row: CampaignDeliverableRow): OperationalDeliverab
     assignment_post_schedule_id: null,
     assignment_title: label,
     creator_name: row.influencer_name ?? null,
+    creator_avatar_url: null,
     influencer_id: null,
     platform,
     platform_label: getPlatformOptionLabel(platform),
@@ -94,6 +95,7 @@ export function flattenOperationalDeliverables(
     if (!line?.id) continue;
 
     const creatorName = line.influencer_name ?? null;
+    const creatorAvatarUrl = line.creator_avatar_url ?? null;
     const assignmentTitle = line.name ?? "Assignment";
 
     for (const deliverable of group.deliverables ?? []) {
@@ -112,6 +114,7 @@ export function flattenOperationalDeliverables(
         assignment_post_schedule_id: null,
         assignment_title: assignmentTitle,
         creator_name: creatorName,
+        creator_avatar_url: creatorAvatarUrl,
         influencer_id: line.influencer_id,
         platform: deliverable.platform,
         platform_label: getPlatformOptionLabel(deliverable.platform),
@@ -162,6 +165,7 @@ export function flattenOperationalDeliverables(
             assignment_post_schedule_id: post.id,
             assignment_title: assignmentTitle,
             creator_name: creatorName,
+            creator_avatar_url: creatorAvatarUrl,
             influencer_id: line.influencer_id,
             platform,
             platform_label: getPlatformOptionLabel(platform),

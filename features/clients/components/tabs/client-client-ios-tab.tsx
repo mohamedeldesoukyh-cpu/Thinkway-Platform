@@ -13,12 +13,15 @@ import {
 import { ClientIoForm } from "@/features/io/components/client-io-form";
 import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 import {
-  CLIENT_FORM_SECONDARY_BUTTON_CLASS,
   ClientFormSection,
   ClientProfileTabShell,
+  useClientProfilePlatformV6,
 } from "@/features/clients/components/client-form-ui";
 import { CLIENT_IOS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import { cn } from "@/lib/utils";
+
+export const CLIENT_IO_SAVE_FORM_ID = "client-io-save";
 
 type ClientClientIosTabProps = {
   clientId: string;
@@ -37,7 +40,8 @@ export function ClientClientIosTab({
   recipients,
   onCancel,
 }: ClientClientIosTabProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(rows[0]?.id ?? null);
+  const platformV6 = useClientProfilePlatformV6();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const selected = useMemo(
     () => rows.find((row) => row.id === selectedId) ?? null,
@@ -49,68 +53,74 @@ export function ClientClientIosTab({
     return rest;
   }, []);
 
+  const registerToolbar = (
+    <>
+      <Link
+        href={`/ios/client?client=${clientId}`}
+        className={cn(platformV6 && "platform-v6-btn platform-v6-btn-sm")}
+      >
+        Open IO register
+      </Link>
+      <OperationalTableControlsSlot contextLabel="Client IO register" />
+    </>
+  );
+
   return (
     <ClientProfileTabShell
       title="Client IO"
       description={`All client insertion orders issued to ${clientName}.`}
       onCancel={onCancel}
     >
-      <div className="grid gap-[18px]">
-        <OperationalTableSuiteProvider
-          tableId={OPERATIONAL_TABLE_IDS.clientClientIos}
-          columns={CLIENT_IOS_TABLE_COLUMNS}
-          rows={rows}
-          filterAccessors={filterAccessors}
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.clientClientIos}
+        columns={CLIENT_IOS_TABLE_COLUMNS}
+        rows={rows}
+        filterAccessors={filterAccessors}
+      >
+        <ClientFormSection
+          icon={FileTextIcon}
+          title="Client IO register"
+          description="Select a row to review terms, recipients, and send history."
+          toolbar={registerToolbar}
+          bodyClassName={platformV6 ? "platform-v6-wide-form-body-table" : undefined}
         >
-          <ClientFormSection
-            icon={FileTextIcon}
-            title="Client IO register"
-            description="Select a row to review terms, recipients, and send history."
-          >
-            <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
-              <Link
-                href={`/ios/client?client=${clientId}`}
-                className={CLIENT_FORM_SECONDARY_BUTTON_CLASS}
-              >
-                Open IO register
-              </Link>
-              <OperationalTableControlsSlot contextLabel="Client IOs" />
-            </div>
-
-            {rows.length === 0 ? (
-              <p className="py-6 text-[13px] text-[#9099A8]">
+          {rows.length === 0 ? (
+            <div className={cn(platformV6 ? "platform-v6-empty-state" : "py-6")}>
+              <p className={cn(!platformV6 && "text-[13px] text-[#9099A8]")}>
                 No client IOs issued for this legal entity yet. IOs are created from
                 campaign workspaces when a campaign is prepared for client approval.
               </p>
-            ) : (
-              <div className="-mx-[22px] overflow-x-auto">
-                <ClientIosTable
-                  rows={rows}
-                  selectedId={selected?.id ?? null}
-                  onView={setSelectedId}
-                  showClientColumn={false}
-                />
-              </div>
-            )}
-          </ClientFormSection>
-        </OperationalTableSuiteProvider>
+            </div>
+          ) : (
+            <div className={cn("overflow-x-auto", !platformV6 && "-mx-[22px]")}>
+              <ClientIosTable
+                rows={rows}
+                selectedId={selected?.id ?? null}
+                onView={setSelectedId}
+                showClientColumn={false}
+                platformV6={platformV6}
+              />
+            </div>
+          )}
+        </ClientFormSection>
+      </OperationalTableSuiteProvider>
 
-        {selected ? (
-          <ClientFormSection
-            icon={FileTextIcon}
-            title={selected.document_number ?? "Client IO detail"}
-            description={`Review and manage ${selected.brand_name ?? "this IO"}.`}
-          >
-            <ClientIoForm
-              key={selected.id}
-              row={selected}
-              recipients={recipients}
-              clientDefaultTermsText={selected.client_io_terms_text ?? clientIoTermsText}
-              brandName={selected.brand_name}
-            />
-          </ClientFormSection>
-        ) : null}
-      </div>
+      {selected ? (
+        <ClientFormSection
+          icon={FileTextIcon}
+          title={selected.document_number ?? "Client IO detail"}
+          description={`Review and manage ${selected.brand_name ?? "this IO"}.`}
+          className={platformV6 ? "mt-3.5" : undefined}
+        >
+          <ClientIoForm
+            key={selected.id}
+            row={selected}
+            recipients={recipients}
+            clientDefaultTermsText={selected.client_io_terms_text ?? clientIoTermsText}
+            brandName={selected.brand_name}
+          />
+        </ClientFormSection>
+      ) : null}
     </ClientProfileTabShell>
   );
 }

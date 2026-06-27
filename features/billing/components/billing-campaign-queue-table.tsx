@@ -2,15 +2,17 @@
 
 import type { ReactNode } from "react";
 
-import { XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   OperationalFloatingActionBar,
+  PlatformFloatingBarDivider,
+  PlatformFloatingBarPrimaryButton,
+  PlatformFloatingBarSecondaryLink,
+  PlatformFloatingBarSelection,
   operationalFloatingBarContentClass,
 } from "@/components/workspace/operational-floating-action-bar";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -508,54 +510,40 @@ export function BillingCampaignQueueTable({
       ) : null}
 
       <OperationalFloatingActionBar visible={totalQueueSelected > 0}>
-        <div className="flex shrink-0 items-center gap-1.5 pr-1">
-          <Badge
-            variant="secondary"
-            className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-          >
-            {totalQueueSelected} selected
-          </Badge>
-          <Button
-            type="button"
-            size="icon-xs"
-            variant="ghost"
-            className="size-6 shrink-0 rounded-full text-muted-foreground"
-            onClick={handleClearQueueSelection}
-            aria-label="Clear selection"
-          >
-            <XIcon className="size-3.5" />
-          </Button>
-        </div>
+        <PlatformFloatingBarSelection
+          selectedCount={totalQueueSelected}
+          selectionLabel="row"
+          onClearSelection={handleClearQueueSelection}
+        />
 
-        <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+        <PlatformFloatingBarDivider />
 
-        <span className="shrink-0 text-xs text-muted-foreground">
+        <span className="shrink-0 px-2 text-xs text-muted-foreground">
           {invoiceContext
             ? (campaigns.find((c) => c.campaign_header_id === invoiceContext.campaignId)
                 ?.campaign_name ?? "Campaign")
             : "Select rows in one campaign only"}
         </span>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 shrink-0 rounded-full text-xs"
-            disabled={!invoiceContext}
-            onClick={() => handleQueueInvoiceSelected("new")}
-          >
-            Create new invoice
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 shrink-0 rounded-full text-xs"
-            disabled={!invoiceContext}
-            onClick={() => handleQueueInvoiceSelected("append")}
-          >
-            Append to open invoice
-          </Button>
+        <PlatformFloatingBarDivider className="ml-auto" />
+
+        <div className="flex shrink-0 items-center gap-1 pl-2">
+          <PlatformFloatingBarPrimaryButton
+            action={{
+              id: "new-invoice",
+              label: "Create new invoice",
+              disabled: !invoiceContext,
+              onClick: () => handleQueueInvoiceSelected("new"),
+            }}
+          />
+          <PlatformFloatingBarSecondaryLink
+            action={{
+              id: "append-invoice",
+              label: "Append to open invoice",
+              disabled: !invoiceContext,
+              onClick: () => handleQueueInvoiceSelected("append"),
+            }}
+          />
         </div>
       </OperationalFloatingActionBar>
 

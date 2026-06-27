@@ -205,7 +205,15 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("Client investment"));
   assert.ok(html.includes("Client cost"));
   assert.ok(html.includes("Client Cost"));
+  assert.ok(html.includes("Total cost included AF"));
   assert.ok(!html.includes("Total client cost"));
+  const summaryStart = html.indexOf('class="summary-box');
+  const summaryHtml = summaryStart >= 0 ? html.slice(summaryStart) : html;
+  const clientCostIdx = summaryHtml.indexOf("Client Cost");
+  const agencyFeeIdx = summaryHtml.indexOf("Total agency fee");
+  const totalIncludedIdx = summaryHtml.indexOf("Total cost included AF");
+  assert.ok(clientCostIdx > 0 && agencyFeeIdx > clientCostIdx, "Client Cost before AF in summary");
+  assert.ok(totalIncludedIdx > agencyFeeIdx, "Total included AF after agency fee in summary");
   assert.ok(html.includes("Agency fee (AF)"));
   assert.ok(html.includes("AF %"));
   assert.ok(html.includes('class="money"'));

@@ -22,10 +22,10 @@ export const ASSIGNMENT_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
   { id: "vat", label: "VAT" },
   { id: "totalBilling", label: "Total billing" },
   { id: "gp", label: "GP" },
-  { id: "margin", label: "Margin" },
-  { id: "opsStatus", label: "Ops status" },
+  { id: "margin", label: "MGN" },
+  { id: "opsStatus", label: "OPS" },
   { id: "billing", label: "Billing" },
-  { id: "payout", label: "Payout" },
+  { id: "payout", label: "Payment" },
   { id: "actions", label: "Actions", locked: true },
 ];
 

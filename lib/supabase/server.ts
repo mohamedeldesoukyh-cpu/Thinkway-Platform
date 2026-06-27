@@ -34,9 +34,17 @@ export async function getAuthUser() {
     error,
   } = await supabase.auth.getUser();
 
-  if (error) {
-    return { user: null, error };
+  if (error || !user) {
+    return { user: null, fullName: null, error: error ?? null };
   }
 
-  return { user, error: null };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const fullName = profile?.full_name?.trim() || null;
+
+  return { user, fullName, error: null };
 }

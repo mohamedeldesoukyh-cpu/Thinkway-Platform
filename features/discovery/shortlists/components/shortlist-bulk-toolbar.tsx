@@ -7,10 +7,13 @@ import {
   GitCompareArrowsIcon,
   SendIcon,
   Trash2Icon,
-  XIcon,
 } from "lucide-react";
+import { useMemo } from "react";
 
-import { Button } from "@/components/ui/button";
+import {
+  GlassSelectionFlyout,
+  type GlassFlyoutAction,
+} from "@/components/shared/navigation/glass-selection-flyout";
 
 type Props = {
   selectedCount: number;
@@ -47,69 +50,122 @@ export function ShortlistBulkToolbar({
   onCancelSelected,
   onClearSelection,
 }: Props) {
-  if (selectedCount === 0) return null;
+  const actions = useMemo(() => {
+    const list: GlassFlyoutAction[] = [];
+
+    if (showSubmit) {
+      list.push({
+        id: "submit",
+        label: "Submit selected",
+        icon: SendIcon,
+        variant: "primary",
+        disabled: busy,
+        onClick: onSubmitSelected,
+      });
+    }
+
+    if (showStatusActions) {
+      list.push(
+        {
+          id: "approve",
+          label: "Approve",
+          icon: CheckIcon,
+          variant: "primary",
+          disabled: busy,
+          onClick: onApproveSelected,
+        },
+        {
+          id: "reject",
+          label: "Reject",
+          variant: "outline",
+          disabled: busy,
+          onClick: onRejectSelected,
+        }
+      );
+    }
+
+    list.push(
+      {
+        id: "remove",
+        label: "Remove",
+        icon: Trash2Icon,
+        variant: "outline",
+        destructive: true,
+        disabled: busy,
+        onClick: onRemoveSelected,
+      },
+      {
+        id: "compare",
+        label: "Compare",
+        icon: GitCompareArrowsIcon,
+        variant: "outline",
+        disabled: busy,
+        onClick: onCompareSelected,
+      },
+      {
+        id: "export",
+        label: "Export",
+        icon: DownloadIcon,
+        variant: "outline",
+        disabled: busy,
+        onClick: onExportSelected,
+      }
+    );
+
+    if (showMove) {
+      list.push({
+        id: "move",
+        label: "Move to campaign",
+        variant: "outline",
+        disabled: busy,
+        onClick: onMoveSelected,
+      });
+    }
+
+    list.push(
+      {
+        id: "quotation",
+        label: "Generate quotation",
+        icon: FileTextIcon,
+        variant: "outline",
+        disabled: busy,
+        onClick: onGenerateQuotation,
+      },
+      {
+        id: "cancel",
+        label: "Cancel selected",
+        variant: "outline",
+        disabled: busy,
+        onClick: onCancelSelected,
+      }
+    );
+
+    return list;
+  }, [
+    showSubmit,
+    showStatusActions,
+    showMove,
+    busy,
+    onSubmitSelected,
+    onRemoveSelected,
+    onCompareSelected,
+    onExportSelected,
+    onMoveSelected,
+    onGenerateQuotation,
+    onApproveSelected,
+    onRejectSelected,
+    onCancelSelected,
+  ]);
 
   return (
-    <div className="sticky top-0 z-10 -mx-3 mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2 backdrop-blur-sm">
-      <span className="text-xs font-semibold text-primary">
-        {selectedCount} selected
-      </span>
-      <div className="hidden h-4 w-px bg-primary/25 sm:block" aria-hidden />
-
-      {showSubmit ? (
-        <Button size="sm" variant="secondary" className="h-8 gap-1.5 text-xs" onClick={onSubmitSelected} disabled={busy}>
-          <SendIcon className="size-3.5" />
-          Submit selected
-        </Button>
-      ) : null}
-
-      {showStatusActions ? (
-        <>
-          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onApproveSelected} disabled={busy}>
-            <CheckIcon className="size-3.5" />
-            Approve
-          </Button>
-          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onRejectSelected} disabled={busy}>
-            Reject
-          </Button>
-        </>
-      ) : null}
-
-      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onRemoveSelected} disabled={busy}>
-        <Trash2Icon className="size-3.5" />
-        Remove
-      </Button>
-      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onCompareSelected} disabled={busy}>
-        <GitCompareArrowsIcon className="size-3.5" />
-        Compare
-      </Button>
-      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onExportSelected} disabled={busy}>
-        <DownloadIcon className="size-3.5" />
-        Export
-      </Button>
-      {showMove ? (
-        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onMoveSelected} disabled={busy}>
-          Move to campaign
-        </Button>
-      ) : null}
-      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onGenerateQuotation} disabled={busy}>
-        <FileTextIcon className="size-3.5" />
-        Generate quotation
-      </Button>
-      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onCancelSelected} disabled={busy}>
-        Cancel selected
-      </Button>
-
-      <Button
-        size="sm"
-        variant="ghost"
-        className="ml-auto h-8 gap-1 text-xs text-muted-foreground"
-        onClick={onClearSelection}
-        disabled={busy}
-      >
-        <XIcon className="size-3.5" />
-        Clear selection
-      </Button>
-    </div>
+    <GlassSelectionFlyout
+      open={selectedCount > 0}
+      selectedCount={selectedCount}
+      entityLabel="creator"
+      actions={actions}
+      onClearSelection={onClearSelection}
+      busy={busy}
+      maxVisibleActions={3}
+    />
   );
 }

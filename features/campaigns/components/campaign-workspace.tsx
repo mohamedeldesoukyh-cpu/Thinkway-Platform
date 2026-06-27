@@ -28,8 +28,9 @@ import { useMetricsSyncCompletionToasts } from "@/features/campaigns/hooks/use-m
 import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
-import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
+import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { CancelCampaignDialog } from "@/components/campaigns/cancel-campaign-dialog";
+import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
@@ -45,17 +46,10 @@ import { ClientIoTab } from "@/features/io/components/client-io-tab";
 import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
-import { formatPlatformLabel } from "@/features/campaigns/utils";
-import {
-  OPERATIONAL_CHROME_LABEL,
-  OPERATIONAL_CHROME_META,
-  OPERATIONAL_CHROME_STATUS_BADGE,
-  OPERATIONAL_CHROME_TITLE,
-} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { formatMoney, formatPlatformLabel } from "@/features/campaigns/utils";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
-import { cn } from "@/lib/utils";
 
 type CampaignWorkspaceViewProps = {
   workspace: CampaignWorkspace;
@@ -259,7 +253,7 @@ export function CampaignWorkspaceView({
       reloadOperationalBilling={reloadOperationalBilling}
       reloadPublications={reloadPublications}
     >
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="thinkway-campaign-workspace flex min-h-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
@@ -268,30 +262,26 @@ export function CampaignWorkspaceView({
         <CampaignWorkspaceScrollShell
           chrome={
             <>
-              <div className="space-y-1 pt-0">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <PageBackButton
-                      fallbackHref="/campaigns"
-                      label="Back to campaigns"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setDetailsOpen(true)}
-                      className={cn(
-                        OPERATIONAL_CHROME_TITLE,
-                        "truncate text-left transition-colors hover:text-primary"
-                      )}
-                      title="View campaign details"
-                    >
-                      {workspace.name}
-                    </button>
-                    <CampaignStatusBadge
-                      status={workspace.status}
-                      className={OPERATIONAL_CHROME_STATUS_BADGE}
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="thinkway-campaign-header-inner">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <PageBackButton
+                    fallbackHref="/campaigns"
+                    label="Back to campaigns"
+                    className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setDetailsOpen(true)}
+                    className="thinkway-campaign-title truncate text-left transition-colors hover:text-[var(--camp-blue)]"
+                    title="View campaign details"
+                  >
+                    {workspace.name}
+                  </button>
+                  <CampaignStatusBadge
+                    status={workspace.status}
+                    className="thinkway-campaign-status-chip"
+                  />
+                  <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
                     <ClientIoCampaignChrome io={workspace.client_io} campaignId={workspace.id} />
                     {workspace.status !== "cancelled" ? (
                       <CancelCampaignDialog
@@ -304,7 +294,7 @@ export function CampaignWorkspaceView({
                         <Button
                           variant="outline"
                           size="sm"
-                          className={cn(OPERATIONAL_CHROME_LABEL, "h-7 gap-1 px-2")}
+                          className="thinkway-campaign-btn h-[30px] px-[11px] text-[11px] font-medium shadow-none"
                         >
                           <MoreHorizontalIcon className="size-3.5" />
                           Actions
@@ -331,16 +321,25 @@ export function CampaignWorkspaceView({
                     </DropdownMenu>
                   </div>
                 </div>
-                <p className={cn(OPERATIONAL_CHROME_META, "pl-10")}>
+                <p className="thinkway-campaign-meta">
                   <DocumentNumber value={workspace.document_number} />
                   {workspace.brand ? ` · ${workspace.brand.name}` : null}
                   {workspace.platform
                     ? ` · ${formatPlatformLabel(workspace.platform)}`
                     : null}
                 </p>
+                <CampaignKpiStrip workspace={workspace} />
               </div>
-
-              <CampaignKpiStrip workspace={workspace} />
+              {workspace.financials.budget > 0 ? (
+                <PoConsumptionBanner
+                  variant="po-bar"
+                  consumed={workspace.financials.po_banner_consumed}
+                  po_amount={workspace.financials.budget}
+                  currency={workspace.currency_code}
+                  formatMoney={formatMoney}
+                  po_exceeded={workspace.financials.po_exceeded}
+                />
+              ) : null}
             </>
           }
           tabs={
@@ -352,7 +351,7 @@ export function CampaignWorkspaceView({
           }
         >
         <CampaignWorkspaceTabContent value="overview" className={tabPanelClass}>
-          <CampaignWorkspaceTabPanel className="p-4 md:p-5">
+          <CampaignWorkspaceTabPanel>
             <CampaignOverviewTab
               workspace={workspace}
               accountManagers={accountManagers}
@@ -433,7 +432,7 @@ export function CampaignWorkspaceView({
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
         <CampaignWorkspaceTabContent value="workflow" className={tabPanelClass}>
-          <CampaignWorkspaceTabPanel className="p-4 md:p-5">
+          <CampaignWorkspaceTabPanel>
             <TabErrorBoundary tabName="Workflow">
               <CampaignWorkflowTab workspace={workspace} />
             </TabErrorBoundary>
@@ -456,7 +455,7 @@ export function CampaignWorkspaceView({
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
         <CampaignWorkspaceTabContent value="timeline" className={tabPanelClass}>
-          <CampaignWorkspaceTabPanel className="p-4 md:p-5">
+          <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "timeline",
               <TabErrorBoundary tabName="Timeline">

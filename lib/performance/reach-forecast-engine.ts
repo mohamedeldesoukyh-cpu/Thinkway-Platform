@@ -240,12 +240,12 @@ export function reachSourceBadgeClass(source: ReachSource | null | undefined): s
 export function reachSourceTextClass(source: ReachSource | null | undefined): string {
   switch (source) {
     case "actual":
-      return "text-emerald-700 dark:text-emerald-400";
+      return "thinkway-campaign-c-green";
     case "forecast":
-      return "text-amber-700 dark:text-amber-400";
+      return "thinkway-campaign-c-amber";
     case "manual":
-      return "text-[#0057FF]";
+      return "thinkway-campaign-c-blue";
     default:
-      return "text-[#5B6575]";
+      return "thinkway-campaign-c-gray";
   }
 }

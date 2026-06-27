@@ -23,6 +23,8 @@ type Props = {
   /** Grid: inline value + color. Workspace: stacked layout. */
   layout?: "inline" | "stacked";
   showPreviousForecast?: boolean;
+  /** Grid table: colored value without dotted underline. */
+  compact?: boolean;
 };
 
 function ReachValue({
@@ -32,6 +34,7 @@ function ReachValue({
   forecastConfidence,
   showPreviousForecast,
   sizeClass,
+  compact = false,
 }: {
   reach: number | null | undefined;
   source: ReachSource | null;
@@ -39,6 +42,7 @@ function ReachValue({
   forecastConfidence?: ReachForecastConfidence | null;
   showPreviousForecast?: boolean;
   sizeClass: string;
+  compact?: boolean;
 }) {
   const tooltip = reachSourceTooltip(source);
   const hasSource = source != null && reach != null;
@@ -65,7 +69,8 @@ function ReachValue({
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "tabular-nums cursor-help underline decoration-dotted decoration-current/30 underline-offset-2",
+              "tabular-nums",
+              !compact && "cursor-help underline decoration-dotted decoration-current/30 underline-offset-2",
               sizeClass,
               textClass
             )}
@@ -95,6 +100,7 @@ export function ReachDisplay({
   className,
   layout = "inline",
   showPreviousForecast = false,
+  compact = false,
 }: Props) {
   const source = (reachSource ?? null) as ReachSource | null;
 
@@ -116,6 +122,7 @@ export function ReachDisplay({
           forecastConfidence={forecastConfidence}
           showPreviousForecast={showPreviousForecast}
           sizeClass="text-lg font-semibold"
+          compact={compact}
         />
         {source === "forecast" && forecastConfidence ? (
           <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -138,6 +145,7 @@ export function ReachDisplay({
         forecastConfidence={forecastConfidence}
         showPreviousForecast={showPreviousForecast}
         sizeClass=""
+        compact={compact}
       />
     </div>
   );

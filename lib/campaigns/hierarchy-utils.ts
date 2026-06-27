@@ -44,7 +44,7 @@ export const HIERARCHY_COLUMN_LABELS = {
   assignment: "Assignment",
   creator: "Creator",
   platforms: "Platforms",
-  deliverables: "Deliv",
+  deliverables: "Deliv.",
   postingDates: "Dates",
   costCurrency: "CCY",
   revenue: "Rev",
@@ -54,12 +54,12 @@ export const HIERARCHY_COLUMN_LABELS = {
   cost: "Cost",
   usageRightsCost: "UR Cost",
   vat: "VAT",
-  totalBilling: "Total Billing",
+  totalBilling: "Total billing",
   gp: "GP",
-  margin: "Mgn",
-  opsStatus: "Ops",
+  margin: "MGN",
+  opsStatus: "OPS",
   billing: "Billing",
-  payout: "Payout",
+  payout: "Payment",
   actions: "",
 } as const;
 
@@ -166,4 +166,9 @@ export function childGridLeadingColumnCount(showExpandColumn: boolean): number {
 /** `data-assignment-col` value for parent grid cells (width measurement). */
 export function assignmentParentColDataAttr(columnId: string) {
   return { "data-assignment-col": columnId } as const;
+}
+
+/** `data-child-col` value for child grid leading cells (alignment + accent). */
+export function assignmentChildColDataAttr(childColumnId: string) {
+  return { "data-child-col": childColumnId } as const;
 }

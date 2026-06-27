@@ -44,6 +44,7 @@ export type AssignmentRowViewModel = {
   lineBillingStatus: CampaignLineBillingStatus;
   displayName: string;
   platformSummary: string;
+  platforms: string[];
   postingSummary: string;
   opsStatusLabel: string;
   billingStatusLabel: string;
@@ -67,10 +68,18 @@ function deriveChildBillingStatus(
   return "draft";
 }
 
-function summarizePlatforms(group: AssignmentHierarchyGroup): string {
+function collectPlatforms(group: AssignmentHierarchyGroup): string[] {
   try {
     const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
-    const platforms = [...new Set(deliverables.map((d) => d.platform).filter(Boolean))];
+    return [...new Set(deliverables.map((d) => d.platform).filter(Boolean))];
+  } catch {
+    return [];
+  }
+}
+
+function summarizePlatforms(group: AssignmentHierarchyGroup): string {
+  try {
+    const platforms = collectPlatforms(group);
     if (platforms.length === 0) return group.line.platform_summary ?? "—";
     return platforms.map(platformShortLabel).join(", ");
   } catch {
@@ -200,6 +209,7 @@ export function buildAssignmentRowViewModel(
     childBillingStatus,
     displayName,
     platformSummary: summarizePlatforms(group),
+    platforms: collectPlatforms(group),
     postingSummary: safeSummarizePostingDates(collectLiveDates(group)),
     opsStatusLabel: LINE_OPERATIONAL_STATUS_LABELS[operationalStatus] ?? operationalStatus,
     lineBillingStatus,

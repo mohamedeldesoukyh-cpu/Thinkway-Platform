@@ -83,8 +83,9 @@ function renderDetailedSummaryRows(doc: QuotationDocument): string {
           <tr class="gp"><td>GP %</td><td class="num" style="color:${doc.summary.gpColor}">${esc(doc.summary.totalGpPct ?? "—")}</td></tr>`
       : "";
   return `${internalRows}
-          <tr class="total"><td>${esc(QUOTATION_CLIENT_LABELS.totalAgencyFee)}</td><td class="num">${renderMoney(doc.summary.totalAf)}</td></tr>
-          <tr class="sub"><td>${esc(QUOTATION_CLIENT_LABELS.totalClientCost)}</td><td class="num">${renderMoney(doc.summary.totalClientCost)}</td></tr>`;
+          <tr><td>${esc(QUOTATION_CLIENT_LABELS.totalClientCost)}</td><td class="num">${renderMoney(doc.summary.totalClientCost)}</td></tr>
+          <tr><td>${esc(QUOTATION_CLIENT_LABELS.totalAgencyFee)}</td><td class="num">${renderMoney(doc.summary.totalAf)}</td></tr>
+          <tr class="total"><td>${esc(QUOTATION_CLIENT_LABELS.totalCostIncludedAf)}</td><td class="num">${renderMoney(doc.summary.grandTotal)}</td></tr>`;
 }
 
 function renderLumpSumSummaryRows(doc: QuotationDocument): string {

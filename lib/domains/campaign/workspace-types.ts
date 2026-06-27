@@ -123,6 +123,9 @@ export type CampaignLineWorkspace = {
   platform: string | null;
   influencer_id: string | null;
   influencer_name: string | null;
+  creator_profile_image_url: string | null;
+  influencer_avatar_url: string | null;
+  creator_avatar_url: string | null;
   platform_summary: string | null;
   deliverable_count: number;
   influencer_count: number;

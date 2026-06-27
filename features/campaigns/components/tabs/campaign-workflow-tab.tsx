@@ -104,29 +104,22 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
     []
   );
 
-  const currentIndex = WORKFLOW_STAGE_OPTIONS.findIndex(
-    (s) => s.value === workspace.workflow_stage
-  );
-
   return (
     <>
-      <div className={cn("space-y-4", OPERATIONAL_TABLE_FONT)}>
+      <div className={cn("space-y-3.5", OPERATIONAL_TABLE_FONT)}>
         <CampaignFlatSection
           title="Workflow stages"
           description="Planning through closed — derived from assignment status and billing."
         >
-          <div className="flex flex-wrap gap-2">
-            {WORKFLOW_STAGE_OPTIONS.map((stage, index) => {
+          <div className="thinkway-campaign-workflow-stages">
+            {WORKFLOW_STAGE_OPTIONS.map((stage) => {
               const isCurrent = stage.value === workspace.workflow_stage;
-              const isPast = index < currentIndex;
               return (
                 <div
                   key={stage.value}
                   className={cn(
-                    "rounded-full border px-4 py-2 text-sm font-medium",
-                    isCurrent && "border-primary bg-primary text-primary-foreground",
-                    isPast && !isCurrent && "border-primary/40 bg-primary/5",
-                    !isCurrent && !isPast && "border-border text-muted-foreground"
+                    "thinkway-campaign-stage-btn inline-flex items-center",
+                    isCurrent && "thinkway-campaign-stage-btn-active"
                   )}
                 >
                   {stage.label}
@@ -137,10 +130,17 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
         </CampaignFlatSection>
 
         {workspace.blockers.length > 0 ? (
-          <CampaignFlatSection title="Blockers">
-            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+          <CampaignFlatSection
+            title="Blockers"
+            description="Items that need resolution before the campaign can be closed."
+            flushBody
+          >
+            <ul className="thinkway-campaign-blockers-list">
               {workspace.blockers.map((b) => (
-                <li key={b}>{b}</li>
+                <li key={b}>
+                  <span className="thinkway-campaign-blocker-dot" aria-hidden />
+                  {b}
+                </li>
               ))}
             </ul>
           </CampaignFlatSection>
@@ -171,7 +171,9 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
             }
           >
             {workspace.approvals.length === 0 ? (
-              <p className="px-4 py-8 text-sm text-muted-foreground">No approval records.</p>
+              <div className="thinkway-campaign-empty-state">
+                <p>No approval records.</p>
+              </div>
             ) : (
               <OperationalConfigurableTable
                 columns={columns}

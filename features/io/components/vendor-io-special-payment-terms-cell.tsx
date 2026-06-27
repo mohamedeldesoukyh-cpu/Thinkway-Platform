@@ -46,8 +46,8 @@ export function VendorIoSpecialPaymentTermsCell({ row }: Props) {
         placeholder="Agreed terms…"
         disabled={pending}
         className={cn(
-          "h-7 border-border/60 bg-background text-[11px]",
-          row.special_payment_terms?.trim() && "border-[var(--brand-product)]/40"
+          "h-7 border-transparent bg-transparent px-0 text-[11px] text-[var(--camp-text-3)] shadow-none focus-visible:ring-0",
+          row.special_payment_terms?.trim() && "text-[var(--camp-text-2)]"
         )}
       />
     </form>

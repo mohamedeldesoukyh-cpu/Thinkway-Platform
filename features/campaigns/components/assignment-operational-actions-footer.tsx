@@ -5,7 +5,6 @@ import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,7 +16,15 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { OperationalFloatingActionBar } from "@/components/workspace/operational-floating-action-bar";
+import {
+  OperationalFloatingActionBar,
+  PLATFORM_FLOATING_BAR_PRIMARY_CLASS,
+  PlatformFloatingBarDivider,
+  PlatformFloatingBarPrimaryButton,
+  PlatformFloatingBarSecondaryLink,
+  PlatformFloatingBarSelection,
+} from "@/components/workspace/operational-floating-action-bar";
+import { cn } from "@/lib/utils";
 import {
   generateVendorIosFromLinesAction,
   type GenerateVendorIoState,
@@ -112,18 +119,26 @@ export function AssignmentOperationalActionsFooter({
   return (
     <>
       <OperationalFloatingActionBar visible={visible} className={className}>
-        <Badge
-          variant="secondary"
-          className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-        >
-          {selectedLineIds.length} selected
-        </Badge>
+        <PlatformFloatingBarSelection
+          selectedCount={selectedLineIds.length}
+          selectionLabel="line"
+          onClearSelection={() => {}}
+          showClearButton={false}
+          busy={vioPending || revisePending || ungeneratePending}
+        />
+
         {invoiceLineIds.length > 0 ? (
-          <span className="shrink-0 text-xs text-muted-foreground">
-            Invoice {formatMoney(invoiceTotal, currency)}
-          </span>
+          <>
+            <PlatformFloatingBarDivider />
+            <span className="shrink-0 px-2 text-xs text-muted-foreground">
+              Invoice {formatMoney(invoiceTotal, currency)}
+            </span>
+          </>
         ) : null}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+
+        <PlatformFloatingBarDivider className="ml-auto" />
+
+        <div className="flex shrink-0 items-center gap-1 pl-2">
           {vioLineIds.length > 0 ? (
             <form action={vioAction}>
               <input type="hidden" name="campaign_id" value={campaignId} />
@@ -131,50 +146,46 @@ export function AssignmentOperationalActionsFooter({
               <Button
                 type="submit"
                 size="sm"
-                variant="default"
-                className="h-8 shrink-0 rounded-full text-xs"
+                className={cn(
+                  "h-9 shrink-0 rounded-lg px-4 text-sm font-medium",
+                  PLATFORM_FLOATING_BAR_PRIMARY_CLASS
+                )}
                 disabled={vioPending}
               >
-                <FileStackIcon data-icon="inline-start" />
+                <FileStackIcon data-icon="inline-start" className="size-4" />
                 {vioPending ? "Generating…" : "Generate Vendor IO"}
               </Button>
             </form>
           ) : null}
           {reviseVioLineIds.length > 0 ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 shrink-0 rounded-full text-xs"
-              onClick={() => setReviseOpen(true)}
-            >
-              <GitBranchIcon data-icon="inline-start" />
-              Revise Vendor IO
-            </Button>
+            <PlatformFloatingBarSecondaryLink
+              action={{
+                id: "revise",
+                label: "Revise Vendor IO",
+                icon: GitBranchIcon,
+                onClick: () => setReviseOpen(true),
+              }}
+            />
           ) : null}
           {ungenerateIoLineIds.length > 0 ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 shrink-0 rounded-full text-xs"
-              onClick={() => setUngenerateOpen(true)}
-            >
-              <Undo2Icon data-icon="inline-start" />
-              Ungenerate IO
-            </Button>
+            <PlatformFloatingBarSecondaryLink
+              action={{
+                id: "ungenerate",
+                label: "Ungenerate IO",
+                icon: Undo2Icon,
+                onClick: () => setUngenerateOpen(true),
+              }}
+            />
           ) : null}
           {invoiceLineIds.length > 0 ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              className="h-8 shrink-0 rounded-full text-xs"
-              onClick={() => onGenerateInvoice(invoiceLineIds)}
-            >
-              <FileTextIcon data-icon="inline-start" />
-              Generate invoice
-            </Button>
+            <PlatformFloatingBarPrimaryButton
+              action={{
+                id: "invoice",
+                label: "Generate invoice",
+                icon: FileTextIcon,
+                onClick: () => onGenerateInvoice(invoiceLineIds),
+              }}
+            />
           ) : null}
         </div>
       </OperationalFloatingActionBar>

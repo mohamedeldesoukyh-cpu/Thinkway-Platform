@@ -7,7 +7,6 @@ import {
   loadCampaignBillingBundle,
   loadCampaignFinanceAuditBundle,
   loadCampaignFormOptionsBundle,
-  loadCampaignPublicationsBundle,
   type CampaignAssignmentsBillingPayload,
   type CampaignBillingPayload,
   type CampaignDeferredBundle,
@@ -41,6 +40,7 @@ import {
   SCREENSHOT_CAPTURE_POLL_INTERVAL_MS,
 } from "@/features/campaigns/hooks/metrics-sync-poll-policy";
 import { assignmentHierarchyBoundaryKey } from "@/lib/campaigns/assignment-row-debug";
+import { fetchCampaignPublicationsBundle } from "@/features/campaigns/hooks/fetch-campaign-publications-bundle";
 
 export const OPERATIONAL_BILLING_BUNDLES: CampaignDeferredBundle[] = [
   "assignmentsBilling",
@@ -251,7 +251,7 @@ export function useCampaignTabData(
           }
           applyBillingPayload(result.data);
         } else if (bundle === "publications") {
-          const result = await loadCampaignPublicationsBundle(campaignId);
+          const result = await fetchCampaignPublicationsBundle(campaignId);
           if (!result.ok) {
             markBundleStatus(bundle, "error", result.error);
             return;

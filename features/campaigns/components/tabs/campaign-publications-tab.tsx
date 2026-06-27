@@ -295,7 +295,9 @@ export function CampaignPublicationsTab({
           }
         >
           {filtered.length === 0 ? (
-            <p className="px-4 py-8 text-sm text-muted-foreground">No publications found.</p>
+            <div className="thinkway-campaign-empty-state">
+              <p>No publications found.</p>
+            </div>
           ) : (
             <OperationalConfigurableTable
               columns={columns}

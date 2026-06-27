@@ -71,9 +71,9 @@ export default async function ClientProfilePage({
 
   return (
     <DashboardShell
-      title="Client profile"
-      description="Master data, compliance documents, finance terms, and campaign history."
+      title={client?.name ?? "Client profile"}
       hidePageHeader
+      platformV6
       containedMain
       mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
     >

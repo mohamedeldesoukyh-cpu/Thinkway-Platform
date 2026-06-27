@@ -27,6 +27,12 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  GlassSelectionFlyout,
+  GLASS_FLYOUT_PRIMARY_ACTION_CLASS,
+  glassFlyoutContentClass,
+  type GlassFlyoutAction,
+} from "@/components/shared/navigation/glass-selection-flyout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -489,7 +495,12 @@ export function QuotationWorkspace({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
+      <div
+        className={cn(
+          "min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6",
+          glassFlyoutContentClass(selectedIds.size > 0)
+        )}
+      >
         <QuotationLifecyclePanel detail={detail} promoteOptions={promoteOptions} />
         <QuotationClientBrandPanel
           detail={detail}
@@ -513,51 +524,50 @@ export function QuotationWorkspace({
               onGlobalCalcMode={setGlobalCalcMode}
             />
 
-            {selectedIds.size > 0 ? (
-              <BulkToolbar
-                selectedCount={selectedIds.size}
-                globalCalcMode={globalCalcMode}
-                pending={bulkPending}
-                onClear={() => setSelectedIds(new Set())}
-                onApplyGpPct={applyBulkGpPct}
-                onApplyMarkupPct={applyBulkGpPct}
-                onChangeCurrency={applyBulkCurrency}
-                onRemove={() => {
-                  startBulkTransition(async () => {
-                    for (const id of selectedIds) {
-                      const res = await removeQuotationItem({
-                        item_id: id,
-                        quotation_id: detail.id,
-                      });
-                      if (!res.ok) {
-                        toast.error(res.message);
-                        return;
-                      }
-                    }
-                    toast.success("Selected creators removed.");
-                    setSelectedIds(new Set());
-                    router.refresh();
-                  });
-                }}
-                onDuplicate={() => {
-                  startBulkTransition(async () => {
-                    const res = await duplicateQuotationItems({
+            <BulkToolbar
+              open={selectedIds.size > 0}
+              selectedCount={selectedIds.size}
+              globalCalcMode={globalCalcMode}
+              pending={bulkPending}
+              onClear={() => setSelectedIds(new Set())}
+              onApplyGpPct={applyBulkGpPct}
+              onApplyMarkupPct={applyBulkGpPct}
+              onChangeCurrency={applyBulkCurrency}
+              onRemove={() => {
+                startBulkTransition(async () => {
+                  for (const id of selectedIds) {
+                    const res = await removeQuotationItem({
+                      item_id: id,
                       quotation_id: detail.id,
-                      item_ids: [...selectedIds],
                     });
                     if (!res.ok) {
                       toast.error(res.message);
                       return;
                     }
-                    toast.success(res.message ?? "Duplicated.");
-                    router.refresh();
+                  }
+                  toast.success("Selected creators removed.");
+                  setSelectedIds(new Set());
+                  router.refresh();
+                });
+              }}
+              onDuplicate={() => {
+                startBulkTransition(async () => {
+                  const res = await duplicateQuotationItems({
+                    quotation_id: detail.id,
+                    item_ids: [...selectedIds],
                   });
-                }}
-                onExport={() =>
-                  exportSelectedCsv(detail.items, drafts, selectedIds, detail.name)
-                }
-              />
-            ) : null}
+                  if (!res.ok) {
+                    toast.error(res.message);
+                    return;
+                  }
+                  toast.success(res.message ?? "Duplicated.");
+                  router.refresh();
+                });
+              }}
+              onExport={() =>
+                exportSelectedCsv(detail.items, drafts, selectedIds, detail.name)
+              }
+            />
 
             <div className="overflow-x-auto rounded-xl border border-border">
               <Table>
@@ -770,6 +780,7 @@ function Toolbar({
 }
 
 function BulkToolbar({
+  open,
   selectedCount,
   globalCalcMode,
   pending,
@@ -781,6 +792,7 @@ function BulkToolbar({
   onDuplicate,
   onExport,
 }: {
+  open: boolean;
   selectedCount: number;
   globalCalcMode: CalculationModePreference;
   pending: boolean;
@@ -794,19 +806,58 @@ function BulkToolbar({
 }) {
   const [bulkPct, setBulkPct] = useState("25");
 
+  const actions: GlassFlyoutAction[] = [
+    {
+      id: "duplicate",
+      label: "Duplicate",
+      icon: CopyIcon,
+      variant: "outline",
+      disabled: pending,
+      onClick: onDuplicate,
+    },
+    {
+      id: "export",
+      label: "Export",
+      icon: DownloadIcon,
+      variant: "outline",
+      onClick: onExport,
+    },
+    {
+      id: "remove",
+      label: "Remove",
+      icon: Trash2Icon,
+      variant: "outline",
+      destructive: true,
+      disabled: pending,
+      onClick: onRemove,
+    },
+  ];
+
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
-      <span className="text-sm font-medium">{selectedCount} selected</span>
-      <div className="flex items-center gap-1">
+    <GlassSelectionFlyout
+      open={open}
+      selectedCount={selectedCount}
+      entityLabel="creator"
+      actions={actions}
+      onClearSelection={onClear}
+      busy={pending}
+      maxVisibleActions={2}
+    >
+      <div className="flex shrink-0 items-center gap-1">
         <Input
-          className="h-8 w-16"
+          className="h-7 w-14 text-xs"
           inputMode="decimal"
           value={bulkPct}
           onChange={(e) => setBulkPct(e.target.value)}
         />
         <Button
-          variant="secondary"
-          size="sm"
+          type="button"
+          size="xs"
+          variant="default"
+          className={cn(
+            "h-7 shrink-0 rounded-full text-xs",
+            GLASS_FLYOUT_PRIMARY_ACTION_CLASS
+          )}
           disabled={pending}
           onClick={() => {
             const pct = parseNum(bulkPct);
@@ -814,12 +865,12 @@ function BulkToolbar({
             else onApplyGpPct(pct);
           }}
         >
-          <PercentIcon className="size-3.5" />
-          Apply {globalCalcMode === "markup" ? "Markup" : "GP Margin"}%
+          <PercentIcon className="size-3" />
+          Apply {globalCalcMode === "markup" ? "Markup" : "GP"}%
         </Button>
       </div>
       <Select onValueChange={onChangeCurrency}>
-        <SelectTrigger className="h-8 w-[110px]">
+        <SelectTrigger className="h-7 w-[100px] text-xs">
           <SelectValue placeholder="Currency" />
         </SelectTrigger>
         <SelectContent>
@@ -830,19 +881,7 @@ function BulkToolbar({
           ))}
         </SelectContent>
       </Select>
-      <Button variant="outline" size="sm" disabled={pending} onClick={onDuplicate}>
-        <CopyIcon className="size-3.5" /> Duplicate
-      </Button>
-      <Button variant="outline" size="sm" onClick={onExport}>
-        <DownloadIcon className="size-3.5" /> Export
-      </Button>
-      <Button variant="destructive" size="sm" disabled={pending} onClick={onRemove}>
-        <Trash2Icon className="size-3.5" /> Remove
-      </Button>
-      <Button variant="ghost" size="icon" className="size-8" onClick={onClear}>
-        <XIcon className="size-4" />
-      </Button>
-    </div>
+    </GlassSelectionFlyout>
   );
 }
 

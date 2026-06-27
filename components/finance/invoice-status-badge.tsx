@@ -25,11 +25,29 @@ function resolveInvoiceStatusTone(input: {
   return "neutral";
 }
 
+function campaignInvoiceStatusBadgeClass(label: string): string {
+  const key = label.toLowerCase();
+  if (key === "issued" || key === "sent" || key === "partial") {
+    return "thinkway-campaign-badge-blue";
+  }
+  if (key === "paid" || key === "posted") {
+    return "thinkway-campaign-badge-green";
+  }
+  if (key === "void" || key === "overdue" || key === "cancelled") {
+    return "thinkway-campaign-badge-red";
+  }
+  if (key === "draft" || key === "pending regeneration") {
+    return "thinkway-campaign-badge-gray";
+  }
+  return "thinkway-campaign-badge-gray";
+}
+
 type InvoiceStatusBadgeProps = {
   status: string;
   regeneration_status?: string | null;
   metadata?: Record<string, unknown> | null;
   className?: string;
+  appearance?: "default" | "campaign";
 };
 
 export function InvoiceStatusBadge({
@@ -37,6 +55,7 @@ export function InvoiceStatusBadge({
   regeneration_status,
   metadata,
   className,
+  appearance = "default",
 }: InvoiceStatusBadgeProps) {
   const label =
     regeneration_status !== undefined || metadata
@@ -45,6 +64,20 @@ export function InvoiceStatusBadge({
         ? getInvoiceRegisterStatusLabel({ status })
         : status;
   const tone = resolveInvoiceStatusTone({ status, regeneration_status, label });
+
+  if (appearance === "campaign") {
+    return (
+      <span
+        className={cn(
+          "thinkway-campaign-badge",
+          campaignInvoiceStatusBadgeClass(label),
+          className
+        )}
+      >
+        {label}
+      </span>
+    );
+  }
 
   return (
     <StatusBadge

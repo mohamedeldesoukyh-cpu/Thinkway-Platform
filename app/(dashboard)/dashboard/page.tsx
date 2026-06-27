@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
+import { PlatformV6Page, PlatformV6PageHeader } from "@/components/platform/platform-v6-layout";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { ExecutiveDashboardView } from "@/features/executive-dashboard/components/executive-dashboard-view";
 import {
@@ -39,25 +40,33 @@ export default async function ExecutiveDashboardPage({ searchParams }: PageProps
     <DashboardShell
       title="Executive dashboard"
       description="CFO-grade finance monitoring — revenue, profitability, collections, and operational exposure."
+      platformV6
     >
-      {errorMessage ? (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[11px] text-destructive">
-          {errorMessage}
-        </div>
-      ) : payload && filterOptions ? (
-        <Suspense
-          fallback={
-            <div className="space-y-4">
-              <div className="h-14 animate-pulse rounded-2xl bg-muted" />
-              <div className="h-32 animate-pulse rounded-2xl bg-muted" />
-            </div>
-          }
-        >
-          <PlatformErrorBoundary surface="executive">
-            <ExecutiveDashboardView data={payload} filterOptions={filterOptions} />
-          </PlatformErrorBoundary>
-        </Suspense>
-      ) : null}
+      <PlatformV6Page>
+        <PlatformV6PageHeader
+          title="Executive dashboard"
+          description="CFO-grade finance monitoring — revenue, profitability, collections, and operational exposure."
+        />
+
+        {errorMessage ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[11px] text-destructive">
+            {errorMessage}
+          </div>
+        ) : payload && filterOptions ? (
+          <Suspense
+            fallback={
+              <div className="space-y-4">
+                <div className="h-14 animate-pulse rounded-2xl bg-muted" />
+                <div className="h-32 animate-pulse rounded-2xl bg-muted" />
+              </div>
+            }
+          >
+            <PlatformErrorBoundary surface="executive">
+              <ExecutiveDashboardView data={payload} filterOptions={filterOptions} />
+            </PlatformErrorBoundary>
+          </Suspense>
+        ) : null}
+      </PlatformV6Page>
     </DashboardShell>
   );
 }

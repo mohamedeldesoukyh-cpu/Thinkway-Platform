@@ -4,6 +4,10 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Button } from "@/components/ui/button";
 import { DiscoverySubNav } from "@/features/discovery-import/components/discovery-sub-nav";
+import {
+  DISCOVERY_PAGE_IDENTITY,
+  DiscoveryPageHeader,
+} from "@/features/discovery/components/discovery-page-identity";
 
 export default function DiscoveryCampaignMatchPage() {
   return (
@@ -17,9 +21,9 @@ export default function DiscoveryCampaignMatchPage() {
       <PlatformErrorBoundary surface="generic">
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <DiscoverySubNav activeHref="/discovery/campaign-match" />
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
-            <section className="space-y-4 rounded-3xl border border-dashed border-border px-6 py-16 text-center">
-              <h2 className="font-heading text-2xl font-semibold tracking-tight">Campaign Match</h2>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3 md:p-4">
+            <DiscoveryPageHeader identity={DISCOVERY_PAGE_IDENTITY["campaign-match"]} />
+            <section className="space-y-3 rounded-2xl border border-dashed border-border px-4 py-12 text-center">
               <p className="mx-auto max-w-lg text-sm text-muted-foreground">
                 AI-powered campaign brief matching is coming in a later discovery phase. Use Creator
                 Search and shortlists while this workspace is being built.

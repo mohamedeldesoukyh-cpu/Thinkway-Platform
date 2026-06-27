@@ -98,10 +98,10 @@ export function CampaignWorkspaceScrollShell({
   return (
     <div
       ref={scrollRef}
-      className="h-0 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain"
+      className="h-0 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-[var(--camp-surface)]"
       data-campaign-workspace-scroll
     >
-      <div className="space-y-4">{chrome}</div>
+      <div className="thinkway-campaign-header">{chrome}</div>
       <div ref={sentinelRef} className="h-px w-full shrink-0" aria-hidden />
       {tabsPinned && tabsHeight > 0 ? (
         <div style={{ height: tabsHeight }} className="shrink-0" aria-hidden />
@@ -110,8 +110,7 @@ export function CampaignWorkspaceScrollShell({
         ref={tabsRef}
         style={tabsPinned ? pinStyle : undefined}
         className={cn(
-          "thinkway-campaign-workspace-tabs-pinned z-40 -mx-3 px-3 md:-mx-6 md:px-6",
-          "border-y-4 border-card bg-background pb-0",
+          "thinkway-campaign-workspace-tabs-pinned z-40",
           !tabsPinned && "relative"
         )}
         data-sticky="campaign-workspace-tabs"

@@ -29,7 +29,7 @@ import {
   updatePostScheduleAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
-import { DeliverableBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
+import { AssignmentDeliverableBillingBadge } from "@/features/campaigns/components/assignment-hierarchy/assignment-status-badges";
 import {
   OperationalAmountField,
   OperationalQtyField,
@@ -48,6 +48,7 @@ import {
   platformBadgeClass,
 } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
 import {
+  assignmentChildColDataAttr,
   assignmentChildLeadingParentColumnIds,
   assignmentChildRowColSpan,
   assignmentChildTypeLabel,
@@ -485,14 +486,25 @@ export function EditablePostRow({
       childColumnId === "expand" ||
       childColumnId === "select"
     ) {
-      return <td key={parentColumnId} className={cellClass} aria-hidden />;
+      return (
+        <td
+          key={parentColumnId}
+          {...assignmentChildColDataAttr(childColumnId)}
+          className={cellClass}
+          aria-hidden
+        />
+      );
     }
 
     switch (childColumnId) {
       case "type":
         return (
-          <td key={parentColumnId} className={cellClass}>
-            <div className="flex items-center justify-center">
+          <td
+            key={parentColumnId}
+            {...assignmentChildColDataAttr(childColumnId)}
+            className={cellClass}
+          >
+            <div className="flex min-w-0 items-center">
               {canEdit && editing ? (
                 <DeliverableTypeSelect
                   platform={meta.platform}
@@ -515,7 +527,7 @@ export function EditablePostRow({
         );
       case "platform":
         return (
-          <td key={parentColumnId} className={cellClass}>
+          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {canEdit && editing ? (
               <PlatformSelect
                 platform={meta.platform}
@@ -544,7 +556,7 @@ export function EditablePostRow({
         );
       case "qty":
         return (
-          <td key={parentColumnId} className={cellClass}>
+          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             <OperationalQtyField
               value={commercial.draft.qty}
               onChange={(q) => commercial.setQty(q)}
@@ -555,7 +567,7 @@ export function EditablePostRow({
         );
       case "revPerAd":
         return (
-          <td key={parentColumnId} className={cellClass}>
+          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             <OperationalAmountField
               value={commercial.draft.revPerAd}
               onChange={(n) => commercial.setRevPerAd(n)}
@@ -567,7 +579,7 @@ export function EditablePostRow({
         );
       case "costPerAd":
         return (
-          <td key={parentColumnId} className={cellClass}>
+          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             <OperationalAmountField
               value={commercial.draft.costPerAd}
               onChange={(n) => commercial.setCostPerAd(n)}
@@ -579,13 +591,13 @@ export function EditablePostRow({
         );
       case "ccy":
         return (
-          <td key={parentColumnId} className={cellClass}>
+          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {currency}
           </td>
         );
       case "rev":
         return (
-          <td key={parentColumnId} className={cellClass}>
+          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             <OperationalAmountField
               value={commercial.draft.rev}
               onChange={(n) => commercial.setRev(n)}
@@ -595,7 +607,14 @@ export function EditablePostRow({
           </td>
         );
       default:
-        return <td key={parentColumnId} className={cellClass} aria-hidden />;
+        return (
+          <td
+            key={parentColumnId}
+            {...assignmentChildColDataAttr(childColumnId)}
+            className={cellClass}
+            aria-hidden
+          />
+        );
     }
   }
 
@@ -603,11 +622,10 @@ export function EditablePostRow({
     <>
       <tr
         className={cn(
-          "text-[11px] font-normal text-foreground/80",
-          !isLastChildRow && "border-b border-border/15",
-          OPERATIONAL_TABLE_SURFACE,
-          "hover:bg-muted/15",
-          editing && OPERATIONAL_TABLE_SURFACE
+          "thinkway-campaign-asgn-child text-[11px] font-normal text-[var(--camp-text-2)]",
+          !isLastChildRow && "border-b border-[var(--camp-border)]",
+          "hover:bg-[var(--camp-row-open-hover)]",
+          editing && "bg-[var(--camp-row-open)]"
         )}
       >
         {leadingParentColumnIds.map(renderLeadingBodyCell)}
@@ -746,7 +764,7 @@ export function EditablePostRow({
         ) : null}
         {col("billing") ? (
         <td className={GRID_CELL.status}>
-          <DeliverableBillingStatusBadge billingStatus={post.billing_status} />
+          <AssignmentDeliverableBillingBadge billingStatus={post.billing_status} />
         </td>
         ) : null}
         {col("collection") ? (
@@ -916,25 +934,32 @@ export function OperationalGridHeader({
       childColumnId === "expand" ||
       childColumnId === "select"
     ) {
-      return <th key={parentColumnId} className={cellClass} aria-hidden />;
+      return (
+        <th
+          key={parentColumnId}
+          {...assignmentChildColDataAttr(childColumnId)}
+          className={cellClass}
+          aria-hidden
+        />
+      );
     }
 
     switch (childColumnId) {
       case "type":
         return (
-          <th key={parentColumnId} className={cellClass}>
+          <th key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {OPERATIONAL_GRID_LABELS.type}
           </th>
         );
       case "platform":
         return (
-          <th key={parentColumnId} className={cellClass}>
+          <th key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {OPERATIONAL_GRID_LABELS.platform}
           </th>
         );
       case "qty":
         return (
-          <th key={parentColumnId} className={cellClass}>
+          <th key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {OPERATIONAL_GRID_LABELS.qty}
           </th>
         );
@@ -942,6 +967,7 @@ export function OperationalGridHeader({
         return (
           <th
             key={parentColumnId}
+            {...assignmentChildColDataAttr(childColumnId)}
             className={cn(cellClass, "whitespace-nowrap px-1.5")}
           >
             {OPERATIONAL_GRID_LABELS.revPerAd}
@@ -951,6 +977,7 @@ export function OperationalGridHeader({
         return (
           <th
             key={parentColumnId}
+            {...assignmentChildColDataAttr(childColumnId)}
             className={cn(cellClass, "whitespace-nowrap px-1.5")}
           >
             {OPERATIONAL_GRID_LABELS.costPerAd}
@@ -958,7 +985,7 @@ export function OperationalGridHeader({
         );
       case "ccy":
         return (
-          <th key={parentColumnId} className={cellClass}>
+          <th key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {OPERATIONAL_GRID_LABELS.ccy}
           </th>
         );
@@ -966,6 +993,7 @@ export function OperationalGridHeader({
         return (
           <th
             key={parentColumnId}
+            {...assignmentChildColDataAttr(childColumnId)}
             className={cn(
               cellClass,
               OPERATIONAL_TABLE_HEADER_SURFACE,
@@ -976,12 +1004,19 @@ export function OperationalGridHeader({
           </th>
         );
       default:
-        return <th key={parentColumnId} className={cellClass} aria-hidden />;
+        return (
+          <th
+            key={parentColumnId}
+            {...assignmentChildColDataAttr(childColumnId)}
+            className={cellClass}
+            aria-hidden
+          />
+        );
     }
   }
 
   return (
-    <tr className={OPERATIONAL_TABLE_HEADER_ROW}>
+    <tr className={cn(OPERATIONAL_TABLE_HEADER_ROW, "thinkway-campaign-asgn-child-hdr")}>
       {leadingParentColumnIds.map(renderLeadingHeaderCell)}
       {col("usageRights") ? (
       <th

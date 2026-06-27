@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   CreatorIdentityCell,
   creatorProfileSourceFromAccounts,
@@ -9,12 +11,9 @@ import {
   type OperationalConfigurableColumnDef,
   getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
-import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import {
-  VendorRowActions,
-  VendorStatusCell,
-} from "@/features/vendors/components/vendor-row-actions";
 import { DocumentNumber } from "@/components/ui/document-number";
+import { VendorListStatusCell } from "@/features/vendors/components/vendor-list-status-cell";
+import { VendorRowActions } from "@/features/vendors/components/vendor-row-actions";
 import type { VendorsListResult } from "@/features/vendors/queries";
 import {
   formatCategoriesList,
@@ -34,8 +33,11 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
   {
     id: "document_number",
     label: "Vendor #",
-    renderCell: (vendor) => <DocumentNumber value={vendor.document_number} />,
-    cellClassName: "text-muted-foreground",
+    renderCell: (vendor) => (
+      <Link href={`/vendors/${vendor.id}`} className="platform-v6-link">
+        <DocumentNumber value={vendor.document_number} />
+      </Link>
+    ),
   },
   {
     id: "creator",
@@ -46,54 +48,66 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
         size="sm"
         showHandle={false}
         stopPropagation
+        nameClassName="font-medium text-foreground"
       />
     ),
   },
   {
     id: "agency",
     label: "Agency",
-    renderCell: (vendor) => vendor.legal_name ?? "—",
-    cellClassName: "text-muted-foreground",
+    renderCell: (vendor) => (
+      <span className="platform-v6-c-gray">{vendor.legal_name ?? "—"}</span>
+    ),
   },
   {
     id: "platforms",
     label: "Platforms",
-    renderCell: (vendor) => formatPlatformsSummary(vendor.platform_accounts),
-    cellClassName: "text-muted-foreground",
+    renderCell: (vendor) => (
+      <span className="platform-v6-c-blue">{formatPlatformsSummary(vendor.platform_accounts)}</span>
+    ),
   },
   {
     id: "followers",
     label: "Followers",
     headerClassName: "text-right",
     amountCell: true,
-    renderCell: (vendor) => formatFollowers(getTotalFollowers(vendor.platform_accounts)),
+    renderCell: (vendor) => (
+      <span className="platform-v6-num font-medium">
+        {formatFollowers(getTotalFollowers(vendor.platform_accounts))}
+      </span>
+    ),
   },
   {
     id: "assignments",
     label: "Assignments",
     headerClassName: "text-right",
     amountCell: true,
-    renderCell: (vendor) => vendor.assignment_count,
+    renderCell: (vendor) => (
+      <span className="platform-v6-num">{vendor.assignment_count}</span>
+    ),
   },
   {
     id: "niche",
     label: "Niche",
-    renderCell: (vendor) => formatCategoriesList(vendor.categories),
-    cellClassName: "max-w-[140px] truncate text-muted-foreground",
+    renderCell: (vendor) => (
+      <span className="block max-w-[140px] truncate text-[11px] text-muted-foreground">
+        {formatCategoriesList(vendor.categories)}
+      </span>
+    ),
   },
   {
     id: "pricing",
     label: "Pricing",
     headerClassName: "text-right",
     amountCell: true,
-    renderCell: (vendor) => formatPricing(vendor.rate_card),
+    renderCell: (vendor) => (
+      <span className="platform-v6-c-gray">{formatPricing(vendor.rate_card)}</span>
+    ),
   },
   {
     id: "status",
     label: "Status",
-    renderCell: (vendor) => (
-      <VendorStatusCell vendor={vendor} badgeClassName={OPERATIONAL_CHROME_STATUS_BADGE} />
-    ),
+    renderCell: (vendor) => <VendorListStatusCell status={vendor.status} />,
   },
   {
     id: "country",

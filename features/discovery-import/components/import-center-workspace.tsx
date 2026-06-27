@@ -45,15 +45,6 @@ export function ImportCenterWorkspace({ initialFiles }: ImportCenterWorkspacePro
 
   return (
     <div className="space-y-8">
-      <section className="space-y-2">
-        <h2 className="font-heading text-2xl font-semibold tracking-tight">
-          Discovery Import Center
-        </h2>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Upload creator datasets from agencies, platforms, or clients.
-        </p>
-      </section>
-
       <section className="space-y-4">
         <div>
           <h3 className="text-sm font-semibold">Upload datasets</h3>

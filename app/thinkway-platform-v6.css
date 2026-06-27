@@ -1,0 +1,2576 @@
+/* thinkway-platform_6.html — scoped platform list + client workspace design system */
+
+.thinkway-platform-v6,
+.thinkway-platform-v6-topbar {
+  --tw-navy: #0d1526;
+  --tw-navy-2: #152035;
+  --tw-blue: #2563eb;
+  --tw-blue-h: #1d4ed8;
+  --tw-blue-light: #eff6ff;
+  --tw-blue-text: #1d4ed8;
+  --tw-green: #10b981;
+  --tw-green-bg: #ecfdf5;
+  --tw-green-text: #065f46;
+  --tw-amber: #f59e0b;
+  --tw-amber-bg: #fffbeb;
+  --tw-amber-text: #92400e;
+  --tw-red: #ef4444;
+  --tw-red-bg: #fef2f2;
+  --tw-red-text: #991b1b;
+  --tw-purple-bg: #faf5ff;
+  --tw-purple-text: #6b21a8;
+  --tw-text: #0f172a;
+  --tw-text-2: #475569;
+  --tw-text-3: #94a3b8;
+  --tw-border: #e2e8f0;
+  --tw-surface: #f8fafc;
+  --tw-white: #fff;
+  --tw-r: 6px;
+  --tw-rl: 10px;
+  --tw-ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+  font-size: 13px;
+  color: var(--tw-text);
+}
+
+.thinkway-platform-v6 .platform-v6-page {
+  min-height: 100%;
+}
+
+.thinkway-platform-v6 .platform-v6-page-header {
+  margin-bottom: 20px;
+}
+
+.thinkway-platform-v6 .platform-v6-page-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tw-text);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.thinkway-platform-v6 .platform-v6-page-header p {
+  font-size: 12px;
+  color: var(--tw-text-3);
+  margin-top: 3px;
+}
+
+.thinkway-platform-v6 .platform-v6-page-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.thinkway-platform-v6 .platform-v6-page-header-row .platform-v6-page-header {
+  margin-bottom: 0;
+}
+
+/* Topbar (dashboard shell) */
+.thinkway-platform-v6-topbar {
+  height: 52px;
+  width: 100%;
+  background: var(--tw-white);
+  border-bottom: 1px solid var(--tw-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6-topbar .platform-v6-tb-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tw-text);
+}
+
+/* Buttons */
+.thinkway-platform-v6 .platform-v6-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--tw-r);
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--tw-border);
+  background: var(--tw-white);
+  color: var(--tw-text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 120ms var(--tw-ease), transform 100ms;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.thinkway-platform-v6 .platform-v6-btn:hover {
+  background: var(--tw-surface);
+}
+
+.thinkway-platform-v6 .platform-v6-btn:active {
+  transform: scale(0.97);
+}
+
+.thinkway-platform-v6 .platform-v6-btn-primary {
+  background: var(--tw-blue);
+  color: #fff;
+  border-color: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-btn-primary:hover {
+  background: var(--tw-blue-h);
+  border-color: var(--tw-blue-h);
+}
+
+.thinkway-platform-v6 .platform-v6-btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+/* Badges */
+.thinkway-platform-v6 .platform-v6-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.thinkway-platform-v6 .platform-v6-badge-green {
+  background: var(--tw-green-bg);
+  color: var(--tw-green-text);
+}
+
+.thinkway-platform-v6 .platform-v6-badge-amber {
+  background: var(--tw-amber-bg);
+  color: var(--tw-amber-text);
+}
+
+.thinkway-platform-v6 .platform-v6-badge-red {
+  background: var(--tw-red-bg);
+  color: var(--tw-red-text);
+}
+
+.thinkway-platform-v6 .platform-v6-badge-blue {
+  background: var(--tw-blue-light);
+  color: var(--tw-blue-text);
+}
+
+.thinkway-platform-v6 .platform-v6-badge-gray {
+  background: var(--tw-surface);
+  color: var(--tw-text-2);
+  border: 1px solid var(--tw-border);
+}
+
+.thinkway-platform-v6 .platform-v6-badge-purple {
+  background: var(--tw-purple-bg);
+  color: var(--tw-purple-text);
+}
+
+.thinkway-platform-v6 .platform-v6-badge-outline-amber {
+  background: transparent;
+  color: var(--tw-amber-text);
+  border: 1px solid var(--tw-amber);
+}
+
+.thinkway-platform-v6 .platform-v6-badge-outline-green {
+  background: transparent;
+  color: var(--tw-green-text);
+  border: 1px solid var(--tw-green);
+}
+
+/* KPI strip — grid must win over Tailwind utilities on parent/child wrappers */
+.thinkway-platform-v6 .platform-v6-kpi-strip {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0;
+  background: var(--tw-white);
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-rl);
+  overflow: hidden;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-cell {
+  flex: 1;
+  padding: 14px 16px;
+  border-right: 1px solid var(--tw-border);
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-cell:last-child {
+  border-right: none;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--tw-text-3);
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-lbl svg {
+  width: 13px;
+  height: 13px;
+  padding: 2px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-val {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.thinkway-platform-v6 .platform-v6-c-blue {
+  color: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-c-green {
+  color: var(--tw-green);
+}
+
+.thinkway-platform-v6 .platform-v6-c-amber {
+  color: var(--tw-amber);
+}
+
+.thinkway-platform-v6 .platform-v6-c-red {
+  color: var(--tw-red);
+}
+
+.thinkway-platform-v6 .platform-v6-c-gray {
+  color: var(--tw-text-3);
+}
+
+/* Section cards + tables */
+.thinkway-platform-v6 .platform-v6-section-wrap {
+  background: var(--tw-white);
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-rl);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.thinkway-platform-v6 .platform-v6-section-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.thinkway-platform-v6 .platform-v6-section-meta strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tw-text);
+}
+
+.thinkway-platform-v6 .platform-v6-section-meta div {
+  font-size: 11px;
+  color: var(--tw-text-3);
+}
+
+.thinkway-platform-v6 .platform-v6-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.thinkway-platform-v6 .platform-v6-search-wrap {
+  position: relative;
+  min-width: 220px;
+  flex: 1;
+  max-width: 320px;
+}
+
+.thinkway-platform-v6 .platform-v6-search-wrap input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-r);
+  padding: 0 10px 0 30px;
+  font-size: 12px;
+  outline: none;
+  background: var(--tw-white);
+  color: var(--tw-text);
+  transition: border-color 150ms;
+}
+
+.thinkway-platform-v6 .platform-v6-search-wrap input:focus {
+  border-color: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-search-ico {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--tw-text-3);
+  pointer-events: none;
+}
+
+.thinkway-platform-v6 .platform-v6-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.thinkway-platform-v6 .platform-v6-data-table th {
+  padding: 9px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--tw-text-3);
+  text-align: left;
+  border-bottom: 1px solid var(--tw-border);
+  background: var(--tw-surface);
+  white-space: nowrap;
+}
+
+.thinkway-platform-v6 .platform-v6-data-table td {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--tw-text-2);
+  border-bottom: 1px solid var(--tw-border);
+  vertical-align: middle;
+}
+
+.thinkway-platform-v6 .platform-v6-data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.thinkway-platform-v6 .platform-v6-data-table tbody tr {
+  transition: background 100ms;
+}
+
+.thinkway-platform-v6 .platform-v6-data-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.thinkway-platform-v6 .platform-v6-link {
+  color: var(--tw-blue);
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.thinkway-platform-v6 .platform-v6-link:hover {
+  text-decoration: underline;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap .platform-v6-link {
+  color: var(--tw-blue) !important;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap .platform-v6-link.font-semibold {
+  font-weight: 600;
+}
+
+.thinkway-platform-v6 .platform-v6-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Operational table overrides inside v6 section wrap */
+.thinkway-platform-v6 .platform-v6-section-wrap [data-slot="table-container"] {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap [data-slot="table"] {
+  width: 100%;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap [data-slot="table-head"],
+.thinkway-platform-v6 .platform-v6-section-wrap thead th {
+  padding: 9px 14px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.4px !important;
+  text-transform: uppercase !important;
+  color: var(--tw-text-3) !important;
+  background: var(--tw-surface) !important;
+  border-bottom: 1px solid var(--tw-border) !important;
+  height: auto !important;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap [data-slot="table-cell"],
+.thinkway-platform-v6 .platform-v6-section-wrap tbody td {
+  padding: 12px 14px !important;
+  font-size: 12px !important;
+  color: var(--tw-text-2) !important;
+  border-bottom: 1px solid var(--tw-border) !important;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap tbody tr:hover td {
+  background: #f8fafc !important;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap .border-t {
+  border-color: var(--tw-border) !important;
+}
+
+/* Entity workspace chrome */
+.thinkway-platform-v6 .platform-v6-entity-nav-bar {
+  background: var(--tw-white);
+  border-bottom: 1px solid var(--tw-border);
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-entity-nav-inner {
+  padding: 14px 24px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.thinkway-platform-v6 .platform-v6-entity-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tw-text);
+}
+
+.thinkway-platform-v6 .platform-v6-also-view {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--tw-text-3);
+  margin-left: 8px;
+}
+
+.thinkway-platform-v6 .platform-v6-entity-tabs-row {
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.thinkway-platform-v6 .platform-v6-entity-tabs-row::-webkit-scrollbar {
+  display: none;
+}
+
+.thinkway-platform-v6 .platform-v6-etab {
+  padding: 10px 0;
+  margin-right: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tw-text-3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 150ms, border-color 150ms;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.thinkway-platform-v6 .platform-v6-etab:hover {
+  color: var(--tw-text-2);
+}
+
+.thinkway-platform-v6 .platform-v6-etab.active {
+  color: var(--tw-text);
+  border-bottom-color: var(--tw-blue);
+  font-weight: 500;
+}
+
+.thinkway-platform-v6 .platform-v6-entity-breadcrumb {
+  padding: 8px 24px;
+  font-size: 11px;
+  color: var(--tw-text-3);
+  border-bottom: 1px solid var(--tw-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--tw-white);
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-entity-breadcrumb a {
+  color: var(--tw-text-3);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.thinkway-platform-v6 .platform-v6-entity-breadcrumb a:hover {
+  color: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-entity-breadcrumb span.current {
+  color: var(--tw-text-2);
+  font-weight: 500;
+}
+
+.thinkway-platform-v6 .platform-v6-epanel-inner {
+  padding: 20px 24px 60px;
+  width: 100%;
+  background: var(--tw-surface);
+  min-height: 100%;
+}
+
+.thinkway-platform-v6 .platform-v6-page-section-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--tw-text);
+  margin-bottom: 4px;
+}
+
+.thinkway-platform-v6 .platform-v6-page-section-sub {
+  font-size: 12px;
+  color: var(--tw-text-3);
+  margin-bottom: 24px;
+}
+
+/* Form blocks */
+.thinkway-platform-v6 .platform-v6-wide-form-block {
+  background: var(--tw-white);
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-rl);
+  overflow: hidden;
+  margin-bottom: 14px;
+  width: 100%;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--tw-border);
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-head-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--tw-blue-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-head-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-head-icon-green {
+  background: var(--tw-green-bg);
+  color: var(--tw-green);
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-head-icon-amber {
+  background: var(--tw-amber-bg);
+  color: var(--tw-amber);
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-head-icon-purple {
+  background: var(--tw-purple-bg);
+  color: var(--tw-purple-text);
+}
+
+.thinkway-platform-v6 .platform-v6-form-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .thinkway-platform-v6 .platform-v6-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .thinkway-platform-v6 .platform-v6-form-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.thinkway-platform-v6 .platform-v6-io-term {
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-r);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.thinkway-platform-v6 .platform-v6-io-term-head {
+  padding: 10px 14px;
+  background: var(--tw-surface);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.thinkway-platform-v6 .platform-v6-io-term-head::-webkit-details-marker {
+  display: none;
+}
+
+.thinkway-platform-v6 .platform-v6-io-term-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tw-text);
+}
+
+.thinkway-platform-v6 .platform-v6-io-term-body {
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--tw-text-2);
+  line-height: 1.6;
+  border-top: 1px solid var(--tw-border);
+}
+
+.thinkway-platform-v6 .platform-v6-io-term-edit {
+  padding: 10px 14px;
+  border-top: 1px solid var(--tw-border);
+  display: grid;
+  gap: 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-io-term-delete {
+  border: none;
+  background: none;
+  color: var(--tw-text-3);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.thinkway-platform-v6 .platform-v6-io-term-delete:hover {
+  color: var(--tw-red);
+}
+
+.thinkway-platform-v6 .platform-v6-io-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.thinkway-platform-v6 .platform-v6-admin-details {
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-r);
+  background: var(--tw-white);
+}
+
+.thinkway-platform-v6 .platform-v6-admin-details summary {
+  padding: 0 10px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--tw-text);
+  list-style: none;
+}
+
+.thinkway-platform-v6 .platform-v6-admin-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.thinkway-platform-v6 .platform-v6-admin-details-body {
+  border-top: 1px solid var(--tw-border);
+  padding: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-head h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tw-text);
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-head p {
+  font-size: 11px;
+  color: var(--tw-text-3);
+  margin-top: 1px;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-body {
+  padding: 20px;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-body-table {
+  padding: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-footer {
+  padding: 10px 16px;
+  font-size: 11px;
+  color: var(--tw-text-3);
+  border-top: none;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-footer strong {
+  font-weight: 600;
+  color: var(--tw-text-2);
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-data-table th {
+  padding: 9px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--tw-text-3);
+  text-align: left;
+  border-bottom: 1px solid var(--tw-border);
+  background: var(--tw-surface);
+  white-space: nowrap;
+  height: auto;
+  border-top: none;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-data-table td {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--tw-text-2);
+  border-bottom: 1px solid var(--tw-border);
+  vertical-align: middle;
+  background: transparent;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-data-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-data-table .platform-v6-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-data-table .platform-v6-row-actions .platform-v6-link {
+  font-size: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-data-table .platform-v6-row-actions .platform-v6-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-block .platform-v6-empty-state {
+  padding: 28px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--tw-text-3);
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-toolbar {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tw-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.thinkway-platform-v6 .platform-v6-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--tw-text-2);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.thinkway-platform-v6 .platform-v6-field-input {
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-r);
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--tw-text);
+  outline: none;
+  background: var(--tw-white);
+  transition: border-color 150ms;
+}
+
+.thinkway-platform-v6 .platform-v6-field-input:focus {
+  border-color: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-field-textarea {
+  width: 100%;
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-r);
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--tw-text);
+  outline: none;
+  background: var(--tw-white);
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+
+.thinkway-platform-v6 .platform-v6-field-textarea:focus {
+  border-color: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-field-hint {
+  font-size: 10px;
+  color: var(--tw-text-3);
+  margin-top: 5px;
+}
+
+.thinkway-platform-v6 .platform-v6-progress-bar {
+  height: 3px;
+  background: var(--tw-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.thinkway-platform-v6 .platform-v6-progress-fill {
+  height: 100%;
+  background: var(--tw-green);
+  border-radius: 2px;
+}
+
+.thinkway-platform-v6 .platform-v6-page-header-row .platform-v6-btn-primary,
+.thinkway-platform-v6 .platform-v6-page-header-row [data-slot="button"],
+.thinkway-platform-v6 .platform-v6-page-header-row button {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  border-radius: var(--tw-r) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border: 1px solid var(--tw-blue) !important;
+  background: var(--tw-blue) !important;
+  color: #fff !important;
+  gap: 5px !important;
+  box-shadow: none !important;
+}
+
+.thinkway-platform-v6 .platform-v6-page-header-row .platform-v6-btn-primary:hover,
+.thinkway-platform-v6 .platform-v6-page-header-row [data-slot="button"]:hover,
+.thinkway-platform-v6 .platform-v6-page-header-row button:hover {
+  background: var(--tw-blue-h) !important;
+  border-color: var(--tw-blue-h) !important;
+}
+
+.thinkway-platform-v6 .platform-v6-toolbar .relative input[type="search"],
+.thinkway-platform-v6 .platform-v6-toolbar input[type="search"] {
+  width: 100% !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  border: 1px solid var(--tw-border) !important;
+  border-radius: var(--tw-r) !important;
+  padding: 0 10px 0 30px !important;
+  font-size: 12px !important;
+  outline: none;
+  background: var(--tw-white) !important;
+  box-shadow: none !important;
+  color: var(--tw-text) !important;
+}
+
+.thinkway-platform-v6 .platform-v6-toolbar .relative input[type="search"]:focus,
+.thinkway-platform-v6 .platform-v6-toolbar input[type="search"]:focus {
+  border-color: var(--tw-blue) !important;
+}
+
+.thinkway-platform-v6 .platform-v6-toolbar .relative {
+  min-width: 220px;
+  flex: 1;
+  max-width: 320px;
+}
+
+.thinkway-platform-v6 .platform-v6-toolbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.thinkway-platform-v6 .platform-v6-toolbar [data-slot="button"],
+.thinkway-platform-v6 .platform-v6-toolbar button,
+.thinkway-platform-v6 .platform-v6-toolbar .group\/table-tool,
+.thinkway-platform-v6 .platform-v6-wide-form-toolbar [data-slot="button"],
+.thinkway-platform-v6 .platform-v6-wide-form-toolbar button {
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border-radius: var(--tw-r) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  border: 1px solid var(--tw-border) !important;
+  background: var(--tw-white) !important;
+  color: var(--tw-text-2) !important;
+  box-shadow: none !important;
+  gap: 5px !important;
+}
+
+.thinkway-platform-v6 .platform-v6-toolbar [data-slot="button"]:hover,
+.thinkway-platform-v6 .platform-v6-toolbar button:hover,
+.thinkway-platform-v6 .platform-v6-toolbar .group\/table-tool:hover {
+  background: var(--tw-surface) !important;
+  color: var(--tw-text-2) !important;
+}
+
+.thinkway-platform-v6 .platform-v6-toolbar .platform-v6-btn-primary,
+.thinkway-platform-v6 .platform-v6-wide-form-toolbar .platform-v6-btn-primary {
+  background: var(--tw-blue);
+  color: #fff;
+  border-color: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-toggle {
+  width: 36px;
+  height: 20px;
+  background: var(--tw-border);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  transition: background 200ms;
+  flex-shrink: 0;
+  border: none;
+}
+
+.thinkway-platform-v6 .platform-v6-toggle.on {
+  background: var(--tw-blue);
+}
+
+.thinkway-platform-v6 .platform-v6-toggle::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 200ms var(--tw-ease);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.thinkway-platform-v6 .platform-v6-toggle.on::after {
+  transform: translateX(16px);
+}
+
+.thinkway-platform-v6 .platform-v6-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--tw-surface);
+  border-radius: var(--tw-r);
+  border: 1px solid var(--tw-border);
+}
+
+.thinkway-platform-v6 .platform-v6-toggle-row-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tw-text);
+  margin-bottom: 4px;
+}
+
+.thinkway-platform-v6 .platform-v6-toggle-row-desc {
+  font-size: 11px;
+  color: var(--tw-text-3);
+}
+
+.thinkway-platform-v6 .platform-v6-toggle-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .thinkway-platform-v6 .platform-v6-toggle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Map shadcn inputs inside v6 client workspace */
+.thinkway-platform-v6 .platform-v6-wide-form-body input:not([type="checkbox"]):not([type="radio"]),
+.thinkway-platform-v6 .platform-v6-wide-form-body textarea,
+.thinkway-platform-v6 .platform-v6-wide-form-body [data-slot="select-trigger"] {
+  height: 36px !important;
+  min-height: 36px !important;
+  border: 1px solid var(--tw-border) !important;
+  border-radius: var(--tw-r) !important;
+  padding: 0 10px !important;
+  font-size: 12px !important;
+  background: var(--tw-white) !important;
+  box-shadow: none !important;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-body textarea {
+  height: auto !important;
+  min-height: 72px !important;
+  padding: 8px 10px !important;
+}
+
+.thinkway-platform-v6 .platform-v6-wide-form-body label,
+.thinkway-platform-v6 .platform-v6-wide-form-body .platform-v6-field-label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.4px !important;
+  text-transform: uppercase !important;
+  color: var(--tw-text-2) !important;
+}
+
+/* Light-only scope for list + client workspace (matches HTML reference) */
+.thinkway-platform-v6,
+.thinkway-platform-v6-topbar {
+  background: var(--tw-surface);
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap,
+.thinkway-platform-v6 .platform-v6-wide-form-block,
+.thinkway-platform-v6 .platform-v6-entity-nav-bar,
+.thinkway-platform-v6 .platform-v6-entity-breadcrumb,
+.thinkway-platform-v6 .platform-v6-kpi-strip,
+.thinkway-platform-v6 .platform-v6-dash-filters,
+.thinkway-platform-v6 .platform-v6-trend-card,
+.thinkway-platform-v6 .platform-v6-alert-section {
+  color-scheme: light;
+}
+
+/* ─── Executive dashboard ─── */
+.thinkway-platform-v6 .platform-v6-dash-filters {
+  background: var(--tw-white);
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-rl);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.thinkway-platform-v6 .platform-v6-dash-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.thinkway-platform-v6 .platform-v6-df-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--tw-text-3);
+}
+
+.thinkway-platform-v6 .platform-v6-df-input,
+.thinkway-platform-v6 .platform-v6-dash-filters input[type="date"],
+.thinkway-platform-v6 .platform-v6-dash-filters [data-slot="select-trigger"] {
+  height: 30px !important;
+  min-height: 30px !important;
+  border: 1px solid var(--tw-border) !important;
+  border-radius: var(--tw-r) !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  color: var(--tw-text) !important;
+  outline: none;
+  background: var(--tw-white) !important;
+  min-width: 120px;
+  box-shadow: none !important;
+}
+
+.thinkway-platform-v6 .platform-v6-dash-filters input[type="date"]:focus,
+.thinkway-platform-v6 .platform-v6-dash-filters [data-slot="select-trigger"]:focus-visible {
+  border-color: var(--tw-blue) !important;
+}
+
+.thinkway-platform-v6 .platform-v6-dash-filter-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--tw-border);
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-strip--executive {
+  display: flex !important;
+  grid-template-columns: unset !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-strip--executive::-webkit-scrollbar {
+  display: none;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-strip--executive .platform-v6-kpi-cell {
+  flex: 1;
+  min-width: 110px;
+}
+
+.thinkway-platform-v6 .platform-v6-trend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1024px) {
+  .thinkway-platform-v6 .platform-v6-trend-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .thinkway-platform-v6 .platform-v6-trend-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .thinkway-platform-v6 .platform-v6-trend-card-wide {
+    grid-column: span 1 !important;
+  }
+}
+
+.thinkway-platform-v6 .platform-v6-trend-card {
+  background: var(--tw-white);
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-rl);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.thinkway-platform-v6 .platform-v6-trend-card h4 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tw-text);
+  margin-bottom: 2px;
+}
+
+.thinkway-platform-v6 .platform-v6-trend-card p {
+  font-size: 10px;
+  color: var(--tw-text-3);
+  margin-bottom: 12px;
+}
+
+.thinkway-platform-v6 .platform-v6-trend-card-wide {
+  grid-column: span 2;
+}
+
+.thinkway-platform-v6 .platform-v6-sparkline {
+  height: 80px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.thinkway-platform-v6 .platform-v6-spark-bar {
+  border-radius: 3px 3px 0 0;
+  flex: 1;
+  min-height: 4px;
+  transition: height 400ms var(--tw-ease);
+}
+
+.thinkway-platform-v6 .platform-v6-chart-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.thinkway-platform-v6 .platform-v6-chart-foot span {
+  font-size: 10px;
+  color: var(--tw-text-3);
+}
+
+.thinkway-platform-v6 .platform-v6-pa-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .thinkway-platform-v6 .platform-v6-pa-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.thinkway-platform-v6 .platform-v6-dash-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1280px) {
+  .thinkway-platform-v6 .platform-v6-dash-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.thinkway-platform-v6 .platform-v6-section-head {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--tw-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-section-head h2 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tw-text);
+}
+
+.thinkway-platform-v6 .platform-v6-section-head p {
+  font-size: 11px;
+  color: var(--tw-text-3);
+  margin-top: 1px;
+}
+
+.thinkway-platform-v6 .platform-v6-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-section-actions button,
+.thinkway-platform-v6 .platform-v6-section-actions [data-slot="button"] {
+  height: 28px !important;
+  padding: 0 10px !important;
+  border-radius: var(--tw-r) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  border: 1px solid var(--tw-border) !important;
+  background: var(--tw-white) !important;
+  color: var(--tw-text-2) !important;
+  box-shadow: none !important;
+}
+
+.thinkway-platform-v6 .platform-v6-section-actions button:hover,
+.thinkway-platform-v6 .platform-v6-section-actions [data-slot="button"]:hover {
+  background: var(--tw-surface) !important;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-section {
+  background: var(--tw-white);
+  border: 1px solid var(--tw-border);
+  border-radius: var(--tw-rl);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-group-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--tw-text-3);
+  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-group-label .cnt {
+  background: var(--tw-amber-bg);
+  color: var(--tw-amber-text);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 9px;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--tw-r);
+  border: 1px solid #fde68a;
+  background: var(--tw-amber-bg);
+  margin-bottom: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 150ms;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-item:hover {
+  background: #fef3c7;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tw-amber);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.thinkway-platform-v6 .platform-v6-c-purple {
+  color: #a855f7;
+}
+
+.thinkway-platform-v6 .platform-v6-c-pink {
+  color: #ec4899;
+}
+
+.thinkway-platform-v6 .platform-v6-mixed-currency {
+  font-size: 11px;
+  color: var(--tw-text-3);
+  margin-bottom: 8px;
+}
+
+/* Topbar subtitle (v8) */
+.thinkway-platform-v6-topbar .platform-v6-tb-sub {
+  font-size: 11px;
+  color: var(--tw-text-3);
+  margin-top: 1px;
+}
+
+/* Executive dashboard compact section headers (v8) */
+.thinkway-platform-v6 .platform-v6-dash-section-header {
+  margin-bottom: 8px;
+}
+
+.thinkway-platform-v6 .platform-v6-dash-section-header strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tw-text);
+}
+
+.thinkway-platform-v6 .platform-v6-dash-section-header p {
+  font-size: 11px;
+  color: var(--tw-text-3);
+  margin-top: 2px;
+  margin-bottom: 0;
+}
+
+/* ─── Home dashboard (v13 immersive) ─── */
+@keyframes platform-v6-hs-aurora-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes platform-v6-hs-reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes platform-v6-hs-reveal-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes platform-v6-hs-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes platform-v6-hs-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes platform-v6-hs-gradient-move {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.thinkway-platform-v6 .platform-v6-hs-root {
+  position: relative;
+  display: flex;
+  min-height: 100%;
+  height: 100%;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: #05060f;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 80% at 80% -10%, rgba(99, 102, 241, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 70% at -10% 90%, rgba(16, 185, 129, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(236, 72, 153, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 90% 60% at 90% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 50%);
+  animation: platform-v6-hs-gradient-move 18s ease infinite;
+  background-size: 300% 300%;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-aurora-2 {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 70% 70%, rgba(6, 182, 212, 0.08) 0%, transparent 55%);
+  animation: platform-v6-hs-gradient-move 24s ease infinite reverse;
+  background-size: 300% 300%;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 20%, transparent 80%);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  padding: 0 36px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(5, 6, 15, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-left .login-v2-logo {
+  gap: 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-left .login-v2-logo-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-center {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-tab {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: all 150ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-tab.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-av {
+  display: flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-nav-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-cta-btn {
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  padding: 0 14px;
+  border: none;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 120ms,
+    box-shadow 120ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.6);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ticker {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  height: 32px;
+  align-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ticker-inner {
+  display: flex;
+  white-space: nowrap;
+  animation: platform-v6-hs-ticker 30s linear infinite;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-tick-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 32px;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-tick-val {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-badge-up {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-badge-dn {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-main {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  flex: 1;
+  align-items: start;
+  grid-template-columns: 1fr 380px;
+  gap: 0;
+  padding: 40px 36px 36px;
+  overflow-y: auto;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-left {
+  padding-right: 36px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-greeting-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: platform-v6-hs-reveal-up 600ms 100ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-greeting-meta::before {
+  content: "";
+  width: 20px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-heading {
+  margin-bottom: 8px;
+  color: #fff;
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: -2.5px;
+  line-height: 1.05;
+  opacity: 0;
+  animation: platform-v6-hs-reveal-up 700ms 200ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-heading-accent {
+  display: inline-block;
+  background: linear-gradient(135deg, #818cf8 0%, #c084fc 40%, #f472b6 70%, #fb923c 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  background-size: 200% 200%;
+  -webkit-text-fill-color: transparent;
+  animation: platform-v6-hs-aurora-shift 5s ease infinite;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-heading-cursor {
+  display: inline-block;
+  width: 3px;
+  height: 0.85em;
+  margin-left: 2px;
+  vertical-align: middle;
+  background: #818cf8;
+  animation: platform-v6-hs-cursor-blink 1s step-end infinite;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-tagline {
+  max-width: 420px;
+  margin-bottom: 36px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 15px;
+  line-height: 1.7;
+  opacity: 0;
+  animation: platform-v6-hs-reveal-up 700ms 320ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: platform-v6-hs-reveal-up 700ms 420ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  transition:
+    border-color 200ms,
+    background 200ms,
+    transform 150ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi-icon {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  border-radius: 7px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi-lbl {
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi-val {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi-val-warn {
+  color: #fbbf24;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-kpi-sub {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 40px;
+  opacity: 0;
+  animation: platform-v6-hs-reveal-up 700ms 520ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-primary {
+  position: relative;
+  display: inline-flex;
+  height: 42px;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  padding: 0 22px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow:
+    0 0 0 1px rgba(99, 102, 241, 0.3),
+    0 8px 32px rgba(99, 102, 241, 0.35);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform 120ms,
+    box-shadow 120ms,
+    filter 120ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(99, 102, 241, 0.5),
+    0 12px 40px rgba(99, 102, 241, 0.5);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-primary:active {
+  transform: scale(0.97);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-primary svg {
+  width: 14px;
+  height: 14px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-ghost {
+  display: inline-flex;
+  height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 150ms,
+    border-color 150ms,
+    transform 120ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-ghost:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-ghost:active {
+  transform: scale(0.97);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-ghost svg {
+  width: 14px;
+  height: 14px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-modules-label {
+  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: platform-v6-hs-reveal-up 600ms 580ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-modules {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  opacity: 0;
+  animation: platform-v6-hs-reveal-up 700ms 620ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  overflow: hidden;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 200ms,
+    background 200ms,
+    transform 150ms,
+    box-shadow 200ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod:hover::after {
+  opacity: 1;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod:hover {
+  transform: translateY(-3px) scale(1.01);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod:active {
+  transform: scale(0.98);
+  transition-duration: 80ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod-icon {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  border-radius: 9px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod-title {
+  margin-bottom: 3px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod-desc {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod-arrow {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  color: rgba(255, 255, 255, 0.2);
+  transition:
+    color 200ms,
+    transform 200ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod:hover .platform-v6-hs-mod-arrow {
+  transform: translate(2px, -2px);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  opacity: 0;
+  animation: platform-v6-hs-reveal-left 600ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-delay-300 {
+  animation-delay: 300ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-delay-400 {
+  animation-delay: 400ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-title svg {
+  width: 12px;
+  height: 12px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-link {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 150ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-link:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-decoration: none;
+  transition: background 120ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-row:last-child {
+  border-bottom: none;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-empty {
+  padding: 16px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-av {
+  display: flex;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-name {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-meta {
+  margin-top: 1px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-val {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-sub {
+  margin-top: 1px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  text-align: right;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(251, 191, 36, 0.06));
+  opacity: 0;
+  animation: platform-v6-hs-reveal-left 600ms 100ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-alert-icon {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-alert-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-alert-title {
+  margin-bottom: 3px;
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-alert-desc {
+  margin-bottom: 8px;
+  color: rgba(251, 191, 36, 0.6);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-alert-link {
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-alert-link:hover {
+  text-decoration: underline;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  opacity: 0;
+  animation: platform-v6-hs-reveal-left 600ms 200ms ease-out forwards;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring svg {
+  transform: rotate(-90deg);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 5;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring-fill {
+  fill: none;
+  stroke: url(#platform-v6-hs-ring-grad);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 157;
+  stroke-dashoffset: 157;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring-pct {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring-sub {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring-info-title {
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ring-info-desc {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px 0;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: platform-v6-hs-cursor-blink 2s infinite;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-footer-strip {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 32px;
+  padding: 12px 36px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(5, 6, 15, 0.6);
+  backdrop-filter: blur(20px);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-fs-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-fs-lbl {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-fs-val {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-fs-div {
+  width: 1px;
+  height: 24px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-footer-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 1200px) {
+  .thinkway-platform-v6 .platform-v6-hs-main {
+    grid-template-columns: 1fr;
+    padding: 28px 24px 24px;
+  }
+
+  .thinkway-platform-v6 .platform-v6-hs-left {
+    padding-right: 0;
+  }
+
+  .thinkway-platform-v6 .platform-v6-hs-heading {
+    font-size: 40px;
+    letter-spacing: -1.5px;
+  }
+}
+
+@media (max-width: 900px) {
+  .thinkway-platform-v6 .platform-v6-hs-nav {
+    padding: 0 16px;
+  }
+
+  .thinkway-platform-v6 .platform-v6-hs-nav-center,
+  .thinkway-platform-v6 .platform-v6-hs-nav-name {
+    display: none;
+  }
+
+  .thinkway-platform-v6 .platform-v6-hs-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .thinkway-platform-v6 .platform-v6-hs-modules {
+    grid-template-columns: 1fr;
+  }
+
+  .thinkway-platform-v6 .platform-v6-hs-footer-strip {
+    gap: 16px;
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .thinkway-platform-v6 .platform-v6-hs-heading {
+    font-size: 32px;
+  }
+
+  .thinkway-platform-v6 .platform-v6-hs-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-root {
+  background: #f8faff;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-aurora {
+  background:
+    radial-gradient(ellipse 120% 80% at 80% -10%, rgba(99, 102, 241, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 70% at -10% 90%, rgba(16, 185, 129, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(236, 72, 153, 0.04) 0%, transparent 60%);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-aurora-2 {
+  opacity: 0.5;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-grid {
+  background-image:
+    linear-gradient(rgba(99, 102, 241, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav {
+  border-bottom-color: rgba(99, 102, 241, 0.1);
+  background: rgba(248, 250, 255, 0.85);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-left .login-v2-logo-text,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-heading,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi-val,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-mod-title,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-pr-name,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-pr-val,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-pct {
+  color: #0f172a;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-name {
+  color: #64748b;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-tab {
+  color: rgba(15, 23, 42, 0.4);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-tab.active {
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-tab:hover {
+  background: rgba(15, 23, 42, 0.04);
+  color: rgba(15, 23, 42, 0.7);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-center {
+  border-color: rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.04);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ticker {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
+  background: rgba(15, 23, 42, 0.03);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-tick-item {
+  border-right-color: rgba(15, 23, 42, 0.06);
+  color: rgba(15, 23, 42, 0.35);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-tick-val {
+  color: rgba(15, 23, 42, 0.7);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-greeting-meta,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi-lbl,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi-sub,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-pr-meta,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-pr-sub,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-sub,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-fs-lbl {
+  color: #94a3b8;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-tagline,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-mod-desc,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-info-desc {
+  color: #64748b;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-heading-cursor {
+  background: #4f46e5;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-mod,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-panel {
+  border-color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi:hover,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-mod:hover {
+  border-color: #c7d2fe;
+  background: #fff;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-btn-ghost {
+  border-color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.8);
+  color: #334155;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-btn-ghost:hover {
+  border-color: #c7d2fe;
+  background: #fff;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-modules-label,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-live,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-footer-live {
+  color: #94a3b8;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-head {
+  border-bottom-color: #f1f5f9;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-title,
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-info-title {
+  color: #334155;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-link {
+  color: #94a3b8;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-link:hover {
+  color: #4f46e5;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-row {
+  border-bottom-color: #f8fafc;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-row:hover {
+  background: #f8fafc;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-track {
+  stroke: #e2e8f0;
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-footer-strip {
+  border-top-color: rgba(99, 102, 241, 0.1);
+  background: rgba(248, 250, 255, 0.85);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-fs-val {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-fs-div {
+  background: rgba(15, 23, 42, 0.08);
+}

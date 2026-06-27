@@ -1,12 +1,12 @@
 "use client";
 
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { XIcon } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   OperationalFloatingActionBar,
+  PlatformFloatingBarDivider,
+  PlatformFloatingBarPrimaryButton,
+  PlatformFloatingBarSelection,
   operationalFloatingBarContentClass,
 } from "@/components/workspace/operational-floating-action-bar";
 import { OperationalRowTree } from "@/features/billing/components/operational-row-tree";
@@ -202,28 +202,15 @@ function BillingCampaignDrilldownInner({
 
       {showBulkSelectionControls ? (
         <OperationalFloatingActionBar visible={showFloatingBar}>
-          <div className="flex shrink-0 items-center gap-1.5 pr-1">
-            <Badge
-              variant="secondary"
-              className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-            >
-              {selectedCount} selected
-            </Badge>
-            <Button
-              type="button"
-              size="icon-xs"
-              variant="ghost"
-              className="size-6 shrink-0 rounded-full text-muted-foreground"
-              onClick={handleClearSelection}
-              aria-label="Clear selection"
-            >
-              <XIcon className="size-3.5" />
-            </Button>
-          </div>
+          <PlatformFloatingBarSelection
+            selectedCount={selectedCount}
+            selectionLabel="row"
+            onClearSelection={handleClearSelection}
+          />
 
-          <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+          <PlatformFloatingBarDivider />
 
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5 px-2">
             <OperationalSelectionCheckbox
               status={globalSelectionStatus}
               onToggle={handleSelectAllToggle}
@@ -233,7 +220,7 @@ function BillingCampaignDrilldownInner({
               type="button"
               size="xs"
               variant="ghost"
-              className="hidden shrink-0 sm:inline-flex"
+              className="hidden shrink-0 text-xs text-muted-foreground hover:text-foreground sm:inline-flex"
               onClick={handleSelectAllToggle}
             >
               Select all
@@ -242,16 +229,15 @@ function BillingCampaignDrilldownInner({
 
           {onInvoice ? (
             <>
-              <div className="hidden h-5 w-px shrink-0 bg-border/70 md:block" aria-hidden />
-              <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 shrink-0 rounded-full text-xs"
-                  onClick={handleInvoiceSelected}
-                >
-                  Generate invoice
-                </Button>
+              <PlatformFloatingBarDivider className="ml-auto" />
+              <div className="pl-2">
+                <PlatformFloatingBarPrimaryButton
+                  action={{
+                    id: "invoice",
+                    label: "Generate invoice",
+                    onClick: handleInvoiceSelected,
+                  }}
+                />
               </div>
             </>
           ) : null}

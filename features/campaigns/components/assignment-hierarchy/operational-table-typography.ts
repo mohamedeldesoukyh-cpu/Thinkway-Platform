@@ -6,16 +6,12 @@ export const OPERATIONAL_TABLE_FONT = "font-sans";
 /** Data sheet surface (token-based for light/dark). */
 export const OPERATIONAL_TABLE_SURFACE = "bg-card";
 
-/** Column header strip — distinct from white body rows. */
-export const OPERATIONAL_TABLE_HEADER_SURFACE = "bg-secondary";
+/** Scoped CSS in `.thinkway-campaign-workspace` owns header strip styling. */
+export const OPERATIONAL_TABLE_HEADER_SURFACE = "";
 
-export const OPERATIONAL_TABLE_HEADER_ROW = cn(
-  OPERATIONAL_TABLE_HEADER_SURFACE,
-  "border-0 border-b border-border/50 hover:bg-secondary"
-);
+export const OPERATIONAL_TABLE_HEADER_ROW = "";
 
-export const OPERATIONAL_TABLE_HEADER_CELL =
-  "h-auto align-middle py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-foreground/80";
+export const OPERATIONAL_TABLE_HEADER_CELL = "";
 
 export const OPERATIONAL_AMOUNT_TABULAR =
   "text-[11px] tabular-nums tracking-normal";

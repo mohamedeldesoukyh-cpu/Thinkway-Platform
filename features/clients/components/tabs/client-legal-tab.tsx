@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { ScaleIcon } from "lucide-react";
+import { ClipboardListIcon, MapPinIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
 import { SearchableSelect } from "@/components/forms/searchable-select";
+import { PLATFORM_V6_ICON_AMBER } from "@/components/platform/platform-v6-layout";
 import { Input } from "@/components/ui/input";
 import {
   ClientFormField,
@@ -148,13 +149,13 @@ export function ClientLegalTab({
           <input type="hidden" name="legal_address_city" value={legalCity} />
 
           <ClientFormSection
-            icon={ScaleIcon}
+            icon={ClipboardListIcon}
             title="Registration & certificates"
             description="Attach certificates using the controls beside each field."
           >
-            <ClientFormGrid>
+            <ClientFormGrid columns={4}>
               <ClientFormField label="Trade license / CR" htmlFor="trade_license_number">
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <ClientInlineDocumentAttach
                     clientId={client.id}
                     documentType="trade_license"
@@ -187,11 +188,8 @@ export function ClientLegalTab({
                   disabled={isPending}
                 />
               </ClientFormField>
-            </ClientFormGrid>
-
-            <ClientFormGrid>
               <ClientFormField label="VAT number" htmlFor="vat_number">
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <ClientInlineDocumentAttach
                     clientId={client.id}
                     documentType="vat_certificate"
@@ -211,7 +209,7 @@ export function ClientLegalTab({
                 </div>
               </ClientFormField>
               <ClientFormField label="Tax ID" htmlFor="tax_id">
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <ClientInlineDocumentAttach
                     clientId={client.id}
                     documentType="tax_certificate"
@@ -234,40 +232,43 @@ export function ClientLegalTab({
           </ClientFormSection>
 
           <ClientFormSection
-            icon={ScaleIcon}
+            icon={MapPinIcon}
+            iconClassName={PLATFORM_V6_ICON_AMBER}
             title="Registered address"
             description="Legal address on file for compliance and invoicing."
           >
-            <ClientFormField label="Legal address line 1" htmlFor="legal_address_line1">
-              <Input
-                id="legal_address_line1"
-                name="legal_address_line1"
-                className={CLIENT_FORM_INPUT_CLASS}
-                value={addressLine1}
-                onChange={(e) => {
-                  setAddressLine1(e.target.value);
-                  markDirty();
-                }}
-                disabled={isPending}
-              />
-              <FieldError messages={state.fieldErrors?.legal_address_line1} />
-            </ClientFormField>
+            <ClientFormGrid className="sm:grid-cols-2">
+              <ClientFormField label="Legal address line 1" htmlFor="legal_address_line1">
+                <Input
+                  id="legal_address_line1"
+                  name="legal_address_line1"
+                  className={CLIENT_FORM_INPUT_CLASS}
+                  value={addressLine1}
+                  onChange={(e) => {
+                    setAddressLine1(e.target.value);
+                    markDirty();
+                  }}
+                  disabled={isPending}
+                />
+                <FieldError messages={state.fieldErrors?.legal_address_line1} />
+              </ClientFormField>
 
-            <ClientFormField label="Legal address line 2" htmlFor="legal_address_line2">
-              <Input
-                id="legal_address_line2"
-                name="legal_address_line2"
-                className={CLIENT_FORM_INPUT_CLASS}
-                value={addressLine2}
-                onChange={(e) => {
-                  setAddressLine2(e.target.value);
-                  markDirty();
-                }}
-                disabled={isPending}
-              />
-            </ClientFormField>
+              <ClientFormField label="Legal address line 2" htmlFor="legal_address_line2">
+                <Input
+                  id="legal_address_line2"
+                  name="legal_address_line2"
+                  className={CLIENT_FORM_INPUT_CLASS}
+                  value={addressLine2}
+                  onChange={(e) => {
+                    setAddressLine2(e.target.value);
+                    markDirty();
+                  }}
+                  disabled={isPending}
+                />
+              </ClientFormField>
+            </ClientFormGrid>
 
-            <ClientFormGrid className="sm:grid-cols-3">
+            <ClientFormGrid columns={4} className="mt-4">
               <ClientFormField label="City">
                 <SearchableSelect
                   value={legalCity}
@@ -307,6 +308,7 @@ export function ClientLegalTab({
                   disabled={isPending}
                 />
               </ClientFormField>
+              <div className="hidden md:block" aria-hidden />
             </ClientFormGrid>
           </ClientFormSection>
         </form>

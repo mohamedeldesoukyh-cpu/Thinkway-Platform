@@ -17,6 +17,9 @@ import { OPERATIONS_MOVE_CAMPAIGNS_FILTER_ACCESSORS } from "@/lib/tables/workspa
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import {
   OperationalFloatingActionBar,
+  PlatformFloatingBarDivider,
+  PlatformFloatingBarPrimaryButton,
+  PlatformFloatingBarSelection,
   operationalFloatingBarContentClass,
 } from "@/components/workspace/operational-floating-action-bar";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -617,28 +620,16 @@ export function MoveBetweenAccountsWorkspace({
       </OperationalTableSuiteProvider>
 
       <OperationalFloatingActionBar visible={selected.size > 0}>
-        <div className="flex shrink-0 items-center gap-1.5 pr-1">
-          <Badge
-            variant="secondary"
-            className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-          >
-            {selected.size} selected
-          </Badge>
-          <Button
-            type="button"
-            size="icon-xs"
-            variant="ghost"
-            className="size-6 shrink-0 rounded-full text-muted-foreground"
-            onClick={() => setSelected(new Set())}
-            aria-label="Clear selection"
-          >
-            <XIcon className="size-3.5" />
-          </Button>
-        </div>
+        <PlatformFloatingBarSelection
+          selectedCount={selected.size}
+          selectionLabel="campaign"
+          onClearSelection={() => setSelected(new Set())}
+          busy={isPending}
+        />
 
-        <div className="hidden h-5 w-px shrink-0 bg-border/70 sm:block" aria-hidden />
+        <PlatformFloatingBarDivider />
 
-        <div className="flex shrink-0 items-center gap-3 text-xs tabular-nums">
+        <div className="flex shrink-0 items-center gap-3 px-2 text-xs tabular-nums">
           <span className="text-muted-foreground">
             Revenue{" "}
             <span className="font-semibold text-foreground">
@@ -653,16 +644,18 @@ export function MoveBetweenAccountsWorkspace({
           </span>
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 shrink-0 rounded-full text-xs"
-            disabled={isPending}
-            onClick={handlePreview}
-          >
-            Preview & move selected
-          </Button>
+        <PlatformFloatingBarDivider className="ml-auto" />
+
+        <div className="pl-2">
+          <PlatformFloatingBarPrimaryButton
+            busy={isPending}
+            action={{
+              id: "preview-move",
+              label: "Preview & move selected",
+              disabled: isPending,
+              onClick: handlePreview,
+            }}
+          />
         </div>
       </OperationalFloatingActionBar>
 

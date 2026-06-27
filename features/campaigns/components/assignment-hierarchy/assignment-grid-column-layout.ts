@@ -22,7 +22,8 @@ export function isAssignmentGridColumnVisible(
 ): boolean {
   switch (columnId) {
     case "expand":
-      return gates.enableExpansion && col("expand");
+      // Chevron renders inside the assignment cell — never allocate a parent column.
+      return false;
     case "cost":
     case "usageRightsCost":
     case "gp":

@@ -8,54 +8,79 @@ type Props = {
   className?: string;
 };
 
-function Kpi({
+type SyncHealthTone =
+  | "success"
+  | "partial"
+  | "danger"
+  | "manual"
+  | "queued"
+  | "collecting";
+
+const TONE_CLASS: Record<SyncHealthTone, string> = {
+  success: "bg-[var(--camp-green-bg)] text-[var(--camp-green-text)]",
+  partial: "bg-[var(--camp-amber-bg)] text-[var(--camp-amber-text)]",
+  danger: "bg-[var(--camp-red-bg)] text-[var(--camp-red-text)]",
+  manual: "bg-[var(--camp-purple-bg)] text-[var(--camp-purple-text)]",
+  queued: "thinkway-campaign-badge-gray border border-[var(--camp-border)] bg-[var(--camp-surface)]",
+  collecting: "bg-[var(--camp-blue-light)] text-[var(--camp-blue-text)]",
+};
+
+const DOT_CLASS: Record<SyncHealthTone, string> = {
+  success: "bg-[var(--camp-green)]",
+  partial: "bg-[var(--camp-amber)]",
+  danger: "bg-[var(--camp-red)]",
+  manual: "bg-[var(--camp-purple)]",
+  queued: "bg-[var(--camp-text-3)]",
+  collecting: "bg-[var(--camp-blue)]",
+};
+
+function SyncHealthPill({
   label,
-  value,
+  count,
   tone,
 }: {
   label: string;
-  value: number;
-  tone: "success" | "warning" | "danger" | "neutral" | "info";
+  count: number;
+  tone: SyncHealthTone;
 }) {
-  const toneClass = {
-    success:
-      "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300",
-    warning:
-      "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300",
-    danger:
-      "border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300",
-    neutral: "border-border bg-muted text-muted-foreground",
-    info: "border-primary/20 bg-primary/10 text-primary",
-  }[tone];
-
   return (
-    <div className={cn("rounded-lg border px-3 py-2", toneClass)}>
-      <p className="text-[10px] font-medium uppercase tracking-wide opacity-80">{label}</p>
-      <p className="text-lg font-semibold tabular-nums">{value}</p>
-    </div>
+    <span className={cn("thinkway-campaign-sh-pill tabular-nums", TONE_CLASS[tone])}>
+      <span className={cn("thinkway-campaign-sh-dot", DOT_CLASS[tone])} aria-hidden />
+      {label} {count}
+    </span>
   );
 }
 
+const SYNC_HEALTH_ITEMS: Array<{
+  key: keyof Omit<CampaignMetricsSyncHealth, "total">;
+  label: string;
+  tone: SyncHealthTone;
+}> = [
+  { key: "synced", label: "Synced", tone: "success" },
+  { key: "partial", label: "Partial", tone: "partial" },
+  { key: "failed", label: "Failed", tone: "danger" },
+  { key: "manual_required", label: "Manual required", tone: "manual" },
+  { key: "queued", label: "Queued", tone: "queued" },
+  { key: "collecting", label: "Collecting", tone: "collecting" },
+];
+
 export function CampaignPerformanceSyncHealth({ health, className }: Props) {
   return (
-    <section className={cn("space-y-2 rounded-xl border border-border bg-card p-3", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-xs font-semibold text-foreground">Sync health</p>
-          <p className="text-[11px] text-muted-foreground">
-            Metrics collection status across {health.total} publication
-            {health.total === 1 ? "" : "s"}
-          </p>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Kpi label="Synced" value={health.synced} tone="success" />
-        <Kpi label="Partial" value={health.partial} tone="warning" />
-        <Kpi label="Failed" value={health.failed} tone="danger" />
-        <Kpi label="Manual required" value={health.manual_required} tone="warning" />
-        <Kpi label="Queued" value={health.queued} tone="info" />
-        <Kpi label="Collecting" value={health.collecting} tone="info" />
-      </div>
+    <section
+      className={cn("thinkway-campaign-sync-health", className)}
+      aria-label="Metrics sync health"
+    >
+      <span className="thinkway-campaign-sh-title">Sync health</span>
+      <span className="thinkway-campaign-sh-count">
+        {health.total} publication{health.total === 1 ? "" : "s"}
+      </span>
+      <ul className="thinkway-campaign-sh-pills">
+        {SYNC_HEALTH_ITEMS.map(({ key, label, tone }) => (
+          <li key={key}>
+            <SyncHealthPill label={label} count={health[key]} tone={tone} />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

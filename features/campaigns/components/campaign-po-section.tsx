@@ -46,14 +46,19 @@ export function CampaignPoSection({
         title="Client PO governance"
         description="Consumption uses billable base (Revenue + UR Rev + AF). VAT never affects PO utilization."
         actions={
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <PencilIcon data-icon="inline-start" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
+            onClick={() => setEditOpen(true)}
+          >
+            <PencilIcon data-icon="inline-start" className="size-3.5" />
             Edit PO
           </Button>
         }
       >
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant={PO_STATUS_VARIANT[po.po_status]}>
               {PO_STATUS_LABELS[po.po_status]}
             </Badge>
@@ -65,11 +70,12 @@ export function CampaignPoSection({
             ) : null}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Metric label="PO number" value={po.po_number ?? "—"} />
             <Metric
               label="PO amount"
               value={formatMoney(po.po_amount_original, po.po_currency ?? campaignCurrency)}
+              valueClassName="thinkway-campaign-c-amber"
             />
             <Metric label="PO currency" value={po.po_currency ?? campaignCurrency} />
             <Metric
@@ -87,6 +93,7 @@ export function CampaignPoSection({
             <Metric
               label="Consumed"
               value={formatMoney(po.po_consumed_amount, campaignCurrency)}
+              valueClassName="thinkway-campaign-c-amber"
             />
             <Metric
               label="Remaining"
@@ -104,14 +111,13 @@ export function CampaignPoSection({
           </div>
 
           {po.po_amount_campaign_currency > 0 ? (
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>PO consumption</span>
-                <span>{consumedPct.toFixed(1)}% utilized</span>
+            <div className="space-y-1.5">
+              <div className="thinkway-campaign-field-label mb-1">
+                PO consumption · {consumedPct.toFixed(1)}% utilized
               </div>
-              <div className="h-3 overflow-hidden rounded-full bg-muted">
+              <div className="thinkway-campaign-po-progress-bar">
                 <div
-                  className={cn("h-full transition-all", getPoHealthColor(po.health))}
+                  className={cn("thinkway-campaign-po-progress-fill transition-all", getPoHealthColor(po.health))}
                   style={{ width: `${consumedPct}%` }}
                 />
               </div>
@@ -133,11 +139,19 @@ export function CampaignPoSection({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
   return (
-    <div className="rounded-2xl border border-border/70 p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+    <div>
+      <div className="thinkway-campaign-field-label">{label}</div>
+      <div className={cn("thinkway-campaign-field-val tabular-nums", valueClassName)}>{value}</div>
     </div>
   );
 }

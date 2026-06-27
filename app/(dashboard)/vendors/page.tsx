@@ -1,5 +1,6 @@
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PlatformV6Page, PlatformV6PageHeader } from "@/components/platform/platform-v6-layout";
 import { NewVendorDialog } from "@/features/vendors/components/new-vendor-dialog";
 import { VendorsListSection } from "@/features/vendors/components/vendors-list-section";
 import { getVendorsList } from "@/features/vendors/queries";
@@ -45,17 +46,12 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
   let errorMessage: string | null = null;
 
   try {
-    const [listResult, masterData] = await Promise.all([
-      getVendorsList({
-        page,
-        search,
-        status: status || undefined,
-        platform: platform || undefined,
-      }),
-      getMasterDataOptions(),
-    ]);
-    list = listResult;
-    currencyOptions = buildCurrencyOptions(masterData.currencies);
+    list = await getVendorsList({
+      page,
+      search,
+      status: status || undefined,
+      platform: platform || undefined,
+    });
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load vendors.";
@@ -68,34 +64,46 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
     };
   }
 
+  try {
+    const masterData = await getMasterDataOptions();
+    currencyOptions = buildCurrencyOptions(masterData.currencies);
+  } catch {
+    currencyOptions = [];
+  }
+
   const { vendors, total, totalPages } = list;
   const hasFilters = Boolean(search || status || platform);
   const meta =
     total === 1 ? "1 vendor" : `${total} vendors` + (hasFilters ? " matching filters" : "");
 
   return (
-    <DashboardShell
-      title="Vendors"
-      description="Manage creators, agencies, and platform presence for campaign assignments."
-      actions={<NewVendorDialog currencyOptions={currencyOptions} />}
-    >
-      <VendorsListSection
-        vendors={vendors}
-        meta={meta}
-        hasFilters={hasFilters}
-        page={list.page}
-        totalPages={totalPages}
-        search={search}
-        status={status || undefined}
-        platform={platform || undefined}
-        errorSlot={
-          errorMessage ? (
-            <div className="border-b border-border/40 px-4 py-3">
-              <PageAlert>{errorMessage}</PageAlert>
-            </div>
-          ) : null
-        }
-      />
+    <DashboardShell title="Vendors" platformV6>
+      <PlatformV6Page>
+        <PlatformV6PageHeader
+          inline
+          title="Vendors"
+          description="Manage creators, agencies, and platform presence for campaign assignments."
+          actions={<NewVendorDialog currencyOptions={currencyOptions} />}
+        />
+
+        <VendorsListSection
+          vendors={vendors}
+          meta={meta}
+          hasFilters={hasFilters}
+          page={list.page}
+          totalPages={totalPages}
+          search={search}
+          status={status || undefined}
+          platform={platform || undefined}
+          errorSlot={
+            errorMessage ? (
+              <div className="border-b px-4 py-3">
+                <PageAlert>{errorMessage}</PageAlert>
+              </div>
+            ) : null
+          }
+        />
+      </PlatformV6Page>
     </DashboardShell>
   );
 }

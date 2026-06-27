@@ -81,15 +81,15 @@ export async function getDiscoveryShortlistsV2(options?: {
   }>;
   if (rows.length === 0) return [];
 
-  const [ownerNames, clientNames, brandNames, counts] = await Promise.all([
-    nameMap(supabase, "profiles", rows.map((r) => r.owner_id), "full_name"),
-    nameMap(supabase, "clients", rows.map((r) => r.client_id), "name"),
-    nameMap(supabase, "brands", rows.map((r) => r.brand_id), "name"),
-    countItemsByShortlist(
-      supabase,
-      rows.map((r) => r.id)
-    ),
-  ]);
+  const shortlistIds = rows.map((r) => r.id);
+  const [ownerNames, clientNames, brandNames, counts, creatorPreviews] =
+    await Promise.all([
+      nameMap(supabase, "profiles", rows.map((r) => r.owner_id), "full_name"),
+      nameMap(supabase, "clients", rows.map((r) => r.client_id), "name"),
+      nameMap(supabase, "brands", rows.map((r) => r.brand_id), "name"),
+      countItemsByShortlist(supabase, shortlistIds),
+      loadCreatorPreviewsByShortlist(supabase, shortlistIds),
+    ]);
 
   return rows.map((row) => ({
     id: row.id,
@@ -106,10 +106,73 @@ export async function getDiscoveryShortlistsV2(options?: {
     brand_name: row.brand_id ? brandNames.get(row.brand_id) ?? null : null,
     is_archived: row.is_archived,
     creator_count: counts.get(row.id) ?? 0,
+    creator_previews: creatorPreviews.get(row.id) ?? [],
     approved_at: row.approved_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }));
+}
+
+async function loadCreatorPreviewsByShortlist(
+  supabase: Supabase,
+  shortlistIds: string[]
+): Promise<Map<string, ShortlistListRow["creator_previews"]>> {
+  const previews = new Map<string, ShortlistListRow["creator_previews"]>();
+  if (shortlistIds.length === 0) return previews;
+
+  const { data } = await supabase
+    .from("discovery_shortlist_items")
+    .select("shortlist_id, unified_id, profile_id, influencer_id, sort_order")
+    .in("shortlist_id", shortlistIds)
+    .order("sort_order", { ascending: true });
+
+  const items = (data ?? []) as Array<{
+    shortlist_id: string;
+    unified_id: string | null;
+    profile_id: string | null;
+    influencer_id: string | null;
+  }>;
+
+  const cappedByShortlist = new Map<string, typeof items>();
+  for (const item of items) {
+    const bucket = cappedByShortlist.get(item.shortlist_id) ?? [];
+    if (bucket.length < 4) bucket.push(item);
+    cappedByShortlist.set(item.shortlist_id, bucket);
+  }
+
+  if (cappedByShortlist.size === 0) return previews;
+
+  const browse = await browseUnifiedCreators(supabase, { pageSize: 500 });
+  const byUnifiedId = new Map(browse.creators.map((c) => [c.unified_id, c]));
+  const byDiscoveryId = new Map(
+    browse.creators
+      .filter((c) => c.discovered_profile_id)
+      .map((c) => [c.discovered_profile_id!, c])
+  );
+  const byInfluencerId = new Map(
+    browse.creators
+      .filter((c) => c.influencer_id)
+      .map((c) => [c.influencer_id!, c])
+  );
+
+  for (const [shortlistId, shortlistItems] of cappedByShortlist) {
+    const rowPreviews: ShortlistListRow["creator_previews"] = [];
+    for (const item of shortlistItems) {
+      const creator =
+        (item.unified_id ? byUnifiedId.get(item.unified_id) : null) ??
+        (item.profile_id ? byDiscoveryId.get(item.profile_id) : null) ??
+        (item.influencer_id ? byInfluencerId.get(item.influencer_id) : null) ??
+        null;
+      if (!creator) continue;
+      rowPreviews.push({
+        display_name: creator.display_name,
+        profile_image_url: creator.profile_image_url,
+      });
+    }
+    previews.set(shortlistId, rowPreviews);
+  }
+
+  return previews;
 }
 
 async function countItemsByShortlist(

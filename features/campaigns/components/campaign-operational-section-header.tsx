@@ -2,26 +2,47 @@
 
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
 type CampaignOperationalSectionHeaderProps = {
   title: string;
+  /** Muted suffix after title, e.g. "14 of 14" (reference: Deliverables · N of N). */
+  countLabel?: string;
   description?: string;
+  titleClassName?: string;
   actions?: ReactNode;
 };
 
-/** Matches Assignments tab toolbar (title row + optional subtitle + actions). */
+/** Matches reference section-head / tab toolbar title row. */
 export function CampaignOperationalSectionHeader({
   title,
+  countLabel,
   description,
+  titleClassName,
   actions,
 }: CampaignOperationalSectionHeaderProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
-        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+    <div className="flex w-full flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h2
+          className={cn(
+            "text-[13px] font-bold text-[var(--camp-text)]",
+            titleClassName
+          )}
+        >
+          {title}
+          {countLabel ? (
+            <span className="font-normal text-[var(--camp-text-3)]"> · {countLabel}</span>
+          ) : null}
+        </h2>
+        {description ? (
+          <p className="mt-0.5 max-w-3xl text-[11px] leading-snug text-[var(--camp-text-3)]">
+            {description}
+          </p>
+        ) : null}
       </div>
-      {description ? (
-        <p className="max-w-3xl text-[11px] leading-snug text-muted-foreground">{description}</p>
+      {actions ? (
+        <div className="thinkway-campaign-section-actions">{actions}</div>
       ) : null}
     </div>
   );

@@ -8,6 +8,12 @@ export const PO_BANNER_FRAME: Record<PoBannerLevel, string> = {
   exceeded: "border-2 border-red-500/70 bg-red-500/10 text-red-950 dark:text-red-50",
 };
 
+export const PO_BANNER_TEXT: Record<PoBannerLevel, string> = {
+  safe: "text-success",
+  near_limit: "text-warning",
+  exceeded: "text-destructive",
+};
+
 export function resolvePoBannerLevel(input: {
   po_amount: number;
   consumed: number;

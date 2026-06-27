@@ -3,11 +3,32 @@
 import type { LucideIcon } from "lucide-react";
 import { SaveIcon } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
+import { PlatformV6PageSectionHeader, PlatformV6WideFormBlock } from "@/components/platform/platform-v6-layout";
 import { Label } from "@/components/ui/label";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 import { cn } from "@/lib/utils";
+
+const ClientProfilePlatformContext = createContext(false);
+
+export function ClientProfilePlatformProvider({
+  platformV6,
+  children,
+}: {
+  platformV6?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <ClientProfilePlatformContext.Provider value={Boolean(platformV6)}>
+      {children}
+    </ClientProfilePlatformContext.Provider>
+  );
+}
+
+export function useClientProfilePlatformV6() {
+  return useContext(ClientProfilePlatformContext);
+}
 
 /** Marks a form as the Ctrl+S / Cmd+S save target (see KeyboardShortcutsProvider). */
 export const CLIENT_FORM_SHORTCUT_SAVE_ATTR = "data-shortcut-save";
@@ -273,13 +294,40 @@ export function ClientFormSection({
   description,
   children,
   className,
+  iconClassName,
+  toolbar,
+  bodyClassName,
+  footer,
 }: {
   icon: LucideIcon;
   title: string;
   description?: string;
   children: ReactNode;
   className?: string;
+  iconClassName?: string;
+  toolbar?: ReactNode;
+  bodyClassName?: string;
+  footer?: ReactNode;
 }) {
+  const platformV6 = useClientProfilePlatformV6();
+
+  if (platformV6) {
+    return (
+      <PlatformV6WideFormBlock
+        icon={Icon}
+        iconClassName={iconClassName}
+        title={title}
+        description={description}
+        toolbar={toolbar}
+        bodyClassName={bodyClassName}
+        footer={footer}
+        className={className}
+      >
+        {children}
+      </PlatformV6WideFormBlock>
+    );
+  }
+
   return (
     <section
       className={cn(
@@ -308,12 +356,28 @@ export function ClientFormSection({
 export function ClientFormGrid({
   children,
   className,
+  columns,
 }: {
   children: ReactNode;
   className?: string;
+  /** Override column layout when platform v6 is active. */
+  columns?: 3 | 4;
 }) {
+  const platformV6 = useClientProfilePlatformV6();
+  const v6GridClass =
+    columns === 4 ? "platform-v6-form-grid-4" : "platform-v6-form-grid";
+
   return (
-    <div className={cn("grid gap-[18px] sm:grid-cols-2", className)}>{children}</div>
+    <div
+      className={cn(
+        platformV6
+          ? v6GridClass
+          : "grid gap-[18px] sm:grid-cols-2",
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -330,15 +394,28 @@ export function ClientFormField({
   children: ReactNode;
   className?: string;
 }) {
+  const platformV6 = useClientProfilePlatformV6();
+
   return (
     <div className={cn("grid gap-[7px]", className)}>
-      <Label htmlFor={htmlFor} className={CLIENT_FORM_FIELD_LABEL_CLASS}>
+      <Label
+        htmlFor={htmlFor}
+        className={
+          platformV6 ? "platform-v6-field-label" : CLIENT_FORM_FIELD_LABEL_CLASS
+        }
+      >
         {label}
       </Label>
       {children}
       {hint ? (
         typeof hint === "string" ? (
-          <p className={CLIENT_FORM_FIELD_HINT_CLASS}>{hint}</p>
+          <p
+            className={
+              platformV6 ? "platform-v6-field-hint" : CLIENT_FORM_FIELD_HINT_CLASS
+            }
+          >
+            {hint}
+          </p>
         ) : (
           hint
         )
@@ -407,6 +484,7 @@ export function ClientProfileTabShell({
   title,
   description,
   children,
+  beforeHeader,
   onCancel,
   saveFormId,
   saveLabel = "Save changes",
@@ -419,6 +497,8 @@ export function ClientProfileTabShell({
   title: string;
   description?: string;
   children: ReactNode;
+  /** Renders above the page title (e.g. onboarding progress strip). */
+  beforeHeader?: ReactNode;
   onCancel?: () => void;
   saveFormId?: string;
   saveLabel?: string;
@@ -428,6 +508,18 @@ export function ClientProfileTabShell({
   onDiscard?: () => void;
   discardDisabled?: boolean;
 }) {
+  const platformV6 = useClientProfilePlatformV6();
+
+  if (platformV6) {
+    return (
+      <div className="platform-v6-epanel-inner">
+        {beforeHeader}
+        <PlatformV6PageSectionHeader title={title} description={description} />
+        {children}
+      </div>
+    );
+  }
+
   return (
     <ClientFormLayout
       topbar={

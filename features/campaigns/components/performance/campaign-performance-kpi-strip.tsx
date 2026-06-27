@@ -1,96 +1,75 @@
 "use client";
 
-import {
-  BarChart3Icon,
-  EyeIcon,
-  HeartIcon,
-  MegaphoneIcon,
-  PercentIcon,
-  TrendingUpIcon,
-  UsersIcon,
-} from "lucide-react";
-
-import { KPI_ACCENT_CLASS, KPI_PERFORMANCE_ACCENT } from "@/components/shared/kpi/kpi-config";
-import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import type { CampaignPerformanceSummary } from "@/features/campaigns/queries/publications";
 import {
   formatCompactCount,
   formatMoneyValue,
   formatPercent,
 } from "@/lib/campaigns/performance-calculations";
+import { cn } from "@/lib/utils";
 
 type Props = {
   summary: CampaignPerformanceSummary;
 };
 
-export function CampaignPerformanceKpiStrip({ summary }: Props) {
-  const items: KpiCarouselItem[] = [
-    {
-      id: "pubs",
-      label: "Total Publications",
-      value: String(summary.total_publications),
-      icon: MegaphoneIcon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.blue],
-    },
-    {
-      id: "reach",
-      label: "Total Reach",
-      value: formatCompactCount(summary.total_reach),
-      subtext: `Actual ${formatCompactCount(summary.total_actual_reach)} · Forecast ${formatCompactCount(summary.total_forecast_reach)}`,
-      icon: UsersIcon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.green],
-    },
-    {
-      id: "impressions",
-      label: "Total Impressions",
-      value: formatCompactCount(summary.total_impressions),
-      subtext: `Actual ${formatCompactCount(summary.total_actual_impressions)} · Forecast ${formatCompactCount(summary.total_forecast_impressions)}`,
-      icon: EyeIcon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.purple],
-    },
-    {
-      id: "views",
-      label: "Total Views",
-      value: formatCompactCount(summary.total_views),
-      icon: BarChart3Icon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.blue],
-    },
-    {
-      id: "engagements",
-      label: "Total Engagements",
-      value: formatCompactCount(summary.total_engagements),
-      icon: HeartIcon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.green],
-    },
-    {
-      id: "er",
-      label: "Average ER",
-      value: formatPercent(summary.average_engagement_rate),
-      icon: PercentIcon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.amber],
-    },
-    {
-      id: "cpm",
-      label: "CPM",
-      value: formatMoneyValue(summary.average_cpm, summary.currency),
-      icon: TrendingUpIcon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.purple],
-    },
-    {
-      id: "cpv",
-      label: "CPV",
-      value: formatMoneyValue(summary.average_cpv, summary.currency),
-      icon: TrendingUpIcon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.blue],
-    },
-    {
-      id: "top",
-      label: "Top Performing Creator",
-      value: summary.top_creator_name ?? "—",
-      icon: UsersIcon,
-      accentClass: KPI_ACCENT_CLASS[KPI_PERFORMANCE_ACCENT.green],
-    },
-  ];
+type KpiCellProps = {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "blue" | "green" | "gray";
+};
 
-  return <KpiStrip items={items} />;
+function KpiCell({ label, value, sub, tone }: KpiCellProps) {
+  return (
+    <div className="thinkway-campaign-kpi-cell">
+      <div className="thinkway-campaign-kpi-lbl">{label}</div>
+      <div
+        className={cn(
+          "thinkway-campaign-kpi-val tabular-nums",
+          tone === "blue" && "thinkway-campaign-c-blue",
+          tone === "green" && "thinkway-campaign-c-green",
+          tone === "gray" && "thinkway-campaign-c-gray"
+        )}
+      >
+        {value}
+      </div>
+      {sub ? <div className="thinkway-campaign-kpi-sub">{sub}</div> : null}
+    </div>
+  );
+}
+
+export function CampaignPerformanceKpiStrip({ summary }: Props) {
+  return (
+    <div className="thinkway-campaign-kpi-strip">
+      <KpiCell label="Publications" value={String(summary.total_publications)} />
+      <KpiCell
+        label="Total reach"
+        value={formatCompactCount(summary.total_reach)}
+        sub={`Actual ${formatCompactCount(summary.total_actual_reach)}`}
+        tone="blue"
+      />
+      <KpiCell
+        label="Impressions"
+        value={formatCompactCount(summary.total_impressions)}
+        sub={`Actual ${formatCompactCount(summary.total_actual_impressions)}`}
+      />
+      <KpiCell label="Total views" value={formatCompactCount(summary.total_views)} />
+      <KpiCell label="Engagements" value={formatCompactCount(summary.total_engagements)} />
+      <KpiCell
+        label="Avg ER %"
+        value={formatPercent(summary.average_engagement_rate)}
+        tone="green"
+      />
+      <KpiCell
+        label="CPM"
+        value={formatMoneyValue(summary.average_cpm, summary.currency)}
+        tone="gray"
+      />
+      <KpiCell
+        label="CPV"
+        value={formatMoneyValue(summary.average_cpv, summary.currency)}
+        tone="gray"
+      />
+    </div>
+  );
 }

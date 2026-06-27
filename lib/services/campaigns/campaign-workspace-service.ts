@@ -45,6 +45,10 @@ import {
   fetchPaymentsForInvoiceIds,
   fetchProfileNamesByIds,
 } from "./repositories/workspace-repository";
+import {
+  fetchInfluencerAvatarMetaMap,
+  resolveInfluencerAvatarFieldsFromMeta,
+} from "@/lib/creators/influencer-avatar-meta";
 
 type HeaderWithRelations = {
   id: string;
@@ -215,6 +219,11 @@ export async function getCampaignWorkspace(
     platformAccounts = await fetchInfluencerPlatformAccounts(supabase, influencerIds);
   }
 
+  const influencerAvatarMeta =
+    influencerIds.length > 0
+      ? await fetchInfluencerAvatarMetaMap(supabase, influencerIds)
+      : new Map();
+
   const accountsByInfluencer = new Map<string, typeof platformAccounts>();
   for (const account of platformAccounts) {
     const list = accountsByInfluencer.get(account.influencer_id) ?? [];
@@ -361,6 +370,20 @@ export async function getCampaignWorkspace(
     const creatorPlatformAccounts = influencerId
       ? (accountsByInfluencer.get(influencerId) ?? [])
       : [];
+    const primaryPlatform =
+      assignment?.platforms[0]?.platform ?? line.platform ?? null;
+    const avatarFields =
+      influencerId != null
+        ? resolveInfluencerAvatarFieldsFromMeta(
+            influencerAvatarMeta,
+            influencerId,
+            primaryPlatform
+          )
+        : {
+            creator_profile_image_url: null,
+            influencer_avatar_url: null,
+            creator_avatar_url: null,
+          };
 
     return {
       id: line.id,
@@ -373,6 +396,9 @@ export async function getCampaignWorkspace(
       platform: line.platform,
       influencer_id: assignment?.influencer_id ?? null,
       influencer_name: assignment?.influencer_name ?? null,
+      creator_profile_image_url: avatarFields.creator_profile_image_url,
+      influencer_avatar_url: avatarFields.influencer_avatar_url,
+      creator_avatar_url: avatarFields.creator_avatar_url,
       platform_summary: platformSummary,
       deliverable_count: assignment
         ? countLineDeliverables(assignment.platforms)

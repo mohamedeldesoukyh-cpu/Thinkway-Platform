@@ -28,6 +28,13 @@ import {
   resolveCampaignWorkspaceTab,
 } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 
+export {
+  loadCampaignAssignmentsBillingBundle,
+  loadCampaignBillingBundle,
+  loadCampaignFinanceAuditBundle,
+  loadCampaignFormOptionsBundle,
+} from "@/features/campaigns/actions/load-campaign-tab-data";
+
 type CampaignWorkspacePageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
@@ -134,7 +141,7 @@ export default async function CampaignWorkspacePage({
       title="Campaign workspace"
       hidePageHeader
       containedMain
-      mainClassName="min-h-0 flex-1 flex-col p-3 md:px-6 md:py-4"
+      mainClassName="min-h-0 flex-1 flex-col overflow-hidden p-0 md:p-0"
     >
       {errorMessage ? (
         <PageAlert>{errorMessage}</PageAlert>

@@ -2,11 +2,10 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
-import { ChevronDownIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { showErrorToastOnce, showSuccessToastOnce, resetToastOnce } from "@/lib/ui/toast-once";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,6 +19,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   OperationalFloatingActionBar,
+  PLATFORM_FLOATING_BAR_PRIMARY_CLASS,
+  PlatformFloatingBarDivider,
+  PlatformFloatingBarSelection,
   operationalFloatingBarContentClass,
 } from "@/components/workspace/operational-floating-action-bar";
 import { DeliverableBillingStatusBadge } from "@/features/billing/components/deliverable-billing-status-badge";
@@ -338,40 +340,41 @@ export function CreateInvoiceSheet({
         </form>
 
         <OperationalFloatingActionBar visible={selected.size > 0}>
-          <Badge
-            variant="secondary"
-            className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-          >
-            {selected.size} selected
-          </Badge>
-          <Button
-            type="button"
-            size="icon-xs"
-            variant="ghost"
-            className="size-6 shrink-0 rounded-full text-muted-foreground"
-            onClick={() => setSelected(new Set())}
-            aria-label="Clear selection"
-          >
-            <XIcon className="size-3.5" />
-          </Button>
-          <span className="shrink-0 text-xs text-muted-foreground">
+          <PlatformFloatingBarSelection
+            selectedCount={selected.size}
+            selectionLabel="row"
+            onClearSelection={() => setSelected(new Set())}
+            busy={pending}
+          />
+
+          <PlatformFloatingBarDivider />
+
+          <span className="shrink-0 px-2 text-xs text-muted-foreground">
             Invoice{" "}
             <span className="font-semibold text-foreground">
               {formatBillingMoney(selectedTotal, currency)}
             </span>
           </span>
-          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+          <span className="hidden shrink-0 px-2 text-xs text-muted-foreground sm:inline">
             Remaining {formatBillingMoney(remainingAfterInvoice, currency)}
           </span>
-          <Button
-            type="submit"
-            form="create-invoice-sheet-form"
-            size="sm"
-            className="ml-auto h-8 shrink-0 rounded-full text-xs"
-            disabled={pending}
-          >
-            {pending ? "Creating…" : "Create invoice"}
-          </Button>
+
+          <PlatformFloatingBarDivider className="ml-auto" />
+
+          <div className="pl-2">
+            <Button
+              type="submit"
+              form="create-invoice-sheet-form"
+              size="sm"
+              className={cn(
+                "h-9 shrink-0 rounded-lg px-4 text-sm font-medium",
+                PLATFORM_FLOATING_BAR_PRIMARY_CLASS
+              )}
+              disabled={pending}
+            >
+              {pending ? "Creating…" : "Create invoice"}
+            </Button>
+          </div>
         </OperationalFloatingActionBar>
       </SheetContent>
     </Sheet>

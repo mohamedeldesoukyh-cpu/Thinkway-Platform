@@ -21,6 +21,7 @@ type Props = {
   className?: string;
   layout?: "inline" | "stacked";
   showPreviousForecast?: boolean;
+  compact?: boolean;
 };
 
 function ImpressionsValue({
@@ -30,6 +31,7 @@ function ImpressionsValue({
   forecastFormula,
   showPreviousForecast,
   sizeClass,
+  compact = false,
 }: {
   impressions: number | null | undefined;
   source: ImpressionsSource | null;
@@ -37,6 +39,7 @@ function ImpressionsValue({
   forecastFormula?: string | null;
   showPreviousForecast?: boolean;
   sizeClass: string;
+  compact?: boolean;
 }) {
   const tooltip = impressionsSourceTooltip(source, forecastFormula);
   const hasSource = source != null && impressions != null;
@@ -63,7 +66,8 @@ function ImpressionsValue({
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "tabular-nums cursor-help underline decoration-dotted decoration-current/30 underline-offset-2",
+              "tabular-nums",
+              !compact && "cursor-help underline decoration-dotted decoration-current/30 underline-offset-2",
               sizeClass,
               textClass
             )}
@@ -93,6 +97,7 @@ export function ImpressionsDisplay({
   className,
   layout = "inline",
   showPreviousForecast = false,
+  compact = false,
 }: Props) {
   const source = (impressionsSource ?? null) as ImpressionsSource | null;
 
@@ -117,6 +122,7 @@ export function ImpressionsDisplay({
           forecastFormula={forecastFormula}
           showPreviousForecast={showPreviousForecast}
           sizeClass="text-lg font-semibold"
+          compact={compact}
         />
         {formulaNote ? (
           <p className="mt-0.5 text-[11px] text-muted-foreground">{formulaNote}</p>
@@ -137,6 +143,7 @@ export function ImpressionsDisplay({
         forecastFormula={forecastFormula}
         showPreviousForecast={showPreviousForecast}
         sizeClass=""
+        compact={compact}
       />
     </div>
   );

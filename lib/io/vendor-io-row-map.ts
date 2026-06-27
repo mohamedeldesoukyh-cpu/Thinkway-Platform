@@ -69,6 +69,7 @@ export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
     assignment_document_number: line?.document_number ?? null,
     influencer_id: row.influencer_id,
     influencer_name: influencer?.display_name ?? "—",
+    creator_avatar_url: null,
     amount: Number(row.amount),
     currency_code: row.currency_code,
     status: row.status,

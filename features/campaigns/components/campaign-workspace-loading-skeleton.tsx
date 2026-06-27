@@ -4,49 +4,59 @@ import { CampaignWorkspaceScrollShell } from "@/features/campaigns/components/ca
 
 export function CampaignWorkspaceLoadingSkeleton() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="thinkway-campaign-workspace flex min-h-0 flex-1 flex-col overflow-hidden">
       <CampaignWorkspaceScrollShell
         chrome={
           <>
-            <div className="space-y-1 pt-0">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <PageBackButton fallbackHref="/campaigns" label="Back to campaigns" />
-                  <Skeleton className="h-7 w-48" />
-                  <Skeleton className="h-6 w-20 rounded-full" />
+            <div className="thinkway-campaign-header-inner">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                <PageBackButton
+                  fallbackHref="/campaigns"
+                  label="Back to campaigns"
+                  className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0"
+                />
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
+              <Skeleton className="mb-2.5 h-3 w-64" />
+              <div className="thinkway-campaign-metrics-band">
+                <div className="thinkway-campaign-metrics-section space-y-2">
+                  <Skeleton className="h-2 w-16" />
+                  <div className="flex gap-4">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Skeleton key={index} className="h-10 w-20" />
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Skeleton className="h-7 w-24" />
-                  <Skeleton className="h-7 w-20" />
+                <div className="thinkway-campaign-metrics-section space-y-2">
+                  <Skeleton className="h-2 w-16" />
+                  <div className="flex gap-4">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <Skeleton key={index} className="h-10 w-20" />
+                    ))}
+                  </div>
                 </div>
               </div>
-              <Skeleton className="ml-10 h-4 w-64" />
             </div>
-
-            <div className="space-y-3 pb-8">
-              <div className="flex gap-3 overflow-hidden">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <Skeleton key={index} className="h-20 min-w-[9rem] shrink-0 rounded-2xl" />
-                ))}
-              </div>
-            </div>
+            <Skeleton className="h-8 w-full rounded-none" />
           </>
         }
         tabs={
-          <div className="flex gap-1 border-b border-border/60 pb-px">
+          <div className="thinkway-campaign-tabs-bar">
             {Array.from({ length: 7 }).map((_, index) => (
-              <Skeleton key={index} className="h-9 w-24 rounded-t-lg" />
+              <Skeleton key={index} className="my-2.5 mr-5 h-4 w-24" />
             ))}
           </div>
         }
       >
-        <div className="mt-4 space-y-4 p-4 md:p-5">
+        <div className="thinkway-campaign-content space-y-3.5">
           <Skeleton className="h-10 w-48" />
-          <div className="grid gap-4 md:grid-cols-2">
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-40 w-full" />
+          <div className="grid gap-3.5 md:grid-cols-3">
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
           </div>
-          <Skeleton className="h-56 w-full" />
+          <Skeleton className="h-56 w-full rounded-xl" />
         </div>
       </CampaignWorkspaceScrollShell>
     </div>

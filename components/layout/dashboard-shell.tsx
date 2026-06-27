@@ -31,8 +31,12 @@ type DashboardShellProps = {
   title: string;
   description?: string;
   actions?: React.ReactNode;
+  /** thinkway-platform_6.html list/workspace chrome (light, compact topbar). */
+  platformV6?: boolean;
   /** Hide generic page header (entity workspaces provide their own). */
   hidePageHeader?: boolean;
+  /** Full-bleed home layout — hides shell topbars (desktop + mobile). */
+  immersiveLayout?: boolean;
   /**
    * Lock shell height and delegate scrolling to page content (campaign workspaces).
    * Prevents document/main scroll so inner sticky regions work.
@@ -49,13 +53,15 @@ export async function DashboardShell({
   title,
   description,
   actions,
+  platformV6 = false,
   hidePageHeader = false,
+  immersiveLayout = false,
   containedMain = false,
   mainClassName,
   backFallbackHref,
   backLabel = "Go back",
 }: DashboardShellProps) {
-  const { user } = await getAuthUser();
+  const { user, fullName } = await getAuthUser();
   const userEmail = user?.email ?? null;
 
   return (
@@ -67,6 +73,7 @@ export async function DashboardShell({
           containedMain && "h-svh max-h-svh overflow-hidden"
         )}
       >
+        {!immersiveLayout ? (
         <div className="flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-md md:hidden dark:bg-background/90">
           <Link href="/" className="flex items-center">
             <ThinkwayLogo compact className="mb-0" />
@@ -92,17 +99,59 @@ export async function DashboardShell({
           <div className="flex items-center gap-2">
             <DashboardHelpButton />
             <ThemeToggle />
-            <UserAccount email={userEmail} compact inSidebar={false} />
+            <UserAccount email={userEmail} name={fullName} compact inSidebar={false} />
           </div>
         </div>
-        {hidePageHeader ? (
-          <header className="thinkway-shell-header hidden justify-end gap-2 px-4 py-3 md:flex md:px-8">
-            <DashboardHelpButton />
-            <ThemeToggle />
+        ) : null}
+        {!immersiveLayout && hidePageHeader ? (
+          <header
+            className={cn(
+              "hidden items-center justify-between gap-3 md:flex",
+              platformV6
+                ? "thinkway-platform-v6-topbar"
+                : "thinkway-shell-header px-4 py-2.5 md:px-8"
+            )}
+          >
+            {platformV6 ? (
+              <div>
+                <span className="platform-v6-tb-title">{title}</span>
+                {description ? (
+                  <p className="platform-v6-tb-sub">{description}</p>
+                ) : null}
+              </div>
+            ) : (
+              <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
+                <ThinkwayLogo compact showText className="mb-0" />
+              </Link>
+            )}
+            <div className="flex items-center gap-2">
+              <DashboardHelpButton />
+              <ThemeToggle />
+              <UserAccount email={userEmail} name={fullName} compact inSidebar={false} />
+            </div>
           </header>
-        ) : (
+        ) : !immersiveLayout && platformV6 ? (
+          <header className="thinkway-platform-v6-topbar hidden w-full md:flex">
+            <div>
+              <span className="platform-v6-tb-title">{title}</span>
+              {description ? <p className="platform-v6-tb-sub">{description}</p> : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <DashboardHelpButton />
+              <ThemeToggle />
+              <UserAccount email={userEmail} name={fullName} compact inSidebar={false} />
+            </div>
+          </header>
+        ) : !immersiveLayout ? (
           <header className="thinkway-shell-header flex flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
-            <div className="flex min-w-0 items-start gap-2">
+            <div className="flex min-w-0 items-start gap-3">
+              <Link
+                href="/"
+                className="hidden shrink-0 items-center md:flex"
+                title="Thinkway home"
+              >
+                <ThinkwayLogo compact showText className="mb-0" />
+              </Link>
               {backFallbackHref ? (
                 <PageBackButton
                   fallbackHref={backFallbackHref}
@@ -128,12 +177,15 @@ export async function DashboardShell({
               {actions}
             </div>
           </header>
-        )}
+        ) : null}
         <main
           className={cn(
+            platformV6 && "thinkway-platform-v6",
             containedMain
               ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-background p-4 md:p-6"
               : "min-h-0 flex-1 overflow-y-auto bg-background p-4 md:p-6",
+            platformV6 && !containedMain && "bg-[#f8fafc] p-6 md:p-6",
+            platformV6 && containedMain && "bg-[#f8fafc] p-0 md:p-0",
             mainClassName
           )}
         >

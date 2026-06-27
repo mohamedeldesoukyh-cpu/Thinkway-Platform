@@ -1,4 +1,5 @@
 import type { SemanticStatusTone } from "@/components/shared/status/status-config";
+import { cn } from "@/lib/utils";
 
 /** KPI health tones — subset of semantic status tokens (no hardcoded palette). */
 export type KpiHealthTone = Extract<
@@ -73,11 +74,51 @@ export const KPI_HEALTH_SURFACE_CLASS: Record<KpiHealthTone, string> = {
   neutral: "border-border bg-card",
 };
 
-export const KPI_STRIP_CARD_CLASS =
-  "flex shrink-0 snap-start items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md";
+/** Shared surface — gradient fill + inset highlight (shadow applied per tier). */
+const KPI_DEPTH_SURFACE =
+  "border border-border/50 bg-gradient-to-br from-card to-muted/10 ring-1 ring-inset ring-white/50 dark:from-card dark:to-muted/5 dark:ring-white/[0.04]";
+
+/** Individual KPI card — layered neutral shadow + subtle hover depth (no translate). */
+export const KPI_CARD_DEPTH = cn(
+  KPI_DEPTH_SURFACE,
+  "shadow-[var(--card-shadow),0_4px_16px_-4px_rgba(15,23,42,0.12)] transition-shadow duration-200 hover:shadow-[var(--card-shadow-hover),0_6px_20px_-4px_rgba(15,23,42,0.16)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.32),0_6px_20px_-4px_rgba(0,0,0,0.45)] dark:hover:shadow-[0_2px_4px_rgba(0,0,0,0.36),0_8px_24px_-4px_rgba(0,0,0,0.52)]",
+);
+
+/** Outer KPI panel — slightly stronger separation from page background. */
+export const KPI_PANEL_DEPTH = cn(
+  KPI_DEPTH_SURFACE,
+  "shadow-[var(--card-shadow),0_6px_24px_-6px_rgba(15,23,42,0.14)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.36),0_8px_28px_-6px_rgba(0,0,0,0.48)]",
+);
+
+/** Overview detail field tile — outer shadow so tiles pop from section surface. */
+export const KPI_FIELD_TILE_DEPTH =
+  "shadow-[0_1px_2px_rgba(6,8,16,0.05),0_3px_10px_-2px_rgba(15,23,42,0.10)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.28),0_4px_12px_-2px_rgba(0,0,0,0.40)]";
+
+export const KPI_STRIP_CARD_CLASS = cn(
+  "flex shrink-0 snap-start items-center gap-2.5 rounded-lg px-2.5 py-2",
+  KPI_CARD_DEPTH,
+);
+
+export const KPI_STRIP_CARD_CLASS_DENSE = cn(
+  "flex h-full min-h-[4.25rem] flex-col justify-between gap-1 rounded-lg px-2 py-1.5",
+  KPI_CARD_DEPTH,
+);
+
+/** KPI label — matches operational detail field labels. */
+export const KPI_CARD_LABEL_CLASS =
+  "truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
+
+/** KPI value — harmonized with operational detail values. */
+export const KPI_CARD_VALUE_CLASS =
+  "truncate font-sans text-sm font-semibold tabular-nums tracking-tight text-foreground";
+
+/** Scroll-layout KPI value — carousel cards. */
+export const KPI_CARD_VALUE_CLASS_SCROLL =
+  "truncate font-sans text-sm font-semibold tabular-nums tracking-tight text-foreground";
 
 export const KPI_STRIP_CARD_WIDTH = "min-w-[168px] max-w-[168px]";
 export const KPI_STRIP_CARD_WIDTH_COMPACT = "min-w-[140px] max-w-[140px]";
+export const KPI_STRIP_CARD_WIDTH_FLUID = "min-w-0 w-full";
 
 export const KPI_LOADING_SKELETON_COUNT = 8;
 

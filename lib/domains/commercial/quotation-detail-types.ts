@@ -45,20 +45,30 @@ export type QuotationRevisionRow = {
   created_at: string;
 };
 
+export type QuotationCreatorPreview = {
+  display_name: string;
+  profile_image_url: string | null;
+};
+
 export type QuotationListRow = {
   id: string;
   serial_number: string | null;
   name: string;
   status: QuotationStatus;
+  client_id: string | null;
   client_name: string | null;
+  brand_id: string | null;
   brand_name: string | null;
   campaign_name: string | null;
   shortlist_id: string | null;
+  owner_id: string | null;
+  owner_name: string | null;
   total_cost_egp: number;
   total_revenue_egp: number;
   total_gp_value_egp: number;
   total_gp_pct: number;
   item_count: number;
+  creator_previews: QuotationCreatorPreview[];
   is_archived: boolean;
   issue_date: string | null;
   validity_date: string | null;

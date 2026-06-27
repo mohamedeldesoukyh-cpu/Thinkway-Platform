@@ -2,20 +2,12 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import {
-  DownloadIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-  FilterIcon,
-  PlusIcon,
-  RefreshCwIcon,
+  LineChartIcon,
   SearchIcon,
-  UploadIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -28,7 +20,8 @@ import { OperationalTableSettingsButton } from "@/components/tables/operational-
 import { operationalFloatingBarContentClass } from "@/components/workspace/operational-floating-action-bar";
 import { CampaignPublicationSheet } from "@/features/campaigns/components/campaign-publication-sheet";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
-import { CampaignPerformanceCharts as PerformanceChartsSection } from "@/features/campaigns/components/performance/campaign-performance-charts";
+import { CampaignPerformanceCharts as PerformanceChartsSection, countPerformanceChartSeries } from "@/features/campaigns/components/performance/campaign-performance-charts";
+import { OperationalDetailSheet } from "@/features/campaigns/components/operational-detail-panel";
 import { PublicationWorkspace } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace";
 import { CampaignPerformanceGrid } from "@/features/campaigns/components/performance/campaign-performance-grid";
 import { CampaignPerformanceKpiStrip } from "@/features/campaigns/components/performance/campaign-performance-kpi-strip";
@@ -52,6 +45,7 @@ import type {
 } from "@/features/campaigns/queries/publications";
 import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { cn } from "@/lib/utils";
 import {
   PERFORMANCE_GRID_COLUMN_METAS,
   PERFORMANCE_GRID_TABLE_ID,
@@ -84,6 +78,7 @@ export function CampaignPerformanceCenterTab({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailId, setDetailId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<
     | "influencer_name"
     | "publication_date"
@@ -340,6 +335,7 @@ export function CampaignPerformanceCenterTab({
   }
 
   const selectedCount = selectedIds.size;
+  const chartSeriesCount = countPerformanceChartSeries(charts);
   const reportBase = `/api/campaigns/${workspace.id}/performance/document`;
   const selectedRows = useMemo(
     () => publications.filter((row) => selectedIds.has(row.id)),
@@ -347,58 +343,57 @@ export function CampaignPerformanceCenterTab({
   );
 
   return (
-    <div className={operationalFloatingBarContentClass(selectedCount > 0, "space-y-4")}>
+    <div
+      className={cn(
+        operationalFloatingBarContentClass(selectedCount > 0, "space-y-3.5"),
+        "pb-14"
+      )}
+    >
       <CampaignOperationalSectionHeader
         title="Campaign Performance Center"
+        titleClassName="text-[14px]"
         description="Central reporting workspace for live content, metrics, and client-ready exports."
         actions={
           <>
-            <Button size="sm" variant="outline" asChild>
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
               <a
                 href={`/campaigns/${workspace.id}/performance/preview`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <FileTextIcon data-icon="inline-start" className="size-3.5" />
                 Preview report
               </a>
             </Button>
-            <Button size="sm" variant="outline" asChild>
-              <a href={`${reportBase}?format=pdf&download=1`}>
-                <DownloadIcon data-icon="inline-start" className="size-3.5" />
-                Combined PDF
-              </a>
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
+              <a href={`${reportBase}?format=pdf&download=1`}>↓ Combined PDF</a>
             </Button>
-            <Button size="sm" variant="outline" asChild>
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
               <a href={`${reportBase}?format=pdf&variant=influencers&download=1`}>
-                <DownloadIcon data-icon="inline-start" className="size-3.5" />
                 Influencer PDF
               </a>
             </Button>
-            <Button size="sm" variant="outline" asChild>
-              <a href={`${reportBase}?format=xlsx&download=1`}>
-                <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
-                Excel
-              </a>
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
+              <a href={`${reportBase}?format=xlsx&download=1`}>Excel</a>
             </Button>
-            <Button size="sm" variant="outline" asChild>
-              <a href={`${reportBase}?format=pptx&download=1`}>
-                <FileTextIcon data-icon="inline-start" className="size-3.5" />
-                PPT
-              </a>
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
+              <a href={`${reportBase}?format=pptx&download=1`}>PPT</a>
             </Button>
             <Button
               size="sm"
               variant="outline"
+              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
               onClick={refreshAllCampaignMetrics}
               disabled={isPending || publications.length === 0}
             >
-              <RefreshCwIcon data-icon="inline-start" className="size-3.5" />
-              Refresh all metrics
+              ↺ Refresh metrics
             </Button>
-            <Button size="sm" onClick={() => setSheetOpen(true)} disabled={lines.length === 0}>
-              <PlusIcon data-icon="inline-start" />
-              Add publication
+            <Button
+              size="sm"
+              className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[30px] text-[11px] shadow-none"
+              onClick={() => setSheetOpen(true)}
+              disabled={lines.length === 0}
+            >
+              + Add publication
             </Button>
           </>
         }
@@ -420,115 +415,122 @@ export function CampaignPerformanceCenterTab({
 
       <CampaignPerformanceKpiStrip summary={summary} />
       <CampaignPerformanceSyncHealth health={syncHealth} />
-      <PerformanceChartsSection charts={charts} />
 
       <OperationalTableColumnsProvider
         tableId={PERFORMANCE_GRID_TABLE_ID}
         columns={PERFORMANCE_GRID_COLUMN_METAS}
       >
-        <div className="space-y-3 rounded-xl border border-border bg-muted p-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Publications grid · {filtered.length} of {publications.length}
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={exportCsv} disabled={filtered.length === 0}>
-              <DownloadIcon className="mr-1 size-3" /> Export CSV
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => importRef.current?.click()}
-              disabled={isPending}
-            >
-              <UploadIcon className="mr-1 size-3" /> Import publications CSV
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => metricsImportRef.current?.click()}
-              disabled={isPending}
-            >
-              <UploadIcon className="mr-1 size-3" /> Import metrics CSV
-            </Button>
+        <div className="thinkway-campaign-grid-toolbar">
+          <span className="text-[11px] font-semibold text-[var(--camp-text-2)]">
+            Publications grid · {filtered.length} of {publications.length}
+          </span>
+          <div className="thinkway-campaign-search-box">
+            <SearchIcon className="thinkway-campaign-search-ico size-3" aria-hidden />
             <input
-              ref={metricsImportRef}
-              type="file"
-              accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleMetricsImport(file);
-                e.target.value = "";
-              }}
-            />
-            <input
-              ref={importRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handleImport(file);
-                e.target.value = "";
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
-          <div className="grid gap-1.5">
-            <Label htmlFor="perf_search">
-              <SearchIcon className="mr-1 inline size-3.5" /> Search
-            </Label>
-            <Input
               id="perf_search"
-              placeholder="Creator, URL, caption, hashtags, mentions…"
+              type="search"
+              placeholder="Creator, URL, caption, hashtags…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label>
-              <FilterIcon className="mr-1 inline size-3.5" /> Status
-            </Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="published">Published</SelectItem>
-                <SelectItem value="verified">Verified</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label>Platform</Label>
-            <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_STATUSES}>All platforms</SelectItem>
-                {platforms.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex justify-end">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="thinkway-campaign-filter-select h-[30px] w-auto min-w-[110px] border-[var(--camp-border)] text-[11px] shadow-none">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={platformFilter} onValueChange={setPlatformFilter}>
+            <SelectTrigger className="thinkway-campaign-filter-select h-[30px] w-auto min-w-[130px] border-[var(--camp-border)] text-[11px] shadow-none">
+              <SelectValue placeholder="All platforms" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_STATUSES}>All platforms</SelectItem>
+              {platforms.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="thinkway-campaign-grid-actions">
+            <Button
+              size="sm"
+              variant="outline"
+              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
+              onClick={exportCsv}
+              disabled={filtered.length === 0}
+            >
+              ↓ Export CSV
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
+              onClick={() => importRef.current?.click()}
+              disabled={isPending}
+            >
+              ↑ Import publications
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
+              onClick={() => metricsImportRef.current?.click()}
+              disabled={isPending}
+            >
+              ↑ Import metrics
+            </Button>
             <OperationalTableSettingsButton contextLabel="Publications grid" />
           </div>
+          <input
+            ref={metricsImportRef}
+            type="file"
+            accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleMetricsImport(file);
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={importRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleImport(file);
+              e.target.value = "";
+            }}
+          />
         </div>
 
+        <div className="thinkway-campaign-color-legend">
+          <span className="font-semibold">Reach / Impr.:</span>
+          <span className="thinkway-campaign-cl-item">
+            <span className="thinkway-campaign-cl-dot bg-[var(--camp-green)]" aria-hidden />
+            Actual
+          </span>
+          <span className="thinkway-campaign-cl-item">
+            <span className="thinkway-campaign-cl-dot bg-[var(--camp-amber)]" aria-hidden />
+            Forecast
+          </span>
+          <span className="thinkway-campaign-cl-item">
+            <span className="thinkway-campaign-cl-dot bg-[var(--camp-blue)]" aria-hidden />
+            Manual
+          </span>
+        </div>
+
+        <div className="thinkway-campaign-section-card mb-0 overflow-hidden">
         <CampaignPerformanceGrid
           rows={filtered}
           selectedIds={selectedIds}
@@ -541,6 +543,17 @@ export function CampaignPerformanceCenterTab({
           sortDir={sortDir}
           onSort={handleSort}
         />
+        <div className="thinkway-campaign-section-footer">
+          <button
+            type="button"
+            className="thinkway-campaign-link inline-flex items-center gap-1 text-[11px]"
+            onClick={() => setChartsOpen(true)}
+          >
+            <LineChartIcon className="size-3" aria-hidden />
+            Performance charts
+            {chartSeriesCount > 0 ? ` · ${chartSeriesCount}` : ""}
+          </button>
+        </div>
         </div>
       </OperationalTableColumnsProvider>
 
@@ -577,6 +590,17 @@ export function CampaignPerformanceCenterTab({
         onPublicationUpdated={refreshAfterPublicationMutation}
         isRefreshing={isPending}
       />
+
+      <OperationalDetailSheet
+        open={chartsOpen}
+        onOpenChange={setChartsOpen}
+        title="Performance charts"
+        description="Platform, creator, and engagement breakdowns for this campaign"
+      >
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-4">
+          <PerformanceChartsSection charts={charts} />
+        </div>
+      </OperationalDetailSheet>
     </div>
   );
 }

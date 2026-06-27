@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { glassFlyoutContentClass } from "@/components/shared/navigation/glass-selection-flyout";
+import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
 import {
@@ -380,7 +382,12 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
         busy={isPending}
       />
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 overflow-hidden",
+          glassFlyoutContentClass(selectedIds.size > 0)
+        )}
+      >
         <CreatorSearchResultList
           creators={sortedCreators}
           loading={loading}

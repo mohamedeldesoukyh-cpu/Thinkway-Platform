@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./thinkway-platform-v6.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -327,6 +328,2026 @@
   :root {
     --app-sidebar-width: 0px;
   }
+}
+
+/* thinkway-campaign_2.html — campaign workspace design system */
+@layer components {
+  .thinkway-campaign-workspace {
+    --camp-text: #0f172a;
+    --camp-text-2: #475569;
+    --camp-text-3: #94a3b8;
+    --camp-border: #e2e8f0;
+    --camp-surface: #f8fafc;
+    --camp-white: #ffffff;
+    --camp-blue: #2563eb;
+    --camp-blue-hover: #1d4ed8;
+    --camp-blue-light: #eff6ff;
+    --camp-blue-text: #1d4ed8;
+    --camp-green: #10b981;
+    --camp-green-bg: #ecfdf5;
+    --camp-green-text: #065f46;
+    --camp-amber: #f59e0b;
+    --camp-amber-bg: #fffbeb;
+    --camp-amber-text: #92400e;
+    --camp-red: #ef4444;
+    --camp-red-bg: #fef2f2;
+    --camp-red-text: #991b1b;
+    --camp-purple: #a855f7;
+    --camp-purple-bg: #faf5ff;
+    --camp-purple-text: #6b21a8;
+    --camp-hover: #f8fafc;
+    --camp-row-open: #fafbff;
+    --camp-row-open-hover: #f0f4ff;
+    --camp-child-hdr: #f4f6fb;
+    --camp-child-accent: #c7d6fa;
+    --camp-scrollbar: #cbd5e1;
+    --camp-progress-track: #e2e8f0;
+    --camp-danger-border: #fecaca;
+    --camp-danger-hover: #fee2e2;
+    --camp-po-border: #fde68a;
+    --camp-po-val: #78350f;
+    --camp-tab-badge-active-border: #bfdbfe;
+    --camp-plat-ig-bg: #fce7f3;
+    --camp-plat-ig-text: #9d174d;
+    --camp-plat-tt-bg: #f1f5f9;
+    --camp-plat-tt-text: #1e293b;
+    --camp-er-hi-bg: #dcfce7;
+    --camp-er-hi-text: #166534;
+    --camp-on-primary: #ffffff;
+    --camp-radius: 6px;
+    --camp-radius-lg: 12px;
+    --camp-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--camp-text);
+    background: var(--camp-surface);
+  }
+
+  .dark .thinkway-campaign-workspace {
+    --camp-text: var(--foreground);
+    --camp-text-2: #a1a1aa;
+    --camp-text-3: #71717a;
+    --camp-border: var(--border);
+    --camp-surface: var(--muted);
+    --camp-white: var(--card);
+    --camp-blue: #3b82f6;
+    --camp-blue-hover: #2563eb;
+    --camp-blue-light: rgba(59, 130, 246, 0.14);
+    --camp-blue-text: #93c5fd;
+    --camp-green: #34d399;
+    --camp-green-bg: rgba(16, 185, 129, 0.14);
+    --camp-green-text: #6ee7b7;
+    --camp-amber: #fbbf24;
+    --camp-amber-bg: rgba(245, 158, 11, 0.14);
+    --camp-amber-text: #fcd34d;
+    --camp-red: #f87171;
+    --camp-red-bg: rgba(239, 68, 68, 0.14);
+    --camp-red-text: #fca5a5;
+    --camp-purple: #c084fc;
+    --camp-purple-bg: rgba(168, 85, 247, 0.14);
+    --camp-purple-text: #d8b4fe;
+    --camp-hover: rgba(255, 255, 255, 0.04);
+    --camp-row-open: rgba(59, 130, 246, 0.08);
+    --camp-row-open-hover: rgba(59, 130, 246, 0.14);
+    --camp-child-hdr: rgba(255, 255, 255, 0.03);
+    --camp-child-accent: rgba(59, 130, 246, 0.45);
+    --camp-scrollbar: rgba(255, 255, 255, 0.18);
+    --camp-progress-track: rgba(255, 255, 255, 0.12);
+    --camp-danger-border: rgba(248, 113, 113, 0.35);
+    --camp-danger-hover: rgba(239, 68, 68, 0.18);
+    --camp-po-border: rgba(251, 191, 36, 0.35);
+    --camp-po-val: #fbbf24;
+    --camp-tab-badge-active-border: rgba(59, 130, 246, 0.35);
+    --camp-plat-ig-bg: rgba(236, 72, 153, 0.14);
+    --camp-plat-ig-text: #f9a8d4;
+    --camp-plat-tt-bg: rgba(255, 255, 255, 0.08);
+    --camp-plat-tt-text: #e4e4e7;
+    --camp-er-hi-bg: rgba(34, 197, 94, 0.14);
+    --camp-er-hi-text: #86efac;
+    --camp-on-primary: #ffffff;
+  }
+
+  .thinkway-campaign-header {
+    background: var(--camp-white);
+    border-bottom: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-header-inner {
+    padding: 14px 20px 0;
+  }
+
+  .thinkway-campaign-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--camp-text);
+  }
+
+  .thinkway-campaign-meta {
+    font-size: 11px;
+    color: var(--camp-text-3);
+    margin-bottom: 10px;
+  }
+
+  .thinkway-campaign-back-btn {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius);
+    background: transparent;
+    color: var(--camp-text-2);
+    transition: background 150ms;
+  }
+
+  .thinkway-campaign-back-btn:hover {
+    background: var(--camp-surface);
+  }
+
+  .thinkway-campaign-status-chip {
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: none;
+  }
+
+  .thinkway-campaign-btn {
+    display: inline-flex;
+    height: 30px;
+    align-items: center;
+    gap: 4px;
+    padding: 0 11px;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius);
+    background: var(--camp-white);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--camp-text-2);
+    transition:
+      background 120ms var(--camp-ease-out),
+      transform 100ms var(--camp-ease-out);
+  }
+
+  .thinkway-campaign-btn:hover {
+    background: var(--camp-surface);
+  }
+
+  .thinkway-campaign-btn:active {
+    transform: scale(0.97);
+  }
+
+  .thinkway-campaign-btn-primary {
+    border-color: var(--camp-blue);
+    background: var(--camp-blue);
+    color: var(--camp-on-primary);
+  }
+
+  .thinkway-campaign-btn-primary:hover {
+    border-color: var(--camp-blue-hover);
+    background: var(--camp-blue-hover);
+  }
+
+  .thinkway-campaign-btn-danger {
+    border-color: var(--camp-danger-border);
+    background: var(--camp-red-bg);
+    color: var(--camp-red);
+  }
+
+  .thinkway-campaign-btn-danger:hover {
+    background: var(--camp-danger-hover);
+  }
+
+  .thinkway-campaign-metrics-band {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    border-top: 1px solid var(--camp-border);
+    background: var(--camp-white);
+  }
+
+  .thinkway-campaign-metrics-section {
+    padding: 12px 20px;
+  }
+
+  .thinkway-campaign-metrics-section + .thinkway-campaign-metrics-section {
+    border-left: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-metrics-label {
+    margin-bottom: 8px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-metrics-row {
+    display: flex;
+    gap: 0;
+  }
+
+  .thinkway-campaign-metric-item {
+    min-width: 80px;
+    margin-right: 18px;
+    padding-right: 18px;
+    border-right: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-metric-item:last-child {
+    margin-right: 0;
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .thinkway-campaign-metric-lbl {
+    margin-bottom: 2px;
+    font-size: 10px;
+    color: var(--camp-text-3);
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-metric-val {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.4px;
+  }
+
+  .thinkway-campaign-po-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    border-top: 1px solid var(--camp-po-border);
+    background: var(--camp-amber-bg);
+    padding: 6px 20px;
+    font-size: 11px;
+  }
+
+  .thinkway-campaign-po-bar-label {
+    font-weight: 500;
+    color: var(--camp-amber-text);
+  }
+
+  .thinkway-campaign-po-bar-val {
+    font-weight: 700;
+    color: var(--camp-po-val);
+  }
+
+  .thinkway-campaign-po-bar-pct {
+    margin-left: 4px;
+    font-weight: 700;
+    color: var(--camp-red);
+  }
+
+  .thinkway-campaign-tabs-bar {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--camp-border);
+    background: var(--camp-white);
+    padding: 0 20px;
+    scrollbar-width: none;
+  }
+
+  .thinkway-campaign-tabs-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .thinkway-campaign-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 20px;
+    padding: 10px 0;
+    border-bottom: 2px solid transparent;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--camp-text-3);
+    white-space: nowrap;
+    transition:
+      color 150ms,
+      border-color 150ms;
+  }
+
+  .thinkway-campaign-tab:hover {
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-campaign-tab[data-state="active"] {
+    border-bottom-color: var(--camp-blue);
+    color: var(--camp-text);
+  }
+
+  .thinkway-campaign-tab-badge {
+    padding: 1px 5px;
+    border: 1px solid var(--camp-border);
+    border-radius: 10px;
+    background: var(--camp-surface);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-campaign-tab[data-state="active"] .thinkway-campaign-tab-badge {
+    border-color: var(--camp-tab-badge-active-border);
+    background: var(--camp-blue-light);
+    color: var(--camp-blue-text);
+  }
+
+  .thinkway-campaign-content {
+    min-height: calc(100vh - 280px);
+    padding: 16px 20px;
+  }
+
+  .thinkway-campaign-section-card {
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-lg);
+    background: var(--camp-white);
+  }
+
+  .thinkway-campaign-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--camp-border);
+    padding: 12px 16px;
+  }
+
+  .thinkway-campaign-section-head h2,
+  .thinkway-campaign-section-head h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--camp-text);
+  }
+
+  .thinkway-campaign-section-head p {
+    margin-top: 1px;
+    font-size: 11px;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-section-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  .thinkway-campaign-section-actions > .inline-flex {
+    gap: 5px;
+  }
+
+  .thinkway-campaign-section-body {
+    padding: 14px 16px;
+  }
+
+  .thinkway-campaign-info-card {
+    padding: 14px 16px;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-lg);
+    background: var(--camp-white);
+  }
+
+  .thinkway-campaign-info-card h3 {
+    margin-bottom: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--camp-text);
+  }
+
+  .thinkway-campaign-info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-info-row:last-child {
+    border-bottom: none;
+  }
+
+  .thinkway-campaign-info-lbl {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-info-val {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--camp-text);
+  }
+
+  .thinkway-campaign-overview-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  @media (min-width: 768px) {
+    .thinkway-campaign-overview-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .thinkway-campaign-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-lg);
+    background: var(--camp-white);
+  }
+
+  @media (min-width: 640px) {
+    .thinkway-campaign-kpi-strip {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .thinkway-campaign-kpi-strip--billing {
+      grid-template-columns: repeat(7, 1fr);
+    }
+
+    .thinkway-campaign-kpi-strip--billing > .thinkway-campaign-kpi-cell {
+      border-right: 1px solid var(--camp-border);
+      border-bottom: none;
+    }
+
+    .thinkway-campaign-kpi-strip--billing > .thinkway-campaign-kpi-cell:nth-child(2n),
+    .thinkway-campaign-kpi-strip--billing > .thinkway-campaign-kpi-cell:nth-child(4n) {
+      border-right: 1px solid var(--camp-border);
+    }
+
+    .thinkway-campaign-kpi-strip--billing > .thinkway-campaign-kpi-cell:nth-child(7n) {
+      border-right: none;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .thinkway-campaign-kpi-strip {
+      grid-template-columns: repeat(8, 1fr);
+    }
+  }
+
+  .thinkway-campaign-kpi-cell {
+    padding: 12px 14px;
+    border-right: 1px solid var(--camp-border);
+    border-bottom: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-kpi-strip > .thinkway-campaign-kpi-cell:nth-child(2n) {
+    border-right: none;
+  }
+
+  @media (min-width: 640px) {
+    .thinkway-campaign-kpi-strip > .thinkway-campaign-kpi-cell {
+      border-bottom: none;
+    }
+
+    .thinkway-campaign-kpi-strip > .thinkway-campaign-kpi-cell:nth-child(2n) {
+      border-right: 1px solid var(--camp-border);
+    }
+
+    .thinkway-campaign-kpi-strip > .thinkway-campaign-kpi-cell:nth-child(4n) {
+      border-right: none;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .thinkway-campaign-kpi-strip > .thinkway-campaign-kpi-cell {
+      border-right: 1px solid var(--camp-border);
+      border-bottom: none;
+    }
+
+    .thinkway-campaign-kpi-strip > .thinkway-campaign-kpi-cell:nth-child(4n),
+    .thinkway-campaign-kpi-strip > .thinkway-campaign-kpi-cell:nth-child(2n) {
+      border-right: 1px solid var(--camp-border);
+    }
+
+    .thinkway-campaign-kpi-strip > .thinkway-campaign-kpi-cell:nth-child(8n) {
+      border-right: none;
+    }
+  }
+
+  .thinkway-campaign-kpi-lbl {
+    margin-bottom: 4px;
+    overflow: hidden;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-kpi-val {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+
+  .thinkway-campaign-kpi-sub {
+    margin-top: 3px;
+    font-size: 9px;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-sync-health {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 8px 14px;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-lg);
+    background: var(--camp-white);
+  }
+
+  .thinkway-campaign-sh-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-sh-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .thinkway-campaign-field-label {
+    margin-bottom: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-field-val {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--camp-text);
+  }
+
+  .thinkway-campaign-po-progress-bar {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--camp-progress-track);
+  }
+
+  .thinkway-campaign-po-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--camp-amber);
+  }
+
+  .thinkway-campaign-c-amber {
+    color: var(--camp-amber);
+  }
+
+  .thinkway-campaign-c-blue {
+    color: var(--camp-blue);
+  }
+
+  .thinkway-campaign-c-green {
+    color: var(--camp-green);
+  }
+
+  .thinkway-campaign-c-red {
+    color: var(--camp-red);
+  }
+
+  .thinkway-campaign-c-gray {
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-tab-panel {
+    animation: thinkway-campaign-fade-in 180ms var(--camp-ease-out);
+  }
+
+  @keyframes thinkway-campaign-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .thinkway-campaign-workspace-tabs-pinned {
+    border-top: none !important;
+    border-bottom: 1px solid var(--camp-border) !important;
+    background: var(--camp-white) !important;
+  }
+
+  @media (max-width: 767px) {
+    .thinkway-campaign-metrics-band {
+      grid-template-columns: 1fr;
+    }
+
+    .thinkway-campaign-metrics-section + .thinkway-campaign-metrics-section {
+      border-top: 1px solid var(--camp-border);
+      border-left: none;
+    }
+
+    .thinkway-campaign-metrics-row {
+      flex-wrap: wrap;
+      gap: 12px 0;
+    }
+
+    .thinkway-campaign-metric-item {
+      min-width: calc(50% - 8px);
+      margin-right: 0;
+      padding-right: 0;
+      border-right: none;
+    }
+  }
+
+  /* Tab tables/cards inherit reference section-card shell */
+  .thinkway-campaign-workspace .thinkway-campaign-content [data-slot="card"] {
+    margin-bottom: 14px;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-lg);
+    background: var(--camp-white);
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content [data-slot="card-header"],
+  .thinkway-campaign-workspace .thinkway-campaign-content [data-slot="card"] > .border-b {
+    border-color: var(--camp-border) !important;
+    padding: 12px 16px;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content [data-slot="card-title"] {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--camp-text);
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content [data-slot="card-description"] {
+    font-size: 11px;
+    color: var(--camp-text-3);
+  }
+
+  /* ── Shared tab utilities (thinkway-campaign_2.html) ── */
+  .thinkway-campaign-link {
+    color: var(--camp-blue);
+    font-size: 12px;
+    text-decoration: none;
+  }
+
+  .thinkway-campaign-link:hover {
+    text-decoration: underline;
+  }
+
+  .thinkway-campaign-link-btn {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--camp-blue);
+    cursor: pointer;
+  }
+
+  .thinkway-campaign-link-btn:hover {
+    text-decoration: underline;
+    background: transparent;
+  }
+
+  .thinkway-campaign-action-links {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .thinkway-campaign-num {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .thinkway-campaign-cell-muted {
+    font-size: 11px;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-badge-gray {
+    background: var(--camp-surface);
+    color: var(--camp-text-2);
+    border: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-badge-green {
+    background: var(--camp-green-bg);
+    color: var(--camp-green-text);
+  }
+
+  .thinkway-campaign-badge-blue {
+    background: var(--camp-blue-light);
+    color: var(--camp-blue-text);
+  }
+
+  .thinkway-campaign-badge-red {
+    background: var(--camp-red-bg);
+    color: var(--camp-red-text);
+  }
+
+  .thinkway-campaign-badge-purple {
+    background: var(--camp-purple-bg);
+    color: var(--camp-purple-text);
+  }
+
+  .thinkway-campaign-badge-amber {
+    background: var(--camp-amber-bg);
+    color: var(--camp-amber-text);
+  }
+
+  .thinkway-campaign-sh-count {
+    font-size: 11px;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-sh-pills {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 5px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .thinkway-campaign-sh-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .thinkway-campaign-cr-cell {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .thinkway-campaign-cr-thumb-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .thinkway-campaign-cr-thumb-wrap--vio {
+    width: 28px;
+    height: 28px;
+  }
+
+  .thinkway-campaign-cr-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+    font-weight: 700;
+    border: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-cr-thumb--vio {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    font-size: 9px;
+    border: none;
+  }
+
+  .thinkway-campaign-cr-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--camp-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-cr-plat-badge {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--camp-white);
+  }
+
+  .thinkway-campaign-cr-plat-badge-ig {
+    background: linear-gradient(135deg, #f9ce34, #ee2a7b, #6228d7);
+  }
+
+  .thinkway-campaign-cr-plat-badge-tt {
+    background: #010101;
+  }
+
+  .thinkway-campaign-cr-thumb-wrap--perf {
+    width: 38px;
+    height: 38px;
+  }
+
+  .thinkway-campaign-cr-thumb--perf {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    font-size: 11px;
+    border: none;
+  }
+
+  .thinkway-campaign-cr-plat-badge--perf {
+    bottom: -3px;
+    right: -3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+  }
+
+  .thinkway-campaign-cr-av-circle {
+    display: flex;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1.5px solid var(--camp-white);
+    font-size: 8px;
+    font-weight: 700;
+  }
+
+  .thinkway-campaign-menu-btn {
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--camp-radius);
+    background: transparent;
+    color: var(--camp-text-3);
+    font-size: 14px;
+    line-height: 1;
+    transition: background 120ms var(--camp-ease-out);
+  }
+
+  .thinkway-campaign-menu-btn:hover {
+    background: var(--camp-surface);
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-section-head .group\/table-tool {
+    height: 30px;
+    padding: 0 11px;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius);
+    background: var(--camp-white);
+    color: var(--camp-text-2);
+    font-size: 11px;
+    font-weight: 500;
+    gap: 4px;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-section-head .group\/table-tool:hover {
+    background: var(--camp-surface);
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-section-head .group\/table-tool[data-active="true"] {
+    color: var(--camp-blue-text);
+    background: var(--camp-blue-light);
+    border-color: var(--camp-tab-badge-active-border);
+  }
+
+  .thinkway-campaign-empty-state {
+    padding: 32px 16px;
+    text-align: center;
+  }
+
+  .thinkway-campaign-empty-state p {
+    font-size: 12px;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-campaign-data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content table:not(.thinkway-campaign-asgn-table) {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content table:not(.thinkway-campaign-asgn-table) thead th,
+  .thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table"] thead th {
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+    text-align: left;
+    border-bottom: 1px solid var(--camp-border);
+    background: var(--camp-surface);
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content table:not(.thinkway-campaign-asgn-table) tbody td,
+  .thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table"] tbody td {
+    padding: 9px 12px;
+    font-size: 12px;
+    color: var(--camp-text-2);
+    border-bottom: 1px solid var(--camp-border);
+    vertical-align: middle;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content tbody tr {
+    transition: background 100ms;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-content tbody tr:hover td {
+    background: var(--camp-hover);
+  }
+
+  /* Assignments expanded table */
+  .thinkway-campaign-asgn-wrap {
+    background: var(--camp-white);
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-lg);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .thinkway-campaign-asgn-head-bar {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--camp-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .thinkway-campaign-asgn-head-bar .thinkway-campaign-section-actions {
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Single horizontal scroll shell — matches HTML .asgn-scroll */
+  .thinkway-campaign-table-scroll,
+  .thinkway-campaign-asgn-scroll {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--camp-scrollbar) var(--camp-surface);
+    padding: 0;
+  }
+
+  .thinkway-campaign-asgn-scroll > * {
+    margin: 0;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .thinkway-campaign-asgn-scroll > * > .thinkway-campaign-asgn-table-root {
+    min-width: min-content;
+    width: max-content;
+  }
+
+  .thinkway-campaign-table-scroll::-webkit-scrollbar,
+  .thinkway-campaign-asgn-scroll::-webkit-scrollbar {
+    height: 5px;
+    width: 5px;
+  }
+
+  .thinkway-campaign-table-scroll::-webkit-scrollbar-track,
+  .thinkway-campaign-asgn-scroll::-webkit-scrollbar-track {
+    background: var(--camp-surface);
+  }
+
+  .thinkway-campaign-table-scroll::-webkit-scrollbar-thumb,
+  .thinkway-campaign-asgn-scroll::-webkit-scrollbar-thumb {
+    background: var(--camp-scrollbar);
+    border-radius: 3px;
+  }
+
+  .thinkway-campaign-asgn-table {
+    width: max-content;
+    min-width: 1300px;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+
+  .thinkway-campaign-asgn-col-hdrs th,
+  .thinkway-campaign-asgn-th {
+    padding: 7px 10px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+    text-align: left;
+    border-bottom: 1px solid var(--camp-border);
+    background: var(--camp-surface);
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-asgn-parent td,
+  .thinkway-campaign-asgn-td {
+    padding: 10px 10px;
+    font-size: 12px;
+    color: var(--camp-text-2);
+    border-bottom: 1px solid var(--camp-border);
+    vertical-align: middle;
+    background: var(--camp-white);
+  }
+
+  .thinkway-campaign-asgn-parent {
+    cursor: pointer;
+    transition: background 100ms;
+  }
+
+  .thinkway-campaign-asgn-parent:hover td {
+    background: var(--camp-hover);
+  }
+
+  .thinkway-campaign-asgn-parent td[data-assignment-col="select"],
+  .thinkway-campaign-asgn-col-hdrs th[data-assignment-col="select"] {
+    width: 24px;
+    min-width: 24px;
+    max-width: 24px;
+    padding: 0 !important;
+    border-left: none;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .thinkway-campaign-asgn-parent td[data-assignment-col="assignment"],
+  .thinkway-campaign-asgn-parent-open td[data-assignment-col="assignment"] {
+    border-left: 3px solid var(--camp-blue);
+    padding-left: 9px;
+  }
+
+  .thinkway-campaign-asgn-parent td[data-assignment-col="assignment"]:first-child,
+  .thinkway-campaign-asgn-parent-open td[data-assignment-col="assignment"]:first-child {
+    border-left: 3px solid var(--camp-blue);
+    padding-left: 9px;
+  }
+
+  .thinkway-campaign-asgn-parent-open td {
+    background: var(--camp-row-open);
+  }
+
+  .thinkway-campaign-asgn-child-hdr td {
+    padding: 6px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+    background: var(--camp-child-hdr);
+    border-bottom: 1px solid var(--camp-border);
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-asgn-child-hdr td[data-child-col="type"],
+  .thinkway-campaign-asgn-child td[data-child-col="type"] {
+    border-left: 3px solid var(--camp-child-accent);
+    padding-left: 28px;
+  }
+
+  .thinkway-campaign-asgn-child-hdr td[data-child-col="expand"],
+  .thinkway-campaign-asgn-child-hdr td[data-child-col="select"],
+  .thinkway-campaign-asgn-child td[data-child-col="expand"],
+  .thinkway-campaign-asgn-child td[data-child-col="select"] {
+    padding: 0;
+    border-left: none;
+  }
+
+  .thinkway-campaign-asgn-child td {
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--camp-text-2);
+    border-bottom: 1px solid var(--camp-border);
+    background: var(--camp-row-open);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-asgn-child:hover td {
+    background: var(--camp-row-open-hover);
+  }
+
+  /* Nested deliverable sub-table inside expanded parent rows */
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child-hdr td {
+    padding: 6px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+    background: var(--camp-child-hdr);
+    border-bottom: 1px solid var(--camp-border);
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child-hdr td[data-child-col="type"],
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child td[data-child-col="type"] {
+    border-left: 3px solid var(--camp-child-accent);
+    padding-left: 28px;
+  }
+
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child-hdr td[data-child-col="expand"],
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child-hdr td[data-child-col="select"],
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child td[data-child-col="expand"],
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child td[data-child-col="select"] {
+    padding: 0;
+    border-left: none;
+  }
+
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child td {
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--camp-text-2);
+    border-bottom: 1px solid var(--camp-border);
+    background: var(--camp-row-open);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child:hover td {
+    background: var(--camp-row-open-hover);
+  }
+
+  .thinkway-campaign-asgn-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--camp-border);
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .thinkway-campaign-asgn-footer-btn {
+    display: inline-flex;
+    height: 30px;
+    align-items: center;
+    gap: 4px;
+    padding: 0 11px;
+    border: 1px solid transparent;
+    border-radius: var(--camp-radius);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--camp-text-2);
+    cursor: pointer;
+    transition: background 120ms var(--camp-ease-out);
+  }
+
+  .thinkway-campaign-asgn-footer-btn:hover {
+    background: var(--camp-surface);
+  }
+
+  .thinkway-campaign-asgn-footer-btn-primary {
+    color: var(--camp-blue);
+  }
+
+  .thinkway-campaign-chevron {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--camp-border);
+    border-radius: 4px;
+    background: var(--camp-white);
+    color: var(--camp-text-3);
+    flex-shrink: 0;
+    transition: transform 160ms var(--camp-ease-out), background 120ms;
+  }
+
+  .thinkway-campaign-asgn-parent-open .thinkway-campaign-chevron svg {
+    transform: rotate(90deg);
+  }
+
+  .thinkway-campaign-cell-rev {
+    color: var(--camp-blue);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .thinkway-campaign-cell-highlight-rev {
+    background: var(--camp-blue-light);
+  }
+
+  .thinkway-campaign-cell-highlight-cost {
+    background: var(--camp-amber-bg);
+  }
+
+  .thinkway-campaign-cell-highlight-billing {
+    background: var(--camp-blue-light);
+  }
+
+  .thinkway-campaign-cell-cost {
+    color: var(--camp-amber);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .thinkway-campaign-cell-billing-total {
+    color: var(--camp-blue-text);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .thinkway-campaign-cell-gp {
+    color: var(--camp-green);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .thinkway-campaign-plat-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-plat-mini-ig {
+    background: var(--camp-plat-ig-bg);
+    color: var(--camp-plat-ig-text);
+  }
+
+  .thinkway-campaign-plat-mini-tt {
+    background: var(--camp-plat-tt-bg);
+    color: var(--camp-plat-tt-text);
+  }
+
+  .thinkway-campaign-plat-mini-other {
+    background: var(--camp-surface);
+    color: var(--camp-text-2);
+  }
+
+  /* Deliverables explorer — type/platform pills (panel-deliverables) */
+  .thinkway-campaign-deliv-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  .thinkway-campaign-deliv-pill-ig {
+    background: var(--camp-plat-ig-bg);
+    color: var(--camp-plat-ig-text);
+  }
+
+  .thinkway-campaign-deliv-pill-tt {
+    background: var(--camp-plat-tt-bg);
+    color: var(--camp-plat-tt-text);
+  }
+
+  .thinkway-campaign-deliv-pill--perf {
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .thinkway-campaign-deliv-pill-other {
+    background: var(--camp-surface);
+    color: var(--camp-text-2);
+    border: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-cr-thumb--deliv {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+
+  .thinkway-campaign-view-toggle {
+    display: inline-flex;
+    gap: 4px;
+  }
+
+  .thinkway-campaign-view-btn {
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid var(--camp-border);
+    background: var(--camp-white);
+    color: var(--camp-text-2);
+    transition: all 120ms;
+    cursor: pointer;
+  }
+
+  .thinkway-campaign-view-btn:hover {
+    background: var(--camp-surface);
+  }
+
+  .thinkway-campaign-view-btn-active {
+    background: var(--camp-blue);
+    color: var(--camp-on-primary);
+    border-color: var(--camp-blue);
+  }
+
+  /* Performance / deliverables grid toolbar */
+  .thinkway-campaign-grid-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .thinkway-campaign-search-box {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+  }
+
+  .thinkway-campaign-search-box input {
+    width: 100%;
+    height: 30px;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius);
+    padding: 0 8px 0 28px;
+    font-size: 11px;
+    color: var(--camp-text);
+    background: var(--camp-white);
+    outline: none;
+    transition: border-color 150ms;
+  }
+
+  .thinkway-campaign-search-box input:focus {
+    border-color: var(--camp-blue);
+  }
+
+  .thinkway-campaign-search-ico {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--camp-text-3);
+    pointer-events: none;
+  }
+
+  .thinkway-campaign-filter-select {
+    height: 30px;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius);
+    padding: 0 8px;
+    font-size: 11px;
+    color: var(--camp-text);
+    background: var(--camp-white);
+    outline: none;
+    min-width: 110px;
+  }
+
+  .thinkway-campaign-grid-actions {
+    display: flex;
+    gap: 5px;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-grid-actions .group\/table-tool {
+    height: 30px;
+    padding: 0 11px;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius);
+    background: var(--camp-white);
+    color: var(--camp-text-2);
+    font-size: 11px;
+    font-weight: 500;
+    gap: 4px;
+  }
+
+  .thinkway-campaign-workspace .thinkway-campaign-grid-actions .group\/table-tool:hover {
+    background: var(--camp-surface);
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-campaign-filter-panel {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-color-legend {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 10px;
+    color: var(--camp-text-3);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .thinkway-campaign-cl-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .thinkway-campaign-cl-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  .thinkway-campaign-section-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--camp-border);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .thinkway-campaign-bottom-bar {
+    padding: 10px 16px;
+    border-top: 1px solid var(--camp-border);
+    background: var(--camp-white);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .thinkway-campaign-er {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .thinkway-campaign-er-hi {
+    background: var(--camp-er-hi-bg);
+    color: var(--camp-er-hi-text);
+  }
+
+  .thinkway-campaign-er-mid {
+    background: var(--camp-amber-bg);
+    color: var(--camp-amber-text);
+  }
+
+  .thinkway-campaign-er-lo {
+    background: var(--camp-surface);
+    color: var(--camp-text-2);
+    border: 1px solid var(--camp-border);
+  }
+
+  /* Billing flow */
+  .thinkway-campaign-billing-flow {
+    font-size: 11px;
+    color: var(--camp-text-3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .thinkway-campaign-billing-flow-step {
+    color: var(--camp-text-2);
+    font-weight: 500;
+  }
+
+  .thinkway-campaign-billing-flow-sep {
+    color: var(--camp-text-3);
+    font-weight: 400;
+  }
+
+  /* Workflow */
+  .thinkway-campaign-workflow-stages {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .thinkway-campaign-stage-btn {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid var(--camp-border);
+    background: var(--camp-white);
+    color: var(--camp-text-2);
+    transition: all 120ms var(--camp-ease-out);
+  }
+
+  .thinkway-campaign-stage-btn:hover:not(.thinkway-campaign-stage-btn-active) {
+    background: var(--camp-surface);
+  }
+
+  .thinkway-campaign-stage-btn-active {
+    background: var(--camp-blue);
+    color: var(--camp-on-primary);
+    border-color: var(--camp-blue);
+  }
+
+  .thinkway-campaign-blockers-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .thinkway-campaign-blockers-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--camp-border);
+    font-size: 12px;
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-campaign-blockers-list li:last-child {
+    border-bottom: none;
+  }
+
+  .thinkway-campaign-blocker-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--camp-red);
+    flex-shrink: 0;
+  }
+
+  /* Timeline */
+  .thinkway-campaign-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  @media (max-width: 1023px) {
+    .thinkway-campaign-two-col {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .thinkway-campaign-activity-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--camp-border);
+  }
+
+  .thinkway-campaign-activity-item:last-child {
+    border-bottom: none;
+  }
+
+  .thinkway-campaign-act-name {
+    font-size: 12px;
+    color: var(--camp-text);
+    font-weight: 500;
+  }
+
+  .thinkway-campaign-act-by {
+    font-size: 10px;
+    color: var(--camp-blue);
+    margin-top: 1px;
+  }
+
+  .thinkway-campaign-act-date {
+    font-size: 10px;
+    color: var(--camp-text-3);
+    white-space: nowrap;
+  }
+
+  .thinkway-campaign-activity-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--camp-scrollbar) transparent;
+  }
+
+  .thinkway-campaign-activity-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .thinkway-campaign-activity-scroll::-webkit-scrollbar-thumb {
+    background: var(--camp-scrollbar);
+    border-radius: 3px;
+  }
+
+  /* Client IO form surfaces */
+  .thinkway-campaign-email-preview {
+    background: var(--camp-surface);
+    border: 1px solid var(--camp-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: var(--camp-text-2);
+    line-height: 1.7;
+  }
+
+  .thinkway-campaign-io-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--camp-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--camp-surface);
+  }
+}
+
+/*
+ * Campaign workspace tables — unlayered overrides beat Tailwind/shadcn utilities.
+ * Values copied from thinkway-campaign_2.html (.data-table, .asgn-table).
+ */
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-container"],
+.thinkway-campaign-workspace .thinkway-campaign-table-scroll [data-slot="table-container"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-scroll [data-slot="table-container"] {
+  overflow: visible !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-container"] > div,
+.thinkway-campaign-workspace .thinkway-campaign-table-scroll [data-slot="table-container"] > div,
+.thinkway-campaign-workspace .thinkway-campaign-asgn-scroll [data-slot="table-container"] > div {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* Main workspace scroll — overlay-style gutter at true page edge (no reserved strip) */
+.thinkway-campaign-workspace [data-campaign-workspace-scroll] {
+  scrollbar-gutter: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--camp-scrollbar) transparent;
+}
+
+.thinkway-campaign-workspace [data-campaign-workspace-scroll]::-webkit-scrollbar {
+  width: 8px;
+}
+
+.thinkway-campaign-workspace [data-campaign-workspace-scroll]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thinkway-campaign-workspace [data-campaign-workspace-scroll]::-webkit-scrollbar-thumb {
+  background: var(--camp-scrollbar);
+  border-radius: 4px;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table"],
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-data-table {
+  font-size: inherit !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-header"],
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-surface) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-header"] [data-slot="table-row"],
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-header [data-slot="table-row"] {
+  border-bottom: none !important;
+  background: transparent !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-header"] [data-slot="table-row"]:hover,
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-header [data-slot="table-row"]:hover {
+  background: transparent !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-head"],
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-head,
+.thinkway-campaign-workspace .thinkway-campaign-content thead th,
+.thinkway-campaign-workspace .thinkway-campaign-content table:not(.thinkway-campaign-asgn-table) thead th {
+  height: auto !important;
+  padding: 8px 12px !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-surface) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.4px !important;
+  line-height: 1.4 !important;
+  text-transform: uppercase !important;
+  color: var(--camp-text-3) !important;
+  text-align: left !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content thead th.text-right,
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-head.text-right {
+  text-align: right !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content tbody td.text-right,
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-cell.text-right {
+  text-align: right !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-body"],
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-body {
+  background: transparent !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-body"] [data-slot="table-row"]:nth-child(even),
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-body [data-slot="table-row"]:nth-child(even) {
+  background: transparent !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-row"],
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-row {
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-white) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  transition: background 100ms !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-row"]:hover,
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-row:hover {
+  background: var(--camp-hover) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-row"]:last-child,
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-row:last-child {
+  border-bottom: none !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-cell"],
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-cell,
+.thinkway-campaign-workspace .thinkway-campaign-content table:not(.thinkway-campaign-asgn-table) tbody td {
+  padding: 9px 12px !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: inherit !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: var(--camp-text-2) !important;
+  vertical-align: middle !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table-row"]:last-child [data-slot="table-cell"],
+.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-row:last-child .thinkway-campaign-op-table-cell {
+  border-bottom: none !important;
+}
+
+/* Assignments grid (.asgn-table) */
+.thinkway-campaign-workspace .thinkway-campaign-asgn-scroll .thinkway-campaign-asgn-table {
+  width: max-content !important;
+  min-width: 1300px !important;
+  table-layout: auto !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-col-hdrs th,
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-th,
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table thead th {
+  height: auto !important;
+  padding: 7px 10px !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-surface) !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.4px !important;
+  line-height: 1.4 !important;
+  text-transform: uppercase !important;
+  color: var(--camp-text-3) !important;
+  text-align: left !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td,
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent .thinkway-campaign-asgn-td {
+  padding: 10px 10px !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-white) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: var(--camp-text-2) !important;
+  vertical-align: middle !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent {
+  cursor: pointer !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent:hover td {
+  background: var(--camp-hover) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="select"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-col-hdrs th[data-assignment-col="select"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table thead th[data-assignment-col="select"] {
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  padding: 0 !important;
+  border-left: none !important;
+  text-align: center !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="assignment"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent-open td[data-assignment-col="assignment"] {
+  border-left: 3px solid var(--camp-blue) !important;
+  padding-left: 9px !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="assignment"]:first-child,
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent-open td[data-assignment-col="assignment"]:first-child {
+  border-left: 3px solid var(--camp-blue) !important;
+  padding-left: 9px !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent-open td {
+  background: var(--camp-row-open) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td {
+  padding: 6px 10px !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-child-hdr) !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  line-height: 1.4 !important;
+  text-transform: uppercase !important;
+  color: var(--camp-text-3) !important;
+  white-space: nowrap !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td[data-child-col="type"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td[data-child-col="type"] {
+  border-left: 3px solid var(--camp-child-accent) !important;
+  padding-left: 28px !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td[data-child-col="expand"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td[data-child-col="select"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td[data-child-col="expand"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td[data-child-col="select"] {
+  padding: 0 !important;
+  border-left: none !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td {
+  padding: 8px 10px !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-row-open) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: var(--camp-text-2) !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child:hover td {
+  background: var(--camp-row-open-hover) !important;
+}
+
+/* Performance publications grid (CSS grid, not <table>) */
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-surface) !important;
+  color: var(--camp-text-3) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-header > button,
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-header > div {
+  padding: 8px 12px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.4px !important;
+  line-height: 1.4 !important;
+  text-transform: uppercase !important;
+  color: var(--camp-text-3) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-header > button:hover {
+  color: var(--camp-blue) !important;
+  background: transparent !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-row {
+  min-height: 0 !important;
+  height: auto !important;
+  border-bottom: 1px solid var(--camp-border) !important;
+  background: var(--camp-white) !important;
+  font-size: 12px !important;
+  color: var(--camp-text-2) !important;
+  transition: background 100ms !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-row:hover {
+  background: var(--camp-hover) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-row--selected {
+  background: var(--camp-row-open) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-row--selected:hover {
+  background: var(--camp-row-open-hover) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-row > div,
+.thinkway-campaign-workspace .thinkway-campaign-perf-grid-row > button {
+  padding: 9px 12px !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-section-card .thinkway-campaign-perf-grid-shell {
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--camp-white) !important;
+  box-shadow: none !important;
 }
 
 /* Login v2 — custom split-card design */
@@ -1176,4 +3197,68 @@
   .login-v2-btn-sign:hover:not(:disabled) {
     transform: none !important;
   }
+}
+
+/* ── Platform floating action bar (selection bulk actions) ── */
+.platform-floating-bar {
+  border-radius: 9999px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: #ffffff;
+  box-shadow:
+    0 2px 8px rgba(15, 23, 42, 0.06),
+    0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.dark .platform-floating-bar {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--surface-elevated);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.24),
+    0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.platform-floating-bar-divider {
+  width: 1px;
+  background: rgba(15, 23, 42, 0.1);
+}
+
+.dark .platform-floating-bar-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.platform-floating-bar-clear {
+  background: #eef2f8;
+  color: #64748b;
+}
+
+.platform-floating-bar-clear:hover {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.dark .platform-floating-bar-clear {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted-foreground);
+}
+
+.dark .platform-floating-bar-clear:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--foreground);
+}
+
+.platform-floating-bar-primary {
+  box-shadow: 0 1px 2px rgba(29, 158, 117, 0.2);
+}
+
+.platform-floating-bar-secondary {
+  color: var(--foreground);
+}
+
+.platform-floating-bar-secondary:hover {
+  color: var(--foreground);
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.dark .platform-floating-bar-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
 }

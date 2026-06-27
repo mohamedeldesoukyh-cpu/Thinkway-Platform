@@ -118,11 +118,17 @@ export function getVisibleOrderedColumnIds(
 ): string[] {
   const metaById = new Map(columns.map((column) => [column.id, column]));
 
-  return state.order.filter((id) => {
+  const ordered = state.order.filter((id) => {
     const column = metaById.get(id);
     if (!column) {
       return false;
     }
     return column.locked || state.visible[id] !== false;
   });
+
+  if (ordered.includes("select")) {
+    return ["select", ...ordered.filter((id) => id !== "select")];
+  }
+
+  return ordered;
 }

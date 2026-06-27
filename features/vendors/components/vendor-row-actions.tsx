@@ -36,7 +36,6 @@ import {
   type FormActionState,
 } from "@/features/vendors/actions";
 import { VendorDependencyDialog } from "@/features/vendors/components/vendor-dependency-dialog";
-import { VendorStatusBadge } from "@/features/vendors/components/vendor-status-badge";
 import type { VendorListRow } from "@/features/vendors/types";
 
 type VendorRowActionsProps = {
@@ -197,12 +196,3 @@ export function VendorRowActions({ vendor }: VendorRowActionsProps) {
   );
 }
 
-export function VendorStatusCell({
-  vendor,
-  badgeClassName,
-}: {
-  vendor: VendorListRow;
-  badgeClassName?: string;
-}) {
-  return <VendorStatusBadge status={vendor.status} className={badgeClassName} />;
-}

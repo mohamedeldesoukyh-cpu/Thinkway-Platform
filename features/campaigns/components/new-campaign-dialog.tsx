@@ -1,6 +1,5 @@
 "use client";
 
-import { PlusIcon } from "lucide-react";
 import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -308,10 +307,14 @@ export function NewCampaignDialog({
     <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={!hasBrands} title={!hasBrands ? "Create a brand before creating campaigns." : undefined}>
-          <PlusIcon data-icon="inline-start" />
-          New Campaign
-        </Button>
+        <button
+          type="button"
+          className="platform-v6-btn platform-v6-btn-primary"
+          disabled={!hasBrands}
+          title={!hasBrands ? "Create a brand before creating campaigns." : undefined}
+        >
+          + New Campaign
+        </button>
       </DialogTrigger>
       <DialogContent className="max-h-[min(90vh,800px)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>

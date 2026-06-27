@@ -24,8 +24,6 @@ import {
   updatePublicationSchema,
 } from "@/lib/services/campaigns/campaign-performance-service";
 
-export type { PublicationMetricSyncLogRow } from "@/lib/domains/campaign/types";
-
 function revalidateCampaign(campaignId: string) {
   revalidatePath("/campaigns");
   revalidatePath(`/campaigns/${campaignId}`);

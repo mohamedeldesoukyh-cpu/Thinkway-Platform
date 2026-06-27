@@ -41,6 +41,27 @@ function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
 }
 
+/** List columns only — avoids heavy enrichment JSONB on `*`. */
+const VENDOR_LIST_SELECT = `
+  id,
+  document_number,
+  display_name,
+  legal_name,
+  email,
+  status,
+  country_code,
+  categories,
+  rate_card,
+  created_at,
+  platform_accounts:influencer_platform_accounts(
+    id,
+    platform,
+    handle,
+    follower_count,
+    is_primary
+  )
+`;
+
 async function requireUser() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -69,7 +90,8 @@ export async function getVendorsList(
   const from = (page - 1) * VENDORS_PAGE_SIZE;
   const to = from + VENDORS_PAGE_SIZE - 1;
 
-  const { supabase } = await requireUser();
+  // Middleware already validates the session; RLS enforces row access.
+  const supabase = await createSupabaseServerClient();
 
   if (platform) {
     const { data: platformMatches, error: platformError } = await supabase
@@ -97,19 +119,7 @@ export async function getVendorsList(
 
     let query = supabase
       .from("influencers")
-      .select(
-        `
-        *,
-        platform_accounts:influencer_platform_accounts(
-          id,
-          platform,
-          handle,
-          follower_count,
-          is_primary
-        )
-      `,
-        { count: "exact" }
-      )
+      .select(VENDOR_LIST_SELECT, { count: "exact" })
       .in("id", influencerIds)
       .order("created_at", { ascending: false });
 
@@ -152,19 +162,7 @@ export async function getVendorsList(
 
   let query = supabase
     .from("influencers")
-    .select(
-      `
-      *,
-      platform_accounts:influencer_platform_accounts(
-        id,
-        platform,
-        handle,
-        follower_count,
-        is_primary
-      )
-    `,
-      { count: "exact" }
-    )
+    .select(VENDOR_LIST_SELECT, { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (status) {

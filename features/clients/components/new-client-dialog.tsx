@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardListIcon, MapPinIcon, PlusIcon } from "lucide-react";
+import { ClipboardListIcon, MapPinIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -12,7 +12,6 @@ import { useClientCategoryClassification } from "@/components/forms/use-client-c
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { SearchableSelect } from "@/components/forms/searchable-select";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -165,10 +164,9 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusIcon data-icon="inline-start" />
-          New Client
-        </Button>
+        <button type="button" className="platform-v6-btn platform-v6-btn-primary">
+          + New Client
+        </button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden rounded-[20px] border-border p-0 shadow-[var(--card-shadow)] sm:max-w-xl">
         <DialogHeader className="shrink-0 border-b border-border bg-background/70 px-6 py-4 backdrop-blur-md">

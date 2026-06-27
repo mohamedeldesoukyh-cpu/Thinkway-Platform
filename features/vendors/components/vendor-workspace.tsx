@@ -10,7 +10,11 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MoreHorizontalIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import {
+  PlatformV6EntityBreadcrumb,
+  platformV6BadgeClass,
+} from "@/components/platform/platform-v6-layout";
+import { ClientProfilePlatformProvider } from "@/features/clients/components/client-form-ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,14 +26,9 @@ import {
   OperationalWorkspaceTabContent,
   OperationalWorkspaceTabPanel,
 } from "@/components/workspace/operational-workspace-ui";
-import {
-  OPERATIONAL_CHROME_LABEL,
-  OPERATIONAL_CHROME_META,
-  OPERATIONAL_CHROME_STATUS_BADGE,
-} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { VENDOR_STATUS_OPTIONS } from "@/features/vendors/constants";
 import { VendorDependencyDialog } from "@/features/vendors/components/vendor-dependency-dialog";
 import { VendorKpiStrip } from "@/features/vendors/components/vendor-kpi-strip";
-import { VendorStatusBadge } from "@/features/vendors/components/vendor-status-badge";
 import { VendorActivityTab } from "@/features/vendors/components/tabs/vendor-activity-tab";
 import { VendorAssignmentsTab } from "@/features/vendors/components/tabs/vendor-assignments-tab";
 import { VendorBillingTab } from "@/features/vendors/components/tabs/vendor-billing-tab";
@@ -39,6 +38,7 @@ import { VendorOverviewTab } from "@/features/vendors/components/tabs/vendor-ove
 import { VendorPlatformsTab } from "@/features/vendors/components/tabs/vendor-platforms-tab";
 import { DocumentNumber } from "@/components/ui/document-number";
 import type { VendorWorkspace } from "@/features/vendors/types";
+import type { InfluencerStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 type VendorWorkspaceViewProps = {
@@ -62,6 +62,42 @@ type VendorWorkspaceTabId = (typeof VENDOR_WORKSPACE_TAB_IDS)[number];
 
 function isVendorWorkspaceTabId(value: string): value is VendorWorkspaceTabId {
   return (VENDOR_WORKSPACE_TAB_IDS as readonly string[]).includes(value);
+}
+
+const TAB_SAVE_LABELS: Record<VendorWorkspaceTabId, string> = {
+  overview: "Save overview",
+  platforms: "Save platforms",
+  assignments: "Save",
+  billing: "Save billing",
+  documents: "Save",
+  contracts: "Save legal",
+  activity: "Save",
+};
+
+const TAB_FORM_IDS: Partial<Record<VendorWorkspaceTabId, string>> = {
+  overview: "vendor-overview-form",
+  platforms: "platform-accounts-form",
+  billing: "vendor-bank-details-form",
+  contracts: "vendor-legal-form",
+};
+
+function resolveEntityStatusBadge(status: InfluencerStatus): {
+  label: string;
+  className: string;
+} {
+  const label =
+    VENDOR_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+
+  if (status === "active") {
+    return { label, className: platformV6BadgeClass("outline-green") };
+  }
+  if (status === "blacklisted") {
+    return { label, className: platformV6BadgeClass("red") };
+  }
+  if (status === "prospect") {
+    return { label, className: platformV6BadgeClass("blue") };
+  }
+  return { label, className: platformV6BadgeClass("gray") };
 }
 
 const tabPanelClassName =
@@ -142,154 +178,185 @@ export function VendorWorkspaceView({
     [tabCounts]
   );
 
+  const entityBadge = resolveEntityStatusBadge(workspace.status);
+  const saveFormId = TAB_FORM_IDS[activeTab];
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
-      <div className="shrink-0 space-y-4 px-[26px] pb-2 pt-0">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <PageBackButton fallbackHref="/vendors" label="Back to vendors" />
-              <CreatorIdentityCell
-                source={creatorProfileSourceFromAccounts(
-                  workspace.display_name,
-                  workspace.platform_accounts
-                )}
-                size="md"
-                showHandle={false}
-                stopPropagation
-              />
-              <VendorStatusBadge
-                status={workspace.status}
-                className={OPERATIONAL_CHROME_STATUS_BADGE}
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(OPERATIONAL_CHROME_LABEL, "h-7 gap-1 px-2")}
-                >
-                  <MoreHorizontalIcon className="size-3.5" />
-                  Actions
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setDepOpen(true)}>
-                  View dependencies
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={`/operations/move?vendor=${workspace.id}`}>
-                    Reassign via Move
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <p className={cn(OPERATIONAL_CHROME_META, "pl-10")}>
-            <DocumentNumber value={workspace.document_number} />
-            {workspace.country_code ? ` · ${workspace.country_code}` : null}
-          </p>
-        </div>
-
-        <VendorKpiStrip workspace={workspace} />
-      </div>
-
-      <Tabs
-        value={activeTab}
-        onValueChange={handleTabChange}
-        className="mt-0 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
-      >
-        <nav
-          aria-label="Creator workspace sections"
-          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-[26px] py-2.5"
+    <ClientProfilePlatformProvider platformV6>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="mt-0 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
         >
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Also view
-          </span>
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleTabChange(tab.id)}
-                className={cn(
-                  "text-[13px] font-medium transition-colors",
-                  isActive
-                    ? "font-semibold text-[#0057FF]"
-                    : "text-muted-foreground hover:text-primary"
+          <div className="platform-v6-entity-nav-bar shrink-0">
+            <div className="flex items-start justify-between gap-3 px-5 pb-2.5 pt-3.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                <PageBackButton fallbackHref="/vendors" label="Back to vendors" />
+                <CreatorIdentityCell
+                  source={creatorProfileSourceFromAccounts(
+                    workspace.display_name,
+                    workspace.platform_accounts
+                  )}
+                  size="md"
+                  showHandle={false}
+                  stopPropagation
+                />
+                <span className={entityBadge.className}>{entityBadge.label}</span>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="platform-v6-btn platform-v6-btn-sm shrink-0"
+                  >
+                    <MoreHorizontalIcon className="size-3.5" aria-hidden />
+                    Actions
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setDepOpen(true)}>
+                    View dependencies
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/operations/move?vendor=${workspace.id}`}>
+                      Reassign via Move
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <p className="px-5 pb-2.5 text-[11px] text-muted-foreground">
+              <DocumentNumber value={workspace.document_number} />
+              {workspace.country_code ? ` · ${workspace.country_code}` : null}
+            </p>
+
+            <div className="border-b border-border px-5 pb-2.5">
+              <VendorKpiStrip workspace={workspace} />
+            </div>
+
+            <div className="flex items-center px-5">
+              <span className="platform-v6-also-view">Also view</span>
+              <div className="platform-v6-entity-tabs-row flex-1" role="tablist">
+                {tabs.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => handleTabChange(tab.id)}
+                      className={cn("platform-v6-etab", isActive && "active")}
+                    >
+                      {tab.label}
+                      {tab.count != null ? ` (${tab.count})` : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <PlatformV6EntityBreadcrumb
+            crumbs={[
+              { label: "Vendors", href: "/vendors" },
+              { label: "Creator workspace" },
+            ]}
+            actions={
+              <>
+                <button
+                  type="button"
+                  className="platform-v6-btn platform-v6-btn-sm"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+                {saveFormId ? (
+                  <button
+                    type="submit"
+                    form={saveFormId}
+                    className="platform-v6-btn platform-v6-btn-primary platform-v6-btn-sm"
+                  >
+                    {TAB_SAVE_LABELS[activeTab]}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="platform-v6-btn platform-v6-btn-primary platform-v6-btn-sm"
+                  >
+                    {TAB_SAVE_LABELS[activeTab]}
+                  </button>
                 )}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {tab.label}
-                {tab.count != null ? ` (${tab.count})` : ""}
-              </button>
-            );
-          })}
-        </nav>
+              </>
+            }
+          />
 
-        <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
-          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <VendorOverviewTab
-              vendor={workspace}
-              portalAccessPanel={portalAccessPanel}
-              onCancel={handleCancel}
-              shortcutsEnabled={activeTab === "overview"}
-            />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="platforms" className={tabPanelClassName}>
-          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <VendorPlatformsTab vendor={workspace} onCancel={handleCancel} />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="assignments" className={tabPanelClassName}>
-          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <VendorAssignmentsTab workspace={workspace} onCancel={handleCancel} />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="billing" className={tabPanelClassName}>
-          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {activeTab === "billing" ? (
-              <VendorBillingTab
-                workspace={workspace}
-                currencyOptions={currencyOptions}
-                onCancel={handleCancel}
-              />
-            ) : null}
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="documents" className={tabPanelClassName}>
-          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <VendorDocumentsTab vendor={workspace} onCancel={handleCancel} />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="contracts" className={tabPanelClassName}>
-          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <VendorContractsTab
-              vendor={workspace}
-              onCancel={handleCancel}
-              shortcutsEnabled={activeTab === "contracts"}
-            />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-        <OperationalWorkspaceTabContent value="activity" className={tabPanelClassName}>
-          <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <VendorActivityTab workspace={workspace} onCancel={handleCancel} />
-          </OperationalWorkspaceTabPanel>
-        </OperationalWorkspaceTabContent>
-      </Tabs>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <VendorOverviewTab
+                  vendor={workspace}
+                  portalAccessPanel={portalAccessPanel}
+                  onCancel={handleCancel}
+                  shortcutsEnabled={activeTab === "overview"}
+                />
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
+            <OperationalWorkspaceTabContent value="platforms" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <VendorPlatformsTab vendor={workspace} onCancel={handleCancel} />
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
+            <OperationalWorkspaceTabContent value="assignments" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <VendorAssignmentsTab workspace={workspace} onCancel={handleCancel} />
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
+            <OperationalWorkspaceTabContent value="billing" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {activeTab === "billing" ? (
+                  <VendorBillingTab
+                    workspace={workspace}
+                    currencyOptions={currencyOptions}
+                    onCancel={handleCancel}
+                  />
+                ) : null}
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
+            <OperationalWorkspaceTabContent value="documents" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <VendorDocumentsTab vendor={workspace} onCancel={handleCancel} />
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
+            <OperationalWorkspaceTabContent value="contracts" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <VendorContractsTab
+                  vendor={workspace}
+                  onCancel={handleCancel}
+                  shortcutsEnabled={activeTab === "contracts"}
+                />
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
+            <OperationalWorkspaceTabContent value="activity" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <VendorActivityTab workspace={workspace} onCancel={handleCancel} />
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
+          </div>
+        </Tabs>
 
-      <VendorDependencyDialog
-        vendorId={workspace.id}
-        vendorName={workspace.display_name}
-        open={depOpen}
-        onOpenChange={setDepOpen}
-        onArchive={
-          workspace.counts.assignments === 0 ? () => setDepOpen(false) : undefined
-        }
-      />
-    </div>
+        <VendorDependencyDialog
+          vendorId={workspace.id}
+          vendorName={workspace.display_name}
+          open={depOpen}
+          onOpenChange={setDepOpen}
+          onArchive={
+            workspace.counts.assignments === 0 ? () => setDepOpen(false) : undefined
+          }
+        />
+      </div>
+    </ClientProfilePlatformProvider>
   );
 }

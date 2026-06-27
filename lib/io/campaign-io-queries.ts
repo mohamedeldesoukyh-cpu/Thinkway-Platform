@@ -10,6 +10,7 @@ import type {
 } from "@/lib/domains/io/types";
 import { mapVendorIoQueryRow } from "@/lib/io/vendor-io-row-map";
 import { attachVendorIoUngenerateEligibility } from "@/lib/io/vendor-io-query-helpers";
+import { attachInfluencerAvatarsToVendorIoRows } from "@/lib/creators/influencer-avatar-meta";
 import { fetchClientIoRow, fetchClientIoRows } from "@/lib/io/client-io-query";
 
 const VENDOR_IO_LIST_SELECT = `
@@ -239,7 +240,8 @@ export async function getCampaignVendorIos(campaignHeaderId: string): Promise<Ve
 
       const mapped = ((data ?? []) as unknown[]).map((row) => mapVendorIoQueryRow(row as never));
 
-      return attachVendorIoUngenerateEligibility(supabase, mapped);
+      const withEligibility = await attachVendorIoUngenerateEligibility(supabase, mapped);
+      return attachInfluencerAvatarsToVendorIoRows(supabase, withEligibility);
     },
     []
   );

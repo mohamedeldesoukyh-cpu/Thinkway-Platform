@@ -14,9 +14,14 @@ import { cn } from "@/lib/utils";
 
 import { HealthIndicator } from "./health-indicator";
 import {
+  KPI_CARD_LABEL_CLASS,
+  KPI_CARD_VALUE_CLASS,
+  KPI_CARD_VALUE_CLASS_SCROLL,
   KPI_STRIP_CARD_CLASS,
+  KPI_STRIP_CARD_CLASS_DENSE,
   KPI_STRIP_CARD_WIDTH,
   KPI_STRIP_CARD_WIDTH_COMPACT,
+  KPI_STRIP_CARD_WIDTH_FLUID,
   type KpiHealthTone,
 } from "./kpi-config";
 import {
@@ -38,6 +43,10 @@ export type KpiCardProps = {
   loading?: boolean;
   tooltip?: string;
   compact?: boolean;
+  /** Tighter padding and typography — used in grouped workspace strips. */
+  dense?: boolean;
+  /** Fill grid cell width instead of fixed carousel width. */
+  fluid?: boolean;
   accentKey?: Parameters<typeof resolveKpiAccentClass>[0];
   accentClass?: string;
   valueSemantic?: OperationalKpiValueSemantic;
@@ -60,18 +69,30 @@ function KpiTrendIndicator({ trend }: { trend: KpiTrend }) {
   );
 }
 
-function KpiCardSkeleton({ compact }: { compact?: boolean }) {
+function KpiCardSkeleton({
+  compact,
+  dense,
+  fluid,
+}: {
+  compact?: boolean;
+  dense?: boolean;
+  fluid?: boolean;
+}) {
   return (
     <div
       className={cn(
-        KPI_STRIP_CARD_CLASS,
-        compact ? KPI_STRIP_CARD_WIDTH_COMPACT : KPI_STRIP_CARD_WIDTH,
+        dense ? KPI_STRIP_CARD_CLASS_DENSE : KPI_STRIP_CARD_CLASS,
+        fluid
+          ? KPI_STRIP_CARD_WIDTH_FLUID
+          : compact
+            ? KPI_STRIP_CARD_WIDTH_COMPACT
+            : KPI_STRIP_CARD_WIDTH,
       )}
     >
-      <Skeleton className="size-9 shrink-0 rounded-lg" />
+      <Skeleton className={cn("shrink-0 rounded-lg", dense ? "size-7" : "size-9")} />
       <div className="min-w-0 space-y-1.5">
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="h-4 w-20" />
+        <Skeleton className={cn(dense ? "h-2.5 w-14" : "h-3 w-16")} />
+        <Skeleton className={cn(dense ? "h-3.5 w-16" : "h-4 w-20")} />
       </div>
     </div>
   );
@@ -87,6 +108,8 @@ export function KpiCard({
   loading,
   tooltip,
   compact,
+  dense,
+  fluid,
   accentKey,
   accentClass,
   valueSemantic,
@@ -97,7 +120,7 @@ export function KpiCard({
   className,
 }: KpiCardProps) {
   if (loading) {
-    return <KpiCardSkeleton compact={compact} />;
+    return <KpiCardSkeleton compact={compact} dense={dense} fluid={fluid} />;
   }
 
   const legacyAlert = valueAlert ?? alert;
@@ -112,40 +135,70 @@ export function KpiCard({
   const cardBody = (
     <div
       className={cn(
-        KPI_STRIP_CARD_CLASS,
-        compact ? KPI_STRIP_CARD_WIDTH_COMPACT : KPI_STRIP_CARD_WIDTH,
+        dense ? KPI_STRIP_CARD_CLASS_DENSE : KPI_STRIP_CARD_CLASS,
+        fluid
+          ? KPI_STRIP_CARD_WIDTH_FLUID
+          : compact
+            ? KPI_STRIP_CARD_WIDTH_COMPACT
+            : KPI_STRIP_CARD_WIDTH,
         className,
       )}
     >
-      {Icon ? (
-        <div
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg",
-            resolveKpiAccentClass(accentKey, accentClass),
-          )}
-        >
-          <Icon className="size-4" />
-        </div>
-      ) : health ? (
-        <div className="flex size-9 shrink-0 items-center justify-center">
-          <HealthIndicator tone={health} aria-label={`Status: ${health}`} />
-        </div>
-      ) : null}
-      <div className="min-w-0">
-        <p className="truncate text-[11px] text-muted-foreground">{title}</p>
-        <p
-          className={cn(
-            "truncate font-heading text-sm font-bold tracking-tight tabular-nums",
-            resolvedValueClass,
-          )}
-        >
-          {value}
-        </p>
-        {subtitle ? (
-          <p className="truncate text-[10px] text-muted-foreground">{subtitle}</p>
-        ) : null}
-        {trend ? <KpiTrendIndicator trend={trend} /> : null}
-      </div>
+      {dense ? (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <p className={KPI_CARD_LABEL_CLASS}>{title}</p>
+            {Icon ? (
+              <div
+                className={cn(
+                  "flex size-5 shrink-0 items-center justify-center rounded-md",
+                  resolveKpiAccentClass(accentKey, accentClass),
+                )}
+              >
+                <Icon className="size-2.5" />
+              </div>
+            ) : health ? (
+              <HealthIndicator tone={health} aria-label={`Status: ${health}`} />
+            ) : null}
+          </div>
+          <p className={cn(KPI_CARD_VALUE_CLASS, resolvedValueClass)}>{value}</p>
+          {subtitle ? (
+            <p className="truncate text-[10px] text-muted-foreground">{subtitle}</p>
+          ) : null}
+          {trend ? <KpiTrendIndicator trend={trend} /> : null}
+        </>
+      ) : (
+        <>
+          {Icon ? (
+            <div
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-lg",
+                compact ? "size-8" : "size-9",
+                resolveKpiAccentClass(accentKey, accentClass),
+              )}
+            >
+              <Icon className={compact ? "size-3.5" : "size-4"} />
+            </div>
+          ) : health ? (
+            <div
+              className={cn(
+                "flex shrink-0 items-center justify-center",
+                compact ? "size-8" : "size-9",
+              )}
+            >
+              <HealthIndicator tone={health} aria-label={`Status: ${health}`} />
+            </div>
+          ) : null}
+          <div className="min-w-0">
+            <p className={KPI_CARD_LABEL_CLASS}>{title}</p>
+            <p className={cn(KPI_CARD_VALUE_CLASS_SCROLL, resolvedValueClass)}>{value}</p>
+            {subtitle ? (
+              <p className="truncate text-[10px] text-muted-foreground">{subtitle}</p>
+            ) : null}
+            {trend ? <KpiTrendIndicator trend={trend} /> : null}
+          </div>
+        </>
+      )}
     </div>
   );
 
@@ -176,11 +229,16 @@ export type KpiCarouselItem = {
   alert?: "warning" | "danger";
   tooltip?: string;
   compact?: boolean;
+  dense?: boolean;
+  fluid?: boolean;
   trend?: KpiTrend;
   health?: KpiHealthTone;
 };
 
-export function kpiCarouselItemToCardProps(item: KpiCarouselItem): KpiCardProps {
+export function kpiCarouselItemToCardProps(
+  item: KpiCarouselItem,
+  stripOptions?: { dense?: boolean; fluid?: boolean },
+): KpiCardProps {
   return {
     id: item.id,
     title: item.label,
@@ -195,6 +253,8 @@ export function kpiCarouselItemToCardProps(item: KpiCarouselItem): KpiCardProps 
     valueAlert: item.valueAlert ?? item.alert,
     tooltip: item.tooltip,
     compact: item.compact,
+    dense: item.dense ?? stripOptions?.dense,
+    fluid: item.fluid ?? stripOptions?.fluid,
     trend: item.trend,
     health: item.health,
   };

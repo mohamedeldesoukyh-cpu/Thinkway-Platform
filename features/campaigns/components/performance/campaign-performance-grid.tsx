@@ -5,7 +5,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
-  MoreHorizontalIcon,
   RefreshCwIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -13,12 +12,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +24,12 @@ import {
   useOperationalColumnVisibleChecker,
   useOperationalTableColumnsContext,
 } from "@/components/tables/operational-table-column-context";
+import { DeliverableExplorerPlatformPill } from "@/features/campaigns/components/deliverables/deliverable-explorer-cells";
+import { EngagementRateDisplay } from "@/features/campaigns/components/performance/engagement-rate-display";
+import {
+  PerformanceExplorerCreatorCell,
+  PerformanceMetricsStatusBadge,
+} from "@/features/campaigns/components/performance/performance-explorer-cells";
 import {
   schedulePublicationWorkspaceOpen,
 } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace-open-policy";
@@ -38,21 +38,15 @@ import {
   isPerformanceGridColumnRightAligned,
 } from "@/features/campaigns/components/performance/performance-grid-column-layout";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
-import { PublicationCreatorName } from "@/lib/performance/publication-creator-identity";
 import {
   PublicationContentPreviewThumb,
   PublicationPlatformThumb,
 } from "@/lib/performance/publication-grid-visual";
 import {
-  ENGAGEMENT_RATE_METHOD_LABELS,
-  engagementRateMethodTooltip,
-  type EngagementRateMethod,
-} from "@/lib/performance/engagement-rate-engine";
-import {
   formatCompactCount,
   formatMoneyValue,
-  formatPercent,
 } from "@/lib/campaigns/performance-calculations";
+import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { ReachDisplay } from "@/features/campaigns/components/performance/reach-display";
 import { ImpressionsDisplay } from "@/features/campaigns/components/performance/impressions-display";
 import type { PerformanceGridColumnId } from "@/lib/tables/performance-grid-column-metas";
@@ -124,17 +118,17 @@ function refreshStatusLabel(status: string | null | undefined): string {
 function refreshStatusClass(status: string | null | undefined): string {
   switch (status) {
     case "completed":
-      return "text-emerald-700";
+      return "text-[var(--camp-green)]";
     case "partial":
-      return "text-amber-700";
+      return "text-[var(--camp-amber)]";
     case "collecting":
-      return "text-[#0057FF]";
+      return "text-[var(--camp-blue)]";
     case "manual_required":
-      return "text-amber-700";
+      return "text-[var(--camp-amber)]";
     case "failed":
-      return "text-destructive";
+      return "text-[var(--camp-red)]";
     default:
-      return "text-muted-foreground";
+      return "text-[var(--camp-text-3)]";
   }
 }
 
@@ -152,30 +146,14 @@ function sortRows(
 ): CampaignPublicationRow[] {
   const factor = dir === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
-    const av = a[key];
-    const bv = b[key];
+    const av = key === "status" ? a.metrics_refresh_status : a[key];
+    const bv = key === "status" ? b.metrics_refresh_status : b[key];
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
     if (typeof av === "number" && typeof bv === "number") return (av - bv) * factor;
     return String(av).localeCompare(String(bv)) * factor;
   });
-}
-
-function MetricsSourceLegend() {
-  return (
-    <div
-      className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-border px-3 py-1.5 text-[10px] text-muted-foreground"
-      aria-label="Reach and impressions source legend"
-    >
-      <span className="font-medium text-muted-foreground">Reach / Impr.:</span>
-      <span className="text-emerald-700">Green = Actual</span>
-      <span aria-hidden>·</span>
-      <span className="text-amber-700">Amber = Forecast</span>
-      <span aria-hidden>·</span>
-      <span className="text-[#0057FF]">Blue = Manual</span>
-    </div>
-  );
 }
 
 export function CampaignPerformanceGrid({
@@ -234,7 +212,7 @@ export function CampaignPerformanceGrid({
         className={cn(
           "px-2 py-2 text-left",
           isPerformanceGridColumnRightAligned(columnId) && "text-right",
-          sortableKey && "hover:text-[#0057FF]"
+          sortableKey && "cursor-pointer"
         )}
         onClick={() => sortableKey && onSort(sortableKey)}
         disabled={!sortableKey}
@@ -276,67 +254,74 @@ export function CampaignPerformanceGrid({
       case "creator":
         return (
           <div key={columnId} className="min-w-0 px-2 text-left">
-            <PublicationCreatorName
-              row={row}
-              name={row.influencer_name ?? "—"}
-              stopPropagation
+            <PerformanceExplorerCreatorCell
+              name={row.influencer_name}
+              platform={row.platform}
+              avatarUrl={resolvePublicationRowCreatorAvatar(row)}
+              influencerId={row.influencer_id}
+              onOpenPublication={() => schedulePublicationWorkspaceOpen(row.id, onOpenDetail)}
             />
           </div>
         );
       case "platform":
         return (
-          <div key={columnId} className="truncate px-2 text-muted-foreground">
-            {row.platform_label}
+          <div key={columnId} className="px-2">
+            <DeliverableExplorerPlatformPill
+              platform={row.platform}
+              className="thinkway-campaign-deliv-pill--perf"
+            />
           </div>
         );
       case "type":
         return (
-          <div key={columnId} className="truncate px-2">
+          <div key={columnId} className="truncate px-2 text-[10px] text-[var(--camp-text-3)]">
             {row.publication_type_label}
           </div>
         );
       case "published":
         return (
-          <div key={columnId} className="px-2 text-muted-foreground">
+          <div key={columnId} className="px-2 text-[11px] text-[var(--camp-text-3)]">
             {safeDate(row.publication_date)}
           </div>
         );
       case "views":
         return (
-          <div key={columnId} className="px-2 text-right tabular-nums">
+          <div key={columnId} className="px-2 text-right tabular-nums text-[12px]">
             {formatCompactCount(row.views)}
           </div>
         );
       case "reach":
         return (
-          <div key={columnId} className="px-2 text-right">
+          <div key={columnId} className="px-2 text-right text-[12px]">
             <ReachDisplay
               reach={row.reach}
               reachSource={row.reach_source}
               forecastReach={row.forecast_reach}
+              compact
             />
           </div>
         );
       case "impressions":
         return (
-          <div key={columnId} className="px-2 text-right">
+          <div key={columnId} className="px-2 text-right text-[12px]">
             <ImpressionsDisplay
               impressions={row.impressions}
               impressionsSource={row.impressions_source}
               forecastImpressions={row.forecast_impressions}
               forecastFormula={row.forecast_impressions_formula}
+              compact
             />
           </div>
         );
       case "likes":
         return (
-          <div key={columnId} className="px-2 text-right tabular-nums">
+          <div key={columnId} className="px-2 text-right tabular-nums text-[12px]">
             {formatCompactCount(row.likes)}
           </div>
         );
       case "comments":
         return (
-          <div key={columnId} className="px-2 text-right tabular-nums">
+          <div key={columnId} className="px-2 text-right tabular-nums text-[12px]">
             {formatCompactCount(row.comments)}
           </div>
         );
@@ -354,25 +339,11 @@ export function CampaignPerformanceGrid({
         );
       case "engagementRate":
         return (
-          <div key={columnId} className="px-2 text-right tabular-nums font-medium text-[#0057FF]">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="cursor-help underline decoration-dotted underline-offset-2">
-                  {formatPercent(row.engagement_rate, 1)}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs text-xs">
-                Method:{" "}
-                {ENGAGEMENT_RATE_METHOD_LABELS[
-                  (row.engagement_rate_method ?? "unknown") as EngagementRateMethod
-                ] ?? "Unknown"}
-                {engagementRateMethodTooltip(
-                  (row.engagement_rate_method ?? "unknown") as EngagementRateMethod
-                )
-                  ? ` — ${engagementRateMethodTooltip((row.engagement_rate_method ?? "unknown") as EngagementRateMethod)}`
-                  : ""}
-              </TooltipContent>
-            </Tooltip>
+          <div key={columnId} className="px-2 text-right">
+            <EngagementRateDisplay
+              rate={row.engagement_rate}
+              method={row.engagement_rate_method}
+            />
           </div>
         );
       case "cost":
@@ -395,8 +366,8 @@ export function CampaignPerformanceGrid({
         );
       case "status":
         return (
-          <div key={columnId} className="px-2 capitalize text-muted-foreground">
-            {row.status.replace(/_/g, " ")}
+          <div key={columnId} className="px-2">
+            <PerformanceMetricsStatusBadge status={row.metrics_refresh_status} />
           </div>
         );
       case "metricsStatus":
@@ -418,28 +389,22 @@ export function CampaignPerformanceGrid({
           >
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0"
+                <button
+                  type="button"
+                  className="thinkway-campaign-menu-btn"
                   onPointerDown={(e) => e.stopPropagation()}
+                  aria-label="Publication actions"
                 >
-                  <MoreHorizontalIcon className="size-4" />
-                </Button>
+                  ⋯
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="text-xs">
-                <DropdownMenuItem
-                  onSelect={(e) => e.preventDefault()}
-                  onClick={() => onRefreshMetrics(row.id)}
-                >
+                <DropdownMenuItem onSelect={() => onRefreshMetrics(row.id)}>
                   <RefreshCwIcon className="mr-1 inline size-3" />
                   Refresh metrics
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    schedulePublicationWorkspaceOpen(row.id, onOpenDetail);
-                  }}
+                  onSelect={() => schedulePublicationWorkspaceOpen(row.id, onOpenDetail)}
                 >
                   View details
                 </DropdownMenuItem>
@@ -454,8 +419,7 @@ export function CampaignPerformanceGrid({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onSelect={(e) => e.preventDefault()}
-                  onClick={() => onRemovePublication(row.id)}
+                  onSelect={() => onRemovePublication(row.id)}
                 >
                   <Trash2Icon className="mr-1 inline size-3" />
                   Remove line
@@ -471,12 +435,11 @@ export function CampaignPerformanceGrid({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex min-h-0 flex-col rounded-xl border border-border bg-card">
-        <MetricsSourceLegend />
-        <div className="min-h-0 flex-1 overflow-auto">
+      <div className="thinkway-campaign-perf-grid-shell flex min-h-0 flex-col">
+        <div className="thinkway-campaign-table-scroll min-h-0 flex-1">
           <div className="min-w-[960px]">
             <div
-              className="sticky top-0 z-10 grid border-b border-border bg-muted text-[10px] font-semibold tracking-wide text-muted-foreground uppercase"
+              className="thinkway-campaign-perf-grid-header grid"
               style={{ gridTemplateColumns: gridTemplate }}
             >
               {visibleColumns.map((columnId) =>
@@ -485,16 +448,16 @@ export function CampaignPerformanceGrid({
             </div>
 
             {pageRows.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-                No publications match your filters.
-              </p>
+              <div className="thinkway-campaign-empty-state">
+                <p>No publications match your filters.</p>
+              </div>
             ) : (
               pageRows.map((row) => (
                 <div
                   key={row.id}
                   className={cn(
-                    "grid h-14 items-center border-b border-border text-[11px] hover:bg-muted",
-                    selectedIds.has(row.id) && "bg-[#EEF4FF]/60"
+                    "thinkway-campaign-perf-grid-row grid items-center",
+                    selectedIds.has(row.id) && "thinkway-campaign-perf-grid-row--selected"
                   )}
                   style={{ gridTemplateColumns: gridTemplate }}
                 >

@@ -8,8 +8,6 @@ import {
   SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
   SAFE_GRID_CHILD_GROUP_CELL,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
-import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/operational-status";
-import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
@@ -105,18 +103,6 @@ export function AssignmentSafeDeliverableRows({
   fallbackChildTableWidthPx,
 }: AssignmentSafeDeliverableRowsProps) {
   const currency = resolveAssignmentLineCurrency(line) || currencyProp;
-  const parentRowClass = LINE_OPERATIONAL_ROW_CLASS[
-    effectiveLineOperationalStatusForUi({
-      operational_status: line.operational_status,
-      vendor_io_id: line.vendor_io_id,
-      billing_status: line.billing_status,
-      invoice_id: line.invoice_id,
-      revenue_locked: line.revenue_locked,
-      vendor_assignment_locked: line.vendor_assignment_locked,
-    })
-  ];
-  const childBorderClass = parentRowClass.split(" ").filter((c) => c.startsWith("border-l")).join(" ");
-
   if (deliverables.length === 0) {
     return (
       <tr className="bg-muted/20">
@@ -125,7 +111,6 @@ export function AssignmentSafeDeliverableRows({
           className={cn(
             SAFE_GRID_CHILD_GROUP_CELL,
             SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
-            childBorderClass,
             "px-4 py-2 text-xs text-muted-foreground"
           )}
         >
@@ -146,7 +131,7 @@ export function AssignmentSafeDeliverableRows({
         onToggleDeliverable={onToggleDeliverable}
         showSelection={showSelection}
         parentColSpan={parentColSpan}
-        nestedGroupClassName={cn(SAFE_GRID_CHILD_GROUP_CELL, childBorderClass)}
+        nestedGroupClassName={SAFE_GRID_CHILD_GROUP_CELL}
         showExpandColumn={showExpandColumn}
         leadingParentColumnIds={leadingParentColumnIds}
         fallbackLeadingWidths={fallbackLeadingWidths}

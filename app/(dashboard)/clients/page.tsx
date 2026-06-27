@@ -1,5 +1,6 @@
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PlatformV6Page, PlatformV6PageHeader } from "@/components/platform/platform-v6-layout";
 import { ClientsListSection } from "@/features/clients/components/clients-list-section";
 import { NewClientDialog } from "@/features/clients/components/new-client-dialog";
 import { getClientsList } from "@/features/clients/queries";
@@ -52,26 +53,33 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
       : `${total} clients` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
-    <DashboardShell
-      title="Clients"
-      description="Clients within holding groups. Brands and campaigns hang off each client."
-      actions={<NewClientDialog groups={groups} currencyOptions={currencyOptions} />}
-    >
-      <ClientsListSection
-        clients={clients}
-        meta={meta}
-        hasSearch={hasSearch}
-        page={list.page}
-        totalPages={totalPages}
-        search={search}
-        errorSlot={
-          errorMessage ? (
-            <div className="border-b border-border/40 px-4 py-3">
-              <PageAlert>{errorMessage}</PageAlert>
-            </div>
-          ) : null
-        }
-      />
+    <DashboardShell title="Clients" platformV6>
+      <PlatformV6Page>
+        <PlatformV6PageHeader
+          inline
+          title="Clients"
+          description="Clients within holding groups. Brands and campaigns hang off each client."
+          actions={
+            <NewClientDialog groups={groups} currencyOptions={currencyOptions} />
+          }
+        />
+
+        <ClientsListSection
+          clients={clients}
+          meta={meta}
+          hasSearch={hasSearch}
+          page={list.page}
+          totalPages={totalPages}
+          search={search}
+          errorSlot={
+            errorMessage ? (
+              <div className="border-b px-4 py-3">
+                <PageAlert>{errorMessage}</PageAlert>
+              </div>
+            ) : null
+          }
+        />
+      </PlatformV6Page>
     </DashboardShell>
   );
 }

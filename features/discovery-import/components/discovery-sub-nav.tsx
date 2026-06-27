@@ -2,39 +2,37 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
-  { href: "/discovery/search", label: "Search" },
-  { href: "/discovery/shortlists", label: "Shortlists" },
-  { href: "/discovery/quotations", label: "Client Quotations" },
-  { href: "/discovery/campaign-match", label: "Campaign Match" },
-  { href: "/discovery/import", label: "Import Center" },
-] as const;
+import {
+  DISCOVERY_SUB_NAV_PAGES,
+  DiscoveryPageIconBadge,
+} from "@/features/discovery/components/discovery-page-identity";
 
 type DiscoverySubNavProps = {
-  activeHref: (typeof NAV_ITEMS)[number]["href"];
+  activeHref: string;
 };
 
 export function DiscoverySubNav({ activeHref }: DiscoverySubNavProps) {
   return (
     <nav
       aria-label="Discovery"
-      className="flex shrink-0 flex-wrap items-center gap-4 border-b border-border bg-background px-4 py-2 text-[12px] md:px-5"
+      className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-border bg-background/95 px-2 py-1.5 md:px-3"
     >
-      {NAV_ITEMS.map((item) => {
-        const isActive = activeHref === item.href;
+      {DISCOVERY_SUB_NAV_PAGES.map((page) => {
+        const isActive = activeHref === page.href;
         return (
           <Link
-            key={item.href}
-            href={item.href}
+            key={page.href}
+            href={page.href}
             className={cn(
-              "font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors",
               isActive
-                ? "font-semibold text-primary"
-                : "text-muted-foreground hover:text-primary"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             )}
             aria-current={isActive ? "page" : undefined}
           >
-            {item.label}
+            <DiscoveryPageIconBadge identity={page} size="sm" />
+            <span className={cn(isActive && "font-semibold")}>{page.navLabel}</span>
           </Link>
         );
       })}

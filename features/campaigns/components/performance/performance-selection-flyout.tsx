@@ -4,14 +4,14 @@ import {
   DownloadIcon,
   FileTextIcon,
   RefreshCwIcon,
-  XIcon,
 } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { OperationalFloatingActionBar } from "@/components/workspace/operational-floating-action-bar";
+import {
+  PlatformFloatingActionBar,
+  type PlatformFloatingBarAction,
+} from "@/components/shared/navigation/platform-floating-action-bar";
 import { refreshCampaignMetricsAction } from "@/features/campaigns/actions/performance-actions";
 import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { notifyMetricsSyncQueued } from "@/features/campaigns/hooks/use-metrics-sync-toasts";
@@ -64,7 +64,6 @@ export function PerformanceSelectionFlyout({
 }: PerformanceSelectionFlyoutProps) {
   const [pending, startTransition] = useTransition();
   const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
-  const visible = selectedIds.length > 0;
   const reportBase = `/api/campaigns/${campaignId}/performance/document`;
   const publicationIdsParam = encodeURIComponent(selectedIds.join(","));
 
@@ -130,87 +129,51 @@ export function PerformanceSelectionFlyout({
     toast.success(`Started download for ${withMedia.length} preview image(s).`);
   }
 
-  return (
-    <OperationalFloatingActionBar visible={visible}>
-      <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto text-xs [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden">
-          <div className="flex shrink-0 items-center gap-1.5 pr-1">
-            <Badge
-              variant="secondary"
-              className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-            >
-              {selectedIds.length} publication{selectedIds.length === 1 ? "" : "s"} selected
-            </Badge>
-            <Button
-              type="button"
-              size="icon-xs"
-              variant="ghost"
-              className="size-6 shrink-0 rounded-full text-muted-foreground"
-              onClick={onClearSelection}
-              aria-label="Clear selection"
-            >
-              <XIcon className="size-3.5" />
-            </Button>
-            {selectableCount > 0 && selectedIds.length < selectableCount ? (
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost"
-                className="hidden shrink-0 sm:inline-flex"
-                onClick={onSelectAll}
-              >
-                Select all
-              </Button>
-            ) : null}
-          </div>
-        </div>
+  const primaryAction: PlatformFloatingBarAction = {
+    id: "refresh",
+    label: pending ? "Refreshing…" : "Refresh metrics",
+    icon: RefreshCwIcon,
+    disabled: pending,
+    loading: pending,
+    onClick: refreshSelectedMetrics,
+  };
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:border-l sm:border-border/70 sm:pl-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="default"
-            className="h-8 shrink-0 rounded-full text-xs"
-            disabled={pending}
-            onClick={refreshSelectedMetrics}
-          >
-            <RefreshCwIcon data-icon="inline-start" />
-            {pending ? "Refreshing…" : "Refresh metrics"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 shrink-0 rounded-full text-xs"
-            onClick={openSelectedReport}
-          >
-            <FileTextIcon data-icon="inline-start" />
-            <span className="hidden sm:inline">Preview report</span>
-            <span className="sm:hidden">Report</span>
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="hidden h-8 shrink-0 rounded-full text-xs md:inline-flex"
-            onClick={downloadSelectedReport}
-          >
-            <DownloadIcon data-icon="inline-start" />
-            Download PDF
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 shrink-0 rounded-full text-xs"
-            onClick={() => void downloadPublishedContent()}
-          >
-            <DownloadIcon data-icon="inline-start" />
-            <span className="hidden sm:inline">Download content</span>
-            <span className="sm:hidden">Content</span>
-          </Button>
-        </div>
-      </div>
-    </OperationalFloatingActionBar>
+  const secondaryActions: PlatformFloatingBarAction[] = [
+    {
+      id: "preview",
+      label: "Preview report",
+      icon: FileTextIcon,
+      onClick: openSelectedReport,
+    },
+  ];
+
+  const overflowActions: PlatformFloatingBarAction[] = [
+    {
+      id: "pdf",
+      label: "Download PDF",
+      icon: DownloadIcon,
+      onClick: downloadSelectedReport,
+    },
+    {
+      id: "content",
+      label: "Download content",
+      icon: DownloadIcon,
+      onClick: () => void downloadPublishedContent(),
+    },
+  ];
+
+  return (
+    <PlatformFloatingActionBar
+      open={selectedIds.length > 0}
+      selectedCount={selectedIds.length}
+      selectionLabel="publication"
+      primaryAction={primaryAction}
+      secondaryActions={secondaryActions}
+      overflowActions={overflowActions}
+      onClearSelection={onClearSelection}
+      onSelectAll={onSelectAll}
+      selectableCount={selectableCount}
+      busy={pending}
+    />
   );
 }

@@ -1,8 +1,7 @@
 "use client";
 
-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type AssignmentExpandToggleProps = {
@@ -12,6 +11,7 @@ type AssignmentExpandToggleProps = {
   className?: string;
 };
 
+/** Chevron expand control — matches thinkway-campaign_2.html .chevron. */
 export function AssignmentExpandToggle({
   expanded,
   onToggle,
@@ -19,20 +19,17 @@ export function AssignmentExpandToggle({
   className,
 }: AssignmentExpandToggleProps) {
   return (
-    <Button
+    <button
       type="button"
-      variant="ghost"
-      size="icon-sm"
-      className={cn("shrink-0 text-muted-foreground", className)}
-      onClick={onToggle}
+      className={cn("thinkway-campaign-chevron", className)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
       aria-expanded={expanded}
       aria-label={ariaLabel}
     >
-      {expanded ? (
-        <ChevronDownIcon className="size-4" />
-      ) : (
-        <ChevronRightIcon className="size-4" />
-      )}
-    </Button>
+      <ChevronRightIcon className="size-2.5" aria-hidden />
+    </button>
   );
 }

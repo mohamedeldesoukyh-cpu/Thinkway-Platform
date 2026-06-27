@@ -1,7 +1,7 @@
 "use client";
 
 import { PlusIcon, TagIcon } from "lucide-react";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -10,7 +10,7 @@ import {
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
-import { DocumentNumber } from "@/components/ui/document-number";
+import { platformV6BadgeClass } from "@/components/platform/platform-v6-layout";
 import {
   Dialog,
   DialogContent,
@@ -22,8 +22,9 @@ import {
 import { archiveBrandAction } from "@/features/brands/actions";
 import { ClientAddBrandDialog } from "@/features/brands/components/client-add-brand-dialog";
 import {
+  BrandDeactivateButton,
   BrandRowActions,
-  BrandStatusToggle,
+  BrandStatusCell,
 } from "@/features/brands/components/brand-row-actions";
 import {
   brandTableRowToGroupBrandRow,
@@ -31,10 +32,6 @@ import {
 } from "@/features/brands/utils";
 import { BrandSheet } from "@/features/groups/components/brand-sheet";
 import type { GroupBrandRow } from "@/features/groups/types";
-import {
-  brandVrInheritanceHint,
-  getEffectiveBrandVrPercent,
-} from "@/lib/clients/vr-inheritance";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { CLIENT_BRANDS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
@@ -47,6 +44,7 @@ import {
   ClientFormKeyboardShortcuts,
   ClientFormSection,
   ClientProfileTabShell,
+  useClientProfilePlatformV6,
 } from "@/features/clients/components/client-form-ui";
 import { cn } from "@/lib/utils";
 
@@ -61,21 +59,16 @@ type ClientBrandsTabProps = {
 };
 
 type BrandTableContext = {
-  clientVr: { vr_rate_id: string | null; vr_rate_percent: number | null };
   onEdit: (brand: ClientBrandRow) => void;
   onArchive: (brand: ClientBrandRow) => void;
+  platformV6: boolean;
 };
 
-function formatEffectiveVrLabel(
-  brand: ClientBrandRow,
-  clientVr: BrandTableContext["clientVr"]
-): string {
-  const effective = getEffectiveBrandVrPercent(brand, clientVr);
-  if (effective == null) {
-    return "—";
+function formatBrandVrOverride(brand: ClientBrandRow): string {
+  if (brand.vr_rate_id && brand.vr_rate_percent != null) {
+    return `${brand.vr_rate_percent}%`;
   }
-  const inherited = !brand.vr_rate_id;
-  return inherited ? `${effective}% (inherited)` : `${effective}%`;
+  return "—";
 }
 
 function buildClientBrandsColumns(
@@ -86,17 +79,33 @@ function buildClientBrandsColumns(
       id: "brand_number",
       label: "Brand #",
       monoCell: true,
-      renderCell: (brand) => <DocumentNumber value={brand.document_number} />,
+      renderCell: (brand) => (
+        <button
+          type="button"
+          onClick={() => context.onEdit(brand)}
+          className={cn(
+            context.platformV6
+              ? "platform-v6-link tabular-nums"
+              : "font-mono text-[#0057FF] hover:underline"
+          )}
+        >
+          {brand.document_number}
+        </button>
+      ),
     },
     {
       id: "name",
       label: "Name",
-      renderCell: (brand) => <span className="font-medium">{brand.name}</span>,
+      renderCell: (brand) => (
+        <span className={cn(context.platformV6 && "font-semibold text-[var(--tw-text)]")}>
+          {brand.name}
+        </span>
+      ),
     },
     {
       id: "vr_rate",
       label: "VR%",
-      renderCell: (brand) => formatEffectiveVrLabel(brand, context.clientVr),
+      renderCell: (brand) => formatBrandVrOverride(brand),
     },
     {
       id: "currency",
@@ -106,14 +115,23 @@ function buildClientBrandsColumns(
     {
       id: "campaigns",
       label: "Campaigns",
-      headerClassName: "text-right",
-      cellClassName: "text-right",
+      headerClassName: "text-center",
+      cellClassName: "text-center",
       renderCell: (brand) => brand.active_campaigns,
     },
     {
       id: "status",
       label: "Status",
-      renderCell: (brand) => <BrandStatusToggle brand={brand} />,
+      renderCell: (brand) =>
+        context.platformV6 ? (
+          brand.status === "active" ? (
+            <span className={platformV6BadgeClass("outline-green")}>Active</span>
+          ) : (
+            <BrandStatusCell status={brand.status} />
+          )
+        ) : (
+          <BrandStatusCell status={brand.status} />
+        ),
     },
     {
       id: "actions",
@@ -122,11 +140,23 @@ function buildClientBrandsColumns(
       headerClassName: "text-right",
       cellClassName: "text-right",
       renderCell: (brand) => (
-        <BrandRowActions
-          brand={brand}
-          onEdit={() => context.onEdit(brand)}
-          onArchive={() => context.onArchive(brand)}
-        />
+        <div
+          className={cn(
+            context.platformV6 && "platform-v6-row-actions"
+          )}
+        >
+          <BrandDeactivateButton brand={brand} />
+          <BrandRowActions
+            brand={brand}
+            onEdit={() => context.onEdit(brand)}
+            onArchive={() => context.onArchive(brand)}
+            triggerClassName={
+              context.platformV6
+                ? "platform-v6-btn platform-v6-btn-sm !px-[6px]"
+                : undefined
+            }
+          />
+        </div>
       ),
     },
   ];
@@ -139,27 +169,30 @@ export function ClientBrandsTab({
   shortcutsEnabled = true,
   onGoToOverview,
 }: ClientBrandsTabProps) {
+  const platformV6 = useClientProfilePlatformV6();
   const hasGroup = Boolean(client.group_id ?? client.group?.id);
-  const clientVr = useMemo(
-    () => ({
-      vr_rate_id: client.vr_rate_id,
-      vr_rate_percent: client.vr_rate_percent,
-    }),
-    [client.vr_rate_id, client.vr_rate_percent]
-  );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupBrandRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<ClientBrandRow | null>(null);
 
-  const columns = buildClientBrandsColumns({
-    clientVr,
-    onEdit: (brand) => {
+  const openEditBrand = useCallback(
+    (brand: ClientBrandRow) => {
       setEditing(brandTableRowToGroupBrandRow(brand, client.name));
       setEditSheetOpen(true);
     },
-    onArchive: setArchiveTarget,
-  });
+    [client.name]
+  );
+
+  const columns = useMemo(
+    () =>
+      buildClientBrandsColumns({
+        onEdit: openEditBrand,
+        onArchive: setArchiveTarget,
+        platformV6,
+      }),
+    [openEditBrand, platformV6]
+  );
 
   const [archiveState, archiveAction, archivePending] = useActionState(
     archiveBrandAction,
@@ -177,11 +210,48 @@ export function ClientBrandsTab({
   }, [archiveState]);
 
   const legalEntity = clientToLegalEntityRow(client);
-  const vrHint = brandVrInheritanceHint(client.vr_rate_percent, false);
+  const openAddBrandDialog = () => setAddDialogOpen(true);
 
-  const openAddBrandDialog = () => {
-    setAddDialogOpen(true);
-  };
+  const portfolioFooter = (
+    <>
+      Set default VR% on client overview or override here. Use{" "}
+      <strong>Add new brand</strong> to create another brand after each save.
+      {platformV6 ? null : (
+        <>
+          {" "}
+          {CLIENT_FORM_SAVE_SHORTCUT_HINT} while the add dialog is open.
+        </>
+      )}
+    </>
+  );
+
+  const addBrandButton = platformV6 ? (
+    <button
+      type="button"
+      className="platform-v6-btn platform-v6-btn-primary platform-v6-btn-sm"
+      onClick={openAddBrandDialog}
+      disabled={!hasGroup}
+    >
+      + Add new brand
+    </button>
+  ) : (
+    <button
+      type="button"
+      className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
+      onClick={openAddBrandDialog}
+      disabled={!hasGroup}
+    >
+      <PlusIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
+      Add new brand
+    </button>
+  );
+
+  const portfolioToolbar = (
+    <>
+      <OperationalTableControlsSlot contextLabel="Client brands" />
+      {addBrandButton}
+    </>
+  );
 
   return (
     <>
@@ -194,9 +264,15 @@ export function ClientBrandsTab({
         description="Commercial brands under this legal entity. VR% inherits from overview unless overridden."
         onCancel={onCancel}
       >
-        <div className="grid gap-[18px]">
+        <div className={cn(!platformV6 && "grid gap-[18px]")}>
           {!hasGroup ? (
-            <div className="rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
+            <div
+              className={cn(
+                platformV6
+                  ? "mb-3 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-950"
+                  : "rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950"
+              )}
+            >
               <p className="font-medium">Group required before adding brands</p>
               <p className="mt-1 text-[12px] text-amber-900/80">
                 Link this legal entity to a holding group on the Overview tab, then
@@ -205,7 +281,12 @@ export function ClientBrandsTab({
               {onGoToOverview ? (
                 <button
                   type="button"
-                  className={cn(CLIENT_FORM_SECONDARY_BUTTON_CLASS, "mt-3")}
+                  className={cn(
+                    platformV6
+                      ? "platform-v6-btn platform-v6-btn-sm mt-3"
+                      : CLIENT_FORM_SECONDARY_BUTTON_CLASS,
+                    !platformV6 && "mt-3"
+                  )}
                   onClick={onGoToOverview}
                 >
                   Go to Overview
@@ -222,28 +303,27 @@ export function ClientBrandsTab({
           >
             <ClientFormSection
               icon={TagIcon}
+              iconClassName="platform-v6-wide-form-head-icon-purple"
               title="Brand portfolio"
               description="Manage brands, VR overrides, and status for this legal entity."
+              toolbar={portfolioToolbar}
+              bodyClassName={platformV6 ? "platform-v6-wide-form-body-table" : undefined}
+              footer={hasGroup ? portfolioFooter : undefined}
             >
-              <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
-                <OperationalTableControlsSlot contextLabel="Client brands" />
-                <button
-                  type="button"
-                  className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
-                  onClick={openAddBrandDialog}
-                  disabled={!hasGroup}
-                >
-                  <PlusIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
-                  Add new brand
-                </button>
-              </div>
-
               {client.brands.length === 0 ? (
-                <div className="space-y-3 py-6">
-                  <p className="text-[13px] text-[#9099A8]">
+                <div
+                  className={cn(
+                    platformV6 ? "platform-v6-empty-state" : "space-y-3 py-6"
+                  )}
+                >
+                  <p
+                    className={cn(
+                      !platformV6 && "text-[13px] text-[#9099A8]"
+                    )}
+                  >
                     No brands yet for this legal entity.
                   </p>
-                  {hasGroup ? (
+                  {hasGroup && !platformV6 ? (
                     <button
                       type="button"
                       className={CLIENT_FORM_SECONDARY_BUTTON_CLASS}
@@ -255,24 +335,22 @@ export function ClientBrandsTab({
                   ) : null}
                 </div>
               ) : (
-                <div className="-mx-[22px] overflow-x-auto">
+                <div
+                  className={cn(
+                    "overflow-x-auto",
+                    !platformV6 && "-mx-[22px]"
+                  )}
+                >
                   <OperationalConfigurableTable
                     columns={columns}
                     rows={client.brands}
                     rowKey={(brand) => brand.id}
+                    className={platformV6 ? "platform-v6-data-table" : undefined}
                   />
                 </div>
               )}
             </ClientFormSection>
           </OperationalTableSuiteProvider>
-
-          {hasGroup ? (
-            <p className="text-[12px] text-[#9099A8]">
-              {vrHint} Use <span className="font-medium text-[#3A4254]">Add new brand</span>{" "}
-              to create another brand after each save. {CLIENT_FORM_SAVE_SHORTCUT_HINT} while
-              the add dialog is open.
-            </p>
-          ) : null}
         </div>
       </ClientProfileTabShell>
 

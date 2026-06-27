@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { getAuthContext, hasPermission } from "@/lib/auth/permissions";
 import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
 import {
@@ -22,6 +23,7 @@ import type {
   QuotationFormOptions,
   QuotationItemRow,
   QuotationListRow,
+  QuotationCreatorPreview,
   QuotationRevisionRow,
   QuotationVersionSummary,
 } from "@/lib/domains/commercial/quotation-detail-types";
@@ -167,19 +169,21 @@ export async function getQuotationsList(
     .from("quotations")
     .select(
       `id, serial_number, name, status, shortlist_id, is_archived,
+       owner_id, client_id, brand_id,
        total_cost_egp, total_revenue_egp, total_gp_value_egp, total_gp_pct,
        issue_date, validity_date, version,
        created_at, updated_at,
        clients:client_id(name),
        brands:brand_id(name),
        campaign_headers:campaign_header_id(name),
+       owner:owner_id(full_name),
        quotation_items(count)`
     )
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((raw) => {
+  const rows = (data ?? []).map((raw) => {
     const row = raw as Record<string, unknown>;
     const itemsAgg = row.quotation_items as Array<{ count: number }> | undefined;
     return {
@@ -187,16 +191,21 @@ export async function getQuotationsList(
       serial_number: (row.serial_number as string | null) ?? null,
       name: row.name as string,
       status: row.status as QuotationStatus,
+      client_id: (row.client_id as string | null) ?? null,
       client_name: unwrap(row.clients as { name: string } | null)?.name ?? null,
+      brand_id: (row.brand_id as string | null) ?? null,
       brand_name: unwrap(row.brands as { name: string } | null)?.name ?? null,
       campaign_name:
         unwrap(row.campaign_headers as { name: string } | null)?.name ?? null,
       shortlist_id: (row.shortlist_id as string | null) ?? null,
+      owner_id: (row.owner_id as string | null) ?? null,
+      owner_name: unwrap(row.owner as { full_name: string | null } | null)?.full_name ?? null,
       total_cost_egp: Number(row.total_cost_egp ?? 0),
       total_revenue_egp: Number(row.total_revenue_egp ?? 0),
       total_gp_value_egp: Number(row.total_gp_value_egp ?? 0),
       total_gp_pct: Number(row.total_gp_pct ?? 0),
       item_count: itemsAgg?.[0]?.count ?? 0,
+      creator_previews: [] as QuotationCreatorPreview[],
       is_archived: Boolean(row.is_archived),
       issue_date: (row.issue_date as string | null) ?? null,
       validity_date: (row.validity_date as string | null) ?? null,
@@ -205,6 +214,86 @@ export async function getQuotationsList(
       updated_at: row.updated_at as string,
     };
   });
+
+  if (rows.length === 0) return rows;
+
+  const creatorPreviews = await loadQuotationCreatorPreviews(
+    supabase,
+    rows.map((row) => row.id)
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    creator_previews: creatorPreviews.get(row.id) ?? [],
+  }));
+}
+
+async function loadQuotationCreatorPreviews(
+  supabase: SupabaseClient<Database>,
+  quotationIds: string[]
+): Promise<Map<string, QuotationCreatorPreview[]>> {
+  const previews = new Map<string, QuotationCreatorPreview[]>();
+  if (quotationIds.length === 0) return previews;
+
+  const { data } = await supabase
+    .from("quotation_items")
+    .select(
+      "quotation_id, creator_name, influencer_id, profile_id, unified_id, sort_order"
+    )
+    .in("quotation_id", quotationIds)
+    .order("sort_order", { ascending: true });
+
+  const items = (data ?? []) as Array<{
+    quotation_id: string;
+    creator_name: string | null;
+    influencer_id: string | null;
+    profile_id: string | null;
+    unified_id: string | null;
+  }>;
+
+  const cappedByQuotation = new Map<string, typeof items>();
+  for (const item of items) {
+    const bucket = cappedByQuotation.get(item.quotation_id) ?? [];
+    if (bucket.length < 4) bucket.push(item);
+    cappedByQuotation.set(item.quotation_id, bucket);
+  }
+
+  if (cappedByQuotation.size === 0) return previews;
+
+  const browse = await browseUnifiedCreators(supabase, { pageSize: 500 });
+  const byUnifiedId = new Map(browse.creators.map((c) => [c.unified_id, c]));
+  const byDiscoveryId = new Map(
+    browse.creators
+      .filter((c) => c.discovered_profile_id)
+      .map((c) => [c.discovered_profile_id!, c])
+  );
+  const byInfluencerId = new Map(
+    browse.creators
+      .filter((c) => c.influencer_id)
+      .map((c) => [c.influencer_id!, c])
+  );
+
+  for (const [quotationId, quotationItems] of cappedByQuotation) {
+    const rowPreviews: QuotationCreatorPreview[] = [];
+    for (const item of quotationItems) {
+      const creator =
+        (item.unified_id ? byUnifiedId.get(item.unified_id) : null) ??
+        (item.profile_id ? byDiscoveryId.get(item.profile_id) : null) ??
+        (item.influencer_id ? byInfluencerId.get(item.influencer_id) : null) ??
+        null;
+      const displayName =
+        creator?.display_name?.trim() ||
+        item.creator_name?.trim() ||
+        "Creator";
+      rowPreviews.push({
+        display_name: displayName,
+        profile_image_url: creator?.profile_image_url ?? null,
+      });
+    }
+    previews.set(quotationId, rowPreviews);
+  }
+
+  return previews;
 }
 
 export async function getQuotationDetail(

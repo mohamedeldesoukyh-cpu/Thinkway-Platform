@@ -16,19 +16,42 @@ import { cn } from "@/lib/utils";
 
 type UserAccountProps = {
   email?: string | null;
+  name?: string | null;
   className?: string;
   compact?: boolean;
   /** Dark sidebar (default) vs light page chrome (mobile header). */
   inSidebar?: boolean;
 };
 
-function getInitials(email: string | null | undefined) {
+function getInitials(name: string | null | undefined, email: string | null | undefined) {
+  const trimmedName = name?.trim();
+  if (trimmedName) {
+    const parts = trimmedName.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0]![0] ?? ""}${parts[parts.length - 1]![0] ?? ""}`.toUpperCase();
+    }
+    return trimmedName.slice(0, 2).toUpperCase();
+  }
+
   if (!email) {
     return "?";
   }
 
   const local = email.split("@")[0] ?? email;
   return local.slice(0, 2).toUpperCase();
+}
+
+function getHeaderDisplayName(name: string | null | undefined, email: string | null | undefined) {
+  const trimmedName = name?.trim();
+  if (trimmedName) {
+    return trimmedName;
+  }
+
+  if (email) {
+    return email.split("@")[0] ?? email;
+  }
+
+  return "Account";
 }
 
 function SignOutMenuItem() {
@@ -46,13 +69,21 @@ function SignOutMenuItem() {
 
 export function UserAccount({
   email,
+  name,
   className,
   compact = false,
   inSidebar = true,
 }: UserAccountProps) {
+  const isHeaderChrome = compact && !inSidebar;
   const displayEmail = email ?? "Signed in";
+  const displayLabel = isHeaderChrome
+    ? getHeaderDisplayName(name, email)
+    : displayEmail;
   const textPrimary = inSidebar ? "text-sidebar-foreground" : "text-foreground";
   const textSecondary = inSidebar ? "text-sidebar-muted-foreground" : "text-muted-foreground";
+  const labelClass = isHeaderChrome
+    ? "text-muted-foreground font-normal"
+    : cn("font-medium", textPrimary);
   const triggerSurface = inSidebar
     ? "rounded-xl p-2 transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] active:scale-[0.99]"
     : "rounded-2xl hover:bg-muted";
@@ -91,7 +122,7 @@ export function UserAccount({
                   : "bg-primary text-primary-foreground"
               )}
             >
-              {getInitials(email)}
+              {getInitials(name, email)}
             </span>
             {!compact ? (
               <span className="min-w-0 flex-1 text-left">
@@ -101,13 +132,8 @@ export function UserAccount({
                 <span className={cn("block text-[11px]", textSecondary)}>Account</span>
               </span>
             ) : (
-              <span
-                className={cn(
-                  "hidden truncate text-sm font-medium sm:block",
-                  textPrimary
-                )}
-              >
-                {displayEmail}
+              <span className={cn("hidden truncate text-sm sm:block", labelClass)}>
+                {displayLabel}
               </span>
             )}
             {!compact ? (

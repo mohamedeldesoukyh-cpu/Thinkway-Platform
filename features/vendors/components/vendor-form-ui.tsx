@@ -11,7 +11,9 @@ import {
   CLIENT_FORM_MAX_WIDTH,
   CLIENT_FORM_PRIMARY_BUTTON_CLASS,
   CLIENT_FORM_SCROLL_PADDING_CLASS,
+  useClientProfilePlatformV6,
 } from "@/features/clients/components/client-form-ui";
+import { PlatformV6PageSectionHeader } from "@/components/platform/platform-v6-layout";
 import { cn } from "@/lib/utils";
 
 export {
@@ -30,7 +32,7 @@ export const VENDOR_PROFILE_BREADCRUMBS = [
   { label: "Creator workspace" },
 ] as const;
 
-/** Form_4 shell for vendor profile tabs — matches client profile tab layout. */
+/** Form shell for vendor profile tabs — matches client profile tab layout. */
 export function VendorProfileTabShell({
   title,
   description,
@@ -56,6 +58,17 @@ export function VendorProfileTabShell({
   onDiscard?: () => void;
   discardDisabled?: boolean;
 }) {
+  const platformV6 = useClientProfilePlatformV6();
+
+  if (platformV6) {
+    return (
+      <div className="platform-v6-epanel-inner">
+        <PlatformV6PageSectionHeader title={title} description={description} />
+        {children}
+      </div>
+    );
+  }
+
   return (
     <ClientFormLayout
       topbar={

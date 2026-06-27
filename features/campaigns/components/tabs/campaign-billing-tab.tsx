@@ -9,9 +9,7 @@ import { DetailClickableLabel } from "@/features/campaigns/components/detail-she
 import { InvoiceDetailSheet } from "@/features/campaigns/components/detail-sheets/invoice-detail-sheet";
 import { PaymentDetailSheet } from "@/features/campaigns/components/detail-sheets/payment-detail-sheet";
 import { format } from "date-fns";
-import { PlusIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
@@ -30,8 +28,8 @@ import {
 } from "@/components/ui/select";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import {
-  FINANCE_INVOICE_REGISTER_COLUMN_METAS_WITH_ACTIONS,
   FinanceInvoiceRegisterTable,
+  getFinanceInvoiceRegisterColumnMetas,
 } from "@/features/finance/invoices/components/finance-invoice-register-table";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 import {
@@ -83,6 +81,14 @@ import { cn } from "@/lib/utils";
 
 type CampaignPaymentRow = CampaignWorkspace["payments"][number];
 
+function paymentStatusBadgeClass(status: string): string {
+  const key = status.toLowerCase();
+  if (key === "paid" || key === "completed") return "thinkway-campaign-badge-green";
+  if (key === "pending" || key === "processing") return "thinkway-campaign-badge-blue";
+  if (key === "failed" || key === "cancelled") return "thinkway-campaign-badge-red";
+  return "thinkway-campaign-badge-gray";
+}
+
 function buildCampaignPaymentsColumns(
   onOpenDetail: (id: string) => void
 ): OperationalConfigurableColumnDef<CampaignPaymentRow>[] {
@@ -95,7 +101,7 @@ function buildCampaignPaymentsColumns(
         <DetailClickableLabel
           onClick={() => onOpenDetail(p.id)}
           title={`View ${p.document_number} details`}
-          className="font-mono text-[11px]"
+          className="thinkway-campaign-link-btn font-mono text-[11px]"
         >
           <DocumentNumber value={p.document_number} />
         </DetailClickableLabel>
@@ -118,15 +124,15 @@ function buildCampaignPaymentsColumns(
       id: "status",
       label: "Status",
       renderCell: (p) => (
-        <Badge variant="outline" className="text-[10px] capitalize">
+        <span className={cn("thinkway-campaign-badge capitalize", paymentStatusBadgeClass(p.status))}>
           {p.status}
-        </Badge>
+        </span>
       ),
     },
     {
       id: "paid_at",
       label: "Paid at",
-      cellClassName: "text-muted-foreground",
+      cellClassName: "text-[11px] text-[var(--camp-text-3)]",
       renderCell: (p) => formatBillingDateTime(p.paid_at),
     },
   ];
@@ -181,6 +187,11 @@ export function CampaignBillingTab({
   const [regenerateInvoiceOpen, setRegenerateInvoiceOpen] = useState(false);
   const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(null);
   const [detailPaymentId, setDetailPaymentId] = useState<string | null>(null);
+
+  const campaignInvoiceColumnMetas = useMemo(
+    () => getFinanceInvoiceRegisterColumnMetas(true, "campaign"),
+    []
+  );
 
   const paymentColumns = useMemo(
     () => buildCampaignPaymentsColumns(setDetailPaymentId),
@@ -337,20 +348,45 @@ export function CampaignBillingTab({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          Billing lifecycle: draft → approved → moved to billing → partially invoiced → invoiced → paid → closed
-        </p>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" asChild>
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="thinkway-campaign-billing-flow">
+          <span className="thinkway-campaign-billing-flow-step">draft</span>
+          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+            →
+          </span>
+          <span className="thinkway-campaign-billing-flow-step">approved</span>
+          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+            →
+          </span>
+          <span className="thinkway-campaign-billing-flow-step">moved to billing</span>
+          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+            →
+          </span>
+          <span className="thinkway-campaign-billing-flow-step">partially invoiced</span>
+          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+            →
+          </span>
+          <span className="thinkway-campaign-billing-flow-step">invoiced</span>
+          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+            →
+          </span>
+          <span className="thinkway-campaign-billing-flow-step">paid</span>
+          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+            →
+          </span>
+          <span className="thinkway-campaign-billing-flow-step">closed</span>
+        </div>
+        <div className="flex flex-wrap gap-[5px]">
+          <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
             <Link href="/finance/invoices">Invoice register</Link>
           </Button>
-          <Button size="sm" variant="outline" asChild>
+          <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
             <Link href="/billing">Finance workspace</Link>
           </Button>
           <Button
             size="sm"
+            className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[30px] text-[11px] shadow-none"
             onClick={() => {
               if (operationalBilling) {
                 beginInvoiceFlow(undefined);
@@ -359,8 +395,7 @@ export function CampaignBillingTab({
               }
             }}
           >
-            <PlusIcon data-icon="inline-start" />
-            Create new invoice
+            + Create new invoice
           </Button>
         </div>
       </div>
@@ -370,52 +405,52 @@ export function CampaignBillingTab({
         operationalRows={operationalBilling?.operational_rows}
       />
 
-      {operationalBilling ? (
-        <OperationalTableSuiteProvider
-          tableId={OPERATIONAL_TABLE_IDS.campaignConsolidatedInvoiceQueue}
-          columns={operationalColumnsFromMetas(CAMPAIGN_CONSOLIDATED_INVOICE_QUEUE_COLUMN_METAS, {
-            campaign_number: (row: ConsolidatedInvoiceQueueRow) => row.campaign_document_number,
-            client: (row: ConsolidatedInvoiceQueueRow) => row.client_name,
-            brand: (row: ConsolidatedInvoiceQueueRow) => row.brand_name,
-            campaign_name: (row: ConsolidatedInvoiceQueueRow) => row.campaign_name,
-            revenue_before_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_before_vat,
-            vat_amount: (row: ConsolidatedInvoiceQueueRow) => row.vat_amount,
-            revenue_after_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_after_vat,
-          })}
-          rows={billingQueueRows}
-          filterAccessors={{
-            campaign_number: (row: ConsolidatedInvoiceQueueRow) => row.campaign_document_number,
-            client: (row: ConsolidatedInvoiceQueueRow) => row.client_name,
-            brand: (row: ConsolidatedInvoiceQueueRow) => row.brand_name,
-            campaign_name: (row: ConsolidatedInvoiceQueueRow) => row.campaign_name,
-            revenue_before_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_before_vat,
-            vat_amount: (row: ConsolidatedInvoiceQueueRow) => row.vat_amount,
-            revenue_after_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_after_vat,
-          }}
-        >
-          <OperationalTableSection
-            wide
-            tableOnly
-            cardSurface
-            compact
-            className={operationalFloatingBarContentClass(selectedQueueBatchKeys.size > 0)}
-            leading={
-              <div className="flex w-full flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                  Billing queue
-                </h2>
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.campaignConsolidatedInvoiceQueue}
+        columns={operationalColumnsFromMetas(CAMPAIGN_CONSOLIDATED_INVOICE_QUEUE_COLUMN_METAS, {
+          campaign_number: (row: ConsolidatedInvoiceQueueRow) => row.campaign_document_number,
+          client: (row: ConsolidatedInvoiceQueueRow) => row.client_name,
+          brand: (row: ConsolidatedInvoiceQueueRow) => row.brand_name,
+          campaign_name: (row: ConsolidatedInvoiceQueueRow) => row.campaign_name,
+          revenue_before_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_before_vat,
+          vat_amount: (row: ConsolidatedInvoiceQueueRow) => row.vat_amount,
+          revenue_after_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_after_vat,
+        })}
+        rows={billingQueueRows}
+        filterAccessors={{
+          campaign_number: (row: ConsolidatedInvoiceQueueRow) => row.campaign_document_number,
+          client: (row: ConsolidatedInvoiceQueueRow) => row.client_name,
+          brand: (row: ConsolidatedInvoiceQueueRow) => row.brand_name,
+          campaign_name: (row: ConsolidatedInvoiceQueueRow) => row.campaign_name,
+          revenue_before_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_before_vat,
+          vat_amount: (row: ConsolidatedInvoiceQueueRow) => row.vat_amount,
+          revenue_after_vat: (row: ConsolidatedInvoiceQueueRow) => row.revenue_after_vat,
+        }}
+      >
+        <OperationalTableSection
+          wide
+          tableOnly
+          cardSurface
+          compact
+          className={operationalFloatingBarContentClass(selectedQueueBatchKeys.size > 0)}
+          leading={
+            <CampaignOperationalSectionHeader
+              title="Billing queue"
+              actions={
                 <OperationalTableControlsSlot contextLabel="Consolidated invoice queue" />
-              </div>
-            }
-          >
-            <CampaignBillingQueueTable
-              rows={billingQueueRows}
-              selectedBatchKeys={selectedQueueBatchKeys}
-              activeBatchKey={activeQueueBatchKey}
-              onToggleRowSelect={toggleQueueBatchSelection}
-              onSelectRow={(row) => openQueueDrilldown(row.batch_key)}
+              }
             />
-          </OperationalTableSection>
+          }
+        >
+          <CampaignBillingQueueTable
+            rows={billingQueueRows}
+            selectedBatchKeys={selectedQueueBatchKeys}
+            activeBatchKey={activeQueueBatchKey}
+            onToggleRowSelect={toggleQueueBatchSelection}
+            onSelectRow={(row) => openQueueDrilldown(row.batch_key)}
+          />
+        </OperationalTableSection>
+        {operationalBilling ? (
           <CampaignBillingQueueFloatingBar
             rows={billingQueueRows}
             selectedBatchKeys={selectedQueueBatchKeys}
@@ -423,8 +458,8 @@ export function CampaignBillingTab({
             onClear={() => setSelectedQueueBatchKeys(new Set())}
             onGenerateInvoice={handleQueueGenerateInvoice}
           />
-        </OperationalTableSuiteProvider>
-      ) : null}
+        ) : null}
+      </OperationalTableSuiteProvider>
 
       {!operationalBilling ? (
         <OperationalTableSuiteProvider
@@ -446,14 +481,12 @@ export function CampaignBillingTab({
               />
             }
           >
-            <div className="p-4">
-              <AssignmentBillingGroupsTable
-                groups={billingGroups}
-                billingLines={billingLines}
-                currency={currency}
-                campaignId={workspace.id}
-              />
-            </div>
+            <AssignmentBillingGroupsTable
+              groups={billingGroups}
+              billingLines={billingLines}
+              currency={currency}
+              campaignId={workspace.id}
+            />
           </OperationalTableSection>
         </OperationalTableSuiteProvider>
       ) : (
@@ -494,10 +527,12 @@ export function CampaignBillingTab({
           }
         >
           {!drilldownVisible ? (
-            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-              Click the campaign number in the billing queue to open assignment-level operational
-              billing.
-            </p>
+            <div className="thinkway-campaign-empty-state">
+              <p>
+                Click the campaign number in the billing queue to open assignment-level operational
+                billing.
+              </p>
+            </div>
           ) : (
             <div
               className={cn(
@@ -523,7 +558,7 @@ export function CampaignBillingTab({
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignInvoiceRegister}
         columns={operationalColumnsFromMetas(
-          FINANCE_INVOICE_REGISTER_COLUMN_METAS_WITH_ACTIONS,
+          campaignInvoiceColumnMetas,
           FINANCE_INVOICE_REGISTER_FILTER_ACCESSORS
         )}
         rows={campaignInvoiceRegister}
@@ -544,6 +579,7 @@ export function CampaignBillingTab({
           <FinanceInvoiceRegisterTable
             rows={campaignInvoiceRegister}
             showUngenerate
+            appearance="campaign"
             onOpenDetail={(row) => setDetailInvoiceId(row.id)}
           />
         </OperationalTableSection>
@@ -574,7 +610,9 @@ export function CampaignBillingTab({
           }
         >
           {workspace.payments.length === 0 ? (
-            <p className="px-4 py-8 text-sm text-muted-foreground">No payments recorded.</p>
+            <div className="thinkway-campaign-empty-state">
+              <p>No payments recorded.</p>
+            </div>
           ) : (
             <OperationalConfigurableTable
               columns={paymentColumns}

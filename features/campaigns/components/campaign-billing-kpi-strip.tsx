@@ -1,24 +1,40 @@
 "use client";
 
-import {
-  FileTextIcon,
-  PercentIcon,
-  ReceiptIcon,
-  TrendingUpIcon,
-  WalletIcon,
-} from "lucide-react";
-
-import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import { sumIoGatedAssignmentBillable } from "@/lib/billing/queue-eligibility";
 import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
+import { cn } from "@/lib/utils";
 
 type CampaignBillingKpiStripProps = {
   workspace: CampaignWorkspace;
   /** When set, revenue / PO consumed reflect Vendor-IO-gated billable only. */
   operationalRows?: OperationalBillingRow[];
 };
+
+type BillingKpiCellProps = {
+  label: string;
+  value: string;
+  tone?: "amber" | "blue" | "red";
+};
+
+function BillingKpiCell({ label, value, tone }: BillingKpiCellProps) {
+  return (
+    <div className="thinkway-campaign-kpi-cell">
+      <div className="thinkway-campaign-kpi-lbl">{label}</div>
+      <div
+        className={cn(
+          "thinkway-campaign-kpi-val tabular-nums",
+          tone === "amber" && "thinkway-campaign-c-amber",
+          tone === "blue" && "thinkway-campaign-c-blue",
+          tone === "red" && "thinkway-campaign-c-red"
+        )}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
 
 export function CampaignBillingKpiStrip({
   workspace,
@@ -35,67 +51,40 @@ export function CampaignBillingKpiStrip({
   const billingPoConsumed = ioGatedBillable ?? financials.po_consumed;
   const billingRemainingPo = financials.po_total - billingPoConsumed;
 
-  const poAlert =
-    financials.po_exceeded || workspace.po.po_status === "exceeded"
-      ? ("danger" as const)
-      : workspace.po.po_status === "near_limit"
-        ? ("warning" as const)
-        : undefined;
-
-  const items: KpiCarouselItem[] = [
-    {
-      id: "po-total",
-      label: "PO total",
-      value: formatMoney(financials.po_total, currency),
-      icon: WalletIcon,
-      accentKey: "blue",
-      alert: poAlert,
-    },
-    {
-      id: "po-consumed",
-      label: "PO consumed",
-      value: formatMoney(billingPoConsumed, currency),
-      icon: ReceiptIcon,
-      accentKey: "pink",
-      alert: poAlert,
-    },
-    {
-      id: "remaining-po",
-      label: "Remaining PO",
-      value: formatMoney(billingRemainingPo, currency),
-      icon: WalletIcon,
-      accentKey: "amber",
-      alert: poAlert,
-    },
-    {
-      id: "revenue",
-      label: "Revenue",
-      value: formatMoney(billingRevenue, currency),
-      icon: TrendingUpIcon,
-      accentKey: "purple",
-    },
-    {
-      id: "collected",
-      label: "Collected",
-      value: formatMoney(financials.collected, currency),
-      icon: TrendingUpIcon,
-      accentKey: "green",
-    },
-    {
-      id: "outstanding",
-      label: "Outstanding",
-      value: formatMoney(financials.billing_outstanding, currency),
-      icon: FileTextIcon,
-      accentKey: "blue",
-    },
-    {
-      id: "margin",
-      label: "Margin",
-      value: formatPercent(financials.margin_percent ?? 0),
-      icon: PercentIcon,
-      accentKey: "green",
-    },
-  ];
-
-  return <KpiStrip items={items} />;
+  return (
+    <div className="thinkway-campaign-kpi-strip thinkway-campaign-kpi-strip--billing">
+      <BillingKpiCell
+        label="PO total"
+        value={formatMoney(financials.po_total, currency)}
+        tone="amber"
+      />
+      <BillingKpiCell
+        label="PO consumed"
+        value={formatMoney(billingPoConsumed, currency)}
+        tone="amber"
+      />
+      <BillingKpiCell
+        label="Remaining PO"
+        value={formatMoney(billingRemainingPo, currency)}
+      />
+      <BillingKpiCell
+        label="Revenue"
+        value={formatMoney(billingRevenue, currency)}
+        tone="blue"
+      />
+      <BillingKpiCell
+        label="Collected"
+        value={formatMoney(financials.collected, currency)}
+      />
+      <BillingKpiCell
+        label="Outstanding"
+        value={formatMoney(financials.billing_outstanding, currency)}
+        tone={financials.billing_outstanding > 0 ? "red" : undefined}
+      />
+      <BillingKpiCell
+        label="Margin"
+        value={formatPercent(financials.margin_percent ?? 0)}
+      />
+    </div>
+  );
 }

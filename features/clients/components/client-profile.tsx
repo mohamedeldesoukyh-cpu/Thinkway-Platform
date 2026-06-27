@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import {
+  PlatformV6EntityBreadcrumb,
+  platformV6BadgeClass,
+} from "@/components/platform/platform-v6-layout";
 import { Tabs } from "@/components/ui/tabs";
 import {
   OperationalWorkspaceTabContent,
@@ -25,19 +29,22 @@ import type {
 import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 import type { ClientDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
+import {
+  isClientOnboardingStatus,
+  ONBOARDING_STATUS_LABELS,
+  type ClientOnboardingStatus,
+} from "@/lib/clients/onboarding-status";
 
-import { ClientProfileTabShell } from "./client-form-ui";
+import { ClientProfileTabShell, ClientProfilePlatformProvider } from "./client-form-ui";
 import { ClientAccessTab } from "./tabs/client-access-tab";
 import { ClientBrandsTab } from "./tabs/client-brands-tab";
 import { ClientCampaignsTab } from "./tabs/client-campaigns-tab";
-import { ClientClientIosTab } from "./tabs/client-client-ios-tab";
+import { ClientClientIosTab, CLIENT_IO_SAVE_FORM_ID } from "./tabs/client-client-ios-tab";
 import { ClientFinanceTab } from "./tabs/client-finance-tab";
 import { ClientLegalTab } from "./tabs/client-legal-tab";
 import { ClientOverviewTab } from "./tabs/client-overview-tab";
 import { OnboardingWorkspace } from "./onboarding-workspace";
-import { OnboardingStatusBadge } from "./onboarding-status-badge";
-import { isClientOnboardingStatus } from "@/lib/clients/onboarding-status";
-import type { ClientOnboardingTimelineEvent } from "@/features/clients/onboarding-queries";
 
 type ClientProfileProps = {
   client: ClientDetail;
@@ -47,10 +54,55 @@ type ClientProfileProps = {
   clientIoRecipients: ClientIoSendRecipient[];
   clientAccessEntity: ClientAccessEntityRow | null;
   assignableClientProfiles: AssignableClientProfileRow[];
-  onboardingTimeline?: ClientOnboardingTimelineEvent[];
+  onboardingTimeline?: import("@/features/clients/onboarding-queries").ClientOnboardingTimelineEvent[];
   canEditOnboardingChecklist?: boolean;
   canOverrideOnboardingStatus?: boolean;
 };
+
+const TAB_SAVE_LABELS: Record<ClientProfileTabId, string> = {
+  overview: "Save changes",
+  brands: "Save",
+  legal: "Save legal",
+  finance: "Save finance",
+  "client-ios": "Save draft",
+  campaigns: "Save",
+  access: "Save",
+};
+
+const TAB_FORM_IDS: Partial<Record<ClientProfileTabId, string>> = {
+  overview: "client-overview-form",
+  legal: "client-legal-form",
+  finance: "client-finance-form",
+  "client-ios": CLIENT_IO_SAVE_FORM_ID,
+};
+
+function resolveEntityStatusBadge(client: ClientDetail): {
+  label: string;
+  className: string;
+} {
+  if (isClientOnboardingStatus(client.onboarding_status)) {
+    const status = client.onboarding_status as ClientOnboardingStatus;
+    if (status === "active") {
+      return { label: ONBOARDING_STATUS_LABELS.active, className: platformV6BadgeClass("outline-green") };
+    }
+    if (status === "legal_pending") {
+      return {
+        label: ONBOARDING_STATUS_LABELS.legal_pending,
+        className: platformV6BadgeClass("outline-amber"),
+      };
+    }
+    return { label: ONBOARDING_STATUS_LABELS[status], className: platformV6BadgeClass("gray") };
+  }
+
+  const label =
+    CLIENT_STATUS_OPTIONS.find((option) => option.value === client.status)?.label ??
+    client.status;
+  const className =
+    client.status === "active"
+      ? platformV6BadgeClass("outline-green")
+      : platformV6BadgeClass("gray");
+  return { label, className };
+}
 
 export function ClientProfile({
   client,
@@ -74,6 +126,7 @@ export function ClientProfile({
   });
 
   const handleCancel = () => router.push("/clients");
+  const entityBadge = resolveEntityStatusBadge(client);
 
   const tabsById = useMemo(
     (): Record<ClientProfileTabId, OperationalWorkspaceTabDef> => ({
@@ -102,35 +155,35 @@ export function ClientProfile({
   const tabPanels = (
     <>
       <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
-        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
-          <div className="shrink-0 border-b border-border px-[26px] py-2">
-            <OnboardingWorkspace
-              clientId={client.id}
-              status={client.onboarding_status}
-              completion={{
-                legal_completed_at: client.legal_completed_at,
-                finance_completed_at: client.finance_completed_at,
-                contracts_completed_at: client.contracts_completed_at,
-                tax_completed_at: client.tax_completed_at,
-              }}
-              activatedAt={client.activated_at ?? null}
-              timeline={onboardingTimeline}
-              canEditChecklist={canEditOnboardingChecklist}
-              canOverrideStatus={canOverrideOnboardingStatus}
-              collapsible
-            />
-          </div>
+        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientOverviewTab
             client={client}
             groups={groups}
             masterData={masterData}
             onCancel={handleCancel}
             shortcutsEnabled={activeTab === "overview"}
+            onboardingSlot={
+              <OnboardingWorkspace
+                clientId={client.id}
+                status={client.onboarding_status}
+                completion={{
+                  legal_completed_at: client.legal_completed_at,
+                  finance_completed_at: client.finance_completed_at,
+                  contracts_completed_at: client.contracts_completed_at,
+                  tax_completed_at: client.tax_completed_at,
+                }}
+                activatedAt={client.activated_at ?? null}
+                timeline={onboardingTimeline}
+                canEditChecklist={canEditOnboardingChecklist}
+                canOverrideStatus={canOverrideOnboardingStatus}
+                platformV6
+              />
+            }
           />
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="brands" className={tabPanelClassName}>
-        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
+        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientBrandsTab
             client={client}
             masterData={masterData}
@@ -141,7 +194,7 @@ export function ClientProfile({
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="legal" className={tabPanelClassName}>
-        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
+        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientLegalTab
             client={client}
             onCancel={handleCancel}
@@ -150,7 +203,7 @@ export function ClientProfile({
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="finance" className={tabPanelClassName}>
-        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
+        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientFinanceTab
             client={client}
             currencyOptions={currencyOptions}
@@ -160,7 +213,7 @@ export function ClientProfile({
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="client-ios" className={tabPanelClassName}>
-        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
+        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientClientIosTab
             clientId={client.id}
             clientName={client.name}
@@ -172,12 +225,12 @@ export function ClientProfile({
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="campaigns" className={tabPanelClassName}>
-        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
+        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientCampaignsTab client={client} onCancel={handleCancel} />
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="access" className={tabPanelClassName}>
-        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col min-h-0 overflow-hidden">
+        <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientProfileTabShell
             title="Client access"
             description="Manage portal users and roles for this legal entity."
@@ -194,7 +247,8 @@ export function ClientProfile({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
+    <ClientProfilePlatformProvider platformV6>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
         onValueChange={(value) => {
@@ -204,44 +258,71 @@ export function ClientProfile({
         }}
         className="mt-0 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
       >
-        <nav
-          aria-label="Legal entity workspace sections"
-          className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-[26px] py-2.5"
-        >
-          <div className="mr-2 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">{client.name}</span>
-            {isClientOnboardingStatus(client.onboarding_status) ? (
-              <OnboardingStatusBadge status={client.onboarding_status} />
-            ) : null}
+        <div className="platform-v6-entity-nav-bar">
+          <div className="platform-v6-entity-nav-inner">
+            <span className="platform-v6-entity-title">{client.name}</span>
+            <span className={entityBadge.className}>{entityBadge.label}</span>
+            <span className="platform-v6-also-view">Also View</span>
           </div>
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9099A8]">
-            Also view
-          </span>
-          {tabOrder.map((tabId) => {
-            const tab = tabsById[tabId];
-            const isActive = activeTab === tabId;
-            return (
-              <button
-                key={tabId}
-                type="button"
-                onClick={() => setActiveTab(tabId)}
-                className={cn(
-                  "text-[13px] font-medium transition-colors",
-                  isActive
-                    ? "font-semibold text-primary"
-                    : "text-muted-foreground hover:text-primary"
-                )}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {tab.label}
-                {tab.count != null ? ` (${tab.count})` : ""}
-              </button>
-            );
-          })}
-        </nav>
+          <div className="platform-v6-entity-tabs-row" role="tablist">
+            {tabOrder.map((tabId) => {
+              const tab = tabsById[tabId];
+              const isActive = activeTab === tabId;
+              return (
+                <button
+                  key={tabId}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tabId)}
+                  className={cn("platform-v6-etab", isActive && "active")}
+                >
+                  {tab.label}
+                  {tab.count != null ? ` (${tab.count})` : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-        {tabPanels}
+        <PlatformV6EntityBreadcrumb
+          crumbs={[
+            { label: "Clients", href: "/clients" },
+            { label: "Legal Entities", href: "/clients" },
+            { label: "Edit" },
+          ]}
+          actions={
+            <>
+              <button
+                type="button"
+                className="platform-v6-btn platform-v6-btn-sm"
+                onClick={handleCancel}
+              >
+                Cancel
+              </button>
+              {TAB_FORM_IDS[activeTab] ? (
+                <button
+                  type="submit"
+                  form={TAB_FORM_IDS[activeTab]}
+                  className="platform-v6-btn platform-v6-btn-primary platform-v6-btn-sm"
+                >
+                  {TAB_SAVE_LABELS[activeTab]}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="platform-v6-btn platform-v6-btn-primary platform-v6-btn-sm"
+                >
+                  {TAB_SAVE_LABELS[activeTab]}
+                </button>
+              )}
+            </>
+          }
+        />
+
+        <div className="min-h-0 flex-1 overflow-y-auto">{tabPanels}</div>
       </Tabs>
     </div>
+    </ClientProfilePlatformProvider>
   );
 }

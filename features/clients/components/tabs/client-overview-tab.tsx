@@ -3,10 +3,10 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import {
   ChevronDownIcon,
-  ClipboardListIcon,
   DollarSignIcon,
   FileTextIcon,
   MapPinIcon,
+  UserIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,7 +53,13 @@ import {
 } from "@/features/clients/constants";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
 import type { ClientDetail, ClientStatus } from "@/types/database";
+import type { ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
+import {
+  PLATFORM_V6_ICON_AMBER,
+  PLATFORM_V6_ICON_GREEN,
+} from "@/components/platform/platform-v6-layout";
 
 type ClientOverviewTabProps = {
   client: ClientDetail;
@@ -62,6 +68,7 @@ type ClientOverviewTabProps = {
   onCancel?: () => void;
   /** When false, Ctrl+S is not wired to this form (e.g. another profile tab is active). */
   shortcutsEnabled?: boolean;
+  onboardingSlot?: React.ReactNode;
 };
 
 export function ClientOverviewTab({
@@ -70,6 +77,7 @@ export function ClientOverviewTab({
   masterData,
   onCancel,
   shortcutsEnabled = true,
+  onboardingSlot,
 }: ClientOverviewTabProps) {
   const [status, setStatus] = useState(client.status);
   const [groupId, setGroupId] = useState(client.group_id ?? "");
@@ -254,6 +262,7 @@ export function ClientOverviewTab({
     <ClientProfileTabShell
       title="Edit legal entity"
       description="Update the client's profile, billing, and default insertion-order terms."
+      beforeHeader={onboardingSlot}
       onCancel={handleCancel}
       saveFormId="client-overview-form"
       saveDisabled={isPending}
@@ -326,11 +335,11 @@ export function ClientOverviewTab({
         ) : null}
 
         <ClientFormSection
-          icon={ClipboardListIcon}
+          icon={UserIcon}
           title="Identity"
           description="Legal name and classification"
         >
-          <ClientFormGrid>
+          <ClientFormGrid columns={3}>
             <ClientFormField label="Client name (English)" htmlFor="name">
               <Input
                 id="name"
@@ -365,96 +374,98 @@ export function ClientOverviewTab({
               />
               <FieldError messages={state.fieldErrors?.name_ar} />
             </ClientFormField>
+            <div className="hidden md:block" aria-hidden />
           </ClientFormGrid>
 
-          <ClientCategoryFields
-            categorySlug={categorySlug}
-            subcategorySlug={subcategorySlug}
-            onCategoryChange={(value) => {
-              setCategoryManuallySet(true);
-              setCategorySlug(value);
-              setClassificationMeta(null);
-              markDirty();
-            }}
-            onSubcategoryChange={(value) => {
-              setCategoryManuallySet(true);
-              setSubcategorySlug(value);
-              setClassificationMeta(null);
-              markDirty();
-            }}
-            disabled={isPending}
-            layout="grid"
-          />
+          <ClientFormGrid columns={3}>
+            <ClientCategoryFields
+              categorySlug={categorySlug}
+              subcategorySlug={subcategorySlug}
+              onCategoryChange={(value) => {
+                setCategoryManuallySet(true);
+                setCategorySlug(value);
+                setClassificationMeta(null);
+                markDirty();
+              }}
+              onSubcategoryChange={(value) => {
+                setCategoryManuallySet(true);
+                setSubcategorySlug(value);
+                setClassificationMeta(null);
+                markDirty();
+              }}
+              disabled={isPending}
+              layout="inline"
+            />
+            <ClientFormField label="Administration">
+              <details className="platform-v6-admin-details group">
+                <summary>
+                  <span>Administration</span>
+                  <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="platform-v6-admin-details-body">
+                  <ClientFormField label="Legal name" htmlFor="legal_name">
+                    <Input
+                      id="legal_name"
+                      name="legal_name"
+                      className={CLIENT_FORM_INPUT_CLASS}
+                      value={legalName}
+                      onChange={(e) => {
+                        setLegalName(e.target.value);
+                        markDirty();
+                      }}
+                      disabled={isPending}
+                    />
+                    <FieldError messages={state.fieldErrors?.legal_name} />
+                  </ClientFormField>
+                  <ClientFormField label="Group">
+                    <SearchableSelect
+                      value={groupId}
+                      onValueChange={(value) => {
+                        setGroupId(value);
+                        markDirty();
+                      }}
+                      options={groupOptions}
+                      disabled={isPending}
+                      className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+                    />
+                    <FieldError messages={state.fieldErrors?.group_id} />
+                  </ClientFormField>
+                  <ClientFormField label="Status">
+                    <Select
+                      value={status}
+                      onValueChange={(v) => {
+                        setStatus(v as ClientStatus);
+                        markDirty();
+                      }}
+                      disabled={isPending}
+                    >
+                      <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CLIENT_STATUS_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </ClientFormField>
+                </div>
+              </details>
+            </ClientFormField>
+          </ClientFormGrid>
           <FieldError messages={state.fieldErrors?.client_category} />
           <FieldError messages={state.fieldErrors?.client_subcategory} />
-
-          <details className="group rounded-[12px] border border-border bg-muted open:bg-card">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[13px] font-semibold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
-              <span>Administration</span>
-              <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <div className="space-y-[18px] border-t border-border px-4 py-4">
-              <ClientFormField label="Legal name" htmlFor="legal_name">
-                <Input
-                  id="legal_name"
-                  name="legal_name"
-                  className={CLIENT_FORM_INPUT_CLASS}
-                  value={legalName}
-                  onChange={(e) => {
-                    setLegalName(e.target.value);
-                    markDirty();
-                  }}
-                  disabled={isPending}
-                />
-                <FieldError messages={state.fieldErrors?.legal_name} />
-              </ClientFormField>
-
-              <ClientFormGrid>
-                <ClientFormField label="Group">
-                  <SearchableSelect
-                    value={groupId}
-                    onValueChange={(value) => {
-                      setGroupId(value);
-                      markDirty();
-                    }}
-                    options={groupOptions}
-                    disabled={isPending}
-                    className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
-                  />
-                  <FieldError messages={state.fieldErrors?.group_id} />
-                </ClientFormField>
-                <ClientFormField label="Status">
-                  <Select
-                    value={status}
-                    onValueChange={(v) => {
-                      setStatus(v as ClientStatus);
-                      markDirty();
-                    }}
-                    disabled={isPending}
-                  >
-                    <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CLIENT_STATUS_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </ClientFormField>
-              </ClientFormGrid>
-            </div>
-          </details>
         </ClientFormSection>
 
         <ClientFormSection
           icon={DollarSignIcon}
+          iconClassName={PLATFORM_V6_ICON_GREEN}
           title="Commercial"
           description="Rates and online presence"
         >
-          <ClientFormGrid>
+          <ClientFormGrid columns={3}>
             <ClientFormField
               label="Default VR%"
               hint="Brands inherit this rate unless they set an explicit VR% override."
@@ -491,15 +502,17 @@ export function ClientOverviewTab({
               />
               <FieldError messages={state.fieldErrors?.website} />
             </ClientFormField>
+            <div className="hidden md:block" aria-hidden />
           </ClientFormGrid>
         </ClientFormSection>
 
         <ClientFormSection
           icon={MapPinIcon}
+          iconClassName={PLATFORM_V6_ICON_AMBER}
           title="Location & billing"
           description="Where invoices are sent"
         >
-          <ClientFormGrid>
+          <ClientFormGrid columns={3}>
             <ClientFormField label="Country">
               <SearchableSelect
                 value={country}
@@ -527,9 +540,10 @@ export function ClientOverviewTab({
               />
               <FieldError messages={state.fieldErrors?.city} />
             </ClientFormField>
+            <div className="hidden md:block" aria-hidden />
           </ClientFormGrid>
 
-          <ClientFormGrid>
+          <ClientFormGrid columns={3}>
             <ClientFormField label="Billing email" htmlFor="billing_email">
               <Input
                 id="billing_email"
@@ -559,6 +573,7 @@ export function ClientOverviewTab({
                 placeholder="+20 1XX XXX XXXX"
               />
             </ClientFormField>
+            <div className="hidden md:block" aria-hidden />
           </ClientFormGrid>
 
           <ClientFormField label="Notes" htmlFor="notes">

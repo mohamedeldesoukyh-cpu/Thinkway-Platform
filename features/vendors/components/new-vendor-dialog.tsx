@@ -150,10 +150,10 @@ export function NewVendorDialog({ currencyOptions }: NewVendorDialogProps) {
       }}
     >
       <DialogTrigger asChild>
-        <Button>
-          <PlusIcon data-icon="inline-start" />
+        <button type="button" className="platform-v6-btn platform-v6-btn-primary">
+          <PlusIcon className="size-3.5" aria-hidden />
           New Vendor
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent className="max-h-[min(90vh,840px)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>

@@ -61,6 +61,7 @@ export type VendorIoRow = {
   assignment_document_number: string | null;
   influencer_id: string;
   influencer_name: string;
+  creator_avatar_url: string | null;
   amount: number;
   currency_code: string;
   status: VendorIoStatus;

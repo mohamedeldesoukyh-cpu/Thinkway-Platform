@@ -2,9 +2,12 @@
 
 import { FileTextIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { OperationalFloatingActionBar } from "@/components/workspace/operational-floating-action-bar";
+import {
+  OperationalFloatingActionBar,
+  PlatformFloatingBarDivider,
+  PlatformFloatingBarPrimaryButton,
+  PlatformFloatingBarSelection,
+} from "@/components/workspace/operational-floating-action-bar";
 import { formatMoney } from "@/features/campaigns/utils";
 
 type AssignmentTotalsFooterProps = {
@@ -26,27 +29,34 @@ export function AssignmentTotalsFooter({
 
   return (
     <OperationalFloatingActionBar visible={visible} className={className}>
-      <Badge
-        variant="secondary"
-        className="h-6 shrink-0 rounded-full px-2.5 text-[11px] font-semibold"
-      >
-        {selectedCount} selected
-      </Badge>
-      <span className="shrink-0 text-xs text-muted-foreground">
+      <PlatformFloatingBarSelection
+        selectedCount={selectedCount}
+        selectionLabel="line"
+        onClearSelection={() => {}}
+        showClearButton={false}
+      />
+
+      <PlatformFloatingBarDivider />
+
+      <span className="shrink-0 px-2 text-xs text-muted-foreground">
         Invoice{" "}
         <span className="font-semibold text-foreground">
           {formatMoney(selectedTotal, currency)}
         </span>
       </span>
-      <Button
-        type="button"
-        size="sm"
-        className="ml-auto h-8 shrink-0 rounded-full text-xs"
-        onClick={onCreateInvoice}
-      >
-        <FileTextIcon data-icon="inline-start" />
-        Create invoice
-      </Button>
+
+      <PlatformFloatingBarDivider className="ml-auto" />
+
+      <div className="pl-2">
+        <PlatformFloatingBarPrimaryButton
+          action={{
+            id: "invoice",
+            label: "Create invoice",
+            icon: FileTextIcon,
+            onClick: onCreateInvoice,
+          }}
+        />
+      </div>
     </OperationalFloatingActionBar>
   );
 }

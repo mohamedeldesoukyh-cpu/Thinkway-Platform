@@ -100,8 +100,6 @@ export function OperationalConfigurableTable<T>({
   );
 }
 
-const OPERATIONAL_LIST_TABLE_CELL_PADDING = "!px-4";
-
 function resolveOperationalTableColumnWidths<T>(
   columns: readonly OperationalConfigurableColumnDef<T>[]
 ): string[] {
@@ -142,11 +140,7 @@ function OperationalConfigurableTableView<T>({
           {columns.map((column) => (
             <CampaignOperationalTableHead
               key={column.id}
-              className={cn(
-                OPERATIONAL_LIST_TABLE_CELL_PADDING,
-                column.amountCell ? "text-right" : "text-left",
-                column.headerClassName
-              )}
+              className={cn(column.amountCell ? "text-right" : "text-left", column.headerClassName)}
             >
               {column.renderHeader ? column.renderHeader() : column.label}
             </CampaignOperationalTableHead>
@@ -159,10 +153,7 @@ function OperationalConfigurableTableView<T>({
             <CampaignOperationalTableRow className={rowClassName?.(row)}>
               {columns.map((column) => {
                 const content = column.renderCell(row);
-                const sharedCellClassName = cn(
-                  OPERATIONAL_LIST_TABLE_CELL_PADDING,
-                  column.cellClassName
-                );
+                const sharedCellClassName = column.cellClassName;
                 if (column.amountCell) {
                   const amountClassName = column.amountVariant
                     ? operationalAmountVariantClass(

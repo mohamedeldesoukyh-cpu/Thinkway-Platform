@@ -2,7 +2,11 @@
 
 import { Suspense, type ReactNode } from "react";
 
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import {
+  PlatformV6SectionMeta,
+  PlatformV6SectionWrap,
+  PlatformV6Toolbar,
+} from "@/components/platform/platform-v6-layout";
 import { OperationalTableToolbar } from "@/components/tables/operational-table-toolbar";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { CampaignsEmptyState } from "@/features/campaigns/components/campaigns-empty-state";
@@ -46,26 +50,16 @@ export function CampaignsListSection({
       filterAccessors={CAMPAIGNS_TABLE_FILTER_ACCESSORS}
       additionalFilterFields={CAMPAIGNS_ADDITIONAL_FILTER_FIELDS}
     >
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 space-y-0.5">
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                All campaigns
-              </h2>
-              <p className="text-[11px] leading-snug text-muted-foreground">{meta}</p>
-            </div>
-            <Suspense fallback={null}>
-              <OperationalTableToolbar contextLabel="Campaigns">
-                <CampaignsSearch />
-              </OperationalTableToolbar>
-            </Suspense>
-          </div>
-        }
-      >
+      <PlatformV6SectionMeta title="All campaigns" meta={meta} />
+      <PlatformV6Toolbar>
+        <Suspense fallback={null}>
+          <OperationalTableToolbar contextLabel="Campaigns">
+            <CampaignsSearch />
+          </OperationalTableToolbar>
+        </Suspense>
+      </PlatformV6Toolbar>
+
+      <PlatformV6SectionWrap>
         {errorSlot}
 
         {campaigns.length === 0 ? (
@@ -73,12 +67,12 @@ export function CampaignsListSection({
         ) : (
           <>
             <CampaignsTable campaigns={campaigns} />
-            <div className="border-t border-border/40 px-4 py-3 md:px-5">
+            <div className="border-t px-4 py-3 md:px-[14px]">
               <CampaignsPagination page={page} totalPages={totalPages} search={search} />
             </div>
           </>
         )}
-      </OperationalTableSection>
+      </PlatformV6SectionWrap>
     </OperationalTableSuiteProvider>
   );
 }

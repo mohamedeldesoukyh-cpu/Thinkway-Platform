@@ -11,6 +11,7 @@ import {
 } from "@/components/tables/operational-configurable-table";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { platformV6BadgeClass } from "@/components/platform/platform-v6-layout";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { formatMoney } from "@/features/campaigns/utils";
@@ -54,10 +55,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     id: "document_number",
     label: "Campaign #",
     renderCell: (campaign) => (
-      <Link
-        href={`/campaigns/${campaign.id}`}
-        className="text-muted-foreground hover:text-foreground hover:underline"
-      >
+      <Link href={`/campaigns/${campaign.id}`} className="platform-v6-link">
         <DocumentNumber value={campaign.document_number} />
       </Link>
     ),
@@ -69,7 +67,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     renderCell: (campaign) => (
       <Link
         href={`/campaigns/${campaign.id}`}
-        className="font-medium text-foreground hover:text-primary hover:underline"
+        className="text-xs font-semibold text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)]"
       >
         {campaign.name}
       </Link>
@@ -133,13 +131,16 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
         <div className="flex flex-col items-end gap-1">
           <span
             className={cn(
-              poAlertStatus === "exceeded" && "text-red-600 dark:text-red-400",
-              poAlertStatus === "near_limit" && "text-amber-700 dark:text-amber-300"
+              "platform-v6-num font-semibold",
+              poAlertStatus === "exceeded" && "platform-v6-c-red",
+              poAlertStatus === "near_limit" && "platform-v6-c-amber"
             )}
           >
             {formatMoney(campaignPoBudget(campaign), campaign.currency_code)}
           </span>
-          {campaign.po_status && campaign.po_status !== "draft" ? (
+          {poAlertStatus === "near_limit" ? (
+            <span className={platformV6BadgeClass("outline-amber")}>Near limit</span>
+          ) : campaign.po_status && campaign.po_status !== "draft" ? (
             <Badge
               variant={PO_STATUS_VARIANT[campaign.po_status]}
               className={cn(

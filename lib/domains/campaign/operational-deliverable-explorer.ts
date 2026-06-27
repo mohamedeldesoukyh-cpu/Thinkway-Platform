@@ -8,6 +8,7 @@ export type OperationalDeliverableExplorerRow = {
   assignment_post_schedule_id: string | null;
   assignment_title: string;
   creator_name: string | null;
+  creator_avatar_url: string | null;
   influencer_id: string | null;
   platform: string;
   platform_label: string;

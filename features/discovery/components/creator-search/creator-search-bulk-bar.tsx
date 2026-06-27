@@ -7,9 +7,12 @@ import {
   ListPlusIcon,
   Share2Icon,
   SparklesIcon,
-  XIcon,
 } from "lucide-react";
 
+import {
+  GlassSelectionFlyout,
+  type GlassFlyoutAction,
+} from "@/components/shared/navigation/glass-selection-flyout";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -61,23 +64,75 @@ export function CreatorSearchBulkBar({
   estEngagement,
   busy,
 }: Props) {
-  if (selectedCount === 0) return null;
+  const actions: GlassFlyoutAction[] = [
+    {
+      id: "add",
+      label: "Add to list",
+      icon: ListPlusIcon,
+      variant: "primary",
+      disabled: busy || !selectedShortlist,
+      onClick: onAddToList,
+    },
+    {
+      id: "compare",
+      label: "Compare",
+      icon: GitCompareArrowsIcon,
+      variant: "outline",
+      onClick: onCompare,
+    },
+    {
+      id: "export",
+      label: "Export",
+      icon: DownloadIcon,
+      variant: "outline",
+      onClick: onExport,
+    },
+    {
+      id: "share",
+      label: "Share",
+      icon: Share2Icon,
+      variant: "outline",
+      onClick: onShare,
+    },
+    {
+      id: "quotation",
+      label: "Generate quotation",
+      icon: FileTextIcon,
+      variant: "outline",
+      disabled: busy,
+      onClick: onGenerateQuotation,
+    },
+    {
+      id: "ai-match",
+      label: "AI Match",
+      icon: SparklesIcon,
+      variant: "outline",
+      onClick: onAiMatch,
+    },
+  ];
+
+  const hasStats =
+    estFollowers != null || estReach != null || estEngagement != null;
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-primary/20 bg-primary/5 px-4 py-2 md:px-5">
-      <span className="text-[12px] font-semibold text-primary">
-        {selectedCount} selected
-      </span>
-      {(estFollowers != null || estReach != null || estEngagement != null) && (
-        <span className="text-[11px] text-muted-foreground">
-          {estFollowers != null && <>· {compact(estFollowers)} followers </>}
+    <GlassSelectionFlyout
+      open={selectedCount > 0}
+      selectedCount={selectedCount}
+      entityLabel="creator"
+      actions={actions}
+      onClearSelection={onClearSelection}
+      busy={busy}
+      maxVisibleActions={2}
+    >
+      {hasStats ? (
+        <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline">
+          {estFollowers != null && <>{compact(estFollowers)} followers </>}
           {estReach != null && <>· {compact(estReach)} est. reach </>}
           {estEngagement != null && <>· {estEngagement.toFixed(1)}% avg ER</>}
         </span>
-      )}
-      <div className="h-4 w-px bg-primary/25" aria-hidden />
+      ) : null}
       <Select value={selectedShortlist} onValueChange={onShortlistChange}>
-        <SelectTrigger className="h-8 w-[160px] border-border bg-card text-xs">
+        <SelectTrigger className="h-7 w-[140px] border-border/60 bg-background/60 text-xs">
           <SelectValue placeholder="Target list" />
         </SelectTrigger>
         <SelectContent>
@@ -89,50 +144,16 @@ export function CreatorSearchBulkBar({
         </SelectContent>
       </Select>
       <Button
-        size="sm"
-        variant="secondary"
-        className="h-8 gap-1.5 text-xs"
-        onClick={onAddToList}
-        disabled={busy || !selectedShortlist}
-      >
-        <ListPlusIcon className="size-3.5" />
-        Add to List
-      </Button>
-      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onCompare}>
-        <GitCompareArrowsIcon className="size-3.5" />
-        Compare
-      </Button>
-      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onExport}>
-        <DownloadIcon className="size-3.5" />
-        Export
-      </Button>
-      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onShare}>
-        <Share2Icon className="size-3.5" />
-        Share
-      </Button>
-      <Button
-        size="sm"
+        type="button"
+        size="xs"
         variant="outline"
-        className="h-8 gap-1.5 text-xs"
-        onClick={onGenerateQuotation}
-        disabled={busy}
+        className="h-7 shrink-0 rounded-full text-xs sm:hidden"
+        disabled={busy || !selectedShortlist}
+        onClick={onAddToList}
       >
-        <FileTextIcon className="size-3.5" />
-        Generate Quotation
+        <ListPlusIcon className="size-3" />
+        Add
       </Button>
-      <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={onAiMatch}>
-        <SparklesIcon className="size-3.5" />
-        AI Match
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        className="ml-auto h-8 gap-1 text-xs text-muted-foreground"
-        onClick={onClearSelection}
-      >
-        <XIcon className="size-3.5" />
-        Clear
-      </Button>
-    </div>
+    </GlassSelectionFlyout>
   );
 }

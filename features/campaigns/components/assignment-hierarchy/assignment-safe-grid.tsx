@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon, UserIcon } from "lucide-react";
+import { PencilIcon } from "lucide-react";
 import {
   Fragment,
   useCallback,
@@ -14,6 +14,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
+import { AssignmentCreatorCell } from "@/features/campaigns/components/assignment-hierarchy/assignment-creator-cell";
+import { AssignmentPlatformPills } from "@/features/campaigns/components/assignment-hierarchy/assignment-platform-pills";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import {
@@ -28,9 +30,7 @@ import {
   SAFE_GRID_AMOUNT,
   SAFE_GRID_CHECKBOX,
   SAFE_GRID_CONTROL_CELL,
-  SAFE_GRID_HIGHLIGHT_COST,
-  SAFE_GRID_HIGHLIGHT_REV,
-  SAFE_GRID_HIGHLIGHT_TOTAL_BILLING,
+  SAFE_GRID_HIGHLIGHT_GP,
   SAFE_GRID_PARENT_ROW,
   SAFE_GRID_PARENT_ROW_EXPANDED,
   SAFE_GRID_SHELL,
@@ -39,7 +39,11 @@ import {
   SAFE_GRID_TH,
   SAFE_GRID_HEAD,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
-import { LineBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
+import { AssignmentHighlightAmount } from "@/features/campaigns/components/assignment-hierarchy/assignment-highlight-amount";
+import {
+  AssignmentLineBillingBadge,
+  AssignmentOpsStatusBadge,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-status-badges";
 import { ASSIGNMENT_GRID_MONEY_COL, ASSIGNMENT_GRID_VAT_COL } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
 import { AssignmentParentTableColGroup } from "@/features/campaigns/components/assignment-hierarchy/assignment-parent-table-colgroup";
 import {
@@ -50,9 +54,7 @@ import {
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-layout";
 import { HIERARCHY_COLUMN_LABELS, assignmentParentColDataAttr } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
-import { OPERATIONAL_TABLE_FONT, operationalGpAmountClass, operationalMarginAmountClass } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import { AssignmentOperationalStatusBadge } from "@/features/campaigns/components/assignment-operational-status-badge";
-import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
+import { OPERATIONAL_TABLE_FONT, operationalMarginAmountClass } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/operational-status";
 import type {
   AssignmentHierarchy,
@@ -372,7 +374,7 @@ export function AssignmentSafeGrid({
     <div
       className={cn(
         OPERATIONAL_TABLE_FONT,
-        "space-y-2",
+        "min-w-0 space-y-2",
         operationalFloatingBarContentClass(showFloatingBar)
       )}
     >
@@ -382,18 +384,15 @@ export function AssignmentSafeGrid({
           cost, margin, vendor IO, billing controls, and deliverable editing are hidden.
         </div>
       ) : null}
-      <div className={cn(SAFE_GRID_SHELL, "overflow-x-auto")}>
+      <div className={SAFE_GRID_SHELL}>
         <table
           className={SAFE_GRID_TABLE}
           data-assignment-parent-grid
-          style={{ minWidth: parentTableMinWidthPx }}
+          style={{ minWidth: Math.max(parentTableMinWidthPx, 1300) }}
         >
           <AssignmentParentTableColGroup col={col} gates={gates} />
           <thead className={SAFE_GRID_HEAD}>
             <tr>
-              {gates.enableExpansion && col("expand") ? (
-                <th {...assignmentParentColDataAttr("expand")} className={cn(SAFE_GRID_TH, "w-9")}>{HIERARCHY_COLUMN_LABELS.expand}</th>
-              ) : null}
               {col("select") ? (
                 <th {...assignmentParentColDataAttr("select")} className={cn(SAFE_GRID_TH, SAFE_GRID_CONTROL_CELL)}>
                   {gates.enableCheckboxes ? (
@@ -418,7 +417,7 @@ export function AssignmentSafeGrid({
                 </th>
               ) : null}
               {col("creator") ? (
-                <th {...assignmentParentColDataAttr("creator")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.creator}</th>
+                <th {...assignmentParentColDataAttr("creator")} className={cn(SAFE_GRID_TH, "min-w-[140px]")}>{HIERARCHY_COLUMN_LABELS.creator}</th>
               ) : null}
               {col("platforms") ? (
                 <th {...assignmentParentColDataAttr("platforms")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.platforms}</th>
@@ -510,7 +509,10 @@ export function AssignmentSafeGrid({
             const lineCurrency = resolveAssignmentLineCurrency(line);
             const rowClass = gates.enableRowStyling
               ? (LINE_OPERATIONAL_ROW_CLASS[row.operationalStatus] ??
-                LINE_OPERATIONAL_ROW_CLASS.draft)
+                  LINE_OPERATIONAL_ROW_CLASS.draft)
+                  .split(" ")
+                  .filter((c) => !c.startsWith("border-l"))
+                  .join(" ")
               : "";
 
             return (
@@ -524,22 +526,6 @@ export function AssignmentSafeGrid({
                         )}
                         data-line-id={row.lineId}
                       >
-                        {gates.enableExpansion && col("expand") ? (
-                          <td {...assignmentParentColDataAttr("expand")} className={SAFE_GRID_CONTROL_CELL}>
-                            <AssignmentExpandToggle
-                              expanded={expanded}
-                              onToggle={() => {
-                                setExpandedIds((prev) => {
-                                  const next = new Set(prev);
-                                  if (next.has(row.lineId)) next.delete(row.lineId);
-                                  else next.add(row.lineId);
-                                  return next;
-                                });
-                              }}
-                              ariaLabel={`${expanded ? "Collapse" : "Expand"} ${row.displayName}`}
-                            />
-                          </td>
-                        ) : null}
                         {col("select") ? (
                           <td {...assignmentParentColDataAttr("select")} className={SAFE_GRID_CONTROL_CELL}>
                             {selectable ? (
@@ -554,56 +540,72 @@ export function AssignmentSafeGrid({
                           </td>
                         ) : null}
                         {col("assignment") ? (
-                        <td {...assignmentParentColDataAttr("assignment")} className={SAFE_GRID_TD}>
-                          <button
-                            type="button"
-                            onClick={() => onOpenInfluencerDetail?.(row.group, row)}
-                            className="mx-auto block w-full text-center transition-colors hover:text-primary"
-                            title={`View ${row.displayName} details`}
-                          >
-                            <div className="flex flex-wrap items-center justify-center gap-1.5">
-                              <span className="font-medium text-foreground underline-offset-2 hover:underline">
-                                {row.displayName}
-                              </span>
-                              {gates.showInternalFinancials &&
-                              (campaignPoExceeded || line.po_over_consumed) ? (
-                                <Badge
-                                  variant="outline"
-                                  className="border-amber-500/60 text-[10px] text-amber-800 dark:text-amber-200"
-                                >
-                                  PO exceeded
-                                </Badge>
-                              ) : null}
-                            </div>
-                            {gates.showLineDocumentNumber ? (
-                              <p className="text-[10px] text-muted-foreground">
-                                <DocumentNumber value={line.document_number} />
-                              </p>
+                        <td {...assignmentParentColDataAttr("assignment")} className={cn(SAFE_GRID_TD, "thinkway-campaign-asgn-assignment-cell")}>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            {gates.enableExpansion && col("expand") ? (
+                              <AssignmentExpandToggle
+                                expanded={expanded}
+                                onToggle={() => {
+                                  setExpandedIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(row.lineId)) next.delete(row.lineId);
+                                    else next.add(row.lineId);
+                                    return next;
+                                  });
+                                }}
+                                ariaLabel={`${expanded ? "Collapse" : "Expand"} ${row.displayName}`}
+                              />
                             ) : null}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => onOpenInfluencerDetail?.(row.group, row)}
+                              className="min-w-0 flex-1 text-left transition-colors hover:text-primary"
+                              title={`View ${row.displayName} details`}
+                            >
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[11px] font-semibold text-[var(--camp-text)]">
+                                  {row.displayName}
+                                </span>
+                                {gates.showInternalFinancials &&
+                                (campaignPoExceeded || line.po_over_consumed) ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-amber-500/60 text-[10px] text-amber-800 dark:text-amber-200"
+                                  >
+                                    PO exceeded
+                                  </Badge>
+                                ) : null}
+                              </div>
+                              {gates.showLineDocumentNumber ? (
+                                <p className="text-[10px] text-[var(--camp-text-3)]">
+                                  <DocumentNumber value={line.document_number} />
+                                </p>
+                              ) : null}
+                            </button>
+                          </div>
                         </td>
                         ) : null}
                         {col("creator") ? (
                         <td {...assignmentParentColDataAttr("creator")} className={SAFE_GRID_TD}>
                           {line.influencer_name || row.displayName ? (
-                            <button
-                              type="button"
-                              onClick={() => onOpenInfluencerDetail?.(row.group, row)}
-                              className="mx-auto flex items-center justify-center gap-1 text-muted-foreground transition-colors hover:text-primary"
-                              title={`View ${line.influencer_name ?? row.displayName} details`}
-                            >
-                              <UserIcon className="size-3 shrink-0" />
-                              <span className="font-medium underline-offset-2 hover:underline">
-                                {line.influencer_name ?? row.displayName}
-                              </span>
-                            </button>
+                            <AssignmentCreatorCell
+                              name={line.influencer_name ?? row.displayName}
+                              avatarUrl={line.creator_avatar_url}
+                              onClick={
+                                onOpenInfluencerDetail
+                                  ? () => onOpenInfluencerDetail(row.group, row)
+                                  : undefined
+                              }
+                            />
                           ) : (
                             "—"
                           )}
                         </td>
                         ) : null}
                         {col("platforms") ? (
-                          <td {...assignmentParentColDataAttr("platforms")} className={SAFE_GRID_TD}>{row.platformSummary}</td>
+                          <td {...assignmentParentColDataAttr("platforms")} className={SAFE_GRID_TD}>
+                            <AssignmentPlatformPills platforms={row.platforms} />
+                          </td>
                         ) : null}
                         {col("deliverables") ? (
                           <td {...assignmentParentColDataAttr("deliverables")} className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>
@@ -625,8 +627,10 @@ export function AssignmentSafeGrid({
                           </td>
                         ) : null}
                         {col("revenue") ? (
-                          <td {...assignmentParentColDataAttr("revenue")} className={cn(SAFE_GRID_HIGHLIGHT_REV, ASSIGNMENT_GRID_MONEY_COL)}>
-                            {formatOperationalAmount(row.rollups.revenue)}
+                          <td {...assignmentParentColDataAttr("revenue")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
+                            <AssignmentHighlightAmount variant="rev">
+                              {formatOperationalAmount(row.rollups.revenue)}
+                            </AssignmentHighlightAmount>
                           </td>
                         ) : null}
                         {col("usageRights") ? (
@@ -645,8 +649,10 @@ export function AssignmentSafeGrid({
                           </td>
                         ) : null}
                         {gates.showInternalFinancials && col("cost") ? (
-                          <td {...assignmentParentColDataAttr("cost")} className={cn(SAFE_GRID_HIGHLIGHT_COST, ASSIGNMENT_GRID_MONEY_COL)}>
-                            {formatOperationalAmount(line.cost_before_vat)}
+                          <td {...assignmentParentColDataAttr("cost")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
+                            <AssignmentHighlightAmount variant="cost">
+                              {formatOperationalAmount(line.cost_before_vat)}
+                            </AssignmentHighlightAmount>
                           </td>
                         ) : null}
                         {gates.showInternalFinancials && col("usageRightsCost") ? (
@@ -660,18 +666,16 @@ export function AssignmentSafeGrid({
                           </td>
                         ) : null}
                         {col("totalBilling") ? (
-                          <td {...assignmentParentColDataAttr("totalBilling")} className={cn(SAFE_GRID_HIGHLIGHT_TOTAL_BILLING, ASSIGNMENT_GRID_MONEY_COL)}>
-                            {formatOperationalAmount(line.revenue_after_vat)}
+                          <td {...assignmentParentColDataAttr("totalBilling")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
+                            <AssignmentHighlightAmount variant="billing">
+                              {formatOperationalAmount(line.revenue_after_vat)}
+                            </AssignmentHighlightAmount>
                           </td>
                         ) : null}
                         {gates.showInternalFinancials && col("gp") ? (
                           <td
                             {...assignmentParentColDataAttr("gp")}
-                            className={cn(
-                              SAFE_GRID_TD,
-                              ASSIGNMENT_GRID_MONEY_COL,
-                              operationalGpAmountClass(row.rollups.gp)
-                            )}
+                            className={cn(SAFE_GRID_HIGHLIGHT_GP, ASSIGNMENT_GRID_MONEY_COL)}
                           >
                             {formatOperationalAmount(row.rollups.gp)}
                           </td>
@@ -691,14 +695,7 @@ export function AssignmentSafeGrid({
                         {col("opsStatus") ? (
                         <td {...assignmentParentColDataAttr("opsStatus")} className={SAFE_GRID_TD}>
                           {gates.enablePills ? (
-                            <>
-                              <AssignmentOperationalStatusBadge status={row.operationalStatus} />
-                              {gates.showInternalFinancials && line.vendor_io_document_number ? (
-                                <p className="mt-0.5 text-[10px] text-muted-foreground">
-                                  <DocumentNumber value={line.vendor_io_document_number} />
-                                </p>
-                              ) : null}
-                            </>
+                            <AssignmentOpsStatusBadge status={row.operationalStatus} />
                           ) : (
                             row.opsStatusLabel
                           )}
@@ -706,16 +703,16 @@ export function AssignmentSafeGrid({
                         ) : null}
                         {gates.showInternalBilling && col("billing") ? (
                           <td {...assignmentParentColDataAttr("billing")} className={SAFE_GRID_TD}>
-                            <LineBillingStatusBadge lineBillingStatus={row.lineBillingStatus} />
+                            <AssignmentLineBillingBadge lineBillingStatus={row.lineBillingStatus} />
                           </td>
                         ) : null}
                         {gates.showInternalFinancials && col("payout") ? (
                           <td {...assignmentParentColDataAttr("payout")} className={SAFE_GRID_TD}>
-                            {line.vendor_payment_status ? (
-                              <Badge variant="secondary" className="text-[10px] font-normal">
-                                {VENDOR_PAYMENT_STATUS_LABELS[line.vendor_payment_status] ??
-                                  line.vendor_payment_status}
-                              </Badge>
+                            {line.vendor_io_document_number ? (
+                              <DocumentNumber
+                                value={line.vendor_io_document_number}
+                                className="text-[10px] text-[var(--camp-blue)]"
+                              />
                             ) : (
                               "—"
                             )}
@@ -750,7 +747,7 @@ export function AssignmentSafeGrid({
                         showSelection={
                           (line.assignment?.pricing_mode ?? "package") === "per_deliverable"
                         }
-                        showExpandColumn={gates.enableExpansion}
+                        showExpandColumn={false}
                         leadingParentColumnIds={childGridAlignment.leadingParentColumnIds}
                         fallbackLeadingWidths={childGridAlignment.fallbackLeadingWidths}
                         fallbackChildTableWidthPx={childGridAlignment.fallbackChildTableWidthPx}

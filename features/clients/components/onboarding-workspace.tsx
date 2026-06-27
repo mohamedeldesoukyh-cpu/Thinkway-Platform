@@ -45,6 +45,8 @@ type OnboardingWorkspaceProps = {
   collapsible?: boolean;
   /** Initial expanded state when collapsible (defaults to collapsed). */
   defaultExpanded?: boolean;
+  /** thinkway-platform_6.html slim progress strip on overview tab. */
+  platformV6?: boolean;
 };
 
 type ChecklistState = Record<OnboardingChecklistSection, boolean>;
@@ -90,6 +92,7 @@ export function OnboardingWorkspace({
   compact = false,
   collapsible = false,
   defaultExpanded = false,
+  platformV6 = false,
 }: OnboardingWorkspaceProps) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -201,6 +204,29 @@ export function OnboardingWorkspace({
       : fallbackTimeline.sort(
           (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
         );
+
+  if (platformV6) {
+    return (
+      <div className={cn("mb-1.5", className)}>
+        <div className="platform-v6-progress-bar">
+          <div
+            className="platform-v6-progress-fill"
+            style={{ width: `${progress.percentage}%` }}
+            role="progressbar"
+            aria-valuenow={progress.percentage}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          />
+        </div>
+        <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--tw-text-3,#94a3b8)]">
+          <span>Onboarding progress ↓</span>
+          <span className="platform-v6-badge platform-v6-badge-outline-green">
+            {ONBOARDING_STATUS_LABELS[status]} · {progress.percentage}%
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   const progressBar = (
     <div className="flex min-w-0 flex-1 items-center gap-2">

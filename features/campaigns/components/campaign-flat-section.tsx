@@ -1,47 +1,60 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type CampaignFlatSectionProps = {
   title: string;
   description?: string;
+  icon?: LucideIcon;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** info-card = overview grid cards; section-card = full-width sections */
+  variant?: "section-card" | "info-card";
+  /** Tables / activity lists flush to card edges (no section-body padding). */
+  flushBody?: boolean;
 };
 
-/** Operational card section — matches assignments tab section rhythm. */
+/** Section shell — matches thinkway-campaign_2.html section-card / info-card. */
 export function CampaignFlatSection({
   title,
   description,
+  icon: Icon,
   actions,
   children,
   className,
+  variant = "section-card",
+  flushBody = false,
 }: CampaignFlatSectionProps) {
+  if (variant === "info-card") {
+    return (
+      <section className={cn("thinkway-campaign-info-card flex h-full min-w-0 flex-col", className)}>
+        <h3>{title}</h3>
+        {children}
+      </section>
+    );
+  }
+
   return (
-    <section className={cn("min-w-0", className)}>
-      <Card className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <CardHeader
-          className={cn(
-            "flex flex-row flex-wrap items-start justify-between gap-2 border-b border-border/40 px-4 py-3 md:px-5",
-            actions ? "space-y-0" : undefined
-          )}
-        >
-          <div className="min-w-0 space-y-0.5">
-            <CardTitle className="text-sm font-semibold tracking-tight text-foreground">
-              {title}
-            </CardTitle>
-            {description ? (
-              <p className="text-[11px] leading-snug text-muted-foreground">{description}</p>
+    <section className={cn("thinkway-campaign-section-card flex min-w-0 flex-col", className)}>
+      <div className="thinkway-campaign-section-head">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            {Icon ? (
+              <Icon className="size-3.5 shrink-0 text-[var(--camp-text-3)]" aria-hidden />
             ) : null}
+            <h2>{title}</h2>
           </div>
-          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-        </CardHeader>
-        <CardContent className="px-4 py-4 md:px-5">{children}</CardContent>
-      </Card>
+          {description ? <p>{description}</p> : null}
+        </div>
+        {actions ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">{actions}</div>
+        ) : null}
+      </div>
+      {flushBody ? children : <div className="thinkway-campaign-section-body">{children}</div>}
     </section>
   );
 }

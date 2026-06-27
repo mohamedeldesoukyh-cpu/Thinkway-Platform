@@ -10,6 +10,10 @@ import {
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import {
+  DISCOVERY_PAGE_IDENTITY,
+  DiscoveryPageIconBadge,
+} from "@/features/discovery/components/discovery-page-identity";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -47,28 +51,37 @@ export function CreatorSearchTopBar({
   loading,
 }: Props) {
   return (
-    <div className="shrink-0 border-b border-border bg-background px-4 py-2.5 md:px-5">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-[16px] font-bold tracking-tight text-foreground">Creator Search</h1>
-          <p className="text-[11px] text-muted-foreground">
-            {loading
-              ? "Searching…"
-              : `${loadedCount.toLocaleString()} loaded · ${total.toLocaleString()} matched`}
-          </p>
+    <div className="shrink-0 border-b border-border bg-background px-3 py-2 md:px-4">
+      <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <DiscoveryPageIconBadge
+            identity={DISCOVERY_PAGE_IDENTITY.search}
+            size="sm"
+            className="!size-8 !rounded-lg"
+          />
+          <div className="min-w-0">
+            <h1 className="text-[15px] font-bold tracking-tight text-foreground">
+              {DISCOVERY_PAGE_IDENTITY.search.title}
+            </h1>
+            <p className="text-[10px] text-muted-foreground">
+              {loading
+                ? "Searching…"
+                : `${loadedCount.toLocaleString()} loaded · ${total.toLocaleString()} matched`}
+            </p>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" asChild>
             <Link href="/ai">
               <SparklesIcon className="size-3.5" />
               AI Search
             </Link>
           </Button>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={onSaveSearch}>
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={onSaveSearch}>
             <SaveIcon className="size-3.5" />
             <span className="hidden sm:inline">Save Search</span>
           </Button>
-          <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={onCreateList}>
+          <Button size="sm" className="h-7 gap-1 text-xs" onClick={onCreateList}>
             <ListPlusIcon className="size-3.5" />
             <span className="hidden sm:inline">Create List</span>
           </Button>
@@ -76,7 +89,7 @@ export function CreatorSearchTopBar({
       </div>
 
       <form
-        className="mt-2 flex gap-2"
+        className="mt-1.5 flex gap-1.5"
         onSubmit={(e) => {
           e.preventDefault();
           onSearchSubmit();
@@ -88,14 +101,14 @@ export function CreatorSearchTopBar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search creator by name, username, or keyword"
-            className="h-9 border-border bg-muted pl-9 text-[13px] focus-visible:border-primary focus-visible:bg-background"
+            className="h-8 border-border bg-muted pl-9 text-[12px] focus-visible:border-primary focus-visible:bg-background"
           />
         </div>
 
         <div className="hidden items-center gap-1.5 sm:flex">
           <ArrowUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
           <Select value={sort} onValueChange={(value) => onSortChange(value as CreatorSearchSort)}>
-            <SelectTrigger className="h-9 w-[150px] border-border bg-background text-xs">
+            <SelectTrigger className="h-8 w-[140px] border-border bg-background text-xs">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
@@ -108,7 +121,7 @@ export function CreatorSearchTopBar({
           </Select>
         </div>
 
-        <Button type="submit" size="sm" className="h-9 px-4" disabled={loading}>
+        <Button type="submit" size="sm" className="h-8 px-3" disabled={loading}>
           Search
         </Button>
       </form>

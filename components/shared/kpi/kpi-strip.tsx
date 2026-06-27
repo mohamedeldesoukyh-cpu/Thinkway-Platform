@@ -27,6 +27,12 @@ export type KpiStripProps = {
   className?: string;
   /** Side scroll buttons (disable on campaign workspace for grid alignment). */
   showNavigation?: boolean;
+  /** Horizontal scroll (default) or responsive grid. */
+  layout?: "scroll" | "grid";
+  /** Tighter cards — pairs well with grid layout. */
+  dense?: boolean;
+  /** Grid column template when layout is grid. */
+  gridClassName?: string;
   loading?: boolean;
   loadingCount?: number;
   /** Renders mixed-currency disclaimer above the strip when truthy. */
@@ -72,6 +78,9 @@ export function KpiStrip({
   items,
   className,
   showNavigation = true,
+  layout = "scroll",
+  dense = false,
+  gridClassName,
   loading,
   loadingCount = KPI_LOADING_SKELETON_COUNT,
   mixedCurrencyNotice,
@@ -105,6 +114,32 @@ export function KpiStrip({
         ? mixedCurrencyNotice
         : undefined;
 
+  const stripOptions = { dense, fluid: layout === "grid" };
+
+  if (layout === "grid") {
+    return (
+      <div className={cn("space-y-2", dense && "flex h-full min-h-0 flex-col", className)}>
+        {children}
+        {noticeText ? <KpiMixedCurrencyNotice label={noticeText} /> : null}
+        <div
+          className={cn(
+            "grid auto-rows-fr items-stretch gap-1.5",
+            dense && "min-h-0 flex-1",
+            gridClassName ?? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
+          )}
+        >
+          {items.map((item) => (
+            <KpiCard
+              key={item.id}
+              {...kpiCarouselItemToCardProps(item, stripOptions)}
+            />
+          ))}
+        </div>
+        {footer}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("space-y-2", className)}>
       {children}
@@ -131,7 +166,10 @@ export function KpiStrip({
           )}
         >
           {items.map((item) => (
-            <KpiCard key={item.id} {...kpiCarouselItemToCardProps(item)} />
+            <KpiCard
+              key={item.id}
+              {...kpiCarouselItemToCardProps(item, stripOptions)}
+            />
           ))}
         </div>
 

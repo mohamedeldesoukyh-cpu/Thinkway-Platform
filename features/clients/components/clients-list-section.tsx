@@ -2,7 +2,11 @@
 
 import { Suspense, type ReactNode } from "react";
 
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import {
+  PlatformV6SectionMeta,
+  PlatformV6SectionWrap,
+  PlatformV6Toolbar,
+} from "@/components/platform/platform-v6-layout";
 import { OperationalTableToolbar } from "@/components/tables/operational-table-toolbar";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { ClientsEmptyState } from "@/features/clients/components/clients-empty-state";
@@ -39,26 +43,16 @@ export function ClientsListSection({
       rows={clients}
       filterAccessors={CLIENTS_TABLE_FILTER_ACCESSORS}
     >
-      <OperationalTableSection
-        wide
-        tableOnly
-        cardSurface
-        leading={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 space-y-0.5">
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                All clients
-              </h2>
-              <p className="text-[11px] leading-snug text-muted-foreground">{meta}</p>
-            </div>
-            <Suspense fallback={null}>
-              <OperationalTableToolbar contextLabel="Clients">
-                <ClientsSearch />
-              </OperationalTableToolbar>
-            </Suspense>
-          </div>
-        }
-      >
+      <PlatformV6SectionMeta title="All clients" meta={meta} />
+      <PlatformV6Toolbar>
+        <Suspense fallback={null}>
+          <OperationalTableToolbar contextLabel="Clients">
+            <ClientsSearch />
+          </OperationalTableToolbar>
+        </Suspense>
+      </PlatformV6Toolbar>
+
+      <PlatformV6SectionWrap>
         {errorSlot}
 
         {clients.length === 0 ? (
@@ -66,12 +60,12 @@ export function ClientsListSection({
         ) : (
           <>
             <ClientsTable clients={clients} />
-            <div className="border-t border-border/40 px-4 py-3 md:px-5">
+            <div className="border-t px-4 py-3 md:px-[14px]">
               <ClientsPagination page={page} totalPages={totalPages} search={search} />
             </div>
           </>
         )}
-      </OperationalTableSection>
+      </PlatformV6SectionWrap>
     </OperationalTableSuiteProvider>
   );
 }

@@ -26,14 +26,10 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
     colWidth: "96px",
     monoCell: true,
     renderCell: (client) => (
-      <Link
-        href={`/clients/${client.id}`}
-        className="text-muted-foreground hover:text-foreground hover:underline"
-      >
+      <Link href={`/clients/${client.id}`} className="platform-v6-link">
         <DocumentNumber value={client.document_number} />
       </Link>
     ),
-    cellClassName: "text-muted-foreground",
   },
   {
     id: "legal_entity",
@@ -49,7 +45,7 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
         <div className="min-w-0 flex flex-col gap-0.5">
           <Link
             href={`/clients/${client.id}`}
-            className="truncate font-medium text-foreground hover:text-primary hover:underline"
+            className="platform-v6-link font-semibold"
           >
             {client.name}
           </Link>
@@ -65,7 +61,7 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
     label: "Group",
     colWidth: "16%",
     renderCell: (client) => (
-      <span className="block truncate text-muted-foreground">
+      <span className="block truncate platform-v6-c-gray">
         {client.group?.name ?? "—"}
       </span>
     ),
@@ -85,17 +81,20 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
     id: "billing_email",
     label: "Billing email",
     colWidth: "20%",
-    renderCell: (client) => (
-      <span className="block truncate">{client.billing_email ?? "—"}</span>
-    ),
-    cellClassName: "text-muted-foreground",
+    renderCell: (client) => {
+      const email = client.billing_email?.trim();
+      if (!email) {
+        return <span className="block truncate platform-v6-c-gray">—</span>;
+      }
+      return <span className="block truncate text-[11px]">{email}</span>;
+    },
   },
   {
     id: "created",
     label: "Created",
     colWidth: "112px",
     renderCell: (client) => format(new Date(client.created_at), "MMM d, yyyy"),
-    cellClassName: "whitespace-nowrap text-muted-foreground",
+    cellClassName: "whitespace-nowrap platform-v6-c-gray text-[11px]",
   },
 ];
 

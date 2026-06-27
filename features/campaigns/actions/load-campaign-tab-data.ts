@@ -1,14 +1,11 @@
 "use server";
 
 import { getCampaignFormOptions } from "@/features/campaigns/queries";
-import {
-  getCampaignPerformanceBundle,
-  type CampaignPerformanceCharts,
-  type CampaignPerformanceSummary,
-} from "@/features/campaigns/queries/publications";
-import { emptyCampaignPerformanceSummary } from "@/features/campaigns/queries/campaign-performance-defaults";
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
-import { traceCampaignRouteError } from "@/lib/performance/campaign-route-trace";
+import {
+  resolveCampaignPublicationsBundle,
+  type CampaignPublicationsBundleData,
+} from "@/lib/campaigns/publications-bundle-loader";
 import {
   getCampaignBillingGroups,
   getCampaignBillingLines,
@@ -54,14 +51,7 @@ export type CampaignBillingPayload = {
   campaignInvoiceRegister: FinanceInvoiceRegisterRow[];
 };
 
-export type CampaignPublicationsPayload = {
-  publications: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["publications"];
-  summary: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["summary"];
-  charts: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["charts"];
-  syncHealth: Awaited<ReturnType<typeof getCampaignPerformanceBundle>>["sync_health"];
-  schemaWarnings: string[];
-  loadError: string | null;
-};
+export type CampaignPublicationsPayload = CampaignPublicationsBundleData;
 
 export type CampaignFinanceAuditPayload = {
   financeAudit: FinanceAuditTimelineEntry[];
@@ -204,57 +194,7 @@ export async function loadCampaignBillingBundle(
 export async function loadCampaignPublicationsBundle(
   campaignId: string
 ): Promise<BundleResult<CampaignPublicationsPayload>> {
-  if (!isUuid(campaignId)) return invalidCampaignResult();
-
-  try {
-    const result = await getCampaignPerformanceBundle(campaignId);
-    return {
-      ok: true,
-      data: {
-        publications: result.publications,
-        summary: result.summary,
-        charts: result.charts,
-        syncHealth: result.sync_health,
-        schemaWarnings: result.schema_warnings,
-        loadError: result.load_error,
-      },
-    };
-  } catch (error) {
-    traceCampaignRouteError("tab-data:publications:failed", error, { campaignId });
-    const message =
-      error instanceof Error ? error.message : "Failed to load publications.";
-    console.error("[campaign-tab-data] publications failed", { campaignId, message });
-    if (process.env.NODE_ENV === "development") {
-      throw error;
-    }
-    return {
-      ok: true,
-      data: {
-        publications: [],
-        summary: emptyCampaignPerformanceSummary(),
-        charts: {
-          performance_over_time: [],
-          platform_split: [],
-          content_type_split: [],
-          top_creators_by_engagement: [],
-          reach_by_creator: [],
-          views_by_publication: [],
-          engagement_distribution: [],
-        },
-        schemaWarnings: [],
-        syncHealth: {
-          synced: 0,
-          partial: 0,
-          failed: 0,
-          manual_required: 0,
-          queued: 0,
-          collecting: 0,
-          total: 0,
-        },
-        loadError: message,
-      },
-    };
-  }
+  return resolveCampaignPublicationsBundle(campaignId);
 }
 
 export async function loadCampaignFinanceAuditBundle(

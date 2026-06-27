@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
 import { Button } from "@/components/ui/button";
+import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OperationalTableDualColumnsProvider } from "@/components/tables/operational-table-column-context";
 import { OperationalTableSettingsSlot } from "@/components/tables/operational-data-table";
@@ -40,7 +41,10 @@ import {
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
 
-import { CampaignCreatorDiscoveryPanel } from "@/features/campaigns/components/campaign-creator-discovery-panel";
+import {
+  CampaignCreatorDiscoveryFooter,
+  CampaignCreatorDiscoveryProvider,
+} from "@/features/campaigns/components/campaign-creator-discovery-panel";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import { AssignmentAudienceViewProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
 import { AssignmentAudienceViewToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-toggle";
@@ -255,78 +259,82 @@ export function CampaignLinesTabInner({
 
   return (
     <>
-      <div className="mb-4">
-        <CampaignCreatorDiscoveryPanel
-          campaignHeaderId={workspace.id}
-          campaignName={workspace.name}
-          brandCountry={workspace.vat_context.client_country_code}
-        />
-      </div>
-
-      <OperationalTableDualColumnsProvider
-        parentTableId={ASSIGNMENT_GRID_PARENT_TABLE_ID}
-        parentColumns={ASSIGNMENT_GRID_COLUMN_METAS}
-        childTableId={ASSIGNMENT_GRID_CHILD_TABLE_ID}
-        childColumns={ASSIGNMENT_CHILD_GRID_COLUMN_METAS}
+      <CampaignCreatorDiscoveryProvider
+        campaignHeaderId={workspace.id}
+        campaignName={workspace.name}
+        brandCountry={workspace.vat_context.client_country_code}
       >
-        <OperationalTableSection
-          wide
-          tableOnly
-          cardSurface
-          leading={
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex min-w-0 flex-wrap items-center gap-3">
-                <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                  Creator assignments
-                </h2>
-                <AssignmentAudienceViewToggle
-                  value={audienceView}
-                  onChange={setAudienceView}
-                />
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <OperationalTableSettingsSlot
-                  contextLabel="Assignments"
-                  columnSettings="assignment-grid"
-                />
-                {enableLineSheet && audienceView === "internal" ? (
-                  <Button size="sm" onClick={openCreate} title="Create assignment (A)">
-                    <PlusIcon data-icon="inline-start" />
-                    Create assignment
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          }
+        <OperationalTableDualColumnsProvider
+          parentTableId={ASSIGNMENT_GRID_PARENT_TABLE_ID}
+          parentColumns={ASSIGNMENT_GRID_COLUMN_METAS}
+          childTableId={ASSIGNMENT_GRID_CHILD_TABLE_ID}
+          childColumns={ASSIGNMENT_CHILD_GRID_COLUMN_METAS}
         >
-          {!hasAssignments ? (
-          <AssignmentsEmptyState
-            onCreateAssignment={enableLineSheet ? openCreate : undefined}
-          />
-        ) : (
-          <>
-            {assignmentHierarchy.load_error ? (
-              <div className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-                Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}.
-                Showing available rows — apply pending migrations if commercial columns are
-                missing.
-              </div>
-            ) : null}
-            <AssignmentAudienceViewProvider value={audienceView}>
-              <AssignmentSafeGrid
-                campaignId={workspace.id}
-                hierarchy={assignmentHierarchy}
-                campaignPoExceeded={workspace.financials.po_exceeded}
-                onEditLine={openEdit}
-                onOpenInfluencerDetail={(group) => setDetailLineId(group.line.id)}
-                onInvoiceLines={openInvoiceWithLines}
+          <OperationalTableSection
+            wide
+            tableOnly
+            cardSurface
+            assignmentsShell
+            footer={<CampaignCreatorDiscoveryFooter />}
+            leading={
+              <CampaignOperationalSectionHeader
+                title="Creator assignments"
+                description="Revenue, cost, margin, and billing status per creator."
+                actions={
+                  <>
+                    <AssignmentAudienceViewToggle
+                      value={audienceView}
+                      onChange={setAudienceView}
+                    />
+                    <OperationalTableSettingsSlot
+                      contextLabel="Assignments"
+                      columnSettings="assignment-grid"
+                    />
+                    {enableLineSheet && audienceView === "internal" ? (
+                      <Button
+                        size="sm"
+                        onClick={openCreate}
+                        title="Create assignment (A)"
+                        className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[30px] text-[11px] shadow-none"
+                      >
+                        <PlusIcon data-icon="inline-start" className="size-3.5" />
+                        Create assignment
+                      </Button>
+                    ) : null}
+                  </>
+                }
+              />
+            }
+          >
+            {!hasAssignments ? (
+              <AssignmentsEmptyState
                 onCreateAssignment={enableLineSheet ? openCreate : undefined}
               />
-            </AssignmentAudienceViewProvider>
-          </>
-          )}
-        </OperationalTableSection>
-      </OperationalTableDualColumnsProvider>
+            ) : (
+              <>
+                {assignmentHierarchy.load_error ? (
+                  <div className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                    Assignment hierarchy loaded with warnings: {assignmentHierarchy.load_error}.
+                    Showing available rows — apply pending migrations if commercial columns are
+                    missing.
+                  </div>
+                ) : null}
+                <AssignmentAudienceViewProvider value={audienceView}>
+                  <AssignmentSafeGrid
+                    campaignId={workspace.id}
+                    hierarchy={assignmentHierarchy}
+                    campaignPoExceeded={workspace.financials.po_exceeded}
+                    onEditLine={openEdit}
+                    onOpenInfluencerDetail={(group) => setDetailLineId(group.line.id)}
+                    onInvoiceLines={openInvoiceWithLines}
+                    onCreateAssignment={enableLineSheet ? openCreate : undefined}
+                  />
+                </AssignmentAudienceViewProvider>
+              </>
+            )}
+          </OperationalTableSection>
+        </OperationalTableDualColumnsProvider>
+      </CampaignCreatorDiscoveryProvider>
 
       <AssignmentInfluencerDetailSheet
         open={detailLineId != null}

@@ -24,15 +24,17 @@ export default async function VendorProfilePage({
   let errorMessage: string | null = null;
 
   try {
-    const [workspaceResult, masterData] = await Promise.all([
-      getVendorWorkspace(id),
-      getMasterDataOptions(),
-    ]);
-    workspace = workspaceResult;
-    currencyOptions = buildCurrencyOptions(masterData.currencies);
+    workspace = await getVendorWorkspace(id);
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load vendor.";
+  }
+
+  try {
+    const masterData = await getMasterDataOptions();
+    currencyOptions = buildCurrencyOptions(masterData.currencies);
+  } catch {
+    currencyOptions = [];
   }
 
   if (!workspace && !errorMessage) {
@@ -43,6 +45,7 @@ export default async function VendorProfilePage({
     <DashboardShell
       title="Creator workspace"
       hidePageHeader
+      platformV6
       containedMain
       mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
