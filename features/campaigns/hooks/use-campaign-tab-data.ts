@@ -36,6 +36,8 @@ import {
 import {
   METRICS_SYNC_POLL_INTERVAL_MS,
   publicationsNeedMetricsSyncPoll,
+  publicationsNeedScreenshotCapturePoll,
+  SCREENSHOT_CAPTURE_POLL_INTERVAL_MS,
 } from "@/features/campaigns/hooks/metrics-sync-poll-policy";
 import { assignmentHierarchyBoundaryKey } from "@/lib/campaigns/assignment-row-debug";
 
@@ -317,15 +319,33 @@ export function useCampaignTabData(
     [publications]
   );
 
+  const needsScreenshotCapturePoll = useMemo(
+    () => publicationsNeedScreenshotCapturePoll(publications),
+    [publications]
+  );
+
+  const loadBundleRef = useRef(loadBundle);
+  loadBundleRef.current = loadBundle;
+
   useEffect(() => {
     if (!needsMetricsSyncPoll) return;
 
     const timer = window.setInterval(() => {
-      void loadBundle("publications", { force: true });
+      void loadBundleRef.current("publications", { force: true });
     }, METRICS_SYNC_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
-  }, [needsMetricsSyncPoll, loadBundle]);
+  }, [needsMetricsSyncPoll]);
+
+  useEffect(() => {
+    if (!needsScreenshotCapturePoll) return;
+
+    const timer = window.setInterval(() => {
+      void loadBundleRef.current("publications", { force: true });
+    }, SCREENSHOT_CAPTURE_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [needsScreenshotCapturePoll]);
 
   const isTabLoading = useCallback(
     (tabId: CampaignWorkspaceTabId) => {

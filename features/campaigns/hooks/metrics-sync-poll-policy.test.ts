@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
 
 import {
+  isSyncInFlight,
+  isSyncPending,
   METRICS_SYNC_POLL_INTERVAL_MS,
   publicationsNeedMetricsSyncPoll,
+  publicationsNeedScreenshotCapturePoll,
+  SCREENSHOT_CAPTURE_POLL_INTERVAL_MS,
   SCREENSHOT_CAPTURE_POLL_WINDOW_MS,
+  shouldShowMetricsSyncLoadingToast,
   type PublicationSyncPollRow,
 } from "@/features/campaigns/hooks/metrics-sync-poll-policy";
 import { resolvePublicationCreatorAvatar } from "@/lib/performance/creator-avatar";
@@ -92,7 +97,16 @@ assert.equal(
 
 assert.notEqual(PLATFORM_ICON_STYLES.tiktok?.imageUrl, PLATFORM_ICON_STYLES.instagram?.imageUrl);
 
-// --- Collecting / queued statuses should keep polling active ---
+// --- Sync state helpers ---
+assert.equal(isSyncInFlight("queued"), true);
+assert.equal(isSyncInFlight("collecting"), true);
+assert.equal(isSyncInFlight("pending"), false);
+assert.equal(isSyncInFlight("completed"), false);
+assert.equal(isSyncInFlight(null), false);
+assert.equal(isSyncPending("pending"), true);
+assert.equal(isSyncPending("queued"), false);
+
+// --- In-flight metrics statuses keep polling active ---
 assert.equal(
   publicationsNeedMetricsSyncPoll([
     { metrics_refresh_status: "collecting" },
@@ -109,7 +123,8 @@ assert.equal(
   publicationsNeedMetricsSyncPoll([
     { metrics_refresh_status: "pending" },
   ] as PublicationSyncPollRow[]),
-  true
+  false,
+  "pending means never collected — must not poll"
 );
 assert.equal(
   publicationsNeedMetricsSyncPoll([
@@ -119,15 +134,31 @@ assert.equal(
 );
 assert.equal(
   publicationsNeedMetricsSyncPoll([
+    { metrics_refresh_status: "failed" },
+  ] as PublicationSyncPollRow[]),
+  false,
+  "failed metrics sync should stop polling"
+);
+assert.equal(
+  publicationsNeedMetricsSyncPoll([
     { metrics_refresh_status: "completed" },
     { metrics_refresh_status: "collecting" },
   ] as PublicationSyncPollRow[]),
   true
 );
 assert.equal(METRICS_SYNC_POLL_INTERVAL_MS, 4_000);
+assert.equal(SCREENSHOT_CAPTURE_POLL_INTERVAL_MS, 30_000);
 assert.equal(SCREENSHOT_CAPTURE_POLL_WINDOW_MS, 10 * 60 * 1000);
 
-// --- Completed metrics without screenshot should keep polling briefly ---
+// --- Loading toast only on transition into in-flight ---
+assert.equal(shouldShowMetricsSyncLoadingToast(null, "queued"), true);
+assert.equal(shouldShowMetricsSyncLoadingToast("pending", "queued"), true);
+assert.equal(shouldShowMetricsSyncLoadingToast("queued", "collecting"), false);
+assert.equal(shouldShowMetricsSyncLoadingToast("collecting", "collecting"), false);
+assert.equal(shouldShowMetricsSyncLoadingToast(null, "pending"), false);
+assert.equal(shouldShowMetricsSyncLoadingToast("completed", "queued"), true);
+
+// --- Completed metrics without screenshot use separate slower poll ---
 const recentAttempt = new Date(Date.now() - 60_000).toISOString();
 assert.equal(
   publicationsNeedMetricsSyncPoll([
@@ -139,11 +170,24 @@ assert.equal(
       created_at: recentAttempt,
     },
   ]),
-  true,
-  "completed metrics with URL but no screenshot should keep polling"
+  false,
+  "completed metrics should not use in-flight poll"
 );
 assert.equal(
-  publicationsNeedMetricsSyncPoll([
+  publicationsNeedScreenshotCapturePoll([
+    {
+      metrics_refresh_status: "completed",
+      content_url: "https://instagram.com/p/abc",
+      screenshot_captured_at: null,
+      metrics_refresh_attempted_at: recentAttempt,
+      created_at: recentAttempt,
+    },
+  ]),
+  true,
+  "completed metrics with URL but no screenshot should keep screenshot poll"
+);
+assert.equal(
+  publicationsNeedScreenshotCapturePoll([
     {
       metrics_refresh_status: "completed",
       content_url: "https://instagram.com/p/abc",
@@ -153,10 +197,10 @@ assert.equal(
     },
   ]),
   false,
-  "screenshot captured should stop polling"
+  "screenshot captured should stop screenshot poll"
 );
 assert.equal(
-  publicationsNeedMetricsSyncPoll([
+  publicationsNeedScreenshotCapturePoll([
     {
       metrics_refresh_status: "completed",
       content_url: null,
@@ -170,7 +214,7 @@ assert.equal(
 );
 const staleAttempt = new Date(Date.now() - SCREENSHOT_CAPTURE_POLL_WINDOW_MS - 1_000).toISOString();
 assert.equal(
-  publicationsNeedMetricsSyncPoll([
+  publicationsNeedScreenshotCapturePoll([
     {
       metrics_refresh_status: "completed",
       content_url: "https://instagram.com/p/abc",

@@ -4,8 +4,11 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
+import {
+  isSyncInFlight,
+  shouldShowMetricsSyncLoadingToast,
+} from "@/features/campaigns/hooks/metrics-sync-poll-policy";
 
-const ACTIVE_METRICS_SYNC_STATUSES = new Set(["pending", "queued", "collecting"]);
 const TERMINAL_METRICS_SYNC_STATUSES = new Set([
   "completed",
   "partial",
@@ -50,15 +53,13 @@ export function useMetricsSyncCompletionToasts(
       const toastId = metricsSyncToastId(id);
       const label = publicationLabel(row);
 
-      if (status != null && ACTIVE_METRICS_SYNC_STATUSES.has(status)) {
-        if (prior == null || !ACTIVE_METRICS_SYNC_STATUSES.has(prior)) {
-          toast.loading(`Collecting metrics for ${label}…`, { id: toastId });
-        }
+      if (shouldShowMetricsSyncLoadingToast(prior, status)) {
+        toast.loading(`Collecting metrics for ${label}…`, { id: toastId });
       }
 
       if (
         prior != null &&
-        ACTIVE_METRICS_SYNC_STATUSES.has(prior) &&
+        isSyncInFlight(prior) &&
         status != null &&
         TERMINAL_METRICS_SYNC_STATUSES.has(status)
       ) {
