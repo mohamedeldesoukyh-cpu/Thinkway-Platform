@@ -9,7 +9,7 @@ import {
   isFullyInvoicedBillingStatus,
   isPartiallyInvoicedBillingStatus,
 } from "@/lib/billing/partial-invoice-lifecycle";
-import { isInvoiceEligibleOperationalStatus } from "@/features/campaigns/types/operational";
+import { isInvoiceEligibleOperationalStatus } from "@/lib/domains/campaign/operational-utils";
 import { snapshotOperationalRow } from "@/lib/billing/operational-billing-trace";
 
 function hasRemainingInvoiceableRevenue(
@@ -275,7 +275,7 @@ export function isOperationalRowInvoiceEligible(
 }
 
 const UI_SELECTABLE_OPERATIONAL = new Set<
-  import("@/features/campaigns/types/operational").CampaignLineOperationalStatus
+  import("@/lib/domains/campaign/operational-utils").CampaignLineOperationalStatus
 >(["io_generated", "io_revised", "partially_invoiced", "reopened"]);
 
 const UI_BLOCKED_LINE_BILLING = new Set<CampaignLineBillingStatus>([

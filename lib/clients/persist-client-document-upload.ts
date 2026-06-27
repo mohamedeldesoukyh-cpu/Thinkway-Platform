@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 
-import { uploadClientDocumentSchema } from "@/features/clients/schemas";
+import { uploadClientDocumentSchema } from "@/lib/domains/clients/document-schemas";
 import { friendlyClientDocumentError } from "@/lib/clients/client-document-utils";
 import {
   removeStorageObject,

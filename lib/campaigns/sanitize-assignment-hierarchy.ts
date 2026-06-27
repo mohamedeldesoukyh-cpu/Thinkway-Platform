@@ -1,13 +1,13 @@
-import { formatMarginPercent } from "@/features/billing/types";
+import { formatMarginPercent } from "@/lib/domains/billing/types";
 import type {
   AssignmentDeliverableHierarchyRow,
   AssignmentHierarchy,
   AssignmentHierarchyGroup,
   AssignmentHierarchyRollups,
   AssignmentPostOperationalRow,
-} from "@/features/campaigns/types/assignment-hierarchy";
+} from "@/lib/domains/campaign/assignment-hierarchy-types";
 import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
-import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import { normalizeOperationalStatus } from "@/lib/campaigns/operational-status-utils";

@@ -4,7 +4,7 @@ import {
   buildSeedsFromShortlistItems,
   filterNewShortlistImportItems,
   type ShortlistItemForSeed,
-} from "@/features/quotations/shortlist-seeds";
+} from "@/lib/commercial-sync/shortlist-seeds";
 import type { Database } from "@/types/database";
 
 import { recomputeQuotationTotals } from "./quotation-commercial-service";

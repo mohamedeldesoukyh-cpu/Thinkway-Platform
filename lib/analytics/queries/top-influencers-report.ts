@@ -35,8 +35,8 @@ import {
   TOP_INFLUENCERS_MIN_LIMIT,
 } from "@/lib/analytics/top-influencers/top-influencers-types";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
-import { parseLineAssignment } from "@/features/campaigns/line-assignment";
-import { resolveEffectiveExchangeRate } from "@/features/finance/exchange-rates/queries";
+import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
+import { resolveEffectiveExchangeRate } from "@/lib/finance/exchange-rates/resolve-rate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AgencyOrDirect, CampaignStatus } from "@/types/database";
 

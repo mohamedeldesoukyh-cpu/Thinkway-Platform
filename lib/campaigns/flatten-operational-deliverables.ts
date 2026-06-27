@@ -1,10 +1,10 @@
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
-import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import type {
   OperationalDeliverableExplorerRow,
   OperationalDeliverableFlattenStats,
-} from "@/features/campaigns/types/operational-deliverable-explorer";
-import type { CampaignDeliverableRow } from "@/features/campaigns/types";
+} from "@/lib/domains/campaign/operational-deliverable-explorer";
+import type { CampaignDeliverableRow } from "@/lib/domains/campaign/workspace-types";
 import {
   deliverableTypeShortLabel,
   getPlatformOptionLabel,

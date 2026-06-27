@@ -1,5 +1,5 @@
-import { formatPlatformLabel } from "@/features/campaigns/utils";
-import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { formatPlatformLabel } from "@/lib/campaigns/utils";
+import type { CampaignWorkspace } from "@/lib/domains/campaign/workspace-types";
 
 export function resolveCampaignDisplayGroup(
   workspace: CampaignWorkspace

@@ -304,7 +304,7 @@ export function expandPostSchedules(row: CommercialDeliverableRow): PostSchedule
 export function commercialRowsToPlatformSelections(
   rows: CommercialDeliverableRow[],
   accountLookup: Map<string, { account_id: string; handle: string; profile_url: string | null; follower_count: number | null; engagement_rate: number | null; audience_country: string | null }>
-): import("@/features/campaigns/line-assignment").LinePlatformSelection[] {
+): import("@/lib/campaigns/line-assignment").LinePlatformSelection[] {
   const byPlatform = new Map<string, string[]>();
 
   for (const row of rows) {

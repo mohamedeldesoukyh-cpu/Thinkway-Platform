@@ -1,4 +1,4 @@
-import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import type { CampaignLineOperationalStatus } from "@/lib/domains/campaign/operational-utils";
 import {
   calculateAssignmentInvoiceProgress,
   deriveAssignmentBillingStatusFromProgress,

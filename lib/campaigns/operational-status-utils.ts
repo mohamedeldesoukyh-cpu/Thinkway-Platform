@@ -1,5 +1,5 @@
-import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
-import { operationalStatusForOpsBadge } from "@/features/campaigns/types/operational";
+import type { CampaignLineOperationalStatus } from "@/lib/domains/campaign/operational-utils";
+import { operationalStatusForOpsBadge } from "@/lib/domains/campaign/operational-utils";
 
 const KNOWN: CampaignLineOperationalStatus[] = [
   "draft",

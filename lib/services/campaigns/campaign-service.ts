@@ -1,12 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { METADATA_PLATFORM_KEY } from "@/features/campaigns/constants";
+import { METADATA_PLATFORM_KEY } from "@/lib/campaigns/constants";
 import type {
   BrandFormOption,
   ClientFormOption,
   GroupFormOption,
-} from "@/features/campaigns/types";
-import { CAMPAIGNS_PAGE_SIZE } from "@/features/campaigns/constants";
+} from "@/lib/domains/campaign/workspace-types";
+import { CAMPAIGNS_PAGE_SIZE } from "@/lib/campaigns/constants";
 import { logCampaignGroupAssignmentChange } from "@/lib/campaigns/campaign-group-audit";
 import {
   buildDuplicatedCampaignLineInsert,

@@ -1,4 +1,4 @@
-import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 
 type RowDebugShape = {

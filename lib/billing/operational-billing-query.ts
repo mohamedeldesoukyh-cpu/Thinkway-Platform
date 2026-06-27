@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   AssignmentBillingGroup,
   DeliverableBillingRow,
-} from "@/features/billing/types";
+} from "@/lib/domains/billing/types";
 import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import {
   queryAssignmentDeliverables,
@@ -52,7 +52,7 @@ import { queryCampaignLinesWithDisplayOrder } from "@/lib/campaigns/line-orderin
 import {
   parseLineAssignment,
   platformLabel,
-} from "@/features/campaigns/line-assignment";
+} from "@/lib/campaigns/line-assignment";
 
 type LineRow = {
   id: string;

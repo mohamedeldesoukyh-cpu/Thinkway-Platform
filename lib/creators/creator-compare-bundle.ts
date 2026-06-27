@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { suggestCostFromRateCard } from "@/features/campaigns/line-assignment";
+import { suggestCostFromRateCard } from "@/lib/campaigns/line-assignment";
 import { loadCreatorHistoricalMetrics } from "@/lib/creators/historical-metrics";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";

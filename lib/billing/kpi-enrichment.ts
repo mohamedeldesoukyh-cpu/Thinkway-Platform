@@ -7,7 +7,7 @@ import {
 import { buildBillingKpisFromOperationalRows } from "@/lib/analytics/billing-kpi-fallback";
 import type { BillingKpiExtras } from "@/lib/analytics/queries/billing-bridge";
 import { safeLoadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
-import type { BillingKpiSummary } from "@/features/billing/types";
+import type { BillingKpiSummary } from "@/lib/domains/billing/types";
 import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import { safeAnalyticsQuery } from "@/lib/platform/safe-query";
 import { devLog } from "@/lib/platform/logger";

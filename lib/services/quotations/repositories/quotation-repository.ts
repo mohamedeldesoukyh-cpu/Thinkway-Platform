@@ -2,9 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
-import { formatQuotationTermsText } from "@/features/quotations/quotation-default-terms";
-import { defaultValidityDateFromIssue } from "@/features/quotations/quotation-validity";
-import { normalizeCommercialLine } from "@/features/quotations/quotation-engine";
+import { formatQuotationTermsText } from "@/lib/commercial/quotation-default-terms";
+import { defaultValidityDateFromIssue } from "@/lib/commercial/quotation-validity";
+import { normalizeCommercialLine } from "@/lib/commercial/quotation-engine";
 import type { CommercialInputMode, Database } from "@/types/database";
 
 import type { QuotationItemSeed } from "../quotation-helpers";

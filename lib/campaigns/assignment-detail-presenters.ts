@@ -1,8 +1,8 @@
 import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
-import { platformLabel } from "@/features/campaigns/line-assignment";
-import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-import { formatPercent } from "@/features/campaigns/utils";
+import { platformLabel } from "@/lib/campaigns/line-assignment";
+import type { AssignmentHierarchyGroup } from "@/lib/domains/campaign/assignment-hierarchy-types";
+import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
+import { formatPercent } from "@/lib/campaigns/utils";
 
 export function formatAssignmentDetailDate(value: string | null | undefined): string {
   if (!value?.trim()) return "—";

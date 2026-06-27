@@ -1,5 +1,5 @@
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
-import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchyGroup } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import { analyzeAssignmentGroupsCoverage } from "@/lib/operations/io-coverage-server";
 import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
 import {
@@ -11,7 +11,7 @@ import {
   resolveInvoiceActionForSelection,
   type RegenerationEligibilityInput,
 } from "@/lib/billing/regeneration-eligibility";
-import type { AssignmentHierarchyBillingContext } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchyBillingContext } from "@/lib/domains/campaign/assignment-hierarchy-types";
 
 export type SelectionActionRowInput = {
   lineId: string;

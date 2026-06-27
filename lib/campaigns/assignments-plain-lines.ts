@@ -1,4 +1,4 @@
-import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hierarchy-types";
 
 export type PlainAssignmentLine = {
   line_id: string;

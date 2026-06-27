@@ -26,7 +26,7 @@ import {
   computeAgencyFeeAmount,
   rollupLineClientCommercial,
 } from "@/lib/assignments/client-billing-commercial";
-import { resolveEffectiveExchangeRate } from "@/features/finance/exchange-rates/queries";
+import { resolveEffectiveExchangeRate } from "@/lib/finance/exchange-rates/resolve-rate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CampaignStatus } from "@/types/database";
 

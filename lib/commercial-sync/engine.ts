@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buildSeedsFromShortlistItems,
   type ShortlistItemForSeed,
-} from "@/features/quotations/shortlist-seeds";
+} from "@/lib/commercial-sync/shortlist-seeds";
 import type { Database, QuotationStatus } from "@/types/database";
 
 import { logQuotationLifecycleEvent } from "./audit";

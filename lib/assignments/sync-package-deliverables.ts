@@ -2,7 +2,7 @@ import type { CommercialDeliverableRow } from "@/lib/assignments/commercial-calc
 import {
   countLineDeliverables,
   type LinePlatformSelection,
-} from "@/features/campaigns/line-assignment";
+} from "@/lib/campaigns/line-assignment";
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;

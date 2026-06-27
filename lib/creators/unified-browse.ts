@@ -492,6 +492,6 @@ export async function getUnifiedCreatorById(
 /** Back-compat helper for assignment flows */
 export function toLegacySearchResult(
   creator: UnifiedCreatorResult
-): import("@/features/campaigns/types").InfluencerSearchResult | null {
+): import("@/lib/domains/campaign/workspace-types").InfluencerSearchResult | null {
   return unifiedToInfluencerSearch(creator);
 }

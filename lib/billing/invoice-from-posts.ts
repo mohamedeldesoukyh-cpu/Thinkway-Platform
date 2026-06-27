@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { assignmentStatusFromBilling, platformLabel } from "@/features/campaigns/line-assignment";
+import { assignmentStatusFromBilling, platformLabel } from "@/lib/campaigns/line-assignment";
 import {
   assignmentDeliverableBillingSelect,
   resolveDeliverableVatExempt,

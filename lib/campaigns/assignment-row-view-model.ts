@@ -1,11 +1,11 @@
-import { labelForBillingStatus } from "@/features/billing/constants";
+import { labelForBillingStatus } from "@/lib/domains/billing/constants";
 import type {
   AssignmentDeliverableBillingStatus,
   CampaignLineBillingStatus,
 } from "@/lib/domains/campaign/types";
-import { LINE_OPERATIONAL_STATUS_LABELS } from "@/features/campaigns/constants/operational-status";
-import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import { LINE_OPERATIONAL_STATUS_LABELS } from "@/lib/campaigns/constants/operational-status";
+import type { AssignmentHierarchyGroup } from "@/lib/domains/campaign/assignment-hierarchy-types";
+import type { CampaignLineOperationalStatus } from "@/lib/domains/campaign/operational-utils";
 import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
@@ -14,7 +14,7 @@ import {
   isAssignmentInvoiceSelectable,
 } from "@/lib/billing/regeneration-eligibility";
 import { effectiveAssignmentBillingStatusForUi } from "@/lib/campaigns/assignment-display-status";
-import type { AssignmentHierarchyBillingContext } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchyBillingContext } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import { buildScopedLineSnapshotFromHierarchy } from "@/lib/operations/io-coverage-scope";
 import {
   hasExistingIoCoverage,
@@ -24,7 +24,7 @@ import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 import { isLineVendorIoGenerateEligible } from "@/lib/io/vendor-io-generate-eligibility";
 import { isLineUngenerateIoEligible } from "@/lib/io/vendor-io-ungenerate-eligibility";
 import { safeSummarizePostingDates } from "@/lib/campaigns/safe-assignment-dates";
-import { platformShortLabel } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import { platformShortLabel } from "@/lib/campaigns/hierarchy-utils";
 
 export type AssignmentLineMeta = {
   vioEligible: boolean;

@@ -23,7 +23,7 @@ import {
   type PnlPeriodScope,
 } from "@/lib/analytics/pnl/pnl-periods";
 import { loadPnLLineFacts } from "@/lib/analytics/queries/pnl-report";
-import { resolveEffectiveExchangeRate } from "@/features/finance/exchange-rates/queries";
+import { resolveEffectiveExchangeRate } from "@/lib/finance/exchange-rates/resolve-rate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AgencyOrDirect } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";

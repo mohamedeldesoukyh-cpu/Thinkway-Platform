@@ -1,11 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { promoteDiscoveredProfileToInfluencer } from "@/features/discovery/shortlists/promote";
+import { promoteDiscoveredProfileToInfluencer } from "@/lib/discovery/promote-profile";
 import {
   executePromoteMasterData,
   writePromoteMasterDataAuditEvents,
-} from "@/features/quotations/promote-master-data";
-import type { PromoteMasterDataInput } from "@/features/quotations/promote-master-data-schema";
+} from "@/lib/quotations/promote-master-data";
+import type { PromoteMasterDataInput } from "@/lib/domains/commercial/promote-master-data-schema";
 import { logQuotationLifecycleEvent } from "@/lib/commercial-sync/audit";
 import {
   canCreateCampaignFromQuotation,

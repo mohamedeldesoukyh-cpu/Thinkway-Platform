@@ -5,9 +5,9 @@ import {
   buildAnalyticsCacheKey,
   withAnalyticsCache,
 } from "@/lib/analytics/aggregations/memo";
-import { computeAgingBucket } from "@/features/billing/types";
-import { AGING_BUCKET_LABELS } from "@/features/billing/constants";
-import type { AgingBucket } from "@/features/billing/types";
+import { computeAgingBucket } from "@/lib/domains/billing/types";
+import { AGING_BUCKET_LABELS } from "@/lib/domains/billing/constants";
+import type { AgingBucket } from "@/lib/domains/billing/types";
 import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import { buildKpiStripFromMetrics } from "@/lib/analytics/queries/kpi-builder";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";

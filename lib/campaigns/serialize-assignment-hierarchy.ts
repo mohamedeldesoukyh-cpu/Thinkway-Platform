@@ -1,4 +1,4 @@
-import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 /** Ensure hierarchy is RSC-safe plain JSON before crossing into client components. */

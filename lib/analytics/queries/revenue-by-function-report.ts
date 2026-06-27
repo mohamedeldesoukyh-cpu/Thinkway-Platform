@@ -32,7 +32,7 @@ import type {
   RevenueByFunctionReportData,
   RevenueByFunctionUserOption,
 } from "@/lib/analytics/revenue-by-function/revenue-by-function-types";
-import { resolveEffectiveExchangeRate } from "@/features/finance/exchange-rates/queries";
+import { resolveEffectiveExchangeRate } from "@/lib/finance/exchange-rates/resolve-rate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { BusinessFunction, CampaignStatus } from "@/types/database";
 

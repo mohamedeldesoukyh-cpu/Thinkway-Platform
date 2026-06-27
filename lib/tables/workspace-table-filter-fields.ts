@@ -1,12 +1,12 @@
 import type { CampaignListItem } from "@/types/database";
-import type { BillingInvoiceRow, CampaignBillingQueueRow, FinancialApprovalRow, VendorPaymentBatchRow } from "@/features/billing/types";
+import type { BillingInvoiceRow, CampaignBillingQueueRow, FinancialApprovalRow, VendorPaymentBatchRow } from "@/lib/domains/billing/types";
 import type { FinanceAdjustmentRegisterRow } from "@/features/finance/adjustments/types";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
-import type { ClientIoRow, VendorIoRow } from "@/features/io/types";
+import type { ClientIoRow, VendorIoRow } from "@/lib/domains/io/types";
 import type { SettingsRoleRow, SettingsUserRow } from "@/features/settings/types";
 import type { ClientAccessEntityRow } from "@/features/client-access/types";
 import type { ClientBrandRow, ClientDetail, VendorDetail } from "@/types/database";
-import type { GroupBrandRow, GroupLegalEntityRow, GroupWorkspace } from "@/features/groups/types";
+import type { GroupBrandRow, GroupLegalEntityRow, GroupWorkspace } from "@/lib/domains/groups/types";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import type {
   MovementBatchRow,
@@ -16,9 +16,9 @@ import type {
 import type { LinkedCampaignSummary } from "@/lib/operations/entity-dependencies";
 import type { CollectionInvoiceRow } from "@/lib/collections/queries/load-collection-invoices";
 import type { VendorPayablesPayload } from "@/lib/vendor-payables/load-payables";
-import { AGING_BUCKET_LABELS } from "@/features/billing/constants";
-import { FINANCIAL_APPROVAL_STAGE_LABELS } from "@/features/billing/constants";
-import { LINE_BILLING_STATUS_LABELS, VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
+import { AGING_BUCKET_LABELS } from "@/lib/domains/billing/constants";
+import { FINANCIAL_APPROVAL_STAGE_LABELS } from "@/lib/domains/billing/constants";
+import { LINE_BILLING_STATUS_LABELS, VENDOR_PAYMENT_STATUS_LABELS } from "@/lib/campaigns/constants";
 import { labelForOption } from "@/features/clients/constants";
 import { CLIENT_DOCUMENT_TYPE_OPTIONS } from "@/features/clients/constants";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";

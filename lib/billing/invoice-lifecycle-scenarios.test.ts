@@ -483,7 +483,7 @@ function testPerDeliverableLineSelectionExpandsDeliverables() {
               invoiced_amount: 0,
             },
           ],
-        } as import("@/features/campaigns/types/assignment-hierarchy").AssignmentHierarchyGroup,
+        } as import("@/lib/domains/campaign/assignment-hierarchy-types").AssignmentHierarchyGroup,
       },
     ],
   });

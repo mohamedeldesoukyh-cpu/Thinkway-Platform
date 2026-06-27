@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { FINANCIAL_APPROVAL_CHAIN } from "@/features/billing/constants";
+import { FINANCIAL_APPROVAL_CHAIN } from "@/lib/domains/billing/constants";
 import { lineBillingPatch } from "../billing-helpers";
 
 export async function fetchLineForBillingApproval(

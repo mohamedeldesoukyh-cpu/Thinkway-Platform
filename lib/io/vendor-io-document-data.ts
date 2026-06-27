@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { formatPaymentMethodLabel } from "@/features/vendors/utils";
+import { formatPaymentMethodLabel } from "@/lib/vendors/format-utils";
 import { resolveVendorIoPaymentSchedule } from "@/lib/io/vendor-io-payment-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type { VendorIoDocumentData, VendorIoDeliverableRow } from "@/lib/io/vendor-io-document-types";

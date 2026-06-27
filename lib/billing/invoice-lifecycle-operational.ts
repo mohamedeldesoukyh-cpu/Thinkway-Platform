@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
+import { assignmentStatusFromBilling } from "@/lib/campaigns/line-assignment";
 import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import { resolveClientBillableAmount } from "@/lib/billing/client-billable-amount";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { syncQuotationChangeToShortlist } from "@/lib/commercial-sync/engine";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
-import { normalizeCommercialLine, computeQuotationTotals } from "@/features/quotations/quotation-engine";
+import { normalizeCommercialLine, computeQuotationTotals } from "@/lib/commercial/quotation-engine";
 import type { CommercialInputMode, Database } from "@/types/database";
 
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";

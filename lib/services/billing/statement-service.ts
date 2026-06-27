@@ -19,11 +19,11 @@ import { queryCampaignLinesWithDisplayOrder } from "@/lib/campaigns/line-orderin
 import {
   parseLineAssignment,
   platformLabel,
-} from "@/features/campaigns/line-assignment";
+} from "@/lib/campaigns/line-assignment";
 
 import { resolveBillingKpis } from "@/lib/billing/kpi-enrichment";
 import { devLog } from "@/lib/platform/logger";
-import { AGING_BUCKET_LABELS } from "@/features/billing/constants";
+import { AGING_BUCKET_LABELS } from "@/lib/domains/billing/constants";
 import { buildCampaignQueueFromBillingLines } from "@/lib/billing/campaign-billing-queue";
 import {
   loadCampaignInvoiceLineRollups,
@@ -44,7 +44,7 @@ import {
   type FinancialApprovalRow,
   type InvoiceWorkspace,
   type VendorPaymentBatchRow,
-} from "@/features/billing/types";
+} from "@/lib/domains/billing/types";
 
 type LineQueryRow = {
   id: string;

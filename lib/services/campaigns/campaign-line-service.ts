@@ -14,7 +14,7 @@ import {
   resolveCampaignBillingVatRate,
   resolveVatRateForCountry,
 } from "@/lib/vat/queries";
-import { lineAssignmentPayloadSchema } from "@/features/campaigns/schemas";
+import { lineAssignmentPayloadSchema } from "@/lib/campaigns/schemas";
 import {
   buildLineTitle,
   deriveLinePlatformField,
@@ -22,7 +22,7 @@ import {
   parseLineAssignment,
   type LineInfluencerAssignment,
   type LinePlatformSelection,
-} from "@/features/campaigns/line-assignment";
+} from "@/lib/campaigns/line-assignment";
 
 import {
   emptyToNull,

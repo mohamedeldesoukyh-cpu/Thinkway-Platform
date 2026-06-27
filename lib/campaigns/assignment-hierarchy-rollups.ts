@@ -1,12 +1,12 @@
 import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 import { distributeAmountByWeights } from "@/lib/assignments/commercial-calculations";
-import { formatMarginPercent } from "@/features/billing/types";
+import { formatMarginPercent } from "@/lib/domains/billing/types";
 import type {
   AssignmentDeliverableHierarchyRow,
   AssignmentHierarchyRollups,
   AssignmentPostOperationalRow,
-} from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+} from "@/lib/domains/campaign/assignment-hierarchy-types";
+import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
 import type { AssignmentPricingMode } from "@/lib/domains/commercial/types";
 import { rollupAssignmentBilling } from "@/lib/billing/deliverable-billing";
 

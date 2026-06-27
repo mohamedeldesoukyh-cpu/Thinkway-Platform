@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
-import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import { assignmentStatusFromBilling } from "@/lib/campaigns/line-assignment";
+import type { CampaignLineOperationalStatus } from "@/lib/domains/campaign/operational-utils";
 import {
   assignmentDeliverableBillingSelect,
   queryAssignmentDeliverables,

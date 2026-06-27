@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
-import { parseLineAssignment } from "@/features/campaigns/line-assignment";
+import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 
 /** Recomputes campaign line display name from deliverables when not user-edited. */
 export async function syncAssignmentLineTitleFromDeliverables(

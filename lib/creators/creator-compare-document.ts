@@ -5,7 +5,7 @@ import {
   formatCreatorCount,
   formatEngagementRate,
   thinkwayAiScore,
-} from "@/features/discovery/components/creator-search/creator-search-utils";
+} from "@/lib/creators/creator-display-utils";
 
 import type { CreatorCompareBundle } from "@/lib/creators/creator-compare-bundle";
 import { formatGrowthRate } from "@/lib/creators/creator-compare-bundle";

@@ -26,7 +26,7 @@ import {
   parseClientTypeFilter,
   type ClientTypeFilter,
 } from "@/lib/analytics/filters/client-type-filter";
-import { resolveEffectiveExchangeRate } from "@/features/finance/exchange-rates/queries";
+import { resolveEffectiveExchangeRate } from "@/lib/finance/exchange-rates/resolve-rate";
 import { loadStatementClientOptions } from "@/lib/reports/queries/statement-options";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 

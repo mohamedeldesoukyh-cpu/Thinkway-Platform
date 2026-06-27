@@ -1,6 +1,6 @@
 import type { FinancialMetrics } from "@/lib/analytics/types/metrics";
-import type { BillingKpiSummary } from "@/features/billing/types";
-import { formatMarginPercent } from "@/features/billing/types";
+import type { BillingKpiSummary } from "@/lib/domains/billing/types";
+import { formatMarginPercent } from "@/lib/domains/billing/types";
 
 export type BillingKpiExtras = {
   output_vat: number;

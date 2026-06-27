@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { ClientIoRow } from "@/features/io/types";
+import type { ClientIoRow } from "@/lib/domains/io/types";
 import { parseSendRecipientsJson } from "@/lib/io/client-io-send-recipients";
 
 export const CLIENT_IO_LIST_SELECT = `

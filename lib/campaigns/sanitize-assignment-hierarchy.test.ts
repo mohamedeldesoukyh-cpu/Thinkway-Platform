@@ -2,7 +2,7 @@
  * Run: npx tsx lib/campaigns/sanitize-assignment-hierarchy.test.ts
  */
 import { sanitizeAssignmentHierarchyGroup } from "@/lib/campaigns/sanitize-assignment-hierarchy";
-import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchyGroup } from "@/lib/domains/campaign/assignment-hierarchy-types";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);

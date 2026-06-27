@@ -1,4 +1,4 @@
-import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 type AssignmentCurrencyLine = Pick<

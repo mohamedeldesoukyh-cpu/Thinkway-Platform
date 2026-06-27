@@ -8,8 +8,8 @@ import {
 import type {
   AssignmentDeliverableHierarchyRow,
   AssignmentPostOperationalRow,
-} from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+} from "@/lib/domains/campaign/assignment-hierarchy-types";
+import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);

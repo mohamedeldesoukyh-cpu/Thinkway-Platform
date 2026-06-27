@@ -19,7 +19,7 @@ import type {
   bulkOperationalBillingSchema,
   closeBillingLineSchema,
   moveLineToBillingSchema,
-} from "@/features/billing/schemas";
+} from "@/lib/domains/billing/schemas";
 
 export async function approveLineForBilling(supabase: SupabaseClient, userId: string, input: z.infer<typeof approveLineForBillingSchema>): Promise<BillingMutationResult> {const { data: line, error: fetchError } = await supabase
     .from("campaign_lines")
@@ -319,7 +319,7 @@ import {
   type DeliverableBillingRow,
 } from "@/lib/billing/deliverable-billing";
 import { queryCampaignLinesWithDisplayOrder } from "@/lib/campaigns/line-ordering";
-import { parseLineAssignment, platformLabel } from "@/features/campaigns/line-assignment";
+import { parseLineAssignment, platformLabel } from "@/lib/campaigns/line-assignment";
 import { devLog } from "@/lib/platform/logger";
 import {
   loadCampaignInvoiceLineRollups,
@@ -332,7 +332,7 @@ import {
   type BillingLineRow,
   type CampaignLineBillingStatus,
   type CampaignOperationalBillingDetail,
-} from "@/features/billing/types";
+} from "@/lib/domains/billing/types";
 
 type LineQueryRow = {
   id: string;

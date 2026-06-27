@@ -1,4 +1,4 @@
-import type { ClientIoRow } from "@/features/io/types";
+import type { ClientIoRow } from "@/lib/domains/io/types";
 import { getGmailFromEmail } from "@/lib/email/gmail-config";
 import type { GmailAttachment } from "@/lib/email/gmail-send";
 

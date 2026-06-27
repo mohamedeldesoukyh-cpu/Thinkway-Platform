@@ -1,5 +1,5 @@
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
-import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
+import type { AssignmentHierarchyGroup } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
 import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { CAMPAIGNS_PAGE_SIZE } from "@/features/campaigns/constants";
+import { CAMPAIGNS_PAGE_SIZE } from "@/lib/campaigns/constants";
 import {
   syncCampaignHeaderStatusesForList,
 } from "@/lib/campaigns/sync-campaign-header-status";

@@ -1,7 +1,7 @@
 import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import { rowTotalRevenue } from "@/lib/assignments/commercial-calculations";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
-import { isCancelledCampaignStatus } from "@/features/groups/types";
+import { isCancelledCampaignStatus } from "@/lib/domains/groups/campaign-status";
 import { buildLineVatPayload } from "@/lib/vat/line-payload";
 
 export function emptyToNull(value: string | undefined): string | null {

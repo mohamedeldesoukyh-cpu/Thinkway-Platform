@@ -1,8 +1,8 @@
 import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import type {
   AssignmentHierarchyRollups,
-} from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+} from "@/lib/domains/campaign/assignment-hierarchy-types";
+import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
 import {
   calculateAssignmentInvoiceProgress,
   getRemainingRevenue,

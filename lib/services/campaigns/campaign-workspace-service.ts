@@ -13,12 +13,12 @@ import {
   getCampaignVendorIos,
   getClientIoSendHistory,
   getClientIoSendRecipients,
-} from "@/features/io/queries";
+} from "@/lib/io/campaign-io-queries";
 import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
-import type { CampaignLineBillingStatus } from "@/features/billing/types";
-import { METADATA_PLATFORM_KEY } from "@/features/campaigns/constants";
+import type { CampaignLineBillingStatus } from "@/lib/domains/billing/types";
+import { METADATA_PLATFORM_KEY } from "@/lib/campaigns/constants";
 import {
   deriveLinePaymentStatus,
   deriveWorkflowStage,
@@ -26,12 +26,12 @@ import {
   mapDeliverableDisplayStatus,
   type CampaignLineWorkspace,
   type CampaignWorkspace,
-} from "@/features/campaigns/types";
+} from "@/lib/domains/campaign/workspace-types";
 import {
   countLineDeliverables,
   parseLineAssignment,
   platformLabel,
-} from "@/features/campaigns/line-assignment";
+} from "@/lib/campaigns/line-assignment";
 import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 import {
   fetchCampaignApprovals,
@@ -105,7 +105,7 @@ type LineRow = {
   start_date: string | null;
   end_date: string | null;
   billing_status: CampaignLineBillingStatus;
-  assignment_status: import("@/features/campaigns/types").CampaignLineAssignmentStatus;
+  assignment_status: import("@/lib/domains/campaign/workspace-types").CampaignLineAssignmentStatus;
   revenue_locked: boolean;
   cost_locked: boolean;
   vendor_assignment_locked: boolean;

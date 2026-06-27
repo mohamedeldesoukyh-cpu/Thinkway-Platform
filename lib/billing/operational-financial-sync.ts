@@ -1,4 +1,4 @@
-import type { AssignmentBillingGroup } from "@/features/billing/types";
+import type { AssignmentBillingGroup } from "@/lib/domains/billing/types";
 import {
   aggregateRollupFromLeaves,
   flattenOperationalLeaves,

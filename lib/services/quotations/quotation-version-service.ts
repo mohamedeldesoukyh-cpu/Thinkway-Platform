@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { computeQuotationTotals } from "@/features/quotations/quotation-engine";
-import { defaultValidityDateFromIssue } from "@/features/quotations/quotation-validity";
+import { computeQuotationTotals } from "@/lib/commercial/quotation-engine";
+import { defaultValidityDateFromIssue } from "@/lib/commercial/quotation-validity";
 import { logQuotationLifecycleEvent } from "@/lib/commercial-sync/audit";
 import {
   canGenerateQuotationVersion,

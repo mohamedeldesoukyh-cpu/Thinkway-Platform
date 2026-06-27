@@ -10,11 +10,11 @@ import {
 import { isCommercialSyncEnabled, stripQuotationVersionSuffix } from "@/lib/commercial-sync/rules";
 import type { CommercialInputMode, Database, QuotationStatus } from "@/types/database";
 
-import { QUOTATION_PERMISSIONS } from "@/features/quotations/constants";
+import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
 import {
   isQuotationExpired,
   validDaysRemaining,
-} from "@/features/quotations/quotation-validity";
+} from "@/lib/commercial/quotation-validity";
 import type {
   PromoteWizardOptions,
   QuotationDeliverable,
@@ -24,7 +24,7 @@ import type {
   QuotationListRow,
   QuotationRevisionRow,
   QuotationVersionSummary,
-} from "@/features/quotations/types";
+} from "@/lib/domains/commercial/quotation-detail-types";
 
 function unwrap<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;

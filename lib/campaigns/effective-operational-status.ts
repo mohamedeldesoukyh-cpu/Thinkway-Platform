@@ -2,7 +2,7 @@ import {
   normalizeOperationalStatus,
   normalizeOperationalStatusForOpsBadge,
 } from "@/lib/campaigns/operational-status-utils";
-import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import type { CampaignLineOperationalStatus } from "@/lib/domains/campaign/operational-utils";
 import { getAssignmentOpsStatus } from "@/lib/billing/assignment-lifecycle-state";
 import {
   getRemainingRevenue,

@@ -8,7 +8,7 @@ import {
   buildLineTitle,
   deliverableLabel,
   parseLineAssignment,
-} from "@/features/campaigns/line-assignment";
+} from "@/lib/campaigns/line-assignment";
 import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
 import {
   parseTermsText,

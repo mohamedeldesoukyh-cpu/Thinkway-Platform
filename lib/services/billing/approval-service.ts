@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { z } from "zod";
-import type { decideFinancialApprovalSchema, requestFinanceOverrideSchema } from "@/features/billing/schemas";
+import type { decideFinancialApprovalSchema, requestFinanceOverrideSchema } from "@/lib/domains/billing/schemas";
 import { emptyToNull, type BillingMutationResult } from "./billing-helpers";
 import { insertFinancialApprovalChain } from "./repositories/billing-repository";
 

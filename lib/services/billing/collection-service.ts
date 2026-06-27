@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { z } from "zod";
-import type { recordCollectionPaymentSchema } from "@/features/billing/schemas";
+import type { recordCollectionPaymentSchema } from "@/lib/domains/billing/schemas";
 import { syncDeliverableCollectionsForInvoice } from "@/lib/billing/sync-deliverable-collections";
 import { emptyToNull, type BillingMutationResult } from "./billing-helpers";
 

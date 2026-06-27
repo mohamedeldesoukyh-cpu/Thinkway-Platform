@@ -1,5 +1,5 @@
-import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
-import type { InvoiceWorkspace } from "@/features/billing/types";
+import type { AssignmentHierarchyGroup } from "@/lib/domains/campaign/assignment-hierarchy-types";
+import type { InvoiceWorkspace } from "@/lib/domains/billing/types";
 import type {
   IoCoverageSelectionScope,
   IoDeliverableSnapshot,

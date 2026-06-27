@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { z } from "zod";
-import type { recordVendorPaymentSchema } from "@/features/billing/schemas";
+import type { recordVendorPaymentSchema } from "@/lib/domains/billing/schemas";
 import { emptyToNull, type BillingMutationResult } from "./billing-helpers";
 
 export async function recordVendorPayment(supabase: SupabaseClient, userId: string, input: z.infer<typeof recordVendorPaymentSchema>): Promise<BillingMutationResult> {const { data: assignment, error: assignError } = await supabase

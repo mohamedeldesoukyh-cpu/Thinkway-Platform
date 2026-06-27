@@ -6,8 +6,8 @@ import {
 import {
   countLineDeliverables,
   type LinePlatformSelection,
-} from "@/features/campaigns/line-assignment";
-import type { AssignmentPricingMode } from "@/features/campaigns/line-assignment";
+} from "@/lib/campaigns/line-assignment";
+import type { AssignmentPricingMode } from "@/lib/campaigns/line-assignment";
 
 type PlatformAccount = {
   id: string;

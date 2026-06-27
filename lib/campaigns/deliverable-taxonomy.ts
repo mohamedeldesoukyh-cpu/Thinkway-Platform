@@ -1,5 +1,5 @@
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
-import type { LineInfluencerAssignment } from "@/features/campaigns/line-assignment";
+import type { LineInfluencerAssignment } from "@/lib/campaigns/line-assignment";
 import { isSocialPlatform } from "@/lib/social/platforms";
 
 /** Master-data deliverable taxonomy keyed by social platform. */

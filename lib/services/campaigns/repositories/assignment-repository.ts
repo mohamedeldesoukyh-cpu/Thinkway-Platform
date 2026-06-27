@@ -15,7 +15,7 @@ import type {
 import {
   suggestCostFromRateCard,
   suggestCurrencyFromPaymentDetails,
-} from "@/features/campaigns/line-assignment";
+} from "@/lib/campaigns/line-assignment";
 import { escapeIlikePattern } from "../campaign-commercial";
 
 const INFLUENCER_PLATFORM_ACCOUNT_SELECT =

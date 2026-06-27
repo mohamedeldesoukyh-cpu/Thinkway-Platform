@@ -1,8 +1,8 @@
 import type {
   AssignmentHierarchyRollups,
-} from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignLineWorkspace } from "@/features/campaigns/types";
-import { formatMarginPercent } from "@/features/billing/types";
+} from "@/lib/domains/campaign/assignment-hierarchy-types";
+import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
+import { formatMarginPercent } from "@/lib/domains/billing/types";
 
 /** Never crash the assignments grid when rollups are missing from the payload. */
 export function coalesceAssignmentRollups(

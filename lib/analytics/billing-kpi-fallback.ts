@@ -2,7 +2,7 @@ import { roundMoney } from "@/lib/analytics/aggregations/round";
 import { computeMarginPercent } from "@/lib/analytics/metrics/financial";
 import { mapFinancialMetricsToBillingKpis } from "@/lib/analytics/queries/billing-bridge";
 import type { BillingKpiExtras } from "@/lib/analytics/queries/billing-bridge";
-import type { BillingKpiSummary } from "@/features/billing/types";
+import type { BillingKpiSummary } from "@/lib/domains/billing/types";
 import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 
 const INVOICED_STATUSES = new Set<CampaignLineBillingStatus>([

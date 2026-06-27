@@ -42,8 +42,8 @@ import type {
   createInvoiceFromLinesSchema,
   regenerateInvoiceSchema,
   ungenerateInvoiceSchema,
-} from "@/features/billing/schemas";
-import type { FinancialApprovalRow, InvoiceWorkspace } from "@/features/billing/types";
+} from "@/lib/domains/billing/schemas";
+import type { FinancialApprovalRow, InvoiceWorkspace } from "@/lib/domains/billing/types";
 import {
   buildInvoiceCreateSuccessMessage,
   emptyToNull,
@@ -195,7 +195,7 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
           : ("generate" as const);
 
       let appendInvoiceLines:
-        | import("@/features/billing/types").InvoiceWorkspace["lines"]
+        | import("@/lib/domains/billing/types").InvoiceWorkspace["lines"]
         | undefined;
       if (invoiceMode === "append" && validationCtx.targetInvoiceId) {
         const { getInvoiceLines } = await import("@/lib/finance/invoice-line-registry");

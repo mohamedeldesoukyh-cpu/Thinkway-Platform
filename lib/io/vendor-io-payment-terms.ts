@@ -1,4 +1,4 @@
-import { formatPaymentTermsLabel } from "@/features/vendors/utils";
+import { formatPaymentTermsLabel } from "@/lib/vendors/format-utils";
 import type { PaymentTerms } from "@/types/database";
 
 export function resolveVendorIoPaymentSchedule(options: {

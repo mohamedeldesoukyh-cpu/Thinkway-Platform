@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { InvoiceWorkspace } from "@/features/billing/types";
+import type { InvoiceWorkspace } from "@/lib/domains/billing/types";
 import { getInvoiceLines } from "@/lib/finance/invoice-line-registry";
 import { governanceDb } from "@/lib/supabase/governance-client";
 

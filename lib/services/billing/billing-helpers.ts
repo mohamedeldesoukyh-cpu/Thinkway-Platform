@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { assignmentStatusFromBilling } from "@/features/campaigns/line-assignment";
+import { assignmentStatusFromBilling } from "@/lib/campaigns/line-assignment";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { parseInvoiceBillingMode } from "@/lib/billing/invoice-validation-context";
 import { unlockDeliverablesForInvoice } from "@/lib/billing/sync-deliverable-billing";
