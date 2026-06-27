@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { filterWritePayload } from "@/lib/campaigns/campaign-publications-schema";
 import { countStorageTags } from "@/lib/performance/content-normalizer";
+import type { PublicationMetricSyncLogRow } from "@/lib/domains/campaign/types";
 import {
   getCampaignPublicationsSchema,
   invalidateCampaignPublicationsSchemaCache,
@@ -413,22 +414,7 @@ export async function requestPublicationScreenshot(
   return { ok: true, message: "Screenshot capture queued." };
 }
 
-export type PublicationMetricSyncLogRow = {
-  id: string;
-  created_at: string;
-  provider: string | null;
-  status: string;
-  metrics_refresh_status: string | null;
-  message: string | null;
-  duration_ms: number | null;
-  metrics_snapshot: Record<string, number | null> | null;
-  triggered_by: string | null;
-  previous_er: number | null;
-  new_er: number | null;
-  previous_method: string | null;
-  new_method: string | null;
-  response_summary: Record<string, unknown> | null;
-};
+export type { PublicationMetricSyncLogRow } from "@/lib/domains/campaign/types";
 
 export async function loadPublicationSyncLogs(
   supabase: SupabaseClient,

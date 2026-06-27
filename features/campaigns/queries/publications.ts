@@ -3,6 +3,7 @@ import type {
   CampaignPerformanceCharts,
   CampaignPerformanceSummary,
   CampaignPublicationRow,
+  PublicationMetricSyncLogRow,
 } from "@/lib/domains/campaign/types";
 
 export type {
@@ -10,6 +11,7 @@ export type {
   CampaignPerformanceCharts,
   CampaignPerformanceSummary,
   CampaignPublicationRow,
+  PublicationMetricSyncLogRow,
 } from "@/lib/domains/campaign/types";
 
 export {

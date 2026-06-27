@@ -36,12 +36,14 @@ import {
   saveManualPublicationMetricsAction,
   savePublicationDetailsAction,
   requestPublicationScreenshotAction,
-  type PublicationMetricSyncLogRow,
 } from "@/features/campaigns/actions/performance-actions";
 import { PublicationWorkspaceEmptyState } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace-empty-state";
 import { EngagementRateDisplay } from "@/features/campaigns/components/performance/publication-workspace/engagement-rate-display";
 import { PublicationWorkspaceSheet } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace-sheet";
-import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
+import type {
+  CampaignPublicationRow,
+  PublicationMetricSyncLogRow,
+} from "@/features/campaigns/queries/publications";
 import {
   formatCompactCount,
   formatMoneyValue,

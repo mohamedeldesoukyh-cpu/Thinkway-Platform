@@ -236,3 +236,20 @@ export type CampaignPerformanceBundle = {
   load_error: string | null;
   schema_warnings: string[];
 };
+
+export type PublicationMetricSyncLogRow = {
+  id: string;
+  created_at: string;
+  provider: string | null;
+  status: string;
+  metrics_refresh_status: string | null;
+  message: string | null;
+  duration_ms: number | null;
+  metrics_snapshot: Record<string, number | null> | null;
+  triggered_by: string | null;
+  previous_er: number | null;
+  new_er: number | null;
+  previous_method: string | null;
+  new_method: string | null;
+  response_summary: Record<string, unknown> | null;
+};

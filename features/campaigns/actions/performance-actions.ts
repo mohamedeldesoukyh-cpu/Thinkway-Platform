@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { FormActionState } from "@/features/campaigns/form-action-state";
+import type { PublicationMetricSyncLogRow } from "@/lib/domains/campaign/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   bulkImportPublications,
@@ -21,10 +22,9 @@ import {
   savePublicationDetails,
   updateCampaignPublication,
   updatePublicationSchema,
-  type PublicationMetricSyncLogRow,
 } from "@/lib/services/campaigns/campaign-performance-service";
 
-export type { PublicationMetricSyncLogRow };
+export type { PublicationMetricSyncLogRow } from "@/lib/domains/campaign/types";
 
 function revalidateCampaign(campaignId: string) {
   revalidatePath("/campaigns");
