@@ -1,6 +1,7 @@
 import { Queue, Worker } from "bullmq";
 
 import { CAMPAIGN_PERFORMANCE_JOB_OPTIONS } from "@/lib/performance/campaign-performance-queue-options";
+import { recoverStuckMetricCollections } from "@/lib/performance/metrics-collector/recover-stuck-metric-collections";
 import { getRedisConnection } from "../queues/connection.js";
 import { QUEUES } from "../queues/names.js";
 import { supabase } from "../db/supabase.js";
@@ -13,6 +14,11 @@ export function startPublicationMetricsScheduler(): Worker {
   return new Worker(
     QUEUES.publicationMetricsScheduler,
     async () => {
+      const recovery = await recoverStuckMetricCollections(supabase);
+      if (recovery.markedFailed > 0 || recovery.skippedActiveJob > 0) {
+        console.log("[publication-metrics-scheduler] stuck collecting recovery", recovery);
+      }
+
       const { data, error } = await supabase
         .from("campaign_publications")
         .select("id, campaign_header_id, metrics_next_refresh_at, metrics_refresh_status")

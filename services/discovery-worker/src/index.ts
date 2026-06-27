@@ -50,9 +50,6 @@ enrichmentWorker.on("failed", (job, err) => {
 publicationMetricsWorker.on("completed", (job) => {
   console.log(`[publication-metrics] completed ${job.id}`, job.returnvalue);
 });
-publicationMetricsWorker.on("failed", (job, err) => {
-  console.error(`[publication-metrics] failed ${job?.id}`, err.message);
-});
 publicationScreenshotWorker.on("completed", (job) => {
   console.log(`[publication-screenshot] completed ${job.id}`, job.returnvalue);
 });

@@ -1,6 +1,7 @@
 import { Queue } from "bullmq";
 
 import { CAMPAIGN_PERFORMANCE_JOB_OPTIONS } from "@/lib/performance/campaign-performance-queue-options";
+import { logMetricsQueueEvent } from "@/lib/performance/metrics-collector/metrics-queue-log";
 
 export const PUBLICATION_METRICS_QUEUE = "publication-metrics";
 
@@ -41,7 +42,24 @@ export async function enqueuePublicationMetricsJob(
   if (!q) return { enqueued: false };
 
   const job = await q.add("collect-metrics", data, JOB_OPTIONS);
+
+  logMetricsQueueEvent("JOB_QUEUED", {
+    publicationId: data.publicationId,
+    jobId: job.id,
+    status: "queued",
+  });
+
   return { enqueued: true, jobId: job.id };
+}
+
+export async function publicationHasInflightMetricsJob(
+  publicationId: string
+): Promise<boolean> {
+  const q = getQueue();
+  if (!q) return false;
+
+  const jobs = await q.getJobs(["active", "waiting"], 0, 499);
+  return jobs.some((job) => job.data.publicationId === publicationId);
 }
 
 export async function enqueuePublicationMetricsBulk(

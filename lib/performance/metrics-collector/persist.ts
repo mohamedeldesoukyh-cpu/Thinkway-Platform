@@ -45,6 +45,7 @@ import {
   isAvatarUrlAllowedForPlatform,
   resolvePublicationEffectivePlatform,
 } from "@/lib/performance/creator-avatar";
+import { logMetricsQueueEvent } from "@/lib/performance/metrics-collector/metrics-queue-log";
 import type {
   CollectionOutcome,
   CollectedMetrics,
@@ -1105,11 +1106,27 @@ export async function markPublicationRefreshStatus(
     schema.columns
   );
 
-  await supabase
+  const { error } = await supabase
     .from("campaign_publications")
     .update(payload as never)
     .eq("id", input.publicationId)
     .eq("campaign_header_id", input.campaignHeaderId);
+
+  if (error) {
+    logMetricsQueueEvent("STATUS_UPDATED", {
+      publicationId: input.publicationId,
+      status: input.status,
+      error: error.message,
+    });
+    throw new Error(
+      `Failed to update metrics_refresh_status for publication ${input.publicationId}: ${error.message}`
+    );
+  }
+
+  logMetricsQueueEvent("STATUS_UPDATED", {
+    publicationId: input.publicationId,
+    status: input.status,
+  });
 }
 
 export async function queuePublicationForMetrics(
