@@ -13,6 +13,8 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/validation/uuid";
 
+export const dynamic = "force-dynamic";
+
 type CampaignPerformancePreviewPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ variant?: string; publicationIds?: string }>;
