@@ -14,6 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { writeEnrichmentRun } from "@/lib/creator-enrichment/audit";
 import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import {
+  cancelCreatorEnrichmentJobs,
   enqueueCreatorEnrichment,
   isCreatorEnrichmentQueueAvailable,
 } from "@/lib/creator-enrichment/queue";
@@ -67,6 +68,23 @@ export type RefreshCreatorMetricsBatchResult = {
   queued: number;
   failed: number;
   results: RefreshCreatorMetricsResult[];
+};
+
+export type StopCreatorMetricsRefreshResult = {
+  ok: boolean;
+  influencerId: string | null;
+  stopped: boolean;
+  jobsRemoved: number;
+  syncStatus: CreatorMetricsSyncStatus;
+  message: string;
+};
+
+export type StopCreatorMetricsRefreshBatchResult = {
+  ok: boolean;
+  total: number;
+  stopped: number;
+  skipped: number;
+  results: StopCreatorMetricsRefreshResult[];
 };
 
 /** Map DB enrichment_status to the public sync status enum. */
@@ -385,6 +403,150 @@ export async function refreshCreatorMetricsBatchByUnifiedIds(
     total: unifiedIds.length,
     queued,
     failed,
+    results,
+  };
+}
+
+function resolveStatusAfterRefreshCancel(
+  lastEnrichedAt: string | null | undefined
+): CreatorEnrichmentStatus {
+  return lastEnrichedAt ? "enriched" : "never";
+}
+
+/**
+ * Cancel queued/running metric refresh for one creator.
+ * Removes BullMQ jobs and resets DB status when currently queued/running.
+ */
+export async function stopCreatorMetricsRefresh(
+  supabase: AnySupabase,
+  creatorId: string
+): Promise<StopCreatorMetricsRefreshResult> {
+  const resolved = await resolveCreatorInfluencerId(supabase, {
+    influencerId: creatorId,
+  });
+
+  if (!resolved.ok) {
+    return {
+      ok: false,
+      influencerId: null,
+      stopped: false,
+      jobsRemoved: 0,
+      syncStatus: "pending",
+      message: resolved.message,
+    };
+  }
+
+  const influencerId = resolved.influencerId;
+  const { data, error } = await supabase
+    .from("influencers")
+    .select("enrichment_status, last_enriched_at")
+    .eq("id", influencerId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return {
+      ok: false,
+      influencerId,
+      stopped: false,
+      jobsRemoved: 0,
+      syncStatus: "pending",
+      message: error?.message ?? "Creator not found.",
+    };
+  }
+
+  const row = data as {
+    enrichment_status: CreatorEnrichmentStatus;
+    last_enriched_at: string | null;
+  };
+
+  if (row.enrichment_status !== "queued" && row.enrichment_status !== "running") {
+    return {
+      ok: true,
+      influencerId,
+      stopped: false,
+      jobsRemoved: 0,
+      syncStatus: mapEnrichmentStatusToSyncStatus(row.enrichment_status),
+      message: "No refresh in progress.",
+    };
+  }
+
+  const { removed } = await cancelCreatorEnrichmentJobs(influencerId);
+  const nextStatus = resolveStatusAfterRefreshCancel(row.last_enriched_at);
+
+  const { error: updateError } = await supabase
+    .from("influencers")
+    .update({ enrichment_status: nextStatus } as never)
+    .eq("id", influencerId)
+    .in("enrichment_status", ["queued", "running"]);
+
+  if (updateError) {
+    return {
+      ok: false,
+      influencerId,
+      stopped: false,
+      jobsRemoved: removed,
+      syncStatus: mapEnrichmentStatusToSyncStatus(row.enrichment_status),
+      message: updateError.message,
+    };
+  }
+
+  return {
+    ok: true,
+    influencerId,
+    stopped: true,
+    jobsRemoved: removed,
+    syncStatus: mapEnrichmentStatusToSyncStatus(nextStatus),
+    message: removed > 0 ? "Refresh stopped." : "Refresh cancelled.",
+  };
+}
+
+export async function stopCreatorMetricsRefreshByUnifiedId(
+  supabase: AnySupabase,
+  unifiedId: string
+): Promise<StopCreatorMetricsRefreshResult> {
+  const trimmed = unifiedId.trim();
+  if (trimmed.startsWith("inf:")) {
+    return stopCreatorMetricsRefresh(supabase, trimmed.slice(4));
+  }
+  if (trimmed.startsWith("dis:")) {
+    const profileId = trimmed.slice(4);
+    const resolved = await resolveCreatorInfluencerId(supabase, {
+      discoveredProfileId: profileId,
+    });
+    if (!resolved.ok) {
+      return {
+        ok: false,
+        influencerId: null,
+        stopped: false,
+        jobsRemoved: 0,
+        syncStatus: "pending",
+        message: resolved.message,
+      };
+    }
+    return stopCreatorMetricsRefresh(supabase, resolved.influencerId);
+  }
+  return stopCreatorMetricsRefresh(supabase, trimmed);
+}
+
+export async function stopCreatorMetricsRefreshBatchByUnifiedIds(
+  supabase: AnySupabase,
+  unifiedIds: string[]
+): Promise<StopCreatorMetricsRefreshBatchResult> {
+  const uniqueIds = [...new Set(unifiedIds.filter(Boolean))];
+  const results: StopCreatorMetricsRefreshResult[] = [];
+
+  for (const unifiedId of uniqueIds) {
+    results.push(await stopCreatorMetricsRefreshByUnifiedId(supabase, unifiedId));
+  }
+
+  const stopped = results.filter((r) => r.stopped).length;
+  const skipped = results.filter((r) => r.ok && !r.stopped).length;
+
+  return {
+    ok: results.every((r) => r.ok),
+    total: uniqueIds.length,
+    stopped,
+    skipped,
     results,
   };
 }

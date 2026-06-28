@@ -29,6 +29,9 @@ type Props = {
   onToggleSelectAll: () => void;
   onOpenCreator: (creator: UnifiedCreatorResult) => void;
   onAddToList: (creator: UnifiedCreatorResult) => void;
+  onStopRefresh?: (creator: UnifiedCreatorResult) => void;
+  onStopAllRefresh?: () => void;
+  inFlightCount?: number;
   onRetry: () => void;
   loadMoreRef: (node: HTMLDivElement | null) => void;
 };
@@ -66,6 +69,9 @@ export function CreatorSearchResultList({
   onToggleSelectAll,
   onOpenCreator,
   onAddToList,
+  onStopRefresh,
+  onStopAllRefresh,
+  inFlightCount = 0,
   onRetry,
   loadMoreRef,
 }: Props) {
@@ -97,6 +103,17 @@ export function CreatorSearchResultList({
             ? "Searching…"
             : `${total.toLocaleString()} ${total === 1 ? "result" : "results"}`}
         </span>
+        {inFlightCount > 0 && onStopAllRefresh ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            className="ml-auto h-7 shrink-0 rounded-full text-xs"
+            onClick={onStopAllRefresh}
+          >
+            Stop all refresh ({inFlightCount})
+          </Button>
+        ) : null}
       </div>
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto overscroll-y-contain">
@@ -156,6 +173,9 @@ export function CreatorSearchResultList({
                       onToggleSelect={() => onToggleSelect(creator)}
                       onOpenCreator={() => onOpenCreator(creator)}
                       onAddToList={() => onAddToList(creator)}
+                      onStopRefresh={
+                        onStopRefresh ? () => onStopRefresh(creator) : undefined
+                      }
                     />
                   </div>
                 );

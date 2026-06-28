@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { EnrichmentStatusBadge } from "@/features/discovery/enrichment/components/enrichment-status-badge";
-import { resolveCreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
+import { isEnrichmentInProgress, resolveCreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolvePrimaryProfileUrl } from "@/lib/discovery/profile-url";
@@ -141,6 +141,7 @@ function DefaultRowActions({
   onOpenCreator,
   onAddToList,
   onToggleSelect,
+  onStopRefresh,
   addLabel = "Add",
 }: {
   creator: UnifiedCreatorResult;
@@ -149,9 +150,12 @@ function DefaultRowActions({
   onOpenCreator: () => void;
   onAddToList?: () => void;
   onToggleSelect: () => void;
+  onStopRefresh?: () => void;
   addLabel?: string;
 }) {
   const primary = creator.platforms[0];
+  const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
+  const refreshInProgress = isEnrichmentInProgress(enrichmentStatus);
   return (
     <div
       className="flex items-center justify-end gap-1"
@@ -185,6 +189,9 @@ function DefaultRowActions({
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem onClick={onOpenCreator}>View details</DropdownMenuItem>
+          {refreshInProgress && onStopRefresh ? (
+            <DropdownMenuItem onClick={onStopRefresh}>Stop refresh</DropdownMenuItem>
+          ) : null}
           {onAddToList ? (
             <DropdownMenuItem onClick={onAddToList}>{addLabel} to list</DropdownMenuItem>
           ) : null}
@@ -205,10 +212,12 @@ export type CreatorResultRowProps = {
   onToggleSelect: () => void;
   onOpenCreator?: () => void;
   onAddToList?: () => void;
+  onStopRefresh?: () => void;
   addLabel?: string;
   statusBadge?: ReactNode;
   actions?: ReactNode;
   className?: string;
+  workerOfflineHint?: boolean;
 };
 
 /** Shared Discovery creator row — used by Search and Shortlist workspaces. */
@@ -220,10 +229,12 @@ export function CreatorResultRow({
   onToggleSelect,
   onOpenCreator,
   onAddToList,
+  onStopRefresh,
   addLabel,
   statusBadge,
   actions,
   className,
+  workerOfflineHint,
 }: CreatorResultRowProps) {
   const primary = creator.platforms[0];
   const profileUrl = resolvePrimaryProfileUrl(creator.platforms);
@@ -249,6 +260,7 @@ export function CreatorResultRow({
         onOpenCreator={handleOpen}
         onAddToList={onAddToList}
         onToggleSelect={onToggleSelect}
+        onStopRefresh={onStopRefresh}
         addLabel={addLabel}
       />
     ) : null);
@@ -289,6 +301,7 @@ export function CreatorResultRow({
           source={creatorProfileSourceFromUnified(creator)}
           size="lg"
           showExternalIcon
+          linkName={!onOpenCreator}
           stopPropagation
         />
         <PlatformCell creator={creator} />
@@ -318,7 +331,11 @@ export function CreatorResultRow({
         <div className={cn("text-[11px] font-medium", safety.className)}>{safety.label}</div>
         {!isShortlist ? (
           <div className="flex justify-end">
-            <EnrichmentStatusBadge status={enrichmentStatus} className="text-[10px]" />
+            <EnrichmentStatusBadge
+              status={enrichmentStatus}
+              workerOfflineHint={workerOfflineHint}
+              className="text-[10px]"
+            />
           </div>
         ) : null}
         {isShortlist ? <div className="min-w-0">{statusBadge}</div> : null}
@@ -339,6 +356,7 @@ export function CreatorResultRow({
               source={creatorProfileSourceFromUnified(creator)}
               size="md"
               showExternalIcon
+              linkName={!onOpenCreator}
               stopPropagation
             />
             {actionNode}
@@ -375,7 +393,11 @@ export function CreatorResultRow({
             {!isShortlist ? <RelevanceScore score={aiScore} /> : statusBadge}
             <div className="flex items-center gap-2">
               {!isShortlist ? (
-                <EnrichmentStatusBadge status={enrichmentStatus} className="text-[10px]" />
+                <EnrichmentStatusBadge
+              status={enrichmentStatus}
+              workerOfflineHint={workerOfflineHint}
+              className="text-[10px]"
+            />
               ) : null}
               <span className={cn("text-[10px] font-medium", safety.className)}>
                 {safety.label} safety

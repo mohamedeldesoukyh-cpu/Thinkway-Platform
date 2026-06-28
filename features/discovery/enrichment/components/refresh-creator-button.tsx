@@ -97,6 +97,15 @@ export function RefreshCreatorButton({
   }
 
   useEffect(() => {
+    const status = resolveCreatorEnrichmentStatus(enrichmentStatusProp);
+    if (!isEnrichmentInProgress(status)) {
+      setLocalStatus(null);
+      setIsPolling(false);
+      pollActiveRef.current = false;
+    }
+  }, [enrichmentStatusProp]);
+
+  useEffect(() => {
     if (!unifiedId || !influencerId) return;
     const status = resolveCreatorEnrichmentStatus(enrichmentStatusProp);
     if (!isEnrichmentInProgress(status)) return;

@@ -8,6 +8,7 @@ import {
   RefreshCwIcon,
   Share2Icon,
   SparklesIcon,
+  SquareIcon,
 } from "lucide-react";
 
 import {
@@ -36,6 +37,8 @@ type Props = {
   onAiMatch: () => void;
   onGenerateQuotation: () => void;
   onRefreshMetrics?: () => void;
+  onStopRefresh?: () => void;
+  stopRefreshDisabled?: boolean;
   /** Quick stats computed from the current selection (spec §1). */
   estFollowers?: number;
   estReach?: number;
@@ -62,6 +65,8 @@ export function CreatorSearchBulkBar({
   onAiMatch,
   onGenerateQuotation,
   onRefreshMetrics,
+  onStopRefresh,
+  stopRefreshDisabled,
   estFollowers,
   estReach,
   estEngagement,
@@ -83,6 +88,14 @@ export function CreatorSearchBulkBar({
       variant: "outline",
       disabled: busy || !onRefreshMetrics,
       onClick: () => onRefreshMetrics?.(),
+    },
+    {
+      id: "stop-refresh",
+      label: "Stop refresh",
+      icon: SquareIcon,
+      variant: "outline",
+      disabled: busy || stopRefreshDisabled || !onStopRefresh,
+      onClick: () => onStopRefresh?.(),
     },
     {
       id: "compare",

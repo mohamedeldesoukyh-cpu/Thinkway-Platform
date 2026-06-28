@@ -12,9 +12,17 @@ import { glassFlyoutContentClass } from "@/components/shared/navigation/glass-se
 import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
-import { refreshCreatorsBatchAction } from "@/features/discovery/enrichment/actions";
+import {
+  refreshCreatorsBatchAction,
+  stopCreatorMetricsRefreshAction,
+  stopCreatorsMetricsRefreshBatchAction,
+} from "@/features/discovery/enrichment/actions";
 import { pollCreatorsAfterBatchRefresh } from "@/features/discovery/enrichment/poll-creator-refresh";
-import { syncStatusToEnrichmentStatus } from "@/features/discovery/enrichment/status";
+import {
+  isEnrichmentInProgress,
+  syncStatusToEnrichmentStatus,
+  resolveCreatorEnrichmentStatus,
+} from "@/features/discovery/enrichment/status";
 import {
   addUnifiedCreatorsToShortlist,
   describeAddOutcome,
@@ -99,6 +107,20 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   const visibleCreatorIds = useMemo(
     () => sortedCreators.map((c) => c.unified_id),
     [sortedCreators]
+  );
+  const inFlightCreators = useMemo(
+    () =>
+      sortedCreators.filter((creator) =>
+        isEnrichmentInProgress(resolveCreatorEnrichmentStatus(creator.enrichment_status))
+      ),
+    [sortedCreators]
+  );
+  const selectedInFlightCreators = useMemo(
+    () =>
+      selectedCreators.filter((creator) =>
+        isEnrichmentInProgress(resolveCreatorEnrichmentStatus(creator.enrichment_status))
+      ),
+    [selectedCreators]
   );
 
   const fetchPage = useCallback(async (pageNum: number, append: boolean) => {
@@ -334,6 +356,50 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     );
   }
 
+  function applyStopRefreshResult(
+    unifiedIds: string[],
+    result: { ok: boolean; stopped: boolean; message: string; stoppedCount?: number }
+  ) {
+    if (result.stopped) {
+      toast.success(result.message);
+      for (const unifiedId of unifiedIds) {
+        const creator = creators.find((c) => c.unified_id === unifiedId);
+        if (!creator) continue;
+        const nextStatus = creator.last_enriched_at ? "enriched" : "never";
+        patchCreatorEnrichmentStatus(unifiedId, nextStatus);
+      }
+    } else if (result.ok) {
+      toast.info(result.message);
+    } else {
+      toast.error(result.message);
+    }
+  }
+
+  function handleBulkStopRefresh() {
+    if (selectedInFlightCreators.length === 0) return;
+    const unifiedIds = selectedInFlightCreators.map((c) => c.unified_id);
+    startTransition(async () => {
+      const result = await stopCreatorsMetricsRefreshBatchAction(unifiedIds);
+      applyStopRefreshResult(unifiedIds, result);
+    });
+  }
+
+  function handleStopAllRefresh() {
+    if (inFlightCreators.length === 0) return;
+    const unifiedIds = inFlightCreators.map((c) => c.unified_id);
+    startTransition(async () => {
+      const result = await stopCreatorsMetricsRefreshBatchAction(unifiedIds);
+      applyStopRefreshResult(unifiedIds, result);
+    });
+  }
+
+  function handleStopRefreshForCreator(creator: UnifiedCreatorResult) {
+    startTransition(async () => {
+      const result = await stopCreatorMetricsRefreshAction(creator.unified_id);
+      applyStopRefreshResult([creator.unified_id], result);
+    });
+  }
+
   function handleBulkRefreshMetrics() {
     if (selectedCreators.length === 0) return;
     const targets = selectedCreators.map((creator) => ({
@@ -426,6 +492,8 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
         onShare={handleBulkShare}
         onGenerateQuotation={handleGenerateQuotation}
         onRefreshMetrics={handleBulkRefreshMetrics}
+        onStopRefresh={handleBulkStopRefresh}
+        stopRefreshDisabled={selectedInFlightCreators.length === 0}
         estFollowers={selectionStats.followers}
         estReach={selectionStats.reach}
         estEngagement={selectionStats.engagement}
@@ -465,6 +533,9 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
           onToggleSelectAll={handleToggleSelectAll}
           onOpenCreator={setDetailCreator}
           onAddToList={(c) => addCreatorsToList([c])}
+          onStopRefresh={handleStopRefreshForCreator}
+          onStopAllRefresh={handleStopAllRefresh}
+          inFlightCount={inFlightCreators.length}
           onRetry={runSearch}
           loadMoreRef={loadMoreRef}
         />

@@ -87,3 +87,104 @@ export function enqueueCreatorEnrichmentBestEffort(
     );
   });
 }
+
+export type CreatorEnrichmentQueueStats = {
+  waiting: number;
+  active: number;
+  delayed: number;
+};
+
+let sharedQueue: Queue<CreatorEnrichmentJobPayload> | null = null;
+
+function getSharedQueue(): Queue<CreatorEnrichmentJobPayload> | null {
+  const connection = getConnection();
+  if (!connection) return null;
+  if (!sharedQueue) {
+    sharedQueue = new Queue<CreatorEnrichmentJobPayload>(CREATOR_ENRICHMENT_QUEUE, {
+      connection,
+    });
+  }
+  return sharedQueue;
+}
+
+/** BullMQ depth for health checks and stale recovery. */
+export async function getCreatorEnrichmentQueueStats(): Promise<CreatorEnrichmentQueueStats | null> {
+  const queue = getSharedQueue();
+  if (!queue) return null;
+  try {
+    const counts = await queue.getJobCounts("waiting", "active", "delayed");
+    return {
+      waiting: counts.waiting ?? 0,
+      active: counts.active ?? 0,
+      delayed: counts.delayed ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** True when a job for this creator is waiting or actively processing. */
+export async function creatorHasInflightEnrichmentJob(
+  influencerId: string
+): Promise<boolean> {
+  const queue = getSharedQueue();
+  if (!queue) return false;
+
+  try {
+    const jobs = await queue.getJobs(["active", "waiting", "delayed"], 0, 499);
+    return jobs.some((job) => job.data.influencerId === influencerId);
+  } catch {
+    return false;
+  }
+}
+
+export type CancelCreatorEnrichmentJobsResult = {
+  removed: number;
+};
+
+/**
+ * Remove waiting, delayed, and active BullMQ jobs for one creator.
+ * Matches de-dupe id `creator-enrich-{id}` and forced `creator-enrich-force-{id}-*`.
+ */
+export async function cancelCreatorEnrichmentJobs(
+  influencerId: string
+): Promise<CancelCreatorEnrichmentJobsResult> {
+  const queue = getSharedQueue();
+  if (!queue) return { removed: 0 };
+
+  let removed = 0;
+
+  try {
+    const dedupeJob = await queue.getJob(`creator-enrich-${influencerId}`);
+    if (dedupeJob) {
+      try {
+        if (await dedupeJob.isActive()) {
+          await dedupeJob.discard();
+        }
+        await dedupeJob.remove();
+        removed += 1;
+      } catch {
+        // Best-effort per job.
+      }
+    }
+
+    const jobs = await queue.getJobs(["active", "waiting", "delayed"], 0, 499);
+    for (const job of jobs) {
+      if (job.data.influencerId !== influencerId) continue;
+      if (job.id === `creator-enrich-${influencerId}`) continue;
+      try {
+        if (await job.isActive()) {
+          await job.discard();
+        }
+        await job.remove();
+        removed += 1;
+      } catch {
+        // Best-effort per job.
+      }
+    }
+  } catch {
+    return { removed };
+  }
+
+  return { removed };
+}
