@@ -37,6 +37,7 @@ import {
   storedImpressionsContextFromPublication,
 } from "@/lib/performance/metrics-collector/merge-metrics";
 import {
+  isAvatarUrlNeedsRefresh,
   isUsableAvatarUrl,
   normalizeAvatarSource,
   shouldSyncPlatformAvatar,
@@ -388,6 +389,8 @@ export async function persistInfluencerPlatformAvatar(
     platform: string;
     profilePictureUrl: string;
     source?: "apify" | "discovery";
+    /** Bypass 30-day stale policy (Discovery explicit Refresh Metrics). */
+    forceSync?: boolean;
     /** When true, log skip reasons (default: true). */
     logSkips?: boolean;
   }
@@ -403,6 +406,7 @@ export async function persistInfluencerPlatformAvatarDetailed(
     platform: string;
     profilePictureUrl: string;
     source?: "apify" | "discovery";
+    forceSync?: boolean;
     logSkips?: boolean;
   }
 ): Promise<PersistPlatformAvatarResult> {
@@ -418,7 +422,7 @@ export async function persistInfluencerPlatformAvatarDetailed(
   }
 
   const url = input.profilePictureUrl.trim();
-  if (!url.startsWith("http")) {
+  if (!url.startsWith("http") || !isUsableAvatarUrl(url)) {
     if (logSkips) {
       console.warn(
         `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=invalid_url`
@@ -427,6 +431,14 @@ export async function persistInfluencerPlatformAvatarDetailed(
     return { saved: false, reason: "invalid_url" };
   }
   const normalizedUrl = prepareCreatorAvatarUrlForDisplay(platformKey, url) ?? url;
+  if (!isUsableAvatarUrl(normalizedUrl)) {
+    if (logSkips) {
+      console.warn(
+        `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=invalid_url detail=placeholder_or_broken_after_normalize`
+      );
+    }
+    return { saved: false, reason: "invalid_url" };
+  }
   if (!isAvatarUrlAllowedForPlatform(platformKey, normalizedUrl)) {
     if (logSkips) {
       console.warn(
@@ -472,20 +484,23 @@ export async function persistInfluencerPlatformAvatarDetailed(
     currentUrl?.trim() && !isAvatarUrlAllowedForPlatform(platformKey, currentUrl)
   );
 
-  if (
-    !shouldSyncPlatformAvatar(
-      {
-        profile_picture_url: currentUrl,
-        avatar_source: avatarSource,
-        avatar_last_synced_at: avatarLastSyncedAt,
-      },
-      Date.now(),
-      { allowManualCrossPlatformRefresh: crossPlatformBlocked }
-    )
-  ) {
+  const policyAllowsSync =
+    input.forceSync === true
+      ? avatarSource !== "manual" || isAvatarUrlNeedsRefresh(currentUrl)
+      : shouldSyncPlatformAvatar(
+          {
+            profile_picture_url: currentUrl,
+            avatar_source: avatarSource,
+            avatar_last_synced_at: avatarLastSyncedAt,
+          },
+          Date.now(),
+          { allowManualCrossPlatformRefresh: crossPlatformBlocked }
+        );
+
+  if (!policyAllowsSync) {
     if (logSkips) {
       console.warn(
-        `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=policy_blocked source=${avatarSource} hasUrl=${Boolean(currentUrl?.trim())}`
+        `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=policy_blocked source=${avatarSource} hasUrl=${Boolean(currentUrl?.trim())} forceSync=${Boolean(input.forceSync)}`
       );
     }
     return {

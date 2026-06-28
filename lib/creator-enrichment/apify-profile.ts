@@ -135,20 +135,14 @@ function extractMentions(rows: Record<string, unknown>[]): string[] {
   return [...set].slice(0, 30);
 }
 
+import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
+
 function toRecentPublications(rows: Record<string, unknown>[]): RecentPublication[] {
   return rows
     .slice(0, 6)
     .map((row) => ({
       url: str(row.url) ?? str(row.postPage) ?? str(row.webVideoUrl) ?? null,
-      thumbnail:
-        str(row.thumbnailSrc) ??
-        str(row.displayUrl) ??
-        str(row.imageUrl) ??
-        str(row.previewUrl) ??
-        str(row.thumbnailUrl) ??
-        str(record(row.displayResource)?.src) ??
-        str(row.coverUrl) ??
-        null,
+      thumbnail: resolveCreatorRecentPublicationThumbnail(row),
       likes: num(row.likesCount) ?? num(row.diggCount) ?? num(row.likes),
       comments: num(row.commentsCount) ?? num(row.comments),
       views: num(row.videoViewCount) ?? num(row.playCount) ?? num(row.views),
@@ -294,7 +288,12 @@ function normalizeApifyProfileData(input: {
       str(owner.name),
     displayName: str(head.fullName) ?? str(owner.nickName) ?? str(owner.fullName),
     bio: str(head.biography) ?? str(owner.signature) ?? str(head.description),
-    profilePictureUrl: pickApifyAuthorAvatarUrl(input.platformKey, head) ?? str(head.profilePicUrl),
+    profilePictureUrl:
+      pickApifyAuthorAvatarUrl(input.platformKey, head) ??
+      str(head.profilePicUrlHD) ??
+      str(head.profilePicUrlHd) ??
+      str(head.hdProfilePicUrl) ??
+      str(head.profilePicUrl),
     profileUrl: input.profileUrl,
     followers,
     following,

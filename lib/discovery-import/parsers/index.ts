@@ -26,6 +26,33 @@ function parsePercent(value: string | null | undefined): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
+function parseImportProfilePictureUrlRaw(lookup: Map<string, unknown>): string | null {
+  return lookupCell(
+    lookup,
+    "avatar url",
+    "avatar_url",
+    "profile photo",
+    "profile_photo",
+    "profile picture url",
+    "profile_picture_url",
+    "profile picture",
+    "profile_picture",
+    "profile pic",
+    "profile_pic",
+    "profile image url",
+    "profile_image_url",
+    "profile image",
+    "profile_image",
+    "image url",
+    "image_url",
+    "photo",
+    "picture",
+    "avatar",
+    "thumbnail",
+    "headshot"
+  );
+}
+
 function parseGenericTabularRow(
   row: Record<string, unknown>,
   source: string | null
@@ -70,6 +97,7 @@ function parseGenericTabularRow(
     audience_interests:
       audience_interests.length > 0 ? audience_interests : categories,
     relevance_score,
+    profile_picture_url: parseImportProfilePictureUrlRaw(lookup),
   };
 }
 

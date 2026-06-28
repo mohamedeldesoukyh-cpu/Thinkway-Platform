@@ -24,7 +24,9 @@ import type {
 } from "@/lib/creators/types";
 import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
 import { mergeImportedStringArrays } from "@/lib/discovery-import/normalize";
+import { normalizeCreatorRecentPublications } from "@/lib/creators/recent-publication-thumb";
 import { ftsRankMap, searchInfluencerIdsByFts } from "@/lib/creators/fts-search";
+import { isAvatarUrlNeedsRefresh } from "@/lib/performance/avatar-sync-policy";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 import type { DiscoverySearchResult, ProfileAiScore, ProfileMetricsSnapshot } from "@/lib/discovery/types";
 
@@ -34,6 +36,18 @@ async function resolveInternalSearchIds(
 ): Promise<Map<string, number>> {
   const hits = await searchInfluencerIdsByFts(supabase, search, 500);
   return ftsRankMap(hits);
+}
+
+/** Prefer platform account photo; fall back to linked discovery image when missing/broken. */
+function resolveCreatorProfileImageUrl(
+  platformPictureUrl: string | null | undefined,
+  fallbackUrl: string | null | undefined
+): string | null {
+  const platform = platformPictureUrl?.trim();
+  if (platform && !isAvatarUrlNeedsRefresh(platform)) return platform;
+  const fallback = fallbackUrl?.trim();
+  if (fallback && !isAvatarUrlNeedsRefresh(fallback)) return fallback;
+  return platform || fallback || null;
 }
 
 function tagsFromImportMetadata(
@@ -209,11 +223,17 @@ async function fetchInternalCreators(
 
   const { data: linkedDiscovery } = await supabase
     .from("discovered_profiles")
-    .select("id, influencer_id")
+    .select("id, influencer_id, profile_image_url")
     .in("influencer_id", ids);
 
   const discoveryByInfluencer = new Map(
     (linkedDiscovery ?? []).map((r) => [r.influencer_id as string, r.id as string])
+  );
+  const discoveryImageByInfluencer = new Map(
+    (linkedDiscovery ?? []).map((r) => [
+      r.influencer_id as string,
+      (r as { profile_image_url?: string | null }).profile_image_url ?? null,
+    ])
   );
 
   const { data: accounts } = await supabase
@@ -251,13 +271,18 @@ async function fetchInternalCreators(
     const platformRows = accountsByInfluencer.get(r.id) ?? [];
     const primary = platformRows[0];
     const profileBio = (primary as { profile_bio?: string | null } | undefined)?.profile_bio ?? null;
-    const recentPublications =
-      (primary as { recent_publications?: CreatorRecentPublication[] | null })?.recent_publications ??
-      [];
+    const recentPublications = normalizeCreatorRecentPublications(
+      (primary as { recent_publications?: unknown })?.recent_publications
+    );
     const importTags = tagsFromImportMetadata(
       (primary?.metadata as Record<string, unknown> | null | undefined) ?? null
     );
     const categories = mergeImportedStringArrays(r.categories ?? [], importTags);
+    const discoveryProfileImage = discoveryImageByInfluencer.get(r.id) ?? null;
+    const profileImageUrl = resolveCreatorProfileImageUrl(
+      primary?.profile_picture_url,
+      discoveryProfileImage
+    );
     const sourceType: CreatorSourceType = discoveryByInfluencer.has(r.id)
       ? "imported"
       : primary
@@ -275,7 +300,7 @@ async function fetchInternalCreators(
     const completeness = profileCompletenessPercent({
       display_name: r.display_name,
       bio: profileBio,
-      profile_image_url: primary?.profile_picture_url ?? null,
+      profile_image_url: profileImageUrl,
       platforms_count: platformRows.length,
       country_code: r.country_code,
       categories,
@@ -291,7 +316,7 @@ async function fetchInternalCreators(
         ai_category: categories[0] ?? null,
         ai_niche: null,
         bio: profileBio,
-        profile_image_url: primary?.profile_picture_url ?? null,
+        profile_image_url: profileImageUrl,
         platforms_count: platformRows.length,
       });
 
@@ -315,7 +340,7 @@ async function fetchInternalCreators(
       city: null,
       categories,
       language_codes: [],
-      profile_image_url: primary?.profile_picture_url ?? null,
+      profile_image_url: profileImageUrl,
       bio: profileBio,
       metrics,
       ai_category: categories[0] ?? null,
@@ -334,14 +359,17 @@ async function fetchInternalCreators(
         engagement_rate: p.engagement_rate,
         audience_country: p.audience_country,
         is_verified: p.is_verified ?? false,
-        profile_picture_url: p.profile_picture_url,
+        profile_picture_url: resolveCreatorProfileImageUrl(
+          p.profile_picture_url,
+          discoveryProfileImage
+        ),
       })),
       notes: r.notes,
       suggested_currency: DEFAULT_PLATFORM_CURRENCY,
       enrichment_status: (r.enrichment_status as CreatorEnrichmentStatus | null) ?? "never",
       last_enriched_at: r.last_enriched_at ?? null,
       enrichment_source: r.enrichment_source ?? null,
-      recent_publications: Array.isArray(recentPublications) ? recentPublications : [],
+      recent_publications: recentPublications,
       search_rank: searchRankById?.get(r.id) ?? null,
     });
   }

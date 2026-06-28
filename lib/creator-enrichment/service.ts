@@ -365,6 +365,7 @@ export async function runCreatorEnrichment(
         platform: platformKey,
         profilePictureUrl: data.profilePictureUrl,
         source: "apify",
+        forceSync: bypassMetricsOverride,
         logSkips: false,
       });
       if (avatarSaved) {

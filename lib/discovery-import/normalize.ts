@@ -1,3 +1,6 @@
+import { prepareCreatorAvatarUrlForDisplay } from "@/lib/performance/creator-avatar";
+import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+
 import type { ParsedCreatorRow } from "./types";
 
 const COUNTRY_CODE_MAP: Record<string, string> = {
@@ -45,6 +48,36 @@ export function normalizeParsedCreatorRow(
     audience_interests: row.audience_interests
       .map((value) => value.trim())
       .filter(Boolean),
+    profile_picture_url: row.profile_picture_url?.trim() || null,
+  };
+}
+
+/** Validate and normalize a CSV-provided profile photo URL for platform account storage. */
+export function resolveImportProfilePictureUrl(
+  url: string | null | undefined,
+  platform: string
+): string | null {
+  const trimmed = url?.trim();
+  if (!trimmed || !/^https?:\/\//i.test(trimmed) || !isUsableAvatarUrl(trimmed)) {
+    return null;
+  }
+  return prepareCreatorAvatarUrlForDisplay(platform, trimmed) ?? trimmed;
+}
+
+export function importProfilePictureAccountFields(
+  url: string | null | undefined,
+  platform: string
+): {
+  profile_picture_url: string;
+  avatar_source: "manual";
+  avatar_last_synced_at: string;
+} | null {
+  const profilePictureUrl = resolveImportProfilePictureUrl(url, platform);
+  if (!profilePictureUrl) return null;
+  return {
+    profile_picture_url: profilePictureUrl,
+    avatar_source: "manual",
+    avatar_last_synced_at: new Date().toISOString(),
   };
 }
 

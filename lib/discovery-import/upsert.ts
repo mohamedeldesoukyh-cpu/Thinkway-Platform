@@ -7,6 +7,7 @@ import type { Database } from "@/types/database";
 
 import {
   buildCreatorImportMetadata,
+  importProfilePictureAccountFields,
   mergeCreatorImportMetadata,
   normalizeParsedCreatorRow,
   resolveCountryCode,
@@ -127,6 +128,11 @@ export async function upsertImportedCreators(
       metrics_is_manual_override: row.followers != null,
     });
 
+    const importAvatarFields = importProfilePictureAccountFields(
+      row.profile_picture_url,
+      normalized.platform
+    );
+
     try {
       const existing = await findExistingAccount(
         ctx.supabase,
@@ -158,6 +164,7 @@ export async function upsertImportedCreators(
             sync_source: "discovery_import",
             metrics_source: normalized.metrics_source,
             metrics_is_manual_override: normalized.metrics_is_manual_override,
+            ...(importAvatarFields ?? {}),
           })
           .eq("id", existing.id);
 
@@ -266,6 +273,7 @@ export async function upsertImportedCreators(
             ...importMeta,
             categories: influencerCategories,
           },
+          ...(importAvatarFields ?? {}),
         })
         .select("id")
         .single();

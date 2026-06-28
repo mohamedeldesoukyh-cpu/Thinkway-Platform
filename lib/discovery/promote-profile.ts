@@ -22,7 +22,7 @@ export async function promoteDiscoveredProfileToInfluencer(
   const { data: profile, error: profileError } = await supabase
     .from("discovered_profiles")
     .select(
-      "id, platform, username, profile_url, display_name, country_code, category_tags, influencer_id"
+      "id, platform, username, profile_url, display_name, country_code, category_tags, profile_image_url, influencer_id"
     )
     .eq("id", profileId)
     .maybeSingle();
@@ -67,6 +67,8 @@ export async function promoteDiscoveredProfileToInfluencer(
 
   const influencerId = (influencer as { id: string }).id;
 
+  const profileImageUrl = profile.profile_image_url?.trim() || null;
+
   const { error: accountError } = await supabase
     .from("influencer_platform_accounts")
     .insert({
@@ -77,6 +79,13 @@ export async function promoteDiscoveredProfileToInfluencer(
       follower_count: metrics?.followers ?? 0,
       engagement_rate: metrics?.engagement_rate ?? null,
       is_primary: true,
+      ...(profileImageUrl
+        ? {
+            profile_picture_url: profileImageUrl,
+            avatar_source: "discovery",
+            avatar_last_synced_at: new Date().toISOString(),
+          }
+        : {}),
     } as never);
 
   if (accountError) {

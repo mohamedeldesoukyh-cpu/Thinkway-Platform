@@ -20,6 +20,7 @@ function sampleRow(overrides: Partial<ParsedCreatorRow> = {}): ParsedCreatorRow 
     categories: ["Beauty"],
     audience_interests: ["Camera & Photography"],
     relevance_score: 85,
+    profile_picture_url: null,
     ...overrides,
   };
 }
@@ -122,6 +123,9 @@ type PlatformAccount = {
   follower_count: number;
   engagement_rate: number | null;
   metadata: Record<string, unknown>;
+  profile_picture_url?: string | null;
+  avatar_source?: string | null;
+  avatar_last_synced_at?: string | null;
 };
 
 type Influencer = {
@@ -588,6 +592,31 @@ async function testReimportUpdatesExistingSourceProvenance() {
   assert.notEqual(state.sources[0]?.imported_at, "2026-01-01T00:00:00.000Z");
 }
 
+async function testImportPersistsProfilePictureFromCsv() {
+  const { supabase, getState } = createDiscoveryImportMock();
+  const avatarUrl = "https://cdn.example.com/creator-one.jpg";
+
+  await upsertImportedCreators(
+    [
+      sampleRow({
+        profile_picture_url: avatarUrl,
+      }),
+    ],
+    {
+      supabase,
+      importFileId: "file-avatar",
+      sourceName: "agency-export",
+      uploadedBy: "user-1",
+      log: () => {},
+    }
+  );
+
+  const account = getState().accounts[0];
+  assert.equal(account?.profile_picture_url, avatarUrl);
+  assert.equal(account?.avatar_source, "manual");
+  assert.ok(account?.avatar_last_synced_at);
+}
+
 async function run() {
   testResolveInfluencerImportCategories();
   testMergeBackfillsEmptyExisting();
@@ -600,6 +629,7 @@ async function run() {
   await testReimportBackfillsAndMergesFields();
   await testReimportBackfillsCategoriesFromAudienceInterestsOnly();
   await testReimportUpdatesExistingSourceProvenance();
+  await testImportPersistsProfilePictureFromCsv();
 
   console.log("lib/discovery-import/upsert.test.ts — all tests passed");
 }

@@ -115,6 +115,7 @@ function parseIndahashBlock(block: string, source: string | null): ParsedCreator
     categories,
     audience_interests,
     relevance_score,
+    profile_picture_url: null,
   };
 }
 
@@ -342,6 +343,7 @@ function buildSearchExportRow(
     categories,
     audience_interests: [...categories],
     relevance_score,
+    profile_picture_url: null,
   };
 }
 
@@ -441,6 +443,29 @@ export function parseIndahashCsvRow(
   const relevance_score = parsePercent(
     lookup("relevance score", "relevance", "match score", "score")
   );
+  const profile_picture_url = lookup(
+    "avatar url",
+    "avatar_url",
+    "profile photo",
+    "profile_photo",
+    "profile picture url",
+    "profile_picture_url",
+    "profile picture",
+    "profile_picture",
+    "profile pic",
+    "profile_pic",
+    "profile image url",
+    "profile_image_url",
+    "profile image",
+    "profile_image",
+    "image url",
+    "image_url",
+    "photo",
+    "picture",
+    "avatar",
+    "thumbnail",
+    "headshot"
+  );
 
   return {
     username,
@@ -453,5 +478,6 @@ export function parseIndahashCsvRow(
     audience_interests:
       audience_interests.length > 0 ? audience_interests : categories,
     relevance_score,
+    profile_picture_url,
   };
 }

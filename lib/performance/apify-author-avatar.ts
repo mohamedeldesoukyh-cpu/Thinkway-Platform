@@ -52,11 +52,20 @@ function instagramAuthorAvatarCandidates(row: Record<string, unknown>): unknown[
   const owner = nestedRecord(row.owner);
   const author = nestedRecord(row.author);
   return [
+    row.profilePicUrlHD,
+    row.profilePicUrlHd,
+    row.hdProfilePicUrl,
     row.ownerProfilePicUrl,
     row.owner_profile_pic_url,
+    owner?.profilePicUrlHD,
+    owner?.profilePicUrlHd,
+    owner?.hdProfilePicUrl,
     owner?.profilePicUrl,
     owner?.profile_pic_url,
     owner?.profilePictureUrl,
+    author?.profilePicUrlHD,
+    author?.profilePicUrlHd,
+    author?.hdProfilePicUrl,
     author?.profilePicUrl,
     author?.profile_pic_url,
     author?.profilePictureUrl,

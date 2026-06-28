@@ -8,6 +8,8 @@ export type ParsedCreatorRow = {
   categories: string[];
   audience_interests: string[];
   relevance_score: number | null;
+  /** Raw profile photo URL from import file (CSV/XLSX column), when present. */
+  profile_picture_url: string | null;
   raw?: Record<string, unknown>;
 };
 
