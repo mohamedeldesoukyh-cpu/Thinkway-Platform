@@ -100,6 +100,29 @@ async function upsertCreatorSource(
   if (error) throw new Error(error.message);
 }
 
+/** Rebuild influencers.search_vector after import upsert (platform account triggers may lag). */
+async function refreshInfluencerSearchVector(
+  supabase: SupabaseClient<Database>,
+  influencerId: string
+) {
+  const { data: row, error: loadError } = await supabase
+    .from("influencers")
+    .select("display_name")
+    .eq("id", influencerId)
+    .maybeSingle();
+
+  if (loadError) throw new Error(loadError.message);
+  const displayName = row?.display_name?.trim();
+  if (!displayName) return;
+
+  const { error } = await supabase
+    .from("influencers")
+    .update({ display_name: displayName })
+    .eq("id", influencerId);
+
+  if (error) throw new Error(error.message);
+}
+
 export async function upsertImportedCreators(
   rows: ParsedCreatorRow[],
   ctx: UpsertContext
@@ -222,6 +245,8 @@ export async function upsertImportedCreators(
           importedAt: importMeta.imported_at as string,
         });
 
+        await refreshInfluencerSearchVector(ctx.supabase, existing.influencer_id);
+
         counters.updated += 1;
         counters.enrichmentAccountIds.push({
           influencerId: existing.influencer_id,
@@ -320,6 +345,8 @@ export async function upsertImportedCreators(
         sourceFileId: ctx.importFileId,
         importedAt: importMeta.imported_at as string,
       });
+
+      await refreshInfluencerSearchVector(ctx.supabase, influencer.id);
 
       counters.imported += 1;
       counters.enrichmentAccountIds.push({

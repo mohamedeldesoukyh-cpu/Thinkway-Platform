@@ -24,17 +24,26 @@ import type {
 import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
 import { mergeImportedStringArrays } from "@/lib/discovery-import/normalize";
 import { normalizeCreatorRecentPublications } from "@/lib/creators/recent-publication-thumb";
-import { ftsRankMap, searchInfluencerIdsByFts } from "@/lib/creators/fts-search";
+import {
+  ftsRankMap,
+  searchInfluencerIdsByFts,
+  searchInfluencerIdsByHandleFallback,
+} from "@/lib/creators/fts-search";
 import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 import type { DiscoverySearchResult, ProfileAiScore, ProfileMetricsSnapshot } from "@/lib/discovery/types";
+
+const INTERNAL_BROWSE_LIMIT = 500;
 
 async function resolveInternalSearchIds(
   supabase: SupabaseClient,
   search: string
 ): Promise<Map<string, number>> {
-  const hits = await searchInfluencerIdsByFts(supabase, search, 500);
-  return ftsRankMap(hits);
+  const ftsHits = await searchInfluencerIdsByFts(supabase, search, 500);
+  if (ftsHits.length > 0) return ftsRankMap(ftsHits);
+
+  const fallbackHits = await searchInfluencerIdsByHandleFallback(supabase, search, 100);
+  return ftsRankMap(fallbackHits);
 }
 
 /** Prefer platform account photo; fall back to linked discovery / metadata image when missing/broken. */
@@ -207,23 +216,6 @@ async function fetchInternalCreators(
     if (influencerIds.length === 0) return [];
   }
 
-  let query = supabase
-    .from("influencers")
-    .select(
-      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, enrichment_source"
-    )
-    .eq("status", "active");
-
-  if (filters.influencerId) {
-    query = query.eq("id", filters.influencerId);
-  } else {
-    query = query.order("display_name").limit(80);
-  }
-
-  if (country) query = query.eq("country_code", country);
-  if (category) query = query.contains("categories", [category]);
-  if (filters.language) query = query.contains("languages", [filters.language]);
-
   let scopedIds: string[] | null = null;
   if (searchRankById) {
     scopedIds = [...searchRankById.keys()];
@@ -233,6 +225,24 @@ async function fetchInternalCreators(
       ? scopedIds.filter((id) => influencerIds.includes(id))
       : influencerIds;
   }
+
+  let query = supabase
+    .from("influencers")
+    .select(
+      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, enrichment_source"
+    )
+    .eq("status", "active");
+
+  if (filters.influencerId) {
+    query = query.eq("id", filters.influencerId);
+  } else if (!scopedIds) {
+    query = query.order("updated_at", { ascending: false }).limit(INTERNAL_BROWSE_LIMIT);
+  }
+
+  if (country) query = query.eq("country_code", country);
+  if (category) query = query.contains("categories", [category]);
+  if (filters.language) query = query.contains("languages", [filters.language]);
+
   if (scopedIds) {
     if (scopedIds.length === 0) return [];
     query = query.in("id", scopedIds);
@@ -272,6 +282,15 @@ async function fetchInternalCreators(
   );
   const discoveryImageByProfileId = new Map(
     (linkedProfilesById ?? []).map((r) => [r.id, r.profile_image_url ?? null])
+  );
+
+  const { data: importSourceRows } = await supabase
+    .from("creator_sources")
+    .select("influencer_id")
+    .in("influencer_id", ids);
+
+  const importedByInfluencerId = new Set(
+    (importSourceRows ?? []).map((row) => row.influencer_id as string)
   );
 
   const { data: accounts } = await supabase
@@ -331,11 +350,12 @@ async function fetchInternalCreators(
       discoveryProfileImage,
       metadataAvatarUrl(r.metadata)
     );
-    const sourceType: CreatorSourceType = discoveryByInfluencer.has(r.id)
-      ? "imported"
-      : primary
-        ? resolveInternalSourceType(primary)
-        : "internal";
+    const sourceType: CreatorSourceType =
+      discoveryByInfluencer.has(r.id) || importedByInfluencerId.has(r.id)
+        ? "imported"
+        : primary
+          ? resolveInternalSourceType(primary)
+          : "internal";
 
     if (filters.source && filters.source !== "all" && filters.source !== sourceType) {
       continue;
