@@ -24,12 +24,13 @@ import { persistInfluencerPlatformAvatar } from "@/lib/performance/metrics-colle
 import { fetchApifyProfile } from "./apify-profile";
 import { writeEnrichmentRun } from "./audit";
 import { decideEnrichment, computeNextRefreshAt } from "./policy";
-import { mergeSourcedFields, type IncomingField } from "./merge";
+import { mergeSourcedFields, type IncomingField, type MergeResult } from "./merge";
 import type {
   CreatorEnrichmentJobPayload,
   CreatorEnrichmentResult,
   FieldSource,
   FieldSourceMap,
+  ApifyProfileData,
 } from "./types";
 
 type AnySupabase = SupabaseClient;
@@ -58,6 +59,33 @@ const APIFY_METRIC_FIELDS = [
 
 function logCreatorEnrichment(event: string, data: Record<string, unknown>): void {
   console.log(`[creator-enrichment:service] ${event}`, JSON.stringify(data));
+}
+
+/** Discovery forced refresh — always persist live Apify core metrics. */
+function applyBypassMetricPersist(
+  merged: MergeResult,
+  data: ApifyProfileData
+): MergeResult {
+  const updates = { ...merged.updates };
+  const fieldSources = { ...merged.fieldSources };
+  const fieldsUpdated = [...merged.fieldsUpdated];
+
+  const metricPairs: Array<[typeof APIFY_METRIC_FIELDS[number], number | null]> = [
+    ["follower_count", data.followers],
+    ["engagement_rate", data.engagementRate],
+    ["avg_views", data.avgViews],
+    ["avg_likes", data.avgLikes],
+    ["avg_comments", data.avgComments],
+  ];
+
+  for (const [field, value] of metricPairs) {
+    if (value == null) continue;
+    updates[field] = value;
+    fieldSources[field] = APIFY;
+    if (!fieldsUpdated.includes(field)) fieldsUpdated.push(field);
+  }
+
+  return { ...merged, updates, fieldSources, fieldsUpdated };
 }
 
 function profileUrlFor(account: PlatformAccountRow): string | null {
@@ -173,6 +201,13 @@ export async function runCreatorEnrichment(
   const errors: string[] = [];
   const bypassMetricsOverride = Boolean(payload.bypassMetricsManualOverride);
 
+  logCreatorEnrichment("Enrichment job started", {
+    influencerId: payload.influencerId,
+    trigger: payload.trigger,
+    force: Boolean(payload.force),
+    bypassMetricsManualOverride: bypassMetricsOverride,
+  });
+
   for (const account of accounts) {
     const profileUrl = profileUrlFor(account);
     const platformKey = canonicalPlatformKey(account.platform);
@@ -251,16 +286,20 @@ export async function runCreatorEnrichment(
       },
     ];
 
-    if (!manualLock) {
+    if (bypassMetricsOverride || !manualLock) {
       incoming.push(
         { field: "follower_count", value: data.followers, source: APIFY },
         { field: "engagement_rate", value: data.engagementRate, source: APIFY }
       );
     }
 
-    const merged = mergeSourcedFields(account.field_sources, incoming, {
+    let merged = mergeSourcedFields(account.field_sources, incoming, {
       ignoreManualProtectionFor: bypassMetricsOverride ? APIFY_METRIC_FIELDS : undefined,
     });
+
+    if (bypassMetricsOverride) {
+      merged = applyBypassMetricPersist(merged, data);
+    }
 
     if (bypassMetricsOverride && (data.followers != null || data.engagementRate != null)) {
       logCreatorEnrichment("Apify metrics override applied", {
@@ -284,6 +323,9 @@ export async function runCreatorEnrichment(
 
     if (merged.fieldsUpdated.length > 0) {
       const nowIso = new Date().toISOString();
+      const metricsBypassWritten =
+        bypassMetricsOverride &&
+        APIFY_METRIC_FIELDS.some((field) => field in merged.updates);
       const { error: updateError } = await supabase
         .from("influencer_platform_accounts")
         .update({
@@ -296,6 +338,13 @@ export async function runCreatorEnrichment(
           sync_status: "synced",
           sync_source: "apify",
           last_synced_at: nowIso,
+          ...(metricsBypassWritten
+            ? {
+                metrics_is_manual_override: false,
+                metrics_source: "synced",
+                metrics_last_synced_at: nowIso,
+              }
+            : {}),
           updated_at: nowIso,
         } as never)
         .eq("id", account.id);

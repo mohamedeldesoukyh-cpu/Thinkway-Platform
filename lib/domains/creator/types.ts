@@ -99,6 +99,10 @@ export type UnifiedCreatorResult = {
 };
 
 export type UnifiedCreatorBrowseFilters = {
+  /** Single-creator lookup (post-enrichment refresh). Not for browse UI. */
+  influencerId?: string;
+  /** Single discovery profile lookup (post-enrichment refresh). Not for browse UI. */
+  discoveredProfileId?: string;
   search?: string;
   platform?: string;
   country?: string;

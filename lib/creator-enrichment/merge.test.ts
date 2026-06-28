@@ -110,4 +110,15 @@ import {
   assert.equal(hasDemographics(cols), true);
 }
 
+// Discovery Apify refresh bypasses manual field_sources protection.
+{
+  const result = mergeSourcedFields(
+    { follower_count: "manual" },
+    [{ field: "follower_count", value: 99999, source: "apify" }],
+    { ignoreManualProtectionFor: ["follower_count"] }
+  );
+  assert.equal(result.updates.follower_count, 99999);
+  assert.deepEqual(result.manualProtected, []);
+}
+
 console.log("creator-enrichment merge tests passed");

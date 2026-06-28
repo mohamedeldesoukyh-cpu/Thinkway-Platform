@@ -38,6 +38,15 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
   const worker = new Worker<CreatorEnrichmentJobPayload>(
     QUEUES.creatorEnrichment,
     async (job: Job<CreatorEnrichmentJobPayload>) => {
+      console.log(
+        `[creator-enrichment] processing ${job.id}`,
+        JSON.stringify({
+          influencerId: job.data.influencerId,
+          bypassMetricsManualOverride: Boolean(job.data.bypassMetricsManualOverride),
+          force: Boolean(job.data.force),
+          trigger: job.data.trigger,
+        })
+      );
       const result = await executeCreatorMetricsRefresh(supabase, job.data, {
         attempt: job.attemptsMade + 1,
         jobId: job.id ?? null,

@@ -266,7 +266,9 @@ function normalizeApifyProfileData(input: {
 
   const followers =
     num(head.followersCount) ??
+    num(head.followerCount) ??
     num(owner.followersCount) ??
+    num(owner.followerCount) ??
     num(owner.fans) ??
     pickApifyAuthorFollowerCount(input.platformKey, head);
   const following = num(head.followsCount) ?? num(owner.following) ?? num(owner.followingCount);

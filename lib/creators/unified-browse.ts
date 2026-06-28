@@ -26,6 +26,7 @@ import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
 import { mergeImportedStringArrays } from "@/lib/discovery-import/normalize";
 import { ftsRankMap, searchInfluencerIdsByFts } from "@/lib/creators/fts-search";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
+import type { DiscoverySearchResult, ProfileAiScore, ProfileMetricsSnapshot } from "@/lib/discovery/types";
 
 async function resolveInternalSearchIds(
   supabase: SupabaseClient,
@@ -174,9 +175,13 @@ async function fetchInternalCreators(
     .select(
       "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id, enrichment_status, last_enriched_at, enrichment_source"
     )
-    .eq("status", "active")
-    .order("display_name")
-    .limit(80);
+    .eq("status", "active");
+
+  if (filters.influencerId) {
+    query = query.eq("id", filters.influencerId);
+  } else {
+    query = query.order("display_name").limit(80);
+  }
 
   if (country) query = query.eq("country_code", country);
   if (category) query = query.contains("categories", [category]);
@@ -352,32 +357,15 @@ async function fetchInternalCreators(
   return results;
 }
 
-async function fetchDiscoveryCreators(
-  supabase: SupabaseClient,
+type DiscoveryProfileRow = DiscoverySearchResult["profiles"][number];
+
+function mapDiscoveryProfileToUnifiedResults(
+  profiles: DiscoveryProfileRow[],
   filters: UnifiedCreatorBrowseFilters
-): Promise<UnifiedCreatorResult[]> {
-  if (filters.source === "internal" || filters.source === "oauth_verified") {
-    return [];
-  }
-
-  const discovery = await searchDiscoveredProfiles(supabase, {
-    q: filters.search,
-    platform: filters.platform as "instagram" | "tiktok" | "youtube" | "twitter" | undefined,
-    country: filters.country,
-    city: filters.city,
-    category: filters.category,
-    language: filters.language,
-    minFollowers: filters.minFollowers,
-    maxFollowers: filters.maxFollowers,
-    minEngagement: filters.minEngagement,
-    minViews: filters.minViews,
-    page: 1,
-    pageSize: 80,
-  });
-
+): UnifiedCreatorResult[] {
   const results: UnifiedCreatorResult[] = [];
 
-  for (const profile of discovery.profiles) {
+  for (const profile of profiles) {
     if (profile.influencer_id) continue;
 
     const sourceType: CreatorSourceType = "public_discovery";
@@ -465,6 +453,82 @@ async function fetchDiscoveryCreators(
   return results;
 }
 
+async function fetchDiscoveryCreators(
+  supabase: SupabaseClient,
+  filters: UnifiedCreatorBrowseFilters
+): Promise<UnifiedCreatorResult[]> {
+  if (filters.source === "internal" || filters.source === "oauth_verified") {
+    return [];
+  }
+
+  if (filters.discoveredProfileId) {
+    const { data: profileRow, error } = await supabase
+      .from("discovered_profiles")
+      .select(
+        `
+        *,
+        profile_metrics (
+          followers, following, posts_count, avg_likes, avg_comments,
+          engagement_rate, avg_views, posting_frequency_per_week,
+          reels_views_avg, captured_at
+        ),
+        profile_ai_scores (
+          category, niche, audience_type, content_quality_score,
+          luxury_level_score, brand_fit_score, professionalism_score,
+          influencer_summary, audience_persona, content_style, scored_at
+        )
+      `
+      )
+      .eq("id", filters.discoveredProfileId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!profileRow) return [];
+    if (profileRow.influencer_id) return [];
+
+    const metricsRows = (profileRow.profile_metrics ?? []) as Array<
+      { captured_at: string } & Record<string, unknown>
+    >;
+    const aiRows = (profileRow.profile_ai_scores ?? []) as Array<
+      { scored_at: string } & Record<string, unknown>
+    >;
+    const latestMetrics =
+      ([...metricsRows].sort(
+        (a, b) => new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime()
+      )[0] as ProfileMetricsSnapshot | undefined) ?? null;
+    const latestAi =
+      ([...aiRows].sort(
+        (a, b) => new Date(b.scored_at).getTime() - new Date(a.scored_at).getTime()
+      )[0] as ProfileAiScore | undefined) ?? null;
+
+    const { profile_metrics: _m, profile_ai_scores: _a, ...profileBase } = profileRow;
+    const profile = {
+      ...(profileBase as DiscoverySearchResult["profiles"][number]),
+      latest_metrics: latestMetrics,
+      latest_ai_score: latestAi,
+    };
+
+    return mapDiscoveryProfileToUnifiedResults([profile], filters);
+  }
+
+  const discovery = await searchDiscoveredProfiles(supabase, {
+    q: filters.search,
+    platform: filters.platform as "instagram" | "tiktok" | "youtube" | "twitter" | undefined,
+    country: filters.country,
+    city: filters.city,
+    category: filters.category,
+    language: filters.language,
+    minFollowers: filters.minFollowers,
+    maxFollowers: filters.maxFollowers,
+    minEngagement: filters.minEngagement,
+    minViews: filters.minViews,
+    page: 1,
+    pageSize: 80,
+  });
+
+  return mapDiscoveryProfileToUnifiedResults(discovery.profiles, filters);
+}
+
 export async function browseUnifiedCreators(
   supabase: SupabaseClient,
   filters: UnifiedCreatorBrowseFilters
@@ -522,19 +586,27 @@ export async function getUnifiedCreatorById(
   if (!id) return null;
 
   if (kind === "inf") {
-    const internal = await fetchInternalCreators(supabase, {});
-    return internal.find((c) => c.influencer_id === id) ?? null;
+    const internal = await fetchInternalCreators(supabase, { influencerId: id });
+    return internal[0] ?? null;
   }
 
   if (kind === "dis") {
-    const { data: profile } = await supabase
+    const { data: profileLink } = await supabase
       .from("discovered_profiles")
-      .select("*")
+      .select("id, influencer_id")
       .eq("id", id)
       .maybeSingle();
-    if (!profile) return null;
-    const list = await fetchDiscoveryCreators(supabase, {});
-    return list.find((c) => c.discovered_profile_id === id) ?? null;
+
+    if (!profileLink) return null;
+    if (profileLink.influencer_id) {
+      const internal = await fetchInternalCreators(supabase, {
+        influencerId: profileLink.influencer_id,
+      });
+      return internal[0] ?? null;
+    }
+
+    const discovery = await fetchDiscoveryCreators(supabase, { discoveredProfileId: id });
+    return discovery[0] ?? null;
   }
 
   return null;
