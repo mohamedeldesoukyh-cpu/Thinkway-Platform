@@ -76,8 +76,9 @@ function apifyErrorReason(rows: Record<string, unknown>[]): string | null {
 }
 
 /**
- * Profile-oriented actor input. Instagram uses `searchType: user` + `resultsType:
- * details` (the scraper does NOT accept `usernames`). TikTok profile scrapers
+ * Profile-oriented actor input. Instagram profile metadata must be scraped via
+ * `directUrls` + `resultsType: details` — username search (`searchType: user`)
+ * often returns `no_items` for exact public handles. TikTok profile scrapers
  * accept a handle list; generic platforms fall back to a direct profile URL.
  */
 function buildProfileDetailsInput(
@@ -88,14 +89,7 @@ function buildProfileDetailsInput(
   const handle = normalizeHandle(username, profileUrl);
   switch (platformKey) {
     case "instagram":
-      return handle
-        ? {
-            search: handle,
-            searchType: "user",
-            resultsType: "details",
-            resultsLimit: 1,
-          }
-        : { directUrls: [profileUrl], resultsType: "details", resultsLimit: 1 };
+      return { directUrls: [profileUrl], resultsType: "details", resultsLimit: 1 };
     case "tiktok":
       return handle
         ? { profiles: [handle], resultsPerPage: 6, shouldDownloadVideos: false }
@@ -217,10 +211,20 @@ async function launchApifyActor(input: {
 
   const items = (await itemsResponse.json()) as unknown[];
   const rows = (items ?? []).map(record).filter((r): r is Record<string, unknown> => r != null);
+  const sampleRow = rows[0];
   logApifyEnrichment("Actor raw output", {
     label: input.label,
     apifyRunId: runId,
     rawOutputCount: rows.length,
+    rawOutputSample: sampleRow
+      ? {
+          keys: Object.keys(sampleRow).slice(0, 25),
+          error: sampleRow.error ?? null,
+          errorDescription: sampleRow.errorDescription ?? null,
+          username: sampleRow.username ?? null,
+          followersCount: sampleRow.followersCount ?? null,
+        }
+      : null,
   });
 
   const errorReason = apifyErrorReason(rows);
@@ -285,7 +289,7 @@ function normalizeApifyProfileData(input: {
     followers,
     following,
     postsCount,
-    avgViews,
+    avgViews: avgViews != null ? Math.round(avgViews) : null,
     avgLikes,
     avgComments,
     engagementRate,
