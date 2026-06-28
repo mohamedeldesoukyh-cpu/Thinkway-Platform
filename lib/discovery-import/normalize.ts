@@ -3,6 +3,8 @@ import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 
 import type { FieldSource, FieldSourceMap } from "@/lib/creator-enrichment/types";
 
+import { mergeMissingOnly, type ImportMergeLog } from "./merge";
+
 import type { ParsedCreatorRow } from "./types";
 
 const IMPORTED: FieldSource = "imported";
@@ -182,6 +184,47 @@ export function mergeCreatorImportMetadata(
       row.relevance_score != null
         ? row.relevance_score
         : ((existing.relevance_score as number | null | undefined) ?? null),
+    import_source: row.source ?? existing.import_source ?? importMeta.import_source,
+    imported_at: importMeta.imported_at,
+  };
+}
+
+/** Re-import metadata merge — only fill empty fields; always refresh provenance timestamps. */
+export function mergeCreatorImportMetadataMissingOnly(
+  existing: Record<string, unknown>,
+  row: ParsedCreatorRow,
+  log?: ImportMergeLog
+): Record<string, unknown> {
+  const importMeta = buildCreatorImportMetadata(row);
+  const incomingCategories = resolveInfluencerImportCategories([], row);
+  const incomingInterests = row.audience_interests;
+
+  return {
+    ...existing,
+    audience_interests: mergeMissingOnly(
+      (existing.audience_interests as string[] | undefined) ?? [],
+      incomingInterests,
+      "metadata.audience_interests",
+      log
+    ),
+    categories: mergeMissingOnly(
+      (existing.categories as string[] | undefined) ?? [],
+      incomingCategories,
+      "metadata.categories",
+      log
+    ),
+    relevance_score: mergeMissingOnly(
+      (existing.relevance_score as number | null | undefined) ?? null,
+      row.relevance_score,
+      "metadata.relevance_score",
+      log
+    ),
+    role: mergeMissingOnly(
+      (existing.role as string | null | undefined) ?? null,
+      row.role?.trim() || null,
+      "metadata.role",
+      log
+    ),
     import_source: row.source ?? existing.import_source ?? importMeta.import_source,
     imported_at: importMeta.imported_at,
   };

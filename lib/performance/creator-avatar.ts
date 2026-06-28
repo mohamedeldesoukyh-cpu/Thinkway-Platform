@@ -11,13 +11,15 @@ export type CreatorAvatarInput = {
 export type BrowseCreatorProfileImageInput = {
   platform?: string | null;
   platformPictureUrl?: string | null;
+  /** Secondary platform avatar (e.g. metadata.avatar_url on platform account). */
+  platformAvatarUrl?: string | null;
   discoveryProfileImageUrl?: string | null;
   influencerAvatarUrl?: string | null;
 };
 
 /**
- * Discovery browse/detail — platform account photo first, then linked discovery
- * profile or influencer metadata avatar. Rejects placeholders and cross-platform CDN bleed.
+ * Discovery browse/detail — platform account photo first, then platform metadata avatar,
+ * influencer metadata avatar, then linked discovery profile image.
  */
 export function resolveBrowseCreatorProfileImageUrl(
   input: BrowseCreatorProfileImageInput
@@ -25,10 +27,9 @@ export function resolveBrowseCreatorProfileImageUrl(
   const platform = input.platform ?? "unknown";
   return (
     firstAllowedAvatarUrl(platform, [input.platformPictureUrl]) ??
-    firstGenericAvatarUrl(platform, [
-      input.discoveryProfileImageUrl,
-      input.influencerAvatarUrl,
-    ])
+    firstAllowedAvatarUrl(platform, [input.platformAvatarUrl]) ??
+    firstGenericAvatarUrl(platform, [input.influencerAvatarUrl]) ??
+    firstGenericAvatarUrl(platform, [input.discoveryProfileImageUrl])
   );
 }
 

@@ -249,6 +249,30 @@ assert.equal(
   resolveBrowseCreatorProfileImageUrl({
     platform: "instagram",
     platformPictureUrl: null,
+    platformAvatarUrl: "https://cdn.example.com/platform-meta.jpg",
+    discoveryProfileImageUrl: IG_CDN,
+    influencerAvatarUrl: "https://cdn.example.com/influencer.jpg",
+  }),
+  "https://cdn.example.com/platform-meta.jpg",
+  "platform metadata avatar before influencer/discovery"
+);
+
+assert.equal(
+  resolveBrowseCreatorProfileImageUrl({
+    platform: "instagram",
+    platformPictureUrl: null,
+    platformAvatarUrl: null,
+    discoveryProfileImageUrl: IG_CDN,
+    influencerAvatarUrl: "https://cdn.example.com/influencer.jpg",
+  }),
+  "https://cdn.example.com/influencer.jpg",
+  "influencer avatar before discovery profile"
+);
+
+assert.equal(
+  resolveBrowseCreatorProfileImageUrl({
+    platform: "instagram",
+    platformPictureUrl: null,
     discoveryProfileImageUrl: IG_CDN,
   }),
   IG_CDN,

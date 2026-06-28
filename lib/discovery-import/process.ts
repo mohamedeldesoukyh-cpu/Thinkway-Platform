@@ -7,6 +7,7 @@ import type { Database } from "@/types/database";
 import { parseImportFile } from "./parsers";
 import { downloadCreatorImportFile } from "./storage";
 import type { ImportProcessingLog, ImportProcessingLogEntry } from "./types";
+import { queueImportedCreatorAvatarEnrichment } from "./enrichment";
 import { upsertImportedCreators } from "./upsert";
 
 type ProcessImportFileInput = {
@@ -80,6 +81,17 @@ export async function processCreatorImportFile(
       `Upsert complete — imported ${counters.imported}, updated ${counters.updated}, duplicate ${counters.duplicate}, failed ${counters.failed}`
     );
 
+    const avatarEnrichmentQueued = await queueImportedCreatorAvatarEnrichment(
+      counters.avatarEnrichmentAccountIds,
+      input.importFileId
+    );
+    if (avatarEnrichmentQueued > 0) {
+      log(
+        "info",
+        `[import] avatar enrichment queued: ${avatarEnrichmentQueued} account(s)`
+      );
+    }
+
     let storagePathAfterProcessing: string | null = importFile.storage_path;
     const metadataAfterProcessing: Record<string, unknown> =
       importFile.metadata &&
@@ -110,7 +122,7 @@ export async function processCreatorImportFile(
       parser: parsed.parser,
       file_type: importFile.file_type,
       duration_ms: Date.now() - startedAt,
-      enrichment_queued: 0,
+      enrichment_queued: avatarEnrichmentQueued,
       errors,
       entries,
     };

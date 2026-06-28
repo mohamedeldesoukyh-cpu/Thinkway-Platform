@@ -46,16 +46,18 @@ async function resolveInternalSearchIds(
   return ftsRankMap(fallbackHits);
 }
 
-/** Prefer platform account photo; fall back to linked discovery / metadata image when missing/broken. */
+/** Prefer platform account photo; fall back through avatar_url chain when missing/broken. */
 function resolveCreatorProfileImageUrl(
   platform: string | null | undefined,
   platformPictureUrl: string | null | undefined,
+  platformAvatarUrl: string | null | undefined,
   discoveryProfileImageUrl: string | null | undefined,
   influencerAvatarUrl?: string | null | undefined
 ): string | null {
   return resolveBrowseCreatorProfileImageUrl({
     platform,
     platformPictureUrl,
+    platformAvatarUrl,
     discoveryProfileImageUrl,
     influencerAvatarUrl,
   });
@@ -347,6 +349,9 @@ async function fetchInternalCreators(
     const profileImageUrl = resolveCreatorProfileImageUrl(
       primary?.platform,
       primary?.profile_picture_url,
+      metadataAvatarUrl(
+        (primary?.metadata as Record<string, unknown> | null | undefined) ?? null
+      ),
       discoveryProfileImage,
       metadataAvatarUrl(r.metadata)
     );
@@ -431,6 +436,9 @@ async function fetchInternalCreators(
         profile_picture_url: resolveCreatorProfileImageUrl(
           p.platform,
           p.profile_picture_url,
+          metadataAvatarUrl(
+            (p.metadata as Record<string, unknown> | null | undefined) ?? null
+          ),
           discoveryProfileImage,
           metadataAvatarUrl(r.metadata)
         ),

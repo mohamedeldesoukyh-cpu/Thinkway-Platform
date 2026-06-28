@@ -57,11 +57,16 @@ export type ImportUpsertCounters = {
   failed: number;
 };
 
+export type ImportEnrichmentAccountRef = {
+  influencerId: string;
+  platformAccountId: string;
+  platform: string;
+  username: string;
+};
+
 export type ImportUpsertResult = ImportUpsertCounters & {
-  enrichmentAccountIds: Array<{
-    influencerId: string;
-    platformAccountId: string;
-    platform: string;
-    username: string;
-  }>;
+  /** @deprecated Use avatarEnrichmentAccountIds — full metrics enrichment is not auto-queued on import. */
+  enrichmentAccountIds: ImportEnrichmentAccountRef[];
+  /** Platform accounts still missing a usable avatar after upsert (avatar-only fetch queued). */
+  avatarEnrichmentAccountIds: ImportEnrichmentAccountRef[];
 };

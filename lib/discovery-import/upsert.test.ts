@@ -404,7 +404,7 @@ async function testReimportDoesNotCreateDuplicates() {
   assert.equal(state.sources.length, 1);
 }
 
-async function testReimportBackfillsAndMergesFields() {
+async function testReimportBackfillsEmptyFieldsOnly() {
   const influencerId = "inf-2";
   const { supabase, getState } = createDiscoveryImportMock({
     influencers: [
@@ -437,10 +437,11 @@ async function testReimportBackfillsAndMergesFields() {
     ],
   });
 
-  await upsertImportedCreators(
+  const result = await upsertImportedCreators(
     [
       sampleRow({
         username: "creator_two",
+        followers: 99_000,
         categories: ["Beauty", "Fashion"],
         audience_interests: [
           "Camera & Photography",
@@ -463,20 +464,18 @@ async function testReimportBackfillsAndMergesFields() {
   const influencer = state.influencers[0];
   const metadata = account?.metadata ?? {};
 
-  assert.deepEqual(influencer?.categories, [
-    "Beauty",
-    "Fashion",
-    "Camera & Photography",
-    "Clothes, Shoes, Handbags & Accessories",
-  ]);
+  assert.equal(result.updated, 1);
+  assert.equal(account?.follower_count, 5_000, "preserve enriched follower count");
+  assert.deepEqual(influencer?.categories, ["Beauty"], "preserve existing influencer categories");
   assert.deepEqual(metadata.audience_interests, [
     "Camera & Photography",
     "Clothes, Shoes, Handbags & Accessories",
-  ]);
-  assert.deepEqual(metadata.categories, ["Beauty", "Fashion"]);
-  assert.equal(metadata.relevance_score, 88);
+  ], "backfill empty audience_interests");
+  assert.deepEqual(metadata.categories, ["Beauty"], "preserve existing metadata categories");
+  assert.equal(metadata.relevance_score, 60, "preserve existing relevance score");
   assert.equal(metadata.import_source, "indaHash");
   assert.notEqual(metadata.imported_at, "2026-01-01T00:00:00.000Z");
+  assert.equal(result.avatarEnrichmentAccountIds.length, 1, "queue avatar when missing");
 
   const source = state.sources.find((row) => row.source_file_id === "file-2");
   assert.ok(source);
@@ -597,7 +596,7 @@ async function testImportPersistsProfilePictureFromCsv() {
   const { supabase, getState } = createDiscoveryImportMock();
   const avatarUrl = "https://cdn.example.com/creator-one.jpg";
 
-  await upsertImportedCreators(
+  const result = await upsertImportedCreators(
     [
       sampleRow({
         profile_picture_url: avatarUrl,
@@ -616,6 +615,61 @@ async function testImportPersistsProfilePictureFromCsv() {
   assert.equal(account?.profile_picture_url, avatarUrl);
   assert.equal(account?.avatar_source, "manual");
   assert.ok(account?.avatar_last_synced_at);
+  assert.equal(result.avatarEnrichmentAccountIds.length, 0, "skip avatar queue when CSV has photo");
+}
+
+async function testReimportPreservesExistingAvatar() {
+  const influencerId = "inf-avatar";
+  const existingAvatar = "https://cdn.example.com/enriched.jpg";
+  const { supabase, getState } = createDiscoveryImportMock({
+    influencers: [
+      {
+        id: influencerId,
+        display_name: "creator_avatar",
+        country_code: "JO",
+        categories: [],
+        status: "active",
+      },
+    ],
+    accounts: [
+      {
+        id: "acct-avatar",
+        influencer_id: influencerId,
+        platform: "instagram",
+        handle: "creator_avatar",
+        username: "creator_avatar",
+        normalized_username: "creator_avatar",
+        follower_count: 50_000,
+        engagement_rate: 3.2,
+        profile_picture_url: existingAvatar,
+        avatar_source: "apify",
+        avatar_last_synced_at: "2026-06-01T00:00:00.000Z",
+        metadata: {},
+      },
+    ],
+  });
+
+  const result = await upsertImportedCreators(
+    [
+      sampleRow({
+        username: "creator_avatar",
+        followers: 10_000,
+        profile_picture_url: "https://cdn.example.com/csv-avatar.jpg",
+      }),
+    ],
+    {
+      supabase,
+      importFileId: "file-avatar-reimport",
+      sourceName: "indaHash",
+      uploadedBy: "user-1",
+      log: () => {},
+    }
+  );
+
+  const account = getState().accounts[0];
+  assert.equal(account?.profile_picture_url, existingAvatar);
+  assert.equal(account?.follower_count, 50_000);
+  assert.equal(result.avatarEnrichmentAccountIds.length, 0);
 }
 
 async function run() {
@@ -627,10 +681,11 @@ async function run() {
   testMergeCreatorImportMetadataPreservesRelevanceWhenImportNull();
   await testFirstImportCreatesRecords();
   await testReimportDoesNotCreateDuplicates();
-  await testReimportBackfillsAndMergesFields();
+  await testReimportBackfillsEmptyFieldsOnly();
   await testReimportBackfillsCategoriesFromAudienceInterestsOnly();
   await testReimportUpdatesExistingSourceProvenance();
   await testImportPersistsProfilePictureFromCsv();
+  await testReimportPreservesExistingAvatar();
 
   console.log("lib/discovery-import/upsert.test.ts — all tests passed");
 }
