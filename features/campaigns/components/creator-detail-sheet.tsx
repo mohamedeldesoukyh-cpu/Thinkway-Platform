@@ -48,6 +48,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAssign?: (creator: UnifiedCreatorResult) => void;
+  onCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
   campaignHeaderId?: string;
 };
 
@@ -150,9 +151,15 @@ export function CreatorDetailSheet({
   open,
   onOpenChange,
   onAssign,
+  onCreatorUpdated,
   campaignHeaderId,
 }: Props) {
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
+  const [displayCreator, setDisplayCreator] = useState<UnifiedCreatorResult | null>(creator);
+
+  useEffect(() => {
+    setDisplayCreator(creator);
+  }, [creator]);
 
   useEffect(() => {
     if (!open || !creator) return;
@@ -171,21 +178,26 @@ export function CreatorDetailSheet({
     return () => {
       active = false;
     };
-  }, [open, creator]);
+  }, [open, creator?.unified_id]);
 
-  if (!creator) return null;
+  if (!displayCreator) return null;
 
-  const matchedDetail = detail?.unifiedId === creator.unified_id ? detail : null;
+  const matchedDetail = detail?.unifiedId === displayCreator.unified_id ? detail : null;
   const loading = matchedDetail == null;
   const similar = matchedDetail?.similar ?? [];
   const history = matchedDetail?.history ?? null;
 
-  const primary = creator.platforms[0];
+  const primary = displayCreator.platforms[0];
   const handle = primary?.handle ? `@${primary.handle.replace(/^@/, "")}` : null;
-  const profileUrl = resolvePrimaryProfileUrl(creator.platforms);
+  const profileUrl = resolvePrimaryProfileUrl(displayCreator.platforms);
   const platformName = primary ? platformLabel(primary.platform) : null;
-  const canAssign = isAssignableCreator(creator) && Boolean(onAssign);
+  const canAssign = isAssignableCreator(displayCreator) && Boolean(onAssign);
   const latestFollowers = history?.followers.at(-1)?.value ?? null;
+
+  function handleCreatorUpdated(next: UnifiedCreatorResult) {
+    setDisplayCreator(next);
+    onCreatorUpdated?.(next);
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -196,7 +208,7 @@ export function CreatorDetailSheet({
         style={OPERATIONAL_DETAIL_SHEET_STYLE}
         className={OPERATIONAL_DETAIL_SHEET_CLASS}
       >
-        <SheetTitle className="sr-only">{creator.display_name} creator profile</SheetTitle>
+        <SheetTitle className="sr-only">{displayCreator.display_name} creator profile</SheetTitle>
         <SheetDescription className="sr-only">
           Creator profile, metrics confidence, and similar creators.
         </SheetDescription>
@@ -215,12 +227,14 @@ export function CreatorDetailSheet({
           }
           actions={
             <div className="flex shrink-0 items-center gap-2">
-              {creator.influencer_id ? (
+              {displayCreator.influencer_id ? (
                 <RefreshCreatorButton
-                  influencerId={creator.influencer_id}
+                  influencerId={displayCreator.influencer_id}
+                  unifiedId={displayCreator.unified_id}
                   showTimestamp={false}
                   size="sm"
                   variant="outline"
+                  onCreatorUpdated={handleCreatorUpdated}
                 />
               ) : null}
               {profileUrl ? (
@@ -233,13 +247,13 @@ export function CreatorDetailSheet({
               ) : null}
             </div>
           }
-          avatarUrl={creator.profile_image_url}
-          avatarInitials={initialsFromName(creator.display_name)}
+          avatarUrl={displayCreator.profile_image_url}
+          avatarInitials={initialsFromName(displayCreator.display_name)}
           profileUrl={profileUrl}
-          profileTooltip={profileLinkTooltip(creator.display_name, primary?.platform)}
+          profileTooltip={profileLinkTooltip(displayCreator.display_name, primary?.platform)}
           title={
             <CreatorProfileLink
-              source={creatorProfileSourceFromUnified(creator)}
+              source={creatorProfileSourceFromUnified(displayCreator)}
               size="md"
               showAvatar={false}
               showHandle={false}
@@ -249,7 +263,7 @@ export function CreatorDetailSheet({
             />
           }
           subtitle={
-            creator.is_platform_verified ? (
+            displayCreator.is_platform_verified ? (
               <BadgeCheckIcon className="size-4 shrink-0 text-primary" aria-label="Platform verified" />
             ) : null
           }
@@ -261,11 +275,11 @@ export function CreatorDetailSheet({
                   {platformName}
                 </span>
               ) : null}
-              <CreatorSourceBadge source={creator.source_type} />
-              {creator.estimated_country || creator.country_code ? (
+              <CreatorSourceBadge source={displayCreator.source_type} />
+              {displayCreator.estimated_country || displayCreator.country_code ? (
                 <span className="inline-flex rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-foreground">
-                  {creator.estimated_country ?? creator.country_code}
-                  {creator.city ? ` · ${creator.city}` : ""}
+                  {displayCreator.estimated_country ?? displayCreator.country_code}
+                  {displayCreator.city ? ` · ${displayCreator.city}` : ""}
                 </span>
               ) : null}
             </>
@@ -273,8 +287,8 @@ export function CreatorDetailSheet({
         />
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
-          {creator.bio ? (
-            <p className="text-sm leading-relaxed text-muted-foreground">{creator.bio}</p>
+          {displayCreator.bio ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">{displayCreator.bio}</p>
           ) : null}
 
           {/* Thinkway score + relevance */}
@@ -284,10 +298,10 @@ export function CreatorDetailSheet({
                 Thinkway score
               </p>
               <p className="mt-1 text-3xl font-semibold tabular-nums text-primary">
-                {Math.round(creator.thinkway_score)}
+                {Math.round(displayCreator.thinkway_score)}
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Source confidence {Math.round(creator.source_confidence)}%
+                Source confidence {Math.round(displayCreator.source_confidence)}%
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3">
@@ -295,10 +309,10 @@ export function CreatorDetailSheet({
                 Brand fit
               </p>
               <p className="mt-1 text-3xl font-semibold tabular-nums text-foreground">
-                {creator.brand_fit_score != null ? Math.round(creator.brand_fit_score) : "—"}
+                {displayCreator.brand_fit_score != null ? Math.round(displayCreator.brand_fit_score) : "—"}
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {(creator.ai_niche ?? creator.ai_category) || "No niche tagged"}
+                {(displayCreator.ai_niche ?? displayCreator.ai_category) || "No niche tagged"}
               </p>
             </div>
           </div>
@@ -307,12 +321,12 @@ export function CreatorDetailSheet({
           <section className="space-y-2.5">
             <SectionHeading icon={<UsersIcon className="size-3.5" />}>Audience & engagement</SectionHeading>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              <Kpi label="Followers" metric={creator.metrics.followers} accent />
-              <Kpi label="Engagement" metric={creator.metrics.engagement_rate} suffix="%" />
-              <Kpi label="Avg likes" metric={creator.metrics.avg_likes} />
-              <Kpi label="Avg comments" metric={creator.metrics.avg_comments} />
-              <Kpi label="Avg views" metric={creator.metrics.avg_views} />
-              <Kpi label="Posts / week" metric={creator.metrics.posting_frequency_per_week} />
+              <Kpi label="Followers" metric={displayCreator.metrics.followers} accent />
+              <Kpi label="Engagement" metric={displayCreator.metrics.engagement_rate} suffix="%" />
+              <Kpi label="Avg likes" metric={displayCreator.metrics.avg_likes} />
+              <Kpi label="Avg comments" metric={displayCreator.metrics.avg_comments} />
+              <Kpi label="Avg views" metric={displayCreator.metrics.avg_views} />
+              <Kpi label="Posts / week" metric={displayCreator.metrics.posting_frequency_per_week} />
             </div>
           </section>
 
@@ -324,13 +338,13 @@ export function CreatorDetailSheet({
             <div className="rounded-xl border border-border/60 bg-muted/15 px-4">
               <MetaRow
                 label="Authenticity"
-                value={creator.authenticity_score != null ? `${creator.authenticity_score}` : "—"}
+                value={displayCreator.authenticity_score != null ? `${displayCreator.authenticity_score}` : "—"}
               />
-              <MetaRow label="Source confidence" value={`${Math.round(creator.source_confidence)}%`} />
+              <MetaRow label="Source confidence" value={`${Math.round(displayCreator.source_confidence)}%`} />
               <MetaRow
                 label="Verification"
                 value={
-                  creator.is_platform_verified ? (
+                  displayCreator.is_platform_verified ? (
                     <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                       <BadgeCheckIcon className="size-3.5" />
                       Verified
@@ -340,12 +354,12 @@ export function CreatorDetailSheet({
                   )
                 }
               />
-              {creator.categories.length > 0 ? (
+              {displayCreator.categories.length > 0 ? (
                 <MetaRow
                   label="Categories"
                   value={
                     <div className="flex flex-wrap justify-end gap-1.5">
-                      {creator.categories.slice(0, 5).map((category) => (
+                      {displayCreator.categories.slice(0, 5).map((category) => (
                         <span
                           key={category}
                           className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize text-muted-foreground"
@@ -430,14 +444,14 @@ export function CreatorDetailSheet({
                   size="sm"
                   variant="outline"
                   onClick={() =>
-                    void addCreatorToCampaignShortlistAction(campaignHeaderId, creator)
+                    void addCreatorToCampaignShortlistAction(campaignHeaderId, displayCreator)
                   }
                 >
                   Save to shortlist
                 </Button>
               ) : null}
               {canAssign ? (
-                <Button size="sm" onClick={() => onAssign?.(creator)}>
+                <Button size="sm" onClick={() => onAssign?.(displayCreator)}>
                   Assign to line
                 </Button>
               ) : null}

@@ -71,8 +71,11 @@ function genericAuthorAvatarCandidates(row: Record<string, unknown>): unknown[] 
   return [
     row.channelAvatarUrl,
     row.channelAvatar,
+    row.channelThumbnail,
+    row.avatarUrl,
     channel?.avatarUrl,
     channel?.avatar,
+    channel?.channelThumbnail,
     channel?.profileImageUrl,
     author?.avatarUrl,
     author?.avatar,

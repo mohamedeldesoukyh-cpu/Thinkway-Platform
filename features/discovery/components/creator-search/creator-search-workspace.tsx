@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
 import { refreshCreatorsBatchAction } from "@/features/discovery/enrichment/actions";
+import { pollCreatorsAfterBatchRefresh } from "@/features/discovery/enrichment/poll-creator-refresh";
 import {
   addUnifiedCreatorsToShortlist,
   describeAddOutcome,
@@ -307,14 +308,28 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     return { followers, reach, engagement };
   }, [selectedCreators]);
 
+  function patchCreatorInList(next: UnifiedCreatorResult) {
+    setCreators((prev) =>
+      prev.map((creator) => (creator.unified_id === next.unified_id ? next : creator))
+    );
+    setDetailCreator((current) =>
+      current?.unified_id === next.unified_id ? next : current
+    );
+  }
+
   function handleBulkRefreshMetrics() {
     if (selectedCreators.length === 0) return;
+    const targets = selectedCreators.map((creator) => ({
+      unifiedId: creator.unified_id,
+      influencerId: creator.influencer_id,
+    }));
     startTransition(async () => {
       const result = await refreshCreatorsBatchAction(
         selectedCreators.map((c) => c.unified_id)
       );
       if (result.queued) {
         toast.success(result.message);
+        void pollCreatorsAfterBatchRefresh(targets, patchCreatorInList);
       } else {
         toast.error(result.message);
       }
@@ -441,6 +456,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
         onOpenChange={(open) => {
           if (!open) setDetailCreator(null);
         }}
+        onCreatorUpdated={patchCreatorInList}
       />
 
       <CreateListDialog

@@ -5,9 +5,11 @@ import { Loader2Icon, RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { cn } from "@/lib/utils";
 
 import { refreshCreatorAction } from "../actions";
+import { pollCreatorAfterRefresh } from "../poll-creator-refresh";
 import { formatLastUpdated } from "../status";
 
 /**
@@ -18,20 +20,24 @@ import { formatLastUpdated } from "../status";
  */
 export function RefreshCreatorButton({
   influencerId,
+  unifiedId,
   lastEnrichedAt,
   size = "sm",
   variant = "outline",
   showTimestamp = true,
   className,
   onQueued,
+  onCreatorUpdated,
 }: {
   influencerId: string;
+  unifiedId?: string | null;
   lastEnrichedAt?: string | null;
   size?: "xs" | "sm" | "default";
   variant?: "outline" | "ghost" | "secondary" | "default";
   showTimestamp?: boolean;
   className?: string;
   onQueued?: () => void;
+  onCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [queued, setQueued] = useState(false);
@@ -45,6 +51,15 @@ export function RefreshCreatorButton({
           description: "Latest data will appear once enrichment completes.",
         });
         onQueued?.();
+        if (unifiedId && onCreatorUpdated) {
+          void pollCreatorAfterRefresh(
+            { unifiedId, influencerId },
+            (creator) => {
+              setQueued(false);
+              onCreatorUpdated(creator);
+            }
+          );
+        }
       } else {
         toast.error("Could not refresh", { description: result.message });
       }

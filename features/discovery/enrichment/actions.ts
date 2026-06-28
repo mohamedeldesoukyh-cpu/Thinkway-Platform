@@ -2,7 +2,9 @@
 
 import { requirePermission } from "@/lib/auth/permissions";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
+import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import {
+  getCreatorMetricsSyncStatus,
   refreshCreatorMetrics,
   refreshCreatorMetricsBatchByUnifiedIds,
 } from "@/lib/services/creators/creator-enrichment-service";
@@ -105,4 +107,24 @@ export async function enqueueCreatorDetailEnrichment(
     queued: result.queued,
     message: result.queued ? "Enrichment queued." : "No enrichment queued.",
   };
+}
+
+export async function getCreatorEnrichmentStatusAction(influencerId: string) {
+  if (!influencerId) return "pending" as const;
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
+  if ("error" in auth) return "pending" as const;
+
+  return getCreatorMetricsSyncStatus(supabase, influencerId);
+}
+
+export async function getUnifiedCreatorAfterRefreshAction(unifiedId: string) {
+  if (!unifiedId?.trim()) return null;
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
+  if ("error" in auth) return null;
+
+  return getUnifiedCreatorById(supabase, unifiedId.trim());
 }

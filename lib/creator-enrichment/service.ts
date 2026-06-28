@@ -19,6 +19,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildCanonicalProfileUrl, isSocialPlatform } from "@/lib/social/platforms";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 
+import { persistInfluencerPlatformAvatar } from "@/lib/performance/metrics-collector/persist";
+
 import { fetchApifyProfile } from "./apify-profile";
 import { writeEnrichmentRun } from "./audit";
 import { decideEnrichment, computeNextRefreshAt } from "./policy";
@@ -273,6 +275,19 @@ export async function runCreatorEnrichment(
       }
     } else {
       anySuccess = true;
+    }
+
+    if (data.profilePictureUrl) {
+      const avatarSaved = await persistInfluencerPlatformAvatar(supabase, {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        profilePictureUrl: data.profilePictureUrl,
+        source: "apify",
+        logSkips: false,
+      });
+      if (avatarSaved) {
+        allFieldsUpdated.push(`${platformKey}.profile_picture_url`);
+      }
     }
 
     if ((data.followers ?? 0) > topFollowers) topFollowers = data.followers ?? 0;
