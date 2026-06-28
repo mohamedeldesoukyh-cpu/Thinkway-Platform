@@ -111,61 +111,49 @@ export async function resetDemoDiscoveryProfiles(
   };
 }
 
-async function resolveCsvImportedInfluencerIds(
+async function resolveImportCenterInfluencerIds(
   supabase: SupabaseClient<Database>
 ): Promise<string[]> {
   const ids = new Set<string>();
 
-  const { data: csvFiles, error: filesError } = await supabase
+  const { data: importFiles, error: filesError } = await supabase
     .from("creator_import_files")
-    .select("id")
-    .eq("file_type", "csv");
+    .select("id");
 
   if (filesError) {
     throw new Error(filesError.message);
   }
 
-  const csvFileIds = (csvFiles ?? []).map((row) => row.id);
-  if (csvFileIds.length > 0) {
-    const { data: sources, error: sourcesError } = await supabase
-      .from("creator_sources")
-      .select("influencer_id")
-      .in("source_file_id", csvFileIds);
-
-    if (sourcesError) {
-      throw new Error(sourcesError.message);
-    }
-
-    for (const row of sources ?? []) {
-      ids.add(row.influencer_id);
-    }
+  const importFileIds = (importFiles ?? []).map((row) => row.id);
+  if (importFileIds.length === 0) {
+    return [];
   }
 
-  const { data: metadataMatches, error: metadataError } = await supabase
-    .from("influencers")
-    .select("id")
-    .filter("metadata->>import_source", "eq", "csv");
+  const { data: sources, error: sourcesError } = await supabase
+    .from("creator_sources")
+    .select("influencer_id")
+    .in("source_file_id", importFileIds);
 
-  if (metadataError) {
-    throw new Error(metadataError.message);
+  if (sourcesError) {
+    throw new Error(sourcesError.message);
   }
 
-  for (const row of metadataMatches ?? []) {
-    ids.add(row.id);
+  for (const row of sources ?? []) {
+    ids.add(row.influencer_id);
   }
 
   return [...ids];
 }
 
 /**
- * Deletes CSV-imported demo creators and related rows in FK-safe order.
+ * Deletes Import Center demo creators and related rows in FK-safe order.
  * Uses service role — caller must enforce auth + demo-reset policy gates.
  */
 export async function resetDemoImportedCreators(
   supabase: SupabaseClient<Database>,
   options?: ResetDemoImportedCreatorsOptions
 ): Promise<ResetDemoImportedCreatorsResult> {
-  const influencerIds = await resolveCsvImportedInfluencerIds(supabase);
+  const influencerIds = await resolveImportCenterInfluencerIds(supabase);
 
   if (influencerIds.length === 0) {
     const discovery =
@@ -182,7 +170,7 @@ export async function resetDemoImportedCreators(
 
     return {
       ok: true,
-      message: `No CSV-imported creators found.${discoveryNote}`,
+      message: `No Import Center creators found.${discoveryNote}`,
       ...EMPTY_RESULT_COUNTS,
       ...discovery,
     };
@@ -287,7 +275,7 @@ export async function resetDemoImportedCreators(
 
   return {
     ok: true,
-    message: `Deleted ${deletedInfluencers} CSV-imported creator(s) and ${deletedPlatformAccounts} platform account(s).${skippedNote}${discoveryNote}`,
+    message: `Deleted ${deletedInfluencers} imported creator(s) and ${deletedPlatformAccounts} platform account(s).${skippedNote}${discoveryNote}`,
     deletedInfluencers,
     deletedPlatformAccounts,
     deletedEnrichmentRuns: enrichmentRunCount ?? 0,

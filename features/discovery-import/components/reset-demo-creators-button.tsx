@@ -73,9 +73,10 @@ export function ResetDemoCreatorsButton({ enabled }: ResetDemoCreatorsButtonProp
           </DialogDescription>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
-          Removes CSV-imported influencers, their platform accounts, creator source
-          links, and enrichment run history. Local/demo only — blocked in production
-          unless <code className="text-[11px]">DEMO_RESET_ENABLED</code> is set.
+          Removes all Import Center creators (CSV, Excel, PDF, ZIP), their platform
+          accounts, creator source links, and enrichment run history. Local/demo only
+          — blocked in production unless{" "}
+          <code className="text-[11px]">DEMO_RESET_ENABLED</code> is set.
         </p>
         <div className="flex items-start gap-2 rounded-md border border-border/60 p-3">
           <Checkbox
