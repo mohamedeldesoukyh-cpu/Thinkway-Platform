@@ -158,8 +158,8 @@ export function ImportDropzone({ onUploadComplete }: ImportDropzoneProps) {
             {isDragActive ? "Drop files to upload" : "Drag and drop creator datasets"}
           </p>
           <p className="text-xs text-muted-foreground">
-            {CREATOR_IMPORT_FILE_EXTENSIONS.join(", ").toUpperCase()} · multiple files · up to
-            50 MB each
+            {CREATOR_IMPORT_FILE_EXTENSIONS.join(", ").toUpperCase()} · ZIP bundles may contain CSV
+            or XLSX plus optional avatar images · multiple files · up to 50 MB each
           </p>
         </div>
         <Button type="button" variant="secondary" onClick={open} disabled={isUploading}>
