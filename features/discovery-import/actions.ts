@@ -3,13 +3,19 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 
-import { removeCreatorImportObject, uploadCreatorImportFile } from "@/lib/supabase/storage";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/auth/permissions";
+import { isDemoResetEnabled } from "@/lib/discovery-import/demo-reset-policy";
+import {
+  resetDemoImportedCreators,
+  type ResetDemoImportedCreatorsResult,
+} from "@/lib/discovery-import/reset-demo-imported-creators";
 import {
   enqueueCreatorImportJob,
   isCreatorImportQueueAvailable,
 } from "@/lib/discovery-import/queue";
+import { removeCreatorImportObject, uploadCreatorImportFile } from "@/lib/supabase/storage";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import {
   inferCreatorImportFileType,
@@ -50,6 +56,52 @@ async function rollbackOrphanedImportObject(storagePath: string): Promise<void> 
   } catch {
     // Service role unavailable or removal failed — leave the orphan; immutability
     // guarantees prevent users from deleting it, and no DB record references it.
+  }
+}
+
+export async function resetDemoImportedCreatorsAction(): Promise<ResetDemoImportedCreatorsResult> {
+  if (!isDemoResetEnabled()) {
+    return {
+      ok: false,
+      message: "Demo reset is disabled in production.",
+      deletedInfluencers: 0,
+      deletedPlatformAccounts: 0,
+      deletedEnrichmentRuns: 0,
+      deletedCreatorSources: 0,
+      skippedInfluencers: 0,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, "discovery.admin");
+  if ("error" in auth) {
+    return {
+      ok: false,
+      message: auth.error,
+      deletedInfluencers: 0,
+      deletedPlatformAccounts: 0,
+      deletedEnrichmentRuns: 0,
+      deletedCreatorSources: 0,
+      skippedInfluencers: 0,
+    };
+  }
+
+  try {
+    const admin = createSupabaseAdminClient();
+    const result = await resetDemoImportedCreators(admin);
+    revalidatePath("/discovery/import");
+    return result;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : "Failed to reset demo creators.",
+      deletedInfluencers: 0,
+      deletedPlatformAccounts: 0,
+      deletedEnrichmentRuns: 0,
+      deletedCreatorSources: 0,
+      skippedInfluencers: 0,
+    };
   }
 }
 

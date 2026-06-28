@@ -7,6 +7,7 @@ import {
 } from "@/features/discovery/components/discovery-page-identity";
 import { ImportCenterWorkspace } from "@/features/discovery-import/components/import-center-workspace";
 import { getCreatorImportFiles } from "@/features/discovery-import/queries";
+import { isDemoResetEnabled } from "@/lib/discovery-import/demo-reset-policy";
 import type { CreatorImportFileRow } from "@/features/discovery-import/types";
 
 export default async function DiscoveryImportPage() {
@@ -38,7 +39,10 @@ export default async function DiscoveryImportPage() {
               </div>
             ) : null}
             <DiscoveryPageHeader identity={DISCOVERY_PAGE_IDENTITY.import} />
-            <ImportCenterWorkspace initialFiles={files} />
+            <ImportCenterWorkspace
+              initialFiles={files}
+              demoResetEnabled={isDemoResetEnabled()}
+            />
           </div>
         </div>
       </PlatformErrorBoundary>
