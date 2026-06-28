@@ -161,7 +161,8 @@ export async function uploadCreatorImportFile(params: {
  * Removes a creator-import object. Import source files are immutable: the
  * storage RLS policies deny DELETE to all authenticated users, so this MUST be
  * called with a service-role client (see createSupabaseAdminClient). Reserved
- * for failed-upload rollback and admin/legal purge — never wire it to user UI.
+ * for failed-upload rollback, post-processing cleanup (service-role worker), and
+ * admin/legal purge — never wire it to user UI.
  */
 export async function removeCreatorImportObject(params: {
   supabase: SupabaseClient<Database>;

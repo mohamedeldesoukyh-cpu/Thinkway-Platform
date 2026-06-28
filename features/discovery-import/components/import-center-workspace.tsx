@@ -49,7 +49,8 @@ export function ImportCenterWorkspace({ initialFiles }: ImportCenterWorkspacePro
         <div>
           <h3 className="text-sm font-semibold">Upload datasets</h3>
           <p className="text-xs text-muted-foreground">
-            Files are stored securely and queued for processing in a later phase.
+            Uploads are processed automatically; source files are removed after import
+            completes. Filename and row counts stay in upload history.
           </p>
         </div>
         <ImportDropzone onUploadComplete={handleUploadComplete} />

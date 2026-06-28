@@ -213,7 +213,7 @@ assert.doesNotMatch(
 // processing_log JSON object, not as a written column. Provenance immutability of
 // file_type is enforced + asserted via the DB trigger above.
 const WORKER_FORBIDDEN_COLUMNS = IMMUTABLE_COLUMNS.filter(
-  (column) => column !== "file_type"
+  (column) => column !== "file_type" && column !== "storage_path"
 );
 for (const column of WORKER_FORBIDDEN_COLUMNS) {
   assert.doesNotMatch(
@@ -222,6 +222,16 @@ for (const column of WORKER_FORBIDDEN_COLUMNS) {
     `worker must never write the immutable column ${column}`
   );
 }
+assert.match(
+  processSource,
+  /removeCreatorImportObject/,
+  "worker must remove processed source files from storage via service role"
+);
+assert.match(
+  processSource,
+  /storage_path: storagePathAfterProcessing/,
+  "worker must clear storage_path after successful storage removal"
+);
 assert.match(
   processSource,
   /\.update\(\{\s*[\s\S]*status: "processing"/,

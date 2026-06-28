@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
+import { removeCreatorImportObject } from "@/lib/supabase/storage";
 import type { Database } from "@/types/database";
 
 import {
@@ -90,6 +91,32 @@ export async function processCreatorImportFile(
     );
     log("info", `Queued ${enrichmentQueued} enrichment job(s)`);
 
+    let storagePathAfterProcessing: string | null = importFile.storage_path;
+    const metadataAfterProcessing: Record<string, unknown> =
+      importFile.metadata &&
+      typeof importFile.metadata === "object" &&
+      !Array.isArray(importFile.metadata)
+        ? { ...(importFile.metadata as Record<string, unknown>) }
+        : {};
+
+    if (importFile.storage_path) {
+      try {
+        await removeCreatorImportObject({
+          supabase: input.supabase,
+          storagePath: importFile.storage_path,
+        });
+        storagePathAfterProcessing = null;
+        metadataAfterProcessing.storage_removed_at = new Date().toISOString();
+        log("info", "Source file removed from storage after processing");
+      } catch (removeError) {
+        const removeMessage =
+          removeError instanceof Error
+            ? removeError.message
+            : "Could not remove source file from storage";
+        log("warn", removeMessage);
+      }
+    }
+
     const processingLog: ImportProcessingLog = {
       parser: parsed.parser,
       file_type: importFile.file_type,
@@ -103,6 +130,8 @@ export async function processCreatorImportFile(
       .from("creator_import_files")
       .update({
         status: "completed",
+        storage_path: storagePathAfterProcessing,
+        metadata: metadataAfterProcessing,
         total_creators: counters.total,
         imported_creators: counters.imported,
         updated_creators: counters.updated,
