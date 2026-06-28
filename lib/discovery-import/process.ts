@@ -8,6 +8,7 @@ import { parseImportFile } from "./parsers";
 import {
   extractPdfCreatorAvatarBuffers,
   logPdfAvatarExtraction,
+  type ExtractedImportAvatar,
 } from "./parsers/pdf-avatars";
 import { uploadImportCreatorAvatar } from "./import-avatar-storage";
 import { downloadCreatorImportFile } from "./storage";
@@ -226,7 +227,7 @@ async function attachPdfImportAvatars(input: {
   const targets = input.rows.filter((row) => !row.profile_picture_url?.trim());
   if (targets.length === 0) return;
 
-  let avatarBuffers: Map<string, { buffer: Buffer; contentType: string }>;
+  let avatarBuffers: Map<string, ExtractedImportAvatar>;
   try {
     avatarBuffers = await extractPdfCreatorAvatarBuffers(input.buffer, targets);
   } catch (error) {
@@ -244,7 +245,12 @@ async function attachPdfImportAvatars(input: {
 
     input.log(
       "info",
-      `[import] avatar extracted @${row.username} (${row.platform}) bytes=${extracted.buffer.length}`
+      `[import] avatar extracted ${JSON.stringify({
+        username: row.username,
+        finalWidth: extracted.width,
+        finalHeight: extracted.height,
+        source: extracted.source,
+      })}`
     );
 
     try {
