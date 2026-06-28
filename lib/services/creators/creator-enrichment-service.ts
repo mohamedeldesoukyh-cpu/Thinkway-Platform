@@ -41,7 +41,7 @@ export type CreatorMetricsSyncStatus =
 export type RefreshCreatorMetricsOptions = {
   /** Bypass the 30-day freshness skip. Default true for explicit Refresh Metrics. */
   force?: boolean;
-  /** @deprecated Ignored — import/manual fields are preserved on refresh. */
+  /** @deprecated CSV/import metric fields are preserved; flag still forces avatar re-sync. */
   bypassMetricsManualOverride?: boolean;
   trigger?: EnrichmentTrigger;
   requestedBy?: string | null;

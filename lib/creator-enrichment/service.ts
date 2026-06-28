@@ -225,11 +225,14 @@ export async function runCreatorEnrichment(
   let topFollowers = 0;
   let lastApifyRunId: string | null = null;
   const errors: string[] = [];
+  /** Discovery Refresh Metrics — always re-sync Apify profile photos. */
+  const forceAvatarSync = Boolean(payload.force || payload.bypassMetricsManualOverride);
 
   logCreatorEnrichment("Enrichment job started", {
     influencerId: payload.influencerId,
     trigger: payload.trigger,
     force: Boolean(payload.force),
+    forceAvatarSync,
   });
 
   for (const account of accounts) {
@@ -354,17 +357,41 @@ export async function runCreatorEnrichment(
         platform: platformKey,
         profilePictureUrl: data.profilePictureUrl,
         source: "apify",
+        forceSync: forceAvatarSync,
         logSkips: false,
       });
+
+      const { data: avatarRow } = await supabase
+        .from("influencer_platform_accounts")
+        .select("profile_picture_url, avatar_source, avatar_last_synced_at")
+        .eq("id", account.id)
+        .maybeSingle();
+
+      logCreatorEnrichment("Avatar persist result", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        username,
+        apifyProfilePictureUrl: data.profilePictureUrl,
+        forceSync: forceAvatarSync,
+        saved: avatarResult.saved,
+        skipReason: avatarResult.saved ? undefined : avatarResult.reason,
+        dbProfilePictureUrl:
+          (avatarRow as { profile_picture_url?: string | null } | null)?.profile_picture_url ??
+          null,
+        dbAvatarSource:
+          (avatarRow as { avatar_source?: string | null } | null)?.avatar_source ?? null,
+      });
+
       if (avatarResult.saved) {
         allFieldsUpdated.push(`${platformKey}.profile_picture_url`);
-      } else {
-        logCreatorEnrichment("Avatar persist skipped", {
-          influencerId: payload.influencerId,
-          platform: platformKey,
-          reason: avatarResult.reason,
-        });
       }
+    } else {
+      logCreatorEnrichment("Avatar persist skipped", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        username,
+        reason: "apify_profile_picture_missing",
+      });
     }
 
     if ((data.followers ?? 0) > topFollowers) topFollowers = data.followers ?? 0;

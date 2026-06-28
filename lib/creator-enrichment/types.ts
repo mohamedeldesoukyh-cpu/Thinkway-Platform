@@ -54,9 +54,7 @@ export type CreatorEnrichmentJobPayload = {
   priority: EnrichmentPriority;
   /** Explicit refresh — bypasses the 30-day freshness skip. */
   force?: boolean;
-  /**
-   * @deprecated Discovery refresh preserves CSV/import data; this flag is ignored.
-   */
+  /** Explicit Refresh Metrics — forces Apify profile photo sync (see service forceAvatarSync). */
   bypassMetricsManualOverride?: boolean;
   /** User who requested it (manual refresh / detail open). */
   requestedBy?: string | null;

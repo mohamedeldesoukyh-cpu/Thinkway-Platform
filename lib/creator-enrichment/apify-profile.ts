@@ -465,6 +465,7 @@ export async function fetchApifyProfile(input: {
       apifyRunId: data.apifyRunId,
       followers: data.followers,
       engagementRate: data.engagementRate,
+      profilePictureUrl: data.profilePictureUrl,
       recentPublications: data.recentPublications.length,
       displayName: data.displayName,
       samplePublication: data.recentPublications[0] ?? null,

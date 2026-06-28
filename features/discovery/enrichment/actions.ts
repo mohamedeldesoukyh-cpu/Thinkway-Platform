@@ -46,6 +46,7 @@ export async function refreshCreatorAction(
   const result = await refreshCreatorMetrics(supabase, influencerId, {
     force: true,
     trigger: "manual",
+    bypassMetricsManualOverride: true,
     requestedBy: auth.userId,
   });
 
@@ -73,6 +74,7 @@ export async function refreshCreatorsBatchAction(
   const batch = await refreshCreatorMetricsBatchByUnifiedIds(supabase, unifiedIds, {
     force: true,
     trigger: "manual",
+    bypassMetricsManualOverride: true,
     requestedBy: auth.userId,
   });
 
