@@ -41,6 +41,7 @@ import {
   isUsableAvatarUrl,
   normalizeAvatarSource,
   shouldPersistPlatformAvatar,
+  shouldSyncPlatformAvatar,
 } from "@/lib/performance/avatar-sync-policy";
 import {
   isAvatarUrlAllowedForPlatform,

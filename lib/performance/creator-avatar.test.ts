@@ -6,6 +6,7 @@ import {
   isInstagramHostedAvatarUrl,
   isTikTokHostedAvatarUrl,
   isYouTubeHostedAvatarUrl,
+  resolveBrowseCreatorProfileImageUrl,
   resolveCreatorAvatarDisplay,
   resolvePublicationCreatorAvatar,
   resolvePublicationEffectivePlatform,
@@ -242,6 +243,26 @@ assert.equal(
   }).kind,
   "initials",
   "placeholder platform picture falls through to initials"
+);
+
+assert.equal(
+  resolveBrowseCreatorProfileImageUrl({
+    platform: "instagram",
+    platformPictureUrl: null,
+    discoveryProfileImageUrl: IG_CDN,
+  }),
+  IG_CDN,
+  "discovery profile image fallback"
+);
+
+assert.equal(
+  resolveBrowseCreatorProfileImageUrl({
+    platform: "instagram",
+    platformPictureUrl: IG_PLACEHOLDER,
+    discoveryProfileImageUrl: IG_CDN,
+  }),
+  IG_CDN,
+  "reject placeholder platform photo, use discovery image"
 );
 
 console.log("creator-avatar tests passed");

@@ -8,6 +8,30 @@ export type CreatorAvatarInput = {
   social_profile_picture_url?: string | null;
 };
 
+export type BrowseCreatorProfileImageInput = {
+  platform?: string | null;
+  platformPictureUrl?: string | null;
+  discoveryProfileImageUrl?: string | null;
+  influencerAvatarUrl?: string | null;
+};
+
+/**
+ * Discovery browse/detail — platform account photo first, then linked discovery
+ * profile or influencer metadata avatar. Rejects placeholders and cross-platform CDN bleed.
+ */
+export function resolveBrowseCreatorProfileImageUrl(
+  input: BrowseCreatorProfileImageInput
+): string | null {
+  const platform = input.platform ?? "unknown";
+  return (
+    firstAllowedAvatarUrl(platform, [input.platformPictureUrl]) ??
+    firstGenericAvatarUrl(platform, [
+      input.discoveryProfileImageUrl,
+      input.influencerAvatarUrl,
+    ])
+  );
+}
+
 /** Creator thumb priority — never use publication screenshot. */
 export function resolveCreatorAvatarUrl(input: CreatorAvatarInput): string | null {
   return (

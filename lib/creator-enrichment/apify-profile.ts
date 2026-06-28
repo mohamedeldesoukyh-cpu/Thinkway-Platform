@@ -13,6 +13,8 @@ import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/conf
 import { apifyActorIdForPlatform } from "@/lib/performance/metrics-collector/providers/apify-input";
 import { pickApifyAuthorAvatarUrl } from "@/lib/performance/apify-author-avatar";
 import { pickApifyAuthorFollowerCount } from "@/lib/performance/apify-author-followers";
+import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
+import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 
 import type { ApifyProfileData, RecentPublication } from "./types";
 
@@ -237,6 +239,34 @@ async function launchApifyActor(input: {
   return { runId, rows: filterUsableRows(rows) };
 }
 
+function pickApifyProfilePictureUrl(
+  platformKey: string,
+  head: Record<string, unknown>,
+  owner: Record<string, unknown>
+): string | null {
+  const candidates = [
+    pickApifyAuthorAvatarUrl(platformKey, head),
+    pickApifyAuthorAvatarUrl(platformKey, owner),
+    str(head.profilePicUrlHD),
+    str(head.profilePicUrlHd),
+    str(head.hdProfilePicUrl),
+    str(head.profilePicUrl),
+    str(owner.profilePicUrlHD),
+    str(owner.profilePicUrlHd),
+    str(owner.hdProfilePicUrl),
+    str(owner.profilePicUrl),
+  ];
+
+  for (const raw of candidates) {
+    const trimmed = raw?.trim();
+    if (!trimmed || !isUsableAvatarUrl(trimmed)) continue;
+    if (!isAvatarUrlAllowedForPlatform(platformKey, trimmed)) continue;
+    return trimmed;
+  }
+
+  return null;
+}
+
 function normalizeApifyProfileData(input: {
   platformKey: string;
   username: string | null;
@@ -288,12 +318,7 @@ function normalizeApifyProfileData(input: {
       str(owner.name),
     displayName: str(head.fullName) ?? str(owner.nickName) ?? str(owner.fullName),
     bio: str(head.biography) ?? str(owner.signature) ?? str(head.description),
-    profilePictureUrl:
-      pickApifyAuthorAvatarUrl(input.platformKey, head) ??
-      str(head.profilePicUrlHD) ??
-      str(head.profilePicUrlHd) ??
-      str(head.hdProfilePicUrl) ??
-      str(head.profilePicUrl),
+    profilePictureUrl: pickApifyProfilePictureUrl(input.platformKey, head, owner),
     profileUrl: input.profileUrl,
     followers,
     following,

@@ -1,7 +1,8 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useState } from "react";
+
+import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 
 import {
   Sheet,
@@ -320,6 +321,7 @@ export function DetailPanelHeader({
   actions,
   avatarInitials,
   avatarUrl,
+  avatarPlatform,
   profileUrl,
   profileTooltip,
   title,
@@ -330,32 +332,15 @@ export function DetailPanelHeader({
   actions?: ReactNode;
   avatarInitials: string;
   avatarUrl?: string | null;
+  avatarPlatform?: string | null;
   profileUrl?: string | null;
   profileTooltip?: string;
   title: ReactNode;
   subtitle?: ReactNode;
   badges?: ReactNode;
 }) {
-  const [avatarFailed, setAvatarFailed] = useState(false);
-
-  useEffect(() => {
-    setAvatarFailed(false);
-  }, [avatarUrl]);
-
-  const showAvatar = Boolean(avatarUrl?.trim()) && !avatarFailed;
-
-  const avatarContent = showAvatar ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={avatarUrl!}
-      alt=""
-      referrerPolicy="no-referrer"
-      className="size-14 shrink-0 rounded-full border border-border object-cover"
-      onError={(event) => {
-        event.currentTarget.onerror = null;
-        setAvatarFailed(true);
-      }}
-    />
+  const avatarNode = avatarUrl?.trim() ? (
+    <CreatorAvatarImage avatarUrl={avatarUrl} platform={avatarPlatform} size="lg" sizeClassName="size-14" />
   ) : (
     <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/40 text-base font-semibold text-foreground">
       {avatarInitials}
@@ -378,10 +363,10 @@ export function DetailPanelHeader({
             title={profileTooltip ?? "Open social profile"}
             className="shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
           >
-            {avatarContent}
+            {avatarNode}
           </a>
         ) : (
-          avatarContent
+          avatarNode
         )}
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">

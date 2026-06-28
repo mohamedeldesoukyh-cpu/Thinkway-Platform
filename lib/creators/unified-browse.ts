@@ -25,7 +25,7 @@ import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
 import { mergeImportedStringArrays } from "@/lib/discovery-import/normalize";
 import { normalizeCreatorRecentPublications } from "@/lib/creators/recent-publication-thumb";
 import { ftsRankMap, searchInfluencerIdsByFts } from "@/lib/creators/fts-search";
-import { isAvatarUrlNeedsRefresh } from "@/lib/performance/avatar-sync-policy";
+import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 import type { DiscoverySearchResult, ProfileAiScore, ProfileMetricsSnapshot } from "@/lib/discovery/types";
 
@@ -37,16 +37,29 @@ async function resolveInternalSearchIds(
   return ftsRankMap(hits);
 }
 
-/** Prefer platform account photo; fall back to linked discovery image when missing/broken. */
+/** Prefer platform account photo; fall back to linked discovery / metadata image when missing/broken. */
 function resolveCreatorProfileImageUrl(
+  platform: string | null | undefined,
   platformPictureUrl: string | null | undefined,
-  fallbackUrl: string | null | undefined
+  discoveryProfileImageUrl: string | null | undefined,
+  influencerAvatarUrl?: string | null | undefined
 ): string | null {
-  const platform = platformPictureUrl?.trim();
-  if (platform && !isAvatarUrlNeedsRefresh(platform)) return platform;
-  const fallback = fallbackUrl?.trim();
-  if (fallback && !isAvatarUrlNeedsRefresh(fallback)) return fallback;
-  return platform || fallback || null;
+  return resolveBrowseCreatorProfileImageUrl({
+    platform,
+    platformPictureUrl,
+    discoveryProfileImageUrl,
+    influencerAvatarUrl,
+  });
+}
+
+function metadataAvatarUrl(metadata: Record<string, unknown> | null | undefined): string | null {
+  if (typeof metadata?.avatar_url === "string" && metadata.avatar_url.trim()) {
+    return metadata.avatar_url.trim();
+  }
+  if (typeof metadata?.profile_image_url === "string" && metadata.profile_image_url.trim()) {
+    return metadata.profile_image_url.trim();
+  }
+  return null;
 }
 
 function tagsFromImportMetadata(
@@ -186,7 +199,7 @@ async function fetchInternalCreators(
   let query = supabase
     .from("influencers")
     .select(
-      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id, enrichment_status, last_enriched_at, enrichment_source"
+      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, enrichment_source"
     )
     .eq("status", "active");
 
@@ -225,6 +238,18 @@ async function fetchInternalCreators(
     .select("id, influencer_id, profile_image_url")
     .in("influencer_id", ids);
 
+  const profileIds = (data ?? [])
+    .map((row) => (row as { profile_id?: string | null }).profile_id)
+    .filter((id): id is string => Boolean(id));
+
+  const { data: linkedProfilesById } =
+    profileIds.length > 0
+      ? await supabase
+          .from("discovered_profiles")
+          .select("id, profile_image_url")
+          .in("id", profileIds)
+      : { data: [] as Array<{ id: string; profile_image_url: string | null }> };
+
   const discoveryByInfluencer = new Map(
     (linkedDiscovery ?? []).map((r) => [r.influencer_id as string, r.id as string])
   );
@@ -233,6 +258,9 @@ async function fetchInternalCreators(
       r.influencer_id as string,
       (r as { profile_image_url?: string | null }).profile_image_url ?? null,
     ])
+  );
+  const discoveryImageByProfileId = new Map(
+    (linkedProfilesById ?? []).map((r) => [r.id, r.profile_image_url ?? null])
   );
 
   const { data: accounts } = await supabase
@@ -266,6 +294,8 @@ async function fetchInternalCreators(
       enrichment_status?: string | null;
       last_enriched_at?: string | null;
       enrichment_source?: string | null;
+      profile_id?: string | null;
+      metadata?: Record<string, unknown> | null;
     };
     const platformRows = accountsByInfluencer.get(r.id) ?? [];
     const primary = platformRows[0];
@@ -277,10 +307,14 @@ async function fetchInternalCreators(
       (primary?.metadata as Record<string, unknown> | null | undefined) ?? null
     );
     const categories = mergeImportedStringArrays(r.categories ?? [], importTags);
-    const discoveryProfileImage = discoveryImageByInfluencer.get(r.id) ?? null;
+    const discoveryProfileImage =
+      discoveryImageByInfluencer.get(r.id) ??
+      (r.profile_id ? (discoveryImageByProfileId.get(r.profile_id) ?? null) : null);
     const profileImageUrl = resolveCreatorProfileImageUrl(
+      primary?.platform,
       primary?.profile_picture_url,
-      discoveryProfileImage
+      discoveryProfileImage,
+      metadataAvatarUrl(r.metadata)
     );
     const sourceType: CreatorSourceType = discoveryByInfluencer.has(r.id)
       ? "imported"
@@ -359,8 +393,10 @@ async function fetchInternalCreators(
         audience_country: p.audience_country,
         is_verified: p.is_verified ?? false,
         profile_picture_url: resolveCreatorProfileImageUrl(
+          p.platform,
           p.profile_picture_url,
-          discoveryProfileImage
+          discoveryProfileImage,
+          metadataAvatarUrl(r.metadata)
         ),
       })),
       notes: r.notes,
@@ -415,10 +451,15 @@ function mapDiscoveryProfileToUnifiedResults(
       if (aiScore < filters.minAiScore) continue;
     }
 
+    const profileImageUrl = resolveBrowseCreatorProfileImageUrl({
+      platform: profile.platform,
+      discoveryProfileImageUrl: profile.profile_image_url,
+    });
+
     const completeness = profileCompletenessPercent({
       display_name: profile.display_name,
       bio: profile.bio,
-      profile_image_url: profile.profile_image_url,
+      profile_image_url: profileImageUrl,
       platforms_count: 1,
       country_code: profile.country_code,
       categories: profile.category_tags ?? [],
@@ -434,7 +475,7 @@ function mapDiscoveryProfileToUnifiedResults(
         ai_category: ai?.category ?? profile.category_tags?.[0] ?? null,
         ai_niche: ai?.niche ?? null,
         bio: profile.bio,
-        profile_image_url: profile.profile_image_url,
+        profile_image_url: profileImageUrl,
         platforms_count: 1,
       });
 
@@ -455,7 +496,7 @@ function mapDiscoveryProfileToUnifiedResults(
       city: profile.city,
       categories: profile.category_tags ?? [],
       language_codes: profile.language_codes ?? [],
-      profile_image_url: profile.profile_image_url,
+      profile_image_url: profileImageUrl,
       bio: profile.bio,
       metrics,
       ai_category: ai?.category ?? profile.category_tags?.[0] ?? null,
@@ -476,7 +517,7 @@ function mapDiscoveryProfileToUnifiedResults(
           engagement_rate: profile.latest_metrics?.engagement_rate ?? null,
           audience_country: profile.country_code,
           is_verified: false,
-          profile_picture_url: profile.profile_image_url,
+          profile_picture_url: profileImageUrl,
         },
       ],
       search_rank:

@@ -1,18 +1,11 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
+import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 
 function httpUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.startsWith("http") ? trimmed : null;
-}
-
-function firstHttpUrl(candidates: unknown[]): string | null {
-  for (const candidate of candidates) {
-    const url = httpUrl(candidate);
-    if (url) return url;
-  }
-  return null;
 }
 
 function nestedRecord(value: unknown): Record<string, unknown> | null {
@@ -121,7 +114,11 @@ export function pickApifyAuthorAvatarUrl(
         ? instagramAuthorAvatarCandidates(row)
         : [...instagramAuthorAvatarCandidates(row), ...tiktokAuthorAvatarCandidates(row), ...genericAuthorAvatarCandidates(row)];
 
-  const url = firstHttpUrl(candidates);
-  if (!url) return null;
-  return isAvatarUrlAllowedForPlatform(platformKey, url) ? url : null;
+  for (const candidate of candidates) {
+    const url = httpUrl(candidate);
+    if (!url || !isUsableAvatarUrl(url)) continue;
+    if (!isAvatarUrlAllowedForPlatform(platformKey, url)) continue;
+    return url;
+  }
+  return null;
 }

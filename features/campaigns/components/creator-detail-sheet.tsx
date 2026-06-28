@@ -271,6 +271,7 @@ export function CreatorDetailSheet({
             </div>
           }
           avatarUrl={displayCreator.profile_image_url}
+          avatarPlatform={primary?.platform}
           avatarInitials={initialsFromName(displayCreator.display_name)}
           profileUrl={profileUrl}
           profileTooltip={profileLinkTooltip(displayCreator.display_name, primary?.platform)}

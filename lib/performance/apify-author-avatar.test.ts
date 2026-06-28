@@ -100,4 +100,13 @@ assert.equal(
   "authorAvatarThumbUrl root field"
 );
 
+assert.equal(
+  pickApifyAuthorAvatarUrl("instagram", {
+    ownerProfilePicUrl: "https://static.cdninstagram.com/rsrc.php/v4/yD/r/R0fBIMurK8v.png",
+    profilePicUrlHD: IG_CDN,
+  }),
+  IG_CDN,
+  "skip Instagram default placeholder, use next candidate"
+);
+
 console.log("apify-author-avatar tests passed");

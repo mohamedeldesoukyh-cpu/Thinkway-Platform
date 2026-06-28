@@ -19,7 +19,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildCanonicalProfileUrl, isSocialPlatform } from "@/lib/social/platforms";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 
-import { persistInfluencerPlatformAvatar } from "@/lib/performance/metrics-collector/persist";
+import { persistInfluencerPlatformAvatarDetailed } from "@/lib/performance/metrics-collector/persist";
 
 import { fetchApifyProfile } from "./apify-profile";
 import { writeEnrichmentRun } from "./audit";
@@ -360,7 +360,7 @@ export async function runCreatorEnrichment(
     }
 
     if (data.profilePictureUrl) {
-      const avatarSaved = await persistInfluencerPlatformAvatar(supabase, {
+      const avatarResult = await persistInfluencerPlatformAvatarDetailed(supabase, {
         influencerId: payload.influencerId,
         platform: platformKey,
         profilePictureUrl: data.profilePictureUrl,
@@ -368,8 +368,14 @@ export async function runCreatorEnrichment(
         forceSync: bypassMetricsOverride,
         logSkips: false,
       });
-      if (avatarSaved) {
+      if (avatarResult.saved) {
         allFieldsUpdated.push(`${platformKey}.profile_picture_url`);
+      } else {
+        logCreatorEnrichment("Avatar persist skipped", {
+          influencerId: payload.influencerId,
+          platform: platformKey,
+          reason: avatarResult.reason,
+        });
       }
     }
 
