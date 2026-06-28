@@ -1,5 +1,8 @@
 import { prepareCreatorAvatarUrlForDisplay } from "@/lib/performance/creator-avatar";
-import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+import {
+  isUsableAvatarUrl,
+  type AvatarSource,
+} from "@/lib/performance/avatar-sync-policy";
 
 import type { FieldSource, FieldSourceMap } from "@/lib/creator-enrichment/types";
 
@@ -55,6 +58,7 @@ export function normalizeParsedCreatorRow(
       .map((value) => value.trim())
       .filter(Boolean),
     profile_picture_url: row.profile_picture_url?.trim() || null,
+    profile_avatar_source: row.profile_avatar_source ?? null,
     role: row.role?.trim() || null,
   };
 }
@@ -101,17 +105,18 @@ export function resolveImportProfilePictureUrl(
 
 export function importProfilePictureAccountFields(
   url: string | null | undefined,
-  platform: string
+  platform: string,
+  avatarSource: AvatarSource = "manual"
 ): {
   profile_picture_url: string;
-  avatar_source: "manual";
+  avatar_source: AvatarSource;
   avatar_last_synced_at: string;
 } | null {
   const profilePictureUrl = resolveImportProfilePictureUrl(url, platform);
   if (!profilePictureUrl) return null;
   return {
     profile_picture_url: profilePictureUrl,
-    avatar_source: "manual",
+    avatar_source: avatarSource,
     avatar_last_synced_at: new Date().toISOString(),
   };
 }

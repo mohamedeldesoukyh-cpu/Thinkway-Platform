@@ -5,8 +5,13 @@ import { removeCreatorImportObject } from "@/lib/supabase/storage";
 import type { Database } from "@/types/database";
 
 import { parseImportFile } from "./parsers";
+import {
+  extractPdfCreatorAvatarBuffers,
+  logPdfAvatarExtraction,
+} from "./parsers/pdf-avatars";
+import { uploadImportCreatorAvatar } from "./import-avatar-storage";
 import { downloadCreatorImportFile } from "./storage";
-import type { ImportProcessingLog, ImportProcessingLogEntry } from "./types";
+import type { ImportProcessingLog, ImportProcessingLogEntry, ParsedCreatorRow } from "./types";
 import { queueImportedCreatorAvatarEnrichment } from "./enrichment";
 import { upsertImportedCreators } from "./upsert";
 
@@ -62,6 +67,16 @@ export async function processCreatorImportFile(
       buffer,
       sourceName: importFile.source_name,
     });
+
+    if (importFile.file_type === "pdf" && parsed.rows.length > 0) {
+      await attachPdfImportAvatars({
+        buffer,
+        rows: parsed.rows,
+        importFileId: input.importFileId,
+        supabase: input.supabase,
+        log,
+      });
+    }
 
     log("info", `Parser ${parsed.parser} extracted ${parsed.rows.length} creator row(s)`);
     if (parsed.diagnostics.warning) {
@@ -198,5 +213,58 @@ export async function processCreatorImportFile(
     });
 
     throw error;
+  }
+}
+
+async function attachPdfImportAvatars(input: {
+  buffer: Buffer;
+  rows: ParsedCreatorRow[];
+  importFileId: string;
+  supabase: ProcessImportFileInput["supabase"];
+  log: (level: ImportProcessingLogEntry["level"], message: string) => void;
+}): Promise<void> {
+  const targets = input.rows.filter((row) => !row.profile_picture_url?.trim());
+  if (targets.length === 0) return;
+
+  let avatarBuffers: Map<string, { buffer: Buffer; contentType: string }>;
+  try {
+    avatarBuffers = await extractPdfCreatorAvatarBuffers(input.buffer, targets);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "PDF avatar extraction failed";
+    input.log("warn", `[import] avatar extraction failed: ${message}`);
+    return;
+  }
+
+  for (const row of targets) {
+    const key = row.username.toLowerCase();
+    const extracted = avatarBuffers.get(key);
+    logPdfAvatarExtraction(row.username, Boolean(extracted));
+    if (!extracted) continue;
+
+    input.log(
+      "info",
+      `[import] avatar extracted @${row.username} (${row.platform}) bytes=${extracted.buffer.length}`
+    );
+
+    try {
+      const publicUrl = await uploadImportCreatorAvatar({
+        supabase: input.supabase,
+        importFileId: input.importFileId,
+        platform: row.platform,
+        username: row.username,
+        buffer: extracted.buffer,
+        contentType: extracted.contentType,
+      });
+      row.profile_picture_url = publicUrl;
+      row.profile_avatar_source = "uploaded";
+      input.log(
+        "info",
+        `[import] avatar uploaded @${row.username} url=${publicUrl}`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Avatar upload failed";
+      input.log("warn", `[import] avatar upload failed @${row.username}: ${message}`);
+    }
   }
 }

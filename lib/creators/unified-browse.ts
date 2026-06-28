@@ -52,15 +52,24 @@ function resolveCreatorProfileImageUrl(
   platformPictureUrl: string | null | undefined,
   platformAvatarUrl: string | null | undefined,
   discoveryProfileImageUrl: string | null | undefined,
-  influencerAvatarUrl?: string | null | undefined
+  influencerAvatarUrl?: string | null | undefined,
+  logContext?: { handle?: string | null }
 ): string | null {
-  return resolveBrowseCreatorProfileImageUrl({
+  const resolved = resolveBrowseCreatorProfileImageUrl({
     platform,
     platformPictureUrl,
     platformAvatarUrl,
     discoveryProfileImageUrl,
     influencerAvatarUrl,
   });
+
+  if (resolved && platformPictureUrl?.trim() && resolved === platformPictureUrl.trim()) {
+    console.log(
+      `[browse] avatar selected @${logContext?.handle ?? "unknown"} source=platform_account`
+    );
+  }
+
+  return resolved;
 }
 
 function metadataAvatarUrl(metadata: Record<string, unknown> | null | undefined): string | null {
@@ -353,7 +362,8 @@ async function fetchInternalCreators(
         (primary?.metadata as Record<string, unknown> | null | undefined) ?? null
       ),
       discoveryProfileImage,
-      metadataAvatarUrl(r.metadata)
+      metadataAvatarUrl(r.metadata),
+      { handle: primary?.handle ?? r.display_name }
     );
     const sourceType: CreatorSourceType =
       discoveryByInfluencer.has(r.id) || importedByInfluencerId.has(r.id)

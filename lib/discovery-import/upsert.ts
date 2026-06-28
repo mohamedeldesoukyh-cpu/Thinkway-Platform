@@ -198,13 +198,18 @@ export async function upsertImportedCreators(
 
     const importAvatarFields = importProfilePictureAccountFields(
       row.profile_picture_url,
-      normalized.platform
+      normalized.platform,
+      row.profile_avatar_source ?? "manual"
     );
 
     if (importAvatarFields) {
       ctx.log(
         "info",
         `[import] creator avatar detected @${row.username} (${row.platform})`
+      );
+      ctx.log(
+        "info",
+        `[import] avatar persisted @${row.username} source=${importAvatarFields.avatar_source}`
       );
     }
 
