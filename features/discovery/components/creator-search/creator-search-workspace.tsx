@@ -12,6 +12,7 @@ import { glassFlyoutContentClass } from "@/components/shared/navigation/glass-se
 import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
+import { refreshCreatorsBatchAction } from "@/features/discovery/enrichment/actions";
 import {
   addUnifiedCreatorsToShortlist,
   describeAddOutcome,
@@ -306,6 +307,20 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     return { followers, reach, engagement };
   }, [selectedCreators]);
 
+  function handleBulkRefreshMetrics() {
+    if (selectedCreators.length === 0) return;
+    startTransition(async () => {
+      const result = await refreshCreatorsBatchAction(
+        selectedCreators.map((c) => c.unified_id)
+      );
+      if (result.queued) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    });
+  }
+
   function clearAllFilters() {
     setFilters(DEFAULT_CREATOR_SEARCH_FILTERS);
     setSearch("");
@@ -361,6 +376,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
         onExport={handleBulkExport}
         onShare={handleBulkShare}
         onGenerateQuotation={handleGenerateQuotation}
+        onRefreshMetrics={handleBulkRefreshMetrics}
         estFollowers={selectionStats.followers}
         estReach={selectionStats.reach}
         estEngagement={selectionStats.engagement}

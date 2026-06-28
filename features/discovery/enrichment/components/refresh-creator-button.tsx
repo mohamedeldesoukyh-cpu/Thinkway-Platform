@@ -65,7 +65,7 @@ export function RefreshCreatorButton({
         ) : (
           <RefreshCwIcon aria-hidden />
         )}
-        {queued ? "Queued" : "Refresh Creator"}
+        {queued ? "Queued" : "Refresh Metrics"}
       </Button>
       {showTimestamp ? (
         <span className="text-xs text-muted-foreground">

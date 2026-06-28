@@ -19,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { CreatorSourceBadge } from "@/features/campaigns/components/creator-source-badge";
+import { RefreshCreatorButton } from "@/features/discovery/enrichment/components/refresh-creator-button";
+import { enqueueCreatorDetailEnrichment } from "@/features/discovery/enrichment/actions";
 import {
   DetailPanelHeader,
   OPERATIONAL_DETAIL_SHEET_CLASS,
@@ -155,6 +157,9 @@ export function CreatorDetailSheet({
   useEffect(() => {
     if (!open || !creator) return;
     const unifiedId = creator.unified_id;
+    if (creator.influencer_id) {
+      void enqueueCreatorDetailEnrichment(creator.influencer_id);
+    }
     let active = true;
     void Promise.all([
       getSimilarCreatorsAction(unifiedId),
@@ -209,14 +214,24 @@ export function CreatorDetailSheet({
             </>
           }
           actions={
-            profileUrl ? (
-              <Button asChild size="sm" variant="outline" className="shrink-0 gap-1.5">
-                <a href={profileUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLinkIcon className="size-3.5" />
-                  {platformName ? `View on ${platformName}` : "View profile"}
-                </a>
-              </Button>
-            ) : undefined
+            <div className="flex shrink-0 items-center gap-2">
+              {creator.influencer_id ? (
+                <RefreshCreatorButton
+                  influencerId={creator.influencer_id}
+                  showTimestamp={false}
+                  size="sm"
+                  variant="outline"
+                />
+              ) : null}
+              {profileUrl ? (
+                <Button asChild size="sm" variant="outline" className="shrink-0 gap-1.5">
+                  <a href={profileUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLinkIcon className="size-3.5" />
+                    {platformName ? `View on ${platformName}` : "View profile"}
+                  </a>
+                </Button>
+              ) : null}
+            </div>
           }
           avatarUrl={creator.profile_image_url}
           avatarInitials={initialsFromName(creator.display_name)}

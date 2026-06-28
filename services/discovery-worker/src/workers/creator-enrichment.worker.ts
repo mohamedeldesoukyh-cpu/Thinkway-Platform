@@ -1,6 +1,6 @@
 import { Queue, Worker, type Job } from "bullmq";
 
-import { runCreatorEnrichment } from "@/lib/creator-enrichment/service.js";
+import { executeCreatorMetricsRefresh } from "@/lib/services/creators/creator-enrichment-service.js";
 import { writeEnrichmentRun } from "@/lib/creator-enrichment/audit.js";
 import {
   CREATOR_ENRICHMENT_DLQ,
@@ -38,7 +38,7 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
   const worker = new Worker<CreatorEnrichmentJobPayload>(
     QUEUES.creatorEnrichment,
     async (job: Job<CreatorEnrichmentJobPayload>) => {
-      const result = await runCreatorEnrichment(supabase, job.data, {
+      const result = await executeCreatorMetricsRefresh(supabase, job.data, {
         attempt: job.attemptsMade + 1,
         jobId: job.id ?? null,
       });

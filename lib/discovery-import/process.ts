@@ -79,6 +79,7 @@ export async function processCreatorImportFile(
     });
 
     const enrichmentQueued = await queueImportedCreatorEnrichment(
+      input.supabase,
       counters.enrichmentAccountIds,
       input.importFileId
     );

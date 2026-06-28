@@ -116,11 +116,24 @@ export async function runCreatorEnrichment(
     };
   }
 
-  // Mark running.
+  // Mark collecting (DB: running).
   await supabase
     .from("influencers")
     .update({ enrichment_status: "running" } as never)
     .eq("id", payload.influencerId);
+
+  await writeEnrichmentRun(supabase, {
+    influencerId: payload.influencerId,
+    discoveredProfileId: payload.discoveredProfileId,
+    trigger: payload.trigger,
+    priority: payload.priority,
+    status: "running",
+    forced: Boolean(payload.force),
+    attempt: options?.attempt ?? 1,
+    jobId: options?.jobId ?? null,
+    requestedBy: payload.requestedBy,
+    startedAt,
+  });
 
   const { data: accountsData, error: accountsError } = await supabase
     .from("influencer_platform_accounts")

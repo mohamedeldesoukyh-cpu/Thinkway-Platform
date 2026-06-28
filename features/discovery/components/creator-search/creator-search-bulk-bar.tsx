@@ -5,6 +5,7 @@ import {
   FileTextIcon,
   GitCompareArrowsIcon,
   ListPlusIcon,
+  RefreshCwIcon,
   Share2Icon,
   SparklesIcon,
 } from "lucide-react";
@@ -34,6 +35,7 @@ type Props = {
   onShare: () => void;
   onAiMatch: () => void;
   onGenerateQuotation: () => void;
+  onRefreshMetrics?: () => void;
   /** Quick stats computed from the current selection (spec §1). */
   estFollowers?: number;
   estReach?: number;
@@ -59,6 +61,7 @@ export function CreatorSearchBulkBar({
   onShare,
   onAiMatch,
   onGenerateQuotation,
+  onRefreshMetrics,
   estFollowers,
   estReach,
   estEngagement,
@@ -72,6 +75,14 @@ export function CreatorSearchBulkBar({
       variant: "primary",
       disabled: busy || !selectedShortlist,
       onClick: onAddToList,
+    },
+    {
+      id: "refresh-metrics",
+      label: "Refresh Metrics",
+      icon: RefreshCwIcon,
+      variant: "outline",
+      disabled: busy || !onRefreshMetrics,
+      onClick: () => onRefreshMetrics?.(),
     },
     {
       id: "compare",

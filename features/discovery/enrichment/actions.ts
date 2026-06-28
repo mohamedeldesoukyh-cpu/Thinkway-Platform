@@ -1,24 +1,22 @@
 "use server";
 
 import { requirePermission } from "@/lib/auth/permissions";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  enqueueCreatorEnrichment,
-  isCreatorEnrichmentQueueAvailable,
-} from "@/lib/creator-enrichment/queue";
-import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
-import type { CreatorEnrichmentJobPayload } from "@/lib/creator-enrichment/types";
+import {
+  refreshCreatorMetrics,
+  refreshCreatorMetricsBatchByUnifiedIds,
+} from "@/lib/services/creators/creator-enrichment-service";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type EnrichmentActionResult = {
   ok: boolean;
   queued: boolean;
   message: string;
+  queuedCount?: number;
 };
 
 /**
- * Explicit "Refresh Creator" click (spec §1/§3, priority 4). Forces a run,
- * bypassing the 30-day freshness skip.
+ * Explicit "Refresh Metrics" click. Forces a run, bypassing the 30-day skip.
  */
 export async function refreshCreatorAction(
   influencerId: string
@@ -33,64 +31,72 @@ export async function refreshCreatorAction(
     return { ok: false, queued: false, message: auth.error };
   }
 
-  if (!isCreatorEnrichmentQueueAvailable()) {
-    return {
-      ok: false,
-      queued: false,
-      message: "Enrichment queue is not configured.",
-    };
-  }
-
-  const payload: CreatorEnrichmentJobPayload = {
-    influencerId,
-    trigger: "manual",
-    priority: priorityForTrigger("manual"),
+  const result = await refreshCreatorMetrics(supabase, influencerId, {
     force: true,
+    trigger: "manual",
     requestedBy: auth.userId,
-  };
+  });
 
-  const result = await enqueueCreatorEnrichment(payload);
-  if (!result.queued) {
-    return {
-      ok: false,
-      queued: false,
-      message: result.reason ?? "Could not queue enrichment.",
-    };
+  return {
+    ok: result.ok,
+    queued: result.queued,
+    message: result.message,
+  };
+}
+
+/** Batch refresh for selected creators in Discovery Search / Import Center demos. */
+export async function refreshCreatorsBatchAction(
+  unifiedIds: string[]
+): Promise<EnrichmentActionResult> {
+  if (unifiedIds.length === 0) {
+    return { ok: false, queued: false, message: "Select at least one creator." };
   }
 
-  // Reflect "queued" immediately so the UI can show the pending state.
-  await supabase
-    .from("influencers")
-    .update({ enrichment_status: "queued" } as never)
-    .eq("id", influencerId);
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
+  if ("error" in auth) {
+    return { ok: false, queued: false, message: auth.error };
+  }
 
-  return { ok: true, queued: true, message: "Refresh queued." };
+  const batch = await refreshCreatorMetricsBatchByUnifiedIds(supabase, unifiedIds, {
+    force: true,
+    trigger: "manual",
+    requestedBy: auth.userId,
+  });
+
+  return {
+    ok: batch.ok,
+    queued: batch.queued > 0,
+    queuedCount: batch.queued,
+    message:
+      batch.queued > 0
+        ? `Queued ${batch.queued} of ${batch.total} creator refresh(es).`
+        : batch.failed > 0
+          ? `${batch.failed} refresh(es) could not be queued.`
+          : "No creators queued.",
+  };
 }
 
 /**
- * Detail-view trigger (spec §2.B, priority 3). Best-effort, respects the 30-day
- * skip (force=false). Safe to call on every sheet open — de-duped by job id and
- * skipped in the worker when fresh.
+ * Detail-view trigger (priority 3). Best-effort, respects the 30-day skip.
+ * Safe to call on every sheet open — de-duped by job id and skipped when fresh.
  */
 export async function enqueueCreatorDetailEnrichment(
   influencerId: string
 ): Promise<EnrichmentActionResult> {
-  if (!influencerId || !isCreatorEnrichmentQueueAvailable()) {
+  if (!influencerId) {
     return { ok: true, queued: false, message: "No enrichment queued." };
   }
 
   const supabase = await createSupabaseServerClient();
   const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
   if ("error" in auth) {
-    // Detail view is read-mostly; never surface a hard error for a background hint.
     return { ok: true, queued: false, message: "No enrichment queued." };
   }
 
-  const result = await enqueueCreatorEnrichment({
-    influencerId,
-    trigger: "detail",
-    priority: priorityForTrigger("detail"),
+  const result = await refreshCreatorMetrics(supabase, influencerId, {
     force: false,
+    trigger: "detail",
     requestedBy: auth.userId,
   });
 
