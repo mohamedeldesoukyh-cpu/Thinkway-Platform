@@ -43,6 +43,36 @@ export function formatLastUpdated(
   return `${Math.floor(months / 12)}y ago`;
 }
 
+/** Map public sync status (from polling) to enrichment badge status. */
+export function syncStatusToEnrichmentStatus(
+  status: "pending" | "queued" | "collecting" | "completed" | "failed"
+): CreatorEnrichmentStatus {
+  switch (status) {
+    case "queued":
+      return "queued";
+    case "collecting":
+      return "running";
+    case "completed":
+      return "enriched";
+    case "failed":
+      return "failed";
+    default:
+      return "never";
+  }
+}
+
+/** Resolve display status from unified creator row (falls back to never). */
+export function resolveCreatorEnrichmentStatus(
+  status: CreatorEnrichmentStatus | null | undefined
+): CreatorEnrichmentStatus {
+  return status ?? "never";
+}
+
+/** True while enrichment is queued or actively collecting. */
+export function isEnrichmentInProgress(status: CreatorEnrichmentStatus): boolean {
+  return status === "queued" || status === "running";
+}
+
 /** True when the displayed data is older than the 30-day freshness window. */
 export function isStaleForDisplay(
   value: string | Date | null | undefined,

@@ -44,6 +44,25 @@ export type UnifiedCreatorPlatform = {
   profile_picture_url?: string | null;
 };
 
+export type CreatorRecentPublication = {
+  url: string | null;
+  thumbnail: string | null;
+  likes: number | null;
+  comments: number | null;
+  views: number | null;
+  posted_at: string | null;
+  caption: string | null;
+};
+
+export type CreatorEnrichmentStatus =
+  | "never"
+  | "queued"
+  | "running"
+  | "enriched"
+  | "partial"
+  | "failed"
+  | "skipped";
+
 export type UnifiedCreatorResult = {
   /** Stable composite key: `inf:uuid` or `dis:uuid` */
   unified_id: string;
@@ -71,6 +90,10 @@ export type UnifiedCreatorResult = {
   platforms: UnifiedCreatorPlatform[];
   notes?: string | null;
   suggested_currency?: string;
+  enrichment_status?: CreatorEnrichmentStatus | null;
+  last_enriched_at?: string | null;
+  enrichment_source?: string | null;
+  recent_publications?: CreatorRecentPublication[];
 };
 
 export type UnifiedCreatorBrowseFilters = {

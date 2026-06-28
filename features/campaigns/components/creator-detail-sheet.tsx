@@ -9,6 +9,7 @@ import {
 import {
   BadgeCheckIcon,
   ExternalLinkIcon,
+  ImageIcon,
   Loader2Icon,
   ShieldCheckIcon,
   SparklesIcon,
@@ -20,7 +21,15 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { CreatorSourceBadge } from "@/features/campaigns/components/creator-source-badge";
 import { RefreshCreatorButton } from "@/features/discovery/enrichment/components/refresh-creator-button";
+import { DataSourceBadge } from "@/features/discovery/enrichment/components/data-source-badge";
+import { EnrichmentStatusBadge } from "@/features/discovery/enrichment/components/enrichment-status-badge";
+import { RecentPublicationsGallery } from "@/features/discovery/enrichment/components/recent-publications-gallery";
 import { enqueueCreatorDetailEnrichment } from "@/features/discovery/enrichment/actions";
+import {
+  formatLastUpdated,
+  resolveCreatorEnrichmentStatus,
+  type CreatorEnrichmentStatus,
+} from "@/features/discovery/enrichment/status";
 import {
   DetailPanelHeader,
   OPERATIONAL_DETAIL_SHEET_CLASS,
@@ -156,9 +165,11 @@ export function CreatorDetailSheet({
 }: Props) {
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
   const [displayCreator, setDisplayCreator] = useState<UnifiedCreatorResult | null>(creator);
+  const [enrichmentStatus, setEnrichmentStatus] = useState<CreatorEnrichmentStatus>("never");
 
   useEffect(() => {
     setDisplayCreator(creator);
+    setEnrichmentStatus(resolveCreatorEnrichmentStatus(creator?.enrichment_status));
   }, [creator]);
 
   useEffect(() => {
@@ -196,8 +207,14 @@ export function CreatorDetailSheet({
 
   function handleCreatorUpdated(next: UnifiedCreatorResult) {
     setDisplayCreator(next);
+    setEnrichmentStatus(resolveCreatorEnrichmentStatus(next.enrichment_status));
     onCreatorUpdated?.(next);
   }
+
+  const dataSource =
+    displayCreator.enrichment_source === "apify" ? "apify" : displayCreator.enrichment_source
+      ? "imported"
+      : "unavailable";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -231,9 +248,12 @@ export function CreatorDetailSheet({
                 <RefreshCreatorButton
                   influencerId={displayCreator.influencer_id}
                   unifiedId={displayCreator.unified_id}
+                  lastEnrichedAt={displayCreator.last_enriched_at}
+                  enrichmentStatus={enrichmentStatus}
                   showTimestamp={false}
                   size="sm"
                   variant="outline"
+                  onStatusChange={setEnrichmentStatus}
                   onCreatorUpdated={handleCreatorUpdated}
                 />
               ) : null}
@@ -291,6 +311,16 @@ export function CreatorDetailSheet({
             <p className="text-sm leading-relaxed text-muted-foreground">{displayCreator.bio}</p>
           ) : null}
 
+          {displayCreator.influencer_id ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/15 px-4 py-3">
+              <EnrichmentStatusBadge status={enrichmentStatus} />
+              <span className="text-[11px] text-muted-foreground">
+                Last synced {formatLastUpdated(displayCreator.last_enriched_at)}
+              </span>
+              <DataSourceBadge source={dataSource} label={dataSource === "apify" ? "Apify" : undefined} />
+            </div>
+          ) : null}
+
           {/* Thinkway score + relevance */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
@@ -328,6 +358,12 @@ export function CreatorDetailSheet({
               <Kpi label="Avg views" metric={displayCreator.metrics.avg_views} />
               <Kpi label="Posts / week" metric={displayCreator.metrics.posting_frequency_per_week} />
             </div>
+          </section>
+
+          {/* Recent publications */}
+          <section className="space-y-2.5">
+            <SectionHeading icon={<ImageIcon className="size-3.5" />}>Recent publications</SectionHeading>
+            <RecentPublicationsGallery publications={displayCreator.recent_publications ?? []} />
           </section>
 
           {/* Confidence & authenticity */}

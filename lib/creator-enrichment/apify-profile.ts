@@ -140,7 +140,14 @@ function toRecentPublications(rows: Record<string, unknown>[]): RecentPublicatio
     .slice(0, 6)
     .map((row) => ({
       url: str(row.url) ?? str(row.postPage) ?? str(row.webVideoUrl) ?? null,
-      thumbnail: str(row.displayUrl) ?? str(row.thumbnailUrl) ?? str(row.coverUrl) ?? null,
+      thumbnail:
+        str(row.displayUrl) ??
+        str(row.thumbnailUrl) ??
+        str(row.thumbnailSrc) ??
+        str(row.imageUrl) ??
+        str(row.previewUrl) ??
+        str(row.coverUrl) ??
+        null,
       likes: num(row.likesCount) ?? num(row.diggCount) ?? num(row.likes),
       comments: num(row.commentsCount) ?? num(row.comments),
       views: num(row.videoViewCount) ?? num(row.playCount) ?? num(row.views),

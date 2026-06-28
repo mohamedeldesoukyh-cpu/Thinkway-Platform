@@ -14,6 +14,7 @@ import { CreatorDetailSheet } from "@/features/campaigns/components/creator-deta
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
 import { refreshCreatorsBatchAction } from "@/features/discovery/enrichment/actions";
 import { pollCreatorsAfterBatchRefresh } from "@/features/discovery/enrichment/poll-creator-refresh";
+import { syncStatusToEnrichmentStatus } from "@/features/discovery/enrichment/status";
 import {
   addUnifiedCreatorsToShortlist,
   describeAddOutcome,
@@ -317,19 +318,52 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     );
   }
 
+  function patchCreatorEnrichmentStatus(
+    unifiedId: string,
+    status: ReturnType<typeof syncStatusToEnrichmentStatus>
+  ) {
+    setCreators((prev) =>
+      prev.map((creator) =>
+        creator.unified_id === unifiedId
+          ? { ...creator, enrichment_status: status }
+          : creator
+      )
+    );
+    setDetailCreator((current) =>
+      current?.unified_id === unifiedId ? { ...current, enrichment_status: status } : current
+    );
+  }
+
   function handleBulkRefreshMetrics() {
     if (selectedCreators.length === 0) return;
     const targets = selectedCreators.map((creator) => ({
       unifiedId: creator.unified_id,
       influencerId: creator.influencer_id,
     }));
+    for (const target of targets) {
+      if (target.influencerId) {
+        patchCreatorEnrichmentStatus(target.unifiedId, "queued");
+      }
+    }
     startTransition(async () => {
       const result = await refreshCreatorsBatchAction(
         selectedCreators.map((c) => c.unified_id)
       );
       if (result.queued) {
         toast.success(result.message);
-        void pollCreatorsAfterBatchRefresh(targets, patchCreatorInList);
+        void pollCreatorsAfterBatchRefresh(targets, {
+          onUpdated: patchCreatorInList,
+          onStatusChange: ({ unifiedId, status }) => {
+            patchCreatorEnrichmentStatus(unifiedId, syncStatusToEnrichmentStatus(status));
+          },
+          onComplete: ({ status }) => {
+            if (status === "completed") {
+              toast.success("Creator metrics updated");
+            } else if (status === "failed") {
+              toast.error("Creator refresh failed");
+            }
+          },
+        });
       } else {
         toast.error(result.message);
       }

@@ -14,6 +14,8 @@ import {
   profileCompletenessPercent,
 } from "@/lib/creators/thinkway-score";
 import type {
+  CreatorEnrichmentStatus,
+  CreatorRecentPublication,
   CreatorSourceType,
   UnifiedCreatorBrowseFilters,
   UnifiedCreatorBrowseResult,
@@ -51,30 +53,34 @@ function buildInternalMetrics(
   account: {
     follower_count: number | null;
     engagement_rate: number | null;
+    avg_likes?: number | null;
+    avg_comments?: number | null;
+    avg_views?: number | null;
     metrics_source?: string | null;
     sync_status?: string | null;
     metrics_is_manual_override?: boolean | null;
   } | undefined
 ): UnifiedCreatorMetrics {
-  const followersConf = resolveInternalMetricConfidence({
-    metrics_source: account?.metrics_source,
-    sync_status: account?.sync_status,
-    is_manual_override: account?.metrics_is_manual_override ?? false,
-    has_value: account?.follower_count != null,
-  });
-  const engagementConf = resolveInternalMetricConfidence({
-    metrics_source: account?.metrics_source,
-    sync_status: account?.sync_status,
-    is_manual_override: account?.metrics_is_manual_override ?? false,
-    has_value: account?.engagement_rate != null,
-  });
+  const metricConf = (has: boolean) =>
+    resolveInternalMetricConfidence({
+      metrics_source: account?.metrics_source,
+      sync_status: account?.sync_status,
+      is_manual_override: account?.metrics_is_manual_override ?? false,
+      has_value: has,
+    });
 
   return {
-    followers: metricWithConfidence(account?.follower_count, followersConf),
-    engagement_rate: metricWithConfidence(account?.engagement_rate, engagementConf),
-    avg_likes: metricWithConfidence(null, "estimated"),
-    avg_comments: metricWithConfidence(null, "estimated"),
-    avg_views: metricWithConfidence(null, "estimated"),
+    followers: metricWithConfidence(account?.follower_count, metricConf(account?.follower_count != null)),
+    engagement_rate: metricWithConfidence(
+      account?.engagement_rate,
+      metricConf(account?.engagement_rate != null)
+    ),
+    avg_likes: metricWithConfidence(account?.avg_likes, metricConf(account?.avg_likes != null)),
+    avg_comments: metricWithConfidence(
+      account?.avg_comments,
+      metricConf(account?.avg_comments != null)
+    ),
+    avg_views: metricWithConfidence(account?.avg_views, metricConf(account?.avg_views != null)),
     posting_frequency_per_week: metricWithConfidence(null, "estimated"),
   };
 }
@@ -132,7 +138,7 @@ async function fetchInternalCreators(
     let accountQuery = supabase
       .from("influencer_platform_accounts")
       .select(
-        "influencer_id, follower_count, engagement_rate, handle, profile_url, platform, metrics_source, sync_status, metrics_is_manual_override"
+        "influencer_id, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, handle, profile_url, platform, metrics_source, sync_status, metrics_is_manual_override"
       );
 
     if (platform) accountQuery = accountQuery.eq("platform", platform);
@@ -156,7 +162,7 @@ async function fetchInternalCreators(
   let query = supabase
     .from("influencers")
     .select(
-      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id"
+      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id, enrichment_status, last_enriched_at, enrichment_source"
     )
     .eq("status", "active")
     .order("display_name")
@@ -193,7 +199,7 @@ async function fetchInternalCreators(
   const { data: accounts } = await supabase
     .from("influencer_platform_accounts")
     .select(
-      "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, audience_country, is_verified, is_primary, profile_picture_url, metrics_source, sync_status, metrics_is_manual_override, metadata"
+      "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, recent_publications, metrics_source, sync_status, metrics_is_manual_override, metadata"
     )
     .in("influencer_id", ids)
     .order("is_primary", { ascending: false });
@@ -218,9 +224,16 @@ async function fetchInternalCreators(
       notes: string | null;
       thinkway_score: number | null;
       source_confidence: number | null;
+      enrichment_status?: string | null;
+      last_enriched_at?: string | null;
+      enrichment_source?: string | null;
     };
     const platformRows = accountsByInfluencer.get(r.id) ?? [];
     const primary = platformRows[0];
+    const profileBio = (primary as { profile_bio?: string | null } | undefined)?.profile_bio ?? null;
+    const recentPublications =
+      (primary as { recent_publications?: CreatorRecentPublication[] | null })?.recent_publications ??
+      [];
     const importTags = tagsFromImportMetadata(
       (primary?.metadata as Record<string, unknown> | null | undefined) ?? null
     );
@@ -241,7 +254,7 @@ async function fetchInternalCreators(
     const metrics = buildInternalMetrics(primary);
     const completeness = profileCompletenessPercent({
       display_name: r.display_name,
-      bio: null,
+      bio: profileBio,
       profile_image_url: primary?.profile_picture_url ?? null,
       platforms_count: platformRows.length,
       country_code: r.country_code,
@@ -257,7 +270,7 @@ async function fetchInternalCreators(
         profile_completeness: completeness,
         ai_category: categories[0] ?? null,
         ai_niche: null,
-        bio: null,
+        bio: profileBio,
         profile_image_url: primary?.profile_picture_url ?? null,
         platforms_count: platformRows.length,
       });
@@ -283,7 +296,7 @@ async function fetchInternalCreators(
       categories,
       language_codes: [],
       profile_image_url: primary?.profile_picture_url ?? null,
-      bio: null,
+      bio: profileBio,
       metrics,
       ai_category: categories[0] ?? null,
       ai_niche: null,
@@ -305,6 +318,10 @@ async function fetchInternalCreators(
       })),
       notes: r.notes,
       suggested_currency: DEFAULT_PLATFORM_CURRENCY,
+      enrichment_status: (r.enrichment_status as CreatorEnrichmentStatus | null) ?? "never",
+      last_enriched_at: r.last_enriched_at ?? null,
+      enrichment_source: r.enrichment_source ?? null,
+      recent_publications: Array.isArray(recentPublications) ? recentPublications : [],
     });
   }
 

@@ -5,6 +5,7 @@
  */
 export { DataSourceBadge, type DataSource } from "./data-source-badge";
 export { EnrichmentStatusBadge } from "./enrichment-status-badge";
+export { RecentPublicationsGallery } from "./recent-publications-gallery";
 export { RefreshCreatorButton } from "./refresh-creator-button";
 export {
   AudienceDemographicsSection,

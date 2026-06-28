@@ -18,7 +18,7 @@ const STATUS_META: Record<
   { label: string; icon: LucideIcon; spin?: boolean }
 > = {
   never: {
-    label: "Not enriched",
+    label: "Never synced",
     icon: CircleDashedIcon,
   },
   queued: {
@@ -26,12 +26,12 @@ const STATUS_META: Record<
     icon: ClockIcon,
   },
   running: {
-    label: "Enriching",
+    label: "Collecting",
     icon: Loader2Icon,
     spin: true,
   },
   enriched: {
-    label: "Enriched",
+    label: "Updated",
     icon: CircleCheckIcon,
   },
   partial: {

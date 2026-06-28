@@ -20,6 +20,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { platformLabel } from "@/features/campaigns/line-assignment";
+import { EnrichmentStatusBadge } from "@/features/discovery/enrichment/components/enrichment-status-badge";
+import { resolveCreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolvePrimaryProfileUrl } from "@/lib/discovery/profile-url";
@@ -35,10 +37,10 @@ import {
 } from "./creator-search/creator-search-utils";
 
 export const CREATOR_SEARCH_GRID_TEMPLATE =
-  "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px 80px";
+  "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px 88px 80px";
 export const CREATOR_SHORTLIST_GRID_TEMPLATE =
   "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px";
-export const CREATOR_ROW_MIN_WIDTH = "md:min-w-[1180px]";
+export const CREATOR_ROW_MIN_WIDTH = "md:min-w-[1268px]";
 export const CREATOR_SHORTLIST_MIN_WIDTH = "md:min-w-[1060px]";
 
 export function InterestChips({ interests }: { interests: string[] }) {
@@ -231,6 +233,7 @@ export function CreatorResultRow({
   const followers = formatCreatorCount(creator.metrics.followers.value);
   const avgEr = formatEngagementRate(creator.metrics.engagement_rate.value);
   const avgViews = formatCreatorCount(creator.metrics.avg_views.value);
+  const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
   const isShortlist = variant === "shortlist";
   const gridTemplate = isShortlist ? CREATOR_SHORTLIST_GRID_TEMPLATE : CREATOR_SEARCH_GRID_TEMPLATE;
   const minWidth = isShortlist ? CREATOR_SHORTLIST_MIN_WIDTH : CREATOR_ROW_MIN_WIDTH;
@@ -313,6 +316,11 @@ export function CreatorResultRow({
           </>
         ) : null}
         <div className={cn("text-[11px] font-medium", safety.className)}>{safety.label}</div>
+        {!isShortlist ? (
+          <div className="flex justify-end">
+            <EnrichmentStatusBadge status={enrichmentStatus} className="text-[10px]" />
+          </div>
+        ) : null}
         {isShortlist ? <div className="min-w-0">{statusBadge}</div> : null}
         {!isShortlist ? actionNode : null}
         {isShortlist ? actionNode : null}
@@ -365,9 +373,14 @@ export function CreatorResultRow({
           <InterestChips interests={audienceInterestList(creator).slice(0, 4)} />
           <div className="flex items-center justify-between gap-3">
             {!isShortlist ? <RelevanceScore score={aiScore} /> : statusBadge}
-            <span className={cn("text-[10px] font-medium", safety.className)}>
-              {safety.label} safety
-            </span>
+            <div className="flex items-center gap-2">
+              {!isShortlist ? (
+                <EnrichmentStatusBadge status={enrichmentStatus} className="text-[10px]" />
+              ) : null}
+              <span className={cn("text-[10px] font-medium", safety.className)}>
+                {safety.label} safety
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -393,6 +406,7 @@ const SEARCH_HEADER_COLUMNS: HeaderColumn[] = [
   { key: "views", label: "Avg views", align: "right" },
   { key: "relevance", label: "Relevance" },
   { key: "safety", label: "Brand safety" },
+  { key: "sync", label: "Sync" },
   { key: "actions", label: "Actions", align: "right", srOnly: true },
 ];
 

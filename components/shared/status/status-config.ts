@@ -200,7 +200,7 @@ export const PLATFORM_SYNC_STATUS_TONE = {
 
 export const CREATOR_ENRICHMENT_STATUS_TONE = {
   never: "neutral",
-  queued: "foreground",
+  queued: "warning",
   running: "foreground",
   enriched: "success",
   partial: "warning",
