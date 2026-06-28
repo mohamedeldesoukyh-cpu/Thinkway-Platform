@@ -357,6 +357,13 @@ async function fetchInternalCreators(
   return results;
 }
 
+/** Browse rows omit publication JSONB; detail views load full creator separately. */
+function stripRecentPublicationsForBrowse(
+  creators: UnifiedCreatorResult[]
+): UnifiedCreatorResult[] {
+  return creators.map(({ recent_publications: _recentPublications, ...creator }) => creator);
+}
+
 type DiscoveryProfileRow = DiscoverySearchResult["profiles"][number];
 
 function mapDiscoveryProfileToUnifiedResults(
@@ -566,7 +573,7 @@ export async function browseUnifiedCreators(
 
   const total = merged.length;
   const from = (page - 1) * pageSize;
-  const creators = merged.slice(from, from + pageSize);
+  const creators = stripRecentPublicationsForBrowse(merged.slice(from, from + pageSize));
 
   return {
     creators,

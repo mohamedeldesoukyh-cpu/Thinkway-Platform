@@ -29,6 +29,12 @@ export async function browseUnifiedCreatorsAction(filters: UnifiedCreatorBrowseF
   return browseUnifiedCreators(supabase, filters);
 }
 
+export async function getUnifiedCreatorDetailAction(unifiedId: string) {
+  if (!unifiedId?.trim()) return null;
+  const { supabase } = await requireUserId();
+  return getUnifiedCreatorById(supabase, unifiedId.trim());
+}
+
 export async function addCreatorToCampaignShortlistAction(
   campaignHeaderId: string,
   creator: UnifiedCreatorResult,

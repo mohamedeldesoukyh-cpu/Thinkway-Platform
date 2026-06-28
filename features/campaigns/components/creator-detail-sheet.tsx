@@ -39,6 +39,7 @@ import {
   addCreatorToCampaignShortlistAction,
   getCreatorHistoricalMetricsAction,
   getSimilarCreatorsAction,
+  getUnifiedCreatorDetailAction,
 } from "@/features/campaigns/creator-discovery-actions";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { isAssignableCreator } from "@/lib/creators/adapters";
@@ -180,10 +181,12 @@ export function CreatorDetailSheet({
     }
     let active = true;
     void Promise.all([
+      getUnifiedCreatorDetailAction(unifiedId),
       getSimilarCreatorsAction(unifiedId),
       getCreatorHistoricalMetricsAction(unifiedId),
-    ]).then(([sim, hist]) => {
+    ]).then(([fullCreator, sim, hist]) => {
       if (!active) return;
+      if (fullCreator) setDisplayCreator(fullCreator);
       setDetail({ unifiedId, similar: sim, history: hist });
     });
     return () => {
