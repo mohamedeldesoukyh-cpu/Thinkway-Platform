@@ -40,7 +40,7 @@ import {
   isAvatarUrlNeedsRefresh,
   isUsableAvatarUrl,
   normalizeAvatarSource,
-  shouldSyncPlatformAvatar,
+  shouldPersistPlatformAvatar,
 } from "@/lib/performance/avatar-sync-policy";
 import {
   isAvatarUrlAllowedForPlatform,
@@ -484,18 +484,18 @@ export async function persistInfluencerPlatformAvatarDetailed(
     currentUrl?.trim() && !isAvatarUrlAllowedForPlatform(platformKey, currentUrl)
   );
 
-  const policyAllowsSync =
-    input.forceSync === true
-      ? avatarSource !== "manual" || isAvatarUrlNeedsRefresh(currentUrl)
-      : shouldSyncPlatformAvatar(
-          {
-            profile_picture_url: currentUrl,
-            avatar_source: avatarSource,
-            avatar_last_synced_at: avatarLastSyncedAt,
-          },
-          Date.now(),
-          { allowManualCrossPlatformRefresh: crossPlatformBlocked }
-        );
+  const policyAllowsSync = shouldPersistPlatformAvatar(
+    {
+      profile_picture_url: currentUrl,
+      avatar_source: avatarSource,
+      avatar_last_synced_at: avatarLastSyncedAt,
+    },
+    Date.now(),
+    {
+      forceSync: input.forceSync,
+      allowManualCrossPlatformRefresh: crossPlatformBlocked,
+    }
+  );
 
   if (!policyAllowsSync) {
     if (logSkips) {

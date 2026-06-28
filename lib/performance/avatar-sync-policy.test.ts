@@ -5,6 +5,7 @@ import {
   isAvatarSyncStale,
   isBrokenAvatarUrl,
   isPlaceholderAvatarUrl,
+  shouldPersistPlatformAvatar,
   shouldSyncPlatformAvatar,
 } from "@/lib/performance/avatar-sync-policy";
 
@@ -153,6 +154,47 @@ assert.equal(
 assert.equal(
   isPlaceholderAvatarUrl("https://static.cdninstagram.com/rsrc.php/v4/yD/r/R0fBIMurK8v.png"),
   true
+);
+
+assert.equal(
+  shouldSyncPlatformAvatar(
+    {
+      profile_picture_url: "https://cdn.example.com/photo.jpg",
+      avatar_source: "apify",
+      avatar_last_synced_at: fresh,
+    },
+    now
+  ),
+  false,
+  "fresh apify blocked without force"
+);
+
+assert.equal(
+  shouldPersistPlatformAvatar(
+    {
+      profile_picture_url: "https://cdn.example.com/photo.jpg",
+      avatar_source: "apify",
+      avatar_last_synced_at: fresh,
+    },
+    now,
+    { forceSync: true }
+  ),
+  true,
+  "Discovery Refresh Metrics forceSync overwrites fresh apify avatar"
+);
+
+assert.equal(
+  shouldPersistPlatformAvatar(
+    {
+      profile_picture_url: "https://cdn.example.com/photo.jpg",
+      avatar_source: "manual",
+      avatar_last_synced_at: fresh,
+    },
+    now,
+    { forceSync: true }
+  ),
+  false,
+  "forceSync still protects valid manual avatar"
 );
 
 console.log("avatar-sync-policy tests passed");

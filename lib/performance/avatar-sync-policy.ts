@@ -151,6 +151,22 @@ export function shouldSyncPlatformAvatar(
   return false;
 }
 
+/**
+ * Whether persist may write profile_picture_url (includes Discovery force refresh).
+ */
+export function shouldPersistPlatformAvatar(
+  account: PlatformAvatarAccount,
+  nowMs = Date.now(),
+  options?: { forceSync?: boolean; allowManualCrossPlatformRefresh?: boolean }
+): boolean {
+  if (options?.forceSync) {
+    const source = normalizeAvatarSource(account.avatar_source);
+    if (source !== "manual") return true;
+    return isAvatarUrlNeedsRefresh(account.profile_picture_url);
+  }
+  return shouldSyncPlatformAvatar(account, nowMs, options);
+}
+
 export function normalizeAvatarSource(value: string | null | undefined): AvatarSource {
   switch (value) {
     case "apify":
