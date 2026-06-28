@@ -45,6 +45,10 @@ type PlatformAccountRow = {
 
 const APIFY: FieldSource = "apify";
 
+function logCreatorEnrichment(event: string, data: Record<string, unknown>): void {
+  console.log(`[creator-enrichment:service] ${event}`, JSON.stringify(data));
+}
+
 function profileUrlFor(account: PlatformAccountRow): string | null {
   if (account.profile_url?.trim()) return account.profile_url.trim();
   const platformKey = canonicalPlatformKey(account.platform);
@@ -93,6 +97,11 @@ export async function runCreatorEnrichment(
     force: payload.force,
   });
   if (decision.skip) {
+    logCreatorEnrichment("Skipped enrichment (freshness policy)", {
+      influencerId: payload.influencerId,
+      fallbackReason: decision.reason,
+      force: Boolean(payload.force),
+    });
     await writeEnrichmentRun(supabase, {
       influencerId: payload.influencerId,
       discoveredProfileId: payload.discoveredProfileId,
@@ -155,15 +164,42 @@ export async function runCreatorEnrichment(
   for (const account of accounts) {
     const profileUrl = profileUrlFor(account);
     const platformKey = canonicalPlatformKey(account.platform);
-    if (!profileUrl || !isSocialPlatform(platformKey)) continue;
+    const username = account.username ?? account.handle;
+
+    if (!profileUrl || !isSocialPlatform(platformKey)) {
+      logCreatorEnrichment("Skipped platform account", {
+        influencerId: payload.influencerId,
+        platform: account.platform,
+        platformKey,
+        username,
+        fallbackReason: !profileUrl
+          ? "Missing profile URL or username."
+          : "Unsupported platform for Apify enrichment.",
+      });
+      continue;
+    }
+
+    logCreatorEnrichment("Fetching Apify profile", {
+      influencerId: payload.influencerId,
+      platform: platformKey,
+      username,
+      profileUrl,
+    });
 
     const fetched = await fetchApifyProfile({
       platform: platformKey,
-      username: account.username ?? account.handle,
+      username,
       profileUrl,
     });
 
     if (!fetched.ok) {
+      logCreatorEnrichment("Apify fetch failed", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        username,
+        available: fetched.available,
+        fallbackReason: fetched.reason,
+      });
       if (fetched.available) {
         anyApifyAvailable = true;
         errors.push(`${platformKey}: ${fetched.reason}`);
