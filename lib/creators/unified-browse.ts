@@ -15,7 +15,6 @@ import {
 } from "@/lib/creators/thinkway-score";
 import type {
   CreatorEnrichmentStatus,
-  CreatorRecentPublication,
   CreatorSourceType,
   UnifiedCreatorBrowseFilters,
   UnifiedCreatorBrowseResult,

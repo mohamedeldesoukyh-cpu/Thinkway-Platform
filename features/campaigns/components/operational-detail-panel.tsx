@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Sheet,
@@ -335,12 +336,25 @@ export function DetailPanelHeader({
   subtitle?: ReactNode;
   badges?: ReactNode;
 }) {
-  const avatarContent = avatarUrl ? (
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [avatarUrl]);
+
+  const showAvatar = Boolean(avatarUrl?.trim()) && !avatarFailed;
+
+  const avatarContent = showAvatar ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={avatarUrl}
+      src={avatarUrl!}
       alt=""
+      referrerPolicy="no-referrer"
       className="size-14 shrink-0 rounded-full border border-border object-cover"
+      onError={(event) => {
+        event.currentTarget.onerror = null;
+        setAvatarFailed(true);
+      }}
     />
   ) : (
     <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/40 text-base font-semibold text-foreground">

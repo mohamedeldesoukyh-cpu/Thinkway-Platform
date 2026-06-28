@@ -1,7 +1,9 @@
 "use client";
 
-import { ExternalLinkIcon, HeartIcon, MessageCircleIcon, PlayIcon } from "lucide-react";
+import { useState } from "react";
+import { ExternalLinkIcon, HeartIcon, ImageIcon, MessageCircleIcon, PlayIcon } from "lucide-react";
 
+import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
 import type { CreatorRecentPublication } from "@/lib/creators/types";
 import { cn } from "@/lib/utils";
 
@@ -25,46 +27,51 @@ function captionSnippet(caption: string | null | undefined): string {
   return trimmed.length > 90 ? `${trimmed.slice(0, 87)}…` : trimmed;
 }
 
-type PublicationThumbnailSource = CreatorRecentPublication & {
-  thumbnailSrc?: string | null;
-  displayUrl?: string | null;
-  imageUrl?: string | null;
-  previewUrl?: string | null;
-  thumbnailUrl?: string | null;
-  displayResource?: { src?: string | null } | null;
-};
+function PublicationThumbnail({
+  thumbnailUrl,
+  className,
+}: {
+  thumbnailUrl: string | null;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
 
-function resolvePublicationThumbnail(publication: PublicationThumbnailSource): string | null {
+  if (!thumbnailUrl || failed) {
+    return (
+      <div
+        className={cn(
+          "flex size-full flex-col items-center justify-center gap-1.5 bg-muted text-muted-foreground",
+          className
+        )}
+      >
+        <ImageIcon className="size-4 opacity-60" aria-hidden />
+        <span className="text-[10px]">No preview</span>
+      </div>
+    );
+  }
+
   return (
-    publication.thumbnail ??
-    publication.thumbnailSrc ??
-    publication.displayUrl ??
-    publication.imageUrl ??
-    publication.previewUrl ??
-    publication.thumbnailUrl ??
-    publication.displayResource?.src ??
-    null
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={thumbnailUrl}
+      alt=""
+      referrerPolicy="no-referrer"
+      className={cn("size-full object-cover transition-transform group-hover:scale-[1.02]", className)}
+      loading="lazy"
+      onError={(event) => {
+        event.currentTarget.onerror = null;
+        setFailed(true);
+      }}
+    />
   );
 }
 
 function PublicationCard({ publication }: { publication: CreatorRecentPublication }) {
-  const thumbnailUrl = resolvePublicationThumbnail(publication);
+  const thumbnailUrl = resolveCreatorRecentPublicationThumbnail(publication);
   const content = (
     <>
       <div className="relative aspect-square overflow-hidden bg-muted">
-        {thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumbnailUrl}
-            alt=""
-            className="size-full object-cover transition-transform group-hover:scale-[1.02]"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center text-[11px] text-muted-foreground">
-            No preview
-          </div>
-        )}
+        <PublicationThumbnail thumbnailUrl={thumbnailUrl} />
         {publication.url ? (
           <span className="absolute right-2 top-2 rounded-full bg-background/80 p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
             <ExternalLinkIcon className="size-3" aria-hidden />
@@ -135,7 +142,7 @@ export function RecentPublicationsGallery({
         <PublicationCard
           key={
             publication.url ??
-            resolvePublicationThumbnail(publication) ??
+            resolveCreatorRecentPublicationThumbnail(publication) ??
             `pub-${index}`
           }
           publication={publication}

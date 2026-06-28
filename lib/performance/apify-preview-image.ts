@@ -6,7 +6,13 @@ export function pickApifyPreviewImageUrl(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const row = payload as Record<string, unknown>;
 
+  const displayResource =
+    row.displayResource && typeof row.displayResource === "object"
+      ? (row.displayResource as Record<string, unknown>)
+      : null;
+
   const directCandidates = [
+    row.thumbnailSrc,
     row.displayUrl,
     row.display_url,
     row.thumbnailUrl,
@@ -18,6 +24,7 @@ export function pickApifyPreviewImageUrl(payload: unknown): string | null {
     row.image_url,
     row.previewUrl,
     row.preview_url,
+    displayResource?.src,
   ];
 
   for (const value of directCandidates) {
