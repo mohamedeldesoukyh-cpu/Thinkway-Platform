@@ -21,6 +21,7 @@ function sampleRow(overrides: Partial<ParsedCreatorRow> = {}): ParsedCreatorRow 
     audience_interests: ["Camera & Photography"],
     relevance_score: 85,
     profile_picture_url: null,
+    role: null,
     ...overrides,
   };
 }

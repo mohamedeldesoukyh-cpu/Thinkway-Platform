@@ -71,6 +71,17 @@ function tagsFromImportMetadata(
   );
 }
 
+function roleFromImportMetadata(
+  accountMetadata: Record<string, unknown> | null | undefined,
+  influencerMetadata: Record<string, unknown> | null | undefined
+): string | null {
+  for (const metadata of [accountMetadata, influencerMetadata]) {
+    const raw = metadata?.role ?? metadata?.creator_role;
+    if (typeof raw === "string" && raw.trim()) return raw.trim();
+  }
+  return null;
+}
+
 function resolveInternalSourceType(account: {
   metrics_source?: string | null;
   sync_status?: string | null;
@@ -306,6 +317,10 @@ async function fetchInternalCreators(
     const importTags = tagsFromImportMetadata(
       (primary?.metadata as Record<string, unknown> | null | undefined) ?? null
     );
+    const role = roleFromImportMetadata(
+      (primary?.metadata as Record<string, unknown> | null | undefined) ?? null,
+      r.metadata ?? null
+    );
     const categories = mergeImportedStringArrays(r.categories ?? [], importTags);
     const discoveryProfileImage =
       discoveryImageByInfluencer.get(r.id) ??
@@ -375,6 +390,7 @@ async function fetchInternalCreators(
       language_codes: [],
       profile_image_url: profileImageUrl,
       bio: profileBio,
+      role,
       metrics,
       ai_category: categories[0] ?? null,
       ai_niche: null,

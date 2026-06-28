@@ -10,6 +10,8 @@ export type ParsedCreatorRow = {
   relevance_score: number | null;
   /** Raw profile photo URL from import file (CSV/XLSX column), when present. */
   profile_picture_url: string | null;
+  /** Creator role/type from import file (e.g. Macro, Micro, Brand ambassador). */
+  role: string | null;
   raw?: Record<string, unknown>;
 };
 

@@ -7,6 +7,7 @@ import {
   parseIndahashText,
 } from "./indahash";
 import { extractPdfText } from "./pdf-text";
+import { parseZipBuffer } from "./zip";
 import type { ImportParseDiagnostics } from "../types";
 import { lookupCell, buildNormalizedRowLookup } from "@/lib/intelligence/parsers/header-normalize";
 import { parseCompactCount } from "@/lib/social/parse-compact-count";
@@ -50,6 +51,21 @@ function parseImportProfilePictureUrlRaw(lookup: Map<string, unknown>): string |
     "avatar",
     "thumbnail",
     "headshot"
+  );
+}
+
+function parseImportRoleRaw(lookup: Map<string, unknown>): string | null {
+  return lookupCell(
+    lookup,
+    "role",
+    "creator role",
+    "creator_role",
+    "type",
+    "creator type",
+    "creator_type",
+    "details",
+    "creator details",
+    "creator_details"
   );
 }
 
@@ -98,6 +114,7 @@ function parseGenericTabularRow(
       audience_interests.length > 0 ? audience_interests : categories,
     relevance_score,
     profile_picture_url: parseImportProfilePictureUrlRaw(lookup),
+    role: parseImportRoleRaw(lookup),
   };
 }
 
@@ -301,6 +318,8 @@ export async function parseImportFile(params: {
       return parseXlsxBuffer(params.buffer, source);
     case "pdf":
       return parsePdfBuffer(params.buffer, source);
+    case "zip":
+      return parseZipBuffer(params.buffer, source);
     default:
       return {
         parser: "unsupported",

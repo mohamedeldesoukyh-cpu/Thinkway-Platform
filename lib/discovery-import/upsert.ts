@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { FieldSourceMap } from "@/lib/creator-enrichment/types";
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
 import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
 import { resolveMetricsSourceForEnrichment } from "@/lib/social/enrichment/metrics-status";
@@ -7,6 +8,7 @@ import type { Database } from "@/types/database";
 
 import {
   buildCreatorImportMetadata,
+  buildImportFieldSources,
   importProfilePictureAccountFields,
   mergeCreatorImportMetadata,
   normalizeParsedCreatorRow,
@@ -34,7 +36,9 @@ async function findExistingAccount(
 ) {
   const { data, error } = await supabase
     .from("influencer_platform_accounts")
-    .select("id, influencer_id, follower_count, engagement_rate, metadata")
+    .select(
+      "id, influencer_id, follower_count, engagement_rate, metadata, field_sources, interest_categories"
+    )
     .eq("platform", platform)
     .eq("normalized_username", normalizedUsername)
     .maybeSingle();
@@ -49,7 +53,7 @@ async function findInfluencerProfile(
 ) {
   const { data, error } = await supabase
     .from("influencers")
-    .select("categories, country_code")
+    .select("categories, country_code, metadata")
     .eq("id", influencerId)
     .maybeSingle();
 
@@ -132,6 +136,9 @@ export async function upsertImportedCreators(
       row.profile_picture_url,
       normalized.platform
     );
+    const importFieldSources = buildImportFieldSources(row, {
+      hasAvatar: Boolean(importAvatarFields),
+    });
 
     try {
       const existing = await findExistingAccount(
@@ -145,6 +152,10 @@ export async function upsertImportedCreators(
         const existingMeta =
           (existing.metadata as Record<string, unknown> | null) ?? {};
         const mergedMetadata = mergeCreatorImportMetadata(existingMeta, row);
+        const mergedFieldSources: FieldSourceMap = {
+          ...(existing.field_sources as FieldSourceMap | null),
+          ...importFieldSources,
+        };
         const existingInfluencer = await findInfluencerProfile(
           ctx.supabase,
           existing.influencer_id
@@ -153,6 +164,8 @@ export async function upsertImportedCreators(
           existingInfluencer?.categories,
           row
         );
+        const interestCategories =
+          mergedInfluencerCategories.length > 0 ? mergedInfluencerCategories : undefined;
 
         const { error: accountError } = await ctx.supabase
           .from("influencer_platform_accounts")
@@ -161,6 +174,8 @@ export async function upsertImportedCreators(
             engagement_rate: row.engagement_rate ?? existing.engagement_rate,
             audience_country: resolveCountryCode(row.country),
             metadata: mergedMetadata,
+            field_sources: mergedFieldSources,
+            ...(interestCategories ? { interest_categories: interestCategories } : {}),
             sync_source: "discovery_import",
             metrics_source: normalized.metrics_source,
             metrics_is_manual_override: normalized.metrics_is_manual_override,
@@ -180,6 +195,14 @@ export async function upsertImportedCreators(
           (existingInfluencer?.categories?.length ?? 0) > 0
         ) {
           influencerPatch.categories = mergedInfluencerCategories;
+        }
+        if (row.role?.trim()) {
+          const existingInfluencerMeta =
+            (existingInfluencer?.metadata as Record<string, unknown> | null) ?? {};
+          influencerPatch.metadata = {
+            ...existingInfluencerMeta,
+            role: row.role.trim(),
+          };
         }
 
         if (Object.keys(influencerPatch).length > 0) {
@@ -237,8 +260,9 @@ export async function upsertImportedCreators(
           categories: influencerCategories,
           status: "active",
           notes: row.source ? `Imported from ${row.source}` : "Imported via Discovery Import Center",
+          ...(row.role?.trim() ? { metadata: { role: row.role.trim() } } : {}),
           created_by: ctx.uploadedBy,
-        })
+        } as Database["public"]["Tables"]["influencers"]["Insert"])
         .select("id")
         .single();
 
@@ -264,11 +288,14 @@ export async function upsertImportedCreators(
           follower_count: row.followers ?? 0,
           engagement_rate: row.engagement_rate,
           audience_country: countryCode,
+          interest_categories:
+            influencerCategories.length > 0 ? influencerCategories : null,
           is_primary: true,
           sync_status: normalized.sync_status,
           sync_source: normalized.sync_source,
           metrics_source: normalized.metrics_source,
           metrics_is_manual_override: normalized.metrics_is_manual_override,
+          field_sources: importFieldSources,
           metadata: {
             ...importMeta,
             categories: influencerCategories,

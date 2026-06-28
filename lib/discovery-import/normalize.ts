@@ -1,7 +1,11 @@
 import { prepareCreatorAvatarUrlForDisplay } from "@/lib/performance/creator-avatar";
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 
+import type { FieldSource, FieldSourceMap } from "@/lib/creator-enrichment/types";
+
 import type { ParsedCreatorRow } from "./types";
+
+const IMPORTED: FieldSource = "imported";
 
 const COUNTRY_CODE_MAP: Record<string, string> = {
   jordan: "JO",
@@ -49,7 +53,36 @@ export function normalizeParsedCreatorRow(
       .map((value) => value.trim())
       .filter(Boolean),
     profile_picture_url: row.profile_picture_url?.trim() || null,
+    role: row.role?.trim() || null,
   };
+}
+
+/** Record per-field provenance for CSV-sourced platform account columns. */
+export function buildImportFieldSources(
+  row: Pick<
+    ParsedCreatorRow,
+    | "followers"
+    | "engagement_rate"
+    | "country"
+    | "categories"
+    | "audience_interests"
+    | "profile_picture_url"
+    | "role"
+  >,
+  options?: { hasAvatar?: boolean }
+): FieldSourceMap {
+  const sources: FieldSourceMap = {};
+  if (row.followers != null) sources.follower_count = IMPORTED;
+  if (row.engagement_rate != null) sources.engagement_rate = IMPORTED;
+  if (row.country?.trim()) sources.audience_country = IMPORTED;
+  if (row.categories.length > 0 || row.audience_interests.length > 0) {
+    sources.interest_categories = IMPORTED;
+  }
+  if (options?.hasAvatar || row.profile_picture_url?.trim()) {
+    sources.profile_picture_url = IMPORTED;
+  }
+  if (row.role?.trim()) sources.creator_role = IMPORTED;
+  return sources;
 }
 
 /** Validate and normalize a CSV-provided profile photo URL for platform account storage. */
@@ -86,6 +119,7 @@ export function buildCreatorImportMetadata(row: ParsedCreatorRow): Record<string
     import_source: row.source,
     audience_interests: row.audience_interests,
     relevance_score: row.relevance_score,
+    ...(row.role?.trim() ? { role: row.role.trim() } : {}),
     imported_at: new Date().toISOString(),
   };
 }

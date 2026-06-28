@@ -316,6 +316,10 @@ export function CreatorDetailSheet({
             <p className="text-sm leading-relaxed text-muted-foreground">{displayCreator.bio}</p>
           ) : null}
 
+          {displayCreator.role ? (
+            <MetaRow label="Role" value={displayCreator.role} />
+          ) : null}
+
           {displayCreator.influencer_id ? (
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/15 px-4 py-3">
               <EnrichmentStatusBadge status={enrichmentStatus} />

@@ -110,15 +110,45 @@ import {
   assert.equal(hasDemographics(cols), true);
 }
 
-// Discovery Apify refresh bypasses manual field_sources protection.
+// IMPORTED PROTECTION: imported fields are NEVER overwritten by automation
 {
   const result = mergeSourcedFields(
-    { follower_count: "manual" },
+    { follower_count: "imported" },
     [{ field: "follower_count", value: 99999, source: "apify" }],
-    { ignoreManualProtectionFor: ["follower_count"] }
+    { existingValues: { follower_count: 10000 }, fillMissingOnly: true }
+  );
+  assert.equal("follower_count" in result.updates, false);
+  assert.deepEqual(result.manualProtected, ["follower_count"]);
+}
+
+// Fill-missing-only: apify-sourced metrics may refresh; import/manual values stay.
+{
+  const result = mergeSourcedFields(
+    { follower_count: "apify" },
+    [{ field: "follower_count", value: 99999, source: "apify" }],
+    { existingValues: { follower_count: 50000 }, fillMissingOnly: true }
   );
   assert.equal(result.updates.follower_count, 99999);
-  assert.deepEqual(result.manualProtected, []);
+}
+
+// Fill-missing-only: empty fields accept Apify data.
+{
+  const result = mergeSourcedFields(
+    {},
+    [{ field: "avg_views", value: 12000, source: "apify" }],
+    { existingValues: { avg_views: null }, fillMissingOnly: true }
+  );
+  assert.equal(result.updates.avg_views, 12000);
+}
+
+// Fill-missing-only: non-apify existing values are preserved.
+{
+  const result = mergeSourcedFields(
+    {},
+    [{ field: "profile_bio", value: "Apify bio", source: "apify" }],
+    { existingValues: { profile_bio: "CSV bio" }, fillMissingOnly: true }
+  );
+  assert.equal("profile_bio" in result.updates, false);
 }
 
 console.log("creator-enrichment merge tests passed");

@@ -24,7 +24,7 @@ import { persistInfluencerPlatformAvatarDetailed } from "@/lib/performance/metri
 import { fetchApifyProfile } from "./apify-profile";
 import { writeEnrichmentRun } from "./audit";
 import { decideEnrichment, computeNextRefreshAt } from "./policy";
-import { mergeSourcedFields, type IncomingField, type MergeResult } from "./merge";
+import { mergeSourcedFields, type IncomingField } from "./merge";
 import type {
   CreatorEnrichmentJobPayload,
   CreatorEnrichmentResult,
@@ -41,8 +41,24 @@ type PlatformAccountRow = {
   handle: string | null;
   username: string | null;
   profile_url: string | null;
+  profile_display_name: string | null;
+  profile_bio: string | null;
+  following_count: number | null;
+  posts_count: number | null;
   follower_count: number | null;
   engagement_rate: number | null;
+  avg_views: number | null;
+  avg_likes: number | null;
+  avg_comments: number | null;
+  is_verified: boolean | null;
+  audience_country: string | null;
+  hashtags: string[] | null;
+  mentions: string[] | null;
+  interest_categories: string[] | null;
+  recent_publications: ApifyProfileData["recentPublications"] | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  contact_links: string[] | null;
   metrics_is_manual_override: boolean | null;
   field_sources: FieldSourceMap | null;
 };
@@ -61,31 +77,41 @@ function logCreatorEnrichment(event: string, data: Record<string, unknown>): voi
   console.log(`[creator-enrichment:service] ${event}`, JSON.stringify(data));
 }
 
-/** Discovery forced refresh — always persist live Apify core metrics. */
-function applyBypassMetricPersist(
-  merged: MergeResult,
-  data: ApifyProfileData
-): MergeResult {
-  const updates = { ...merged.updates };
-  const fieldSources = { ...merged.fieldSources };
-  const fieldsUpdated = [...merged.fieldsUpdated];
+/** Legacy imports may only set metrics_is_manual_override — treat as manual lock. */
+function resolveAccountFieldSources(account: PlatformAccountRow): FieldSourceMap {
+  const sources: FieldSourceMap = { ...(account.field_sources ?? {}) };
+  if (!account.metrics_is_manual_override) return sources;
 
-  const metricPairs: Array<[typeof APIFY_METRIC_FIELDS[number], number | null]> = [
-    ["follower_count", data.followers],
-    ["engagement_rate", data.engagementRate],
-    ["avg_views", data.avgViews],
-    ["avg_likes", data.avgLikes],
-    ["avg_comments", data.avgComments],
-  ];
-
-  for (const [field, value] of metricPairs) {
-    if (value == null) continue;
-    updates[field] = value;
-    fieldSources[field] = APIFY;
-    if (!fieldsUpdated.includes(field)) fieldsUpdated.push(field);
+  for (const field of APIFY_METRIC_FIELDS) {
+    const value = account[field];
+    if (value != null && sources[field] == null) {
+      sources[field] = "manual";
+    }
   }
+  return sources;
+}
 
-  return { ...merged, updates, fieldSources, fieldsUpdated };
+function accountExistingValues(account: PlatformAccountRow): Record<string, unknown> {
+  return {
+    profile_display_name: account.profile_display_name,
+    profile_bio: account.profile_bio,
+    following_count: account.following_count,
+    posts_count: account.posts_count,
+    follower_count: account.follower_count,
+    engagement_rate: account.engagement_rate,
+    avg_views: account.avg_views,
+    avg_likes: account.avg_likes,
+    avg_comments: account.avg_comments,
+    is_verified: account.is_verified,
+    audience_country: account.audience_country,
+    hashtags: account.hashtags,
+    mentions: account.mentions,
+    interest_categories: account.interest_categories,
+    recent_publications: account.recent_publications,
+    contact_email: account.contact_email,
+    contact_phone: account.contact_phone,
+    contact_links: account.contact_links,
+  };
 }
 
 function profileUrlFor(account: PlatformAccountRow): string | null {
@@ -186,7 +212,7 @@ export async function runCreatorEnrichment(
   const { data: accountsData, error: accountsError } = await supabase
     .from("influencer_platform_accounts")
     .select(
-      "id, platform, handle, username, profile_url, follower_count, engagement_rate, metrics_is_manual_override, field_sources"
+      "id, platform, handle, username, profile_url, profile_display_name, profile_bio, following_count, posts_count, follower_count, engagement_rate, avg_views, avg_likes, avg_comments, is_verified, audience_country, hashtags, mentions, interest_categories, recent_publications, contact_email, contact_phone, contact_links, metrics_is_manual_override, field_sources"
     )
     .eq("influencer_id", payload.influencerId);
 
@@ -199,13 +225,11 @@ export async function runCreatorEnrichment(
   let topFollowers = 0;
   let lastApifyRunId: string | null = null;
   const errors: string[] = [];
-  const bypassMetricsOverride = Boolean(payload.bypassMetricsManualOverride);
 
   logCreatorEnrichment("Enrichment job started", {
     influencerId: payload.influencerId,
     trigger: payload.trigger,
     force: Boolean(payload.force),
-    bypassMetricsManualOverride: bypassMetricsOverride,
   });
 
   for (const account of accounts) {
@@ -258,16 +282,13 @@ export async function runCreatorEnrichment(
     const data = fetched.data;
     lastApifyRunId = data.apifyRunId ?? lastApifyRunId;
 
-    // metrics_is_manual_override hard-locks core numeric metrics unless Discovery
-    // explicitly forces a live Apify refresh (bypassMetricsManualOverride).
-    const manualLock =
-      !bypassMetricsOverride && Boolean(account.metrics_is_manual_override);
-
     const incoming: IncomingField[] = [
       { field: "profile_display_name", value: data.displayName, source: APIFY },
       { field: "profile_bio", value: data.bio, source: APIFY },
       { field: "following_count", value: data.following, source: APIFY },
       { field: "posts_count", value: data.postsCount, source: APIFY },
+      { field: "follower_count", value: data.followers, source: APIFY },
+      { field: "engagement_rate", value: data.engagementRate, source: APIFY },
       { field: "avg_views", value: data.avgViews, source: APIFY },
       { field: "avg_likes", value: data.avgLikes, source: APIFY },
       { field: "avg_comments", value: data.avgComments, source: APIFY },
@@ -286,32 +307,10 @@ export async function runCreatorEnrichment(
       },
     ];
 
-    if (bypassMetricsOverride || !manualLock) {
-      incoming.push(
-        { field: "follower_count", value: data.followers, source: APIFY },
-        { field: "engagement_rate", value: data.engagementRate, source: APIFY }
-      );
-    }
-
-    let merged = mergeSourcedFields(account.field_sources, incoming, {
-      ignoreManualProtectionFor: bypassMetricsOverride ? APIFY_METRIC_FIELDS : undefined,
+    const merged = mergeSourcedFields(resolveAccountFieldSources(account), incoming, {
+      existingValues: accountExistingValues(account),
+      fillMissingOnly: true,
     });
-
-    if (bypassMetricsOverride) {
-      merged = applyBypassMetricPersist(merged, data);
-    }
-
-    if (bypassMetricsOverride && (data.followers != null || data.engagementRate != null)) {
-      logCreatorEnrichment("Apify metrics override applied", {
-        influencerId: payload.influencerId,
-        platform: platformKey,
-        previousFollowers: account.follower_count,
-        newFollowers: data.followers,
-        previousEngagement: account.engagement_rate,
-        newEngagement: data.engagementRate,
-        overrideApplied: Boolean(account.metrics_is_manual_override),
-      });
-    }
 
     if (data.recentPublications.length > 0) {
       logCreatorEnrichment("Sample recent publication", {
@@ -323,9 +322,6 @@ export async function runCreatorEnrichment(
 
     if (merged.fieldsUpdated.length > 0) {
       const nowIso = new Date().toISOString();
-      const metricsBypassWritten =
-        bypassMetricsOverride &&
-        APIFY_METRIC_FIELDS.some((field) => field in merged.updates);
       const { error: updateError } = await supabase
         .from("influencer_platform_accounts")
         .update({
@@ -338,13 +334,6 @@ export async function runCreatorEnrichment(
           sync_status: "synced",
           sync_source: "apify",
           last_synced_at: nowIso,
-          ...(metricsBypassWritten
-            ? {
-                metrics_is_manual_override: false,
-                metrics_source: "synced",
-                metrics_last_synced_at: nowIso,
-              }
-            : {}),
           updated_at: nowIso,
         } as never)
         .eq("id", account.id);
@@ -365,7 +354,6 @@ export async function runCreatorEnrichment(
         platform: platformKey,
         profilePictureUrl: data.profilePictureUrl,
         source: "apify",
-        forceSync: bypassMetricsOverride,
         logSkips: false,
       });
       if (avatarResult.saved) {

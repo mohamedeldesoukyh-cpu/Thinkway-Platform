@@ -41,12 +41,26 @@ function isEmpty(value: unknown): boolean {
   return false;
 }
 
+/** Sources that must not be overwritten by automated enrichment. */
+function isProtectedFieldSource(source: FieldSource | undefined): boolean {
+  return source === "manual" || source === "imported";
+}
+
 /**
  * Merge incoming enriched fields onto existing field sources, honoring manual
  * protection and recording transparency sources.
  */
 export type MergeSourcedFieldsOptions = {
-  /** Skip manual protection for these fields (Discovery Apify refresh). */
+  /** Existing column values — used for fill-missing-only enrichment. */
+  existingValues?: Record<string, unknown>;
+  /**
+   * When true (default), only overwrite non-empty values when the existing
+   * source is `apify`. Manual/imported values are always preserved.
+   */
+  fillMissingOnly?: boolean;
+  /**
+   * @deprecated Discovery refresh no longer bypasses import/manual protection.
+   */
   ignoreManualProtectionFor?: readonly string[];
 };
 
@@ -60,15 +74,35 @@ export function mergeSourcedFields(
   const fieldsUpdated: string[] = [];
   const manualProtected: string[] = [];
   const ignoreManual = new Set(options?.ignoreManualProtectionFor ?? []);
+  const fillMissingOnly = options?.fillMissingOnly !== false;
+  const existingValues = options?.existingValues ?? {};
 
   for (const item of incoming) {
     // Never overwrite with empty/null — keeps existing data intact.
     if (isEmpty(item.value)) continue;
 
-    // MANUAL PROTECTION: a manually-sourced field is locked from automation.
+    const existingSource = fieldSources[item.field];
+    const existingValue = existingValues[item.field];
+    const hasExistingValue = !isEmpty(existingValue);
+    const protectedSource = isProtectedFieldSource(existingSource);
+
+    // MANUAL / IMPORT PROTECTION: operator or CSV-sourced fields stay locked.
     if (
-      fieldSources[item.field] === "manual" &&
+      protectedSource &&
       item.source !== "manual" &&
+      item.source !== "imported" &&
+      !ignoreManual.has(item.field)
+    ) {
+      manualProtected.push(item.field);
+      continue;
+    }
+
+    // Fill-missing-only: keep any non-empty value unless it came from Apify.
+    if (
+      fillMissingOnly &&
+      hasExistingValue &&
+      existingSource !== "apify" &&
+      item.source === "apify" &&
       !ignoreManual.has(item.field)
     ) {
       manualProtected.push(item.field);

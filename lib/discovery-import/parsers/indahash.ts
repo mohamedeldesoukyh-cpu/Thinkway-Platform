@@ -116,6 +116,7 @@ function parseIndahashBlock(block: string, source: string | null): ParsedCreator
     audience_interests,
     relevance_score,
     profile_picture_url: null,
+    role: null,
   };
 }
 
@@ -344,6 +345,7 @@ function buildSearchExportRow(
     audience_interests: [...categories],
     relevance_score,
     profile_picture_url: null,
+    role: null,
   };
 }
 
@@ -466,6 +468,17 @@ export function parseIndahashCsvRow(
     "thumbnail",
     "headshot"
   );
+  const role = lookup(
+    "role",
+    "creator role",
+    "creator_role",
+    "type",
+    "creator type",
+    "creator_type",
+    "details",
+    "creator details",
+    "creator_details"
+  );
 
   return {
     username,
@@ -479,5 +492,6 @@ export function parseIndahashCsvRow(
       audience_interests.length > 0 ? audience_interests : categories,
     relevance_score,
     profile_picture_url,
+    role,
   };
 }

@@ -79,6 +79,8 @@ export type UnifiedCreatorResult = {
   language_codes: string[];
   profile_image_url: string | null;
   bio: string | null;
+  /** Creator role/type from CSV import (e.g. Macro, Micro). */
+  role?: string | null;
   metrics: UnifiedCreatorMetrics;
   ai_category: string | null;
   ai_niche: string | null;

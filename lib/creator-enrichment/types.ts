@@ -55,8 +55,7 @@ export type CreatorEnrichmentJobPayload = {
   /** Explicit refresh — bypasses the 30-day freshness skip. */
   force?: boolean;
   /**
-   * Discovery "Refresh Metrics" — always persist live Apify follower/engagement
-   * metrics even when `metrics_is_manual_override` or manual field_sources are set.
+   * @deprecated Discovery refresh preserves CSV/import data; this flag is ignored.
    */
   bypassMetricsManualOverride?: boolean;
   /** User who requested it (manual refresh / detail open). */

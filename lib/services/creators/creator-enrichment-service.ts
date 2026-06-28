@@ -41,7 +41,7 @@ export type CreatorMetricsSyncStatus =
 export type RefreshCreatorMetricsOptions = {
   /** Bypass the 30-day freshness skip. Default true for explicit Refresh Metrics. */
   force?: boolean;
-  /** Discovery refresh — always overwrite Apify metrics despite manual override. */
+  /** @deprecated Ignored — import/manual fields are preserved on refresh. */
   bypassMetricsManualOverride?: boolean;
   trigger?: EnrichmentTrigger;
   requestedBy?: string | null;
