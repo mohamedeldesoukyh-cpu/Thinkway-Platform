@@ -46,7 +46,7 @@ import {
   DEFAULT_CREATOR_SEARCH_SORT,
   filtersToBrowseParams,
   type CreatorSearchFilters,
-  type CreatorSearchSort,
+  type CreatorSearchSortState,
 } from "./creator-search-types";
 import { exportCreatorsCsv, sortCreators, stashCompareQueue } from "./creator-search-utils";
 import { stashDiscoverySelection } from "./discovery-selection-storage";
@@ -68,7 +68,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   const [shortlists, setShortlists] = useState(initialShortlists);
   const [filters, setFilters] = useState<CreatorSearchFilters>(DEFAULT_CREATOR_SEARCH_FILTERS);
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<CreatorSearchSort>(DEFAULT_CREATOR_SEARCH_SORT);
+  const [sort, setSort] = useState<CreatorSearchSortState>(DEFAULT_CREATOR_SEARCH_SORT);
   const [page, setPage] = useState(1);
   const [creators, setCreators] = useState<UnifiedCreatorResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -523,6 +523,8 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
       >
         <CreatorSearchResultList
           creators={sortedCreators}
+          sort={sort}
+          onSortChange={setSort}
           loading={loading}
           loadingMore={loadingMore}
           hasMore={hasMore}

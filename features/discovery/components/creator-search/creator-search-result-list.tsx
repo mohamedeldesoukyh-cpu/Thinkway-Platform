@@ -17,8 +17,12 @@ import {
 
 const ROW_ESTIMATE = 76;
 
+import type { CreatorSearchSortState } from "./creator-search-types";
+
 type Props = {
   creators: UnifiedCreatorResult[];
+  sort?: CreatorSearchSortState;
+  onSortChange?: (sort: CreatorSearchSortState) => void;
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
@@ -59,6 +63,8 @@ function ResultSkeleton() {
 
 export function CreatorSearchResultList({
   creators,
+  sort,
+  onSortChange,
   loading,
   loadingMore,
   hasMore,
@@ -133,7 +139,7 @@ export function CreatorSearchResultList({
           </div>
         ) : loading && creators.length === 0 ? (
           <div>
-            <CreatorResultGridHeader variant="search" />
+            <CreatorResultGridHeader variant="search" sort={sort} onSortChange={onSortChange} />
             {Array.from({ length: 8 }).map((_, i) => (
               <ResultSkeleton key={i} />
             ))}
@@ -152,7 +158,7 @@ export function CreatorSearchResultList({
           </div>
         ) : (
           <>
-            <CreatorResultGridHeader variant="search" />
+            <CreatorResultGridHeader variant="search" sort={sort} onSortChange={onSortChange} />
             <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
               {virtualizer.getVirtualItems().map((virtualRow) => {
                 const creator = creators[virtualRow.index];

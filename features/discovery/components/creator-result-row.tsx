@@ -4,6 +4,8 @@ import {
   ExternalLinkIcon,
   ListPlusIcon,
   MoreHorizontalIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -29,12 +31,17 @@ import { cn } from "@/lib/utils";
 
 import {
   audienceInterestList,
+  applyCreatorSearchHeaderSort,
   brandSafetyMeta,
   countryFlag,
   formatCreatorCount,
   formatEngagementRate,
   thinkwayAiScore,
 } from "./creator-search/creator-search-utils";
+import type {
+  CreatorSearchSortField,
+  CreatorSearchSortState,
+} from "./creator-search/creator-search-types";
 
 export const CREATOR_SEARCH_GRID_TEMPLATE =
   "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px 88px 80px";
@@ -415,20 +422,21 @@ type HeaderColumn = {
   label: string;
   align?: "right";
   srOnly?: boolean;
+  sortField?: CreatorSearchSortField;
 };
 
 const SEARCH_HEADER_COLUMNS: HeaderColumn[] = [
   { key: "rank", label: "#" },
-  { key: "creator", label: "Creator" },
+  { key: "creator", label: "Creator", sortField: "name" },
   { key: "platform", label: "Platform" },
-  { key: "followers", label: "Followers", align: "right" },
+  { key: "followers", label: "Followers", align: "right", sortField: "followers" },
   { key: "country", label: "Country" },
   { key: "interests", label: "Audience interests" },
-  { key: "er", label: "Avg ER", align: "right" },
-  { key: "views", label: "Avg views", align: "right" },
-  { key: "relevance", label: "Relevance" },
+  { key: "er", label: "Avg ER", align: "right", sortField: "engagement" },
+  { key: "views", label: "Avg views", align: "right", sortField: "views" },
+  { key: "relevance", label: "Relevance", sortField: "thinkway" },
   { key: "safety", label: "Brand safety" },
-  { key: "sync", label: "Sync" },
+  { key: "sync", label: "Sync", sortField: "last_synced" },
   { key: "actions", label: "Actions", align: "right", srOnly: true },
 ];
 
@@ -445,7 +453,15 @@ const SHORTLIST_HEADER_COLUMNS: HeaderColumn[] = [
   { key: "actions", label: "Actions", align: "right", srOnly: true },
 ];
 
-export function CreatorResultGridHeader({ variant = "search" }: { variant?: "search" | "shortlist" }) {
+export function CreatorResultGridHeader({
+  variant = "search",
+  sort,
+  onSortChange,
+}: {
+  variant?: "search" | "shortlist";
+  sort?: CreatorSearchSortState;
+  onSortChange?: (sort: CreatorSearchSortState) => void;
+}) {
   const columns = variant === "shortlist" ? SHORTLIST_HEADER_COLUMNS : SEARCH_HEADER_COLUMNS;
   const gridTemplate =
     variant === "shortlist" ? CREATOR_SHORTLIST_GRID_TEMPLATE : CREATOR_SEARCH_GRID_TEMPLATE;
@@ -461,15 +477,49 @@ export function CreatorResultGridHeader({ variant = "search" }: { variant?: "sea
       )}
       style={{ gridTemplateColumns: gridTemplate }}
     >
-      {columns.map((column) => (
-        <div
-          key={column.key}
-          role="columnheader"
-          className={cn("min-w-0 truncate", column.align === "right" && "text-right")}
-        >
-          {column.srOnly ? <span className="sr-only">{column.label}</span> : column.label}
-        </div>
-      ))}
+      {columns.map((column) => {
+        const isActive = column.sortField != null && sort?.field === column.sortField;
+        const sortable =
+          variant === "search" && column.sortField != null && sort != null && onSortChange != null;
+
+        if (sortable) {
+          return (
+            <button
+              key={column.key}
+              type="button"
+              role="columnheader"
+              aria-sort={
+                isActive ? (sort.direction === "asc" ? "ascending" : "descending") : "none"
+              }
+              onClick={() => onSortChange(applyCreatorSearchHeaderSort(sort, column.sortField!))}
+              className={cn(
+                "inline-flex min-w-0 items-center gap-0.5 truncate transition-colors hover:text-foreground",
+                column.align === "right" && "justify-end text-right",
+                isActive && "text-foreground"
+              )}
+            >
+              <span className="truncate">{column.label}</span>
+              {isActive ? (
+                sort.direction === "asc" ? (
+                  <ArrowUpIcon className="size-3 shrink-0" aria-hidden />
+                ) : (
+                  <ArrowDownIcon className="size-3 shrink-0" aria-hidden />
+                )
+              ) : null}
+            </button>
+          );
+        }
+
+        return (
+          <div
+            key={column.key}
+            role="columnheader"
+            className={cn("min-w-0 truncate", column.align === "right" && "text-right")}
+          >
+            {column.srOnly ? <span className="sr-only">{column.label}</span> : column.label}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -48,17 +48,40 @@ export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
   minBrandFit: "",
 };
 
-export const CREATOR_SEARCH_SORTS = [
-  { value: "relevance", label: "Relevance" },
-  { value: "followers", label: "Followers" },
-  { value: "engagement", label: "Engagement rate" },
-  { value: "views", label: "Avg views" },
-  { value: "name", label: "Name (A–Z)" },
+export const CREATOR_SEARCH_SORT_FIELDS = [
+  { value: "relevance", label: "Relevance", defaultDirection: "desc" },
+  { value: "name", label: "Name", defaultDirection: "asc" },
+  { value: "followers", label: "Followers", defaultDirection: "desc" },
+  { value: "engagement", label: "Engagement rate", defaultDirection: "desc" },
+  { value: "views", label: "Avg views", defaultDirection: "desc" },
+  { value: "thinkway", label: "Thinkway score", defaultDirection: "desc" },
+  { value: "last_synced", label: "Last synced", defaultDirection: "desc" },
 ] as const;
 
-export type CreatorSearchSort = (typeof CREATOR_SEARCH_SORTS)[number]["value"];
+export type CreatorSearchSortField = (typeof CREATOR_SEARCH_SORT_FIELDS)[number]["value"];
 
-export const DEFAULT_CREATOR_SEARCH_SORT: CreatorSearchSort = "relevance";
+export type CreatorSearchSortDirection = "asc" | "desc";
+
+export type CreatorSearchSortState = {
+  field: CreatorSearchSortField;
+  direction: CreatorSearchSortDirection;
+};
+
+/** @deprecated Use CreatorSearchSortField */
+export type CreatorSearchSort = CreatorSearchSortField;
+
+export const DEFAULT_CREATOR_SEARCH_SORT: CreatorSearchSortState = {
+  field: "relevance",
+  direction: "desc",
+};
+
+export function defaultDirectionForSortField(
+  field: CreatorSearchSortField
+): CreatorSearchSortDirection {
+  return (
+    CREATOR_SEARCH_SORT_FIELDS.find((option) => option.value === field)?.defaultDirection ?? "desc"
+  );
+}
 
 /** A removable filter pill shown above the result list. */
 export type ActiveFilterChip = {

@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  ArrowDownIcon,
   ArrowUpDownIcon,
+  ArrowUpIcon,
   ListPlusIcon,
   SaveIcon,
   SearchIcon,
@@ -23,14 +25,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { CREATOR_SEARCH_SORTS, type CreatorSearchSort } from "./creator-search-types";
+import {
+  CREATOR_SEARCH_SORT_FIELDS,
+  defaultDirectionForSortField,
+  type CreatorSearchSortDirection,
+  type CreatorSearchSortField,
+  type CreatorSearchSortState,
+} from "./creator-search-types";
 
 type Props = {
   search: string;
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
-  sort: CreatorSearchSort;
-  onSortChange: (value: CreatorSearchSort) => void;
+  sort: CreatorSearchSortState;
+  onSortChange: (value: CreatorSearchSortState) => void;
   total: number;
   loadedCount: number;
   onSaveSearch: () => void;
@@ -107,16 +115,48 @@ export function CreatorSearchTopBar({
 
         <div className="hidden items-center gap-1.5 sm:flex">
           <ArrowUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          <Select value={sort} onValueChange={(value) => onSortChange(value as CreatorSearchSort)}>
+          <Select
+            value={sort.field}
+            onValueChange={(value) =>
+              onSortChange({
+                field: value as CreatorSearchSortField,
+                direction: defaultDirectionForSortField(value as CreatorSearchSortField),
+              })
+            }
+          >
             <SelectTrigger className="h-8 w-[140px] border-border bg-background text-xs">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
-              {CREATOR_SEARCH_SORTS.map((option) => (
+              {CREATOR_SEARCH_SORT_FIELDS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={sort.direction}
+            onValueChange={(value) =>
+              onSortChange({ ...sort, direction: value as CreatorSearchSortDirection })
+            }
+          >
+            <SelectTrigger className="h-8 w-[118px] border-border bg-background text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc">
+                <span className="flex items-center gap-1.5">
+                  <ArrowUpIcon className="size-3" />
+                  Ascending
+                </span>
+              </SelectItem>
+              <SelectItem value="desc">
+                <span className="flex items-center gap-1.5">
+                  <ArrowDownIcon className="size-3" />
+                  Descending
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

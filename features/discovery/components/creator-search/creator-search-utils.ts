@@ -1,7 +1,11 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 
-import type { CreatorSearchSort } from "./creator-search-types";
+import {
+  defaultDirectionForSortField,
+  type CreatorSearchSortField,
+  type CreatorSearchSortState,
+} from "./creator-search-types";
 
 /** Converts an ISO 3166-1 alpha-2 code (e.g. "AE") to its flag emoji. */
 export function countryFlag(code: string | null | undefined): string | null {
@@ -25,27 +29,62 @@ export function audienceInterestList(creator: UnifiedCreatorResult): string[] {
 }
 
 const SORT_VALUE: Record<
-  Exclude<CreatorSearchSort, "name">,
+  Exclude<CreatorSearchSortField, "name" | "last_synced">,
   (creator: UnifiedCreatorResult) => number
 > = {
   relevance: (c) => c.search_rank ?? thinkwayAiScore(c) ?? 0,
   followers: (c) => c.metrics.followers.value ?? 0,
   engagement: (c) => c.metrics.engagement_rate.value ?? 0,
   views: (c) => c.metrics.avg_views.value ?? 0,
+  thinkway: (c) => thinkwayAiScore(c) ?? 0,
 };
+
+function compareWithDirection(
+  left: number,
+  right: number,
+  direction: CreatorSearchSortState["direction"]
+): number {
+  const delta = left - right;
+  return direction === "asc" ? delta : -delta;
+}
+
+/** Toggle or set sort when a table column header is clicked. */
+export function applyCreatorSearchHeaderSort(
+  current: CreatorSearchSortState,
+  field: CreatorSearchSortField
+): CreatorSearchSortState {
+  if (current.field === field) {
+    return {
+      field,
+      direction: current.direction === "asc" ? "desc" : "asc",
+    };
+  }
+  return { field, direction: defaultDirectionForSortField(field) };
+}
 
 /** Stable client-side sort applied on top of the server result set. */
 export function sortCreators(
   creators: UnifiedCreatorResult[],
-  sort: CreatorSearchSort
+  sort: CreatorSearchSortState
 ): UnifiedCreatorResult[] {
   const next = [...creators];
-  if (sort === "name") {
-    next.sort((a, b) => a.display_name.localeCompare(b.display_name));
+  if (sort.field === "name") {
+    next.sort((a, b) => {
+      const cmp = a.display_name.localeCompare(b.display_name);
+      return sort.direction === "asc" ? cmp : -cmp;
+    });
     return next;
   }
-  const getValue = SORT_VALUE[sort];
-  next.sort((a, b) => getValue(b) - getValue(a));
+  if (sort.field === "last_synced") {
+    next.sort((a, b) => {
+      const left = a.last_enriched_at ? Date.parse(a.last_enriched_at) : 0;
+      const right = b.last_enriched_at ? Date.parse(b.last_enriched_at) : 0;
+      return compareWithDirection(left, right, sort.direction);
+    });
+    return next;
+  }
+  const getValue = SORT_VALUE[sort.field];
+  next.sort((a, b) => compareWithDirection(getValue(a), getValue(b), sort.direction));
   return next;
 }
 
