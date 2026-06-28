@@ -2,6 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
 
+export type ResetDemoImportedCreatorsOptions = {
+  alsoDeleteDiscoveryProfiles?: boolean;
+};
+
 export type ResetDemoImportedCreatorsResult = {
   ok: boolean;
   message: string;
@@ -10,7 +14,102 @@ export type ResetDemoImportedCreatorsResult = {
   deletedEnrichmentRuns: number;
   deletedCreatorSources: number;
   skippedInfluencers: number;
+  deletedDiscoveredProfiles: number;
+  deletedProfilePosts: number;
 };
+
+const EMPTY_RESULT_COUNTS = {
+  deletedInfluencers: 0,
+  deletedPlatformAccounts: 0,
+  deletedEnrichmentRuns: 0,
+  deletedCreatorSources: 0,
+  skippedInfluencers: 0,
+  deletedDiscoveredProfiles: 0,
+  deletedProfilePosts: 0,
+} as const;
+
+/** Matches all rows — PostgREST requires a filter on bulk delete. */
+const DELETE_ALL_ROWS_FILTER = {
+  column: "id" as const,
+  value: "00000000-0000-0000-0000-000000000000",
+};
+
+async function countAllRows(
+  supabase: SupabaseClient<Database>,
+  table:
+    | "discovered_profiles"
+    | "profile_posts"
+    | "profile_metrics"
+    | "profile_ai_scores"
+    | "discovery_sources"
+): Promise<number> {
+  const { count, error } = await supabase
+    .from(table)
+    .select("id", { count: "exact", head: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+async function deleteAllRows(
+  supabase: SupabaseClient<Database>,
+  table:
+    | "discovered_profiles"
+    | "profile_posts"
+    | "profile_metrics"
+    | "profile_ai_scores"
+    | "discovery_sources"
+): Promise<void> {
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .neq(DELETE_ALL_ROWS_FILTER.column, DELETE_ALL_ROWS_FILTER.value);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+/**
+ * Deletes all Discovery staging profiles and child rows in FK-safe order.
+ * Uses service role — caller must enforce auth + demo-reset policy gates.
+ */
+export async function resetDemoDiscoveryProfiles(
+  supabase: SupabaseClient<Database>
+): Promise<Pick<
+  ResetDemoImportedCreatorsResult,
+  "deletedDiscoveredProfiles" | "deletedProfilePosts"
+>> {
+  const profilePostCount = await countAllRows(supabase, "profile_posts");
+  const discoveredProfileCount = await countAllRows(
+    supabase,
+    "discovered_profiles"
+  );
+
+  if (discoveredProfileCount === 0 && profilePostCount === 0) {
+    return {
+      deletedDiscoveredProfiles: 0,
+      deletedProfilePosts: 0,
+    };
+  }
+
+  await deleteAllRows(supabase, "profile_posts");
+  await deleteAllRows(supabase, "profile_metrics");
+  await deleteAllRows(supabase, "profile_ai_scores");
+  await deleteAllRows(supabase, "discovery_sources");
+  await deleteAllRows(supabase, "discovered_profiles");
+
+  console.log(`[admin] deleted ${discoveredProfileCount} discovered profiles`);
+  console.log(`[admin] deleted ${profilePostCount} profile posts`);
+
+  return {
+    deletedDiscoveredProfiles: discoveredProfileCount,
+    deletedProfilePosts: profilePostCount,
+  };
+}
 
 async function resolveCsvImportedInfluencerIds(
   supabase: SupabaseClient<Database>
@@ -63,19 +162,29 @@ async function resolveCsvImportedInfluencerIds(
  * Uses service role — caller must enforce auth + demo-reset policy gates.
  */
 export async function resetDemoImportedCreators(
-  supabase: SupabaseClient<Database>
+  supabase: SupabaseClient<Database>,
+  options?: ResetDemoImportedCreatorsOptions
 ): Promise<ResetDemoImportedCreatorsResult> {
   const influencerIds = await resolveCsvImportedInfluencerIds(supabase);
 
   if (influencerIds.length === 0) {
+    const discovery =
+      options?.alsoDeleteDiscoveryProfiles === true
+        ? await resetDemoDiscoveryProfiles(supabase)
+        : { deletedDiscoveredProfiles: 0, deletedProfilePosts: 0 };
+
+    const discoveryNote =
+      discovery.deletedDiscoveredProfiles > 0 || discovery.deletedProfilePosts > 0
+        ? ` Deleted ${discovery.deletedDiscoveredProfiles} discovery profile(s) and ${discovery.deletedProfilePosts} profile post(s).`
+        : options?.alsoDeleteDiscoveryProfiles
+          ? " No discovery profiles found."
+          : "";
+
     return {
       ok: true,
-      message: "No CSV-imported creators found.",
-      deletedInfluencers: 0,
-      deletedPlatformAccounts: 0,
-      deletedEnrichmentRuns: 0,
-      deletedCreatorSources: 0,
-      skippedInfluencers: 0,
+      message: `No CSV-imported creators found.${discoveryNote}`,
+      ...EMPTY_RESULT_COUNTS,
+      ...discovery,
     };
   }
 
@@ -159,18 +268,31 @@ export async function resetDemoImportedCreators(
   console.log(`[admin] deleted ${deletedInfluencers} influencers`);
   console.log(`[admin] deleted ${deletedPlatformAccounts} platform accounts`);
 
+  const discovery =
+    options?.alsoDeleteDiscoveryProfiles === true
+      ? await resetDemoDiscoveryProfiles(supabase)
+      : { deletedDiscoveredProfiles: 0, deletedProfilePosts: 0 };
+
   const skippedNote =
     skippedInfluencers > 0
       ? ` ${skippedInfluencers} influencer(s) could not be deleted (linked to campaigns or finance).`
       : "";
 
+  const discoveryNote =
+    discovery.deletedDiscoveredProfiles > 0 || discovery.deletedProfilePosts > 0
+      ? ` Deleted ${discovery.deletedDiscoveredProfiles} discovery profile(s) and ${discovery.deletedProfilePosts} profile post(s).`
+      : options?.alsoDeleteDiscoveryProfiles
+        ? " No discovery profiles found."
+        : "";
+
   return {
     ok: true,
-    message: `Deleted ${deletedInfluencers} CSV-imported creator(s) and ${deletedPlatformAccounts} platform account(s).${skippedNote}`,
+    message: `Deleted ${deletedInfluencers} CSV-imported creator(s) and ${deletedPlatformAccounts} platform account(s).${skippedNote}${discoveryNote}`,
     deletedInfluencers,
     deletedPlatformAccounts,
     deletedEnrichmentRuns: enrichmentRunCount ?? 0,
     deletedCreatorSources: creatorSourceCount ?? 0,
     skippedInfluencers,
+    ...discovery,
   };
 }

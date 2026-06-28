@@ -24,6 +24,16 @@ import {
 } from "./schemas";
 import type { CreatorImportUploadResult } from "./types";
 
+const EMPTY_RESET_RESULT_COUNTS = {
+  deletedInfluencers: 0,
+  deletedPlatformAccounts: 0,
+  deletedEnrichmentRuns: 0,
+  deletedCreatorSources: 0,
+  skippedInfluencers: 0,
+  deletedDiscoveredProfiles: 0,
+  deletedProfilePosts: 0,
+} satisfies Omit<ResetDemoImportedCreatorsResult, "ok" | "message">;
+
 async function requireAuthUser() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -59,16 +69,18 @@ async function rollbackOrphanedImportObject(storagePath: string): Promise<void> 
   }
 }
 
-export async function resetDemoImportedCreatorsAction(): Promise<ResetDemoImportedCreatorsResult> {
+export type ResetDemoImportedCreatorsActionInput = {
+  alsoDeleteDiscoveryProfiles?: boolean;
+};
+
+export async function resetDemoImportedCreatorsAction(
+  input?: ResetDemoImportedCreatorsActionInput
+): Promise<ResetDemoImportedCreatorsResult> {
   if (!isDemoResetEnabled()) {
     return {
       ok: false,
       message: "Demo reset is disabled in production.",
-      deletedInfluencers: 0,
-      deletedPlatformAccounts: 0,
-      deletedEnrichmentRuns: 0,
-      deletedCreatorSources: 0,
-      skippedInfluencers: 0,
+      ...EMPTY_RESET_RESULT_COUNTS,
     };
   }
 
@@ -78,29 +90,27 @@ export async function resetDemoImportedCreatorsAction(): Promise<ResetDemoImport
     return {
       ok: false,
       message: auth.error,
-      deletedInfluencers: 0,
-      deletedPlatformAccounts: 0,
-      deletedEnrichmentRuns: 0,
-      deletedCreatorSources: 0,
-      skippedInfluencers: 0,
+      ...EMPTY_RESET_RESULT_COUNTS,
     };
   }
 
   try {
     const admin = createSupabaseAdminClient();
-    const result = await resetDemoImportedCreators(admin);
+    const result = await resetDemoImportedCreators(admin, {
+      alsoDeleteDiscoveryProfiles: input?.alsoDeleteDiscoveryProfiles === true,
+    });
     revalidatePath("/discovery/import");
+    if (input?.alsoDeleteDiscoveryProfiles) {
+      revalidatePath("/discovery/search");
+      revalidatePath("/discovery");
+    }
     return result;
   } catch (error) {
     return {
       ok: false,
       message:
         error instanceof Error ? error.message : "Failed to reset demo creators.",
-      deletedInfluencers: 0,
-      deletedPlatformAccounts: 0,
-      deletedEnrichmentRuns: 0,
-      deletedCreatorSources: 0,
-      skippedInfluencers: 0,
+      ...EMPTY_RESET_RESULT_COUNTS,
     };
   }
 }
