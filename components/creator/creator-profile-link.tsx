@@ -69,6 +69,8 @@ export type CreatorProfileLinkProps = {
   showHandle?: boolean;
   showPlatformBadge?: boolean;
   showExternalIcon?: boolean;
+  /** When false, display name is plain text (e.g. row click opens detail sheet). Default true. */
+  linkName?: boolean;
   stopPropagation?: boolean;
   className?: string;
   nameClassName?: string;
@@ -171,6 +173,7 @@ export function CreatorProfileLink({
   showHandle = true,
   showPlatformBadge = true,
   showExternalIcon = false,
+  linkName = true,
   stopPropagation = false,
   className,
   nameClassName,
@@ -210,7 +213,7 @@ export function CreatorProfileLink({
 
   const nameNode = showName ? (
     <div className="flex min-w-0 items-center gap-1.5">
-      {profileUrl ? (
+      {profileUrl && linkName ? (
         <ProfileExternalLink
           href={profileUrl}
           tooltip={tooltip}

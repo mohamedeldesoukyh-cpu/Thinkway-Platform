@@ -281,6 +281,7 @@ export function CreatorDetailSheet({
               showAvatar={false}
               showHandle={false}
               showPlatformBadge={false}
+              linkName={false}
               nameClassName="text-lg font-semibold tracking-tight"
               stopPropagation
             />
