@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  ftsRankMap,
+  searchDiscoveredProfileIdsByFts,
+} from "@/lib/creators/fts-search";
 import { isSyntheticCreatorUsername } from "@/lib/discovery/demo-data";
 import type {
   DiscoverySearchFilters,
@@ -17,12 +21,18 @@ export async function searchDiscoveredProfiles(
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? DEFAULT_PAGE_SIZE));
   const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const searchQuery = filters.q?.trim() ?? "";
+  const ftsHits = searchQuery
+    ? await searchDiscoveredProfileIdsByFts(supabase, searchQuery, 1000)
+    : [];
+  const rankByProfileId = ftsRankMap(ftsHits);
 
-  let query = supabase
-    .from("discovered_profiles")
-    .select(
-      `
+  if (searchQuery && ftsHits.length === 0) {
+    return { profiles: [], total: 0, page, pageSize };
+  }
+
+  let query = supabase.from("discovered_profiles").select(
+    `
       *,
       profile_metrics (
         followers, following, posts_count, avg_likes, avg_comments,
@@ -35,10 +45,17 @@ export async function searchDiscoveredProfiles(
         influencer_summary, audience_persona, content_style, scored_at
       )
     `,
-      { count: "exact" }
-    )
-    .order("updated_at", { ascending: false })
-    .range(from, to);
+    { count: searchQuery ? undefined : "exact" }
+  );
+
+  if (searchQuery) {
+    query = query.in(
+      "id",
+      ftsHits.map((hit) => hit.id)
+    );
+  } else {
+    query = query.order("updated_at", { ascending: false }).range(from, from + pageSize - 1);
+  }
 
   if (filters.platform) {
     query = query.eq("platform", filters.platform);
@@ -58,13 +75,6 @@ export async function searchDiscoveredProfiles(
   if (filters.stage) {
     query = query.eq("stage", filters.stage);
   }
-  if (filters.q?.trim()) {
-    query = query.textSearch("search_vector", filters.q.trim(), {
-      type: "websearch",
-      config: "simple",
-    });
-  }
-
   const { data, error, count } = await query;
 
   if (error) {
@@ -119,6 +129,24 @@ export async function searchDiscoveredProfiles(
     profiles = profiles.filter(
       (p) => (p.latest_metrics?.avg_views ?? 0) >= filters.minViews!
     );
+  }
+
+  if (searchQuery) {
+    profiles.sort(
+      (a, b) =>
+        (rankByProfileId.get(b.id) ?? 0) - (rankByProfileId.get(a.id) ?? 0)
+    );
+    const totalMatches = profiles.length;
+    profiles = profiles.slice(from, from + pageSize);
+    return {
+      profiles: profiles.map((profile) => ({
+        ...profile,
+        search_rank: rankByProfileId.get(profile.id) ?? null,
+      })),
+      total: totalMatches,
+      page,
+      pageSize,
+    };
   }
 
   return {

@@ -28,7 +28,7 @@ const SORT_VALUE: Record<
   Exclude<CreatorSearchSort, "name">,
   (creator: UnifiedCreatorResult) => number
 > = {
-  relevance: (c) => thinkwayAiScore(c) ?? 0,
+  relevance: (c) => c.search_rank ?? thinkwayAiScore(c) ?? 0,
   followers: (c) => c.metrics.followers.value ?? 0,
   engagement: (c) => c.metrics.engagement_rate.value ?? 0,
   views: (c) => c.metrics.avg_views.value ?? 0,

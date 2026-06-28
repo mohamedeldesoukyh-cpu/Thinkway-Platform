@@ -24,10 +24,15 @@ import type {
 } from "@/lib/creators/types";
 import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
 import { mergeImportedStringArrays } from "@/lib/discovery-import/normalize";
+import { ftsRankMap, searchInfluencerIdsByFts } from "@/lib/creators/fts-search";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 
-function escapeIlikePattern(value: string): string {
-  return value.replace(/[%_\\,]/g, "\\$&");
+async function resolveInternalSearchIds(
+  supabase: SupabaseClient,
+  search: string
+): Promise<Map<string, number>> {
+  const hits = await searchInfluencerIdsByFts(supabase, search, 500);
+  return ftsRankMap(hits);
 }
 
 function tagsFromImportMetadata(
@@ -126,6 +131,11 @@ async function fetchInternalCreators(
   const platform = filters.platform?.trim() ?? "";
   const country = filters.country?.trim().toUpperCase() ?? "";
   const category = filters.category?.trim() ?? "";
+  const searchRankById = search ? await resolveInternalSearchIds(supabase, search) : null;
+
+  if (search && searchRankById && searchRankById.size === 0) {
+    return [];
+  }
 
   let influencerIds: string[] | null = null;
 
@@ -172,14 +182,19 @@ async function fetchInternalCreators(
   if (category) query = query.contains("categories", [category]);
   if (filters.language) query = query.contains("languages", [filters.language]);
 
-  if (search && !platform) {
-    const pattern = `%${escapeIlikePattern(search)}%`;
-    query = query.or(
-      [`display_name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(",")
-    );
+  let scopedIds: string[] | null = null;
+  if (searchRankById) {
+    scopedIds = [...searchRankById.keys()];
   }
-
-  if (influencerIds) query = query.in("id", influencerIds);
+  if (influencerIds) {
+    scopedIds = scopedIds
+      ? scopedIds.filter((id) => influencerIds.includes(id))
+      : influencerIds;
+  }
+  if (scopedIds) {
+    if (scopedIds.length === 0) return [];
+    query = query.in("id", scopedIds);
+  }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -322,7 +337,16 @@ async function fetchInternalCreators(
       last_enriched_at: r.last_enriched_at ?? null,
       enrichment_source: r.enrichment_source ?? null,
       recent_publications: Array.isArray(recentPublications) ? recentPublications : [],
+      search_rank: searchRankById?.get(r.id) ?? null,
     });
+  }
+
+  if (searchRankById) {
+    results.sort(
+      (a, b) =>
+        (b.search_rank ?? 0) - (a.search_rank ?? 0) ||
+        a.display_name.localeCompare(b.display_name)
+    );
   }
 
   return results;
@@ -433,6 +457,8 @@ async function fetchDiscoveryCreators(
           profile_picture_url: profile.profile_image_url,
         },
       ],
+      search_rank:
+        (profile as { search_rank?: number | null }).search_rank ?? null,
     });
   }
 
@@ -451,9 +477,17 @@ export async function browseUnifiedCreators(
     fetchDiscoveryCreators(supabase, filters),
   ]);
 
-  let merged = [...internal, ...discovery].sort(
-    (a, b) => b.thinkway_score - a.thinkway_score
-  );
+  let merged = [...internal, ...discovery];
+
+  if (filters.search?.trim()) {
+    merged.sort(
+      (a, b) =>
+        (b.search_rank ?? 0) - (a.search_rank ?? 0) ||
+        b.thinkway_score - a.thinkway_score
+    );
+  } else {
+    merged.sort((a, b) => b.thinkway_score - a.thinkway_score);
+  }
 
   if (filters.productionOnly !== false) {
     merged = merged.filter(passesProductionCreatorGate);

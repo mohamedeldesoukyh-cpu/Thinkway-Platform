@@ -100,7 +100,7 @@ export function CreatorSearchTopBar({
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search creator by name, username, or keyword"
+            placeholder="Search by name, category, location, hashtags…"
             className="h-8 border-border bg-muted pl-9 text-[12px] focus-visible:border-primary focus-visible:bg-background"
           />
         </div>

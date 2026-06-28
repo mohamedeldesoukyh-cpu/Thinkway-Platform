@@ -94,6 +94,8 @@ export type UnifiedCreatorResult = {
   last_enriched_at?: string | null;
   enrichment_source?: string | null;
   recent_publications?: CreatorRecentPublication[];
+  /** PostgreSQL ts_rank when a full-text search query is active. */
+  search_rank?: number | null;
 };
 
 export type UnifiedCreatorBrowseFilters = {

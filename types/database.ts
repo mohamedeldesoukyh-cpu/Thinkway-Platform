@@ -399,6 +399,7 @@ export type InfluencerRow = {
   tax_registration_number: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
+  search_vector: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -2900,6 +2901,26 @@ export type Database = {
           brand_name_raw: string | null;
           influencer_name_raw: string | null;
           client_type_report: string | null;
+        }[];
+      };
+      search_influencers_fts: {
+        Args: {
+          search_query: string;
+          result_limit?: number;
+        };
+        Returns: {
+          influencer_id: string;
+          rank: number;
+        }[];
+      };
+      search_discovered_profiles_fts: {
+        Args: {
+          search_query: string;
+          result_limit?: number;
+        };
+        Returns: {
+          profile_id: string;
+          rank: number;
         }[];
       };
     };
