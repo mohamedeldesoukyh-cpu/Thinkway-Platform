@@ -4,10 +4,6 @@ import { insertAuditLog } from "@/lib/audit/insert-audit-log";
 import { removeCreatorImportObject } from "@/lib/supabase/storage";
 import type { Database } from "@/types/database";
 
-import {
-  enrichImportedPlatformAccount,
-  queueImportedCreatorEnrichment,
-} from "./enrichment";
 import { parseImportFile } from "./parsers";
 import { downloadCreatorImportFile } from "./storage";
 import type { ImportProcessingLog, ImportProcessingLogEntry } from "./types";
@@ -79,17 +75,10 @@ export async function processCreatorImportFile(
       log,
     });
 
-    const enrichmentQueued = await queueImportedCreatorEnrichment(
-      input.supabase,
-      counters.enrichmentAccountIds,
-      input.importFileId
-    );
-
     log(
       "info",
       `Upsert complete — imported ${counters.imported}, updated ${counters.updated}, duplicate ${counters.duplicate}, failed ${counters.failed}`
     );
-    log("info", `Queued ${enrichmentQueued} enrichment job(s)`);
 
     let storagePathAfterProcessing: string | null = importFile.storage_path;
     const metadataAfterProcessing: Record<string, unknown> =
@@ -121,7 +110,7 @@ export async function processCreatorImportFile(
       parser: parsed.parser,
       file_type: importFile.file_type,
       duration_ms: Date.now() - startedAt,
-      enrichment_queued: enrichmentQueued,
+      enrichment_queued: 0,
       errors,
       entries,
     };
