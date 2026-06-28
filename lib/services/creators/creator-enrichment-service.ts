@@ -40,6 +40,8 @@ export type CreatorMetricsSyncStatus =
 export type RefreshCreatorMetricsOptions = {
   /** Bypass the 30-day freshness skip. Default true for explicit Refresh Metrics. */
   force?: boolean;
+  /** Discovery refresh — always overwrite Apify metrics despite manual override. */
+  bypassMetricsManualOverride?: boolean;
   trigger?: EnrichmentTrigger;
   requestedBy?: string | null;
   discoveredProfileId?: string | null;
@@ -181,6 +183,7 @@ function buildJobPayload(
     trigger,
     priority: priorityForTrigger(trigger),
     force: options.force ?? true,
+    bypassMetricsManualOverride: options.bypassMetricsManualOverride ?? false,
     requestedBy: options.requestedBy ?? null,
   };
 }

@@ -45,21 +45,32 @@ function isEmpty(value: unknown): boolean {
  * Merge incoming enriched fields onto existing field sources, honoring manual
  * protection and recording transparency sources.
  */
+export type MergeSourcedFieldsOptions = {
+  /** Skip manual protection for these fields (Discovery Apify refresh). */
+  ignoreManualProtectionFor?: readonly string[];
+};
+
 export function mergeSourcedFields(
   existingSources: FieldSourceMap | null | undefined,
-  incoming: IncomingField[]
+  incoming: IncomingField[],
+  options?: MergeSourcedFieldsOptions
 ): MergeResult {
   const fieldSources: FieldSourceMap = { ...(existingSources ?? {}) };
   const updates: Record<string, unknown> = {};
   const fieldsUpdated: string[] = [];
   const manualProtected: string[] = [];
+  const ignoreManual = new Set(options?.ignoreManualProtectionFor ?? []);
 
   for (const item of incoming) {
     // Never overwrite with empty/null — keeps existing data intact.
     if (isEmpty(item.value)) continue;
 
     // MANUAL PROTECTION: a manually-sourced field is locked from automation.
-    if (fieldSources[item.field] === "manual" && item.source !== "manual") {
+    if (
+      fieldSources[item.field] === "manual" &&
+      item.source !== "manual" &&
+      !ignoreManual.has(item.field)
+    ) {
       manualProtected.push(item.field);
       continue;
     }

@@ -41,11 +41,20 @@ type PlatformAccountRow = {
   username: string | null;
   profile_url: string | null;
   follower_count: number | null;
+  engagement_rate: number | null;
   metrics_is_manual_override: boolean | null;
   field_sources: FieldSourceMap | null;
 };
 
 const APIFY: FieldSource = "apify";
+
+const APIFY_METRIC_FIELDS = [
+  "follower_count",
+  "engagement_rate",
+  "avg_views",
+  "avg_likes",
+  "avg_comments",
+] as const;
 
 function logCreatorEnrichment(event: string, data: Record<string, unknown>): void {
   console.log(`[creator-enrichment:service] ${event}`, JSON.stringify(data));
@@ -149,7 +158,7 @@ export async function runCreatorEnrichment(
   const { data: accountsData, error: accountsError } = await supabase
     .from("influencer_platform_accounts")
     .select(
-      "id, platform, handle, username, profile_url, follower_count, metrics_is_manual_override, field_sources"
+      "id, platform, handle, username, profile_url, follower_count, engagement_rate, metrics_is_manual_override, field_sources"
     )
     .eq("influencer_id", payload.influencerId);
 
@@ -162,6 +171,7 @@ export async function runCreatorEnrichment(
   let topFollowers = 0;
   let lastApifyRunId: string | null = null;
   const errors: string[] = [];
+  const bypassMetricsOverride = Boolean(payload.bypassMetricsManualOverride);
 
   for (const account of accounts) {
     const profileUrl = profileUrlFor(account);
@@ -213,9 +223,10 @@ export async function runCreatorEnrichment(
     const data = fetched.data;
     lastApifyRunId = data.apifyRunId ?? lastApifyRunId;
 
-    // metrics_is_manual_override hard-locks the core numeric metrics regardless
-    // of field_sources (legacy manual flag — respected for back-compat).
-    const manualLock = Boolean(account.metrics_is_manual_override);
+    // metrics_is_manual_override hard-locks core numeric metrics unless Discovery
+    // explicitly forces a live Apify refresh (bypassMetricsManualOverride).
+    const manualLock =
+      !bypassMetricsOverride && Boolean(account.metrics_is_manual_override);
 
     const incoming: IncomingField[] = [
       { field: "profile_display_name", value: data.displayName, source: APIFY },
@@ -247,7 +258,29 @@ export async function runCreatorEnrichment(
       );
     }
 
-    const merged = mergeSourcedFields(account.field_sources, incoming);
+    const merged = mergeSourcedFields(account.field_sources, incoming, {
+      ignoreManualProtectionFor: bypassMetricsOverride ? APIFY_METRIC_FIELDS : undefined,
+    });
+
+    if (bypassMetricsOverride && (data.followers != null || data.engagementRate != null)) {
+      logCreatorEnrichment("Apify metrics override applied", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        previousFollowers: account.follower_count,
+        newFollowers: data.followers,
+        previousEngagement: account.engagement_rate,
+        newEngagement: data.engagementRate,
+        overrideApplied: Boolean(account.metrics_is_manual_override),
+      });
+    }
+
+    if (data.recentPublications.length > 0) {
+      logCreatorEnrichment("Sample recent publication", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        samplePublication: data.recentPublications[0],
+      });
+    }
 
     if (merged.fieldsUpdated.length > 0) {
       const nowIso = new Date().toISOString();

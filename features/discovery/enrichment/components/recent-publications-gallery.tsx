@@ -25,14 +25,37 @@ function captionSnippet(caption: string | null | undefined): string {
   return trimmed.length > 90 ? `${trimmed.slice(0, 87)}…` : trimmed;
 }
 
+type PublicationThumbnailSource = CreatorRecentPublication & {
+  thumbnailSrc?: string | null;
+  displayUrl?: string | null;
+  imageUrl?: string | null;
+  previewUrl?: string | null;
+  thumbnailUrl?: string | null;
+  displayResource?: { src?: string | null } | null;
+};
+
+function resolvePublicationThumbnail(publication: PublicationThumbnailSource): string | null {
+  return (
+    publication.thumbnail ??
+    publication.thumbnailSrc ??
+    publication.displayUrl ??
+    publication.imageUrl ??
+    publication.previewUrl ??
+    publication.thumbnailUrl ??
+    publication.displayResource?.src ??
+    null
+  );
+}
+
 function PublicationCard({ publication }: { publication: CreatorRecentPublication }) {
+  const thumbnailUrl = resolvePublicationThumbnail(publication);
   const content = (
     <>
       <div className="relative aspect-square overflow-hidden bg-muted">
-        {publication.thumbnail ? (
+        {thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={publication.thumbnail}
+            src={thumbnailUrl}
             alt=""
             className="size-full object-cover transition-transform group-hover:scale-[1.02]"
             loading="lazy"
@@ -110,7 +133,11 @@ export function RecentPublicationsGallery({
     <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", className)}>
       {publications.map((publication, index) => (
         <PublicationCard
-          key={publication.url ?? publication.thumbnail ?? `pub-${index}`}
+          key={
+            publication.url ??
+            resolvePublicationThumbnail(publication) ??
+            `pub-${index}`
+          }
           publication={publication}
         />
       ))}

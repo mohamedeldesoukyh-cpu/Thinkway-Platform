@@ -141,11 +141,12 @@ function toRecentPublications(rows: Record<string, unknown>[]): RecentPublicatio
     .map((row) => ({
       url: str(row.url) ?? str(row.postPage) ?? str(row.webVideoUrl) ?? null,
       thumbnail:
-        str(row.displayUrl) ??
-        str(row.thumbnailUrl) ??
         str(row.thumbnailSrc) ??
+        str(row.displayUrl) ??
         str(row.imageUrl) ??
         str(row.previewUrl) ??
+        str(row.thumbnailUrl) ??
+        str(record(row.displayResource)?.src) ??
         str(row.coverUrl) ??
         null,
       likes: num(row.likesCount) ?? num(row.diggCount) ?? num(row.likes),
@@ -440,6 +441,7 @@ export async function fetchApifyProfile(input: {
       engagementRate: data.engagementRate,
       recentPublications: data.recentPublications.length,
       displayName: data.displayName,
+      samplePublication: data.recentPublications[0] ?? null,
     });
 
     return { ok: true, data };
