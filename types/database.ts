@@ -2194,6 +2194,36 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["discovery_jobs"]["Insert"]>;
         Relationships: [];
       };
+      discovery_search_analytics: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          event_type: string;
+          query: string | null;
+          intent_mode: string | null;
+          confidence: number | null;
+          latency_ms: number | null;
+          results_count: number | null;
+          creator_unified_id: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          event_type: string;
+          query?: string | null;
+          intent_mode?: string | null;
+          confidence?: number | null;
+          latency_ms?: number | null;
+          results_count?: number | null;
+          creator_unified_id?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["discovery_search_analytics"]["Insert"]>;
+        Relationships: [];
+      };
       discovery_shortlists: {
         Row: {
           id: string;
@@ -2760,6 +2790,12 @@ export type Database = {
           categorized_creators: number;
           category_label: string;
           category_count: number;
+        }[];
+      };
+      get_discovery_search_taxonomy: {
+        Args: Record<string, never>;
+        Returns: {
+          term: string;
         }[];
       };
     };

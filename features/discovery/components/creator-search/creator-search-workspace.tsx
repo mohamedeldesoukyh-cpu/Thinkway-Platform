@@ -71,6 +71,20 @@ import {
   resolveCreatorSearchQueryFromCreator,
   upsertCreatorInResults,
 } from "@/lib/discovery/creator-search-query";
+import { filterExactCreatorMatches } from "./creator-search-exact-match";
+import {
+  buildCreatorSearchHybridListItems,
+  countCreatorSearchHybridResults,
+} from "./creator-search-hybrid-sections";
+import {
+  scoreCreatorSearchIntent,
+  simplifyCreatorSearchQuery,
+} from "./creator-search-intent-engine";
+import type { DiscoverySearchTaxonomy } from "./creator-search-taxonomy";
+import {
+  createDiscoverySearchAnalyticsTracker,
+  type DiscoverySearchAnalyticsTracker,
+} from "@/features/discovery/search-analytics";
 import { exportCreatorsCsv, sortCreators, stashCompareQueue } from "./creator-search-utils";
 import { stashDiscoverySelection } from "./discovery-selection-storage";
 import {
@@ -78,15 +92,19 @@ import {
 } from "@/features/creators/picker/creator-selection-hooks";
 
 const PAGE_SIZE = 50;
-const SEARCH_DEBOUNCE_MS = 250;
 const SAVED_SEARCH_KEY = "thinkway:creator-search-saved:v1";
 
 type Props = {
   shortlists: Array<{ id: string; name: string }>;
   campaigns: ShortlistCampaignOption[];
+  searchTaxonomy: DiscoverySearchTaxonomy;
 };
 
-export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaigns }: Props) {
+export function CreatorSearchWorkspace({
+  shortlists: initialShortlists,
+  campaigns,
+  searchTaxonomy,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -97,7 +115,6 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     ...DEFAULT_CREATOR_SEARCH_FILTERS,
     categories: initialCategories,
   }));
-  const [search, setSearch] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [sort, setSort] = useState<CreatorSearchSortState>(DEFAULT_CREATOR_SEARCH_SORT);
   const [page, setPage] = useState(1);
@@ -131,13 +148,14 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   >(() => new Map());
   const loadMoreObserver = useRef<IntersectionObserver | null>(null);
   const filtersRef = useRef(filters);
-  const searchRef = useRef(search);
   const reqIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const skipCategoryUrlWriteRef = useRef(false);
   const skipSearchUrlWriteRef = useRef(false);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pinnedCreatorsRef = useRef<Map<string, UnifiedCreatorResult>>(new Map());
+  const searchRef = useRef(initialSearch);
+  const searchStartedAtRef = useRef<number | null>(null);
+  const analyticsRef = useRef<DiscoverySearchAnalyticsTracker | null>(null);
 
   filtersRef.current = filters;
   searchRef.current = debouncedSearch;
@@ -147,7 +165,6 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
 
   // URL → search (back/forward, refresh)
   useEffect(() => {
-    setSearch((prev) => (prev === searchFromUrl ? prev : searchFromUrl));
     setDebouncedSearch((prev) => (prev === searchFromUrl ? prev : searchFromUrl));
     skipSearchUrlWriteRef.current = true;
   }, [searchFromUrl]);
@@ -211,16 +228,9 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid replace loop on navigation
   }, [debouncedSearch, pathname, router]);
 
-  // Debounce search input (250ms live search)
-  useEffect(() => {
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    };
-  }, [search]);
+  const handleDebouncedSearchChange = useCallback((value: string) => {
+    setDebouncedSearch((prev) => (prev === value ? prev : value));
+  }, []);
 
   const selectedCreators = useMemo(
     () => [...selectedCreatorMap.values()],
@@ -246,10 +256,52 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     stashDiscoverySelection(selectedCreators);
   }, [selectedCreators]);
 
+  const searchIntent = useMemo(
+    () => scoreCreatorSearchIntent(debouncedSearch, searchTaxonomy),
+    [debouncedSearch, searchTaxonomy]
+  );
+  const isExactCreatorSearch = searchIntent.mode === "exact";
+  const isHybridCreatorSearch = searchIntent.mode === "hybrid";
+
   const sortedCreators = useMemo(() => sortCreators(creators, sort), [creators, sort]);
+  const exactMatches = useMemo(() => {
+    if (!debouncedSearch.trim()) return [];
+    if (searchIntent.mode === "discovery") return [];
+    return filterExactCreatorMatches(sortedCreators, debouncedSearch);
+  }, [debouncedSearch, searchIntent.mode, sortedCreators]);
+
+  const displayCreators = useMemo(() => {
+    if (!debouncedSearch.trim() || searchIntent.mode === "discovery") return sortedCreators;
+    if (isExactCreatorSearch) return exactMatches;
+    return sortedCreators;
+  }, [debouncedSearch, exactMatches, isExactCreatorSearch, searchIntent.mode, sortedCreators]);
+
+  const hybridListItems = useMemo(() => {
+    if (!isHybridCreatorSearch || !debouncedSearch.trim()) return undefined;
+    return buildCreatorSearchHybridListItems({
+      exactMatches,
+      allCreators: sortedCreators,
+    });
+  }, [debouncedSearch, exactMatches, isHybridCreatorSearch, sortedCreators]);
+
+  const resultCount = useMemo(() => {
+    if (hybridListItems) return countCreatorSearchHybridResults(hybridListItems);
+    return displayCreators.length;
+  }, [displayCreators.length, hybridListItems]);
+
+  const exactCreatorZeroMatch =
+    isExactCreatorSearch &&
+    !loading &&
+    debouncedSearch.trim().length > 0 &&
+    exactMatches.length === 0;
+  const canSimplifyExactQuery = useMemo(() => {
+    const simplified = simplifyCreatorSearchQuery(debouncedSearch);
+    return simplified.length > 0 && simplified !== debouncedSearch.trim();
+  }, [debouncedSearch]);
+
   const visibleCreatorIds = useMemo(
-    () => sortedCreators.map((c) => c.unified_id),
-    [sortedCreators]
+    () => displayCreators.map((c) => c.unified_id),
+    [displayCreators]
   );
   const inFlightCreators = useMemo(
     () =>
@@ -273,15 +325,21 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
 
     const requestId = ++reqIdRef.current;
     if (append) setLoadingMore(true);
-    else setLoading(true);
+    else {
+      setLoading(true);
+      searchStartedAtRef.current = performance.now();
+    }
     setError(null);
+
+    const queryAtFetch = searchRef.current;
+    const intentAtFetch = scoreCreatorSearchIntent(queryAtFetch, searchTaxonomy);
 
     try {
       if (controller.signal.aborted) return;
 
       const mergedFilters: CreatorSearchFilters = {
         ...filtersRef.current,
-        search: searchRef.current,
+        search: queryAtFetch,
       };
       const result = await browseUnifiedCreatorsAction(
         filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE)
@@ -296,24 +354,66 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
         filtered = upsertCreatorInResults(filtered, pinned).creators;
       }
 
-      setTotal(Math.max(result.total, filtered.length));
-      setCreators((prev) => {
-        const next = append ? [...prev, ...filtered] : filtered;
-        const unique = new Map(next.map((c) => [c.unified_id, c]));
-        return [...unique.values()];
+      const latencyMs =
+        searchStartedAtRef.current != null
+          ? Math.round(performance.now() - searchStartedAtRef.current)
+          : 0;
+
+      startTransition(() => {
+        setTotal(Math.max(result.total, filtered.length));
+        setCreators((prev) => {
+          const next = append ? [...prev, ...filtered] : filtered;
+          const unique = new Map(next.map((c) => [c.unified_id, c]));
+          return [...unique.values()];
+        });
+        setHasMore(result.has_more ?? pageNum * PAGE_SIZE < result.total);
       });
-      setHasMore(result.has_more ?? pageNum * PAGE_SIZE < result.total);
+
+      if (!append && queryAtFetch.trim()) {
+        const exactOnly =
+          intentAtFetch.mode === "exact"
+            ? filterExactCreatorMatches(filtered, queryAtFetch)
+            : [];
+        const resultsCount =
+          intentAtFetch.mode === "exact"
+            ? exactOnly.length
+            : filtered.length;
+
+        analyticsRef.current?.trackSearchExecuted({
+          query: queryAtFetch,
+          intentMode: intentAtFetch.mode,
+          confidence: intentAtFetch.confidence,
+          resultsCount,
+          latencyMs,
+        });
+      }
     } catch (err) {
       if (controller.signal.aborted || requestId !== reqIdRef.current) return;
       const message = err instanceof Error ? err.message : "Search failed";
-      if (!append) setError(message);
+      startTransition(() => {
+        if (!append) setError(message);
+      });
       toast.error(message);
     } finally {
       if (controller.signal.aborted || requestId !== reqIdRef.current) return;
-      setLoading(false);
-      setLoadingMore(false);
+      startTransition(() => {
+        setLoading(false);
+        setLoadingMore(false);
+      });
     }
+  }, [searchTaxonomy, startTransition]);
+
+  useEffect(() => {
+    analyticsRef.current = createDiscoverySearchAnalyticsTracker();
+    return () => {
+      analyticsRef.current?.dispose();
+      analyticsRef.current = null;
+    };
   }, []);
+
+  useEffect(() => {
+    analyticsRef.current?.trackQueryCleared(debouncedSearch);
+  }, [debouncedSearch]);
 
   const runSearch = useCallback(
     (immediateQuery?: string) => {
@@ -321,7 +421,6 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
       if (immediateQuery !== undefined) {
         const normalizedQuery = normalizeDiscoverySearchQuery(immediateQuery);
         searchRef.current = normalizedQuery;
-        setSearch(normalizedQuery);
         setDebouncedSearch(normalizedQuery);
       }
       setPage(1);
@@ -385,7 +484,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     [hasMore, loading, loadingMore]
   );
 
-  function handleToggleSelect(creator: UnifiedCreatorResult) {
+  const handleToggleSelect = useCallback((creator: UnifiedCreatorResult) => {
     toggle(creator.unified_id);
     setSelectedCreatorMap((prev) => {
       const next = new Map(prev);
@@ -393,9 +492,9 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
       else next.set(creator.unified_id, creator);
       return next;
     });
-  }
+  }, [toggle]);
 
-  function handleToggleSelectAll() {
+  const handleToggleSelectAll = useCallback(() => {
     const allSelected =
       visibleCreatorIds.length > 0 && visibleCreatorIds.every((id) => selectedIds.has(id));
     toggleAllVisible(visibleCreatorIds);
@@ -404,7 +503,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
       if (allSelected) {
         for (const id of visibleCreatorIds) next.delete(id);
       } else {
-        for (const creator of sortedCreators) {
+        for (const creator of displayCreators) {
           if (visibleCreatorIds.includes(creator.unified_id)) {
             next.set(creator.unified_id, creator);
           }
@@ -412,7 +511,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
       }
       return next;
     });
-  }
+  }, [displayCreators, selectedIds, toggleAllVisible, visibleCreatorIds]);
 
   function openAddToShortlistModal(
     targets: UnifiedCreatorResult[],
@@ -462,14 +561,14 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     });
   }
 
-  function handleAddCreatorToList(creator: UnifiedCreatorResult) {
+  const handleAddCreatorToList = useCallback((creator: UnifiedCreatorResult) => {
     if (needsPlatformAccountSelection(creator)) {
       setPendingShortlistCreator(creator);
       setPlatformSelectOpen(true);
       return;
     }
     openAddToShortlistModal([creator]);
-  }
+  }, []);
 
   function handleConfirmPlatformAccounts(platformAccountIds: string[]) {
     if (!pendingShortlistCreator) return;
@@ -592,7 +691,6 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     const normalized = normalizeDiscoverySearchQuery(query);
     if (!normalized || searchRef.current === normalized) return;
     searchRef.current = normalized;
-    setSearch(normalized);
     setDebouncedSearch(normalized);
   }
 
@@ -610,6 +708,12 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   }
 
   function handleMissingCreatorAdded(creator: UnifiedCreatorResult) {
+    analyticsRef.current?.trackAddMissingCreator({
+      query: debouncedSearch,
+      intentMode: searchIntent.mode,
+      confidence: searchIntent.confidence,
+    });
+
     const query =
       resolveCreatorSearchQueryFromCreator(creator) ||
       normalizeDiscoverySearchQuery(searchRef.current);
@@ -778,7 +882,6 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
 
   function clearAllFilters() {
     setFilters(DEFAULT_CREATOR_SEARCH_FILTERS);
-    setSearch("");
     setDebouncedSearch("");
   }
 
@@ -786,7 +889,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     try {
       localStorage.setItem(
         SAVED_SEARCH_KEY,
-        JSON.stringify({ search, filters, savedAt: new Date().toISOString() })
+        JSON.stringify({ search: debouncedSearch, filters, savedAt: new Date().toISOString() })
       );
       toast.success("Search saved on this device");
     } catch {
@@ -794,16 +897,35 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
     }
   }
 
+  const handleOpenCreator = useCallback(
+    (creator: UnifiedCreatorResult) => {
+      analyticsRef.current?.trackCreatorClicked({
+        query: debouncedSearch,
+        intentMode: searchIntent.mode,
+        confidence: searchIntent.confidence,
+        creatorUnifiedId: creator.unified_id,
+      });
+      setDetailCreator(creator);
+    },
+    [debouncedSearch, searchIntent.confidence, searchIntent.mode]
+  );
+
+  const handleSearchWithFewerWords = useCallback(() => {
+    const simplified = simplifyCreatorSearchQuery(debouncedSearch);
+    if (!simplified) return;
+    runSearch(simplified);
+  }, [debouncedSearch, runSearch]);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <CreatorSearchTopBar
-        search={search}
-        onSearchChange={setSearch}
-        onSearchSubmit={() => runSearch(search)}
+        searchQuery={debouncedSearch}
+        onDebouncedSearchChange={handleDebouncedSearchChange}
+        onSearchSubmit={runSearch}
         sort={sort}
         onSortChange={setSort}
-        total={total}
-        loadedCount={creators.length}
+        total={isExactCreatorSearch ? resultCount : total}
+        loadedCount={isExactCreatorSearch ? resultCount : creators.length}
         onSaveSearch={handleSaveSearch}
         onCreateList={() => setCreateListOpen(true)}
         loading={loading || isPending}
@@ -811,7 +933,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
 
       <CreatorSearchFilterBar
         filters={filters}
-        search={search}
+        search={debouncedSearch}
         onChange={setFilters}
         onClearAll={clearAllFilters}
         onOpenAllFilters={() => setFiltersDrawerOpen(true)}
@@ -862,19 +984,21 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
         )}
       >
         <CreatorSearchResultList
-          creators={sortedCreators}
+          creators={displayCreators}
+          hybridListItems={hybridListItems}
+          searchMode={searchIntent.mode}
           sort={sort}
           onSortChange={setSort}
           platformFilter={filters.platforms}
           loading={loading}
           loadingMore={loadingMore}
-          hasMore={hasMore}
+          hasMore={isExactCreatorSearch ? false : hasMore}
           error={error}
-          total={total}
+          total={isExactCreatorSearch ? resultCount : total}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
           onToggleSelectAll={handleToggleSelectAll}
-          onOpenCreator={setDetailCreator}
+          onOpenCreator={handleOpenCreator}
           onAddToList={handleAddCreatorToList}
           onRefreshMetrics={handleRefreshMetricsForCreator}
           onStopRefresh={handleStopRefreshForCreator}
@@ -882,7 +1006,13 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
           inFlightCount={inFlightCreators.length}
           onRetry={runSearch}
           loadMoreRef={loadMoreRef}
-          showAddMissingCreator={debouncedSearch.trim().length > 0}
+          showAddMissingCreator={
+            debouncedSearch.trim().length > 0 && !exactCreatorZeroMatch
+          }
+          exactCreatorEmptyState={exactCreatorZeroMatch}
+          searchQuery={debouncedSearch}
+          canSimplifyExactQuery={canSimplifyExactQuery}
+          onSearchWithFewerWords={handleSearchWithFewerWords}
           onMissingCreatorAdded={handleMissingCreatorAdded}
           onMissingCreatorEnrichmentStatusChange={patchCreatorEnrichmentStatus}
           onMissingCreatorUpdated={handleMissingCreatorUpdated}

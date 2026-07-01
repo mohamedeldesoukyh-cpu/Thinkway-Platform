@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -177,7 +177,7 @@ export type CreatorResultRowProps = {
 };
 
 /** Shared Discovery creator row — used by Search and Shortlist workspaces. */
-export function CreatorResultRow({
+export const CreatorResultRow = memo(function CreatorResultRow({
   creator,
   rank,
   selected,
@@ -347,7 +347,7 @@ export function CreatorResultRow({
       </div>
     </div>
   );
-}
+});
 
 type HeaderColumn = {
   key: string;

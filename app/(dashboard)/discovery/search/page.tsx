@@ -8,11 +8,13 @@ import {
   getCampaignOptionsForShortlist,
   getDiscoveryShortlists,
 } from "@/features/discovery/queries";
+import { getDiscoverySearchTaxonomy } from "@/lib/discovery/search-taxonomy";
 
 export default async function CreatorSearchPage() {
-  const [shortlists, campaigns] = await Promise.all([
+  const [shortlists, campaigns, searchTaxonomy] = await Promise.all([
     getDiscoveryShortlists(),
     getCampaignOptionsForShortlist(),
+    getDiscoverySearchTaxonomy(),
   ]);
 
   return (
@@ -33,7 +35,11 @@ export default async function CreatorSearchPage() {
                 </div>
               }
             >
-              <CreatorSearchWorkspace shortlists={shortlists} campaigns={campaigns} />
+              <CreatorSearchWorkspace
+                shortlists={shortlists}
+                campaigns={campaigns}
+                searchTaxonomy={searchTaxonomy}
+              />
             </Suspense>
           </div>
         </div>

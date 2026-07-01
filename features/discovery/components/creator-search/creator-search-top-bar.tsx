@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   ArrowDownIcon,
   ArrowUpDownIcon,
@@ -11,6 +12,8 @@ import {
   SparklesIcon,
 } from "lucide-react";
 import Link from "next/link";
+
+import { useDebouncedValue } from "@/features/creators/picker/creator-selection-hooks";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,10 +37,13 @@ import {
   type CreatorSearchSortState,
 } from "./creator-search-types";
 
+const SEARCH_DEBOUNCE_MS = 250;
+
 type Props = {
-  search: string;
-  onSearchChange: (value: string) => void;
-  onSearchSubmit: () => void;
+  /** External query (URL, clear filters, programmatic sync). */
+  searchQuery: string;
+  onDebouncedSearchChange: (value: string) => void;
+  onSearchSubmit: (value: string) => void;
   sort: CreatorSearchSortState;
   onSortChange: (value: CreatorSearchSortState) => void;
   total: number;
@@ -48,8 +54,8 @@ type Props = {
 };
 
 export function CreatorSearchTopBar({
-  search,
-  onSearchChange,
+  searchQuery,
+  onDebouncedSearchChange,
   onSearchSubmit,
   sort,
   onSortChange,
@@ -59,6 +65,16 @@ export function CreatorSearchTopBar({
   onCreateList,
   loading,
 }: Props) {
+  const [draftSearch, setDraftSearch] = useState(searchQuery);
+  const debouncedDraft = useDebouncedValue(draftSearch, SEARCH_DEBOUNCE_MS);
+
+  useEffect(() => {
+    setDraftSearch(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    onDebouncedSearchChange(debouncedDraft);
+  }, [debouncedDraft, onDebouncedSearchChange]);
   return (
     <div className="shrink-0 border-b border-border bg-background px-3 py-2 md:px-4">
       <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between">
@@ -101,7 +117,7 @@ export function CreatorSearchTopBar({
         className="mt-1.5 flex gap-1.5"
         onSubmit={(e) => {
           e.preventDefault();
-          onSearchSubmit();
+          onSearchSubmit(draftSearch);
         }}
       >
         <div className="relative min-w-0 flex-1">
@@ -113,11 +129,10 @@ export function CreatorSearchTopBar({
             />
           ) : null}
           <Input
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={draftSearch}
+            onChange={(e) => setDraftSearch(e.target.value)}
             placeholder="Search by name, category, location, hashtags…"
             className="h-8 border-border bg-muted pl-9 pr-9 text-[12px] focus-visible:border-primary focus-visible:bg-background"
-            disabled={loading}
           />
         </div>
 

@@ -2,7 +2,7 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Loader2Icon, RotateCwIcon, SearchXIcon } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,17 +12,27 @@ import { resolveCreatorCheckboxState } from "@/features/creators/picker/creator-
 import { AddMissingCreatorEmptyState } from "@/features/discovery/components/add-missing-creator-dialog";
 import type { CreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
 
+import { CreatorSearchExactEmptyState } from "./creator-search-exact-empty-state";
+import {
+  CreatorSearchHybridSectionHeader,
+  type CreatorSearchHybridListItem,
+} from "./creator-search-hybrid-sections";
+import type { CreatorSearchIntentMode } from "./creator-search-intent-engine";
+
 import {
   CreatorResultGridHeader,
   CreatorResultRow,
 } from "../creator-result-row";
 
 const ROW_ESTIMATE = 92;
+const SECTION_ESTIMATE = 52;
 
 import type { CreatorSearchSortState } from "./creator-search-types";
 
 type Props = {
   creators: UnifiedCreatorResult[];
+  hybridListItems?: CreatorSearchHybridListItem[];
+  searchMode?: CreatorSearchIntentMode;
   sort?: CreatorSearchSortState;
   onSortChange?: (sort: CreatorSearchSortState) => void;
   loading: boolean;
@@ -47,6 +57,11 @@ type Props = {
   platformFilter?: string[];
   /** When true, show "Add missing creator" in the empty state. */
   showAddMissingCreator?: boolean;
+  /** Exact-creator lookup with zero handle/name matches (hide fuzzy suggestions). */
+  exactCreatorEmptyState?: boolean;
+  searchQuery?: string;
+  canSimplifyExactQuery?: boolean;
+  onSearchWithFewerWords?: () => void;
   onMissingCreatorAdded?: (creator: UnifiedCreatorResult) => void;
   onMissingCreatorEnrichmentStatusChange?: (
     unifiedId: string,
@@ -54,6 +69,69 @@ type Props = {
   ) => void;
   onMissingCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
 };
+
+type VirtualRowProps = {
+  creator: UnifiedCreatorResult;
+  rank: number;
+  selected: boolean;
+  platformFilter?: string[];
+  onToggleSelect: (creator: UnifiedCreatorResult) => void;
+  onOpenCreator: (creator: UnifiedCreatorResult) => void;
+  onAddToList: (creator: UnifiedCreatorResult) => void;
+  onRefreshMetrics?: (
+    creator: UnifiedCreatorResult,
+    platformAccountId?: string | null
+  ) => void;
+  onStopRefresh?: (creator: UnifiedCreatorResult) => void;
+};
+
+const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
+  creator,
+  rank,
+  selected,
+  platformFilter,
+  onToggleSelect,
+  onOpenCreator,
+  onAddToList,
+  onRefreshMetrics,
+  onStopRefresh,
+}: VirtualRowProps) {
+  const handleToggleSelect = useCallback(
+    () => onToggleSelect(creator),
+    [onToggleSelect, creator]
+  );
+  const handleOpenCreator = useCallback(
+    () => onOpenCreator(creator),
+    [onOpenCreator, creator]
+  );
+  const handleAddToList = useCallback(
+    () => onAddToList(creator),
+    [onAddToList, creator]
+  );
+  const handleRefreshMetrics = useCallback(
+    (platformAccountId?: string | null) => onRefreshMetrics?.(creator, platformAccountId),
+    [onRefreshMetrics, creator]
+  );
+  const handleStopRefresh = useCallback(
+    () => onStopRefresh?.(creator),
+    [onStopRefresh, creator]
+  );
+
+  return (
+    <CreatorResultRow
+      creator={creator}
+      rank={rank}
+      selected={selected}
+      variant="search"
+      platformFilter={platformFilter}
+      onToggleSelect={handleToggleSelect}
+      onOpenCreator={handleOpenCreator}
+      onAddToList={handleAddToList}
+      onRefreshMetrics={onRefreshMetrics ? handleRefreshMetrics : undefined}
+      onStopRefresh={onStopRefresh ? handleStopRefresh : undefined}
+    />
+  );
+});
 
 function ResultSkeleton() {
   return (
@@ -78,6 +156,8 @@ function ResultSkeleton() {
 
 export function CreatorSearchResultList({
   creators,
+  hybridListItems,
+  searchMode = "discovery",
   sort,
   onSortChange,
   loading,
@@ -98,18 +178,41 @@ export function CreatorSearchResultList({
   loadMoreRef,
   platformFilter,
   showAddMissingCreator = false,
+  exactCreatorEmptyState = false,
+  searchQuery = "",
+  canSimplifyExactQuery = false,
+  onSearchWithFewerWords,
   onMissingCreatorAdded,
   onMissingCreatorEnrichmentStatusChange,
   onMissingCreatorUpdated,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const listItems = useMemo<CreatorSearchHybridListItem[]>(() => {
+    if (hybridListItems && hybridListItems.length > 0) return hybridListItems;
+    return creators.map((creator, index) => ({
+      kind: "creator" as const,
+      id: creator.unified_id,
+      creator,
+      rank: index + 1,
+    }));
+  }, [creators, hybridListItems]);
+
+  const visibleCreatorIds = useMemo(
+    () =>
+      listItems
+        .filter((item): item is Extract<CreatorSearchHybridListItem, { kind: "creator" }> => item.kind === "creator")
+        .map((item) => item.creator.unified_id),
+    [listItems]
+  );
+
   const virtualizer = useVirtualizer({
-    count: creators.length,
+    count: listItems.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_ESTIMATE,
+    estimateSize: (index) =>
+      listItems[index]?.kind === "section" ? SECTION_ESTIMATE : ROW_ESTIMATE,
     overscan: 12,
-    getItemKey: (index) => creators[index]?.unified_id ?? index,
+    getItemKey: (index) => listItems[index]?.id ?? index,
   });
 
   useEffect(() => {
@@ -119,10 +222,12 @@ export function CreatorSearchResultList({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset layout when sort identity changes
   }, [sort?.field, sort?.direction]);
 
-  const allSelected = resolveCreatorCheckboxState(
-    creators.map((c) => c.unified_id),
-    selectedIds
+  const allSelected = useMemo(
+    () => resolveCreatorCheckboxState(visibleCreatorIds, selectedIds),
+    [visibleCreatorIds, selectedIds]
   );
+
+  const hasCreators = visibleCreatorIds.length > 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-card">
@@ -131,12 +236,15 @@ export function CreatorSearchResultList({
           checked={allSelected}
           onCheckedChange={onToggleSelectAll}
           aria-label="Select all loaded creators"
-          disabled={creators.length === 0}
+          disabled={!hasCreators}
         />
         <span className="text-[12px] font-medium text-muted-foreground">
-          {loading && creators.length === 0
+          {loading && !hasCreators
             ? "Searching…"
             : `${total.toLocaleString()} ${total === 1 ? "result" : "results"}`}
+          {searchMode === "hybrid" && hasCreators ? (
+            <span className="ml-1 text-muted-foreground/70">· hybrid match</span>
+          ) : null}
         </span>
         {inFlightCount > 0 && onStopAllRefresh ? (
           <Button
@@ -166,70 +274,92 @@ export function CreatorSearchResultList({
               Try again
             </Button>
           </div>
-        ) : loading && creators.length === 0 ? (
+        ) : loading && !hasCreators ? (
           <div>
             <CreatorResultGridHeader variant="search" sort={sort} onSortChange={onSortChange} />
             {Array.from({ length: 8 }).map((_, i) => (
               <ResultSkeleton key={i} />
             ))}
           </div>
-        ) : creators.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-              <SearchXIcon className="size-6 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                {showAddMissingCreator
-                  ? "No creators match your search"
-                  : "No creators match your filters"}
-              </p>
-              <p className="mt-1 max-w-sm text-[12px] text-muted-foreground">
-                {showAddMissingCreator
-                  ? "Try a different spelling or handle, or add the creator by profile link."
-                  : "Try widening the follower range, removing a category, or clearing some filters."}
-              </p>
-            </div>
-            <AddMissingCreatorEmptyState
-              visible={showAddMissingCreator}
-              className="mt-1"
-              onSuccess={onMissingCreatorAdded}
-              onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
-              onCreatorUpdated={onMissingCreatorUpdated}
+        ) : !hasCreators ? (
+          exactCreatorEmptyState ? (
+            <CreatorSearchExactEmptyState
+              query={searchQuery}
+              canSimplifyQuery={canSimplifyExactQuery}
+              onSearchWithFewerWords={() => onSearchWithFewerWords?.()}
+              onMissingCreatorAdded={onMissingCreatorAdded}
+              onMissingCreatorEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+              onMissingCreatorUpdated={onMissingCreatorUpdated}
             />
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                <SearchXIcon className="size-6 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {showAddMissingCreator
+                    ? "No creators match your search"
+                    : "No creators match your filters"}
+                </p>
+                <p className="mt-1 max-w-sm text-[12px] text-muted-foreground">
+                  {showAddMissingCreator
+                    ? "Try a different spelling or handle, or add the creator by profile link."
+                    : "Try widening the follower range, removing a category, or clearing some filters."}
+                </p>
+              </div>
+              <AddMissingCreatorEmptyState
+                visible={showAddMissingCreator}
+                className="mt-1"
+                onSuccess={onMissingCreatorAdded}
+                onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+                onCreatorUpdated={onMissingCreatorUpdated}
+              />
+            </div>
+          )
         ) : (
           <>
             <CreatorResultGridHeader variant="search" sort={sort} onSortChange={onSortChange} />
             <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
               {virtualizer.getVirtualItems().map((virtualRow) => {
-                const creator = creators[virtualRow.index];
-                if (!creator) return null;
+                const item = listItems[virtualRow.index];
+                if (!item) return null;
+
+                if (item.kind === "section") {
+                  return (
+                    <div
+                      key={item.id}
+                      data-index={virtualRow.index}
+                      ref={virtualizer.measureElement}
+                      className="absolute top-0 left-0 w-full"
+                      style={{ transform: `translateY(${virtualRow.start}px)` }}
+                    >
+                      <CreatorSearchHybridSectionHeader
+                        title={item.title}
+                        subtitle={item.subtitle}
+                      />
+                    </div>
+                  );
+                }
+
                 return (
                   <div
-                    key={creator.unified_id}
+                    key={item.id}
                     data-index={virtualRow.index}
                     ref={virtualizer.measureElement}
                     className="absolute top-0 left-0 w-full"
                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                   >
-                    <CreatorResultRow
-                      creator={creator}
-                      rank={virtualRow.index + 1}
-                      selected={selectedIds.has(creator.unified_id)}
-                      variant="search"
+                    <CreatorSearchVirtualRow
+                      creator={item.creator}
+                      rank={item.rank}
+                      selected={selectedIds.has(item.creator.unified_id)}
                       platformFilter={platformFilter}
-                      onToggleSelect={() => onToggleSelect(creator)}
-                      onOpenCreator={() => onOpenCreator(creator)}
-                      onAddToList={() => onAddToList(creator)}
-                      onRefreshMetrics={
-                        onRefreshMetrics
-                          ? (platformAccountId) => onRefreshMetrics(creator, platformAccountId)
-                          : undefined
-                      }
-                      onStopRefresh={
-                        onStopRefresh ? () => onStopRefresh(creator) : undefined
-                      }
+                      onToggleSelect={onToggleSelect}
+                      onOpenCreator={onOpenCreator}
+                      onAddToList={onAddToList}
+                      onRefreshMetrics={onRefreshMetrics}
+                      onStopRefresh={onStopRefresh}
                     />
                   </div>
                 );
@@ -244,7 +374,7 @@ export function CreatorSearchResultList({
             <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
           </div>
         ) : null}
-        {!hasMore && creators.length > 0 && !error ? (
+        {!hasMore && hasCreators && !error ? (
           <p className="py-3 text-center text-[10px] text-muted-foreground">End of results</p>
         ) : null}
       </div>
