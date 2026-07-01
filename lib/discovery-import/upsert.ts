@@ -2,23 +2,25 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { FieldSourceMap } from "@/lib/creator-enrichment/types";
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
-import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+import { persistCreatorPrimaryIdentity } from "@/lib/creators/persist-primary-avatar";
 import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
 import { resolveMetricsSourceForEnrichment } from "@/lib/social/enrichment/metrics-status";
 import type { Database } from "@/types/database";
 
-import { mergeMissingOnly, isImportFieldEmpty } from "./merge";
+import { mergeAuthoritative, isImportFieldEmpty } from "./merge";
 import {
   buildCreatorImportMetadata,
   buildImportFieldSources,
-  importProfilePictureAccountFields,
-  mergeCreatorImportMetadataMissingOnly,
+  mergeCreatorImportMetadataAuthoritative,
   normalizeParsedCreatorRow,
   resolveCountryCode,
+  resolveImportDisplayName,
   resolveInfluencerImportCategories,
 } from "./normalize";
+import {
+  resolveImportAvatarFields,
+} from "./resolve-import-avatar";
 import type {
-  ImportEnrichmentAccountRef,
   ImportProcessingLogEntry,
   ImportUpsertResult,
   ParsedCreatorRow,
@@ -29,6 +31,8 @@ type UpsertContext = {
   importFileId: string;
   sourceName: string | null;
   uploadedBy: string | null;
+  /** PDF imports may fetch og:image from profile URLs when no photo column exists. */
+  enableOpenGraphAvatarFallback?: boolean;
   log: (level: ImportProcessingLogEntry["level"], message: string) => void;
 };
 
@@ -39,6 +43,8 @@ type ExistingPlatformAccount = {
   engagement_rate: number | null;
   audience_country: string | null;
   interest_categories: string[] | null;
+  profile_url: string | null;
+  normalized_profile_url: string | null;
   profile_picture_url: string | null;
   avatar_source: string | null;
   metadata: Record<string, unknown> | null;
@@ -53,7 +59,7 @@ async function findExistingAccount(
   const { data, error } = await supabase
     .from("influencer_platform_accounts")
     .select(
-      "id, influencer_id, follower_count, engagement_rate, audience_country, interest_categories, profile_picture_url, avatar_source, metadata, field_sources"
+      "id, influencer_id, follower_count, engagement_rate, audience_country, interest_categories, profile_url, normalized_profile_url, profile_picture_url, avatar_source, metadata, field_sources"
     )
     .eq("platform", platform)
     .eq("normalized_username", normalizedUsername)
@@ -63,13 +69,28 @@ async function findExistingAccount(
   return data as ExistingPlatformAccount | null;
 }
 
+async function findInfluencerIdByNormalizedUsername(
+  supabase: SupabaseClient<Database>,
+  normalizedUsername: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("influencer_platform_accounts")
+    .select("influencer_id")
+    .eq("normalized_username", normalizedUsername)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data?.influencer_id ?? null;
+}
+
 async function findInfluencerProfile(
   supabase: SupabaseClient<Database>,
   influencerId: string
 ) {
   const { data, error } = await supabase
     .from("influencers")
-    .select("categories, country_code, metadata")
+    .select("display_name, categories, country_code, metadata")
     .eq("id", influencerId)
     .maybeSingle();
 
@@ -90,15 +111,6 @@ function importFieldSourcesForFilledFields(
     }
   }
   return filtered;
-}
-
-function trackAvatarEnrichmentIfNeeded(
-  counters: ImportUpsertResult,
-  ref: ImportEnrichmentAccountRef,
-  profilePictureUrl: string | null | undefined
-) {
-  if (isUsableAvatarUrl(profilePictureUrl)) return;
-  counters.avatarEnrichmentAccountIds.push(ref);
 }
 
 async function upsertCreatorSource(
@@ -171,10 +183,16 @@ export async function upsertImportedCreators(
     total: rows.length,
     imported: 0,
     updated: 0,
+    skipped: 0,
     duplicate: 0,
     failed: 0,
-    enrichmentAccountIds: [],
-    avatarEnrichmentAccountIds: [],
+    platform_accounts_created: 0,
+    platform_accounts_updated: 0,
+    followers_updated: 0,
+    categories_updated: 0,
+    audience_interests_updated: 0,
+    avatars_imported: 0,
+    missing_avatars: 0,
   };
 
   for (const rawRow of rows) {
@@ -196,23 +214,6 @@ export async function upsertImportedCreators(
       metrics_is_manual_override: row.followers != null,
     });
 
-    const importAvatarFields = importProfilePictureAccountFields(
-      row.profile_picture_url,
-      normalized.platform,
-      row.profile_avatar_source ?? "manual"
-    );
-
-    if (importAvatarFields) {
-      ctx.log(
-        "info",
-        `[import] creator avatar detected @${row.username} (${row.platform})`
-      );
-      ctx.log(
-        "info",
-        `[import] avatar persisted @${row.username} source=${importAvatarFields.avatar_source}`
-      );
-    }
-
     try {
       const existing = await findExistingAccount(
         ctx.supabase,
@@ -220,11 +221,37 @@ export async function upsertImportedCreators(
         normalized.normalized_username
       );
 
+      const rowHasAvatarUrl = !isImportFieldEmpty(row.profile_picture_url);
+      const shouldResolveAvatar =
+        rowHasAvatarUrl ||
+        !existing ||
+        (ctx.enableOpenGraphAvatarFallback &&
+          isImportFieldEmpty(existing?.profile_picture_url));
+      const importAvatarFields = shouldResolveAvatar
+        ? await resolveImportAvatarFields({
+            row,
+            platform: normalized.platform,
+            profileUrl: normalized.profile_url,
+            enableOpenGraphFallback: ctx.enableOpenGraphAvatarFallback,
+            log: ctx.log,
+          })
+        : null;
+
+      if (importAvatarFields?.profile_picture_url) {
+        counters.avatars_imported += 1;
+        ctx.log(
+          "info",
+          `[import] avatar persisted @${row.username} source=${importAvatarFields.avatar_source}`
+        );
+      } else if (!rowHasAvatarUrl && !importAvatarFields?.profile_picture_url) {
+        counters.missing_avatars += 1;
+      }
+
       if (existing) {
         const filledFields = new Set<string>();
         const log = ctx.log;
 
-        const mergedFollowerCount = mergeMissingOnly(
+        const mergedFollowerCount = mergeAuthoritative(
           existing.follower_count,
           row.followers,
           "follower_count",
@@ -234,7 +261,7 @@ export async function upsertImportedCreators(
           filledFields.add("follower_count");
         }
 
-        const mergedEngagementRate = mergeMissingOnly(
+        const mergedEngagementRate = mergeAuthoritative(
           existing.engagement_rate,
           row.engagement_rate,
           "engagement_rate",
@@ -245,7 +272,7 @@ export async function upsertImportedCreators(
         }
 
         const countryCode = resolveCountryCode(row.country);
-        const mergedAudienceCountry = mergeMissingOnly(
+        const mergedAudienceCountry = mergeAuthoritative(
           existing.audience_country,
           countryCode,
           "audience_country",
@@ -255,8 +282,8 @@ export async function upsertImportedCreators(
           filledFields.add("audience_country");
         }
 
-        const incomingInterestCategories = resolveInfluencerImportCategories([], row);
-        const mergedInterestCategories = mergeMissingOnly(
+        const incomingInterestCategories = row.categories;
+        const mergedInterestCategories = mergeAuthoritative(
           existing.interest_categories ?? [],
           incomingInterestCategories.length > 0 ? incomingInterestCategories : [],
           "interest_categories",
@@ -271,22 +298,35 @@ export async function upsertImportedCreators(
 
         const existingMeta =
           (existing.metadata as Record<string, unknown> | null) ?? {};
-        const mergedMetadata = mergeCreatorImportMetadataMissingOnly(existingMeta, row, log);
+        const mergedMetadata = mergeCreatorImportMetadataAuthoritative(existingMeta, row, log);
 
         let avatarPatch: Record<string, unknown> = {};
-        if (importAvatarFields) {
-          if (
-            isImportFieldEmpty(existing.profile_picture_url) ||
-            !isUsableAvatarUrl(existing.profile_picture_url)
-          ) {
-            avatarPatch = importAvatarFields;
-            filledFields.add("profile_picture_url");
-          } else {
-            log(
-              "info",
-              `[import] field skipped (existing value present): profile_picture_url`
-            );
-          }
+        if (
+          importAvatarFields?.profile_picture_url &&
+          (rowHasAvatarUrl || isImportFieldEmpty(existing.profile_picture_url))
+        ) {
+          avatarPatch = importAvatarFields;
+          filledFields.add("profile_picture_url");
+        }
+
+        const mergedProfileUrl = mergeAuthoritative(
+          existing.profile_url,
+          normalized.profile_url,
+          "profile_url",
+          log
+        );
+        if (mergedProfileUrl !== existing.profile_url) {
+          filledFields.add("profile_url");
+        }
+
+        const mergedNormalizedProfileUrl = mergeAuthoritative(
+          existing.normalized_profile_url,
+          normalized.normalized_profile_url,
+          "normalized_profile_url",
+          log
+        );
+        if (mergedNormalizedProfileUrl !== existing.normalized_profile_url) {
+          filledFields.add("normalized_profile_url");
         }
 
         const importFieldSources = importFieldSourcesForFilledFields(
@@ -303,8 +343,8 @@ export async function upsertImportedCreators(
           ctx.supabase,
           existing.influencer_id
         );
-        const incomingInfluencerCategories = resolveInfluencerImportCategories([], row);
-        const mergedInfluencerCategories = mergeMissingOnly(
+        const incomingInfluencerCategories = row.categories;
+        const mergedInfluencerCategories = mergeAuthoritative(
           existingInfluencer?.categories ?? [],
           incomingInfluencerCategories.length > 0 ? incomingInfluencerCategories : [],
           "influencer.categories",
@@ -315,6 +355,8 @@ export async function upsertImportedCreators(
           follower_count: mergedFollowerCount,
           engagement_rate: mergedEngagementRate,
           audience_country: mergedAudienceCountry,
+          profile_url: mergedProfileUrl,
+          normalized_profile_url: mergedNormalizedProfileUrl,
           metadata: mergedMetadata,
           field_sources: mergedFieldSources,
           sync_source: "discovery_import",
@@ -340,7 +382,17 @@ export async function upsertImportedCreators(
         if (accountError) throw new Error(accountError.message);
 
         const influencerPatch: Record<string, unknown> = {};
-        const mergedCountryCode = mergeMissingOnly(
+        const mergedDisplayName = mergeAuthoritative(
+          existingInfluencer?.display_name ?? null,
+          row.display_name?.trim() || null,
+          "influencer.display_name",
+          log
+        );
+        if (mergedDisplayName !== existingInfluencer?.display_name) {
+          influencerPatch.display_name = mergedDisplayName;
+        }
+
+        const mergedCountryCode = mergeAuthoritative(
           existingInfluencer?.country_code ?? null,
           countryCode,
           "influencer.country_code",
@@ -360,7 +412,7 @@ export async function upsertImportedCreators(
         if (row.role?.trim()) {
           const existingInfluencerMeta =
             (existingInfluencer?.metadata as Record<string, unknown> | null) ?? {};
-          const mergedRole = mergeMissingOnly(
+          const mergedRole = mergeAuthoritative(
             (existingInfluencerMeta.role as string | null | undefined) ?? null,
             row.role.trim(),
             "influencer.role",
@@ -393,20 +445,32 @@ export async function upsertImportedCreators(
         });
 
         await refreshInfluencerSearchVector(ctx.supabase, existing.influencer_id);
+        if (avatarPatch.profile_picture_url) {
+          await persistCreatorPrimaryIdentity(ctx.supabase, existing.influencer_id);
+        }
 
-        counters.updated += 1;
-        const enrichmentRef: ImportEnrichmentAccountRef = {
-          influencerId: existing.influencer_id,
-          platformAccountId: existing.id,
-          platform: normalized.platform,
-          username: normalized.username,
-        };
-        counters.enrichmentAccountIds.push(enrichmentRef);
-
-        const resolvedAvatarUrl =
-          (avatarPatch.profile_picture_url as string | undefined) ??
-          existing.profile_picture_url;
-        trackAvatarEnrichmentIfNeeded(counters, enrichmentRef, resolvedAvatarUrl);
+        const hadAccountChanges = filledFields.size > 0;
+        const hadInfluencerChanges = Object.keys(influencerPatch).length > 0;
+        if (!hadAccountChanges && !hadInfluencerChanges) {
+          counters.skipped += 1;
+        } else {
+          counters.updated += 1;
+          counters.platform_accounts_updated += 1;
+          if (filledFields.has("follower_count")) counters.followers_updated += 1;
+          if (
+            filledFields.has("interest_categories") ||
+            mergedInfluencerCategories !== (existingInfluencer?.categories ?? [])
+          ) {
+            counters.categories_updated += 1;
+          }
+          const prevInterests =
+            (existingMeta.audience_interests as string[] | undefined) ?? [];
+          const nextInterests =
+            (mergedMetadata.audience_interests as string[] | undefined) ?? [];
+          if (JSON.stringify(prevInterests) !== JSON.stringify(nextInterests)) {
+            counters.audience_interests_updated += 1;
+          }
+        }
 
         await insertAuditLog(ctx.supabase, {
           action: "update",
@@ -430,26 +494,87 @@ export async function upsertImportedCreators(
 
       const countryCode = resolveCountryCode(row.country);
       const influencerCategories = resolveInfluencerImportCategories(undefined, row);
-      const { data: influencer, error: influencerError } = await ctx.supabase
-        .from("influencers")
-        .insert({
-          display_name: normalized.username,
-          country_code: countryCode,
-          categories: influencerCategories,
-          status: "active",
-          notes: row.source ? `Imported from ${row.source}` : "Imported via Discovery Import Center",
-          ...(row.role?.trim() ? { metadata: { role: row.role.trim() } } : {}),
-          created_by: ctx.uploadedBy,
-        } as Database["public"]["Tables"]["influencers"]["Insert"])
-        .select("id")
-        .single();
+      const importDisplayName = resolveImportDisplayName(row);
+      const linkedInfluencerId = await findInfluencerIdByNormalizedUsername(
+        ctx.supabase,
+        normalized.normalized_username
+      );
 
-      if (influencerError) {
-        if (influencerError.code === "23505") {
-          counters.duplicate += 1;
-          continue;
+      let influencerId = linkedInfluencerId;
+      let createdInfluencer = false;
+
+      if (!influencerId) {
+        const { data: influencer, error: influencerError } = await ctx.supabase
+          .from("influencers")
+          .insert({
+            display_name: importDisplayName,
+            country_code: countryCode,
+            categories: influencerCategories,
+            status: "active",
+            notes: row.source
+              ? `Imported from ${row.source}`
+              : "Imported via Discovery Import Center",
+            ...(row.role?.trim() ? { metadata: { role: row.role.trim() } } : {}),
+            created_by: ctx.uploadedBy,
+          } as Database["public"]["Tables"]["influencers"]["Insert"])
+          .select("id")
+          .single();
+
+        if (influencerError) {
+          if (influencerError.code === "23505") {
+            counters.duplicate += 1;
+            continue;
+          }
+          throw new Error(influencerError.message);
         }
-        throw new Error(influencerError.message);
+
+        influencerId = influencer.id;
+        createdInfluencer = true;
+      } else {
+        const existingInfluencer = await findInfluencerProfile(ctx.supabase, influencerId);
+        const influencerPatch: Record<string, unknown> = {};
+        const mergedDisplayName = mergeAuthoritative(
+          existingInfluencer?.display_name ?? null,
+          row.display_name?.trim() || null,
+          "influencer.display_name",
+          ctx.log
+        );
+        if (mergedDisplayName !== existingInfluencer?.display_name) {
+          influencerPatch.display_name = mergedDisplayName;
+        }
+
+        const mergedCountryCode = mergeAuthoritative(
+          existingInfluencer?.country_code ?? null,
+          countryCode,
+          "influencer.country_code",
+          ctx.log
+        );
+        if (mergedCountryCode !== existingInfluencer?.country_code) {
+          influencerPatch.country_code = mergedCountryCode;
+        }
+
+        const mergedInfluencerCategories = mergeAuthoritative(
+          existingInfluencer?.categories ?? [],
+          influencerCategories.length > 0 ? influencerCategories : [],
+          "influencer.categories",
+          ctx.log
+        );
+        if (
+          mergedInfluencerCategories.length > 0 ||
+          (existingInfluencer?.categories?.length ?? 0) > 0
+        ) {
+          influencerPatch.categories = mergedInfluencerCategories;
+        }
+
+        if (Object.keys(influencerPatch).length > 0) {
+          const { error: influencerError } = await ctx.supabase
+            .from("influencers")
+            .update(
+              influencerPatch as Database["public"]["Tables"]["influencers"]["Update"]
+            )
+            .eq("id", influencerId);
+          if (influencerError) throw new Error(influencerError.message);
+        }
       }
 
       const importMeta = buildCreatorImportMetadata(row);
@@ -459,7 +584,7 @@ export async function upsertImportedCreators(
       const { data: account, error: accountError } = await ctx.supabase
         .from("influencer_platform_accounts")
         .insert({
-          influencer_id: influencer.id,
+          influencer_id: influencerId,
           platform: normalized.platform,
           handle: normalized.handle,
           username: normalized.username,
@@ -470,17 +595,14 @@ export async function upsertImportedCreators(
           engagement_rate: row.engagement_rate,
           audience_country: countryCode,
           interest_categories:
-            influencerCategories.length > 0 ? influencerCategories : null,
-          is_primary: true,
+            row.categories.length > 0 ? row.categories : null,
+          is_primary: createdInfluencer,
           sync_status: normalized.sync_status,
           sync_source: normalized.sync_source,
           metrics_source: normalized.metrics_source,
           metrics_is_manual_override: normalized.metrics_is_manual_override,
           field_sources: importFieldSources,
-          metadata: {
-            ...importMeta,
-            categories: influencerCategories,
-          },
+          metadata: importMeta,
           ...(importAvatarFields ?? {}),
         })
         .select("id")
@@ -488,7 +610,9 @@ export async function upsertImportedCreators(
 
       if (accountError) {
         if (accountError.code === "23505") {
-          await ctx.supabase.from("influencers").delete().eq("id", influencer.id);
+          if (createdInfluencer) {
+            await ctx.supabase.from("influencers").delete().eq("id", influencerId);
+          }
           counters.duplicate += 1;
           continue;
         }
@@ -496,42 +620,43 @@ export async function upsertImportedCreators(
       }
 
       await upsertCreatorSource(ctx.supabase, {
-        influencerId: influencer.id,
+        influencerId,
         sourceName: row.source ?? ctx.sourceName ?? "import",
         sourceFileId: ctx.importFileId,
         importedAt: importMeta.imported_at as string,
       });
 
-      await refreshInfluencerSearchVector(ctx.supabase, influencer.id);
+      await refreshInfluencerSearchVector(ctx.supabase, influencerId);
+      if (importAvatarFields?.profile_picture_url) {
+        await persistCreatorPrimaryIdentity(ctx.supabase, influencerId);
+      }
 
-      counters.imported += 1;
-      const enrichmentRef: ImportEnrichmentAccountRef = {
-        influencerId: influencer.id,
-        platformAccountId: account.id,
-        platform: normalized.platform,
-        username: normalized.username,
-      };
-      counters.enrichmentAccountIds.push(enrichmentRef);
-
-      trackAvatarEnrichmentIfNeeded(
-        counters,
-        enrichmentRef,
-        importAvatarFields?.profile_picture_url ?? null
-      );
+      if (createdInfluencer) {
+        counters.imported += 1;
+        counters.platform_accounts_created += 1;
+      } else {
+        counters.updated += 1;
+        counters.platform_accounts_created += 1;
+      }
+      if (row.followers != null) counters.followers_updated += 1;
+      if (row.categories.length > 0) counters.categories_updated += 1;
+      if (row.audience_interests.length > 0) counters.audience_interests_updated += 1;
 
       await insertAuditLog(ctx.supabase, {
-        action: "create",
+        action: createdInfluencer ? "create" : "update",
         entity_type: "influencer",
-        entity_id: influencer.id,
+        entity_id: influencerId,
         actor_id: ctx.uploadedBy,
         metadata: {
           import_file_id: ctx.importFileId,
           platform: normalized.platform,
           username: normalized.username,
-          operation: "discovery_import_create",
+          operation: createdInfluencer
+            ? "discovery_import_create"
+            : "discovery_import_add_platform",
         },
         new_data: {
-          display_name: normalized.username,
+          display_name: importDisplayName,
           follower_count: row.followers,
           engagement_rate: row.engagement_rate,
           country: row.country,

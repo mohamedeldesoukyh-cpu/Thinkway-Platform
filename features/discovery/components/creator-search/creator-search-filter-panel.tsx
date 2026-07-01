@@ -1,9 +1,8 @@
 "use client";
 
-import { ChevronDownIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import {
@@ -17,7 +16,7 @@ import {
   NameField,
   PlatformField,
 } from "./creator-search-filter-fields";
-import { buildActiveFilterChips, type CreatorSearchFilters } from "./creator-search-types";
+import type { CreatorSearchFilters } from "./creator-search-types";
 
 type Props = {
   filters: CreatorSearchFilters;
@@ -30,40 +29,42 @@ type Props = {
 
 function FilterSection({
   title,
-  count,
   defaultOpen = true,
   children,
 }: {
   title: string;
-  count: number;
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className="border-b border-border px-4 py-3">
+    <section className={cn("border-b border-[#e2e8f0]", !open && "collapsed")}>
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-2 text-left"
+        className="flex w-full items-center justify-between px-6 py-[15px] pb-[13px] text-left transition-colors duration-120 hover:bg-[#f8fafc]"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
       >
-        <span className="flex items-center gap-2">
-          <span className="text-[12px] font-semibold text-foreground">{title}</span>
-          {count > 0 ? (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/10 px-1 text-[9px] font-bold text-primary">
-              {count}
-            </span>
-          ) : null}
-        </span>
-        <ChevronDownIcon
+        <span className="text-xs font-bold tracking-[-0.01em] text-[#0f172a]">{title}</span>
+        <span
           className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180"
+            "text-[#94a3b8] transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            !open && "-rotate-90"
           )}
-        />
+        >
+          <svg
+            className="block size-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            aria-hidden
+          >
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </span>
       </button>
-      {open ? <div className="mt-3 space-y-4">{children}</div> : null}
+      {open ? <div className="px-6 pb-5">{children}</div> : null}
     </section>
   );
 }
@@ -76,51 +77,23 @@ export function CreatorSearchFilterPanel({
   total,
   loading,
 }: Props) {
-  const set = (value: string) => (value.trim() ? 1 : 0);
-  const range = (a: string, b: string) => (a || b ? 1 : 0);
-
-  const metricsCount =
-    set(filters.handle) +
-    filters.platforms.length +
-    range(filters.minFollowers, filters.maxFollowers) +
-    set(filters.minEngagement) +
-    set(filters.minViews) +
-    set(filters.country) +
-    set(filters.language) +
-    set(filters.category) +
-    set(filters.audienceInterests);
-
-  const audienceCount =
-    set(filters.audienceCountry) + set(filters.gender) + range(filters.ageMin, filters.ageMax);
-
-  const commercialCount =
-    range(filters.minEstimatedCost, filters.maxEstimatedCost) + set(filters.minBrandSafety);
-
-  const aiCount =
-    set(filters.minThinkwayScore) +
-    set(filters.minBrandFit) +
-    set(filters.aiNiche) +
-    set(filters.minAiScore);
-
-  const totalActive = buildActiveFilterChips(filters).length;
-
   return (
-    <div className="flex h-full min-h-0 flex-col bg-popover">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3 pr-14">
-        <h2 className="text-[14px] font-semibold text-foreground">Filters</h2>
-        {totalActive > 0 ? (
-          <button
-            type="button"
-            onClick={onClearAll}
-            className="text-[11px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          >
-            Clear all ({totalActive})
-          </button>
-        ) : null}
+    <div className="flex h-full min-h-0 flex-col bg-white shadow-[-8px_0_40px_rgba(15,23,42,0.12)] animate-in slide-in-from-right-10 fade-in duration-[280ms] ease-[cubic-bezier(0.32,0.72,0,1)]">
+      <div className="flex shrink-0 items-center justify-between border-b border-[#e2e8f0] px-6 py-4">
+        <h2 className="text-[15px] font-bold tracking-[-0.02em] text-[#0f172a]">Filters</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          title="Close"
+          className="flex size-7 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#cbd5e1] hover:bg-[#f8fafc] hover:text-[#0f172a]"
+          aria-label="Close filters"
+        >
+          <XIcon className="size-3.5" />
+        </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
-        <FilterSection title="Creator metrics" count={metricsCount}>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-color:#e2e8f0_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-[#e2e8f0]">
+        <FilterSection title="Creator metrics">
           <NameField filters={filters} onChange={onChange} />
           <PlatformField filters={filters} onChange={onChange} />
           <FollowerRangeField filters={filters} onChange={onChange} />
@@ -129,23 +102,35 @@ export function CreatorSearchFilterPanel({
           <CategoryField filters={filters} onChange={onChange} />
         </FilterSection>
 
-        <FilterSection title="Audience data" count={audienceCount}>
+        <FilterSection title="Audience data">
           <AudienceField filters={filters} onChange={onChange} />
         </FilterSection>
 
-        <FilterSection title="Commercial" count={commercialCount} defaultOpen={false}>
+        <FilterSection title="Commercial" defaultOpen={false}>
           <CommercialField filters={filters} onChange={onChange} />
         </FilterSection>
 
-        <FilterSection title="AI scoring" count={aiCount} defaultOpen={false}>
+        <FilterSection title="AI scoring" defaultOpen={false}>
           <AiField filters={filters} onChange={onChange} />
         </FilterSection>
       </div>
 
-      <div className="shrink-0 border-t border-border p-3">
-        <Button className="w-full" size="sm" onClick={onClose} disabled={loading}>
+      <div className="flex shrink-0 items-center gap-2.5 border-t border-[#e2e8f0] bg-white px-6 py-4">
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="inline-flex h-[38px] shrink-0 items-center whitespace-nowrap rounded-md border border-[#e2e8f0] bg-white px-3.5 text-xs font-medium text-[#475569] transition-colors duration-120 hover:border-[#cbd5e1] hover:bg-[#f8fafc]"
+        >
+          Clear all
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loading}
+          className="h-[38px] flex-1 rounded-md border-0 bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-[13px] font-bold tracking-[-0.01em] text-white shadow-[0_2px_12px_rgba(37,99,235,0.3)] transition-all duration-150 hover:brightness-[1.08] hover:shadow-[0_4px_20px_rgba(37,99,235,0.45)] hover:[transform:translateY(-1px)] active:scale-[0.98] disabled:opacity-60"
+        >
           {loading ? "Searching…" : `Show ${total.toLocaleString()} results`}
-        </Button>
+        </button>
       </div>
     </div>
   );

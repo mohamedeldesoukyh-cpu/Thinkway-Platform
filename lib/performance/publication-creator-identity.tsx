@@ -111,8 +111,7 @@ export function PublicationCreatorAvatar({
     return (
       <CreatorAvatarImage
         avatarUrl={display.url}
-        platform={row.platform}
-        fallbackUrl={display.fallbackUrl}
+        profileUrl={row.influencer_profile_url}
         sizeClassName={cn("shrink-0", dim, className)}
         onFailed={() => setImageFailed(true)}
       />

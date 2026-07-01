@@ -6,6 +6,7 @@ export {
   refreshCreatorMetricsBatch,
   refreshCreatorMetricsBatchByUnifiedIds,
   refreshCreatorMetricsByUnifiedId,
+  refreshCreatorPlatformMetrics,
   resolveCreatorInfluencerId,
 } from "./creator-enrichment-service";
 export type {

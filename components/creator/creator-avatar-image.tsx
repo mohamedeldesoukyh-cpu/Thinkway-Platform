@@ -1,82 +1,156 @@
 "use client";
 
-import { UserIcon } from "lucide-react";
-import { useMemo, useState } from "react";
 
-import { creatorAvatarDisplayUrls } from "@/lib/performance/creator-avatar";
+
+import { UserIcon } from "lucide-react";
+
+import { useEffect, useState } from "react";
+
+
+
+import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
+
 import { cn } from "@/lib/utils";
 
+
+
 const AVATAR_SIZE_CLASS = {
+
   xs: "size-6",
+
   sm: "size-8",
+
   md: "size-10",
+
   lg: "size-12",
+
 } as const;
+
+
+
+const AVATAR_CONTAINER_CLASS =
+
+  "relative shrink-0 overflow-hidden rounded-full border border-border";
+
+
 
 export type CreatorAvatarImageSize = keyof typeof AVATAR_SIZE_CLASS;
 
+
+
 export function CreatorAvatarImage({
+
   avatarUrl,
-  platform,
+
+  profileUrl,
+
   size = "md",
+
   sizeClassName,
+
   className,
-  fallbackUrl,
+
+  alt = "",
+
   onFailed,
+
 }: {
+
   avatarUrl: string | null | undefined;
-  platform?: string | null;
+
+  /** External social profile URL — enables server OpenGraph fallback when CDN src fails. */
+
+  profileUrl?: string | null;
+
   size?: CreatorAvatarImageSize;
+
   sizeClassName?: string;
+
   className?: string;
-  /** Optional signed/original URL when avatarUrl is already normalized for display. */
-  fallbackUrl?: string | null;
+
+  alt?: string;
+
   onFailed?: () => void;
+
 }) {
+
   const dim = sizeClassName ?? AVATAR_SIZE_CLASS[size];
-  const sources = useMemo(() => {
-    const fromRaw = creatorAvatarDisplayUrls(platform, avatarUrl);
-    if (!fromRaw) return null;
-    const chain = [fromRaw.primary];
-    const secondary = fallbackUrl?.trim() || fromRaw.fallback;
-    if (secondary && secondary !== fromRaw.primary) {
-      chain.push(secondary);
-    }
-    return chain;
-  }, [avatarUrl, fallbackUrl, platform]);
 
-  const [sourceIndex, setSourceIndex] = useState(0);
-  const src = sources?.[sourceIndex];
+  const src = creatorAvatarBrowserDisplayUrl(avatarUrl, profileUrl);
 
-  if (!src) {
+  const [failed, setFailed] = useState(false);
+
+
+
+  useEffect(() => {
+
+    setFailed(false);
+
+  }, [src]);
+
+
+
+  if (!src || failed) {
+
     return (
+
       <div
+
         className={cn(
-          "flex items-center justify-center rounded-full border border-border bg-muted",
+
+          AVATAR_CONTAINER_CLASS,
+
+          "flex items-center justify-center bg-muted",
+
           dim,
+
           className
+
         )}
+
       >
+
         <UserIcon className={cn(size === "xs" ? "size-3" : "size-5", "text-muted-foreground")} />
+
       </div>
+
     );
+
   }
 
+
+
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt=""
-      referrerPolicy="no-referrer"
-      className={cn("rounded-full border border-border object-cover", dim, className)}
-      onError={(event) => {
-        event.currentTarget.onerror = null;
-        if (sources && sourceIndex + 1 < sources.length) {
-          setSourceIndex(sourceIndex + 1);
-          return;
-        }
-        onFailed?.();
-      }}
-    />
+
+    <div className={cn(AVATAR_CONTAINER_CLASS, dim, className)}>
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+
+      <img
+
+        key={src}
+
+        src={src}
+
+        alt={alt}
+
+        referrerPolicy="no-referrer"
+
+        className="size-full object-cover object-center"
+
+        onError={() => {
+
+          setFailed(true);
+
+          onFailed?.();
+
+        }}
+
+      />
+
+    </div>
+
   );
+
 }
+

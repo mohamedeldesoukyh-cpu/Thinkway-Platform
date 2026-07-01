@@ -2,7 +2,7 @@ import type { ParsedCreatorRow } from "../types";
 import {
   isIndahashText,
   normalizeImportPlatform,
-  parseIndahashCsvRow,
+  parseIndahashTabularRows,
   parseIndahashSearchExport,
   parseIndahashText,
 } from "./indahash";
@@ -16,6 +16,14 @@ function splitTags(value: string | null | undefined): string[] {
   if (!value?.trim()) return [];
   return value
     .split(/[,;|]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function splitAudienceInterestTags(value: string | null | undefined): string[] {
+  if (!value?.trim()) return [];
+  return value
+    .split(/[;|]/)
     .map((part) => part.trim())
     .filter(Boolean);
 }
@@ -95,8 +103,16 @@ function parseGenericTabularRow(
   const categories = splitTags(
     lookupCell(lookup, "categories", "category", "niche")
   );
-  const audience_interests = splitTags(
+  const audience_interests = splitAudienceInterestTags(
     lookupCell(lookup, "audience interests", "interests", "tags")
+  );
+  const display_name = lookupCell(
+    lookup,
+    "display name",
+    "display_name",
+    "name",
+    "creator name",
+    "full name"
   );
   const relevance_score = parsePercent(
     lookupCell(lookup, "relevance score", "relevance", "score")
@@ -104,14 +120,14 @@ function parseGenericTabularRow(
 
   return {
     username,
+    display_name,
     platform,
     followers,
     engagement_rate,
     country,
     source,
-    categories: categories.length > 0 ? categories : audience_interests,
-    audience_interests:
-      audience_interests.length > 0 ? audience_interests : categories,
+    categories,
+    audience_interests,
     relevance_score,
     profile_picture_url: parseImportProfilePictureUrlRaw(lookup),
     role: parseImportRoleRaw(lookup),
@@ -164,14 +180,17 @@ export function parseCsvText(
       record[header] = (values[index] ?? "").trim();
     });
 
-    const row =
-      parseIndahashCsvRow(record, source) ?? parseGenericTabularRow(record, source);
-    if (!row) continue;
+    const indahashRows = parseIndahashTabularRows(record, source);
+    const genericRow = parseGenericTabularRow(record, source);
+    const parsedRows =
+      indahashRows.length > 0 ? indahashRows : genericRow ? [genericRow] : [];
 
-    const key = `${row.platform}:${row.username.toLowerCase()}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    rows.push(row);
+    for (const row of parsedRows) {
+      const key = `${row.platform}:${row.username.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(row);
+    }
   }
 
   return {
@@ -213,19 +232,20 @@ export function parseXlsxBuffer(
   const seen = new Set<string>();
 
   for (const record of jsonRows) {
-    const row =
-      parseIndahashCsvRow(
-        Object.fromEntries(
-          Object.entries(record).map(([key, value]) => [key, String(value ?? "")])
-        ),
-        source
-      ) ?? parseGenericTabularRow(record, source);
+    const stringRecord = Object.fromEntries(
+      Object.entries(record).map(([key, value]) => [key, String(value ?? "")])
+    );
+    const indahashRows = parseIndahashTabularRows(stringRecord, source);
+    const genericRow = parseGenericTabularRow(record, source);
+    const parsedRows =
+      indahashRows.length > 0 ? indahashRows : genericRow ? [genericRow] : [];
 
-    if (!row) continue;
-    const key = `${row.platform}:${row.username.toLowerCase()}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    rows.push(row);
+    for (const row of parsedRows) {
+      const key = `${row.platform}:${row.username.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(row);
+    }
   }
 
   const headerText = jsonRows.length

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { upsertCreatorInResults } from "@/lib/discovery/creator-search-query";
 
 import {
   CREATOR_PICKER_DEBOUNCE_MS,
@@ -129,6 +131,7 @@ export function useCreatorBrowse({
 }: UseCreatorBrowseOptions = {}) {
   const [state, setState] = useState<CreatorBrowseState>(INITIAL_BROWSE_STATE);
   const reqId = useRef(0);
+  const pinnedCreatorsRef = useRef<Map<string, UnifiedCreatorResult>>(new Map());
   const filtersKey = JSON.stringify(filters);
   const debouncedFiltersKey = useDebouncedValue(filtersKey, debounceMs);
 
@@ -152,12 +155,20 @@ export function useCreatorBrowse({
         if (id !== reqId.current) return;
 
         setState((prev) => {
-          const merged = append ? [...prev.creators, ...result.creators] : result.creators;
-          const unique = new Map(merged.map((c) => [c.unified_id, c]));
+          for (const creator of result.creators) {
+            pinnedCreatorsRef.current.delete(creator.unified_id);
+          }
+
+          let mergedCreators = append ? [...prev.creators, ...result.creators] : result.creators;
+          for (const pinned of pinnedCreatorsRef.current.values()) {
+            mergedCreators = upsertCreatorInResults(mergedCreators, pinned).creators;
+          }
+
+          const unique = new Map(mergedCreators.map((c) => [c.unified_id, c]));
           const creators = [...unique.values()];
           return {
             creators,
-            total: result.total,
+            total: Math.max(result.total, creators.length),
             page: result.page,
             pageSize: result.pageSize,
             internalCount: result.internal_count,
@@ -165,7 +176,7 @@ export function useCreatorBrowse({
             loading: false,
             loadingMore: false,
             error: null,
-            hasMore: page * pageSize < result.total,
+            hasMore: page * pageSize < Math.max(result.total, creators.length),
           };
         });
       } catch (err) {
@@ -207,6 +218,18 @@ export function useCreatorBrowse({
     void fetchPage(state.page, false);
   }, [fetchPage, state.page]);
 
+  const upsertCreator = useCallback((creator: UnifiedCreatorResult) => {
+    pinnedCreatorsRef.current.set(creator.unified_id, creator);
+    setState((prev) => {
+      const { creators, inserted } = upsertCreatorInResults(prev.creators, creator);
+      return {
+        ...prev,
+        creators,
+        total: inserted ? Math.max(prev.total, creators.length, 1) : prev.total,
+      };
+    });
+  }, []);
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(state.total / pageSize)),
     [state.total, pageSize]
@@ -219,5 +242,6 @@ export function useCreatorBrowse({
     goToPage,
     retry,
     refetch: () => void fetchPage(1, false),
+    upsertCreator,
   };
 }

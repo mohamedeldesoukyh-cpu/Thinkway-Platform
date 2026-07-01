@@ -1,0 +1,198 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { persistCreatorPrimaryIdentity } from "@/lib/creators/persist-primary-avatar";
+import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { refreshCreatorMetrics } from "@/lib/services/creators/creator-enrichment-service";
+import { findDuplicatePlatformAccounts } from "@/lib/social/duplicate-check";
+import { enrichCreatorProfile } from "@/lib/social/enrichment/providers/open-graph";
+import { resolveMetricsSourceForEnrichment } from "@/lib/social/enrichment/metrics-status";
+import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
+import { parseProfileInput } from "@/lib/social/parse-profile-url";
+import { isSocialPlatform } from "@/lib/social/platforms";
+import type { Database } from "@/types/database";
+
+export type AddCreatorByProfileUrlResult =
+  | {
+      ok: true;
+      creator: UnifiedCreatorResult;
+      created: boolean;
+      enrichmentQueued: boolean;
+      message: string;
+    }
+  | { ok: false; message: string };
+
+/**
+ * Parse a social profile URL, upsert a minimal influencer + platform account when
+ * needed, and queue Apify enrichment via the unified creator-enrichment pipeline.
+ */
+export async function addCreatorByProfileUrl(
+  supabase: SupabaseClient<Database>,
+  input: { profileUrl: string; actorId: string }
+): Promise<AddCreatorByProfileUrlResult> {
+  const trimmed = input.profileUrl.trim();
+  const parsed = parseProfileInput(trimmed);
+
+  if (!parsed) {
+    return {
+      ok: false,
+      message: "Could not detect platform or username from this URL.",
+    };
+  }
+
+  if (!isSocialPlatform(parsed.platform)) {
+    return { ok: false, message: "Unsupported platform." };
+  }
+
+  const duplicates = await findDuplicatePlatformAccounts(supabase, {
+    platform: parsed.platform,
+    normalized_username: parsed.normalized_username,
+    normalized_profile_url: parsed.normalized_profile_url,
+  });
+
+  let influencerId: string;
+  let created = false;
+
+  if (duplicates.length > 0) {
+    influencerId = duplicates[0]!.influencer_id;
+  } else {
+    let enrichment = null;
+    try {
+      enrichment = await enrichCreatorProfile({
+        platform: parsed.platform,
+        username: parsed.username,
+        profile_url: parsed.profile_url,
+      });
+    } catch {
+      // Open-graph enrichment must not block creator creation.
+    }
+
+    const displayName =
+      enrichment?.display_name?.trim() || `@${parsed.normalized_username}`;
+
+    const normalized = buildNormalizedPlatformAccount({
+      platform: parsed.platform,
+      username: parsed.username,
+      profile_url: parsed.profile_url,
+      follower_count: enrichment?.follower_count ?? null,
+      following_count: enrichment?.following_count ?? null,
+      engagement_rate: enrichment?.engagement_rate ?? null,
+      avg_views: enrichment?.avg_views ?? null,
+      profile_display_name: enrichment?.display_name ?? null,
+      profile_bio: enrichment?.bio ?? null,
+      profile_picture_url: enrichment?.profile_picture_url ?? null,
+      is_verified: enrichment?.is_verified ?? false,
+      sync_status: enrichment?.sync_status ?? "partial",
+      sync_source: enrichment?.sync_source ?? "discovery_add",
+      sync_error: enrichment?.sync_error ?? null,
+      last_synced_at: enrichment ? new Date().toISOString() : null,
+      metrics_source: resolveMetricsSourceForEnrichment({
+        platform: parsed.platform,
+        follower_count: enrichment?.follower_count ?? null,
+        engagement_rate: enrichment?.engagement_rate ?? null,
+        avg_views: enrichment?.avg_views ?? null,
+        sync_status: enrichment?.sync_status ?? "partial",
+      }),
+      metrics_last_synced_at: enrichment ? new Date().toISOString() : null,
+      metrics_is_manual_override: false,
+    });
+
+    const { data: influencer, error: influencerError } = await supabase
+      .from("influencers")
+      .insert({
+        display_name: displayName,
+        status: "active",
+        notes: "Added via Discovery profile link",
+        created_by: input.actorId,
+      })
+      .select("id")
+      .single();
+
+    if (influencerError || !influencer) {
+      return {
+        ok: false,
+        message: influencerError?.message ?? "Failed to create creator.",
+      };
+    }
+
+    influencerId = influencer.id;
+    created = true;
+
+    const { error: accountError } = await supabase
+      .from("influencer_platform_accounts")
+      .insert({
+        influencer_id: influencerId,
+        platform: normalized.platform,
+        handle: normalized.handle,
+        username: normalized.username,
+        normalized_username: normalized.normalized_username,
+        profile_url: normalized.profile_url,
+        normalized_profile_url: normalized.normalized_profile_url,
+        profile_display_name: normalized.profile_display_name,
+        profile_bio: normalized.profile_bio,
+        profile_picture_url: normalized.profile_picture_url,
+        follower_count: normalized.follower_count ?? 0,
+        following_count: normalized.following_count,
+        engagement_rate: normalized.engagement_rate,
+        avg_views: normalized.avg_views,
+        is_verified: normalized.is_verified,
+        sync_status: normalized.sync_status,
+        sync_source: normalized.sync_source,
+        sync_error: normalized.sync_error,
+        last_synced_at: normalized.last_synced_at,
+        metrics_source: normalized.metrics_source,
+        metrics_last_synced_at: normalized.metrics_last_synced_at,
+        metrics_is_manual_override: normalized.metrics_is_manual_override,
+        is_primary: true,
+        ...(normalized.profile_picture_url
+          ? {
+              avatar_source: enrichment?.profile_picture_url ? "discovery" : "manual",
+              avatar_last_synced_at: new Date().toISOString(),
+            }
+          : {}),
+      });
+
+    if (accountError) {
+      await supabase.from("influencers").delete().eq("id", influencerId);
+      return { ok: false, message: accountError.message };
+    }
+
+    if (normalized.profile_picture_url) {
+      await persistCreatorPrimaryIdentity(supabase, influencerId);
+    }
+
+    await supabase
+      .from("influencers")
+      .update({ display_name: displayName })
+      .eq("id", influencerId);
+  }
+
+  const refresh = await refreshCreatorMetrics(supabase, influencerId, {
+    force: true,
+    trigger: "manual",
+    scope: "all",
+    requestedBy: input.actorId,
+  });
+
+  const unifiedId = `inf:${influencerId}`;
+  const creator = await getUnifiedCreatorById(supabase, unifiedId);
+  if (!creator) {
+    return { ok: false, message: "Creator was saved but could not be loaded." };
+  }
+
+  const message = created
+    ? refresh.queued
+      ? "Creator added — enrichment queued."
+      : refresh.message
+    : refresh.queued
+      ? "This creator already exists — enrichment queued."
+      : `This creator already exists. ${refresh.message}`;
+
+  return {
+    ok: true,
+    creator,
+    created,
+    enrichmentQueued: refresh.queued,
+    message,
+  };
+}

@@ -13,18 +13,12 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
 import {
-  addUnifiedCreatorsToShortlist,
+  addUnifiedCreatorsToShortlists,
   describeAddOutcome,
 } from "@/features/discovery/shortlists/add-to-shortlist-client";
+import { AddToShortlistDialog } from "@/features/discovery/shortlists/components/add-to-shortlist-dialog";
 import { loadCreatorCompareBundleAction } from "@/features/discovery/actions/creator-compare-actions";
 import type { CreatorCompareBundle } from "@/lib/creators/creator-compare-bundle";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
@@ -40,13 +34,14 @@ type Props = {
   shortlists: Array<{ id: string; name: string }>;
 };
 
-export function CreatorCompareWorkspace({ shortlists }: Props) {
+export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [shortlists, setShortlists] = useState(initialShortlists);
   const [bundle, setBundle] = useState<CreatorCompareBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
-  const [selectedShortlist, setSelectedShortlist] = useState(shortlists[0]?.id ?? "");
+  const [addToShortlistOpen, setAddToShortlistOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -107,18 +102,14 @@ export function CreatorCompareWorkspace({ shortlists }: Props) {
     setDetailCreator(creator);
   }
 
-  function addAllToList() {
-    if (!selectedShortlist) {
-      toast.error("Select a target list first.");
-      return;
-    }
+  function handleAddToShortlistConfirm({ shortlistIds }: { shortlistIds: string[] }) {
     if (creators.length === 0) {
       toast.error("No creators to add.");
       return;
     }
     startTransition(async () => {
       try {
-        const outcome = await addUnifiedCreatorsToShortlist(selectedShortlist, creators);
+        const outcome = await addUnifiedCreatorsToShortlists(shortlistIds, creators);
         if (outcome.added > 0) {
           toast.success(describeAddOutcome(outcome));
         } else if (outcome.failed > 0) {
@@ -128,6 +119,7 @@ export function CreatorCompareWorkspace({ shortlists }: Props) {
         } else {
           toast.info(describeAddOutcome(outcome));
         }
+        setAddToShortlistOpen(false);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to add to list");
       }
@@ -202,24 +194,12 @@ export function CreatorCompareWorkspace({ shortlists }: Props) {
           {bundle.entries.length} creators compared
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Select value={selectedShortlist} onValueChange={setSelectedShortlist}>
-            <SelectTrigger className="h-8 w-[160px] border-border bg-card text-xs">
-              <SelectValue placeholder="Target list" />
-            </SelectTrigger>
-            <SelectContent>
-              {shortlists.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Button
             size="sm"
             variant="secondary"
             className="h-8 gap-1.5 text-xs"
-            onClick={addAllToList}
-            disabled={isPending || !selectedShortlist}
+            onClick={() => setAddToShortlistOpen(true)}
+            disabled={isPending}
           >
             <ListPlusIcon className="size-3.5" />
             Add all to list
@@ -253,6 +233,16 @@ export function CreatorCompareWorkspace({ shortlists }: Props) {
         onOpenChange={(open) => {
           if (!open) setDetailCreator(null);
         }}
+      />
+
+      <AddToShortlistDialog
+        open={addToShortlistOpen}
+        onOpenChange={setAddToShortlistOpen}
+        creators={creators}
+        shortlists={shortlists}
+        onShortlistsChange={setShortlists}
+        onConfirm={handleAddToShortlistConfirm}
+        busy={isPending}
       />
     </div>
   );

@@ -1,14 +1,18 @@
 "use client";
 
-import { CheckIcon, Loader2Icon, RotateCwIcon, SearchXIcon } from "lucide-react";
+import { CheckIcon, Loader2Icon, RotateCwIcon, SearchIcon, SearchXIcon } from "lucide-react";
 
+import { CreatorProfileLink, creatorProfileSourceFromUnified } from "@/components/creator/creator-profile-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { cn } from "@/lib/utils";
+import { AddMissingCreatorEmptyState } from "@/features/discovery/components/add-missing-creator-dialog";
+import type { CreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
 
+import { formatPanelFollowers } from "./creator-selection-format";
 import type { CreatorCheckboxState, CreatorRowMeta } from "./creator-selection-types";
 
 type Props = {
@@ -32,17 +36,28 @@ type Props = {
   loadMoreRef?: (node: HTMLDivElement | null) => void;
   hasMore?: boolean;
   skeletonCount?: number;
-  variant?: "compact" | "list";
+  variant?: "compact" | "list" | "panel";
+  onSelectAllVisible?: () => void;
+  selectAllLabel?: string;
+  showAddMissingCreator?: boolean;
+  onMissingCreatorAdded?: (creator: UnifiedCreatorResult) => void;
+  onMissingCreatorEnrichmentStatusChange?: (
+    unifiedId: string,
+    status: CreatorEnrichmentStatus
+  ) => void;
+  onMissingCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
 };
 
-function RowSkeleton() {
+function PanelRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 px-3 py-2">
-      <Skeleton className="size-4 rounded" />
+    <div className="flex items-center gap-3 border-b border-slate-50 px-4 py-[11px]">
+      <Skeleton className="size-[18px] rounded-[5px]" />
+      <Skeleton className="size-[38px] rounded-full" />
       <div className="min-w-0 flex-1 space-y-1.5">
-        <Skeleton className="h-3.5 w-40" />
-        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-3.5 w-32" />
+        <Skeleton className="h-2.5 w-24" />
       </div>
+      <Skeleton className="h-3.5 w-10" />
     </div>
   );
 }
@@ -78,6 +93,36 @@ function toRowMeta(
   };
 }
 
+function RowSkeleton() {
+  return (
+    <div className="flex items-center gap-3 px-3 py-2">
+      <Skeleton className="size-4 rounded" />
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <Skeleton className="h-3.5 w-40" />
+        <Skeleton className="h-3 w-28" />
+      </div>
+    </div>
+  );
+}
+
+function panelPlatformMeta(creator: UnifiedCreatorResult): {
+  platform: string | null;
+  handle: string | null;
+  followers: number | null;
+} {
+  const platformInfo = creator.platforms[0];
+  return {
+    platform: platformInfo?.platform ?? null,
+    handle: platformInfo?.handle ?? null,
+    followers: creator.metrics.followers.value ?? platformInfo?.follower_count ?? null,
+  };
+}
+
+function formatHandle(handle: string | null): string {
+  if (!handle) return "";
+  return handle.startsWith("@") ? handle : `@${handle}`;
+}
+
 export function CreatorSelectionTable({
   creators,
   selectedIds,
@@ -99,10 +144,42 @@ export function CreatorSelectionTable({
   hasMore,
   skeletonCount = 8,
   variant = "compact",
+  onSelectAllVisible,
+  selectAllLabel = "Select all",
+  showAddMissingCreator = false,
+  onMissingCreatorAdded,
+  onMissingCreatorEnrichmentStatusChange,
+  onMissingCreatorUpdated,
 }: Props) {
+  const resultCount = total ?? creators.length;
+  const isPanel = variant === "panel";
+
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
-      {showHeader ? (
+      {showHeader && isPanel ? (
+        <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-2.5">
+          <div className="flex items-center gap-1.5">
+            <div className="flex size-[18px] items-center justify-center rounded-full border border-border bg-muted text-[9px] font-bold text-muted-foreground">
+              {resultCount > 99 ? "99+" : resultCount}
+            </div>
+            <span className="text-xs font-semibold text-muted-foreground">
+              {loading && creators.length === 0
+                ? "Searching…"
+                : `${resultCount.toLocaleString()} ${resultCount === 1 ? "result" : "results"}`}
+            </span>
+          </div>
+          {onSelectAllVisible ? (
+            <button
+              type="button"
+              onClick={onSelectAllVisible}
+              disabled={creators.length === 0}
+              className="border-0 bg-transparent p-0 text-[11px] font-semibold text-blue-600 transition-colors hover:text-blue-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {selectAllLabel}
+            </button>
+          ) : null}
+        </div>
+      ) : showHeader ? (
         <div className="flex shrink-0 items-center gap-3 border-b border-border bg-muted/40 px-3 py-2">
           {onToggleSelectAll ? (
             <Checkbox
@@ -115,12 +192,12 @@ export function CreatorSelectionTable({
           <span className="text-[12px] font-medium text-muted-foreground">
             {loading && creators.length === 0
               ? "Searching…"
-              : `${(total ?? creators.length).toLocaleString()} ${(total ?? creators.length) === 1 ? "result" : "results"}`}
+              : `${resultCount.toLocaleString()} ${resultCount === 1 ? "result" : "results"}`}
           </span>
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={cn("min-h-0 flex-1 overflow-y-auto", isPanel && "scrollbar-thin")}>
         {error ? (
           <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
             <SearchXIcon className="size-8 text-destructive" />
@@ -133,13 +210,56 @@ export function CreatorSelectionTable({
             ) : null}
           </div>
         ) : loading && creators.length === 0 ? (
-          <div className="space-y-1 py-1">
-            {Array.from({ length: skeletonCount }).map((_, i) => (
-              <RowSkeleton key={i} />
-            ))}
+          <div className={cn(isPanel ? "" : "space-y-1 py-1")}>
+            {Array.from({ length: skeletonCount }).map((_, i) =>
+              isPanel ? <PanelRowSkeleton key={i} /> : <RowSkeleton key={i} />
+            )}
           </div>
         ) : creators.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+          isPanel ? (
+            <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
+              <div className="mb-3.5 flex size-12 items-center justify-center rounded-xl border border-border bg-muted">
+                <SearchIcon className="size-[22px] text-muted-foreground" strokeWidth={1.5} />
+              </div>
+              <p className="text-sm font-semibold text-foreground">No creators found</p>
+              <p className="mt-1 max-w-[260px] text-xs leading-relaxed text-muted-foreground">
+                Try a different search term or platform filter.
+              </p>
+              <AddMissingCreatorEmptyState
+                visible={showAddMissingCreator}
+                className="mt-3"
+                onSuccess={onMissingCreatorAdded}
+                onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+                onCreatorUpdated={onMissingCreatorUpdated}
+              />
+            </div>
+          ) : (
+            <div className="space-y-3 py-12 text-center">
+              <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+              <AddMissingCreatorEmptyState
+                visible={showAddMissingCreator}
+                onSuccess={onMissingCreatorAdded}
+                onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+                onCreatorUpdated={onMissingCreatorUpdated}
+              />
+            </div>
+          )
+        ) : isPanel ? (
+          <div>
+            {creators.map((creator) => {
+              const row = toRowMeta(creator, existingKeys, isRowDisabled, disabledBadge);
+              const checked = selectedIds.has(creator.unified_id);
+              return (
+                <PanelSelectionRow
+                  key={creator.unified_id}
+                  creator={creator}
+                  row={row}
+                  checked={checked}
+                  onToggle={() => onToggle(creator)}
+                />
+              );
+            })}
+          </div>
         ) : (
           <ul className={cn("space-y-1 p-1", variant === "list" && "p-0")}>
             {creators.map((creator) => {
@@ -164,11 +284,91 @@ export function CreatorSelectionTable({
             <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
           </div>
         ) : null}
-        {hasMore === false && creators.length > 0 && !error ? (
+        {hasMore === false && creators.length > 0 && !error && !isPanel ? (
           <p className="py-2 text-center text-[10px] text-muted-foreground">End of results</p>
         ) : null}
       </div>
     </div>
+  );
+}
+
+function PanelSelectionRow({
+  creator,
+  row,
+  checked,
+  onToggle,
+}: {
+  creator: UnifiedCreatorResult;
+  row: CreatorRowMeta;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  const disabled = row.disabled;
+  const source = creatorProfileSourceFromUnified(creator);
+  const meta = panelPlatformMeta(creator);
+  const handleLabel = formatHandle(meta.handle);
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onToggle}
+      className={cn(
+        "flex w-full items-center gap-3 border-b border-slate-50 px-4 py-[11px] text-left transition-colors",
+        disabled && "cursor-not-allowed opacity-60",
+        !disabled && checked && "bg-blue-50 hover:bg-blue-100",
+        !disabled && !checked && "hover:bg-slate-50"
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-all",
+          checked ? "border-blue-600 bg-blue-600" : "border-border bg-white"
+        )}
+        aria-hidden
+      >
+        <CheckIcon
+          className={cn(
+            "size-2.5 text-white transition-all",
+            checked ? "scale-100 opacity-100" : "scale-75 opacity-0"
+          )}
+          strokeWidth={3}
+        />
+      </span>
+
+      <CreatorProfileLink
+        source={source}
+        size="md"
+        avatarBadge="country"
+        showPlatformBadge={false}
+        showName={false}
+        showHandle={false}
+        linkName={false}
+        className="shrink-0"
+      />
+
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-semibold text-foreground">{row.label}</span>
+        <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+          {meta.platform ? <span>{meta.platform}</span> : null}
+          {meta.platform && handleLabel ? (
+            <span className="size-0.5 rounded-full bg-border" aria-hidden />
+          ) : null}
+          {handleLabel ? <span>{handleLabel}</span> : null}
+        </span>
+      </span>
+
+      <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+        {formatPanelFollowers(meta.followers)}
+      </span>
+
+      {row.disabledBadge ? (
+        <Badge variant={row.disabledBadge === "On list" ? "secondary" : "outline"} className="shrink-0 gap-1">
+          {row.disabledBadge === "On list" ? <CheckIcon className="size-3" /> : null}
+          {row.disabledBadge}
+        </Badge>
+      ) : null}
+    </button>
   );
 }
 

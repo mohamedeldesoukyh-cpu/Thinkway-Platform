@@ -78,6 +78,8 @@ export type CreatorPickerDialogProps = {
   formatConfirmLabel?: (selectedCount: number) => string;
   /** Custom row disable check beyond existing keys. */
   isRowDisabled?: (creator: UnifiedCreatorResult) => boolean;
+  /** Show add-by-profile-link CTA when search returns no results. */
+  showAddMissingCreator?: boolean;
   children?: React.ReactNode;
 };
 

@@ -30,6 +30,10 @@ import {
   type ImpressionsSource,
 } from "@/lib/performance/impressions-forecast-engine";
 import { buildQrCodeImageUrl } from "@/lib/performance/report/qr-code";
+import {
+  renderThinkwayReportLogoHtml,
+  THINKWAY_REPORT_LOGO_STYLES,
+} from "@/lib/reports/document/thinkway-report-logo";
 import { THINKWAY_REPORT_STYLES } from "@/lib/reports/document/thinkway-report-styles";
 
 /** IO-aligned document palette (Client/Vendor IO / Invoice). */
@@ -114,8 +118,7 @@ function buildPerformanceReportStyles(generatedLabel: string): string {
     padding: 36px 40px 32px;
     background: linear-gradient(180deg, rgba(2,11,38,.72) 0%, rgba(2,11,38,.92) 55%, ${PALETTE.primary} 100%);
   }
-  .cover-brand { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-  .cover-brand span { color: ${PALETTE.accent}; }
+  ${THINKWAY_REPORT_LOGO_STYLES}
   .cover-kicker { font-size: 10px; letter-spacing: 2.2px; text-transform: uppercase; color: #8899BB; margin-top: 6px; }
   .cover-title { font-size: 26px; font-weight: 700; line-height: 1.15; margin: 24px 0 10px; max-width: 88%; }
   .cover-meta { font-size: 12px; color: #C8D6F5; line-height: 1.65; display: grid; gap: 2px; }
@@ -233,8 +236,6 @@ function buildPerformanceReportStyles(generatedLabel: string): string {
     break-before: page;
     padding: 48px 32px;
   }
-  .closing-logo { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 32px; }
-  .closing-logo span { color: ${PALETTE.accent}; }
   .closing-title { font-size: 28px; font-weight: 700; letter-spacing: 4px; margin-bottom: 16px; }
   .closing-text { font-size: 14px; color: #C8D6F5; margin-bottom: 24px; max-width: 420px; line-height: 1.6; }
   .closing-contact { font-size: 12px; color: #8899BB; line-height: 1.8; }
@@ -415,7 +416,7 @@ function renderCoverPage(data: PerformanceReportDocumentData): string {
     ${hero}
     <div class="cover-overlay">
       <div>
-        <div class="cover-brand">THINK<span>WAY</span></div>
+        ${renderThinkwayReportLogoHtml({ variant: "cover", theme: "dark" })}
         <div class="cover-kicker">${esc(variantLabel)}</div>
         ${brandLogo}
         <div class="cover-accent"></div>
@@ -445,7 +446,7 @@ function renderCoverPage(data: PerformanceReportDocumentData): string {
 
 function renderClosingPage(): string {
   return `<section class="closing-page" id="section-thank-you">
-    <div class="closing-logo">THINK<span>WAY</span></div>
+    ${renderThinkwayReportLogoHtml({ variant: "closing", theme: "dark" })}
     <h2 class="closing-title">THANK YOU</h2>
     <p class="closing-text">Thank you for partnering with Thinkway.</p>
     <div class="closing-contact">

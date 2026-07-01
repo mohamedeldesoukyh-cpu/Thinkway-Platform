@@ -10,6 +10,7 @@ import {
 import type { ClientIoDocumentData } from "@/lib/io/client-io-document-types";
 import { renderTermsListHtml } from "@/lib/io/client-io-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
+import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
 
 const TEMPLATE_PATH = join(process.cwd(), "lib/io/templates/Thinkway_Client_IO_Global.html");
 
@@ -271,5 +272,5 @@ export function renderClientIoHtml(
     `<ul class="terms-list">${renderTermsListHtml(data.terms)}</ul>`
   );
 
-  return html;
+  return applyThinkwayLogoToDocumentHtml(html);
 }

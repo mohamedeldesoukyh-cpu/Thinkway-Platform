@@ -13,8 +13,6 @@ import type {
 } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { enqueueCreatorEnrichmentBestEffort } from "@/lib/creator-enrichment/queue";
-import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
@@ -432,9 +430,81 @@ export type AddCreatorInput = {
   unifiedId?: string | null;
   discoveredProfileId?: string | null;
   influencerId?: string | null;
+  platformAccountIds?: string[];
   notes?: string | null;
   matchScore?: number | null;
 };
+
+export type BulkAddCreatorsToShortlistsInput = {
+  shortlistIds: string[];
+  creators: Array<{
+    unifiedId?: string | null;
+    discoveredProfileId?: string | null;
+    influencerId?: string | null;
+    platformAccountIds?: string[];
+    notes?: string | null;
+    matchScore?: number | null;
+  }>;
+};
+
+export async function addCreatorsToShortlistsV2(
+  input: BulkAddCreatorsToShortlistsInput
+): Promise<ActionResult & { added?: number; alreadyOnList?: number; failed?: number }> {
+  const shortlistIds = [...new Set((input.shortlistIds ?? []).filter(Boolean))];
+  if (shortlistIds.length === 0) {
+    return { ok: false, message: "Select at least one shortlist." };
+  }
+  if (!input.creators?.length) {
+    return { ok: false, message: "Select at least one creator." };
+  }
+
+  let added = 0;
+  let alreadyOnList = 0;
+  let failed = 0;
+  let firstError: string | null = null;
+
+  for (const shortlistId of shortlistIds) {
+    for (const creator of input.creators) {
+      const result = await addCreatorToShortlistV2({
+        shortlistId,
+        unifiedId: creator.unifiedId,
+        discoveredProfileId: creator.discoveredProfileId,
+        influencerId: creator.influencerId,
+        platformAccountIds: creator.platformAccountIds,
+        notes: creator.notes,
+        matchScore: creator.matchScore,
+      });
+
+      if (result.ok) {
+        if (result.message?.toLowerCase().includes("already")) {
+          alreadyOnList += 1;
+        } else {
+          added += 1;
+        }
+      } else {
+        failed += 1;
+        firstError = firstError ?? result.message ?? "Add failed";
+      }
+    }
+  }
+
+  if (added === 0 && failed > 0) {
+    return { ok: false, message: firstError ?? "Failed to add creators.", added, alreadyOnList, failed };
+  }
+
+  const parts: string[] = [];
+  if (added > 0) parts.push(`${added} added`);
+  if (alreadyOnList > 0) parts.push(`${alreadyOnList} already on list`);
+  if (failed > 0) parts.push(`${failed} failed`);
+
+  return {
+    ok: true,
+    message: parts.join(" · ") || "No creators added",
+    added,
+    alreadyOnList,
+    failed,
+  };
+}
 
 export async function addCreatorToShortlistV2(
   input: AddCreatorInput
@@ -463,6 +533,10 @@ export async function addCreatorToShortlistV2(
     existingQuery = existingQuery.eq("profile_id", input.discoveredProfileId);
   } else if (input.influencerId) {
     existingQuery = existingQuery.eq("influencer_id", input.influencerId);
+  } else if (input.unifiedId) {
+    existingQuery = existingQuery.eq("unified_id", input.unifiedId);
+  } else {
+    return { ok: false, message: "A creator reference is required." };
   }
   const { data: existing } = await existingQuery.maybeSingle();
   if (existing?.id) {
@@ -474,6 +548,7 @@ export async function addCreatorToShortlistV2(
     profile_id: input.discoveredProfileId || null,
     influencer_id: input.influencerId || null,
     unified_id: input.unifiedId || null,
+    platform_account_ids: input.platformAccountIds ?? [],
     notes: input.notes?.trim() || null,
     match_score: input.matchScore ?? null,
     added_by: actor.userId,
@@ -499,20 +574,6 @@ export async function addCreatorToShortlistV2(
     discoveredProfileId: input.discoveredProfileId,
     unifiedId: input.unifiedId,
   });
-
-  // Phase 3 trigger (spec §4): enqueue background enrichment when a real creator
-  // is added. Non-blocking & best-effort — never delays or fails shortlist add.
-  // The worker honors the 30-day skip (only enriches if never enriched OR stale).
-  if (input.influencerId) {
-    enqueueCreatorEnrichmentBestEffort({
-      influencerId: input.influencerId,
-      discoveredProfileId: input.discoveredProfileId ?? null,
-      trigger: "shortlist",
-      priority: priorityForTrigger("shortlist"),
-      force: false,
-      requestedBy: actor.userId,
-    });
-  }
 
   revalidateShortlist(input.shortlistId);
   return { ok: true, message: "Creator added to shortlist." };
@@ -828,17 +889,6 @@ export async function moveShortlistToCampaign(
       notes: `Moved to ${documentNumber} as Suggested.`,
     });
 
-    // Phase 3 trigger (spec §5): creator moved Approved shortlist -> campaign is
-    // the highest-value signal, so enqueue HIGH priority (1) enrichment.
-    // Non-blocking & best-effort; the worker still honors the 30-day skip.
-    enqueueCreatorEnrichmentBestEffort({
-      influencerId,
-      discoveredProfileId: item.profile_id,
-      trigger: "campaign",
-      priority: priorityForTrigger("campaign"),
-      force: false,
-      requestedBy: actor.userId,
-    });
   }
 
   if (moved === 0) {

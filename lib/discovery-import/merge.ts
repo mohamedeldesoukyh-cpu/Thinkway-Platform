@@ -1,4 +1,4 @@
-/** Fill-missing-only merge for CSV re-import — never overwrite non-empty existing values. */
+/** Authoritative import merge — incoming non-empty values overwrite; empty incoming preserves existing. */
 
 export function isImportFieldEmpty(value: unknown): boolean {
   if (value === null || value === undefined) return true;
@@ -13,28 +13,32 @@ export function isImportFieldEmpty(value: unknown): boolean {
 export type ImportMergeLog = (level: "info" | "warn", message: string) => void;
 
 /**
- * Return incoming only when existing is empty; otherwise keep existing.
- * Logs `[import] field skipped` / `[import] field filled from upload`.
+ * Authoritative merge: when incoming is non-empty, use it; otherwise keep existing.
+ * Never overwrites populated values with NULL/empty.
  */
-export function mergeMissingOnly<T>(
+export function mergeAuthoritative<T>(
   existing: T,
   incoming: T,
   field: string,
   log?: ImportMergeLog
 ): T {
-  if (!isImportFieldEmpty(existing)) {
-    log?.("info", `[import] field skipped (existing value present): ${field}`);
-    return existing;
-  }
   if (!isImportFieldEmpty(incoming)) {
-    log?.("info", `[import] field filled from upload: ${field}`);
+    if (incoming !== existing) {
+      log?.("info", `[import] field updated from upload: ${field}`);
+    }
     return incoming;
+  }
+  if (!isImportFieldEmpty(existing)) {
+    log?.("info", `[import] field skipped (empty in upload): ${field}`);
   }
   return existing;
 }
 
+/** @deprecated Use {@link mergeAuthoritative}. Kept for incremental migration. */
+export const mergeMissingOnly = mergeAuthoritative;
+
 /** Shallow patch: only keys whose merged value differs from existing. */
-export function mergeMissingOnlyRecord<T extends Record<string, unknown>>(
+export function mergeAuthoritativeRecord<T extends Record<string, unknown>>(
   existing: T,
   incoming: Partial<T>,
   fieldLabels: Partial<Record<keyof T, string>>,
@@ -43,10 +47,18 @@ export function mergeMissingOnlyRecord<T extends Record<string, unknown>>(
   const patch: Partial<T> = {};
   for (const key of Object.keys(incoming) as Array<keyof T>) {
     const label = fieldLabels[key] ?? String(key);
-    const merged = mergeMissingOnly(existing[key], incoming[key] as T[keyof T], label, log);
+    const merged = mergeAuthoritative(
+      existing[key],
+      incoming[key] as T[keyof T],
+      label,
+      log
+    );
     if (merged !== existing[key]) {
       patch[key] = merged as T[keyof T];
     }
   }
   return patch;
 }
+
+/** @deprecated Use {@link mergeAuthoritativeRecord}. */
+export const mergeMissingOnlyRecord = mergeAuthoritativeRecord;

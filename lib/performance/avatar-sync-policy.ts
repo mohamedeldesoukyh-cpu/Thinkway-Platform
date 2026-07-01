@@ -74,6 +74,23 @@ export function isPlaceholderAvatarUrl(url: string): boolean {
   return false;
 }
 
+/** Instagram CDN signed URLs expire via hex unix timestamp in `oe=` query param. */
+export function isInstagramCdnUrlExpired(url: string, nowMs = Date.now()): boolean {
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.toLowerCase();
+    if (!host.includes("cdninstagram") && !host.includes("fbcdn")) return false;
+
+    const oe = parsed.searchParams.get("oe");
+    if (!oe || !/^[0-9a-fA-F]+$/.test(oe)) return false;
+
+    const expiryMs = parseInt(oe, 16) * 1000;
+    return Number.isFinite(expiryMs) && expiryMs <= nowMs;
+  } catch {
+    return false;
+  }
+}
+
 /** Lightweight broken URL heuristics — no network HEAD. */
 export function isBrokenAvatarUrl(url: string): boolean {
   const trimmed = url.trim();
@@ -87,6 +104,8 @@ export function isBrokenAvatarUrl(url: string): boolean {
   } catch {
     return true;
   }
+
+  if (isInstagramCdnUrlExpired(trimmed)) return true;
 
   return isPlaceholderAvatarUrl(trimmed);
 }
@@ -119,25 +138,68 @@ export type PlatformAvatarAccount = {
   avatar_last_synced_at: string | null;
 };
 
+/** Compare avatar URLs ignoring CDN signing query params (oe=, x-expires, etc.). */
+export function normalizeAvatarUrlForComparison(url: string): string {
+  try {
+    const parsed = new URL(url.trim());
+    return `${parsed.hostname.toLowerCase()}${parsed.pathname}`.toLowerCase();
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
+
+/** True when incoming provider URL matches stored URL (exact or same CDN asset path). */
+export function isSameProviderAvatarUrl(
+  current: string | null | undefined,
+  incoming: string
+): boolean {
+  const cur = current?.trim();
+  const inc = incoming.trim();
+  if (!cur || !inc) return false;
+  if (cur === inc) return true;
+  return normalizeAvatarUrlForComparison(cur) === normalizeAvatarUrlForComparison(inc);
+}
+
+export type AvatarSyncPolicyOptions = {
+  allowManualCrossPlatformRefresh?: boolean;
+  /** Explicit operator consent to replace an uploaded avatar. */
+  forceAvatarReplace?: boolean;
+  /** Incoming Apify/Discovery profile picture URL for change detection. */
+  incomingProfilePictureUrl?: string;
+  /** Manual refresh may replace uploaded import avatars when provider URL differs. */
+  allowUploadedProviderReplace?: boolean;
+};
+
 /**
  * Whether an automated sync may write profile_picture_url.
  * Never overwrites manual uploads; allows first fill when URL is empty.
- * Re-syncs apify avatars after 30 days.
+ * Re-syncs apify avatars after 30 days or when provider returns a different photo.
  */
 export function shouldSyncPlatformAvatar(
   account: PlatformAvatarAccount,
   nowMs = Date.now(),
-  options?: { allowManualCrossPlatformRefresh?: boolean }
+  options?: AvatarSyncPolicyOptions
 ): boolean {
   const source = (account.avatar_source ?? "manual") as AvatarSource;
   const url = account.profile_picture_url;
   const needsRefresh = isAvatarUrlNeedsRefresh(url);
   const stale = isAvatarSyncStale(account.avatar_last_synced_at, nowMs);
+  const incoming = options?.incomingProfilePictureUrl?.trim();
+  const providerUrlChanged =
+    Boolean(incoming) && !isSameProviderAvatarUrl(url, incoming!);
 
-  if (source === "manual") {
+  if (source === "manual" || source === "uploaded") {
     if (isEmptyAvatarUrl(url)) return true;
+    if (source === "uploaded" && options?.forceAvatarReplace) return true;
+    if (
+      source === "uploaded" &&
+      providerUrlChanged &&
+      options?.allowUploadedProviderReplace
+    ) {
+      return true;
+    }
     if (options?.allowManualCrossPlatformRefresh) return true;
-    // Broken/placeholder manual URLs (e.g. migration default) may be replaced by Apify.
+    // Broken/placeholder URLs (e.g. migration default) may be replaced by Apify.
     if (needsRefresh) return true;
     return false;
   }
@@ -146,7 +208,11 @@ export function shouldSyncPlatformAvatar(
 
   if (source === "apify" && stale) return true;
 
-  if ((source === "discovery" || source === "uploaded") && stale) return true;
+  if (source === "discovery" && stale) return true;
+
+  if (providerUrlChanged && (source === "apify" || source === "discovery")) {
+    return true;
+  }
 
   return false;
 }
@@ -157,12 +223,20 @@ export function shouldSyncPlatformAvatar(
 export function shouldPersistPlatformAvatar(
   account: PlatformAvatarAccount,
   nowMs = Date.now(),
-  options?: { forceSync?: boolean; allowManualCrossPlatformRefresh?: boolean }
+  options?: AvatarSyncPolicyOptions & {
+    forceSync?: boolean;
+  }
 ): boolean {
   if (options?.forceSync) {
     const source = normalizeAvatarSource(account.avatar_source);
-    if (source !== "manual") return true;
-    return isAvatarUrlNeedsRefresh(account.profile_picture_url);
+    if (source === "uploaded") {
+      if (options.forceAvatarReplace || options.allowUploadedProviderReplace) return true;
+      return isAvatarUrlNeedsRefresh(account.profile_picture_url);
+    }
+    if (source === "manual") {
+      return isAvatarUrlNeedsRefresh(account.profile_picture_url);
+    }
+    return true;
   }
   return shouldSyncPlatformAvatar(account, nowMs, options);
 }
@@ -177,4 +251,27 @@ export function normalizeAvatarSource(value: string | null | undefined): AvatarS
     default:
       return "manual";
   }
+}
+
+/** Uploaded avatars with a non-empty URL keep avatar_source='uploaded' on persist. */
+export function shouldPreserveUploadedAvatarSource(account: PlatformAvatarAccount): boolean {
+  return (
+    normalizeAvatarSource(account.avatar_source) === "uploaded" &&
+    !isEmptyAvatarUrl(account.profile_picture_url)
+  );
+}
+
+/** avatar_source to write when persisting a provider avatar. */
+export function resolvePersistedAvatarSource(
+  account: PlatformAvatarAccount,
+  incomingSource: AvatarSource,
+  options?: Pick<AvatarSyncPolicyOptions, "forceAvatarReplace" | "allowUploadedProviderReplace">
+): AvatarSource {
+  if (shouldPreserveUploadedAvatarSource(account)) {
+    if (options?.forceAvatarReplace || options?.allowUploadedProviderReplace) {
+      return incomingSource;
+    }
+    return "uploaded";
+  }
+  return incomingSource;
 }

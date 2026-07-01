@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
+import {
+  resolveCreatorFromRefLookup,
+  resolveUnifiedCreatorsByRefs,
+} from "@/lib/creators/unified-browse";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CommercialInputMode, Database } from "@/types/database";
 
@@ -79,36 +82,22 @@ export function buildQuotationSeedFromShortlistItem(
   };
 }
 
-/** Resolve unified creator profiles for shortlist items (same lookup order as shortlist queries). */
+/** Resolve unified creator profiles for shortlist items by explicit refs. */
 export async function resolveCreatorsForShortlistItems(
   supabase: Supabase,
   items: ShortlistItemForSeed[]
 ): Promise<Map<string, UnifiedCreatorResult>> {
   if (items.length === 0) return new Map();
 
-  const browse = await browseUnifiedCreators(supabase, {
-    pageSize: Math.max(400, items.length + 50),
+  const lookup = await resolveUnifiedCreatorsByRefs(supabase, {
+    unifiedIds: items.map((item) => item.unified_id),
+    influencerIds: items.map((item) => item.influencer_id),
+    discoveredProfileIds: items.map((item) => item.profile_id),
   });
-
-  const byUnifiedId = new Map(browse.creators.map((c) => [c.unified_id, c]));
-  const byDiscoveryId = new Map(
-    browse.creators
-      .filter((c) => c.discovered_profile_id)
-      .map((c) => [c.discovered_profile_id!, c])
-  );
-  const byInfluencerId = new Map(
-    browse.creators
-      .filter((c) => c.influencer_id)
-      .map((c) => [c.influencer_id!, c])
-  );
 
   const resolved = new Map<string, UnifiedCreatorResult>();
   for (const item of items) {
-    const creator =
-      (item.unified_id ? byUnifiedId.get(item.unified_id) : null) ??
-      (item.profile_id ? byDiscoveryId.get(item.profile_id) : null) ??
-      (item.influencer_id ? byInfluencerId.get(item.influencer_id) : null) ??
-      null;
+    const creator = resolveCreatorFromRefLookup(lookup, item);
     if (creator) resolved.set(item.id, creator);
   }
   return resolved;

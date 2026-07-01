@@ -6,7 +6,7 @@ import {
 
 import type { FieldSource, FieldSourceMap } from "@/lib/creator-enrichment/types";
 
-import { mergeMissingOnly, type ImportMergeLog } from "./merge";
+import { mergeAuthoritative, type ImportMergeLog } from "./merge";
 
 import type { ParsedCreatorRow } from "./types";
 
@@ -50,6 +50,7 @@ export function normalizeParsedCreatorRow(
   return {
     ...row,
     username: row.username.trim().replace(/^@+/, ""),
+    display_name: row.display_name?.trim() || null,
     platform: row.platform.trim().toLowerCase(),
     country: row.country?.trim() || null,
     source: row.source?.trim() || defaultSource,
@@ -60,6 +61,7 @@ export function normalizeParsedCreatorRow(
     profile_picture_url: row.profile_picture_url?.trim() || null,
     profile_avatar_source: row.profile_avatar_source ?? null,
     role: row.role?.trim() || null,
+    appearances: row.appearances ?? null,
   };
 }
 
@@ -83,6 +85,7 @@ export function buildImportFieldSources(
   if (row.country?.trim()) sources.audience_country = IMPORTED;
   if (row.categories.length > 0 || row.audience_interests.length > 0) {
     sources.interest_categories = IMPORTED;
+    sources.audience_interests = IMPORTED;
   }
   if (options?.hasAvatar || row.profile_picture_url?.trim()) {
     sources.profile_picture_url = IMPORTED;
@@ -121,25 +124,32 @@ export function importProfilePictureAccountFields(
   };
 }
 
+export function resolveImportDisplayName(
+  row: Pick<ParsedCreatorRow, "display_name" | "username">
+): string {
+  const displayName = row.display_name?.trim();
+  if (displayName) return displayName;
+  return row.username.trim().replace(/^@+/, "");
+}
+
 export function buildCreatorImportMetadata(row: ParsedCreatorRow): Record<string, unknown> {
   return {
     import_source: row.source,
+    categories: row.categories,
     audience_interests: row.audience_interests,
     relevance_score: row.relevance_score,
+    ...(row.appearances != null ? { appearances: row.appearances } : {}),
     ...(row.role?.trim() ? { role: row.role.trim() } : {}),
     imported_at: new Date().toISOString(),
   };
 }
 
-/** Union of influencer-level categories and imported category/interest tags. */
+/** Merge influencer-level categories from import (Categories column only). */
 export function resolveInfluencerImportCategories(
   existing: string[] | null | undefined,
-  row: Pick<ParsedCreatorRow, "categories" | "audience_interests">
+  row: Pick<ParsedCreatorRow, "categories">
 ): string[] {
-  return mergeImportedStringArrays(
-    mergeImportedStringArrays(existing, row.categories),
-    row.audience_interests
-  );
+  return mergeImportedStringArrays(existing, row.categories);
 }
 
 export function mergeImportedStringArrays(
@@ -189,48 +199,61 @@ export function mergeCreatorImportMetadata(
       row.relevance_score != null
         ? row.relevance_score
         : ((existing.relevance_score as number | null | undefined) ?? null),
+    appearances:
+      row.appearances != null
+        ? row.appearances
+        : ((existing.appearances as number | null | undefined) ?? null),
     import_source: row.source ?? existing.import_source ?? importMeta.import_source,
     imported_at: importMeta.imported_at,
   };
 }
 
-/** Re-import metadata merge — only fill empty fields; always refresh provenance timestamps. */
-export function mergeCreatorImportMetadataMissingOnly(
+/** Re-import metadata merge — authoritative when import supplies values. */
+export function mergeCreatorImportMetadataAuthoritative(
   existing: Record<string, unknown>,
   row: ParsedCreatorRow,
   log?: ImportMergeLog
 ): Record<string, unknown> {
   const importMeta = buildCreatorImportMetadata(row);
-  const incomingCategories = resolveInfluencerImportCategories([], row);
+  const incomingCategories = row.categories;
   const incomingInterests = row.audience_interests;
 
   return {
     ...existing,
-    audience_interests: mergeMissingOnly(
+    audience_interests: mergeAuthoritative(
       (existing.audience_interests as string[] | undefined) ?? [],
       incomingInterests,
       "metadata.audience_interests",
       log
     ),
-    categories: mergeMissingOnly(
+    categories: mergeAuthoritative(
       (existing.categories as string[] | undefined) ?? [],
       incomingCategories,
       "metadata.categories",
       log
     ),
-    relevance_score: mergeMissingOnly(
+    relevance_score: mergeAuthoritative(
       (existing.relevance_score as number | null | undefined) ?? null,
       row.relevance_score,
       "metadata.relevance_score",
       log
     ),
-    role: mergeMissingOnly(
+    role: mergeAuthoritative(
       (existing.role as string | null | undefined) ?? null,
       row.role?.trim() || null,
       "metadata.role",
+      log
+    ),
+    appearances: mergeAuthoritative(
+      (existing.appearances as number | null | undefined) ?? null,
+      row.appearances,
+      "metadata.appearances",
       log
     ),
     import_source: row.source ?? existing.import_source ?? importMeta.import_source,
     imported_at: importMeta.imported_at,
   };
 }
+
+/** @deprecated Use {@link mergeCreatorImportMetadataAuthoritative}. */
+export const mergeCreatorImportMetadataMissingOnly = mergeCreatorImportMetadataAuthoritative;

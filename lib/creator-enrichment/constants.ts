@@ -17,6 +17,15 @@ export const CREATOR_ENRICHMENT_BACKOFF_DELAY_MS = 5_000;
 export const CREATOR_ENRICHMENT_REMOVE_ON_COMPLETE = 1_000;
 export const CREATOR_ENRICHMENT_REMOVE_ON_FAIL = 500;
 
+/** Rows in `queued` longer than this with no BullMQ job are reset (worker offline). */
+export const STUCK_QUEUED_ENRICHMENT_THRESHOLD_MS = 10 * 60 * 1000;
+
+/** Rows in `running` longer than this with no BullMQ job are marked failed. */
+export const STUCK_RUNNING_ENRICHMENT_THRESHOLD_MS = 15 * 60 * 1000;
+
+/** Import files stuck in `queued` with no worker progress revert to `uploaded`. */
+export const STUCK_QUEUED_IMPORT_THRESHOLD_MS = 10 * 60 * 1000;
+
 /**
  * Permission required to trigger a manual refresh. Reuses discovery write,
  * matching the shortlist permission model.

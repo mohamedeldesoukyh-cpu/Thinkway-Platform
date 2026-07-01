@@ -18,7 +18,7 @@ const STATUS_META: Record<
   { label: string; icon: LucideIcon; spin?: boolean }
 > = {
   never: {
-    label: "Never synced",
+    label: "Imported",
     icon: CircleDashedIcon,
   },
   queued: {
@@ -26,7 +26,7 @@ const STATUS_META: Record<
     icon: ClockIcon,
   },
   running: {
-    label: "Collecting",
+    label: "Updating",
     icon: Loader2Icon,
     spin: true,
   },
@@ -35,7 +35,7 @@ const STATUS_META: Record<
     icon: CircleCheckIcon,
   },
   partial: {
-    label: "Partial",
+    label: "Partial failure",
     icon: CircleAlertIcon,
   },
   failed: {
@@ -51,23 +51,38 @@ const STATUS_META: Record<
 /** Self-contained enrichment status badge (spec §1/§3). */
 export function EnrichmentStatusBadge({
   status,
+  workerOfflineHint,
   className,
 }: {
   status: CreatorEnrichmentStatus;
+  /** When true, queued badge explains the discovery worker may be offline. */
+  workerOfflineHint?: boolean;
   className?: string;
 }) {
   const meta = STATUS_META[status] ?? STATUS_META.never;
   const Icon = meta.icon;
   const tone = CREATOR_ENRICHMENT_STATUS_TONE[status] ?? CREATOR_ENRICHMENT_STATUS_TONE.never;
+  const label =
+    status === "queued" && workerOfflineHint
+      ? "Queued (worker offline)"
+      : meta.label;
+  const title =
+    status === "queued" && workerOfflineHint
+      ? "Enrichment jobs are waiting in Redis but discovery-worker is not processing them. Run npm run discovery-worker."
+      : status === "queued"
+        ? "Waiting for discovery-worker to process the enrichment job."
+        : undefined;
 
   return (
-    <StatusBadge
-      label={meta.label}
-      tone={tone}
-      className={cn("gap-1 font-medium", className)}
-    >
-      <Icon aria-hidden className={cn(meta.spin && "animate-spin")} />
-      {meta.label}
-    </StatusBadge>
+    <span title={title}>
+      <StatusBadge
+        label={label}
+        tone={tone}
+        className={cn("gap-1 font-medium", className)}
+      >
+        <Icon aria-hidden className={cn(meta.spin && "animate-spin")} />
+        {label}
+      </StatusBadge>
+    </span>
   );
 }

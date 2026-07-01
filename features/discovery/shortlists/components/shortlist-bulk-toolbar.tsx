@@ -5,6 +5,7 @@ import {
   DownloadIcon,
   FileTextIcon,
   GitCompareArrowsIcon,
+  RefreshCwIcon,
   SendIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -25,6 +26,7 @@ type Props = {
   onRemoveSelected: () => void;
   onCompareSelected: () => void;
   onExportSelected: () => void;
+  onRefreshMetrics?: () => void;
   onMoveSelected: () => void;
   onGenerateQuotation: () => void;
   onApproveSelected: () => void;
@@ -43,6 +45,7 @@ export function ShortlistBulkToolbar({
   onRemoveSelected,
   onCompareSelected,
   onExportSelected,
+  onRefreshMetrics,
   onMoveSelected,
   onGenerateQuotation,
   onApproveSelected,
@@ -103,8 +106,16 @@ export function ShortlistBulkToolbar({
         onClick: onCompareSelected,
       },
       {
+        id: "refresh-metrics",
+        label: "Refresh metrics",
+        icon: RefreshCwIcon,
+        variant: "outline",
+        disabled: busy || !onRefreshMetrics,
+        onClick: () => onRefreshMetrics?.(),
+      },
+      {
         id: "export",
-        label: "Export",
+        label: "Export CSV",
         icon: DownloadIcon,
         variant: "outline",
         disabled: busy,
@@ -150,6 +161,7 @@ export function ShortlistBulkToolbar({
     onRemoveSelected,
     onCompareSelected,
     onExportSelected,
+    onRefreshMetrics,
     onMoveSelected,
     onGenerateQuotation,
     onApproveSelected,

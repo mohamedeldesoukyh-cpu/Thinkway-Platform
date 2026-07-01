@@ -87,7 +87,7 @@ export function LoginForm({ nextPath = "/", callbackError }: LoginFormProps) {
       ) : null}
 
       <a
-        href="mailto:support@thinkway.com"
+        href="mailto:Hello@thinkwaymedia.com"
         className="login-v2-forgot"
       >
         Forgot your password?
@@ -103,7 +103,7 @@ export function LoginForm({ nextPath = "/", callbackError }: LoginFormProps) {
 
       <p className="login-v2-create-acc">
         Don&apos;t have an account?{" "}
-        <a href="mailto:support@thinkway.com">Contact us</a>
+        <a href="mailto:Hello@thinkwaymedia.com">Contact us</a>
       </p>
     </form>
   );

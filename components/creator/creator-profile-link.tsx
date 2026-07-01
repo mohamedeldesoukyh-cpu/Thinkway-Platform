@@ -4,6 +4,10 @@ import { BadgeCheckIcon, ExternalLinkIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
+import {
+  CountryFlagBadge,
+  type CountryFlagBadgeOverlaySize,
+} from "@/components/creator/country-flag-badge";
 
 import {
   Tooltip,
@@ -11,25 +15,28 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import {
+  type CreatorProfileSource,
+  creatorProfileSourceFromAccounts,
+  creatorProfileSourceFromPlatformAccount,
+  creatorProfileSourceFromUnified,
+} from "@/lib/creators/creator-profile-source";
 import {
   openOnPlatformTooltip,
-  pickPrimaryPlatformAccount,
   profileLinkTooltip,
   resolveCreatorProfileUrl,
   resolvePrimaryProfileUrl,
   type ProfileUrlSource,
 } from "@/lib/discovery/profile-url";
+import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { cn } from "@/lib/utils";
 
-export type CreatorProfileSource = {
-  displayName: string;
-  avatarUrl?: string | null;
-  platform?: string | null;
-  handle?: string | null;
-  profile_url?: string | null;
-  isVerified?: boolean;
+export type { CreatorProfileSource };
+export {
+  creatorProfileSourceFromAccounts,
+  creatorProfileSourceFromPlatformAccount,
+  creatorProfileSourceFromUnified,
 };
 
 const AVATAR_SIZE_CLASS = {
@@ -53,12 +60,23 @@ const HANDLE_SIZE_CLASS = {
   lg: "text-[11px]",
 } as const;
 
-const BADGE_SIZE_CLASS = {
+const BADGE_SIZE_CLASS: Record<CountryFlagBadgeOverlaySize, string> = {
   xs: "size-4",
   sm: "size-5",
   md: "size-5",
   lg: "size-6",
-} as const;
+};
+
+/** Country flag overlay — one step smaller than avatar for ~50% proportion (matches Discovery lg). */
+const AVATAR_COUNTRY_BADGE_SIZE: Record<
+  keyof typeof AVATAR_SIZE_CLASS,
+  CountryFlagBadgeOverlaySize
+> = {
+  xs: "xs",
+  sm: "xs",
+  md: "sm",
+  lg: "lg",
+};
 
 export type CreatorProfileLinkProps = {
   source: CreatorProfileSource;
@@ -67,6 +85,8 @@ export type CreatorProfileLinkProps = {
   showAvatar?: boolean;
   showName?: boolean;
   showHandle?: boolean;
+  /** Overlay on avatar: platform icon (default) or country flag. */
+  avatarBadge?: "platform" | "country" | "none";
   showPlatformBadge?: boolean;
   showExternalIcon?: boolean;
   /** When false, display name is plain text (e.g. row click opens detail sheet). Default true. */
@@ -76,55 +96,6 @@ export type CreatorProfileLinkProps = {
   nameClassName?: string;
   trailing?: ReactNode;
 };
-
-export function creatorProfileSourceFromUnified(creator: UnifiedCreatorResult): CreatorProfileSource {
-  const primary = creator.platforms[0];
-  return {
-    displayName: creator.display_name,
-    avatarUrl: creator.profile_image_url,
-    platform: primary?.platform,
-    handle: primary?.handle,
-    profile_url: primary?.profile_url,
-    isVerified: creator.is_platform_verified,
-  };
-}
-
-export function creatorProfileSourceFromPlatformAccount(
-  displayName: string,
-  account: {
-    platform: string;
-    handle: string;
-    profile_url?: string | null;
-    profile_picture_url?: string | null;
-  } | null | undefined,
-  options?: { avatarUrl?: string | null; isVerified?: boolean }
-): CreatorProfileSource {
-  return {
-    displayName,
-    avatarUrl: options?.avatarUrl ?? account?.profile_picture_url ?? null,
-    platform: account?.platform,
-    handle: account?.handle,
-    profile_url: account?.profile_url,
-    isVerified: options?.isVerified,
-  };
-}
-
-export function creatorProfileSourceFromAccounts(
-  displayName: string,
-  accounts: Array<
-    {
-      platform: string;
-      handle: string;
-      profile_url?: string | null;
-      profile_picture_url?: string | null;
-      is_primary?: boolean | null;
-    }
-  > | null | undefined,
-  options?: { avatarUrl?: string | null; isVerified?: boolean }
-): CreatorProfileSource {
-  const primary = pickPrimaryPlatformAccount(accounts ?? []);
-  return creatorProfileSourceFromPlatformAccount(displayName, primary, options);
-}
 
 function formatHandle(handle: string | null | undefined): string | null {
   const trimmed = handle?.trim().replace(/^@+/, "");
@@ -163,7 +134,7 @@ function ProfileExternalLink({
   );
 }
 
-/** Avatar + display name with platform badge, external social profile links, and tooltips. */
+/** Avatar + display name with optional badge overlay, external social profile links, and tooltips. */
 export function CreatorProfileLink({
   source,
   size = "md",
@@ -171,6 +142,7 @@ export function CreatorProfileLink({
   showAvatar = true,
   showName = true,
   showHandle = true,
+  avatarBadge,
   showPlatformBadge = true,
   showExternalIcon = false,
   linkName = true,
@@ -182,11 +154,12 @@ export function CreatorProfileLink({
   const profileUrl = resolveCreatorProfileUrl(source as ProfileUrlSource);
   const handleLabel = formatHandle(source.handle);
   const tooltip = profileLinkTooltip(source.displayName, source.platform);
-  const avatarDim = AVATAR_SIZE_CLASS[size];
   const badgeDim = BADGE_SIZE_CLASS[size];
+  const badgeMode = avatarBadge ?? (showPlatformBadge ? "platform" : "none");
+  const showCountryBadge = badgeMode === "country" && Boolean(normalizeCountryCode(source.countryCode));
 
   const avatarNode = (
-    <CreatorAvatarImage avatarUrl={source.avatarUrl} platform={source.platform} size={size} />
+    <CreatorAvatarImage avatarUrl={source.avatarUrl} profileUrl={profileUrl} size={size} />
   );
 
   const avatarBlock = showAvatar ? (
@@ -203,7 +176,21 @@ export function CreatorProfileLink({
       ) : (
         avatarNode
       )}
-      {showPlatformBadge && source.platform ? (
+      {showCountryBadge ? (
+        <span
+          className={cn(
+            "pointer-events-none absolute -right-1 -bottom-1",
+            BADGE_SIZE_CLASS[AVATAR_COUNTRY_BADGE_SIZE[size]]
+          )}
+        >
+          <CountryFlagBadge
+            countryCode={source.countryCode}
+            size={AVATAR_COUNTRY_BADGE_SIZE[size]}
+            overlay
+            className="size-full"
+          />
+        </span>
+      ) : badgeMode === "platform" && source.platform ? (
         <span className="pointer-events-none absolute -right-1 -bottom-1 rounded-full ring-2 ring-card">
           <PlatformIcon platform={source.platform} size="xs" className={cn(badgeDim, "rounded-full")} />
         </span>

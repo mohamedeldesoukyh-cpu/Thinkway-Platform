@@ -7,6 +7,8 @@ import type { EmbeddedImage } from "pdf-parse";
 
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
 
+import type { Canvas, SKRSContext2D } from "@napi-rs/canvas";
+
 import type { ParsedCreatorRow } from "../types";
 
 export type ExtractedImportAvatar = {
@@ -24,14 +26,29 @@ const COMPOSITE_CROP = {
   avatarLeftRatio: 0.042,
   avatarSizeRowRatio: 0.72,
   maxAvatarPx: 110,
+  cropZoomInFactor: 1.6,
+  /** Shift crop window right so faces sit centered in the circular UI frame. */
+  cropCenterOffsetRightRatio: 0.12,
+  minCropPx: 80,
   avatarColumnWidthRatio: 0.12,
   avatarScanTopRatio: 0.14,
   avatarScanBottomRatio: 0.99,
   avatarBandDensityThreshold: 0.12,
   avatarBandMinHeightPx: 40,
+  /** Reject composite crops above this white ratio — leaves URL empty for Apify/OG enrichment. */
+  maxCropWhiteRatio: 0.72,
 } as const;
 
 const AVATAR_DEBUG_DIR = path.join(".tmp", "avatar-debug");
+
+function importAvatarDebugLog(message: string, details?: Record<string, unknown>): void {
+  if (process.env.NODE_ENV === "production") return;
+  if (details) {
+    console.log(message, details);
+    return;
+  }
+  console.log(message);
+}
 
 function isLikelyProfileEmbeddedImage(image: EmbeddedImage): boolean {
   const minSide = Math.min(image.width, image.height);
@@ -44,6 +61,68 @@ function isLikelyProfileEmbeddedImage(image: EmbeddedImage): boolean {
 function pickCompositePageImage(images: EmbeddedImage[]): EmbeddedImage | null {
   if (images.length === 0) return null;
   return [...images].sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? null;
+}
+
+/** Full-page raster screenshots — one per PDF page in multi-page exports. */
+function listCompositePageImages(pages: Array<{ images: EmbeddedImage[] }>): EmbeddedImage[] {
+  return pages
+    .map((page) => pickCompositePageImage(page.images))
+    .filter((image): image is EmbeddedImage => Boolean(image?.data?.length));
+}
+
+/** Split import rows across page composites using detected avatar band counts per page. */
+export function splitImportRowsAcrossPages(
+  rows: ParsedCreatorRow[],
+  bandCountsPerPage: number[]
+): ParsedCreatorRow[][] {
+  if (rows.length === 0 || bandCountsPerPage.length === 0) return [];
+
+  const counts = [...bandCountsPerPage];
+  let totalBands = counts.reduce((sum, count) => sum + count, 0);
+
+  if (totalBands === 0) {
+    const perPage = Math.ceil(rows.length / counts.length);
+    for (let i = 0; i < counts.length; i++) {
+      counts[i] = Math.min(perPage, Math.max(0, rows.length - i * perPage));
+    }
+    totalBands = counts.reduce((sum, count) => sum + count, 0);
+  }
+
+  while (totalBands > rows.length) {
+    const idx = counts.indexOf(Math.max(...counts));
+    counts[idx]! -= 1;
+    totalBands -= 1;
+  }
+  while (totalBands < rows.length) {
+    counts[counts.length - 1]! += 1;
+    totalBands += 1;
+  }
+
+  const chunks: ParsedCreatorRow[][] = [];
+  let offset = 0;
+  for (const count of counts) {
+    if (count <= 0) continue;
+    chunks.push(rows.slice(offset, offset + count));
+    offset += count;
+  }
+  return chunks;
+}
+
+/** Fraction of pixels brighter than threshold — used to reject empty PDF crops. */
+export function measureRgbaWhiteRatio(
+  data: ArrayLike<number>,
+  pixelCount: number,
+  threshold = 240
+): number {
+  if (pixelCount <= 0) return 1;
+  let white = 0;
+  for (let i = 0; i < pixelCount; i++) {
+    const offset = i * 4;
+    if (data[offset]! > threshold && data[offset + 1]! > threshold && data[offset + 2]! > threshold) {
+      white++;
+    }
+  }
+  return white / pixelCount;
 }
 
 type AvatarScanContext = {
@@ -137,12 +216,18 @@ function computePortraitSquareCrop(
   const originalCenterX = avatarLeft + avatarSize / 2;
   const originalCenterY = centerY;
   const squareSize = Math.max(cropWidth, cropHeight);
+  const finalCropSize = Math.max(
+    COMPOSITE_CROP.minCropPx,
+    Math.round(squareSize / COMPOSITE_CROP.cropZoomInFactor)
+  );
 
-  cropX = Math.round(originalCenterX - squareSize / 2);
-  cropY = Math.round(originalCenterY - squareSize / 2);
-  cropY = Math.max(0, Math.round(cropY - squareSize * 0.15));
-  cropWidth = squareSize;
-  cropHeight = squareSize;
+  const adjustedCenterX =
+    originalCenterX + finalCropSize * COMPOSITE_CROP.cropCenterOffsetRightRatio;
+  cropX = Math.round(adjustedCenterX - finalCropSize / 2);
+  cropY = Math.round(originalCenterY - finalCropSize / 2);
+  cropY = Math.max(0, Math.round(cropY - finalCropSize * 0.15));
+  cropWidth = finalCropSize;
+  cropHeight = finalCropSize;
 
   if (cropX < 0) cropX = 0;
   if (cropY < 0) cropY = 0;
@@ -167,7 +252,7 @@ function logAvatarCropDebug(input: {
   cropWidth: number;
   cropHeight: number;
 }): void {
-  console.log("[import] avatar crop", {
+  importAvatarDebugLog("[import] avatar crop", {
     username: input.username,
     pageWidth: input.pageWidth,
     pageHeight: input.pageHeight,
@@ -184,7 +269,7 @@ export function logAvatarExtracted(input: {
   finalHeight: number;
   source: ExtractedImportAvatar["source"];
 }): void {
-  console.log("[import] avatar extracted", {
+  importAvatarDebugLog("[import] avatar extracted", {
     username: input.username,
     finalWidth: input.finalWidth,
     finalHeight: input.finalHeight,
@@ -193,6 +278,7 @@ export function logAvatarExtracted(input: {
 }
 
 function saveAvatarDebugCrop(username: string, buffer: Buffer): void {
+  if (process.env.NODE_ENV === "production") return;
   try {
     mkdirSync(AVATAR_DEBUG_DIR, { recursive: true });
     writeFileSync(path.join(AVATAR_DEBUG_DIR, `${username}.jpg`), buffer);
@@ -233,6 +319,165 @@ function avatarBuffersFromEmbeddedImages(
   return result;
 }
 
+type CropCanvas = Canvas;
+
+type RenderedAvatarCrop = {
+  buffer: Buffer;
+  width: number;
+  height: number;
+  whiteRatio: number;
+};
+
+function measureBufferWhiteRatio(
+  createCanvas: typeof import("@napi-rs/canvas").createCanvas,
+  loadImage: typeof import("@napi-rs/canvas").loadImage,
+  buffer: Buffer
+): Promise<number> {
+  return loadImage(buffer).then((img) => {
+    const canvas = createCanvas(img.width, img.height);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const { data } = ctx.getImageData(0, 0, img.width, img.height);
+    return measureRgbaWhiteRatio(data, img.width * img.height);
+  });
+}
+
+function finalizeCompositeCropBuffer(
+  cropCanvas: CropCanvas,
+  cropCtx: SKRSContext2D,
+  createCanvas: typeof import("@napi-rs/canvas").createCanvas,
+  cropWidth: number,
+  cropHeight: number
+): { buffer: Buffer; width: number; height: number } {
+  const threshold = 235;
+  const imageData = cropCtx.getImageData(0, 0, cropWidth, cropHeight);
+  const { data, width, height } = imageData;
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const r = data[i]!;
+      const g = data[i + 1]!;
+      const b = data[i + 2]!;
+      if (r < threshold || g < threshold || b < threshold) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX >= minX) {
+    const contentW = maxX - minX + 1;
+    const contentH = maxY - minY + 1;
+    const squareSize = Math.max(contentW, contentH);
+    const centerX = minX + contentW / 2;
+    const contentCenterY = minY + contentH / 2;
+
+    let sqX = Math.round(centerX - squareSize / 2);
+    let sqY = Math.round(contentCenterY - squareSize / 2);
+    sqX = Math.max(0, Math.min(sqX, cropWidth - squareSize));
+    sqY = Math.max(0, Math.min(sqY, cropHeight - squareSize));
+    let finalSize = squareSize;
+    if (sqX + finalSize > cropWidth) finalSize = cropWidth - sqX;
+    if (sqY + finalSize > cropHeight) finalSize = cropHeight - sqY;
+
+    const trimmed = createCanvas(finalSize, finalSize);
+    const trimmedCtx = trimmed.getContext("2d");
+    trimmedCtx.drawImage(
+      cropCanvas as never,
+      sqX,
+      sqY,
+      finalSize,
+      finalSize,
+      0,
+      0,
+      finalSize,
+      finalSize
+    );
+    return {
+      buffer: Buffer.from(trimmed.toBuffer("image/jpeg")),
+      width: finalSize,
+      height: finalSize,
+    };
+  }
+
+  return {
+    buffer: Buffer.from(cropCanvas.toBuffer("image/jpeg")),
+    width: cropWidth,
+    height: cropHeight,
+  };
+}
+
+async function renderCompositeAvatarCrop(input: {
+  source: Awaited<ReturnType<typeof import("@napi-rs/canvas").loadImage>>;
+  pageWidth: number;
+  pageHeight: number;
+  centerY: number;
+  avatarSize: number;
+  avatarLeft: number;
+  createCanvas: typeof import("@napi-rs/canvas").createCanvas;
+  loadImage: typeof import("@napi-rs/canvas").loadImage;
+}): Promise<RenderedAvatarCrop | null> {
+  const { cropX, cropY, cropWidth, cropHeight } = computePortraitSquareCrop(
+    input.pageWidth,
+    input.pageHeight,
+    input.centerY,
+    input.avatarSize,
+    input.avatarLeft
+  );
+
+  const crop = input.createCanvas(cropWidth, cropHeight);
+  const cropCtx = crop.getContext("2d");
+  cropCtx.drawImage(
+    input.source,
+    cropX,
+    cropY,
+    cropWidth,
+    cropHeight,
+    0,
+    0,
+    cropWidth,
+    cropHeight
+  );
+
+  const finalized = finalizeCompositeCropBuffer(
+    crop,
+    cropCtx,
+    input.createCanvas,
+    cropWidth,
+    cropHeight
+  );
+  const whiteRatio = await measureBufferWhiteRatio(
+    input.createCanvas,
+    input.loadImage,
+    finalized.buffer
+  );
+  if (whiteRatio > COMPOSITE_CROP.maxCropWhiteRatio) {
+    return null;
+  }
+  return { ...finalized, whiteRatio };
+}
+
+function candidateCenterYs(
+  pageHeight: number,
+  rowIndex: number,
+  rowCount: number,
+  detectedCenters: number[]
+): number[] {
+  const uniform = uniformAvatarCenterY(pageHeight, rowIndex, rowCount);
+  const detected = detectedCenters[rowIndex];
+  const candidates: number[] = [];
+  if (detected != null) candidates.push(detected);
+  if (!candidates.includes(uniform)) candidates.push(uniform);
+  return candidates;
+}
+
 async function avatarBuffersFromCompositePage(
   pageImage: EmbeddedImage,
   rows: ParsedCreatorRow[]
@@ -251,7 +496,6 @@ async function avatarBuffersFromCompositePage(
     pageImage.width,
     pageImage.height
   );
-  const useDetectedCenters = detectedCenters.length === rows.length;
 
   const avatarSize = baseAvatarSize(pageImage.height, rows.length);
   const avatarLeft = Math.round(pageImage.width * COMPOSITE_CROP.avatarLeftRatio);
@@ -261,18 +505,44 @@ async function avatarBuffersFromCompositePage(
     const row = rows[index];
     if (!row) continue;
 
-    const centerY = useDetectedCenters
-      ? detectedCenters[index]!
-      : uniformAvatarCenterY(pageImage.height, index, rows.length);
+    let best: RenderedAvatarCrop | null = null;
+    for (const centerY of candidateCenterYs(
+      pageImage.height,
+      index,
+      rows.length,
+      detectedCenters
+    )) {
+      const rendered = await renderCompositeAvatarCrop({
+        source,
+        pageWidth: pageImage.width,
+        pageHeight: pageImage.height,
+        centerY,
+        avatarSize,
+        avatarLeft,
+        createCanvas,
+        loadImage,
+      });
+      if (!rendered) continue;
+      if (!best || rendered.whiteRatio < best.whiteRatio) {
+        best = rendered;
+      }
+    }
+
+    if (!best) {
+      importAvatarDebugLog("[import] avatar crop rejected", {
+        username: row.username,
+        reason: "mostly_empty",
+      });
+      continue;
+    }
 
     const { cropX, cropY, cropWidth, cropHeight } = computePortraitSquareCrop(
       pageImage.width,
       pageImage.height,
-      centerY,
+      candidateCenterYs(pageImage.height, index, rows.length, detectedCenters)[0]!,
       avatarSize,
       avatarLeft
     );
-
     logAvatarCropDebug({
       username: row.username,
       pageWidth: pageImage.width,
@@ -283,27 +553,13 @@ async function avatarBuffersFromCompositePage(
       cropHeight,
     });
 
-    const crop = createCanvas(cropWidth, cropHeight);
-    const cropCtx = crop.getContext("2d");
-    cropCtx.drawImage(
-      source,
-      cropX,
-      cropY,
-      cropWidth,
-      cropHeight,
-      0,
-      0,
-      cropWidth,
-      cropHeight
-    );
-    const buffer = Buffer.from(crop.toBuffer("image/jpeg"));
-    saveAvatarDebugCrop(row.username, buffer);
+    saveAvatarDebugCrop(row.username, best.buffer);
 
     const extracted: ExtractedImportAvatar = {
-      buffer,
+      buffer: best.buffer,
       contentType: "image/jpeg",
-      width: cropWidth,
-      height: cropHeight,
+      width: best.width,
+      height: best.height,
       source: "pdf-crop",
     };
     result.set(row.username.toLowerCase(), extracted);
@@ -316,6 +572,16 @@ async function avatarBuffersFromCompositePage(
   }
 
   return result;
+}
+
+async function countAvatarBandsOnPage(pageImage: EmbeddedImage): Promise<number> {
+  if (!pageImage.data?.length) return 0;
+  const { createCanvas, loadImage } = await import("@napi-rs/canvas");
+  const source = await loadImage(Buffer.from(pageImage.data));
+  const canvas = createCanvas(pageImage.width, pageImage.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(source, 0, 0);
+  return detectCompositeAvatarCenters(ctx, pageImage.width, pageImage.height).length;
 }
 
 /**
@@ -342,10 +608,28 @@ export async function extractPdfCreatorAvatarBuffers(
       return fromEmbedded;
     }
 
-    const composite = pickCompositePageImage(allImages);
-    if (!composite) return new Map();
+    const pageComposites = listCompositePageImages(imageResult.pages);
+    if (pageComposites.length === 0) return new Map();
 
-    return avatarBuffersFromCompositePage(composite, rows);
+    if (pageComposites.length === 1) {
+      return avatarBuffersFromCompositePage(pageComposites[0]!, rows);
+    }
+
+    const bandCounts = await Promise.all(pageComposites.map((page) => countAvatarBandsOnPage(page)));
+    const rowChunks = splitImportRowsAcrossPages(rows, bandCounts);
+    const merged = new Map<string, ExtractedImportAvatar>();
+
+    for (let pageIndex = 0; pageIndex < pageComposites.length; pageIndex++) {
+      const pageRows = rowChunks[pageIndex];
+      const pageImage = pageComposites[pageIndex];
+      if (!pageRows?.length || !pageImage) continue;
+      const pageAvatars = await avatarBuffersFromCompositePage(pageImage, pageRows);
+      for (const [key, value] of pageAvatars) {
+        merged.set(key, value);
+      }
+    }
+
+    return merged;
   } finally {
     await parser.destroy();
   }
@@ -355,5 +639,5 @@ export function logPdfAvatarExtraction(
   username: string,
   extracted: boolean
 ): void {
-  console.log(`[import] extracted avatar for ${username}: ${extracted}`);
+  importAvatarDebugLog(`[import] extracted avatar for ${username}: ${extracted}`);
 }

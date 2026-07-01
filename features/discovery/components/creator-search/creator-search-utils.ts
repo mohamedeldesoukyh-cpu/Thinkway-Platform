@@ -1,5 +1,6 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
 
 import {
   defaultDirectionForSortField,
@@ -7,17 +8,12 @@ import {
   type CreatorSearchSortState,
 } from "./creator-search-types";
 
-/** Converts an ISO 3166-1 alpha-2 code (e.g. "AE") to its flag emoji. */
-export function countryFlag(code: string | null | undefined): string | null {
-  if (!code) return null;
-  const trimmed = code.trim().toUpperCase();
-  if (trimmed.length !== 2 || !/^[A-Z]{2}$/.test(trimmed)) return null;
-  const base = 127397; // 0x1F1E6 - 'A'.codePointAt(0)
-  return String.fromCodePoint(
-    base + trimmed.charCodeAt(0),
-    base + trimmed.charCodeAt(1)
-  );
-}
+export {
+  countryFlag,
+  countryFlagImageUrl,
+  countryFlagImageFallbackUrls,
+  normalizeCountryCode,
+} from "@/lib/creators/creator-display-utils";
 
 /** Distinct audience-interest / category tags for a creator. */
 export function audienceInterestList(creator: UnifiedCreatorResult): string[] {
@@ -117,11 +113,7 @@ export function audienceCountryLabel(creator: UnifiedCreatorResult): string {
 }
 
 export function categoriesLabel(creator: UnifiedCreatorResult): string {
-  const parts = [
-    creator.ai_category,
-    creator.ai_niche,
-    ...creator.categories.slice(0, 2),
-  ].filter(Boolean);
+  const parts = creatorStoredCategoriesForDisplay(creator).slice(0, 3);
   return parts.length ? parts.join(", ") : "—";
 }
 

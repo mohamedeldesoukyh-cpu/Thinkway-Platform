@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { CreatorSearchWorkspace } from "@/features/discovery/components/creator-search/creator-search-workspace";
@@ -24,7 +26,15 @@ export default async function CreatorSearchPage() {
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <DiscoverySubNav activeHref="/discovery/search" />
           <div className="min-h-0 flex-1 overflow-hidden">
-            <CreatorSearchWorkspace shortlists={shortlists} campaigns={campaigns} />
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  Loading search…
+                </div>
+              }
+            >
+              <CreatorSearchWorkspace shortlists={shortlists} campaigns={campaigns} />
+            </Suspense>
           </div>
         </div>
       </PlatformErrorBoundary>

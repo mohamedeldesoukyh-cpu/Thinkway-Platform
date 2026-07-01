@@ -35,16 +35,31 @@ export function ResetDemoCreatorsButton({ enabled }: ResetDemoCreatorsButtonProp
 
   const handleConfirm = () => {
     startTransition(async () => {
-      const result = await resetDemoImportedCreatorsAction({
-        alsoDeleteDiscoveryProfiles,
-      });
-      if (result.ok) {
-        toast.success(result.message);
-        setOpen(false);
-        setAlsoDeleteDiscoveryProfiles(false);
-        router.refresh();
-      } else {
-        toast.error(result.message);
+      try {
+        const result = await resetDemoImportedCreatorsAction({
+          alsoDeleteDiscoveryProfiles,
+        });
+        if (!result) {
+          toast.error("Reset failed — no response from server. Try again.");
+          return;
+        }
+        if (result.ok) {
+          toast.success(result.message);
+          setOpen(false);
+          setAlsoDeleteDiscoveryProfiles(false);
+          router.refresh();
+        } else {
+          toast.error(
+            result.message?.trim() ||
+              "Failed to reset demo creators. Check server logs for details."
+          );
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error && error.message.trim()
+            ? error.message
+            : "Failed to reset demo creators. The request may have timed out — try again."
+        );
       }
     });
   };
@@ -60,8 +75,12 @@ export function ResetDemoCreatorsButton({ enabled }: ResetDemoCreatorsButtonProp
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="border-destructive/40">
-          <Trash2Icon className="size-4" />
+        <Button
+          type="button"
+          variant="outline"
+          className="h-[30px] gap-1.5 px-3 text-[11px] font-medium text-muted-foreground"
+        >
+          <Trash2Icon className="size-3" />
           Reset demo creators
         </Button>
       </DialogTrigger>

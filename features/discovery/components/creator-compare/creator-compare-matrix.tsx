@@ -53,6 +53,7 @@ export function CreatorCompareMatrix({ bundle, onRemove, onOpenCreator }: Props)
                   <CreatorProfileLink
                     source={creatorProfileSourceFromUnified(entry.creator)}
                     size="sm"
+                    avatarBadge="country"
                     showHandle
                     stopPropagation
                   />

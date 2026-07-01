@@ -1,5 +1,10 @@
 import { parseCompactCount } from "@/lib/social/parse-compact-count";
 import { isSocialPlatform } from "@/lib/social/platforms";
+import {
+  buildNormalizedRowLookup,
+  lookupCell,
+  normalizeExcelHeader,
+} from "@/lib/intelligence/parsers/header-normalize";
 
 import type { ParsedCreatorRow } from "../types";
 
@@ -56,6 +61,296 @@ function splitTags(value: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
+function splitAudienceInterestTags(value: string | null | undefined): string[] {
+  if (!value?.trim()) return [];
+  return value
+    .split(/[;|]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+const PLATFORM_FOLLOWER_COLUMNS: Array<{ platform: string; aliases: string[] }> = [
+  {
+    platform: "instagram",
+    aliases: ["instagram followers", "ig followers", "instagram follower count"],
+  },
+  {
+    platform: "tiktok",
+    aliases: ["tiktok followers", "tik tok followers", "tt followers"],
+  },
+  {
+    platform: "youtube",
+    aliases: [
+      "youtube followers",
+      "yt followers",
+      "youtube subscriber count",
+      "subscribers",
+    ],
+  },
+  {
+    platform: "facebook",
+    aliases: ["facebook followers", "fb followers"],
+  },
+];
+
+const PROFILE_PICTURE_ALIASES = [
+  "avatar url",
+  "avatar_url",
+  "profile photo",
+  "profile_photo",
+  "profile picture url",
+  "profile_picture_url",
+  "profile picture",
+  "profile_picture",
+  "profile pic",
+  "profile_pic",
+  "profile image url",
+  "profile_image_url",
+  "profile image",
+  "profile_image",
+  "image url",
+  "image_url",
+  "photo",
+  "picture",
+  "avatar",
+  "thumbnail",
+  "headshot",
+] as const;
+
+const ROLE_ALIASES = [
+  "role",
+  "creator role",
+  "creator_role",
+  "type",
+  "creator type",
+  "creator_type",
+  "details",
+  "creator details",
+  "creator_details",
+] as const;
+
+function parseImportProfilePictureUrlRaw(
+  lookup: Map<string, unknown>
+): string | null {
+  return lookupCell(lookup, ...PROFILE_PICTURE_ALIASES);
+}
+
+function parseImportRoleRaw(lookup: Map<string, unknown>): string | null {
+  return lookupCell(lookup, ...ROLE_ALIASES);
+}
+
+function parsePlatformsList(value: string | null | undefined): string[] {
+  if (!value?.trim()) return [];
+  const platforms: string[] = [];
+  const seen = new Set<string>();
+  for (const part of value.split(/[,;/|&+]/)) {
+    const platform = normalizeImportPlatform(part.trim());
+    if (!platform || seen.has(platform)) continue;
+    seen.add(platform);
+    platforms.push(platform);
+  }
+  return platforms;
+}
+
+function hasMultiPlatformFollowerColumns(lookup: Map<string, unknown>): boolean {
+  return PLATFORM_FOLLOWER_COLUMNS.some(({ aliases }) =>
+    aliases.some((alias) => lookupCell(lookup, alias) != null)
+  );
+}
+
+function hasPlatformFollowerColumnHeaders(lookup: Map<string, unknown>): boolean {
+  return PLATFORM_FOLLOWER_COLUMNS.some(({ aliases }) =>
+    aliases.some((alias) => lookup.has(normalizeExcelHeader(alias)))
+  );
+}
+
+function shouldParseAsMultiPlatformRow(
+  lookup: Map<string, unknown>,
+  listedPlatforms: string[]
+): boolean {
+  if (hasMultiPlatformFollowerColumns(lookup)) return true;
+  if (listedPlatforms.length > 1) return true;
+  if (listedPlatforms.length === 1 && hasPlatformFollowerColumnHeaders(lookup)) {
+    return true;
+  }
+  return false;
+}
+
+function parseTotalFollowers(lookup: Map<string, unknown>): number | null {
+  return parseCompactCount(
+    lookupCell(
+      lookup,
+      "total followers",
+      "total_followers",
+      "total follower count",
+      "total follower"
+    )
+  );
+}
+
+function parseAppearances(lookup: Map<string, unknown>): number | null {
+  const raw = lookupCell(lookup, "appearances", "appearance", "appearance count");
+  if (raw == null) return null;
+  const cleaned = raw.replace(/,/g, "").trim();
+  if (!cleaned) return null;
+  const num = Number(cleaned);
+  return Number.isFinite(num) ? num : null;
+}
+
+/** When exactly one platform is present, fall back to Total Followers if per-platform count is empty. */
+function resolveFollowersWithTotalFallback(
+  lookup: Map<string, unknown>,
+  platformSpecificFollowers: number | null,
+  platformCount: number
+): number | null {
+  if (platformSpecificFollowers != null) return platformSpecificFollowers;
+  if (platformCount !== 1) return null;
+  return parseTotalFollowers(lookup);
+}
+
+function parseIndahashSharedFields(
+  lookup: Map<string, unknown>,
+  source: string | null
+): Omit<ParsedCreatorRow, "platform" | "followers"> | null {
+  const usernameRaw =
+    lookupCell(
+      lookup,
+      "username",
+      "handle",
+      "creator",
+      "social handle",
+      "social username"
+    ) ?? "";
+  const username = usernameRaw.replace(/^@+/, "").trim();
+  if (!username) return null;
+
+  const engagement_rate = parsePercent(
+    lookupCell(
+      lookup,
+      "engagement rate",
+      "avg. engagement rate",
+      "avg engagement rate",
+      "avg er%",
+      "avg er",
+      "er%",
+      "effective er",
+      "engagement_rate"
+    )
+  );
+  const country = lookupCell(
+    lookup,
+    "country",
+    "audience country",
+    "location",
+    "geo",
+    "market"
+  );
+  const categories = splitTags(
+    lookupCell(lookup, "categories", "category", "niche", "content category")
+  );
+  const audience_interests = splitAudienceInterestTags(
+    lookupCell(
+      lookup,
+      "audience interests",
+      "interests",
+      "audience_interests",
+      "tags"
+    )
+  );
+  const relevance_score = parsePercent(
+    lookupCell(lookup, "relevance score", "relevance", "match score", "score")
+  );
+  const display_name = lookupCell(
+    lookup,
+    "display name",
+    "display_name",
+    "name",
+    "creator name",
+    "full name"
+  );
+
+  return {
+    username,
+    display_name,
+    engagement_rate,
+    country,
+    source,
+    categories,
+    audience_interests,
+    relevance_score,
+    profile_picture_url: parseImportProfilePictureUrlRaw(lookup),
+    role: parseImportRoleRaw(lookup),
+    appearances: parseAppearances(lookup),
+  };
+}
+
+function parseIndahashMultiPlatformRows(
+  row: Record<string, string>,
+  source: string | null = "indaHash"
+): ParsedCreatorRow[] {
+  const lookup = buildNormalizedRowLookup(row);
+  const listedPlatforms = parsePlatformsList(
+    lookupCell(lookup, "platforms", "platform", "social network", "network", "channel")
+  );
+  if (!shouldParseAsMultiPlatformRow(lookup, listedPlatforms)) return [];
+
+  const shared = parseIndahashSharedFields(lookup, source);
+  if (!shared) return [];
+
+  const platformsWithFollowers = PLATFORM_FOLLOWER_COLUMNS.flatMap(
+    ({ platform, aliases }) => {
+      const value = lookupCell(lookup, ...aliases);
+      if (value == null) return [];
+      return [platform];
+    }
+  );
+
+  const platformOrder: string[] = [];
+  const seenPlatforms = new Set<string>();
+  for (const platform of [...listedPlatforms, ...platformsWithFollowers]) {
+    if (seenPlatforms.has(platform)) continue;
+    seenPlatforms.add(platform);
+    platformOrder.push(platform);
+  }
+
+  if (platformOrder.length === 0) return [];
+
+  const rows: ParsedCreatorRow[] = [];
+  for (const platform of platformOrder) {
+    const followerAliases =
+      PLATFORM_FOLLOWER_COLUMNS.find((entry) => entry.platform === platform)
+        ?.aliases ?? [];
+    const platformFollowers = parseCompactCount(lookupCell(lookup, ...followerAliases));
+    const followers = resolveFollowersWithTotalFallback(
+      lookup,
+      platformFollowers,
+      platformOrder.length
+    );
+    const explicitlyListed = listedPlatforms.includes(platform);
+    if (followers == null && !explicitlyListed) continue;
+
+    rows.push({
+      ...shared,
+      platform,
+      followers,
+    });
+  }
+
+  return rows;
+}
+
+/** Parse one indaHash / generic tabular row into one or more creator rows. */
+export function parseIndahashTabularRows(
+  row: Record<string, string>,
+  source: string | null = "indaHash"
+): ParsedCreatorRow[] {
+  const multiPlatformRows = parseIndahashMultiPlatformRows(row, source);
+  if (multiPlatformRows.length > 0) return multiPlatformRows;
+
+  const single = parseIndahashCsvRow(row, source);
+  return single ? [single] : [];
+}
+
 function parseIndahashBlock(block: string, source: string | null): ParsedCreatorRow | null {
   const trimmed = block.trim();
   if (!trimmed.startsWith("@")) return null;
@@ -107,6 +402,7 @@ function parseIndahashBlock(block: string, source: string | null): ParsedCreator
 
   return {
     username,
+    display_name: null,
     platform,
     followers,
     engagement_rate,
@@ -117,6 +413,7 @@ function parseIndahashBlock(block: string, source: string | null): ParsedCreator
     relevance_score,
     profile_picture_url: null,
     role: null,
+    appearances: null,
   };
 }
 
@@ -336,6 +633,7 @@ function buildSearchExportRow(
 
   return {
     username,
+    display_name: null,
     platform,
     followers,
     engagement_rate,
@@ -346,6 +644,7 @@ function buildSearchExportRow(
     relevance_score,
     profile_picture_url: null,
     role: null,
+    appearances: null,
   };
 }
 
@@ -398,100 +697,39 @@ export function parseIndahashCsvRow(
   row: Record<string, string>,
   source: string | null = "indaHash"
 ): ParsedCreatorRow | null {
-  const normalized = new Map<string, string>();
-  for (const [key, value] of Object.entries(row)) {
-    normalized.set(key.trim().toLowerCase(), String(value ?? "").trim());
-  }
+  const lookup = buildNormalizedRowLookup(row);
+  const shared = parseIndahashSharedFields(lookup, source);
+  if (!shared) return null;
 
-  const lookup = (...aliases: string[]) => {
-    for (const alias of aliases) {
-      const value = normalized.get(alias.toLowerCase());
-      if (value) return value;
-    }
-    return null;
-  };
-
-  const usernameRaw =
-    lookup("username", "handle", "creator", "social handle", "social username") ??
-    "";
-  const username = usernameRaw.replace(/^@+/, "").trim();
-  if (!username) return null;
-
-  const platform = normalizeImportPlatform(
-    lookup("platform", "social network", "network", "channel")
+  const platformRaw = lookupCell(
+    lookup,
+    "platform",
+    "platforms",
+    "social network",
+    "network",
+    "channel"
   );
+  const platform =
+    normalizeImportPlatform(platformRaw) ??
+    parsePlatformsList(platformRaw)[0] ??
+    null;
   if (!platform) return null;
 
-  const followers = parseCompactCount(
-    lookup("followers", "follower number", "follower count", "fans", "subscribers")
-  );
-  const engagement_rate = parsePercent(
-    lookup(
-      "engagement rate",
-      "avg er%",
-      "avg er",
-      "er%",
-      "effective er",
-      "engagement_rate"
+  const platformFollowers = parseCompactCount(
+    lookupCell(
+      lookup,
+      "followers",
+      "follower number",
+      "follower count",
+      "fans",
+      "subscribers"
     )
   );
-  const country = lookup("country", "audience country", "location", "geo");
-  const categories = splitTags(
-    lookup("categories", "category", "niche", "content category")
-  );
-  const audience_interests = splitTags(
-    lookup("audience interests", "interests", "audience_interests", "tags")
-  );
-  const relevance_score = parsePercent(
-    lookup("relevance score", "relevance", "match score", "score")
-  );
-  const profile_picture_url = lookup(
-    "avatar url",
-    "avatar_url",
-    "profile photo",
-    "profile_photo",
-    "profile picture url",
-    "profile_picture_url",
-    "profile picture",
-    "profile_picture",
-    "profile pic",
-    "profile_pic",
-    "profile image url",
-    "profile_image_url",
-    "profile image",
-    "profile_image",
-    "image url",
-    "image_url",
-    "photo",
-    "picture",
-    "avatar",
-    "thumbnail",
-    "headshot"
-  );
-  const role = lookup(
-    "role",
-    "creator role",
-    "creator_role",
-    "type",
-    "creator type",
-    "creator_type",
-    "details",
-    "creator details",
-    "creator_details"
-  );
+  const followers = resolveFollowersWithTotalFallback(lookup, platformFollowers, 1);
 
   return {
-    username,
+    ...shared,
     platform,
     followers,
-    engagement_rate,
-    country,
-    source,
-    categories: categories.length > 0 ? categories : audience_interests,
-    audience_interests:
-      audience_interests.length > 0 ? audience_interests : categories,
-    relevance_score,
-    profile_picture_url,
-    role,
   };
 }

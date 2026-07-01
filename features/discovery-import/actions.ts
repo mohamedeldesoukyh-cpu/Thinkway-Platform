@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/auth/permissions";
 import { isDemoResetEnabled } from "@/lib/discovery-import/demo-reset-policy";
 import {
   resetDemoImportedCreators,
+  formatResetDemoError,
   type ResetDemoImportedCreatorsResult,
 } from "@/lib/discovery-import/reset-demo-imported-creators";
 import {
@@ -23,6 +24,18 @@ import {
   uploadCreatorImportSchema,
 } from "./schemas";
 import type { CreatorImportUploadResult } from "./types";
+import {
+  cancelCreatorImportFile,
+  type CancelCreatorImportFileResult,
+} from "@/lib/discovery-import/cancel-import";
+import {
+  pauseCreatorImportFile,
+  type PauseCreatorImportFileResult,
+} from "@/lib/discovery-import/pause-import";
+import {
+  resumeCreatorImportFile,
+  type ResumeCreatorImportFileResult,
+} from "@/lib/discovery-import/resume-import";
 
 const EMPTY_RESET_RESULT_COUNTS = {
   deletedInfluencers: 0,
@@ -108,8 +121,7 @@ export async function resetDemoImportedCreatorsAction(
   } catch (error) {
     return {
       ok: false,
-      message:
-        error instanceof Error ? error.message : "Failed to reset demo creators.",
+      message: formatResetDemoError(error, "Failed to reset demo creators."),
       ...EMPTY_RESET_RESULT_COUNTS,
     };
   }
@@ -219,6 +231,87 @@ export async function uploadCreatorImportFileAction(
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Upload failed.",
+    };
+  }
+}
+
+export async function cancelCreatorImportFileAction(
+  importFileId: string
+): Promise<CancelCreatorImportFileResult> {
+  const trimmedId = importFileId.trim();
+  if (!trimmedId) {
+    return { ok: false, message: "Import file id is required." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  try {
+    const result = await cancelCreatorImportFile(supabase, trimmedId, user.id);
+    if (result.ok) {
+      revalidatePath("/discovery/import");
+    }
+    return result;
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Failed to cancel import.",
+    };
+  }
+}
+
+export async function pauseCreatorImportFileAction(
+  importFileId: string
+): Promise<PauseCreatorImportFileResult> {
+  const trimmedId = importFileId.trim();
+  if (!trimmedId) {
+    return { ok: false, message: "Import file id is required." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  try {
+    const result = await pauseCreatorImportFile(supabase, trimmedId, user.id);
+    if (result.ok) {
+      revalidatePath("/discovery/import");
+    }
+    return result;
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Failed to pause import.",
+    };
+  }
+}
+
+export async function resumeCreatorImportFileAction(
+  importFileId: string
+): Promise<ResumeCreatorImportFileResult> {
+  const trimmedId = importFileId.trim();
+  if (!trimmedId) {
+    return { ok: false, message: "Import file id is required." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  try {
+    const result = await resumeCreatorImportFile(supabase, trimmedId, user.id);
+    if (result.ok) {
+      revalidatePath("/discovery/import");
+    }
+    return result;
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Failed to resume import.",
     };
   }
 }

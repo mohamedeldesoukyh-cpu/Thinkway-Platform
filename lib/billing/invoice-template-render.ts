@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import type { InvoiceDocumentData, InvoiceLineItemRow } from "@/lib/billing/invoice-document-types";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
+import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
 
 const TEMPLATE_PATH = join(process.cwd(), "lib/billing/templates/Thinkway_Invoice_Template.html");
 
@@ -260,5 +261,5 @@ export function renderInvoiceHtml(data: InvoiceDocumentData): string {
     );
   }
 
-  return html;
+  return applyThinkwayLogoToDocumentHtml(html);
 }

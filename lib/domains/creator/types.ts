@@ -39,9 +39,14 @@ export type UnifiedCreatorPlatform = {
   profile_url: string | null;
   follower_count: number | null;
   engagement_rate: number | null;
+  avg_likes?: number | null;
+  avg_comments?: number | null;
+  avg_views?: number | null;
   audience_country: string | null;
   is_verified?: boolean;
   profile_picture_url?: string | null;
+  profile_bio?: string | null;
+  recent_publications?: CreatorRecentPublication[];
 };
 
 export type CreatorRecentPublication = {
@@ -76,8 +81,27 @@ export type UnifiedCreatorResult = {
   estimated_country: string | null;
   city: string | null;
   categories: string[];
+  /** Stored category tags for browse filters (influencers.categories / category_tags). */
+  browse_category_tags?: string[];
+  /** Merged audience interests from all platform accounts (Discovery display). */
+  audience_interests?: string[];
   language_codes: string[];
+  /** Stable creator-level avatar (persisted on influencers.primary_avatar_url). */
   profile_image_url: string | null;
+  /** Creator-level avatar for Discovery rows — always use this, never platforms[0].profile_picture_url. */
+  primaryAvatarUrl?: string | null;
+  primaryAvatarSource?:
+    | "manual"
+    | "uploaded"
+    | "imported"
+    | "instagram"
+    | "tiktok"
+    | "youtube"
+    | "opengraph"
+    | "placeholder"
+    | null;
+  /** Platform account whose metrics populate list-row KPIs until detail switcher changes view. */
+  default_metrics_platform_account_id?: string | null;
   bio: string | null;
   /** Creator role/type from CSV import (e.g. Macro, Micro). */
   role?: string | null;
@@ -109,7 +133,10 @@ export type UnifiedCreatorBrowseFilters = {
   platform?: string;
   country?: string;
   city?: string;
+  /** @deprecated Prefer `categories` for multi-select OR filtering. */
   category?: string;
+  /** Match creators tagged with any of these categories (OR semantics). */
+  categories?: string[];
   language?: string;
   minFollowers?: number;
   maxFollowers?: number;
@@ -129,6 +156,7 @@ export type UnifiedCreatorBrowseFilters = {
 export type UnifiedCreatorBrowseResult = {
   creators: UnifiedCreatorResult[];
   total: number;
+  has_more?: boolean;
   page: number;
   pageSize: number;
   internal_count: number;

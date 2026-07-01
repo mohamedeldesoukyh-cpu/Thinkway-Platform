@@ -71,8 +71,8 @@ async function main() {
       { id: "h2", status: "cancelled", currency_code: "USD" },
     ],
     [
-      { campaign_header_id: "h1", revenue: 1000, profit: 200 },
-      { campaign_header_id: "h2", revenue: 500, profit: 100 },
+      { campaign_header_id: "h1", revenue: 1000, cost: 800, profit: 200 },
+      { campaign_header_id: "h2", revenue: 500, cost: 400, profit: 100 },
     ],
     [
       { id: "a1", campaign_header_id: "h1" },
@@ -84,6 +84,26 @@ async function main() {
   assert.equal(kpis.avg_margin, 20);
   assert.equal(kpis.assignments, 1);
   assert.equal(kpis.currency_code, "AED");
+
+  const kpisWithFees = aggregateCampaignKpis(
+    [{ id: "h1", status: "active", currency_code: "EGP" }],
+    [
+      {
+        campaign_header_id: "h1",
+        revenue: 515_000,
+        cost: 445_000,
+        profit: 70_000,
+        revenue_before_vat: 515_000,
+        usage_rights_amount: 0,
+        usage_rights_cost: 0,
+        agency_fee_percent: 10,
+        cost_before_vat: 445_000,
+      },
+    ],
+    [{ id: "a1", campaign_header_id: "h1" }]
+  );
+  assert.equal(kpisWithFees.total_revenue, 566_500);
+  assert.equal(kpisWithFees.avg_margin, 21.45);
 
   console.log("campaign-service-layer.test.ts: all assertions passed");
 }

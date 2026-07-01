@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
+import { DiscoveryDatabaseStatsBar } from "@/features/discovery/components/discovery-database-stats-bar";
+import { getDiscoveryDatabaseStats } from "@/features/discovery/queries";
 
 import {
   DISCOVERY_SUB_NAV_PAGES,
@@ -11,31 +13,54 @@ type DiscoverySubNavProps = {
   activeHref: string;
 };
 
-export function DiscoverySubNav({ activeHref }: DiscoverySubNavProps) {
+function resolveActiveTabClass(isActive: boolean, pageKey: string): string {
+  if (!isActive) {
+    return "text-muted-foreground hover:bg-muted/60 hover:text-foreground";
+  }
+
+  if (pageKey === "import") {
+    return "border border-emerald-200 bg-emerald-50 font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300";
+  }
+
+  return "border border-blue-200 bg-blue-50 font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300";
+}
+
+export async function DiscoverySubNav({ activeHref }: DiscoverySubNavProps) {
+  let stats: Awaited<ReturnType<typeof getDiscoveryDatabaseStats>> | null = null;
+  let statsError: string | null = null;
+
+  try {
+    stats = await getDiscoveryDatabaseStats();
+  } catch (error) {
+    statsError =
+      error instanceof Error ? error.message : "Failed to load creator database stats.";
+  }
+
   return (
-    <nav
-      aria-label="Discovery"
-      className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-border bg-background/95 px-2 py-1.5 md:px-3"
-    >
-      {DISCOVERY_SUB_NAV_PAGES.map((page) => {
-        const isActive = activeHref === page.href;
-        return (
-          <Link
-            key={page.href}
-            href={page.href}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors",
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            )}
-            aria-current={isActive ? "page" : undefined}
-          >
-            <DiscoveryPageIconBadge identity={page} size="sm" />
-            <span className={cn(isActive && "font-semibold")}>{page.navLabel}</span>
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      <nav
+        aria-label="Discovery"
+        className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border bg-background px-5 py-2.5"
+      >
+        {DISCOVERY_SUB_NAV_PAGES.map((page) => {
+          const isActive = activeHref === page.href;
+          return (
+            <Link
+              key={page.href}
+              href={page.href}
+              className={cn(
+                "inline-flex h-[30px] items-center gap-1.5 rounded-md border border-transparent px-3 text-xs font-medium transition-colors",
+                resolveActiveTabClass(isActive, page.key)
+              )}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <DiscoveryPageIconBadge identity={page} size="sm" />
+              <span>{page.navLabel}</span>
+            </Link>
+          );
+        })}
+      </nav>
+      <DiscoveryDatabaseStatsBar stats={stats} errorMessage={statsError} />
+    </>
   );
 }

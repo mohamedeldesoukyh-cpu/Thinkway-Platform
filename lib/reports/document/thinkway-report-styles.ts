@@ -1,3 +1,5 @@
+import { THINKWAY_REPORT_LOGO_STYLES } from "@/lib/reports/document/thinkway-report-logo";
+
 /** IO-style document CSS extracted from Thinkway_IO_Global.html for report exports. */
 export const THINKWAY_REPORT_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -46,14 +48,8 @@ export const THINKWAY_REPORT_STYLES = `
     gap: 24px;
   }
   .doc-header .brand { display: flex; flex-direction: column; gap: 6px; }
-  .doc-header .logo-text {
-    font-size: 26px;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: -0.5px;
-  }
-  .doc-header .logo-text span { color: var(--blue); }
   .doc-header .tagline { font-size: 11px; color: #8899BB; letter-spacing: 0.5px; text-transform: uppercase; }
+  ${THINKWAY_REPORT_LOGO_STYLES}
 
   .doc-header .title-block { text-align: right; }
   .doc-header .report-title {

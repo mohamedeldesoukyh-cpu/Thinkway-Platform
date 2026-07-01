@@ -1,3 +1,4 @@
+import { renderThinkwayReportLogoHtml } from "@/lib/reports/document/thinkway-report-logo";
 import { THINKWAY_REPORT_STYLES } from "@/lib/reports/document/thinkway-report-styles";
 
 export type ReportScopeMetaItem = {
@@ -90,7 +91,7 @@ export function renderThinkwayReportHtml(input: ThinkwayReportHtmlInput): string
 <div class="page">
   <div class="doc-header">
     <div class="brand">
-      <div class="logo-text">THINK<span>WAY</span></div>
+      ${renderThinkwayReportLogoHtml({ variant: "header", theme: "dark" })}
       <div class="tagline">Influencer Marketing Agency · ثينكواي</div>
     </div>
     <div class="title-block">

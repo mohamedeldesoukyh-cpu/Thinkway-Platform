@@ -97,7 +97,7 @@ function mergeParseResults(
   }
   if (avatarImageCount > 0) {
     warnings.push(
-      `${avatarImageCount} avatar image(s) found in ZIP; include profile photo URLs in CSV columns or rely on enrichment — local images are not uploaded automatically.`
+      `${avatarImageCount} avatar image(s) found in ZIP; include profile photo URLs in CSV columns or refresh avatars from creator profiles later — local images are not uploaded automatically.`
     );
   }
 

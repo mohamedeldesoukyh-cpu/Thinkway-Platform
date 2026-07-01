@@ -5,46 +5,118 @@ export type FtsRankHit = {
   rank: number;
 };
 
+export type CreatorSearchHit = {
+  source_type: "influencer" | "discovered";
+  creator_id: string;
+  rank: number;
+  has_more: boolean;
+};
+
+const DEFAULT_SEARCH_LIMIT = 50;
+const MAX_SEARCH_LIMIT = 200;
+
+export async function searchCreators(
+  supabase: SupabaseClient,
+  query: string,
+  limit = DEFAULT_SEARCH_LIMIT,
+  offset = 0
+): Promise<CreatorSearchHit[]> {
+  const cappedLimit = Math.min(Math.max(limit, 0), MAX_SEARCH_LIMIT);
+  const cappedOffset = Math.max(offset, 0);
+
+  const { data, error } = await supabase.rpc("search_creators", {
+    p_query: query.trim(),
+    p_limit: cappedLimit,
+    p_offset: cappedOffset,
+  });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map(
+    (row: {
+      source_type: string;
+      creator_id: string;
+      rank: number;
+      has_more: boolean;
+    }) => ({
+      source_type: row.source_type === "discovered" ? "discovered" : "influencer",
+      creator_id: row.creator_id,
+      rank: row.rank,
+      has_more: Boolean(row.has_more),
+    })
+  );
+}
+
+export async function searchCreatorsCount(
+  supabase: SupabaseClient,
+  query: string
+): Promise<number> {
+  const { data, error } = await supabase.rpc("search_creators_count", {
+    p_query: query.trim(),
+  });
+
+  if (error) throw new Error(error.message);
+  return typeof data === "number" ? data : Number(data ?? 0);
+}
+
+export function creatorSearchRankMap(
+  hits: CreatorSearchHit[]
+): Map<string, number> {
+  return new Map(
+    hits.map((hit) => [`${hit.source_type}:${hit.creator_id}`, hit.rank])
+  );
+}
+
+export function creatorSearchHasMore(hits: CreatorSearchHit[]): boolean {
+  return hits[0]?.has_more ?? false;
+}
+
+/** Resolve influencer IDs + ranks via unified search (no FTS short-circuit). */
+export async function searchInfluencerIdsByQuery(
+  supabase: SupabaseClient,
+  query: string,
+  limit = DEFAULT_SEARCH_LIMIT
+): Promise<FtsRankHit[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const hits = await searchCreators(supabase, trimmed, limit, 0);
+  return hits
+    .filter((hit) => hit.source_type === "influencer")
+    .map((hit) => ({ id: hit.creator_id, rank: hit.rank }));
+}
+
+/** Resolve discovered profile IDs + ranks via unified search. */
+export async function searchDiscoveredProfileIdsByQuery(
+  supabase: SupabaseClient,
+  query: string,
+  limit = DEFAULT_SEARCH_LIMIT
+): Promise<FtsRankHit[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const hits = await searchCreators(supabase, trimmed, limit, 0);
+  return hits
+    .filter((hit) => hit.source_type === "discovered")
+    .map((hit) => ({ id: hit.creator_id, rank: hit.rank }));
+}
+
+/** @deprecated Prefer searchInfluencerIdsByQuery — kept for legacy callers. */
 export async function searchInfluencerIdsByFts(
   supabase: SupabaseClient,
   query: string,
   limit = 500
 ): Promise<FtsRankHit[]> {
-  const trimmed = query.trim();
-  if (!trimmed) return [];
-
-  const { data, error } = await supabase.rpc("search_influencers_fts", {
-    search_query: trimmed,
-    result_limit: limit,
-  });
-
-  if (error) throw new Error(error.message);
-
-  return (data ?? []).map((row: { influencer_id: string; rank: number }) => ({
-    id: row.influencer_id,
-    rank: row.rank,
-  }));
+  return searchInfluencerIdsByQuery(supabase, query, limit);
 }
 
+/** @deprecated Prefer searchDiscoveredProfileIdsByQuery — kept for legacy callers. */
 export async function searchDiscoveredProfileIdsByFts(
   supabase: SupabaseClient,
   query: string,
   limit = 500
 ): Promise<FtsRankHit[]> {
-  const trimmed = query.trim();
-  if (!trimmed) return [];
-
-  const { data, error } = await supabase.rpc("search_discovered_profiles_fts", {
-    search_query: trimmed,
-    result_limit: limit,
-  });
-
-  if (error) throw new Error(error.message);
-
-  return (data ?? []).map((row: { profile_id: string; rank: number }) => ({
-    id: row.profile_id,
-    rank: row.rank,
-  }));
+  return searchDiscoveredProfileIdsByQuery(supabase, query, limit);
 }
 
 export function ftsRankMap(hits: FtsRankHit[]): Map<string, number> {
@@ -57,8 +129,8 @@ function escapeIlikePattern(value: string): string {
 }
 
 /**
- * Fallback handle/display-name match when FTS misses freshly imported creators
- * (search_vector not yet backfilled from platform account triggers).
+ * Fallback handle/display-name match when search_vector is stale.
+ * Unified search_creators covers most cases; this remains for edge post-import gaps.
  */
 export async function searchInfluencerIdsByHandleFallback(
   supabase: SupabaseClient,
@@ -74,9 +146,9 @@ export async function searchInfluencerIdsByHandleFallback(
 
   const { data: accountMatches, error: accountError } = await supabase
     .from("influencer_platform_accounts")
-    .select("influencer_id, handle, username, normalized_username")
+    .select("influencer_id, handle, username, normalized_username, profile_display_name")
     .or(
-      `handle.ilike."${pattern}",username.ilike."${pattern}",normalized_username.ilike."${pattern}"`
+      `handle.ilike."${pattern}",username.ilike."${pattern}",normalized_username.ilike."${pattern}",profile_display_name.ilike."${pattern}"`
     )
     .limit(limit);
 
@@ -96,7 +168,7 @@ export async function searchInfluencerIdsByHandleFallback(
     .from("influencers")
     .select("id")
     .eq("status", "active")
-    .ilike("display_name", pattern)
+    .or(`display_name.ilike."${pattern}",legal_name.ilike."${pattern}"`)
     .limit(remaining);
 
   if (nameError) throw new Error(nameError.message);

@@ -8,6 +8,7 @@ export const QUEUES = {
   publicationScreenshot: "publication-screenshot",
   publicationScreenshotScheduler: "publication-screenshot-scheduler",
   creatorImport: "creator-import",
+  creatorImportChunk: "creator-import-chunk",
   creatorImportEnrich: "creator-import-enrich",
   /** Phase 3 — commercial creator enrichment (Apify), priorities 1..4. */
   creatorEnrichment: "creator-enrichment",

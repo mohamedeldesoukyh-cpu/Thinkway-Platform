@@ -42,6 +42,7 @@ export type ShortlistCreatorItem = {
   unified_id: string | null;
   profile_id: string | null;
   influencer_id: string | null;
+  platform_account_ids: string[];
   creator: UnifiedCreatorResult | null;
 };
 

@@ -2,7 +2,7 @@
 
 ## Preconditions
 
-- Apply migration `20260630120000_reach_forecasting.sql`
+- Apply migration `20260630130000_reach_forecasting.sql`
 - Campaign with publications linked to influencers that have `influencer_platform_accounts.follower_count`
 
 ## Scenarios

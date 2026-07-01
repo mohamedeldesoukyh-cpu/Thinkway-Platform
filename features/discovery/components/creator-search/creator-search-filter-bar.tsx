@@ -2,6 +2,7 @@
 
 import {
   ChevronDownIcon,
+  RotateCcwIcon,
   SlidersHorizontalIcon,
   UsersIcon,
 } from "lucide-react";
@@ -19,11 +20,17 @@ import {
   LocationField,
   PlatformField,
 } from "./creator-search-filter-fields";
-import { buildActiveFilterChips, type CreatorSearchFilters } from "./creator-search-types";
+import {
+  buildActiveFilterChips,
+  hasActiveCreatorSearchFilters,
+  type CreatorSearchFilters,
+} from "./creator-search-types";
 
 type Props = {
   filters: CreatorSearchFilters;
+  search: string;
   onChange: (next: CreatorSearchFilters) => void;
+  onClearAll: () => void;
   onOpenAllFilters: () => void;
 };
 
@@ -40,7 +47,7 @@ type FilterPillDef = {
 function CountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+    <span className="flex size-4 items-center justify-center rounded-full bg-[#2563eb] text-[9px] font-bold text-white">
       {count}
     </span>
   );
@@ -64,8 +71,8 @@ function FilterPill({
           className={cn(
             "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors",
             active
-              ? "border-primary/40 bg-primary/10 text-primary"
-              : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-muted/50"
+              ? "border-[#93c5fd] bg-[#eff6ff] text-[#1d4ed8]"
+              : "border-[#e2e8f0] bg-white text-[#0f172a] hover:border-[#93c5fd] hover:bg-[#eff6ff]"
           )}
         >
           {label}
@@ -73,15 +80,45 @@ function FilterPill({
           <ChevronDownIcon className="size-3.5 opacity-60" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-3.5">
+      <PopoverContent align="start" className="w-[320px] p-4">
         {children}
       </PopoverContent>
     </Popover>
   );
 }
 
-export function CreatorSearchFilterBar({ filters, onChange, onOpenAllFilters }: Props) {
+function ClearFiltersButton({
+  onClick,
+  className,
+}: {
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[12px] font-medium",
+        "text-[#2563eb] transition-colors hover:bg-[#eff6ff]",
+        className
+      )}
+    >
+      <RotateCcwIcon className="size-3.5" />
+      Clear filters
+    </button>
+  );
+}
+
+export function CreatorSearchFilterBar({
+  filters,
+  search,
+  onChange,
+  onClearAll,
+  onOpenAllFilters,
+}: Props) {
   const totalActive = buildActiveFilterChips(filters).length;
+  const hasActive = hasActiveCreatorSearchFilters(filters, search);
 
   const range = (a: string, b: string) => (a || b ? 1 : 0);
   const set = (value: string) => (value.trim() ? 1 : 0);
@@ -109,7 +146,7 @@ export function CreatorSearchFilterBar({ filters, onChange, onOpenAllFilters }: 
     {
       id: "categories",
       label: "Categories",
-      count: set(filters.category) + set(filters.audienceInterests),
+      count: filters.categories.length + set(filters.audienceInterests),
       Field: CategoryField,
     },
   ];
@@ -127,6 +164,9 @@ export function CreatorSearchFilterBar({ filters, onChange, onOpenAllFilters }: 
         Filters
         <CountBadge count={totalActive} />
       </Button>
+      {hasActive ? (
+        <ClearFiltersButton onClick={onClearAll} className="md:hidden" />
+      ) : null}
 
       {/* Desktop: per-filter popover pills */}
       <div className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-auto md:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -147,6 +187,10 @@ export function CreatorSearchFilterBar({ filters, onChange, onOpenAllFilters }: 
           <AudienceField filters={filters} onChange={onChange} />
         </FilterPill>
       </div>
+
+      {hasActive ? (
+        <ClearFiltersButton onClick={onClearAll} className="hidden md:inline-flex" />
+      ) : null}
 
       <Button
         variant="outline"

@@ -12,12 +12,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { writeEnrichmentRun } from "@/lib/creator-enrichment/audit";
-import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
+import {
+  canEnqueueCreatorEnrichment,
+  creatorEnrichmentDisabledMessage,
+  type EnrichmentScope,
+} from "@/lib/creator-enrichment/enabled";
+import { decideEnrichment, priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import {
   cancelCreatorEnrichmentJobs,
+  creatorHasInflightEnrichmentJob,
   enqueueCreatorEnrichment,
   isCreatorEnrichmentQueueAvailable,
 } from "@/lib/creator-enrichment/queue";
+import { resolveAggregatedCreatorEnrichmentStatus } from "@/lib/creator-enrichment/status-resolution";
 import { runCreatorEnrichment } from "@/lib/creator-enrichment/service";
 import type {
   CreatorEnrichmentJobPayload,
@@ -25,6 +32,7 @@ import type {
   CreatorEnrichmentStatus,
   EnrichmentTrigger,
 } from "@/lib/creator-enrichment/types";
+export type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
 import { promoteDiscoveredProfileToInfluencer } from "@/lib/discovery/promote-profile";
 import type { Database } from "@/types/database";
 
@@ -41,8 +49,12 @@ export type CreatorMetricsSyncStatus =
 export type RefreshCreatorMetricsOptions = {
   /** Bypass the 30-day freshness skip. Default true for explicit Refresh Metrics. */
   force?: boolean;
-  /** @deprecated CSV/import metric fields are preserved; flag still forces avatar re-sync. */
+  /** @deprecated CSV/import metric fields are preserved; flag still forces avatar re-sync for non-uploaded sources. */
   bypassMetricsManualOverride?: boolean;
+  /** Replace a valid uploaded avatar with a provider photo. Default false. */
+  forceAvatarReplace?: boolean;
+  /** Replace imported/manual interests with provider values. Default false. */
+  forceInterestReplace?: boolean;
   trigger?: EnrichmentTrigger;
   requestedBy?: string | null;
   discoveredProfileId?: string | null;
@@ -50,6 +62,12 @@ export type RefreshCreatorMetricsOptions = {
   mode?: "queue" | "inline";
   attempt?: number;
   jobId?: string | null;
+  /** When set, only refresh metrics for this platform account. */
+  platformAccountId?: string | null;
+  /** Manual refresh scope — limits which provider fields are persisted. */
+  scope?: EnrichmentScope;
+  /** Batch selection refresh (checks ALLOW_BULK_ENRICHMENT). */
+  isBulk?: boolean;
 };
 
 export type RefreshCreatorMetricsResult = {
@@ -178,16 +196,36 @@ export async function getCreatorMetricsSyncStatus(
   supabase: AnySupabase,
   influencerId: string
 ): Promise<CreatorMetricsSyncStatus> {
-  const { data, error } = await supabase
-    .from("influencers")
-    .select("enrichment_status")
-    .eq("id", influencerId)
-    .maybeSingle();
+  const [{ data, error }, { data: platformRows, error: platformError }] = await Promise.all([
+    supabase
+      .from("influencers")
+      .select("enrichment_status")
+      .eq("id", influencerId)
+      .maybeSingle(),
+    supabase
+      .from("influencer_platform_accounts")
+      .select("enrichment_status")
+      .eq("influencer_id", influencerId),
+  ]);
 
   if (error || !data) return "pending";
-  return mapEnrichmentStatusToSyncStatus(
-    (data as { enrichment_status: CreatorEnrichmentStatus }).enrichment_status
-  );
+  if (platformError) {
+    return mapEnrichmentStatusToSyncStatus(
+      (data as { enrichment_status: CreatorEnrichmentStatus }).enrichment_status
+    );
+  }
+
+  const hasInflightJob = await creatorHasInflightEnrichmentJob(influencerId);
+  const resolved = resolveAggregatedCreatorEnrichmentStatus({
+    creatorId: influencerId,
+    storedStatus: (data as { enrichment_status: CreatorEnrichmentStatus }).enrichment_status,
+    platformStatuses: (platformRows ?? []).map(
+      (row) => (row as { enrichment_status: CreatorEnrichmentStatus }).enrichment_status
+    ),
+    hasInflightJob,
+  });
+
+  return mapEnrichmentStatusToSyncStatus(resolved);
 }
 
 function buildJobPayload(
@@ -202,7 +240,11 @@ function buildJobPayload(
     priority: priorityForTrigger(trigger),
     force: options.force ?? true,
     bypassMetricsManualOverride: options.bypassMetricsManualOverride ?? false,
+    forceAvatarReplace: options.forceAvatarReplace ?? false,
+    forceInterestReplace: options.forceInterestReplace ?? false,
     requestedBy: options.requestedBy ?? null,
+    platformAccountId: options.platformAccountId ?? null,
+    scope: options.scope ?? (trigger === "manual" ? "metrics" : "all"),
   };
 }
 
@@ -237,6 +279,8 @@ export async function refreshCreatorMetrics(
   creatorId: string,
   options: RefreshCreatorMetricsOptions = {}
 ): Promise<RefreshCreatorMetricsResult> {
+  console.log(`[refresh] requested creatorId=${creatorId.trim()}`);
+
   const resolved = await resolveCreatorInfluencerId(supabase, {
     influencerId: creatorId,
     discoveredProfileId: options.discoveredProfileId,
@@ -255,6 +299,79 @@ export async function refreshCreatorMetrics(
 
   const influencerId = resolved.influencerId;
   const payload = buildJobPayload(influencerId, options);
+  const forceRefresh = payload.force ?? true;
+  const scope = payload.scope ?? "all";
+
+  const gate = canEnqueueCreatorEnrichment(
+    { trigger: payload.trigger, scope },
+    { isBulk: options.isBulk ?? false }
+  );
+  if (!gate.allowed) {
+    const message = gate.reason ?? creatorEnrichmentDisabledMessage();
+    console.log(
+      `[refresh] skipped creatorId=${influencerId.trim()} reason=${message}`
+    );
+    const syncStatus = await getCreatorMetricsSyncStatus(supabase, influencerId);
+    const isManual = payload.trigger === "manual";
+    return {
+      ok: !isManual,
+      influencerId,
+      syncStatus,
+      queued: false,
+      message,
+    };
+  }
+
+  if (!forceRefresh) {
+    const [{ data: creatorRow, error: creatorError }, { data: platformRows }] =
+      await Promise.all([
+        supabase
+          .from("influencers")
+          .select("enrichment_status, last_enriched_at")
+          .eq("id", influencerId)
+          .maybeSingle(),
+        supabase
+          .from("influencer_platform_accounts")
+          .select("enrichment_status")
+          .eq("influencer_id", influencerId),
+      ]);
+
+    if (creatorError) {
+      return {
+        ok: false,
+        influencerId,
+        syncStatus: "failed",
+        queued: false,
+        message: creatorError.message,
+      };
+    }
+
+    const skipDecision = decideEnrichment({
+      lastEnrichedAt: (creatorRow as { last_enriched_at: string | null } | null)
+        ?.last_enriched_at,
+      force: false,
+    });
+
+    if (skipDecision.skip) {
+      const resolvedStatus = resolveAggregatedCreatorEnrichmentStatus({
+        creatorId: influencerId,
+        storedStatus:
+          (creatorRow as { enrichment_status: CreatorEnrichmentStatus } | null)
+            ?.enrichment_status ?? "never",
+        platformStatuses: (platformRows ?? []).map(
+          (row) => (row as { enrichment_status: CreatorEnrichmentStatus }).enrichment_status
+        ),
+        hasInflightJob: false,
+      });
+      return {
+        ok: true,
+        influencerId,
+        syncStatus: mapEnrichmentStatusToSyncStatus(resolvedStatus),
+        queued: false,
+        message: skipDecision.reason,
+      };
+    }
+  }
 
   if (options.mode === "inline") {
     try {
@@ -284,7 +401,9 @@ export async function refreshCreatorMetrics(
     };
   }
 
-  const enqueueResult = await enqueueCreatorEnrichment(payload);
+  const enqueueResult = await enqueueCreatorEnrichment(payload, {
+    isBulk: options.isBulk ?? false,
+  });
   if (!enqueueResult.queued) {
     return {
       ok: false,
@@ -294,6 +413,10 @@ export async function refreshCreatorMetrics(
       message: enqueueResult.reason ?? "Could not queue enrichment.",
     };
   }
+
+  console.log(
+    `[refresh] queued creatorIds=${JSON.stringify([influencerId])} batch size=1 publication jobs queued=0`
+  );
 
   const now = new Date().toISOString();
   await supabase
@@ -330,6 +453,7 @@ export async function refreshCreatorMetricsBatch(
   options: RefreshCreatorMetricsOptions = {}
 ): Promise<RefreshCreatorMetricsBatchResult> {
   const uniqueIds = [...new Set(creatorIds.filter(Boolean))];
+  console.log(`[refresh] batch size=${uniqueIds.length}`);
   const results: RefreshCreatorMetricsResult[] = [];
 
   for (const creatorId of uniqueIds) {
@@ -338,6 +462,15 @@ export async function refreshCreatorMetricsBatch(
 
   const queued = results.filter((r) => r.queued).length;
   const failed = results.filter((r) => !r.ok).length;
+  const queuedIds = results
+    .filter((r) => r.queued && r.influencerId)
+    .map((r) => r.influencerId as string);
+
+  if (queuedIds.length > 0) {
+    console.log(
+      `[refresh] queued creatorIds=${JSON.stringify(queuedIds)} batch size=${uniqueIds.length} publication jobs queued=0`
+    );
+  }
 
   return {
     ok: failed === 0,
@@ -384,23 +517,47 @@ export async function refreshCreatorMetricsByUnifiedId(
   return refreshCreatorMetrics(supabase, trimmed, options);
 }
 
+/** Refresh metrics for a single platform account on a creator. */
+export async function refreshCreatorPlatformMetrics(
+  supabase: AnySupabase,
+  influencerId: string,
+  platformAccountId: string,
+  options: RefreshCreatorMetricsOptions = {}
+): Promise<RefreshCreatorMetricsResult> {
+  return refreshCreatorMetrics(supabase, influencerId, {
+    ...options,
+    platformAccountId,
+  });
+}
+
 export async function refreshCreatorMetricsBatchByUnifiedIds(
   supabase: AnySupabase,
   unifiedIds: string[],
   options: RefreshCreatorMetricsOptions = {}
 ): Promise<RefreshCreatorMetricsBatchResult> {
+  const uniqueUnifiedIds = [...new Set(unifiedIds.filter(Boolean))];
+  console.log(`[refresh] batch size=${uniqueUnifiedIds.length}`);
   const results: RefreshCreatorMetricsResult[] = [];
 
-  for (const unifiedId of unifiedIds) {
+  for (const unifiedId of uniqueUnifiedIds) {
     results.push(await refreshCreatorMetricsByUnifiedId(supabase, unifiedId, options));
   }
 
   const queued = results.filter((r) => r.queued).length;
   const failed = results.filter((r) => !r.ok).length;
+  const queuedIds = results
+    .filter((r) => r.queued && r.influencerId)
+    .map((r) => r.influencerId as string);
+
+  if (queuedIds.length > 0) {
+    console.log(
+      `[refresh] queued creatorIds=${JSON.stringify(queuedIds)} batch size=${uniqueUnifiedIds.length} publication jobs queued=0`
+    );
+  }
 
   return {
     ok: failed === 0,
-    total: unifiedIds.length,
+    total: uniqueUnifiedIds.length,
     queued,
     failed,
     results,

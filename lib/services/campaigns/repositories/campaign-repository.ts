@@ -207,7 +207,9 @@ export async function fetchCampaignKpiSourceData(supabase: SupabaseClient) {
     supabase.from("campaign_headers").select("id, status, currency_code").limit(2000),
     supabase
       .from("campaign_lines")
-      .select("campaign_header_id, revenue, profit")
+      .select(
+        "campaign_header_id, revenue, cost, profit, billing_status, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat"
+      )
       .limit(5000),
     supabase
       .from("campaign_influencers")

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { isImportFieldEmpty, mergeMissingOnly, type ImportMergeLog } from "./merge";
+import { isImportFieldEmpty, mergeAuthoritative, type ImportMergeLog } from "./merge";
 
 function testIsImportFieldEmpty() {
   assert.equal(isImportFieldEmpty(null), true);
@@ -14,36 +14,42 @@ function testIsImportFieldEmpty() {
   assert.equal(isImportFieldEmpty(["a"]), false);
 }
 
-function testMergeMissingOnlyPreservesExisting() {
+function testMergeAuthoritativeOverwritesExisting() {
   const logs: string[] = [];
   const log: ImportMergeLog = (_level, message) => {
     logs.push(message);
   };
 
-  assert.equal(mergeMissingOnly(50_000, 10_000, "follower_count", log), 50_000);
+  assert.equal(mergeAuthoritative(50_000, 10_000, "follower_count", log), 10_000);
+  assert.ok(logs.some((m) => m.includes("field updated") && m.includes("follower_count")));
+}
+
+function testMergeAuthoritativeFillsEmpty() {
+  const logs: string[] = [];
+  const log: ImportMergeLog = (_level, message) => {
+    logs.push(message);
+  };
+
+  assert.equal(mergeAuthoritative(null, 10_000, "follower_count", log), 10_000);
+  assert.ok(logs.some((m) => m.includes("field updated") && m.includes("follower_count")));
+}
+
+function testMergeAuthoritativePreservesWhenIncomingEmpty() {
+  const logs: string[] = [];
+  const log: ImportMergeLog = (_level, message) => {
+    logs.push(message);
+  };
+
+  assert.equal(mergeAuthoritative(50_000, null, "follower_count", log), 50_000);
   assert.ok(logs.some((m) => m.includes("field skipped") && m.includes("follower_count")));
-}
-
-function testMergeMissingOnlyFillsEmpty() {
-  const logs: string[] = [];
-  const log: ImportMergeLog = (_level, message) => {
-    logs.push(message);
-  };
-
-  assert.equal(mergeMissingOnly(null, 10_000, "follower_count", log), 10_000);
-  assert.ok(logs.some((m) => m.includes("field filled") && m.includes("follower_count")));
-}
-
-function testMergeMissingOnlySkipsEmptyIncoming() {
-  assert.equal(mergeMissingOnly(null, null, "engagement_rate"), null);
-  assert.deepEqual(mergeMissingOnly([], ["Fashion"], "categories"), ["Fashion"]);
+  assert.deepEqual(mergeAuthoritative(["Beauty"], [], "categories", log), ["Beauty"]);
 }
 
 function run() {
   testIsImportFieldEmpty();
-  testMergeMissingOnlyPreservesExisting();
-  testMergeMissingOnlyFillsEmpty();
-  testMergeMissingOnlySkipsEmptyIncoming();
+  testMergeAuthoritativeOverwritesExisting();
+  testMergeAuthoritativeFillsEmpty();
+  testMergeAuthoritativePreservesWhenIncomingEmpty();
   console.log("lib/discovery-import/merge.test.ts — all tests passed");
 }
 

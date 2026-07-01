@@ -15,20 +15,9 @@ import {
   GlassSelectionFlyout,
   type GlassFlyoutAction,
 } from "@/components/shared/navigation/glass-selection-flyout";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type Props = {
   selectedCount: number;
-  shortlists: Array<{ id: string; name: string }>;
-  selectedShortlist: string;
-  onShortlistChange: (id: string) => void;
   onClearSelection: () => void;
   onAddToList: () => void;
   onCompare: () => void;
@@ -54,9 +43,6 @@ function compact(n: number): string {
 
 export function CreatorSearchBulkBar({
   selectedCount,
-  shortlists,
-  selectedShortlist,
-  onShortlistChange,
   onClearSelection,
   onAddToList,
   onCompare,
@@ -78,7 +64,7 @@ export function CreatorSearchBulkBar({
       label: "Add to list",
       icon: ListPlusIcon,
       variant: "primary",
-      disabled: busy || !selectedShortlist,
+      disabled: busy,
       onClick: onAddToList,
     },
     {
@@ -155,29 +141,6 @@ export function CreatorSearchBulkBar({
           {estEngagement != null && <>· {estEngagement.toFixed(1)}% avg ER</>}
         </span>
       ) : null}
-      <Select value={selectedShortlist} onValueChange={onShortlistChange}>
-        <SelectTrigger className="h-7 w-[140px] border-border/60 bg-background/60 text-xs">
-          <SelectValue placeholder="Target list" />
-        </SelectTrigger>
-        <SelectContent>
-          {shortlists.map((s) => (
-            <SelectItem key={s.id} value={s.id}>
-              {s.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button
-        type="button"
-        size="xs"
-        variant="outline"
-        className="h-7 shrink-0 rounded-full text-xs sm:hidden"
-        disabled={busy || !selectedShortlist}
-        onClick={onAddToList}
-      >
-        <ListPlusIcon className="size-3" />
-        Add
-      </Button>
     </GlassSelectionFlyout>
   );
 }

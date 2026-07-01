@@ -2,20 +2,22 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Loader2Icon, RotateCwIcon, SearchXIcon } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorCheckboxState } from "@/features/creators/picker/creator-selection-hooks";
+import { AddMissingCreatorEmptyState } from "@/features/discovery/components/add-missing-creator-dialog";
+import type { CreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
 
 import {
   CreatorResultGridHeader,
   CreatorResultRow,
 } from "../creator-result-row";
 
-const ROW_ESTIMATE = 76;
+const ROW_ESTIMATE = 92;
 
 import type { CreatorSearchSortState } from "./creator-search-types";
 
@@ -33,11 +35,24 @@ type Props = {
   onToggleSelectAll: () => void;
   onOpenCreator: (creator: UnifiedCreatorResult) => void;
   onAddToList: (creator: UnifiedCreatorResult) => void;
+  onRefreshMetrics?: (
+    creator: UnifiedCreatorResult,
+    platformAccountId?: string | null
+  ) => void;
   onStopRefresh?: (creator: UnifiedCreatorResult) => void;
   onStopAllRefresh?: () => void;
   inFlightCount?: number;
   onRetry: () => void;
   loadMoreRef: (node: HTMLDivElement | null) => void;
+  platformFilter?: string[];
+  /** When true, show "Add missing creator" in the empty state. */
+  showAddMissingCreator?: boolean;
+  onMissingCreatorAdded?: (creator: UnifiedCreatorResult) => void;
+  onMissingCreatorEnrichmentStatusChange?: (
+    unifiedId: string,
+    status: CreatorEnrichmentStatus
+  ) => void;
+  onMissingCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
 };
 
 function ResultSkeleton() {
@@ -75,11 +90,17 @@ export function CreatorSearchResultList({
   onToggleSelectAll,
   onOpenCreator,
   onAddToList,
+  onRefreshMetrics,
   onStopRefresh,
   onStopAllRefresh,
   inFlightCount = 0,
   onRetry,
   loadMoreRef,
+  platformFilter,
+  showAddMissingCreator = false,
+  onMissingCreatorAdded,
+  onMissingCreatorEnrichmentStatusChange,
+  onMissingCreatorUpdated,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +109,15 @@ export function CreatorSearchResultList({
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_ESTIMATE,
     overscan: 12,
+    getItemKey: (index) => creators[index]?.unified_id ?? index,
   });
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    virtualizer.scrollToIndex(0);
+    virtualizer.measure();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset layout when sort identity changes
+  }, [sort?.field, sort?.direction]);
 
   const allSelected = resolveCreatorCheckboxState(
     creators.map((c) => c.unified_id),
@@ -150,11 +179,24 @@ export function CreatorSearchResultList({
               <SearchXIcon className="size-6 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">No creators match your filters</p>
+              <p className="text-sm font-semibold text-foreground">
+                {showAddMissingCreator
+                  ? "No creators match your search"
+                  : "No creators match your filters"}
+              </p>
               <p className="mt-1 max-w-sm text-[12px] text-muted-foreground">
-                Try widening the follower range, removing a category, or clearing some filters.
+                {showAddMissingCreator
+                  ? "Try a different spelling or handle, or add the creator by profile link."
+                  : "Try widening the follower range, removing a category, or clearing some filters."}
               </p>
             </div>
+            <AddMissingCreatorEmptyState
+              visible={showAddMissingCreator}
+              className="mt-1"
+              onSuccess={onMissingCreatorAdded}
+              onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+              onCreatorUpdated={onMissingCreatorUpdated}
+            />
           </div>
         ) : (
           <>
@@ -176,9 +218,15 @@ export function CreatorSearchResultList({
                       rank={virtualRow.index + 1}
                       selected={selectedIds.has(creator.unified_id)}
                       variant="search"
+                      platformFilter={platformFilter}
                       onToggleSelect={() => onToggleSelect(creator)}
                       onOpenCreator={() => onOpenCreator(creator)}
                       onAddToList={() => onAddToList(creator)}
+                      onRefreshMetrics={
+                        onRefreshMetrics
+                          ? (platformAccountId) => onRefreshMetrics(creator, platformAccountId)
+                          : undefined
+                      }
                       onStopRefresh={
                         onStopRefresh ? () => onStopRefresh(creator) : undefined
                       }

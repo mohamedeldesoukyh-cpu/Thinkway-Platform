@@ -26,6 +26,7 @@ function profileSourceFromDiscoveryProfile(profile: Profile): CreatorProfileSour
     platform: profile.platform,
     handle: profile.username,
     profile_url: profile.profile_url,
+    countryCode: profile.country_code,
   };
 }
 
@@ -49,6 +50,7 @@ export function DiscoveryProfileCard({ profile, onEnrich, onSave, enriching }: P
               <CreatorProfileLink
                 source={profileSourceFromDiscoveryProfile(profile)}
                 size="md"
+                avatarBadge="country"
                 showHandle={false}
                 stopPropagation
               />

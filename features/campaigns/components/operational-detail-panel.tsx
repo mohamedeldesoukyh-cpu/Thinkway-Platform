@@ -322,6 +322,7 @@ export function DetailPanelHeader({
   avatarInitials,
   avatarUrl,
   avatarPlatform,
+  avatarUsername,
   profileUrl,
   profileTooltip,
   title,
@@ -333,6 +334,7 @@ export function DetailPanelHeader({
   avatarInitials: string;
   avatarUrl?: string | null;
   avatarPlatform?: string | null;
+  avatarUsername?: string | null;
   profileUrl?: string | null;
   profileTooltip?: string;
   title: ReactNode;
@@ -340,7 +342,7 @@ export function DetailPanelHeader({
   badges?: ReactNode;
 }) {
   const avatarNode = avatarUrl?.trim() ? (
-    <CreatorAvatarImage avatarUrl={avatarUrl} platform={avatarPlatform} size="lg" sizeClassName="size-14" />
+    <CreatorAvatarImage avatarUrl={avatarUrl} size="lg" sizeClassName="size-14" />
   ) : (
     <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/40 text-base font-semibold text-foreground">
       {avatarInitials}

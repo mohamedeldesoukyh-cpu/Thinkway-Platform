@@ -1,47 +1,42 @@
 "use client";
 
-import {
-  ExternalLinkIcon,
-  ListPlusIcon,
-  MoreHorizontalIcon,
-  ArrowDownIcon,
-  ArrowUpIcon,
-} from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   CreatorProfileLink,
   creatorProfileSourceFromUnified,
 } from "@/components/creator/creator-profile-link";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { platformLabel } from "@/features/campaigns/line-assignment";
+import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
 import { EnrichmentStatusBadge } from "@/features/discovery/enrichment/components/enrichment-status-badge";
-import { isEnrichmentInProgress, resolveCreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
+import { resolveCreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
+import { DiscoveryCreatorActionsMenu } from "@/features/discovery/components/discovery-creator-actions-menu";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import {
+  audienceInterestListFromCreator,
+  filterPlatformsForDisplay,
+} from "@/lib/creators/creator-centric";
 import { resolvePrimaryProfileUrl } from "@/lib/discovery/profile-url";
 import { cn } from "@/lib/utils";
 
 import {
-  audienceInterestList,
   applyCreatorSearchHeaderSort,
+  audienceCountryLabel,
   brandSafetyMeta,
-  countryFlag,
-  formatCreatorCount,
   formatEngagementRate,
+  normalizeCountryCode,
   thinkwayAiScore,
 } from "./creator-search/creator-search-utils";
 import type {
   CreatorSearchSortField,
   CreatorSearchSortState,
 } from "./creator-search/creator-search-types";
+import {
+  PlatformMetricStack,
+  PlatformMetricsMobileBlock,
+} from "./platform-metric-stack";
 
 export const CREATOR_SEARCH_GRID_TEMPLATE =
   "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px 88px 80px";
@@ -49,6 +44,17 @@ export const CREATOR_SHORTLIST_GRID_TEMPLATE =
   "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px";
 export const CREATOR_ROW_MIN_WIDTH = "md:min-w-[1268px]";
 export const CREATOR_SHORTLIST_MIN_WIDTH = "md:min-w-[1060px]";
+
+/** Single ER for a row — filtered platform when one match, else creator default metrics. */
+function resolveDisplayEngagementRate(
+  creator: UnifiedCreatorResult,
+  displayPlatforms: UnifiedCreatorResult["platforms"]
+): string {
+  if (displayPlatforms.length === 1) {
+    return formatEngagementRate(displayPlatforms[0]?.engagement_rate ?? null);
+  }
+  return formatEngagementRate(creator.metrics.engagement_rate.value);
+}
 
 export function InterestChips({ interests }: { interests: string[] }) {
   if (interests.length === 0) {
@@ -90,18 +96,28 @@ export function RelevanceScore({ score }: { score: number | null }) {
   );
 }
 
-export function PlatformCell({ creator }: { creator: UnifiedCreatorResult }) {
-  const primary = creator.platforms[0];
+export function PlatformCell({
+  creator,
+  platformFilter,
+}: {
+  creator: UnifiedCreatorResult;
+  platformFilter?: string[];
+}) {
+  const platforms = filterPlatformsForDisplay(creator.platforms, platformFilter);
+  if (platforms.length === 0) {
+    return <span className="text-[12px] text-muted-foreground">—</span>;
+  }
+
   return (
-    <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
-      {primary ? (
-        <>
-          <PlatformIcon platform={primary.platform} size="xs" className="size-4 rounded-full" />
-          <span className="truncate capitalize">{platformLabel(primary.platform)}</span>
-        </>
-      ) : (
-        "—"
-      )}
+    <div className="flex min-w-0 flex-wrap items-center gap-1" title="Linked platforms">
+      {platforms.map((platform) => (
+        <PlatformIcon
+          key={platform.id}
+          platform={platform.platform}
+          size="xs"
+          className="size-4 shrink-0 rounded-full"
+        />
+      ))}
     </div>
   );
 }
@@ -141,76 +157,6 @@ function SelectCell({
   );
 }
 
-function DefaultRowActions({
-  creator,
-  profileUrl,
-  selected,
-  onOpenCreator,
-  onAddToList,
-  onToggleSelect,
-  onStopRefresh,
-  addLabel = "Add",
-}: {
-  creator: UnifiedCreatorResult;
-  profileUrl: string | null;
-  selected: boolean;
-  onOpenCreator: () => void;
-  onAddToList?: () => void;
-  onToggleSelect: () => void;
-  onStopRefresh?: () => void;
-  addLabel?: string;
-}) {
-  const primary = creator.platforms[0];
-  const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
-  const refreshInProgress = isEnrichmentInProgress(enrichmentStatus);
-  return (
-    <div
-      className="flex items-center justify-end gap-1"
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => e.stopPropagation()}
-    >
-      {onAddToList ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="hidden h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary lg:inline-flex"
-          onClick={onAddToList}
-        >
-          <ListPlusIcon className="size-3.5" />
-          {addLabel}
-        </Button>
-      ) : null}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <MoreHorizontalIcon className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="text-xs">
-          {profileUrl ? (
-            <DropdownMenuItem asChild>
-              <a href={profileUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLinkIcon className="size-3.5" />
-                {primary ? `Open on ${platformLabel(primary.platform)}` : "Open profile"}
-              </a>
-            </DropdownMenuItem>
-          ) : null}
-          <DropdownMenuItem onClick={onOpenCreator}>View details</DropdownMenuItem>
-          {refreshInProgress && onStopRefresh ? (
-            <DropdownMenuItem onClick={onStopRefresh}>Stop refresh</DropdownMenuItem>
-          ) : null}
-          {onAddToList ? (
-            <DropdownMenuItem onClick={onAddToList}>{addLabel} to list</DropdownMenuItem>
-          ) : null}
-          <DropdownMenuItem onClick={onToggleSelect}>
-            {selected ? "Deselect" : "Select"}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
 export type CreatorResultRowProps = {
   creator: UnifiedCreatorResult;
   rank: number;
@@ -219,12 +165,15 @@ export type CreatorResultRowProps = {
   onToggleSelect: () => void;
   onOpenCreator?: () => void;
   onAddToList?: () => void;
+  onRefreshMetrics?: (platformAccountId?: string | null) => void;
   onStopRefresh?: () => void;
   addLabel?: string;
   statusBadge?: ReactNode;
   actions?: ReactNode;
   className?: string;
   workerOfflineHint?: boolean;
+  /** When set, metric columns show only matching platform account data. */
+  platformFilter?: string[];
 };
 
 /** Shared Discovery creator row — used by Search and Shortlist workspaces. */
@@ -236,21 +185,23 @@ export function CreatorResultRow({
   onToggleSelect,
   onOpenCreator,
   onAddToList,
+  onRefreshMetrics,
   onStopRefresh,
   addLabel,
   statusBadge,
   actions,
   className,
   workerOfflineHint,
+  platformFilter,
 }: CreatorResultRowProps) {
-  const primary = creator.platforms[0];
+  const displayPlatforms = filterPlatformsForDisplay(creator.platforms, platformFilter);
+  const avgEr = resolveDisplayEngagementRate(creator, displayPlatforms);
   const profileUrl = resolvePrimaryProfileUrl(creator.platforms);
-  const flag = countryFlag(creator.country_code);
+  const displayCountry = audienceCountryLabel(creator);
+  const hasCountryCode = Boolean(normalizeCountryCode(displayCountry));
+  const audienceInterests = audienceInterestListFromCreator(creator);
   const safety = brandSafetyMeta(creator.authenticity_score);
   const aiScore = thinkwayAiScore(creator);
-  const followers = formatCreatorCount(creator.metrics.followers.value);
-  const avgEr = formatEngagementRate(creator.metrics.engagement_rate.value);
-  const avgViews = formatCreatorCount(creator.metrics.avg_views.value);
   const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
   const isShortlist = variant === "shortlist";
   const gridTemplate = isShortlist ? CREATOR_SHORTLIST_GRID_TEMPLATE : CREATOR_SEARCH_GRID_TEMPLATE;
@@ -259,14 +210,15 @@ export function CreatorResultRow({
   const handleOpen = onOpenCreator ?? (() => undefined);
   const actionNode =
     actions ??
-    (onOpenCreator || onAddToList ? (
-      <DefaultRowActions
+    (onOpenCreator || onAddToList || onRefreshMetrics || onStopRefresh ? (
+      <DiscoveryCreatorActionsMenu
         creator={creator}
         profileUrl={profileUrl}
         selected={selected}
         onOpenCreator={handleOpen}
         onAddToList={onAddToList}
         onToggleSelect={onToggleSelect}
+        onRefreshMetrics={onRefreshMetrics}
         onStopRefresh={onStopRefresh}
         addLabel={addLabel}
       />
@@ -295,7 +247,7 @@ export function CreatorResultRow({
       )}
     >
       <div
-        className={cn("hidden items-center gap-3 px-5 py-2.5 md:grid", minWidth)}
+        className={cn("hidden items-start gap-3 px-5 py-2.5 md:grid", minWidth)}
         style={{ gridTemplateColumns: gridTemplate }}
       >
         <SelectCell
@@ -307,37 +259,34 @@ export function CreatorResultRow({
         <CreatorProfileLink
           source={creatorProfileSourceFromUnified(creator)}
           size="lg"
+          avatarBadge="country"
           showExternalIcon
           linkName={!onOpenCreator}
           stopPropagation
         />
-        <PlatformCell creator={creator} />
-        <div className="text-right text-[12px] font-semibold tabular-nums text-foreground">
-          {followers}
+        <PlatformCell creator={creator} platformFilter={platformFilter} />
+        <PlatformMetricStack platforms={displayPlatforms} metric="followers" align="right" />
+        <div className="flex items-center gap-1 self-center text-[12px] text-muted-foreground">
+          {hasCountryCode ? <CountryFlagBadge countryCode={displayCountry} size="inline" /> : null}
+          <span>{displayCountry}</span>
         </div>
-        <div className="flex items-center gap-1 text-[12px] text-muted-foreground">
-          {flag ? <span aria-hidden>{flag}</span> : null}
-          <span>{creator.country_code ?? "—"}</span>
+        <div className="min-w-0 self-center">
+          <InterestChips interests={audienceInterests.slice(0, 3)} />
         </div>
-        <div className="min-w-0">
-          <InterestChips interests={audienceInterestList(creator).slice(0, 3)} />
-        </div>
-        <div className="text-right text-[12px] font-semibold tabular-nums text-foreground">
+        <div className="self-center text-right text-[12px] font-semibold tabular-nums text-foreground">
           {avgEr}
         </div>
         {!isShortlist ? (
           <>
-            <div className="text-right text-[12px] tabular-nums text-muted-foreground">
-              {avgViews}
-            </div>
-            <div>
+            <PlatformMetricStack platforms={displayPlatforms} metric="avg_views" align="right" />
+            <div className="self-center">
               <RelevanceScore score={aiScore} />
             </div>
           </>
         ) : null}
-        <div className={cn("text-[11px] font-medium", safety.className)}>{safety.label}</div>
+        <div className={cn("self-center text-[11px] font-medium", safety.className)}>{safety.label}</div>
         {!isShortlist ? (
-          <div className="flex justify-end">
+          <div className="flex justify-end self-center">
             <EnrichmentStatusBadge
               status={enrichmentStatus}
               workerOfflineHint={workerOfflineHint}
@@ -345,9 +294,9 @@ export function CreatorResultRow({
             />
           </div>
         ) : null}
-        {isShortlist ? <div className="min-w-0">{statusBadge}</div> : null}
-        {!isShortlist ? actionNode : null}
-        {isShortlist ? actionNode : null}
+        {isShortlist ? <div className="min-w-0 self-center">{statusBadge}</div> : null}
+        {!isShortlist ? <div className="self-center">{actionNode}</div> : null}
+        {isShortlist ? <div className="self-center">{actionNode}</div> : null}
       </div>
 
       <div className="flex items-start gap-3 px-4 py-3 md:hidden">
@@ -362,40 +311,23 @@ export function CreatorResultRow({
             <CreatorProfileLink
               source={creatorProfileSourceFromUnified(creator)}
               size="md"
+              avatarBadge="country"
               showExternalIcon
               linkName={!onOpenCreator}
               stopPropagation
             />
             {actionNode}
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
-            <span className="flex items-center gap-1">
-              {primary ? (
-                <PlatformIcon
-                  platform={primary.platform}
-                  size="xs"
-                  className="size-4 rounded-full"
-                />
+          <PlatformMetricsMobileBlock platforms={displayPlatforms} avgEr={avgEr} />
+          {hasCountryCode || displayCountry !== "—" ? (
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              {hasCountryCode ? (
+                <CountryFlagBadge countryCode={displayCountry} size="inline" />
               ) : null}
-              <span className="font-semibold tabular-nums text-foreground">{followers}</span>
-              <span className="text-muted-foreground">followers</span>
-            </span>
-            {flag || creator.country_code ? (
-              <span className="text-muted-foreground">
-                {flag ? <span aria-hidden>{flag} </span> : null}
-                {creator.country_code ?? ""}
-              </span>
-            ) : null}
-            <span className="text-muted-foreground">
-              <span className="font-semibold text-foreground">{avgEr}</span> ER
-            </span>
-            {!isShortlist ? (
-              <span className="text-muted-foreground">
-                <span className="font-semibold text-foreground">{avgViews}</span> views
-              </span>
-            ) : null}
-          </div>
-          <InterestChips interests={audienceInterestList(creator).slice(0, 4)} />
+              {displayCountry !== "—" ? displayCountry : ""}
+            </div>
+          ) : null}
+          <InterestChips interests={audienceInterests.slice(0, 4)} />
           <div className="flex items-center justify-between gap-3">
             {!isShortlist ? <RelevanceScore score={aiScore} /> : statusBadge}
             <div className="flex items-center gap-2">
@@ -431,7 +363,7 @@ const SEARCH_HEADER_COLUMNS: HeaderColumn[] = [
   { key: "platform", label: "Platform" },
   { key: "followers", label: "Followers", align: "right", sortField: "followers" },
   { key: "country", label: "Country" },
-  { key: "interests", label: "Audience interests" },
+  { key: "categories", label: "Categories" },
   { key: "er", label: "Avg ER", align: "right", sortField: "engagement" },
   { key: "views", label: "Avg views", align: "right", sortField: "views" },
   { key: "relevance", label: "Relevance", sortField: "thinkway" },

@@ -15,6 +15,7 @@ import {
   CREATOR_ENRICHMENT_REMOVE_ON_COMPLETE,
   CREATOR_ENRICHMENT_REMOVE_ON_FAIL,
 } from "./constants";
+import { canEnqueueCreatorEnrichment } from "./enabled";
 import { bullmqPriority } from "./policy";
 import type { CreatorEnrichmentJobPayload, EnqueueResult } from "./types";
 
@@ -40,8 +41,26 @@ function jobIdFor(payload: CreatorEnrichmentJobPayload): string {
 }
 
 export async function enqueueCreatorEnrichment(
-  payload: CreatorEnrichmentJobPayload
+  payload: CreatorEnrichmentJobPayload,
+  options?: { isBulk?: boolean }
 ): Promise<EnqueueResult> {
+  const gate = canEnqueueCreatorEnrichment(
+    { trigger: payload.trigger, scope: payload.scope ?? "all" },
+    options
+  );
+  if (!gate.allowed) {
+    console.log(
+      "[creator-enrichment] enqueue skipped",
+      JSON.stringify({
+        influencerId: payload.influencerId,
+        trigger: payload.trigger,
+        scope: payload.scope ?? "all",
+        reason: gate.reason,
+      })
+    );
+    return { queued: false, reason: gate.reason };
+  }
+
   const connection = getConnection();
   if (!connection) {
     return { queued: false, reason: "REDIS_URL not configured" };

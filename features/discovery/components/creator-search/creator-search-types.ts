@@ -17,7 +17,7 @@ export type CreatorSearchFilters = {
   minThinkwayScore: string;
   minEstimatedCost: string;
   maxEstimatedCost: string;
-  category: string;
+  categories: string[];
   minBrandSafety: string;
   aiNiche: string;
   minBrandFit: string;
@@ -42,7 +42,7 @@ export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
   minThinkwayScore: "",
   minEstimatedCost: "",
   maxEstimatedCost: "",
-  category: "",
+  categories: [],
   minBrandSafety: "",
   aiNiche: "",
   minBrandFit: "",
@@ -102,6 +102,26 @@ function rangeLabel(prefix: string, min: string, max: string): string {
   if (min && max) return `${prefix}: ${min}–${max}`;
   if (min) return `${prefix}: ≥ ${min}`;
   return `${prefix}: ≤ ${max}`;
+}
+
+/** True when any filter field or the top-bar search query differs from defaults. */
+export function hasActiveCreatorSearchFilters(
+  filters: CreatorSearchFilters,
+  search = ""
+): boolean {
+  if (search.trim()) return true;
+
+  for (const key of Object.keys(DEFAULT_CREATOR_SEARCH_FILTERS) as (keyof CreatorSearchFilters)[]) {
+    const current = filters[key];
+    const defaults = DEFAULT_CREATOR_SEARCH_FILTERS[key];
+    if (Array.isArray(current)) {
+      if (current.length > 0) return true;
+    } else if (current !== defaults) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /** Derives the set of removable chips from the current filter state. */
@@ -165,9 +185,6 @@ export function buildActiveFilterChips(filters: CreatorSearchFilters): ActiveFil
   if (filters.minViews) {
     chips.push({ id: "views", label: `Views ≥ ${filters.minViews}`, clear: { minViews: "" } });
   }
-  if (filters.category.trim()) {
-    chips.push({ id: "category", label: `Category: ${filters.category.trim()}`, clear: { category: "" } });
-  }
   if (filters.minBrandSafety) {
     chips.push({
       id: "brandSafety",
@@ -199,6 +216,15 @@ export function buildActiveFilterChips(filters: CreatorSearchFilters): ActiveFil
       clear: { minAiScore: "" },
     });
   }
+  for (const category of filters.categories) {
+    chips.push({
+      id: `category:${category}`,
+      label: `Category: ${category}`,
+      clear: {
+        categories: filters.categories.filter((value) => value !== category),
+      },
+    });
+  }
   return chips;
 }
 
@@ -215,7 +241,7 @@ export function filtersToBrowseParams(filters: CreatorSearchFilters, page: numbe
     platforms: filters.platforms.length > 1 ? filters.platforms : undefined,
     country: filters.country.trim() || undefined,
     language: filters.language.trim() || undefined,
-    category: filters.category.trim() || filters.aiNiche.trim() || undefined,
+    categories: filters.categories.length > 0 ? filters.categories : undefined,
     minFollowers: filters.minFollowers ? Number(filters.minFollowers) : undefined,
     maxFollowers: filters.maxFollowers ? Number(filters.maxFollowers) : undefined,
     minEngagement: filters.minEngagement ? Number(filters.minEngagement) : undefined,

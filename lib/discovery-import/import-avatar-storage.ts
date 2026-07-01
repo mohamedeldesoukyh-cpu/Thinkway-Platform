@@ -35,6 +35,43 @@ export function resolveCreatorAvatarPublicUrl(
   return `${base}/storage/v1/object/public/${CREATOR_AVATARS_BUCKET}/${storagePath}`;
 }
 
+/** Extract storage object path from a creator-avatars public or signed URL. */
+export function parseCreatorAvatarStoragePathFromUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    const marker = `/storage/v1/object/`;
+    const idx = parsed.pathname.indexOf(marker);
+    if (idx < 0) return null;
+
+    const remainder = parsed.pathname.slice(idx + marker.length);
+    const segments = remainder.split("/").filter(Boolean);
+    if (segments.length < 3) return null;
+
+    const accessMode = segments[0];
+    if (accessMode !== "public" && accessMode !== "sign") return null;
+    if (segments[1] !== CREATOR_AVATARS_BUCKET) return null;
+
+    return segments.slice(2).join("/");
+  } catch {
+    return null;
+  }
+}
+
+/** True when the uploaded avatar object still exists in creator-avatars storage. */
+export async function uploadedAvatarExistsInStorage(
+  supabase: SupabaseClient<Database>,
+  profilePictureUrl: string
+): Promise<boolean> {
+  const storagePath = parseCreatorAvatarStoragePathFromUrl(profilePictureUrl);
+  if (!storagePath) return false;
+
+  const { error } = await supabase.storage.from(CREATOR_AVATARS_BUCKET).download(storagePath);
+  return !error;
+}
+
 export async function uploadImportCreatorAvatar(params: {
   supabase: SupabaseClient<Database>;
   importFileId: string;

@@ -11,6 +11,13 @@
  * demographic_source = 'unavailable'.
  */
 
+import {
+  isInterestProtectedField,
+  resolveInterestFieldContext,
+  resolveInterestFieldMerge,
+  type InterestMergeOptions,
+} from "@/lib/performance/interest-sync-policy";
+
 import type {
   DemographicSource,
   FieldSource,
@@ -62,6 +69,12 @@ export type MergeSourcedFieldsOptions = {
    * @deprecated Discovery refresh no longer bypasses import/manual protection.
    */
   ignoreManualProtectionFor?: readonly string[];
+  /** Platform account metadata — used for imported audience_interests / categories. */
+  metadata?: Record<string, unknown> | null;
+  /** Replace imported/manual interests with provider values (Discovery opt-in). */
+  forceInterestReplace?: boolean;
+  /** Merge only genuinely new interests when ENABLE_INTEREST_MERGE=true. */
+  enableInterestMerge?: boolean;
 };
 
 export function mergeSourcedFields(
@@ -76,8 +89,47 @@ export function mergeSourcedFields(
   const ignoreManual = new Set(options?.ignoreManualProtectionFor ?? []);
   const fillMissingOnly = options?.fillMissingOnly !== false;
   const existingValues = options?.existingValues ?? {};
+  const interestOptions: InterestMergeOptions = {
+    forceInterestReplace: options?.forceInterestReplace,
+    enableInterestMerge: options?.enableInterestMerge,
+    metadata: options?.metadata,
+  };
 
   for (const item of incoming) {
+    if (isInterestProtectedField(item.field)) {
+      const context = resolveInterestFieldContext(
+        item.field,
+        existingValues,
+        fieldSources,
+        interestOptions
+      );
+      const decision = resolveInterestFieldMerge({
+        field: item.field,
+        existingValue: context.existingValue,
+        existingSource: context.existingSource,
+        incomingValue: item.value,
+        incomingSource: item.source,
+        forceInterestReplace: options?.forceInterestReplace,
+        enableInterestMerge: options?.enableInterestMerge,
+      });
+
+      if (decision.log) {
+        console.log(decision.log);
+      }
+
+      if (decision.action === "preserve" || decision.action === "skip") {
+        if (decision.action === "preserve") {
+          manualProtected.push(item.field);
+        }
+        continue;
+      }
+
+      updates[item.field] = decision.value;
+      fieldSources[item.field] = decision.source as FieldSource;
+      fieldsUpdated.push(item.field);
+      continue;
+    }
+
     // Never overwrite with empty/null — keeps existing data intact.
     if (isEmpty(item.value)) continue;
 

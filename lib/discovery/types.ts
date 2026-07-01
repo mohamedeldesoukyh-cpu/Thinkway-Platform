@@ -104,7 +104,9 @@ export type DiscoverySearchFilters = {
   platform?: DiscoveryPlatform;
   country?: string;
   city?: string;
+  /** @deprecated Prefer `categories` for multi-select OR filtering. */
   category?: string;
+  categories?: string[];
   language?: string;
   minFollowers?: number;
   maxFollowers?: number;

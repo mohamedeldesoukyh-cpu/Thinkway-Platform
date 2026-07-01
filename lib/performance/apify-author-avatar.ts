@@ -1,6 +1,10 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
-import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
+import {
+  isAvatarUrlAllowedForPlatform,
+  stabilizeTikTokAvatarUrl,
+} from "@/lib/performance/creator-avatar";
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+import { isExpiredSignedAvatarUrl } from "@/lib/performance/provider-avatar-validation";
 
 function httpUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -12,9 +16,46 @@ function nestedRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
 
+function tiktokAvatarVariants(raw: string): string[] {
+  const trimmed = raw.trim();
+  const stabilized = stabilizeTikTokAvatarUrl(trimmed);
+  return stabilized === trimmed ? [trimmed] : [trimmed, stabilized];
+}
+
+function pickFirstAllowedAvatar(platformKey: string, candidates: unknown[]): string | null {
+  const preferNonExpired = (variant: string) =>
+    isUsableAvatarUrl(variant) &&
+    !isExpiredSignedAvatarUrl(variant) &&
+    isAvatarUrlAllowedForPlatform(platformKey, variant);
+
+  const acceptAny = (variant: string) =>
+    isUsableAvatarUrl(variant) && isAvatarUrlAllowedForPlatform(platformKey, variant);
+
+  for (const candidate of candidates) {
+    const url = httpUrl(candidate);
+    if (!url) continue;
+    const variants = platformKey === "tiktok" ? tiktokAvatarVariants(url) : [url];
+    for (const variant of variants) {
+      if (preferNonExpired(variant)) return variant;
+    }
+  }
+
+  for (const candidate of candidates) {
+    const url = httpUrl(candidate);
+    if (!url) continue;
+    const variants = platformKey === "tiktok" ? tiktokAvatarVariants(url) : [url];
+    for (const variant of variants) {
+      if (acceptAny(variant)) return variant;
+    }
+  }
+
+  return null;
+}
+
 function tiktokAuthorAvatarCandidates(row: Record<string, unknown>): unknown[] {
   const authorMeta = nestedRecord(row.authorMeta);
   const author = nestedRecord(row.author);
+  const user = nestedRecord(row.user);
   return [
     authorMeta?.originalAvatarUrl,
     authorMeta?.avatarLarger,
@@ -31,13 +72,21 @@ function tiktokAuthorAvatarCandidates(row: Record<string, unknown>): unknown[] {
     author?.originalAvatarUrl,
     author?.profilePictureUrl,
     author?.avatarUrl,
+    user?.avatarLarger,
+    user?.avatarMedium,
+    user?.avatar,
+    user?.avatarThumb,
+    user?.originalAvatarUrl,
+    row.originalAvatarUrl,
+    row.avatarLarger,
+    row.avatarMedium,
+    row.avatar,
     row.authorAvatar,
     row.authorAvatarUrl,
     row.authorAvatarThumbUrl,
     row.authorProfilePicUrl,
     row.authorProfilePictureUrl,
     row.avatarThumb,
-    row.avatarLarger,
   ];
 }
 
@@ -115,10 +164,8 @@ export function pickApifyAuthorAvatarUrl(
         : [...instagramAuthorAvatarCandidates(row), ...tiktokAuthorAvatarCandidates(row), ...genericAuthorAvatarCandidates(row)];
 
   for (const candidate of candidates) {
-    const url = httpUrl(candidate);
-    if (!url || !isUsableAvatarUrl(url)) continue;
-    if (!isAvatarUrlAllowedForPlatform(platformKey, url)) continue;
-    return url;
+    const picked = pickFirstAllowedAvatar(platformKey, [candidate]);
+    if (picked) return picked;
   }
   return null;
 }

@@ -151,4 +151,53 @@ import {
   assert.equal("profile_bio" in result.updates, false);
 }
 
+// Interest protection: imported interests survive empty Apify refresh (Scenario A).
+{
+  const result = mergeSourcedFields(
+    { interest_categories: "imported", audience_interests: "imported" },
+    [
+      { field: "interest_categories", value: [], source: "apify" },
+      { field: "audience_interests", value: [], source: "apify" },
+    ],
+    {
+      existingValues: {
+        interest_categories: ["Beauty", "Fashion"],
+        audience_interests: ["Beauty", "Fashion"],
+      },
+      metadata: { audience_interests: ["Beauty", "Fashion"] },
+      fillMissingOnly: true,
+    }
+  );
+  assert.equal("interest_categories" in result.updates, false);
+  assert.equal("audience_interests" in result.updates, false);
+  assert.deepEqual(result.manualProtected, ["interest_categories", "audience_interests"]);
+}
+
+// Interest protection: provider partial data does not replace import by default (Scenario B).
+{
+  const result = mergeSourcedFields(
+    { interest_categories: "imported" },
+    [{ field: "interest_categories", value: ["Beauty", "Travel"], source: "apify" }],
+    {
+      existingValues: { interest_categories: ["Beauty"] },
+      fillMissingOnly: true,
+    }
+  );
+  assert.equal("interest_categories" in result.updates, false);
+}
+
+// Interest protection: forceInterestReplace replaces imported values (Scenario C).
+{
+  const result = mergeSourcedFields(
+    { interest_categories: "imported" },
+    [{ field: "interest_categories", value: ["Beauty", "Travel"], source: "apify" }],
+    {
+      existingValues: { interest_categories: ["Beauty"] },
+      fillMissingOnly: true,
+      forceInterestReplace: true,
+    }
+  );
+  assert.deepEqual(result.updates.interest_categories, ["Beauty", "Travel"]);
+}
+
 console.log("creator-enrichment merge tests passed");

@@ -2,10 +2,9 @@
  * Pure, testable enrichment policy: 30-day freshness skip, priority assignment,
  * next-refresh scheduling, and BullMQ priority mapping.
  *
- * CRITICAL credit-preservation rules (spec §2):
- *  - NEVER auto-enrich during import / PDF / CSV / manual creation / discovery.
- *  - Enrich ONLY on detail open, shortlist add, campaign move, explicit refresh,
- *    or when data is stale.
+ * Credit-preservation rules:
+ *  - Automatic enrichment is opt-in via AUTO_CREATOR_ENRICHMENT / AUTO_IMPORT_ENRICHMENT.
+ *  - Manual refresh is explicit only (ALLOW_MANUAL_ENRICHMENT).
  *  - Skip if last_enriched_at within 30 days UNLESS forced (explicit Refresh).
  */
 

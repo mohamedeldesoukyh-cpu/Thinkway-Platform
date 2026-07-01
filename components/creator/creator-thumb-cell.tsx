@@ -57,10 +57,9 @@ export function CreatorThumbAvatar({
     return (
       <CreatorAvatarImage
         avatarUrl={avatarUrl}
-        platform={platform}
         sizeClassName={cn(
           sizeClass,
-          "shrink-0 object-cover",
+          "shrink-0",
           !isDesignThumb && roundedClass,
           className
         )}

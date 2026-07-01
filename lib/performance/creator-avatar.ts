@@ -1,4 +1,5 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
 import { isAvatarUrlNeedsRefresh } from "@/lib/performance/avatar-sync-policy";
 import { isSocialPlatform } from "@/lib/social/platforms";
 
@@ -292,6 +293,34 @@ export function prepareCreatorAvatarUrlForDisplay(
     resolvePublicationEffectivePlatform({ platform: platform ?? "" }),
     trimmed
   );
+}
+
+/**
+ * Browser-safe avatar URL — proxies expiring/blocked Instagram/TikTok CDN links server-side.
+ * Optional profile URL enables OpenGraph fallback when the CDN src is expired or blocked.
+ */
+export function creatorAvatarBrowserDisplayUrl(
+  url: string | null | undefined,
+  profileUrl?: string | null,
+  /** Bust browser/proxy cache after avatar_last_synced_at changes. */
+  cacheKey?: string | null
+): string | null {
+  const trimmed = url?.trim();
+  const profile = profileUrl?.trim();
+
+  if (!trimmed && !profile) return null;
+  if (trimmed?.startsWith("/api/creators/")) return trimmed;
+
+  if (trimmed && !shouldProxyPublicationMediaUrl(trimmed)) {
+    return trimmed;
+  }
+
+  const params = new URLSearchParams();
+  if (trimmed) params.set("src", trimmed);
+  if (profile) params.set("profileUrl", profile);
+  const bust = cacheKey?.trim();
+  if (bust) params.set("v", bust);
+  return `/api/creators/avatar?${params.toString()}`;
 }
 
 /** Primary display URL plus optional signed/original fallback when stabilization changes the URL. */

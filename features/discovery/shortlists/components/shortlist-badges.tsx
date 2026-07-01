@@ -41,9 +41,33 @@ export function ShortlistVisibilityBadge({
 
 export function ShortlistItemStatusBadge({
   status,
+  variant = "default",
 }: {
   status: ShortlistItemStatus;
+  variant?: "default" | "table";
 }) {
+  if (variant === "table") {
+    return (
+      <span
+        className={cn(
+          "inline-flex h-5 items-center rounded-full border px-2 text-[10px] font-semibold",
+          status === "draft" && "border-border bg-muted/60 text-muted-foreground",
+          status === "under_review" &&
+            "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
+          status === "approved" &&
+            "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
+          status === "rejected" &&
+            "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+          (status === "moved_to_campaign" || status === "cancelled") &&
+            "border-border bg-muted/60 text-muted-foreground",
+          status === "cancelled" && "line-through"
+        )}
+      >
+        {SHORTLIST_ITEM_STATUS_LABELS[status]}
+      </span>
+    );
+  }
+
   return (
     <StatusBadge
       label={SHORTLIST_ITEM_STATUS_LABELS[status]}

@@ -101,12 +101,42 @@ assert.equal(
 );
 
 assert.equal(
+  pickApifyAuthorAvatarUrl("tiktok", {
+    avatarLarger: TT_CDN,
+    avatarMedium: "https://p16-sign-va.tiktokcdn.com/thumb.jpg",
+  }),
+  TT_CDN,
+  "top-level profile scraper avatarLarger"
+);
+
+assert.equal(
+  pickApifyAuthorAvatarUrl("tiktok", {
+    authorMeta: {
+      avatar:
+        "https://p16-sign-va.tiktokcdn.com/expired.jpg?x-expires=1661893200&x-signature=abc",
+    },
+  }),
+  "https://p16-va.tiktokcdn.com/expired.jpg",
+  "prefer stabilized TikTok URL when signed copy is expired"
+);
+
+assert.equal(
   pickApifyAuthorAvatarUrl("instagram", {
     ownerProfilePicUrl: "https://static.cdninstagram.com/rsrc.php/v4/yD/r/R0fBIMurK8v.png",
     profilePicUrlHD: IG_CDN,
   }),
   IG_CDN,
   "skip Instagram default placeholder, use next candidate"
+);
+
+assert.equal(
+  pickApifyAuthorAvatarUrl("instagram", {
+    username: "zeinaelfakahany",
+    profilePicUrl: IG_CDN,
+    profilePicUrlHD: `${IG_CDN}?oe=1`,
+  }),
+  IG_CDN,
+  "instagram profile details: skip expired HD, use profilePicUrl"
 );
 
 console.log("apify-author-avatar tests passed");

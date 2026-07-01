@@ -19,7 +19,7 @@ import type { AgencyOrDirect } from "@/types/database";
 import type { CampaignListItem } from "@/types/database";
 import { isUuid } from "@/lib/validation/uuid";
 
-import { aggregateCampaignKpis, emptyToNull } from "./campaign-commercial";
+import { aggregateCampaignKpis, emptyToNull, type CampaignKpiLineInput } from "./campaign-commercial";
 import {
   deleteCampaignHeader,
   fetchBrandForCampaignCreate,
@@ -492,11 +492,7 @@ export async function getCampaignsKpis(supabase: SupabaseClient): Promise<Campai
     status: string;
     currency_code: string | null;
   }[];
-  const lines = (linesResult.data ?? []) as {
-    campaign_header_id: string;
-    revenue: number | null;
-    profit: number | null;
-  }[];
+  const lines = (linesResult.data ?? []) as CampaignKpiLineInput[];
   const assignments = (assignmentsResult.data ?? []) as {
     id: string;
     campaign_header_id: string | null;

@@ -22,6 +22,35 @@ function record(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+function hostFromUrl(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/** True when a publication preview should be loaded via the server proxy (social CDNs). */
+export function shouldProxyPublicationMediaUrl(url: string): boolean {
+  const host = hostFromUrl(url);
+  if (!host) return false;
+  if (host.includes("supabase.co") || host.includes("supabase.in")) return false;
+  if (host.includes("cdninstagram") || host.endsWith("instagram.com")) return true;
+  if (
+    host.includes("tiktokcdn") ||
+    host.includes("tiktokv.com") ||
+    host.includes("ibyteimg.com") ||
+    host.includes("ibytedtos.com") ||
+    host.includes("byteoversea.com") ||
+    host.includes("ttwstatic.com") ||
+    host.includes("muscdn.com")
+  ) {
+    return true;
+  }
+  if (host.includes("fbcdn")) return true;
+  return false;
+}
+
 /** Resolve a displayable thumbnail from normalized or raw Apify publication rows. */
 export function resolveCreatorRecentPublicationThumbnail(
   publication: CreatorRecentPublication | Record<string, unknown> | null | undefined
@@ -49,6 +78,32 @@ export function resolveCreatorRecentPublicationThumbnail(
 
   if (direct?.startsWith("http")) return direct;
   return pickApifyPreviewImageUrl(row);
+}
+
+export function recentPublicationsLackThumbnails(publications: unknown): boolean {
+  if (!Array.isArray(publications) || publications.length === 0) return false;
+  return publications.every(
+    (pub) => !resolveCreatorRecentPublicationThumbnail(pub as Record<string, unknown>)
+  );
+}
+
+/** Browser-safe preview URL — proxies expiring Instagram/TikTok CDN links server-side. */
+export function creatorRecentPublicationDisplayUrl(
+  publication: CreatorRecentPublication | Record<string, unknown> | null | undefined
+): string | null {
+  if (!publication || typeof publication !== "object") return null;
+  const row = publication as Record<string, unknown>;
+  const thumbnail = resolveCreatorRecentPublicationThumbnail(publication);
+  const postUrl =
+    str(row.url) ?? str(row.postPage) ?? str(row.webVideoUrl) ?? str(row.content_url) ?? null;
+
+  if (!thumbnail && !postUrl) return null;
+  if (thumbnail && !shouldProxyPublicationMediaUrl(thumbnail)) return thumbnail;
+
+  const params = new URLSearchParams();
+  if (thumbnail) params.set("src", thumbnail);
+  if (postUrl) params.set("postUrl", postUrl);
+  return `/api/creators/publication-preview?${params.toString()}`;
 }
 
 /** Normalize DB / Apify JSONB into stable CreatorRecentPublication rows for UI. */

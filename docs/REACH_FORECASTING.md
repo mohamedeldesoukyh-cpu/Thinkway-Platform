@@ -4,7 +4,7 @@ Reach forecasting fills gaps when metrics providers do not return reach, while k
 
 ## Data model
 
-Migration: `20260630120000_reach_forecasting.sql`
+Migration: `20260630130000_reach_forecasting.sql`
 
 | Column | Purpose |
 |--------|---------|
@@ -54,7 +54,7 @@ HTML/PDF, Excel, and PPTX include Reach Source per publication and a reach discl
 
 ## Applying the migration
 
-Migration file: `supabase/migrations/20260630120000_reach_forecasting.sql`
+Migration file: `supabase/migrations/20260630130000_reach_forecasting.sql`
 
 This repo does **not** ship a global Supabase CLI or an npm script for migrations. On Windows PowerShell, `supabase` is not on PATH unless you install it separately — use **`npx supabase`** from the project root instead (downloads the CLI on first run).
 
@@ -116,7 +116,7 @@ Then run `supabase db push` from the repo root (same flags as Option A).
 ### Option C — Supabase Dashboard SQL Editor (no CLI)
 
 1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**.
-2. Paste the full contents of `supabase/migrations/20260630120000_reach_forecasting.sql`.
+2. Paste the full contents of `supabase/migrations/20260630130000_reach_forecasting.sql`.
 3. Run the script (idempotent: safe to re-run).
 4. **Project Settings → API → Reload schema**.
 

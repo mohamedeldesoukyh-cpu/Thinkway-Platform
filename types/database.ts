@@ -425,6 +425,9 @@ export type InfluencerRow = {
   audience_top_countries: Array<{ code?: string; name?: string; percent?: number }> | null;
   audience_top_cities: Array<{ name?: string; percent?: number }> | null;
   demographic_source: CreatorDemographicSource;
+  primary_avatar_url: string | null;
+  primary_avatar_source: string | null;
+  default_metrics_platform_account_id: string | null;
 };
 
 export type CreatorEnrichmentStatus =
@@ -1853,8 +1856,11 @@ export type Database = {
           audience_gender_unknown?: number | null;
           audience_top_countries?: Array<{ code?: string; name?: string; percent?: number }> | null;
           audience_top_cities?: Array<{ name?: string; percent?: number }> | null;
-          demographic_source?: CreatorDemographicSource;
-        };
+  demographic_source?: CreatorDemographicSource;
+  primary_avatar_url?: string | null;
+  primary_avatar_source?: string | null;
+  default_metrics_platform_account_id?: string | null;
+};
         Update: Partial<Database["public"]["Tables"]["influencers"]["Insert"]>;
         Relationships: [];
       };
@@ -2332,6 +2338,7 @@ export type Database = {
           deliverables: Json;
           commercial_updated_at: string | null;
           item_status: ShortlistItemStatus;
+          platform_account_ids: string[];
         };
         Insert: {
           id?: string;
@@ -2339,6 +2346,7 @@ export type Database = {
           profile_id?: string | null;
           influencer_id?: string | null;
           unified_id?: string | null;
+          platform_account_ids?: string[];
           notes?: string | null;
           match_score?: number | null;
           sort_order?: number;
@@ -2743,6 +2751,17 @@ export type Database = {
         Args: { p_table: string };
         Returns: { column_name: string }[];
       };
+      get_discovery_database_stats: {
+        Args: {
+          category_limit?: number;
+        };
+        Returns: {
+          total_creators: number;
+          categorized_creators: number;
+          category_label: string;
+          category_count: number;
+        }[];
+      };
     };
     Enums: {
       client_status: ClientStatus;
@@ -2922,6 +2941,25 @@ export type Database = {
           profile_id: string;
           rank: number;
         }[];
+      };
+      search_creators: {
+        Args: {
+          p_query: string;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          source_type: string;
+          creator_id: string;
+          rank: number;
+          has_more: boolean;
+        }[];
+      };
+      search_creators_count: {
+        Args: {
+          p_query: string;
+        };
+        Returns: number;
       };
     };
     Enums: Record<string, never>;

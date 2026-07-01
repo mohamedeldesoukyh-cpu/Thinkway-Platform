@@ -6,6 +6,10 @@ import {
   CREATOR_ENRICHMENT_DLQ,
   CREATOR_ENRICHMENT_JOB_ATTEMPTS,
 } from "@/lib/creator-enrichment/constants.js";
+import {
+  creatorEnrichmentDisabledMessage,
+  isCreatorEnrichmentWorkerEnabled,
+} from "@/lib/creator-enrichment/enabled.js";
 import type { CreatorEnrichmentJobPayload } from "@/lib/creator-enrichment/types.js";
 
 import { getRedisConnection } from "../queues/connection.js";
@@ -38,6 +42,21 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
   const worker = new Worker<CreatorEnrichmentJobPayload>(
     QUEUES.creatorEnrichment,
     async (job: Job<CreatorEnrichmentJobPayload>) => {
+      if (!isCreatorEnrichmentWorkerEnabled()) {
+        const message = creatorEnrichmentDisabledMessage();
+        console.log(
+          `[creator-enrichment] skipped ${job.id} — enrichment globally disabled`,
+          JSON.stringify({ influencerId: job.data.influencerId })
+        );
+        return {
+          ok: true,
+          status: "skipped",
+          message,
+          fieldsUpdated: [],
+          skippedReason: message,
+        };
+      }
+
       console.log(
         `[creator-enrichment] processing ${job.id}`,
         JSON.stringify({
@@ -68,6 +87,11 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
       err.message
     );
     if (!exhausted) return;
+
+    await supabase
+      .from("influencers")
+      .update({ enrichment_status: "failed" } as never)
+      .eq("id", job.data.influencerId);
 
     // Dead-letter: out of retries.
     try {

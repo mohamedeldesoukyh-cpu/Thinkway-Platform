@@ -1,15 +1,58 @@
 /**
  * Extract preview/thumbnail image URL from Apify Instagram/TikTok scraper payloads.
  * Instagram `apify/instagram-scraper` returns `displayUrl` (image/reel poster).
+ * TikTok `clockworks/tiktok-scraper` nests covers under `videoMeta` / `covers`.
  */
+
+function httpUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.startsWith("http") ? trimmed : null;
+}
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+/** TikTok post rows store cover art under nested videoMeta / covers objects. */
+export function pickApifyTikTokCoverUrls(row: Record<string, unknown>): string[] {
+  const urls: string[] = [];
+
+  const push = (value: unknown) => {
+    const url = httpUrl(value);
+    if (url) urls.push(url);
+  };
+
+  const videoMeta = record(row.videoMeta);
+  if (videoMeta) {
+    push(videoMeta.originalCoverUrl);
+    push(videoMeta.coverUrl);
+    push(videoMeta.dynamicCover);
+    push(videoMeta.cover);
+  }
+
+  const covers = record(row.covers);
+  if (covers) {
+    push(covers.origin);
+    push(covers.default);
+    push(covers.dynamic);
+  }
+
+  push(row.originalCoverUrl);
+  push(row.dynamicCover);
+  push(row.coverUrl);
+  push(row.cover);
+
+  return urls;
+}
+
 export function pickApifyPreviewImageUrl(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const row = payload as Record<string, unknown>;
 
-  const displayResource =
-    row.displayResource && typeof row.displayResource === "object"
-      ? (row.displayResource as Record<string, unknown>)
-      : null;
+  const displayResource = record(row.displayResource);
 
   const directCandidates = [
     row.thumbnailSrc,
@@ -28,20 +71,22 @@ export function pickApifyPreviewImageUrl(payload: unknown): string | null {
   ];
 
   for (const value of directCandidates) {
-    if (typeof value === "string" && value.startsWith("http")) return value;
+    const url = httpUrl(value);
+    if (url) return url;
   }
+
+  const tiktokCover = pickApifyTikTokCoverUrls(row)[0];
+  if (tiktokCover) return tiktokCover;
 
   const images = row.images;
   if (Array.isArray(images)) {
     for (const item of images) {
-      if (typeof item === "string" && item.startsWith("http")) return item;
-      if (item && typeof item === "object") {
-        const nested = item as Record<string, unknown>;
-        const url =
-          (typeof nested.url === "string" && nested.url) ||
-          (typeof nested.src === "string" && nested.src) ||
-          null;
-        if (url?.startsWith("http")) return url;
+      const url = httpUrl(item);
+      if (url) return url;
+      const nested = record(item);
+      if (nested) {
+        const nestedUrl = httpUrl(nested.url) ?? httpUrl(nested.src);
+        if (nestedUrl) return nestedUrl;
       }
     }
   }

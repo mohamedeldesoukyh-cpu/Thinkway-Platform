@@ -44,6 +44,15 @@ export type CreatorEnrichmentStatus =
   | "failed"
   | "skipped";
 
+/** Manual refresh scope — Apify returns a full profile; the worker applies only these fields. */
+export type EnrichmentScope =
+  | "avatar"
+  | "metrics"
+  | "profile"
+  | "audience"
+  | "categories"
+  | "all";
+
 /** Job payload placed on the `creator-enrichment` queue. */
 export type CreatorEnrichmentJobPayload = {
   /** Primary target. Required for commercial enrichment. */
@@ -52,12 +61,20 @@ export type CreatorEnrichmentJobPayload = {
   discoveredProfileId?: string | null;
   trigger: EnrichmentTrigger;
   priority: EnrichmentPriority;
+  /** Which fields to persist from the provider response. Default `all` for auto; manual actions set explicitly. */
+  scope?: EnrichmentScope;
   /** Explicit refresh — bypasses the 30-day freshness skip. */
   force?: boolean;
-  /** Explicit Refresh Metrics — forces Apify profile photo sync (see service forceAvatarSync). */
+  /** Explicit Refresh Metrics — re-syncs metrics; does not replace uploaded avatars unless paired with forceAvatarReplace. */
   bypassMetricsManualOverride?: boolean;
+  /** Replace a valid uploaded avatar with a provider photo. Default false. */
+  forceAvatarReplace?: boolean;
+  /** Replace imported/manual interests with provider values. Default false. */
+  forceInterestReplace?: boolean;
   /** User who requested it (manual refresh / detail open). */
   requestedBy?: string | null;
+  /** When set, only enrich this platform account (Discovery per-platform refresh). */
+  platformAccountId?: string | null;
 };
 
 export type EnqueueResult = {

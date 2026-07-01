@@ -3,15 +3,81 @@ import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 
 export type CreatorSearchSort = "relevance" | "name" | "followers" | "engagement" | "views";
 
-/** Converts an ISO 3166-1 alpha-2 code (e.g. "AE") to its flag emoji. */
-export function countryFlag(code: string | null | undefined): string | null {
+/** Normalizes an ISO 3166-1 alpha-2 country code (e.g. " ae " → "AE"). */
+export function normalizeCountryCode(code: string | null | undefined): string | null {
   if (!code) return null;
   const trimmed = code.trim().toUpperCase();
   if (trimmed.length !== 2 || !/^[A-Z]{2}$/.test(trimmed)) return null;
+  return trimmed;
+}
+
+/** Valid flagcdn.com width presets (fixed width, variable height). */
+const FLAGCDN_WIDTHS = [20, 40, 80, 160, 320, 640, 1280, 2560] as const;
+
+/** Valid flagcdn.com fixed WxH presets (4:3 aspect ratio). */
+const FLAGCDN_DIMENSIONS: readonly [number, number][] = [
+  [16, 12],
+  [20, 15],
+  [24, 18],
+  [28, 21],
+  [32, 24],
+  [40, 30],
+  [48, 36],
+  [56, 42],
+  [64, 48],
+  [80, 60],
+  [160, 120],
+  [320, 240],
+];
+
+function snapFlagcdnWidth(minPx: number): number {
+  const target = Math.max(20, Math.round(minPx));
+  return FLAGCDN_WIDTHS.find((width) => width >= target) ?? FLAGCDN_WIDTHS[FLAGCDN_WIDTHS.length - 1];
+}
+
+function snapFlagcdnDimensions(minPx: number): [number, number] {
+  const target = Math.max(16, Math.round(minPx));
+  const match = FLAGCDN_DIMENSIONS.find(([width]) => width >= target);
+  return match ?? FLAGCDN_DIMENSIONS[FLAGCDN_DIMENSIONS.length - 1];
+}
+
+/** Circular flag PNG URL via flagcdn.com (2× pixel density for crisp badges). */
+export function countryFlagImageUrl(
+  code: string | null | undefined,
+  displayPx = 20
+): string | null {
+  const normalized = normalizeCountryCode(code);
+  if (!normalized) return null;
+  const width = snapFlagcdnWidth(displayPx * 2);
+  return `https://flagcdn.com/w${width}/${normalized.toLowerCase()}.png`;
+}
+
+/** Fallback CDN URLs when the primary flagcdn request fails (404, blocked CDN, etc.). */
+export function countryFlagImageFallbackUrls(
+  code: string | null | undefined,
+  displayPx = 20
+): string[] {
+  const normalized = normalizeCountryCode(code);
+  if (!normalized) return [];
+  const cc = normalized.toLowerCase();
+  const retinaPx = displayPx * 2;
+  const [dimW, dimH] = snapFlagcdnDimensions(retinaPx);
+  const urls = [
+    countryFlagImageUrl(code, displayPx),
+    `https://flagcdn.com/${dimW}x${dimH}/${cc}.png`,
+    `https://flagcdn.com/w20/${cc}.png`,
+  ];
+  return [...new Set(urls.filter((url): url is string => Boolean(url)))];
+}
+
+/** Converts an ISO 3166-1 alpha-2 code (e.g. "AE") to its flag emoji. */
+export function countryFlag(code: string | null | undefined): string | null {
+  const normalized = normalizeCountryCode(code);
+  if (!normalized) return null;
   const base = 127397; // 0x1F1E6 - 'A'.codePointAt(0)
   return String.fromCodePoint(
-    base + trimmed.charCodeAt(0),
-    base + trimmed.charCodeAt(1)
+    base + normalized.charCodeAt(0),
+    base + normalized.charCodeAt(1)
   );
 }
 

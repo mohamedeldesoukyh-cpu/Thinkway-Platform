@@ -2,14 +2,12 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { FileUpIcon, Loader2Icon, UploadCloudIcon } from "lucide-react";
+import { FileIcon, Loader2Icon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { uploadCreatorImportFileAction } from "@/features/discovery-import/actions";
+import { CREATOR_IMPORT_UPLOAD_CONCURRENCY } from "@/lib/discovery-import/constants";
 import { CREATOR_IMPORT_FILE_EXTENSIONS } from "@/features/discovery-import/types";
 import type { CreatorImportUploadProgressItem } from "@/features/discovery-import/types";
 import { cn } from "@/lib/utils";
@@ -26,6 +24,15 @@ const ACCEPT = {
 type ImportDropzoneProps = {
   onUploadComplete?: () => void | Promise<void>;
 };
+
+function resolveProgressStatusText(item: CreatorImportUploadProgressItem): string {
+  if (item.status === "uploading") return "Uploading…";
+  if (item.status === "pending") return "Waiting…";
+  if (item.status === "success") {
+    return item.message ?? "File uploaded. Queued for processing.";
+  }
+  return item.message ?? "Upload failed";
+}
 
 export function ImportDropzone({ onUploadComplete }: ImportDropzoneProps) {
   const [sourceName, setSourceName] = useState("");
@@ -45,9 +52,9 @@ export function ImportDropzone({ onUploadComplete }: ImportDropzoneProps) {
       );
 
       let successCount = 0;
+      let nextIndex = 0;
 
-      for (let index = 0; index < files.length; index += 1) {
-        const file = files[index];
+      const uploadOne = async (file: File, index: number) => {
         setProgress((current) =>
           current.map((item, itemIndex) =>
             itemIndex === index ? { ...item, status: "uploading" } : item
@@ -81,7 +88,19 @@ export function ImportDropzone({ onUploadComplete }: ImportDropzoneProps) {
           );
           toast.error(result.message ?? `Failed to upload ${file.name}`);
         }
-      }
+      };
+
+      const worker = async () => {
+        while (true) {
+          const index = nextIndex;
+          nextIndex += 1;
+          if (index >= files.length) break;
+          await uploadOne(files[index], index);
+        }
+      };
+
+      const workerCount = Math.min(CREATOR_IMPORT_UPLOAD_CONCURRENCY, files.length);
+      await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
       setIsUploading(false);
 
@@ -109,89 +128,114 @@ export function ImportDropzone({ onUploadComplete }: ImportDropzoneProps) {
   });
 
   const completedCount = progress.filter((item) => item.status === "success").length;
+  const errorCount = progress.filter((item) => item.status === "error").length;
+  const uploadingCount = progress.filter((item) => item.status === "uploading").length;
   const overallPercent =
     progress.length === 0
       ? 0
       : Math.round(
-          ((completedCount +
-            progress.filter((item) => item.status === "error").length) /
-            progress.length) *
-            100
+          ((completedCount + errorCount + uploadingCount * 0.5) / progress.length) * 100
         );
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-2 sm:max-w-md">
-        <Label htmlFor="source_name">Source name (optional)</Label>
-        <Input
-          id="source_name"
-          value={sourceName}
-          onChange={(event) => setSourceName(event.target.value)}
-          placeholder="Agency, platform, or client name"
-          disabled={isUploading}
-        />
-        <p className="text-xs text-muted-foreground">
-          Tag uploads with the dataset provider for easier filtering in history.
-        </p>
-      </div>
+    <div>
+      <label
+        htmlFor="source_name"
+        className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground"
+      >
+        Source name (optional)
+      </label>
+      <Input
+        id="source_name"
+        value={sourceName}
+        onChange={(event) => setSourceName(event.target.value)}
+        placeholder="Agency, platform, or client name"
+        disabled={isUploading}
+        className="h-9 max-w-[340px] text-xs"
+      />
+      <p className="mt-1.5 mb-4 text-[11px] text-muted-foreground">
+        Tag uploads with the dataset provider for easier filtering in history.
+      </p>
 
       <div
         {...getRootProps()}
         className={cn(
-          "flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed px-6 py-10 text-center transition-colors",
+          "group relative mb-5 cursor-pointer rounded-xl border-[1.5px] border-dashed bg-background px-8 py-12 text-center transition-colors",
           isDragActive
-            ? "border-primary bg-primary/5"
-            : "border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/30",
+            ? "border-solid border-blue-600 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/30"
+            : "border-border hover:border-blue-600 hover:bg-blue-50/80 dark:hover:border-blue-500 dark:hover:bg-blue-950/20",
           isUploading && "pointer-events-none opacity-70"
         )}
       >
         <input {...getInputProps()} />
-        <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <div
+          className={cn(
+            "mx-auto mb-4 flex size-[52px] items-center justify-center rounded-[14px] border border-blue-200 bg-blue-50 transition-transform duration-200 dark:border-blue-800 dark:bg-blue-950/50",
+            !isUploading && "group-hover:-translate-y-0.5"
+          )}
+        >
           {isUploading ? (
-            <Loader2Icon className="size-6 animate-spin" />
+            <Loader2Icon className="size-6 animate-spin text-blue-600 dark:text-blue-400" />
           ) : (
-            <UploadCloudIcon className="size-6" />
+            <UploadIcon className="size-6 text-blue-600 dark:text-blue-400" />
           )}
         </div>
-        <div className="space-y-1">
-          <p className="text-sm font-medium">
-            {isDragActive ? "Drop files to upload" : "Drag and drop creator datasets"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {CREATOR_IMPORT_FILE_EXTENSIONS.join(", ").toUpperCase()} · ZIP bundles may contain CSV
-            or XLSX plus optional avatar images · multiple files · up to 50 MB each
-          </p>
-        </div>
-        <Button type="button" variant="secondary" onClick={open} disabled={isUploading}>
-          <FileUpIcon data-icon="inline-start" />
+        <p className="mb-1.5 text-sm font-semibold text-foreground">
+          {isDragActive ? "Drop files to upload" : "Drag and drop creator datasets"}
+        </p>
+        <p className="mx-auto mb-4 max-w-lg text-[11px] leading-relaxed text-muted-foreground">
+          {CREATOR_IMPORT_FILE_EXTENSIONS.join(", ").toUpperCase()} — ZIP bundles may contain CSV
+          or XLSX plus optional avatar images · multiple files · up to 50 MB each
+        </p>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            open();
+          }}
+          disabled={isUploading}
+          className="inline-flex h-[34px] items-center gap-1.5 rounded-md border border-border bg-background px-4 text-xs font-medium text-muted-foreground transition-colors hover:border-slate-300 hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+        >
+          <FileIcon className="size-3.5" />
           Browse files
-        </Button>
+        </button>
       </div>
 
       {progress.length > 0 ? (
-        <div className="space-y-3 rounded-3xl border border-border p-4">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="font-medium">Upload progress</span>
-            <span className="text-muted-foreground">{overallPercent}%</span>
+        <div className="mb-5 overflow-hidden rounded-[10px] border border-border bg-background">
+          <div className="flex items-center justify-between px-4 pt-3 pb-2">
+            <span className="text-xs font-semibold text-foreground">Upload progress</span>
+            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+              {overallPercent}%
+            </span>
           </div>
-          <Progress value={overallPercent} />
-          <ul className="space-y-2 text-sm">
+          <div className="h-1 bg-slate-200 dark:bg-slate-800">
+            <div
+              className="relative h-full overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-500 transition-[width] duration-500 ease-out"
+              style={{ width: `${overallPercent}%` }}
+            >
+              <div className="absolute inset-0 animate-[import-shimmer_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            </div>
+          </div>
+          <ul className="divide-y divide-border">
             {progress.map((item) => (
               <li
                 key={item.filename}
-                className="flex items-center justify-between gap-3 rounded-2xl bg-muted/40 px-3 py-2"
+                className="flex items-center justify-between gap-3 px-4 py-2.5"
               >
-                <span className="truncate">{item.filename}</span>
+                <span className="truncate text-xs font-medium text-muted-foreground">
+                  {item.filename}
+                </span>
                 <span
                   className={cn(
-                    "shrink-0 text-xs font-medium",
-                    item.status === "success" && "text-emerald-600",
+                    "shrink-0 text-[11px] font-semibold",
+                    item.status === "success" && "text-emerald-600 dark:text-emerald-400",
                     item.status === "error" && "text-destructive",
-                    item.status === "uploading" && "text-primary",
+                    item.status === "uploading" && "text-blue-600 dark:text-blue-400",
                     item.status === "pending" && "text-muted-foreground"
                   )}
                 >
-                  {item.status === "uploading" ? "Uploading…" : item.message ?? item.status}
+                  {resolveProgressStatusText(item)}
                 </span>
               </li>
             ))}

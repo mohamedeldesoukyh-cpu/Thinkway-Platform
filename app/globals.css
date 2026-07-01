@@ -3262,3 +3262,12 @@
 .dark .platform-floating-bar-secondary:hover {
   background: rgba(255, 255, 255, 0.06);
 }
+
+@keyframes import-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}

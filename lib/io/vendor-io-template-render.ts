@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type { VendorIoDocumentData } from "@/lib/io/vendor-io-document-types";
+import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
 
 const TEMPLATE_PATH = join(process.cwd(), "lib/io/templates/Thinkway_IO_Global.html");
 
@@ -269,5 +270,5 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
       )
   );
 
-  return html;
+  return applyThinkwayLogoToDocumentHtml(html);
 }

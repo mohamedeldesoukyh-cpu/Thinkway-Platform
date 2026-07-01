@@ -14,6 +14,7 @@ import {
   stabilizeTikTokAvatarUrl,
   prepareCreatorAvatarUrlForDisplay,
   creatorAvatarDisplayUrls,
+  creatorAvatarBrowserDisplayUrl,
 } from "@/lib/performance/creator-avatar";
 
 const IG_CDN = "https://scontent-lhr8-1.cdninstagram.com/v/t51.2885-19/abc.jpg";
@@ -211,6 +212,30 @@ assert.deepEqual(creatorAvatarDisplayUrls("tiktok", TT_CDN), {
   fallback: TT_CDN,
 });
 assert.equal(prepareCreatorAvatarUrlForDisplay("tt", TT_CDN), "https://p16-va.tiktokcdn.com/avatar.jpg");
+
+assert.match(
+  creatorAvatarBrowserDisplayUrl(IG_CDN, "https://www.instagram.com/amiryoussef.official/") ?? "",
+  /^\/api\/creators\/avatar\?/,
+  "Instagram CDN avatar uses server proxy"
+);
+assert.match(
+  creatorAvatarBrowserDisplayUrl(TT_CDN, "https://www.tiktok.com/@with.fatimma") ?? "",
+  /^\/api\/creators\/avatar\?/,
+  "TikTok CDN avatar uses server proxy"
+);
+assert.equal(
+  creatorAvatarBrowserDisplayUrl(
+    "https://abc.supabase.co/storage/v1/object/public/creator-avatars/x.jpg",
+    "https://www.instagram.com/amiryoussef.official/"
+  ),
+  "https://abc.supabase.co/storage/v1/object/public/creator-avatars/x.jpg",
+  "Supabase avatar loads directly even when profile URL is present"
+);
+assert.equal(
+  creatorAvatarBrowserDisplayUrl(null, "https://www.instagram.com/amiryoussef.official/"),
+  "/api/creators/avatar?profileUrl=https%3A%2F%2Fwww.instagram.com%2Famiryoussef.official%2F",
+  "profile-only proxy when CDN src missing"
+);
 
 assert.equal(
   resolveCreatorAvatarDisplay({

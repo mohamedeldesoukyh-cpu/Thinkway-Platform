@@ -136,7 +136,7 @@ export const CAMPAIGN_PUBLICATIONS_EXPECTED_MIGRATION =
   "20260623120000_campaign_publications_full_schema_reconcile.sql";
 
 export const CAMPAIGN_PUBLICATIONS_REACH_FORECAST_MIGRATION =
-  "20260630120000_reach_forecasting.sql";
+  "20260630130000_reach_forecasting.sql";
 
 export const CAMPAIGN_PUBLICATIONS_IMPRESSIONS_FORECAST_MIGRATION =
   "20260630150000_impressions_forecasting.sql";

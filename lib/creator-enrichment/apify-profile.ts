@@ -16,6 +16,7 @@ import { pickApifyAuthorFollowerCount } from "@/lib/performance/apify-author-fol
 import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 
+import { isCreatorEnrichmentWorkerEnabled } from "./enabled";
 import type { ApifyProfileData, RecentPublication } from "./types";
 
 export type ApifyProfileFetchResult =
@@ -139,6 +140,20 @@ function extractMentions(rows: Record<string, unknown>[]): string[] {
 
 import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
 
+function extractLatestPostRows(head: Record<string, unknown>): Record<string, unknown>[] {
+  const rows: Record<string, unknown>[] = [];
+  for (const key of ["latestPosts", "latestIgtvVideos"] as const) {
+    const value = head[key];
+    if (!Array.isArray(value)) continue;
+    for (const item of value) {
+      if (item && typeof item === "object") {
+        rows.push(item as Record<string, unknown>);
+      }
+    }
+  }
+  return rows;
+}
+
 function toRecentPublications(rows: Record<string, unknown>[]): RecentPublication[] {
   return rows
     .slice(0, 6)
@@ -251,10 +266,18 @@ function pickApifyProfilePictureUrl(
     str(head.profilePicUrlHd),
     str(head.hdProfilePicUrl),
     str(head.profilePicUrl),
+    str(head.avatarLarger),
+    str(head.avatarMedium),
+    str(head.avatar),
+    str(head.originalAvatarUrl),
     str(owner.profilePicUrlHD),
     str(owner.profilePicUrlHd),
     str(owner.hdProfilePicUrl),
     str(owner.profilePicUrl),
+    str(owner.avatarLarger),
+    str(owner.avatarMedium),
+    str(owner.avatar),
+    str(owner.originalAvatarUrl),
   ];
 
   for (const raw of candidates) {
@@ -265,6 +288,82 @@ function pickApifyProfilePictureUrl(
   }
 
   return null;
+}
+
+/** Scan all Apify rows — TikTok profile scrapes may omit avatar on the first post row. */
+export function pickApifyProfilePictureFromRows(
+  platformKey: string,
+  rows: Record<string, unknown>[]
+): string | null {
+  for (const row of rows) {
+    const owner = record(row.owner) ?? record(row.author) ?? record(row.authorMeta) ?? row;
+    const picked = pickApifyProfilePictureUrl(platformKey, row, owner);
+    if (picked) return picked;
+  }
+  return null;
+}
+
+function normalizeApifyCountryCode(value: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^[A-Za-z]{2}$/.test(trimmed)) return trimmed.toUpperCase();
+  return trimmed;
+}
+
+/** TikTok: authorMeta.region; Instagram: country on profile details. */
+export function pickApifyAudienceCountry(
+  platformKey: string,
+  head: Record<string, unknown>,
+  owner: Record<string, unknown>,
+  rows: Record<string, unknown>[]
+): string | null {
+  const candidates: Array<string | null> = [
+    str(head.country),
+    str(owner.country),
+    str(head.region),
+    str(owner.region),
+  ];
+
+  if (platformKey === "tiktok") {
+    for (const row of rows) {
+      const authorMeta = record(row.authorMeta);
+      if (!authorMeta) continue;
+      candidates.push(str(authorMeta.region), str(authorMeta.country));
+    }
+  }
+
+  for (const candidate of candidates) {
+    const normalized = normalizeApifyCountryCode(candidate);
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
+/** Business category when present; TikTok falls back to top post hashtags as interest tags. */
+export function pickApifyInterestCategories(
+  platformKey: string,
+  head: Record<string, unknown>,
+  owner: Record<string, unknown>,
+  hashtags: string[]
+): string[] {
+  const business =
+    str(head.businessCategoryName) ??
+    str(head.category) ??
+    str(owner.businessCategoryName) ??
+    str(owner.category);
+  if (business) return [business];
+
+  if (platformKey === "tiktok" && hashtags.length > 0) {
+    const tags = hashtags
+      .slice(0, 8)
+      .map((tag) => tag.replace(/^#+/, "").trim())
+      .filter(Boolean);
+    return [...new Set(tags)];
+  }
+
+  return [];
 }
 
 function normalizeApifyProfileData(input: {
@@ -285,7 +384,7 @@ function normalizeApifyProfileData(input: {
     input.postRows.length > 0
       ? input.postRows
       : input.platformKey === "instagram"
-        ? []
+        ? extractLatestPostRows(head)
         : metricRows;
 
   const followers =
@@ -300,6 +399,7 @@ function normalizeApifyProfileData(input: {
     num(head.postsCount) ?? num(owner.postsCount) ?? num(owner.videoCount) ?? null;
 
   const recent = toRecentPublications(publicationRows);
+  const hashtags = extractHashtags(publicationRows);
   const avgLikes = averageOf(recent.map((p) => p.likes));
   const avgComments = averageOf(recent.map((p) => p.comments));
   const avgViews = averageOf(recent.map((p) => p.views));
@@ -307,6 +407,7 @@ function normalizeApifyProfileData(input: {
     followers && followers > 0 && (avgLikes != null || avgComments != null)
       ? Number((((avgLikes ?? 0) + (avgComments ?? 0)) / followers * 100).toFixed(3))
       : null;
+  const allAvatarRows = [...input.profileRows, ...input.postRows, ...metricRows];
 
   return {
     platform: input.platformKey,
@@ -318,7 +419,7 @@ function normalizeApifyProfileData(input: {
       str(owner.name),
     displayName: str(head.fullName) ?? str(owner.nickName) ?? str(owner.fullName),
     bio: str(head.biography) ?? str(owner.signature) ?? str(head.description),
-    profilePictureUrl: pickApifyProfilePictureUrl(input.platformKey, head, owner),
+    profilePictureUrl: pickApifyProfilePictureFromRows(input.platformKey, allAvatarRows),
     profileUrl: input.profileUrl,
     followers,
     following,
@@ -333,13 +434,15 @@ function normalizeApifyProfileData(input: {
         : typeof owner.verified === "boolean"
           ? owner.verified
           : null,
-    audienceCountry: str(head.country) ?? null,
-    hashtags: extractHashtags(publicationRows),
+    audienceCountry: pickApifyAudienceCountry(
+      input.platformKey,
+      head,
+      owner,
+      allAvatarRows
+    ),
+    hashtags,
     mentions: extractMentions(publicationRows),
-    categories: (() => {
-      const c = str(head.businessCategoryName) ?? str(head.category);
-      return c ? [c] : [];
-    })(),
+    categories: pickApifyInterestCategories(input.platformKey, head, owner, hashtags),
     recentPublications: recent,
     contactEmail: str(head.publicEmail) ?? str(head.email),
     contactPhone: str(head.publicPhoneNumber) ?? null,
@@ -362,6 +465,19 @@ export async function fetchApifyProfile(input: {
   profileUrl: string;
   timeoutMs?: number;
 }): Promise<ApifyProfileFetchResult> {
+  if (!isCreatorEnrichmentWorkerEnabled()) {
+    logApifyEnrichment("Skipped Apify", {
+      fallbackReason: "Creator enrichment globally disabled.",
+      platform: input.platform,
+      username: input.username,
+    });
+    return {
+      ok: false,
+      available: false,
+      reason: "Creator enrichment is disabled.",
+    };
+  }
+
   const env = getMetricsCollectorEnv();
   const hasApifyToken = Boolean(env.apifyToken);
   const platformKey = canonicalPlatformKey(input.platform);

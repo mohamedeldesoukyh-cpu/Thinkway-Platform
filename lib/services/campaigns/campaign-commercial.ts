@@ -1,7 +1,12 @@
 import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import { rowTotalRevenue } from "@/lib/assignments/commercial-calculations";
+import {
+  computeMarginPercent,
+  resolveLineCommercialMetrics,
+} from "@/lib/analytics/metrics/financial";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { isCancelledCampaignStatus } from "@/lib/domains/groups/campaign-status";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import { buildLineVatPayload } from "@/lib/vat/line-payload";
 
 export function emptyToNull(value: string | undefined): string | null {
@@ -161,9 +166,23 @@ export function deliverableStatusTimestamps(status: string): Record<string, stri
   return timestamps;
 }
 
+export type CampaignKpiLineInput = {
+  campaign_header_id: string;
+  revenue: number | null;
+  cost: number | null;
+  profit: number | null;
+  billing_status?: CampaignLineBillingStatus | null;
+  revenue_before_vat?: number | null;
+  usage_rights_amount?: number | null;
+  usage_rights_cost?: number | null;
+  agency_fee_percent?: number | null;
+  agency_fee_amount?: number | null;
+  cost_before_vat?: number | null;
+};
+
 export function aggregateCampaignKpis(
   headers: { id: string; status: string; currency_code: string | null }[],
-  lines: { campaign_header_id: string; revenue: number | null; profit: number | null }[],
+  lines: CampaignKpiLineInput[],
   assignments: { id: string; campaign_header_id: string | null }[]
 ) {
   const operationalHeaderIds = new Set(
@@ -172,15 +191,25 @@ export function aggregateCampaignKpis(
   const operationalLines = lines.filter((l) =>
     operationalHeaderIds.has(l.campaign_header_id)
   );
-  const totalRevenue = operationalLines.reduce(
-    (sum, l) => sum + Number(l.revenue ?? 0),
-    0
-  );
-  const totalProfit = operationalLines.reduce(
-    (sum, l) => sum + Number(l.profit ?? 0),
-    0
-  );
-  const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+  let totalRevenue = 0;
+  let totalGp = 0;
+  for (const line of operationalLines) {
+    const metrics = resolveLineCommercialMetrics({
+      revenue: Number(line.revenue ?? 0),
+      cost: Number(line.cost ?? 0),
+      profit: Number(line.profit ?? 0),
+      billing_status: (line.billing_status ?? "draft") as CampaignLineBillingStatus,
+      revenue_before_vat: line.revenue_before_vat,
+      usage_rights_amount: line.usage_rights_amount,
+      usage_rights_cost: line.usage_rights_cost,
+      agency_fee_percent: line.agency_fee_percent,
+      agency_fee_amount: line.agency_fee_amount,
+      cost_before_vat: line.cost_before_vat,
+    });
+    totalRevenue += metrics.revenue;
+    totalGp += metrics.gp;
+  }
+  const avgMargin = computeMarginPercent(totalRevenue, totalGp);
 
   const currencyCounts = new Map<string, number>();
   for (const header of headers.filter((h) => !isCancelledCampaignStatus(h.status))) {

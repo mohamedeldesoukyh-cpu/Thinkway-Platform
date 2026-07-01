@@ -1,4 +1,5 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { creatorMatchesBrowseCategories } from "@/lib/creators/category-filter";
 
 import type { CreatorSearchFilters } from "./creator-search-types";
 
@@ -7,6 +8,9 @@ export function applyCreatorSearchClientFilters(
   filters: CreatorSearchFilters
 ): UnifiedCreatorResult[] {
   return creators.filter((creator) => {
+    if (filters.categories.length > 0) {
+      if (!creatorMatchesBrowseCategories(creator, filters.categories)) return false;
+    }
     if (filters.platforms.length > 1) {
       const hasPlatform = creator.platforms.some((p) =>
         filters.platforms.includes(p.platform)

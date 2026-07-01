@@ -2,7 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
+import {
+  resolveCreatorFromRefLookup,
+  resolveUnifiedCreatorsByRefs,
+} from "@/lib/creators/unified-browse";
 import type { Database, ShortlistItemStatus } from "@/types/database";
 import {
   getAuthContext,
@@ -142,27 +145,17 @@ async function loadCreatorPreviewsByShortlist(
 
   if (cappedByShortlist.size === 0) return previews;
 
-  const browse = await browseUnifiedCreators(supabase, { pageSize: 500 });
-  const byUnifiedId = new Map(browse.creators.map((c) => [c.unified_id, c]));
-  const byDiscoveryId = new Map(
-    browse.creators
-      .filter((c) => c.discovered_profile_id)
-      .map((c) => [c.discovered_profile_id!, c])
-  );
-  const byInfluencerId = new Map(
-    browse.creators
-      .filter((c) => c.influencer_id)
-      .map((c) => [c.influencer_id!, c])
-  );
+  const allItems = [...cappedByShortlist.values()].flat();
+  const lookup = await resolveUnifiedCreatorsByRefs(supabase, {
+    unifiedIds: allItems.map((item) => item.unified_id),
+    influencerIds: allItems.map((item) => item.influencer_id),
+    discoveredProfileIds: allItems.map((item) => item.profile_id),
+  });
 
   for (const [shortlistId, shortlistItems] of cappedByShortlist) {
     const rowPreviews: ShortlistListRow["creator_previews"] = [];
     for (const item of shortlistItems) {
-      const creator =
-        (item.unified_id ? byUnifiedId.get(item.unified_id) : null) ??
-        (item.profile_id ? byDiscoveryId.get(item.profile_id) : null) ??
-        (item.influencer_id ? byInfluencerId.get(item.influencer_id) : null) ??
-        null;
+      const creator = resolveCreatorFromRefLookup(lookup, item);
       if (!creator) continue;
       rowPreviews.push({
         display_name: creator.display_name,
@@ -199,32 +192,27 @@ async function loadShortlistCreators(
 ): Promise<ShortlistCreatorItem[]> {
   const { data: items, error } = await supabase
     .from("discovery_shortlist_items")
-    .select("id, profile_id, influencer_id, unified_id, notes, match_score, sort_order, item_status")
+    .select(
+      "id, profile_id, influencer_id, unified_id, notes, match_score, sort_order, item_status, platform_account_ids"
+    )
     .eq("shortlist_id", shortlistId)
     .order("sort_order", { ascending: true });
 
   if (error) throw new Error(error.message);
   if (!items || items.length === 0) return [];
 
-  const browse = await browseUnifiedCreators(supabase, { pageSize: 400 });
-  const byUnifiedId = new Map(browse.creators.map((c) => [c.unified_id, c]));
-  const byDiscoveryId = new Map(
-    browse.creators
-      .filter((c) => c.discovered_profile_id)
-      .map((c) => [c.discovered_profile_id!, c])
-  );
-  const byInfluencerId = new Map(
-    browse.creators
-      .filter((c) => c.influencer_id)
-      .map((c) => [c.influencer_id!, c])
-  );
+  const lookup = await resolveUnifiedCreatorsByRefs(supabase, {
+    unifiedIds: items.map((item) => item.unified_id as string | null),
+    influencerIds: items.map((item) => item.influencer_id as string | null),
+    discoveredProfileIds: items.map((item) => item.profile_id as string | null),
+  });
 
   return items.map((item) => {
-    const creator =
-      (item.unified_id ? byUnifiedId.get(item.unified_id as string) : null) ??
-      (item.profile_id ? byDiscoveryId.get(item.profile_id as string) : null) ??
-      (item.influencer_id ? byInfluencerId.get(item.influencer_id as string) : null) ??
-      null;
+    const creator = resolveCreatorFromRefLookup(lookup, {
+      unified_id: item.unified_id as string | null,
+      profile_id: item.profile_id as string | null,
+      influencer_id: item.influencer_id as string | null,
+    });
 
     return {
       item_id: item.id as string,
@@ -234,6 +222,7 @@ async function loadShortlistCreators(
       unified_id: (item.unified_id as string) ?? creator?.unified_id ?? null,
       profile_id: (item.profile_id as string) ?? null,
       influencer_id: (item.influencer_id as string) ?? null,
+      platform_account_ids: ((item.platform_account_ids as string[]) ?? []).filter(Boolean),
       creator,
     };
   });

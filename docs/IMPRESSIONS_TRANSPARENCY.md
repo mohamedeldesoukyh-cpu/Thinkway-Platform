@@ -112,4 +112,4 @@ After migration, re-sync a publication and confirm:
 ## Related docs
 
 - `docs/PUBLICATION_CONTENT_EXTRACTION.md` — caption/hashtag pipeline
-- Reach forecasting migration: `20260630120000_reach_forecasting.sql`
+- Reach forecasting migration: `20260630130000_reach_forecasting.sql`

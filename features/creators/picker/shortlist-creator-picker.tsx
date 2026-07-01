@@ -63,6 +63,7 @@ export function ShortlistCreatorPicker({
       open={open}
       onOpenChange={onOpenChange}
       container="sheet"
+      panelLayout
       title="Add creators"
       description="Search internal, imported, and discovered creators, then add them to this shortlist. Keep adding without losing your place."
       selectionMode="multi"
@@ -71,9 +72,6 @@ export function ShortlistCreatorPicker({
       isRowDisabled={(creator) => !isAddableCreator(creator)}
       onConfirm={handleConfirm}
       onConfirmPending={isPending}
-      formatConfirmLabel={(count) =>
-        `Add ${count > 0 ? count : ""} to shortlist`.replace(/\s+/g, " ").trim()
-      }
     />
   );
 }

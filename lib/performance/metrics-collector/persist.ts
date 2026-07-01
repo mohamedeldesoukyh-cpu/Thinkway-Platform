@@ -40,12 +40,15 @@ import {
   isAvatarUrlNeedsRefresh,
   isUsableAvatarUrl,
   normalizeAvatarSource,
+  resolvePersistedAvatarSource,
   shouldPersistPlatformAvatar,
+  shouldPreserveUploadedAvatarSource,
   shouldSyncPlatformAvatar,
 } from "@/lib/performance/avatar-sync-policy";
+import { resolvePersistableProviderAvatarUrl } from "@/lib/performance/provider-avatar-validation";
+import { uploadedAvatarExistsInStorage } from "@/lib/discovery-import/import-avatar-storage";
 import {
   isAvatarUrlAllowedForPlatform,
-  prepareCreatorAvatarUrlForDisplay,
   resolvePublicationEffectivePlatform,
 } from "@/lib/performance/creator-avatar";
 import { logMetricsQueueEvent } from "@/lib/performance/metrics-collector/metrics-queue-log";
@@ -392,8 +395,12 @@ export async function persistInfluencerPlatformAvatar(
     source?: "apify" | "discovery";
     /** Bypass 30-day stale policy (Discovery explicit Refresh Metrics). */
     forceSync?: boolean;
+    /** Replace a valid uploaded avatar with a provider photo. */
+    forceAvatarReplace?: boolean;
     /** When true, log skip reasons (default: true). */
     logSkips?: boolean;
+    /** Test hook — skip HTTP probe for provider avatar validation. */
+    skipProviderAvatarNetworkValidation?: boolean;
   }
 ): Promise<boolean> {
   const result = await persistInfluencerPlatformAvatarDetailed(supabase, input);
@@ -408,7 +415,11 @@ export async function persistInfluencerPlatformAvatarDetailed(
     profilePictureUrl: string;
     source?: "apify" | "discovery";
     forceSync?: boolean;
+    forceAvatarReplace?: boolean;
+    /** Manual refresh may replace uploaded import avatars when provider URL differs. */
+    allowUploadedProviderReplace?: boolean;
     logSkips?: boolean;
+    skipProviderAvatarNetworkValidation?: boolean;
   }
 ): Promise<PersistPlatformAvatarResult> {
   const logSkips = input.logSkips !== false;
@@ -423,23 +434,18 @@ export async function persistInfluencerPlatformAvatarDetailed(
   }
 
   const url = input.profilePictureUrl.trim();
-  if (!url.startsWith("http") || !isUsableAvatarUrl(url)) {
+  const providerValidation = await resolvePersistableProviderAvatarUrl(platformKey, url, {
+    skipNetwork: input.skipProviderAvatarNetworkValidation,
+  });
+  if (!providerValidation.ok) {
     if (logSkips) {
-      console.warn(
-        `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=invalid_url`
+      console.log(
+        `[avatar] rejected provider avatar reason=${providerValidation.reason} influencer=${input.influencerId} platform=${platformKey}`
       );
     }
-    return { saved: false, reason: "invalid_url" };
+    return { saved: false, reason: "invalid_url", detail: providerValidation.reason };
   }
-  const normalizedUrl = prepareCreatorAvatarUrlForDisplay(platformKey, url) ?? url;
-  if (!isUsableAvatarUrl(normalizedUrl)) {
-    if (logSkips) {
-      console.warn(
-        `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=invalid_url detail=placeholder_or_broken_after_normalize`
-      );
-    }
-    return { saved: false, reason: "invalid_url" };
-  }
+  const normalizedUrl = providerValidation.url;
   if (!isAvatarUrlAllowedForPlatform(platformKey, normalizedUrl)) {
     if (logSkips) {
       console.warn(
@@ -494,15 +500,28 @@ export async function persistInfluencerPlatformAvatarDetailed(
     Date.now(),
     {
       forceSync: input.forceSync,
+      forceAvatarReplace: input.forceAvatarReplace,
+      allowUploadedProviderReplace: input.allowUploadedProviderReplace,
       allowManualCrossPlatformRefresh: crossPlatformBlocked,
+      incomingProfilePictureUrl: normalizedUrl,
     }
   );
 
   if (!policyAllowsSync) {
     if (logSkips) {
-      console.warn(
-        `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=policy_blocked source=${avatarSource} hasUrl=${Boolean(currentUrl?.trim())} forceSync=${Boolean(input.forceSync)}`
-      );
+      if (
+        avatarSource === "uploaded" &&
+        isUsableAvatarUrl(currentUrl) &&
+        !input.forceAvatarReplace
+      ) {
+        console.log(
+          `[avatar] skipped avatar overwrite (provider failed) influencer=${input.influencerId} platform=${platformKey} avatar_source=${avatarSource}`
+        );
+      } else {
+        console.warn(
+          `[avatar-sync] skip influencer=${input.influencerId} platform=${platformKey} reason=policy_blocked source=${avatarSource} hasUrl=${Boolean(currentUrl?.trim())} forceSync=${Boolean(input.forceSync)}`
+        );
+      }
     }
     return {
       saved: false,
@@ -511,12 +530,58 @@ export async function persistInfluencerPlatformAvatarDetailed(
     };
   }
 
+  if (
+    shouldPreserveUploadedAvatarSource({
+      profile_picture_url: currentUrl,
+      avatar_source: avatarSource,
+      avatar_last_synced_at: avatarLastSyncedAt,
+    }) &&
+    !input.allowUploadedProviderReplace
+  ) {
+    const existsInStorage = await uploadedAvatarExistsInStorage(supabase, currentUrl!);
+    if (existsInStorage) {
+      if (logSkips) {
+        console.log(
+          `[avatar] preserving uploaded avatar in storage influencer=${input.influencerId} platform=${platformKey} avatar_source=${avatarSource}`
+        );
+      }
+      return {
+        saved: false,
+        reason: "policy_blocked",
+        detail: "uploaded_avatar_in_storage",
+      };
+    }
+  }
+
+  if (
+    avatarSource === "uploaded" &&
+    isUsableAvatarUrl(currentUrl) &&
+    input.forceAvatarReplace
+  ) {
+    console.log(
+      `[avatar] replacing uploaded avatar with provider avatar influencer=${input.influencerId} platform=${platformKey}`
+    );
+  }
+
   const syncedAt = new Date().toISOString();
+  const incomingSource = input.source ?? "apify";
+  const persistedAvatarSource = resolvePersistedAvatarSource(
+    {
+      profile_picture_url: currentUrl,
+      avatar_source: avatarSource,
+      avatar_last_synced_at: avatarLastSyncedAt,
+    },
+    incomingSource,
+    {
+      forceAvatarReplace: input.forceAvatarReplace,
+      allowUploadedProviderReplace: input.allowUploadedProviderReplace,
+    }
+  );
   const { error: updateError } = await supabase
     .from("influencer_platform_accounts")
     .update({
       profile_picture_url: normalizedUrl,
-      avatar_source: input.source ?? "apify",
+      avatar_source: persistedAvatarSource,
       avatar_last_synced_at: syncedAt,
       updated_at: syncedAt,
     } as never)

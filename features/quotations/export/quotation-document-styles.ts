@@ -1,3 +1,5 @@
+import { THINKWAY_REPORT_LOGO_STYLES } from "@/lib/reports/document/thinkway-report-logo";
+
 /**
  * Print/PDF styles for client quotation exports.
  * IO-aligned palette — matches Performance report / Client IO documents.
@@ -74,8 +76,7 @@ export function buildQuotationDocumentStyles(generatedLabel: string): string {
     padding: 36px 40px 32px;
     background: linear-gradient(180deg, rgba(2,11,38,.72) 0%, rgba(2,11,38,.92) 55%, ${P.primary} 100%);
   }
-  .cover-brand { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-  .cover-brand span { color: ${P.accent}; }
+  ${THINKWAY_REPORT_LOGO_STYLES}
   .cover-kicker { font-size: 10px; letter-spacing: 2.2px; text-transform: uppercase; color: #8899BB; margin-top: 6px; }
   .cover-title { font-size: 26px; font-weight: 700; line-height: 1.15; margin: 24px 0 10px; max-width: 88%; }
   .cover-subtitle { font-size: 12px; color: #C8D6F5; margin-bottom: 8px; }

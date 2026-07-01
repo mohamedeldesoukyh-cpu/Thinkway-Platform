@@ -2,6 +2,7 @@ export const CREATOR_IMPORT_STATUSES = [
   "uploaded",
   "queued",
   "processing",
+  "paused",
   "completed",
   "failed",
 ] as const;

@@ -44,3 +44,13 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# temporary debug / local artifacts
+.tmp/
+services/discovery-worker/.tmp/
+/probe-*.ts
+/validate-*.ts
+*.log
+response.html
+.discovery-worker-startup.log*
+services/discovery-worker/*.log

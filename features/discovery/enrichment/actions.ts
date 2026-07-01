@@ -2,12 +2,14 @@
 
 import { requirePermission } from "@/lib/auth/permissions";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
+import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
 import { getCreatorEnrichmentQueueHealth } from "@/lib/creator-enrichment/health";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import {
   getCreatorMetricsSyncStatus,
   refreshCreatorMetrics,
   refreshCreatorMetricsBatchByUnifiedIds,
+  refreshCreatorPlatformMetrics,
   stopCreatorMetricsRefreshByUnifiedId,
   stopCreatorMetricsRefreshBatchByUnifiedIds,
 } from "@/lib/services/creators/creator-enrichment-service";
@@ -27,13 +29,12 @@ export type StopEnrichmentActionResult = {
   stoppedCount?: number;
 };
 
-/**
- * Explicit "Refresh Metrics" click. Forces a run, bypassing the 30-day skip.
- */
-export async function refreshCreatorAction(
-  influencerId: string
+async function refreshCreatorWithScope(
+  influencerId: string,
+  scope: EnrichmentScope,
+  options?: { platformAccountId?: string; isBulk?: boolean }
 ): Promise<EnrichmentActionResult> {
-  if (!influencerId) {
+  if (!influencerId?.trim()) {
     return { ok: false, queued: false, message: "A creator id is required." };
   }
 
@@ -43,12 +44,26 @@ export async function refreshCreatorAction(
     return { ok: false, queued: false, message: auth.error };
   }
 
-  const result = await refreshCreatorMetrics(supabase, influencerId, {
+  const refreshOptions = {
     force: true,
-    trigger: "manual",
-    bypassMetricsManualOverride: true,
+    trigger: "manual" as const,
+    bypassMetricsManualOverride: scope === "metrics" || scope === "all",
+    forceAvatarReplace: scope === "avatar" || scope === "all",
+    forceInterestReplace: scope === "categories" || scope === "all",
     requestedBy: auth.userId,
-  });
+    scope,
+    isBulk: options?.isBulk ?? false,
+    platformAccountId: options?.platformAccountId ?? null,
+  };
+
+  const result = options?.platformAccountId
+    ? await refreshCreatorPlatformMetrics(
+        supabase,
+        influencerId.trim(),
+        options.platformAccountId.trim(),
+        refreshOptions
+      )
+    : await refreshCreatorMetrics(supabase, influencerId.trim(), refreshOptions);
 
   return {
     ok: result.ok,
@@ -57,9 +72,57 @@ export async function refreshCreatorAction(
   };
 }
 
-/** Batch refresh for selected creators in Discovery Search / Import Center demos. */
+/** Explicit full refresh — all scopes. */
+export async function refreshCreatorAllAction(
+  influencerId: string
+): Promise<EnrichmentActionResult> {
+  return refreshCreatorWithScope(influencerId, "all");
+}
+
+/** Refresh followers, engagement, and views only. */
+export async function refreshCreatorAction(
+  influencerId: string
+): Promise<EnrichmentActionResult> {
+  return refreshCreatorWithScope(influencerId, "metrics");
+}
+
+export async function refreshCreatorAvatarAction(
+  influencerId: string
+): Promise<EnrichmentActionResult> {
+  return refreshCreatorWithScope(influencerId, "avatar");
+}
+
+export async function refreshCreatorProfileAction(
+  influencerId: string
+): Promise<EnrichmentActionResult> {
+  return refreshCreatorWithScope(influencerId, "profile");
+}
+
+export async function refreshCreatorAudienceAction(
+  influencerId: string
+): Promise<EnrichmentActionResult> {
+  return refreshCreatorWithScope(influencerId, "audience");
+}
+
+export async function refreshCreatorCategoriesAction(
+  influencerId: string
+): Promise<EnrichmentActionResult> {
+  return refreshCreatorWithScope(influencerId, "categories");
+}
+
+/** Refresh metrics for one platform account only (Discovery context menu). */
+export async function refreshCreatorPlatformAction(
+  influencerId: string,
+  platformAccountId: string,
+  scope: EnrichmentScope = "metrics"
+): Promise<EnrichmentActionResult> {
+  return refreshCreatorWithScope(influencerId, scope, { platformAccountId });
+}
+
+/** Batch refresh for selected creators in Discovery Search. */
 export async function refreshCreatorsBatchAction(
-  unifiedIds: string[]
+  unifiedIds: string[],
+  scope: EnrichmentScope = "metrics"
 ): Promise<EnrichmentActionResult> {
   if (unifiedIds.length === 0) {
     return { ok: false, queued: false, message: "Select at least one creator." };
@@ -74,8 +137,12 @@ export async function refreshCreatorsBatchAction(
   const batch = await refreshCreatorMetricsBatchByUnifiedIds(supabase, unifiedIds, {
     force: true,
     trigger: "manual",
-    bypassMetricsManualOverride: true,
+    bypassMetricsManualOverride: scope === "metrics" || scope === "all",
+    forceAvatarReplace: scope === "avatar" || scope === "all",
+    forceInterestReplace: scope === "categories" || scope === "all",
     requestedBy: auth.userId,
+    scope,
+    isBulk: true,
   });
 
   return {
@@ -144,33 +211,13 @@ export async function stopCreatorsMetricsRefreshBatchAction(
 }
 
 /**
- * Detail-view trigger (priority 3). Best-effort, respects the 30-day skip.
- * Safe to call on every sheet open — de-duped by job id and skipped when fresh.
+ * Detail-view auto enrichment removed — import and enrichment are separate.
+ * Kept for API compatibility; always returns without queuing.
  */
 export async function enqueueCreatorDetailEnrichment(
-  influencerId: string
+  _influencerId: string
 ): Promise<EnrichmentActionResult> {
-  if (!influencerId) {
-    return { ok: true, queued: false, message: "No enrichment queued." };
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
-  if ("error" in auth) {
-    return { ok: true, queued: false, message: "No enrichment queued." };
-  }
-
-  const result = await refreshCreatorMetrics(supabase, influencerId, {
-    force: false,
-    trigger: "detail",
-    requestedBy: auth.userId,
-  });
-
-  return {
-    ok: true,
-    queued: result.queued,
-    message: result.queued ? "Enrichment queued." : "No enrichment queued.",
-  };
+  return { ok: true, queued: false, message: "Automatic detail enrichment is disabled." };
 }
 
 export async function getCreatorEnrichmentStatusAction(influencerId: string) {

@@ -3,6 +3,7 @@
  * Preview / Word / PDF share this renderer (puppeteer via vendor-io-pdf).
  */
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
+import { renderThinkwayReportLogoHtml } from "@/lib/reports/document/thinkway-report-logo";
 import { THINKWAY_REPORT_STYLES } from "@/lib/reports/document/thinkway-report-styles";
 import type { QuotationDocument } from "./quotation-document";
 import { buildQuotationDocumentStyles } from "./quotation-document-styles";
@@ -145,7 +146,7 @@ function renderCoverPage(doc: QuotationDocument): string {
   return `<section class="cover-page">
     <div class="cover-overlay">
       <div>
-        <div class="cover-brand">THINK<span>WAY</span></div>
+        ${renderThinkwayReportLogoHtml({ variant: "cover", theme: "dark" })}
         <div class="cover-kicker">Client Quotation${doc.template === "lump-sum" ? " · Lump Sum" : ""}</div>
         <div class="cover-accent"></div>
         <h1 class="cover-title">${esc(doc.name)}</h1>
