@@ -5,6 +5,7 @@ import {
   ArrowUpDownIcon,
   ArrowUpIcon,
   ListPlusIcon,
+  Loader2Icon,
   SaveIcon,
   SearchIcon,
   SparklesIcon,
@@ -105,11 +106,18 @@ export function CreatorSearchTopBar({
       >
         <div className="relative min-w-0 flex-1">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          {loading ? (
+            <Loader2Icon
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground"
+            />
+          ) : null}
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search by name, category, location, hashtags…"
-            className="h-8 border-border bg-muted pl-9 text-[12px] focus-visible:border-primary focus-visible:bg-background"
+            className="h-8 border-border bg-muted pl-9 pr-9 text-[12px] focus-visible:border-primary focus-visible:bg-background"
+            disabled={loading}
           />
         </div>
 

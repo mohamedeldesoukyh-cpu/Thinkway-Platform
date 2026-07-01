@@ -12,6 +12,12 @@ export type CreatorSearchHit = {
   has_more: boolean;
 };
 
+export type CreatorSearchResponse = {
+  hits: CreatorSearchHit[];
+  /** Present on page 1 (offset 0) when returned by search_creators RPC. */
+  totalCount?: number;
+};
+
 const DEFAULT_SEARCH_LIMIT = 50;
 const MAX_SEARCH_LIMIT = 200;
 
@@ -20,7 +26,7 @@ export async function searchCreators(
   query: string,
   limit = DEFAULT_SEARCH_LIMIT,
   offset = 0
-): Promise<CreatorSearchHit[]> {
+): Promise<CreatorSearchResponse> {
   const cappedLimit = Math.min(Math.max(limit, 0), MAX_SEARCH_LIMIT);
   const cappedOffset = Math.max(offset, 0);
 
@@ -32,31 +38,40 @@ export async function searchCreators(
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map(
+  const rows = data ?? [];
+  const hits = rows.map(
     (row: {
       source_type: string;
       creator_id: string;
       rank: number;
       has_more: boolean;
+      total_count?: number | string | null;
     }) => ({
       source_type: row.source_type === "discovered" ? "discovered" : "influencer",
       creator_id: row.creator_id,
       rank: row.rank,
       has_more: Boolean(row.has_more),
     })
-  );
+  ) as CreatorSearchHit[];
+
+  const rawTotal = rows[0]?.total_count;
+  const totalCount =
+    rawTotal != null && rawTotal !== ""
+      ? typeof rawTotal === "number"
+        ? rawTotal
+        : Number(rawTotal)
+      : undefined;
+
+  return { hits, totalCount };
 }
 
+/** @deprecated Prefer totalCount from searchCreators() — kept for backward compatibility. */
 export async function searchCreatorsCount(
   supabase: SupabaseClient,
   query: string
 ): Promise<number> {
-  const { data, error } = await supabase.rpc("search_creators_count", {
-    p_query: query.trim(),
-  });
-
-  if (error) throw new Error(error.message);
-  return typeof data === "number" ? data : Number(data ?? 0);
+  const { totalCount } = await searchCreators(supabase, query, 1, 0);
+  return totalCount ?? 0;
 }
 
 export function creatorSearchRankMap(
@@ -80,7 +95,7 @@ export async function searchInfluencerIdsByQuery(
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const hits = await searchCreators(supabase, trimmed, limit, 0);
+  const { hits } = await searchCreators(supabase, trimmed, limit, 0);
   return hits
     .filter((hit) => hit.source_type === "influencer")
     .map((hit) => ({ id: hit.creator_id, rank: hit.rank }));
@@ -95,7 +110,7 @@ export async function searchDiscoveredProfileIdsByQuery(
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const hits = await searchCreators(supabase, trimmed, limit, 0);
+  const { hits } = await searchCreators(supabase, trimmed, limit, 0);
   return hits
     .filter((hit) => hit.source_type === "discovered")
     .map((hit) => ({ id: hit.creator_id, rank: hit.rank }));

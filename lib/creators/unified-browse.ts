@@ -38,10 +38,10 @@ import {
 } from "@/lib/creators/creator-centric";
 import { mergeImportedStringArrays } from "@/lib/discovery-import/normalize";
 import { normalizeCreatorRecentPublications } from "@/lib/creators/recent-publication-thumb";
+import { createDiscoverySearchPerf } from "@/lib/creators/discovery-search-perf";
 import {
   creatorSearchHasMore,
   searchCreators,
-  searchCreatorsCount,
   searchInfluencerIdsByHandleFallback,
   type CreatorSearchHit,
 } from "@/lib/creators/fts-search";
@@ -194,7 +194,9 @@ async function fetchInternalCreatorsBrowsePage(
   const results = await fetchInternalCreators(
     supabase,
     { ...filters, search: undefined, page: undefined, pageSize: undefined },
-    ids
+    ids,
+    null,
+    { omitHeavyFields: true }
   );
 
   const order = new Map(ids.map((id, index) => [id, index]));
@@ -384,19 +386,25 @@ async function fetchInternalCreators(
   supabase: SupabaseClient,
   filters: UnifiedCreatorBrowseFilters,
   scopedInfluencerIds?: string[],
-  searchRankById?: Map<string, number> | null
+  searchRankById?: Map<string, number> | null,
+  options?: { omitHeavyFields?: boolean }
 ): Promise<UnifiedCreatorResult[]> {
   const search = filters.search?.trim() ?? "";
   const platform = filters.platform?.trim() ?? "";
   const country = filters.country?.trim().toUpperCase() ?? "";
   const categories = resolveBrowseCategories(filters);
   const resolvedSearchRankById = searchRankById ?? null;
+  const omitHeavyFields = options?.omitHeavyFields ?? false;
 
   if (search && scopedInfluencerIds && scopedInfluencerIds.length === 0) {
     return [];
   }
 
-  let influencerIds: string[] | null = scopedInfluencerIds ?? null;
+  const candidateIds =
+    scopedInfluencerIds ??
+    (resolvedSearchRankById ? [...resolvedSearchRankById.keys()] : null);
+
+  let influencerIds: string[] | null = candidateIds;
 
   if (
     platform ||
@@ -409,6 +417,10 @@ async function fetchInternalCreators(
       .select(
         "influencer_id, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, handle, profile_url, platform, metrics_source, sync_status, metrics_is_manual_override"
       );
+
+    if (candidateIds?.length) {
+      accountQuery = accountQuery.in("influencer_id", candidateIds);
+    }
 
     if (platform) accountQuery = accountQuery.eq("platform", platform);
     if (filters.minFollowers != null) {
@@ -438,7 +450,7 @@ async function fetchInternalCreators(
   }
   if (influencerIds) {
     scopedIds = scopedIds
-      ? scopedIds.filter((id) => influencerIds.includes(id))
+      ? scopedIds.filter((id) => influencerIds!.includes(id))
       : influencerIds;
   }
 
@@ -516,12 +528,20 @@ async function fetchInternalCreators(
     (importSourceRows ?? []).map((row) => row.influencer_id as string)
   );
 
-  const { data: accounts } = await supabase
-    .from("influencer_platform_accounts")
-    .select(
-      "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, recent_publications, metrics_source, sync_status, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
-    )
-    .in("influencer_id", ids);
+  const accountsResult = omitHeavyFields
+    ? await supabase
+        .from("influencer_platform_accounts")
+        .select(
+          "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, metrics_source, sync_status, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
+        )
+        .in("influencer_id", ids)
+    : await supabase
+        .from("influencer_platform_accounts")
+        .select(
+          "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, recent_publications, metrics_source, sync_status, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
+        )
+        .in("influencer_id", ids);
+  const { data: accounts } = accountsResult;
 
   const accountsByInfluencer = new Map<string, NonNullable<typeof accounts>>();
   for (const account of accounts ?? []) {
@@ -728,19 +748,24 @@ async function fetchInternalCreators(
   return results;
 }
 
+type CreatorSearchHitsResult = {
+  hits: CreatorSearchHit[];
+  totalCount?: number;
+};
+
 async function resolveCreatorSearchHits(
   supabase: SupabaseClient,
   search: string,
   pageSize: number,
   offset: number
-): Promise<CreatorSearchHit[]> {
-  let hits = await searchCreators(supabase, search, pageSize, offset);
-  if (hits.length > 0 || !search) return hits;
+): Promise<CreatorSearchHitsResult> {
+  let response = await searchCreators(supabase, search, pageSize, offset);
+  if (response.hits.length > 0 || !search) return response;
 
   const normalizedQuery = normalizeDiscoverySearchQuery(search);
   if (normalizedQuery && normalizedQuery !== search.trim()) {
-    hits = await searchCreators(supabase, normalizedQuery, pageSize, offset);
-    if (hits.length > 0) return hits;
+    response = await searchCreators(supabase, normalizedQuery, pageSize, offset);
+    if (response.hits.length > 0) return response;
   }
 
   const fallbackIds = await searchInfluencerIdsByHandleFallback(
@@ -748,14 +773,17 @@ async function resolveCreatorSearchHits(
     normalizedQuery || search,
     pageSize
   );
-  if (fallbackIds.length === 0) return [];
+  if (fallbackIds.length === 0) return { hits: [], totalCount: 0 };
 
-  return fallbackIds.map((hit) => ({
-    source_type: "influencer" as const,
-    creator_id: hit.id,
-    rank: hit.rank,
-    has_more: false,
-  }));
+  return {
+    hits: fallbackIds.map((hit) => ({
+      source_type: "influencer" as const,
+      creator_id: hit.id,
+      rank: hit.rank,
+      has_more: false,
+    })),
+    totalCount: fallbackIds.length,
+  };
 }
 
 /** Browse rows omit publication JSONB; detail views load full creator separately. */
@@ -955,21 +983,27 @@ export async function browseUnifiedCreators(
   supabase: SupabaseClient,
   filters: UnifiedCreatorBrowseFilters
 ): Promise<UnifiedCreatorBrowseResult> {
+  const perf = createDiscoverySearchPerf("browseUnifiedCreators");
+
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = Math.min(50, filters.pageSize ?? 20);
   const search = filters.search?.trim() ?? "";
   const sourceFilter = filters.source ?? "all";
+  const browseHydrationOptions = { omitHeavyFields: true };
 
   if (filters.influencerId || filters.discoveredProfileId) {
-    const [internal, discovery] = await Promise.all([
-      fetchInternalCreators(supabase, filters),
-      fetchDiscoveryCreators(supabase, filters),
-    ]);
+    perf?.span("fetchInternalCreators");
+    const internalPromise = fetchInternalCreators(supabase, filters);
+    perf?.span("fetchDiscoveryCreators");
+    const discoveryPromise = fetchDiscoveryCreators(supabase, filters);
+    const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
+    perf?.span("merge");
     let merged = [...internal, ...discovery];
     if (filters.productionOnly !== false) {
       merged = merged.filter(passesProductionCreatorGate);
     }
-    return {
+    perf?.span("serialization");
+    const result = {
       creators: stripRecentPublicationsForBrowse(merged),
       total: merged.length,
       page: 1,
@@ -977,6 +1011,8 @@ export async function browseUnifiedCreators(
       internal_count: internal.length,
       discovery_count: discovery.length,
     };
+    perf?.end();
+    return result;
   }
 
   if (!search) {
@@ -985,15 +1021,18 @@ export async function browseUnifiedCreators(
     const categoryFilterActive = resolveBrowseCategories(filters).length > 0;
 
     if (categoryFilterActive && includeInternal) {
-      const [internal, totalMatches] = await Promise.all([
-        fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize),
-        countInternalCreatorsBrowse(supabase, filters),
-      ]);
+      perf?.span("fetchInternalCreators");
+      const internalPromise = fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize);
+      perf?.span("search_creators_count");
+      const totalPromise = countInternalCreatorsBrowse(supabase, filters);
+      const [internal, totalMatches] = await Promise.all([internalPromise, totalPromise]);
 
+      perf?.span("merge");
       let merged = applyPostBrowseFilters(internal, filters);
       const offset = (page - 1) * pageSize;
 
-      return {
+      perf?.span("serialization");
+      const result = {
         creators: stripRecentPublicationsForBrowse(merged),
         total: totalMatches,
         has_more: offset + merged.length < totalMatches,
@@ -1002,20 +1041,24 @@ export async function browseUnifiedCreators(
         internal_count: merged.length,
         discovery_count: 0,
       };
+      perf?.end();
+      return result;
     }
 
     if (includeInternal && includeDiscovery && shouldUseUnifiedBrowseIndexPath(filters)) {
-      const browseHits = await searchCreators(
+      perf?.span("search_creators");
+      const browseResponse = await searchCreators(
         supabase,
         "",
         pageSize,
         (page - 1) * pageSize
       );
+      const browseHits = browseResponse.hits;
       const browseHasMore = creatorSearchHasMore(browseHits);
-      const browseTotal =
-        page === 1 ? await searchCreatorsCount(supabase, "") : undefined;
+      const browseTotal = browseResponse.totalCount;
       if (browseHits.length === 0) {
-        return {
+        perf?.span("serialization");
+        const result = {
           creators: [],
           total: browseTotal ?? 0,
           has_more: false,
@@ -1024,6 +1067,8 @@ export async function browseUnifiedCreators(
           internal_count: 0,
           discovery_count: 0,
         };
+        perf?.end();
+        return result;
       }
 
       const influencerIds = browseHits
@@ -1033,7 +1078,8 @@ export async function browseUnifiedCreators(
         .filter((hit) => hit.source_type === "discovered")
         .map((hit) => hit.creator_id);
 
-      const [internal, discovery] = await Promise.all([
+      perf?.span("fetchInternalCreators");
+      const internalPromise =
         influencerIds.length > 0
           ? fetchInternalCreators(
               supabase,
@@ -1044,9 +1090,13 @@ export async function browseUnifiedCreators(
                 page: undefined,
                 pageSize: undefined,
               },
-              influencerIds
+              influencerIds,
+              null,
+              browseHydrationOptions
             )
-          : Promise.resolve([]),
+          : Promise.resolve([]);
+      perf?.span("fetchDiscoveryCreators");
+      const discoveryPromise =
         discoveredIds.length > 0
           ? fetchDiscoveryCreators(
               supabase,
@@ -1059,13 +1109,15 @@ export async function browseUnifiedCreators(
               },
               discoveredIds
             )
-          : Promise.resolve([]),
-      ]);
+          : Promise.resolve([]);
+      const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
 
+      perf?.span("merge");
       let merged = mergeCreatorsInSearchOrder(browseHits, internal, discovery);
       merged = applyPostBrowseFilters(merged, filters);
 
-      return {
+      perf?.span("serialization");
+      const result = {
         creators: stripRecentPublicationsForBrowse(merged),
         total:
           browseTotal ??
@@ -1076,27 +1128,32 @@ export async function browseUnifiedCreators(
         internal_count: internal.length,
         discovery_count: discovery.length,
       };
+      perf?.end();
+      return result;
     }
 
-    const [internal, discovery] = await Promise.all([
-      includeInternal
-        ? fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize)
-        : Promise.resolve([]),
-      includeDiscovery
-        ? fetchDiscoveryCreators(supabase, {
-            ...filters,
-            search: undefined,
-            page,
-            pageSize,
-          })
-        : Promise.resolve([]),
-    ]);
+    perf?.span("fetchInternalCreators");
+    const internalPromise = includeInternal
+      ? fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize)
+      : Promise.resolve([]);
+    perf?.span("fetchDiscoveryCreators");
+    const discoveryPromise = includeDiscovery
+      ? fetchDiscoveryCreators(supabase, {
+          ...filters,
+          search: undefined,
+          page,
+          pageSize,
+        })
+      : Promise.resolve([]);
+    const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
 
+    perf?.span("merge");
     let merged = [...internal, ...discovery];
     merged.sort((a, b) => b.thinkway_score - a.thinkway_score);
     merged = applyPostBrowseFilters(merged, filters);
 
-    return {
+    perf?.span("serialization");
+    const result = {
       creators: stripRecentPublicationsForBrowse(merged),
       total: merged.length,
       page,
@@ -1104,12 +1161,17 @@ export async function browseUnifiedCreators(
       internal_count: internal.length,
       discovery_count: discovery.length,
     };
+    perf?.end();
+    return result;
   }
 
-  const searchHits = search
+  perf?.span("search_creators");
+  const searchResponse = search
     ? await resolveCreatorSearchHits(supabase, search, pageSize, (page - 1) * pageSize)
-    : [];
+    : { hits: [], totalCount: undefined };
+  const searchHits = searchResponse.hits;
   const searchHasMore = creatorSearchHasMore(searchHits);
+  const searchTotal = page === 1 ? searchResponse.totalCount : undefined;
   const influencerRankMap = influencerRankMapFromHits(searchHits);
   const influencerSearchIds = search
     ? searchHits
@@ -1134,7 +1196,8 @@ export async function browseUnifiedCreators(
     search &&
     searchHits.length === 0
   ) {
-    return {
+    perf?.span("serialization");
+    const result = {
       creators: [],
       total: 0,
       has_more: false,
@@ -1143,26 +1206,27 @@ export async function browseUnifiedCreators(
       internal_count: 0,
       discovery_count: 0,
     };
+    perf?.end();
+    return result;
   }
 
-  const searchTotalPromise =
-    search && page === 1 ? searchCreatorsCount(supabase, search) : Promise.resolve(undefined);
+  perf?.span("fetchInternalCreators");
+  const internalPromise = fetchInternalCreators(
+    supabase,
+    { ...filters, search: undefined },
+    scopedInfluencerIds,
+    influencerRankMap,
+    browseHydrationOptions
+  );
+  perf?.span("fetchDiscoveryCreators");
+  const discoveryPromise = fetchDiscoveryCreators(
+    supabase,
+    { ...filters, search: undefined },
+    scopedDiscoveryIds
+  );
+  const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
 
-  const [internal, discovery, searchTotal] = await Promise.all([
-    fetchInternalCreators(
-      supabase,
-      { ...filters, search: undefined },
-      scopedInfluencerIds,
-      influencerRankMap
-    ),
-    fetchDiscoveryCreators(
-      supabase,
-      { ...filters, search: undefined },
-      scopedDiscoveryIds
-    ),
-    searchTotalPromise,
-  ]);
-
+  perf?.span("merge");
   let merged: UnifiedCreatorResult[];
   if (search && searchHits.length > 0) {
     merged = mergeCreatorsInSearchOrder(searchHits, internal, discovery);
@@ -1183,7 +1247,8 @@ export async function browseUnifiedCreators(
     merged = dedupeSearchResultsByHandle(merged);
   }
 
-  return {
+  perf?.span("serialization");
+  const result = {
     creators: stripRecentPublicationsForBrowse(merged),
     total:
       searchTotal ??
@@ -1194,6 +1259,8 @@ export async function browseUnifiedCreators(
     internal_count: internal.length,
     discovery_count: discovery.length,
   };
+  perf?.end();
+  return result;
 }
 
 export type UnifiedCreatorRefLookup = {

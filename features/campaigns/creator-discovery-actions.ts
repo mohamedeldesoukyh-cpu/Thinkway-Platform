@@ -13,13 +13,16 @@ import { findSimilarCreators } from "@/lib/creators/similar-creators";
 import { loadCreatorHistoricalMetrics } from "@/lib/creators/historical-metrics";
 import { browseUnifiedCreators, getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import type { UnifiedCreatorBrowseFilters, UnifiedCreatorResult } from "@/lib/creators/types";
+import { createDiscoverySearchPerf } from "@/lib/creators/discovery-search-perf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 async function requireUserId() {
+  const perf = createDiscoverySearchPerf("browseUnifiedCreatorsAction.auth");
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  perf?.end();
   if (!user) throw new Error("Unauthorized");
   return { supabase, userId: user.id };
 }

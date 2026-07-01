@@ -133,6 +133,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   const filtersRef = useRef(filters);
   const searchRef = useRef(search);
   const reqIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
   const skipCategoryUrlWriteRef = useRef(false);
   const skipSearchUrlWriteRef = useRef(false);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -266,12 +267,18 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
   );
 
   const fetchPage = useCallback(async (pageNum: number, append: boolean) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const requestId = ++reqIdRef.current;
     if (append) setLoadingMore(true);
     else setLoading(true);
     setError(null);
 
     try {
+      if (controller.signal.aborted) return;
+
       const mergedFilters: CreatorSearchFilters = {
         ...filtersRef.current,
         search: searchRef.current,
@@ -279,7 +286,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
       const result = await browseUnifiedCreatorsAction(
         filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE)
       );
-      if (requestId !== reqIdRef.current) return;
+      if (controller.signal.aborted || requestId !== reqIdRef.current) return;
 
       let filtered = applyCreatorSearchClientFilters(result.creators, mergedFilters);
       for (const creator of filtered) {
@@ -297,12 +304,12 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
       });
       setHasMore(result.has_more ?? pageNum * PAGE_SIZE < result.total);
     } catch (err) {
-      if (requestId !== reqIdRef.current) return;
+      if (controller.signal.aborted || requestId !== reqIdRef.current) return;
       const message = err instanceof Error ? err.message : "Search failed";
       if (!append) setError(message);
       toast.error(message);
     } finally {
-      if (requestId !== reqIdRef.current) return;
+      if (controller.signal.aborted || requestId !== reqIdRef.current) return;
       setLoading(false);
       setLoadingMore(false);
     }
@@ -310,6 +317,7 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
 
   const runSearch = useCallback(
     (immediateQuery?: string) => {
+      if (loading) return;
       if (immediateQuery !== undefined) {
         const normalizedQuery = normalizeDiscoverySearchQuery(immediateQuery);
         searchRef.current = normalizedQuery;
@@ -317,20 +325,24 @@ export function CreatorSearchWorkspace({ shortlists: initialShortlists, campaign
         setDebouncedSearch(normalizedQuery);
       }
       setPage(1);
-      setCreators([]);
       setHasMore(true);
       clearCreatorSelection();
       void fetchPage(1, false);
     },
-    [fetchPage]
+    [fetchPage, loading]
   );
 
   useEffect(() => {
     setPage(1);
-    setCreators([]);
     setHasMore(true);
     void fetchPage(1, false);
   }, [filters, debouncedSearch, fetchPage]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (page <= 1) return;
