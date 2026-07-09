@@ -19,7 +19,10 @@ import { pickApifyAuthorFollowerCount } from "@/lib/performance/apify-author-fol
 import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 
-import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
+import {
+  isCreatorRecentPublicationVideo,
+  resolveCreatorRecentPublicationThumbnail,
+} from "@/lib/creators/recent-publication-thumb";
 import { formatCreatorBio } from "@/lib/text/decode-html-entities";
 import { extractEmailFromText, normalizeContactLinks } from "@/lib/creators/contact-info";
 
@@ -162,6 +165,7 @@ function toRecentPublications(rows: Record<string, unknown>[]): RecentPublicatio
       views: num(row.videoViewCount) ?? num(row.playCount) ?? num(row.views),
       posted_at: str(row.timestamp) ?? str(row.createTimeISO) ?? null,
       caption: str(row.caption) ?? str(row.text) ?? null,
+      isVideo: isCreatorRecentPublicationVideo(row),
     }))
     .filter((pub) => pub.url || pub.caption || pub.likes != null || pub.comments != null);
 }

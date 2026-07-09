@@ -16,6 +16,7 @@ import { formatMoneyCompact, formatPercent } from "@/lib/campaigns/utils";
 import { HomeCanvas } from "@/features/home/components/home-canvas";
 import { HomeKpiCounter } from "@/features/home/components/home-kpi-counter";
 import { HomePoRing } from "@/features/home/components/home-po-ring";
+import { HomeWorkspaceNavTabs } from "@/features/home/components/home-workspace-nav-tabs";
 import type { HomeDashboardSnapshot } from "@/features/home/queries";
 
 type HomePageProps = {
@@ -151,18 +152,7 @@ export function HomePage({ snapshot }: HomePageProps) {
             <ThinkwayLogo compact showText className="mb-0" />
           </Link>
         </div>
-        <div className="platform-v6-hs-nav-center">
-          <span className="platform-v6-hs-nav-tab active">Overview</span>
-          <Link className="platform-v6-hs-nav-tab" href="/dashboard">
-            Finance
-          </Link>
-          <Link className="platform-v6-hs-nav-tab" href="/campaigns">
-            Campaigns
-          </Link>
-          <Link className="platform-v6-hs-nav-tab" href="/clients">
-            Clients
-          </Link>
-        </div>
+        <HomeWorkspaceNavTabs active="overview" />
         <div className="platform-v6-hs-nav-right">
           <Link className="platform-v6-hs-cta-btn" href="/campaigns">
             + New Campaign

@@ -173,6 +173,24 @@ const CREATOR_GROUP_STYLES = `
     color: var(--ink);
     font-weight: 600;
   }
+  .creator-category-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .creator-category-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-transform: capitalize;
+  }
   .creator-quote-block .data-table {
     border: none;
     border-radius: 0;
@@ -191,12 +209,28 @@ const SHOWCASE_STYLES = `
   .showcase-creator-page {
     page-break-after: always;
     break-after: page;
-    padding: 12px 0 28px;
-    min-height: 240mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    padding: 12px 0 20px;
     display: flex;
     flex-direction: column;
   }
-  .showcase-creator-page:last-of-type { page-break-after: auto; break-after: auto; }
+  .showcase-creator-page + .showcase-creator-page {
+    page-break-before: always;
+    break-before: page;
+  }
+  .showcase-creator-page:last-of-type {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .showcase-creator-sheet {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
   .showcase-hero {
     text-align: center;
     margin: 8px 0 28px;
@@ -250,7 +284,7 @@ const SHOWCASE_STYLES = `
   }
   .showcase-kpi-row {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 8px;
     margin-bottom: 20px;
   }
@@ -314,12 +348,41 @@ const SHOWCASE_STYLES = `
     break-inside: avoid;
     page-break-inside: avoid;
   }
+  .showcase-pub-thumb-wrap {
+    position: relative;
+    display: block;
+  }
   .showcase-pub-thumb {
     display: block;
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
     background: #EEF4FF;
+  }
+  .showcase-pub-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .showcase-pub-play-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.58);
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.22);
+  }
+  .showcase-pub-play-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: #fff;
+    margin-left: 2px;
   }
   .showcase-pub-empty {
     border: 1px dashed var(--rule);
@@ -331,7 +394,89 @@ const SHOWCASE_STYLES = `
     background: #F8FAFC;
   }
   @media print {
-    .showcase-kpi-row { grid-template-columns: repeat(5, 1fr); }
+    .quotation-showcase .report-body {
+      padding-top: 0;
+      padding-bottom: 4px;
+    }
+    .showcase-creator-page {
+      padding: 0 0 6px;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .showcase-creator-page .section-label {
+      margin-bottom: 6px;
+    }
+    .showcase-hero {
+      margin: 0 0 10px;
+    }
+    .showcase-avatar {
+      width: 88px;
+      height: 88px;
+      margin-bottom: 8px;
+      border-width: 3px;
+    }
+    .showcase-avatar--initials {
+      font-size: 24px;
+    }
+    .showcase-name {
+      font-size: 18px;
+      margin: 0 0 2px;
+    }
+    .showcase-handle {
+      font-size: 10px;
+    }
+    .showcase-kpi-row {
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .showcase-kpi {
+      padding: 6px 4px;
+    }
+    .showcase-kpi label {
+      font-size: 7px;
+      margin-bottom: 2px;
+    }
+    .showcase-kpi strong {
+      font-size: 11px;
+    }
+    .showcase-pubs {
+      margin: 0 0 10px;
+    }
+    .showcase-pubs-title {
+      margin-bottom: 6px;
+    }
+    .showcase-pubs-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+    }
+    .showcase-pub-card {
+      max-height: 72px;
+    }
+    .showcase-pub-thumb {
+      aspect-ratio: 1;
+      max-height: 72px;
+      object-fit: cover;
+    }
+    .showcase-pub-play-icon {
+      width: 28px;
+      height: 28px;
+    }
+    .showcase-pub-play-icon svg {
+      width: 12px;
+      height: 12px;
+    }
+    .showcase-deliverables-title {
+      margin-bottom: 4px;
+    }
+    .showcase-creator-page .data-table {
+      font-size: 10px;
+    }
+    .showcase-creator-page .data-table thead th,
+    .showcase-creator-page .data-table tbody td {
+      padding: 4px 6px;
+    }
+    .showcase-kpi-row { grid-template-columns: repeat(6, 1fr); }
     .showcase-pubs-grid { grid-template-columns: repeat(3, 1fr); }
   }
   @media (max-width: 600px) {
@@ -460,6 +605,23 @@ function renderProfileLink(
   return `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" class="creator-profile-link">${content}</a>`;
 }
 
+function renderCreatorCategoryChips(categories: string[]): string {
+  const visible = categories.map((value) => value.trim()).filter(Boolean).slice(0, 3);
+  if (!visible.length) return "";
+  return `<div class="creator-category-chips">${visible
+    .map((category) => `<span class="creator-category-chip">${esc(category)}</span>`)
+    .join("")}</div>`;
+}
+
+function renderRosterCategoriesCell(categories: string[]): string {
+  const chips = renderCreatorCategoryChips(categories);
+  return chips || "—";
+}
+
+function renderShowcasePlayOverlay(): string {
+  return `<span class="showcase-pub-play" aria-hidden="true"><span class="showcase-pub-play-icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z"/></svg></span></span>`;
+}
+
 function renderCreatorIdentityBlock(
   group: QuotationDocCreatorGroup,
   siteOrigin?: string
@@ -468,10 +630,11 @@ function renderCreatorIdentityBlock(
     group.handle !== "—"
       ? `<div class="creator-handle">${esc(group.handle)}</div>`
       : "";
+  const categoriesBlock = renderCreatorCategoryChips(group.categories);
 
   return renderProfileLink(
     group.profileUrl,
-    `${renderCreatorAvatar(group, siteOrigin)}<div><div class="creator-name">${esc(group.creator)}</div>${handleBlock}</div>`
+    `${renderCreatorAvatar(group, siteOrigin)}<div><div class="creator-name">${esc(group.creator)}</div>${handleBlock}${categoriesBlock}</div>`
   );
 }
 
@@ -866,10 +1029,13 @@ function renderShowcaseGroupPlatforms(group: QuotationDocCreatorGroup): string {
 
 function renderShowcaseCreatorKpis(group: QuotationDocCreatorGroup): string {
   const tier = group.rows[0]?.tier ?? "—";
+  const categoriesLabel =
+    group.categories.length > 0 ? esc(group.categories.join(", ")) : "—";
   return `<div class="showcase-kpi-row">
     <div class="showcase-kpi avoid-break"><label>Followers</label><strong>${esc(group.followers)}</strong></div>
     <div class="showcase-kpi avoid-break"><label>Engagement</label><strong>${esc(group.engagementRate)}</strong></div>
     <div class="showcase-kpi avoid-break"><label>Tier</label><strong>${renderTierBadge(tier)}</strong></div>
+    <div class="showcase-kpi avoid-break"><label>Categories</label><strong>${categoriesLabel}</strong></div>
     <div class="showcase-kpi avoid-break"><label>Market</label><strong>${esc(group.country)}</strong></div>
     <div class="showcase-kpi avoid-break"><label>Platforms</label><strong>${renderShowcaseGroupPlatforms(group)}</strong></div>
   </div>`;
@@ -891,7 +1057,8 @@ function renderShowcasePublicationGrid(
     .map((shot) => {
       const src = resolvePublicationShotSrc(shot, siteOrigin);
       if (!src) return "";
-      const img = `<img class="showcase-pub-thumb" src="${esc(src)}" alt="" referrerpolicy="no-referrer" />`;
+      const playOverlay = shot.isVideo ? renderShowcasePlayOverlay() : "";
+      const img = `<span class="showcase-pub-thumb-wrap"><img class="showcase-pub-thumb" src="${esc(src)}" alt="" referrerpolicy="no-referrer" />${playOverlay}</span>`;
       const linked =
         shot.postUrl && /^https?:\/\//i.test(shot.postUrl)
           ? `<a href="${esc(shot.postUrl)}" target="_blank" rel="noopener noreferrer">${img}</a>`
@@ -936,9 +1103,10 @@ function renderShowcaseCreatorPage(
     group.handle !== "—"
       ? `<div class="showcase-handle">${esc(group.handle)}</div>`
       : "";
+  const categoriesBlock = renderCreatorCategoryChips(group.categories);
   const heroContent = `${renderCreatorAvatar(group, siteOrigin, "hero")}
       <h2 class="showcase-name">${esc(group.creator)}${renderVerifiedBadge(group.isVerified)}</h2>
-      ${handleBlock}`;
+      ${handleBlock}${categoriesBlock}`;
   const hero = renderProfileLink(
     group.profileUrl,
     `<div class="showcase-hero">${heroContent}</div>`
@@ -947,13 +1115,14 @@ function renderShowcaseCreatorPage(
   const internalHead =
     doc.audience === "internal" ? "<th>Deliverables</th>" : "";
 
-  return `<section class="showcase-creator-page page-break" id="showcase-creator-${index}">
+  return `<section class="showcase-creator-page avoid-break" id="showcase-creator-${index}">
       ${sectionLabel(String(index + 1).padStart(2, "0"), `Creator ${index + 1} of ${total}`)}
+      <div class="showcase-creator-sheet avoid-break">
       ${hero}
       ${renderShowcaseCreatorKpis(group)}
       ${renderShowcasePublicationGrid(group, siteOrigin)}
       <div class="showcase-deliverables-title">Proposed deliverables</div>
-      <div class="table-scroll">
+      <div class="table-scroll avoid-break">
         <table class="data-table">
           <thead>
             <tr>
@@ -973,6 +1142,7 @@ function renderShowcaseCreatorPage(
           </tbody>
         </table>
       </div>
+      </div>
     </section>`;
 }
 
@@ -981,7 +1151,7 @@ function renderShowcaseCreatorPages(
   siteOrigin?: string
 ): string {
   if (!doc.creatorGroups.length) {
-    return `<section class="showcase-creator-page page-break">
+    return `<section class="showcase-creator-page avoid-break">
       ${sectionLabel("01", "Creators")}
       <p class="report-note">No creators added yet.</p>
     </section>`;
@@ -1005,6 +1175,7 @@ function renderShowcaseRosterSection(doc: QuotationDocument): string {
         <td class="num">${esc(group.followers)}</td>
         <td class="num">${esc(group.engagementRate)}</td>
         <td>${renderTierBadge(group.rows[0]?.tier ?? "—")}</td>
+        <td class="categories-cell">${renderRosterCategoriesCell(group.categories)}</td>
         <td class="platform-cell">${renderShowcaseGroupPlatforms(group)}</td>
       </tr>`
     )
@@ -1021,6 +1192,7 @@ function renderShowcaseRosterSection(doc: QuotationDocument): string {
               <th class="num">Followers</th>
               <th class="num">ER</th>
               <th>Tier</th>
+              <th>Categories</th>
               <th>Platforms</th>
             </tr>
           </thead>
@@ -1056,7 +1228,7 @@ ${baseTag}
 <title>${esc(doc.serial)} — ${esc(showcaseTitle)} — Thinkway Showcase</title>
 <style>${THINKWAY_REPORT_STYLES}${buildQuotationDocumentStyles(generatedLabel)}${CREATOR_GROUP_STYLES}${SHOWCASE_STYLES}</style>
 </head>
-<body class="quotation-report">
+<body class="quotation-report quotation-showcase">
   <div class="page">
     ${renderCoverPage(doc)}
     <div class="report-body">

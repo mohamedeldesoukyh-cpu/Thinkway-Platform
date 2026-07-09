@@ -65,6 +65,8 @@ export type CreatorRecentPublication = {
   views: number | null;
   posted_at: string | null;
   caption: string | null;
+  /** True for reels, TikTok, YouTube, etc. — persisted from enrichment when known. */
+  isVideo?: boolean;
 };
 
 export type CreatorEnrichmentStatus =

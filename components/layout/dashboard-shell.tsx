@@ -14,6 +14,10 @@ import { DashboardHelpButton } from "@/components/layout/dashboard-help-button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { UserAccount } from "@/components/layout/user-account";
+import {
+  HomeWorkspaceNavTabs,
+  type HomeWorkspaceNavTab,
+} from "@/features/home/components/home-workspace-nav-tabs";
 import { getAuthUser } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +47,8 @@ type DashboardShellProps = {
    */
   containedMain?: boolean;
   mainClassName?: string;
+  /** When set, shows Overview / Finance / Campaigns / Clients switcher in the shell topbar. */
+  workspaceNavActive?: HomeWorkspaceNavTab;
   /** When set, shows a back control that navigates to this path. */
   backFallbackHref?: string;
   backLabel?: string;
@@ -58,6 +64,7 @@ export async function DashboardShell({
   immersiveLayout = false,
   containedMain = false,
   mainClassName,
+  workspaceNavActive,
   backFallbackHref,
   backLabel = "Go back",
 }: DashboardShellProps) {
@@ -103,12 +110,20 @@ export async function DashboardShell({
           </div>
         </div>
         ) : null}
+        {!immersiveLayout && workspaceNavActive ? (
+          <div className="thinkway-platform-v6 thinkway-platform-v6-workspace-nav-mobile md:hidden">
+            <HomeWorkspaceNavTabs active={workspaceNavActive} />
+          </div>
+        ) : null}
         {!immersiveLayout && hidePageHeader ? (
           <header
             className={cn(
               "hidden items-center justify-between gap-3 md:flex",
               platformV6
-                ? "thinkway-platform-v6-topbar"
+                ? cn(
+                    "thinkway-platform-v6-topbar",
+                    workspaceNavActive && "thinkway-platform-v6-topbar--workspace-nav"
+                  )
                 : "thinkway-shell-header px-4 py-2.5 md:px-8"
             )}
           >
@@ -124,6 +139,7 @@ export async function DashboardShell({
                 <ThinkwayLogo compact showText className="mb-0" />
               </Link>
             )}
+            {workspaceNavActive ? <HomeWorkspaceNavTabs active={workspaceNavActive} /> : null}
             <div className="flex items-center gap-2">
               <DashboardHelpButton />
               <ThemeToggle />
@@ -131,11 +147,18 @@ export async function DashboardShell({
             </div>
           </header>
         ) : !immersiveLayout && platformV6 ? (
-          <header className="thinkway-platform-v6-topbar hidden w-full md:flex">
+          <header
+            className={cn(
+              "thinkway-platform-v6-topbar hidden w-full md:flex",
+              "thinkway-platform-v6",
+              workspaceNavActive && "thinkway-platform-v6-topbar--workspace-nav"
+            )}
+          >
             <div>
               <span className="platform-v6-tb-title">{title}</span>
               {description ? <p className="platform-v6-tb-sub">{description}</p> : null}
             </div>
+            {workspaceNavActive ? <HomeWorkspaceNavTabs active={workspaceNavActive} /> : null}
             <div className="flex items-center gap-2">
               <DashboardHelpButton />
               <ThemeToggle />

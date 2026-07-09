@@ -36,16 +36,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import type { ShortlistCreatorQuotationRef } from "../types";
 import type { ShortlistItemStatus } from "@/types/database";
 import { MoreHorizontalIcon, UsersIcon } from "lucide-react";
 
-import { ShortlistItemStatusBadge } from "./shortlist-badges";
+import { ShortlistItemStatusBadge, ShortlistCreatorQuotedBadge } from "./shortlist-badges";
+import { SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
 import { ShortlistDetailCheckbox } from "./shortlist-detail-primitives";
 
 type ShortlistRowItem = {
   item_id: string;
   item_status: ShortlistItemStatus;
   creator: UnifiedCreatorResult | null;
+  quotation_refs: ShortlistCreatorQuotationRef[];
 };
 
 type Props = {
@@ -252,6 +255,9 @@ function CreatorDataRow({
       <td className={TD_CLASS}>
         <ShortlistItemStatusBadge status={item.item_status} variant="table" />
       </td>
+      <td className={cn(TD_CLASS, "min-w-[7.5rem]")}>
+        <ShortlistCreatorQuotedBadge refs={item.quotation_refs} variant="table" />
+      </td>
       <td className={cn(TD_CLASS, "w-10 overflow-hidden p-2 text-right")}>
         <RowActions
           editable={editable}
@@ -341,6 +347,9 @@ function UnknownCreatorRow({
       <td className={TD_CLASS}>
         <ShortlistItemStatusBadge status={item.item_status} variant="table" />
       </td>
+      <td className={cn(TD_CLASS, "min-w-[7.5rem]")}>
+        <ShortlistCreatorQuotedBadge refs={item.quotation_refs} variant="table" />
+      </td>
       <td className={cn(TD_CLASS, "w-10 overflow-hidden p-2 text-right")}>
         <RowActions
           editable={editable}
@@ -370,20 +379,21 @@ export function ShortlistCreatorList({
 }: Props) {
   return (
     <div className="w-full overflow-x-auto px-1 pb-1">
-      <table className="w-full min-w-[960px] table-fixed border-collapse [&_tbody_tr:last-child_td]:border-b-0">
+      <table className="w-full min-w-[1040px] table-fixed border-collapse [&_tbody_tr:last-child_td]:border-b-0">
         <colgroup>
           <col className="w-9" />
           <col className="w-7" />
-          <col className="w-[14%]" />
-          <col className="w-[8%]" />
-          <col className="w-[8%]" />
+          <col className="w-[13%]" />
           <col className="w-[7%]" />
           <col className="w-[7%]" />
-          <col className="w-[11%]" />
+          <col className="w-[6%]" />
+          <col className="w-[6%]" />
+          <col className="w-[10%]" />
+          <col className="w-[5%]" />
+          <col className="w-[7%]" />
+          <col className="w-[7%]" />
           <col className="w-[6%]" />
           <col className="w-[8%]" />
-          <col className="w-[8%]" />
-          <col className="w-[7%]" />
           <col className="w-10" />
         </colgroup>
         <thead>
@@ -409,6 +419,7 @@ export function ShortlistCreatorList({
             <th className={TH_CLASS}>Brand safety</th>
             <th className={TH_CLASS}>Sync</th>
             <th className={TH_CLASS}>Status</th>
+            <th className={TH_CLASS}>{SHORTLIST_QUOTED_COLUMN_LABEL}</th>
             <th className={cn(TH_CLASS, "w-10")} aria-label="Actions" />
           </tr>
         </thead>

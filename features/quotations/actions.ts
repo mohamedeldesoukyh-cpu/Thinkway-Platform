@@ -136,17 +136,27 @@ export async function addShortlistCreatorsToQuotation(input: {
   shortlistId: string;
   itemIds: string[];
 }): Promise<ActionResult<{ quotationId: string; added: number }>> {
-  const actor = await getActor();
-  if (!actor.ok) return actor;
-  const result = await addShortlistCreatorsToQuotationService(
-    actor.supabase,
-    actor.userId,
-    input
-  );
-  if (result.ok && result.data?.quotationId) {
-    revalidate(result.data.quotationId, input.shortlistId);
+  try {
+    const actor = await getActor();
+    if (!actor.ok) return actor;
+    const result = await addShortlistCreatorsToQuotationService(
+      actor.supabase,
+      actor.userId,
+      input
+    );
+    if (result.ok && result.data?.quotationId) {
+      revalidate(result.data.quotationId, input.shortlistId);
+    }
+    return result;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to add creators to the quotation.",
+    };
   }
-  return result;
 }
 
 export async function addItemsToQuotation(

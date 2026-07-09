@@ -118,6 +118,7 @@ export type RecentPublication = {
   views: number | null;
   posted_at: string | null;
   caption: string | null;
+  isVideo?: boolean;
 };
 
 export type CreatorEnrichmentResult = {

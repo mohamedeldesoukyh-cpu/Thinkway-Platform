@@ -41,6 +41,7 @@ export default async function ExecutiveDashboardPage({ searchParams }: PageProps
       title="Executive dashboard"
       description="CFO-grade finance monitoring — revenue, profitability, collections, and operational exposure."
       platformV6
+      workspaceNavActive="finance"
     >
       <PlatformV6Page>
         <PlatformV6PageHeader

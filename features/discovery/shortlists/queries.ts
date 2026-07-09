@@ -185,6 +185,104 @@ async function countItemsByShortlist(
   return counts;
 }
 
+type ShortlistItemRef = {
+  item_id: string;
+  influencer_id: string | null;
+  unified_id: string | null;
+};
+
+async function loadShortlistCreatorQuotationRefs(
+  supabase: Supabase,
+  shortlistId: string,
+  shortlistItems: ShortlistItemRef[]
+): Promise<Map<string, ShortlistCreatorQuotationRef[]>> {
+  const refsByItem = new Map<string, ShortlistCreatorQuotationRef[]>();
+  if (shortlistItems.length === 0) return refsByItem;
+
+  const { data: quotations, error: quotationsError } =
+    await listQuotationsByShortlistQuery(supabase, shortlistId);
+  if (quotationsError) throw new Error(quotationsError.message);
+
+  const quotationRows = (quotations ?? []) as Array<{
+    id: string;
+    serial_number: string | null;
+    name: string;
+    status: QuotationStatus;
+    created_at: string;
+  }>;
+  if (quotationRows.length === 0) return refsByItem;
+
+  const quotationById = new Map(
+    quotationRows.map((row) => [
+      row.id,
+      {
+        quotation_id: row.id,
+        serial_number: row.serial_number,
+        name: row.name,
+        status: row.status,
+        created_at: row.created_at,
+      },
+    ])
+  );
+  const quotationIds = quotationRows.map((row) => row.id);
+
+  const { data: quotationItems, error: itemsError } = await supabase
+    .from("quotation_items")
+    .select("quotation_id, source_shortlist_item_id, influencer_id, unified_id")
+    .in("quotation_id", quotationIds);
+
+  if (itemsError) throw new Error(itemsError.message);
+
+  const itemIdByInfluencer = new Map<string, string>();
+  const itemIdByUnified = new Map<string, string>();
+  for (const item of shortlistItems) {
+    if (item.influencer_id) itemIdByInfluencer.set(item.influencer_id, item.item_id);
+    if (item.unified_id) itemIdByUnified.set(item.unified_id, item.item_id);
+  }
+
+  const seen = new Set<string>();
+
+  for (const row of (quotationItems ?? []) as Array<{
+    quotation_id: string;
+    source_shortlist_item_id: string | null;
+    influencer_id: string | null;
+    unified_id: string | null;
+  }>) {
+    const quotation = quotationById.get(row.quotation_id);
+    if (!quotation) continue;
+
+    const itemId =
+      row.source_shortlist_item_id ??
+      (row.influencer_id ? itemIdByInfluencer.get(row.influencer_id) : null) ??
+      (row.unified_id ? itemIdByUnified.get(row.unified_id) : null);
+    if (!itemId) continue;
+
+    const dedupeKey = `${itemId}:${quotation.quotation_id}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    const bucket = refsByItem.get(itemId) ?? [];
+    bucket.push({
+      quotation_id: quotation.quotation_id,
+      serial_number: quotation.serial_number,
+      name: quotation.name,
+      status: quotation.status,
+    });
+    refsByItem.set(itemId, bucket);
+  }
+
+  for (const [itemId, refs] of refsByItem) {
+    refs.sort((a, b) => {
+      const aCreated = quotationById.get(a.quotation_id)?.created_at ?? "";
+      const bCreated = quotationById.get(b.quotation_id)?.created_at ?? "";
+      return bCreated.localeCompare(aCreated);
+    });
+    refsByItem.set(itemId, refs);
+  }
+
+  return refsByItem;
+}
+
 async function loadShortlistCreators(
   supabase: Supabase,
   shortlistId: string
@@ -200,11 +298,20 @@ async function loadShortlistCreators(
   if (error) throw new Error(error.message);
   if (!items || items.length === 0) return [];
 
-  const lookup = await resolveUnifiedCreatorsByRefs(supabase, {
-    unifiedIds: items.map((item) => item.unified_id as string | null),
-    influencerIds: items.map((item) => item.influencer_id as string | null),
-    discoveredProfileIds: items.map((item) => item.profile_id as string | null),
-  });
+  const itemRefs = items.map((item) => ({
+    item_id: item.id as string,
+    influencer_id: (item.influencer_id as string | null) ?? null,
+    unified_id: (item.unified_id as string | null) ?? null,
+  }));
+
+  const [lookup, quotationRefsByItem] = await Promise.all([
+    resolveUnifiedCreatorsByRefs(supabase, {
+      unifiedIds: items.map((item) => item.unified_id as string | null),
+      influencerIds: items.map((item) => item.influencer_id as string | null),
+      discoveredProfileIds: items.map((item) => item.profile_id as string | null),
+    }),
+    loadShortlistCreatorQuotationRefs(supabase, shortlistId, itemRefs),
+  ]);
 
   return items.map((item) => {
     const creator = resolveCreatorFromRefLookup(lookup, {
@@ -223,6 +330,7 @@ async function loadShortlistCreators(
       influencer_id: (item.influencer_id as string) ?? null,
       platform_account_ids: ((item.platform_account_ids as string[]) ?? []).filter(Boolean),
       creator,
+      quotation_refs: quotationRefsByItem.get(item.id as string) ?? [],
     };
   });
 }

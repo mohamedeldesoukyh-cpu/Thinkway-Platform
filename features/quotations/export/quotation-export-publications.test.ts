@@ -43,6 +43,59 @@ import {
 {
   const pubs: CreatorRecentPublication[] = [
     {
+      url: "https://www.instagram.com/reel/ABC123/",
+      thumbnail: "https://cdn.example.com/reel.jpg",
+      likes: 10,
+      comments: 1,
+      views: 5000,
+      posted_at: null,
+      caption: "Reel",
+    },
+    {
+      url: "https://www.instagram.com/p/PHOTO/",
+      thumbnail: "https://cdn.example.com/photo.jpg",
+      likes: 5,
+      comments: 0,
+      views: null,
+      posted_at: null,
+      caption: "Photo",
+    },
+  ];
+  const shots = selectShowcasePublicationShots(pubs, 6);
+  assert.equal(shots[0]?.isVideo, true);
+  assert.equal(shots[1]?.isVideo, false);
+}
+
+{
+  const pubs: CreatorRecentPublication[] = [
+    {
+      url: "https://www.instagram.com/p/REEL-VIA-VIEWS/",
+      thumbnail: "https://cdn.example.com/reel-via-views.jpg",
+      likes: 10,
+      comments: 1,
+      views: 8000,
+      posted_at: null,
+      caption: "Reel stored as /p/",
+      isVideo: true,
+    },
+    {
+      url: "https://vm.tiktok.com/ZMabcdef/",
+      thumbnail: "https://cdn.example.com/tt-short.jpg",
+      likes: 20,
+      comments: 2,
+      views: 12000,
+      posted_at: null,
+      caption: "TikTok short link",
+      isVideo: true,
+    },
+  ];
+  const shots = selectShowcasePublicationShots(pubs, 6);
+  assert.ok(shots.every((shot) => shot.isVideo), "Normalized video flags survive shot selection");
+}
+
+{
+  const pubs: CreatorRecentPublication[] = [
+    {
       url: "https://www.instagram.com/p/A/",
       thumbnail: "https://cdn.example.com/a.jpg",
       likes: 10,

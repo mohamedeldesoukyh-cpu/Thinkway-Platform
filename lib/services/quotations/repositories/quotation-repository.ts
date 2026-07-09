@@ -540,6 +540,36 @@ export async function findOpenQuotationForShortlistQuery(
     .maybeSingle();
 }
 
+export async function findLatestQuotationForShortlistQuery(
+  supabase: SupabaseClient<Database>,
+  shortlistId: string
+) {
+  return supabase
+    .from("quotations")
+    .select("id, status, serial_number, version_number")
+    .eq("shortlist_id", shortlistId)
+    .eq("is_archived", false)
+    .neq("status", "archived")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}
+
+export async function findEditableQuotationForShortlistQuery(
+  supabase: SupabaseClient<Database>,
+  shortlistId: string
+) {
+  return supabase
+    .from("quotations")
+    .select("id, status, serial_number, version_number")
+    .eq("shortlist_id", shortlistId)
+    .eq("is_archived", false)
+    .in("status", ["draft", "under_review"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}
+
 export async function listQuotationsByShortlistQuery(
   supabase: SupabaseClient<Database>,
   shortlistId: string

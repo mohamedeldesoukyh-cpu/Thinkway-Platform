@@ -53,7 +53,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
       : `${total} clients` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
-    <DashboardShell title="Clients" platformV6>
+    <DashboardShell title="Clients" platformV6 workspaceNavActive="clients">
       <PlatformV6Page>
         <PlatformV6PageHeader
           inline

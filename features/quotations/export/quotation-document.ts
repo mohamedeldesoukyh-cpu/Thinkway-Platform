@@ -40,6 +40,8 @@ export type QuotationDocPublicationShot = {
   imageUrl: string;
   postUrl: string | null;
   caption: string | null;
+  /** True for reels, TikTok videos, YouTube, etc. */
+  isVideo?: boolean;
   /** Same-origin proxy when CDN embed fails (preview/PDF fallback). */
   imageProxyUrl?: string | null;
 };
@@ -56,6 +58,7 @@ export type QuotationDocCreatorGroup = {
   followers: string;
   engagementRate: string;
   country: string;
+  categories: string[];
   isVerified: boolean;
   optionCount: number;
   /** Showcase only — recent publication screenshots when available. */
@@ -235,6 +238,7 @@ function buildCreatorGroup(
         ? `${num(headerItem.engagement_rate, 2)}%`
         : "—",
     country: headerItem.country_code ?? "—",
+    categories: headerItem.creator_categories ?? [],
     isVerified: Boolean(profileSource.isVerified),
     optionCount: group.items.length,
     publicationShots: publicationShotsByCreatorKey?.get(group.creatorKey) ?? [],

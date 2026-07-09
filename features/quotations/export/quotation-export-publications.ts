@@ -12,6 +12,7 @@ import {
 } from "@/lib/creators/publication-preview-proxy";
 import {
   creatorRecentPublicationDisplayUrl,
+  isCreatorRecentPublicationVideo,
   normalizeCreatorRecentPublications,
   resolveCreatorRecentPublicationThumbnail,
   shouldProxyPublicationMediaUrl,
@@ -99,16 +100,22 @@ export function selectShowcasePublicationShots(
     shots.push(shot);
   };
 
+  const shotFromPublication = (
+    pub: CreatorRecentPublication,
+    imageUrl: string
+  ): QuotationDocPublicationShot => ({
+    imageUrl,
+    postUrl: pub.url?.trim() || null,
+    caption: pub.caption?.trim() || null,
+    isVideo: isCreatorRecentPublicationVideo(pub),
+  });
+
   // Pass 1: stored thumbnails / screenshots (durable or CDN).
   for (const pub of publications) {
     if (shots.length >= limit) break;
     const imageUrl = resolveCreatorRecentPublicationThumbnail(pub);
     if (!imageUrl?.startsWith("http") && !imageUrl?.startsWith("data:")) continue;
-    pushShot({
-      imageUrl,
-      postUrl: pub.url?.trim() || null,
-      caption: pub.caption?.trim() || null,
-    });
+    pushShot(shotFromPublication(pub, imageUrl));
   }
 
   // Pass 2: post URL only — embed path can resolve via OpenGraph / TikTok oEmbed.
@@ -119,11 +126,7 @@ export function selectShowcasePublicationShots(
       if (!postUrl?.startsWith("http")) continue;
       const imageUrl = resolveCreatorRecentPublicationThumbnail(pub);
       if (imageUrl?.startsWith("http") || imageUrl?.startsWith("data:")) continue;
-      pushShot({
-        imageUrl: "",
-        postUrl,
-        caption: pub.caption?.trim() || null,
-      });
+      pushShot(shotFromPublication(pub, ""));
     }
   }
 

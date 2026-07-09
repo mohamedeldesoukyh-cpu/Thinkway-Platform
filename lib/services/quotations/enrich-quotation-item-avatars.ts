@@ -5,6 +5,7 @@ import {
   avatarStorageQualityRank,
   sortPlatformsStable,
 } from "@/lib/creators/creator-centric";
+import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
 import {
   isPositiveNumericMetric,
   normalizeCountryCode,
@@ -194,6 +195,12 @@ function resolveLineEngagementRate(
   );
 }
 
+function resolveLineCreatorCategories(
+  creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>
+): string[] {
+  return creatorStoredCategoriesForDisplay(creator).slice(0, 3);
+}
+
 function resolveLineAvatarFields(
   item: QuotationItemRow,
   creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>
@@ -203,6 +210,7 @@ function resolveLineAvatarFields(
   followers: number | null;
   engagement_rate: number | null;
   creator_profile_source: CreatorProfileSource;
+  creator_categories: string[];
 } {
   const creatorProfileSource = resolveLineCreatorProfileSource(item, creator);
   return {
@@ -211,6 +219,7 @@ function resolveLineAvatarFields(
     followers: resolveLineFollowers(item, creator),
     engagement_rate: resolveLineEngagementRate(item, creator),
     creator_profile_source: creatorProfileSource,
+    creator_categories: resolveLineCreatorCategories(creator),
   };
 }
 
@@ -246,6 +255,7 @@ export async function enrichQuotationItemsWithCreatorAvatars(
         ...item,
         ...fallbackAvatarFields(item),
         creator_profile_source: null,
+        creator_categories: [],
       };
     }
 

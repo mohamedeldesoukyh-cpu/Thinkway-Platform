@@ -3,6 +3,8 @@
  * Does not affect the quotation workspace UI.
  */
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
+import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorProfileUrl, type ProfileUrlSource } from "@/lib/discovery/profile-url";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
@@ -122,6 +124,20 @@ export function formatCreatorHandle(handle: string | null | undefined): string {
   const trimmed = handle?.trim();
   if (!trimmed) return "—";
   return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
+}
+
+/** Stored influencer categories for export (max 3 tags, matches shortlist export). */
+export function quotationCreatorCategoriesFromUnified(
+  creator: Pick<UnifiedCreatorResult, "browse_category_tags" | "categories">
+): string[] {
+  return creatorStoredCategoriesForDisplay(creator).slice(0, 3);
+}
+
+export function formatQuotationCreatorCategories(
+  categories: string[] | null | undefined
+): string {
+  const list = (categories ?? []).map((value) => value.trim()).filter(Boolean);
+  return list.length ? list.join(", ") : "—";
 }
 
 function deliverableTypeLines(deliverable: DeliverableJson): Array<{ type: string; quantity: number }> {

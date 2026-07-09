@@ -76,6 +76,9 @@ export const SHORTLIST_ITEM_STATUS_LABELS: Record<
   cancelled: "Cancelled",
 };
 
+/** Shortlist creator table — tracks creators sent to a linked quotation. */
+export const SHORTLIST_QUOTED_COLUMN_LABEL = "Quoted";
+
 /** Permission slugs powering shortlist authorization (spec §16). */
 export const SHORTLIST_PERMISSIONS = {
   /** Discovery User — create/edit own drafts, add creators. */

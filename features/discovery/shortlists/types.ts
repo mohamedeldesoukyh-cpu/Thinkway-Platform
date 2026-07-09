@@ -34,6 +34,13 @@ export type ShortlistListRow = {
   updated_at: string;
 };
 
+export type ShortlistCreatorQuotationRef = {
+  quotation_id: string;
+  serial_number: string | null;
+  name: string;
+  status: QuotationStatus;
+};
+
 export type ShortlistCreatorItem = {
   item_id: string;
   item_status: ShortlistItemStatus;
@@ -44,6 +51,8 @@ export type ShortlistCreatorItem = {
   influencer_id: string | null;
   platform_account_ids: string[];
   creator: UnifiedCreatorResult | null;
+  /** Quotations this creator has been sent to from this shortlist. */
+  quotation_refs: ShortlistCreatorQuotationRef[];
 };
 
 export type ShortlistMovementRow = {

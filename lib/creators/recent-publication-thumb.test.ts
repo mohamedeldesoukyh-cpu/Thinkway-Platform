@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 
 import {
   creatorRecentPublicationDisplayUrl,
+  isCreatorRecentPublicationVideo,
+  isVideoPublicationUrl,
   normalizeCreatorRecentPublications,
   recentPublicationsLackThumbnails,
   resolveCreatorRecentPublicationThumbnail,
@@ -157,5 +159,88 @@ assert.equal(tiktokNormalized[0]?.thumbnail, TT_COVER);
 assert.equal(tiktokNormalized[0]?.url, "https://www.tiktok.com/@with.fatimma/video/7123456789012345678");
 assert.equal(tiktokNormalized[0]?.likes, 420);
 assert.equal(tiktokNormalized[0]?.views, 12_400);
+
+assert.equal(
+  isVideoPublicationUrl("https://www.instagram.com/reel/ABC123/"),
+  true,
+  "Instagram reel URLs are video"
+);
+assert.equal(
+  isVideoPublicationUrl("https://www.instagram.com/p/ABC123/"),
+  false,
+  "Instagram post URLs are not video"
+);
+assert.equal(
+  isVideoPublicationUrl("https://vm.tiktok.com/ZMabcdef/"),
+  true,
+  "TikTok vm short links are video"
+);
+assert.equal(
+  isVideoPublicationUrl("https://www.tiktok.com/t/ZTRabcdef/"),
+  true,
+  "TikTok /t/ share links are video"
+);
+assert.equal(
+  isVideoPublicationUrl("https://www.youtube.com/shorts/abc123"),
+  true,
+  "YouTube shorts are video"
+);
+assert.equal(
+  isVideoPublicationUrl("https://www.facebook.com/reels/123456789"),
+  true,
+  "Facebook reels plural path is video"
+);
+assert.equal(
+  isCreatorRecentPublicationVideo({
+    webVideoUrl: "https://www.tiktok.com/@creator/video/123",
+  }),
+  true,
+  "Raw TikTok rows with webVideoUrl are video"
+);
+assert.equal(
+  isCreatorRecentPublicationVideo({
+    url: "https://www.instagram.com/p/ABC123/",
+    product_type: "clips",
+  }),
+  true,
+  "Instagram clips product_type is video"
+);
+assert.equal(
+  isCreatorRecentPublicationVideo({
+    url: "https://www.instagram.com/p/ABC123/",
+    videoViewCount: 12_000,
+  }),
+  true,
+  "Instagram /p/ with view count is video (reel permalink)"
+);
+assert.equal(
+  isCreatorRecentPublicationVideo({
+    url: "https://www.instagram.com/p/PHOTO/",
+    likes: 100,
+    comments: 5,
+  }),
+  false,
+  "Instagram photo without views is not video"
+);
+
+const reelNormalized = normalizeCreatorRecentPublications([
+  {
+    url: "https://www.instagram.com/p/REELSHORT/",
+    displayUrl: IG_CDN,
+    product_type: "clips",
+    videoViewCount: 5000,
+    likesCount: 100,
+  },
+]);
+assert.equal(reelNormalized[0]?.isVideo, true, "normalize preserves isVideo for reels");
+
+const tiktokShortNormalized = normalizeCreatorRecentPublications([
+  {
+    url: "https://vm.tiktok.com/ZMabcdef/",
+    videoMeta: { coverUrl: TT_COVER },
+    playCount: 9000,
+  },
+]);
+assert.equal(tiktokShortNormalized[0]?.isVideo, true, "normalize detects vm.tiktok short links");
 
 console.log("recent-publication-thumb tests passed");

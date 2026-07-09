@@ -66,7 +66,7 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
     total === 1 ? "1 campaign" : `${total} campaigns` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
-    <DashboardShell title="Campaigns" platformV6>
+    <DashboardShell title="Campaigns" platformV6 workspaceNavActive="campaigns">
       <PlatformV6Page>
         <PlatformV6PageHeader
           inline

@@ -432,6 +432,10 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   );
   assert.ok(showcaseLumpHtml.includes("showcase-avatar"));
   assert.ok(showcaseLumpHtml.includes("showcase-creator-page"));
+  assert.ok(showcaseLumpHtml.includes("showcase-creator-sheet"));
+  assert.ok(showcaseLumpHtml.includes("page-break-inside: avoid"));
+  assert.ok(showcaseLumpHtml.includes('class="quotation-report quotation-showcase"'));
+  assert.ok(!showcaseLumpHtml.includes("min-height: 240mm"));
   assert.ok(showcaseLumpHtml.includes("Creator Roster (1)"));
   assert.ok(showcaseLumpHtml.includes("Proposed deliverables"));
   assert.ok(showcaseLumpHtml.includes("Commercial Summary"));
@@ -590,6 +594,76 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     html.includes("/api/creators/avatar"),
     "HTML should proxy Instagram CDN avatars instead of hotlinking"
   );
+}
+
+{
+  const item = mockItem({
+    creator_categories: ["Beauty", "Lifestyle"],
+  });
+  const detail = mockDetail({ items: [item] });
+  const detailedDoc = buildQuotationDocument(detail, { template: "detailed" });
+  assert.deepEqual(detailedDoc.creatorGroups[0]?.categories, ["Beauty", "Lifestyle"]);
+
+  const detailedHtml = buildQuotationHtml(detailedDoc);
+  assert.ok(detailedHtml.includes("creator-category-chip"));
+  assert.ok(detailedHtml.includes("Beauty"));
+  assert.ok(detailedHtml.includes("Lifestyle"));
+
+  const showcaseHtml = buildQuotationHtml(
+    buildQuotationDocument(detail, { template: "showcase" })
+  );
+  assert.ok(showcaseHtml.includes("<label>Categories</label>"));
+  assert.ok(showcaseHtml.includes("Beauty, Lifestyle"));
+  assert.ok(
+    showcaseHtml.includes('<th>Categories</th>'),
+    "Showcase creator roster includes Categories column"
+  );
+  assert.ok(
+    showcaseHtml.includes('class="categories-cell"'),
+    "Showcase creator roster renders category chips per creator"
+  );
+
+  const showcaseLumpHtml = buildQuotationHtml(
+    buildQuotationDocument(detail, { template: "showcase-lump-sum" })
+  );
+  assert.ok(
+    showcaseLumpHtml.includes('<th>Categories</th>'),
+    "Showcase lump sum creator roster includes Categories column"
+  );
+  assert.ok(showcaseLumpHtml.includes("Beauty"));
+  assert.ok(showcaseLumpHtml.includes("Lifestyle"));
+}
+
+{
+  const item = mockItem({ influencer_id: "inf-1", unified_id: "inf:inf-1" });
+  const creatorKey = quotationCreatorDuplicateKey(item);
+  const showcaseHtml = buildQuotationHtml(
+    buildQuotationDocument(mockDetail({ items: [item] }), {
+      template: "showcase",
+      publicationShotsByCreatorKey: new Map([
+        [
+          creatorKey,
+          [
+            {
+              imageUrl: "data:image/jpeg;base64,reel",
+              postUrl: "https://www.instagram.com/reel/XYZ/",
+              caption: "Reel",
+              isVideo: true,
+            },
+            {
+              imageUrl: "data:image/jpeg;base64,photo",
+              postUrl: "https://www.instagram.com/p/XYZ/",
+              caption: "Photo",
+              isVideo: false,
+            },
+          ],
+        ],
+      ]),
+    })
+  );
+  assert.ok(showcaseHtml.includes('class="showcase-pub-play"'), "Video shots render play overlay");
+  const playCount = (showcaseHtml.match(/class="showcase-pub-play"/g) ?? []).length;
+  assert.equal(playCount, 1, "Only video publications get a play overlay");
 }
 
 console.log("quotation-document.test.ts passed");

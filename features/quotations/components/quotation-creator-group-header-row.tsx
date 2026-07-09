@@ -6,6 +6,7 @@ import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-
 import { CreatorProfileLink } from "@/components/creator/creator-profile-link";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
+import { InterestChips } from "@/features/discovery/components/creator-result-row";
 import type { QuotationItemRow } from "@/features/quotations/types";
 import { resolveQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
 import { bootstrapPlatformOptionsFromItem } from "@/lib/quotations/quotation-creator-platform-options";
@@ -31,6 +32,7 @@ export function QuotationCreatorGroupHeaderRow({
   }, [item]);
 
   const linkedPlatforms = creatorProfileSource.linkedPlatforms ?? [];
+  const creatorCategories = item.creator_categories ?? [];
 
   return (
     <TableRow
@@ -41,23 +43,28 @@ export function QuotationCreatorGroupHeaderRow({
     >
       <TableCell colSpan={10} className="bg-muted/25 px-3 py-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CreatorProfileLink
-            source={creatorProfileSource}
-            size="lg"
-            avatarBadge="country"
-            showPlatformBadge={false}
-            showExternalIcon
-            linkName={false}
-            onNameClick={onOpenCreator}
-            stopPropagation
-            className="min-w-0 max-w-full"
-            nameClassName="truncate"
-            trailing={
-              linkedPlatforms.length > 0 ? (
-                <CreatorLinkedPlatformIcons platforms={linkedPlatforms} />
-              ) : null
-            }
-          />
+          <div className="min-w-0 max-w-full space-y-1.5">
+            <CreatorProfileLink
+              source={creatorProfileSource}
+              size="lg"
+              avatarBadge="country"
+              showPlatformBadge={false}
+              showExternalIcon
+              linkName={false}
+              onNameClick={onOpenCreator}
+              stopPropagation
+              className="min-w-0 max-w-full"
+              nameClassName="truncate"
+              trailing={
+                linkedPlatforms.length > 0 ? (
+                  <CreatorLinkedPlatformIcons platforms={linkedPlatforms} />
+                ) : null
+              }
+            />
+            {creatorCategories.length > 0 ? (
+              <InterestChips interests={creatorCategories} variant="compact" maxVisible={3} />
+            ) : null}
+          </div>
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             {item.followers != null ? (
               <span className="tabular-nums">{formatCreatorCount(item.followers)} followers</span>

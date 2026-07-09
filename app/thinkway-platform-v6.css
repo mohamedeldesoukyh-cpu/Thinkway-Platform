@@ -67,6 +67,41 @@
   margin-bottom: 0;
 }
 
+.thinkway-platform-v6-topbar--workspace-nav {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.thinkway-platform-v6-topbar--workspace-nav > :first-child {
+  justify-self: start;
+  min-width: 0;
+}
+
+.thinkway-platform-v6-topbar--workspace-nav > :last-child {
+  justify-self: end;
+}
+
+.thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-center {
+  justify-self: center;
+}
+
+.thinkway-platform-v6-workspace-nav-mobile {
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tw-border);
+  background: var(--tw-white);
+}
+
+.thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-center {
+  width: 100%;
+  max-width: 420px;
+  justify-content: center;
+}
+
 /* Topbar (dashboard shell) */
 .thinkway-platform-v6-topbar {
   height: 52px;

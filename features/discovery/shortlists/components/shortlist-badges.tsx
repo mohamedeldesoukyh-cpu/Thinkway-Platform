@@ -1,6 +1,12 @@
+import Link from "next/link";
+
 import { StatusBadge } from "@/components/shared/status/status-badge";
 import { resolveStatusTone } from "@/components/shared/status/status-utils";
 import { Badge } from "@/components/ui/badge";
+import {
+  QUOTATION_STATUS_LABELS,
+  quotationDetailPath,
+} from "@/features/quotations/constants";
 import { cn } from "@/lib/utils";
 import type {
   CampaignShortlistAssignmentStatus,
@@ -15,6 +21,7 @@ import {
   SHORTLIST_STATUS_LABELS,
   SHORTLIST_VISIBILITY_LABELS,
 } from "../constants";
+import type { ShortlistCreatorQuotationRef } from "../types";
 
 export function ShortlistStatusBadge({ status }: { status: ShortlistStatus }) {
   return (
@@ -91,5 +98,50 @@ export function AssignmentStatusBadge({
       appearance="ghost"
       className={cn(status === "removed" && "line-through")}
     />
+  );
+}
+
+function quotationBadgeLabel(ref: ShortlistCreatorQuotationRef): string {
+  if (ref.serial_number?.trim()) return ref.serial_number.trim();
+  return ref.name.trim() || "Quotation";
+}
+
+export function ShortlistCreatorQuotedBadge({
+  refs,
+  variant = "table",
+}: {
+  refs: ShortlistCreatorQuotationRef[];
+  variant?: "default" | "table";
+}) {
+  if (refs.length === 0) {
+    return variant === "table" ? (
+      <span className="text-[11px] text-muted-foreground/50">—</span>
+    ) : null;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {refs.map((ref) => (
+        <Link
+          key={ref.quotation_id}
+          href={quotationDetailPath(ref.quotation_id)}
+          title={`${quotationBadgeLabel(ref)} · ${QUOTATION_STATUS_LABELS[ref.status]}`}
+          className="inline-flex max-w-full"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <span
+            className={cn(
+              "inline-flex h-5 max-w-full items-center truncate rounded-full border px-2 text-[10px] font-semibold",
+              "border-[#1D9E75]/25 bg-[#1D9E75]/10 text-[#1D9E75]",
+              "hover:bg-[#1D9E75]/15 dark:border-[#1D9E75]/35 dark:bg-[#1D9E75]/15"
+            )}
+          >
+            Quoted
+            <span className="mx-1 opacity-40">·</span>
+            <span className="truncate">{quotationBadgeLabel(ref)}</span>
+          </span>
+        </Link>
+      ))}
+    </div>
   );
 }

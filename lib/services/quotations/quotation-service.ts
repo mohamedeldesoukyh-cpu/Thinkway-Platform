@@ -21,7 +21,8 @@ import {
   fetchShortlistHeader,
   insertQuotationRowsAfter,
   renumberQuotationOptionNumbers,
-  findOpenQuotationForShortlistQuery,
+  findLatestQuotationForShortlistQuery,
+  findEditableQuotationForShortlistQuery,
   insertQuotationHeaderRecord,
   listCampaignsForImportQuery,
   listShortlistsForImportQuery,
@@ -32,6 +33,11 @@ import {
   buildItemInsertRows,
   insertQuotationItems,
 } from "./repositories/quotation-item-repository";
+import {
+  canGenerateQuotationVersion,
+  isQuotationCommercialImmutable,
+} from "@/lib/commercial-sync/rules";
+import { generateQuotationVersion } from "./quotation-version-service";
 
 async function insertQuotationHeader(
   supabase: SupabaseClient<Database>,
@@ -132,9 +138,90 @@ export async function findOpenQuotationForShortlist(
   supabase: SupabaseClient<Database>,
   shortlistId: string
 ): Promise<QuotationMutationResult<{ id: string | null }>> {
-  const { data, error } = await findOpenQuotationForShortlistQuery(supabase, shortlistId);
+  const { data, error } = await findEditableQuotationForShortlistQuery(supabase, shortlistId);
   if (error) return { ok: false, message: error.message };
   return { ok: true, data: { id: (data as { id: string } | null)?.id ?? null } };
+}
+
+async function resolveTargetQuotationForShortlistImport(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  shortlistId: string
+): Promise<
+  QuotationMutationResult<{
+    quotationId: string | null;
+    versionCreated: boolean;
+    versionSerial: string | null;
+  }>
+> {
+  const { data: editable, error: editableError } =
+    await findEditableQuotationForShortlistQuery(supabase, shortlistId);
+  if (editableError) return { ok: false, message: editableError.message };
+  if (editable) {
+    return {
+      ok: true,
+      data: {
+        quotationId: (editable as { id: string }).id,
+        versionCreated: false,
+        versionSerial: (editable as { serial_number: string | null }).serial_number ?? null,
+      },
+    };
+  }
+
+  const { data: latest, error: latestError } = await findLatestQuotationForShortlistQuery(
+    supabase,
+    shortlistId
+  );
+  if (latestError) return { ok: false, message: latestError.message };
+  if (!latest) {
+    return {
+      ok: true,
+      data: { quotationId: null, versionCreated: false, versionSerial: null },
+    };
+  }
+
+  const latestRow = latest as {
+    id: string;
+    status: Database["public"]["Tables"]["quotations"]["Row"]["status"];
+  };
+
+  if (!isQuotationCommercialImmutable(latestRow.status)) {
+    return {
+      ok: true,
+      data: {
+        quotationId: latestRow.id,
+        versionCreated: false,
+        versionSerial: (latest as { serial_number: string | null }).serial_number ?? null,
+      },
+    };
+  }
+
+  if (!canGenerateQuotationVersion(latestRow.status)) {
+    return {
+      ok: false,
+      message:
+        "The linked quotation is locked and cannot accept new creators. Generate a new quotation version first.",
+    };
+  }
+
+  const versioned = await generateQuotationVersion(supabase, userId, {
+    quotationId: latestRow.id,
+    revisionNotes: "Auto-generated to add new shortlist creators.",
+  });
+  if (!versioned.ok || !versioned.data) {
+    return versioned.ok
+      ? { ok: false, message: "Failed to create a new quotation version." }
+      : versioned;
+  }
+
+  return {
+    ok: true,
+    data: {
+      quotationId: versioned.data.newQuotationId,
+      versionCreated: true,
+      versionSerial: versioned.data.serialNumber,
+    },
+  };
 }
 
 export async function createQuotationFromShortlist(
@@ -246,20 +333,36 @@ export async function addShortlistCreatorsToQuotation(
     return { ok: false, message: "No creators selected." };
   }
 
-  const open = await findOpenQuotationForShortlist(supabase, input.shortlistId);
-  if (!open.ok) return open;
+  const target = await resolveTargetQuotationForShortlistImport(
+    supabase,
+    userId,
+    input.shortlistId
+  );
+  if (!target.ok) return target;
 
-  if (open.data?.id) {
+  const quotationId = target.data?.quotationId ?? null;
+  const versionCreated = target.data?.versionCreated ?? false;
+  const versionSerial = target.data?.versionSerial ?? null;
+
+  if (quotationId) {
     const imported = await importShortlistItemsToQuotation(supabase, {
-      quotationId: open.data.id,
+      quotationId,
       shortlistId: input.shortlistId,
       itemIds: input.itemIds,
     });
     if (!imported.ok) return imported;
+
+    const added = imported.data?.added ?? 0;
+    const baseMessage =
+      imported.message ??
+      (added === 1 ? "Added 1 creator." : `Added ${added} creators.`);
+
     return {
       ok: true,
-      data: { quotationId: open.data.id, added: imported.data?.added ?? 0 },
-      message: imported.message,
+      data: { quotationId, added },
+      message: versionCreated
+        ? `${baseMessage} A new quotation version${versionSerial ? ` (${versionSerial})` : ""} was created because the previous quotation was already sent.`
+        : baseMessage,
     };
   }
 

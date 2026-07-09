@@ -23,10 +23,21 @@ const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextValue | n
   null
 );
 
+const noopKeyboardShortcuts: KeyboardShortcutsContextValue = {
+  register: () => () => {},
+  openHelp: () => {},
+  setHelpOpen: () => {},
+};
+
 export function useKeyboardShortcuts() {
   const ctx = useContext(KeyboardShortcutsContext);
   if (!ctx) {
-    throw new Error("useKeyboardShortcuts must be used within KeyboardShortcutsProvider");
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "[keyboard-shortcuts] useKeyboardShortcuts skipped — no KeyboardShortcutsProvider"
+      );
+    }
+    return noopKeyboardShortcuts;
   }
   return ctx;
 }

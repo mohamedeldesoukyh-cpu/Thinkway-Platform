@@ -34,6 +34,7 @@ export function quotationItemsAvatarEnriched(items: QuotationItemRow[]): boolean
     );
     if (!hasCreatorRef) return true;
     if (item.creator_profile_source == null) return false;
+    if (!Array.isArray(item.creator_categories)) return false;
     if (quotationItemHasUsableAvatar(item)) return true;
     const profileUrl =
       item.creator_profile_source.profile_url?.trim() ||

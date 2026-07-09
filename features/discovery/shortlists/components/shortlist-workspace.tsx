@@ -402,16 +402,28 @@ export function ShortlistWorkspace({
 
   function handleAddToQuotation(itemId: string) {
     startTransition(async () => {
-      const res = await addShortlistCreatorsToQuotation({
-        shortlistId: detail.id,
-        itemIds: [itemId],
-      });
-      if (!res.ok) {
-        toast.error(res.message);
-        return;
+      try {
+        const res = await addShortlistCreatorsToQuotation({
+          shortlistId: detail.id,
+          itemIds: [itemId],
+        });
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+        toast.success(res.message ?? "Added to quotation.");
+        if (res.data?.quotationId) {
+          router.push(quotationDetailPath(res.data.quotationId));
+        } else {
+          router.refresh();
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to add creator to quotation."
+        );
       }
-      toast.success(res.message ?? "Added to quotation.");
-      if (res.data?.quotationId) router.push(quotationDetailPath(res.data.quotationId));
     });
   }
 

@@ -110,6 +110,94 @@ export function creatorRecentPublicationDisplayUrl(
   return `/api/creators/publication-preview?${params.toString()}`;
 }
 
+function isTikTokPublicationHost(host: string): boolean {
+  return host.includes("tiktok.com");
+}
+
+/** True when a publication permalink points at video content (reels, TikTok, YouTube, etc.). */
+export function isVideoPublicationUrl(url: string | null | undefined): boolean {
+  const trimmed = url?.trim();
+  if (!trimmed) return false;
+
+  try {
+    const parsed = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    const host = parsed.hostname.toLowerCase();
+    const segments = parsed.pathname.split("/").filter(Boolean);
+
+    if (host.includes("instagram.com")) {
+      const first = segments[0];
+      return first === "reel" || first === "reels" || first === "tv";
+    }
+
+    if (isTikTokPublicationHost(host)) {
+      // vm.tiktok.com / vt.tiktok.com short links always resolve to a video.
+      if (host.startsWith("vm.") || host.startsWith("vt.")) return segments.length > 0;
+      if (segments.includes("video") || segments[0] === "t") return true;
+      const last = segments[segments.length - 1] ?? "";
+      return /^\d{8,}$/.test(last);
+    }
+
+    if (host.includes("youtube.com") || host.includes("youtu.be") || host.includes("m.youtube.com")) {
+      if (host.includes("youtu.be")) return Boolean(segments[0]);
+      const first = segments[0];
+      if (first === "shorts" || first === "watch" || first === "embed" || first === "live") {
+        return true;
+      }
+      return parsed.searchParams.has("v");
+    }
+
+    if (host.includes("facebook.com") || host.includes("fb.watch") || host.includes("fb.com")) {
+      if (host.includes("fb.watch")) return Boolean(segments[0]);
+      const first = segments[0];
+      if (first === "reel" || first === "reels" || first === "watch") return true;
+      return segments.includes("videos") || segments.includes("video");
+    }
+
+    if (host.includes("snapchat.com") && segments[0] === "spotlight") return true;
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export function isCreatorRecentPublicationVideo(
+  publication: CreatorRecentPublication | Record<string, unknown> | null | undefined
+): boolean {
+  if (!publication || typeof publication !== "object") return false;
+  const row = publication as Record<string, unknown>;
+
+  if (row.isVideo === true) return true;
+
+  if (str(row.webVideoUrl)) return true;
+
+  const videoUrl = str(row.videoUrl) ?? str(row.video_url);
+  if (videoUrl) return true;
+
+  const type = str(row.type)?.toLowerCase();
+  if (type === "video" || type === "reel" || type === "clips") return true;
+
+  const productType = str(row.product_type)?.toLowerCase();
+  if (productType === "clips" || productType === "reels" || productType === "igtv") return true;
+
+  const mediaType = str(row.mediaType)?.toLowerCase() ?? str(row.media_type)?.toLowerCase();
+  if (mediaType === "video" || mediaType === "reel" || mediaType === "carousel_video") {
+    return true;
+  }
+  if (num(row.mediaType) === 2 || num(row.media_type) === 2) return true;
+
+  const views =
+    num(row.views) ??
+    num(row.videoViewCount) ??
+    num(row.playCount) ??
+    num(row.videoPlayCount);
+  if (views != null && views > 0) return true;
+
+  const url =
+    str(row.url) ?? str(row.postPage) ?? str(row.webVideoUrl) ?? str(row.content_url) ?? null;
+  return isVideoPublicationUrl(url);
+}
+
 /** Normalize DB / Apify JSONB into stable CreatorRecentPublication rows for UI. */
 export function normalizeCreatorRecentPublications(
   publications: unknown
@@ -139,6 +227,7 @@ export function normalizeCreatorRecentPublications(
         views: num(row.views) ?? num(row.videoViewCount) ?? num(row.playCount),
         posted_at,
         caption,
+        isVideo: isCreatorRecentPublicationVideo(row),
       };
     })
     .filter((pub): pub is CreatorRecentPublication => pub != null);
