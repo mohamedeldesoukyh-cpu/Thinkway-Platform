@@ -33,14 +33,34 @@ test("enrichmentUpdatedMeaningfulFields ignores category-only updates", () => {
 
 test("resolveEnrichmentDisplayStatus downgrades enriched rows without metrics", () => {
   const creator = makeCreator({
-    platforms: [{ platform: "instagram", handle: "@hebanagi5", follower_count: 0 }],
+    platforms: [
+      {
+        id: "plat-heba",
+        platform: "instagram",
+        handle: "@hebanagi5",
+        profile_url: null,
+        follower_count: 0,
+        engagement_rate: null,
+        audience_country: null,
+      },
+    ],
   });
   assert.equal(resolveEnrichmentDisplayStatus("enriched", creator), "never");
 });
 
 test("creatorHasDisplayableMetrics detects platform followers", () => {
   const creator = makeCreator({
-    platforms: [{ platform: "instagram", handle: "@x", follower_count: 1200 }],
+    platforms: [
+      {
+        id: "plat-x",
+        platform: "instagram",
+        handle: "@x",
+        profile_url: null,
+        follower_count: 1200,
+        engagement_rate: null,
+        audience_country: null,
+      },
+    ],
   });
   assert.equal(creatorHasDisplayableMetrics(creator), true);
 });

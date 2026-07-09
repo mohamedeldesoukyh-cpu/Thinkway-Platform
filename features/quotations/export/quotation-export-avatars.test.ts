@@ -28,7 +28,7 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     },
     option_number: 1,
     service_description: null,
-    commercial_input_mode: "cost_gp",
+    commercial_input_mode: "cost_gp_pct",
     cost: 0,
     cost_currency: "EGP",
     revenue: 0,

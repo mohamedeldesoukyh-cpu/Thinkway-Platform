@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import test from "node:test";
 
 import { isNativeEditShortcut } from "./keyboard-shortcuts";
 
@@ -14,27 +15,20 @@ function keyEvent(
   } as KeyboardEvent;
 }
 
-describe("isNativeEditShortcut", () => {
-  it("allows clipboard and undo shortcuts through", () => {
-    for (const key of ["c", "x", "v", "a", "z", "y"] as const) {
-      expect(
-        isNativeEditShortcut(
-          keyEvent({ key, ctrlKey: true })
-        )
-      ).toBe(true);
-    }
-  });
+test("allows clipboard and undo shortcuts through", () => {
+  for (const key of ["c", "x", "v", "a", "z", "y"] as const) {
+    assert.equal(isNativeEditShortcut(keyEvent({ key, ctrlKey: true })), true);
+  }
+});
 
-  it("keeps app save/submit shortcuts available to the handler", () => {
-    expect(isNativeEditShortcut(keyEvent({ key: "s", ctrlKey: true }))).toBe(false);
-    expect(isNativeEditShortcut(keyEvent({ key: "Enter", ctrlKey: true }))).toBe(false);
-  });
+test("keeps app save/submit shortcuts available to the handler", () => {
+  assert.equal(isNativeEditShortcut(keyEvent({ key: "s", ctrlKey: true })), false);
+  assert.equal(isNativeEditShortcut(keyEvent({ key: "Enter", ctrlKey: true })), false);
+});
 
-  it("keeps ctrl+shift+a available for workspace select-all", () => {
-    expect(
-      isNativeEditShortcut(
-        keyEvent({ key: "A", ctrlKey: true, shiftKey: true })
-      )
-    ).toBe(false);
-  });
+test("keeps ctrl+shift+a available for workspace select-all", () => {
+  assert.equal(
+    isNativeEditShortcut(keyEvent({ key: "A", ctrlKey: true, shiftKey: true })),
+    false
+  );
 });

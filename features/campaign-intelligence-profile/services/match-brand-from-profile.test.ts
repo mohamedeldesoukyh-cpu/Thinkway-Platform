@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 
 import { brandMatchesAlias, findKnownBrandsInText, resolveBrandWithAliases } from "./brand-resolution";
 import { detectBrandFromProfile, pickBrandIdFromAccessibleList, pickResolvedBrandId } from "./match-brand-from-profile";
-import { brandMatchesAlias } from "./brand-resolution";
 import { isValidBrandName } from "./normalization/validators";
 import type { LiveMasters } from "@/lib/intelligence/entity-resolution/matchers";
 
@@ -124,7 +123,6 @@ const mockSupabase = {
 void (async () => {
   const garbageResult = await detectBrandFromProfile(mockSupabase, {
     brandName: "and amplify the Summer 2026",
-    clientName: null,
     campaignName: "Summer 2026 Youth Push",
     rawBriefExcerpt: "Etisalat E& 5G campaign targeting Gen Z in UAE",
     objectives: ["Drive 5G awareness"],

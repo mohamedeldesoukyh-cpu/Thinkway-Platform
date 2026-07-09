@@ -136,12 +136,12 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
       mockItem({
         id: "fb-item",
         platform: "facebook",
-        deliverables: [{ type: "facebook_reel", types: ["facebook_reel"] }],
+        deliverables: [{ platform: "facebook", type: "facebook_reel", types: ["facebook_reel"], quantity: 1 }],
       }),
       mockItem({
         id: "yt-item",
         platform: "youtube",
-        deliverables: [{ type: "yt_short", types: ["yt_short"] }],
+        deliverables: [{ platform: "youtube", type: "yt_short", types: ["yt_short"], quantity: 1 }],
       }),
     ],
   });

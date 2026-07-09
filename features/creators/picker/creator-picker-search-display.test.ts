@@ -8,9 +8,10 @@ import { resolveCreatorPickerSearchDisplay } from "./creator-picker-search-displ
 function makeCreator(
   partial: Partial<UnifiedCreatorResult> & Pick<UnifiedCreatorResult, "unified_id" | "display_name">
 ): UnifiedCreatorResult {
+  const { bio, ai_category, ai_niche, display_name, unified_id, ...rest } = partial;
   return {
     source_type: "imported",
-    influencer_id: partial.unified_id.replace("inf:", ""),
+    influencer_id: unified_id.replace("inf:", ""),
     discovered_profile_id: null,
     document_number: "TW-TEST-1",
     status: "active",
@@ -28,11 +29,19 @@ function makeCreator(
       avg_views: { value: null, confidence: "estimated" },
       posting_frequency_per_week: { value: null, confidence: "estimated" },
     },
+    authenticity_score: null,
+    thinkway_score: 0,
+    source_confidence: 0,
+    brand_fit_score: null,
+    is_platform_verified: false,
     platforms: [],
     enrichment_status: null,
-    ...partial,
-    display_name: partial.display_name,
-    unified_id: partial.unified_id,
+    ...rest,
+    bio: bio ?? null,
+    ai_category: ai_category ?? null,
+    ai_niche: ai_niche ?? null,
+    display_name,
+    unified_id,
   };
 }
 
@@ -43,11 +52,13 @@ test("handle-like query with only fuzzy hits shows add-missing empty state", () 
       display_name: "Fatma Usama",
       platforms: [
         {
+          id: "plat-fatma",
           platform: "instagram",
           handle: "@fatmausamakholef",
           profile_url: "https://instagram.com/fatmausamakholef",
           follower_count: 203000,
-          is_primary: true,
+          engagement_rate: null,
+          audience_country: "EG",
         },
       ],
     }),
@@ -71,11 +82,13 @@ test("handle-like query keeps exact handle match", () => {
       display_name: "Tasneem",
       platforms: [
         {
+          id: "plat-tasneem",
           platform: "instagram",
           handle: "@tasneemmohamedd00",
           profile_url: "https://instagram.com/tasneemmohamedd00",
           follower_count: 50000,
-          is_primary: true,
+          engagement_rate: null,
+          audience_country: "EG",
         },
       ],
     }),
@@ -84,11 +97,13 @@ test("handle-like query keeps exact handle match", () => {
       display_name: "Fatma Usama",
       platforms: [
         {
+          id: "plat-fatma",
           platform: "instagram",
           handle: "@fatmausamakholef",
           profile_url: "https://instagram.com/fatmausamakholef",
           follower_count: 203000,
-          is_primary: true,
+          engagement_rate: null,
+          audience_country: "EG",
         },
       ],
     }),
