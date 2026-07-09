@@ -18,6 +18,7 @@ import type {
   ShortlistBrandOption,
   ShortlistCampaignOption,
   ShortlistCreatorItem,
+  ShortlistCreatorQuotationRef,
   ShortlistDetail,
   ShortlistLinkedQuotation,
   ShortlistListRow,
