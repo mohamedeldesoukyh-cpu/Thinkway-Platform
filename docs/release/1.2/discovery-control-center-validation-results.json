@@ -1,0 +1,91 @@
+{
+  "release": "1.2",
+  "feature": "discovery-control-center",
+  "passed": 16,
+  "failed": 0,
+  "total": 16,
+  "status": "STRUCTURAL_OK",
+  "note": "Does NOT claim PASS — run npm run build and manual QA.",
+  "checks": [
+    {
+      "name": "migration discovery_control_settings",
+      "ok": true,
+      "detail": "20260705140000_discovery_control_settings.sql"
+    },
+    {
+      "name": "control-center types",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "control-center service",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "control-center policy",
+      "ok": true,
+      "detail": "present"
+    },
+    {
+      "name": "service SSOT exports",
+      "ok": true,
+      "detail": "get/update/settings"
+    },
+    {
+      "name": "platform_database_only blocks Apify",
+      "ok": true,
+      "detail": "shouldCallApify respects database-only"
+    },
+    {
+      "name": "apify_live_only enables Apify",
+      "ok": true,
+      "detail": "shouldCallApify live mode"
+    },
+    {
+      "name": "hybrid threshold gate",
+      "ok": true,
+      "detail": "enterprise discovery gate (creator count first)"
+    },
+    {
+      "name": "default hybrid + threshold 80",
+      "ok": true,
+      "detail": "defaults match Release 1.2 hybrid"
+    },
+    {
+      "name": "unified-browse wired to control center",
+      "ok": true,
+      "detail": "wired"
+    },
+    {
+      "name": "progressive search wired",
+      "ok": true,
+      "detail": "wired"
+    },
+    {
+      "name": "coverage backfill wired",
+      "ok": true,
+      "detail": "wired"
+    },
+    {
+      "name": "single config service used by browse + backfill paths",
+      "ok": true,
+      "detail": "getDiscoveryControlSettings references"
+    },
+    {
+      "name": "discovery engine settings page",
+      "ok": true,
+      "detail": "/settings/discovery-engine"
+    },
+    {
+      "name": "discovery diagnostics page",
+      "ok": true,
+      "detail": "/settings/discovery-diagnostics"
+    },
+    {
+      "name": "architecture documentation",
+      "ok": true,
+      "detail": "DISCOVERY_CONTROL_CENTER.md"
+    }
+  ]
+}

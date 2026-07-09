@@ -1,0 +1,653 @@
+[
+  {
+    "id": "babyjoy",
+    "label": "BabyJoy → parenting creators",
+    "query": "Launch BabyJoy Premium Diapers in Egypt. Target mothers with babies 0–3 years. Budget EGP 2,000,000. Campaign duration 6 weeks. Objective: Awareness and UGC.",
+    "liveDb": true,
+    "intent": {
+      "rawBrief": "Launch BabyJoy Premium Diapers in Egypt. Target mothers with babies 0–3 years. Budget EGP 2,000,000. Campaign duration 6 weeks. Objective: Awareness and UGC.",
+      "industry": "Baby Care",
+      "industryKey": "baby",
+      "audience": "mothers with babies 0–3 years",
+      "categories": [
+        "Parenting",
+        "Motherhood",
+        "Family",
+        "Baby",
+        "Kids",
+        "Mom"
+      ],
+      "interests": [
+        "Parenting",
+        "Motherhood",
+        "Family",
+        "Baby",
+        "Kids",
+        "Mom",
+        "Maternity",
+        "Pregnancy",
+        "Parent Life",
+        "Lifestyle"
+      ],
+      "hashtags": [],
+      "keywords": [
+        "parenting",
+        "motherhood",
+        "baby",
+        "family",
+        "mom",
+        "babyjoy",
+        "diapers",
+        "egypt"
+      ],
+      "semanticKeywords": [
+        "parenting",
+        "motherhood",
+        "baby",
+        "family",
+        "mom",
+        "babyjoy",
+        "diapers",
+        "egypt"
+      ],
+      "country": "EG",
+      "gender": "female",
+      "ageMin": 0,
+      "ageMax": 3,
+      "platforms": [
+        "instagram",
+        "tiktok"
+      ],
+      "parsed": {
+        "search": "launch babyjoy premium diapers egypt. target mothers babies 0–3 years. budget egp 2,000,000. campaign duration 6 weeks. objective: awareness ugc.",
+        "country": "EG"
+      }
+    },
+    "filtersGenerated": {
+      "categories": [
+        "Parenting",
+        "Motherhood",
+        "Family",
+        "Baby",
+        "Kids",
+        "Mom"
+      ],
+      "country": "EG",
+      "platforms": [
+        "instagram",
+        "tiktok"
+      ],
+      "industry": "Baby Care"
+    },
+    "stagesAttempted": [
+      {
+        "stage": "A_category_country",
+        "label": "Category + country",
+        "filters": {
+          "platforms": [
+            "instagram",
+            "tiktok"
+          ],
+          "productionOnly": true,
+          "pageSize": 50,
+          "page": 1,
+          "categories": [
+            "Parenting",
+            "Motherhood",
+            "Family",
+            "Baby",
+            "Kids",
+            "Mom",
+            "Maternity",
+            "Pregnancy",
+            "Parent Life",
+            "Lifestyle"
+          ],
+          "country": "EG"
+        },
+        "total": 126,
+        "creatorCount": 50
+      }
+    ],
+    "chosenStage": "A_category_country",
+    "finalCreatorCount": 50,
+    "finalTotal": 126,
+    "searchExecutedCount": 1,
+    "passed": true,
+    "notes": []
+  },
+  {
+    "id": "adidas",
+    "label": "Adidas → fitness/sports",
+    "query": "Adidas Egypt sportswear product launch for new running collection. Target active lifestyle 18–35 in Cairo and Alexandria. Budget EGP 4,500,000. Duration 6 weeks.",
+    "liveDb": true,
+    "intent": {
+      "rawBrief": "Adidas Egypt sportswear product launch for new running collection. Target active lifestyle 18–35 in Cairo and Alexandria. Budget EGP 4,500,000. Duration 6 weeks.",
+      "industry": "Sports & Fitness",
+      "industryKey": "sports_fitness",
+      "audience": "active lifestyle 18–35 in Cairo and Alexandria",
+      "categories": [
+        "Lifestyle",
+        "Fitness",
+        "Sports",
+        "Running",
+        "Workout",
+        "Athlete"
+      ],
+      "interests": [
+        "Fitness",
+        "Sports",
+        "Running",
+        "Workout",
+        "Athlete",
+        "Lifestyle",
+        "Fashion"
+      ],
+      "hashtags": [],
+      "keywords": [
+        "fitness",
+        "sports",
+        "running",
+        "workout",
+        "athlete",
+        "adidas",
+        "egypt",
+        "sportswear"
+      ],
+      "semanticKeywords": [
+        "fitness",
+        "sports",
+        "running",
+        "workout",
+        "athlete",
+        "adidas",
+        "egypt",
+        "sportswear"
+      ],
+      "country": "EG",
+      "city": "Cairo",
+      "ageMin": 18,
+      "ageMax": 35,
+      "platforms": [
+        "instagram",
+        "tiktok"
+      ],
+      "parsed": {
+        "search": "adidas sportswear product launch new running collection. target active lifestyle 18–35 cairo alexandria. budget egp 4,500,000. duration 6 weeks.",
+        "country": "EG",
+        "categories": [
+          "Lifestyle"
+        ]
+      }
+    },
+    "filtersGenerated": {
+      "categories": [
+        "Lifestyle",
+        "Fitness",
+        "Sports",
+        "Running",
+        "Workout",
+        "Athlete"
+      ],
+      "country": "EG",
+      "platforms": [
+        "instagram",
+        "tiktok"
+      ],
+      "industry": "Sports & Fitness"
+    },
+    "stagesAttempted": [
+      {
+        "stage": "A_category_country",
+        "label": "Category + country",
+        "filters": {
+          "platforms": [
+            "instagram",
+            "tiktok"
+          ],
+          "productionOnly": true,
+          "pageSize": 50,
+          "page": 1,
+          "categories": [
+            "Lifestyle",
+            "Fitness",
+            "Sports",
+            "Running",
+            "Workout",
+            "Athlete",
+            "Fashion"
+          ],
+          "country": "EG"
+        },
+        "total": 1623,
+        "creatorCount": 50
+      }
+    ],
+    "chosenStage": "A_category_country",
+    "finalCreatorCount": 50,
+    "finalTotal": 1623,
+    "searchExecutedCount": 1,
+    "passed": true,
+    "notes": []
+  },
+  {
+    "id": "luxury-hotel-dubai",
+    "label": "Luxury hotel Dubai → travel/luxury",
+    "query": "Find luxury hotel creators in Dubai for a 5-star resort campaign",
+    "liveDb": true,
+    "intent": {
+      "rawBrief": "Find luxury hotel creators in Dubai for a 5-star resort campaign",
+      "industry": "Luxury & Hospitality",
+      "industryKey": "luxury",
+      "categories": [
+        "Luxury",
+        "Travel",
+        "Lifestyle",
+        "Fashion",
+        "Hospitality"
+      ],
+      "interests": [
+        "Luxury",
+        "Travel",
+        "Lifestyle",
+        "Fashion",
+        "Hospitality"
+      ],
+      "hashtags": [],
+      "keywords": [
+        "luxury",
+        "travel",
+        "hotel",
+        "resort",
+        "hospitality",
+        "find",
+        "creators",
+        "dubai"
+      ],
+      "semanticKeywords": [
+        "luxury",
+        "travel",
+        "hotel",
+        "resort",
+        "hospitality",
+        "find",
+        "creators",
+        "dubai"
+      ],
+      "country": "AE",
+      "city": "Dubai",
+      "platforms": [
+        "instagram"
+      ],
+      "parsed": {
+        "search": "luxury hotel 5-star resort campaign",
+        "country": "AE"
+      }
+    },
+    "filtersGenerated": {
+      "categories": [
+        "Luxury",
+        "Travel",
+        "Lifestyle",
+        "Fashion",
+        "Hospitality"
+      ],
+      "country": "AE",
+      "platforms": [
+        "instagram"
+      ],
+      "industry": "Luxury & Hospitality"
+    },
+    "stagesAttempted": [
+      {
+        "stage": "A_category_country",
+        "label": "Category + country",
+        "filters": {
+          "platform": "instagram",
+          "productionOnly": true,
+          "pageSize": 50,
+          "page": 1,
+          "categories": [
+            "Luxury",
+            "Travel",
+            "Lifestyle",
+            "Fashion",
+            "Hospitality"
+          ],
+          "country": "AE"
+        },
+        "total": 0,
+        "creatorCount": 0
+      },
+      {
+        "stage": "B_category_only",
+        "label": "Category only",
+        "filters": {
+          "platform": "instagram",
+          "productionOnly": true,
+          "pageSize": 50,
+          "page": 1,
+          "categories": [
+            "Luxury",
+            "Travel",
+            "Lifestyle",
+            "Fashion",
+            "Hospitality"
+          ]
+        },
+        "total": 2551,
+        "creatorCount": 50
+      }
+    ],
+    "chosenStage": "B_category_only",
+    "finalCreatorCount": 50,
+    "finalTotal": 2551,
+    "searchExecutedCount": 1,
+    "passed": true,
+    "notes": []
+  },
+  {
+    "id": "travel-egypt",
+    "label": "Travel Egypt",
+    "query": "Find travel creators in Egypt",
+    "liveDb": true,
+    "intent": {
+      "rawBrief": "Find travel creators in Egypt",
+      "industry": "Travel",
+      "industryKey": "travel",
+      "categories": [
+        "Travel",
+        "Lifestyle",
+        "Adventure",
+        "Hospitality"
+      ],
+      "interests": [
+        "Travel",
+        "Lifestyle",
+        "Adventure",
+        "Hospitality"
+      ],
+      "hashtags": [],
+      "keywords": [
+        "travel",
+        "destination",
+        "adventure",
+        "find",
+        "creators",
+        "egypt"
+      ],
+      "semanticKeywords": [
+        "travel",
+        "destination",
+        "adventure",
+        "find",
+        "creators",
+        "egypt"
+      ],
+      "country": "EG",
+      "platforms": [
+        "instagram",
+        "tiktok"
+      ],
+      "parsed": {
+        "search": "travel",
+        "country": "EG",
+        "categories": [
+          "Travel"
+        ]
+      }
+    },
+    "filtersGenerated": {
+      "categories": [
+        "Travel",
+        "Lifestyle",
+        "Adventure",
+        "Hospitality"
+      ],
+      "country": "EG",
+      "platforms": [
+        "instagram",
+        "tiktok"
+      ],
+      "industry": "Travel"
+    },
+    "stagesAttempted": [
+      {
+        "stage": "D_semantic_keywords",
+        "label": "Direct structured parse",
+        "filters": {},
+        "total": 2733,
+        "creatorCount": 31
+      }
+    ],
+    "chosenStage": "direct_parse",
+    "finalCreatorCount": 31,
+    "finalTotal": 2733,
+    "searchExecutedCount": 1,
+    "passed": true,
+    "notes": []
+  },
+  {
+    "id": "finance",
+    "label": "Finance",
+    "query": "Emirates NBD credit card launch in UAE. Target young professionals interested in finance, banking, and wealth management.",
+    "liveDb": true,
+    "intent": {
+      "rawBrief": "Emirates NBD credit card launch in UAE. Target young professionals interested in finance, banking, and wealth management.",
+      "industry": "Finance",
+      "industryKey": "finance",
+      "audience": "young professionals interested in finance",
+      "categories": [
+        "Finance",
+        "Business",
+        "Lifestyle",
+        "Tech"
+      ],
+      "interests": [
+        "Finance",
+        "Business",
+        "Lifestyle",
+        "Tech"
+      ],
+      "hashtags": [],
+      "keywords": [
+        "finance",
+        "banking",
+        "money",
+        "investment",
+        "emirates",
+        "nbd",
+        "credit",
+        "card"
+      ],
+      "semanticKeywords": [
+        "finance",
+        "banking",
+        "money",
+        "investment",
+        "emirates",
+        "nbd",
+        "credit",
+        "card"
+      ],
+      "country": "AE",
+      "platforms": [
+        "instagram",
+        "youtube"
+      ],
+      "parsed": {
+        "search": "nbd credit card launch uae. target young professionals interested finance, banking, wealth management.",
+        "country": "AE"
+      }
+    },
+    "filtersGenerated": {
+      "categories": [
+        "Finance",
+        "Business",
+        "Lifestyle",
+        "Tech"
+      ],
+      "country": "AE",
+      "platforms": [
+        "instagram",
+        "youtube"
+      ],
+      "industry": "Finance"
+    },
+    "stagesAttempted": [
+      {
+        "stage": "A_category_country",
+        "label": "Category + country",
+        "filters": {
+          "platforms": [
+            "instagram",
+            "youtube"
+          ],
+          "productionOnly": true,
+          "pageSize": 50,
+          "page": 1,
+          "categories": [
+            "Finance",
+            "Business",
+            "Lifestyle",
+            "Tech"
+          ],
+          "country": "AE"
+        },
+        "total": 0,
+        "creatorCount": 0
+      },
+      {
+        "stage": "B_category_only",
+        "label": "Category only",
+        "filters": {
+          "platforms": [
+            "instagram",
+            "youtube"
+          ],
+          "productionOnly": true,
+          "pageSize": 50,
+          "page": 1,
+          "categories": [
+            "Finance",
+            "Business",
+            "Lifestyle",
+            "Tech"
+          ]
+        },
+        "total": 161,
+        "creatorCount": 50
+      }
+    ],
+    "chosenStage": "B_category_only",
+    "finalCreatorCount": 50,
+    "finalTotal": 161,
+    "searchExecutedCount": 1,
+    "passed": true,
+    "notes": []
+  },
+  {
+    "id": "tourism",
+    "label": "Tourism",
+    "query": "Visit Egypt tourism destination marketing campaign. Promote pyramids and Red Sea resorts to international travelers.",
+    "liveDb": true,
+    "intent": {
+      "rawBrief": "Visit Egypt tourism destination marketing campaign. Promote pyramids and Red Sea resorts to international travelers.",
+      "industry": "Tourism",
+      "industryKey": "tourism",
+      "categories": [
+        "Travel",
+        "Tourism",
+        "Lifestyle",
+        "Adventure",
+        "Hospitality"
+      ],
+      "interests": [
+        "Travel",
+        "Tourism",
+        "Lifestyle",
+        "Adventure",
+        "Hospitality"
+      ],
+      "hashtags": [],
+      "keywords": [
+        "tourism",
+        "travel",
+        "destination",
+        "egypt",
+        "visit",
+        "marketing",
+        "promote",
+        "pyramids"
+      ],
+      "semanticKeywords": [
+        "tourism",
+        "travel",
+        "destination",
+        "egypt",
+        "visit",
+        "marketing",
+        "promote",
+        "pyramids"
+      ],
+      "country": "EG",
+      "platforms": [
+        "instagram",
+        "tiktok",
+        "youtube"
+      ],
+      "parsed": {
+        "search": "visit tourism destination marketing campaign. promote pyramids red sea resorts international travelers.",
+        "country": "EG"
+      }
+    },
+    "filtersGenerated": {
+      "categories": [
+        "Travel",
+        "Tourism",
+        "Lifestyle",
+        "Adventure",
+        "Hospitality"
+      ],
+      "country": "EG",
+      "platforms": [
+        "instagram",
+        "tiktok",
+        "youtube"
+      ],
+      "industry": "Tourism"
+    },
+    "stagesAttempted": [
+      {
+        "stage": "A_category_country",
+        "label": "Category + country",
+        "filters": {
+          "platforms": [
+            "instagram",
+            "tiktok",
+            "youtube"
+          ],
+          "productionOnly": true,
+          "pageSize": 50,
+          "page": 1,
+          "categories": [
+            "Travel",
+            "Tourism",
+            "Lifestyle",
+            "Adventure",
+            "Hospitality"
+          ],
+          "country": "EG"
+        },
+        "total": 2008,
+        "creatorCount": 50
+      }
+    ],
+    "chosenStage": "A_category_country",
+    "finalCreatorCount": 50,
+    "finalTotal": 2008,
+    "searchExecutedCount": 1,
+    "passed": true,
+    "notes": []
+  }
+]

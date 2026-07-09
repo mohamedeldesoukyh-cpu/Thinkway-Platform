@@ -52,7 +52,7 @@ function DraftDecimalInput({
 }: {
   value: number;
   onCommit: (next: number) => void;
-} & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "onBlur">) {
+} & Omit<ComponentProps<typeof Input>, "value" | "onChange">) {
   const [text, setText] = useState(() => formatNumDisplay(value));
   const focusedRef = useRef(false);
 
@@ -105,7 +105,7 @@ function DraftUnitsInput({
 }: {
   value: number;
   onCommit: (next: number) => void;
-} & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "onBlur">) {
+} & Omit<ComponentProps<typeof Input>, "value" | "onChange">) {
   const [text, setText] = useState(() => formatNumDisplay(value));
   const focusedRef = useRef(false);
 

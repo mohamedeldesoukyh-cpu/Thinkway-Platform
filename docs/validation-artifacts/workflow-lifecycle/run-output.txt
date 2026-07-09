@@ -1,0 +1,26 @@
+﻿node : (node:21252) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS 
+connections and HTTPS requests insecure by disabling certificate verification.
+At C:\Users\X13 Yoga G3\AppData\Local\Temp\ps-script-499a1b95-3464-4ec9-8ca8-cf7abea1f74c.ps1:81 char:65
++ ... THORIZED='0'; node scripts/workflow-lifecycle-verify.mjs 2>&1 | Out-F ...
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:21252) Wa...e verification.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(Use `node --trace-warnings ...` to show where the warning was created)
+Sending BabyJoy create-campaign request...
+[client] [workflow-lifecycle] SSE "done" received (client stream)
+SSE stream ended. done=true conversationId=9374c4e1-4884-4cec-9e2c-a691456f8dc1
+[client] [workflow-lifecycle] Conversation reload started
+[client] [workflow-lifecycle] Conversation reload completed (2 messages)
+[client] [workflow-lifecycle] Chat render started
+[client] [workflow-lifecycle] Chat render completed (simulated 2 messages)
+
+=== CLIENT LIFECYCLE LOGS ===
+[workflow-lifecycle] SSE "done" received (client stream)
+[workflow-lifecycle] Conversation reload started
+[workflow-lifecycle] Conversation reload completed (2 messages)
+[workflow-lifecycle] Chat render started
+[workflow-lifecycle] Chat render completed (simulated 2 messages)
+
+Report: C:\thinkway-platform\docs\validation-artifacts\workflow-lifecycle\client-report.json
+Check dev server terminal for server-side [workflow-lifecycle] logs.

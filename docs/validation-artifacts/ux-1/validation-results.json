@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-07-04T05:39:21.742Z",
+  "baseUrl": "http://localhost:3000",
+  "results": [
+    {
+      "id": "1-vendor-discovery-pipeline",
+      "pass": true,
+      "detail": "Vendor DiscoveryCompleteThinkway Database—→Profiles Screened—→Matched39→AI Qualified39→Ranked—→Recommended—39 recommended creators"
+    },
+    {
+      "id": "2-vendor-avatars",
+      "pass": true,
+      "detail": "5 avatars / 5 vendor cards"
+    },
+    {
+      "id": "8-recommendation-explanation",
+      "pass": true,
+      "detail": "Per-creator reasoning OK"
+    },
+    {
+      "id": "7-thinkway-decision-rationale-rename",
+      "pass": true,
+      "detail": "Renamed to Thinkway Decision Rationale"
+    },
+    {
+      "id": "3b-chat-display-alignment",
+      "pass": true,
+      "detail": "textAlign=left, direction=ltr, rightAligned=true"
+    },
+    {
+      "id": "3-chat-edit-alignment",
+      "pass": true,
+      "detail": "textAlign=left, direction=ltr, rightAligned=true, cursorStart=true"
+    },
+    {
+      "id": "pepsi-vendor-discovery",
+      "pass": true,
+      "detail": "Vendor DiscoveryCompleteThinkway Database—→Profiles Screened—→Matched50→AI Qualified50→Ranked—→Recommended—50 recommended creators"
+    }
+  ],
+  "allPass": true
+}

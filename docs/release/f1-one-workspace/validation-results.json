@@ -1,0 +1,308 @@
+{
+  "generatedAt": "2026-07-05T21:18:55.566Z",
+  "sprint": "F1.1 ONE WORKSPACE",
+  "totalPassed": 58,
+  "totalFailed": 2,
+  "buildOk": false,
+  "tscOk": false,
+  "status": "FAIL",
+  "architecture": {
+    "composition": [
+      {
+        "name": "Main page renders IntelligenceWorkspace (chat workspace)",
+        "passed": true
+      },
+      {
+        "name": "Main page does not replace workspace with host-only shell",
+        "passed": true
+      },
+      {
+        "name": "Chat thread embeds CampaignStudioHost (not direct CampaignStudio)",
+        "passed": true
+      },
+      {
+        "name": "Chat thread retains messages render area",
+        "passed": true
+      },
+      {
+        "name": "Host accepts complete and completed workflow status",
+        "passed": true
+      }
+    ],
+    "checks": [
+      {
+        "name": "Host excludes ScenarioComparisonTable",
+        "passed": true
+      },
+      {
+        "name": "Host excludes RecommendationPanel",
+        "passed": true
+      },
+      {
+        "name": "Host excludes DecisionTimeline",
+        "passed": true
+      },
+      {
+        "name": "Host excludes ClientCreatorEvaluator",
+        "passed": true
+      },
+      {
+        "name": "Host excludes ScoreBreakdown",
+        "passed": true
+      },
+      {
+        "name": "Host excludes CreatorActionControls",
+        "passed": true
+      },
+      {
+        "name": "Presentation mode: no decisionMode on CampaignStudio",
+        "passed": true
+      },
+      {
+        "name": "Decision mode: displayCampaignObject + decisionMode wired",
+        "passed": true
+      }
+    ],
+    "forbiddenBelowStudio": [
+      "ScenarioComparisonTable",
+      "RecommendationPanel",
+      "DecisionTimeline",
+      "ClientCreatorEvaluator",
+      "ScoreBreakdown",
+      "CreatorActionControls"
+    ]
+  },
+  "campaigns": [
+    {
+      "id": "babyjoy",
+      "label": "BabyJoy",
+      "passed": 9,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "Presentation: CampaignObject snapshot stable",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenarios created in sandbox",
+          "passed": true
+        },
+        {
+          "name": "Decision: display-only apply does not mutate source",
+          "passed": true
+        },
+        {
+          "name": "Decision: display budget reflects simulation",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenario comparison has rows",
+          "passed": true
+        },
+        {
+          "name": "Decision: comparison winner selected",
+          "passed": true
+        },
+        {
+          "name": "Decision: recommendations available",
+          "passed": true
+        },
+        {
+          "name": "Promote: source still immutable after buildPromotedCampaignObject",
+          "passed": true
+        },
+        {
+          "name": "Promote: promoted object differs from original",
+          "passed": true
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "adidas",
+      "label": "Adidas",
+      "passed": 9,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "Presentation: CampaignObject snapshot stable",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenarios created in sandbox",
+          "passed": true
+        },
+        {
+          "name": "Decision: display-only apply does not mutate source",
+          "passed": true
+        },
+        {
+          "name": "Decision: display budget reflects simulation",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenario comparison has rows",
+          "passed": true
+        },
+        {
+          "name": "Decision: comparison winner selected",
+          "passed": true
+        },
+        {
+          "name": "Decision: recommendations available",
+          "passed": true
+        },
+        {
+          "name": "Promote: source still immutable after buildPromotedCampaignObject",
+          "passed": true
+        },
+        {
+          "name": "Promote: promoted object differs from original",
+          "passed": true
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "tourism",
+      "label": "Tourism",
+      "passed": 9,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "Presentation: CampaignObject snapshot stable",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenarios created in sandbox",
+          "passed": true
+        },
+        {
+          "name": "Decision: display-only apply does not mutate source",
+          "passed": true
+        },
+        {
+          "name": "Decision: display budget reflects simulation",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenario comparison has rows",
+          "passed": true
+        },
+        {
+          "name": "Decision: comparison winner selected",
+          "passed": true
+        },
+        {
+          "name": "Decision: recommendations available",
+          "passed": true
+        },
+        {
+          "name": "Promote: source still immutable after buildPromotedCampaignObject",
+          "passed": true
+        },
+        {
+          "name": "Promote: promoted object differs from original",
+          "passed": true
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "passed": 9,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "Presentation: CampaignObject snapshot stable",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenarios created in sandbox",
+          "passed": true
+        },
+        {
+          "name": "Decision: display-only apply does not mutate source",
+          "passed": true
+        },
+        {
+          "name": "Decision: display budget reflects simulation",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenario comparison has rows",
+          "passed": true
+        },
+        {
+          "name": "Decision: comparison winner selected",
+          "passed": true
+        },
+        {
+          "name": "Decision: recommendations available",
+          "passed": true
+        },
+        {
+          "name": "Promote: source still immutable after buildPromotedCampaignObject",
+          "passed": true
+        },
+        {
+          "name": "Promote: promoted object differs from original",
+          "passed": true
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "luxury",
+      "label": "Luxury",
+      "passed": 9,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "Presentation: CampaignObject snapshot stable",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenarios created in sandbox",
+          "passed": true
+        },
+        {
+          "name": "Decision: display-only apply does not mutate source",
+          "passed": true
+        },
+        {
+          "name": "Decision: display budget reflects simulation",
+          "passed": true
+        },
+        {
+          "name": "Decision: scenario comparison has rows",
+          "passed": true
+        },
+        {
+          "name": "Decision: comparison winner selected",
+          "passed": true
+        },
+        {
+          "name": "Decision: recommendations available",
+          "passed": true
+        },
+        {
+          "name": "Promote: source still immutable after buildPromotedCampaignObject",
+          "passed": true
+        },
+        {
+          "name": "Promote: promoted object differs from original",
+          "passed": true
+        }
+      ],
+      "status": "PASS"
+    }
+  ],
+  "routes": {
+    "primary": "/ai/[conversationId]",
+    "devOnly": "/ai/[conversationId]/decisions"
+  },
+  "presentationParity": "Presentation mode renders CampaignStudio with original CampaignObject — decisionMode undefined, no scenario bar or right panel.",
+  "decisionModeArchitecture": "Decision mode enhances Campaign Studio cards in place; comparison/timeline/score/recommendation live in DecisionRightPanel only."
+}

@@ -1,0 +1,116 @@
+{
+  "generatedAt": "2026-07-06T00:23:59.084Z",
+  "phase": "creator-dna-baseline-coverage",
+  "totals": {
+    "creators": 5121,
+    "dnaDocuments": 5121,
+    "missingDna": 0,
+    "averageCompleteness": 32.3,
+    "createdDuringBackfill": 5113,
+    "mergedDuringBackfill": 2,
+    "skippedDuringBackfill": 1,
+    "errorsDuringBackfill": 5
+  },
+  "completenessDistribution": {
+    "0-20": 368,
+    "21-40": 4701,
+    "41-60": 52,
+    "61-80": 0,
+    "81-100": 0
+  },
+  "platformBreakdown": {
+    "instagram": 5116,
+    "tiktok": 3,
+    "unknown": 2
+  },
+  "topMissingFields": [
+    {
+      "field": "audience.cities",
+      "count": 5121
+    },
+    {
+      "field": "scores.aiCategory",
+      "count": 5121
+    },
+    {
+      "field": "scores.aiNiche",
+      "count": 5121
+    },
+    {
+      "field": "commercial.typicalDeliverables",
+      "count": 5121
+    },
+    {
+      "field": "commercial.campaignFrequency",
+      "count": 5121
+    },
+    {
+      "field": "commercial.responseSpeed",
+      "count": 5121
+    },
+    {
+      "field": "commercial.historicalBrandCategories",
+      "count": 5121
+    },
+    {
+      "field": "scores.authenticityScore",
+      "count": 5121
+    },
+    {
+      "field": "brandSafety.engagementQuality",
+      "count": 5121
+    },
+    {
+      "field": "brandSafety.fakeFollowers",
+      "count": 5121
+    },
+    {
+      "field": "brandSafety.verificationLevel",
+      "count": 5121
+    },
+    {
+      "field": "historicalPerformance.avgCampaignRoi",
+      "count": 5121
+    },
+    {
+      "field": "historicalPerformance.repeatBrandRate",
+      "count": 5121
+    },
+    {
+      "field": "historicalPerformance.onTimeDeliveryRate",
+      "count": 5121
+    },
+    {
+      "field": "historicalPerformance.avgEngagementTrend",
+      "count": 5121
+    },
+    {
+      "field": "audience.languages",
+      "count": 5117
+    },
+    {
+      "field": "commercial.estimatedRate",
+      "count": 5116
+    },
+    {
+      "field": "historicalPerformance.campaignsCompleted",
+      "count": 5116
+    },
+    {
+      "field": "audience.hashtags",
+      "count": 5087
+    },
+    {
+      "field": "audience.mentions",
+      "count": 5080
+    }
+  ],
+  "lifecycleBreakdown": {
+    "ENRICHED": 2,
+    "BASELINE": 5114,
+    "ACTIVE": 5
+  },
+  "sourceHistoryBreakdown": {
+    "baseline_import": 5121
+  }
+}

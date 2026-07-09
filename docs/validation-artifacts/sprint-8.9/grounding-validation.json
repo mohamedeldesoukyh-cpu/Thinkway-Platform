@@ -1,0 +1,335 @@
+{
+  "timestamp": "2026-07-03T21:16:59.903Z",
+  "sprint": "8.9",
+  "industriesDetected": [
+    "baby",
+    "luxury",
+    "tourism",
+    "retail",
+    "finance"
+  ],
+  "uniqueIndustries": 5,
+  "uniqueKpiSets": 5,
+  "uniqueConceptSets": 5,
+  "uniqueSuccessScores": 5,
+  "uniqueExecutiveSummaries": 5,
+  "groundingErrors": [],
+  "allGrounded": true,
+  "outputs": {
+    "babyjoy-egypt": {
+      "industry": "baby",
+      "strategyFields": [
+        "Business Challenge:Industry:91%",
+        "Campaign Objective:Client:95%",
+        "Target Audience:Client:93%",
+        "Consumer Insight:Industry:88%",
+        "Key Message:AI:85%",
+        "Creator Strategy:Historical:90%",
+        "Platform Strategy:Industry:92%",
+        "Customer Journey:Industry:87%",
+        "Competitive Advantage:AI:84%"
+      ],
+      "budgetReasons": [
+        "Vendor fees:55%",
+        "Production:18%",
+        "Paid amplification:12%",
+        "Contingency:10%"
+      ],
+      "kpiMetrics": [
+        "Parent reach (0–3 yrs)",
+        "UGC volume",
+        "Trust score lift",
+        "Trial coupon redemptions",
+        "Mom community ER",
+        "Cost per UGC asset"
+      ],
+      "kpiConfidences": [
+        93,
+        90,
+        88,
+        85,
+        92,
+        87
+      ],
+      "conceptNames": [
+        "Real Mom Moments",
+        "Comfort Tested",
+        "Mom Community"
+      ],
+      "conceptEmotions": [
+        "Relief & confidence",
+        "Trust & proof",
+        "Community & belonging"
+      ],
+      "contentDeliverables": [
+        "TikTok 8 Videos",
+        "Instagram 6 Reels",
+        "Instagram 12 Stories",
+        "TikTok 5 Reviews",
+        "Instagram 4 Carousels"
+      ],
+      "successScore": 91,
+      "opportunityTitles": [
+        "Experienced mothers (2+ children)",
+        "Facebook mom groups",
+        "Add pediatrician endorsement",
+        "Increase nano UGC to 30%",
+        "Night-time comfort content"
+      ],
+      "executiveSummary": "BabyJoy launches with an authenticity-first UGC strategy activating mom creators",
+      "benchmarkEr": "6.5%"
+    },
+    "rolex-middle-east": {
+      "industry": "luxury",
+      "strategyFields": [
+        "Business Challenge:Industry:91%",
+        "Campaign Objective:Client:95%",
+        "Target Audience:Client:93%",
+        "Consumer Insight:Industry:88%",
+        "Key Message:AI:85%",
+        "Creator Strategy:Historical:90%",
+        "Platform Strategy:Industry:92%",
+        "Customer Journey:Industry:87%",
+        "Competitive Advantage:AI:84%"
+      ],
+      "budgetReasons": [
+        "Vendor fees:55%",
+        "Production:18%",
+        "Paid amplification:12%",
+        "Contingency:10%"
+      ],
+      "kpiMetrics": [
+        "Brand favorability lift",
+        "Qualified reach",
+        "Video completion rate",
+        "Share of voice",
+        "Earned media value",
+        "High-net-worth engagement"
+      ],
+      "kpiConfidences": [
+        88,
+        91,
+        85,
+        82,
+        86,
+        90
+      ],
+      "conceptNames": [
+        "Timeless Heritage",
+        "Modern Icons",
+        "Exclusive Access"
+      ],
+      "conceptEmotions": [
+        "Awe & aspiration",
+        "Confidence & achievement",
+        "Exclusivity & privilege"
+      ],
+      "contentDeliverables": [
+        "Instagram 4 Reels",
+        "Instagram 3 Carousels",
+        "Instagram 8 Stories",
+        "YouTube 2 Long-form",
+        "YouTube 3 Shorts"
+      ],
+      "successScore": 78,
+      "opportunityTitles": [
+        "Aspirational achievers (28–40)",
+        "LinkedIn executive reach",
+        "Add 1 celebrity ambassador",
+        "Shift 5% from contingency to production",
+        "Heritage storytelling underserved"
+      ],
+      "executiveSummary": "Rolex requires a prestige-building campaign targeting affluent professionals thr",
+      "benchmarkEr": "4.2%"
+    },
+    "visit-egypt-tourism": {
+      "industry": "tourism",
+      "strategyFields": [
+        "Business Challenge:Industry:91%",
+        "Campaign Objective:Client:95%",
+        "Target Audience:Client:93%",
+        "Consumer Insight:Industry:88%",
+        "Key Message:AI:85%",
+        "Creator Strategy:Historical:90%",
+        "Platform Strategy:Industry:92%",
+        "Customer Journey:Industry:87%",
+        "Competitive Advantage:AI:84%"
+      ],
+      "budgetReasons": [
+        "Vendor fees:55%",
+        "Production:18%",
+        "Paid amplification:12%",
+        "Contingency:10%"
+      ],
+      "kpiMetrics": [
+        "Destination consideration",
+        "Video views",
+        "Save rate",
+        "Trip planning clicks",
+        "UGC submissions",
+        "Cost per view"
+      ],
+      "kpiConfidences": [
+        92,
+        89,
+        87,
+        84,
+        88,
+        91
+      ],
+      "conceptNames": [
+        "Ancient Wonders Reimagined",
+        "Hidden Gems Trail",
+        "Adventure Awaits"
+      ],
+      "conceptEmotions": [
+        "Wonder & discovery",
+        "Authenticity & connection",
+        "Adventure & thrill"
+      ],
+      "contentDeliverables": [
+        "TikTok 6 Videos",
+        "Instagram 8 Reels",
+        "Instagram 15 Stories",
+        "YouTube 3 Vlogs",
+        "TikTok 2 Live"
+      ],
+      "successScore": 83,
+      "opportunityTitles": [
+        "Cultural explorers (30–50)",
+        "Pinterest travel planning",
+        "Activate nano traveler UGC",
+        "Increase paid amplification to 28%",
+        "Red Sea adventure content"
+      ],
+      "executiveSummary": "Visit Egypt needs a destination awareness campaign leveraging travel storyteller",
+      "benchmarkEr": "5.8%"
+    },
+    "adidas-egypt": {
+      "industry": "retail",
+      "strategyFields": [
+        "Business Challenge:Industry:91%",
+        "Campaign Objective:Client:95%",
+        "Target Audience:Client:93%",
+        "Consumer Insight:Industry:88%",
+        "Key Message:AI:85%",
+        "Creator Strategy:Historical:90%",
+        "Platform Strategy:Industry:92%",
+        "Customer Journey:Industry:87%",
+        "Competitive Advantage:AI:84%"
+      ],
+      "budgetReasons": [
+        "Vendor fees:55%",
+        "Production:18%",
+        "Paid amplification:12%",
+        "Contingency:10%"
+      ],
+      "kpiMetrics": [
+        "Product launch awareness",
+        "Shoppable clicks",
+        "Conversion rate",
+        "Try-on / fit content views",
+        "ROAS",
+        "Store visit uplift"
+      ],
+      "kpiConfidences": [
+        91,
+        88,
+        86,
+        90,
+        89,
+        82
+      ],
+      "conceptNames": [
+        "Street to Stadium",
+        "Fit Check Friday",
+        "Creator Collab Drop"
+      ],
+      "conceptEmotions": [
+        "Energy & motivation",
+        "Confidence & style",
+        "Excitement & urgency"
+      ],
+      "contentDeliverables": [
+        "TikTok 10 Videos",
+        "Instagram 8 Reels",
+        "Instagram 14 Stories",
+        "YouTube 3 Unboxing",
+        "TikTok 6 Fit checks"
+      ],
+      "successScore": 85,
+      "opportunityTitles": [
+        "Streetwear enthusiasts (16–28)",
+        "Snapchat AR try-on",
+        "Add 10 nano street style creators",
+        "Front-load 30% spend to week 1",
+        "Local athlete collab drop"
+      ],
+      "executiveSummary": "Adidas product launch demands high-velocity creator activation across nano, micr",
+      "benchmarkEr": "4.8%"
+    },
+    "emirates-nbd": {
+      "industry": "finance",
+      "strategyFields": [
+        "Business Challenge:Industry:91%",
+        "Campaign Objective:Client:95%",
+        "Target Audience:Client:93%",
+        "Consumer Insight:Industry:88%",
+        "Key Message:AI:85%",
+        "Creator Strategy:Historical:90%",
+        "Platform Strategy:Industry:92%",
+        "Customer Journey:Industry:87%",
+        "Competitive Advantage:AI:84%"
+      ],
+      "budgetReasons": [
+        "Vendor fees:55%",
+        "Production:18%",
+        "Paid amplification:12%",
+        "Contingency:10%"
+      ],
+      "kpiMetrics": [
+        "Product consideration",
+        "Compliance-safe reach",
+        "Application starts",
+        "Trust & credibility score",
+        "Video explainers completed",
+        "Cost per lead"
+      ],
+      "kpiConfidences": [
+        87,
+        90,
+        85,
+        92,
+        88,
+        86
+      ],
+      "conceptNames": [
+        "Smart Money Moves",
+        "Life Milestones",
+        "Trust Verified"
+      ],
+      "conceptEmotions": [
+        "Empowerment & clarity",
+        "Security & progress",
+        "Trust & credibility"
+      ],
+      "contentDeliverables": [
+        "Instagram 5 Reels",
+        "Instagram 6 Carousels",
+        "LinkedIn 4 Posts",
+        "YouTube 3 Explainers",
+        "Instagram 8 Stories"
+      ],
+      "successScore": 74,
+      "opportunityTitles": [
+        "Established earners (35–50)",
+        "Podcast sponsorship integration",
+        "Add macro trust anchor",
+        "Shift 5% to LinkedIn paid",
+        "Life milestone banking content"
+      ],
+      "executiveSummary": "Emirates NBD requires a trust-building campaign through verified finance educato",
+      "benchmarkEr": "3.2%"
+    }
+  }
+}

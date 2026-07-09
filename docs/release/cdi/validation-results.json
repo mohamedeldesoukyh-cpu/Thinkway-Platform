@@ -1,0 +1,974 @@
+{
+  "generatedAt": "2026-07-04T15:27:51.305Z",
+  "totalPassed": 105,
+  "totalFailed": 0,
+  "status": "PASS",
+  "results": [
+    {
+      "id": "babyjoy",
+      "label": "BabyJoy",
+      "passed": 21,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject not mutated",
+          "passed": true
+        },
+        {
+          "name": "Baseline context extracted",
+          "passed": true
+        },
+        {
+          "name": "Scenarios generated",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Original\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Budget Cut\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Budget +20%\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Creators\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Alternative Mix\" exists",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces total budget",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces reach",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% lowers Thinkway Score vs +20%",
+          "passed": true
+        },
+        {
+          "name": "Budget +20% increases total budget",
+          "passed": true
+        },
+        {
+          "name": "Client Creators scenario has creator changes",
+          "passed": true
+        },
+        {
+          "name": "Client creator evaluations present",
+          "passed": true
+        },
+        {
+          "name": "Scenario isolation (unique ids)",
+          "passed": true
+        },
+        {
+          "name": "All recommendations valid structure",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Approval summary generated",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has reason",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has confidence",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has alternative",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 7,
+      "baselineScore": 57,
+      "winner": "Original",
+      "sampleRecommendation": {
+        "title": "Mitigate elevated campaign risk",
+        "reason": "Risk score dropped to 66. Factors: Parent skepticism on product claims; Regulatory compliance on messaging.",
+        "confidence": 82,
+        "impact": "3 high-risk factors identified",
+        "alternative": "Reduce scope instead of full mitigation",
+        "priority": "high"
+      },
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 2000000,
+          "reach": 3000000,
+          "thinkwayScore": 57,
+          "successProbability": 88,
+          "isWinner": true
+        },
+        {
+          "name": "Client Budget Cut",
+          "budget": 1600000,
+          "reach": 2400000,
+          "thinkwayScore": 52,
+          "successProbability": 85,
+          "isWinner": false
+        },
+        {
+          "name": "Budget +20%",
+          "budget": 2400000,
+          "reach": 3600000,
+          "thinkwayScore": 56,
+          "successProbability": 88,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 2000000,
+          "reach": 3000000,
+          "thinkwayScore": 54,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Mix",
+          "budget": 1900000,
+          "reach": 2850000,
+          "thinkwayScore": 54,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Sales Objective",
+          "budget": 2200000,
+          "reach": 3300000,
+          "thinkwayScore": 55,
+          "successProbability": 88,
+          "isWinner": false
+        },
+        {
+          "name": "Luxury Positioning",
+          "budget": 2300000,
+          "reach": 3450000,
+          "thinkwayScore": 56,
+          "successProbability": 88,
+          "isWinner": false
+        }
+      ],
+      "clientCreatorEvaluations": [
+        {
+          "creatorId": "client_mom_egypt_1",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        },
+        {
+          "creatorId": "client_mom_egypt_2",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        }
+      ],
+      "approvalSummary": {
+        "campaignHealth": "healthy",
+        "warningsCount": 2,
+        "recommendationsCount": 8,
+        "highRisksCount": 0,
+        "clientConstraintsSatisfied": false,
+        "readyForApproval": false,
+        "details": [
+          "Baseline Thinkway Score: 57",
+          "Best scenario: Original (score 57)",
+          "Success probability: 88%",
+          "Creators: 2",
+          "Budget: EGP 2,000,000",
+          "Scenario \"Client Budget Cut\" adds 1 risk factor(s)",
+          "2 client creator(s) recommended for replacement"
+        ]
+      }
+    },
+    {
+      "id": "adidas",
+      "label": "Adidas",
+      "passed": 21,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject not mutated",
+          "passed": true
+        },
+        {
+          "name": "Baseline context extracted",
+          "passed": true
+        },
+        {
+          "name": "Scenarios generated",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Original\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Budget Cut\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Budget +20%\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Creators\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Alternative Mix\" exists",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces total budget",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces reach",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% lowers Thinkway Score vs +20%",
+          "passed": true
+        },
+        {
+          "name": "Budget +20% increases total budget",
+          "passed": true
+        },
+        {
+          "name": "Client Creators scenario has creator changes",
+          "passed": true
+        },
+        {
+          "name": "Client creator evaluations present",
+          "passed": true
+        },
+        {
+          "name": "Scenario isolation (unique ids)",
+          "passed": true
+        },
+        {
+          "name": "All recommendations valid structure",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Approval summary generated",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has reason",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has confidence",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has alternative",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 7,
+      "baselineScore": 75,
+      "winner": "Original",
+      "sampleRecommendation": {
+        "title": "Mitigate elevated campaign risk",
+        "reason": "Risk score dropped to 66. Factors: Inventory stock-outs during launch; Sizing misrepresentation in fit content.",
+        "confidence": 82,
+        "impact": "3 high-risk factors identified",
+        "alternative": "Reduce scope instead of full mitigation",
+        "priority": "high"
+      },
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 4500000,
+          "reach": 8000000,
+          "thinkwayScore": 75,
+          "successProbability": 88,
+          "isWinner": true
+        },
+        {
+          "name": "Client Budget Cut",
+          "budget": 3600000,
+          "reach": 6400000,
+          "thinkwayScore": 69,
+          "successProbability": 84,
+          "isWinner": false
+        },
+        {
+          "name": "Budget +20%",
+          "budget": 5400000,
+          "reach": 9600000,
+          "thinkwayScore": 75,
+          "successProbability": 88,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 4500000,
+          "reach": 8000000,
+          "thinkwayScore": 72,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Mix",
+          "budget": 4275000,
+          "reach": 7600000,
+          "thinkwayScore": 72,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Sales Objective",
+          "budget": 4950000,
+          "reach": 8800000,
+          "thinkwayScore": 73,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Luxury Positioning",
+          "budget": 5175000,
+          "reach": 9200000,
+          "thinkwayScore": 74,
+          "successProbability": 87,
+          "isWinner": false
+        }
+      ],
+      "clientCreatorEvaluations": [
+        {
+          "creatorId": "client_athlete_cairo",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        },
+        {
+          "creatorId": "client_runner_alex",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        }
+      ],
+      "approvalSummary": {
+        "campaignHealth": "healthy",
+        "warningsCount": 2,
+        "recommendationsCount": 8,
+        "highRisksCount": 0,
+        "clientConstraintsSatisfied": false,
+        "readyForApproval": true,
+        "details": [
+          "Baseline Thinkway Score: 75",
+          "Best scenario: Original (score 75)",
+          "Success probability: 88%",
+          "Creators: 2",
+          "Budget: EGP 4,500,000",
+          "Scenario \"Client Budget Cut\" adds 1 risk factor(s)",
+          "2 client creator(s) recommended for replacement"
+        ]
+      }
+    },
+    {
+      "id": "tourism",
+      "label": "Tourism",
+      "passed": 21,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject not mutated",
+          "passed": true
+        },
+        {
+          "name": "Baseline context extracted",
+          "passed": true
+        },
+        {
+          "name": "Scenarios generated",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Original\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Budget Cut\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Budget +20%\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Creators\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Alternative Mix\" exists",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces total budget",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces reach",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% lowers Thinkway Score vs +20%",
+          "passed": true
+        },
+        {
+          "name": "Budget +20% increases total budget",
+          "passed": true
+        },
+        {
+          "name": "Client Creators scenario has creator changes",
+          "passed": true
+        },
+        {
+          "name": "Client creator evaluations present",
+          "passed": true
+        },
+        {
+          "name": "Scenario isolation (unique ids)",
+          "passed": true
+        },
+        {
+          "name": "All recommendations valid structure",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Approval summary generated",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has reason",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has confidence",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has alternative",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 7,
+      "baselineScore": 74,
+      "winner": "Original",
+      "sampleRecommendation": {
+        "title": "Mitigate elevated campaign risk",
+        "reason": "Risk score dropped to 66. Factors: Filming restrictions at key landmarks; Creator travel cancellations.",
+        "confidence": 82,
+        "impact": "3 high-risk factors identified",
+        "alternative": "Reduce scope instead of full mitigation",
+        "priority": "high"
+      },
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 1200000,
+          "reach": 5000000,
+          "thinkwayScore": 74,
+          "successProbability": 87,
+          "isWinner": true
+        },
+        {
+          "name": "Client Budget Cut",
+          "budget": 960000,
+          "reach": 4000000,
+          "thinkwayScore": 68,
+          "successProbability": 84,
+          "isWinner": false
+        },
+        {
+          "name": "Budget +20%",
+          "budget": 1440000,
+          "reach": 6000000,
+          "thinkwayScore": 74,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 1200000,
+          "reach": 5000000,
+          "thinkwayScore": 71,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Mix",
+          "budget": 1140000,
+          "reach": 4750000,
+          "thinkwayScore": 71,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Sales Objective",
+          "budget": 1320000,
+          "reach": 5500000,
+          "thinkwayScore": 73,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Luxury Positioning",
+          "budget": 1380000,
+          "reach": 5750000,
+          "thinkwayScore": 74,
+          "successProbability": 87,
+          "isWinner": false
+        }
+      ],
+      "clientCreatorEvaluations": [
+        {
+          "creatorId": "client_travel_blogger_1",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        },
+        {
+          "creatorId": "client_adventure_egypt",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        }
+      ],
+      "approvalSummary": {
+        "campaignHealth": "healthy",
+        "warningsCount": 2,
+        "recommendationsCount": 8,
+        "highRisksCount": 0,
+        "clientConstraintsSatisfied": false,
+        "readyForApproval": true,
+        "details": [
+          "Baseline Thinkway Score: 74",
+          "Best scenario: Original (score 74)",
+          "Success probability: 87%",
+          "Creators: 2",
+          "Budget: USD 1,200,000",
+          "Scenario \"Client Budget Cut\" adds 1 risk factor(s)",
+          "2 client creator(s) recommended for replacement"
+        ]
+      }
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "passed": 21,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject not mutated",
+          "passed": true
+        },
+        {
+          "name": "Baseline context extracted",
+          "passed": true
+        },
+        {
+          "name": "Scenarios generated",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Original\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Budget Cut\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Budget +20%\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Creators\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Alternative Mix\" exists",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces total budget",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces reach",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% lowers Thinkway Score vs +20%",
+          "passed": true
+        },
+        {
+          "name": "Budget +20% increases total budget",
+          "passed": true
+        },
+        {
+          "name": "Client Creators scenario has creator changes",
+          "passed": true
+        },
+        {
+          "name": "Client creator evaluations present",
+          "passed": true
+        },
+        {
+          "name": "Scenario isolation (unique ids)",
+          "passed": true
+        },
+        {
+          "name": "All recommendations valid structure",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Approval summary generated",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has reason",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has confidence",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has alternative",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 7,
+      "baselineScore": 57,
+      "winner": "Original",
+      "sampleRecommendation": {
+        "title": "Mitigate elevated campaign risk",
+        "reason": "Risk score dropped to 66. Factors: Regulatory non-compliance in scripts; Low trust transfer from entertainment creators.",
+        "confidence": 82,
+        "impact": "3 high-risk factors identified",
+        "alternative": "Reduce scope instead of full mitigation",
+        "priority": "high"
+      },
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 6000001,
+          "reach": 1500000,
+          "thinkwayScore": 57,
+          "successProbability": 74,
+          "isWinner": true
+        },
+        {
+          "name": "Client Budget Cut",
+          "budget": 4800001,
+          "reach": 1200000,
+          "thinkwayScore": 52,
+          "successProbability": 71,
+          "isWinner": false
+        },
+        {
+          "name": "Budget +20%",
+          "budget": 7200001,
+          "reach": 1800000,
+          "thinkwayScore": 56,
+          "successProbability": 74,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 6000001,
+          "reach": 1500000,
+          "thinkwayScore": 54,
+          "successProbability": 73,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Mix",
+          "budget": 5700001,
+          "reach": 1425000,
+          "thinkwayScore": 54,
+          "successProbability": 73,
+          "isWinner": false
+        },
+        {
+          "name": "Sales Objective",
+          "budget": 6600001,
+          "reach": 1650000,
+          "thinkwayScore": 55,
+          "successProbability": 74,
+          "isWinner": false
+        },
+        {
+          "name": "Luxury Positioning",
+          "budget": 6900001,
+          "reach": 1725000,
+          "thinkwayScore": 56,
+          "successProbability": 74,
+          "isWinner": false
+        }
+      ],
+      "clientCreatorEvaluations": [
+        {
+          "creatorId": "client_finance_uae",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        },
+        {
+          "creatorId": "client_wealth_tips",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        }
+      ],
+      "approvalSummary": {
+        "campaignHealth": "healthy",
+        "warningsCount": 2,
+        "recommendationsCount": 8,
+        "highRisksCount": 0,
+        "clientConstraintsSatisfied": false,
+        "readyForApproval": false,
+        "details": [
+          "Baseline Thinkway Score: 57",
+          "Best scenario: Original (score 57)",
+          "Success probability: 74%",
+          "Creators: 2",
+          "Budget: AED 6,000,001",
+          "Scenario \"Client Budget Cut\" adds 1 risk factor(s)",
+          "2 client creator(s) recommended for replacement"
+        ]
+      }
+    },
+    {
+      "id": "luxury",
+      "label": "Luxury",
+      "passed": 21,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject not mutated",
+          "passed": true
+        },
+        {
+          "name": "Baseline context extracted",
+          "passed": true
+        },
+        {
+          "name": "Scenarios generated",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Original\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Budget Cut\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Budget +20%\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Client Creators\" exists",
+          "passed": true
+        },
+        {
+          "name": "Scenario \"Alternative Mix\" exists",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces total budget",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% reduces reach",
+          "passed": true
+        },
+        {
+          "name": "Budget -20% lowers Thinkway Score vs +20%",
+          "passed": true
+        },
+        {
+          "name": "Budget +20% increases total budget",
+          "passed": true
+        },
+        {
+          "name": "Client Creators scenario has creator changes",
+          "passed": true
+        },
+        {
+          "name": "Client creator evaluations present",
+          "passed": true
+        },
+        {
+          "name": "Scenario isolation (unique ids)",
+          "passed": true
+        },
+        {
+          "name": "All recommendations valid structure",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Approval summary generated",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has reason",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has confidence",
+          "passed": true
+        },
+        {
+          "name": "Sample recommendation has alternative",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 7,
+      "baselineScore": 72,
+      "winner": "Original",
+      "sampleRecommendation": {
+        "title": "Mitigate elevated campaign risk",
+        "reason": "Risk score dropped to 54. Factors: Brand dilution from off-brand aesthetics; Creator scheduling conflicts during peak season.",
+        "confidence": 82,
+        "impact": "4 high-risk factors identified",
+        "alternative": "Reduce scope instead of full mitigation",
+        "priority": "critical"
+      },
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 8500004,
+          "reach": 2500000,
+          "thinkwayScore": 72,
+          "successProbability": 77,
+          "isWinner": true
+        },
+        {
+          "name": "Client Budget Cut",
+          "budget": 6800003,
+          "reach": 2000000,
+          "thinkwayScore": 66,
+          "successProbability": 74,
+          "isWinner": false
+        },
+        {
+          "name": "Budget +20%",
+          "budget": 10200005,
+          "reach": 3000000,
+          "thinkwayScore": 72,
+          "successProbability": 77,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 8500004,
+          "reach": 2500000,
+          "thinkwayScore": 69,
+          "successProbability": 77,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Mix",
+          "budget": 8075004,
+          "reach": 2375000,
+          "thinkwayScore": 69,
+          "successProbability": 77,
+          "isWinner": false
+        },
+        {
+          "name": "Sales Objective",
+          "budget": 9350004,
+          "reach": 2750000,
+          "thinkwayScore": 70,
+          "successProbability": 77,
+          "isWinner": false
+        },
+        {
+          "name": "Luxury Positioning",
+          "budget": 9775005,
+          "reach": 2875000,
+          "thinkwayScore": 71,
+          "successProbability": 77,
+          "isWinner": false
+        }
+      ],
+      "clientCreatorEvaluations": [
+        {
+          "creatorId": "client_luxury_lifestyle",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        },
+        {
+          "creatorId": "client_prestige_uae",
+          "fitScore": 65,
+          "replaceRecommended": true,
+          "reason": "Client creator fit score (65) is below Thinkway recommendation (72). ER diff -0.7%, CPM diff 6."
+        }
+      ],
+      "approvalSummary": {
+        "campaignHealth": "at_risk",
+        "warningsCount": 3,
+        "recommendationsCount": 8,
+        "highRisksCount": 1,
+        "clientConstraintsSatisfied": true,
+        "readyForApproval": true,
+        "details": [
+          "Baseline Thinkway Score: 72",
+          "Best scenario: Original (score 72)",
+          "Success probability: 77%",
+          "Creators: 2",
+          "Budget: USD 8,500,004",
+          "Scenario \"Client Budget Cut\" has high risk level",
+          "Scenario \"Client Budget Cut\" adds 1 risk factor(s)",
+          "2 client creator(s) recommended for replacement"
+        ]
+      }
+    }
+  ]
+}

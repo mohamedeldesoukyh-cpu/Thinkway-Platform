@@ -1,0 +1,18 @@
+{
+  "viewport": 1440,
+  "sectionGridCols": "539px 539px",
+  "widths": {
+    "campaignSummary": 1094,
+    "budgetPlanner": 1094,
+    "kpiForecast": 539,
+    "riskAnalysis": 539,
+    "creatorMix": 539,
+    "thinkwayDecisionRationale": 539,
+    "vendorDiscovery": 1094
+  },
+  "checks": {
+    "analyticsPairEqual": true,
+    "strategyPairEqual": true,
+    "dashboardSpansFull": true
+  }
+}

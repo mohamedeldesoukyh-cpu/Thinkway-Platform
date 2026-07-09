@@ -1,0 +1,531 @@
+{
+  "release": "1.1.5",
+  "generatedAt": "2026-07-04T23:21:19.430Z",
+  "passClaimed": false,
+  "manualQaRequired": true,
+  "fixtures": [
+    "babyjoy",
+    "cocacola",
+    "tourism",
+    "samsung",
+    "loreal"
+  ],
+  "sectionsMigrated": 9,
+  "automatedChecksPassed": 80,
+  "automatedChecksFailed": 0,
+  "automatedChecksTotal": 80,
+  "fallbackPathsDocumented": 5,
+  "summary": "Release 1.1.5 wiring validation: 80/80 checks passed; manual QA required before sign-off",
+  "results": [
+    {
+      "fixture": "babyjoy",
+      "label": "BabyJoy",
+      "checks": [
+        {
+          "name": "Executive Strategy: reasoning preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver uses approved reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver fields match reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: funnel stage count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: IS-2 funnel ids verbatim",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: resolver matches approved funnel",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Recommendations: no selectedReasoning (fallback path)",
+          "ok": true,
+          "detail": "",
+          "fallback": true
+        },
+        {
+          "name": "Budget Planner: allocation reasoning preserved",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Budget Planner: director rationale surfaced",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: activation weeks count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: first week objective from approved data",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Creator Mix: resolver matches approved tiers",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "KPI Forecast: resolver uses kpiReasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Risk Analysis: director risks preserved in resolver",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: minutes preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: resolver maps minutes to insights",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        }
+      ]
+    },
+    {
+      "fixture": "cocacola",
+      "label": "Coca-Cola",
+      "checks": [
+        {
+          "name": "Executive Strategy: reasoning preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver uses approved reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver fields match reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: funnel stage count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: IS-2 funnel ids verbatim",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: resolver matches approved funnel",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Recommendations: no selectedReasoning (fallback path)",
+          "ok": true,
+          "detail": "",
+          "fallback": true
+        },
+        {
+          "name": "Budget Planner: allocation reasoning preserved",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Budget Planner: director rationale surfaced",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: activation weeks count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: first week objective from approved data",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Creator Mix: resolver matches approved tiers",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "KPI Forecast: resolver uses kpiReasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Risk Analysis: director risks preserved in resolver",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: minutes preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: resolver maps minutes to insights",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        }
+      ]
+    },
+    {
+      "fixture": "tourism",
+      "label": "Tourism Egypt",
+      "checks": [
+        {
+          "name": "Executive Strategy: reasoning preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver uses approved reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver fields match reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: funnel stage count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: IS-2 funnel ids verbatim",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: resolver matches approved funnel",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Recommendations: no selectedReasoning (fallback path)",
+          "ok": true,
+          "detail": "",
+          "fallback": true
+        },
+        {
+          "name": "Budget Planner: allocation reasoning preserved",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Budget Planner: director rationale surfaced",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: activation weeks count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: first week objective from approved data",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Creator Mix: resolver matches approved tiers",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "KPI Forecast: resolver uses kpiReasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Risk Analysis: director risks preserved in resolver",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: minutes preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: resolver maps minutes to insights",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        }
+      ]
+    },
+    {
+      "fixture": "samsung",
+      "label": "Samsung",
+      "checks": [
+        {
+          "name": "Executive Strategy: reasoning preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver uses approved reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver fields match reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: funnel stage count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: IS-2 funnel ids verbatim",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: resolver matches approved funnel",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Recommendations: no selectedReasoning (fallback path)",
+          "ok": true,
+          "detail": "",
+          "fallback": true
+        },
+        {
+          "name": "Budget Planner: allocation reasoning preserved",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Budget Planner: director rationale surfaced",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: activation weeks count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: first week objective from approved data",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Creator Mix: resolver matches approved tiers",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "KPI Forecast: resolver uses kpiReasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Risk Analysis: director risks preserved in resolver",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: minutes preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: resolver maps minutes to insights",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        }
+      ]
+    },
+    {
+      "fixture": "loreal",
+      "label": "L'Oréal",
+      "checks": [
+        {
+          "name": "Executive Strategy: reasoning preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver uses approved reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Executive Strategy: resolver fields match reasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: funnel stage count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: IS-2 funnel ids verbatim",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Discovery: resolver matches approved funnel",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Vendor Recommendations: no selectedReasoning (fallback path)",
+          "ok": true,
+          "detail": "",
+          "fallback": true
+        },
+        {
+          "name": "Budget Planner: allocation reasoning preserved",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Budget Planner: director rationale surfaced",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: activation weeks count",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Timeline: first week objective from approved data",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Creator Mix: resolver matches approved tiers",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "KPI Forecast: resolver uses kpiReasoning",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Risk Analysis: director risks preserved in resolver",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: minutes preserved after enrich",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        },
+        {
+          "name": "Decision Rationale: resolver maps minutes to insights",
+          "ok": true,
+          "detail": "",
+          "fallback": false
+        }
+      ]
+    }
+  ]
+}

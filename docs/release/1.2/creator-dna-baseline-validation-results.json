@@ -1,0 +1,220 @@
+{
+  "timestamp": "2026-07-08T02:52:22.335Z",
+  "phase": "creator-dna-baseline",
+  "sprintComplete": true,
+  "passed": 19,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "Phase 2 coverage report exists",
+      "ok": true,
+      "detail": "docs/release/1.2/creator-dna-baseline-coverage-report.json"
+    },
+    {
+      "name": "Coverage report is valid JSON",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Every creator has one DNA document",
+      "ok": true,
+      "detail": "creators=5121 dna=5121 missing=0"
+    },
+    {
+      "name": "Average completeness reported",
+      "ok": true,
+      "detail": "average=32.3"
+    },
+    {
+      "name": "Completeness distribution present",
+      "ok": true,
+      "detail": "0-20, 21-40, 41-60, 61-80, 81-100"
+    },
+    {
+      "name": "Platform breakdown present",
+      "ok": true,
+      "detail": "platforms=3"
+    },
+    {
+      "name": "Top missing fields reported",
+      "ok": true,
+      "detail": "fields=20"
+    },
+    {
+      "name": "Backfill created vs merged counts recorded",
+      "ok": true,
+      "detail": "created=5113 merged=2"
+    },
+    {
+      "name": "Checkpoint cleared after successful backfill",
+      "ok": true,
+      "detail": "docs/release/1.2/creator-dna-baseline-checkpoint.json"
+    },
+    {
+      "name": "No Apify calls in features/creator-dna/services/baseline-dna-mapper.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No Apify calls in features/creator-dna/services/baseline-dna-populator.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "No Apify calls in scripts/backfill-creator-dna-baseline.ts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "mergeEvidence is sole canonical write path",
+      "ok": true,
+      "detail": "baseline → mergeEvidence"
+    },
+    {
+      "name": "updateField delegates to mergeEvidence",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Mandatory baseline hooks present",
+      "ok": true,
+      "detail": "requireCreatorBaselineDna / ensureCreatorBaselineDna"
+    },
+    {
+      "name": "Lifecycle + sources metadata types",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "lastIntelligenceUpdate metadata",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dna-lifecycle unit tests",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dna-merge-engine never-downgrade tests",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "coverageReport": {
+    "generatedAt": "2026-07-06T00:23:59.084Z",
+    "phase": "creator-dna-baseline-coverage",
+    "totals": {
+      "creators": 5121,
+      "dnaDocuments": 5121,
+      "missingDna": 0,
+      "averageCompleteness": 32.3,
+      "createdDuringBackfill": 5113,
+      "mergedDuringBackfill": 2,
+      "skippedDuringBackfill": 1,
+      "errorsDuringBackfill": 5
+    },
+    "completenessDistribution": {
+      "0-20": 368,
+      "21-40": 4701,
+      "41-60": 52,
+      "61-80": 0,
+      "81-100": 0
+    },
+    "platformBreakdown": {
+      "instagram": 5116,
+      "tiktok": 3,
+      "unknown": 2
+    },
+    "topMissingFields": [
+      {
+        "field": "audience.cities",
+        "count": 5121
+      },
+      {
+        "field": "scores.aiCategory",
+        "count": 5121
+      },
+      {
+        "field": "scores.aiNiche",
+        "count": 5121
+      },
+      {
+        "field": "commercial.typicalDeliverables",
+        "count": 5121
+      },
+      {
+        "field": "commercial.campaignFrequency",
+        "count": 5121
+      },
+      {
+        "field": "commercial.responseSpeed",
+        "count": 5121
+      },
+      {
+        "field": "commercial.historicalBrandCategories",
+        "count": 5121
+      },
+      {
+        "field": "scores.authenticityScore",
+        "count": 5121
+      },
+      {
+        "field": "brandSafety.engagementQuality",
+        "count": 5121
+      },
+      {
+        "field": "brandSafety.fakeFollowers",
+        "count": 5121
+      },
+      {
+        "field": "brandSafety.verificationLevel",
+        "count": 5121
+      },
+      {
+        "field": "historicalPerformance.avgCampaignRoi",
+        "count": 5121
+      },
+      {
+        "field": "historicalPerformance.repeatBrandRate",
+        "count": 5121
+      },
+      {
+        "field": "historicalPerformance.onTimeDeliveryRate",
+        "count": 5121
+      },
+      {
+        "field": "historicalPerformance.avgEngagementTrend",
+        "count": 5121
+      },
+      {
+        "field": "audience.languages",
+        "count": 5117
+      },
+      {
+        "field": "commercial.estimatedRate",
+        "count": 5116
+      },
+      {
+        "field": "historicalPerformance.campaignsCompleted",
+        "count": 5116
+      },
+      {
+        "field": "audience.hashtags",
+        "count": 5087
+      },
+      {
+        "field": "audience.mentions",
+        "count": 5080
+      }
+    ],
+    "lifecycleBreakdown": {
+      "ENRICHED": 2,
+      "BASELINE": 5114,
+      "ACTIVE": 5
+    },
+    "sourceHistoryBreakdown": {
+      "baseline_import": 5121
+    }
+  }
+}

@@ -1,0 +1,221 @@
+{
+  "timestamp": "2026-07-05T03:41:44.329Z",
+  "release": "1.2",
+  "phase": "database-first-discovery",
+  "mode": "validation-will-test-not-pass",
+  "passed": 34,
+  "failed": 0,
+  "warnings": 0,
+  "checks": [
+    {
+      "name": "evaluateDiscoveryCoverage module",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "coverage audit writer",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "unified ranking module",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "Apify import DNA pipeline",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "coverage backfill enqueue",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "migration discovery_coverage_decisions",
+      "ok": true,
+      "detail": "20260705100000_discovery_coverage_decisions.sql",
+      "severity": "error"
+    },
+    {
+      "name": "unified-browse coverage hook",
+      "ok": true,
+      "detail": "wired",
+      "severity": "error"
+    },
+    {
+      "name": "progressive search coverage gate",
+      "ok": true,
+      "detail": "wired",
+      "severity": "error"
+    },
+    {
+      "name": "discovery browse coverage orchestrator",
+      "ok": true,
+      "detail": "wired",
+      "severity": "error"
+    },
+    {
+      "name": "coverage backfill orchestrator",
+      "ok": true,
+      "detail": "wired",
+      "severity": "error"
+    },
+    {
+      "name": "Apify gated to insufficient only",
+      "ok": true,
+      "detail": "guard present",
+      "severity": "error"
+    },
+    {
+      "name": "Apify import dedupe checks",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "migration column search_id",
+      "ok": true,
+      "detail": "search_id",
+      "severity": "error"
+    },
+    {
+      "name": "migration column timestamp",
+      "ok": true,
+      "detail": "timestamp",
+      "severity": "error"
+    },
+    {
+      "name": "migration column search_query",
+      "ok": true,
+      "detail": "search_query",
+      "severity": "error"
+    },
+    {
+      "name": "migration column coverage_score",
+      "ok": true,
+      "detail": "coverage_score",
+      "severity": "error"
+    },
+    {
+      "name": "migration column coverage_level",
+      "ok": true,
+      "detail": "coverage_level",
+      "severity": "error"
+    },
+    {
+      "name": "migration column database_creators_count",
+      "ok": true,
+      "detail": "database_creators_count",
+      "severity": "error"
+    },
+    {
+      "name": "migration column apify_executed",
+      "ok": true,
+      "detail": "apify_executed",
+      "severity": "error"
+    },
+    {
+      "name": "migration column reason",
+      "ok": true,
+      "detail": "reason",
+      "severity": "error"
+    },
+    {
+      "name": "migration column duration_ms",
+      "ok": true,
+      "detail": "duration_ms",
+      "severity": "error"
+    },
+    {
+      "name": "fixture registered: BabyJoy",
+      "ok": true,
+      "detail": "BabyJoy parenting baby care Egypt mothers — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Coca-Cola",
+      "ok": true,
+      "detail": "Coca-Cola Gen Z beverage campaign UAE — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Samsung",
+      "ok": true,
+      "detail": "Samsung tech multi-platform creators KSA — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: L'Oréal",
+      "ok": true,
+      "detail": "Loreal beauty skincare influencers Egypt — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Visit Egypt",
+      "ok": true,
+      "detail": "Visit Egypt tourism travel creators Egypt — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Netflix",
+      "ok": true,
+      "detail": "Netflix entertainment streaming niche creators — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Talabat",
+      "ok": true,
+      "detail": "Talabat food delivery UAE creators — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Adidas",
+      "ok": true,
+      "detail": "Adidas sports fitness running UAE — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Red Bull",
+      "ok": true,
+      "detail": "Red Bull extreme sports adventure creators — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Emirates NBD",
+      "ok": true,
+      "detail": "Emirates NBD finance banking UAE — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "coverage evaluates count + country + category",
+      "ok": true,
+      "detail": "composite signals present in evaluator",
+      "severity": "error"
+    },
+    {
+      "name": "coverage levels include insufficient",
+      "ok": true,
+      "detail": "insufficient level defined",
+      "severity": "error"
+    },
+    {
+      "name": "coverage threshold env configurable",
+      "ok": true,
+      "detail": "threshold env present",
+      "severity": "error"
+    }
+  ],
+  "gaps": [
+    "Live Supabase integration not executed in this script",
+    "Apify actors not invoked in CI — enqueue-only verification",
+    "creator_dna row hydration in browse still uses proxy fields",
+    "search_intent_log table not implemented"
+  ]
+}

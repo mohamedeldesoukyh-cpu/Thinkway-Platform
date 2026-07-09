@@ -121,6 +121,8 @@ export type CreatorsSectionData = {
   vendorDecisions?: Record<string, "approved" | "rejected" | "shortlisted">;
   /** Discovery shortlist linked when user shortlists recommendations. */
   linkedShortlistId?: string;
+  /** Legacy Studio grounding payload stripped on creator re-runs. */
+  vendorGrounding?: GroundedVendor[];
 };
 
 export type ExecutiveStrategyReasoning = {

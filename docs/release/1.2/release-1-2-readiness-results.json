@@ -1,0 +1,461 @@
+{
+  "timestamp": "2026-07-05T02:38:38.531Z",
+  "release": "1.2",
+  "mode": "readiness-audit",
+  "note": "Structural checks only. Does not claim fixture PASS.",
+  "totals": {
+    "passed": 50,
+    "failed": 0,
+    "warnings": 1,
+    "checks": 51
+  },
+  "fixtures": [
+    {
+      "id": "babyjoy",
+      "label": "BabyJoy",
+      "phases": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "cocacola",
+      "label": "Coca-Cola",
+      "phases": [
+        3,
+        5
+      ]
+    },
+    {
+      "id": "samsung",
+      "label": "Samsung",
+      "phases": [
+        4,
+        6
+      ]
+    },
+    {
+      "id": "loreal",
+      "label": "L'Oréal",
+      "phases": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "visit_egypt",
+      "label": "Visit Egypt",
+      "phases": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "netflix",
+      "label": "Netflix",
+      "phases": [
+        3,
+        7
+      ]
+    },
+    {
+      "id": "talabat",
+      "label": "Talabat",
+      "phases": [
+        1,
+        5
+      ]
+    },
+    {
+      "id": "adidas",
+      "label": "Adidas",
+      "phases": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "red_bull",
+      "label": "Red Bull",
+      "phases": [
+        4,
+        6
+      ]
+    },
+    {
+      "id": "emirates_nbd",
+      "label": "Emirates NBD",
+      "phases": [
+        2,
+        5,
+        7
+      ]
+    }
+  ],
+  "tableCounts": {
+    "existsOperationalDiscoveryIplDna": 28,
+    "proposedNew": 7
+  },
+  "recommendedPhase1Start": "Implement evaluateDiscoveryCoverage() + discovery_coverage_decisions in lib/creators/unified-browse.ts; wire Apify backfill enqueue in discovery-worker.",
+  "checks": [
+    {
+      "category": "docs",
+      "name": "RELEASE_1_2_ARCHITECTURE.md",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "category": "docs",
+      "name": "DATABASE_FIRST_DISCOVERY.md",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "category": "docs",
+      "name": "CREATOR_DNA_SPECIFICATION.md",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "category": "docs",
+      "name": "SEARCH_ENGINE_SPECIFICATION.md",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "category": "docs",
+      "name": "CAMPAIGN_LEARNING_SPECIFICATION.md",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "Unified browse SSOT",
+      "ok": true,
+      "detail": "lib/creators/unified-browse.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "Creator dedupe module",
+      "ok": true,
+      "detail": "lib/creators/dedupe-creators.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "FTS search / search_creators RPC client",
+      "ok": true,
+      "detail": "lib/creators/fts-search.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "Campaign NL intent parser",
+      "ok": true,
+      "detail": "features/ai/tools/campaign-search-intent.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "Progressive DB search",
+      "ok": true,
+      "detail": "features/ai/tools/progressive-creator-search.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "Creator DNA types",
+      "ok": true,
+      "detail": "features/creator-dna/types/index.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "DNA conflict resolver",
+      "ok": true,
+      "detail": "features/creator-dna/services/conflict-resolver.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "DNA writer (IPL bridge)",
+      "ok": true,
+      "detail": "features/creator-dna/writers/creator-dna-writer.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "Apify enrichment service",
+      "ok": true,
+      "detail": "lib/creator-enrichment/service.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "IPL entry point",
+      "ok": true,
+      "detail": "lib/intelligence-persistence/index.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "Apify IPL adapter",
+      "ok": true,
+      "detail": "lib/intelligence-persistence/adapters/apify-adapter.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "ERS-1 validator",
+      "ok": true,
+      "detail": "features/ai-workflows/validate-creator-integrity.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "ERS-4 DNA validator",
+      "ok": true,
+      "detail": "features/creator-dna/validate-ers4-creator-dna.ts",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "Creator DNA migration",
+      "ok": true,
+      "detail": "supabase/migrations/20260704120000_creator_dna.sql",
+      "severity": "error"
+    },
+    {
+      "category": "modules",
+      "name": "IPL migration",
+      "ok": true,
+      "detail": "supabase/migrations/20260703150000_intelligence_persistence_layer.sql",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "creator_dna in 20260704120000_creator_dna.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "creator_dna_staging in 20260704120000_creator_dna.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "creator_dna_versions in 20260704120000_creator_dna.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "creator_dna_lineage_events in 20260704120000_creator_dna.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "ipl_snapshots in 20260703150000_intelligence_persistence_layer.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "ipl_provider_runs in 20260703150000_intelligence_persistence_layer.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "ipl_refresh_policies in 20260703150000_intelligence_persistence_layer.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "discovered_profiles in 20260611015000_discovery_engine.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "migrations",
+      "name": "profile_metrics in 20260611015000_discovery_engine.sql",
+      "ok": true,
+      "detail": "defined",
+      "severity": "error"
+    },
+    {
+      "category": "db-first",
+      "name": "unified-browse uses FTS + dedupe",
+      "ok": true,
+      "detail": "hooks present",
+      "severity": "error"
+    },
+    {
+      "category": "db-first",
+      "name": "progressive search calls browseUnifiedCreators",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "category": "db-first",
+      "name": "evaluateDiscoveryCoverage module",
+      "ok": false,
+      "detail": "NOT IMPLEMENTED — Phase 1 gap (expected)",
+      "severity": "warn"
+    },
+    {
+      "category": "dna",
+      "name": "Conflict resolver with source priority",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "category": "planned-new",
+      "name": "client_profiles migration",
+      "ok": true,
+      "detail": "not yet migrated (expected for pre-implementation)",
+      "severity": "warn"
+    },
+    {
+      "category": "planned-new",
+      "name": "client_profile_versions migration",
+      "ok": true,
+      "detail": "not yet migrated (expected for pre-implementation)",
+      "severity": "warn"
+    },
+    {
+      "category": "planned-new",
+      "name": "campaign_learning migration",
+      "ok": true,
+      "detail": "not yet migrated (expected for pre-implementation)",
+      "severity": "warn"
+    },
+    {
+      "category": "planned-new",
+      "name": "campaign_learning_creator_outcomes migration",
+      "ok": true,
+      "detail": "not yet migrated (expected for pre-implementation)",
+      "severity": "warn"
+    },
+    {
+      "category": "planned-new",
+      "name": "influencer_metrics_history migration",
+      "ok": true,
+      "detail": "not yet migrated (expected for pre-implementation)",
+      "severity": "warn"
+    },
+    {
+      "category": "planned-new",
+      "name": "discovery_coverage_decisions migration",
+      "ok": true,
+      "detail": "not yet migrated (expected for pre-implementation)",
+      "severity": "warn"
+    },
+    {
+      "category": "planned-new",
+      "name": "search_intent_log migration",
+      "ok": true,
+      "detail": "not yet migrated (expected for pre-implementation)",
+      "severity": "warn"
+    },
+    {
+      "category": "learning",
+      "name": "Internal historical metrics placeholder documented",
+      "ok": true,
+      "detail": "gap documented in code",
+      "severity": "error"
+    },
+    {
+      "category": "fixtures",
+      "name": "BabyJoy registered for validation",
+      "ok": true,
+      "detail": "phases: 1, 2, 3 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "Coca-Cola registered for validation",
+      "ok": true,
+      "detail": "phases: 3, 5 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "Samsung registered for validation",
+      "ok": true,
+      "detail": "phases: 4, 6 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "L'Oréal registered for validation",
+      "ok": true,
+      "detail": "phases: 2, 3 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "Visit Egypt registered for validation",
+      "ok": true,
+      "detail": "phases: 1, 3 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "Netflix registered for validation",
+      "ok": true,
+      "detail": "phases: 3, 7 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "Talabat registered for validation",
+      "ok": true,
+      "detail": "phases: 1, 5 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "Adidas registered for validation",
+      "ok": true,
+      "detail": "phases: 1, 2, 3 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "Red Bull registered for validation",
+      "ok": true,
+      "detail": "phases: 4, 6 — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "category": "fixtures",
+      "name": "Emirates NBD registered for validation",
+      "ok": true,
+      "detail": "phases: 2, 5, 7 — WILL TEST (not PASS)",
+      "severity": "warn"
+    }
+  ]
+}

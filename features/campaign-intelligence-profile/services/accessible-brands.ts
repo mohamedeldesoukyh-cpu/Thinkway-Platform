@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { BrandSelectRow } from "./build-brand-link-dialog-options";
 
-const BRAND_SELECT_LIMIT = 10_000;
+export const BRAND_SELECT_LIMIT = 10_000;
 
 /** All active brands the user can access — no client scoping, explicit high limit. */
 export async function loadAccessibleBrandSelectRows(

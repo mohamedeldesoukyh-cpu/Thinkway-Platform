@@ -54,6 +54,7 @@ export type UnifiedCreatorPlatform = {
   contact_links?: string[];
   /** Last metrics sync provider (e.g. apify, discovery_add). */
   sync_source?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 export type CreatorRecentPublication = {

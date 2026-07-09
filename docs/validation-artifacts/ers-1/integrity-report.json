@@ -1,0 +1,265 @@
+{
+  "reports": [
+    {
+      "id": "travel-egypt-offline",
+      "label": "Find travel creators in Egypt (offline pipeline)",
+      "query": "Find travel creators in Egypt",
+      "stages": [
+        {
+          "stage": "normalizeCreators",
+          "before": 5,
+          "after": 3,
+          "duplicatesRemoved": 2
+        },
+        {
+          "stage": "workflowSearchResults",
+          "before": 5,
+          "after": 3,
+          "duplicatesRemoved": 2
+        },
+        {
+          "stage": "rankingInput",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingOutput",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectDiscovery",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectRecommendations",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "uiHydration",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        }
+      ],
+      "violations": [],
+      "searchExecutedCount": 1,
+      "passed": true,
+      "liveDb": false
+    },
+    {
+      "id": "babyjoy-offline",
+      "label": "BabyJoy campaign (offline pipeline)",
+      "query": "Create BabyJoy baby care campaign in Egypt for new parents",
+      "stages": [
+        {
+          "stage": "normalizeCreators",
+          "before": 5,
+          "after": 3,
+          "duplicatesRemoved": 2
+        },
+        {
+          "stage": "workflowSearchResults",
+          "before": 5,
+          "after": 3,
+          "duplicatesRemoved": 2
+        },
+        {
+          "stage": "rankingInput",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingOutput",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectDiscovery",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectRecommendations",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "uiHydration",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        }
+      ],
+      "violations": [],
+      "searchExecutedCount": 1,
+      "passed": true,
+      "liveDb": false
+    },
+    {
+      "id": "luxury-hotel-offline",
+      "label": "Luxury hotel campaign (offline pipeline)",
+      "query": "Find luxury hotel creators in Egypt for a 5-star resort campaign",
+      "stages": [
+        {
+          "stage": "normalizeCreators",
+          "before": 5,
+          "after": 3,
+          "duplicatesRemoved": 2
+        },
+        {
+          "stage": "workflowSearchResults",
+          "before": 5,
+          "after": 3,
+          "duplicatesRemoved": 2
+        },
+        {
+          "stage": "rankingInput",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingOutput",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectDiscovery",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectRecommendations",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "uiHydration",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        }
+      ],
+      "violations": [],
+      "searchExecutedCount": 1,
+      "passed": true,
+      "liveDb": false
+    },
+    {
+      "id": "fashion-offline",
+      "label": "Fashion campaign (offline pipeline)",
+      "query": "Find fashion creators in UAE for a luxury brand campaign",
+      "stages": [
+        {
+          "stage": "normalizeCreators",
+          "before": 5,
+          "after": 3,
+          "duplicatesRemoved": 2
+        },
+        {
+          "stage": "workflowSearchResults",
+          "before": 5,
+          "after": 3,
+          "duplicatesRemoved": 2
+        },
+        {
+          "stage": "rankingInput",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingOutput",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectDiscovery",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectRecommendations",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "uiHydration",
+          "before": 3,
+          "after": 3,
+          "duplicatesRemoved": 0
+        }
+      ],
+      "violations": [],
+      "searchExecutedCount": 1,
+      "passed": true,
+      "liveDb": false
+    },
+    {
+      "id": "travel-egypt-live",
+      "label": "Find travel creators in Egypt (live DB)",
+      "query": "Find travel creators in Egypt",
+      "stages": [],
+      "violations": [
+        "[runtime] TypeError: fetch failed"
+      ],
+      "searchExecutedCount": 0,
+      "passed": false,
+      "liveDb": true
+    },
+    {
+      "id": "babyjoy-live",
+      "label": "BabyJoy campaign (live DB)",
+      "query": "Create BabyJoy baby care campaign in Egypt for new parents",
+      "stages": [],
+      "violations": [
+        "[runtime] TypeError: fetch failed"
+      ],
+      "searchExecutedCount": 0,
+      "passed": false,
+      "liveDb": true
+    },
+    {
+      "id": "luxury-hotel-live",
+      "label": "Luxury hotel campaign (live DB)",
+      "query": "Find luxury hotel creators in Egypt for a 5-star resort campaign",
+      "stages": [],
+      "violations": [
+        "[runtime] TypeError: fetch failed"
+      ],
+      "searchExecutedCount": 0,
+      "passed": false,
+      "liveDb": true
+    },
+    {
+      "id": "fashion-live",
+      "label": "Fashion campaign (live DB)",
+      "query": "Find fashion creators in UAE for a luxury brand campaign",
+      "stages": [],
+      "violations": [
+        "[runtime] TypeError: fetch failed"
+      ],
+      "searchExecutedCount": 0,
+      "passed": false,
+      "liveDb": true
+    }
+  ],
+  "generatedAt": "2026-07-04T01:26:25.237Z"
+}

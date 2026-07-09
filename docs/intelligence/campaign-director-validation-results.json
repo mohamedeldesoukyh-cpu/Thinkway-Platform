@@ -1,0 +1,272 @@
+{
+  "generatedAt": "2026-07-04T20:16:27.409Z",
+  "totalPassed": 54,
+  "totalFailed": 0,
+  "success": true,
+  "results": [
+    {
+      "fixture": "babyjoy",
+      "label": "BabyJoy",
+      "checks": [
+        {
+          "name": "Campaign facts layer present (factsRef)",
+          "pass": true
+        },
+        {
+          "name": "Strategy fields sourced from facts",
+          "pass": true,
+          "detail": "fields=clientName, brandName, industry, campaignType, objective, budget, durationWeeks, geography, audience, platforms, kpis, constraints, risks"
+        },
+        {
+          "name": "Strategy document exists",
+          "pass": true,
+          "detail": 1267
+        },
+        {
+          "name": "Strategy has brand",
+          "pass": true
+        },
+        {
+          "name": "Strategy has objective",
+          "pass": true
+        },
+        {
+          "name": "Strategy has KPIs with why",
+          "pass": true
+        },
+        {
+          "name": "Strategy has creator tier why",
+          "pass": true
+        },
+        {
+          "name": "Workflow facts accessor pattern",
+          "pass": true
+        },
+        {
+          "name": "Specialists have why fields",
+          "pass": true
+        },
+        {
+          "name": "Cross-review ran",
+          "pass": true
+        },
+        {
+          "name": "Conflicts detected and resolved",
+          "pass": true
+        },
+        {
+          "name": "Approval gate passed",
+          "pass": true
+        },
+        {
+          "name": "Approved sections generated",
+          "pass": true
+        },
+        {
+          "name": "Director review report generated",
+          "pass": true
+        },
+        {
+          "name": "Review report has conversation log",
+          "pass": true,
+          "detail": "turns=9"
+        },
+        {
+          "name": "Review rounds > 0 when conflicts found",
+          "pass": true,
+          "detail": "rounds=1"
+        },
+        {
+          "name": "Revisions exist when conflicts found",
+          "pass": true,
+          "detail": "revised=2"
+        },
+        {
+          "name": "Revision records have all 4 fields",
+          "pass": true
+        },
+        {
+          "name": "Final sections differ from initial when revised",
+          "pass": true
+        },
+        {
+          "name": "Director approval turn in conversation",
+          "pass": true
+        },
+        {
+          "name": "Budget totals 100%",
+          "pass": true,
+          "detail": "sum=100"
+        },
+        {
+          "name": "Client timeline only (no internal phases)",
+          "pass": true
+        },
+        {
+          "name": "Client-facing phases present",
+          "pass": true
+        },
+        {
+          "name": "Every approved section has rationale",
+          "pass": true
+        },
+        {
+          "name": "CampaignObject meta.campaignFacts stored",
+          "pass": true
+        },
+        {
+          "name": "CampaignObject sections = approved only",
+          "pass": true
+        },
+        {
+          "name": "Review report stored in meta.directorPipeline",
+          "pass": true
+        }
+      ],
+      "pipeline": {
+        "strategyDocumentId": "strategy_1783196187379",
+        "specialistCount": 8,
+        "crossReviewCount": 4,
+        "challengeCount": 0,
+        "revisionRounds": 1,
+        "approved": true,
+        "approvedSectionCount": 9,
+        "budgetPercentSum": 100,
+        "reviewReportTurns": 9,
+        "specialistsRevised": 2
+      }
+    },
+    {
+      "fixture": "cocacola",
+      "label": "Coca-Cola",
+      "checks": [
+        {
+          "name": "Campaign facts layer present (factsRef)",
+          "pass": true
+        },
+        {
+          "name": "Strategy fields sourced from facts",
+          "pass": true,
+          "detail": "fields=clientName, brandName, industry, campaignType, objective, budget, durationWeeks, geography, audience, platforms, kpis"
+        },
+        {
+          "name": "Strategy document exists",
+          "pass": true,
+          "detail": 1217
+        },
+        {
+          "name": "Strategy has brand",
+          "pass": true
+        },
+        {
+          "name": "Strategy has objective",
+          "pass": true
+        },
+        {
+          "name": "Strategy has KPIs with why",
+          "pass": true
+        },
+        {
+          "name": "Strategy has creator tier why",
+          "pass": true
+        },
+        {
+          "name": "Workflow facts accessor pattern",
+          "pass": true
+        },
+        {
+          "name": "Specialists have why fields",
+          "pass": true
+        },
+        {
+          "name": "Cross-review ran",
+          "pass": true
+        },
+        {
+          "name": "Conflicts detected and resolved",
+          "pass": true
+        },
+        {
+          "name": "Approval gate passed",
+          "pass": true
+        },
+        {
+          "name": "Approved sections generated",
+          "pass": true
+        },
+        {
+          "name": "Director review report generated",
+          "pass": true
+        },
+        {
+          "name": "Review report has conversation log",
+          "pass": true,
+          "detail": "turns=4"
+        },
+        {
+          "name": "Review rounds > 0 when conflicts found",
+          "pass": true,
+          "detail": "rounds=1"
+        },
+        {
+          "name": "Revisions exist when conflicts found",
+          "pass": true,
+          "detail": "revised=1"
+        },
+        {
+          "name": "Revision records have all 4 fields",
+          "pass": true
+        },
+        {
+          "name": "Final sections differ from initial when revised",
+          "pass": true
+        },
+        {
+          "name": "Director approval turn in conversation",
+          "pass": true
+        },
+        {
+          "name": "Budget totals 100%",
+          "pass": true,
+          "detail": "sum=100"
+        },
+        {
+          "name": "Client timeline only (no internal phases)",
+          "pass": true
+        },
+        {
+          "name": "Client-facing phases present",
+          "pass": true
+        },
+        {
+          "name": "Every approved section has rationale",
+          "pass": true
+        },
+        {
+          "name": "CampaignObject meta.campaignFacts stored",
+          "pass": true
+        },
+        {
+          "name": "CampaignObject sections = approved only",
+          "pass": true
+        },
+        {
+          "name": "Review report stored in meta.directorPipeline",
+          "pass": true
+        }
+      ],
+      "pipeline": {
+        "strategyDocumentId": "strategy_1783196187406",
+        "specialistCount": 8,
+        "crossReviewCount": 2,
+        "challengeCount": 0,
+        "revisionRounds": 1,
+        "approved": true,
+        "approvedSectionCount": 9,
+        "budgetPercentSum": 100,
+        "reviewReportTurns": 4,
+        "specialistsRevised": 1
+      }
+    }
+  ]
+}

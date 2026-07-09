@@ -1,0 +1,903 @@
+{
+  "auditDate": "2026-07-04",
+  "scope": "Nine factual fields: Budget, Currency, Duration, Brand, Client, Campaign Objective, Creator Mix, Timeline, KPIs",
+  "totalBypassLocations": 91,
+  "generationPathCompliancePercent": 40,
+  "displayPathCompliancePercent": 0,
+  "executiveFinding": "meta.campaignFacts is write-only in the display pipeline. Zero reads in features/campaign-studio/.",
+  "metaCampaignFactsReadLocations": {
+    "displayPipeline": [],
+    "generationPipeline": [
+      {
+        "file": "features/campaign-director/integrations/workflow-integration.ts",
+        "function": "applyDirectorPipelineToCampaignObject",
+        "lines": "106-108",
+        "note": "Reads existing meta.campaignFacts only to re-store; not for UI binding"
+      },
+      {
+        "file": "features/campaign-director/services/budget-rules.ts",
+        "function": "buildDirectorBudgetFromStrategy",
+        "note": "Reads campaignFacts?.budget for generation"
+      },
+      {
+        "file": "features/campaign-director/services/campaign-director.ts",
+        "function": "getCampaignFactsFromWorkflowData",
+        "note": "Director pipeline only"
+      },
+      {
+        "file": "features/campaign-director/services/specialist-dispatch.ts",
+        "function": "formatCampaignFactsForSpecialist",
+        "note": "Specialist prompts only"
+      }
+    ]
+  },
+  "metaCampaignFactsWriteLocations": [
+    {
+      "file": "features/campaign-director/integrations/workflow-integration.ts",
+      "function": "applyDirectorPipelineToCampaignObject",
+      "lines": "115,131"
+    },
+    {
+      "file": "features/ai-workflows/engine/workflow-engine.ts",
+      "function": "runWorkflow (create-campaign init)",
+      "lines": "207"
+    }
+  ],
+  "topCriticalBypasses": [
+    {
+      "rank": 1,
+      "id": "meta-campaignFacts-orphan",
+      "description": "meta.campaignFacts write-only in display pipeline",
+      "impact": "Facts stored but never bound to UI"
+    },
+    {
+      "rank": 2,
+      "id": "buildSummarySectionData-reparse",
+      "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+      "function": "buildSummarySectionData",
+      "lines": "101-145",
+      "impact": "Campaign Summary cards re-parse LLM text"
+    },
+    {
+      "rank": 3,
+      "id": "hardcoded-brand-list",
+      "files": [
+        "features/campaign-studio/components/sections/shared/format-utils.ts:parseBrandFromText",
+        "features/campaign-studio/services/industry-intelligence.ts:resolveClientFromBrief"
+      ],
+      "impact": "Pepsi on Coca-Cola — first regex match wins"
+    },
+    {
+      "rank": 4,
+      "id": "continuation-state-overwrite",
+      "file": "features/ai-workflows/engine/continuation.ts",
+      "function": "mergeTaskResultIntoState",
+      "lines": "297-316",
+      "impact": "LLM overwrites facts-derived budgetTotal, currency, brandName"
+    },
+    {
+      "rank": 5,
+      "id": "getGroundedKpis-ignores-facts",
+      "file": "features/campaign-studio/services/industry-intelligence.ts",
+      "function": "getGroundedKpis",
+      "lines": "662-738",
+      "impact": "Industry template KPIs with fabricated historical campaign counts"
+    }
+  ],
+  "classificationLegend": {
+    "1": "Reads CampaignFacts directly",
+    "2": "Re-parses raw prompt / section text",
+    "3": "Uses legacy resolver (pre-facts pipeline)",
+    "4": "Uses fallback / hardcoded defaults",
+    "5": "Uses generated text / LLM output without facts binding"
+  },
+  "fields": {
+    "budget": {
+      "bypassCount": 13,
+      "migrationStatus": "PARTIAL",
+      "currentDisplaySource": "buildBudgetSectionData from LLM estimate-budget text + state.data.budgetTotal",
+      "targetSource": "meta.campaignFacts.budget",
+      "findings": [
+        {
+          "file": "features/campaign-director/facts/extract-campaign-facts.ts",
+          "function": "extractCampaignFacts",
+          "lines": "183",
+          "classification": [2],
+          "note": "parseBudgetTotalFromText at SSOT origin — not display bypass but shared parser"
+        },
+        {
+          "file": "features/campaign-director/services/strategy-document.ts",
+          "function": "writeStrategyDocumentFromBrief",
+          "classification": [1],
+          "note": "Generation compliant — reads facts.budget"
+        },
+        {
+          "file": "features/campaign-director/services/budget-rules.ts",
+          "function": "buildDirectorBudgetFromStrategy",
+          "classification": [1],
+          "note": "Generation compliant — reads campaignFacts?.budget"
+        },
+        {
+          "file": "features/ai-workflows/engine/workflow-engine.ts",
+          "function": "runWorkflow",
+          "lines": "215-218",
+          "classification": [1],
+          "note": "Seeds state.data.budgetTotal from facts — overwritten later"
+        },
+        {
+          "file": "features/ai-workflows/engine/continuation.ts",
+          "function": "mergeTaskResultIntoState",
+          "lines": "308-316",
+          "classification": [2, 5],
+          "note": "parseBudgetAmount from estimate-budget LLM overwrites facts-derived budgetTotal"
+        },
+        {
+          "file": "features/campaign-intelligence/services/structured-section-builders.ts",
+          "function": "buildBudgetSectionData",
+          "lines": "63-127",
+          "classification": [2, 3, 5],
+          "note": "parseBudgetAmount and detectCurrencyFromText from LLM content"
+        },
+        {
+          "file": "features/campaign-intelligence/services/section-updaters.ts",
+          "function": "deriveSectionUpdatesFromTask",
+          "lines": "191,207",
+          "classification": [5],
+          "note": "LLM estimate-budget content → buildBudgetSectionData"
+        },
+        {
+          "file": "features/campaign-intelligence/services/section-updaters.ts",
+          "function": "applySummarySectionsToCampaignObject",
+          "lines": "497,514",
+          "classification": [2, 3],
+          "note": "buildBudgetSectionData(summary.content, {}) with empty stateData"
+        },
+        {
+          "file": "features/campaign-director/integrations/section-builder-integration.ts",
+          "function": "applyDirectorBudgetRules",
+          "lines": "38-52",
+          "classification": [3],
+          "note": "buildDirectorBudgetFromStrategy(strategy, briefText) without campaignFacts param"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildSummarySectionData",
+          "lines": "131-138",
+          "classification": [2],
+          "note": "parseBudgetTotalFromText(combined) for summary budget card"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildBudgetSectionExtras",
+          "lines": "183",
+          "classification": [2],
+          "note": "parseBudgetTotalFromText(contextText) fallback"
+        },
+        {
+          "file": "features/campaign-studio/services/section-data-resolver.ts",
+          "function": "resolveBudgetData",
+          "lines": "461+",
+          "classification": [3, 5],
+          "note": "Re-parses section content via buildBudgetSectionData"
+        },
+        {
+          "file": "features/campaign-studio/services/industry-intelligence.ts",
+          "function": "getIndustryKpis",
+          "lines": "205",
+          "classification": [2],
+          "note": "parseBudgetTotalFromText(budgetText) for KPI scaling"
+        }
+      ]
+    },
+    "currency": {
+      "bypassCount": 11,
+      "migrationStatus": "PARTIAL",
+      "currentDisplaySource": "detectCurrencyFromText / resolveCampaignObjectCurrency text cascade",
+      "targetSource": "meta.campaignFacts.budget.currency",
+      "findings": [
+        {
+          "file": "features/campaign-director/facts/extract-campaign-facts.ts",
+          "function": "extractCampaignFacts",
+          "lines": "182",
+          "classification": [2],
+          "note": "detectCurrencyFromSources at origin"
+        },
+        {
+          "file": "features/campaign-director/facts/validate-campaign-facts.ts",
+          "function": "validateCampaignFacts",
+          "classification": [1],
+          "note": "Normalizes currency — generation compliant"
+        },
+        {
+          "file": "features/ai-workflows/engine/workflow-engine.ts",
+          "function": "runWorkflow",
+          "lines": "210-214",
+          "classification": [1],
+          "note": "Seeds state.data.currency from facts"
+        },
+        {
+          "file": "features/ai-workflows/engine/continuation.ts",
+          "function": "mergeTaskResultIntoState",
+          "lines": "302-305",
+          "classification": [2, 5],
+          "note": "analyze-request: detectCurrencyFromText from LLM overwrites facts currency"
+        },
+        {
+          "file": "features/ai-workflows/engine/continuation.ts",
+          "function": "mergeTaskResultIntoState",
+          "lines": "310-314",
+          "classification": [2, 5],
+          "note": "estimate-budget: detectCurrencyFromText from LLM content"
+        },
+        {
+          "file": "features/campaign-intelligence/services/structured-section-builders.ts",
+          "function": "detectCurrencyFromText",
+          "lines": "42-49",
+          "classification": [3, 4],
+          "note": "Duplicate parser with USD default"
+        },
+        {
+          "file": "features/campaign-intelligence/services/structured-section-builders.ts",
+          "function": "buildBudgetSectionData",
+          "lines": "67-73",
+          "classification": [2, 3],
+          "note": "Currency from stateData or detectCurrencyFromText"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/shared/format-utils.ts",
+          "function": "detectCurrencyFromSources",
+          "lines": "82+",
+          "classification": [3],
+          "note": "Used by display builders outside facts layer"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildSummarySectionData",
+          "lines": "136",
+          "classification": [2],
+          "note": "detectCurrencyFromSources(combined) for summary card"
+        },
+        {
+          "file": "features/campaign-studio/services/section-data-resolver.ts",
+          "function": "resolveCampaignObjectCurrency",
+          "lines": "207-223",
+          "classification": [2, 3, 4],
+          "note": "Text cascade with USD fallback — never reads meta.campaignFacts"
+        },
+        {
+          "file": "features/campaign-studio/services/industry-intelligence.ts",
+          "function": "getIndustryKpis",
+          "lines": "206",
+          "classification": [2, 4],
+          "note": "USD default when budget text missing"
+        }
+      ]
+    },
+    "duration": {
+      "bypassCount": 12,
+      "migrationStatus": "PARTIAL",
+      "currentDisplaySource": "resolveCampaignDurationWeeks + parseDurationWeeks on summary/strategy text",
+      "targetSource": "meta.campaignFacts.durationWeeks",
+      "findings": [
+        {
+          "file": "features/campaign-director/facts/extract-campaign-facts.ts",
+          "function": "extractCampaignFacts",
+          "lines": "188-189",
+          "classification": [2],
+          "note": "parseDurationFromText + parseDurationWeeks at origin"
+        },
+        {
+          "file": "features/campaign-director/facts/validate-campaign-facts.ts",
+          "function": "validateCampaignFacts",
+          "classification": [1, 4],
+          "note": "Clamps 1-52; default 6 weeks if missing"
+        },
+        {
+          "file": "features/campaign-director/services/strategy-document.ts",
+          "function": "writeStrategyDocumentFromBrief",
+          "classification": [1],
+          "note": "facts.durationWeeks ?? 6"
+        },
+        {
+          "file": "features/campaign-director/services/timeline-rules.ts",
+          "function": "buildClientTimelineFromStrategy",
+          "classification": [1],
+          "note": "Generation compliant — uses strategy timeline"
+        },
+        {
+          "file": "features/campaign-intelligence/services/structured-section-builders.ts",
+          "function": "buildTimelineSectionData",
+          "lines": "130-173",
+          "classification": [2, 4, 5],
+          "note": "Parses LLM; 4-week default milestones at lines 158-165"
+        },
+        {
+          "file": "features/campaign-intelligence/services/section-updaters.ts",
+          "function": "deriveSectionUpdatesFromTask",
+          "lines": "226,229",
+          "classification": [5],
+          "note": "LLM timeline primary; director rules only when strategy in state"
+        },
+        {
+          "file": "features/campaign-intelligence/services/section-updaters.ts",
+          "function": "applySummarySectionsToCampaignObject",
+          "lines": "529",
+          "classification": [5],
+          "note": "buildTimelineSectionData(summary.content) — no director rules"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildSummarySectionData",
+          "lines": "128",
+          "classification": [2],
+          "note": "parseDurationFromText(combined)"
+        },
+        {
+          "file": "features/campaign-studio/services/timeline-duration.ts",
+          "function": "resolveCampaignDurationWeeks",
+          "lines": "27-46",
+          "classification": [2, 3, 4],
+          "note": "Re-parses summary/strategy text; default 6 weeks"
+        },
+        {
+          "file": "features/campaign-studio/services/presentation-intelligence.ts",
+          "function": "deriveContentPlan",
+          "lines": "445,466,950,1079",
+          "classification": [2, 3],
+          "note": "parseDurationWeeks(combined) in multiple derivations"
+        },
+        {
+          "file": "features/campaign-studio/services/industry-intelligence.ts",
+          "function": "getIndustryProfile",
+          "lines": "170",
+          "classification": [2],
+          "note": "parseDurationFromText scales estimatedReach"
+        },
+        {
+          "file": "features/campaign-studio/services/section-data-resolver.ts",
+          "function": "resolveTimelineData",
+          "lines": "514+",
+          "classification": [3],
+          "note": "Full legacy chain — resolveCampaignDurationWeeks + buildTimelineWeeksForCampaign"
+        }
+      ]
+    },
+    "brand": {
+      "bypassCount": 10,
+      "migrationStatus": "BYPASS",
+      "currentDisplaySource": "parseBrandFromText / SUMMARY_FIELD_PATTERNS on combined LLM text",
+      "targetSource": "meta.campaignFacts.brandName",
+      "findings": [
+        {
+          "file": "features/campaign-director/facts/extract-campaign-facts.ts",
+          "function": "extractBrandName",
+          "lines": "49",
+          "classification": [1, 2],
+          "note": "Workflow brandName override; else parseBrandFromText"
+        },
+        {
+          "file": "features/campaign-director/services/strategy-document.ts",
+          "function": "writeStrategyDocumentFromBrief",
+          "classification": [1],
+          "note": "Generation compliant — facts.brandName"
+        },
+        {
+          "file": "features/ai-workflows/engine/workflow-engine.ts",
+          "function": "runWorkflow",
+          "lines": "208-209",
+          "classification": [1],
+          "note": "Seeds state.data.brandName from facts"
+        },
+        {
+          "file": "features/ai-workflows/engine/continuation.ts",
+          "function": "mergeTaskResultIntoState",
+          "lines": "297-301",
+          "classification": [2, 5],
+          "note": "analyze-request brand regex from LLM overwrites facts brandName"
+        },
+        {
+          "file": "features/ai-workflows/definitions/create-campaign.ts",
+          "function": "extractBrandFromMessage",
+          "lines": "71,179,190",
+          "classification": [2],
+          "note": "Re-parses user message when state.data.brandName missing"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/shared/format-utils.ts",
+          "function": "parseBrandFromText",
+          "lines": "128-131",
+          "classification": [2, 4],
+          "note": "Hardcoded Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi — first match wins"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildSummarySectionData",
+          "lines": "119-124",
+          "classification": [2, 3],
+          "note": "SUMMARY_FIELD_PATTERNS + parseBrandFromText(combined)"
+        },
+        {
+          "file": "features/campaign-studio/services/section-data-resolver.ts",
+          "function": "resolvePresentationData",
+          "lines": "675",
+          "classification": [2, 3],
+          "note": "parseBrandFromText(summaryText)"
+        },
+        {
+          "file": "features/campaign-studio/services/presentation-intelligence.ts",
+          "function": "deriveExecutiveSummary",
+          "lines": "1078+",
+          "classification": [2, 3],
+          "note": "resolveClientFromBrief uses same hardcoded brand list"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/campaign-summary-section.tsx",
+          "function": "CampaignSummarySection",
+          "classification": [3],
+          "note": "Consumes resolveCampaignSummary bypass chain — meta.campaignFacts never read"
+        }
+      ]
+    },
+    "client": {
+      "bypassCount": 7,
+      "migrationStatus": "BYPASS",
+      "currentDisplaySource": "resolveClientFromBrief(combined) hardcoded brand list",
+      "targetSource": "meta.campaignFacts.clientName",
+      "findings": [
+        {
+          "file": "features/campaign-director/facts/extract-campaign-facts.ts",
+          "function": "extractCampaignFacts",
+          "lines": "60,162",
+          "classification": [1, 2],
+          "note": "input.clientName or resolveClientFromBrief at origin"
+        },
+        {
+          "file": "features/campaign-director/services/strategy-document.ts",
+          "function": "writeStrategyDocumentFromBrief",
+          "classification": [1],
+          "note": "Generation compliant — facts.clientName"
+        },
+        {
+          "file": "features/campaign-studio/services/industry-intelligence.ts",
+          "function": "resolveClientFromBrief",
+          "lines": "180-191",
+          "classification": [2, 4],
+          "note": "Hardcoded Coca-Cola|BabyJoy|...|Pepsi list; fallback Brand Client"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildSummarySectionData",
+          "lines": "112",
+          "classification": [2, 3],
+          "note": "resolveClientFromBrief(combined) for client card"
+        },
+        {
+          "file": "features/campaign-studio/services/presentation-intelligence.ts",
+          "function": "deriveGroundedStrategy",
+          "lines": "890+",
+          "classification": [2, 3],
+          "note": "resolveClientFromBrief for grounding evidence"
+        },
+        {
+          "file": "features/campaign-studio/services/presentation-intelligence.ts",
+          "function": "deriveExecutiveSummary",
+          "lines": "899",
+          "classification": [2, 3],
+          "note": "resolveClientFromBrief(combined)"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/campaign-summary-section.tsx",
+          "function": "CampaignSummarySection",
+          "classification": [3],
+          "note": "Client card uses data.client ?? data.brand from bypass resolver"
+        }
+      ]
+    },
+    "campaignObjective": {
+      "bypassCount": 9,
+      "migrationStatus": "PARTIAL",
+      "currentDisplaySource": "parseObjectiveFromText + deriveExecutiveStrategyFields extractSection",
+      "targetSource": "meta.campaignFacts.objective",
+      "findings": [
+        {
+          "file": "features/campaign-director/facts/extract-campaign-facts.ts",
+          "function": "extractCampaignFacts",
+          "lines": "173",
+          "classification": [2, 4],
+          "note": "parseObjectiveFromText or default Brand awareness and engagement"
+        },
+        {
+          "file": "features/campaign-director/services/strategy-document.ts",
+          "function": "writeStrategyDocumentFromBrief",
+          "classification": [1],
+          "note": "Generation compliant — facts.objective"
+        },
+        {
+          "file": "features/campaign-director/services/specialist-dispatch.ts",
+          "function": "buildStrategyOutput",
+          "classification": [1],
+          "note": "strategy.understanding.objective"
+        },
+        {
+          "file": "features/campaign-intelligence/services/section-updaters.ts",
+          "function": "deriveSectionUpdatesFromTask",
+          "classification": [5],
+          "note": "Raw LLM text → sections.strategy/summary.content"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildSummarySectionData",
+          "lines": "129",
+          "classification": [2, 3],
+          "note": "parseObjectiveFromText(combined) + field patterns"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/shared/format-utils.ts",
+          "function": "parseObjectiveFromText",
+          "lines": "121-125",
+          "classification": [2],
+          "note": "Regex objective label + awareness/ugc heuristic"
+        },
+        {
+          "file": "features/campaign-studio/services/presentation-intelligence.ts",
+          "function": "deriveExecutiveStrategyFields",
+          "lines": "561+",
+          "classification": [2, 4, 5],
+          "note": "extractSection from LLM text; profile.campaignType fallback"
+        },
+        {
+          "file": "features/campaign-studio/services/presentation-intelligence.ts",
+          "function": "deriveGroundedStrategy",
+          "lines": "890+",
+          "classification": [3, 5],
+          "note": "Display derivation from LLM sections"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/executive-strategy-section.tsx",
+          "function": "ExecutiveStrategySection",
+          "classification": [3, 5],
+          "note": "resolveGroundedStrategyFields — no facts binding"
+        }
+      ]
+    },
+    "creatorMix": {
+      "bypassCount": 8,
+      "migrationStatus": "BYPASS",
+      "currentDisplaySource": "deriveCreatorMix → MIX_BY_INDUSTRY[industry]",
+      "targetSource": "strategy.creatorTierStrategy (from facts industry)",
+      "findings": [
+        {
+          "file": "features/campaign-director/services/strategy-document.ts",
+          "function": "defaultCreatorTierStrategy",
+          "classification": [1, 4],
+          "note": "Generation compliant — facts-informed industry defaults"
+        },
+        {
+          "file": "features/campaign-director/services/specialist-dispatch.ts",
+          "function": "buildCreatorIntelligenceOutput",
+          "classification": [1],
+          "note": "strategy.creatorTierStrategy — bypassed at display"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildSummarySectionData",
+          "lines": "115",
+          "classification": [4],
+          "note": "profile.creatorMixSummary industry template"
+        },
+        {
+          "file": "features/campaign-studio/services/presentation-intelligence.ts",
+          "function": "deriveCreatorMix",
+          "lines": "343,388-390",
+          "classification": [3, 4],
+          "note": "MIX_BY_INDUSTRY[industry] — ignores strategy.creatorTierStrategy"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildStrategySectionData",
+          "lines": "156",
+          "classification": [3],
+          "note": "Calls deriveCreatorMix not strategy tiers"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "enrichCampaignObjectWithStudioData",
+          "lines": "283+",
+          "classification": [3],
+          "note": "Orchestrates bypass enrichment"
+        },
+        {
+          "file": "features/campaign-studio/services/section-data-resolver.ts",
+          "function": "resolveCreatorMix",
+          "lines": "628+",
+          "classification": [3],
+          "note": "Reads enriched strategy.data not facts"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/creator-mix-section.tsx",
+          "function": "CreatorMixSection",
+          "lines": "137",
+          "classification": [3],
+          "note": "resolveCreatorMix(campaignObject)"
+        }
+      ]
+    },
+    "timeline": {
+      "bypassCount": 11,
+      "migrationStatus": "BYPASS",
+      "currentDisplaySource": "buildTimelineSectionData (LLM) + buildTimelineWeeksForCampaign (templates)",
+      "targetSource": "buildClientTimelineFromStrategy from facts duration",
+      "findings": [
+        {
+          "file": "features/campaign-director/services/timeline-rules.ts",
+          "function": "buildClientTimelineFromStrategy",
+          "classification": [1],
+          "note": "Generation compliant — bypassed when LLM timeline exists"
+        },
+        {
+          "file": "features/campaign-director/integrations/section-builder-integration.ts",
+          "function": "applyDirectorTimelineRules",
+          "lines": "56-71",
+          "classification": [1],
+          "note": "Applied only when strategy in section-updaters state"
+        },
+        {
+          "file": "features/campaign-intelligence/services/structured-section-builders.ts",
+          "function": "buildTimelineSectionData",
+          "lines": "130-173",
+          "classification": [2, 4, 5],
+          "note": "LLM parse primary; 4-week defaults"
+        },
+        {
+          "file": "features/campaign-intelligence/services/section-updaters.ts",
+          "function": "applySummarySectionsToCampaignObject",
+          "classification": [5],
+          "note": "No director timeline rules on summary path"
+        },
+        {
+          "file": "features/campaign-studio/services/presentation-intelligence.ts",
+          "function": "buildTimelineWeeksForCampaign",
+          "lines": "835+",
+          "classification": [3, 4],
+          "note": "Industry-phase templates not facts duration"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildTimelineSectionExtras",
+          "classification": [3],
+          "note": "Template-based timeline extras"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "enrichCampaignObjectWithStudioData",
+          "lines": "216,358",
+          "classification": [3],
+          "note": "buildTimelineWeeksForCampaign + resolveCampaignDurationWeeks"
+        },
+        {
+          "file": "features/campaign-studio/services/section-data-resolver.ts",
+          "function": "resolveTimelineData",
+          "lines": "514+",
+          "classification": [3],
+          "note": "resolveCampaignDurationWeeks + buildTimelineWeeksForCampaign"
+        },
+        {
+          "file": "features/campaign-decision-engine/campaign-context.ts",
+          "function": "extractCampaignDecisionContext",
+          "lines": "219",
+          "classification": [3],
+          "note": "resolveTimelineData bypass chain"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/timeline-section.tsx",
+          "function": "TimelineSection",
+          "lines": "36",
+          "classification": [3],
+          "note": "resolveTimelineData(campaignObject)"
+        },
+        {
+          "file": "features/campaign-intelligence/services/section-updaters.ts",
+          "function": "deriveSectionUpdatesFromTask",
+          "lines": "226",
+          "classification": [5],
+          "note": "generate-timeline LLM content primary path"
+        }
+      ]
+    },
+    "kpis": {
+      "bypassCount": 10,
+      "migrationStatus": "BYPASS",
+      "currentDisplaySource": "getGroundedKpis industry templates",
+      "targetSource": "meta.campaignFacts.kpis → strategy.understanding.kpis",
+      "findings": [
+        {
+          "file": "features/campaign-director/facts/extract-campaign-facts.ts",
+          "function": "extractKpis",
+          "classification": [2, 4],
+          "note": "Regex from prompt; generic defaults at origin"
+        },
+        {
+          "file": "features/campaign-director/services/strategy-document.ts",
+          "function": "factsToStrategyKpis",
+          "lines": "51+",
+          "classification": [1],
+          "note": "Generation compliant — maps facts.kpis"
+        },
+        {
+          "file": "features/campaign-director/services/specialist-dispatch.ts",
+          "function": "buildPerformanceOutput",
+          "classification": [1],
+          "note": "strategy.understanding.kpis — bypassed at display"
+        },
+        {
+          "file": "features/campaign-intelligence/services/structured-section-builders.ts",
+          "function": "buildKpiForecastFromStrategy",
+          "lines": "182+",
+          "classification": [2, 4, 5],
+          "note": "Parses LLM markdown; TBD defaults"
+        },
+        {
+          "file": "features/campaign-intelligence/services/section-updaters.ts",
+          "function": "deriveSectionUpdatesFromTask",
+          "lines": "177,485",
+          "classification": [5],
+          "note": "buildKpiForecastFromStrategy(content) → sections.performance.content"
+        },
+        {
+          "file": "features/campaign-studio/services/industry-intelligence.ts",
+          "function": "getGroundedKpis",
+          "lines": "662-738",
+          "classification": [3, 4, 5],
+          "note": "Industry templates + fabricated historical counts (47 luxury, 124 baby campaigns)"
+        },
+        {
+          "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+          "function": "buildPerformanceSectionData",
+          "lines": "171",
+          "classification": [3],
+          "note": "getGroundedKpis(industry, combined) — not facts.kpis"
+        },
+        {
+          "file": "features/campaign-studio/services/section-data-resolver.ts",
+          "function": "resolveGroundedKpis",
+          "lines": "575+",
+          "classification": [3],
+          "note": "Reads enriched performance.data groundedKpis"
+        },
+        {
+          "file": "features/campaign-studio/services/section-data-resolver.ts",
+          "function": "resolveKpiData",
+          "lines": "566+",
+          "classification": [5],
+          "note": "Reads sections.performance.content if structured"
+        },
+        {
+          "file": "features/campaign-studio/components/sections/kpi-forecast-section.tsx",
+          "function": "KpiForecastSection",
+          "lines": "30",
+          "classification": [3, 5],
+          "note": "resolveGroundedKpis — industry templates in browser"
+        }
+      ]
+    }
+  },
+  "crossCuttingFiles": [
+    {
+      "file": "features/campaign-intelligence/services/studio-section-data-builders.ts",
+      "function": "enrichCampaignObjectWithStudioData",
+      "lines": "283+",
+      "role": "Central display enrichment — must read meta.campaignFacts first",
+      "fieldsAffected": ["budget", "currency", "duration", "brand", "client", "campaignObjective", "creatorMix", "timeline", "kpis"]
+    },
+    {
+      "file": "features/campaign-studio/services/section-data-resolver.ts",
+      "role": "All resolver exports — add facts-first precedence",
+      "fieldsAffected": ["budget", "currency", "duration", "brand", "client", "campaignObjective", "creatorMix", "timeline", "kpis"]
+    },
+    {
+      "file": "features/campaign-intelligence/services/section-updaters.ts",
+      "role": "Task→section mapping — bind structured data from facts at write time",
+      "fieldsAffected": ["budget", "currency", "duration", "campaignObjective", "timeline", "kpis"]
+    },
+    {
+      "file": "features/campaign-intelligence/services/structured-section-builders.ts",
+      "role": "Legacy LLM parsers — deprecate for factual fields",
+      "fieldsAffected": ["budget", "currency", "duration", "timeline", "kpis"]
+    },
+    {
+      "file": "features/ai-workflows/engine/continuation.ts",
+      "function": "mergeTaskResultIntoState",
+      "role": "Stop overwriting facts-derived state from LLM",
+      "fieldsAffected": ["budget", "currency", "brand"]
+    },
+    {
+      "file": "features/campaign-director/integrations/section-builder-integration.ts",
+      "function": "applyDirectorBudgetRules",
+      "role": "Pass campaignFacts to buildDirectorBudgetFromStrategy",
+      "fieldsAffected": ["budget"]
+    },
+    {
+      "file": "features/campaign-studio/services/presentation-intelligence.ts",
+      "role": "Replace industry templates with facts/strategy for factual fields",
+      "fieldsAffected": ["brand", "client", "campaignObjective", "creatorMix", "timeline"]
+    },
+    {
+      "file": "features/campaign-studio/services/industry-intelligence.ts",
+      "role": "Remove hardcoded brand list; replace getGroundedKpis templates",
+      "fieldsAffected": ["brand", "client", "budget", "duration", "kpis"]
+    },
+    {
+      "file": "features/campaign-studio/components/sections/shared/format-utils.ts",
+      "function": "parseBrandFromText",
+      "lines": "128-131",
+      "role": "Hardcoded brand regex list",
+      "fieldsAffected": ["brand"]
+    },
+    {
+      "file": "features/campaign-studio/hooks/use-campaign-studio.ts",
+      "function": "useCampaignStudio",
+      "lines": "174",
+      "role": "Enrichment entry point",
+      "fieldsAffected": ["budget", "currency", "duration", "brand", "client", "campaignObjective", "creatorMix", "timeline", "kpis"]
+    },
+    {
+      "file": "features/campaign-decision-engine/campaign-context.ts",
+      "role": "Decision simulation reads bypass resolver chain",
+      "fieldsAffected": ["budget", "timeline", "kpis"]
+    },
+    {
+      "file": "features/campaign-decision-workspace/services/promote-scenario.ts",
+      "function": "applyScenarioToCampaignObject",
+      "lines": "120",
+      "role": "Re-enriches via bypass path after scenario promotion",
+      "fieldsAffected": ["budget", "currency", "duration", "brand", "client", "campaignObjective", "creatorMix", "timeline", "kpis"]
+    }
+  ],
+  "legacyCampaignObjectsWithoutFacts": {
+    "behavior": "Silent degradation to text re-parse",
+    "evidence": [
+      {
+        "file": "features/campaign-director/integrations/workflow-integration.ts",
+        "lines": "106-108",
+        "note": "Falls back to undefined — no re-extraction"
+      },
+      {
+        "file": "features/campaign-intelligence/services/section-updaters.ts",
+        "lines": "497,514",
+        "note": "buildBudgetSectionData(text, {}) with empty stateData"
+      }
+    ]
+  },
+  "qaSymptomRootCauses": [
+    {
+      "symptom": "Wrong budget",
+      "rootCause": "LLM estimate-budget re-parsed; applyDirectorBudgetRules omits campaignFacts",
+      "evidence": ["continuation.ts:308-316", "section-builder-integration.ts:43", "buildBudgetSectionData"]
+    },
+    {
+      "symptom": "Budget planner USD vs EGP",
+      "rootCause": "detectCurrencyFromText scans LLM text not facts",
+      "evidence": ["section-data-resolver.ts:207-223", "structured-section-builders.ts:42-49"]
+    },
+    {
+      "symptom": "Wrong timeline / 4-week default",
+      "rootCause": "buildTimelineSectionData default milestones",
+      "evidence": ["structured-section-builders.ts:158-166"]
+    },
+    {
+      "symptom": "Pepsi on Coca-Cola",
+      "rootCause": "parseBrandFromText / resolveClientFromBrief hardcoded multi-brand regex",
+      "evidence": ["format-utils.ts:128-131", "industry-intelligence.ts:180-191"]
+    },
+    {
+      "symptom": "Generic KPI recommendations",
+      "rootCause": "getGroundedKpis industry templates with historical campaign counts",
+      "evidence": ["industry-intelligence.ts:662-738"]
+    },
+    {
+      "symptom": "Presentation inconsistencies",
+      "rootCause": "enrichCampaignObjectWithStudioData re-derives from stale sections.*.content",
+      "evidence": ["use-campaign-studio.ts:174", "section-renderer.tsx:42"]
+    }
+  ]
+}

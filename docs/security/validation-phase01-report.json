@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-07-04T01:24:47.878Z",
+  "passed": 57,
+  "findings": [
+    {
+      "id": "API-health/route.ts",
+      "severity": "P0",
+      "message": "health/route.ts missing authentication/authorization"
+    },
+    {
+      "id": "API-ready/route.ts",
+      "severity": "P0",
+      "message": "ready/route.ts missing authentication/authorization"
+    },
+    {
+      "id": "API-version/route.ts",
+      "severity": "P0",
+      "message": "version/route.ts missing authentication/authorization"
+    }
+  ],
+  "p0Count": 3,
+  "ready": false
+}

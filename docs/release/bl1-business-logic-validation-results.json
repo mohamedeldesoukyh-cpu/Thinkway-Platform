@@ -1,0 +1,603 @@
+{
+  "sprint": "BL-1",
+  "release": "1.1",
+  "generatedAt": "2026-07-05T02:04:27.486Z",
+  "manualQaStatus": "PENDING — do not treat automated run as release PASS",
+  "summary": {
+    "fixtures": 7,
+    "checksPassed": 77,
+    "checksFailed": 0,
+    "automatedPass": true
+  },
+  "babyJoySample": {
+    "budget": {
+      "allocations": [
+        {
+          "category": "Creator fees",
+          "percent": 100,
+          "notes": "Facts SSOT: EGP 2,000,000 — allocated across creator tiers per influencer marketing model — influencer-only default: 100% creator fees include production; no split keywords detected in brief or CampaignFacts constraints."
+        }
+      ],
+      "splitKeywords": [],
+      "reasoning": {
+        "category": "Creator fees",
+        "amount": 2000000,
+        "percent": 100,
+        "reason": "Facts SSOT: EGP 2,000,000 — allocated across creator tiers per influencer marketing model — influencer-only default: 100% creator fees include production; no split keywords detected in brief or CampaignFacts constraints.",
+        "evidence": "CampaignFacts.budget=EGP 2,000,000; no split keywords in brief/constraints",
+        "tradeoff": "Separate production/agency lines — rejected; brief silent on split categories",
+        "confidence": 92,
+        "alternativeConsidered": "Industry-weighted multi-line split — rejected per BL-1 influencer default"
+      }
+    },
+    "timeline": {
+      "weeks": [
+        {
+          "week": 1,
+          "tier": "Micro",
+          "objective": "Anchor Micro mom creators — compliance brief + trust foundation"
+        },
+        {
+          "week": 2,
+          "tier": "Nano",
+          "objective": "Nano UGC publishing — drive Awareness and UGC. via peer-validation content"
+        },
+        {
+          "week": 3,
+          "tier": "Macro",
+          "objective": "Macro UGC publishing — drive Awareness and UGC. via peer-validation content"
+        },
+        {
+          "week": 4,
+          "tier": "Macro",
+          "objective": "Macro UGC publishing — drive Awareness and UGC. via peer-validation content"
+        },
+        {
+          "week": 5,
+          "tier": "Macro",
+          "objective": "Macro UGC publishing — drive Awareness and UGC. via peer-validation content"
+        },
+        {
+          "week": 6,
+          "tier": "Macro",
+          "objective": "Final publishing push — maximize UGC volume before campaign close"
+        }
+      ],
+      "reportingPhase": {
+        "label": "Post-Campaign Reporting",
+        "reason": "Post-campaign reporting (Week 7+) measures UGC volume, trust sentiment, and trial proxy KPIs — outside the 6-week creator activation window. IS-3 debate: ramp activation from winning Option C — ramp activation — Week 1: 10% creators → Week 2: 15% creators → Week 3: 18% creators → Week 4: 22% creators → Week 5: 20% creators → Week 6: 15% creators applied.",
+        "evidence": "CampaignFacts.objective=Awareness and UGC.; reporting week=7 (outside duration)"
+      }
+    },
+    "industryBenchmark": {
+      "summary": "Competitive intelligence for BabyJoy — Awareness and UGC.. IS-3 Option C tier/budget assumptions applied.",
+      "comparisons": [
+        {
+          "metric": "Market Landscape",
+          "expected": "Baby & Parenting influencer landscape in Egypt — Awareness and UGC. campaigns on Instagram, TikTok. Budget EGP 2,000,000"
+        },
+        {
+          "metric": "Creator Pricing",
+          "expected": "Macro: ~EGP 150,000/creator (est. from 15% tier mix) · Micro: ~EGP 180,000/creator (est. from 45% tier mix) · Nano: ~EGP"
+        },
+        {
+          "metric": "Expected Engagement",
+          "expected": "Mom-creator ER typically 5–8% on Instagram/TikTok parenting content; Macro anchors 4–6%, Nano volume 6–9%"
+        },
+        {
+          "metric": "Seasonal Considerations",
+          "expected": "Ramadan/post-Ramadan parenting peaks in MENA — align mom-creator publishing with family routines"
+        },
+        {
+          "metric": "Competitive Activity",
+          "expected": "Competing diaper brands active on mom UGC in Egypt — differentiation via overnight dryness proof points"
+        },
+        {
+          "metric": "Success Factors",
+          "expected": "Tier mix (Macro 15%, Micro 45%, Nano 40%) aligned to Awareness and UGC. · 6-week activation cadence on Instagram, TikTok"
+        },
+        {
+          "metric": "Key Risks",
+          "expected": "Category sensitivity — messaging must align with parenting trust standards"
+        }
+      ],
+      "competitiveIntelligence": {
+        "marketLandscape": "Baby & Parenting influencer landscape in Egypt — Awareness and UGC. campaigns on Instagram, TikTok. Budget EGP 2,000,000 over 6 weeks.",
+        "creatorPricing": "Macro: ~EGP 150,000/creator (est. from 15% tier mix) · Micro: ~EGP 180,000/creator (est. from 45% tier mix) · Nano: ~EGP 200,000/creator (est. from 40% tier mix)",
+        "engagementRanges": "Mom-creator ER typically 5–8% on Instagram/TikTok parenting content; Macro anchors 4–6%, Nano volume 6–9%",
+        "seasonalConsiderations": "Ramadan/post-Ramadan parenting peaks in MENA — align mom-creator publishing with family routines",
+        "competitiveActivity": "Competing diaper brands active on mom UGC in Egypt — differentiation via overnight dryness proof points",
+        "successFactors": [
+          "Tier mix (Macro 15%, Micro 45%, Nano 40%) aligned to Awareness and UGC.",
+          "6-week activation cadence on Instagram, TikTok",
+          "Compliance with CampaignFacts constraints: UGC-first content — creator fees include production"
+        ],
+        "keyRisks": [
+          "Category sensitivity — messaging must align with parenting trust standards"
+        ]
+      }
+    },
+    "objectiveAchievement": {
+      "score": 92,
+      "objectiveAssessments": [
+        {
+          "objective": "Awareness",
+          "confidence": 92,
+          "supportingEvidence": "CampaignFacts[brand=BabyJoy, objective=Awareness, budget=EGP 2,000,000]; tier mix: Macro 15%, Micro 45%, Nano 40%; 6 weeks on Instagram/TikTok",
+          "risks": [
+            "Category sensitivity — messaging must align with parenting trust standards",
+            "Reach concentration in single tier may limit unique audience"
+          ],
+          "recommendations": [
+            "Front-load Macro/Mega anchors Week 1–2 for credibility spike",
+            "Maintain 6-week publishing cadence — avoid gaps mid-campaign"
+          ]
+        },
+        {
+          "objective": "UGC.",
+          "confidence": 92,
+          "supportingEvidence": "CampaignFacts[brand=BabyJoy, objective=UGC., budget=EGP 2,000,000]; tier mix: Macro 15%, Micro 45%, Nano 40%; 6 weeks on Instagram/TikTok",
+          "risks": [
+            "Category sensitivity — messaging must align with parenting trust standards",
+            "UGC quality variance across Nano/Micro roster"
+          ],
+          "recommendations": [
+            "Deploy Nano volume in Weeks 2–4 with claim-safe brief templates",
+            "Maintain 6-week publishing cadence — avoid gaps mid-campaign"
+          ]
+        }
+      ],
+      "risks": [
+        "Category sensitivity — messaging must align with parenting trust standards",
+        "Reach concentration in single tier may limit unique audience",
+        "UGC quality variance across Nano/Micro roster"
+      ],
+      "improvements": [
+        "Front-load Macro/Mega anchors Week 1–2 for credibility spike",
+        "Maintain 6-week publishing cadence — avoid gaps mid-campaign",
+        "Deploy Nano volume in Weeks 2–4 with claim-safe brief templates"
+      ]
+    }
+  },
+  "results": [
+    {
+      "fixture": "babyjoy",
+      "label": "BabyJoy",
+      "checks": [
+        {
+          "name": "Budget split keywords detected only when present",
+          "ok": true,
+          "detail": "unexpected: "
+        },
+        {
+          "name": "Budget default 100% creator fees",
+          "ok": true,
+          "detail": "allocations: Creator fees 100%"
+        },
+        {
+          "name": "Budget allocation has rationale",
+          "ok": true,
+          "detail": "missing notes/reason on allocation lines"
+        },
+        {
+          "name": "Timeline weeks = durationWeeks",
+          "ok": true,
+          "detail": "got 6, expected 6"
+        },
+        {
+          "name": "Timeline tier + objective per week",
+          "ok": true,
+          "detail": "missing tier/objective or reporting embedded in campaign week"
+        },
+        {
+          "name": "Reporting outside campaign duration",
+          "ok": true,
+          "detail": "reporting must be post-campaign phase, not inside activation weeks"
+        },
+        {
+          "name": "Industry benchmark has competitive intelligence rows",
+          "ok": true,
+          "detail": "missing: "
+        },
+        {
+          "name": "Industry benchmark not generic CPM/ER only",
+          "ok": true,
+          "detail": "metrics: Market Landscape, Creator Pricing, Expected Engagement, Seasonal Considerations, Competitive Activity, Success Factors, Key Risks"
+        },
+        {
+          "name": "Industry benchmark competitiveIntelligence object",
+          "ok": true,
+          "detail": "competitiveIntelligence structure incomplete"
+        },
+        {
+          "name": "Success probability → objective achievement structure",
+          "ok": true,
+          "detail": "fields checked: objective, confidence, supportingEvidence, risks, recommendations"
+        },
+        {
+          "name": "Objective score equals average confidence",
+          "ok": true,
+          "detail": "score=92"
+        }
+      ],
+      "splitKeywords": []
+    },
+    {
+      "fixture": "cocacola",
+      "label": "Coca-Cola",
+      "checks": [
+        {
+          "name": "Budget split keywords detected only when present",
+          "ok": true,
+          "detail": "unexpected: "
+        },
+        {
+          "name": "Budget default 100% creator fees",
+          "ok": true,
+          "detail": "allocations: Creator fees 100%"
+        },
+        {
+          "name": "Budget allocation has rationale",
+          "ok": true,
+          "detail": "missing notes/reason on allocation lines"
+        },
+        {
+          "name": "Timeline weeks = durationWeeks",
+          "ok": true,
+          "detail": "got 8, expected 8"
+        },
+        {
+          "name": "Timeline tier + objective per week",
+          "ok": true,
+          "detail": "missing tier/objective or reporting embedded in campaign week"
+        },
+        {
+          "name": "Reporting outside campaign duration",
+          "ok": true,
+          "detail": "reporting must be post-campaign phase, not inside activation weeks"
+        },
+        {
+          "name": "Industry benchmark has competitive intelligence rows",
+          "ok": true,
+          "detail": "missing: "
+        },
+        {
+          "name": "Industry benchmark not generic CPM/ER only",
+          "ok": true,
+          "detail": "metrics: Market Landscape, Creator Pricing, Expected Engagement, Seasonal Considerations, Competitive Activity, Success Factors, Key Risks"
+        },
+        {
+          "name": "Industry benchmark competitiveIntelligence object",
+          "ok": true,
+          "detail": "competitiveIntelligence structure incomplete"
+        },
+        {
+          "name": "Success probability → objective achievement structure",
+          "ok": true,
+          "detail": "fields checked: objective, confidence, supportingEvidence, risks, recommendations"
+        },
+        {
+          "name": "Objective score equals average confidence",
+          "ok": true,
+          "detail": "score=92"
+        }
+      ],
+      "splitKeywords": []
+    },
+    {
+      "fixture": "pepsi",
+      "label": "Pepsi",
+      "checks": [
+        {
+          "name": "Budget split keywords detected only when present",
+          "ok": true,
+          "detail": "unexpected: "
+        },
+        {
+          "name": "Budget default 100% creator fees",
+          "ok": true,
+          "detail": "allocations: Creator fees 100%"
+        },
+        {
+          "name": "Budget allocation has rationale",
+          "ok": true,
+          "detail": "missing notes/reason on allocation lines"
+        },
+        {
+          "name": "Timeline weeks = durationWeeks",
+          "ok": true,
+          "detail": "got 6, expected 6"
+        },
+        {
+          "name": "Timeline tier + objective per week",
+          "ok": true,
+          "detail": "missing tier/objective or reporting embedded in campaign week"
+        },
+        {
+          "name": "Reporting outside campaign duration",
+          "ok": true,
+          "detail": "reporting must be post-campaign phase, not inside activation weeks"
+        },
+        {
+          "name": "Industry benchmark has competitive intelligence rows",
+          "ok": true,
+          "detail": "missing: "
+        },
+        {
+          "name": "Industry benchmark not generic CPM/ER only",
+          "ok": true,
+          "detail": "metrics: Market Landscape, Creator Pricing, Expected Engagement, Seasonal Considerations, Competitive Activity, Success Factors, Key Risks"
+        },
+        {
+          "name": "Industry benchmark competitiveIntelligence object",
+          "ok": true,
+          "detail": "competitiveIntelligence structure incomplete"
+        },
+        {
+          "name": "Success probability → objective achievement structure",
+          "ok": true,
+          "detail": "fields checked: objective, confidence, supportingEvidence, risks, recommendations"
+        },
+        {
+          "name": "Objective score equals average confidence",
+          "ok": true,
+          "detail": "score=92"
+        }
+      ],
+      "splitKeywords": []
+    },
+    {
+      "fixture": "samsung",
+      "label": "Samsung",
+      "checks": [
+        {
+          "name": "Budget split keywords detected only when present",
+          "ok": true,
+          "detail": "unexpected: "
+        },
+        {
+          "name": "Budget default 100% creator fees",
+          "ok": true,
+          "detail": "allocations: Creator fees 100%"
+        },
+        {
+          "name": "Budget allocation has rationale",
+          "ok": true,
+          "detail": "missing notes/reason on allocation lines"
+        },
+        {
+          "name": "Timeline weeks = durationWeeks",
+          "ok": true,
+          "detail": "got 6, expected 6"
+        },
+        {
+          "name": "Timeline tier + objective per week",
+          "ok": true,
+          "detail": "missing tier/objective or reporting embedded in campaign week"
+        },
+        {
+          "name": "Reporting outside campaign duration",
+          "ok": true,
+          "detail": "reporting must be post-campaign phase, not inside activation weeks"
+        },
+        {
+          "name": "Industry benchmark has competitive intelligence rows",
+          "ok": true,
+          "detail": "missing: "
+        },
+        {
+          "name": "Industry benchmark not generic CPM/ER only",
+          "ok": true,
+          "detail": "metrics: Market Landscape, Creator Pricing, Expected Engagement, Seasonal Considerations, Competitive Activity, Success Factors, Key Risks"
+        },
+        {
+          "name": "Industry benchmark competitiveIntelligence object",
+          "ok": true,
+          "detail": "competitiveIntelligence structure incomplete"
+        },
+        {
+          "name": "Success probability → objective achievement structure",
+          "ok": true,
+          "detail": "fields checked: objective, confidence, supportingEvidence, risks, recommendations"
+        },
+        {
+          "name": "Objective score equals average confidence",
+          "ok": true,
+          "detail": "score=92"
+        }
+      ],
+      "splitKeywords": []
+    },
+    {
+      "fixture": "loreal",
+      "label": "L'Oréal",
+      "checks": [
+        {
+          "name": "Budget split keywords detected only when present",
+          "ok": true,
+          "detail": "unexpected: "
+        },
+        {
+          "name": "Budget default 100% creator fees",
+          "ok": true,
+          "detail": "allocations: Creator fees 100%"
+        },
+        {
+          "name": "Budget allocation has rationale",
+          "ok": true,
+          "detail": "missing notes/reason on allocation lines"
+        },
+        {
+          "name": "Timeline weeks = durationWeeks",
+          "ok": true,
+          "detail": "got 5, expected 5"
+        },
+        {
+          "name": "Timeline tier + objective per week",
+          "ok": true,
+          "detail": "missing tier/objective or reporting embedded in campaign week"
+        },
+        {
+          "name": "Reporting outside campaign duration",
+          "ok": true,
+          "detail": "reporting must be post-campaign phase, not inside activation weeks"
+        },
+        {
+          "name": "Industry benchmark has competitive intelligence rows",
+          "ok": true,
+          "detail": "missing: "
+        },
+        {
+          "name": "Industry benchmark not generic CPM/ER only",
+          "ok": true,
+          "detail": "metrics: Market Landscape, Creator Pricing, Expected Engagement, Seasonal Considerations, Competitive Activity, Success Factors, Key Risks"
+        },
+        {
+          "name": "Industry benchmark competitiveIntelligence object",
+          "ok": true,
+          "detail": "competitiveIntelligence structure incomplete"
+        },
+        {
+          "name": "Success probability → objective achievement structure",
+          "ok": true,
+          "detail": "fields checked: objective, confidence, supportingEvidence, risks, recommendations"
+        },
+        {
+          "name": "Objective score equals average confidence",
+          "ok": true,
+          "detail": "score=92"
+        }
+      ],
+      "splitKeywords": []
+    },
+    {
+      "fixture": "studio-split",
+      "label": "Studio Split Brief",
+      "checks": [
+        {
+          "name": "Budget split keywords detected only when present",
+          "ok": true,
+          "detail": "expected keywords, got: Studio, Photography, Usage Rights, Boosting"
+        },
+        {
+          "name": "Budget splits on studio/usage keywords",
+          "ok": true,
+          "detail": "allocations: Creator fees 42%, Content production 20%, Usage rights 10%, Paid amplification 13%, Agency coordination 10%, Contingency reserve 5%"
+        },
+        {
+          "name": "Budget allocation has rationale",
+          "ok": true,
+          "detail": "missing notes/reason on allocation lines"
+        },
+        {
+          "name": "Timeline weeks = durationWeeks",
+          "ok": true,
+          "detail": "got 10, expected 10"
+        },
+        {
+          "name": "Timeline tier + objective per week",
+          "ok": true,
+          "detail": "missing tier/objective or reporting embedded in campaign week"
+        },
+        {
+          "name": "Reporting outside campaign duration",
+          "ok": true,
+          "detail": "reporting must be post-campaign phase, not inside activation weeks"
+        },
+        {
+          "name": "Industry benchmark has competitive intelligence rows",
+          "ok": true,
+          "detail": "missing: "
+        },
+        {
+          "name": "Industry benchmark not generic CPM/ER only",
+          "ok": true,
+          "detail": "metrics: Market Landscape, Creator Pricing, Expected Engagement, Seasonal Considerations, Competitive Activity, Success Factors, Key Risks"
+        },
+        {
+          "name": "Industry benchmark competitiveIntelligence object",
+          "ok": true,
+          "detail": "competitiveIntelligence structure incomplete"
+        },
+        {
+          "name": "Success probability → objective achievement structure",
+          "ok": true,
+          "detail": "fields checked: objective, confidence, supportingEvidence, risks, recommendations"
+        },
+        {
+          "name": "Objective score equals average confidence",
+          "ok": true,
+          "detail": "score=89"
+        }
+      ],
+      "splitKeywords": [
+        "Studio",
+        "Photography",
+        "Usage Rights",
+        "Boosting"
+      ]
+    },
+    {
+      "fixture": "c16",
+      "label": "C16 BabyJoy (no production / no usage rights)",
+      "checks": [
+        {
+          "name": "Budget split keywords detected only when present",
+          "ok": true,
+          "detail": "unexpected: "
+        },
+        {
+          "name": "Budget default 100% creator fees",
+          "ok": true,
+          "detail": "allocations: Creator fees 100%"
+        },
+        {
+          "name": "Budget allocation has rationale",
+          "ok": true,
+          "detail": "missing notes/reason on allocation lines"
+        },
+        {
+          "name": "Timeline weeks = durationWeeks",
+          "ok": true,
+          "detail": "got 6, expected 6"
+        },
+        {
+          "name": "Timeline tier + objective per week",
+          "ok": true,
+          "detail": "missing tier/objective or reporting embedded in campaign week"
+        },
+        {
+          "name": "Reporting outside campaign duration",
+          "ok": true,
+          "detail": "reporting must be post-campaign phase, not inside activation weeks"
+        },
+        {
+          "name": "Industry benchmark has competitive intelligence rows",
+          "ok": true,
+          "detail": "missing: "
+        },
+        {
+          "name": "Industry benchmark not generic CPM/ER only",
+          "ok": true,
+          "detail": "metrics: Market Landscape, Creator Pricing, Expected Engagement, Seasonal Considerations, Competitive Activity, Success Factors, Key Risks"
+        },
+        {
+          "name": "Industry benchmark competitiveIntelligence object",
+          "ok": true,
+          "detail": "competitiveIntelligence structure incomplete"
+        },
+        {
+          "name": "Success probability → objective achievement structure",
+          "ok": true,
+          "detail": "fields checked: objective, confidence, supportingEvidence, risks, recommendations"
+        },
+        {
+          "name": "Objective score equals average confidence",
+          "ok": true,
+          "detail": "score=92"
+        }
+      ],
+      "splitKeywords": []
+    }
+  ]
+}

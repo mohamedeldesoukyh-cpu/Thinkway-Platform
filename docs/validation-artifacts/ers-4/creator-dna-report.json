@@ -1,0 +1,304 @@
+{
+  "generatedAt": "2026-07-04T01:29:04.420Z",
+  "passed": true,
+  "globalPassed": 58,
+  "globalFailed": 0,
+  "scenarios": [
+    {
+      "id": "conflict-unit",
+      "label": "Conflict resolution unit tests",
+      "passed": true,
+      "checks": [
+        {
+          "name": "conflict-resolver.test.ts passed",
+          "passed": true
+        },
+        {
+          "name": "composite score favors manual",
+          "passed": true
+        },
+        {
+          "name": "confidence calculator for ipl",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "travel",
+      "label": "Travel Egypt",
+      "passed": true,
+      "checks": [
+        {
+          "name": "IPL fields mapped",
+          "passed": true,
+          "detail": "count=21"
+        },
+        {
+          "name": "followers field present",
+          "passed": true
+        },
+        {
+          "name": "followers confidence calculated",
+          "passed": true,
+          "detail": "confidence=0.88"
+        },
+        {
+          "name": "followers source is ipl",
+          "passed": true
+        },
+        {
+          "name": "displayName populated after merge",
+          "passed": true
+        },
+        {
+          "name": "history recorded on merge",
+          "passed": true
+        },
+        {
+          "name": "manual wins conflict over ipl",
+          "passed": true
+        },
+        {
+          "name": "hydration resolves from DNA",
+          "passed": true
+        },
+        {
+          "name": "hydration has followers",
+          "passed": true
+        },
+        {
+          "name": "hydration id matches influencer",
+          "passed": true
+        },
+        {
+          "name": "no duplicated creator info",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "babyjoy",
+      "label": "BabyJoy",
+      "passed": true,
+      "checks": [
+        {
+          "name": "IPL fields mapped",
+          "passed": true,
+          "detail": "count=21"
+        },
+        {
+          "name": "followers field present",
+          "passed": true
+        },
+        {
+          "name": "followers confidence calculated",
+          "passed": true,
+          "detail": "confidence=0.88"
+        },
+        {
+          "name": "followers source is ipl",
+          "passed": true
+        },
+        {
+          "name": "displayName populated after merge",
+          "passed": true
+        },
+        {
+          "name": "history recorded on merge",
+          "passed": true
+        },
+        {
+          "name": "manual wins conflict over ipl",
+          "passed": true
+        },
+        {
+          "name": "hydration resolves from DNA",
+          "passed": true
+        },
+        {
+          "name": "hydration has followers",
+          "passed": true
+        },
+        {
+          "name": "hydration id matches influencer",
+          "passed": true
+        },
+        {
+          "name": "no duplicated creator info",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "luxury",
+      "label": "Luxury Hotel Dubai",
+      "passed": true,
+      "checks": [
+        {
+          "name": "IPL fields mapped",
+          "passed": true,
+          "detail": "count=21"
+        },
+        {
+          "name": "followers field present",
+          "passed": true
+        },
+        {
+          "name": "followers confidence calculated",
+          "passed": true,
+          "detail": "confidence=0.88"
+        },
+        {
+          "name": "followers source is ipl",
+          "passed": true
+        },
+        {
+          "name": "displayName populated after merge",
+          "passed": true
+        },
+        {
+          "name": "history recorded on merge",
+          "passed": true
+        },
+        {
+          "name": "manual wins conflict over ipl",
+          "passed": true
+        },
+        {
+          "name": "hydration resolves from DNA",
+          "passed": true
+        },
+        {
+          "name": "hydration has followers",
+          "passed": true
+        },
+        {
+          "name": "hydration id matches influencer",
+          "passed": true
+        },
+        {
+          "name": "no duplicated creator info",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "finance",
+      "label": "Finance Emirates NBD",
+      "passed": true,
+      "checks": [
+        {
+          "name": "IPL fields mapped",
+          "passed": true,
+          "detail": "count=21"
+        },
+        {
+          "name": "followers field present",
+          "passed": true
+        },
+        {
+          "name": "followers confidence calculated",
+          "passed": true,
+          "detail": "confidence=0.88"
+        },
+        {
+          "name": "followers source is ipl",
+          "passed": true
+        },
+        {
+          "name": "displayName populated after merge",
+          "passed": true
+        },
+        {
+          "name": "history recorded on merge",
+          "passed": true
+        },
+        {
+          "name": "manual wins conflict over ipl",
+          "passed": true
+        },
+        {
+          "name": "hydration resolves from DNA",
+          "passed": true
+        },
+        {
+          "name": "hydration has followers",
+          "passed": true
+        },
+        {
+          "name": "hydration id matches influencer",
+          "passed": true
+        },
+        {
+          "name": "no duplicated creator info",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tourism",
+      "label": "Visit Egypt Tourism",
+      "passed": true,
+      "checks": [
+        {
+          "name": "IPL fields mapped",
+          "passed": true,
+          "detail": "count=21"
+        },
+        {
+          "name": "followers field present",
+          "passed": true
+        },
+        {
+          "name": "followers confidence calculated",
+          "passed": true,
+          "detail": "confidence=0.88"
+        },
+        {
+          "name": "followers source is ipl",
+          "passed": true
+        },
+        {
+          "name": "displayName populated after merge",
+          "passed": true
+        },
+        {
+          "name": "history recorded on merge",
+          "passed": true
+        },
+        {
+          "name": "manual wins conflict over ipl",
+          "passed": true
+        },
+        {
+          "name": "hydration resolves from DNA",
+          "passed": true
+        },
+        {
+          "name": "hydration has followers",
+          "passed": true
+        },
+        {
+          "name": "hydration id matches influencer",
+          "passed": true
+        },
+        {
+          "name": "no duplicated creator info",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "db-integration",
+      "label": "Database integration",
+      "passed": true,
+      "checks": [
+        {
+          "name": "creator_dna table exists",
+          "passed": false,
+          "detail": "Skipped — run migration 20260704120000_creator_dna.sql"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "generatedAt": "2026-07-04T20:32:24.573Z",
+  "release": "1.1.1",
+  "totalPassed": 21,
+  "totalFailed": 0,
+  "automatedValidation": "21/21",
+  "manualQaStatus": "pending — Coca-Cola + BabyJoy campaigns",
+  "success": true,
+  "results": [
+    {
+      "fixture": "babyjoy",
+      "label": "BabyJoy",
+      "checks": [
+        {
+          "name": "Summary brand from facts",
+          "pass": true,
+          "detail": "BabyJoy"
+        },
+        {
+          "name": "Summary client from facts",
+          "pass": true,
+          "detail": "BabyJoy"
+        },
+        {
+          "name": "Budget total from facts (not LLM text)",
+          "pass": true,
+          "detail": "2000000"
+        },
+        {
+          "name": "Currency from facts (not LLM text)",
+          "pass": true,
+          "detail": "EGP"
+        },
+        {
+          "name": "Timeline duration from facts",
+          "pass": true,
+          "detail": "6"
+        },
+        {
+          "name": "Objective from facts",
+          "pass": true,
+          "detail": "Awareness and UGC."
+        },
+        {
+          "name": "Creator mix tiers populated from facts",
+          "pass": true,
+          "detail": "3"
+        },
+        {
+          "name": "Presentation brand from facts",
+          "pass": true,
+          "detail": "BabyJoy"
+        },
+        {
+          "name": "Enriched budget section content matches facts currency",
+          "pass": true,
+          "detail": "EGP"
+        },
+        {
+          "name": "Enriched timeline durationWeeks matches facts",
+          "pass": true,
+          "detail": "6"
+        }
+      ]
+    },
+    {
+      "fixture": "cocacola",
+      "label": "Coca-Cola",
+      "checks": [
+        {
+          "name": "Summary brand from facts",
+          "pass": true,
+          "detail": "Coca-Cola"
+        },
+        {
+          "name": "Budget total from facts (not LLM text)",
+          "pass": true,
+          "detail": "500000"
+        },
+        {
+          "name": "Currency from facts (not LLM text)",
+          "pass": true,
+          "detail": "USD"
+        },
+        {
+          "name": "Timeline duration from facts",
+          "pass": true,
+          "detail": "8"
+        },
+        {
+          "name": "Creator mix tiers populated from facts",
+          "pass": true,
+          "detail": "4"
+        },
+        {
+          "name": "Presentation brand from facts",
+          "pass": true,
+          "detail": "Coca-Cola"
+        },
+        {
+          "name": "Enriched budget section content matches facts currency",
+          "pass": true,
+          "detail": "USD"
+        },
+        {
+          "name": "Enriched timeline durationWeeks matches facts",
+          "pass": true,
+          "detail": "8"
+        }
+      ]
+    },
+    {
+      "fixture": "legacy-no-facts",
+      "label": "Legacy (no facts)",
+      "checks": [
+        {
+          "name": "Legacy enrich completes without crash",
+          "pass": true
+        },
+        {
+          "name": "Legacy budget resolves via fallback",
+          "pass": true,
+          "detail": "no data"
+        },
+        {
+          "name": "Legacy summary has brand or client",
+          "pass": true,
+          "detail": "{\"client\":\"BabyJoy\",\"campaignType\":\"Awareness & UGC trust-building\",\"platforms\":\"Instagram, TikTok\",\"creatorMix\":\"Micro + Mid · mom creators\",\"estimatedReach\":\"3M–6M parents reached\",\"brand\":\"BabyJoy\",\"product\":\"Launch BabyJoy Premium Diapers\",\"market\":\"Egypt\",\"duration\":\"6 weeks\",\"budget\":\"2,000,000 EGP\",\"campaignStatus\":\"building\"}"
+        }
+      ]
+    }
+  ]
+}

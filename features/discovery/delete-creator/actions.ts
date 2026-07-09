@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/auth/permissions-server";
 import {
   deleteDiscoveryCreator,
   getDiscoveryCreatorDeleteEligibility,
+  type DeleteDiscoveryCreatorResult,
 } from "@/lib/discovery/delete-discovery-creator";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -25,7 +26,9 @@ export async function getDiscoveryCreatorDeleteEligibilityAction(influencerId: s
   return getDiscoveryCreatorDeleteEligibility(supabase, trimmed);
 }
 
-export async function deleteDiscoveryCreatorAction(influencerId: string) {
+export async function deleteDiscoveryCreatorAction(
+  influencerId: string
+): Promise<DeleteDiscoveryCreatorResult> {
   const trimmed = influencerId?.trim();
   if (!trimmed) {
     return { ok: false, message: "Creator id is required." };

@@ -1,0 +1,105 @@
+{
+  "generatedAt": "2026-07-04T19:28:52.005Z",
+  "sprint": "F1.1 Manual QA",
+  "totalPassed": 18,
+  "totalFailed": 0,
+  "buildOk": true,
+  "tscOk": true,
+  "status": "PASS",
+  "campaigns": [
+    {
+      "id": "babyjoy",
+      "label": "BabyJoy",
+      "passed": 8,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "Budget allocations total 100%",
+          "passed": true,
+          "detail": "got 100%"
+        },
+        {
+          "name": "Budget uses influencer categories",
+          "passed": true
+        },
+        {
+          "name": "Budget grounded rationale present",
+          "passed": true
+        },
+        {
+          "name": "Presentation Status references current campaign brand",
+          "passed": true,
+          "detail": "expected BabyJoy, got BabyJoy"
+        },
+        {
+          "name": "Timeline has no loading state when complete",
+          "passed": true
+        },
+        {
+          "name": "Timeline excludes internal prep phases",
+          "passed": true
+        },
+        {
+          "name": "Timeline uses client execution phases",
+          "passed": true
+        },
+        {
+          "name": "Strategic opportunities populated",
+          "passed": true
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "cocacola",
+      "label": "Coca-Cola",
+      "passed": 8,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "Budget allocations total 100%",
+          "passed": true,
+          "detail": "got 100%"
+        },
+        {
+          "name": "Budget uses influencer categories",
+          "passed": true
+        },
+        {
+          "name": "Budget grounded rationale present",
+          "passed": true
+        },
+        {
+          "name": "Presentation Status references current campaign brand",
+          "passed": true,
+          "detail": "expected Coca-Cola, got Coca-Cola"
+        },
+        {
+          "name": "Timeline has no loading state when complete",
+          "passed": true
+        },
+        {
+          "name": "Timeline excludes internal prep phases",
+          "passed": true
+        },
+        {
+          "name": "Timeline uses client execution phases",
+          "passed": true
+        },
+        {
+          "name": "Strategic opportunities populated",
+          "passed": true
+        }
+      ],
+      "status": "PASS"
+    }
+  ],
+  "rootCauses": {
+    "budget90Percent": "Parsed budget lines (creator fees + production + contingency) summed to 90% without normalization; default fallback shares also did not guarantee 100%.",
+    "presentationCrossCampaign": "resolvePresentationData returned stale presentation.content campaignName/brandName instead of current summaryCards.",
+    "timelineWeek1Loading": "deriveTimelineWeeks defaulted week 1 to in_progress and mergeMilestonesIntoWeeks preserved pending milestone status after campaign completion.",
+    "budgetCategories": "Industry profiles used generic Production/Management/Contingency labels instead of influencer-marketing categories with rationale.",
+    "timelineInternalPrep": "Timeline builder exposed agency-internal phases (brief approval, vendor discovery) instead of client-facing execution milestones.",
+    "opportunityFinder": "Section surfaced industry gap analysis; renamed UI label to Strategic Opportunities to reflect purpose."
+  }
+}

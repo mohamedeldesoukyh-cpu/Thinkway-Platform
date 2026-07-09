@@ -1,0 +1,329 @@
+{
+  "generatedAt": "2026-07-04T20:16:24.997Z",
+  "totalPassed": 57,
+  "totalFailed": 0,
+  "success": true,
+  "results": [
+    {
+      "fixture": "babyjoy",
+      "label": "BabyJoy",
+      "checks": [
+        {
+          "name": "Facts extracted with timestamp",
+          "pass": true
+        },
+        {
+          "name": "Brand matches expected",
+          "pass": true,
+          "detail": "BabyJoy"
+        },
+        {
+          "name": "Budget amount matches",
+          "pass": true,
+          "detail": "got 2000000"
+        },
+        {
+          "name": "Currency matches",
+          "pass": true,
+          "detail": "EGP"
+        },
+        {
+          "name": "Duration weeks matches",
+          "pass": true,
+          "detail": "got 6"
+        },
+        {
+          "name": "Geography includes expected region",
+          "pass": true,
+          "detail": "[\"Egypt\"]"
+        },
+        {
+          "name": "Objective includes expected phrase",
+          "pass": true,
+          "detail": "Awareness and UGC."
+        },
+        {
+          "name": "Facts block is structured JSON (not prose)",
+          "pass": true
+        },
+        {
+          "name": "Strategy references factsRef",
+          "pass": true
+        },
+        {
+          "name": "Strategy budget matches facts",
+          "pass": true
+        },
+        {
+          "name": "Strategy duration matches facts",
+          "pass": true
+        },
+        {
+          "name": "Budget section currency matches facts",
+          "pass": true,
+          "detail": "EGP"
+        },
+        {
+          "name": "Budget section total matches facts",
+          "pass": true,
+          "detail": "2000000"
+        },
+        {
+          "name": "Summary section uses facts budget (no contradiction)",
+          "pass": true,
+          "detail": "Brand: BabyJoy\nObjective: Awareness and UGC.\nAudience: mothers with babies 0–3 years. Budget EGP 2,000,000. Campaign dur"
+        },
+        {
+          "name": "Timeline section uses facts duration",
+          "pass": true,
+          "detail": "6"
+        }
+      ],
+      "facts": {
+        "brandName": "BabyJoy",
+        "budget": {
+          "amount": 2000000,
+          "currency": "EGP"
+        },
+        "durationWeeks": 6
+      }
+    },
+    {
+      "fixture": "cocacola",
+      "label": "Coca-Cola",
+      "checks": [
+        {
+          "name": "Facts extracted with timestamp",
+          "pass": true
+        },
+        {
+          "name": "Brand matches expected",
+          "pass": true,
+          "detail": "Coca-Cola"
+        },
+        {
+          "name": "Budget amount matches",
+          "pass": true,
+          "detail": "got 500000"
+        },
+        {
+          "name": "Currency matches",
+          "pass": true,
+          "detail": "USD"
+        },
+        {
+          "name": "Duration weeks matches",
+          "pass": true,
+          "detail": "got 8"
+        },
+        {
+          "name": "Platforms include expected channels",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "name": "Facts block is structured JSON (not prose)",
+          "pass": true
+        },
+        {
+          "name": "Strategy references factsRef",
+          "pass": true
+        },
+        {
+          "name": "Strategy budget matches facts",
+          "pass": true
+        },
+        {
+          "name": "Strategy duration matches facts",
+          "pass": true
+        },
+        {
+          "name": "Budget section currency matches facts",
+          "pass": true,
+          "detail": "USD"
+        },
+        {
+          "name": "Budget section total matches facts",
+          "pass": true,
+          "detail": "500000"
+        },
+        {
+          "name": "Summary section uses facts budget (no contradiction)",
+          "pass": true,
+          "detail": "Brand: Coca-Cola\nObjective: Brand awareness and engagement\nAudience: Brand-relevant consumers in primary market\nBudget: "
+        },
+        {
+          "name": "Timeline section uses facts duration",
+          "pass": true,
+          "detail": "8"
+        }
+      ],
+      "facts": {
+        "brandName": "Coca-Cola",
+        "budget": {
+          "amount": 500000,
+          "currency": "USD"
+        },
+        "durationWeeks": 8
+      }
+    },
+    {
+      "fixture": "pepsi",
+      "label": "Pepsi",
+      "checks": [
+        {
+          "name": "Facts extracted with timestamp",
+          "pass": true
+        },
+        {
+          "name": "Brand matches expected",
+          "pass": true,
+          "detail": "Pepsi"
+        },
+        {
+          "name": "Budget amount matches",
+          "pass": true,
+          "detail": "got 1200000"
+        },
+        {
+          "name": "Currency matches",
+          "pass": true,
+          "detail": "AED"
+        },
+        {
+          "name": "Duration weeks matches",
+          "pass": true,
+          "detail": "got 10"
+        },
+        {
+          "name": "Geography includes expected region",
+          "pass": true,
+          "detail": "[\"UAE\"]"
+        },
+        {
+          "name": "Facts block is structured JSON (not prose)",
+          "pass": true
+        },
+        {
+          "name": "Strategy references factsRef",
+          "pass": true
+        },
+        {
+          "name": "Strategy budget matches facts",
+          "pass": true
+        },
+        {
+          "name": "Strategy duration matches facts",
+          "pass": true
+        },
+        {
+          "name": "Budget section currency matches facts",
+          "pass": true,
+          "detail": "AED"
+        },
+        {
+          "name": "Budget section total matches facts",
+          "pass": true,
+          "detail": "1200000"
+        },
+        {
+          "name": "Summary section uses facts budget (no contradiction)",
+          "pass": true,
+          "detail": "Brand: Pepsi\nObjective: brand awareness on TikTok and Instagram.\nAudience: Brand-relevant consumers in primary market\nBu"
+        },
+        {
+          "name": "Timeline section uses facts duration",
+          "pass": true,
+          "detail": "10"
+        }
+      ],
+      "facts": {
+        "brandName": "Pepsi",
+        "budget": {
+          "amount": 1200000,
+          "currency": "AED"
+        },
+        "durationWeeks": 10
+      }
+    },
+    {
+      "fixture": "tourism",
+      "label": "Visit Egypt Tourism",
+      "checks": [
+        {
+          "name": "Facts extracted with timestamp",
+          "pass": true
+        },
+        {
+          "name": "Brand matches expected",
+          "pass": true,
+          "detail": "Visit Egypt"
+        },
+        {
+          "name": "Budget amount matches",
+          "pass": true,
+          "detail": "got 750000"
+        },
+        {
+          "name": "Currency matches",
+          "pass": true,
+          "detail": "USD"
+        },
+        {
+          "name": "Duration weeks matches",
+          "pass": true,
+          "detail": "got 12"
+        },
+        {
+          "name": "Platforms include expected channels",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "name": "Facts block is structured JSON (not prose)",
+          "pass": true
+        },
+        {
+          "name": "Strategy references factsRef",
+          "pass": true
+        },
+        {
+          "name": "Strategy budget matches facts",
+          "pass": true
+        },
+        {
+          "name": "Strategy duration matches facts",
+          "pass": true
+        },
+        {
+          "name": "Budget section currency matches facts",
+          "pass": true,
+          "detail": "USD"
+        },
+        {
+          "name": "Budget section total matches facts",
+          "pass": true,
+          "detail": "750000"
+        },
+        {
+          "name": "Summary section uses facts budget (no contradiction)",
+          "pass": true,
+          "detail": "Brand: Visit Egypt\nObjective: Brand awareness and engagement\nAudience: Brand-relevant consumers in primary market\nBudget"
+        },
+        {
+          "name": "Timeline section uses facts duration",
+          "pass": true,
+          "detail": "12"
+        }
+      ],
+      "facts": {
+        "brandName": "Visit Egypt",
+        "budget": {
+          "amount": 750000,
+          "currency": "USD"
+        },
+        "durationWeeks": 12
+      }
+    }
+  ]
+}

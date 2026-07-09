@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-07-03T04:05:09.296Z",
+  "doneReceived": true,
+  "conversationId": "9374c4e1-4884-4cec-9e2c-a691456f8dc1",
+  "clientLifecycleLogs": [
+    "[workflow-lifecycle] SSE \"done\" received (client stream)",
+    "[workflow-lifecycle] Conversation reload started",
+    "[workflow-lifecycle] Conversation reload completed (2 messages)",
+    "[workflow-lifecycle] Chat render started",
+    "[workflow-lifecycle] Chat render completed (simulated 2 messages)"
+  ],
+  "errors": []
+}

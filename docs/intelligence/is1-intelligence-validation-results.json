@@ -1,0 +1,281 @@
+{
+  "generatedAt": "2026-07-04T21:35:54.194Z",
+  "sprint": "IS-1",
+  "automatedChecksPassed": 44,
+  "automatedChecksTotal": 44,
+  "automatedChecksSummary": "automated checks: 44/44; manual intelligence review pending",
+  "results": [
+    {
+      "fixture": "babyjoy",
+      "label": "BabyJoy",
+      "checks": [
+        {
+          "name": "Executive Strategy.businessChallenge",
+          "ok": true,
+          "detail": "BabyJoy enters Egypt's crowded premium diaper segment where Pampers and Huggies "
+        },
+        {
+          "name": "Executive Strategy.strategicInsight",
+          "ok": true,
+          "detail": "Egyptian first-time mothers in the 0–3 cohort consult creator content before pha"
+        },
+        {
+          "name": "Executive Strategy.rejectedAlternatives",
+          "ok": true,
+          "detail": "Celebrity endorsement-led awareness — rejected because EGP 2,000,000 over 6 week"
+        },
+        {
+          "name": "Executive Strategy.chosenStrategy",
+          "ok": true,
+          "detail": "Authenticity-first UGC pyramid on Instagram + TikTok: Macro 29% · Micro 42% · Na"
+        },
+        {
+          "name": "Executive Strategy.whyThisStrategyWins",
+          "ok": true,
+          "detail": "Director Strategy anchors on peer-trust mechanics for Baby & Parenting — tier mi"
+        },
+        {
+          "name": "Executive Strategy.expectedTradeoffs",
+          "ok": true,
+          "detail": "Lower immediate reach vs celebrity burst — traded for higher trust transfer and "
+        },
+        {
+          "name": "Executive Strategy.confidenceLevel",
+          "ok": true,
+          "detail": "91"
+        },
+        {
+          "name": "Executive Strategy.directorConclusion",
+          "ok": true,
+          "detail": "Approve mom-creator UGC pyramid for BabyJoy Egypt launch — Awareness and UGC. th"
+        },
+        {
+          "name": "Vendor funnel stages (9)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Funnel stages have removalWhy",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Budget allocations have reasoning fields",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Creator activation weeks",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Reporting AFTER campaign",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Creator mix reasoning per tier",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "KPI reasoning fields",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Director decision minutes",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "No generic blocklist phrases",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "References CampaignFacts",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Studio enrich: executiveStrategyReasoning",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Studio enrich: directorDecisionMinutes",
+          "ok": true,
+          "detail": ""
+        }
+      ]
+    },
+    {
+      "fixture": "cocacola",
+      "label": "Coca-Cola",
+      "checks": [
+        {
+          "name": "Executive Strategy.businessChallenge",
+          "ok": true,
+          "detail": "Coca-Cola must reignite summer ritual relevance with Gen Z who associate cola wi"
+        },
+        {
+          "name": "Executive Strategy.strategicInsight",
+          "ok": true,
+          "detail": "Gen Z engagement peaks on participatory formats (duets, challenges) not polished"
+        },
+        {
+          "name": "Executive Strategy.rejectedAlternatives",
+          "ok": true,
+          "detail": "TV/OOH summer burst — rejected; Gen Z target and CampaignFacts platforms (Instag"
+        },
+        {
+          "name": "Executive Strategy.chosenStrategy",
+          "ok": true,
+          "detail": "Participatory summer engagement wave: Macro 40% · Micro 35% · Nano 25% on Instag"
+        },
+        {
+          "name": "Executive Strategy.whyThisStrategyWins",
+          "ok": true,
+          "detail": "Director Strategy prioritizes cultural participation over product education — ti"
+        },
+        {
+          "name": "Executive Strategy.expectedTradeoffs",
+          "ok": true,
+          "detail": "Brand safety risk on UGC tone — traded for authenticity; fraud/exclusivity filte"
+        },
+        {
+          "name": "Executive Strategy.confidenceLevel",
+          "ok": true,
+          "detail": "89"
+        },
+        {
+          "name": "Executive Strategy.directorConclusion",
+          "ok": true,
+          "detail": "Approve Gen Z participatory creator wave for Coca-Cola summer — engagement throu"
+        },
+        {
+          "name": "Vendor funnel stages (9)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Funnel stages have removalWhy",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Budget allocations have reasoning fields",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Creator activation weeks",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Reporting AFTER campaign",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Creator mix reasoning per tier",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "KPI reasoning fields",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Director decision minutes",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "No generic blocklist phrases",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "References CampaignFacts",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Studio enrich: executiveStrategyReasoning",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Studio enrich: directorDecisionMinutes",
+          "ok": true,
+          "detail": ""
+        }
+      ]
+    }
+  ],
+  "uniquenessChecks": [
+    {
+      "name": "Executive chosenStrategy differs",
+      "ok": true
+    },
+    {
+      "name": "Business challenge differs",
+      "ok": true
+    },
+    {
+      "name": "KPI metrics differ",
+      "ok": true
+    },
+    {
+      "name": "Budget reasoning differs",
+      "ok": true
+    }
+  ],
+  "diffSamples": {
+    "executiveChosenStrategy": {
+      "babyjoy": "Authenticity-first UGC pyramid on Instagram + TikTok: Macro 29% · Micro 42% · Nano 29% activating verified mom creators in Egypt to document real overnight-use stories tied to Awareness and UGC..",
+      "cocacola": "Participatory summer engagement wave: Macro 40% · Micro 35% · Nano 25% on Instagram + TikTok — creators stage refill/share moments, not product demos, aligned to Gen Z social identity and Brand awaren"
+    },
+    "kpiFirstMetric": {
+      "babyjoy": {
+        "metric": "UGC asset volume",
+        "target": "80+ authentic mom reviews",
+        "reason": "Awareness and UGC. requires peer proof volume — Macro anchors trust, Micro/Nano deliver countable UGC within 6 weeks.",
+        "confidence": 87,
+        "dependencies": [
+          "Macro moms briefed Week 1",
+          "Nano roster onboarded by Week 2",
+          "Brand claim library approved"
+        ],
+        "risk": "Creator drop-out reduces asset count below 80",
+        "tradeoff": "Volume target vs production polish — Director accepts raw authenticity",
+        "evidence": "CampaignFacts.objective=Awareness and UGC.; DirectorStrategy.creatorTierStrategy",
+        "alternativeConsidered": "Reach-only KPI — rejected; trial consideration needs UGC proof not impressions"
+      },
+      "cocacola": {
+        "metric": "Participation rate",
+        "target": "12% duet/stitch rate on hero posts",
+        "reason": "Gen Z summer engagement for Coca-Cola is participation-led — Mega/Macro posts must invite duets, not broadcast.",
+        "confidence": 85,
+        "dependencies": [
+          "Mega/Macro content Week 1-2",
+          "Challenge creative guardrails",
+          "Instagram + TikTok"
+        ],
+        "risk": "Low participation if creative feels too branded",
+        "tradeoff": "Brand control vs participatory looseness",
+        "evidence": "CampaignFacts.audience=Brand-relevant consumers in primary market; DirectorStrategy.platformMix",
+        "alternativeConsidered": "Impression-only KPI — rejected for engagement objective"
+      }
+    },
+    "directorConclusion": {
+      "babyjoy": "Approve mom-creator UGC pyramid for BabyJoy Egypt launch — Awareness and UGC. through peer validation, not brand interruption. EGP 2,000,000 / 6 weeks is sufficient when Nano+Micro carry volume.",
+      "cocacola": "Approve Gen Z participatory creator wave for Coca-Cola summer — engagement through cultural moments on Instagram/TikTok, not traditional awareness spots. USD 500,000 over 8 weeks supports tier waterfa"
+    }
+  }
+}

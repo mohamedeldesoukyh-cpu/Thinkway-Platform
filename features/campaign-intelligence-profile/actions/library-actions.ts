@@ -11,7 +11,10 @@ import {
 import { requireRequestUser } from "@/lib/supabase/server";
 
 import type { BrandSelectRow } from "../services/build-brand-link-dialog-options";
-import { loadAccessibleBrandSelectRows } from "../services/accessible-brands";
+import {
+  BRAND_SELECT_LIMIT,
+  loadAccessibleBrandSelectRows,
+} from "../services/accessible-brands";
 import {
   getCampaignIntelligenceProfileById,
   updateCampaignIntelligenceProfile,

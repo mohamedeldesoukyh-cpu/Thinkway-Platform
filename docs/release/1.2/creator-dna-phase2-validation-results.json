@@ -1,0 +1,145 @@
+{
+  "timestamp": "2026-07-05T02:59:39.677Z",
+  "release": "1.2",
+  "phase": "creator-dna-phase2",
+  "mode": "validation-will-test-not-pass",
+  "fixtureCount": 10,
+  "passed": 21,
+  "failed": 0,
+  "warnings": 0,
+  "checks": [
+    {
+      "name": "migration 20260705120000_creator_dna_phase2_extensions",
+      "ok": true,
+      "detail": "additive dna_completeness_score columns",
+      "severity": "error"
+    },
+    {
+      "name": "dna-completeness-engine",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "dna-merge-engine",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "dna-browse-hydration",
+      "ok": true,
+      "detail": "present",
+      "severity": "error"
+    },
+    {
+      "name": "Phase 2 DNA types",
+      "ok": true,
+      "detail": "sections present",
+      "severity": "error"
+    },
+    {
+      "name": "DNA-led unified ranking",
+      "ok": true,
+      "detail": "weights wired",
+      "severity": "error"
+    },
+    {
+      "name": "DNA hydration in browse",
+      "ok": true,
+      "detail": "wired",
+      "severity": "error"
+    },
+    {
+      "name": "Apify import DNA bridge",
+      "ok": true,
+      "detail": "wired",
+      "severity": "error"
+    },
+    {
+      "name": "merge tier rules",
+      "ok": true,
+      "detail": "Verified > Imported > Inferred > Empty",
+      "severity": "error"
+    },
+    {
+      "name": "fixture registered: BabyJoy",
+      "ok": true,
+      "detail": "babyjoy — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Coca-Cola",
+      "ok": true,
+      "detail": "cocacola — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Samsung",
+      "ok": true,
+      "detail": "samsung — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: L'Oréal",
+      "ok": true,
+      "detail": "loreal — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Visit Egypt",
+      "ok": true,
+      "detail": "visit_egypt — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Netflix",
+      "ok": true,
+      "detail": "netflix — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Talabat",
+      "ok": true,
+      "detail": "talabat — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Adidas",
+      "ok": true,
+      "detail": "adidas — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Red Bull",
+      "ok": true,
+      "detail": "red_bull — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "fixture registered: Emirates NBD",
+      "ok": true,
+      "detail": "emirates_nbd — WILL TEST (not PASS)",
+      "severity": "warn"
+    },
+    {
+      "name": "offline merge engine tests",
+      "ok": true,
+      "detail": "unit tests passed",
+      "severity": "error"
+    },
+    {
+      "name": "offline completeness engine tests",
+      "ok": true,
+      "detail": "unit tests passed",
+      "severity": "error"
+    }
+  ],
+  "gaps": [
+    "Live Supabase DNA row backfill not executed in CI",
+    "Demographics provider integration (Modash/HypeAuditor) not wired",
+    "Commercial DNA populated only via campaign/manual sources",
+    "UI completeness + verification badges not implemented",
+    "Staging promotion merge live tests require operator DB"
+  ]
+}

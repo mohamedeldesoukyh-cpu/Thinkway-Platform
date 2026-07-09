@@ -1,0 +1,649 @@
+{
+  "generatedAt": "2026-07-04T15:43:16.570Z",
+  "phase": 2,
+  "totalPassed": 65,
+  "totalFailed": 0,
+  "status": "PASS",
+  "results": [
+    {
+      "id": "babyjoy",
+      "label": "BabyJoy",
+      "passed": 13,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject unchanged during scenarios",
+          "passed": true
+        },
+        {
+          "name": "Unlimited scenarios supported",
+          "passed": true,
+          "detail": "count=6"
+        },
+        {
+          "name": "Budget cut reduces total",
+          "passed": true
+        },
+        {
+          "name": "Thinkway Score recalculates on budget cut",
+          "passed": true
+        },
+        {
+          "name": "Budget increase raises total",
+          "passed": true
+        },
+        {
+          "name": "Side-by-side comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Comparison rows match scenario count",
+          "passed": true
+        },
+        {
+          "name": "Recommendations explainable",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Score breakdown has 6 dimensions",
+          "passed": true
+        },
+        {
+          "name": "CampaignObject unchanged until promote",
+          "passed": true
+        },
+        {
+          "name": "Promotion produces new snapshot",
+          "passed": true
+        },
+        {
+          "name": "Promotion updates budget",
+          "passed": true
+        },
+        {
+          "name": "Timeline records promotion",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 6,
+      "winner": "Original",
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 2000000,
+          "reach": 3000000,
+          "thinkwayScore": 57,
+          "successProbability": 88,
+          "isWinner": true
+        },
+        {
+          "name": "Budget Cut",
+          "budget": 1600000,
+          "reach": 2400000,
+          "thinkwayScore": 52,
+          "successProbability": 85,
+          "isWinner": false
+        },
+        {
+          "name": "Budget Increase",
+          "budget": 2400000,
+          "reach": 3600000,
+          "thinkwayScore": 56,
+          "successProbability": 88,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 2000000,
+          "reach": 3000000,
+          "thinkwayScore": 54,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Replace Creators",
+          "budget": 2000000,
+          "reach": 3000000,
+          "thinkwayScore": 56,
+          "successProbability": 88,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Objective",
+          "budget": 2200000,
+          "reach": 3300000,
+          "thinkwayScore": 55,
+          "successProbability": 88,
+          "isWinner": false
+        }
+      ],
+      "explainabilitySample": {
+        "key": "budget",
+        "label": "Budget",
+        "score": 75,
+        "maxScore": 20,
+        "why": "Budget allocation in \"Budget Cut\" maintains efficient spend relative to projected reach for BabyJoy.",
+        "evidence": "Baseline budget 2,000,000 EGP · Score 75/100",
+        "confidence": 74,
+        "improvements": [
+          "Reallocate 5–10% from production to creator fees",
+          "Consider phased budget release"
+        ]
+      },
+      "promotionScenario": "Budget Increase"
+    },
+    {
+      "id": "adidas",
+      "label": "Adidas",
+      "passed": 13,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject unchanged during scenarios",
+          "passed": true
+        },
+        {
+          "name": "Unlimited scenarios supported",
+          "passed": true,
+          "detail": "count=6"
+        },
+        {
+          "name": "Budget cut reduces total",
+          "passed": true
+        },
+        {
+          "name": "Thinkway Score recalculates on budget cut",
+          "passed": true
+        },
+        {
+          "name": "Budget increase raises total",
+          "passed": true
+        },
+        {
+          "name": "Side-by-side comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Comparison rows match scenario count",
+          "passed": true
+        },
+        {
+          "name": "Recommendations explainable",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Score breakdown has 6 dimensions",
+          "passed": true
+        },
+        {
+          "name": "CampaignObject unchanged until promote",
+          "passed": true
+        },
+        {
+          "name": "Promotion produces new snapshot",
+          "passed": true
+        },
+        {
+          "name": "Promotion updates budget",
+          "passed": true
+        },
+        {
+          "name": "Timeline records promotion",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 6,
+      "winner": "Original",
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 4500000,
+          "reach": 8000000,
+          "thinkwayScore": 75,
+          "successProbability": 88,
+          "isWinner": true
+        },
+        {
+          "name": "Budget Cut",
+          "budget": 3600000,
+          "reach": 6400000,
+          "thinkwayScore": 69,
+          "successProbability": 84,
+          "isWinner": false
+        },
+        {
+          "name": "Budget Increase",
+          "budget": 5400000,
+          "reach": 9600000,
+          "thinkwayScore": 75,
+          "successProbability": 88,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 4500000,
+          "reach": 8000000,
+          "thinkwayScore": 72,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Replace Creators",
+          "budget": 4500000,
+          "reach": 8000000,
+          "thinkwayScore": 73,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Objective",
+          "budget": 4950000,
+          "reach": 8800000,
+          "thinkwayScore": 73,
+          "successProbability": 87,
+          "isWinner": false
+        }
+      ],
+      "explainabilitySample": {
+        "key": "budget",
+        "label": "Budget",
+        "score": 75,
+        "maxScore": 20,
+        "why": "Budget allocation in \"Budget Cut\" maintains efficient spend relative to projected reach for Adidas.",
+        "evidence": "Baseline budget 4,500,000 EGP · Score 75/100",
+        "confidence": 74,
+        "improvements": [
+          "Reallocate 5–10% from production to creator fees",
+          "Consider phased budget release"
+        ]
+      },
+      "promotionScenario": "Budget Increase"
+    },
+    {
+      "id": "tourism",
+      "label": "Tourism",
+      "passed": 13,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject unchanged during scenarios",
+          "passed": true
+        },
+        {
+          "name": "Unlimited scenarios supported",
+          "passed": true,
+          "detail": "count=6"
+        },
+        {
+          "name": "Budget cut reduces total",
+          "passed": true
+        },
+        {
+          "name": "Thinkway Score recalculates on budget cut",
+          "passed": true
+        },
+        {
+          "name": "Budget increase raises total",
+          "passed": true
+        },
+        {
+          "name": "Side-by-side comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Comparison rows match scenario count",
+          "passed": true
+        },
+        {
+          "name": "Recommendations explainable",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Score breakdown has 6 dimensions",
+          "passed": true
+        },
+        {
+          "name": "CampaignObject unchanged until promote",
+          "passed": true
+        },
+        {
+          "name": "Promotion produces new snapshot",
+          "passed": true
+        },
+        {
+          "name": "Promotion updates budget",
+          "passed": true
+        },
+        {
+          "name": "Timeline records promotion",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 6,
+      "winner": "Original",
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 1200000,
+          "reach": 5000000,
+          "thinkwayScore": 74,
+          "successProbability": 87,
+          "isWinner": true
+        },
+        {
+          "name": "Budget Cut",
+          "budget": 960000,
+          "reach": 4000000,
+          "thinkwayScore": 68,
+          "successProbability": 84,
+          "isWinner": false
+        },
+        {
+          "name": "Budget Increase",
+          "budget": 1440000,
+          "reach": 6000000,
+          "thinkwayScore": 74,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 1200000,
+          "reach": 5000000,
+          "thinkwayScore": 71,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Replace Creators",
+          "budget": 1200000,
+          "reach": 5000000,
+          "thinkwayScore": 72,
+          "successProbability": 87,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Objective",
+          "budget": 1320000,
+          "reach": 5500000,
+          "thinkwayScore": 73,
+          "successProbability": 87,
+          "isWinner": false
+        }
+      ],
+      "explainabilitySample": {
+        "key": "budget",
+        "label": "Budget",
+        "score": 75,
+        "maxScore": 20,
+        "why": "Budget allocation in \"Budget Cut\" maintains efficient spend relative to projected reach for Visit Egypt.",
+        "evidence": "Baseline budget 1,200,000 USD · Score 75/100",
+        "confidence": 74,
+        "improvements": [
+          "Reallocate 5–10% from production to creator fees",
+          "Consider phased budget release"
+        ]
+      },
+      "promotionScenario": "Budget Increase"
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "passed": 13,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject unchanged during scenarios",
+          "passed": true
+        },
+        {
+          "name": "Unlimited scenarios supported",
+          "passed": true,
+          "detail": "count=6"
+        },
+        {
+          "name": "Budget cut reduces total",
+          "passed": true
+        },
+        {
+          "name": "Thinkway Score recalculates on budget cut",
+          "passed": true
+        },
+        {
+          "name": "Budget increase raises total",
+          "passed": true
+        },
+        {
+          "name": "Side-by-side comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Comparison rows match scenario count",
+          "passed": true
+        },
+        {
+          "name": "Recommendations explainable",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Score breakdown has 6 dimensions",
+          "passed": true
+        },
+        {
+          "name": "CampaignObject unchanged until promote",
+          "passed": true
+        },
+        {
+          "name": "Promotion produces new snapshot",
+          "passed": true
+        },
+        {
+          "name": "Promotion updates budget",
+          "passed": true
+        },
+        {
+          "name": "Timeline records promotion",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 6,
+      "winner": "Original",
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 6000001,
+          "reach": 1500000,
+          "thinkwayScore": 57,
+          "successProbability": 74,
+          "isWinner": true
+        },
+        {
+          "name": "Budget Cut",
+          "budget": 4800001,
+          "reach": 1200000,
+          "thinkwayScore": 52,
+          "successProbability": 71,
+          "isWinner": false
+        },
+        {
+          "name": "Budget Increase",
+          "budget": 7200001,
+          "reach": 1800000,
+          "thinkwayScore": 56,
+          "successProbability": 74,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 6000001,
+          "reach": 1500000,
+          "thinkwayScore": 54,
+          "successProbability": 73,
+          "isWinner": false
+        },
+        {
+          "name": "Replace Creators",
+          "budget": 6000001,
+          "reach": 1500000,
+          "thinkwayScore": 56,
+          "successProbability": 74,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Objective",
+          "budget": 6600001,
+          "reach": 1650000,
+          "thinkwayScore": 55,
+          "successProbability": 74,
+          "isWinner": false
+        }
+      ],
+      "explainabilitySample": {
+        "key": "budget",
+        "label": "Budget",
+        "score": 75,
+        "maxScore": 20,
+        "why": "Budget allocation in \"Budget Cut\" maintains efficient spend relative to projected reach for Emirates NBD.",
+        "evidence": "Baseline budget 6,000,001 AED · Score 75/100",
+        "confidence": 74,
+        "improvements": [
+          "Reallocate 5–10% from production to creator fees",
+          "Consider phased budget release"
+        ]
+      },
+      "promotionScenario": "Budget Increase"
+    },
+    {
+      "id": "luxury",
+      "label": "Luxury",
+      "passed": 13,
+      "failed": 0,
+      "checks": [
+        {
+          "name": "CampaignObject unchanged during scenarios",
+          "passed": true
+        },
+        {
+          "name": "Unlimited scenarios supported",
+          "passed": true,
+          "detail": "count=6"
+        },
+        {
+          "name": "Budget cut reduces total",
+          "passed": true
+        },
+        {
+          "name": "Thinkway Score recalculates on budget cut",
+          "passed": true
+        },
+        {
+          "name": "Budget increase raises total",
+          "passed": true
+        },
+        {
+          "name": "Side-by-side comparison has winner",
+          "passed": true
+        },
+        {
+          "name": "Comparison rows match scenario count",
+          "passed": true
+        },
+        {
+          "name": "Recommendations explainable",
+          "passed": true,
+          "detail": "0 invalid"
+        },
+        {
+          "name": "Score breakdown has 6 dimensions",
+          "passed": true
+        },
+        {
+          "name": "CampaignObject unchanged until promote",
+          "passed": true
+        },
+        {
+          "name": "Promotion produces new snapshot",
+          "passed": true
+        },
+        {
+          "name": "Promotion updates budget",
+          "passed": true
+        },
+        {
+          "name": "Timeline records promotion",
+          "passed": true
+        }
+      ],
+      "scenarioCount": 6,
+      "winner": "Original",
+      "comparison": [
+        {
+          "name": "Original",
+          "budget": 8500004,
+          "reach": 2500000,
+          "thinkwayScore": 72,
+          "successProbability": 77,
+          "isWinner": true
+        },
+        {
+          "name": "Budget Cut",
+          "budget": 6800003,
+          "reach": 2000000,
+          "thinkwayScore": 66,
+          "successProbability": 74,
+          "isWinner": false
+        },
+        {
+          "name": "Budget Increase",
+          "budget": 10200005,
+          "reach": 3000000,
+          "thinkwayScore": 72,
+          "successProbability": 77,
+          "isWinner": false
+        },
+        {
+          "name": "Client Creators",
+          "budget": 8500004,
+          "reach": 2500000,
+          "thinkwayScore": 69,
+          "successProbability": 77,
+          "isWinner": false
+        },
+        {
+          "name": "Replace Creators",
+          "budget": 8500004,
+          "reach": 2500000,
+          "thinkwayScore": 70,
+          "successProbability": 77,
+          "isWinner": false
+        },
+        {
+          "name": "Alternative Objective",
+          "budget": 9350004,
+          "reach": 2750000,
+          "thinkwayScore": 70,
+          "successProbability": 77,
+          "isWinner": false
+        }
+      ],
+      "explainabilitySample": {
+        "key": "budget",
+        "label": "Budget",
+        "score": 75,
+        "maxScore": 20,
+        "why": "Budget allocation in \"Budget Cut\" maintains efficient spend relative to projected reach for Rolex.",
+        "evidence": "Baseline budget 8,500,004 USD · Score 75/100",
+        "confidence": 74,
+        "improvements": [
+          "Reallocate 5–10% from production to creator fees",
+          "Consider phased budget release"
+        ]
+      },
+      "promotionScenario": "Budget Increase"
+    }
+  ]
+}

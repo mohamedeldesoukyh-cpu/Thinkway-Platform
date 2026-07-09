@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-07-04T01:36:00.000Z",
+  "environment": "local-dev (localhost:3000)",
+  "stagingReachable": false,
+  "stagingNote": "No dedicated staging URL configured; validation executed against local dev with thinkway-dev Supabase (hsxrewjcbvmbkqdlzjhs)",
+  "build": {
+    "command": "npm run build",
+    "status": "PASS",
+    "durationSeconds": 113,
+    "nextVersion": "16.2.6",
+    "notes": "Compiled successfully; cookie-based routes logged expected dynamic-server warnings during static generation"
+  },
+  "typescript": {
+    "command": "npx tsc --noEmit",
+    "status": "PASS",
+    "durationSeconds": 16
+  },
+  "validators": {
+    "validate-security-phase01": { "status": "FAIL", "passed": 57, "findings": 3, "note": "3 P0 on public health/ready/version — intentional per Phase 0.2" },
+    "validate-infra-phase02": { "status": "PASS", "passed": 33, "findings": 0 },
+    "validate-campaign-persistence": { "status": "PASS", "passed": 24, "failed": 0 },
+    "validate-ers1-live-parity": { "status": "PASS", "note": "Requires NODE_TLS_REJECT_UNAUTHORIZED=0 on Windows" },
+    "validate-ers2-search-intelligence": { "status": "PASS", "note": "Requires NODE_TLS_REJECT_UNAUTHORIZED=0 on Windows" },
+    "validate-ers3-campaign-object-integrity": { "status": "PASS", "passed": 26, "failed": 0 },
+    "validate-ers4-creator-dna": { "status": "PASS", "passed": 58, "failed": 0 },
+    "validate-creator-integrity": { "status": "PARTIAL", "note": "Offline pipeline PASS; live DB scenarios SKIP without TLS bypass" },
+    "validate-ipl": { "status": "PARTIAL", "passed": 12, "failed": 1, "note": "ipl_refresh_policies seed migration pending" },
+    "runtime-verify-ai-workspace": { "status": "PASS", "durationSeconds": 416, "checks": 10 }
+  },
+  "healthEndpoints": {
+    "/api/health": { "status": 200, "latencyMs": 426 },
+    "/api/ready": { "status": 200, "latencyMs": 2731, "database": true, "redis": true, "workerAlive": true },
+    "/api/version": { "status": 200, "latencyMs": 521, "supabaseAligned": true }
+  },
+  "negativeTests": {
+    "total": 7,
+    "passed": 7
+  }
+}

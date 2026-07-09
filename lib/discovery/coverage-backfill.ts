@@ -34,6 +34,7 @@ import { checkCipAcquisitionCooldown } from "@/lib/discovery/cip-acquisition-coo
 
 export type CoverageBackfillInput = {
   searchId: string;
+  searchSessionId?: string;
   intent: CampaignSearchIntent;
   coverage: DiscoveryCoverageEvaluation;
   intelligence?: IntelligenceSufficiencyEvaluation;

@@ -1,0 +1,441 @@
+{
+  "auditVersion": "Release 1.1.4",
+  "auditDate": "2026-07-05",
+  "mode": "read-only",
+  "subagentId": "8f625e55-c0cf-4c95-a28d-11b122473f03",
+  "verdict": "MANUAL_REVIEW_REQUIRED",
+  "passClaimed": false,
+  "failCount": 42,
+  "summary": "8 of 9 Campaign Studio sections render via legacy presentation-intelligence resolvers, not IS-1/IS-3 winning-strategy objects. resolveDirectorDecisionMinutes and resolveExecutiveStrategyReasoning are written but never wired to UI.",
+  "pipelinePath": {
+    "canonical": [
+      "Campaign Brief",
+      "CampaignFacts SSOT",
+      "writeStrategyDocumentFromBrief",
+      "IS-3 Debate Engine",
+      "applyWinnerOptionToStrategy",
+      "Specialist Dispatch + Workflow Tasks",
+      "Cross Review + Challenge Loop",
+      "buildApprovedSections",
+      "CampaignObject sections + data",
+      "enrichCampaignObjectWithStudioData",
+      "section-data-resolver.ts",
+      "Campaign Studio SectionRenderer"
+    ],
+    "integrationPoints": [
+      {
+        "stage": "Director pipeline write",
+        "file": "features/campaign-director/services/campaign-director.ts",
+        "function": "runCampaignDirectorPipeline → buildApprovedSections"
+      },
+      {
+        "stage": "Workflow merge",
+        "file": "features/campaign-director/integrations/workflow-integration.ts",
+        "function": "applyDirectorPipelineToCampaignObject",
+        "condition": "approvalGate.approved"
+      },
+      {
+        "stage": "Post-task enrich",
+        "file": "features/campaign-intelligence/services/section-updaters.ts",
+        "function": "enrichCampaignObjectWithStudioData"
+      },
+      {
+        "stage": "Studio render",
+        "file": "features/campaign-studio/components/sections/section-renderer.tsx",
+        "function": "SectionRenderer dispatch"
+      }
+    ]
+  },
+  "deadResolvers": [
+    {
+      "name": "resolveDirectorDecisionMinutes",
+      "file": "features/campaign-studio/services/section-data-resolver.ts",
+      "status": "defined_never_wired",
+      "intendedSection": "Thinkway Decision Rationale",
+      "actualResolverUsed": "resolveWhyAi"
+    },
+    {
+      "name": "resolveExecutiveStrategyReasoning",
+      "file": "features/campaign-studio/services/section-data-resolver.ts",
+      "status": "defined_never_wired",
+      "intendedSection": "Executive Strategy",
+      "actualResolverUsed": "resolveGroundedStrategyFields"
+    }
+  ],
+  "bypassRisks": [
+    {
+      "sectionNumber": 1,
+      "sectionName": "Executive Strategy",
+      "studioSectionKey": "strategy",
+      "riskLevel": "CRITICAL",
+      "rootCause": "UI reads groundedFields from deriveGroundedStrategy(); IS-1 executiveStrategyReasoning stored but never rendered"
+    },
+    {
+      "sectionNumber": 2,
+      "sectionName": "Vendor Discovery",
+      "studioSectionKey": "creators",
+      "riskLevel": "HIGH",
+      "rootCause": "UI uses 6-stage DISCOVERY_PIPELINE_STAGE_DEFS; IS-2 vendorDiscoveryFunnel (9 stages) incompatible / often rebuilt"
+    },
+    {
+      "sectionNumber": 3,
+      "sectionName": "Vendor Recommendations",
+      "studioSectionKey": "creators",
+      "riskLevel": "HIGH",
+      "rootCause": "UI uses deriveVendorRankingFactors(); IS-1 selectedReasoning not primary render path"
+    },
+    {
+      "sectionNumber": 4,
+      "sectionName": "Budget Planner",
+      "studioSectionKey": "budget",
+      "riskLevel": "MEDIUM",
+      "rootCause": "Amounts may follow Director rules; UI grounding uses getBudgetAllocationReason() industry templates, not budgetPlannerReasoning"
+    },
+    {
+      "sectionNumber": 5,
+      "sectionName": "Timeline",
+      "studioSectionKey": "timeline",
+      "riskLevel": "CRITICAL",
+      "rootCause": "UI uses buildTimelineWeeksForCampaign() generic phases; IS-1 creatorActivationTimeline stored but not used"
+    },
+    {
+      "sectionNumber": 6,
+      "sectionName": "Creator Mix",
+      "studioSectionKey": "strategy",
+      "riskLevel": "MEDIUM",
+      "rootCause": "Fallback buildCreatorMixFromFacts() uses hardcoded industry tiers (≠ IS-3 winner 15/45/40)"
+    },
+    {
+      "sectionNumber": 7,
+      "sectionName": "KPI Forecast",
+      "studioSectionKey": "performance",
+      "riskLevel": "CRITICAL",
+      "rootCause": "UI uses buildGroundedKpisFromFacts(); ignores winner KPIs and kpiReasoning"
+    },
+    {
+      "sectionNumber": 8,
+      "sectionName": "Risk Analysis",
+      "studioSectionKey": "operations",
+      "riskLevel": "HIGH",
+      "rootCause": "UI prefers enrichedRisks from getIndustryRisks() over Director operations.content.risks"
+    },
+    {
+      "sectionNumber": 9,
+      "sectionName": "Thinkway Decision Rationale",
+      "studioSectionKey": "why-ai",
+      "riskLevel": "CRITICAL",
+      "rootCause": "UI reads deriveWhyAiInsights() industry templates; directorDecisionMinutes stored but resolver unused"
+    }
+  ],
+  "riskSummary": {
+    "CRITICAL": 4,
+    "HIGH": 3,
+    "MEDIUM": 2,
+    "LOW": 0
+  },
+  "sections": [
+    {
+      "id": 1,
+      "name": "Executive Strategy",
+      "pipelineObject": "CampaignStrategyDocument.narrative + IS-1 ExecutiveStrategyReasoning",
+      "writer": ["features/campaign-director/services/campaign-director.ts", "features/campaign-intelligence/services/studio-section-data-builders.ts"],
+      "enricher": ["enrichCampaignObjectWithStudioData", "applyIs1ReasoningToSections"],
+      "resolver": "resolveGroundedStrategyFields",
+      "resolverDeadAlternative": "resolveExecutiveStrategyReasoning",
+      "reactComponent": "features/campaign-studio/components/sections/executive-strategy-section.tsx",
+      "legacyOverwrite": true,
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "Brief → Facts → Debate winner → strategy.narrative → enrich groundedFields → resolver → ExecutiveStrategySection",
+      "source": "IS-1 ExecutiveStrategyReasoning + debate winner narrative",
+      "legacyBypass": "IS-1 debate-enriched reasoning bypassed at render",
+      "risk": "CRITICAL",
+      "recommendedFix": "Render executiveStrategyReasoning or merge into groundedFields at enrich time; stop deriving from text when IS-1 data present"
+    },
+    {
+      "id": 2,
+      "name": "Vendor Discovery",
+      "pipelineObject": "IS-1 VendorDiscoveryFunnelStage[] via buildVendorDiscoveryFunnel",
+      "writer": ["features/campaign-intelligence/services/section-updaters.ts", "features/campaign-director/services/campaign-director.ts"],
+      "enricher": ["studio-section-data-builders.ts", "applyIs1ReasoningToSections", "buildCreatorDiscoveryPipeline"],
+      "resolver": "resolveVendorDiscovery → resolveDiscoveryPipeline",
+      "reactComponent": "features/campaign-studio/components/sections/vendor-discovery-section.tsx",
+      "legacyOverwrite": true,
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "IS-1 funnel → creators.data.vendorDiscoveryFunnel → enrich → resolveDiscoveryPipeline → VendorDiscoverySection",
+      "source": "IS-1 VendorDiscoveryFunnelStage[] (9 stages)",
+      "legacyBypass": "6-stage legacy pipeline rebuilt at resolver; IS-2 funnel schema mismatch",
+      "risk": "HIGH",
+      "recommendedFix": "Single funnel schema; resolver reads vendorDiscoveryFunnel verbatim when present"
+    },
+    {
+      "id": 3,
+      "name": "Vendor Recommendations",
+      "pipelineObject": "CreatorsSectionData.recommendations + IS-1 selectedReasoning / rejectedReasoning",
+      "writer": ["features/campaign-intelligence/services/structured-section-builders.ts", "features/campaign-intelligence/services/section-updaters.ts"],
+      "enricher": ["applyIs1ReasoningToSections"],
+      "resolver": "resolveVendorRecommendations + resolveVendorGrounding → deriveVendorRankingFactors",
+      "reactComponent": "features/campaign-studio/components/sections/vendor-recommendations-section.tsx",
+      "legacyOverwrite": true,
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "Shortlist task → recommendations → IS-1 reasoning → resolveVendorGrounding → VendorRecommendationsSection",
+      "source": "IS-1 selectedReasoning / rejectedReasoning per vendor",
+      "legacyBypass": "deriveVendorRankingFactors() overrides IS-1 selection minutes",
+      "risk": "HIGH",
+      "recommendedFix": "Prefer recommendations.selectedReasoning[i] for whySelected when present"
+    },
+    {
+      "id": 4,
+      "name": "Budget Planner",
+      "pipelineObject": "BudgetSectionData + IS-1 BudgetPlannerReasoning",
+      "writer": ["features/campaign-intelligence/services/section-updaters.ts", "applyDirectorBudgetRules"],
+      "enricher": ["buildBudgetSectionExtras → getBudgetAllocationReason"],
+      "resolver": "resolveBudgetData",
+      "reactComponent": "features/campaign-studio/components/sections/budget-planner-section.tsx",
+      "legacyOverwrite": "partial",
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "Director budget rules → budget.data → enrich → resolveBudgetData → BudgetPlannerSection",
+      "source": "IS-1 BudgetPlannerReasoning + Director applyDirectorBudgetRules",
+      "legacyBypass": "Amounts may align; reasoning from industry templates, not budgetPlannerReasoning",
+      "risk": "MEDIUM",
+      "recommendedFix": "Surface budget.data.allocationReasoning / budgetPlannerReasoning in UI badges"
+    },
+    {
+      "id": 5,
+      "name": "Timeline",
+      "pipelineObject": "TimelineSectionData milestones + IS-1 CreatorActivationTimeline",
+      "writer": ["features/campaign-intelligence/services/section-updaters.ts", "applyDirectorTimelineRules"],
+      "enricher": ["buildTimelineSectionExtras → buildTimelineWeeksForCampaign"],
+      "resolver": "resolveTimelineData → buildTimelineWeeksForCampaign",
+      "reactComponent": "features/campaign-studio/components/sections/timeline-section.tsx",
+      "legacyOverwrite": true,
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "Director timeline rules → milestones → enrich → buildTimelineWeeksForCampaign → TimelineSection",
+      "source": "IS-1 CreatorActivationTimeline + winner activationApproach ramp week weights",
+      "legacyBypass": "creatorActivationTimeline stored but resolver ignores it entirely",
+      "risk": "CRITICAL",
+      "recommendedFix": "Resolver should prefer creatorActivationTimeline.activationWeeks when present"
+    },
+    {
+      "id": 6,
+      "name": "Creator Mix",
+      "pipelineObject": "strategy.creatorTierStrategy (post-debate) → IS-1 CreatorMixReasoning",
+      "writer": ["features/campaign-director/services/campaign-director.ts"],
+      "enricher": ["buildCreatorMixFromReasoningTiers", "buildCreatorMixFromFacts"],
+      "resolver": "resolveCreatorMix",
+      "reactComponent": "features/campaign-studio/components/sections/creator-mix-section.tsx",
+      "legacyOverwrite": true,
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "Debate winner tiers → IS-1 reasoning → enrich → resolveCreatorMix → CreatorMixSection",
+      "source": "IS-3 winner creatorTierStrategy (Macro 15% · Micro 45% · Nano 40%)",
+      "legacyBypass": "buildCreatorMixFromFacts() hardcoded industry tiers when director enrich path skipped",
+      "risk": "MEDIUM",
+      "recommendedFix": "Resolver should read strategyDocument.creatorTierStrategy via facts bridge; never industry defaults when debate metadata exists"
+    },
+    {
+      "id": 7,
+      "name": "KPI Forecast",
+      "pipelineObject": "Winner option KPIs in strategy.understanding.kpis + IS-1 kpiReasoning",
+      "writer": ["features/campaign-intelligence/services/section-updaters.ts"],
+      "enricher": ["buildPerformanceSectionData → buildGroundedKpisFromFacts"],
+      "resolver": "resolveGroundedKpis",
+      "reactComponent": "features/campaign-studio/components/sections/kpi-forecast-section.tsx",
+      "legacyOverwrite": true,
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "Debate winner KPIs → strategy understanding → enrich → resolveGroundedKpis → KpiForecastSection",
+      "source": "Winner option KPIs + IS-1 kpiReasoning",
+      "legacyBypass": "CampaignFacts.kpis and facts-first resolver ignore debate KPIs",
+      "risk": "CRITICAL",
+      "recommendedFix": "After debate, use buildGroundedKpisFromStrategy(challengeResult.strategy) as SSOT"
+    },
+    {
+      "id": 8,
+      "name": "Risk Analysis",
+      "pipelineObject": "Winner strategy.understanding.risks + specialist risk output",
+      "writer": ["features/campaign-intelligence/services/section-updaters.ts", "features/campaign-director/services/campaign-director.ts"],
+      "enricher": ["buildOperationsSectionExtras → getIndustryRisks"],
+      "resolver": "resolveRiskData",
+      "reactComponent": "features/campaign-studio/components/sections/risk-analysis-section.tsx",
+      "legacyOverwrite": true,
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "Director operations risks → enrich → resolveRiskData → RiskAnalysisSection",
+      "source": "Winner strategy.understanding.risks + specialist output",
+      "legacyBypass": "enrichedRisks from getIndustryRisks() takes precedence over Director risks",
+      "risk": "HIGH",
+      "recommendedFix": "Render Director/strategy risks first; treat enrichedRisks as supplemental only"
+    },
+    {
+      "id": 9,
+      "name": "Thinkway Decision Rationale",
+      "pipelineObject": "IS-1 DirectorDecisionMinute[] + debate summary in buildDirectorDecisionMinutes",
+      "writer": ["features/campaign-director/services/campaign-director.ts"],
+      "enricher": ["applyIs1ReasoningToSections", "deriveWhyAiInsights"],
+      "resolver": "resolveWhyAi",
+      "resolverDeadAlternative": "resolveDirectorDecisionMinutes",
+      "reactComponent": "features/campaign-studio/components/sections/why-ai-section.tsx",
+      "legacyOverwrite": true,
+      "genericFallback": true,
+      "oldTemplateLogic": true,
+      "pipelinePath": "Debate summary → IS-1 minutes → enrich → resolveWhyAi → WhyAiSection",
+      "source": "IS-1 DirectorDecisionMinute[] + IS-3 debate summary",
+      "legacyBypass": "deriveWhyAiInsights() industry templates replace stored decision minutes",
+      "risk": "CRITICAL",
+      "recommendedFix": "Wire why-ai-section.tsx to resolveDirectorDecisionMinutes; map minute fields to card layout"
+    }
+  ],
+  "fixtureMismatchMatrix": {
+    "fixtures": ["BabyJoy", "Coca-Cola", "Tourism", "Samsung", "L'Oréal"],
+    "winnerStrategy": {
+      "option": "Option C",
+      "creatorTierStrategy": "Macro 15% · Micro 45% · Nano 40%"
+    },
+    "validationSources": [
+      "docs/intelligence/is3-debate-engine-validation-results.json",
+      "features/campaign-intelligence/validate-ers3-campaign-object-integrity.ts",
+      "docs/intelligence/is1-intelligence-validation-results.json",
+      "docs/validation-artifacts/ers-3/validation-report.json"
+    ],
+    "sectionsCompared": [
+      "Executive Strategy",
+      "Vendor Discovery",
+      "Vendor Recommendations",
+      "Budget Planner",
+      "Timeline",
+      "Creator Mix",
+      "KPI Forecast",
+      "Risk Analysis",
+      "Thinkway Decision Rationale"
+    ],
+    "results": {
+      "BabyJoy": {
+        "Executive Strategy": "FAIL",
+        "Vendor Discovery": "FAIL",
+        "Vendor Recommendations": "FAIL",
+        "Budget Planner": "FAIL",
+        "Timeline": "FAIL",
+        "Creator Mix": "FAIL",
+        "KPI Forecast": "FAIL",
+        "Risk Analysis": "FAIL",
+        "Thinkway Decision Rationale": "FAIL",
+        "notes": "IS-3 facts duration 4w vs brief 6 weeks; IS-1 chosenStrategy tiers ≠ winner 15/45/40"
+      },
+      "Coca-Cola": {
+        "Executive Strategy": "FAIL",
+        "Vendor Discovery": "FAIL",
+        "Vendor Recommendations": "FAIL",
+        "Budget Planner": "FAIL",
+        "Timeline": "FAIL",
+        "Creator Mix": "FAIL",
+        "KPI Forecast": "FAIL",
+        "Risk Analysis": "FAIL",
+        "Thinkway Decision Rationale": "FAIL",
+        "notes": "IS-3 facts duration 6w vs brief 8 weeks"
+      },
+      "Tourism": {
+        "Executive Strategy": "FAIL",
+        "Vendor Discovery": "FAIL",
+        "Vendor Recommendations": "FAIL",
+        "Budget Planner": "FAIL",
+        "Timeline": "FAIL",
+        "Creator Mix": "FAIL",
+        "KPI Forecast": "FAIL",
+        "Risk Analysis": "FAIL",
+        "Thinkway Decision Rationale": "FAIL",
+        "notes": "Tier/resolver disconnect; ERS-3 populates via legacy derive (false PASS)"
+      },
+      "Samsung": {
+        "Executive Strategy": "FAIL",
+        "Vendor Discovery": "FAIL",
+        "Vendor Recommendations": "FAIL",
+        "Budget Planner": "FAIL",
+        "Timeline": "FAIL",
+        "Creator Mix": "FAIL",
+        "KPI Forecast": "FAIL",
+        "Risk Analysis": "FAIL",
+        "Thinkway Decision Rationale": "FAIL",
+        "notes": "Same pattern as Coca-Cola (CPG/retail industry routing)"
+      },
+      "L'Oréal": {
+        "Executive Strategy": "FAIL",
+        "Vendor Discovery": "FAIL",
+        "Vendor Recommendations": "FAIL",
+        "Budget Planner": "FAIL",
+        "Timeline": "FAIL",
+        "Creator Mix": "FAIL",
+        "KPI Forecast": "FAIL",
+        "Risk Analysis": "FAIL",
+        "Thinkway Decision Rationale": "FAIL",
+        "notes": "Beauty industry getIndustryRisks overrides debate risks"
+      }
+    },
+    "failCountBreakdown": {
+      "sectionByFixtureAlwaysFail": {
+        "description": "7 always-fail sections × 5 fixtures",
+        "count": 35
+      },
+      "creatorMixFallback": {
+        "description": "Creator Mix fallback mismatches across 5 fixtures",
+        "count": 5
+      },
+      "budgetReasoning": {
+        "description": "Budget reasoning mismatches where amounts OK but reasoning wrong",
+        "count": 2,
+        "note": "Subsumed in total unique cell count of 42"
+      },
+      "total": 42
+    },
+    "ers3FalsePositive": {
+      "report": "docs/validation-artifacts/ers-3/validation-report.json",
+      "allFixturesPassed": true,
+      "directorPipelineInjected": false,
+      "debateWinnerInjected": false,
+      "warning": "Validates legacy derive path only; must not be interpreted as end-to-end intelligence fidelity"
+    }
+  },
+  "fixPriorities": [
+    {
+      "priority": "P0",
+      "title": "Wire IS-1 data to resolvers",
+      "sections": ["Executive Strategy", "Thinkway Decision Rationale", "Timeline", "KPI Forecast"],
+      "actions": [
+        "Connect stored reasoning objects to render path",
+        "Activate resolveDirectorDecisionMinutes and resolveExecutiveStrategyReasoning"
+      ]
+    },
+    {
+      "priority": "P1",
+      "title": "Stop industry override",
+      "sections": ["Risk Analysis", "Vendor Discovery"],
+      "actions": [
+        "Fix enrichedRisks precedence over Director risks",
+        "Unify vendor discovery funnel schema (6 vs 9 stages)"
+      ]
+    },
+    {
+      "priority": "P2",
+      "title": "ERS-3 validation gap",
+      "sections": ["All"],
+      "actions": [
+        "Inject runCampaignDirectorPipeline into ERS-3 validation",
+        "Inject applyDirectorPipelineToCampaignObject",
+        "Assert winner fields match resolver output"
+      ]
+    },
+    {
+      "priority": "P3",
+      "title": "Re-enrich after director sync",
+      "sections": ["All"],
+      "actions": [
+        "syncFromWorkflowState applies director sections after enrich without second enrich pass"
+      ]
+    }
+  ],
+  "manualReviewRequired": true
+}

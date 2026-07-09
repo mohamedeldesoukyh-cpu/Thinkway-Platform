@@ -1,5 +1,7 @@
 export const SCREENSHOT_SOURCES = [
   "meta_graph_thumbnail",
+  "instagram_media_redirect",
+  "instagram_oembed",
   "apify",
   "opengraph",
   "playwright",

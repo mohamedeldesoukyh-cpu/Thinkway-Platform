@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-07-04T01:36:14.036Z",
+  "results": [
+    {
+      "id": "auth",
+      "pass": true,
+      "detail": "Session cookie auth → http://localhost:3000/ai (HTTP 200)"
+    },
+    {
+      "id": "1-open-ai",
+      "pass": true,
+      "detail": "Loaded http://localhost:3000/ai"
+    },
+    {
+      "id": "3-no-stack-overflow",
+      "pass": true,
+      "detail": "No stack overflow (0 new console errors)"
+    },
+    {
+      "id": "4-campaign-studio-streams",
+      "pass": true,
+      "detail": "Campaign Studio UI appeared during workflow"
+    },
+    {
+      "id": "9-sse-network-campaign",
+      "pass": true,
+      "detail": "Campaign phase: 1 chat POST(s), 4 total /api/ai/* requests"
+    },
+    {
+      "id": "5-find-creators",
+      "pass": true,
+      "detail": "Find Creators response observed"
+    },
+    {
+      "id": "6-switch-conversations",
+      "pass": true,
+      "detail": "Sidebar has 5 conversation(s); switched successfully"
+    },
+    {
+      "id": "7-refresh-page",
+      "pass": true,
+      "detail": "Refreshed OK: http://localhost:3000/ai/5703b25b-f30f-46ad-a95a-ab0e37409cce"
+    },
+    {
+      "id": "8-open-old-conversation",
+      "pass": true,
+      "detail": "Old conversation opened with messages visible"
+    },
+    {
+      "id": "10-stable-renders",
+      "pass": true,
+      "detail": "Console errors: 0, warnings: 0, burst duplicate fetches: 0"
+    }
+  ],
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "networkSample": [
+    {
+      "t": 1783128968939,
+      "url": "/api/ai/conversations",
+      "status": 200,
+      "type": "fetch"
+    },
+    {
+      "t": 1783128970029,
+      "url": "/api/ai/conversations/5703b25b-f30f-46ad-a95a-ab0e37409cce",
+      "status": 200,
+      "type": "fetch"
+    }
+  ],
+  "recommendation": "YES"
+}

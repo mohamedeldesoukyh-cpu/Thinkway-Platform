@@ -1,0 +1,532 @@
+{
+  "generatedAt": "2026-07-04T21:59:56.400Z",
+  "sprint": "IS-2",
+  "release": "1.1.2",
+  "automatedChecksPassed": 63,
+  "automatedChecksTotal": 63,
+  "automatedChecksSummary": "automated checks: 63/63; manual QA pending — do not claim PASS",
+  "results": [
+    {
+      "fixture": "babyjoy",
+      "label": "BabyJoy",
+      "checks": [
+        {
+          "name": "Executive.businessChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.marketingChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.audienceChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.rejectedAlternatives",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.chosenStrategy",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.risks",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.successConditions",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.confidenceLevel",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.evidence",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Vendor funnel IS-2 stages (9)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Funnel no fabricated baseline without search",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Budget default 100% creator fees",
+          "ok": true,
+          "detail": "creator fees 100%"
+        },
+        {
+          "name": "Timeline weeks = duration",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Reporting outside duration",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Creator mix whyMix + tier impacts",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "KPI sensitivity fields",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Director minutes board format",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Decision intelligence gate",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Pipeline approval requires decision gate",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Vendor recommendations (no creators in fixture)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "No generic blocklist phrases",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "gateChecks": [
+        {
+          "id": "executive_evidence",
+          "passed": true
+        },
+        {
+          "id": "executive_is2_fields",
+          "passed": true
+        },
+        {
+          "id": "timeline_matches_duration",
+          "passed": true
+        },
+        {
+          "id": "reporting_outside_duration",
+          "passed": true
+        },
+        {
+          "id": "budget_matches_facts",
+          "passed": true
+        },
+        {
+          "id": "budget_totals_100",
+          "passed": true
+        },
+        {
+          "id": "budget_default_creator_fees",
+          "passed": true
+        },
+        {
+          "id": "funnel_is2_stages",
+          "passed": true
+        },
+        {
+          "id": "funnel_no_fabricated_counts",
+          "passed": true
+        },
+        {
+          "id": "kpi_reasoning_complete",
+          "passed": true
+        },
+        {
+          "id": "creator_mix_reasoning",
+          "passed": true
+        },
+        {
+          "id": "director_minutes_board_format",
+          "passed": true
+        },
+        {
+          "id": "vendor_no_fabricated_demographics",
+          "passed": true
+        },
+        {
+          "id": "vendor_no_fabricated_rejection_counts",
+          "passed": true
+        },
+        {
+          "id": "objective_alignment",
+          "passed": true
+        }
+      ],
+      "gateBlockers": []
+    },
+    {
+      "fixture": "cocacola",
+      "label": "Coca-Cola",
+      "checks": [
+        {
+          "name": "Executive.businessChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.marketingChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.audienceChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.rejectedAlternatives",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.chosenStrategy",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.risks",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.successConditions",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.confidenceLevel",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.evidence",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Vendor funnel IS-2 stages (9)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Funnel no fabricated baseline without search",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Budget default 100% creator fees",
+          "ok": true,
+          "detail": "creator fees 100%"
+        },
+        {
+          "name": "Timeline weeks = duration",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Reporting outside duration",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Creator mix whyMix + tier impacts",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "KPI sensitivity fields",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Director minutes board format",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Decision intelligence gate",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Pipeline approval requires decision gate",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Vendor recommendations (no creators in fixture)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "No generic blocklist phrases",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "gateChecks": [
+        {
+          "id": "executive_evidence",
+          "passed": true
+        },
+        {
+          "id": "executive_is2_fields",
+          "passed": true
+        },
+        {
+          "id": "timeline_matches_duration",
+          "passed": true
+        },
+        {
+          "id": "reporting_outside_duration",
+          "passed": true
+        },
+        {
+          "id": "budget_matches_facts",
+          "passed": true
+        },
+        {
+          "id": "budget_totals_100",
+          "passed": true
+        },
+        {
+          "id": "budget_default_creator_fees",
+          "passed": true
+        },
+        {
+          "id": "funnel_is2_stages",
+          "passed": true
+        },
+        {
+          "id": "funnel_no_fabricated_counts",
+          "passed": true
+        },
+        {
+          "id": "kpi_reasoning_complete",
+          "passed": true
+        },
+        {
+          "id": "creator_mix_reasoning",
+          "passed": true
+        },
+        {
+          "id": "director_minutes_board_format",
+          "passed": true
+        },
+        {
+          "id": "vendor_no_fabricated_demographics",
+          "passed": true
+        },
+        {
+          "id": "vendor_no_fabricated_rejection_counts",
+          "passed": true
+        },
+        {
+          "id": "objective_alignment",
+          "passed": true
+        }
+      ],
+      "gateBlockers": []
+    },
+    {
+      "fixture": "production-split",
+      "label": "Production Split Brief",
+      "checks": [
+        {
+          "name": "Executive.businessChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.marketingChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.audienceChallenge",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.rejectedAlternatives",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.chosenStrategy",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.risks",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.successConditions",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.confidenceLevel",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Executive.evidence",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Vendor funnel IS-2 stages (9)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Funnel no fabricated baseline without search",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Budget splits on production keywords",
+          "ok": true,
+          "detail": "allocations: Creator fees, Content production, Usage rights, Paid amplification, Agency coordination, Contingency reserve"
+        },
+        {
+          "name": "Timeline weeks = duration",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Reporting outside duration",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Creator mix whyMix + tier impacts",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "KPI sensitivity fields",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Director minutes board format",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Decision intelligence gate",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Pipeline approval requires decision gate",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Vendor recommendations (no creators in fixture)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "No generic blocklist phrases",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "gateChecks": [
+        {
+          "id": "executive_evidence",
+          "passed": true
+        },
+        {
+          "id": "executive_is2_fields",
+          "passed": true
+        },
+        {
+          "id": "timeline_matches_duration",
+          "passed": true
+        },
+        {
+          "id": "reporting_outside_duration",
+          "passed": true
+        },
+        {
+          "id": "budget_matches_facts",
+          "passed": true
+        },
+        {
+          "id": "budget_totals_100",
+          "passed": true
+        },
+        {
+          "id": "budget_default_creator_fees",
+          "passed": true
+        },
+        {
+          "id": "funnel_is2_stages",
+          "passed": true
+        },
+        {
+          "id": "funnel_no_fabricated_counts",
+          "passed": true
+        },
+        {
+          "id": "kpi_reasoning_complete",
+          "passed": true
+        },
+        {
+          "id": "creator_mix_reasoning",
+          "passed": true
+        },
+        {
+          "id": "director_minutes_board_format",
+          "passed": true
+        },
+        {
+          "id": "vendor_no_fabricated_demographics",
+          "passed": true
+        },
+        {
+          "id": "vendor_no_fabricated_rejection_counts",
+          "passed": true
+        },
+        {
+          "id": "objective_alignment",
+          "passed": true
+        }
+      ],
+      "gateBlockers": []
+    }
+  ]
+}

@@ -1,0 +1,193 @@
+{
+  "timestamp": "2026-07-03T20:39:15.105Z",
+  "industriesDetected": [
+    "baby",
+    "luxury",
+    "tourism",
+    "retail",
+    "finance"
+  ],
+  "uniqueIndustries": 5,
+  "uniqueKpiSets": 5,
+  "uniqueConceptSets": 5,
+  "allIndustriesDifferent": true,
+  "outputs": {
+    "babyjoy-egypt": {
+      "industry": "baby",
+      "campaignType": "Awareness & UGC trust-building",
+      "kpiMetrics": [
+        "Parent reach (0–3 yrs)",
+        "UGC volume",
+        "Trust score lift",
+        "Trial coupon redemptions",
+        "Mom community ER",
+        "Cost per UGC asset"
+      ],
+      "riskTitles": [
+        "Parent audience skepticism on product claims",
+        "Regulatory compliance on baby product messaging",
+        "UGC quality variance across micro creators"
+      ],
+      "conceptNames": [
+        "Real Mom Moments",
+        "Comfort Tested",
+        "Mom Community"
+      ],
+      "creatorMix": [
+        "Mid:25%",
+        "Micro:45%",
+        "Nano:25%",
+        "Macro:5%"
+      ],
+      "whyAiCategories": [
+        "Creators",
+        "Budget",
+        "Strategy",
+        "KPIs",
+        "Timeline"
+      ]
+    },
+    "rolex-middle-east": {
+      "industry": "luxury",
+      "campaignType": "Brand prestige & aspiration",
+      "kpiMetrics": [
+        "Brand favorability lift",
+        "Qualified reach",
+        "Video completion rate",
+        "Share of voice",
+        "Earned media value",
+        "High-net-worth engagement"
+      ],
+      "riskTitles": [
+        "Brand dilution from off-brand creator aesthetics",
+        "Limited macro creator availability in MENA luxury",
+        "Regulatory claims on investment/premium products"
+      ],
+      "conceptNames": [
+        "Timeless Heritage",
+        "Modern Icons",
+        "Exclusive Access"
+      ],
+      "creatorMix": [
+        "Celebrity:15%",
+        "Macro:35%",
+        "Mid:30%",
+        "Micro:15%",
+        "Nano:5%"
+      ],
+      "whyAiCategories": [
+        "Creators",
+        "Budget",
+        "Strategy",
+        "KPIs",
+        "Timeline"
+      ]
+    },
+    "visit-egypt-tourism": {
+      "industry": "tourism",
+      "campaignType": "Destination awareness & consideration",
+      "kpiMetrics": [
+        "Destination consideration",
+        "Video views",
+        "Save rate",
+        "Trip planning clicks",
+        "UGC submissions",
+        "Cost per view"
+      ],
+      "riskTitles": [
+        "Seasonal travel sentiment shifts",
+        "Visa/permit filming restrictions at heritage sites",
+        "Creator travel logistics & cancellations"
+      ],
+      "conceptNames": [
+        "Ancient Wonders Reimagined",
+        "Hidden Gems Trail",
+        "Adventure Awaits"
+      ],
+      "creatorMix": [
+        "Macro:25%",
+        "Mid:35%",
+        "Micro:30%",
+        "Nano:10%"
+      ],
+      "whyAiCategories": [
+        "Creators",
+        "Budget",
+        "Strategy",
+        "KPIs",
+        "Timeline"
+      ]
+    },
+    "adidas-egypt": {
+      "industry": "retail",
+      "campaignType": "Product launch & conversion",
+      "kpiMetrics": [
+        "Product launch awareness",
+        "Shoppable clicks",
+        "Conversion rate",
+        "Try-on / fit content views",
+        "ROAS",
+        "Store visit uplift"
+      ],
+      "riskTitles": [
+        "Stock availability during launch window",
+        "Competitor counter-campaigns during launch",
+        "Sizing/fit misrepresentation in creator content"
+      ],
+      "conceptNames": [
+        "Street to Stadium",
+        "Fit Check Friday",
+        "Creator Collab Drop"
+      ],
+      "creatorMix": [
+        "Macro:20%",
+        "Mid:30%",
+        "Micro:35%",
+        "Nano:15%"
+      ],
+      "whyAiCategories": [
+        "Creators",
+        "Budget",
+        "Strategy",
+        "KPIs",
+        "Timeline"
+      ]
+    },
+    "emirates-nbd": {
+      "industry": "finance",
+      "campaignType": "Trust & product adoption",
+      "kpiMetrics": [
+        "Product consideration",
+        "Compliance-safe reach",
+        "Application starts",
+        "Trust & credibility score",
+        "Video explainers completed",
+        "Cost per lead"
+      ],
+      "riskTitles": [
+        "Regulatory non-compliance in creator scripts",
+        "Low trust transfer from entertainment creators",
+        "Sensitive data exposure in UGC"
+      ],
+      "conceptNames": [
+        "Smart Money Moves",
+        "Life Milestones",
+        "Trust Verified"
+      ],
+      "creatorMix": [
+        "Mid:30%",
+        "Micro:35%",
+        "Macro:20%",
+        "Nano:10%",
+        "Celebrity:5%"
+      ],
+      "whyAiCategories": [
+        "Creators",
+        "Budget",
+        "Strategy",
+        "KPIs",
+        "Timeline"
+      ]
+    }
+  }
+}

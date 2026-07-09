@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-07-03T20:11:01.265Z",
+  "prompt": "Launch BabyJoy Premium Diapers in Egypt. Target mothers with babies 0–3 years. Budget EGP 2,000,000. Campaign duration 6 weeks. Objective: Awareness and UGC.",
+  "results": [
+    {
+      "id": "auth",
+      "pass": true,
+      "detail": "Authenticated at http://localhost:3000/ai"
+    },
+    {
+      "id": "open-existing",
+      "pass": true,
+      "detail": "Opened: Launch BabyJoy Premium Diapers in Egypt. Target mothers w…Jul 3"
+    },
+    {
+      "id": "studio-appeared",
+      "pass": true,
+      "detail": "Campaign Studio visible in existing conversation"
+    },
+    {
+      "id": "workflow-complete",
+      "pass": true,
+      "detail": "Progress 100%, 0 sections complete"
+    },
+    {
+      "id": "10-no-stack-overflow",
+      "pass": true,
+      "detail": "No stack overflow"
+    },
+    {
+      "id": "1-campaign-summary",
+      "pass": true,
+      "detail": "cards=true hasValues=true noMd=true noJson=true noDup=true noLongPara=true"
+    },
+    {
+      "id": "2-executive-strategy",
+      "pass": true,
+      "detail": "cards=true noMd=true noJson=true noDupSummary=true"
+    },
+    {
+      "id": "3-vendor-discovery",
+      "pass": true,
+      "detail": "pipeline=true noRawQuery=true noZero=true validState=true"
+    },
+    {
+      "id": "4-vendor-recommendations",
+      "pass": true,
+      "detail": "cards=true noPlaceholders=true noDup=true"
+    },
+    {
+      "id": "5-budget-planner",
+      "pass": true,
+      "detail": "noJson=true noConversion=true currency=true viz=true"
+    },
+    {
+      "id": "6-timeline",
+      "pass": true,
+      "detail": "component=true noJson=true"
+    },
+    {
+      "id": "7-kpi-forecast",
+      "pass": true,
+      "detail": "cards=true noJson=true noDupStrategy=true"
+    },
+    {
+      "id": "8-risk-analysis",
+      "pass": true,
+      "detail": "cards=true badges=true noGenericAi=true"
+    },
+    {
+      "id": "9-presentation-status",
+      "pass": true,
+      "detail": "approval=true export=true noMd=true"
+    },
+    {
+      "id": "10-whole-page",
+      "pass": true,
+      "detail": "noMd=true noJson=true noDup=true noConsoleErrors=true errors=0 warnings=0"
+    }
+  ],
+  "consoleErrors": [],
+  "consoleWarnings": [],
+  "allPass": true
+}

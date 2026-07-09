@@ -1,0 +1,3925 @@
+{
+  "generatedAt": "2026-07-05T01:49:11.085Z",
+  "results": [
+    {
+      "fixture": "babyjoy",
+      "label": "BabyJoy",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_client_match",
+          "name": "Client matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_geography_present",
+          "name": "Geography reflected in strategy",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_constraints",
+          "name": "Sensitive category constraints documented",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_facts_risks_reflected",
+          "name": "CampaignFacts risks reflected in strategy",
+          "status": "WARNING",
+          "section": "operations",
+          "issue": "Brief risks not reflected in strategy risk list",
+          "severity": "low"
+        },
+        {
+          "id": "compliance_constraints_addressed",
+          "name": "Brief constraints addressed in strategy",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_geo_regulatory",
+          "name": "Geography-specific regulatory awareness",
+          "status": "WARNING",
+          "section": "operations",
+          "issue": "MENA/GCC market without regulatory awareness language",
+          "severity": "low"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 80,
+        "dimensions": {
+          "businessLogic": 74,
+          "consistency": 55,
+          "compliance": 86,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 82
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 80 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151030",
+        "generatedAt": "2026-07-05T01:49:11.030Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 80 below threshold 90"
+          ],
+          "qualityScore": 80,
+          "warningCount": 3,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.030Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "cocacola",
+      "label": "Coca-Cola",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_client_match",
+          "name": "Client matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_geography_present",
+          "name": "Geography reflected in strategy",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 82,
+        "dimensions": {
+          "businessLogic": 74,
+          "consistency": 55,
+          "compliance": 100,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 77
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 82 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151040",
+        "generatedAt": "2026-07-05T01:49:11.040Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 82 below threshold 90"
+          ],
+          "qualityScore": 82,
+          "warningCount": 1,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.040Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "samsung",
+      "label": "Samsung",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_client_match",
+          "name": "Client matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_geography_present",
+          "name": "Geography reflected in strategy",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_geo_regulatory",
+          "name": "Geography-specific regulatory awareness",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 82,
+        "dimensions": {
+          "businessLogic": 74,
+          "consistency": 55,
+          "compliance": 100,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 77
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 82 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151045",
+        "generatedAt": "2026-07-05T01:49:11.045Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 82 below threshold 90"
+          ],
+          "qualityScore": 82,
+          "warningCount": 1,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.045Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "loreal",
+      "label": "L'Oréal",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_constraints_addressed",
+          "name": "Brief constraints addressed in strategy",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "FAIL",
+          "section": "executive_strategy",
+          "issue": "3 generic phrases detected",
+          "severity": "high"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 80,
+        "dimensions": {
+          "businessLogic": 73,
+          "consistency": 53,
+          "compliance": 100,
+          "presentation": 69,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 80
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "4 governance check(s) FAILED",
+          "Quality score 80 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151051",
+        "generatedAt": "2026-07-05T01:49:11.051Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "4 governance check(s) FAILED",
+            "Quality score 80 below threshold 90"
+          ],
+          "qualityScore": 80,
+          "warningCount": 0,
+          "failCount": 4,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.051Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "visit-egypt",
+      "label": "Visit Egypt",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_client_match",
+          "name": "Client matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 81,
+        "dimensions": {
+          "businessLogic": 73,
+          "consistency": 54,
+          "compliance": 100,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 79
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 81 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151059",
+        "generatedAt": "2026-07-05T01:49:11.059Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 81 below threshold 90"
+          ],
+          "qualityScore": 81,
+          "warningCount": 1,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.059Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "adidas",
+      "label": "Adidas",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_client_match",
+          "name": "Client matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_geography_present",
+          "name": "Geography reflected in strategy",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 82,
+        "dimensions": {
+          "businessLogic": 74,
+          "consistency": 55,
+          "compliance": 100,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 80
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 82 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151066",
+        "generatedAt": "2026-07-05T01:49:11.066Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 82 below threshold 90"
+          ],
+          "qualityScore": 82,
+          "warningCount": 1,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.066Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "netflix",
+      "label": "Netflix",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 81,
+        "dimensions": {
+          "businessLogic": 73,
+          "consistency": 53,
+          "compliance": 100,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 77
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 81 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151071",
+        "generatedAt": "2026-07-05T01:49:11.071Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 81 below threshold 90"
+          ],
+          "qualityScore": 81,
+          "warningCount": 1,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.071Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "talabat",
+      "label": "Talabat",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_geography_present",
+          "name": "Geography reflected in strategy",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_geo_regulatory",
+          "name": "Geography-specific regulatory awareness",
+          "status": "WARNING",
+          "section": "operations",
+          "issue": "MENA/GCC market without regulatory awareness language",
+          "severity": "low"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 81,
+        "dimensions": {
+          "businessLogic": 73,
+          "consistency": 54,
+          "compliance": 88,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 85
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 81 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151075",
+        "generatedAt": "2026-07-05T01:49:11.075Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 81 below threshold 90"
+          ],
+          "qualityScore": 81,
+          "warningCount": 2,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.075Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "emirates-nbd",
+      "label": "Emirates NBD",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_client_match",
+          "name": "Client matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_geography_present",
+          "name": "Geography reflected in strategy",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_constraints",
+          "name": "Sensitive category constraints documented",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_constraints_addressed",
+          "name": "Brief constraints addressed in strategy",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_geo_regulatory",
+          "name": "Geography-specific regulatory awareness",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 82,
+        "dimensions": {
+          "businessLogic": 74,
+          "consistency": 55,
+          "compliance": 100,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 80
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 82 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151079",
+        "generatedAt": "2026-07-05T01:49:11.079Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 82 below threshold 90"
+          ],
+          "qualityScore": 82,
+          "warningCount": 1,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.079Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "redbull",
+      "label": "Red Bull",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_geography_present",
+          "name": "Geography reflected in strategy",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_geo_regulatory",
+          "name": "Geography-specific regulatory awareness",
+          "status": "WARNING",
+          "section": "operations",
+          "issue": "MENA/GCC market without regulatory awareness language",
+          "severity": "low"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 80,
+        "dimensions": {
+          "businessLogic": 73,
+          "consistency": 54,
+          "compliance": 88,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 83
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 80 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151082",
+        "generatedAt": "2026-07-05T01:49:11.082Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 80 below threshold 90"
+          ],
+          "qualityScore": 80,
+          "warningCount": 2,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.082Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    },
+    {
+      "fixture": "pepsi",
+      "label": "Pepsi",
+      "qaMatrix": [
+        {
+          "id": "qa_budget_present",
+          "name": "Budget amount defined",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_facts_match",
+          "name": "Budget matches CampaignFacts",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_currency_consistent",
+          "name": "Currency consistent across sections",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_duration_facts_match",
+          "name": "Duration matches CampaignFacts",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_timeline_weeks_match",
+          "name": "Timeline weeks align with strategy duration",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_present",
+          "name": "Brand name present",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_brand_match",
+          "name": "Brand matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_client_match",
+          "name": "Client matches CampaignFacts",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_objective_match",
+          "name": "Objective aligned with CampaignFacts",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_geography_present",
+          "name": "Geography reflected in strategy",
+          "status": "PASS",
+          "section": "summary",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_output",
+          "name": "Creator intelligence section populated",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_creator_tier_sum",
+          "name": "Creator tier allocations sum to 100%",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_allocation_100",
+          "name": "Budget allocations sum to 100%",
+          "status": "PASS",
+          "section": "budget",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "narrative",
+          "issue": "Placeholder pattern detected in narrative",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_placeholder",
+          "name": "No placeholder text",
+          "status": "FAIL",
+          "section": "performance",
+          "issue": "Placeholder pattern detected in performance",
+          "severity": "high"
+        },
+        {
+          "id": "qa_no_duplicate_facts",
+          "name": "No duplicated facts across sections",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_objective",
+          "name": "objective field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_audience",
+          "name": "audience field populated",
+          "status": "PASS",
+          "section": "audience",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_mandatory_narrative",
+          "name": "narrative field populated",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "qa_budget_sourced",
+          "name": "Budget traceable to brief",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "complianceMatrix": [
+        {
+          "id": "compliance_no_fabricated_claims",
+          "name": "No fabricated compliance claims",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_sensitive_category",
+          "name": "Sensitive category risks acknowledged",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_constraints_addressed",
+          "name": "Brief constraints addressed in strategy",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "compliance_geo_regulatory",
+          "name": "Geography-specific regulatory awareness",
+          "status": "WARNING",
+          "section": "operations",
+          "issue": "MENA/GCC market without regulatory awareness language",
+          "severity": "low"
+        },
+        {
+          "id": "compliance_risk_specialist",
+          "name": "Risk specialist assessment present",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "presentationMatrix": [
+        {
+          "id": "pres_exec_strategy_depth",
+          "name": "Executive strategy sufficient depth",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_exec_strategy_unique_pillars",
+          "name": "Executive strategy pillars are distinct",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_timeline_quality",
+          "name": "Timeline specialist provides actionable phases",
+          "status": "PASS",
+          "section": "timeline",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_budget_quality",
+          "name": "Budget allocations documented with rationale",
+          "status": "FAIL",
+          "section": "budget",
+          "issue": "Budget missing category breakdown or percentages",
+          "severity": "high"
+        },
+        {
+          "id": "pres_vendor_quality",
+          "name": "Vendor/creator recommendations include rationale",
+          "status": "PASS",
+          "section": "creators",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_industry_benchmark",
+          "name": "Industry benchmarks referenced in KPIs",
+          "status": "PASS",
+          "section": "performance",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_risk_usefulness",
+          "name": "Risk assessment actionable",
+          "status": "PASS",
+          "section": "operations",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_decision_rationale",
+          "name": "Specialist decision rationales substantive",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_professionalism",
+          "name": "Presentation section client-ready",
+          "status": "PASS",
+          "section": "presentation",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_no_generic_language",
+          "name": "No generic marketing language",
+          "status": "WARNING",
+          "section": "executive_strategy",
+          "issue": "Generic phrases: tbd, tbd",
+          "severity": "low"
+        },
+        {
+          "id": "pres_no_copy_paste",
+          "name": "No cross-section copy-paste",
+          "status": "PASS",
+          "section": "—",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_section_evidence",
+          "name": "Sections backed by evidence citations",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        },
+        {
+          "id": "pres_business_maturity",
+          "name": "Platform mix and creator tiers defined",
+          "status": "PASS",
+          "section": "strategy",
+          "issue": "—",
+          "severity": "—"
+        }
+      ],
+      "qualityScore": {
+        "overall": 81,
+        "dimensions": {
+          "businessLogic": 74,
+          "consistency": 55,
+          "compliance": 90,
+          "presentation": 80,
+          "evidence": 85,
+          "recommendationQuality": 88,
+          "executiveReadiness": 100,
+          "dataConfidence": 83
+        },
+        "weights": {
+          "businessLogic": 0.15,
+          "consistency": 0.15,
+          "compliance": 0.12,
+          "presentation": 0.13,
+          "evidence": 0.1,
+          "recommendationQuality": 0.12,
+          "executiveReadiness": 0.13,
+          "dataConfidence": 0.1
+        },
+        "approved": false,
+        "rejectionReasons": [
+          "3 governance check(s) FAILED",
+          "Quality score 81 below threshold 90"
+        ]
+      },
+      "directorApproval": {
+        "reportId": "director-approval-1783216151085",
+        "generatedAt": "2026-07-05T01:49:11.085Z",
+        "decision": {
+          "approved": false,
+          "blockers": [
+            "Campaign QA Manager gate failed",
+            "Presentation validator failed",
+            "3 governance check(s) FAILED",
+            "Quality score 81 below threshold 90"
+          ],
+          "qualityScore": 81,
+          "warningCount": 2,
+          "failCount": 3,
+          "requiresRevision": true,
+          "decidedAt": "2026-07-05T01:49:11.085Z"
+        },
+        "prerequisites": {
+          "qaPassed": false,
+          "compliancePassed": true,
+          "presentationPassed": false,
+          "qualityScorePassed": false
+        }
+      },
+      "pipelineApproved": false,
+      "releaseApproved": false
+    }
+  ]
+}

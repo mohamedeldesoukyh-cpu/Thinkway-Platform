@@ -1,0 +1,347 @@
+{
+  "generatedAt": "2026-07-04T01:26:28.625Z",
+  "tlsBypassUsed": true,
+  "connectivity": {
+    "supabaseUrl": "https://hsxrewjcbvmbkqdlzjhs.supabase.co",
+    "hostname": "hsxrewjcbvmbkqdlzjhs.supabase.co",
+    "origin": "https://hsxrewjcbvmbkqdlzjhs.supabase.co",
+    "restProbeUrl": "https://hsxrewjcbvmbkqdlzjhs.supabase.co/rest/v1/campaign_publications?select=id%2Ccampaign_header_id%2Cviews%2Clikes%2Ccomments%2Cshares%2Csaves%2Cengagements%2Cengagement_rate&content_url=not.is.null",
+    "nodeVersion": "v24.16.0",
+    "probes": [
+      {
+        "probe": "dns.lookup",
+        "ok": true,
+        "durationMs": 13,
+        "detail": "addresses=104.18.38.10 (IPv4), 172.64.149.246 (IPv4); ipv4=2; ipv6=0"
+      },
+      {
+        "probe": "dns.lookup.ipv6",
+        "ok": false,
+        "durationMs": 3,
+        "detail": "ipv6_count=0"
+      },
+      {
+        "probe": "tls.handshake",
+        "ok": false,
+        "durationMs": 136,
+        "error": {
+          "message": "TLS connected but certificate not authorized",
+          "stack": "Error: TLS connected but certificate not authorized\n    at TLSSocket.<anonymous> (C:\\thinkway-platform\\lib\\performance\\script-env.ts:400:22)\n    at Object.onceWrapper (node:events:630:28)\n    at TLSSocket.emit (node:events:509:28)\n    at TLSSocket.onConnectSecure (node:internal/tls/wrap:1693:8)\n    at TLSSocket.emit (node:events:509:28)\n    at TLSSocket._finishInit (node:internal/tls/wrap:1102:8)\n    at ssl.onhandshakedone (node:internal/tls/wrap:888:12)"
+        }
+      },
+      {
+        "probe": "fetch.origin",
+        "ok": true,
+        "durationMs": 192,
+        "detail": "HTTP 404 Not Found"
+      },
+      {
+        "probe": "fetch.rest",
+        "ok": true,
+        "durationMs": 354,
+        "detail": "HTTP 200 OK"
+      }
+    ],
+    "category": "tls_certificate",
+    "remediation": [
+      "TLS handshake to Supabase failed.",
+      "Check proxy/firewall SSL inspection and certificate trust.",
+      "Try NODE_OPTIONS=--use-system-ca on Node 22+."
+    ]
+  },
+  "reports": [
+    {
+      "id": "travel-egypt",
+      "label": "Find travel creators in Egypt",
+      "query": "Find travel creators in Egypt",
+      "stages": [
+        {
+          "stage": "scoutGroundedSearch",
+          "before": 31,
+          "after": 31,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "browseUnifiedCreators",
+          "before": 1,
+          "after": 1,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "searchCreatorsTool",
+          "before": 1,
+          "after": 1,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "workflowSearchResults",
+          "before": 31,
+          "after": 31,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingInput",
+          "before": 31,
+          "after": 31,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingOutput",
+          "before": 31,
+          "after": 31,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectDiscovery",
+          "before": 31,
+          "after": 31,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectRecommendations",
+          "before": 31,
+          "after": 10,
+          "duplicatesRemoved": 21
+        },
+        {
+          "stage": "uiHydration",
+          "before": 10,
+          "after": 8,
+          "duplicatesRemoved": 2
+        }
+      ],
+      "violations": [],
+      "searchExecutedCount": 1,
+      "browseCount": 1,
+      "rankingCount": 1,
+      "discoveryCount": 31,
+      "recommendationCount": 10,
+      "campaignStudioCount": 31,
+      "duplicateIds": [],
+      "passed": true,
+      "liveDb": true
+    },
+    {
+      "id": "luxury-hotel-dubai",
+      "label": "Find luxury hotel creators in Dubai",
+      "query": "Find luxury hotel creators in Dubai for a 5-star resort campaign",
+      "stages": [
+        {
+          "stage": "scoutGroundedSearch",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "browseUnifiedCreators",
+          "before": 1,
+          "after": 1,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "searchCreatorsTool",
+          "before": 1,
+          "after": 1,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "workflowSearchResults",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingInput",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingOutput",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectDiscovery",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectRecommendations",
+          "before": 50,
+          "after": 10,
+          "duplicatesRemoved": 40
+        },
+        {
+          "stage": "uiHydration",
+          "before": 10,
+          "after": 8,
+          "duplicatesRemoved": 2
+        }
+      ],
+      "violations": [],
+      "searchExecutedCount": 1,
+      "browseCount": 1,
+      "rankingCount": 1,
+      "discoveryCount": 50,
+      "recommendationCount": 10,
+      "campaignStudioCount": 50,
+      "duplicateIds": [],
+      "passed": true,
+      "liveDb": true
+    },
+    {
+      "id": "babyjoy",
+      "label": "BabyJoy campaign",
+      "query": "Launch BabyJoy Premium Diapers in Egypt. Target mothers with babies 0–3 years. Budget EGP 2,000,000. Campaign duration 6 weeks. Objective: Awareness and UGC.",
+      "stages": [
+        {
+          "stage": "scoutGroundedSearch",
+          "before": 39,
+          "after": 39,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "browseUnifiedCreators",
+          "before": 1,
+          "after": 1,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "searchCreatorsTool",
+          "before": 1,
+          "after": 1,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "workflowSearchResults",
+          "before": 39,
+          "after": 39,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingInput",
+          "before": 39,
+          "after": 39,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingOutput",
+          "before": 39,
+          "after": 39,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectDiscovery",
+          "before": 39,
+          "after": 39,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectRecommendations",
+          "before": 39,
+          "after": 10,
+          "duplicatesRemoved": 29
+        },
+        {
+          "stage": "uiHydration",
+          "before": 10,
+          "after": 8,
+          "duplicatesRemoved": 2
+        }
+      ],
+      "violations": [],
+      "searchExecutedCount": 1,
+      "browseCount": 1,
+      "rankingCount": 1,
+      "discoveryCount": 39,
+      "recommendationCount": 10,
+      "campaignStudioCount": 39,
+      "duplicateIds": [],
+      "passed": true,
+      "liveDb": true
+    },
+    {
+      "id": "adidas",
+      "label": "Adidas campaign",
+      "query": "Adidas Egypt sportswear product launch for new running collection. Target active lifestyle 18–35 in Cairo and Alexandria. Budget EGP 4,500,000. Duration 6 weeks. Objective: Product launch and conversion.",
+      "stages": [
+        {
+          "stage": "scoutGroundedSearch",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "browseUnifiedCreators",
+          "before": 1,
+          "after": 1,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "searchCreatorsTool",
+          "before": 1,
+          "after": 1,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "workflowSearchResults",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingInput",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "rankingOutput",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectDiscovery",
+          "before": 50,
+          "after": 50,
+          "duplicatesRemoved": 0
+        },
+        {
+          "stage": "campaignObjectRecommendations",
+          "before": 50,
+          "after": 10,
+          "duplicatesRemoved": 40
+        },
+        {
+          "stage": "uiHydration",
+          "before": 10,
+          "after": 8,
+          "duplicatesRemoved": 2
+        }
+      ],
+      "violations": [],
+      "searchExecutedCount": 1,
+      "browseCount": 1,
+      "rankingCount": 1,
+      "discoveryCount": 50,
+      "recommendationCount": 10,
+      "campaignStudioCount": 50,
+      "duplicateIds": [],
+      "passed": true,
+      "liveDb": true
+    }
+  ],
+  "definitionOfDone": {
+    "allPass": true,
+    "browseOnce": true,
+    "searchOnce": true,
+    "rankOnce": true,
+    "noDuplicateIds": true,
+    "discoveryMatchesStudio": true,
+    "recommendationsLteDiscovery": true
+  }
+}

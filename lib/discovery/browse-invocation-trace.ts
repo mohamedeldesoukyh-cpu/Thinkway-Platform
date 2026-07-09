@@ -6,6 +6,7 @@
 
 export type BrowseInvocationCaller =
   | "initial_search"
+  | "ai_brief_search"
   | "filter_sync"
   | "url_sync"
   | "poll_completion_refresh"

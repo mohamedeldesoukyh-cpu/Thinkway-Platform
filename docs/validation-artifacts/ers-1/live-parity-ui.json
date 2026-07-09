@@ -1,0 +1,99 @@
+{
+  "generatedAt": "2026-07-03T23:13:12.797Z",
+  "skipped": false,
+  "uiResults": [
+    {
+      "id": "travel-egypt",
+      "pass": false,
+      "detail": "Streaming did not complete within timeout",
+      "label": "Find travel creators in Egypt",
+      "screenshots": [
+        "C:\\thinkway-platform\\docs\\validation-artifacts\\ers-1\\01-travel-egypt-sent.png",
+        "C:\\thinkway-platform\\docs\\validation-artifacts\\ers-1\\01-travel-egypt-complete.png"
+      ],
+      "counts": {
+        "discoverySectionFound": true,
+        "recommendationSectionFound": true,
+        "cardCount": 0,
+        "cardIds": [],
+        "uniqueHandleCount": 5,
+        "duplicateHandles": [],
+        "fabricatedCount": 0,
+        "campaignStudioVisible": false,
+        "uniqueCardIds": 0,
+        "duplicateCardIds": []
+      },
+      "streamed": false
+    },
+    {
+      "id": "luxury-hotel-dubai",
+      "pass": false,
+      "detail": "Streaming did not complete within timeout",
+      "label": "Find luxury hotel creators in Dubai",
+      "screenshots": [
+        "C:\\thinkway-platform\\docs\\validation-artifacts\\ers-1\\02-luxury-hotel-dubai-sent.png",
+        "C:\\thinkway-platform\\docs\\validation-artifacts\\ers-1\\02-luxury-hotel-dubai-complete.png"
+      ],
+      "counts": {
+        "discoverySectionFound": true,
+        "recommendationSectionFound": true,
+        "cardCount": 0,
+        "cardIds": [],
+        "uniqueHandleCount": 0,
+        "duplicateHandles": [],
+        "fabricatedCount": 0,
+        "campaignStudioVisible": false,
+        "uniqueCardIds": 0,
+        "duplicateCardIds": []
+      },
+      "streamed": false
+    },
+    {
+      "id": "babyjoy",
+      "pass": false,
+      "detail": "Streaming did not complete within timeout",
+      "label": "BabyJoy campaign",
+      "screenshots": [
+        "C:\\thinkway-platform\\docs\\validation-artifacts\\ers-1\\03-babyjoy-sent.png",
+        "C:\\thinkway-platform\\docs\\validation-artifacts\\ers-1\\03-babyjoy-complete.png"
+      ],
+      "counts": {
+        "discoverySectionFound": true,
+        "recommendationSectionFound": true,
+        "cardCount": 0,
+        "cardIds": [],
+        "uniqueHandleCount": 0,
+        "duplicateHandles": [],
+        "fabricatedCount": 0,
+        "campaignStudioVisible": true,
+        "uniqueCardIds": 0,
+        "duplicateCardIds": []
+      },
+      "streamed": false
+    },
+    {
+      "id": "adidas",
+      "pass": false,
+      "detail": "Streaming did not complete within timeout",
+      "label": "Adidas campaign",
+      "screenshots": [
+        "C:\\thinkway-platform\\docs\\validation-artifacts\\ers-1\\04-adidas-sent.png",
+        "C:\\thinkway-platform\\docs\\validation-artifacts\\ers-1\\04-adidas-complete.png"
+      ],
+      "counts": {
+        "discoverySectionFound": true,
+        "recommendationSectionFound": true,
+        "cardCount": 0,
+        "cardIds": [],
+        "uniqueHandleCount": 0,
+        "duplicateHandles": [],
+        "fabricatedCount": 0,
+        "campaignStudioVisible": true,
+        "uniqueCardIds": 0,
+        "duplicateCardIds": []
+      },
+      "streamed": false
+    }
+  ],
+  "allPass": false
+}
