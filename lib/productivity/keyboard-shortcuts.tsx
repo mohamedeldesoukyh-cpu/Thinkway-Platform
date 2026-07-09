@@ -55,8 +55,18 @@ function isEditableTarget(target: EventTarget | null): boolean {
     tag === "input" ||
     tag === "textarea" ||
     tag === "select" ||
-    target.isContentEditable
+    target.isContentEditable ||
+    target.getAttribute("role") === "textbox"
   );
+}
+
+/** Never steal standard browser edit/clipboard shortcuts from inputs or selections. */
+export function isNativeEditShortcut(event: KeyboardEvent): boolean {
+  if (!(event.ctrlKey || event.metaKey)) return false;
+  const key = event.key.toLowerCase();
+  if (key === "s" || key === "enter") return false;
+  if (key === "a" && event.shiftKey) return false;
+  return ["c", "x", "v", "a", "z", "y"].includes(key);
 }
 
 function matchShortcut(event: KeyboardEvent, keys: string): boolean {
@@ -163,6 +173,8 @@ export function KeyboardShortcutsProvider({
         return;
       }
 
+      if (isNativeEditShortcut(event)) return;
+
       const editable = isEditableTarget(event.target);
 
       for (const action of actionsRef.current.values()) {
@@ -214,4 +226,16 @@ export const ASSIGNMENT_SHORTCUTS: Omit<ShortcutAction, "handler">[] = [
   { id: "dup-row", keys: "Alt+D", label: "Duplicate deliverable row", group: "Assignment" },
   { id: "toggle-vat", keys: "Alt+V", label: "Toggle VAT exempt", group: "Assignment" },
   { id: "pricing-mode", keys: "Alt+M", label: "Switch pricing mode", group: "Assignment" },
+];
+
+export const QUOTATION_SHORTCUTS: Omit<ShortcutAction, "handler">[] = [
+  { id: "quotation-save", keys: "Ctrl+S", label: "Save quotation", group: "Quotation" },
+  { id: "quotation-add-creator", keys: "A", label: "Add creator", group: "Quotation" },
+  { id: "quotation-focus-search", keys: "/", label: "Focus creator search", group: "Quotation" },
+  { id: "quotation-toggle-calc-mode", keys: "Alt+M", label: "Switch calculation mode", group: "Quotation" },
+  { id: "quotation-preview", keys: "Alt+P", label: "Open preview", group: "Quotation" },
+  { id: "quotation-select-all", keys: "Ctrl+Shift+A", label: "Select all visible creators", group: "Quotation" },
+  { id: "quotation-clear-selection", keys: "Shift+Esc", label: "Clear selection", group: "Quotation" },
+  { id: "quotation-duplicate", keys: "Alt+D", label: "Duplicate selected creators", group: "Quotation" },
+  { id: "quotation-remove", keys: "Shift+Delete", label: "Remove selected creators", group: "Quotation" },
 ];

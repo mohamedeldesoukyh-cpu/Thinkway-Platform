@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
+import { filterExactCreatorMatches } from "@/features/discovery/components/creator-search/creator-search-exact-match";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { upsertCreatorInResults } from "@/lib/discovery/creator-search-query";
 
@@ -22,6 +23,28 @@ import {
   toggleCreatorSelection,
   toggleSelectAllVisible,
 } from "./creator-selection-utils";
+
+function pinnedCreatorMatchesSearch(
+  creator: UnifiedCreatorResult,
+  searchQuery: string | undefined
+): boolean {
+  const trimmed = searchQuery?.trim() ?? "";
+  if (!trimmed) return true;
+  return filterExactCreatorMatches([creator], trimmed).length > 0;
+}
+
+function mergePinnedCreators(
+  creators: UnifiedCreatorResult[],
+  pinned: Map<string, UnifiedCreatorResult>,
+  searchQuery: string | undefined
+): UnifiedCreatorResult[] {
+  let merged = creators;
+  for (const creator of pinned.values()) {
+    if (!pinnedCreatorMatchesSearch(creator, searchQuery)) continue;
+    merged = upsertCreatorInResults(merged, creator).creators;
+  }
+  return merged;
+}
 
 export {
   buildExistingCreatorKeys,
@@ -159,10 +182,13 @@ export function useCreatorBrowse({
             pinnedCreatorsRef.current.delete(creator.unified_id);
           }
 
+          const searchQuery = parsedFilters.search;
           let mergedCreators = append ? [...prev.creators, ...result.creators] : result.creators;
-          for (const pinned of pinnedCreatorsRef.current.values()) {
-            mergedCreators = upsertCreatorInResults(mergedCreators, pinned).creators;
-          }
+          mergedCreators = mergePinnedCreators(
+            mergedCreators,
+            pinnedCreatorsRef.current,
+            searchQuery
+          );
 
           const unique = new Map(mergedCreators.map((c) => [c.unified_id, c]));
           const creators = [...unique.values()];
@@ -230,6 +256,19 @@ export function useCreatorBrowse({
     });
   }, []);
 
+  const patchCreator = useCallback((creator: UnifiedCreatorResult) => {
+    if (pinnedCreatorsRef.current.has(creator.unified_id)) {
+      pinnedCreatorsRef.current.set(creator.unified_id, creator);
+    }
+    setState((prev) => {
+      const index = prev.creators.findIndex((row) => row.unified_id === creator.unified_id);
+      if (index < 0) return prev;
+      const creators = [...prev.creators];
+      creators[index] = creator;
+      return { ...prev, creators };
+    });
+  }, []);
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(state.total / pageSize)),
     [state.total, pageSize]
@@ -243,5 +282,6 @@ export function useCreatorBrowse({
     retry,
     refetch: () => void fetchPage(1, false),
     upsertCreator,
+    patchCreator,
   };
 }

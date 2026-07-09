@@ -41,9 +41,9 @@ export {
 
 const AVATAR_SIZE_CLASS = {
   xs: "size-6",
-  sm: "size-8",
-  md: "size-10",
-  lg: "size-12",
+  sm: "size-10",
+  md: "size-12",
+  lg: "size-14",
 } as const;
 
 const NAME_SIZE_CLASS = {
@@ -91,6 +91,8 @@ export type CreatorProfileLinkProps = {
   showExternalIcon?: boolean;
   /** When false, display name is plain text (e.g. row click opens detail sheet). Default true. */
   linkName?: boolean;
+  /** Opens internal creator detail when name is not an external profile link. */
+  onNameClick?: () => void;
   stopPropagation?: boolean;
   className?: string;
   nameClassName?: string;
@@ -146,6 +148,7 @@ export function CreatorProfileLink({
   showPlatformBadge = true,
   showExternalIcon = false,
   linkName = true,
+  onNameClick,
   stopPropagation = false,
   className,
   nameClassName,
@@ -198,6 +201,14 @@ export function CreatorProfileLink({
     </div>
   ) : null;
 
+  const nameClasses = cn(
+    "truncate font-semibold text-foreground",
+    NAME_SIZE_CLASS[size],
+    nameClassName,
+    onNameClick &&
+      "cursor-pointer text-left hover:text-primary hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+  );
+
   const nameNode = showName ? (
     <div className="flex min-w-0 items-center gap-1.5">
       {profileUrl && linkName ? (
@@ -213,16 +224,19 @@ export function CreatorProfileLink({
         >
           {source.displayName}
         </ProfileExternalLink>
-      ) : (
-        <span
-          className={cn(
-            "truncate font-semibold text-foreground",
-            NAME_SIZE_CLASS[size],
-            nameClassName
-          )}
+      ) : onNameClick ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            if (stopPropagation) event.stopPropagation();
+            onNameClick();
+          }}
+          className={nameClasses}
         >
           {source.displayName}
-        </span>
+        </button>
+      ) : (
+        <span className={nameClasses}>{source.displayName}</span>
       )}
       {source.isVerified ? (
         <BadgeCheckIcon className="size-3.5 shrink-0 text-primary" aria-label="Verified" />

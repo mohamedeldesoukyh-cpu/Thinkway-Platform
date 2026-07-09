@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { captureException } from "@/lib/observability/error-reporter";
 import { runCampaignPerformanceAudit } from "@/lib/performance/campaign-performance-audit";
 import {
   buildCampaignPerformanceAlerts,
@@ -35,6 +36,11 @@ export async function GET(request: Request) {
       alerts: monitor.alerts,
     });
   } catch (error) {
+    captureException(error, {
+      route: "/api/cron/campaign-performance-monitor",
+      service: "cron",
+      status: 500,
+    });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Monitor cron failed." },
       { status: 500 }

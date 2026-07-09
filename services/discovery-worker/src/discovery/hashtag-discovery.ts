@@ -6,6 +6,8 @@ export async function runHashtagDiscovery(input: {
   platform: DiscoveryPlatform;
   hashtag: string;
   limit?: number;
+  countryCode?: string;
+  categoryTags?: string[];
 }): Promise<{ discovered: number; usernames: string[] }> {
   const usernames = await discoverUsernamesFromHashtagPage(
     input.platform,
@@ -22,7 +24,11 @@ export async function runHashtagDiscovery(input: {
         profileUrl: `https://${input.platform}.com/${username}`,
       },
       "hashtag",
-      input.hashtag
+      input.hashtag,
+      {
+        countryCode: input.countryCode,
+        categoryTags: input.categoryTags,
+      }
     );
     if (profileId) discovered += 1;
   }

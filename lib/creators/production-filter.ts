@@ -1,4 +1,10 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { isSyntheticCreatorUsername } from "@/lib/discovery/demo-data";
+
+function publicDiscoveryHandle(creator: UnifiedCreatorResult): string | null {
+  const handle = creator.platforms[0]?.handle?.replace(/^@+/, "").trim();
+  return handle || null;
+}
 
 /** Exclude mock-seeded / placeholder discovery profiles in production search. */
 export function passesProductionCreatorGate(creator: UnifiedCreatorResult): boolean {
@@ -14,7 +20,10 @@ export function passesProductionCreatorGate(creator: UnifiedCreatorResult): bool
   if (creator.source_type !== "public_discovery") return false;
 
   const stage = creator.status ?? "";
-  if (stage === "discovered" || stage === "basic_enriched") return false;
+  if (stage === "discovered" || stage === "basic_enriched") {
+    const handle = publicDiscoveryHandle(creator);
+    return Boolean(handle && !isSyntheticCreatorUsername(handle));
+  }
   if (creator.bio?.toLowerCase().includes("collabs:")) return false;
 
   return stage === "metrics_enriched" || stage === "ai_scored" || stage === "verified";

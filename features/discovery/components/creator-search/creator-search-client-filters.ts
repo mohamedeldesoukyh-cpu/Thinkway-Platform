@@ -1,43 +1,76 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
-import { creatorMatchesBrowseCategories } from "@/lib/creators/category-filter";
+import {
+  applyDiscoveryBrowseFilters,
+  creatorMatchesDiscoveryBrowseFilters,
+} from "@/lib/creators/discovery-browse-filters";
+import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
 
 import type { CreatorSearchFilters } from "./creator-search-types";
+import { filtersToBrowseParams } from "./creator-search-types";
+
+const LAST_POST_DAYS: Record<string, number> = {
+  "7d": 7,
+  "30d": 30,
+  "90d": 90,
+  "180d": 180,
+  "365d": 365,
+};
+
+function latestPublicationTimestamp(creator: UnifiedCreatorResult): number | null {
+  const timestamps: number[] = [];
+  const pushDate = (value: string | null | undefined) => {
+    if (!value) return;
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) timestamps.push(parsed);
+  };
+
+  for (const publication of creator.recent_publications ?? []) {
+    pushDate(publication.posted_at);
+  }
+  for (const platform of creator.platforms) {
+    for (const publication of platform.recent_publications ?? []) {
+      pushDate(publication.posted_at);
+    }
+  }
+  pushDate(creator.last_enriched_at);
+
+  if (timestamps.length === 0) return null;
+  return Math.max(...timestamps);
+}
+
+function matchesLastPostWithin(creator: UnifiedCreatorResult, within: string): boolean {
+  const days = LAST_POST_DAYS[within];
+  if (!days) return true;
+  const latest = latestPublicationTimestamp(creator);
+  if (latest == null) return true;
+  return latest >= Date.now() - days * 86_400_000;
+}
+
+function creatorSearchFiltersToBrowseFilters(
+  filters: CreatorSearchFilters
+): UnifiedCreatorBrowseFilters {
+  return filtersToBrowseParams(filters, 1, 1);
+}
+
+/** Filters applied only in the browser (not sent to unified browse). */
+export function hasClientOnlyCreatorSearchFilters(filters: CreatorSearchFilters): boolean {
+  return Boolean(
+    filters.lastPostWithin ||
+      filters.aiNiche.trim() ||
+      filters.minBrandSafety.trim() ||
+      filters.handle.trim()
+  );
+}
 
 export function applyCreatorSearchClientFilters(
   creators: UnifiedCreatorResult[],
   filters: CreatorSearchFilters
 ): UnifiedCreatorResult[] {
-  return creators.filter((creator) => {
-    if (filters.categories.length > 0) {
-      if (!creatorMatchesBrowseCategories(creator, filters.categories)) return false;
-    }
-    if (filters.platforms.length > 1) {
-      const hasPlatform = creator.platforms.some((p) =>
-        filters.platforms.includes(p.platform)
-      );
-      if (!hasPlatform) return false;
-    }
+  const browseFilters = creatorSearchFiltersToBrowseFilters(filters);
+  let results = applyDiscoveryBrowseFilters(creators, browseFilters);
 
-    if (filters.audienceCountry.trim()) {
-      const ac = filters.audienceCountry.trim().toUpperCase();
-      const match = creator.platforms.some(
-        (p) => (p.audience_country ?? creator.country_code ?? "").toUpperCase() === ac
-      );
-      if (!match) return false;
-    }
-
-    if (filters.audienceInterests.trim()) {
-      const needle = filters.audienceInterests.trim().toLowerCase();
-      const hay = [
-        creator.ai_category,
-        creator.ai_niche,
-        ...creator.categories,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      if (!hay.includes(needle)) return false;
-    }
+  return results.filter((creator) => {
+    if (!matchesLastPostWithin(creator, filters.lastPostWithin)) return false;
 
     if (filters.aiNiche.trim()) {
       const needle = filters.aiNiche.trim().toLowerCase();
@@ -51,11 +84,6 @@ export function applyCreatorSearchClientFilters(
       if (score < min) return false;
     }
 
-    if (filters.minThinkwayScore.trim()) {
-      const min = Number(filters.minThinkwayScore);
-      if ((creator.thinkway_score ?? 0) < min) return false;
-    }
-
     if (filters.handle.trim()) {
       const needle = filters.handle.trim().toLowerCase().replace(/^@/, "");
       const handle = creator.platforms[0]?.handle?.toLowerCase() ?? "";
@@ -65,3 +93,5 @@ export function applyCreatorSearchClientFilters(
     return true;
   });
 }
+
+export { creatorMatchesDiscoveryBrowseFilters };

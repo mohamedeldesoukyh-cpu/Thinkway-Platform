@@ -58,6 +58,9 @@ export function buildCanonicalProfileUrl(
     case "linkedin":
       return `https://www.linkedin.com/in/${handle}`;
     case "facebook":
+      if (handle.startsWith("id:")) {
+        return `https://www.facebook.com/profile.php?id=${handle.slice(3)}`;
+      }
       return `https://www.facebook.com/${handle}`;
     default:
       return `https://${platform}.com/${handle}`;
@@ -65,14 +68,39 @@ export function buildCanonicalProfileUrl(
 }
 
 export function normalizeUsername(value: string): string {
-  return value.trim().replace(/^@+/, "").toLowerCase();
+  const trimmed = value.trim().replace(/^@+/, "");
+  if (trimmed.toLowerCase().startsWith("id:")) {
+    return `id:${trimmed.slice(3).trim()}`;
+  }
+  return trimmed.toLowerCase();
 }
 
+function isFacebookHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === "facebook.com" || host.endsWith(".facebook.com") || host === "fb.com";
+}
+
+function isFacebookProfilePhpPath(pathname: string): boolean {
+  const path = pathname.toLowerCase();
+  return path === "/profile.php" || path.endsWith("/profile.php");
+}
+
+/**
+ * Canonical URL for duplicate detection. Strips tracking query params by default,
+ * but preserves Facebook `profile.php?id=` because the numeric id lives in the query string.
+ */
 export function normalizeProfileUrl(url: string): string {
   try {
     const parsed = new URL(url.trim());
     parsed.hash = "";
-    parsed.search = "";
+
+    if (isFacebookHost(parsed.hostname) && isFacebookProfilePhpPath(parsed.pathname)) {
+      const id = parsed.searchParams.get("id")?.trim();
+      parsed.search = id && /^\d+$/.test(id) ? `?id=${id}` : "";
+    } else {
+      parsed.search = "";
+    }
+
     let path = parsed.pathname.replace(/\/+$/, "");
     if (!path) path = "";
     parsed.pathname = path || "/";

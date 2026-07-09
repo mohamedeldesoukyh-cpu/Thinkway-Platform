@@ -68,6 +68,11 @@ type Props = {
     status: CreatorEnrichmentStatus
   ) => void;
   onMissingCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
+  onCreatorDeleted?: (creator: UnifiedCreatorResult) => void;
+  /** Creators imported from the current Apify acquisition session. */
+  apifySourceUnifiedIds?: Set<string>;
+  /** Show campaign brief relevance column (AI search with active strategy criteria). */
+  showCampaignRelevance?: boolean;
 };
 
 type VirtualRowProps = {
@@ -75,6 +80,8 @@ type VirtualRowProps = {
   rank: number;
   selected: boolean;
   platformFilter?: string[];
+  isApifyAcquired?: boolean;
+  showCampaignRelevance?: boolean;
   onToggleSelect: (creator: UnifiedCreatorResult) => void;
   onOpenCreator: (creator: UnifiedCreatorResult) => void;
   onAddToList: (creator: UnifiedCreatorResult) => void;
@@ -83,6 +90,7 @@ type VirtualRowProps = {
     platformAccountId?: string | null
   ) => void;
   onStopRefresh?: (creator: UnifiedCreatorResult) => void;
+  onCreatorDeleted?: (creator: UnifiedCreatorResult) => void;
 };
 
 const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
@@ -90,11 +98,14 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
   rank,
   selected,
   platformFilter,
+  isApifyAcquired,
+  showCampaignRelevance,
   onToggleSelect,
   onOpenCreator,
   onAddToList,
   onRefreshMetrics,
   onStopRefresh,
+  onCreatorDeleted,
 }: VirtualRowProps) {
   const handleToggleSelect = useCallback(
     () => onToggleSelect(creator),
@@ -116,6 +127,10 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
     () => onStopRefresh?.(creator),
     [onStopRefresh, creator]
   );
+  const handleCreatorDeleted = useCallback(
+    () => onCreatorDeleted?.(creator),
+    [onCreatorDeleted, creator]
+  );
 
   return (
     <CreatorResultRow
@@ -124,11 +139,14 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
       selected={selected}
       variant="search"
       platformFilter={platformFilter}
+      isApifyAcquired={isApifyAcquired}
+      showCampaignRelevance={showCampaignRelevance}
       onToggleSelect={handleToggleSelect}
       onOpenCreator={handleOpenCreator}
       onAddToList={handleAddToList}
       onRefreshMetrics={onRefreshMetrics ? handleRefreshMetrics : undefined}
       onStopRefresh={onStopRefresh ? handleStopRefresh : undefined}
+      onCreatorDeleted={onCreatorDeleted ? handleCreatorDeleted : undefined}
     />
   );
 });
@@ -185,6 +203,9 @@ export function CreatorSearchResultList({
   onMissingCreatorAdded,
   onMissingCreatorEnrichmentStatusChange,
   onMissingCreatorUpdated,
+  onCreatorDeleted,
+  apifySourceUnifiedIds,
+  showCampaignRelevance = false,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -276,7 +297,12 @@ export function CreatorSearchResultList({
           </div>
         ) : loading && !hasCreators ? (
           <div>
-            <CreatorResultGridHeader variant="search" sort={sort} onSortChange={onSortChange} />
+            <CreatorResultGridHeader
+              variant="search"
+              sort={sort}
+              onSortChange={onSortChange}
+              showCampaignRelevance={showCampaignRelevance}
+            />
             {Array.from({ length: 8 }).map((_, i) => (
               <ResultSkeleton key={i} />
             ))}
@@ -319,7 +345,12 @@ export function CreatorSearchResultList({
           )
         ) : (
           <>
-            <CreatorResultGridHeader variant="search" sort={sort} onSortChange={onSortChange} />
+            <CreatorResultGridHeader
+              variant="search"
+              sort={sort}
+              onSortChange={onSortChange}
+              showCampaignRelevance={showCampaignRelevance}
+            />
             <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
               {virtualizer.getVirtualItems().map((virtualRow) => {
                 const item = listItems[virtualRow.index];
@@ -355,11 +386,14 @@ export function CreatorSearchResultList({
                       rank={item.rank}
                       selected={selectedIds.has(item.creator.unified_id)}
                       platformFilter={platformFilter}
+                      isApifyAcquired={apifySourceUnifiedIds?.has(item.creator.unified_id) ?? false}
+                      showCampaignRelevance={showCampaignRelevance}
                       onToggleSelect={onToggleSelect}
                       onOpenCreator={onOpenCreator}
                       onAddToList={onAddToList}
                       onRefreshMetrics={onRefreshMetrics}
                       onStopRefresh={onStopRefresh}
+                      onCreatorDeleted={onCreatorDeleted}
                     />
                   </div>
                 );

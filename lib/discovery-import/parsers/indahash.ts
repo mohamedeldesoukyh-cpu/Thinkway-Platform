@@ -7,6 +7,7 @@ import {
 } from "@/lib/intelligence/parsers/header-normalize";
 
 import type { ParsedCreatorRow } from "../types";
+import { parseImportContactFromLookup } from "../parse-contact";
 
 const PLATFORM_ALIASES: Record<string, string> = {
   instagram: "instagram",
@@ -268,6 +269,7 @@ function parseIndahashSharedFields(
     "creator name",
     "full name"
   );
+  const contact = parseImportContactFromLookup(lookup);
 
   return {
     username,
@@ -281,6 +283,7 @@ function parseIndahashSharedFields(
     profile_picture_url: parseImportProfilePictureUrlRaw(lookup),
     role: parseImportRoleRaw(lookup),
     appearances: parseAppearances(lookup),
+    ...contact,
   };
 }
 
@@ -414,6 +417,9 @@ function parseIndahashBlock(block: string, source: string | null): ParsedCreator
     profile_picture_url: null,
     role: null,
     appearances: null,
+    contact_email: null,
+    contact_phone: null,
+    contact_links: [],
   };
 }
 
@@ -645,6 +651,9 @@ function buildSearchExportRow(
     profile_picture_url: null,
     role: null,
     appearances: null,
+    contact_email: null,
+    contact_phone: null,
+    contact_links: [],
   };
 }
 

@@ -10,7 +10,9 @@ import {
 } from "@/components/creator/creator-profile-link";
 import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
 import { EnrichmentStatusBadge } from "@/features/discovery/enrichment/components/enrichment-status-badge";
+import { DataSourceBadge } from "@/features/discovery/enrichment/components/data-source-badge";
 import { resolveCreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
+import { resolveCreatorDiscoverySource } from "@/features/discovery/components/creator-search/creator-discovery-source";
 import { DiscoveryCreatorActionsMenu } from "@/features/discovery/components/discovery-creator-actions-menu";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -27,7 +29,6 @@ import {
   brandSafetyMeta,
   formatEngagementRate,
   normalizeCountryCode,
-  thinkwayAiScore,
 } from "./creator-search/creator-search-utils";
 import type {
   CreatorSearchSortField,
@@ -39,11 +40,26 @@ import {
 } from "./platform-metric-stack";
 
 export const CREATOR_SEARCH_GRID_TEMPLATE =
-  "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px 88px 80px";
+  "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 96px 72px 88px 80px";
+export const CREATOR_SEARCH_GRID_WITH_RELEVANCE_TEMPLATE =
+  "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px 72px 88px 80px";
 export const CREATOR_SHORTLIST_GRID_TEMPLATE =
   "40px minmax(0,1.7fr) 104px 92px 84px minmax(0,1.4fr) 80px 92px 108px 96px";
-export const CREATOR_ROW_MIN_WIDTH = "md:min-w-[1268px]";
+export const CREATOR_ROW_MIN_WIDTH = "md:min-w-[1232px]";
+export const CREATOR_ROW_WITH_RELEVANCE_MIN_WIDTH = "md:min-w-[1340px]";
 export const CREATOR_SHORTLIST_MIN_WIDTH = "md:min-w-[1060px]";
+
+export function creatorSearchGridTemplate(showCampaignRelevance: boolean): string {
+  return showCampaignRelevance
+    ? CREATOR_SEARCH_GRID_WITH_RELEVANCE_TEMPLATE
+    : CREATOR_SEARCH_GRID_TEMPLATE;
+}
+
+export function creatorSearchRowMinWidth(showCampaignRelevance: boolean): string {
+  return showCampaignRelevance
+    ? CREATOR_ROW_WITH_RELEVANCE_MIN_WIDTH
+    : CREATOR_ROW_MIN_WIDTH;
+}
 
 /** Single ER for a row — filtered platform when one match, else creator default metrics. */
 function resolveDisplayEngagementRate(
@@ -56,20 +72,65 @@ function resolveDisplayEngagementRate(
   return formatEngagementRate(creator.metrics.engagement_rate.value);
 }
 
-export function InterestChips({ interests }: { interests: string[] }) {
+export function InterestChips({
+  interests,
+  variant = "default",
+  maxVisible = 3,
+}: {
+  interests: string[];
+  variant?: "default" | "compact";
+  maxVisible?: number;
+}) {
   if (interests.length === 0) {
     return <span className="text-[11px] text-muted-foreground/60">No interests tagged</span>;
   }
+
+  const visible = interests.slice(0, maxVisible);
+  const overflow = interests.length - visible.length;
+
+  if (variant === "compact") {
+    return (
+      <div className="flex min-w-0 max-w-full items-center gap-1 overflow-hidden">
+        {visible.map((interest) => (
+          <span
+            key={interest}
+            title={interest}
+            className="min-w-0 max-w-[5.5rem] truncate rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize text-muted-foreground"
+          >
+            {interest}
+          </span>
+        ))}
+        {overflow > 0 ? (
+          <span
+            className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+            title={interests.slice(maxVisible).join(", ")}
+          >
+            +{overflow}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-wrap gap-1">
-      {interests.map((interest) => (
+    <div className="flex min-w-0 flex-wrap gap-1">
+      {visible.map((interest) => (
         <span
           key={interest}
-          className="truncate rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground capitalize"
+          title={interest}
+          className="max-w-full truncate rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize text-muted-foreground"
         >
           {interest}
         </span>
       ))}
+      {overflow > 0 ? (
+        <span
+          className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+          title={interests.slice(maxVisible).join(", ")}
+        >
+          +{overflow}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -81,7 +142,7 @@ export function RelevanceScore({ score }: { score: number | null }) {
   const rounded = Math.round(score);
   const bars = Math.max(1, Math.min(4, Math.ceil((rounded / 100) * 4)));
   return (
-    <div className="flex items-center gap-1.5" title={`Thinkway AI relevance ${rounded}`}>
+    <div className="flex items-center gap-1.5" title={`Campaign relevance ${rounded}%`}>
       <span className="flex items-end gap-0.5" aria-hidden>
         {[0, 1, 2, 3].map((i) => (
           <span
@@ -167,6 +228,7 @@ export type CreatorResultRowProps = {
   onAddToList?: () => void;
   onRefreshMetrics?: (platformAccountId?: string | null) => void;
   onStopRefresh?: () => void;
+  onCreatorDeleted?: () => void;
   addLabel?: string;
   statusBadge?: ReactNode;
   actions?: ReactNode;
@@ -174,6 +236,10 @@ export type CreatorResultRowProps = {
   workerOfflineHint?: boolean;
   /** When set, metric columns show only matching platform account data. */
   platformFilter?: string[];
+  /** True when this creator was imported from the current Apify acquisition run. */
+  isApifyAcquired?: boolean;
+  /** Show campaign brief relevance % (AI search with active strategy criteria only). */
+  showCampaignRelevance?: boolean;
 };
 
 /** Shared Discovery creator row — used by Search and Shortlist workspaces. */
@@ -187,12 +253,15 @@ export const CreatorResultRow = memo(function CreatorResultRow({
   onAddToList,
   onRefreshMetrics,
   onStopRefresh,
+  onCreatorDeleted,
   addLabel,
   statusBadge,
   actions,
   className,
   workerOfflineHint,
   platformFilter,
+  isApifyAcquired,
+  showCampaignRelevance = false,
 }: CreatorResultRowProps) {
   const displayPlatforms = filterPlatformsForDisplay(creator.platforms, platformFilter);
   const avgEr = resolveDisplayEngagementRate(creator, displayPlatforms);
@@ -201,16 +270,21 @@ export const CreatorResultRow = memo(function CreatorResultRow({
   const hasCountryCode = Boolean(normalizeCountryCode(displayCountry));
   const audienceInterests = audienceInterestListFromCreator(creator);
   const safety = brandSafetyMeta(creator.authenticity_score);
-  const aiScore = thinkwayAiScore(creator);
+  const relevanceScore = showCampaignRelevance ? (creator.campaign_relevance_score ?? null) : null;
   const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
+  const discoverySource = resolveCreatorDiscoverySource(creator, {
+    sessionApify: isApifyAcquired,
+  });
   const isShortlist = variant === "shortlist";
-  const gridTemplate = isShortlist ? CREATOR_SHORTLIST_GRID_TEMPLATE : CREATOR_SEARCH_GRID_TEMPLATE;
-  const minWidth = isShortlist ? CREATOR_SHORTLIST_MIN_WIDTH : CREATOR_ROW_MIN_WIDTH;
+  const gridTemplate = isShortlist
+    ? CREATOR_SHORTLIST_GRID_TEMPLATE
+    : creatorSearchGridTemplate(showCampaignRelevance);
+  const minWidth = isShortlist ? CREATOR_SHORTLIST_MIN_WIDTH : creatorSearchRowMinWidth(showCampaignRelevance);
 
   const handleOpen = onOpenCreator ?? (() => undefined);
   const actionNode =
     actions ??
-    (onOpenCreator || onAddToList || onRefreshMetrics || onStopRefresh ? (
+    ((onOpenCreator || onAddToList || onRefreshMetrics || onStopRefresh || onCreatorDeleted) ? (
       <DiscoveryCreatorActionsMenu
         creator={creator}
         profileUrl={profileUrl}
@@ -220,6 +294,7 @@ export const CreatorResultRow = memo(function CreatorResultRow({
         onToggleSelect={onToggleSelect}
         onRefreshMetrics={onRefreshMetrics}
         onStopRefresh={onStopRefresh}
+        onCreatorDeleted={onCreatorDeleted}
         addLabel={addLabel}
       />
     ) : null);
@@ -277,22 +352,27 @@ export const CreatorResultRow = memo(function CreatorResultRow({
           {avgEr}
         </div>
         {!isShortlist ? (
-          <>
-            <PlatformMetricStack platforms={displayPlatforms} metric="avg_views" align="right" />
-            <div className="self-center">
-              <RelevanceScore score={aiScore} />
-            </div>
-          </>
+          <PlatformMetricStack platforms={displayPlatforms} metric="avg_views" align="right" />
+        ) : null}
+        {!isShortlist && showCampaignRelevance ? (
+          <div className="self-center">
+            <RelevanceScore score={relevanceScore} />
+          </div>
         ) : null}
         <div className={cn("self-center text-[11px] font-medium", safety.className)}>{safety.label}</div>
         {!isShortlist ? (
-          <div className="flex justify-end self-center">
-            <EnrichmentStatusBadge
-              status={enrichmentStatus}
-              workerOfflineHint={workerOfflineHint}
-              className="text-[10px]"
-            />
-          </div>
+          <>
+            <div className="self-center">
+              <DataSourceBadge source={discoverySource} className="text-[10px]" />
+            </div>
+            <div className="self-center">
+              <EnrichmentStatusBadge
+                status={enrichmentStatus}
+                workerOfflineHint={workerOfflineHint}
+                className="text-[10px]"
+              />
+            </div>
+          </>
         ) : null}
         {isShortlist ? <div className="min-w-0 self-center">{statusBadge}</div> : null}
         {!isShortlist ? <div className="self-center">{actionNode}</div> : null}
@@ -310,7 +390,7 @@ export const CreatorResultRow = memo(function CreatorResultRow({
           <div className="flex items-start justify-between gap-2">
             <CreatorProfileLink
               source={creatorProfileSourceFromUnified(creator)}
-              size="md"
+              size="lg"
               avatarBadge="country"
               showExternalIcon
               linkName={!onOpenCreator}
@@ -329,14 +409,21 @@ export const CreatorResultRow = memo(function CreatorResultRow({
           ) : null}
           <InterestChips interests={audienceInterests.slice(0, 4)} />
           <div className="flex items-center justify-between gap-3">
-            {!isShortlist ? <RelevanceScore score={aiScore} /> : statusBadge}
-            <div className="flex items-center gap-2">
+            {!isShortlist && showCampaignRelevance ? (
+              <RelevanceScore score={relevanceScore} />
+            ) : isShortlist ? (
+              statusBadge
+            ) : null}
+            <div className="ml-auto flex items-center gap-2">
               {!isShortlist ? (
-                <EnrichmentStatusBadge
-              status={enrichmentStatus}
-              workerOfflineHint={workerOfflineHint}
-              className="text-[10px]"
-            />
+                <>
+                  <DataSourceBadge source={discoverySource} className="text-[10px]" />
+                  <EnrichmentStatusBadge
+                    status={enrichmentStatus}
+                    workerOfflineHint={workerOfflineHint}
+                    className="text-[10px]"
+                  />
+                </>
               ) : null}
               <span className={cn("text-[10px] font-medium", safety.className)}>
                 {safety.label} safety
@@ -357,20 +444,39 @@ type HeaderColumn = {
   sortField?: CreatorSearchSortField;
 };
 
-const SEARCH_HEADER_COLUMNS: HeaderColumn[] = [
+const SEARCH_HEADER_COLUMNS_BASE: HeaderColumn[] = [
   { key: "rank", label: "#" },
   { key: "creator", label: "Creator", sortField: "name" },
-  { key: "platform", label: "Platform" },
+  { key: "platform", label: "Platform", sortField: "platform" },
   { key: "followers", label: "Followers", align: "right", sortField: "followers" },
-  { key: "country", label: "Country" },
-  { key: "categories", label: "Categories" },
+  { key: "country", label: "Country", sortField: "country" },
+  { key: "categories", label: "Categories", sortField: "categories" },
   { key: "er", label: "Avg ER", align: "right", sortField: "engagement" },
   { key: "views", label: "Avg views", align: "right", sortField: "views" },
-  { key: "relevance", label: "Relevance", sortField: "thinkway" },
-  { key: "safety", label: "Brand safety" },
+];
+
+const SEARCH_HEADER_RELEVANCE_COLUMN: HeaderColumn = {
+  key: "relevance",
+  label: "Relevance",
+  sortField: "relevance",
+};
+
+const SEARCH_HEADER_COLUMNS_TAIL: HeaderColumn[] = [
+  { key: "safety", label: "Brand safety", sortField: "brand_safety" },
+  { key: "source", label: "Source", sortField: "source" },
   { key: "sync", label: "Sync", sortField: "last_synced" },
   { key: "actions", label: "Actions", align: "right", srOnly: true },
 ];
+
+function searchHeaderColumns(showCampaignRelevance: boolean): HeaderColumn[] {
+  return showCampaignRelevance
+    ? [
+        ...SEARCH_HEADER_COLUMNS_BASE,
+        SEARCH_HEADER_RELEVANCE_COLUMN,
+        ...SEARCH_HEADER_COLUMNS_TAIL,
+      ]
+    : [...SEARCH_HEADER_COLUMNS_BASE, ...SEARCH_HEADER_COLUMNS_TAIL];
+}
 
 const SHORTLIST_HEADER_COLUMNS: HeaderColumn[] = [
   { key: "select", label: "#" },
@@ -389,15 +495,23 @@ export function CreatorResultGridHeader({
   variant = "search",
   sort,
   onSortChange,
+  showCampaignRelevance = false,
 }: {
   variant?: "search" | "shortlist";
   sort?: CreatorSearchSortState;
   onSortChange?: (sort: CreatorSearchSortState) => void;
+  showCampaignRelevance?: boolean;
 }) {
-  const columns = variant === "shortlist" ? SHORTLIST_HEADER_COLUMNS : SEARCH_HEADER_COLUMNS;
+  const columns =
+    variant === "shortlist" ? SHORTLIST_HEADER_COLUMNS : searchHeaderColumns(showCampaignRelevance);
   const gridTemplate =
-    variant === "shortlist" ? CREATOR_SHORTLIST_GRID_TEMPLATE : CREATOR_SEARCH_GRID_TEMPLATE;
-  const minWidth = variant === "shortlist" ? CREATOR_SHORTLIST_MIN_WIDTH : CREATOR_ROW_MIN_WIDTH;
+    variant === "shortlist"
+      ? CREATOR_SHORTLIST_GRID_TEMPLATE
+      : creatorSearchGridTemplate(showCampaignRelevance);
+  const minWidth =
+    variant === "shortlist"
+      ? CREATOR_SHORTLIST_MIN_WIDTH
+      : creatorSearchRowMinWidth(showCampaignRelevance);
 
   return (
     <div

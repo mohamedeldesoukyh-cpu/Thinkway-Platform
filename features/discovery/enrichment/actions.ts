@@ -1,12 +1,13 @@
 "use server";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
 import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
 import { getCreatorEnrichmentQueueHealth } from "@/lib/creator-enrichment/health";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import {
   getCreatorMetricsSyncStatus,
+  getBatchProfileAcquisitionJob,
   refreshCreatorMetrics,
   refreshCreatorMetricsBatchByUnifiedIds,
   refreshCreatorPlatformMetrics,
@@ -20,6 +21,11 @@ export type EnrichmentActionResult = {
   queued: boolean;
   message: string;
   queuedCount?: number;
+  batchJobId?: string | null;
+  acquisitionMode?: "batch_profile" | "per_creator";
+  estimatedApifyRuns?: number;
+  estimatedCredits?: number;
+  batchCount?: number;
 };
 
 export type StopEnrichmentActionResult = {
@@ -149,12 +155,18 @@ export async function refreshCreatorsBatchAction(
     ok: batch.ok,
     queued: batch.queued > 0,
     queuedCount: batch.queued,
+    batchJobId: batch.batchJobId ?? null,
+    acquisitionMode: batch.acquisitionMode ?? "per_creator",
+    estimatedApifyRuns: batch.estimatedApifyRuns,
+    estimatedCredits: batch.estimatedCredits,
+    batchCount: batch.batchCount,
     message:
-      batch.queued > 0
+      batch.message ??
+      (batch.queued > 0
         ? `Queued ${batch.queued} of ${batch.total} creator refresh(es).`
         : batch.failed > 0
           ? `${batch.failed} refresh(es) could not be queued.`
-          : "No creators queued.",
+          : "No creators queued."),
   };
 }
 
@@ -218,6 +230,33 @@ export async function enqueueCreatorDetailEnrichment(
   _influencerId: string
 ): Promise<EnrichmentActionResult> {
   return { ok: true, queued: false, message: "Automatic detail enrichment is disabled." };
+}
+
+export async function getBatchProfileAcquisitionStatusAction(jobId: string) {
+  if (!jobId?.trim()) {
+    return { ok: false, message: "Job id is required.", progress: null };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
+  if ("error" in auth) {
+    return { ok: false, message: auth.error, progress: null };
+  }
+
+  const job = await getBatchProfileAcquisitionJob(supabase, jobId.trim());
+  if (!job) {
+    return { ok: false, message: "Batch job not found.", progress: null };
+  }
+
+  return {
+    ok: true,
+    message: job.errorMessage ?? job.status,
+    jobId: job.id,
+    status: job.status,
+    progress: job.progress,
+    startedAt: job.startedAt,
+    completedAt: job.completedAt,
+  };
 }
 
 export async function getCreatorEnrichmentStatusAction(influencerId: string) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -8,13 +9,8 @@ export const maxDuration = 30;
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "influencers.read");
+  if ("response" in auth) return auth.response;
 
   const { searchParams } = new URL(request.url);
   const src = searchParams.get("src");

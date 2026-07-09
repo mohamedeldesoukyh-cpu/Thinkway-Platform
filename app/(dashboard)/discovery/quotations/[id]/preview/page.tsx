@@ -6,8 +6,6 @@ import { PageBackButton } from "@/components/navigation/page-back-button";
 import { QuotationPreviewDownloads } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationPreviewTemplateToggle } from "@/features/quotations/components/quotation-preview-template-toggle";
 import { quotationDetailPath } from "@/features/quotations/constants";
-import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
-import { buildQuotationHtml } from "@/features/quotations/export/quotation-html";
 import { resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -17,6 +15,21 @@ type QuotationPreviewPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ template?: string }>;
 };
+
+function quotationTemplateLabel(
+  template: ReturnType<typeof resolveQuotationTemplate>
+): string {
+  switch (template) {
+    case "lump-sum":
+      return "Lump sum";
+    case "showcase":
+      return "Showcase";
+    case "showcase-lump-sum":
+      return "Showcase Lump Sum";
+    default:
+      return "Detailed";
+  }
+}
 
 export default async function QuotationPreviewPage({
   params,
@@ -44,14 +57,17 @@ export default async function QuotationPreviewPage({
     notFound();
   }
 
-  const templateLabel = template === "lump-sum" ? "Lump sum" : "Detailed";
-  const doc = buildQuotationDocument(detail, { template });
-  const html = buildQuotationHtml(doc);
+  const templateLabel = quotationTemplateLabel(template);
+  const serial = detail.serial_number ?? "QT-PENDING";
+  const previewSrc =
+    template === "detailed"
+      ? `/api/quotations/${id}/export?format=preview`
+      : `/api/quotations/${id}/export?format=preview&template=${template}`;
 
   return (
     <DashboardShell
       title="Quotation preview"
-      description={`${doc.serial} — ${templateLabel.toLowerCase()} client quotation`}
+      description={`${serial} — ${templateLabel.toLowerCase()} client quotation`}
       hidePageHeader
     >
       <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8 print:hidden">
@@ -74,8 +90,8 @@ export default async function QuotationPreviewPage({
       </div>
 
       <iframe
-        title={`${templateLabel} quotation ${doc.serial}`}
-        srcDoc={html}
+        title={`${templateLabel} quotation ${serial}`}
+        src={previewSrc}
         className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
       />
     </DashboardShell>

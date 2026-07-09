@@ -38,7 +38,13 @@ import {
 
 } from "./workers/creator-import.worker.js";
 
+import { startBatchProfileAcquisitionWorker } from "./workers/batch-profile-acquisition.worker.js";
+
 import { startCreatorEnrichmentWorker } from "./workers/creator-enrichment.worker.js";
+
+import { startEnterpriseAcquisitionWorker } from "./workers/enterprise-acquisition.worker.js";
+
+import { startWorkerHeartbeat } from "./observability/heartbeat.js";
 
 import { isCreatorEnrichmentWorkerEnabled } from "@/lib/creator-enrichment/enabled.js";
 
@@ -85,6 +91,10 @@ const publicationScreenshotScheduler = startPublicationScreenshotScheduler();
 const creatorImportWorker = startCreatorImportWorker();
 
 const creatorImportChunkWorker = startCreatorImportChunkWorker();
+
+const enterpriseAcquisitionWorker = startEnterpriseAcquisitionWorker();
+
+const batchProfileAcquisitionWorker = startBatchProfileAcquisitionWorker();
 
 const creatorEnrichmentWorker: Worker | null = creatorEnrichmentEnabled
 
@@ -216,6 +226,30 @@ creatorImportChunkWorker.on("failed", (job, err) => {
 
 });
 
+enterpriseAcquisitionWorker.on("completed", (job) => {
+
+  console.log(`[enterprise-acquisition] completed ${job.id}`, job.returnvalue);
+
+});
+
+enterpriseAcquisitionWorker.on("failed", (job, err) => {
+
+  console.error(`[enterprise-acquisition] failed ${job?.id}`, err.message);
+
+});
+
+batchProfileAcquisitionWorker.on("completed", (job) => {
+
+  console.log(`[batch-profile-acquisition] completed ${job.id}`, job.returnvalue);
+
+});
+
+batchProfileAcquisitionWorker.on("failed", (job, err) => {
+
+  console.error(`[batch-profile-acquisition] failed ${job?.id}`, err.message);
+
+});
+
 // creator-enrichment worker registers its own failed/completed/DLQ handlers when enabled.
 
 
@@ -245,6 +279,10 @@ async function shutdown(): Promise<void> {
     creatorImportWorker.close(),
 
     creatorImportChunkWorker.close(),
+
+    enterpriseAcquisitionWorker.close(),
+
+    batchProfileAcquisitionWorker.close(),
 
     creatorEnrichmentWorker?.close(),
 
@@ -284,6 +322,10 @@ const readyQueues = [
 
   "creator-import-chunk",
 
+  "enterprise-acquisition",
+
+  "batch-profile-acquisition",
+
   ...(creatorEnrichmentEnabled ? ["creator-enrichment"] : []),
 
 ].join(", ");
@@ -291,4 +333,6 @@ const readyQueues = [
 
 
 console.log(`[discovery-worker] ready — queues: ${readyQueues}`);
+
+startWorkerHeartbeat(readyQueues.split(", "));
 

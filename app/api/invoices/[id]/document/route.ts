@@ -4,6 +4,7 @@ import { resolveInvoiceDocumentLayout } from "@/lib/billing/invoice-document-lay
 import { renderLiveInvoiceHtml } from "@/lib/billing/render-live-invoice-html";
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -21,13 +22,8 @@ export async function GET(request: Request, context: RouteContext) {
   const layout = resolveInvoiceDocumentLayout(searchParams.get("layout"));
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "invoices.read");
+  if ("response" in auth) return auth.response;
 
   try {
     const { data: invoice } = await supabase

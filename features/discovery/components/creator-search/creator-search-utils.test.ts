@@ -109,6 +109,47 @@ assert.deepEqual(
   ["inf:b", "inf:a"]
 );
 
+const instagramCreator = baseCreator({
+  unified_id: "inf:ig",
+  display_name: "Instagram Creator",
+  platforms: [{ id: "p1", platform: "instagram", handle: "ig", profile_url: null, follower_count: 100, engagement_rate: 2, audience_country: "EG" }],
+  categories: ["beauty"],
+  authenticity_score: 90,
+  enrichment_source: "apify",
+});
+const tiktokCreator = baseCreator({
+  unified_id: "inf:tt",
+  display_name: "TikTok Creator",
+  platforms: [{ id: "p2", platform: "tiktok", handle: "tt", profile_url: null, follower_count: 100, engagement_rate: 2, audience_country: "US" }],
+  categories: ["fitness"],
+  authenticity_score: 50,
+});
+
+assert.deepEqual(
+  sortCreators([tiktokCreator, instagramCreator], { field: "platform", direction: "asc" }).map(
+    (c) => c.unified_id
+  ),
+  ["inf:ig", "inf:tt"]
+);
+assert.deepEqual(
+  sortCreators([tiktokCreator, instagramCreator], { field: "country", direction: "asc" }).map(
+    (c) => c.unified_id
+  ),
+  ["inf:ig", "inf:tt"]
+);
+assert.deepEqual(
+  sortCreators([tiktokCreator, instagramCreator], { field: "brand_safety", direction: "desc" }).map(
+    (c) => c.unified_id
+  ),
+  ["inf:ig", "inf:tt"]
+);
+assert.deepEqual(
+  sortCreators([tiktokCreator, instagramCreator], { field: "source", direction: "asc" }).map(
+    (c) => c.unified_id
+  ),
+  ["inf:ig", "inf:tt"]
+);
+
 console.log(
   "features/discovery/components/creator-search/creator-search-utils.test.ts — all tests passed"
 );

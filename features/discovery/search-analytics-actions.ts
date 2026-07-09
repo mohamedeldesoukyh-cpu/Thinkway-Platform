@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
 import type { CreatorSearchIntentMode } from "@/features/discovery/components/creator-search/creator-search-intent-engine";
@@ -28,9 +28,7 @@ export async function logDiscoverySearchAnalyticsAction(
   if (events.length === 0) return { ok: true, inserted: 0 };
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await getRequestAuth();
 
   const rows = events.map((event) => ({
     user_id: user?.id ?? null,

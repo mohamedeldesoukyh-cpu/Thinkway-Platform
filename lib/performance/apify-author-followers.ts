@@ -60,6 +60,14 @@ export function pickApifyAuthorFollowerCount(
     );
   }
 
+  if (platformKey === "facebook") {
+    return (
+      sanitizeMetricValue(row.followers) ??
+      sanitizeMetricValue(row.followerCount) ??
+      sanitizeMetricValue(row.followersCount)
+    );
+  }
+
   const author = nestedRecord(row.author);
   return (
     sanitizeMetricValue(row.followerCount) ??

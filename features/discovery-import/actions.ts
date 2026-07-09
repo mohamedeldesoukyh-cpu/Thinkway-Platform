@@ -3,7 +3,7 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { isDemoResetEnabled } from "@/lib/discovery-import/demo-reset-policy";
 import {
   resetDemoImportedCreators,

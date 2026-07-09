@@ -1,6 +1,6 @@
 import type { ClientOnboardingAuditEvent } from "@/lib/clients/onboarding-audit";
 import type { ClientOnboardingStatus } from "@/lib/clients/onboarding-status";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
 
 export type ClientOnboardingTimelineEvent = {
   id: string;
@@ -139,22 +139,11 @@ export async function getClientOnboardingPermissions(): Promise<{
   canOverrideStatus: boolean;
 }> {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, roleSlug } = await getRequestAuth();
 
   if (!user) {
     return { canEditChecklist: false, canOverrideStatus: false };
   }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role:roles(slug)")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const roleSlug =
-    (profile as { role: { slug: string } | null } | null)?.role?.slug ?? null;
 
   const { canOverrideOnboardingStatus } = await import(
     "@/lib/clients/onboarding-permissions"

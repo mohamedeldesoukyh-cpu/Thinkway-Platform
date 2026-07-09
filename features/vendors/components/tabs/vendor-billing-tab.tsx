@@ -135,6 +135,7 @@ export function VendorBillingTab({
           currencyOptions={currencyOptions}
           hidePaymentTerms
           embedded
+          quotationPriceReference={workspace.quotation_price_reference}
         />
 
         <KpiStrip items={summaryItems} showNavigation={false} />

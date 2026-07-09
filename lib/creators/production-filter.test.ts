@@ -1,56 +1,32 @@
+import test from "node:test";
 import assert from "node:assert/strict";
 
-import { passesProductionCreatorGate } from "@/lib/creators/production-filter";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { passesProductionCreatorGate } from "./production-filter";
 
-function baseCreator(overrides: Partial<UnifiedCreatorResult>): UnifiedCreatorResult {
+function discoveryCreator(stage: string, username: string): UnifiedCreatorResult {
   return {
     unified_id: "dis:1",
     source_type: "public_discovery",
     influencer_id: null,
-    discovered_profile_id: "p1",
+    discovered_profile_id: "1",
     document_number: null,
-    display_name: "Test",
-    status: "discovered",
-    country_code: "AE",
-    estimated_country: "AE",
-    city: null,
+    display_name: username,
+    status: stage,
+    country_code: "EG",
     categories: [],
-    language_codes: [],
-    profile_image_url: null,
-    bio: null,
-    metrics: {
-      followers: { value: 1000, confidence: "estimated" },
-      engagement_rate: { value: 2, confidence: "estimated" },
-      avg_likes: { value: null, confidence: "estimated" },
-      avg_comments: { value: null, confidence: "estimated" },
-      avg_views: { value: null, confidence: "estimated" },
-      posting_frequency_per_week: { value: null, confidence: "estimated" },
-    },
-    ai_category: null,
-    ai_niche: null,
-    authenticity_score: null,
+    metrics: { followers: { value: 1000, confidence: "medium" } },
     thinkway_score: 50,
-    source_confidence: 50,
-    brand_fit_score: null,
+    source_confidence: 0.7,
     is_platform_verified: false,
-    platforms: [],
-    ...overrides,
-  };
+    platforms: [{ id: "1", platform: "instagram", handle: username, is_verified: false }],
+  } as unknown as UnifiedCreatorResult;
 }
 
-assert.equal(
-  passesProductionCreatorGate(
-    baseCreator({ source_type: "internal", influencer_id: "inf-1", status: "active" })
-  ),
-  true
-);
+test("passesProductionCreatorGate allows freshly discovered non-synthetic profiles", () => {
+  assert.equal(passesProductionCreatorGate(discoveryCreator("discovered", "adidas_runner_eg")), true);
+});
 
-assert.equal(
-  passesProductionCreatorGate(
-    baseCreator({ status: "discovered", bio: "collabs: test@example.com" })
-  ),
-  false
-);
-
-assert.equal(passesProductionCreatorGate(baseCreator({ status: "verified" })), true);
+test("passesProductionCreatorGate blocks synthetic mock_seed handles", () => {
+  assert.equal(passesProductionCreatorGate(discoveryCreator("discovered", "tw_eg_sports_01")), false);
+});

@@ -5,6 +5,7 @@ import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { formatQuotationTermsText } from "@/lib/commercial/quotation-default-terms";
 import { defaultValidityDateFromIssue } from "@/lib/commercial/quotation-validity";
 import { normalizeCommercialLine } from "@/lib/commercial/quotation-engine";
+import { buildQuotationOptionRenumberPlan, isSameQuotationCreator, nextQuotationOptionNumber, type QuotationCreatorRef } from "@/lib/quotations/quotation-creator-options";
 import type { CommercialInputMode, Database } from "@/types/database";
 
 import type { QuotationItemSeed } from "../quotation-helpers";
@@ -48,7 +49,11 @@ export async function buildItemInsertRows(
       followers: seed.followers ?? null,
       engagement_rate: seed.engagement_rate ?? null,
       country_code: seed.country_code ?? null,
+      profile_image_url: seed.profile_image_url ?? null,
+      profile_url: seed.profile_url ?? null,
       deliverables: (seed.deliverables ?? []) as unknown as Database["public"]["Tables"]["quotation_items"]["Insert"]["deliverables"],
+      option_number: seed.option_number ?? 1,
+      service_description: seed.service_description ?? null,
       commercial_input_mode: line.commercial_input_mode,
       cost: line.cost,
       cost_currency: line.cost_currency,
@@ -132,35 +137,168 @@ export async function duplicateQuotationItemRows(
   quotationId: string,
   itemIds: string[]
 ) {
-  const { data: existing, error: loadError } = await fetchQuotationItemsByIds(
-    supabase,
-    quotationId,
-    itemIds
-  );
-  if (loadError) return { ok: false as const, message: loadError.message, inserts: [] as Record<string, unknown>[] };
+  const uniqueIds = [...new Set(itemIds)];
+  const { data: allItemsData, error: loadError } = await supabase
+    .from("quotation_items")
+    .select("*")
+    .eq("quotation_id", quotationId)
+    .order("sort_order", { ascending: true });
 
-  const rows = (existing ?? []) as Array<Record<string, unknown>>;
-  if (rows.length === 0) {
+  if (loadError) {
+    return { ok: false as const, message: loadError.message, inserts: [] as Record<string, unknown>[] };
+  }
+
+  const allItems = (allItemsData ?? []) as Array<Record<string, unknown>>;
+  const sourceIdSet = new Set(uniqueIds);
+  const foundSources = allItems.filter((item) => sourceIdSet.has(item.id as string));
+  if (!foundSources.length) {
     return { ok: false as const, message: "No matching creators found.", inserts: [] as Record<string, unknown>[] };
   }
 
-  const { data: maxSortRow } = await fetchMaxItemSortOrder(supabase, quotationId);
-  let sort = Number((maxSortRow as { sort_order?: number } | null)?.sort_order ?? -1) + 1;
-
-  const inserts = rows.map((row) => {
+  const insertsAfter = foundSources.map((row) => {
     const {
       id: _id,
       created_at: _created,
       updated_at: _updated,
+      source_shortlist_item_id: _source,
       ...rest
     } = row;
-    return { ...rest, quotation_id: quotationId, sort_order: sort++ };
+    const sameCreator = allItems.filter((item) =>
+      isSameQuotationCreator(row as QuotationCreatorRef, item as QuotationCreatorRef)
+    );
+    return {
+      afterItemId: row.id as string,
+      payload: {
+        ...rest,
+        quotation_id: quotationId,
+        source_shortlist_item_id: null,
+        option_number: nextQuotationOptionNumber(sameCreator),
+      },
+    };
   });
 
-  const { error } = await insertQuotationItems(supabase, inserts);
-  if (error) return { ok: false as const, message: error.message, inserts: [] as Record<string, unknown>[] };
+  const insertResult = await insertQuotationRowsAfter(supabase, quotationId, insertsAfter);
+  if (!insertResult.ok) return insertResult;
 
-  return { ok: true as const, inserts };
+  await renumberQuotationOptionNumbers(supabase, quotationId);
+  return insertResult;
+}
+
+export async function renumberQuotationOptionNumbers(
+  supabase: SupabaseClient<Database>,
+  quotationId: string
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("quotation_items")
+    .select(
+      "id, sort_order, option_number, unified_id, influencer_id, profile_id, creator_name, handle"
+    )
+    .eq("quotation_id", quotationId);
+
+  if (error || !data?.length) return;
+
+  const updates = buildQuotationOptionRenumberPlan(
+    data as Array<{
+      id: string;
+      sort_order: number;
+      option_number: number | null;
+      unified_id: string | null;
+      influencer_id: string | null;
+      profile_id: string | null;
+      creator_name: string | null;
+      handle: string | null;
+    }>
+  );
+
+  await Promise.all(
+    updates.map(({ id, option_number }) =>
+      supabase.from("quotation_items").update({ option_number } as never).eq("id", id)
+    )
+  );
+}
+
+type QuotationRowInsertAfter = {
+  afterItemId: string;
+  payload: Record<string, unknown>;
+};
+
+export async function insertQuotationRowsAfter(
+  supabase: SupabaseClient<Database>,
+  quotationId: string,
+  insertsAfter: QuotationRowInsertAfter[]
+): Promise<
+  | { ok: true; inserts: Record<string, unknown>[] }
+  | { ok: false; message: string; inserts: Record<string, unknown>[] }
+> {
+  if (insertsAfter.length === 0) {
+    return { ok: false, message: "Nothing to insert.", inserts: [] };
+  }
+
+  const { data: allItemsData, error: loadError } = await supabase
+    .from("quotation_items")
+    .select("id, sort_order")
+    .eq("quotation_id", quotationId)
+    .order("sort_order", { ascending: true });
+
+  if (loadError) {
+    return { ok: false, message: loadError.message, inserts: [] };
+  }
+
+  const allItems = (allItemsData ?? []) as Array<{ id: string; sort_order: number }>;
+  const insertsByAfterId = new Map<string, Record<string, unknown>[]>();
+  for (const entry of insertsAfter) {
+    const bucket = insertsByAfterId.get(entry.afterItemId) ?? [];
+    bucket.push(entry.payload);
+    insertsByAfterId.set(entry.afterItemId, bucket);
+  }
+
+  type PlannedRow =
+    | { kind: "existing"; id: string }
+    | { kind: "insert"; row: Record<string, unknown> };
+
+  const plan: PlannedRow[] = [];
+  const inserts: Record<string, unknown>[] = [];
+
+  for (const item of allItems) {
+    plan.push({ kind: "existing", id: item.id });
+    for (const payload of insertsByAfterId.get(item.id) ?? []) {
+      plan.push({ kind: "insert", row: payload });
+      inserts.push(payload);
+    }
+  }
+
+  if (inserts.length === 0) {
+    return { ok: false, message: "Insert position not found.", inserts: [] };
+  }
+
+  let sortOrder = 0;
+  const existingUpdates: Array<{ id: string; sort_order: number }> = [];
+  const insertsWithSort: Record<string, unknown>[] = [];
+
+  for (const step of plan) {
+    if (step.kind === "existing") {
+      existingUpdates.push({ id: step.id, sort_order: sortOrder++ });
+    } else {
+      insertsWithSort.push({ ...step.row, sort_order: sortOrder++ });
+    }
+  }
+
+  const { data: insertedRows, error: insertError } = await supabase
+    .from("quotation_items")
+    .insert(insertsWithSort as never)
+    .select("id");
+
+  if (insertError) {
+    return { ok: false, message: insertError.message, inserts: [] };
+  }
+
+  await Promise.all(
+    existingUpdates.map(({ id, sort_order }) =>
+      supabase.from("quotation_items").update({ sort_order } as never).eq("id", id)
+    )
+  );
+
+  return { ok: true, inserts: (insertedRows ?? []) as Record<string, unknown>[] };
 }
 
 export async function fetchQuotationItemsForCampaign(

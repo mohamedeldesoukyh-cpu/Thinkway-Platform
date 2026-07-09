@@ -65,7 +65,7 @@ export function AddMissingCreatorDialog({
   function handleConfirm() {
     const trimmed = profileUrl.trim();
     if (!parseProfileInput(trimmed)) {
-      setError("Enter a valid Instagram, TikTok, YouTube, Snapchat, or X profile link.");
+      setError("Enter a valid Instagram, TikTok, YouTube, Snapchat, Facebook, or X profile link.");
       return;
     }
 
@@ -100,10 +100,11 @@ export function AddMissingCreatorDialog({
             },
             onComplete: (syncStatus) => {
               if (syncStatus === "completed") {
-                toast.success("Creator profile enriched");
+                toast.success("Creator profile updated");
               } else if (syncStatus === "failed") {
-                toast.error("Enrichment failed", {
-                  description: "Apify enrichment did not complete successfully.",
+                toast.warning("Full Apify enrichment unavailable", {
+                  description:
+                    "The creator was saved with preview data. Use Refresh metrics to try again later.",
                 });
               }
             },

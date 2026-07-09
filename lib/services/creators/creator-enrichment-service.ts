@@ -26,6 +26,15 @@ import {
 } from "@/lib/creator-enrichment/queue";
 import { resolveAggregatedCreatorEnrichmentStatus } from "@/lib/creator-enrichment/status-resolution";
 import { runCreatorEnrichment } from "@/lib/creator-enrichment/service";
+import {
+  getBatchProfileAcquisitionConfig,
+} from "@/lib/creator-enrichment/batch-profile-acquisition-policy";
+import {
+  getBatchProfileAcquisitionJob,
+  startBatchProfileAcquisition,
+} from "@/lib/creator-enrichment/batch-profile-acquisition-service";
+import { runBatchProfileAcquisition } from "@/lib/creator-enrichment/batch-profile-acquisition-orchestrator";
+import { isBatchProfileAcquisitionQueueAvailable } from "@/lib/creator-enrichment/batch-profile-acquisition-queue";
 import type {
   CreatorEnrichmentJobPayload,
   CreatorEnrichmentResult,
@@ -86,6 +95,13 @@ export type RefreshCreatorMetricsBatchResult = {
   queued: number;
   failed: number;
   results: RefreshCreatorMetricsResult[];
+  /** Set when bulk refresh uses batch profile acquisition. */
+  batchJobId?: string | null;
+  acquisitionMode?: "batch_profile" | "per_creator";
+  estimatedApifyRuns?: number;
+  estimatedCredits?: number;
+  batchCount?: number;
+  message?: string;
 };
 
 export type StopCreatorMetricsRefreshResult = {
@@ -401,6 +417,17 @@ export async function refreshCreatorMetrics(
     };
   }
 
+  if (await creatorHasInflightEnrichmentJob(influencerId)) {
+    const syncStatus = await getCreatorMetricsSyncStatus(supabase, influencerId);
+    return {
+      ok: true,
+      influencerId,
+      syncStatus,
+      queued: false,
+      message: "Enrichment already in progress.",
+    };
+  }
+
   const enqueueResult = await enqueueCreatorEnrichment(payload, {
     isBulk: options.isBulk ?? false,
   });
@@ -452,6 +479,11 @@ export async function refreshCreatorMetricsBatch(
   creatorIds: string[],
   options: RefreshCreatorMetricsOptions = {}
 ): Promise<RefreshCreatorMetricsBatchResult> {
+  if (options.isBulk && shouldUseBatchProfileAcquisition(options)) {
+    const unifiedIds = creatorIds.map((id) => `inf:${id}`);
+    return refreshCreatorMetricsBatchByUnifiedIds(supabase, unifiedIds, options);
+  }
+
   const uniqueIds = [...new Set(creatorIds.filter(Boolean))];
   console.log(`[refresh] batch size=${uniqueIds.length}`);
   const results: RefreshCreatorMetricsResult[] = [];
@@ -536,7 +568,12 @@ export async function refreshCreatorMetricsBatchByUnifiedIds(
   options: RefreshCreatorMetricsOptions = {}
 ): Promise<RefreshCreatorMetricsBatchResult> {
   const uniqueUnifiedIds = [...new Set(unifiedIds.filter(Boolean))];
-  console.log(`[refresh] batch size=${uniqueUnifiedIds.length}`);
+
+  if (options.isBulk && shouldUseBatchProfileAcquisition(options)) {
+    return refreshCreatorMetricsViaBatchAcquisition(supabase, uniqueUnifiedIds, options);
+  }
+
+  console.log(`[refresh] batch size=${uniqueUnifiedIds.length} mode=per_creator`);
   const results: RefreshCreatorMetricsResult[] = [];
 
   for (const unifiedId of uniqueUnifiedIds) {
@@ -716,3 +753,104 @@ export async function executeCreatorMetricsRefresh(
 ): Promise<CreatorEnrichmentResult> {
   return runCreatorEnrichment(supabase, payload, options);
 }
+
+function shouldUseBatchProfileAcquisition(options: RefreshCreatorMetricsOptions): boolean {
+  if (!getBatchProfileAcquisitionConfig().batchAcquisitionEnabled) return false;
+  if (options.platformAccountId) return false;
+  return true;
+}
+
+async function refreshCreatorMetricsViaBatchAcquisition(
+  supabase: AnySupabase,
+  unifiedIds: string[],
+  options: RefreshCreatorMetricsOptions
+): Promise<RefreshCreatorMetricsBatchResult> {
+  const total = unifiedIds.length;
+  console.log(`[refresh] batch size=${total} mode=batch_profile_acquisition`);
+
+  const start = await startBatchProfileAcquisition(supabase, {
+    unifiedIds,
+    trigger: options.trigger ?? "manual",
+    scope: options.scope,
+    requestedBy: options.requestedBy,
+    platformAccountId: options.platformAccountId,
+  });
+
+  if (!start.ok && !start.jobId) {
+    return {
+      ok: false,
+      total,
+      queued: 0,
+      failed: total,
+      results: [],
+      message: start.message,
+    };
+  }
+
+  if (!start.queued && start.jobId && !isBatchProfileAcquisitionQueueAvailable()) {
+    const { resolveBatchProfileTargets } = await import(
+      "@/lib/creator-enrichment/batch-profile-target-resolver"
+    );
+    const { targets } = await resolveBatchProfileTargets(supabase, {
+      unifiedIds,
+      platformAccountId: options.platformAccountId,
+      requestedBy: options.requestedBy,
+    });
+    const inlineResult = await runBatchProfileAcquisition(supabase, {
+      jobId: start.jobId,
+      targets,
+      trigger: options.trigger ?? "manual",
+      scope: options.scope,
+      requestedBy: options.requestedBy ?? null,
+    });
+    return {
+      ok: inlineResult.ok,
+      total,
+      queued: inlineResult.creatorsImported + inlineResult.creatorsMerged,
+      failed: inlineResult.creatorsFailed + start.targetsFailed,
+      results: [],
+      batchJobId: start.jobId,
+      acquisitionMode: "batch_profile",
+      estimatedApifyRuns: start.estimatedApifyRuns,
+      estimatedCredits: inlineResult.estimatedCredits,
+      batchCount: start.batchCount,
+      message: inlineResult.reason,
+    };
+  }
+
+  if (!start.queued) {
+    return {
+      ok: false,
+      total,
+      queued: 0,
+      failed: total,
+      results: [],
+      batchJobId: start.jobId,
+      message: start.message,
+    };
+  }
+
+  const syntheticResults: RefreshCreatorMetricsResult[] = unifiedIds.map(() => ({
+    ok: start.ok,
+    influencerId: null,
+    syncStatus: "queued",
+    queued: true,
+    message: start.message,
+  }));
+
+  return {
+    ok: start.ok,
+    total,
+    queued: start.targetsResolved,
+    failed: start.targetsFailed,
+    results: syntheticResults,
+    batchJobId: start.jobId,
+    acquisitionMode: "batch_profile",
+    estimatedApifyRuns: start.estimatedApifyRuns,
+    estimatedCredits: start.estimatedCredits,
+    batchCount: start.batchCount,
+    message: start.message,
+  };
+}
+
+export { getBatchProfileAcquisitionJob };

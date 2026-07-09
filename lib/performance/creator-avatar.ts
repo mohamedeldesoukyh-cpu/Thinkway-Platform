@@ -1,6 +1,9 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
-import { isAvatarUrlNeedsRefresh } from "@/lib/performance/avatar-sync-policy";
+import {
+  isDisplayableAvatarUrl,
+  isInstagramCdnUrlExpired,
+} from "@/lib/performance/avatar-sync-policy";
 import { isSocialPlatform } from "@/lib/social/platforms";
 
 export type CreatorAvatarInput = {
@@ -256,7 +259,7 @@ function firstAllowedAvatarUrl(
 ): string | null {
   for (const candidate of candidates) {
     const trimmed = candidate?.trim();
-    if (!trimmed || isAvatarUrlNeedsRefresh(trimmed)) continue;
+    if (!trimmed || !isDisplayableAvatarUrl(trimmed)) continue;
     if (isAvatarUrlAllowedForPlatform(platform, trimmed)) {
       return options?.normalize === false
         ? trimmed
@@ -315,6 +318,17 @@ export function creatorAvatarBrowserDisplayUrl(
     return trimmed;
   }
 
+  // Dead signed Instagram CDN links cannot be fetched — fall back to profile OpenGraph
+  // when available instead of returning null (which forces initials/placeholder).
+  if (trimmed && isInstagramCdnUrlExpired(trimmed)) {
+    if (!profile) return null;
+    const params = new URLSearchParams();
+    params.set("profileUrl", profile);
+    const bust = cacheKey?.trim();
+    if (bust) params.set("v", bust);
+    return `/api/creators/avatar?${params.toString()}`;
+  }
+
   const params = new URLSearchParams();
   if (trimmed) params.set("src", trimmed);
   if (profile) params.set("profileUrl", profile);
@@ -341,7 +355,7 @@ function firstGenericAvatarUrl(
 ): string | null {
   for (const candidate of candidates) {
     const trimmed = candidate?.trim();
-    if (!trimmed || isAvatarUrlNeedsRefresh(trimmed)) continue;
+    if (!trimmed || !isDisplayableAvatarUrl(trimmed)) continue;
     if (isGenericAvatarAllowedForPlatform(platform, trimmed)) {
       return options?.normalize === false
         ? trimmed

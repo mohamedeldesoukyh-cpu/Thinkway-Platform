@@ -8,6 +8,7 @@ import {
 import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
 import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -24,13 +25,8 @@ export async function GET(request: Request, context: RouteContext) {
   const download = searchParams.get("download") === "1";
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "vendor_ios.read");
+  if ("response" in auth) return auth.response;
 
   try {
     const { data: vendorIo } = await supabase

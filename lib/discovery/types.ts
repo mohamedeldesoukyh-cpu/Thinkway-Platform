@@ -139,6 +139,15 @@ export type DiscoveryJobPayload = {
   locationQuery?: string;
   trendKey?: string;
   limit?: number;
+  /** Release 1.2 — coverage miss backfill metadata. */
+  triggeredBy?: "coverage_miss";
+  coverageIntent?: {
+    industry?: string;
+    country?: string;
+    categories?: string[];
+    platforms?: string[];
+  };
+  searchId?: string;
 };
 
 export type EnrichmentJobPayload = {
@@ -232,4 +241,43 @@ export type DiscoveryJobStats = {
   completedJobs: number;
   failedJobs: number;
   profilesAddedToday: number;
+};
+
+export type DiscoveryBrowseBackfillMeta = {
+  searchId: string;
+  /** True when a background acquisition job was enqueued for this search. */
+  acquisitionStarted?: boolean;
+  acquisitionJobId?: string;
+  /** All platform acquisition jobs when brief lists multiple platforms. */
+  acquisitionJobIds?: string[];
+  /** Human-readable acquisition status for the UI (e.g. "Acquiring creators..."). */
+  status?: string;
+  apifyExecuted: boolean;
+  queued: boolean;
+  completed: boolean;
+  jobId?: string;
+  profilesAdded?: number;
+  reason: string;
+  waitedMs: number;
+  /** Sprint 3 — dataset acquisition vs legacy worker. */
+  acquisitionMode?: "dataset_import" | "legacy_worker";
+  /** Intelligence sufficiency snapshot when dataset acquisition gate is active. */
+  intelligenceSufficiency?: {
+    sufficient: boolean;
+    sufficiencyScore: number;
+    sufficiencyLevel: string;
+    intelligenceGaps: string[];
+    gapReasons: string[];
+  };
+  datasetAcquisition?: {
+    apifyRunId: string | null;
+    datasetId: string | null;
+    creatorsImported: number;
+    creatorsMerged: number;
+    enrichmentJobsQueued: number;
+  };
+};
+
+export type DiscoveryBrowseWithBackfillResult = import("@/lib/creators/types").UnifiedCreatorBrowseResult & {
+  backfill?: DiscoveryBrowseBackfillMeta;
 };

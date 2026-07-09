@@ -38,6 +38,11 @@ import {
 } from "@/lib/creators/creator-centric";
 import { mergeImportedStringArrays } from "@/lib/discovery-import/normalize";
 import { normalizeCreatorRecentPublications } from "@/lib/creators/recent-publication-thumb";
+import {
+  normalizeContactLinks,
+  pickCreatorContactFromPlatforms,
+  resolveCreatorContactFields,
+} from "@/lib/creators/contact-info";
 import { createDiscoverySearchPerf } from "@/lib/creators/discovery-search-perf";
 import {
   creatorSearchHasMore,
@@ -47,8 +52,49 @@ import {
 } from "@/lib/creators/fts-search";
 import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
 import { normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
+import { formatCreatorBio, formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
+import {
+  searchTrace,
+  traceCountDrop,
+  workflowTrace,
+  type SearchTracePath,
+} from "@/lib/creators/search-trace";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 import type { DiscoverySearchResult, ProfileAiScore, ProfileMetricsSnapshot } from "@/lib/discovery/types";
+import { dedupeByCreatorId } from "@/lib/creators/dedupe-creators";
+import {
+  coverageIntentFromBrowseFilters,
+  evaluateDiscoveryCoverage,
+  getDiscoveryCoverageConfig,
+  type DiscoveryCoverageEvaluation,
+  type DiscoveryCoverageIntent,
+} from "@/lib/creators/discovery-coverage";
+import { sortUnifiedCreatorsByDiscoveryRank } from "@/lib/creators/unified-ranking";
+import { hydrateCreatorsWithDna, loadCanonicalDnaByInfluencerIds } from "@/lib/creators/dna-browse-hydration";
+import { extractDnaAvatarUrl } from "@/lib/creators/dna-avatar";
+import {
+  applyDiscoveryBrowseFilters,
+  hasDiscoveryAudienceBrowseFilters,
+} from "@/lib/creators/discovery-browse-filters";
+import { audienceDemographicsFromInfluencer } from "@/features/discovery/enrichment/adapters";
+import {
+  applyDataFreshnessFlags,
+  applyPolicyToBrowse,
+} from "@/lib/discovery/control-center/discovery-control-policy";
+import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
+
+export {
+  evaluateDiscoveryCoverage,
+  coverageIntentFromBrowseFilters,
+  getDiscoveryCoverageConfig,
+  coverageMeetsThreshold,
+  isDiscoveryCoverageApifyFallbackEnabled,
+} from "@/lib/creators/discovery-coverage";
+export type {
+  DiscoveryCoverageEvaluation,
+  DiscoveryCoverageIntent,
+  DiscoveryCoverageLevel,
+} from "@/lib/creators/discovery-coverage";
 
 /** Default discovery browse/search catalog — excludes draft prospects. */
 export const BROWSE_INFLUENCER_STATUSES = ["active"] as const;
@@ -166,7 +212,8 @@ async function fetchInternalCreatorsBrowsePage(
   supabase: SupabaseClient,
   filters: UnifiedCreatorBrowseFilters,
   page: number,
-  pageSize: number
+  pageSize: number,
+  tracePath: SearchTracePath = "unknown"
 ): Promise<UnifiedCreatorResult[]> {
   const categories = resolveBrowseCategories(filters);
   let ids: string[] = [];
@@ -196,7 +243,7 @@ async function fetchInternalCreatorsBrowsePage(
     { ...filters, search: undefined, page: undefined, pageSize: undefined },
     ids,
     null,
-    { omitHeavyFields: true }
+    { omitHeavyFields: true, tracePath }
   );
 
   const order = new Map(ids.map((id, index) => [id, index]));
@@ -234,23 +281,181 @@ async function countInternalCreatorsBrowse(
 
 function applyPostBrowseFilters(
   merged: UnifiedCreatorResult[],
-  filters: UnifiedCreatorBrowseFilters
+  filters: UnifiedCreatorBrowseFilters,
+  tracePath: SearchTracePath = "unknown"
 ): UnifiedCreatorResult[] {
+  const pathOpt = { path: tracePath };
   let results = merged;
+  const initialCount = results.length;
+
   if (filters.productionOnly !== false) {
-    results = results.filter(passesProductionCreatorGate);
+    const next = results.filter(passesProductionCreatorGate);
+    traceCountDrop("8_post_filter", "productionOnly", results.length, next.length, {
+      productionOnly: filters.productionOnly,
+    }, pathOpt);
+    results = next;
   }
+
   const categories = resolveBrowseCategories(filters);
   if (categories.length > 0) {
-    results = results.filter((creator) => creatorMatchesBrowseCategories(creator, categories));
+    const next = results.filter((creator) => creatorMatchesBrowseCategories(creator, categories));
+    traceCountDrop("8_post_filter", "categories", results.length, next.length, {
+      categories,
+    }, pathOpt);
+    results = next;
   }
-  if (filters.platforms?.length) {
-    const set = new Set(filters.platforms.map((p) => p.toLowerCase()));
-    results = results.filter((c) =>
+
+  const platformFilterValues = [
+    ...(filters.platform?.trim() ? [filters.platform.trim()] : []),
+    ...(filters.platforms ?? []),
+  ];
+  if (platformFilterValues.length > 0) {
+    const set = new Set(platformFilterValues.map((p) => p.toLowerCase()));
+    const next = results.filter((c) =>
       c.platforms.some((p) => set.has(p.platform.toLowerCase()))
     );
+    traceCountDrop("8_post_filter", "platforms", results.length, next.length, {
+      platform: filters.platform,
+      platforms: filters.platforms,
+    }, pathOpt);
+    results = next;
   }
+
+  if (hasDiscoveryAudienceBrowseFilters(filters)) {
+    const next = applyDiscoveryBrowseFilters(results, filters);
+    traceCountDrop("8_post_filter", "discovery_audience", results.length, next.length, {
+      audienceCountries: filters.audienceCountries,
+      audienceInterestTags: filters.audienceInterestTags,
+      audienceGender: filters.audienceGender,
+      audienceAgeMin: filters.audienceAgeMin,
+      audienceAgeMax: filters.audienceAgeMax,
+      creatorCountries: filters.creatorCountries,
+    }, pathOpt);
+    results = next;
+  }
+
+  traceCountDrop("8_post_filter_final", "all", initialCount, results.length, {
+    country: filters.country,
+    minFollowers: filters.minFollowers,
+    maxFollowers: filters.maxFollowers,
+    minEngagement: filters.minEngagement,
+  }, pathOpt);
+
   return results;
+}
+
+const DISCOVERY_AUDIENCE_FILTER_BATCH = 100;
+
+async function estimateDiscoveryBrowseRawTotal(
+  supabase: SupabaseClient,
+  filters: UnifiedCreatorBrowseFilters,
+  tracePath: SearchTracePath
+): Promise<number> {
+  const categories = resolveBrowseCategories(filters);
+  if (categories.length > 0) {
+    return countInternalCreatorsBrowse(supabase, filters);
+  }
+  if (shouldUseUnifiedBrowseIndexPath(filters)) {
+    const response = await searchCreators(supabase, "", 1, 0, tracePath);
+    return response.totalCount ?? 0;
+  }
+  return countInternalCreatorsBrowse(supabase, filters);
+}
+
+async function fetchDiscoveryBrowseBatch(
+  supabase: SupabaseClient,
+  filters: UnifiedCreatorBrowseFilters,
+  batchPage: number,
+  batchSize: number,
+  tracePath: SearchTracePath
+): Promise<UnifiedCreatorResult[]> {
+  const sourceFilter = filters.source ?? "all";
+  const includeInternal =
+    sourceFilter === "all" ||
+    sourceFilter === "internal" ||
+    sourceFilter === "imported" ||
+    sourceFilter === "oauth_verified";
+  const includeDiscovery =
+    sourceFilter === "all" ||
+    sourceFilter === "public_discovery" ||
+    sourceFilter === "imported";
+
+  const [internal, discovery] = await Promise.all([
+    includeInternal
+      ? fetchInternalCreatorsBrowsePage(supabase, filters, batchPage, batchSize, tracePath)
+      : Promise.resolve([]),
+    includeDiscovery
+      ? fetchDiscoveryCreators(
+          supabase,
+          { ...filters, search: undefined, page: batchPage, pageSize: batchSize },
+          undefined,
+          tracePath
+        )
+      : Promise.resolve([]),
+  ]);
+
+  return [...internal, ...discovery];
+}
+
+/**
+ * Scan-hydrate-filter paginate when Discovery audience chips are active so
+ * `total` matches displayed rows (avoids "5120 matched / 0 loaded").
+ */
+async function browseDiscoveryAudienceFilteredPage(
+  supabase: SupabaseClient,
+  filters: UnifiedCreatorBrowseFilters,
+  page: number,
+  pageSize: number,
+  tracePath: SearchTracePath
+): Promise<{ creators: UnifiedCreatorResult[]; total: number; has_more: boolean }> {
+  const filtered: UnifiedCreatorResult[] = [];
+  let batchPage = 1;
+  let rawExhausted = false;
+  const rawTotal = await estimateDiscoveryBrowseRawTotal(supabase, filters, tracePath);
+  const maxBatchPages = Math.max(1, Math.ceil(rawTotal / DISCOVERY_AUDIENCE_FILTER_BATCH) + 2);
+  const targetEnd = page * pageSize;
+
+  while (filtered.length < targetEnd && !rawExhausted && batchPage <= maxBatchPages) {
+    const batch = await fetchDiscoveryBrowseBatch(
+      supabase,
+      filters,
+      batchPage,
+      DISCOVERY_AUDIENCE_FILTER_BATCH,
+      tracePath
+    );
+    if (batch.length === 0) {
+      rawExhausted = true;
+      break;
+    }
+    filtered.push(...applyPostBrowseFilters(batch, filters, tracePath));
+    if (batch.length < DISCOVERY_AUDIENCE_FILTER_BATCH) rawExhausted = true;
+    batchPage += 1;
+  }
+
+  while (!rawExhausted && batchPage <= maxBatchPages) {
+    const batch = await fetchDiscoveryBrowseBatch(
+      supabase,
+      filters,
+      batchPage,
+      DISCOVERY_AUDIENCE_FILTER_BATCH,
+      tracePath
+    );
+    if (batch.length === 0) break;
+    filtered.push(...applyPostBrowseFilters(batch, filters, tracePath));
+    if (batch.length < DISCOVERY_AUDIENCE_FILTER_BATCH) break;
+    batchPage += 1;
+  }
+
+  const uniqueFiltered = [...new Map(filtered.map((c) => [c.unified_id, c])).values()];
+  uniqueFiltered.sort((a, b) => b.thinkway_score - a.thinkway_score);
+  const offset = (page - 1) * pageSize;
+  const pageCreators = uniqueFiltered.slice(offset, offset + pageSize);
+
+  return {
+    creators: pageCreators,
+    total: uniqueFiltered.length,
+    has_more: offset + pageCreators.length < uniqueFiltered.length,
+  };
 }
 
 /** Prefer platform account photo; fall back through avatar_url chain when missing/broken. */
@@ -301,6 +506,14 @@ function roleFromImportMetadata(
     if (typeof raw === "string" && raw.trim()) return raw.trim();
   }
   return null;
+}
+
+function normalizeEnrichmentStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
 }
 
 function resolveInternalSourceType(account: {
@@ -387,8 +600,10 @@ async function fetchInternalCreators(
   filters: UnifiedCreatorBrowseFilters,
   scopedInfluencerIds?: string[],
   searchRankById?: Map<string, number> | null,
-  options?: { omitHeavyFields?: boolean }
+  options?: { omitHeavyFields?: boolean; tracePath?: SearchTracePath }
 ): Promise<UnifiedCreatorResult[]> {
+  const tracePath = options?.tracePath ?? "unknown";
+  const pathOpt = { path: tracePath };
   const search = filters.search?.trim() ?? "";
   const platform = filters.platform?.trim() ?? "";
   const country = filters.country?.trim().toUpperCase() ?? "";
@@ -406,11 +621,14 @@ async function fetchInternalCreators(
 
   let influencerIds: string[] | null = candidateIds;
 
+  const scopedFromSearch = Boolean(scopedInfluencerIds && scopedInfluencerIds.length > 0);
+
   if (
-    platform ||
-    filters.minFollowers != null ||
-    filters.maxFollowers != null ||
-    filters.minEngagement != null
+    !scopedFromSearch &&
+    (platform ||
+      filters.minFollowers != null ||
+      filters.maxFollowers != null ||
+      filters.minEngagement != null)
   ) {
     let accountQuery = supabase
       .from("influencer_platform_accounts")
@@ -459,7 +677,7 @@ async function fetchInternalCreators(
   let query = supabase
     .from("influencers")
     .select(
-      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, enrichment_source, primary_avatar_url, primary_avatar_source, default_metrics_platform_account_id"
+      "id, document_number, display_name, status, country_code, categories, notes, rate_card, payment_details, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, enrichment_source, primary_avatar_url, primary_avatar_source, default_metrics_platform_account_id, audience_age_13_17, audience_age_18_24, audience_age_25_34, audience_age_35_44, audience_age_45_54, audience_age_55_plus, audience_gender_male, audience_gender_female, audience_gender_unknown, audience_top_countries, demographic_source"
     );
 
   query = explicitLookup
@@ -479,7 +697,16 @@ async function fetchInternalCreators(
   if (filters.language) query = query.contains("languages", [filters.language]);
 
   if (scopedIds) {
-    if (scopedIds.length === 0) return [];
+    if (scopedIds.length === 0) {
+      searchTrace("6_internal_hydration", {
+        count: 0,
+        reason: "empty_scoped_ids",
+        country,
+        categories,
+        scopedIdCount: 0,
+      }, pathOpt);
+      return [];
+    }
     query = query.in("id", scopedIds);
   }
 
@@ -487,6 +714,16 @@ async function fetchInternalCreators(
   if (error) throw new Error(error.message);
 
   const ids = (data ?? []).map((r) => r.id);
+  searchTrace("6_internal_hydration_query", {
+    hydratedIdCount: ids.length,
+    scopedIdCount: scopedIds?.length ?? null,
+    country,
+    categories,
+    platform,
+    minFollowers: filters.minFollowers,
+    maxFollowers: filters.maxFollowers,
+    minEngagement: filters.minEngagement,
+  }, pathOpt);
   if (ids.length === 0) return [];
 
   const { data: linkedDiscovery } = await supabase
@@ -532,13 +769,13 @@ async function fetchInternalCreators(
     ? await supabase
         .from("influencer_platform_accounts")
         .select(
-          "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, metrics_source, sync_status, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
+          "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, hashtags, mentions, contact_email, contact_phone, contact_links, metrics_source, sync_status, sync_source, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
         )
         .in("influencer_id", ids)
     : await supabase
         .from("influencer_platform_accounts")
         .select(
-          "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, recent_publications, metrics_source, sync_status, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
+          "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, hashtags, mentions, recent_publications, contact_email, contact_phone, contact_links, metrics_source, sync_status, sync_source, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
         )
         .in("influencer_id", ids);
   const { data: accounts } = accountsResult;
@@ -549,6 +786,8 @@ async function fetchInternalCreators(
     list.push(account);
     accountsByInfluencer.set(account.influencer_id, list);
   }
+
+  const dnaByInfluencer = await loadCanonicalDnaByInfluencerIds(supabase, ids);
 
   const results: UnifiedCreatorResult[] = [];
 
@@ -571,6 +810,17 @@ async function fetchInternalCreators(
       primary_avatar_url?: string | null;
       primary_avatar_source?: string | null;
       default_metrics_platform_account_id?: string | null;
+      audience_age_13_17?: number | null;
+      audience_age_18_24?: number | null;
+      audience_age_25_34?: number | null;
+      audience_age_35_44?: number | null;
+      audience_age_45_54?: number | null;
+      audience_age_55_plus?: number | null;
+      audience_gender_male?: number | null;
+      audience_gender_female?: number | null;
+      audience_gender_unknown?: number | null;
+      audience_top_countries?: Array<{ code?: string; name?: string; percent?: number }> | null;
+      demographic_source?: string | null;
     };
     const platformRows = sortPlatformsStable(accountsByInfluencer.get(r.id) ?? []);
     const defaultMetricsAccountId = resolveDefaultMetricsPlatformAccountId(
@@ -579,8 +829,19 @@ async function fetchInternalCreators(
     );
     const metricsAccount =
       findPlatformAccountById(platformRows, defaultMetricsAccountId) ?? platformRows[0];
-    const profileBio =
-      (metricsAccount as { profile_bio?: string | null } | undefined)?.profile_bio ?? null;
+    const profileBio = formatCreatorBio(
+      (metricsAccount as { profile_bio?: string | null } | undefined)?.profile_bio ?? null
+    );
+    const profileHashtags = normalizeEnrichmentStringArray(
+      (metricsAccount as { hashtags?: string[] | null } | undefined)?.hashtags
+    );
+    const profileMentions = normalizeEnrichmentStringArray(
+      (metricsAccount as { mentions?: string[] | null } | undefined)?.mentions
+    );
+    const creatorContact = pickCreatorContactFromPlatforms(
+      platformRows,
+      defaultMetricsAccountId
+    );
     const recentPublications = normalizeCreatorRecentPublications(
       (metricsAccount as { recent_publications?: unknown })?.recent_publications
     );
@@ -605,6 +866,7 @@ async function fetchInternalCreators(
       storedPrimaryAvatarSource: r.primary_avatar_source,
       influencerMetadata: r.metadata ?? null,
       discoveryProfileImageUrl: discoveryProfileImage,
+      dnaAvatarUrl: extractDnaAvatarUrl(dnaByInfluencer.get(r.id) ?? null),
       accounts: platformRows.map((p) => ({
         id: p.id,
         platform: p.platform,
@@ -667,7 +929,7 @@ async function fetchInternalCreators(
       influencer_id: r.id,
       discovered_profile_id: discoveryByInfluencer.get(r.id) ?? null,
       document_number: r.document_number,
-      display_name: r.display_name,
+      display_name: formatCreatorDisplayName(r.display_name),
       status: r.status,
       country_code: r.country_code,
       estimated_country: metricsAccount?.audience_country ?? r.country_code,
@@ -675,12 +937,33 @@ async function fetchInternalCreators(
       categories,
       browse_category_tags: storedCategoryTags,
       audience_interests: audienceInterests,
+      audience_demographics: audienceDemographicsFromInfluencer({
+        audience_age_13_17: r.audience_age_13_17,
+        audience_age_18_24: r.audience_age_18_24,
+        audience_age_25_34: r.audience_age_25_34,
+        audience_age_35_44: r.audience_age_35_44,
+        audience_age_45_54: r.audience_age_45_54,
+        audience_age_55_plus: r.audience_age_55_plus,
+        audience_gender_male: r.audience_gender_male,
+        audience_gender_female: r.audience_gender_female,
+        audience_gender_unknown: r.audience_gender_unknown,
+        audience_top_countries: r.audience_top_countries,
+        demographic_source: r.demographic_source as
+          | import("@/features/discovery/enrichment/status").DemographicSource
+          | null
+          | undefined,
+      }),
       language_codes: [],
       profile_image_url: profileImageUrl,
       primaryAvatarUrl: profileImageUrl,
       primaryAvatarSource: avatarResolved.source,
       default_metrics_platform_account_id: defaultMetricsAccountId,
       bio: profileBio,
+      hashtags: profileHashtags,
+      mentions: profileMentions,
+      contact_email: creatorContact.contact_email,
+      contact_phone: creatorContact.contact_phone,
+      contact_links: creatorContact.contact_links,
       role,
       metrics,
       ai_category: categories[0] ?? null,
@@ -711,10 +994,22 @@ async function fetchInternalCreators(
           discoveryProfileImage,
           metadataAvatarUrl(r.metadata)
         ),
-        profile_bio: (p as { profile_bio?: string | null }).profile_bio ?? null,
+        profile_bio: formatCreatorBio(
+          (p as { profile_bio?: string | null }).profile_bio ?? null
+        ),
+        hashtags: normalizeEnrichmentStringArray((p as { hashtags?: string[] | null }).hashtags),
+        mentions: normalizeEnrichmentStringArray((p as { mentions?: string[] | null }).mentions),
+        ...resolveCreatorContactFields({
+          contact_email: (p as { contact_email?: string | null }).contact_email,
+          contact_phone: (p as { contact_phone?: string | null }).contact_phone,
+          contact_links: normalizeContactLinks(
+            (p as { contact_links?: string[] | null }).contact_links
+          ),
+        }),
         recent_publications: normalizeCreatorRecentPublications(
           (p as { recent_publications?: unknown }).recent_publications
         ),
+        sync_source: (p as { sync_source?: string | null }).sync_source ?? null,
       })),
       notes: r.notes,
       suggested_currency: DEFAULT_PLATFORM_CURRENCY,
@@ -742,10 +1037,16 @@ async function fetchInternalCreators(
   }
 
   if (categories.length > 0 && scopedIds) {
-    return results.filter((creator) => creatorMatchesBrowseCategories(creator, categories));
+    const beforeCategory = results.length;
+    const filtered = results.filter((creator) => creatorMatchesBrowseCategories(creator, categories));
+    traceCountDrop("6_internal_hydration", "categories", beforeCategory, filtered.length, {
+      categories,
+    }, pathOpt);
+    return hydrateCreatorsWithDna(supabase, filtered);
   }
 
-  return results;
+  searchTrace("6_internal_hydration", { count: results.length }, pathOpt);
+  return hydrateCreatorsWithDna(supabase, results);
 }
 
 type CreatorSearchHitsResult = {
@@ -757,14 +1058,15 @@ async function resolveCreatorSearchHits(
   supabase: SupabaseClient,
   search: string,
   pageSize: number,
-  offset: number
+  offset: number,
+  tracePath: SearchTracePath = "unknown"
 ): Promise<CreatorSearchHitsResult> {
-  let response = await searchCreators(supabase, search, pageSize, offset);
+  let response = await searchCreators(supabase, search, pageSize, offset, tracePath);
   if (response.hits.length > 0 || !search) return response;
 
   const normalizedQuery = normalizeDiscoverySearchQuery(search);
   if (normalizedQuery && normalizedQuery !== search.trim()) {
-    response = await searchCreators(supabase, normalizedQuery, pageSize, offset);
+    response = await searchCreators(supabase, normalizedQuery, pageSize, offset, tracePath);
     if (response.hits.length > 0) return response;
   }
 
@@ -828,7 +1130,7 @@ function mapDiscoveryProfileToUnifiedResults(
 
     const completeness = profileCompletenessPercent({
       display_name: profile.display_name,
-      bio: profile.bio,
+      bio: formatCreatorBio(profile.bio),
       profile_image_url: profileImageUrl,
       platforms_count: 1,
       country_code: profile.country_code,
@@ -844,7 +1146,7 @@ function mapDiscoveryProfileToUnifiedResults(
         profile_completeness: completeness,
         ai_category: ai?.category ?? profile.category_tags?.[0] ?? null,
         ai_niche: ai?.niche ?? null,
-        bio: profile.bio,
+        bio: formatCreatorBio(profile.bio),
         profile_image_url: profileImageUrl,
         platforms_count: 1,
       });
@@ -859,7 +1161,7 @@ function mapDiscoveryProfileToUnifiedResults(
       influencer_id: null,
       discovered_profile_id: profile.id,
       document_number: null,
-      display_name: profile.display_name ?? profile.username,
+      display_name: formatCreatorDisplayName(profile.display_name ?? profile.username),
       status: profile.stage,
       country_code: profile.country_code,
       estimated_country: profile.country_code,
@@ -870,7 +1172,7 @@ function mapDiscoveryProfileToUnifiedResults(
       profile_image_url: profileImageUrl,
       primaryAvatarUrl: profileImageUrl,
       primaryAvatarSource,
-      bio: profile.bio,
+      bio: formatCreatorBio(profile.bio),
       metrics,
       ai_category: ai?.category ?? profile.category_tags?.[0] ?? null,
       ai_niche: ai?.niche ?? null,
@@ -904,8 +1206,10 @@ function mapDiscoveryProfileToUnifiedResults(
 async function fetchDiscoveryCreators(
   supabase: SupabaseClient,
   filters: UnifiedCreatorBrowseFilters,
-  scopedDiscoveredProfileIds?: string[]
+  scopedDiscoveredProfileIds?: string[],
+  tracePath: SearchTracePath = "unknown"
 ): Promise<UnifiedCreatorResult[]> {
+  const pathOpt = { path: tracePath };
   if (filters.source === "internal" || filters.source === "oauth_verified") {
     return [];
   }
@@ -957,7 +1261,10 @@ async function fetchDiscoveryCreators(
       latest_ai_score: latestAi,
     };
 
-    return mapDiscoveryProfileToUnifiedResults([profile], filters);
+    return hydrateCreatorsWithDna(
+      supabase,
+      mapDiscoveryProfileToUnifiedResults([profile], filters)
+    );
   }
 
   const discovery = await searchDiscoveredProfiles(supabase, {
@@ -976,26 +1283,166 @@ async function fetchDiscoveryCreators(
     profileIds: scopedDiscoveredProfileIds,
   });
 
-  return mapDiscoveryProfileToUnifiedResults(discovery.profiles, filters);
+  const results = mapDiscoveryProfileToUnifiedResults(discovery.profiles, filters);
+  searchTrace("7_discovery_hydration", {
+    count: results.length,
+    rawProfileCount: discovery.profiles.length,
+    scopedProfileIdCount: scopedDiscoveredProfileIds?.length ?? null,
+    country: filters.country,
+    categories: resolveBrowseCategories(filters),
+    search: filters.search,
+  }, pathOpt);
+  return hydrateCreatorsWithDna(supabase, results);
+}
+
+function dedupeUnifiedCreatorsById(
+  creators: UnifiedCreatorResult[],
+  tracePath: SearchTracePath = "unknown"
+): UnifiedCreatorResult[] {
+  const pathOpt = { path: tracePath };
+  const before = creators.length;
+  const { items } = dedupeByCreatorId(creators, (c) => c.unified_id);
+  if (before !== items.length) {
+    traceCountDrop("8_dedupe_by_id", "unified_id", before, items.length, undefined, pathOpt);
+  }
+  return items;
+}
+
+function traceBrowseUnifiedResult(
+  result: UnifiedCreatorBrowseResult,
+  tracePath: SearchTracePath,
+  filters?: UnifiedCreatorBrowseFilters,
+  settings?: import("@/lib/discovery/control-center/discovery-control-types").DiscoveryControlSettings
+): UnifiedCreatorBrowseResult {
+  const pathOpt = { path: tracePath };
+  let creators = dedupeUnifiedCreatorsById(result.creators, tracePath);
+
+  if (settings) {
+    creators = applyDataFreshnessFlags(creators, settings);
+  }
+
+  if (tracePath === "ai" || tracePath === "discovery") {
+    const coverageIntent: DiscoveryCoverageIntent = {
+      ...coverageIntentFromBrowseFilters(filters ?? {}),
+      ...(filters?.coverageIntent ?? {}),
+    };
+    creators = sortUnifiedCreatorsByDiscoveryRank(creators, coverageIntent);
+  }
+
+  const normalized: UnifiedCreatorBrowseResult = {
+    ...result,
+    creators,
+  };
+
+  if (tracePath === "ai" || tracePath === "discovery") {
+    const coverageIntent: DiscoveryCoverageIntent = {
+      ...coverageIntentFromBrowseFilters(filters ?? {}),
+      ...(filters?.coverageIntent ?? {}),
+    };
+    normalized.coverage = evaluateDiscoveryCoverage(
+      normalized,
+      coverageIntent,
+      settings ? getDiscoveryCoverageConfig(settings) : undefined
+    );
+    searchTrace("coverage_evaluation", {
+      score: normalized.coverage.coverageScore,
+      level: normalized.coverage.coverageLevel,
+      missingReasons: normalized.coverage.missingReasons,
+      count: normalized.coverage.breakdown.count,
+    }, pathOpt);
+  }
+
+  workflowTrace("1_browseUnifiedCreators", normalized, "browseUnifiedCreators", {
+    path: tracePath,
+    internal_count: normalized.internal_count ?? null,
+    discovery_count: normalized.discovery_count ?? null,
+    coverage_score: normalized.coverage?.coverageScore ?? null,
+    coverage_level: normalized.coverage?.coverageLevel ?? null,
+  });
+  return normalized;
 }
 
 export async function browseUnifiedCreators(
   supabase: SupabaseClient,
-  filters: UnifiedCreatorBrowseFilters
+  filters: UnifiedCreatorBrowseFilters,
+  tracePath: SearchTracePath = "unknown"
 ): Promise<UnifiedCreatorBrowseResult> {
+  const settings = await getDiscoveryControlSettings(supabase);
+  filters = applyPolicyToBrowse(filters, settings);
   const perf = createDiscoverySearchPerf("browseUnifiedCreators");
+  const pathOpt = { path: tracePath };
 
   const page = Math.max(1, filters.page ?? 1);
-  const pageSize = Math.min(50, filters.pageSize ?? 20);
+  const pageSize = Math.min(200, Math.max(1, filters.pageSize ?? 20));
   const search = filters.search?.trim() ?? "";
   const sourceFilter = filters.source ?? "all";
-  const browseHydrationOptions = { omitHeavyFields: true };
+  const browseHydrationOptions = { omitHeavyFields: true, tracePath };
+  const categories = resolveBrowseCategories(filters);
+
+  searchTrace("4_browse_entry", {
+    search,
+    country: filters.country,
+    categories,
+    platform: filters.platform,
+    platforms: filters.platforms,
+    productionOnly: filters.productionOnly,
+    page,
+    pageSize,
+    branch:
+      filters.influencerIds?.length
+        ? "influencer_id_batch"
+        : filters.influencerId || filters.discoveredProfileId
+        ? "explicit_id"
+        : !search
+          ? categories.length > 0
+            ? "category_browse"
+            : "unfiltered_browse"
+          : "fts_search",
+  }, pathOpt);
+
+  if (filters.influencerIds?.length) {
+    perf?.span("fetchInternalCreators");
+    const internal = await fetchInternalCreators(
+      supabase,
+      { ...filters, search: undefined, page: undefined, pageSize: undefined },
+      filters.influencerIds,
+      null,
+      browseHydrationOptions
+    );
+    perf?.span("merge");
+    let merged = applyPostBrowseFilters(internal, filters, tracePath);
+    const byInfluencerId = new Map(
+      merged
+        .filter((creator) => creator.influencer_id)
+        .map((creator) => [creator.influencer_id as string, creator])
+    );
+    const ordered = filters.influencerIds
+      .map((id) => byInfluencerId.get(id))
+      .filter((creator): creator is UnifiedCreatorResult => creator != null);
+    if (ordered.length > 0) {
+      merged = ordered;
+    }
+    perf?.span("serialization");
+    const result = {
+      creators: stripRecentPublicationsForBrowse(merged),
+      total: merged.length,
+      has_more: false,
+      page: 1,
+      pageSize: merged.length,
+      internal_count: merged.length,
+      discovery_count: 0,
+    };
+    perf?.end();
+    return traceBrowseUnifiedResult(result, tracePath, filters, settings);
+  }
 
   if (filters.influencerId || filters.discoveredProfileId) {
     perf?.span("fetchInternalCreators");
-    const internalPromise = fetchInternalCreators(supabase, filters);
+    const internalPromise = fetchInternalCreators(supabase, filters, undefined, null, {
+      tracePath,
+    });
     perf?.span("fetchDiscoveryCreators");
-    const discoveryPromise = fetchDiscoveryCreators(supabase, filters);
+    const discoveryPromise = fetchDiscoveryCreators(supabase, filters, undefined, tracePath);
     const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
     perf?.span("merge");
     let merged = [...internal, ...discovery];
@@ -1012,7 +1459,7 @@ export async function browseUnifiedCreators(
       discovery_count: discovery.length,
     };
     perf?.end();
-    return result;
+    return traceBrowseUnifiedResult(result, tracePath, filters, settings);
   }
 
   if (!search) {
@@ -1020,29 +1467,71 @@ export async function browseUnifiedCreators(
     const includeDiscovery = sourceFilter === "all" || sourceFilter === "public_discovery" || sourceFilter === "imported";
     const categoryFilterActive = resolveBrowseCategories(filters).length > 0;
 
+    if (hasDiscoveryAudienceBrowseFilters(filters)) {
+      perf?.span("discovery_audience_filter_scan");
+      const filteredPage = await browseDiscoveryAudienceFilteredPage(
+        supabase,
+        filters,
+        page,
+        pageSize,
+        tracePath
+      );
+      perf?.span("serialization");
+      const result = {
+        creators: stripRecentPublicationsForBrowse(filteredPage.creators),
+        total: filteredPage.total,
+        has_more: filteredPage.has_more,
+        page,
+        pageSize,
+        internal_count: filteredPage.creators.filter((c) => c.influencer_id).length,
+        discovery_count: filteredPage.creators.filter((c) => !c.influencer_id).length,
+      };
+      perf?.end();
+      return traceBrowseUnifiedResult(result, tracePath, filters, settings);
+    }
+
     if (categoryFilterActive && includeInternal) {
       perf?.span("fetchInternalCreators");
-      const internalPromise = fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize);
+      const internalPromise = fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize, tracePath);
+      perf?.span("fetchDiscoveryCreators");
+      const discoveryPromise = includeDiscovery
+        ? fetchDiscoveryCreators(
+            supabase,
+            {
+              ...filters,
+              search: undefined,
+              page,
+              pageSize,
+            },
+            undefined,
+            tracePath
+          )
+        : Promise.resolve([]);
       perf?.span("search_creators_count");
       const totalPromise = countInternalCreatorsBrowse(supabase, filters);
-      const [internal, totalMatches] = await Promise.all([internalPromise, totalPromise]);
+      const [internal, discovery, totalMatches] = await Promise.all([
+        internalPromise,
+        discoveryPromise,
+        totalPromise,
+      ]);
 
       perf?.span("merge");
-      let merged = applyPostBrowseFilters(internal, filters);
+      let merged = applyPostBrowseFilters([...internal, ...discovery], filters, tracePath);
+      merged.sort((a, b) => b.thinkway_score - a.thinkway_score);
       const offset = (page - 1) * pageSize;
 
       perf?.span("serialization");
       const result = {
         creators: stripRecentPublicationsForBrowse(merged),
-        total: totalMatches,
-        has_more: offset + merged.length < totalMatches,
+        total: Math.max(totalMatches, merged.length),
+        has_more: offset + merged.length < Math.max(totalMatches, merged.length),
         page,
         pageSize,
-        internal_count: merged.length,
-        discovery_count: 0,
+        internal_count: internal.length,
+        discovery_count: discovery.length,
       };
       perf?.end();
-      return result;
+      return traceBrowseUnifiedResult(result, tracePath, filters, settings);
     }
 
     if (includeInternal && includeDiscovery && shouldUseUnifiedBrowseIndexPath(filters)) {
@@ -1051,7 +1540,8 @@ export async function browseUnifiedCreators(
         supabase,
         "",
         pageSize,
-        (page - 1) * pageSize
+        (page - 1) * pageSize,
+        tracePath
       );
       const browseHits = browseResponse.hits;
       const browseHasMore = creatorSearchHasMore(browseHits);
@@ -1068,7 +1558,7 @@ export async function browseUnifiedCreators(
           discovery_count: 0,
         };
         perf?.end();
-        return result;
+        return traceBrowseUnifiedResult(result, tracePath, filters, settings);
       }
 
       const influencerIds = browseHits
@@ -1107,14 +1597,15 @@ export async function browseUnifiedCreators(
                 page: undefined,
                 pageSize: undefined,
               },
-              discoveredIds
+              discoveredIds,
+              tracePath
             )
           : Promise.resolve([]);
       const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
 
       perf?.span("merge");
       let merged = mergeCreatorsInSearchOrder(browseHits, internal, discovery);
-      merged = applyPostBrowseFilters(merged, filters);
+      merged = applyPostBrowseFilters(merged, filters, tracePath);
 
       perf?.span("serialization");
       const result = {
@@ -1129,28 +1620,33 @@ export async function browseUnifiedCreators(
         discovery_count: discovery.length,
       };
       perf?.end();
-      return result;
+      return traceBrowseUnifiedResult(result, tracePath, filters, settings);
     }
 
     perf?.span("fetchInternalCreators");
     const internalPromise = includeInternal
-      ? fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize)
+      ? fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize, tracePath)
       : Promise.resolve([]);
     perf?.span("fetchDiscoveryCreators");
     const discoveryPromise = includeDiscovery
-      ? fetchDiscoveryCreators(supabase, {
-          ...filters,
-          search: undefined,
-          page,
-          pageSize,
-        })
+      ? fetchDiscoveryCreators(
+          supabase,
+          {
+            ...filters,
+            search: undefined,
+            page,
+            pageSize,
+          },
+          undefined,
+          tracePath
+        )
       : Promise.resolve([]);
     const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
 
     perf?.span("merge");
     let merged = [...internal, ...discovery];
     merged.sort((a, b) => b.thinkway_score - a.thinkway_score);
-    merged = applyPostBrowseFilters(merged, filters);
+    merged = applyPostBrowseFilters(merged, filters, tracePath);
 
     perf?.span("serialization");
     const result = {
@@ -1162,12 +1658,12 @@ export async function browseUnifiedCreators(
       discovery_count: discovery.length,
     };
     perf?.end();
-    return result;
+    return traceBrowseUnifiedResult(result, tracePath, filters, settings);
   }
 
   perf?.span("search_creators");
   const searchResponse = search
-    ? await resolveCreatorSearchHits(supabase, search, pageSize, (page - 1) * pageSize)
+    ? await resolveCreatorSearchHits(supabase, search, pageSize, (page - 1) * pageSize, tracePath)
     : { hits: [], totalCount: undefined };
   const searchHits = searchResponse.hits;
   const searchHasMore = creatorSearchHasMore(searchHits);
@@ -1192,10 +1688,31 @@ export async function browseUnifiedCreators(
   const scopedDiscoveryIds =
     discoverySearchIds && discoverySearchIds.length > 0 ? discoverySearchIds : undefined;
 
+  searchTrace("5_search_hits_resolved", {
+    search,
+    hitCount: searchHits.length,
+    searchTotal: searchTotal ?? null,
+    influencerHitCount: influencerSearchIds?.length ?? 0,
+    discoveredHitCount: discoverySearchIds?.length ?? 0,
+    scopedInfluencerIdCount: scopedInfluencerIds?.length ?? null,
+    scopedDiscoveryIdCount: scopedDiscoveryIds?.length ?? null,
+    country: filters.country,
+    categories,
+  }, pathOpt);
+
   if (
     search &&
-    searchHits.length === 0
+    searchHits.length === 0 &&
+    !filters.country &&
+    categories.length === 0 &&
+    !filters.platform &&
+    !filters.platforms?.length
   ) {
+    traceCountDrop("5_search_hits_resolved", "fts_zero_hits", 1, 0, {
+      search,
+      country: filters.country,
+      categories,
+    }, pathOpt);
     perf?.span("serialization");
     const result = {
       creators: [],
@@ -1207,7 +1724,7 @@ export async function browseUnifiedCreators(
       discovery_count: 0,
     };
     perf?.end();
-    return result;
+    return traceBrowseUnifiedResult(result, tracePath, filters, settings);
   }
 
   perf?.span("fetchInternalCreators");
@@ -1222,12 +1739,22 @@ export async function browseUnifiedCreators(
   const discoveryPromise = fetchDiscoveryCreators(
     supabase,
     { ...filters, search: undefined },
-    scopedDiscoveryIds
+    scopedDiscoveryIds,
+    tracePath
   );
   const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
 
+  searchTrace("6_7_hydration_complete", {
+    internalCount: internal.length,
+    discoveryCount: discovery.length,
+    preMergeTotal: internal.length + discovery.length,
+    country: filters.country,
+    categories,
+  }, pathOpt);
+
   perf?.span("merge");
   let merged: UnifiedCreatorResult[];
+  const preMergeCount = internal.length + discovery.length;
   if (search && searchHits.length > 0) {
     merged = mergeCreatorsInSearchOrder(searchHits, internal, discovery);
   } else if (search) {
@@ -1242,10 +1769,18 @@ export async function browseUnifiedCreators(
     merged.sort((a, b) => b.thinkway_score - a.thinkway_score);
   }
 
-  merged = applyPostBrowseFilters(merged, filters);
+  merged = applyPostBrowseFilters(merged, filters, tracePath);
   if (search) {
+    const beforeDedupe = merged.length;
     merged = dedupeSearchResultsByHandle(merged);
+    traceCountDrop("8_dedupe_by_handle", "handle_dedupe", beforeDedupe, merged.length, undefined, pathOpt);
   }
+
+  traceCountDrop("9_final", "pipeline", preMergeCount, merged.length, {
+    searchTotal: searchTotal ?? null,
+    country: filters.country,
+    categories,
+  }, pathOpt);
 
   perf?.span("serialization");
   const result = {
@@ -1260,7 +1795,7 @@ export async function browseUnifiedCreators(
     discovery_count: discovery.length,
   };
   perf?.end();
-  return result;
+  return traceBrowseUnifiedResult(result, tracePath, filters, settings);
 }
 
 export type UnifiedCreatorRefLookup = {

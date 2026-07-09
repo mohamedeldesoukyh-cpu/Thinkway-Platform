@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
 import { normalizeCommercialLine } from "@/features/quotations/quotation-engine";

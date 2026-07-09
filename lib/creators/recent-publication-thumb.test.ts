@@ -40,6 +40,13 @@ assert.equal(
 
 assert.equal(shouldProxyPublicationMediaUrl(IG_CDN), true);
 assert.equal(shouldProxyPublicationMediaUrl(SUPABASE), false);
+assert.equal(
+  shouldProxyPublicationMediaUrl(
+    "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=123"
+  ),
+  true,
+  "Instagram OG images on fbsbx.com must use proxy"
+);
 
 assert.match(
   creatorRecentPublicationDisplayUrl({
@@ -60,6 +67,15 @@ assert.equal(
   creatorRecentPublicationDisplayUrl({ thumbnail: SUPABASE }),
   SUPABASE,
   "Supabase storage URL loads directly"
+);
+
+assert.match(
+  creatorRecentPublicationDisplayUrl({
+    url: "https://www.instagram.com/p/ABC/",
+    thumbnail: "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=123",
+  }) ?? "",
+  /^\/api\/creators\/publication-preview\?/,
+  "fbsbx OG thumbnails use proxy route"
 );
 
 assert.equal(

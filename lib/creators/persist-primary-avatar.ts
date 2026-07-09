@@ -6,6 +6,8 @@ import {
   resolvePrimaryAvatar,
   type PlatformAccountAvatarInput,
 } from "@/lib/creators/creator-centric";
+import { extractDnaAvatarUrl, avatarSourceFromDnaUrl } from "@/lib/creators/dna-avatar";
+import { loadCanonicalDnaByInfluencerIds } from "@/lib/creators/dna-browse-hydration";
 import type { Database } from "@/types/database";
 
 type AnySupabase = SupabaseClient<Database>;
@@ -53,16 +55,26 @@ export async function persistCreatorPrimaryIdentity(
   discoveryProfileImage =
     (linkedDiscovery as { profile_image_url?: string | null } | null)?.profile_image_url ?? null;
 
+  const dnaDocuments = await loadCanonicalDnaByInfluencerIds(supabase, [influencerId]);
+  const dnaAvatarUrl = extractDnaAvatarUrl(dnaDocuments.get(influencerId) ?? null);
+
   const candidates = collectAvatarCandidates({
     storedPrimaryAvatarUrl: row.primary_avatar_url,
     storedPrimaryAvatarSource: row.primary_avatar_source,
     influencerMetadata: row.metadata ?? null,
     discoveryProfileImageUrl: discoveryProfileImage,
+    dnaAvatarUrl,
     accounts,
     storedPrimaryMode: "all",
   });
 
-  const resolved = resolvePrimaryAvatar(candidates);
+  let resolved = resolvePrimaryAvatar(candidates);
+  if ((!resolved.url || resolved.source === "placeholder") && dnaAvatarUrl) {
+    resolved = {
+      url: dnaAvatarUrl,
+      source: avatarSourceFromDnaUrl(dnaAvatarUrl),
+    };
+  }
   const defaultMetricsPlatformAccountId = resolveDefaultMetricsPlatformAccountId(
     accounts,
     row.default_metrics_platform_account_id

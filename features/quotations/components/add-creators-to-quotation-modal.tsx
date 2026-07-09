@@ -325,17 +325,31 @@ export function AddCreatorsToQuotationModal({
 export function AddCreatorsToQuotationButton({
   quotationId,
   onAdded,
+  triggerClassName,
+  label = "Add creators",
+  open: openProp,
+  onOpenChange,
 }: {
   quotationId: string;
   onAdded: () => void;
+  triggerClassName?: string;
+  label?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        <UserPlusIcon className="size-4" />
-        Add creators
-      </Button>
+      <button
+        type="button"
+        className={triggerClassName ?? "thinkway-campaign-btn thinkway-campaign-btn-primary"}
+        onClick={() => setOpen(true)}
+      >
+        <UserPlusIcon className="size-3.5" />
+        {label}
+      </button>
       <AddCreatorsToQuotationModal
         quotationId={quotationId}
         open={open}

@@ -18,6 +18,9 @@ export type ParsedCreatorRow = {
   role: string | null;
   /** indaHash Appearances column — preserved in import metadata when present. */
   appearances?: number | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  contact_links: string[];
   raw?: Record<string, unknown>;
 };
 

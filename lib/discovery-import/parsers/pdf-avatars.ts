@@ -1,9 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { PDFParse } from "pdf-parse";
-
 import type { EmbeddedImage } from "pdf-parse";
+
+import { getPdfParseModule } from "@/lib/pdf/pdfjs-server-runtime";
 
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
 
@@ -594,6 +594,7 @@ export async function extractPdfCreatorAvatarBuffers(
 ): Promise<Map<string, ExtractedImportAvatar>> {
   if (rows.length === 0) return new Map();
 
+  const { PDFParse } = await getPdfParseModule();
   const parser = new PDFParse({ data: buffer });
   try {
     const imageResult = await parser.getImage({

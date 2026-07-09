@@ -30,16 +30,23 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
   let kpis: CampaignsKpis | null = null;
 
   try {
-    kpis = await getCampaignsKpis();
-  } catch {
-    kpis = null;
-  }
-
-  try {
-    [list, formOptions] = await Promise.all([
+    const [kpisResult, listResult, formOptionsResult] = await Promise.allSettled([
+      getCampaignsKpis(),
       getCampaignsList({ page, search }),
       getCampaignFormOptions(),
     ]);
+    kpis = kpisResult.status === "fulfilled" ? kpisResult.value : null;
+    list = listResult.status === "fulfilled" ? listResult.value : null;
+    formOptions =
+      formOptionsResult.status === "fulfilled" ? formOptionsResult.value : null;
+
+    if (!list || !formOptions) {
+      throw listResult.status === "rejected"
+        ? listResult.reason
+        : formOptionsResult.status === "rejected"
+          ? formOptionsResult.reason
+          : new Error("Failed to load campaigns.");
+    }
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load campaigns.";

@@ -1,4 +1,5 @@
 import { tryOpenGraphThumbnail } from "@/lib/performance/screenshot-capture/providers/opengraph";
+import { isInstagramCdnUrlExpired } from "@/lib/performance/avatar-sync-policy";
 
 import {
   fetchImageBuffer,
@@ -33,8 +34,13 @@ export async function fetchCreatorAvatarImage(input: {
   const src = input.src?.trim() || null;
   const profileUrl = input.profileUrl?.trim() || null;
 
-  if (src && isAllowedPublicationPreviewSrcUrl(src)) {
-    const direct = await fetchImageBuffer(src);
+  const cdnSrc =
+    src && isAllowedPublicationPreviewSrcUrl(src) && !isInstagramCdnUrlExpired(src)
+      ? src
+      : null;
+
+  if (cdnSrc) {
+    const direct = await fetchImageBuffer(cdnSrc);
     if (direct.ok) return direct;
   }
 

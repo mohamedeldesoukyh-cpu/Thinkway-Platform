@@ -5,14 +5,17 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
+import {
+  appendQuotationTemplateParam,
+  type QuotationTemplateVariant,
+} from "@/features/quotations/export/quotation-template";
 
 type QuotationPreviewDownloadsProps = {
   quotationId: string;
   template: QuotationTemplateVariant;
 };
 
-function buildExportHref(
+export function buildExportHref(
   quotationId: string,
   format: string,
   template: QuotationTemplateVariant,
@@ -22,9 +25,7 @@ function buildExportHref(
   if (options?.download !== false) {
     params.set("download", "1");
   }
-  if (template === "lump-sum") {
-    params.set("template", "lump-sum");
-  }
+  appendQuotationTemplateParam(params, template);
   return `/api/quotations/${quotationId}/export?${params.toString()}`;
 }
 
@@ -55,5 +56,3 @@ export function QuotationPreviewDownloads({
     </div>
   );
 }
-
-export { buildExportHref };

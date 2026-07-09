@@ -109,4 +109,67 @@ function mockCreator(overrides?: Partial<UnifiedCreatorResult>): UnifiedCreatorR
   );
 }
 
+// Multi-platform creator seeds null line platform + metrics-account handle
+{
+  const seed = buildQuotationSeedFromCreator(
+    mockCreator({
+      default_metrics_platform_account_id: "tt-1",
+      platforms: [
+        {
+          id: "ig-1",
+          platform: "instagram",
+          handle: "amir",
+          follower_count: 120000,
+          engagement_rate: 3.2,
+        },
+        {
+          id: "tt-1",
+          platform: "tiktok",
+          handle: "amir.tt",
+          follower_count: 500000,
+          engagement_rate: 5.1,
+        },
+      ],
+      metrics: {
+        followers: { value: 500000, confidence: "verified" },
+        engagement_rate: { value: 5.1, confidence: "verified" },
+        avg_likes: { value: null, confidence: "estimated" },
+        avg_comments: { value: null, confidence: "estimated" },
+        avg_views: { value: null, confidence: "estimated" },
+        posting_frequency_per_week: { value: null, confidence: "estimated" },
+      },
+    })
+  );
+  assert.equal(seed.platform, null);
+  assert.equal(seed.handle, "amir.tt");
+  assert.equal(seed.followers, 500000);
+  assert.equal(seed.engagement_rate, 5.1);
+}
+
+{
+  const seed = buildQuotationSeedFromCreator(
+    mockCreator({
+      default_metrics_platform_account_id: "tt-1",
+      platforms: [
+        {
+          id: "tt-1",
+          platform: "tiktok",
+          handle: "karimgaadd",
+          follower_count: 58_500,
+          engagement_rate: 3.14,
+        },
+      ],
+      metrics: {
+        followers: { value: 0, confidence: "verified" },
+        engagement_rate: { value: 3.14, confidence: "verified" },
+        avg_likes: { value: null, confidence: "estimated" },
+        avg_comments: { value: null, confidence: "estimated" },
+        avg_views: { value: null, confidence: "estimated" },
+        posting_frequency_per_week: { value: null, confidence: "estimated" },
+      },
+    })
+  );
+  assert.equal(seed.followers, 58_500, "seed uses platform followers when DNA metrics are zero");
+}
+
 console.log("shortlist-seeds.test.ts: all assertions passed");

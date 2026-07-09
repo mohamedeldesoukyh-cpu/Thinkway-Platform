@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { searchTrace, type SearchTracePath } from "@/lib/creators/search-trace";
+
 export type FtsRankHit = {
   id: string;
   rank: number;
@@ -25,16 +27,19 @@ export async function searchCreators(
   supabase: SupabaseClient,
   query: string,
   limit = DEFAULT_SEARCH_LIMIT,
-  offset = 0
+  offset = 0,
+  tracePath: SearchTracePath = "unknown"
 ): Promise<CreatorSearchResponse> {
   const cappedLimit = Math.min(Math.max(limit, 0), MAX_SEARCH_LIMIT);
   const cappedOffset = Math.max(offset, 0);
 
-  const { data, error } = await supabase.rpc("search_creators", {
+  const rpcParams = {
     p_query: query.trim(),
     p_limit: cappedLimit,
     p_offset: cappedOffset,
-  });
+  };
+
+  const { data, error } = await supabase.rpc("search_creators", rpcParams);
 
   if (error) throw new Error(error.message);
 
@@ -61,6 +66,14 @@ export async function searchCreators(
         ? rawTotal
         : Number(rawTotal)
       : undefined;
+
+  searchTrace("5_rpc_search_creators", {
+    rpcParams,
+    hitCount: hits.length,
+    totalCount: totalCount ?? null,
+    influencerHits: hits.filter((h) => h.source_type === "influencer").length,
+    discoveredHits: hits.filter((h) => h.source_type === "discovered").length,
+  }, { path: tracePath });
 
   return { hits, totalCount };
 }

@@ -8,10 +8,17 @@ import { toggleCategoryInList } from "@/lib/creators/category-filter";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
 import { cn } from "@/lib/utils";
 
+import {
+  AGE_RANGE_MAX_OPTIONS,
+  AGE_RANGE_OPTIONS,
+  CONTENT_TAG_SUGGESTIONS,
+  DISCOVERY_FILTER_COUNTRIES,
+  LAST_POST_WITHIN_OPTIONS,
+} from "./creator-search-filter-constants";
 import type { CreatorSearchFilters } from "./creator-search-types";
 
-/** Filter panel palette — matches thinkway-filter-panel HTML mockup */
-const FP_BLUE = "#2563eb";
+/** Filter panel palette — Thinkway discovery filters */
+const TW_PRIMARY = "#1D9E75";
 const FP_LABEL = "#94a3b8";
 
 type FieldProps = {
@@ -87,7 +94,7 @@ export function FieldHint({ children }: { children: ReactNode }) {
 }
 
 const filterInputClass =
-  "h-9 rounded-md border-[#e2e8f0] bg-white px-3 text-xs text-[#0f172a] shadow-none placeholder:text-[#94a3b8] focus-visible:border-[#2563eb] focus-visible:ring-[3px] focus-visible:ring-[#2563eb]/[0.08]";
+  "h-9 rounded-md border-[#e2e8f0] bg-white px-3 text-xs text-[#0f172a] shadow-none placeholder:text-[#94a3b8] focus-visible:border-[#1D9E75] focus-visible:ring-[3px] focus-visible:ring-[#1D9E75]/[0.08]";
 
 export function FilterInput(props: React.ComponentProps<typeof Input>) {
   return <Input className={cn(filterInputClass, props.className)} {...props} />;
@@ -122,17 +129,17 @@ export function FilterChip({
       className={cn(
         "inline-flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[20px] border px-2.5 text-[11px] font-medium transition-all duration-[140ms]",
         active
-          ? "border-[#93c5fd] bg-[#eff6ff] font-semibold text-[#1d4ed8]"
-          : "border-[#e2e8f0] bg-white text-[#475569] hover:border-[#93c5fd] hover:bg-[#eff6ff] hover:text-[#1d4ed8]"
+          ? "border-[#9edfc8] bg-[#ecfdf5] font-semibold text-[#168a66]"
+          : "border-[#e2e8f0] bg-white text-[#475569] hover:border-[#9edfc8] hover:bg-[#ecfdf5] hover:text-[#168a66]"
       )}
     >
       <span>{label}</span>
       {active ? (
-        <span className="ml-px text-[12px] leading-none text-[#1d4ed8]">×</span>
+        <span className="ml-px text-[12px] leading-none text-[#168a66]">×</span>
       ) : (
         <span
           className="ml-px flex size-3.5 items-center justify-center rounded-full text-[10px] font-bold"
-          style={{ backgroundColor: "rgba(37,99,235,.1)", color: FP_BLUE }}
+          style={{ backgroundColor: "rgba(29,158,117,.12)", color: TW_PRIMARY }}
         >
           +
         </span>
@@ -158,8 +165,8 @@ export function RatePill({
       className={cn(
         "inline-flex h-7 shrink-0 items-center rounded-md border px-3 text-[11px] font-semibold transition-all duration-[140ms]",
         active
-          ? "border-[#2563eb] bg-[#2563eb] text-white"
-          : "border-[#e2e8f0] bg-white text-[#475569] hover:border-[#93c5fd] hover:bg-[#eff6ff] hover:text-[#1d4ed8]"
+          ? "border-[#1D9E75] bg-[#1D9E75] text-white"
+          : "border-[#e2e8f0] bg-white text-[#475569] hover:border-[#9edfc8] hover:bg-[#ecfdf5] hover:text-[#168a66]"
       )}
     >
       {label}
@@ -197,7 +204,7 @@ export function SegmentedControl<T extends string>({
             className={cn(
               "flex-1 border-r border-[#e2e8f0] px-2 py-[7px] text-center text-[11px] font-medium transition-colors last:border-r-0",
               selected
-                ? "bg-[#eff6ff] font-semibold text-[#1d4ed8]"
+                ? "bg-[#ecfdf5] font-semibold text-[#168a66]"
                 : "text-[#94a3b8] hover:bg-[#f8fafc] hover:text-[#475569]"
             )}
           >
@@ -283,7 +290,201 @@ function FieldGroup({
   );
 }
 
-/* ---------------------------------- groups --------------------------------- */
+function toggleInList(list: string[], value: string, normalize?: (value: string) => string) {
+  const key = normalize ? normalize(value) : value;
+  const has = list.some((entry) => (normalize ? normalize(entry) : entry) === key);
+  if (has) {
+    return list.filter((entry) => (normalize ? normalize(entry) : entry) !== key);
+  }
+  return [...list, key];
+}
+
+function CountryPillGrid({
+  selected,
+  onChange,
+  draft,
+  onDraftChange,
+  placeholder,
+}: {
+  selected: string[];
+  onChange: (next: string[]) => void;
+  draft: string;
+  onDraftChange: (value: string) => void;
+  placeholder: string;
+}) {
+  function addDraftCountry() {
+    const code = draft.trim().toUpperCase();
+    if (!code) return;
+    if (selected.includes(code)) {
+      onDraftChange("");
+      return;
+    }
+    onChange([...selected, code]);
+    onDraftChange("");
+  }
+
+  return (
+    <>
+      <div className="mb-2 flex gap-1.5">
+        <FilterInput
+          value={draft}
+          onChange={(e) => onDraftChange(e.target.value.toUpperCase())}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addDraftCountry();
+            }
+          }}
+          placeholder={placeholder}
+          className="flex-1"
+        />
+        <button
+          type="button"
+          onClick={addDraftCountry}
+          disabled={!draft.trim()}
+          className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#1D9E75] hover:bg-[#1D9E75] hover:text-white disabled:opacity-40"
+          aria-label="Add country"
+        >
+          <PlusIcon className="size-3.5" />
+        </button>
+      </div>
+      {selected.length > 0 ? (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {selected.map((code) => (
+            <FilterChip
+              key={code}
+              label={DISCOVERY_FILTER_COUNTRIES.find((entry) => entry.code === code)?.label ?? code}
+              active
+              onToggle={() => onChange(selected.filter((value) => value !== code))}
+            />
+          ))}
+        </div>
+      ) : null}
+      <div className="flex flex-wrap gap-1.5">
+        {DISCOVERY_FILTER_COUNTRIES.map(({ code, label }) => (
+          <FilterChip
+            key={code}
+            label={label}
+            active={selected.includes(code)}
+            onToggle={() => onChange(toggleInList(selected, code))}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+export function ContentSearchField({ filters, onChange }: FieldProps) {
+  const [draftTag, setDraftTag] = useState("");
+
+  function addDraftTag() {
+    const value = draftTag.trim().replace(/^#+/, "");
+    if (!value) return;
+    if (filters.contentTags.some((tag) => tag.toLowerCase() === value.toLowerCase())) {
+      setDraftTag("");
+      return;
+    }
+    onChange({ ...filters, contentTags: [...filters.contentTags, value] });
+    setDraftTag("");
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <FieldLabel className="mb-0">Advanced search</FieldLabel>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={filters.advancedSearch}
+          onClick={() => onChange({ ...filters, advancedSearch: !filters.advancedSearch })}
+          className={cn(
+            "relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors",
+            filters.advancedSearch
+              ? "border-[#1D9E75] bg-[#1D9E75]"
+              : "border-[#e2e8f0] bg-[#f1f5f9]"
+          )}
+        >
+          <span
+            className={cn(
+              "absolute top-0.5 size-4 rounded-full bg-white shadow transition-transform",
+              filters.advancedSearch ? "translate-x-4" : "translate-x-0.5"
+            )}
+          />
+        </button>
+      </div>
+
+      <FieldGroup label="Keyword / hashtag" className="mt-3">
+        <FilterInput
+          value={filters.contentKeyword}
+          onChange={(e) => onChange({ ...filters, contentKeyword: e.target.value })}
+          placeholder="e.g. travel, #beauty"
+        />
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {CONTENT_TAG_SUGGESTIONS.map((tag) => (
+            <FilterChip
+              key={tag}
+              label={tag.startsWith("#") ? tag : `#${tag}`}
+              active={filters.contentTags.some(
+                (selected) => selected.toLowerCase() === tag.toLowerCase()
+              )}
+              onToggle={() =>
+                onChange({
+                  ...filters,
+                  contentTags: toggleInList(filters.contentTags, tag, (value) =>
+                    value.toLowerCase()
+                  ),
+                })
+              }
+            />
+          ))}
+        </div>
+      </FieldGroup>
+
+      {filters.advancedSearch ? (
+        <FieldGroup label="Add hashtag">
+          <div className="flex gap-1.5">
+            <FilterInput
+              value={draftTag}
+              onChange={(e) => setDraftTag(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addDraftTag();
+                }
+              }}
+              placeholder="Custom tag…"
+              className="flex-1"
+            />
+            <button
+              type="button"
+              onClick={addDraftTag}
+              disabled={!draftTag.trim()}
+              className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#1D9E75] hover:bg-[#1D9E75] hover:text-white disabled:opacity-40"
+              aria-label="Add hashtag"
+            >
+              <PlusIcon className="size-3.5" />
+            </button>
+          </div>
+        </FieldGroup>
+      ) : null}
+
+      <FieldGroup label="Last post within">
+        <FilterSelect
+          value={filters.lastPostWithin}
+          onChange={(e) => onChange({ ...filters, lastPostWithin: e.target.value })}
+          aria-label="Last post within"
+        >
+          {LAST_POST_WITHIN_OPTIONS.map((option) => (
+            <option key={option.value || "any"} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </FilterSelect>
+        <FieldHint>Filters creators with synced recent publication dates when available.</FieldHint>
+      </FieldGroup>
+    </>
+  );
+}
 
 export function PlatformField({ filters, onChange }: FieldProps) {
   function toggle(platform: string) {
@@ -390,33 +591,38 @@ export function EngagementField({ filters, onChange }: FieldProps) {
 }
 
 export function LocationField({ filters, onChange }: FieldProps) {
+  const [draftCountry, setDraftCountry] = useState("");
+
   return (
-    <div className="mt-3.5 grid grid-cols-3 gap-3">
-      <div>
-        <FieldLabel className="mt-0">Creator country</FieldLabel>
-        <FilterInput
-          value={filters.country}
-          onChange={(e) => onChange({ ...filters, country: e.target.value.toUpperCase() })}
-          placeholder="e.g. AE"
+    <>
+      <FieldGroup label="Creator country" className="mt-0">
+        <CountryPillGrid
+          selected={filters.countries}
+          onChange={(countries) => onChange({ ...filters, countries })}
+          draft={draftCountry}
+          onDraftChange={setDraftCountry}
+          placeholder="ISO code e.g. EG"
         />
+      </FieldGroup>
+      <div className="mt-3.5 grid grid-cols-2 gap-3">
+        <div>
+          <FieldLabel className="mt-0">Language</FieldLabel>
+          <FilterInput
+            value={filters.language}
+            onChange={(e) => onChange({ ...filters, language: e.target.value })}
+            placeholder="e.g. en"
+          />
+        </div>
+        <div>
+          <FieldLabel className="mt-0">Verification</FieldLabel>
+          <FilterSelect disabled aria-label="Verification (coming soon)" className="cursor-not-allowed opacity-60">
+            <option>Any</option>
+            <option>Verified</option>
+            <option>Unverified</option>
+          </FilterSelect>
+        </div>
       </div>
-      <div>
-        <FieldLabel className="mt-0">Language</FieldLabel>
-        <FilterInput
-          value={filters.language}
-          onChange={(e) => onChange({ ...filters, language: e.target.value })}
-          placeholder="e.g. en"
-        />
-      </div>
-      <div>
-        <FieldLabel className="mt-0">Verification</FieldLabel>
-        <FilterSelect disabled aria-label="Verification (coming soon)" className="cursor-not-allowed opacity-60">
-          <option>Any</option>
-          <option>Verified</option>
-          <option>Unverified</option>
-        </FilterSelect>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -459,7 +665,7 @@ export function CategoryField({ filters, onChange }: FieldProps) {
             type="button"
             onClick={addDraftCategory}
             disabled={!draftCategory.trim()}
-            className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#2563eb] hover:bg-[#2563eb] hover:text-white disabled:opacity-40"
+            className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#1D9E75] hover:bg-[#1D9E75] hover:text-white disabled:opacity-40"
             aria-label="Add category"
           >
             <PlusIcon className="size-3.5" />
@@ -470,7 +676,7 @@ export function CategoryField({ filters, onChange }: FieldProps) {
             {customCategories.map((category) => (
               <span
                 key={category}
-                className="inline-flex h-6 items-center gap-[5px] rounded-[5px] border border-[#bfdbfe] bg-[#eff6ff] px-2 text-[11px] font-medium text-[#1d4ed8]"
+                className="inline-flex h-6 items-center gap-[5px] rounded-[5px] border border-[#9edfc8] bg-[#ecfdf5] px-2 text-[11px] font-medium text-[#168a66]"
               >
                 {category}
                 <button
@@ -481,8 +687,8 @@ export function CategoryField({ filters, onChange }: FieldProps) {
                       categories: filters.categories.filter((value) => value !== category),
                     })
                   }
-                  className="flex size-3.5 items-center justify-center rounded-full text-[10px] text-[#1d4ed8] transition-colors hover:bg-[rgba(37,99,235,.3)]"
-                  style={{ backgroundColor: "rgba(37,99,235,.15)" }}
+                  className="flex size-3.5 items-center justify-center rounded-full text-[10px] text-[#168a66] transition-colors hover:bg-[rgba(29,158,117,.3)]"
+                  style={{ backgroundColor: "rgba(29,158,117,.15)" }}
                   aria-label={`Remove ${category}`}
                 >
                   ×
@@ -509,32 +715,6 @@ export function CategoryField({ filters, onChange }: FieldProps) {
           ))}
         </div>
       </FieldGroup>
-      <FieldGroup label="Audience interests">
-        <FilterInput
-          value={filters.audienceInterests}
-          onChange={(e) => onChange({ ...filters, audienceInterests: e.target.value })}
-          placeholder="beauty, fashion"
-          className="mb-2"
-        />
-        <div className="flex flex-wrap gap-1.5">
-          {QUICK_INTERESTS.map((interest) => (
-            <FilterChip
-              key={interest}
-              label={interest}
-              active={filters.audienceInterests.toLowerCase() === interest.toLowerCase()}
-              onToggle={() =>
-                onChange({
-                  ...filters,
-                  audienceInterests:
-                    filters.audienceInterests.toLowerCase() === interest.toLowerCase()
-                      ? ""
-                      : interest,
-                })
-              }
-            />
-          ))}
-        </div>
-      </FieldGroup>
     </>
   );
 }
@@ -550,7 +730,7 @@ function MockupChip({ label }: { label: string }) {
       <span>{label}</span>
       <span
         className="ml-px flex size-3.5 items-center justify-center rounded-full text-[10px] font-bold"
-        style={{ backgroundColor: "rgba(37,99,235,.1)", color: FP_BLUE }}
+        style={{ backgroundColor: "rgba(29,158,117,.12)", color: TW_PRIMARY }}
       >
         +
       </span>
@@ -559,48 +739,146 @@ function MockupChip({ label }: { label: string }) {
 }
 
 export function AudienceField({ filters, onChange }: FieldProps) {
+  const [draftAudienceCountry, setDraftAudienceCountry] = useState("");
+  const [draftInterest, setDraftInterest] = useState("");
+
+  function addDraftInterest() {
+    const value = draftInterest.trim();
+    if (!value) return;
+    if (
+      filters.audienceInterestTags.some(
+        (tag) => tag.toLowerCase() === value.toLowerCase()
+      )
+    ) {
+      setDraftInterest("");
+      return;
+    }
+    onChange({ ...filters, audienceInterestTags: [...filters.audienceInterestTags, value] });
+    setDraftInterest("");
+  }
+
   return (
     <>
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <FieldLabel className="mt-0">Audience country</FieldLabel>
-          <FilterInput
-            value={filters.audienceCountry}
-            onChange={(e) =>
-              onChange({ ...filters, audienceCountry: e.target.value.toUpperCase() })
-            }
-            placeholder="e.g. AE"
-          />
-        </div>
-        <div>
-          <FieldLabel className="mt-0">Min audience %</FieldLabel>
-          <FilterInput
-            disabled
-            placeholder="e.g. 30"
-            aria-label="Min audience percentage (coming soon)"
-            className="cursor-not-allowed opacity-60"
-          />
-        </div>
-        <div>
-          <FieldLabel className="mt-0">Age range</FieldLabel>
-          <RangeRow
-            min={filters.ageMin}
-            max={filters.ageMax}
-            onMinChange={(value) => onChange({ ...filters, ageMin: value })}
-            onMaxChange={(value) => onChange({ ...filters, ageMax: value })}
-            minPlaceholder="Min"
-            maxPlaceholder="Max"
-            type="number"
-          />
-        </div>
-      </div>
-      <FieldGroup label="Gender">
-        <SegmentedControl
-          value={filters.gender.toLowerCase() as "" | "male" | "female"}
-          options={GENDER_OPTIONS}
-          onChange={(value) => onChange({ ...filters, gender: value })}
-          className="max-w-[320px]"
+      <FieldGroup label="Audience country" className="mt-0">
+        <CountryPillGrid
+          selected={filters.audienceCountries}
+          onChange={(audienceCountries) => onChange({ ...filters, audienceCountries })}
+          draft={draftAudienceCountry}
+          onDraftChange={setDraftAudienceCountry}
+          placeholder="ISO code e.g. AE"
         />
+      </FieldGroup>
+
+      <FieldGroup label="Gender">
+        <FilterSelect
+          value={filters.gender.toLowerCase()}
+          onChange={(e) => onChange({ ...filters, gender: e.target.value })}
+          aria-label="Audience gender"
+        >
+          {GENDER_OPTIONS.map((option) => (
+            <option key={option.value || "any"} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </FilterSelect>
+        <FieldHint>Applied when audience demographic data is available on the creator.</FieldHint>
+      </FieldGroup>
+
+      <FieldGroup label="Age range">
+        <div className="flex items-center gap-2">
+          <FilterSelect
+            value={filters.ageMin}
+            onChange={(e) => onChange({ ...filters, ageMin: e.target.value })}
+            aria-label="Minimum audience age"
+            className="flex-1"
+          >
+            {AGE_RANGE_OPTIONS.map((option) => (
+              <option key={`min-${option.value || "any"}`} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </FilterSelect>
+          <span className="shrink-0 text-xs text-[#94a3b8]">to</span>
+          <FilterSelect
+            value={filters.ageMax}
+            onChange={(e) => onChange({ ...filters, ageMax: e.target.value })}
+            aria-label="Maximum audience age"
+            className="flex-1"
+          >
+            {AGE_RANGE_MAX_OPTIONS.map((option) => (
+              <option key={`max-${option.value || "any"}`} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </FilterSelect>
+        </div>
+        <FieldHint>Requires enriched audience age distribution (future backend filter).</FieldHint>
+      </FieldGroup>
+
+      <FieldGroup label="Audience interests">
+        <div className="mb-2 flex gap-1.5">
+          <FilterInput
+            value={draftInterest}
+            onChange={(e) => setDraftInterest(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addDraftInterest();
+              }
+            }}
+            placeholder="Add topic…"
+            className="flex-1"
+          />
+          <button
+            type="button"
+            onClick={addDraftInterest}
+            disabled={!draftInterest.trim()}
+            className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#1D9E75] hover:bg-[#1D9E75] hover:text-white disabled:opacity-40"
+            aria-label="Add audience interest"
+          >
+            <PlusIcon className="size-3.5" />
+          </button>
+        </div>
+        {filters.audienceInterestTags.length > 0 ? (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {filters.audienceInterestTags.map((interest) => (
+              <FilterChip
+                key={interest}
+                label={interest}
+                active
+                onToggle={() =>
+                  onChange({
+                    ...filters,
+                    audienceInterestTags: filters.audienceInterestTags.filter(
+                      (value) => value !== interest
+                    ),
+                  })
+                }
+              />
+            ))}
+          </div>
+        ) : null}
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_INTERESTS.map((interest) => (
+            <FilterChip
+              key={interest}
+              label={interest}
+              active={filters.audienceInterestTags.some(
+                (selected) => selected.toLowerCase() === interest.toLowerCase()
+              )}
+              onToggle={() =>
+                onChange({
+                  ...filters,
+                  audienceInterestTags: toggleInList(
+                    filters.audienceInterestTags,
+                    interest,
+                    (value) => value.toLowerCase()
+                  ),
+                })
+              }
+            />
+          ))}
+        </div>
       </FieldGroup>
     </>
   );

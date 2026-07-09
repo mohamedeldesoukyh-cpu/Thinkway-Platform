@@ -39,7 +39,7 @@ export default async function ShortlistDetailPage({
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <DiscoverySubNav activeHref="/discovery/shortlists" />
           <div className="min-h-0 flex-1 overflow-y-auto bg-muted/30">
-            <div className="mx-auto w-full max-w-[1400px] px-5 py-6 sm:px-8">
+            <div className="mx-auto w-full max-w-[1800px] px-5 py-6 sm:px-8">
               <Link
                 href="/discovery/shortlists"
                 className="mb-5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"

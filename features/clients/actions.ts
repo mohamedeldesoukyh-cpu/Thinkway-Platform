@@ -6,7 +6,7 @@ import {
   createSignedDocumentUrl,
   removeStorageObject,
 } from "@/lib/supabase/storage";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import { findDuplicateClient } from "@/lib/validation/checks";
 import { friendlyActionError } from "@/lib/validation/hierarchy";
 import { buildClassificationAuditPayload } from "@/lib/clients/build-classification-audit";
@@ -60,25 +60,17 @@ function normalizeClientIoTermsText(value: string | undefined): string | null {
 }
 
 async function requireAuthUser() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    return { supabase, user: null, error: error.message };
-  }
-
-  if (!user) {
+  try {
+    const { supabase, user } = await requireRequestUser();
+    return { supabase, user, error: null };
+  } catch (error) {
+    const supabase = await createSupabaseServerClient();
     return {
       supabase,
       user: null,
-      error: "You must be signed in to continue.",
+      error: error instanceof Error ? error.message : "You must be signed in to continue.",
     };
   }
-
-  return { supabase, user, error: null };
 }
 
 export async function createClientAction(

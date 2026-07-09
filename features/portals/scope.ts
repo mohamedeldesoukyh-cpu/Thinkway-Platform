@@ -1,4 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/auth/permissions-server";
+import { requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 
 type PortalKey = "creator" | "client";
 
@@ -15,40 +16,17 @@ export type ClientScope = {
 };
 
 async function requirePortalPermission(permission: string) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    throw new Error(error?.message ?? "Unauthorized");
+  const { supabase, userId, user } = await requireRequestUser();
+  const auth = await requirePermission(supabase, permission);
+  if ("error" in auth) {
+    throw new Error(auth.error);
   }
-
-  const { data: roleData } = await supabase
-    .from("profiles")
-    .select("role:roles(slug)")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const roleSlug =
-    (roleData as { role: { slug: string } | null } | null)?.role?.slug ?? null;
-
-  const { data: allowed } = await (supabase as any).rpc("has_permission", {
-    p_permission: permission,
-  });
-
-  const isAdmin = roleSlug === "super_admin" || roleSlug === "admin";
-  if (!isAdmin && !Boolean(allowed)) {
-    throw new Error("Access denied.");
-  }
-
-  return { supabase, userId: user.id };
+  return { supabase, userId, user };
 }
 
 export async function requireCreatorScope(
   portalPermission: "creator_portal.read" | "creator_portal.write" | "creator_portal.approve"
-): Promise<{ supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>; scope: CreatorScope }> {
+): Promise<{ supabase: RequestUser["supabase"]; scope: CreatorScope }> {
   const { supabase, userId } = await requirePortalPermission(portalPermission);
 
   const { data: influencer, error } = await supabase
@@ -72,7 +50,7 @@ export async function requireCreatorScope(
 }
 
 async function provisionClientUserFromInvite(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: RequestUser["supabase"],
   userId: string,
   email: string | undefined
 ) {
@@ -107,12 +85,8 @@ async function provisionClientUserFromInvite(
 
 export async function requireClientScope(
   portalPermission: "client_portal.read" | "client_portal.write" | "client_portal.approve"
-): Promise<{ supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>; scope: ClientScope }> {
-  const { supabase, userId } = await requirePortalPermission(portalPermission);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+): Promise<{ supabase: RequestUser["supabase"]; scope: ClientScope }> {
+  const { supabase, userId, user } = await requirePortalPermission(portalPermission);
 
   let { data: memberships, error } = await supabase
     .from("client_users")

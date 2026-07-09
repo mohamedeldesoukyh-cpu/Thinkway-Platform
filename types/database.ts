@@ -188,6 +188,7 @@ export type CampaignHeaderRow = {
   name: string;
   description: string | null;
   brief: string | null;
+  campaign_intelligence_profile_id: string | null;
   status: CampaignStatus;
   group_id: string | null;
   client_id: string;
@@ -283,6 +284,37 @@ export type CampaignLineRow = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type CampaignObjectLifecycleStatus =
+  | "draft"
+  | "in_review"
+  | "approved"
+  | "archived"
+  | "published";
+
+export type CampaignObjectRow = {
+  id: string;
+  conversation_id: string;
+  campaign_header_id: string | null;
+  workflow_id: string | null;
+  lifecycle_status: CampaignObjectLifecycleStatus;
+  current_version: number;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampaignObjectVersionRow = {
+  id: string;
+  campaign_object_id: string;
+  version: number;
+  workflow_id: string | null;
+  snapshot: Json;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
 };
 
 export type CampaignListItem = CampaignHeaderRow & {
@@ -776,6 +808,7 @@ export type Database = {
           name: string;
           description?: string | null;
           brief?: string | null;
+          campaign_intelligence_profile_id?: string | null;
           brand_id: string;
           group_id?: string | null;
           client_id?: string;
@@ -857,6 +890,42 @@ export type Database = {
         };
         Update: Partial<
           Database["public"]["Tables"]["campaign_lines"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      campaign_object_versions: {
+        Row: CampaignObjectVersionRow;
+        Insert: {
+          id?: string;
+          campaign_object_id: string;
+          version?: number;
+          workflow_id?: string | null;
+          snapshot: Json;
+          created_by: string;
+          updated_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_object_versions"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      campaign_objects: {
+        Row: CampaignObjectRow;
+        Insert: {
+          id: string;
+          conversation_id: string;
+          campaign_header_id?: string | null;
+          workflow_id?: string | null;
+          lifecycle_status?: CampaignObjectLifecycleStatus;
+          current_version?: number;
+          created_by: string;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_objects"]["Insert"]
         >;
         Relationships: [];
       };
@@ -2584,6 +2653,7 @@ export type Database = {
           af_value: number;
           af_value_egp: number;
           sort_order: number;
+          option_number: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -2615,6 +2685,7 @@ export type Database = {
           af_value?: number;
           af_value_egp?: number;
           sort_order?: number;
+          option_number?: number | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["quotation_items"]["Insert"]
@@ -2802,6 +2873,7 @@ export type Database = {
     Enums: {
       client_status: ClientStatus;
       campaign_status: CampaignStatus;
+      campaign_object_lifecycle_status: CampaignObjectLifecycleStatus;
       influencer_status: InfluencerStatus;
       po_status: PoStatus;
       assignment_pricing_mode: AssignmentPricingMode;

@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/auth/permissions-server";
+import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
+import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { debugSettings } from "@/features/settings/queries";
 
 type ActionState = {
@@ -19,28 +21,21 @@ function hashToken(token: string) {
 }
 
 async function requireSettingsWrite() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) return { supabase, user: null, error: error?.message ?? "Unauthorized" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role:roles(slug)")
-    .eq("id", user.id)
-    .maybeSingle();
-  const roleSlug =
-    (profile as { role: { slug: string } | null } | null)?.role?.slug ?? null;
-
-  const { data: allowed } = await (supabase as any).rpc("has_permission", {
-    p_permission: "settings.write",
-  });
-  if (!(roleSlug === "super_admin" || roleSlug === "admin" || Boolean(allowed))) {
-    return { supabase, user: null, error: "Settings write access denied." };
+  try {
+    const { supabase, user } = await requireRequestUser();
+    const auth = await requirePermission(supabase, "settings.write");
+    if ("error" in auth) {
+      return { supabase, user: null, error: auth.error };
+    }
+    return { supabase, user, error: null };
+  } catch (error) {
+    const supabase = await createSupabaseServerClient();
+    return {
+      supabase,
+      user: null,
+      error: error instanceof Error ? error.message : "Unauthorized",
+    };
   }
-  return { supabase, user, error: null };
 }
 
 function revalidateSettings() {
@@ -161,6 +156,14 @@ export async function updateUserRoleAction(
       ...(businessFunction !== undefined ? { business_function: businessFunction } : {}),
     },
   } as never);
+
+  void logAuditEvent(supabase, {
+    userId: user.id,
+    action: "update",
+    entityType: "profile",
+    entityId: profileId,
+    metadata: { role_id: roleId, business_function: businessFunction ?? null },
+  });
 
   debugSettings("role-management", "user updated", { profileId, roleId, businessFunction });
   revalidateSettings();

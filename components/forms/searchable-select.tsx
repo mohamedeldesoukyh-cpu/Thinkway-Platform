@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-type Option = { value: string; label: string; description?: string };
+type Option = {
+  value: string;
+  label: string;
+  description?: string;
+  keywords?: readonly string[];
+};
 
 type SearchableSelectProps = {
   id?: string;
@@ -48,7 +53,8 @@ export function SearchableSelect({
       (o) =>
         o.label.toLowerCase().includes(q) ||
         o.description?.toLowerCase().includes(q) ||
-        o.value.toLowerCase().includes(q)
+        o.value.toLowerCase().includes(q) ||
+        (o.keywords ?? []).some((keyword) => keyword.toLowerCase().includes(q))
     );
   }, [options, query]);
 
@@ -59,6 +65,7 @@ export function SearchableSelect({
     <>
       {name ? <input type="hidden" name={name} value={value} /> : null}
       <DropdownMenu
+        modal={false}
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
@@ -84,7 +91,7 @@ export function SearchableSelect({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[var(--radix-dropdown-menu-trigger-width)] p-2"
+          className="z-[130] w-[var(--radix-dropdown-menu-trigger-width)] p-2"
           align="start"
         >
           <Input

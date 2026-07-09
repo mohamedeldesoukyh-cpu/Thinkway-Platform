@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/auth/permissions-server";
+import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 
 import { CLIENT_ACCESS_REVALIDATE_PATHS } from "./constants";
 import type { ClientAccessRole } from "./types";
@@ -10,30 +11,21 @@ import type { ClientAccessRole } from "./types";
 type ActionState = { ok: boolean; message?: string };
 
 async function requireClientAccessWrite() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) return { supabase, user: null, error: error?.message ?? "Unauthorized" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role:roles(slug)")
-    .eq("id", user.id)
-    .maybeSingle();
-  const roleSlug =
-    (profile as { role: { slug: string } | null } | null)?.role?.slug ?? null;
-
-  const { data: allowed } = await (supabase as any).rpc("has_permission", {
-    p_permission: "client_access.write",
-  });
-
-  if (!(roleSlug === "super_admin" || roleSlug === "admin" || Boolean(allowed))) {
-    return { supabase, user: null, error: "Client access write permission required." };
+  try {
+    const { supabase, user } = await requireRequestUser();
+    const auth = await requirePermission(supabase, "client_access.write");
+    if ("error" in auth) {
+      return { supabase, user: null, error: auth.error };
+    }
+    return { supabase, user, error: null };
+  } catch (error) {
+    const supabase = await createSupabaseServerClient();
+    return {
+      supabase,
+      user: null,
+      error: error instanceof Error ? error.message : "Unauthorized",
+    };
   }
-
-  return { supabase, user, error: null };
 }
 
 function revalidateClientAccess(clientId?: string) {

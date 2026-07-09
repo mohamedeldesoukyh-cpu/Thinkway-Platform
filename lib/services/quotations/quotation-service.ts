@@ -17,7 +17,10 @@ import {
   fetchCampaignImportCreators,
   fetchExistingShortlistSourceIds,
   fetchMaxItemSortOrder,
+  fetchQuotationItemsByIds,
   fetchShortlistHeader,
+  insertQuotationRowsAfter,
+  renumberQuotationOptionNumbers,
   findOpenQuotationForShortlistQuery,
   insertQuotationHeaderRecord,
   listCampaignsForImportQuery,
@@ -387,6 +390,93 @@ export async function duplicateQuotationItems(
     ok: true,
     data: { duplicated: result.inserts.length },
     message: `Duplicated ${result.inserts.length} creator${result.inserts.length === 1 ? "" : "s"}.`,
+  };
+}
+
+export async function addQuotationItemOption(
+  supabase: SupabaseClient<Database>,
+  input: { quotation_id: string; item_id: string }
+): Promise<QuotationMutationResult<{ id: string }>> {
+  const { data: existing, error: loadError } = await fetchQuotationItemsByIds(
+    supabase,
+    input.quotation_id,
+    [input.item_id]
+  );
+  if (loadError) return { ok: false, message: loadError.message };
+
+  const row = (existing ?? [])[0] as Record<string, unknown> | undefined;
+  if (!row) return { ok: false, message: "Quotation line not found." };
+
+  const creatorKey =
+    (row.unified_id as string | null) ??
+    (row.influencer_id as string | null) ??
+    (row.profile_id as string | null);
+  if (!creatorKey) {
+    return { ok: false, message: "Cannot add option without a linked creator profile." };
+  }
+
+  const { data: siblings } = await supabase
+    .from("quotation_items")
+    .select("option_number, unified_id, influencer_id, profile_id")
+    .eq("quotation_id", input.quotation_id);
+
+  const sameCreator = ((siblings ?? []) as Array<Record<string, unknown>>).filter((item) => {
+    if (row.unified_id && item.unified_id === row.unified_id) return true;
+    if (row.influencer_id && item.influencer_id === row.influencer_id) return true;
+    if (row.profile_id && item.profile_id === row.profile_id) return true;
+    return false;
+  });
+
+  const nextOption =
+    sameCreator.reduce(
+      (max, item) => Math.max(max, Number(item.option_number ?? 1)),
+      0
+    ) + 1;
+
+  const {
+    id: _id,
+    created_at: _created,
+    updated_at: _updated,
+    source_shortlist_item_id: _source,
+    ...rest
+  } = row;
+
+  const insertResult = await insertQuotationRowsAfter(supabase, input.quotation_id, [
+    {
+      afterItemId: input.item_id,
+      payload: {
+        ...rest,
+        quotation_id: input.quotation_id,
+        option_number: nextOption,
+        source_shortlist_item_id: null,
+        cost: 0,
+        revenue: 0,
+        gp_value: 0,
+        gp_pct: 0,
+        af_value: 0,
+        cost_egp: 0,
+        revenue_egp: 0,
+        gp_value_egp: 0,
+        af_value_egp: 0,
+      },
+    },
+  ]);
+  if (!insertResult.ok) {
+    return { ok: false, message: insertResult.message };
+  }
+
+  await renumberQuotationOptionNumbers(supabase, input.quotation_id);
+
+  const insertedId = insertResult.inserts[0]?.id as string | undefined;
+  if (!insertedId) {
+    return { ok: false, message: "Failed to add option." };
+  }
+
+  await recomputeQuotationTotals(supabase, input.quotation_id);
+  return {
+    ok: true,
+    data: { id: insertedId },
+    message: `Option ${nextOption} added.`,
   };
 }
 

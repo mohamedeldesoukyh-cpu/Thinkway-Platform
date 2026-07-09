@@ -3,8 +3,14 @@
  */
 
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { avatarSourceFromDnaUrl } from "@/lib/creators/dna-avatar";
 import { detectAvatarCdn } from "@/lib/performance/creator-avatar";
-import { isUsableAvatarUrl, isSameProviderAvatarUrl, normalizeAvatarSource } from "@/lib/performance/avatar-sync-policy";
+import {
+  isDisplayableAvatarUrl,
+  isSameProviderAvatarUrl,
+  isUsableAvatarUrl,
+  normalizeAvatarSource,
+} from "@/lib/performance/avatar-sync-policy";
 import {
   metricWithConfidence,
   resolveInternalMetricConfidence,
@@ -14,6 +20,7 @@ import type {
   UnifiedCreatorPlatform,
   UnifiedCreatorResult,
 } from "@/lib/domains/creator/types";
+import { resolveCreatorContactFields } from "@/lib/creators/contact-info";
 
 /** Display order for platform icons in Discovery rows (stable, not is_primary). */
 export const DISCOVERY_PLATFORM_ORDER = [
@@ -76,6 +83,19 @@ const PLATFORM_METRICS_PRIORITY: Record<string, number> = {
 function platformSortKey(platform: string): number {
   const key = canonicalPlatformKey(platform);
   return PLATFORM_METRICS_PRIORITY[key] ?? 99;
+}
+
+/**
+ * Prefer durable enrichment uploads over PDF import crops when both are
+ * `uploaded` (imports are position-cropped and frequently mis-assigned).
+ */
+export function avatarStorageQualityRank(url: string | null | undefined): number {
+  const lower = url?.trim().toLowerCase() ?? "";
+  if (!lower) return 0;
+  if (lower.includes("/creator-avatars/enrichment/")) return 3;
+  if (lower.includes("/creator-avatars/imports/")) return 1;
+  if (lower.includes("/creator-avatars/")) return 2;
+  return 2;
 }
 
 /** Stable platform ordering for multi-platform creators (never depends on is_primary). */
@@ -142,6 +162,7 @@ export function collectAvatarCandidates(input: {
   storedPrimaryAvatarSource?: string | null;
   influencerMetadata?: Record<string, unknown> | null;
   discoveryProfileImageUrl?: string | null;
+  dnaAvatarUrl?: string | null;
   accounts: PlatformAccountAvatarInput[];
   /**
    * operator (default): trust persisted manual/uploaded only — re-derive platform avatars live.
@@ -165,17 +186,33 @@ export function collectAvatarCandidates(input: {
     Boolean(apifyPlatformAvatar?.profile_picture_url?.trim()) &&
     !isSameProviderAvatarUrl(storedUrl, apifyPlatformAvatar!.profile_picture_url!);
 
+  const storedPrimaryStale =
+    Boolean(storedUrl) &&
+    storedSource !== "manual" &&
+    storedSource !== "uploaded" &&
+    !isUsableAvatarUrl(storedUrl);
+
   const includeStoredPrimary =
     storedMode !== "none" &&
     storedUrl &&
     storedSource &&
     storedSource in AVATAR_SOURCE_PRIORITY &&
+    !storedPrimaryStale &&
     (storedMode === "all" ||
       storedSource === "manual" ||
-      (storedSource === "uploaded" && !storedUploadedSupersededByApify));
+      (storedSource === "uploaded" && !storedUploadedSupersededByApify) ||
+      (storedMode === "operator" &&
+        storedSource !== "placeholder" &&
+        storedSource !== "uploaded" &&
+        isDisplayableAvatarUrl(storedUrl)));
 
   if (includeStoredPrimary) {
     candidates.push({ url: storedUrl, source: storedSource });
+  }
+
+  const dnaAvatar = input.dnaAvatarUrl?.trim();
+  if (dnaAvatar && isDisplayableAvatarUrl(dnaAvatar)) {
+    candidates.push({ url: dnaAvatar, source: avatarSourceFromDnaUrl(dnaAvatar) });
   }
 
   const influencerMetaAvatar = metadataAvatarUrl(input.influencerMetadata);
@@ -218,17 +255,27 @@ export function resolvePrimaryAvatar(candidates: AvatarCandidate[]): {
 
   for (const candidate of candidates) {
     const url = candidate.url?.trim();
-    if (candidate.source !== "placeholder" && !isUsableAvatarUrl(url)) continue;
+    if (candidate.source !== "placeholder" && !isDisplayableAvatarUrl(url)) continue;
 
     if (candidate.source === "placeholder") {
       if (best.source === "placeholder") best = candidate;
       continue;
     }
 
+    const candidatePriority = AVATAR_SOURCE_PRIORITY[candidate.source];
+    const bestPriority = AVATAR_SOURCE_PRIORITY[best.source];
+    const candidateUsable = isUsableAvatarUrl(url);
+    const bestUsable = isUsableAvatarUrl(best.url);
+    const candidateStorage = avatarStorageQualityRank(url);
+    const bestStorage = avatarStorageQualityRank(best.url);
+
     if (
-      AVATAR_SOURCE_PRIORITY[candidate.source] < AVATAR_SOURCE_PRIORITY[best.source] ||
-      (AVATAR_SOURCE_PRIORITY[candidate.source] === AVATAR_SOURCE_PRIORITY[best.source] &&
-        best.source === "placeholder")
+      candidatePriority < bestPriority ||
+      (candidatePriority === bestPriority && best.source === "placeholder") ||
+      (candidatePriority === bestPriority && candidateUsable && !bestUsable) ||
+      (candidatePriority === bestPriority &&
+        candidateUsable === bestUsable &&
+        candidateStorage > bestStorage)
     ) {
       best = { url: url ?? null, source: candidate.source };
     }
@@ -269,6 +316,11 @@ export type MetricsPlatformAccount = {
   sync_status?: string | null;
   metrics_is_manual_override?: boolean | null;
   profile_bio?: string | null;
+  hashtags?: string[];
+  mentions?: string[];
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_links?: string[];
   recent_publications?: unknown;
   audience_country?: string | null;
   metadata?: Record<string, unknown> | null;
@@ -414,6 +466,13 @@ export function projectCreatorPlatformView(
     metrics: buildInternalMetricsFromPlatform(account),
     estimated_country: account.audience_country ?? creator.estimated_country,
     bio: account.profile_bio ?? creator.bio,
+    hashtags: account.hashtags ?? creator.hashtags,
+    mentions: account.mentions ?? creator.mentions,
+    ...resolveCreatorContactFields({
+      contact_email: account.contact_email ?? creator.contact_email,
+      contact_phone: account.contact_phone ?? creator.contact_phone,
+      contact_links: account.contact_links ?? creator.contact_links,
+    }),
     recent_publications: account.recent_publications ?? creator.recent_publications,
     is_platform_verified: account.is_verified ?? creator.is_platform_verified,
   };
@@ -437,6 +496,13 @@ export function applyPlatformMetricsView(
     metrics: buildMetricsFromPlatformAccount(platformAccount, buildMetrics),
     estimated_country: platformAccount.audience_country ?? creator.estimated_country,
     bio: platformAccount.profile_bio ?? creator.bio,
+    hashtags: platformAccount.hashtags ?? creator.hashtags,
+    mentions: platformAccount.mentions ?? creator.mentions,
+    ...resolveCreatorContactFields({
+      contact_email: platformAccount.contact_email ?? creator.contact_email,
+      contact_phone: platformAccount.contact_phone ?? creator.contact_phone,
+      contact_links: platformAccount.contact_links ?? creator.contact_links,
+    }),
     default_metrics_platform_account_id:
       platformAccountId ?? creator.default_metrics_platform_account_id,
   };

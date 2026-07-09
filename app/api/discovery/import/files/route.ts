@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { getCreatorImportFiles } from "@/features/discovery-import/queries";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "discovery.write");
+  if ("response" in auth) return auth.response;
 
   try {
     const files = await getCreatorImportFiles();

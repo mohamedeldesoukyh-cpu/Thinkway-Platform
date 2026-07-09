@@ -1,3 +1,5 @@
+import { tryInstagramMediaRedirectThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
+import { tryInstagramOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-oembed";
 import { tryOpenGraphThumbnail } from "@/lib/performance/screenshot-capture/providers/opengraph";
 import { tryTikTokOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/tiktok-oembed";
 
@@ -13,6 +15,8 @@ const ALLOWED_SRC_HOST_FRAGMENTS = [
   "cdninstagram",
   "instagram.com",
   "fbcdn",
+  "fbsbx.com",
+  "facebook.com",
   "tiktokcdn",
   "tiktokv.com",
   "ibyteimg.com",
@@ -53,12 +57,23 @@ function refererForImageUrl(url: string): string | undefined {
   if (TIKTOK_CDN_HOST_FRAGMENTS.some((fragment) => host.includes(fragment))) {
     return "https://www.tiktok.com/";
   }
+  if (host.includes("cdninstagram") || host.includes("fbcdn") || host.includes("instagram.com")) {
+    return "https://www.instagram.com/";
+  }
+  if (host.includes("fbsbx.com") || host.includes("facebook.com")) {
+    return "https://www.instagram.com/";
+  }
   return undefined;
 }
 
 function isTikTokPostUrl(url: string): boolean {
   const host = hostFromUrl(url);
   return host?.includes("tiktok.com") ?? false;
+}
+
+function isInstagramPostUrl(url: string): boolean {
+  const host = hostFromUrl(url);
+  return host?.includes("instagram.com") ?? false;
 }
 
 async function fetchImageBuffer(
@@ -73,7 +88,7 @@ async function fetchImageBuffer(
       headers: {
         Accept: "image/*,*/*;q=0.8",
         "User-Agent":
-          "Mozilla/5.0 (compatible; ThinkwayBot/1.0; +https://thinkway.com)",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         ...(referer ? { Referer: referer } : {}),
       },
     });
@@ -108,14 +123,28 @@ export async function fetchPublicationPreviewImage(input: {
   if (postUrl && isAllowedPublicationPreviewPostUrl(postUrl)) {
     if (isTikTokPostUrl(postUrl)) {
       const oembed = await tryTikTokOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl && isAllowedPublicationPreviewSrcUrl(oembed.imageUrl)) {
+      if (oembed.imageUrl) {
+        const fromOembed = await fetchImageBuffer(oembed.imageUrl);
+        if (fromOembed.ok) return fromOembed;
+      }
+    }
+
+    if (isInstagramPostUrl(postUrl)) {
+      const mediaRedirect = await tryInstagramMediaRedirectThumbnail({ contentUrl: postUrl });
+      if (mediaRedirect.imageUrl) {
+        const fromRedirect = await fetchImageBuffer(mediaRedirect.imageUrl);
+        if (fromRedirect.ok) return fromRedirect;
+      }
+
+      const oembed = await tryInstagramOembedThumbnail({ contentUrl: postUrl });
+      if (oembed.imageUrl) {
         const fromOembed = await fetchImageBuffer(oembed.imageUrl);
         if (fromOembed.ok) return fromOembed;
       }
     }
 
     const og = await tryOpenGraphThumbnail({ contentUrl: postUrl });
-    if (og.imageUrl && isAllowedPublicationPreviewSrcUrl(og.imageUrl)) {
+    if (og.imageUrl) {
       const fromOg = await fetchImageBuffer(og.imageUrl);
       if (fromOg.ok) return fromOg;
     }

@@ -8,6 +8,7 @@ import {
   type CreatorProfileSource,
 } from "@/components/creator/creator-profile-link";
 import type { DiscoverySearchResult } from "@/lib/discovery/types";
+import { formatCreatorBio } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
 
 type Profile = DiscoverySearchResult["profiles"][number];
@@ -49,7 +50,7 @@ export function DiscoveryProfileCard({ profile, onEnrich, onSave, enriching }: P
             <div className="flex flex-wrap items-center gap-2">
               <CreatorProfileLink
                 source={profileSourceFromDiscoveryProfile(profile)}
-                size="md"
+                size="lg"
                 avatarBadge="country"
                 showHandle={false}
                 stopPropagation
@@ -61,7 +62,7 @@ export function DiscoveryProfileCard({ profile, onEnrich, onSave, enriching }: P
             <p className="text-[11px] text-muted-foreground">@{profile.username}</p>
             {profile.bio ? (
               <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
-                {profile.bio}
+                {formatCreatorBio(profile.bio)}
               </p>
             ) : null}
           </div>

@@ -69,7 +69,7 @@ export function resolveAggregatedCreatorEnrichmentStatus(
     resolved = resolveTerminalFromPlatforms(platformStatuses, stored);
   }
 
-  if (input.log !== false) {
+  if (input.log !== false && process.env.DEBUG_CREATOR_STATUS === "1") {
     console.log(
       `[status] creatorId=${input.creatorId} platformStatuses=${JSON.stringify(platformStatuses)} resolvedStatus=${resolved}`
     );

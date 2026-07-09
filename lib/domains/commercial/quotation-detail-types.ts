@@ -1,5 +1,6 @@
 import type { CommercialInputMode, QuotationStatus } from "@/types/database";
 
+import type { CreatorProfileSource } from "@/lib/creators/creator-profile-source";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 
 export type ActionResult<T = undefined> =
@@ -21,6 +22,12 @@ export type QuotationItemRow = {
   engagement_rate: number | null;
   country_code: string | null;
   deliverables: QuotationDeliverable[];
+  profile_image_url: string | null;
+  profile_url: string | null;
+  /** Resolved server-side from unified creator — same path as Discovery shortlist avatars. */
+  creator_profile_source?: CreatorProfileSource | null;
+  option_number: number | null;
+  service_description: string | null;
   commercial_input_mode: CommercialInputMode;
   cost: number;
   cost_currency: string;

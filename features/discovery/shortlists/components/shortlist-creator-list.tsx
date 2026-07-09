@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import {
   CreatorProfileLink,
   creatorProfileSourceFromUnified,
 } from "@/components/creator/creator-profile-link";
 import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
+import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
+import { resolveCreatorTierFromUnified } from "@/lib/creators/creator-tier";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { filterPlatformsForDisplay } from "@/lib/creators/creator-centric";
 import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
@@ -18,14 +21,23 @@ import {
   PlatformCell,
 } from "@/features/discovery/components/creator-result-row";
 import { EnrichmentStatusBadge } from "@/features/discovery/enrichment/components/enrichment-status-badge";
+import { DeleteDiscoveryCreatorDialog } from "@/features/discovery/delete-creator/delete-discovery-creator-dialog";
 import {
   isEnrichmentInProgress,
-  resolveCreatorEnrichmentStatus,
+  resolveEnrichmentDisplayStatus,
 } from "@/features/discovery/enrichment/status";
 import { PlatformMetricStack } from "@/features/discovery/components/platform-metric-stack";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { ShortlistItemStatus } from "@/types/database";
-import { UsersIcon } from "lucide-react";
+import { MoreHorizontalIcon, UsersIcon } from "lucide-react";
 
 import { ShortlistItemStatusBadge } from "./shortlist-badges";
 import { ShortlistDetailCheckbox } from "./shortlist-detail-primitives";
@@ -48,12 +60,12 @@ type Props = {
   onToggleSelectAll: () => void;
   onRemove: (itemId: string) => void;
   onAddToQuotation: (itemId: string) => void;
+  onCreatorDeleted?: () => void;
 };
 
 const TH_CLASS =
-  "whitespace-nowrap border-b border-border bg-muted/50 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wide text-muted-foreground";
-const TD_CLASS =
-  "border-b border-border px-4 py-3.5 align-middle text-xs text-muted-foreground";
+  "border-b border-border bg-muted/50 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wide text-muted-foreground";
+const TD_CLASS = "border-b border-border px-4 py-3.5 align-middle text-xs text-muted-foreground";
 const ENRICHING_ROW_CLASS =
   "bg-sky-500/[0.07] ring-1 ring-inset ring-sky-500/25 hover:bg-sky-500/10";
 
@@ -70,39 +82,67 @@ function resolveDisplayEngagementRate(
 function RowActions({
   editable,
   busy,
+  visible,
   onAddToQuotation,
   onRemove,
+  onDeleteCreator,
 }: {
   editable: boolean;
   busy?: boolean;
+  visible?: boolean;
   onAddToQuotation: () => void;
   onRemove: () => void;
+  onDeleteCreator?: () => void;
 }) {
   return (
     <div
-      className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100"
+      className={cn(
+        "flex justify-end opacity-0 transition-opacity group-hover:opacity-100",
+        visible && "opacity-100"
+      )}
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
     >
-      <button
-        type="button"
-        className="text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-        onClick={onAddToQuotation}
-        disabled={busy}
-      >
-        Add to quotation
-      </button>
-      <span className="h-3 w-px bg-border" aria-hidden />
-      {editable ? (
-        <button
-          type="button"
-          className="text-[11px] font-medium text-red-600 transition-colors hover:text-red-700 disabled:opacity-50"
-          onClick={onRemove}
-          disabled={busy}
-        >
-          Remove
-        </button>
-      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0 text-muted-foreground"
+            disabled={busy}
+            aria-label="Creator actions"
+          >
+            <MoreHorizontalIcon className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem onSelect={onAddToQuotation} disabled={busy}>
+            Add to quotation
+          </DropdownMenuItem>
+          {onDeleteCreator ? (
+            <DropdownMenuItem
+              onSelect={onDeleteCreator}
+              disabled={busy}
+              className="text-red-600 focus:text-red-600"
+            >
+              Delete creator
+            </DropdownMenuItem>
+          ) : null}
+          {editable ? (
+            <>
+              {onDeleteCreator ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuItem
+                onSelect={onRemove}
+                disabled={busy}
+                className="text-red-600 focus:text-red-600"
+              >
+                Remove from shortlist
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -117,6 +157,7 @@ function CreatorDataRow({
   onToggleSelect,
   onRemove,
   onAddToQuotation,
+  onCreatorDeleted,
 }: {
   item: ShortlistRowItem;
   rank: number;
@@ -127,15 +168,21 @@ function CreatorDataRow({
   onToggleSelect: () => void;
   onRemove: () => void;
   onAddToQuotation: () => void;
+  onCreatorDeleted?: () => void;
 }) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const creator = item.creator!;
   const source = creatorProfileSourceFromUnified(creator);
   const displayPlatforms = filterPlatformsForDisplay(creator.platforms);
   const avgEr = resolveDisplayEngagementRate(creator, displayPlatforms);
   const hasCountryCode = Boolean(normalizeCountryCode(creator.country_code));
   const safety = brandSafetyMeta(creator.authenticity_score);
-  const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
+  const enrichmentStatus = resolveEnrichmentDisplayStatus(
+    creator.enrichment_status,
+    creator
+  );
   const enriching = isEnrichmentInProgress(enrichmentStatus);
+  const tier = resolveCreatorTierFromUnified(creator);
   return (
     <tr
       className={cn(
@@ -156,13 +203,15 @@ function CreatorDataRow({
         ) : null}
       </td>
       <td className={cn(TD_CLASS, "w-7 tabular-nums text-muted-foreground")}>{rank}</td>
-      <td className={cn(TD_CLASS, "min-w-[200px]")}>
+      <td className={cn(TD_CLASS, "min-w-0 overflow-hidden")}>
         <CreatorProfileLink
           source={source}
-          size="sm"
+          size="lg"
           avatarBadge="country"
           showPlatformBadge={false}
           linkName={false}
+          nameClassName="truncate"
+          className="min-w-0 max-w-full"
         />
       </td>
       <td className={TD_CLASS}>
@@ -170,6 +219,9 @@ function CreatorDataRow({
       </td>
       <td className={cn(TD_CLASS, "text-right tabular-nums")}>
         <PlatformMetricStack platforms={displayPlatforms} metric="followers" align="right" />
+      </td>
+      <td className={cn(TD_CLASS, "min-w-[5.5rem]")}>
+        <CreatorTierBadge tier={tier} />
       </td>
       <td className={TD_CLASS}>
         <div className="flex items-center gap-1">
@@ -179,14 +231,20 @@ function CreatorDataRow({
           <span>{creator.country_code ?? "—"}</span>
         </div>
       </td>
-      <td className={cn(TD_CLASS, "min-w-[140px] max-w-[200px]")}>
-        <InterestChips interests={creatorStoredCategoriesForDisplay(creator).slice(0, 3)} />
+      <td className={cn(TD_CLASS, "max-w-[9rem] overflow-hidden")}>
+        <InterestChips
+          interests={creatorStoredCategoriesForDisplay(creator)}
+          variant="compact"
+          maxVisible={2}
+        />
       </td>
       <td className={cn(TD_CLASS, "text-right font-semibold tabular-nums text-foreground")}>
         {avgEr}
       </td>
-      <td className={cn(TD_CLASS, "text-[11px] font-medium", safety.className)}>
-        {safety.label}
+      <td className={cn(TD_CLASS, "overflow-hidden text-[11px] font-medium", safety.className)}>
+        <span className="block truncate" title={safety.label}>
+          {safety.label}
+        </span>
       </td>
       <td className={cn(TD_CLASS, "min-w-[108px] whitespace-nowrap")}>
         <EnrichmentStatusBadge status={enrichmentStatus} className="text-xs font-semibold" />
@@ -194,13 +252,25 @@ function CreatorDataRow({
       <td className={TD_CLASS}>
         <ShortlistItemStatusBadge status={item.item_status} variant="table" />
       </td>
-      <td className={cn(TD_CLASS, "w-0 whitespace-nowrap")}>
+      <td className={cn(TD_CLASS, "w-10 overflow-hidden p-2 text-right")}>
         <RowActions
           editable={editable}
           busy={busy}
+          visible={selected}
           onAddToQuotation={onAddToQuotation}
           onRemove={onRemove}
+          onDeleteCreator={
+            creator.influencer_id ? () => setDeleteOpen(true) : undefined
+          }
         />
+        {creator.influencer_id ? (
+          <DeleteDiscoveryCreatorDialog
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            creator={creator}
+            onDeleted={onCreatorDeleted}
+          />
+        ) : null}
       </td>
     </tr>
   );
@@ -252,12 +322,13 @@ function UnknownCreatorRow({
             avatarUrl: null,
             handle: "Profile not resolved",
           }}
-          size="sm"
+          size="lg"
           avatarBadge="country"
           showPlatformBadge={false}
           linkName={false}
         />
       </td>
+      <td className={TD_CLASS}>—</td>
       <td className={TD_CLASS}>—</td>
       <td className={TD_CLASS}>—</td>
       <td className={TD_CLASS}>—</td>
@@ -270,10 +341,11 @@ function UnknownCreatorRow({
       <td className={TD_CLASS}>
         <ShortlistItemStatusBadge status={item.item_status} variant="table" />
       </td>
-      <td className={cn(TD_CLASS, "w-0 whitespace-nowrap")}>
+      <td className={cn(TD_CLASS, "w-10 overflow-hidden p-2 text-right")}>
         <RowActions
           editable={editable}
           busy={busy}
+          visible={selected}
           onAddToQuotation={onAddToQuotation}
           onRemove={onRemove}
         />
@@ -294,10 +366,26 @@ export function ShortlistCreatorList({
   onToggleSelectAll,
   onRemove,
   onAddToQuotation,
+  onCreatorDeleted,
 }: Props) {
   return (
-    <div className="overflow-x-auto px-1 pb-1">
-      <table className="w-full min-w-[1080px] border-collapse [&_tbody_tr:last-child_td]:border-b-0">
+    <div className="w-full overflow-x-auto px-1 pb-1">
+      <table className="w-full min-w-[960px] table-fixed border-collapse [&_tbody_tr:last-child_td]:border-b-0">
+        <colgroup>
+          <col className="w-9" />
+          <col className="w-7" />
+          <col className="w-[14%]" />
+          <col className="w-[8%]" />
+          <col className="w-[8%]" />
+          <col className="w-[7%]" />
+          <col className="w-[7%]" />
+          <col className="w-[11%]" />
+          <col className="w-[6%]" />
+          <col className="w-[8%]" />
+          <col className="w-[8%]" />
+          <col className="w-[7%]" />
+          <col className="w-10" />
+        </colgroup>
         <thead>
           <tr>
             <th className={cn(TH_CLASS, "w-9")}>
@@ -314,13 +402,14 @@ export function ShortlistCreatorList({
             <th className={TH_CLASS}>Creator</th>
             <th className={TH_CLASS}>Platform</th>
             <th className={cn(TH_CLASS, "text-right")}>Followers</th>
+            <th className={TH_CLASS}>Tier</th>
             <th className={TH_CLASS}>Country</th>
             <th className={TH_CLASS}>Audience interests</th>
             <th className={cn(TH_CLASS, "text-right")}>Avg ER</th>
             <th className={TH_CLASS}>Brand safety</th>
             <th className={TH_CLASS}>Sync</th>
             <th className={TH_CLASS}>Status</th>
-            <th className={cn(TH_CLASS, "w-0")} aria-label="Actions" />
+            <th className={cn(TH_CLASS, "w-10")} aria-label="Actions" />
           </tr>
         </thead>
         <tbody>
@@ -336,6 +425,7 @@ export function ShortlistCreatorList({
               onToggleSelect: () => onToggleSelect(item.item_id),
               onRemove: () => onRemove(item.item_id),
               onAddToQuotation: () => onAddToQuotation(item.item_id),
+              onCreatorDeleted,
             };
 
             if (!item.creator) {

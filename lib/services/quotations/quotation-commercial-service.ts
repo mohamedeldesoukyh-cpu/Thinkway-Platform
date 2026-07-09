@@ -11,6 +11,7 @@ import {
   fetchQuotationItemEgpTotals,
   updateQuotationHeaderRecord,
 } from "./repositories/quotation-repository";
+import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
 
 export async function recomputeQuotationTotals(
   supabase: SupabaseClient<Database>,
@@ -53,16 +54,30 @@ export async function updateQuotationItemCommercials(
     gp_value?: number | null;
     af_pct?: number | null;
     deliverables?: QuotationDeliverable[];
-  }
+    option_number?: number | null;
+    service_description?: string | null;
+    platform?: string | null;
+    handle?: string | null;
+    followers?: number | null;
+    engagement_rate?: number | null;
+  },
+  options?: { skipTotalsRecompute?: boolean }
 ) {
   const rate = await resolveRateToEgp(supabase, input.cost_currency);
+  const rolled = input.deliverables?.length
+    ? rollupDeliverableCommercials(input.deliverables, {
+        lineCurrency: input.cost_currency,
+        fxRateToEgp: rate,
+      })
+    : null;
+
   const line = normalizeCommercialLine({
-    mode: input.mode,
-    cost: input.cost,
+    mode: rolled ? "cost_revenue" : input.mode,
+    cost: rolled?.cost ?? input.cost,
     costCurrency: input.cost_currency,
-    gpPct: input.gp_pct,
-    revenue: input.revenue,
-    gpValue: input.gp_value,
+    gpPct: rolled ? null : input.gp_pct,
+    revenue: rolled?.revenue ?? input.revenue,
+    gpValue: rolled ? null : input.gp_value,
     afPct: input.af_pct,
     fxRateToEgp: rate,
   });
@@ -83,6 +98,19 @@ export async function updateQuotationItemCommercials(
     af_value_egp: line.af_value_egp,
   };
   if (input.deliverables) patch.deliverables = input.deliverables;
+  if (input.option_number !== undefined) {
+    patch.option_number =
+      input.option_number == null
+        ? null
+        : Math.max(1, Math.floor(input.option_number));
+  }
+  if (input.service_description !== undefined) {
+    patch.service_description = input.service_description?.trim() || null;
+  }
+  if (input.platform !== undefined) patch.platform = input.platform;
+  if (input.handle !== undefined) patch.handle = input.handle;
+  if (input.followers !== undefined) patch.followers = input.followers;
+  if (input.engagement_rate !== undefined) patch.engagement_rate = input.engagement_rate;
 
   const { error } = await supabase
     .from("quotation_items")
@@ -90,12 +118,19 @@ export async function updateQuotationItemCommercials(
     .eq("id", input.item_id);
   if (error) return { ok: false as const, message: error.message };
 
-  const totals = await recomputeQuotationTotals(supabase, input.quotation_id);
+  const totals = options?.skipTotalsRecompute
+    ? null
+    : await recomputeQuotationTotals(supabase, input.quotation_id);
   await syncQuotationChangeToShortlist(supabase, {
     quotationId: input.quotation_id,
     actorId: userId,
     quotationItemId: input.item_id,
-    event: input.deliverables ? "deliverables" : "commercial",
+    event:
+      input.deliverables ||
+      input.service_description !== undefined ||
+      input.platform !== undefined
+        ? "deliverables"
+        : "commercial",
   });
 
   return {
@@ -125,4 +160,110 @@ export async function removeQuotationItemWithSync(
 
   await recomputeQuotationTotals(supabase, input.quotation_id);
   return { ok: true as const };
+}
+
+async function ensureCreatorOnLinkedShortlist(
+  supabase: SupabaseClient<Database>,
+  shortlistId: string,
+  item: Record<string, unknown>,
+  userId: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const unifiedId = (item.unified_id as string | null) ?? null;
+  const influencerId = (item.influencer_id as string | null) ?? null;
+  const profileId = (item.profile_id as string | null) ?? null;
+
+  if (!unifiedId && !influencerId && !profileId) {
+    return { ok: false, message: "This line has no linked creator profile." };
+  }
+
+  let existingQuery = supabase
+    .from("discovery_shortlist_items")
+    .select("id")
+    .eq("shortlist_id", shortlistId);
+
+  if (unifiedId) existingQuery = existingQuery.eq("unified_id", unifiedId);
+  else if (influencerId) existingQuery = existingQuery.eq("influencer_id", influencerId);
+  else if (profileId) existingQuery = existingQuery.eq("profile_id", profileId);
+
+  const { data: existing } = await existingQuery.maybeSingle();
+  if (existing?.id) return { ok: true };
+
+  const { data: maxRow } = await supabase
+    .from("discovery_shortlist_items")
+    .select("sort_order")
+    .eq("shortlist_id", shortlistId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const sortOrder = Number((maxRow as { sort_order?: number } | null)?.sort_order ?? -1) + 1;
+
+  const { error } = await supabase.from("discovery_shortlist_items").insert({
+    shortlist_id: shortlistId,
+    influencer_id: influencerId,
+    profile_id: profileId,
+    unified_id: unifiedId,
+    added_by: userId,
+    commercial_input_mode: item.commercial_input_mode,
+    cost: item.cost,
+    cost_currency: item.cost_currency,
+    revenue: item.revenue,
+    gp_pct: item.gp_pct,
+    gp_value: item.gp_value,
+    cost_egp: item.cost_egp,
+    revenue_egp: item.revenue_egp,
+    gp_value_egp: item.gp_value_egp,
+    deliverables: item.deliverables,
+    service_description: item.service_description,
+    option_number: item.option_number,
+    sort_order: sortOrder,
+  } as never);
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
+export async function returnQuotationItemToShortlist(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  input: { item_id: string; quotation_id: string }
+) {
+  const { data: quotation, error: quotationError } = await supabase
+    .from("quotations")
+    .select("shortlist_id")
+    .eq("id", input.quotation_id)
+    .maybeSingle();
+
+  if (quotationError) return { ok: false as const, message: quotationError.message };
+  const shortlistId = (quotation as { shortlist_id: string | null } | null)?.shortlist_id;
+  if (!shortlistId) {
+    return { ok: false as const, message: "This quotation is not linked to a shortlist." };
+  }
+
+  const { data: item, error: itemError } = await supabase
+    .from("quotation_items")
+    .select("*")
+    .eq("id", input.item_id)
+    .eq("quotation_id", input.quotation_id)
+    .maybeSingle();
+
+  if (itemError) return { ok: false as const, message: itemError.message };
+  if (!item) return { ok: false as const, message: "Quotation line not found." };
+
+  const ensured = await ensureCreatorOnLinkedShortlist(
+    supabase,
+    shortlistId,
+    item as Record<string, unknown>,
+    userId
+  );
+  if (!ensured.ok) return ensured;
+
+  const { error: deleteError } = await supabase
+    .from("quotation_items")
+    .delete()
+    .eq("id", input.item_id);
+  if (deleteError) return { ok: false as const, message: deleteError.message };
+
+  await recomputeQuotationTotals(supabase, input.quotation_id);
+  return { ok: true as const, message: "Creator returned to shortlist." };
 }

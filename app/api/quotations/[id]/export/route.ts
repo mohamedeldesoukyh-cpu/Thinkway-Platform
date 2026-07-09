@@ -1,14 +1,27 @@
 import { NextResponse } from "next/server";
 
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
+import {
+  embedQuotationDocumentAvatars,
+  enrichQuotationDetailForExport,
+  resolveQuotationExportSiteOrigin,
+} from "@/features/quotations/export/quotation-export-avatars";
+import {
+  embedQuotationDocumentPublicationShots,
+  loadQuotationCreatorPublicationShots,
+} from "@/features/quotations/export/quotation-export-publications";
 import { buildQuotationExcel } from "@/features/quotations/export/quotation-excel";
 import { buildQuotationHtml } from "@/features/quotations/export/quotation-html";
-import { resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
+import {
+  isShowcaseTemplate,
+  resolveQuotationTemplate,
+} from "@/features/quotations/export/quotation-template";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export const maxDuration = 60;
+/** Showcase embed + Chromium PDF can exceed 60s with many publication shots. */
+export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 
 type RouteContext = {
@@ -36,10 +49,26 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
 
-    const doc = buildQuotationDocument(detail, { template });
+    const enriched = await enrichQuotationDetailForExport(supabase, detail);
+    const publicationShotsByCreatorKey =
+      isShowcaseTemplate(template) && format !== "excel"
+        ? await loadQuotationCreatorPublicationShots(supabase, enriched.items)
+        : undefined;
+    let doc = buildQuotationDocument(enriched, {
+      template,
+      publicationShotsByCreatorKey,
+    });
+    if (format !== "excel") {
+      doc = await embedQuotationDocumentAvatars(doc);
+      doc = await embedQuotationDocumentPublicationShots(doc);
+    }
     const baseName = doc.serial;
     const disposition = download ? "attachment" : "inline";
-    const templateSuffix = template === "lump-sum" ? "-lump-sum" : "";
+    const templateSuffix = template === "detailed" ? "" : `-${template}`;
+    const siteOrigin = resolveQuotationExportSiteOrigin(
+      request.headers.get("x-forwarded-host") ?? request.headers.get("host"),
+      request.headers.get("x-forwarded-proto")
+    );
 
     if (format === "excel") {
       const buffer = await buildQuotationExcel(detail);
@@ -52,7 +81,7 @@ export async function GET(request: Request, context: RouteContext) {
       });
     }
 
-    const html = buildQuotationHtml(doc);
+    const html = buildQuotationHtml(doc, { siteOrigin });
 
     if (format === "word") {
       // Word opens HTML content saved as .doc with full fidelity (no extra deps).

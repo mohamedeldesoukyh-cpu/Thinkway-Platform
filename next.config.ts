@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium-min"],
+  serverExternalPackages: [
+    "puppeteer-core",
+    "@sparticuz/chromium-min",
+    "pdf-parse",
+    "pdfjs-dist",
+    "@napi-rs/canvas",
+    "sharp",
+  ],
   experimental: {
     // Middleware/proxy buffers request bodies (default 10 MB). Truncation breaks multipart
     // server-action uploads with "Unexpected end of form" before bodySizeLimit applies.

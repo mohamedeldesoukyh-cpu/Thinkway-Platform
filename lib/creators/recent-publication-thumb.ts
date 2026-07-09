@@ -36,6 +36,7 @@ export function shouldProxyPublicationMediaUrl(url: string): boolean {
   if (!host) return false;
   if (host.includes("supabase.co") || host.includes("supabase.in")) return false;
   if (host.includes("cdninstagram") || host.endsWith("instagram.com")) return true;
+  if (host.includes("fbsbx") || host.includes("facebook.com")) return true;
   if (
     host.includes("tiktokcdn") ||
     host.includes("tiktokv.com") ||
@@ -48,6 +49,9 @@ export function shouldProxyPublicationMediaUrl(url: string): boolean {
     return true;
   }
   if (host.includes("fbcdn")) return true;
+  if (host.includes("ytimg.com") || host.includes("youtube.com") || host.includes("youtu.be")) {
+    return true;
+  }
   return false;
 }
 

@@ -1,9 +1,15 @@
+import { requireApiPermission } from "@/lib/auth/api-auth";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 import { getCampaignsForMovement } from "@/features/operations/queries";
 import type { MovementType } from "@/features/operations/types";
 
 export async function GET(request: Request) {
+  const supabase = await createSupabaseServerClient();
+  const auth = await requireApiPermission(supabase, "operations.read");
+  if ("response" in auth) return auth.response;
+
   const { searchParams } = new URL(request.url);
 
   try {

@@ -16,6 +16,18 @@ export function buildImportAvatarStoragePath(
   return `imports/${importFileId}/${safePlatform}/${safeUsername}.${safeExt}`;
 }
 
+export function buildEnrichmentAvatarStoragePath(
+  influencerId: string,
+  platform: string,
+  username: string,
+  extension: string
+): string {
+  const safePlatform = platform.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
+  const safeUsername = username.replace(/[^a-zA-Z0-9._-]/g, "_").toLowerCase();
+  const safeExt = extension.replace(/^\./, "").toLowerCase() || "png";
+  return `enrichment/${influencerId}/${safePlatform}/${safeUsername}.${safeExt}`;
+}
+
 export function extensionForContentType(contentType: string): string {
   switch (contentType) {
     case "image/jpeg":
@@ -98,6 +110,45 @@ export async function uploadImportCreatorAvatar(params: {
 
   if (error) {
     throw new Error(`Avatar upload failed for @${params.username}: ${error.message}`);
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!supabaseUrl) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured.");
+  }
+
+  return resolveCreatorAvatarPublicUrl(supabaseUrl, storagePath);
+}
+
+/** Persist an enrichment-fetched provider avatar into creator-avatars storage. */
+export async function uploadEnrichmentCreatorAvatar(params: {
+  supabase: SupabaseClient<Database>;
+  influencerId: string;
+  platform: string;
+  username: string;
+  buffer: Buffer;
+  contentType: string;
+}): Promise<string> {
+  const extension = extensionForContentType(params.contentType);
+  const storagePath = buildEnrichmentAvatarStoragePath(
+    params.influencerId,
+    params.platform,
+    params.username,
+    extension
+  );
+
+  const { error } = await params.supabase.storage
+    .from(CREATOR_AVATARS_BUCKET)
+    .upload(storagePath, params.buffer, {
+      contentType: params.contentType,
+      upsert: true,
+      cacheControl: "31536000",
+    });
+
+  if (error) {
+    throw new Error(
+      `Enrichment avatar upload failed for @${params.username}: ${error.message}`
+    );
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();

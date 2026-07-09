@@ -24,17 +24,26 @@ export default async function VendorProfilePage({
   let errorMessage: string | null = null;
 
   try {
-    workspace = await getVendorWorkspace(id);
+    const [workspaceResult, masterDataResult] = await Promise.allSettled([
+      getVendorWorkspace(id),
+      getMasterDataOptions(),
+    ]);
+
+    if (workspaceResult.status === "fulfilled") {
+      workspace = workspaceResult.value;
+    } else {
+      errorMessage =
+        workspaceResult.reason instanceof Error
+          ? workspaceResult.reason.message
+          : "Failed to load vendor.";
+    }
+
+    if (masterDataResult.status === "fulfilled") {
+      currencyOptions = buildCurrencyOptions(masterDataResult.value.currencies);
+    }
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load vendor.";
-  }
-
-  try {
-    const masterData = await getMasterDataOptions();
-    currencyOptions = buildCurrencyOptions(masterData.currencies);
-  } catch {
-    currencyOptions = [];
   }
 
   if (!workspace && !errorMessage) {

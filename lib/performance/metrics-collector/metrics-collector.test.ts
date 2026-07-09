@@ -18,6 +18,8 @@ import { normalizedContentToStorageFields } from "@/lib/performance/content-norm
 import { confidenceForCollectedMetrics } from "@/lib/performance/metrics-collector/confidence";
 import {
   apifyActorIdForPlatform,
+  apifyProfileActorIdForPlatform,
+  buildApifyProfileDetailsInput,
   buildApifyRunInput,
 } from "@/lib/performance/metrics-collector/providers/apify-input";
 import { extractPublicationDateFromProviderRow } from "@/lib/performance/metrics-collector/extract-publication-date";
@@ -121,14 +123,25 @@ assert.deepEqual(providerChainForPlatform("snapchat"), [
     apifyInstagramActorId: "apify/instagram-scraper",
     apifyTikTokActorId: "clockworks/tiktok-scraper",
     apifyFacebookActorId: "apify/facebook-posts-scraper",
+    apifyFacebookProfileActorId: "apify/facebook-pages-scraper",
     apifyYouTubeActorId: "streamers/youtube-scraper",
     apifySnapchatActorId: null,
   };
   assert.equal(apifyActorIdForPlatform("tiktok", env), "clockworks/tiktok-scraper");
   assert.equal(apifyActorIdForPlatform("facebook", env), "apify/facebook-posts-scraper");
+  assert.equal(
+    apifyProfileActorIdForPlatform("facebook", env),
+    "apify/facebook-pages-scraper"
+  );
   assert.equal(apifyActorIdForPlatform("snapchat", env), null);
   assert.ok("postURLs" in buildApifyRunInput("tiktok", "https://tiktok.com/@x/video/1"));
   assert.ok("startUrls" in buildApifyRunInput("facebook", "https://facebook.com/p/1"));
+  assert.ok(
+    "startUrls" in buildApifyProfileDetailsInput(
+      "facebook",
+      "https://www.facebook.com/nasaearth"
+    )
+  );
 }
 
 {

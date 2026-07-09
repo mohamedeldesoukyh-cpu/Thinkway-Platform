@@ -237,6 +237,24 @@ assert.equal(
   "profile-only proxy when CDN src missing"
 );
 
+{
+  const expiredIg =
+    "https://scontent.cdninstagram.com/v/t51.2885-19/expired.jpg?oe=68500000";
+  assert.equal(
+    creatorAvatarBrowserDisplayUrl(
+      expiredIg,
+      "https://www.instagram.com/radwaadeeel/"
+    ),
+    "/api/creators/avatar?profileUrl=https%3A%2F%2Fwww.instagram.com%2Fradwaadeeel%2F",
+    "expired Instagram CDN falls back to profileUrl proxy"
+  );
+  assert.equal(
+    creatorAvatarBrowserDisplayUrl(expiredIg, null),
+    null,
+    "expired Instagram CDN without profileUrl returns null"
+  );
+}
+
 assert.equal(
   resolveCreatorAvatarDisplay({
     platform: "tiktok",

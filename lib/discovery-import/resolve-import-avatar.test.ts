@@ -23,6 +23,9 @@ function sampleRow(overrides: Partial<ParsedCreatorRow> = {}): ParsedCreatorRow 
     profile_picture_url: null,
     role: null,
     appearances: null,
+    contact_email: null,
+    contact_phone: null,
+    contact_links: [],
     ...overrides,
   };
 }

@@ -9,6 +9,8 @@
  */
 
 import type { EnrichmentTrigger } from "./types";
+import { shouldAutoEnrichForTrigger } from "@/lib/discovery/control-center/discovery-control-policy";
+import { getCachedDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
 
 export type EnrichmentScope =
   | "avatar"
@@ -121,6 +123,13 @@ export function canEnqueueCreatorEnrichment(
   const scope = input.scope ?? "all";
 
   if (AUTO_TRIGGERS.has(input.trigger)) {
+    const settings = getCachedDiscoveryControlSettings();
+    if (!shouldAutoEnrichForTrigger(input.trigger, settings)) {
+      return {
+        allowed: false,
+        reason: `Automatic enrichment disabled by Discovery Control Center (${settings.automaticEnrichment}).`,
+      };
+    }
     if (!isAutoCreatorEnrichmentEnabled()) {
       return {
         allowed: false,

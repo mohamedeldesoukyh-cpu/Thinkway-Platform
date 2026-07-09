@@ -36,7 +36,7 @@ import {
 } from "@/lib/billing/invoice-validation-context";
 import { commitInvoiceLifecycleMutation } from "@/lib/billing/invoice-lifecycle-commit";
 import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import type { z } from "zod";
 import type {
   createInvoiceFromLinesSchema,

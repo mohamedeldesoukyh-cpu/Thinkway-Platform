@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { fetchProfileNamesByIds } from "@/lib/services/campaigns/repositories/workspace-repository";
 import {
   fetchGroupClientsWithOptionalVrRate,
   fetchVrRatesByIds,
@@ -112,7 +113,6 @@ export async function getGroupWorkspace(
     headersResult,
     documentsResult,
     auditResult,
-    profilesResult,
   ] = await Promise.all([
     fetchGroupClientsWithOptionalVrRate(supabase, groupId),
     supabase
@@ -159,7 +159,6 @@ export async function getGroupWorkspace(
       )
       .order("created_at", { ascending: false })
       .limit(40),
-    supabase.from("profiles").select("id, full_name, email"),
   ]);
 
   if (clientsResult.error) {
@@ -242,15 +241,21 @@ export async function getGroupWorkspace(
     }
   }
 
-  const profileMap = new Map(
-    (profilesResult.data ?? []).map((p) => [p.id, p])
-  );
+  const auditRows = auditResult.data ?? [];
+  const actorIds = [
+    ...new Set(
+      auditRows
+        .map((log) => log.actor_id as string | null)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const profileMap = await fetchProfileNamesByIds(supabase, actorIds);
 
   const clientIdSet = new Set(clientIds);
   const brandIds = (brandsResult.data ?? []).map((b) => (b as { id: string }).id);
   const brandIdSet = new Set(brandIds);
 
-  const filteredAudit = (auditResult.data ?? []).filter((log) => {
+  const filteredAudit = auditRows.filter((log) => {
     if (log.entity_type === "groups" && log.entity_id === groupId) {
       return true;
     }

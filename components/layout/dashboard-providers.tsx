@@ -14,10 +14,8 @@ export function DashboardProviders({ children }: DashboardProvidersProps) {
 
   return (
     <KeyboardShortcutsProvider helpOpen={helpOpen} onHelpOpenChange={setHelpOpen}>
-      <div className="relative min-h-screen">
-        {children}
-        <KeyboardHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
-      </div>
+      {children}
+      <KeyboardHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </KeyboardShortcutsProvider>
   );
 }

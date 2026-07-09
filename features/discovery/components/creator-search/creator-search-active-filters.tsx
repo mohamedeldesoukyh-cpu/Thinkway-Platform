@@ -8,12 +8,18 @@ import { buildActiveFilterChips, type CreatorSearchFilters } from "./creator-sea
 
 type Props = {
   filters: CreatorSearchFilters;
+  search?: string;
   onChange: (next: CreatorSearchFilters) => void;
-  onClearAll: () => void;
+  onClearSearch?: () => void;
 };
 
-export function CreatorSearchActiveFilters({ filters, onChange, onClearAll }: Props) {
-  const chips = buildActiveFilterChips(filters);
+export function CreatorSearchActiveFilters({
+  filters,
+  search = "",
+  onChange,
+  onClearSearch,
+}: Props) {
+  const chips = buildActiveFilterChips(filters, search);
   if (chips.length === 0) return null;
 
   return (
@@ -22,23 +28,22 @@ export function CreatorSearchActiveFilters({ filters, onChange, onClearAll }: Pr
         <button
           key={chip.id}
           type="button"
-          onClick={() => onChange({ ...filters, ...chip.clear })}
+          onClick={() => {
+            if (chip.id === "topSearch") {
+              onClearSearch?.();
+              return;
+            }
+            onChange({ ...filters, ...chip.clear });
+          }}
           className={cn(
-            "group inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/5 py-1 pr-1.5 pl-2.5",
-            "text-[11px] font-medium text-primary transition-colors hover:bg-primary/10"
+            "group inline-flex items-center gap-1 rounded-full border border-[#9edfc8] bg-[#ecfdf5] py-1 pr-1.5 pl-2.5",
+            "text-[11px] font-medium text-[#168a66] transition-colors hover:bg-[#d1fae5]"
           )}
         >
-          <span className="max-w-[180px] truncate">{chip.label}</span>
+          <span className="max-w-[220px] truncate">{chip.label}</span>
           <XIcon className="size-3 opacity-60 transition-opacity group-hover:opacity-100" />
         </button>
       ))}
-      <button
-        type="button"
-        onClick={onClearAll}
-        className="ml-1 text-[11px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-      >
-        Clear all
-      </button>
     </div>
   );
 }

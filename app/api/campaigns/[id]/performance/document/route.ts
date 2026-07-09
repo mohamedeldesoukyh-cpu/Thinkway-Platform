@@ -16,6 +16,7 @@ import {
   parseReportDocumentFormat,
 } from "@/lib/reports/document/report-document-response";
 import { PERFORMANCE_REPORT_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/validation/uuid";
 
@@ -55,12 +56,8 @@ export async function GET(
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "analytics.read");
+  if ("response" in auth) return auth.response;
 
   const { data: campaign, error: campaignError } = await supabase
     .from("campaign_headers")

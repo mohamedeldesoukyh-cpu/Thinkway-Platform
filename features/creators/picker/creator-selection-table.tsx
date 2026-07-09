@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { platformLabel } from "@/features/campaigns/line-assignment";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { sortPlatformsStable } from "@/lib/creators/creator-centric";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { cn } from "@/lib/utils";
 import { AddMissingCreatorEmptyState } from "@/features/discovery/components/add-missing-creator-dialog";
 import type { CreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
@@ -62,13 +65,30 @@ function PanelRowSkeleton() {
   );
 }
 
+function primaryPlatformAccount(creator: UnifiedCreatorResult) {
+  const platforms = sortPlatformsStable(creator.platforms);
+  return (
+    platforms.find((p) => p.id === creator.default_metrics_platform_account_id) ??
+    platforms[0] ??
+    null
+  );
+}
+
+function formatPlatformSublabel(creator: UnifiedCreatorResult): string {
+  const platforms = sortPlatformsStable(creator.platforms);
+  if (platforms.length === 0) return creator.source_type;
+  const primary = primaryPlatformAccount(creator);
+  const platformNames = platforms.map((p) => platformLabel(p.platform)).join(", ");
+  const handle = primary?.handle?.replace(/^@/, "") ?? "";
+  return handle ? `${platformNames} · @${handle}` : platformNames;
+}
+
 function toRowMeta(
   creator: UnifiedCreatorResult,
   existingKeys?: Set<string>,
   isRowDisabled?: (creator: UnifiedCreatorResult) => boolean,
   disabledBadge?: (creator: UnifiedCreatorResult) => string | null
 ): CreatorRowMeta {
-  const platformInfo = creator.platforms[0];
   const onList =
     existingKeys != null &&
     [creator.unified_id, creator.influencer_id ? `inf:${creator.influencer_id}` : null, creator.discovered_profile_id ? `dis:${creator.discovered_profile_id}` : null]
@@ -80,9 +100,7 @@ function toRowMeta(
   return {
     id: creator.unified_id,
     label: creator.display_name,
-    sublabel: platformInfo
-      ? `${platformInfo.platform} · @${platformInfo.handle}`
-      : creator.source_type,
+    sublabel: formatPlatformSublabel(creator),
     metric:
       creator.metrics.followers.value != null
         ? Intl.NumberFormat().format(creator.metrics.followers.value)
@@ -106,15 +124,22 @@ function RowSkeleton() {
 }
 
 function panelPlatformMeta(creator: UnifiedCreatorResult): {
-  platform: string | null;
+  platforms: UnifiedCreatorResult["platforms"];
   handle: string | null;
   followers: number | null;
 } {
-  const platformInfo = creator.platforms[0];
+  const platforms = sortPlatformsStable(creator.platforms);
+  const primary = primaryPlatformAccount(creator);
+  const platformFollowers = platforms
+    .map((p) => p.follower_count)
+    .filter((value): value is number => value != null && value > 0);
+  const followersFromPlatforms =
+    platformFollowers.length > 0 ? Math.max(...platformFollowers) : null;
+
   return {
-    platform: platformInfo?.platform ?? null,
-    handle: platformInfo?.handle ?? null,
-    followers: creator.metrics.followers.value ?? platformInfo?.follower_count ?? null,
+    platforms,
+    handle: primary?.handle ?? null,
+    followers: creator.metrics.followers.value ?? followersFromPlatforms,
   };
 }
 
@@ -349,12 +374,23 @@ function PanelSelectionRow({
 
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[13px] font-semibold text-foreground">{row.label}</span>
-        <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-          {meta.platform ? <span>{meta.platform}</span> : null}
-          {meta.platform && handleLabel ? (
-            <span className="size-0.5 rounded-full bg-border" aria-hidden />
+        <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          {meta.platforms.length > 0 ? (
+            <span
+              className="flex shrink-0 items-center gap-0.5"
+              title={meta.platforms.map((p) => platformLabel(p.platform)).join(", ")}
+            >
+              {meta.platforms.map((platform) => (
+                <PlatformIcon
+                  key={platform.id}
+                  platform={platform.platform}
+                  size="xs"
+                  className="size-3.5 rounded-full"
+                />
+              ))}
+            </span>
           ) : null}
-          {handleLabel ? <span>{handleLabel}</span> : null}
+          {handleLabel ? <span className="truncate">{handleLabel}</span> : null}
         </span>
       </span>
 

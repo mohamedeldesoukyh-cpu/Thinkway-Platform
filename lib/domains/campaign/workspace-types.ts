@@ -303,6 +303,15 @@ export type CampaignWorkspace = {
   client_io_send_history: ClientIoSendHistoryEntry[];
   client_io_sender_name: string | null;
   vendor_ios: VendorIoRow[];
+  /** Linked Campaign Intelligence Object — SSOT for brief requirements. */
+  campaign_intelligence: {
+    profileId: string;
+    title: string;
+    status: string;
+    requirementsSummary: string | null;
+    searchUrl: string;
+    libraryUrl: string;
+  } | null;
   vat_context: {
     client_country_code: string | null;
     default_revenue_vat_percent: number;

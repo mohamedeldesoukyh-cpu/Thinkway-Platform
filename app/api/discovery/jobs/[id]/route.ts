@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getDiscoveryJob } from "@/features/discovery/queries";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -10,13 +11,8 @@ type RouteContext = {
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "discovery.read");
+  if ("response" in auth) return auth.response;
 
   try {
     const job = await getDiscoveryJob(id);

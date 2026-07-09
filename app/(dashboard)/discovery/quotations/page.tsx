@@ -39,7 +39,7 @@ export default async function DiscoveryQuotationsPage() {
     >
       <PlatformErrorBoundary surface="generic">
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <DiscoverySubNav activeHref="/discovery/quotations" />
+          <DiscoverySubNav activeHref="/discovery/quotations" showDatabaseStats={false} />
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3 md:p-4">
             <DiscoveryPageHeader
               identity={DISCOVERY_PAGE_IDENTITY.quotations}

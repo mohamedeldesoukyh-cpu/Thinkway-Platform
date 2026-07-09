@@ -7,7 +7,7 @@ import {
   removeStorageObject,
   uploadEntityDocument,
 } from "@/lib/supabase/storage";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import type {
   ContractStatus,
   ExclusivityType,
@@ -16,6 +16,7 @@ import type {
 } from "@/types/database";
 
 import { parseCategoriesInput, parseLanguagesInput } from "./utils";
+import { requireCreatorBaselineDna } from "@/features/creator-dna/services/baseline-dna-populator";
 import {
   archiveVendorSchema,
   createVendorSchema,
@@ -52,25 +53,17 @@ function emptyToNull(value: string | undefined): string | null {
 }
 
 async function requireAuthUser() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    return { supabase, user: null, error: error.message };
-  }
-
-  if (!user) {
+  try {
+    const { supabase, user } = await requireRequestUser();
+    return { supabase, user, error: null };
+  } catch (error) {
+    const supabase = await createSupabaseServerClient();
     return {
       supabase,
       user: null,
-      error: "You must be signed in to continue.",
+      error: error instanceof Error ? error.message : "You must be signed in to continue.",
     };
   }
-
-  return { supabase, user, error: null };
 }
 
 export async function setInfluencerProfileLinkAction(
@@ -260,6 +253,16 @@ export async function createVendorAction(
     if (platformError) {
       return { ok: false, message: platformError.message };
     }
+  }
+
+  try {
+    await requireCreatorBaselineDna(supabase, vendor.id);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Creator DNA baseline failed — vendor cannot be created without DNA.";
+    return { ok: false, message };
   }
 
   revalidatePath("/vendors");

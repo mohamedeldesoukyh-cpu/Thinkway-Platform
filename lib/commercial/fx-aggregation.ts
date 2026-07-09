@@ -81,6 +81,8 @@ export function aggregateEgpTotals(lines: CommercialLineEgp[]): CommercialTotals
   const totalGpValueEgp = round2(totalRevenueEgp - totalCostEgp);
   const totalGpPct =
     totalRevenueEgp === 0 ? 0 : round4((totalGpValueEgp / totalRevenueEgp) * 100);
+  const totalPmPct =
+    totalCostEgp === 0 ? 0 : round4((totalGpValueEgp / totalCostEgp) * 100);
   const totalAfValueEgp = round2(
     lines.reduce((sum, l) => sum + safe(l.afValueEgp ?? 0), 0)
   );
@@ -91,6 +93,7 @@ export function aggregateEgpTotals(lines: CommercialLineEgp[]): CommercialTotals
     totalRevenueEgp,
     totalGpValueEgp,
     totalGpPct,
+    totalPmPct,
     totalAfValueEgp,
     totalAgencyMarginEgp,
     lineCount: lines.length,

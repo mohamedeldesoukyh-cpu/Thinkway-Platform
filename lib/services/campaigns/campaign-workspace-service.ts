@@ -49,6 +49,9 @@ import {
   fetchInfluencerAvatarMetaMap,
   resolveInfluencerAvatarFieldsFromMeta,
 } from "@/lib/creators/influencer-avatar-meta";
+import { getCampaignIntelligenceForHeader } from "@/lib/domains/intelligence/campaign-intelligence-object";
+import { formatCampaignRequirements } from "@/features/campaign-intelligence-profile/services/format-campaign-requirements";
+import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 
 type HeaderWithRelations = {
   id: string;
@@ -56,6 +59,7 @@ type HeaderWithRelations = {
   name: string;
   description: string | null;
   brief: string | null;
+  campaign_intelligence_profile_id?: string | null;
   status: CampaignWorkspace["status"];
   currency_code: string;
   start_date: string | null;
@@ -157,8 +161,6 @@ export async function getCampaignWorkspace(
     vendorsResult,
     deliverablesResult,
     invoicesResult,
-    approvalsResult,
-    auditResult,
     clientIo,
     vendorIos,
   ] = await Promise.all([
@@ -166,10 +168,28 @@ export async function getCampaignWorkspace(
     fetchCampaignInfluencers(supabase, campaignId),
     fetchCampaignDeliverables(supabase, campaignId),
     fetchCampaignInvoices(supabase, campaignId),
-    fetchCampaignApprovals(supabase, campaignId),
-    fetchCampaignAuditLogs(supabase, campaignId),
     getCampaignClientIo(campaignId),
     getCampaignVendorIos(campaignId),
+  ]);
+
+  const scopedLineIds = (linesResult.data ?? []).map((line) => (line as { id: string }).id);
+  const scopedVendorIds = (vendorsResult.data ?? []).map(
+    (vendor) => (vendor as { id: string }).id
+  );
+  const scopedDeliverableIds = (deliverablesResult.data ?? []).map(
+    (deliverable) => (deliverable as { id: string }).id
+  );
+
+  const [approvalsResult, auditResult] = await Promise.all([
+    fetchCampaignApprovals(supabase, campaignId, {
+      vendorIds: scopedVendorIds,
+      deliverableIds: scopedDeliverableIds,
+    }),
+    fetchCampaignAuditLogs(supabase, campaignId, {
+      lineIds: scopedLineIds,
+      vendorIds: scopedVendorIds,
+      deliverableIds: scopedDeliverableIds,
+    }),
   ]);
 
   if (linesResult.error) {
@@ -469,11 +489,6 @@ export async function getCampaignWorkspace(
   const billingOutstanding = invoices.reduce((s, i) => s + i.outstanding, 0);
   const collected = invoices.reduce((s, i) => s + i.amount_paid, 0);
 
-  const deliverableIds = new Set(
-    (deliverablesResult.data ?? []).map((d) => (d as { id: string }).id)
-  );
-  const vendorIds = new Set(vendors.map((v) => v.id));
-
   const deliverables = (deliverablesResult.data ?? []).map((row) => {
     const d = row as unknown as {
       id: string;
@@ -508,47 +523,9 @@ export async function getCampaignWorkspace(
     };
   });
 
-  const filteredApprovals = (approvalsResult.data ?? []).filter((a) => {
-    const row = a as unknown as { entity_type: string; entity_id: string };
-    if (row.entity_type === "campaign" && row.entity_id === campaignId) {
-      return true;
-    }
-    if (row.entity_type === "deliverable" && deliverableIds.has(row.entity_id)) {
-      return true;
-    }
-    if (
-      row.entity_type === "campaign_influencer" &&
-      vendorIds.has(row.entity_id)
-    ) {
-      return true;
-    }
-    return false;
-  });
+  const filteredApprovals = approvalsResult.data ?? [];
 
-  const filteredAudit = (auditResult.data ?? []).filter((log) => {
-    const row = log as unknown as { entity_type: string; entity_id: string | null };
-    if (row.entity_type === "campaign_headers" && row.entity_id === campaignId) {
-      return true;
-    }
-    if (row.entity_type === "campaign_lines" && row.entity_id && lineIds.has(row.entity_id)) {
-      return true;
-    }
-    if (
-      row.entity_type === "campaign_influencers" &&
-      row.entity_id &&
-      vendorIds.has(row.entity_id)
-    ) {
-      return true;
-    }
-    if (
-      row.entity_type === "deliverables" &&
-      row.entity_id &&
-      deliverableIds.has(row.entity_id)
-    ) {
-      return true;
-    }
-    return false;
-  });
+  const filteredAudit = auditResult.data ?? [];
 
   const actorIds = [
     ...new Set(
@@ -664,12 +641,33 @@ export async function getCampaignWorkspace(
   const clientIoSenderName =
     (currentProfile as { full_name?: string | null } | null)?.full_name?.trim() ?? null;
 
+  const linkedIntelligence = await getCampaignIntelligenceForHeader(supabase, headerRow.id);
+  const intelligenceProfile = linkedIntelligence
+    ? normalizeCampaignIntelligenceProfile(linkedIntelligence.profile)
+    : null;
+  const campaignIntelligence = linkedIntelligence
+    ? {
+        profileId: linkedIntelligence.id,
+        title:
+          linkedIntelligence.title ??
+          intelligenceProfile?.campaignName ??
+          intelligenceProfile?.brandName ??
+          "Campaign intelligence",
+        status: linkedIntelligence.status,
+        requirementsSummary: intelligenceProfile
+          ? formatCampaignRequirements(intelligenceProfile).slice(0, 1200)
+          : null,
+        searchUrl: `/discovery/search?profileId=${encodeURIComponent(linkedIntelligence.id)}`,
+        libraryUrl: `/discovery/intelligence/library`,
+      }
+    : null;
+
   const workspace = {
     id: headerRow.id,
     document_number: headerRow.document_number,
     name: headerRow.name,
     description: headerRow.description,
-    brief: headerRow.brief,
+    brief: campaignIntelligence?.requirementsSummary ?? headerRow.brief,
     status: headerRow.status,
     currency_code: headerRow.currency_code,
     start_date: headerRow.start_date,
@@ -762,6 +760,7 @@ export async function getCampaignWorkspace(
     client_io_send_recipients: clientIoSendRecipients,
     client_io_send_history: clientIoSendHistory,
     client_io_sender_name: clientIoSenderName,
+    campaign_intelligence: campaignIntelligence,
     vendor_ios: vendorIos ?? [],
     vat_context: {
       client_country_code: clientCountryCode,

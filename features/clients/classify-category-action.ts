@@ -13,7 +13,7 @@ import type { ClientClassificationSource } from "@/lib/clients/classify-client-c
 import { isValidClientCategoryPair } from "@/lib/clients/client-category-taxonomy";
 import { fetchClientRowSafe } from "@/lib/clients/safe-client-query";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getRequestAuth, requireRequestUser } from "@/lib/supabase/server";
 
 export type ClassifyClientCategoryResult = {
   ok: boolean;
@@ -31,13 +31,9 @@ export type ClientCategoryClassificationCapabilities = {
 };
 
 export async function getClientCategoryClassificationCapabilitiesAction(): Promise<ClientCategoryClassificationCapabilities> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { user } = await getRequestAuth();
 
-  if (authError || !user) {
+  if (!user) {
     return { aiAvailable: false };
   }
 
@@ -52,18 +48,14 @@ export async function classifyClientCategoryAction(input: {
   /** Skip auto-classify when client already has user-approved classification */
   useStoredApproved?: boolean;
 }): Promise<ClassifyClientCategoryResult> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError) {
-    return { ok: false, message: authError.message };
-  }
-
-  if (!user) {
-    return { ok: false, message: "You must be signed in to continue." };
+  let supabase;
+  try {
+    ({ supabase } = await requireRequestUser());
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "You must be signed in to continue.",
+    };
   }
 
   const name = input.name?.trim();

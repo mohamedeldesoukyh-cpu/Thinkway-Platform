@@ -24,6 +24,9 @@ function makeRow(index: number): ParsedCreatorRow {
     relevance_score: null,
     profile_picture_url: null,
     role: null,
+    contact_email: null,
+    contact_phone: null,
+    contact_links: [],
   };
 }
 

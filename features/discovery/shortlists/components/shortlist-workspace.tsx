@@ -602,7 +602,7 @@ export function ShortlistWorkspace({
         ) : null}
       </ShortlistDetailCard>
 
-      <ShortlistDetailCard padding="none" className={cn(glassFlyoutContentClass(selectedCount > 0))}>
+      <ShortlistDetailCard padding="none" className={cn(glassFlyoutContentClass(selectedCount > 0), "overflow-hidden")}>
         <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:px-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1 space-y-1">
@@ -700,6 +700,7 @@ export function ShortlistWorkspace({
               runAction(() => removeCreatorFromShortlistV2(detail.id, itemId))
             }
             onAddToQuotation={handleAddToQuotation}
+            onCreatorDeleted={() => router.refresh()}
           />
         )}
       </ShortlistDetailCard>

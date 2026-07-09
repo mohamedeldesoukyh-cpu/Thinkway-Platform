@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   CampaignShortlistAssignmentStatus,
@@ -19,6 +19,10 @@ import { SHORTLIST_PERMISSIONS } from "./constants";
 import { getCampaignShortlistAssignments } from "./queries";
 import { logCreatorMovement, logShortlistLifecycle } from "./movements";
 import { notifyShortlistEvent } from "./notifications";
+import { enqueueCreatorEnrichmentBestEffort } from "@/lib/creator-enrichment/queue";
+import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
+import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
+import { shouldAutoEnrichForTrigger } from "@/lib/discovery/control-center/discovery-control-policy";
 import { promoteDiscoveredProfileToInfluencer } from "./promote";
 import { canMoveItemToCampaign } from "./item-transitions";
 import {
@@ -435,6 +439,36 @@ export type AddCreatorInput = {
   matchScore?: number | null;
 };
 
+/** Derive influencer / discovered-profile ids from unified_id (inf: / dis:) for shortlist insert. */
+function resolveAddCreatorRefs(input: AddCreatorInput): AddCreatorInput {
+  let influencerId = input.influencerId?.trim() || null;
+  let discoveredProfileId = input.discoveredProfileId?.trim() || null;
+  const unifiedId = input.unifiedId?.trim() || null;
+
+  if (!influencerId && !discoveredProfileId && unifiedId) {
+    const colon = unifiedId.indexOf(":");
+    if (colon > 0) {
+      const kind = unifiedId.slice(0, colon);
+      const rawId = unifiedId.slice(colon + 1);
+      if (kind === "inf" && rawId) influencerId = rawId;
+      else if (kind === "dis" && rawId) discoveredProfileId = rawId;
+    } else {
+      influencerId = unifiedId;
+    }
+  }
+
+  const normalizedUnified =
+    unifiedId ??
+    (influencerId ? `inf:${influencerId}` : discoveredProfileId ? `dis:${discoveredProfileId}` : null);
+
+  return {
+    ...input,
+    unifiedId: normalizedUnified,
+    influencerId,
+    discoveredProfileId,
+  };
+}
+
 export type BulkAddCreatorsToShortlistsInput = {
   shortlistIds: string[];
   creators: Array<{
@@ -512,11 +546,13 @@ export async function addCreatorToShortlistV2(
   const actor = await getActor();
   if (!actor.ok) return actor;
 
-  if (!input.discoveredProfileId && !input.influencerId) {
+  const resolved = resolveAddCreatorRefs(input);
+
+  if (!resolved.discoveredProfileId && !resolved.influencerId) {
     return { ok: false, message: "A creator reference is required." };
   }
 
-  const row = await loadShortlistRow(actor.supabase, input.shortlistId);
+  const row = await loadShortlistRow(actor.supabase, resolved.shortlistId);
   if (!row) return { ok: false, message: "Shortlist not found." };
   if (!canEditCreators(row.status)) {
     return {
@@ -528,13 +564,13 @@ export async function addCreatorToShortlistV2(
   let existingQuery = actor.supabase
     .from("discovery_shortlist_items")
     .select("id")
-    .eq("shortlist_id", input.shortlistId);
-  if (input.discoveredProfileId) {
-    existingQuery = existingQuery.eq("profile_id", input.discoveredProfileId);
-  } else if (input.influencerId) {
-    existingQuery = existingQuery.eq("influencer_id", input.influencerId);
-  } else if (input.unifiedId) {
-    existingQuery = existingQuery.eq("unified_id", input.unifiedId);
+    .eq("shortlist_id", resolved.shortlistId);
+  if (resolved.discoveredProfileId) {
+    existingQuery = existingQuery.eq("profile_id", resolved.discoveredProfileId);
+  } else if (resolved.influencerId) {
+    existingQuery = existingQuery.eq("influencer_id", resolved.influencerId);
+  } else if (resolved.unifiedId) {
+    existingQuery = existingQuery.eq("unified_id", resolved.unifiedId);
   } else {
     return { ok: false, message: "A creator reference is required." };
   }
@@ -544,20 +580,20 @@ export async function addCreatorToShortlistV2(
   }
 
   const { data: inserted, error } = await actor.supabase.from("discovery_shortlist_items").insert({
-    shortlist_id: input.shortlistId,
-    profile_id: input.discoveredProfileId || null,
-    influencer_id: input.influencerId || null,
-    unified_id: input.unifiedId || null,
-    platform_account_ids: input.platformAccountIds ?? [],
-    notes: input.notes?.trim() || null,
-    match_score: input.matchScore ?? null,
+    shortlist_id: resolved.shortlistId,
+    profile_id: resolved.discoveredProfileId || null,
+    influencer_id: resolved.influencerId || null,
+    unified_id: resolved.unifiedId || null,
+    platform_account_ids: resolved.platformAccountIds ?? [],
+    notes: resolved.notes?.trim() || null,
+    match_score: resolved.matchScore ?? null,
     added_by: actor.userId,
   }).select("id").single();
   if (error) return { ok: false, message: error.message };
 
   if (inserted?.id) {
     await syncShortlistChangeToQuotation(actor.supabase, {
-      shortlistId: input.shortlistId,
+      shortlistId: resolved.shortlistId,
       actorId: actor.userId,
       shortlistItemId: (inserted as { id: string }).id,
     });
@@ -566,16 +602,30 @@ export async function addCreatorToShortlistV2(
   await logCreatorMovement(actor.supabase, {
     action: "discovery_to_shortlist",
     sourceType: "discovery",
-    sourceId: input.discoveredProfileId || input.influencerId || null,
+    sourceId: resolved.discoveredProfileId || resolved.influencerId || null,
     destinationType: "shortlist",
-    destinationId: input.shortlistId,
+    destinationId: resolved.shortlistId,
     performedBy: actor.userId,
-    influencerId: input.influencerId,
-    discoveredProfileId: input.discoveredProfileId,
-    unifiedId: input.unifiedId,
+    influencerId: resolved.influencerId,
+    discoveredProfileId: resolved.discoveredProfileId,
+    unifiedId: resolved.unifiedId,
   });
 
-  revalidateShortlist(input.shortlistId);
+  const controlSettings = await getDiscoveryControlSettings(actor.supabase);
+  if (
+    resolved.influencerId &&
+    shouldAutoEnrichForTrigger("shortlist", controlSettings)
+  ) {
+    enqueueCreatorEnrichmentBestEffort({
+      influencerId: resolved.influencerId,
+      trigger: "shortlist",
+      scope: "all",
+      priority: priorityForTrigger("shortlist"),
+      force: false,
+    });
+  }
+
+  revalidateShortlist(resolved.shortlistId);
   return { ok: true, message: "Creator added to shortlist." };
 }
 

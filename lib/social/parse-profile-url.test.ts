@@ -13,4 +13,39 @@ assert.ok(instagram);
 assert.equal(instagram.platform, "instagram");
 assert.equal(instagram.normalized_username, "jane.doe");
 
+const facebookPage = parseProfileInput("https://www.facebook.com/zuck");
+assert.ok(facebookPage);
+assert.equal(facebookPage.platform, "facebook");
+assert.equal(facebookPage.normalized_username, "zuck");
+assert.equal(facebookPage.profile_url, "https://www.facebook.com/zuck");
+
+const facebookId = parseProfileInput("https://www.facebook.com/profile.php?id=123456789");
+assert.ok(facebookId);
+assert.equal(facebookId.platform, "facebook");
+assert.equal(facebookId.normalized_username, "id:123456789");
+assert.equal(
+  facebookId.profile_url,
+  "https://www.facebook.com/profile.php?id=123456789"
+);
+assert.equal(
+  facebookId.normalized_profile_url,
+  "https://www.facebook.com/profile.php?id=123456789"
+);
+
+const facebookIdDistinct = parseProfileInput(
+  "https://www.facebook.com/profile.php?id=100090186279"
+);
+assert.ok(facebookIdDistinct);
+assert.notEqual(
+  facebookId.normalized_profile_url,
+  facebookIdDistinct.normalized_profile_url,
+  "different Facebook numeric ids must not collapse to the same normalized URL"
+);
+
+const facebookPeople = parseProfileInput("https://www.facebook.com/people/Jane-Doe/987654321");
+assert.ok(facebookPeople);
+assert.equal(facebookPeople.normalized_username, "id:987654321");
+
+assert.equal(parseProfileInput("https://www.facebook.com/watch/?v=123"), null);
+
 console.log("lib/social/parse-profile-url.test.ts — all tests passed");

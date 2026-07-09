@@ -133,37 +133,6 @@ export function buildQuotationDocumentStyles(generatedLabel: string): string {
   .data-table tbody td.num,
   .summary-box td.num { white-space: nowrap; }
 
-  .lump-sum-box {
-    margin-top: 8px;
-    margin-bottom: 14px;
-    border: 1px solid var(--rule);
-    border-radius: 6px;
-    padding: 14px 16px;
-    background: ${P.card};
-  }
-  .lump-sum-heading {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--ink);
-    margin-bottom: 10px;
-  }
-  .creator-list { list-style: none; margin: 0; padding: 0; }
-  .creator-list li {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--rule);
-    font-size: 11px;
-    line-height: 1.5;
-  }
-  .creator-list li:last-child { border-bottom: none; }
-  .creator-list .creator-meta {
-    display: block;
-    margin-top: 2px;
-    font-size: 10px;
-    color: var(--muted);
-  }
-
   .summary-box { margin-top: 14px; display: flex; justify-content: flex-end; }
   .summary-box table { width: 300px; border-collapse: collapse; font-size: 11px; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
   .summary-box td { padding: 8px 12px; border-bottom: 1px solid var(--rule); }

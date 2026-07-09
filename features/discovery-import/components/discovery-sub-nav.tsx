@@ -11,6 +11,8 @@ import {
 
 type DiscoverySubNavProps = {
   activeHref: string;
+  /** Hide creator database stats bar (e.g. on quotation workspace). */
+  showDatabaseStats?: boolean;
 };
 
 function resolveActiveTabClass(isActive: boolean, pageKey: string): string {
@@ -25,15 +27,20 @@ function resolveActiveTabClass(isActive: boolean, pageKey: string): string {
   return "border border-blue-200 bg-blue-50 font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300";
 }
 
-export async function DiscoverySubNav({ activeHref }: DiscoverySubNavProps) {
+export async function DiscoverySubNav({
+  activeHref,
+  showDatabaseStats = true,
+}: DiscoverySubNavProps) {
   let stats: Awaited<ReturnType<typeof getDiscoveryDatabaseStats>> | null = null;
   let statsError: string | null = null;
 
-  try {
-    stats = await getDiscoveryDatabaseStats();
-  } catch (error) {
-    statsError =
-      error instanceof Error ? error.message : "Failed to load creator database stats.";
+  if (showDatabaseStats) {
+    try {
+      stats = await getDiscoveryDatabaseStats();
+    } catch (error) {
+      statsError =
+        error instanceof Error ? error.message : "Failed to load creator database stats.";
+    }
   }
 
   return (
@@ -60,7 +67,9 @@ export async function DiscoverySubNav({ activeHref }: DiscoverySubNavProps) {
           );
         })}
       </nav>
-      <DiscoveryDatabaseStatsBar stats={stats} errorMessage={statsError} />
+      {showDatabaseStats ? (
+        <DiscoveryDatabaseStatsBar stats={stats} errorMessage={statsError} />
+      ) : null}
     </>
   );
 }

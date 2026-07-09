@@ -1,5 +1,5 @@
 import { isUuid } from "@/lib/validation/uuid";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireRequestUser } from "@/lib/supabase/server";
 import {
   getCampaignFormOptions as loadCampaignFormOptions,
   getCampaignsKpis as loadCampaignsKpis,
@@ -22,39 +22,22 @@ export type CampaignFormOptions = import("@/lib/services/campaigns/campaign-serv
 export type CampaignsKpis = import("@/lib/services/campaigns/campaign-service").CampaignsKpis;
 export type { CampaignWorkspace } from "./types";
 
-async function requireUser() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!user) {
-    throw new Error("You must be signed in to continue.");
-  }
-
-  return { supabase, user };
-}
 
 export async function getCampaignsList(params: {
   page?: number;
   search?: string;
 }): Promise<CampaignsListResult> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
   return loadCampaignsList(supabase, params);
 }
 
 export async function getCampaignsKpis(): Promise<CampaignsKpis> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
   return loadCampaignsKpis(supabase);
 }
 
 export async function getCampaignFormOptions(): Promise<CampaignFormOptions> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
   return loadCampaignFormOptions(supabase);
 }
 
@@ -63,8 +46,8 @@ export async function getCampaignWorkspace(campaignId: string) {
     return null;
   }
 
-  const { supabase, user } = await requireUser();
-  return loadCampaignWorkspace(supabase, user.id, campaignId);
+  const { supabase, userId } = await requireRequestUser();
+  return loadCampaignWorkspace(supabase, userId, campaignId);
 }
 
 export async function searchInfluencersForCampaign(params: {
@@ -72,21 +55,21 @@ export async function searchInfluencersForCampaign(params: {
   platform?: string;
   limit?: number;
 }): Promise<InfluencerSearchResult[]> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
   return searchInfluencersViaService(supabase, params);
 }
 
 export async function getInfluencerForAssignment(
   influencerId: string
 ): Promise<InfluencerAssignmentProfile | null> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
   return getInfluencerForAssignmentViaService(supabase, influencerId);
 }
 
 export async function browseInfluencersForCampaign(
   params: import("./types").CreatorBrowseFilters
 ): Promise<import("./types").CreatorBrowseResult> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
   return browseInfluencersViaService(supabase, params);
 }
 

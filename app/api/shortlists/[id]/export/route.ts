@@ -13,6 +13,8 @@ import { buildShortlistHtml } from "@/features/discovery/shortlists/export/short
 import { resolveShortlistTemplate } from "@/features/discovery/shortlists/export/shortlist-template";
 import { getShortlistDetail } from "@/features/discovery/shortlists/queries";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { getClientIp, requireApiPermission } from "@/lib/auth/api-auth";
+import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -40,18 +42,23 @@ export async function GET(request: Request, context: RouteContext) {
   const itemIds = parseItemIds(searchParams.get("items"));
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "discovery.read");
+  if ("response" in auth) return auth.response;
 
   try {
     const detail = await getShortlistDetail(id);
     if (!detail) {
       return NextResponse.json({ error: "Shortlist not found" }, { status: 404 });
     }
+
+    void logAuditEvent(supabase, {
+      userId: auth.userId,
+      action: "export",
+      entityType: "shortlist",
+      entityId: id,
+      metadata: { format, download },
+      ip: getClientIp(request),
+    });
 
     const doc = buildShortlistDocument(detail, { template, itemIds });
     const baseName = shortlistDocumentBaseName(doc);

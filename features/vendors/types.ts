@@ -5,6 +5,7 @@ import type {
   InfluencerStatus,
   VendorCampaignAssignment,
 } from "@/types/database";
+import type { CreatorQuotationPriceReference } from "@/lib/creators/quotation-price-reference";
 
 export type VendorFinancialSummary = {
   total_revenue: number;
@@ -95,6 +96,7 @@ export type VendorWorkspace = InfluencerRow & {
   deliverables: VendorDeliverableRow[];
   payouts: VendorPayoutRow[];
   activity: VendorActivityItem[];
+  quotation_price_reference: CreatorQuotationPriceReference | null;
 };
 
 export type { InfluencerStatus as VendorStatus };

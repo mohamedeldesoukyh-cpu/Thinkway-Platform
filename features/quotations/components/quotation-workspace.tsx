@@ -7,25 +7,18 @@ import {
   useRef,
   useState,
   useTransition,
-  type KeyboardEvent,
+  type RefObject,
 } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
-  CheckIcon,
   CopyIcon,
   DownloadIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-  Loader2Icon,
   PercentIcon,
   SearchIcon,
   Trash2Icon,
-  XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   GlassSelectionFlyout,
@@ -35,7 +28,6 @@ import {
 } from "@/components/shared/navigation/glass-selection-flyout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -53,102 +45,69 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  type CommercialInputMode,
-} from "@/lib/commercial/commercial-engine";
-import {
-  COMMERCIAL_CURRENCIES,
-  formatDualCurrency,
-} from "@/lib/commercial/fx-aggregation";
-import { useDebouncedAutosave, type AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
-import {
-  creatorProfileSourceFromPlatformAccount,
-  CreatorIdentityCell,
-} from "@/components/creator/creator-profile-link";
+import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { platformLabel } from "@/features/campaigns/line-assignment";
-import {
-  countryFlag,
-  formatCreatorCount,
-} from "@/features/discovery/components/creator-search/creator-search-utils";
-import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { cn } from "@/lib/utils";
 import {
   CALCULATION_MODE_LABELS,
-  COMMERCIAL_INPUT_MODE_LABELS,
-  DEFAULT_GP_TARGET_PCT,
   QUOTATION_CLIENT_LABELS,
-  QUOTATION_STATUS_LABELS,
 } from "@/features/quotations/constants";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
-import { buildExportHref } from "@/features/quotations/components/quotation-preview-downloads";
-import { QuotationKpiStrip } from "@/features/quotations/components/quotation-kpi-strip";
-import { OnboardingStatusBadge } from "@/features/clients/components/onboarding-status-badge";
-import { isClientOnboardingStatus } from "@/lib/clients/onboarding-status";
-import { QuotationLifecyclePanel } from "@/features/quotations/components/quotation-lifecycle-panel";
+import { useQuotationWorkspaceShortcuts } from "@/features/quotations/components/use-quotation-workspace-shortcuts";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import { QuotationTermsAccordion } from "@/features/quotations/components/quotation-terms-accordion";
+import { QuotationWorkspaceHeader } from "@/features/quotations/components/quotation-workspace-header";
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
-import { gpHealthTextClass } from "@/features/quotations/quotation-gp-health";
-import { formatQuotationTermsText } from "@/features/quotations/quotation-default-terms";
-import { formatValidityLabel } from "@/features/quotations/quotation-validity";
+import { QuotationCreatorGroupRows } from "@/features/quotations/components/quotation-creator-group-rows";
+import { useQuotationCreatorDetailSheet } from "@/features/quotations/hooks/use-quotation-creator-detail-sheet";
+import {
+  QuotationManualSaveProvider,
+  useQuotationManualSave,
+} from "@/features/quotations/components/quotation-manual-save";
 import {
   duplicateQuotationItems,
   removeQuotationItem,
-  updateQuotationHeader,
   updateQuotationItemCommercials,
 } from "@/features/quotations/actions";
 import {
-  aggregateAutosaveStatus,
   calcModeToCommercialMode,
   computeLiveQuotationTotals,
   computeQuotationRowComputed,
   draftFromQuotationItem,
   draftsFromItems,
+  resolveQuotationRowDraft,
   type CalculationModePreference,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
+import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import {
-  QUOTATION_TEMPLATE_OPTIONS,
+  buildFilteredQuotationCreatorGroups,
+  buildQuotationItemOptionContext,
+  countUniqueQuotationCreators,
+} from "@/lib/quotations/quotation-creator-options";
+import {
+  deliverableTypeLines,
+  formatTypeLinesSummary,
+  optionNumberLabel,
+} from "@/lib/quotations/quotation-deliverable-types";
+import {
+  appendQuotationTemplateParam,
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
-import type { PromoteWizardOptions, QuotationDetail, QuotationFormOptions, QuotationItemRow } from "@/features/quotations/types";
+import type {
+  PromoteWizardOptions,
+  QuotationDetail,
+  QuotationFormOptions,
+  QuotationItemRow,
+} from "@/features/quotations/types";
 
 function egp(n: number, decimals = 0): string {
   return `${new Intl.NumberFormat("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(Number.isFinite(n) ? n : 0)} EGP`;
-}
-
-function SaveIndicator({ status }: { status: AutosaveStatus }) {
-  if (status === "pending")
-    return <span className="text-xs text-warning">Unsaved changes</span>;
-  if (status === "saving")
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-        <Loader2Icon className="size-3 animate-spin" /> Saving…
-      </span>
-    );
-  if (status === "saved")
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-primary">
-        <CheckIcon className="size-3" /> Saved
-      </span>
-    );
-  if (status === "error")
-    return <span className="text-xs text-destructive">Save failed</span>;
-  return null;
-}
-
-function gpHealthClass(gpValueEgp: number, gpPct: number, targetPct = DEFAULT_GP_TARGET_PCT): string {
-  return gpHealthTextClass({ gpValueEgp, gpPct, targetPct });
-}
-
-function deliverablesSummary(item: QuotationItemRow): string {
-  if (!item.deliverables.length) return "—";
-  return item.deliverables
-    .map((d) => `${d.quantity}× ${d.type}`)
-    .join(", ");
 }
 
 function parseNum(value: string): number {
@@ -164,8 +123,12 @@ function exportSelectedCsv(
 ) {
   const headers = [
     "Creator",
+    "Option",
     "Handle",
+    "Tier",
     "Platform",
+    "Type",
+    "Service",
     "Followers",
     "Country",
     "Cost",
@@ -185,8 +148,16 @@ function exportSelectedCsv(
       const computed = draft ? computeQuotationRowComputed(draft) : null;
       return [
         item.creator_name ?? "",
+        optionNumberLabel(item.option_number) ?? "",
         item.handle ?? "",
+        resolveCreatorTierLabel({ followers: item.followers }),
         item.platform ?? "",
+        item.deliverables.length
+          ? item.deliverables
+              .map((d) => formatTypeLinesSummary(deliverableTypeLines(d)))
+              .join(", ")
+          : "",
+        item.service_description ?? "",
         item.followers ?? "",
         item.country_code ?? "",
         draft?.cost ?? item.cost,
@@ -221,19 +192,38 @@ export function QuotationWorkspace({
   formOptions: QuotationFormOptions;
   promoteOptions: PromoteWizardOptions;
 }) {
+  return (
+    <QuotationManualSaveProvider quotationId={detail.id} items={detail.items}>
+      <QuotationWorkspaceContent
+        detail={detail}
+        formOptions={formOptions}
+        promoteOptions={promoteOptions}
+      />
+    </QuotationManualSaveProvider>
+  );
+}
+
+function QuotationWorkspaceContent({
+  detail,
+  formOptions,
+  promoteOptions,
+}: {
+  detail: QuotationDetail;
+  formOptions: QuotationFormOptions;
+  promoteOptions: PromoteWizardOptions;
+}) {
   const router = useRouter();
+  const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [globalCalcMode, setGlobalCalcMode] = useState<CalculationModePreference>("markup");
   const [creatorSearch, setCreatorSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
-  const [countryFilter, setCountryFilter] = useState<string>("all");
-  const [rowSaveStatuses, setRowSaveStatuses] = useState<Record<string, AutosaveStatus>>({});
-  const [notesSaveStatus, setNotesSaveStatus] = useState<AutosaveStatus>("idle");
   const [exportTemplate, setExportTemplate] = useState<QuotationTemplateVariant>("detailed");
+  const [addCreatorsOpen, setAddCreatorsOpen] = useState(false);
   const [bulkPending, startBulkTransition] = useTransition();
+  const creatorSearchRef = useRef<HTMLInputElement>(null);
 
-  // Sync drafts when items are added/removed server-side (preserve in-flight edits).
   useEffect(() => {
     setDrafts((prev) => {
       const next = { ...prev };
@@ -252,24 +242,17 @@ export function QuotationWorkspace({
   }, [detail.items]);
 
   const draftList = useMemo(
-    () => detail.items.map((item) => drafts[item.id]).filter(Boolean),
+    () =>
+      detail.items
+        .map((item) => resolveQuotationRowDraft(item, drafts[item.id]))
+        .filter(Boolean),
     [detail.items, drafts]
   );
 
   const totals = useMemo(() => computeLiveQuotationTotals(draftList), [draftList]);
 
-  const workspaceSaveStatus = useMemo(
-    () => aggregateAutosaveStatus([...Object.values(rowSaveStatuses), notesSaveStatus]),
-    [rowSaveStatuses, notesSaveStatus]
-  );
-
   const platformOptions = useMemo(() => {
     const set = new Set(detail.items.map((i) => i.platform).filter(Boolean) as string[]);
-    return [...set].sort();
-  }, [detail.items]);
-
-  const countryOptions = useMemo(() => {
-    const set = new Set(detail.items.map((i) => i.country_code).filter(Boolean) as string[]);
     return [...set].sort();
   }, [detail.items]);
 
@@ -277,7 +260,6 @@ export function QuotationWorkspace({
     const q = creatorSearch.trim().toLowerCase();
     return detail.items.filter((item) => {
       if (platformFilter !== "all" && item.platform !== platformFilter) return false;
-      if (countryFilter !== "all" && item.country_code !== countryFilter) return false;
       if (!q) return true;
       const hay = [item.creator_name, item.handle, item.platform]
         .filter(Boolean)
@@ -285,7 +267,27 @@ export function QuotationWorkspace({
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [detail.items, creatorSearch, platformFilter, countryFilter]);
+  }, [detail.items, creatorSearch, platformFilter]);
+
+  const sortedFilteredItems = useMemo(
+    () => [...filteredItems].sort((a, b) => a.sort_order - b.sort_order),
+    [filteredItems]
+  );
+
+  const optionContextByItemId = useMemo(
+    () => buildQuotationItemOptionContext(detail.items),
+    [detail.items]
+  );
+
+  const creatorGroups = useMemo(
+    () => buildFilteredQuotationCreatorGroups(detail.items, sortedFilteredItems),
+    [detail.items, sortedFilteredItems]
+  );
+
+  const uniqueCreatorCount = useMemo(
+    () => countUniqueQuotationCreators(detail.items),
+    [detail.items]
+  );
 
   const allVisibleSelected =
     filteredItems.length > 0 && filteredItems.every((item) => selectedIds.has(item.id));
@@ -298,9 +300,13 @@ export function QuotationWorkspace({
     });
   }, []);
 
-  const setRowSaveStatus = useCallback((id: string, status: AutosaveStatus) => {
-    setRowSaveStatuses((prev) => ({ ...prev, [id]: status }));
-  }, []);
+  const refreshQuotationLines = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const { openCreatorFromItem, detailSheet } = useQuotationCreatorDetailSheet({
+    onCreatorPlatformsChanged: refreshQuotationLines,
+  });
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -382,144 +388,136 @@ export function QuotationWorkspace({
     [selectedIds, drafts, detail.id, updateDraft, router]
   );
 
-  const exportHref = useCallback(
-    (format: string, download = true) =>
-      buildExportHref(detail.id, format, exportTemplate, { download }),
-    [detail.id, exportTemplate]
-  );
+  const handleDuplicateSelected = useCallback(() => {
+    startBulkTransition(async () => {
+      const res = await duplicateQuotationItems({
+        quotation_id: detail.id,
+        item_ids: [...selectedIds],
+      });
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
+      toast.success(res.message ?? "Duplicated.");
+      router.refresh();
+    });
+  }, [detail.id, selectedIds, router]);
+
+  const handleRemoveSelected = useCallback(() => {
+    startBulkTransition(async () => {
+      for (const id of selectedIds) {
+        const res = await removeQuotationItem({
+          item_id: id,
+          quotation_id: detail.id,
+        });
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+      }
+      toast.success("Selected creators removed.");
+      setSelectedIds(new Set());
+      router.refresh();
+    });
+  }, [detail.id, selectedIds, router]);
 
   const previewHref = useMemo(() => {
     const params = new URLSearchParams();
-    if (exportTemplate === "lump-sum") {
-      params.set("template", "lump-sum");
-    }
+    appendQuotationTemplateParam(params, exportTemplate);
     const query = params.toString();
     return `/discovery/quotations/${detail.id}/preview${query ? `?${query}` : ""}`;
   }, [detail.id, exportTemplate]);
 
-  return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <QuotationSetupWizard detail={detail} options={formOptions} />
-      <div className="shrink-0 border-b border-border bg-background px-4 py-4 md:px-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-heading text-xl font-semibold tracking-tight">{detail.name}</h1>
-              <Badge variant="secondary">{QUOTATION_STATUS_LABELS[detail.status]}</Badge>
-              {detail.is_expired ? (
-                <Badge variant="destructive">Expired</Badge>
-              ) : (
-                <Badge variant="outline">{formatValidityLabel(detail.validity_date)}</Badge>
-              )}
-              {!detail.is_temporary_client &&
-              detail.client_onboarding_status &&
-              isClientOnboardingStatus(detail.client_onboarding_status) ? (
-                <OnboardingStatusBadge status={detail.client_onboarding_status} />
-              ) : null}
-              <SaveIndicator status={workspaceSaveStatus} />
-            </div>
-            <p className="font-mono text-xs text-muted-foreground">
-              {detail.serial_number ?? "QT-PENDING"} ·{" "}
-              {[detail.client_name, detail.brand_name, detail.campaign_name]
-                .filter(Boolean)
-                .join(" · ") || "No client linked"}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <AddCreatorsToQuotationButton
-              quotationId={detail.id}
-              onAdded={() => router.refresh()}
-            />
-            <div
-              className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5"
-              role="tablist"
-              aria-label="Export template"
-            >
-              {QUOTATION_TEMPLATE_OPTIONS.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={exportTemplate === option.id}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                    exportTemplate === option.id
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  onClick={() => setExportTemplate(option.id)}
-                >
-                  {option.label}
-                  <span className="ml-1.5 hidden text-[10px] font-normal text-muted-foreground sm:inline">
-                    · {option.hint}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={previewHref} target="_blank" rel="noreferrer">
-                <FileTextIcon className="size-4" /> Preview
-              </Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={exportHref("excel")}>
-                <FileSpreadsheetIcon className="size-4" /> Excel
-              </a>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={exportHref("word")}>
-                <DownloadIcon className="size-4" /> Word
-              </a>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={exportHref("pdf")}>
-                <DownloadIcon className="size-4" /> PDF
-              </a>
-            </Button>
-          </div>
-        </div>
+  const focusCreatorSearch = useCallback(() => {
+    const el =
+      creatorSearchRef.current ??
+      document.querySelector<HTMLInputElement>("[data-quotation-search]");
+    el?.focus();
+    el?.select();
+  }, []);
 
-        <div className="mt-4">
-          <QuotationKpiStrip
-            creatorCount={detail.items.length}
-            estimatedReach={detail.estimated_reach}
-            estimatedEngagementRate={detail.estimated_engagement_rate}
-            totalCostEgp={totals.totalCostEgp}
-            totalRevenueEgp={totals.totalRevenueEgp}
-            totalGpValueEgp={totals.totalGpValueEgp}
-            totalGpPct={totals.totalGpPct}
-            totalAfEgp={totals.totalAfValueEgp}
-            totalAgencyMarginEgp={totals.totalAgencyMarginEgp}
-            gpTargetPct={detail.gp_target_pct}
-          />
-        </div>
-      </div>
+  const toggleCalcMode = useCallback(() => {
+    setGlobalCalcMode((mode) => (mode === "markup" ? "margin" : "markup"));
+  }, []);
+
+  const openPreview = useCallback(() => {
+    window.open(previewHref, "_blank", "noopener,noreferrer");
+  }, [previewHref]);
+
+  useQuotationWorkspaceShortcuts({
+    canManage: detail.canManage,
+    hasSelection: selectedIds.size > 0,
+    hasVisibleItems: filteredItems.length > 0,
+    onAddCreator: () => setAddCreatorsOpen(true),
+    onFocusSearch: focusCreatorSearch,
+    onToggleCalcMode: toggleCalcMode,
+    onSelectAllVisible: toggleSelectAllVisible,
+    onClearSelection: () => setSelectedIds(new Set()),
+    onDuplicateSelected: handleDuplicateSelected,
+    onRemoveSelected: handleRemoveSelected,
+    onPreview: openPreview,
+  });
+
+  return (
+    <div className="thinkway-campaign-workspace flex h-full min-h-0 flex-col overflow-hidden">
+      <QuotationSetupWizard detail={detail} options={formOptions} />
+      <QuotationWorkspaceHeader
+        detail={detail}
+        promoteOptions={promoteOptions}
+        totals={totals}
+        saveStatus={manualSave.saveStatus}
+        hasUnsavedChanges={manualSave.hasUnsavedChanges}
+        savePending={manualSave.savePending}
+        onSave={() => {
+          void manualSave.saveAll().then((ok) => {
+            if (ok) toast.success("Quotation saved.");
+          });
+        }}
+        exportTemplate={exportTemplate}
+        onExportTemplateChange={setExportTemplate}
+        uniqueCreatorCount={uniqueCreatorCount}
+      />
 
       <div
         className={cn(
-          "min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6",
+          "thinkway-campaign-content min-h-0 flex-1 overflow-y-auto",
           glassFlyoutContentClass(selectedIds.size > 0)
         )}
       >
-        <QuotationLifecyclePanel detail={detail} promoteOptions={promoteOptions} />
         <QuotationClientBrandPanel
           detail={detail}
           options={formOptions}
           disabled={!detail.canManage}
         />
         {detail.items.length === 0 ? (
-          <EmptyState quotationId={detail.id} onAdded={() => router.refresh()} />
+          <EmptyState
+            quotationId={detail.id}
+            onAdded={() => router.refresh()}
+            addCreatorsOpen={addCreatorsOpen}
+            onAddCreatorsOpenChange={setAddCreatorsOpen}
+          />
         ) : (
-          <>
+          <CampaignFlatSection
+            title="Creators"
+            description="Grouped by influencer — duplicated creators are labeled Option 1, 2, 3… on each line."
+            flushBody
+            actions={
+              <AddCreatorsToQuotationButton
+                quotationId={detail.id}
+                onAdded={() => router.refresh()}
+                label="+ Add creator"
+                open={addCreatorsOpen}
+                onOpenChange={setAddCreatorsOpen}
+              />
+            }
+          >
             <Toolbar
               creatorSearch={creatorSearch}
               onCreatorSearch={setCreatorSearch}
+              creatorSearchRef={creatorSearchRef}
               platformFilter={platformFilter}
               onPlatformFilter={setPlatformFilter}
               platformOptions={platformOptions}
-              countryFilter={countryFilter}
-              onCountryFilter={setCountryFilter}
-              countryOptions={countryOptions}
               globalCalcMode={globalCalcMode}
               onGlobalCalcMode={setGlobalCalcMode}
             />
@@ -533,144 +531,101 @@ export function QuotationWorkspace({
               onApplyGpPct={applyBulkGpPct}
               onApplyMarkupPct={applyBulkGpPct}
               onChangeCurrency={applyBulkCurrency}
-              onRemove={() => {
-                startBulkTransition(async () => {
-                  for (const id of selectedIds) {
-                    const res = await removeQuotationItem({
-                      item_id: id,
-                      quotation_id: detail.id,
-                    });
-                    if (!res.ok) {
-                      toast.error(res.message);
-                      return;
-                    }
-                  }
-                  toast.success("Selected creators removed.");
-                  setSelectedIds(new Set());
-                  router.refresh();
-                });
-              }}
-              onDuplicate={() => {
-                startBulkTransition(async () => {
-                  const res = await duplicateQuotationItems({
-                    quotation_id: detail.id,
-                    item_ids: [...selectedIds],
-                  });
-                  if (!res.ok) {
-                    toast.error(res.message);
-                    return;
-                  }
-                  toast.success(res.message ?? "Duplicated.");
-                  router.refresh();
-                });
-              }}
+              onRemove={handleRemoveSelected}
+              onDuplicate={handleDuplicateSelected}
               onExport={() =>
                 exportSelectedCsv(detail.items, drafts, selectedIds, detail.name)
               }
             />
 
-            <div className="overflow-x-auto rounded-xl border border-border">
-              <Table>
+            <div className="thinkway-campaign-table-scroll w-full">
+              <Table variant="flush" className="thinkway-campaign-data-table w-full">
                 <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-10 px-2">
+                    <TableHead className="w-9 px-2">
                       <Checkbox
                         checked={allVisibleSelected}
                         onCheckedChange={toggleSelectAllVisible}
                         aria-label="Select all visible creators"
                       />
                     </TableHead>
-                    <TableHead className="min-w-[160px]">Creator</TableHead>
-                    <TableHead className="w-[100px]">Platform</TableHead>
-                    <TableHead className="w-[88px] text-right">Followers</TableHead>
-                    <TableHead className="w-[72px]">Country</TableHead>
-                    <TableHead className="min-w-[120px]">Deliverables</TableHead>
-                    <TableHead className="w-[96px]">Unit Cost</TableHead>
-                    <TableHead className="w-[88px]">Currency</TableHead>
-                    <TableHead className="min-w-[130px]">Calculation</TableHead>
-                    <TableHead className="w-[120px] text-right">{QUOTATION_CLIENT_LABELS.clientCost}</TableHead>
-                    <TableHead className="w-[100px] text-right">GP</TableHead>
-                    <TableHead className="w-[88px] text-right">GP%</TableHead>
-                    <TableHead className="w-[72px] text-right">AF%</TableHead>
-                    <TableHead className="w-[100px] text-right">AF</TableHead>
-                    <TableHead className="w-[110px] text-right">
-                      {QUOTATION_CLIENT_LABELS.totalAgencyMargin}
+                    <TableHead className="min-w-[92px]">Option</TableHead>
+                    <TableHead className="w-[8%] text-right">Followers</TableHead>
+                    <TableHead className="w-[8%]">Tier</TableHead>
+                    <TableHead className="min-w-[140px]">Service description</TableHead>
+                    <TableHead className="w-[4.5rem] text-center">Platform</TableHead>
+                    <TableHead className="min-w-[200px]">Type</TableHead>
+                    <TableHead className="min-w-[11rem] w-auto px-3 text-right whitespace-nowrap">
+                      <span className="text-xs font-bold uppercase tracking-wide">Price</span>
+                      <span className="mt-0.5 block text-[10px] font-normal normal-case text-muted-foreground">
+                        Via +Cost detail
+                      </span>
                     </TableHead>
                     <TableHead className="w-[72px]">Status</TableHead>
-                    <TableHead className="w-[56px]" />
+                    <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredItems.map((item, index) => (
-                    <CommercialRow
-                      key={item.id}
+                  {creatorGroups.map((group, groupIndex) => (
+                    <QuotationCreatorGroupRows
+                      key={group.creatorKey}
                       quotationId={detail.id}
-                      gpTargetPct={detail.gp_target_pct}
-                      item={item}
-                      draft={drafts[item.id]}
-                      zebra={index % 2 === 1}
-                      selected={selectedIds.has(item.id)}
-                      onToggleSelect={() => toggleSelect(item.id)}
+                      shortlistId={detail.shortlist_id}
+                      items={group.items}
+                      drafts={drafts}
+                      groupIndex={groupIndex}
+                      optionContextByItemId={optionContextByItemId}
+                      selectedIds={selectedIds}
+                      onToggleSelect={toggleSelect}
                       onDraftChange={updateDraft}
-                      onSaveStatus={setRowSaveStatus}
                       onRemoved={() => router.refresh()}
+                      onLineChanged={refreshQuotationLines}
+                      onOpenCreator={openCreatorFromItem}
                     />
                   ))}
                 </TableBody>
                 <TableFooter className="sticky bottom-0 z-10 bg-muted/95 font-medium backdrop-blur">
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={6} className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Totals ({draftList.length} creators)
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-sm">
-                      {egp(totals.totalCostEgp)}
-                    </TableCell>
-                    <TableCell colSpan={2} />
-                    <TableCell className="text-right tabular-nums text-sm">
-                      {egp(totals.totalRevenueEgp)}
-                    </TableCell>
                     <TableCell
-                      className={cn(
-                        "text-right tabular-nums text-sm",
-                        gpHealthClass(
-                          totals.totalGpValueEgp,
-                          totals.totalGpPct,
-                          detail.gp_target_pct
-                        )
-                      )}
+                      colSpan={7}
+                      className="text-xs uppercase tracking-wide text-muted-foreground"
                     >
-                      {egp(totals.totalGpValueEgp)}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        "text-right tabular-nums text-sm",
-                        gpHealthClass(
-                          totals.totalGpValueEgp,
-                          totals.totalGpPct,
-                          detail.gp_target_pct
-                        )
-                      )}
-                    >
-                      {totals.totalGpPct.toFixed(1)}%
-                    </TableCell>
-                    <TableCell />
-                    <TableCell className="text-right tabular-nums text-sm">
-                      {egp(totals.totalAfValueEgp)}
+                      Totals · {uniqueCreatorCount} creators · {draftList.length} option lines
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-sm font-semibold">
-                      {egp(totals.totalAgencyMarginEgp)}
+                      {egp(totals.totalRevenueEgp)}
                     </TableCell>
                     <TableCell colSpan={2} />
                   </TableRow>
                 </TableFooter>
               </Table>
             </div>
-          </>
+            <div className="thinkway-campaign-section-footer justify-start">
+              <AddCreatorsToQuotationButton
+                quotationId={detail.id}
+                onAdded={() => router.refresh()}
+                triggerClassName="thinkway-campaign-btn-add"
+                label="+ Add creator"
+                open={addCreatorsOpen}
+                onOpenChange={setAddCreatorsOpen}
+              />
+            </div>
+          </CampaignFlatSection>
         )}
 
-        <QuotationDocumentMetaPanel detail={detail} />
-        <HeaderNotes detail={detail} onStatusChange={setNotesSaveStatus} />
+        <div className="thinkway-campaign-two-col thinkway-campaign-two-col--wide">
+          <QuotationDocumentMetaPanel detail={detail} />
+          <HeaderNotes detail={detail} />
+        </div>
+
+        <CampaignFlatSection
+          title="Terms & conditions"
+          description="Applies to this quotation unless amended in writing."
+        >
+          <QuotationTermsAccordion termsText={detail.terms} />
+        </CampaignFlatSection>
       </div>
+      {detailSheet}
     </div>
   );
 }
@@ -678,63 +633,72 @@ export function QuotationWorkspace({
 function EmptyState({
   quotationId,
   onAdded,
+  addCreatorsOpen,
+  onAddCreatorsOpenChange,
 }: {
   quotationId: string;
   onAdded: () => void;
+  addCreatorsOpen: boolean;
+  onAddCreatorsOpenChange: (open: boolean) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
-      <p className="text-sm font-medium">No creators yet</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Add creators from a shortlist, Discovery selection, campaign, or manual entry.
-      </p>
-      <div className="mt-4 flex justify-center">
-        <AddCreatorsToQuotationButton quotationId={quotationId} onAdded={onAdded} />
+    <CampaignFlatSection title="Creators" description="Add creators to build this quotation.">
+      <div className="px-4 py-12 text-center">
+        <p className="text-sm font-medium text-[var(--camp-text)]">No creators yet</p>
+        <p className="mt-1 text-xs text-[var(--camp-text-3)]">
+          Add creators from a shortlist, Discovery selection, campaign, or manual entry.
+        </p>
+        <div className="mt-4 flex justify-center">
+          <AddCreatorsToQuotationButton
+            quotationId={quotationId}
+            onAdded={onAdded}
+            open={addCreatorsOpen}
+            onOpenChange={onAddCreatorsOpenChange}
+          />
+        </div>
       </div>
-    </div>
+    </CampaignFlatSection>
   );
 }
 
 function Toolbar({
   creatorSearch,
   onCreatorSearch,
+  creatorSearchRef,
   platformFilter,
   onPlatformFilter,
   platformOptions,
-  countryFilter,
-  onCountryFilter,
-  countryOptions,
   globalCalcMode,
   onGlobalCalcMode,
 }: {
   creatorSearch: string;
   onCreatorSearch: (v: string) => void;
+  creatorSearchRef?: RefObject<HTMLInputElement | null>;
   platformFilter: string;
   onPlatformFilter: (v: string) => void;
   platformOptions: string[];
-  countryFilter: string;
-  onCountryFilter: (v: string) => void;
-  countryOptions: string[];
   globalCalcMode: CalculationModePreference;
   onGlobalCalcMode: (v: CalculationModePreference) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="relative min-w-[180px] flex-1">
-        <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-        <Input
-          className="pl-9"
-          placeholder="Search creators…"
+    <div className="thinkway-campaign-grid-toolbar border-b px-4 py-3">
+      <div className="thinkway-campaign-search-box">
+        <SearchIcon className="thinkway-campaign-search-ico size-3" />
+        <input
+          ref={creatorSearchRef}
+          type="text"
+          data-quotation-search
+          placeholder="Search creators..."
           value={creatorSearch}
           onChange={(e) => onCreatorSearch(e.target.value)}
         />
       </div>
       <Select value={platformFilter} onValueChange={onPlatformFilter}>
-        <SelectTrigger className="w-[130px]">
-          <SelectValue placeholder="Platform" />
+        <SelectTrigger className="thinkway-campaign-filter-select h-[30px] w-[130px] border-[var(--camp-border)] text-[11px] shadow-none">
+          <SelectValue placeholder="Platform · All" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All platforms</SelectItem>
+          <SelectItem value="all">Platform · All</SelectItem>
           {platformOptions.map((p) => (
             <SelectItem key={p} value={p}>
               {platformLabel(p)}
@@ -742,39 +706,21 @@ function Toolbar({
           ))}
         </SelectContent>
       </Select>
-      <Select value={countryFilter} onValueChange={onCountryFilter}>
-        <SelectTrigger className="w-[120px]">
-          <SelectValue placeholder="Country" />
+      <Select
+        value={globalCalcMode}
+        onValueChange={(v) => onGlobalCalcMode(v as CalculationModePreference)}
+      >
+        <SelectTrigger className="thinkway-campaign-filter-select h-[30px] w-[150px] border-[var(--camp-border)] text-[11px] shadow-none">
+          <SelectValue placeholder="Calc · Markup %" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All countries</SelectItem>
-          {countryOptions.map((c) => (
-            <SelectItem key={c} value={c}>
-              {countryFlag(c) ? `${countryFlag(c)} ${c}` : c}
+          {(Object.keys(CALCULATION_MODE_LABELS) as CalculationModePreference[]).map((m) => (
+            <SelectItem key={m} value={m}>
+              Calc · {CALCULATION_MODE_LABELS[m]}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      <div className="space-y-1">
-        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          Default calculation
-        </Label>
-        <Select
-          value={globalCalcMode}
-          onValueChange={(v) => onGlobalCalcMode(v as CalculationModePreference)}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(CALCULATION_MODE_LABELS) as CalculationModePreference[]).map((m) => (
-              <SelectItem key={m} value={m}>
-                {CALCULATION_MODE_LABELS[m]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
     </div>
   );
 }
@@ -885,370 +831,37 @@ function BulkToolbar({
   );
 }
 
-function CommercialRow({
-  quotationId,
-  gpTargetPct,
-  item,
-  draft,
-  zebra,
-  selected,
-  onToggleSelect,
-  onDraftChange,
-  onSaveStatus,
-  onRemoved,
-}: {
-  quotationId: string;
-  gpTargetPct: number;
-  item: QuotationItemRow;
-  draft: QuotationRowDraft | undefined;
-  zebra: boolean;
-  selected: boolean;
-  onToggleSelect: () => void;
-  onDraftChange: (id: string, patch: Partial<QuotationRowDraft>) => void;
-  onSaveStatus: (id: string, status: AutosaveStatus) => void;
-  onRemoved: () => void;
-}) {
-  const [pending, startTransition] = useTransition();
-  const costRef = useRef<HTMLInputElement>(null);
-  const revenueRef = useRef<HTMLInputElement>(null);
-  const gpPctRef = useRef<HTMLInputElement>(null);
-
-  const mode = draft?.mode ?? item.commercial_input_mode;
-  const cost = draft?.cost ?? item.cost;
-  const costCurrency = draft?.costCurrency ?? item.cost_currency;
-  const gpPct = draft?.gpPct ?? item.gp_pct;
-  const revenue = draft?.revenue ?? item.revenue;
-  const gpValue = draft?.gpValue ?? item.gp_value;
-  const afPct = draft?.afPct ?? item.af_pct;
-  const fxRate = draft?.fxRateToEgp ?? item.fx_rate_to_egp;
-
-  const computed = useMemo(
-    () =>
-      computeQuotationRowComputed({
-        id: item.id,
-        mode,
-        cost,
-        costCurrency,
-        gpPct,
-        revenue,
-        gpValue,
-        afPct,
-        fxRateToEgp: fxRate,
-      }),
-    [item.id, mode, cost, costCurrency, gpPct, revenue, gpValue, afPct, fxRate]
-  );
-
-  const { status, schedule } = useDebouncedAutosave<{
-    mode: CommercialInputMode;
-    cost: number | null;
-    cost_currency: string;
-    gp_pct?: number | null;
-    revenue?: number | null;
-    gp_value?: number | null;
-    af_pct?: number | null;
-  }>(async (payload) => {
-    const res = await updateQuotationItemCommercials({
-      item_id: item.id,
-      quotation_id: quotationId,
-      ...payload,
-    });
-    if (res.ok && res.data?.fx_rate_to_egp != null) {
-      onDraftChange(item.id, { fxRateToEgp: res.data.fx_rate_to_egp });
-    }
-    return res;
-  });
-
-  useEffect(() => {
-    onSaveStatus(item.id, status);
-  }, [item.id, status, onSaveStatus]);
-
-  const triggerSave = useCallback(
-    (patch: Partial<QuotationRowDraft>) => {
-      const next = {
-        mode: patch.mode ?? mode,
-        cost: patch.cost ?? cost,
-        costCurrency: patch.costCurrency ?? costCurrency,
-        gpPct: patch.gpPct ?? gpPct,
-        revenue: patch.revenue ?? revenue,
-        gpValue: patch.gpValue ?? gpValue,
-        afPct: patch.afPct ?? afPct,
-        fxRateToEgp:
-          patch.costCurrency && patch.costCurrency !== "EGP" && patch.costCurrency !== costCurrency
-            ? 1
-            : fxRate,
-      };
-      onDraftChange(item.id, next);
-      schedule({
-        mode: next.mode,
-        cost: next.cost,
-        cost_currency: next.costCurrency,
-        gp_pct: next.gpPct,
-        revenue: next.revenue,
-        gp_value: next.gpValue,
-        af_pct: next.afPct,
-      });
-    },
-    [
-      mode,
-      cost,
-      costCurrency,
-      gpPct,
-      revenue,
-      gpValue,
-      afPct,
-      fxRate,
-      item.id,
-      onDraftChange,
-      schedule,
-    ]
-  );
-
-  function handleRemove() {
-    startTransition(async () => {
-      const res = await removeQuotationItem({ item_id: item.id, quotation_id: quotationId });
-      if (!res.ok) {
-        toast.error(res.message);
-        return;
-      }
-      toast.success("Creator removed.");
-      onRemoved();
-    });
-  }
-
-  function handleRowKeyDown(e: KeyboardEvent<HTMLTableRowElement>) {
-    if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
-      e.preventDefault();
-      (e.target as HTMLInputElement).blur();
-    }
-  }
-
-  const flag = countryFlag(item.country_code);
-  const gpClass = gpHealthClass(computed.gpValueEgp, computed.gpPct, gpTargetPct);
-
-  return (
-    <TableRow
-      className={cn(
-        "h-14 max-h-14 [&_td]:py-1.5",
-        zebra && "bg-muted/30",
-        selected && "bg-primary/5",
-        "hover:bg-muted/50"
-      )}
-      onKeyDown={handleRowKeyDown}
-    >
-      <TableCell className="px-2">
-        <Checkbox
-          checked={selected}
-          onCheckedChange={onToggleSelect}
-          aria-label={`Select ${item.creator_name ?? item.handle ?? "creator"}`}
-        />
-      </TableCell>
-      <TableCell className="max-w-[180px]">
-        <CreatorIdentityCell
-          source={creatorProfileSourceFromPlatformAccount(
-            item.creator_name ?? item.handle ?? "Creator",
-            item.platform ? { platform: item.platform, handle: item.handle ?? "" } : null
-          )}
-          size="sm"
-          showAvatar
-          showName
-          showHandle
-        />
-      </TableCell>
-      <TableCell>
-        {item.platform ? (
-          <div className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
-            <PlatformIcon platform={item.platform} size="xs" className="size-3.5 rounded-full" />
-            <span className="truncate capitalize">{platformLabel(item.platform)}</span>
-          </div>
-        ) : (
-          "—"
-        )}
-      </TableCell>
-      <TableCell className="text-right tabular-nums text-xs">
-        {formatCreatorCount(item.followers)}
-      </TableCell>
-      <TableCell className="text-xs text-muted-foreground">
-        {flag ? `${flag} ${item.country_code}` : item.country_code ?? "—"}
-      </TableCell>
-      <TableCell className="max-w-[120px] truncate text-[11px] text-muted-foreground">
-        {deliverablesSummary(item)}
-      </TableCell>
-      <TableCell>
-        <Input
-          ref={costRef}
-          className="h-8 w-[88px] text-xs"
-          inputMode="decimal"
-          value={String(cost || "")}
-          onChange={(e) => triggerSave({ cost: parseNum(e.target.value) })}
-        />
-      </TableCell>
-      <TableCell>
-        <Select
-          value={costCurrency}
-          onValueChange={(v) => triggerSave({ costCurrency: v })}
-        >
-          <SelectTrigger className="h-8 w-[76px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {COMMERCIAL_CURRENCIES.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell>
-        <Select
-          value={mode}
-          onValueChange={(v) => triggerSave({ mode: v as CommercialInputMode })}
-        >
-          <SelectTrigger className="h-8 min-w-[120px] text-[10px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(COMMERCIAL_INPUT_MODE_LABELS) as CommercialInputMode[]).map((m) => (
-              <SelectItem key={m} value={m}>
-                {COMMERCIAL_INPUT_MODE_LABELS[m]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="text-right">
-        {mode === "cost_revenue" ? (
-          <Input
-            ref={revenueRef}
-            className="ml-auto h-8 w-[96px] text-xs"
-            inputMode="decimal"
-            value={String(revenue || "")}
-            onChange={(e) => triggerSave({ revenue: parseNum(e.target.value) })}
-          />
-        ) : (
-          <span className="tabular-nums text-xs">
-            {formatDualCurrency({
-              amount: computed.revenue,
-              currency: costCurrency,
-              egpAmount: computed.revenueEgp,
-            })}
-          </span>
-        )}
-      </TableCell>
-      <TableCell className={cn("text-right tabular-nums text-xs", gpClass)}>
-        {mode === "cost_gp_value" ? (
-          <Input
-            className="ml-auto h-8 w-[88px] text-xs"
-            inputMode="decimal"
-            value={String(gpValue || "")}
-            onChange={(e) => triggerSave({ gpValue: parseNum(e.target.value) })}
-          />
-        ) : (
-          egp(computed.gpValueEgp)
-        )}
-      </TableCell>
-      <TableCell className={cn("text-right text-xs", gpClass)}>
-        {mode === "cost_gp_pct" || mode === "cost_markup_pct" ? (
-          <div className="flex items-center justify-end gap-0.5">
-            <Input
-              ref={gpPctRef}
-              className="h-8 w-[56px] text-xs"
-              inputMode="decimal"
-              value={String(gpPct || "")}
-              onChange={(e) => triggerSave({ gpPct: parseNum(e.target.value) })}
-            />
-            <span className="text-[10px] text-muted-foreground">%</span>
-          </div>
-        ) : (
-          <span className="tabular-nums">{computed.gpPct.toFixed(1)}%</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right text-xs">
-        <div className="flex items-center justify-end gap-0.5">
-          <Input
-            className="h-8 w-[56px] text-xs"
-            inputMode="decimal"
-            value={String(afPct || "")}
-            onChange={(e) => triggerSave({ afPct: parseNum(e.target.value) })}
-          />
-          <span className="text-[10px] text-muted-foreground">%</span>
-        </div>
-      </TableCell>
-      <TableCell className="text-right tabular-nums text-xs">
-        {egp(computed.afValueEgp, 2)}
-      </TableCell>
-      <TableCell className="text-right tabular-nums text-xs font-medium">
-        {egp(computed.agencyMarginEgp, 2)}
-      </TableCell>
-      <TableCell>
-        <SaveIndicator status={status} />
-      </TableCell>
-      <TableCell>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8"
-          onClick={handleRemove}
-          disabled={pending}
-          aria-label="Remove creator"
-        >
-          <Trash2Icon className="size-3.5" />
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function HeaderNotes({
-  detail,
-  onStatusChange,
-}: {
-  detail: QuotationDetail;
-  onStatusChange: (status: AutosaveStatus) => void;
-}) {
+function HeaderNotes({ detail }: { detail: QuotationDetail }) {
+  const { registerMetaPending, saveStatus, hasUnsavedChanges } = useQuotationManualSave();
   const [notes, setNotes] = useState(detail.notes ?? "");
-  const [terms, setTerms] = useState(detail.terms ?? formatQuotationTermsText());
-
-  const { status, schedule } = useDebouncedAutosave<{
-    notes?: string;
-    terms?: string;
-  }>(async (payload) => updateQuotationHeader({ id: detail.id, ...payload }));
 
   useEffect(() => {
-    onStatusChange(status);
-  }, [status, onStatusChange]);
+    setNotes(detail.notes ?? "");
+  }, [detail.id, detail.notes]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="quotation-notes">Quotation notes</Label>
-          <SaveIndicator status={status} />
-        </div>
-        <Textarea
-          id="quotation-notes"
-          rows={5}
-          value={notes}
-          onChange={(e) => {
-            setNotes(e.target.value);
-            schedule({ notes: e.target.value, terms });
-          }}
-          placeholder="Internal or client-facing notes for this quotation…"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="quotation-terms">Terms &amp; conditions</Label>
-        <Textarea
-          id="quotation-terms"
-          rows={5}
-          value={terms}
-          onChange={(e) => {
-            setTerms(e.target.value);
-            schedule({ notes, terms: e.target.value });
-          }}
-          placeholder="Payment terms, validity, usage rights…"
-        />
-      </div>
-    </div>
+    <CampaignFlatSection
+      title="Quotation notes"
+      description="Internal & client-facing."
+      actions={
+        hasUnsavedChanges ? (
+          <span className="text-[10px] text-[var(--camp-amber)]">
+            {saveStatus === "saving" ? "Saving…" : saveStatus === "error" ? "Save failed" : "Unsaved"}
+          </span>
+        ) : null
+      }
+    >
+      <Textarea
+        id="quotation-notes"
+        rows={9}
+        className="min-h-[220px] text-xs"
+        value={notes}
+        onChange={(e) => {
+          setNotes(e.target.value);
+          registerMetaPending({ notes: e.target.value || null });
+        }}
+        placeholder="Internal or client-facing notes for this quotation…"
+      />
+    </CampaignFlatSection>
   );
 }

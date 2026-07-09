@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { captureException } from "@/lib/observability/error-reporter";
 import { collectScheduledMetricsRefresh } from "@/lib/performance/metrics-collector";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -30,6 +31,11 @@ export async function GET(request: Request) {
       failed: result.outcomes.filter((o) => o.status === "failed").length,
     });
   } catch (error) {
+    captureException(error, {
+      route: "/api/cron/publication-metrics",
+      service: "cron",
+      status: 500,
+    });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Cron failed." },
       { status: 500 }

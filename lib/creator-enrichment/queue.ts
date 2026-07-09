@@ -34,10 +34,17 @@ export function isCreatorEnrichmentQueueAvailable(): boolean {
  * Forced refreshes are timestamp-unique so the user always gets a fresh run.
  */
 function jobIdFor(payload: CreatorEnrichmentJobPayload): string {
+  const platformSuffix = payload.platformAccountId
+    ? `-${payload.platformAccountId}`
+    : "";
   if (payload.force) {
+    // Platform-only refreshes (e.g. add Facebook link) dedupe — one Apify run per account.
+    if (payload.platformAccountId) {
+      return `creator-enrich-force-${payload.influencerId}${platformSuffix}`;
+    }
     return `creator-enrich-force-${payload.influencerId}-${Date.now()}`;
   }
-  return `creator-enrich-${payload.influencerId}`;
+  return `creator-enrich-${payload.influencerId}${platformSuffix}`;
 }
 
 export async function enqueueCreatorEnrichment(

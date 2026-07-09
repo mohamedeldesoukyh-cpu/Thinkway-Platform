@@ -79,6 +79,15 @@ test("creatorMatchesBrowseCategories uses OR semantics", () => {
   );
 });
 
+test("creatorMatchesBrowseCategories matches platform interest tags", () => {
+  const creator = {
+    browse_category_tags: [],
+    audience_interests: ["Beauty", "Skincare"],
+  };
+  assert.equal(creatorMatchesBrowseCategories(creator, ["Beauty"]), true);
+  assert.equal(creatorMatchesBrowseCategories(creator, ["Fashion"]), false);
+});
+
 test("creatorMatchesBrowseCategories ignores merged display categories", () => {
   const creator = {
     browse_category_tags: ["Food Pro"],

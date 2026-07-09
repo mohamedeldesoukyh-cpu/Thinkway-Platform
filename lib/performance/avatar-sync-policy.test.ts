@@ -5,6 +5,7 @@ import {
   AVATAR_SYNC_STALE_MS,
   isAvatarSyncStale,
   isBrokenAvatarUrl,
+  isDisplayableAvatarUrl,
   isInstagramCdnUrlExpired,
   isPlaceholderAvatarUrl,
   isSameProviderAvatarUrl,
@@ -41,6 +42,8 @@ assert.equal(isBrokenAvatarUrl("https://p16-sign-va.tiktokcdn.com/avatar.jpg"), 
 const expiredIg =
   "https://scontent-ord5-1.cdninstagram.com/v/t51.2885-19/abc.jpg?oe=6A415820";
 assert.equal(isBrokenAvatarUrl(expiredIg), true, "expired Instagram oe= URL is broken");
+assert.equal(isDisplayableAvatarUrl(expiredIg), true, "expired CDN may still display via proxy");
+assert.equal(isDisplayableAvatarUrl("https://ui-avatars.com/api/?name=AB"), false);
 assert.equal(
   isInstagramCdnUrlExpired(expiredIg, Date.parse("2026-06-29T00:00:00.000Z")),
   true

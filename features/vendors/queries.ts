@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
 import type {
   InfluencerPlatformAccountRow,
@@ -18,6 +18,8 @@ import type {
   VendorPayoutRow,
   VendorWorkspace,
 } from "./types";
+import { getQuotationPriceReferenceForInfluencer } from "@/lib/creators/quotation-price-reference";
+import { fetchProfileNamesByIds } from "@/lib/services/campaigns/repositories/workspace-repository";
 
 export type VendorsListResult = {
   vendors: (VendorListItem & {
@@ -62,23 +64,11 @@ const VENDOR_LIST_SELECT = `
   )
 `;
 
-async function requireUser() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+const VENDOR_LIST_SELECT_PLATFORM_FILTER = VENDOR_LIST_SELECT.replace(
+  "platform_accounts:influencer_platform_accounts",
+  "platform_accounts:influencer_platform_accounts!inner"
+);
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!user) {
-    throw new Error("You must be signed in to continue.");
-  }
-
-  return { supabase, user };
-}
 
 export async function getVendorsList(
   params: VendorListFilters
@@ -94,33 +84,10 @@ export async function getVendorsList(
   const supabase = await createSupabaseServerClient();
 
   if (platform) {
-    const { data: platformMatches, error: platformError } = await supabase
-      .from("influencer_platform_accounts")
-      .select("influencer_id")
-      .eq("platform", platform);
-
-    if (platformError) {
-      throw new Error(platformError.message);
-    }
-
-    const influencerIds = [
-      ...new Set(platformMatches?.map((row) => row.influencer_id) ?? []),
-    ];
-
-    if (influencerIds.length === 0) {
-      return {
-        vendors: [],
-        total: 0,
-        page,
-        pageSize: VENDORS_PAGE_SIZE,
-        totalPages: 1,
-      };
-    }
-
     let query = supabase
       .from("influencers")
-      .select(VENDOR_LIST_SELECT, { count: "exact" })
-      .in("id", influencerIds)
+      .select(VENDOR_LIST_SELECT_PLATFORM_FILTER, { count: "exact" })
+      .eq("platform_accounts.platform", platform)
       .order("created_at", { ascending: false });
 
     if (status) {
@@ -228,7 +195,7 @@ async function enrichVendorList(
 export async function getLinkableCreatorProfiles(
   vendorId: string
 ): Promise<{ id: string; full_name: string | null; email: string }[]> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
 
   const { data: roleRow } = await supabase
     .from("roles")
@@ -264,7 +231,7 @@ export async function getLinkableCreatorProfiles(
 }
 
 export async function getVendorById(id: string): Promise<VendorDetail | null> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
 
   const { data: vendor, error } = await supabase
     .from("influencers")
@@ -347,13 +314,67 @@ function formatMarginPercent(revenue: number, gp: number): number {
   return Math.round((gp / revenue) * 10000) / 100;
 }
 
+type AuditLogRow = {
+  id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  created_at: string;
+  actor_id: string | null;
+};
+
+async function fetchVendorActivityLogs(
+  supabase: RequestUser["supabase"],
+  influencerId: string,
+  assignmentIds: string[]
+): Promise<AuditLogRow[]> {
+  const select =
+    "id, action, entity_type, entity_id, created_at, actor_id, new_data" as const;
+
+  if (assignmentIds.length === 0) {
+    const { data, error } = await supabase
+      .from("audit_logs")
+      .select(select)
+      .eq("entity_type", "influencers")
+      .eq("entity_id", influencerId)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as AuditLogRow[];
+  }
+
+  const [influencerLogs, assignmentLogs] = await Promise.all([
+    supabase
+      .from("audit_logs")
+      .select(select)
+      .eq("entity_type", "influencers")
+      .eq("entity_id", influencerId)
+      .order("created_at", { ascending: false })
+      .limit(40),
+    supabase
+      .from("audit_logs")
+      .select(select)
+      .eq("entity_type", "campaign_influencers")
+      .in("entity_id", assignmentIds)
+      .order("created_at", { ascending: false })
+      .limit(40),
+  ]);
+
+  if (influencerLogs.error) throw new Error(influencerLogs.error.message);
+  if (assignmentLogs.error) throw new Error(assignmentLogs.error.message);
+
+  const merged = [...(influencerLogs.data ?? []), ...(assignmentLogs.data ?? [])] as AuditLogRow[];
+  merged.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return merged.slice(0, 40);
+}
+
 export async function getVendorWorkspace(
   id: string
 ): Promise<VendorWorkspace | null> {
   const base = await getVendorById(id);
   if (!base) return null;
 
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
 
   const { data: assignmentRows, error: assignError } = await supabase
     .from("campaign_influencers")
@@ -421,14 +442,22 @@ export async function getVendorWorkspace(
     };
   });
 
-  const { data: deliverableRows } = await supabase
-    .from("deliverables")
-    .select(
-      "id, document_number, title, deliverable_type, status, platform, due_date, campaign_id"
-    )
-    .eq("influencer_id", id)
-    .order("created_at", { ascending: false })
-    .limit(100);
+  const assignmentIds = assignments.map((a) => a.id);
+
+  const [deliverableResult, quotation_price_reference, auditRows] = await Promise.all([
+    supabase
+      .from("deliverables")
+      .select(
+        "id, document_number, title, deliverable_type, status, platform, due_date, campaign_id"
+      )
+      .eq("influencer_id", id)
+      .order("created_at", { ascending: false })
+      .limit(100),
+    getQuotationPriceReferenceForInfluencer(supabase, id),
+    fetchVendorActivityLogs(supabase, id, assignmentIds),
+  ]);
+
+  const deliverableRows = deliverableResult.data;
 
   const deliverableCampaignIds = [
     ...new Set(
@@ -509,59 +538,29 @@ export async function getVendorWorkspace(
     assignments.map((a) => a.campaign_id).filter(Boolean) as string[]
   );
 
-  const { data: auditRows } = await supabase
-    .from("audit_logs")
-    .select("id, action, entity_type, entity_id, created_at, actor_id, new_data")
-    .or(
-      `and(entity_type.eq.influencers,entity_id.eq.${id}),entity_type.eq.campaign_influencers`
-    )
-    .order("created_at", { ascending: false })
-    .limit(40);
+  const actorIds = [
+    ...new Set(auditRows.map((row) => row.actor_id).filter(Boolean) as string[]),
+  ];
+  const profileMap =
+    actorIds.length > 0 ? await fetchProfileNamesByIds(supabase, actorIds) : new Map();
 
-  const influencerAssignIds = new Set(assignments.map((a) => a.id));
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, email");
-
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
-
-  const activity: VendorActivityItem[] = (auditRows ?? [])
-    .filter((log) => {
-      const row = log as unknown as { entity_type: string; entity_id: string | null };
-      if (row.entity_type === "influencers" && row.entity_id === id) return true;
-      if (
-        row.entity_type === "campaign_influencers" &&
-        row.entity_id &&
-        influencerAssignIds.has(row.entity_id)
-      ) {
-        return true;
-      }
-      return false;
-    })
-    .map((log) => {
-      const row = log as unknown as {
-        id: string;
-        action: string;
-        entity_type: string;
-        created_at: string;
-        actor_id: string | null;
-      };
-      const actor = row.actor_id ? profileMap.get(row.actor_id) : null;
-      return {
-        id: row.id,
-        action: row.action,
-        entity_type: row.entity_type,
-        summary: `${row.action.replace(/_/g, " ")} · ${row.entity_type.replace(/_/g, " ")}`,
-        created_at: row.created_at,
-        actor: actor
-          ? {
-              id: actor.id,
-              full_name: actor.full_name,
-              email: actor.email,
-            }
-          : null,
-      };
-    });
+  const activity: VendorActivityItem[] = auditRows.map((row) => {
+    const actor = row.actor_id ? profileMap.get(row.actor_id) : null;
+    return {
+      id: row.id,
+      action: row.action,
+      entity_type: row.entity_type,
+      summary: `${row.action.replace(/_/g, " ")} · ${row.entity_type.replace(/_/g, " ")}`,
+      created_at: row.created_at,
+      actor: actor
+        ? {
+            id: actor.id,
+            full_name: actor.full_name,
+            email: actor.email,
+          }
+        : null,
+    };
+  });
 
   return {
     ...base,
@@ -576,5 +575,6 @@ export async function getVendorWorkspace(
     deliverables,
     payouts,
     activity,
+    quotation_price_reference,
   };
 }

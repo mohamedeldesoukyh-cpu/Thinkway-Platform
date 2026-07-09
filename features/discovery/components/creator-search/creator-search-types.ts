@@ -1,11 +1,23 @@
+import { countryLabel, LAST_POST_WITHIN_OPTIONS } from "./creator-search-filter-constants";
+
 export type CreatorSearchFilters = {
   search: string;
   handle: string;
   platforms: string[];
-  country: string;
+  /** Creator location — first entry is sent to browse RPC; all apply client-side OR filter. */
+  countries: string[];
   language: string;
-  audienceCountry: string;
-  audienceInterests: string;
+  /** Audience geography — client-side filter when enrichment data is sparse. */
+  audienceCountries: string[];
+  /** Audience interest tags — OR match against creator categories / niche. */
+  audienceInterestTags: string[];
+  /** Content keyword merged into FTS browse search (distinct from top-bar query). */
+  contentKeyword: string;
+  /** Hashtag / topic pills merged into browse search. */
+  contentTags: string[];
+  /** Recency window — client-side filter on recent publications when set. */
+  lastPostWithin: string;
+  advancedSearch: boolean;
   gender: string;
   ageMin: string;
   ageMax: string;
@@ -27,10 +39,14 @@ export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
   search: "",
   handle: "",
   platforms: [],
-  country: "",
+  countries: [],
   language: "",
-  audienceCountry: "",
-  audienceInterests: "",
+  audienceCountries: [],
+  audienceInterestTags: [],
+  contentKeyword: "",
+  contentTags: [],
+  lastPostWithin: "",
+  advancedSearch: false,
   gender: "",
   ageMin: "",
   ageMax: "",
@@ -51,9 +67,14 @@ export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
 export const CREATOR_SEARCH_SORT_FIELDS = [
   { value: "relevance", label: "Relevance", defaultDirection: "desc" },
   { value: "name", label: "Name", defaultDirection: "asc" },
+  { value: "platform", label: "Platform", defaultDirection: "asc" },
   { value: "followers", label: "Followers", defaultDirection: "desc" },
+  { value: "country", label: "Country", defaultDirection: "asc" },
+  { value: "categories", label: "Categories", defaultDirection: "asc" },
   { value: "engagement", label: "Engagement rate", defaultDirection: "desc" },
   { value: "views", label: "Avg views", defaultDirection: "desc" },
+  { value: "brand_safety", label: "Brand safety", defaultDirection: "desc" },
+  { value: "source", label: "Source", defaultDirection: "asc" },
   { value: "thinkway", label: "Thinkway score", defaultDirection: "desc" },
   { value: "last_synced", label: "Last synced", defaultDirection: "desc" },
 ] as const;
@@ -71,7 +92,7 @@ export type CreatorSearchSortState = {
 export type CreatorSearchSort = CreatorSearchSortField;
 
 export const DEFAULT_CREATOR_SEARCH_SORT: CreatorSearchSortState = {
-  field: "relevance",
+  field: "followers",
   direction: "desc",
 };
 
@@ -91,12 +112,24 @@ export type ActiveFilterChip = {
   clear: Partial<CreatorSearchFilters>;
 };
 
+
 const PLATFORM_CHIP_LABELS: Record<string, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
   youtube: "YouTube",
   twitter: "X (Twitter)",
 };
+
+function lastPostWithinLabel(value: string): string {
+  return LAST_POST_WITHIN_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
+
+function formatGenderLabel(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "male") return "Male";
+  if (normalized === "female") return "Female";
+  return value.trim();
+}
 
 function rangeLabel(prefix: string, min: string, max: string): string {
   if (min && max) return `${prefix}: ${min}–${max}`;
@@ -125,9 +158,40 @@ export function hasActiveCreatorSearchFilters(
 }
 
 /** Derives the set of removable chips from the current filter state. */
-export function buildActiveFilterChips(filters: CreatorSearchFilters): ActiveFilterChip[] {
+export function buildActiveFilterChips(
+  filters: CreatorSearchFilters,
+  topBarSearch = ""
+): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
 
+  if (topBarSearch.trim()) {
+    chips.push({
+      id: "topSearch",
+      label: `Search: ${topBarSearch.trim()}`,
+      clear: { search: "" },
+    });
+  }
+  if (filters.contentKeyword.trim()) {
+    chips.push({
+      id: "contentKeyword",
+      label: `Keyword: ${filters.contentKeyword.trim()}`,
+      clear: { contentKeyword: "" },
+    });
+  }
+  for (const tag of filters.contentTags) {
+    chips.push({
+      id: `contentTag:${tag}`,
+      label: `Tag: ${tag.startsWith("#") ? tag : `#${tag}`}`,
+      clear: { contentTags: filters.contentTags.filter((value) => value !== tag) },
+    });
+  }
+  if (filters.lastPostWithin) {
+    chips.push({
+      id: "lastPostWithin",
+      label: `Last post: ${lastPostWithinLabel(filters.lastPostWithin)}`,
+      clear: { lastPostWithin: "" },
+    });
+  }
   if (filters.handle.trim()) {
     chips.push({ id: "handle", label: `Handle: ${filters.handle.trim()}`, clear: { handle: "" } });
   }
@@ -138,28 +202,40 @@ export function buildActiveFilterChips(filters: CreatorSearchFilters): ActiveFil
       clear: { platforms: filters.platforms.filter((p) => p !== platform) },
     });
   }
-  if (filters.country.trim()) {
-    chips.push({ id: "country", label: `Country: ${filters.country.trim()}`, clear: { country: "" } });
+  for (const code of filters.countries) {
+    chips.push({
+      id: `country:${code}`,
+      label: `Creator country: ${countryLabel(code)}`,
+      clear: { countries: filters.countries.filter((value) => value !== code) },
+    });
   }
   if (filters.language.trim()) {
     chips.push({ id: "language", label: `Language: ${filters.language.trim()}`, clear: { language: "" } });
   }
-  if (filters.audienceCountry.trim()) {
+  for (const code of filters.audienceCountries) {
     chips.push({
-      id: "audienceCountry",
-      label: `Audience: ${filters.audienceCountry.trim()}`,
-      clear: { audienceCountry: "" },
+      id: `audienceCountry:${code}`,
+      label: `Audience country: ${countryLabel(code)}`,
+      clear: {
+        audienceCountries: filters.audienceCountries.filter((value) => value !== code),
+      },
     });
   }
-  if (filters.audienceInterests.trim()) {
+  for (const interest of filters.audienceInterestTags) {
     chips.push({
-      id: "audienceInterests",
-      label: `Interests: ${filters.audienceInterests.trim()}`,
-      clear: { audienceInterests: "" },
+      id: `audienceInterest:${interest}`,
+      label: `Audience interest: ${interest}`,
+      clear: {
+        audienceInterestTags: filters.audienceInterestTags.filter((value) => value !== interest),
+      },
     });
   }
   if (filters.gender.trim()) {
-    chips.push({ id: "gender", label: `Gender: ${filters.gender.trim()}`, clear: { gender: "" } });
+    chips.push({
+      id: "gender",
+      label: `Gender: ${formatGenderLabel(filters.gender)}`,
+      clear: { gender: "" },
+    });
   }
   if (filters.ageMin || filters.ageMax) {
     chips.push({
@@ -228,20 +304,72 @@ export function buildActiveFilterChips(filters: CreatorSearchFilters): ActiveFil
   return chips;
 }
 
+function contentSearchTokens(filters: CreatorSearchFilters): string[] {
+  const tags = filters.contentTags
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
+  return [filters.contentKeyword.trim(), ...tags].filter(Boolean);
+}
+
+function buildCoverageIntent(filters: CreatorSearchFilters) {
+  const primaryCountry = filters.countries[0]?.trim().toUpperCase();
+  const audienceSignal = [
+    ...filters.audienceInterestTags,
+    ...filters.categories,
+    filters.aiNiche.trim(),
+    filters.contentKeyword.trim(),
+    ...filters.contentTags,
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(" ");
+
+  const nicheTags = [
+    ...filters.audienceInterestTags.map((tag) => tag.trim()).filter(Boolean),
+    ...(filters.aiNiche.trim() ? [filters.aiNiche.trim()] : []),
+  ];
+
+  return {
+    country: primaryCountry || undefined,
+    categories: filters.categories.length > 0 ? filters.categories : undefined,
+    niches: nicheTags.length > 0 ? nicheTags : undefined,
+    platforms: filters.platforms.length > 0 ? filters.platforms : undefined,
+    audience: audienceSignal || undefined,
+    minFollowers: filters.minFollowers ? Number(filters.minFollowers) : undefined,
+    maxFollowers: filters.maxFollowers ? Number(filters.maxFollowers) : undefined,
+  };
+}
+
 export function filtersToBrowseParams(filters: CreatorSearchFilters, page: number, pageSize: number) {
-  const search = [filters.search.trim(), filters.handle.trim()].filter(Boolean).join(" ");
+  const search = [
+    filters.search.trim(),
+    filters.handle.trim(),
+    ...contentSearchTokens(filters),
+  ]
+    .filter(Boolean)
+    .join(" ");
   const minAi = [filters.minAiScore, filters.minBrandFit]
     .map((v) => (v ? Number(v) : NaN))
     .filter((n) => !Number.isNaN(n));
   const minAiScore = minAi.length ? Math.max(...minAi) : undefined;
+  const primaryCountry = filters.countries[0]?.trim().toUpperCase();
 
   return {
     search: search || undefined,
     platform: filters.platforms.length === 1 ? filters.platforms[0] : undefined,
     platforms: filters.platforms.length > 1 ? filters.platforms : undefined,
-    country: filters.country.trim() || undefined,
+    country: primaryCountry || undefined,
+    creatorCountries: filters.countries.length > 0 ? filters.countries : undefined,
     language: filters.language.trim() || undefined,
     categories: filters.categories.length > 0 ? filters.categories : undefined,
+    audienceCountries:
+      filters.audienceCountries.length > 0 ? filters.audienceCountries : undefined,
+    audienceInterestTags:
+      filters.audienceInterestTags.length > 0 ? filters.audienceInterestTags : undefined,
+    audienceGender: filters.gender.trim() || undefined,
+    audienceAgeMin: filters.ageMin.trim() || undefined,
+    audienceAgeMax: filters.ageMax.trim() || undefined,
     minFollowers: filters.minFollowers ? Number(filters.minFollowers) : undefined,
     maxFollowers: filters.maxFollowers ? Number(filters.maxFollowers) : undefined,
     minEngagement: filters.minEngagement ? Number(filters.minEngagement) : undefined,
@@ -251,5 +379,60 @@ export function filtersToBrowseParams(filters: CreatorSearchFilters, page: numbe
     productionOnly: true as const,
     page,
     pageSize,
+    coverageIntent: buildCoverageIntent(filters),
+  };
+}
+
+/**
+ * Relaxed browse params for AI campaign search — avoids strict AND filters in SQL.
+ * Audience/geo/category/keyword signals are scored client-side instead of excluding creators.
+ */
+export function filtersToRelaxedBrowseParams(
+  filters: CreatorSearchFilters,
+  page: number,
+  pageSize: number
+) {
+  return {
+    platform: filters.platforms.length === 1 ? filters.platforms[0] : undefined,
+    platforms: filters.platforms.length > 1 ? filters.platforms : undefined,
+    productionOnly: true as const,
+    page,
+    pageSize,
+    coverageIntent: buildCoverageIntent(filters),
+  };
+}
+
+/** Active filter count per collapsible panel section. */
+export function creatorSearchSectionFilterCounts(filters: CreatorSearchFilters) {
+  const set = (value: string) => (value.trim() ? 1 : 0);
+  const range = (a: string, b: string) => (a || b ? 1 : 0);
+
+  return {
+    content:
+      set(filters.contentKeyword) +
+      filters.contentTags.length +
+      set(filters.lastPostWithin) +
+      (filters.advancedSearch ? 0 : 0),
+    audience:
+      filters.audienceCountries.length +
+      filters.audienceInterestTags.length +
+      set(filters.gender) +
+      range(filters.ageMin, filters.ageMax),
+    metrics:
+      set(filters.handle) +
+      filters.platforms.length +
+      filters.countries.length +
+      set(filters.language) +
+      range(filters.minFollowers, filters.maxFollowers) +
+      set(filters.minEngagement) +
+      set(filters.minViews) +
+      filters.categories.length,
+    commercial:
+      range(filters.minEstimatedCost, filters.maxEstimatedCost) + set(filters.minBrandSafety),
+    ai:
+      set(filters.minThinkwayScore) +
+      set(filters.aiNiche) +
+      set(filters.minBrandFit) +
+      set(filters.minAiScore),
   };
 }

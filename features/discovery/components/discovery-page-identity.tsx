@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
+  BrainIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
   ListChecksIcon,
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 export type DiscoveryPageKey =
   | "search"
+  | "intelligence"
   | "shortlists"
   | "quotations"
   | "campaign-match"
@@ -39,6 +41,16 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
     icon: SearchIcon,
     accent: "from-sky-400/25 via-sky-300/15 to-blue-500/10",
     iconClass: "text-sky-600 dark:text-sky-400",
+  },
+  intelligence: {
+    key: "intelligence",
+    href: "/discovery/intelligence/library",
+    navLabel: "Intelligence",
+    title: "Campaign Intelligence Library",
+    description: "Shared brief intelligence for Discovery, campaigns, Studio, and AI workflows.",
+    icon: BrainIcon,
+    accent: "from-teal-400/25 via-teal-300/15 to-emerald-500/10",
+    iconClass: "text-[#1D9E75]",
   },
   shortlists: {
     key: "shortlists",
@@ -84,6 +96,7 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
 
 export const DISCOVERY_SUB_NAV_PAGES: DiscoveryPageIdentity[] = [
   DISCOVERY_PAGE_IDENTITY.search,
+  DISCOVERY_PAGE_IDENTITY.intelligence,
   DISCOVERY_PAGE_IDENTITY.shortlists,
   DISCOVERY_PAGE_IDENTITY.quotations,
   DISCOVERY_PAGE_IDENTITY["campaign-match"],

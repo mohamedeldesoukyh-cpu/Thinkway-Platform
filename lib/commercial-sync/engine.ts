@@ -136,6 +136,8 @@ type QuotationCommercialRow = {
   gp_value_egp: number;
   af_value_egp: number;
   sort_order: number;
+  option_number: number;
+  service_description: string | null;
 };
 
 function commercialPatchFromShortlistItem(item: ShortlistCommercialRow) {
@@ -167,6 +169,8 @@ function commercialPatchFromQuotationItem(item: QuotationCommercialRow) {
     revenue_egp: item.revenue_egp,
     gp_value_egp: item.gp_value_egp,
     deliverables: item.deliverables,
+    service_description: item.service_description,
+    option_number: item.option_number,
     commercial_updated_at: new Date().toISOString(),
   };
 }
@@ -306,21 +310,11 @@ export async function syncQuotationChangeToShortlist(
 
   await withSyncLock(pair.quotationId, pair.shortlistId, async () => {
     if (input.event === "remove") {
-      const { data: qItem } = await supabase
-        .from("quotation_items")
-        .select("source_shortlist_item_id")
-        .eq("id", input.quotationItemId)
-        .maybeSingle();
-      const sourceId = (qItem as { source_shortlist_item_id: string | null } | null)
-        ?.source_shortlist_item_id;
-      if (sourceId) {
-        await supabase.from("discovery_shortlist_items").delete().eq("id", sourceId);
-      }
       await logQuotationLifecycleEvent(supabase, {
         quotationId: pair.quotationId,
         actorId: input.actorId,
         event: "quotation.creator_removed",
-        summary: "Creator removed from quotation and synced to shortlist.",
+        summary: "Creator removed from quotation; shortlist row preserved.",
         metadata: { quotationItemId: input.quotationItemId },
       });
       return;

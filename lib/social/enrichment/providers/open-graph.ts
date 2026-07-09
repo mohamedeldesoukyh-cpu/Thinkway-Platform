@@ -1,3 +1,4 @@
+import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
 import { parseCompactCount } from "@/lib/social/parse-compact-count";
 
 import {
@@ -37,15 +38,6 @@ function extractMetaContent(html: string, property: string): string | null {
   }
 
   return null;
-}
-
-function decodeHtmlEntities(value: string): string {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
 }
 
 function parseCountsFromHtml(html: string): {

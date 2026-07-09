@@ -3,11 +3,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FieldSourceMap } from "@/lib/creator-enrichment/types";
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
 import { persistCreatorPrimaryIdentity } from "@/lib/creators/persist-primary-avatar";
+import { ensureCreatorBaselineDna } from "@/features/creator-dna/services/baseline-dna-populator";
 import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
 import { resolveMetricsSourceForEnrichment } from "@/lib/social/enrichment/metrics-status";
 import type { Database } from "@/types/database";
 
 import { mergeAuthoritative, isImportFieldEmpty } from "./merge";
+import { mergeContactLinks } from "@/lib/creators/contact-info";
 import {
   buildCreatorImportMetadata,
   buildImportFieldSources,
@@ -47,6 +49,9 @@ type ExistingPlatformAccount = {
   normalized_profile_url: string | null;
   profile_picture_url: string | null;
   avatar_source: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  contact_links: string[] | null;
   metadata: Record<string, unknown> | null;
   field_sources: FieldSourceMap | null;
 };
@@ -59,7 +64,7 @@ async function findExistingAccount(
   const { data, error } = await supabase
     .from("influencer_platform_accounts")
     .select(
-      "id, influencer_id, follower_count, engagement_rate, audience_country, interest_categories, profile_url, normalized_profile_url, profile_picture_url, avatar_source, metadata, field_sources"
+      "id, influencer_id, follower_count, engagement_rate, audience_country, interest_categories, profile_url, normalized_profile_url, profile_picture_url, avatar_source, contact_email, contact_phone, contact_links, metadata, field_sources"
     )
     .eq("platform", platform)
     .eq("normalized_username", normalizedUsername)
@@ -329,6 +334,37 @@ export async function upsertImportedCreators(
           filledFields.add("normalized_profile_url");
         }
 
+        const mergedContactEmail = mergeAuthoritative(
+          existing.contact_email,
+          row.contact_email,
+          "contact_email",
+          log
+        );
+        if (mergedContactEmail !== existing.contact_email) {
+          filledFields.add("contact_email");
+        }
+
+        const mergedContactPhone = mergeAuthoritative(
+          existing.contact_phone,
+          row.contact_phone,
+          "contact_phone",
+          log
+        );
+        if (mergedContactPhone !== existing.contact_phone) {
+          filledFields.add("contact_phone");
+        }
+
+        const mergedContactLinks = mergeContactLinks(
+          existing.contact_links,
+          row.contact_links.length > 0 ? row.contact_links : null
+        );
+        if (
+          JSON.stringify(mergedContactLinks) !==
+          JSON.stringify(existing.contact_links ?? [])
+        ) {
+          filledFields.add("contact_links");
+        }
+
         const importFieldSources = importFieldSourcesForFilledFields(
           row,
           filledFields,
@@ -357,6 +393,9 @@ export async function upsertImportedCreators(
           audience_country: mergedAudienceCountry,
           profile_url: mergedProfileUrl,
           normalized_profile_url: mergedNormalizedProfileUrl,
+          contact_email: mergedContactEmail,
+          contact_phone: mergedContactPhone,
+          contact_links: mergedContactLinks.length > 0 ? mergedContactLinks : null,
           metadata: mergedMetadata,
           field_sources: mergedFieldSources,
           sync_source: "discovery_import",
@@ -448,6 +487,10 @@ export async function upsertImportedCreators(
         if (avatarPatch.profile_picture_url) {
           await persistCreatorPrimaryIdentity(ctx.supabase, existing.influencer_id);
         }
+
+        await ensureCreatorBaselineDna(ctx.supabase, existing.influencer_id, {
+          isImport: true,
+        });
 
         const hadAccountChanges = filledFields.size > 0;
         const hadInfluencerChanges = Object.keys(influencerPatch).length > 0;
@@ -602,6 +645,9 @@ export async function upsertImportedCreators(
           metrics_source: normalized.metrics_source,
           metrics_is_manual_override: normalized.metrics_is_manual_override,
           field_sources: importFieldSources,
+          contact_email: row.contact_email,
+          contact_phone: row.contact_phone,
+          contact_links: row.contact_links.length > 0 ? row.contact_links : null,
           metadata: importMeta,
           ...(importAvatarFields ?? {}),
         })
@@ -624,6 +670,10 @@ export async function upsertImportedCreators(
         sourceName: row.source ?? ctx.sourceName ?? "import",
         sourceFileId: ctx.importFileId,
         importedAt: importMeta.imported_at as string,
+      });
+
+      await ensureCreatorBaselineDna(ctx.supabase, influencerId, {
+        isImport: true,
       });
 
       await refreshInfluencerSearchVector(ctx.supabase, influencerId);

@@ -143,12 +143,13 @@ export async function searchDiscoveredProfiles(
     };
   }
 
-  const rankByProfileId = searchQuery
+  let rankByProfileId = searchQuery
     ? await resolveDiscoveredProfileSearchIds(supabase, searchQuery)
     : null;
 
+  // Fresh backfill rows may not be indexed in FTS yet — fall through to filter browse.
   if (searchQuery && rankByProfileId && rankByProfileId.size === 0) {
-    return { profiles: [], total: 0, page, pageSize };
+    rankByProfileId = null;
   }
 
   let query = withLatestNestedRowLimits(

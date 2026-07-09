@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { planningDb } from "@/lib/supabase/governance-client";
 import { buildBudgetPeriodSeeds } from "@/lib/planning/budgets/period-builder";

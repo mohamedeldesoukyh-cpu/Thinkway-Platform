@@ -35,7 +35,9 @@ import {
   isCreatorOnExistingList,
   useCreatorBrowse,
   useCreatorSelection,
+  useDebouncedValue,
 } from "./creator-selection-hooks";
+import { resolveCreatorPickerSearchDisplay } from "./creator-picker-search-display";
 import { CreatorSelectionProvider } from "./creator-selection-provider";
 import { CreatorSelectionTable } from "./creator-selection-table";
 import { CreatorSelectionToolbar } from "./creator-selection-toolbar";
@@ -43,7 +45,10 @@ import type {
   CreatorPickerDialogProps,
   ExistingCreatorKey,
 } from "./creator-selection-types";
-import { CREATOR_PICKER_DEFAULT_PAGE_SIZE } from "./creator-selection-types";
+import {
+  CREATOR_PICKER_DEBOUNCE_MS,
+  CREATOR_PICKER_DEFAULT_PAGE_SIZE,
+} from "./creator-selection-types";
 
 type ContainerVariant = "dialog" | "sheet";
 
@@ -108,13 +113,24 @@ export function CreatorPickerDialog({
     paginationMode,
   });
 
+  const debouncedSearch = useDebouncedValue(search, CREATOR_PICKER_DEBOUNCE_MS);
+  const searchDisplay = useMemo(
+    () =>
+      resolveCreatorPickerSearchDisplay(debouncedSearch, browse.creators, {
+        loading: browse.loading,
+        browseTotal: browse.total,
+      }),
+    [debouncedSearch, browse.creators, browse.loading, browse.total]
+  );
+  const displayCreators = searchDisplay.creators;
+
   const visibleIds = useMemo(
     () =>
-      browse.creators
+      displayCreators
         .filter((c) => !isCreatorOnExistingList(c, existingKeysProp ?? new Set()))
         .filter((c) => !(isRowDisabled?.(c) ?? false))
         .map((c) => c.unified_id),
-    [browse.creators, existingKeysProp, isRowDisabled]
+    [displayCreators, existingKeysProp, isRowDisabled]
   );
 
   useEffect(() => {
@@ -212,10 +228,15 @@ export function CreatorPickerDialog({
   }
 
   function handleMissingCreatorUpdated(creator: UnifiedCreatorResult) {
-    browse.upsertCreator(creator);
+    browse.patchCreator(creator);
 
-    const query = resolveCreatorSearchQueryFromCreator(creator);
-    if (query) setSearch(normalizeDiscoverySearchQuery(query));
+    if (selection.selectedIds.has(creator.unified_id)) {
+      setSelectedCreatorMap((prev) => {
+        const next = new Map(prev);
+        next.set(creator.unified_id, creator);
+        return next;
+      });
+    }
   }
 
   const selectedCount = selection.selectedCount;
@@ -223,7 +244,7 @@ export function CreatorPickerDialog({
     visibleIds.length > 0 && visibleIds.every((id) => selection.selectedIds.has(id));
 
   function handleSelectAllVisible() {
-    const visibleCreators = browse.creators.filter(
+    const visibleCreators = displayCreators.filter(
       (creator) =>
         visibleIds.includes(creator.unified_id) &&
         !isCreatorOnExistingList(creator, existingKeysProp ?? new Set()) &&
@@ -272,7 +293,7 @@ export function CreatorPickerDialog({
       {children}
 
       <CreatorSelectionTable
-        creators={browse.creators}
+        creators={displayCreators}
         selectedIds={selection.selectedIds}
         onToggle={handleToggle}
         loading={browse.loading}
@@ -284,8 +305,8 @@ export function CreatorPickerDialog({
         disabledBadge={(creator) =>
           isRowDisabled?.(creator) ? "Not addable" : null
         }
-        total={browse.total}
-        hasMore={browse.hasMore}
+        total={searchDisplay.total}
+        hasMore={searchDisplay.isExactCreatorSearch ? false : browse.hasMore}
         variant="panel"
         onSelectAllVisible={
           selectionMode === "multi" ? handleSelectAllVisible : undefined
@@ -323,7 +344,7 @@ export function CreatorPickerDialog({
       {children}
 
       <CreatorSelectionTable
-        creators={browse.creators}
+        creators={displayCreators}
         selectedIds={selection.selectedIds}
         onToggle={handleToggle}
         onToggleSelectAll={
@@ -341,8 +362,8 @@ export function CreatorPickerDialog({
         disabledBadge={(creator) =>
           isRowDisabled?.(creator) ? "Not addable" : null
         }
-        total={browse.total}
-        hasMore={browse.hasMore}
+        total={searchDisplay.total}
+        hasMore={searchDisplay.isExactCreatorSearch ? false : browse.hasMore}
         className="min-h-[240px] flex-1"
         showAddMissingCreator={showAddMissingCreator && search.trim().length > 0}
         onMissingCreatorAdded={handleMissingCreatorAdded}

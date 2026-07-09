@@ -46,7 +46,14 @@ export type UnifiedCreatorPlatform = {
   is_verified?: boolean;
   profile_picture_url?: string | null;
   profile_bio?: string | null;
+  hashtags?: string[];
+  mentions?: string[];
   recent_publications?: CreatorRecentPublication[];
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_links?: string[];
+  /** Last metrics sync provider (e.g. apify, discovery_add). */
+  sync_source?: string | null;
 };
 
 export type CreatorRecentPublication = {
@@ -103,6 +110,16 @@ export type UnifiedCreatorResult = {
   /** Platform account whose metrics populate list-row KPIs until detail switcher changes view. */
   default_metrics_platform_account_id?: string | null;
   bio: string | null;
+  /** Top hashtags from recent posts (Apify enrichment). */
+  hashtags?: string[];
+  /** Top @mentions from recent posts (Apify enrichment). */
+  mentions?: string[];
+  /** Business/public email from enrichment or import. */
+  contact_email?: string | null;
+  /** Public phone when available from enrichment or import. */
+  contact_phone?: string | null;
+  /** External URLs (website, bio link, etc.). */
+  contact_links?: string[];
   /** Creator role/type from CSV import (e.g. Macro, Micro). */
   role?: string | null;
   metrics: UnifiedCreatorMetrics;
@@ -122,6 +139,21 @@ export type UnifiedCreatorResult = {
   recent_publications?: CreatorRecentPublication[];
   /** PostgreSQL ts_rank when a full-text search query is active. */
   search_rank?: number | null;
+  /** Cached Creator DNA completeness 0..100 (Phase 2). */
+  dna_completeness?: number;
+  /** Normalized historical performance signal 0..1 for ranking. */
+  historical_performance_score?: number;
+  /** Field paths requiring verified provider data. */
+  dna_verification_required?: string[];
+  /** Audience demographics from enrichment (Modash / Apify) when available. */
+  audience_demographics?: import("@/features/discovery/enrichment/components/audience-demographics-section").AudienceDemographics;
+  /** Release 1.2 — browse-only metadata from Discovery Control Center (not persisted). */
+  browse_metadata?: {
+    data_may_be_outdated?: boolean;
+    data_age_days?: number | null;
+  };
+  /** Campaign brief weighted relevance (0–100) — browse-only, set by AI search scoring. */
+  campaign_relevance_score?: number | null;
 };
 
 export type UnifiedCreatorBrowseFilters = {
@@ -151,6 +183,35 @@ export type UnifiedCreatorBrowseFilters = {
   platforms?: string[];
   page?: number;
   pageSize?: number;
+  /** Creator location OR filter (Discovery UI `countries`). */
+  creatorCountries?: string[];
+  /** Audience geography chips — OR match against demographics / platform audience country. */
+  audienceCountries?: string[];
+  /** Audience interest chips — OR match against categories / niche / interests. */
+  audienceInterestTags?: string[];
+  /** Audience gender chip (`male` / `female`). Uses demographic share when enriched. */
+  audienceGender?: string;
+  audienceAgeMin?: string;
+  audienceAgeMax?: string;
+  /** Release 1.2 — intent signals for coverage evaluation on AI browse path. */
+  coverageIntent?: {
+    country?: string;
+    categories?: string[];
+    niches?: string[];
+    platforms?: string[];
+    audience?: string;
+    minFollowers?: number;
+    maxFollowers?: number;
+    searchConfidence?: number;
+  };
+  /** When true, skip async acquisition enqueue (post-acquisition refresh browse). */
+  skipCoverageBackfill?: boolean;
+  /** Client-generated UUID per Creator Search session — ties acquisition to active UI session. */
+  searchSessionId?: string;
+  /** Campaign Intelligence Profile id — acquisition cooldown + audit dedup. */
+  campaignIntelligenceProfileId?: string;
+  /** Batch lookup by influencer UUID — used for post-acquisition result hydration. */
+  influencerIds?: string[];
 };
 
 export type UnifiedCreatorBrowseResult = {
@@ -161,6 +222,9 @@ export type UnifiedCreatorBrowseResult = {
   pageSize: number;
   internal_count: number;
   discovery_count: number;
+  coverage?: import("@/lib/creators/discovery-coverage").DiscoveryCoverageEvaluation;
+  /** Release 1.2 — backfill metadata when Discovery browse triggers coverage miss path. */
+  backfill?: import("@/lib/discovery/types").DiscoveryBrowseBackfillMeta;
 };
 
 export type CreatorHistoricalMetrics = {

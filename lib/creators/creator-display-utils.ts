@@ -1,5 +1,88 @@
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+
+/** Treat zero as missing for follower-style metrics (bad DNA/enrichment snapshots). */
+export function isPositiveNumericMetric(value: number | null | undefined): value is number {
+  return value != null && value > 0;
+}
+
+/** Resolve displayable followers from unified metrics with platform-account fallback. */
+export function resolveCreatorFollowersCount(
+  creator: Pick<
+    UnifiedCreatorResult,
+    "metrics" | "platforms" | "default_metrics_platform_account_id"
+  >,
+  platform?: string | null
+): number | null {
+  if (isPositiveNumericMetric(creator.metrics.followers.value)) {
+    return creator.metrics.followers.value;
+  }
+
+  const platformKey = platform ? canonicalPlatformKey(platform) : null;
+  if (platformKey) {
+    const account = creator.platforms.find(
+      (row) => canonicalPlatformKey(row.platform) === platformKey
+    );
+    if (isPositiveNumericMetric(account?.follower_count)) {
+      return account.follower_count;
+    }
+  }
+
+  const defaultAccount =
+    creator.platforms.find((row) => row.id === creator.default_metrics_platform_account_id) ??
+    creator.platforms[0];
+  if (isPositiveNumericMetric(defaultAccount?.follower_count)) {
+    return defaultAccount.follower_count;
+  }
+
+  for (const account of creator.platforms) {
+    if (isPositiveNumericMetric(account.follower_count)) {
+      return account.follower_count;
+    }
+  }
+
+  return creator.metrics.followers.value ?? null;
+}
+
+/** Resolve displayable engagement rate from unified metrics with platform-account fallback. */
+export function resolveCreatorEngagementRate(
+  creator: Pick<
+    UnifiedCreatorResult,
+    "metrics" | "platforms" | "default_metrics_platform_account_id"
+  >,
+  platform?: string | null
+): number | null {
+  const metricsValue = creator.metrics.engagement_rate.value;
+  if (metricsValue != null && Number.isFinite(metricsValue) && metricsValue > 0) {
+    return metricsValue;
+  }
+
+  const platformKey = platform ? canonicalPlatformKey(platform) : null;
+  if (platformKey) {
+    const account = creator.platforms.find(
+      (row) => canonicalPlatformKey(row.platform) === platformKey
+    );
+    if (account?.engagement_rate != null && account.engagement_rate > 0) {
+      return account.engagement_rate;
+    }
+  }
+
+  const defaultAccount =
+    creator.platforms.find((row) => row.id === creator.default_metrics_platform_account_id) ??
+    creator.platforms[0];
+  if (defaultAccount?.engagement_rate != null && defaultAccount.engagement_rate > 0) {
+    return defaultAccount.engagement_rate;
+  }
+
+  for (const account of creator.platforms) {
+    if (account.engagement_rate != null && account.engagement_rate > 0) {
+      return account.engagement_rate;
+    }
+  }
+
+  return metricsValue ?? null;
+}
 
 export type CreatorSearchSort = "relevance" | "name" | "followers" | "engagement" | "views";
 
@@ -95,7 +178,7 @@ const SORT_VALUE: Record<
   (creator: UnifiedCreatorResult) => number
 > = {
   relevance: (c) => c.search_rank ?? thinkwayAiScore(c) ?? 0,
-  followers: (c) => c.metrics.followers.value ?? 0,
+  followers: (c) => resolveCreatorFollowersCount(c) ?? 0,
   engagement: (c) => c.metrics.engagement_rate.value ?? 0,
   views: (c) => c.metrics.avg_views.value ?? 0,
 };

@@ -140,6 +140,7 @@ export function creatorMatchesBrowseCategories(
   creator: {
     browse_category_tags?: string[] | null;
     categories?: string[] | null;
+    audience_interests?: string[] | null;
   },
   categories: string[]
 ): boolean {
@@ -147,12 +148,14 @@ export function creatorMatchesBrowseCategories(
   if (resolved.length === 0) return true;
 
   const tags = creatorBrowseCategoryTags(creator);
+  const interestTags = normalizeCategoryList(creator.audience_interests);
+  const matchTags = [...tags, ...interestTags];
 
   return resolved.some((category) => {
     if (isUncategorizedCategoryFilter(category)) {
       return tags.length === 0;
     }
-    return tags.some((tag) => categoryTagMatchesFilter(tag, category));
+    return matchTags.some((tag) => categoryTagMatchesFilter(tag, category));
   });
 }
 

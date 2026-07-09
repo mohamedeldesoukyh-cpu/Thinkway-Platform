@@ -30,6 +30,8 @@ import {
 import { parseRateCard } from "@/features/vendors/utils";
 import type { VendorDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { CreatorQuotationPriceReferencePanel } from "@/components/creator/creator-quotation-price-reference-panel";
+import type { CreatorQuotationPriceReference } from "@/lib/creators/quotation-price-reference";
 
 export function VendorFinanceTab({
   vendor,
@@ -37,6 +39,7 @@ export function VendorFinanceTab({
   sectionTitle = "Rate card & tax",
   hidePaymentTerms = false,
   embedded = false,
+  quotationPriceReference = null,
   onCancel,
 }: {
   vendor: VendorDetail;
@@ -45,6 +48,7 @@ export function VendorFinanceTab({
   /** Billing tab already edits payment terms via bank details. */
   hidePaymentTerms?: boolean;
   embedded?: boolean;
+  quotationPriceReference?: CreatorQuotationPriceReference | null;
   onCancel?: () => void;
 }) {
   const rate = parseRateCard(vendor.rate_card);
@@ -184,6 +188,14 @@ export function VendorFinanceTab({
             </button>
           </div>
         ) : null}
+      </VendorFormSection>
+
+      <VendorFormSection
+        icon={DollarSignIcon}
+        title="Quotation price reference"
+        description="Average creator cost from quotation lines — used in studio and influencer selection."
+      >
+        <CreatorQuotationPriceReferencePanel reference={quotationPriceReference} />
       </VendorFormSection>
     </form>
   );

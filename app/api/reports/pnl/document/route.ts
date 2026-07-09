@@ -15,6 +15,8 @@ import {
   createXlsxDocumentResponse,
   parseReportDocumentFormat,
 } from "@/lib/reports/document/report-document-response";
+import { getClientIp, requireApiPermission } from "@/lib/auth/api-auth";
+import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -30,13 +32,8 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "analytics.read");
+  if ("response" in auth) return auth.response;
 
   try {
     const queryParams: Record<string, string | string[] | undefined> = {};
@@ -49,6 +46,15 @@ export async function GET(request: Request) {
     const query = parsePnLReportSearchParams(queryParams);
     const report = await getPnLReport(query);
     const baseName = buildPnlReportFileBaseNameSafe(report);
+
+    void logAuditEvent(supabase, {
+      userId: auth.userId,
+      action: "export",
+      entityType: "report",
+      entityId: "pnl",
+      metadata: { format, download },
+      ip: getClientIp(request),
+    });
 
     if (format === "html") {
       const html = buildPnlReportHtml(report);

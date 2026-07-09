@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   QUOTATION_TEMPLATE_OPTIONS,
+  appendQuotationTemplateParam,
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
 
@@ -34,11 +35,7 @@ export function QuotationPreviewTemplateToggle({
     >
       {QUOTATION_TEMPLATE_OPTIONS.map((option) => {
         const params = new URLSearchParams(searchParams?.toString() ?? "");
-        if (option.id === "detailed") {
-          params.delete("template");
-        } else {
-          params.set("template", option.id);
-        }
+        appendQuotationTemplateParam(params, option.id);
         const query = params.toString();
         const href = query ? `${resolvedBasePath}?${query}` : resolvedBasePath;
         const active = activeTemplate === option.id;

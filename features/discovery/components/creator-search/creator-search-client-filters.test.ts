@@ -44,6 +44,30 @@ function makeCreator(
   };
 }
 
+test("applyCreatorSearchClientFilters enforces category chips via interest tags", () => {
+  const filters: CreatorSearchFilters = {
+    ...DEFAULT_CREATOR_SEARCH_FILTERS,
+    categories: ["Beauty"],
+  };
+
+  const creators = [
+    makeCreator({
+      unified_id: "inf:1",
+      browse_category_tags: [],
+      audience_interests: ["Beauty"],
+    }),
+    makeCreator({
+      unified_id: "inf:2",
+      browse_category_tags: [],
+      audience_interests: ["Fashion"],
+    }),
+  ];
+
+  const filtered = applyCreatorSearchClientFilters(creators, filters);
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0]?.unified_id, "inf:1");
+});
+
 test("applyCreatorSearchClientFilters enforces category chips", () => {
   const filters: CreatorSearchFilters = {
     ...DEFAULT_CREATOR_SEARCH_FILTERS,

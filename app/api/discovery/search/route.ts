@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 
+import { logDiscoveryApiBoundary } from "@/lib/observability/discovery-metrics";
+import { captureException } from "@/lib/observability/error-reporter";
 import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 import type { DiscoveryPlatform } from "@/lib/discovery/types";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
+  const startedAt = performance.now();
   const { searchParams } = new URL(request.url);
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "discovery.read");
+  if ("response" in auth) return auth.response;
 
   try {
     const result = await searchDiscoveredProfiles(supabase, {
@@ -37,9 +36,28 @@ export async function GET(request: Request) {
       pageSize: searchParams.get("pageSize") ? Number(searchParams.get("pageSize")) : 24,
     });
 
+    logDiscoveryApiBoundary({
+      route: "/api/discovery/search",
+      startedAt,
+      status: 200,
+      userId: auth.userId,
+    });
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Search failed";
+    captureException(error, {
+      route: "/api/discovery/search",
+      service: "discovery-api",
+      userId: auth.userId,
+      status: 500,
+    });
+    logDiscoveryApiBoundary({
+      route: "/api/discovery/search",
+      startedAt,
+      status: 500,
+      userId: auth.userId,
+      error: message,
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

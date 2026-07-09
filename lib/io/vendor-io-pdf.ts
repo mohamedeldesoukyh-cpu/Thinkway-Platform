@@ -138,6 +138,15 @@ async function launchBrowser() {
   return launchLocalBrowser();
 }
 
+/**
+ * Showcase quotations embed many large data-URI images. Chromium's default
+ * `waitUntil: "load"` also waits on any leftover http(s) <img> requests
+ * (CDN avatars that failed server-side embed), which routinely exceeds 30s.
+ * Use domcontentloaded + a bounded network-idle settle instead.
+ */
+const PDF_SET_CONTENT_TIMEOUT_MS = 90_000;
+const PDF_NETWORK_IDLE_TIMEOUT_MS = 5_000;
+
 /** Server-side HTML → PDF via headless Chrome (local or Vercel serverless). */
 export async function renderHtmlToPdf(
   html: string,
@@ -148,7 +157,33 @@ export async function renderHtmlToPdf(
   try {
     browser = await launchBrowser();
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "load", timeout: 30_000 });
+    // Abort remote image/font fetches that can hang `load` / network idle when
+    // a Showcase export still contains a handful of unresolved CDN URLs.
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      const url = request.url();
+      const resourceType = request.resourceType();
+      if (
+        (resourceType === "image" || resourceType === "media" || resourceType === "font") &&
+        (url.startsWith("http://") || url.startsWith("https://"))
+      ) {
+        void request.abort();
+        return;
+      }
+      void request.continue();
+    });
+    await page.setContent(html, {
+      waitUntil: "domcontentloaded",
+      timeout: PDF_SET_CONTENT_TIMEOUT_MS,
+    });
+    try {
+      await page.waitForNetworkIdle({
+        idleTime: 500,
+        timeout: PDF_NETWORK_IDLE_TIMEOUT_MS,
+      });
+    } catch {
+      // Non-fatal: remaining external resources must not block PDF export.
+    }
     const pdf = await page.pdf(options);
     return { ok: true, buffer: Buffer.from(pdf) };
   } catch (error) {

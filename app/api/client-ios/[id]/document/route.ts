@@ -9,6 +9,7 @@ import {
 } from "@/lib/io/io-document-storage";
 import { renderLiveClientIoHtml } from "@/lib/io/render-live-client-io-html";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -26,13 +27,8 @@ export async function GET(request: Request, context: RouteContext) {
   const download = searchParams.get("download") === "1";
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "client_ios.read");
+  if ("response" in auth) return auth.response;
 
   try {
     const { data: clientIo } = await supabase
@@ -78,7 +74,7 @@ export async function GET(request: Request, context: RouteContext) {
         }
       }
 
-      const html = await renderLiveClientIoHtml(supabase, id, layout, user.id);
+      const html = await renderLiveClientIoHtml(supabase, id, layout, auth.userId);
       const pdfResult = await renderHtmlToPdf(html);
       if (!pdfResult.ok) {
         return NextResponse.json(
@@ -91,7 +87,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     if (format === "html") {
-      const html = await renderLiveClientIoHtml(supabase, id, layout, user.id);
+      const html = await renderLiveClientIoHtml(supabase, id, layout, auth.userId);
       const fileName = `${baseName}.html`;
 
       return new NextResponse(html, {

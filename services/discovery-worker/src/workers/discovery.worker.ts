@@ -26,6 +26,12 @@ export type DiscoveryJobData = {
   locationQuery?: string;
   trendKey?: string;
   limit?: number;
+  coverageIntent?: {
+    country?: string;
+    categories?: string[];
+    platforms?: string[];
+    industry?: string;
+  };
 };
 
 type CrawlMethodResult = {
@@ -38,6 +44,8 @@ async function runCrawlMethod(
   tracker: DiscoveryJobTracker
 ): Promise<CrawlMethodResult> {
   const { method, platform = "instagram" } = job.data;
+  const countryCode = job.data.coverageIntent?.country ?? job.data.locationCountry;
+  const categoryTags = job.data.coverageIntent?.categories ?? [];
 
   switch (method) {
     case "hashtag":
@@ -46,6 +54,8 @@ async function runCrawlMethod(
         platform,
         hashtag: job.data.hashtag ?? "fashion",
         limit: job.data.limit,
+        countryCode,
+        categoryTags,
       });
     case "competitor":
       tracker.log("info", `Competitor crawl from @${job.data.seedUsername ?? "unknown"}`);
@@ -64,6 +74,7 @@ async function runCrawlMethod(
         countryCode: job.data.locationCountry ?? "AE",
         locationQuery: job.data.locationQuery ?? "dubai",
         limit: job.data.limit,
+        categoryTags,
       });
     case "trend":
       tracker.log("info", `Trend crawl ${job.data.trendKey ?? "viral"}`);

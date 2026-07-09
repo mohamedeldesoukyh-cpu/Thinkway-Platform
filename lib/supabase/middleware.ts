@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { isPublicPath, sanitizeNextPath } from "@/lib/auth/routes";
+import {
+  authorizeCronRequest,
+  isApiPath,
+  isCronPath,
+  isPublicPath,
+  sanitizeNextPath,
+} from "@/lib/auth/routes";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
 
@@ -49,6 +55,19 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user && !isPublicPath(pathname)) {
+    if (isCronPath(pathname) && authorizeCronRequest(request)) {
+      return supabaseResponse;
+    }
+
+    if (isApiPath(pathname)) {
+      const unauthorized = NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+      copyResponseCookies(supabaseResponse, unauthorized);
+      return unauthorized;
+    }
+
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     const nextPath = `${pathname}${request.nextUrl.search}`;

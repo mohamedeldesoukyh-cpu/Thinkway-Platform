@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database, ShortlistItemStatus } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";

@@ -18,7 +18,11 @@ type PlatformPattern = {
   platform: SocialPlatform;
   hostPattern: RegExp;
   pathPattern: RegExp;
-  extractUsername: (pathname: string, segments: string[]) => string | null;
+  extractUsername: (
+    pathname: string,
+    segments: string[],
+    url?: URL
+  ) => string | null;
 };
 
 const PLATFORM_PATTERNS: PlatformPattern[] = [
@@ -80,7 +84,74 @@ const PLATFORM_PATTERNS: PlatformPattern[] = [
       return user;
     },
   },
+  {
+    platform: "facebook",
+    hostPattern: /^(?:www\.|m\.)?(?:facebook\.com|fb\.com)$/i,
+    pathPattern: /^\/(?:[^/?#]+(?:\/[^/?#]+)*)\/?$/i,
+    extractUsername: (pathname, segments, url) =>
+      extractFacebookUsername(pathname, segments, url),
+  },
 ];
+
+const FACEBOOK_RESERVED_SEGMENTS = new Set([
+  "watch",
+  "reel",
+  "reels",
+  "video",
+  "videos",
+  "photo",
+  "photos",
+  "story",
+  "stories",
+  "share",
+  "sharer",
+  "groups",
+  "events",
+  "marketplace",
+  "gaming",
+  "login",
+  "help",
+  "privacy",
+  "policies",
+  "ads",
+  "business",
+  "lite",
+  "dialog",
+  "plugins",
+  "hashtag",
+  "live",
+  "media",
+  "pg",
+  "notes",
+  "recover",
+]);
+
+function extractFacebookUsername(
+  pathname: string,
+  segments: string[],
+  url?: URL
+): string | null {
+  if (segments[0] === "profile.php") {
+    const id = url?.searchParams.get("id")?.trim();
+    return id && /^\d+$/.test(id) ? `id:${id}` : null;
+  }
+
+  if (segments[0] === "people" && segments.length >= 3) {
+    const id = segments[segments.length - 1]?.trim();
+    return id && /^\d+$/.test(id) ? `id:${id}` : null;
+  }
+
+  if (segments[0] === "pages" && segments.length >= 2) {
+    const slug = segments[1]?.trim();
+    return slug && !FACEBOOK_RESERVED_SEGMENTS.has(slug.toLowerCase()) ? slug : null;
+  }
+
+  const user = segments[0];
+  if (!user || FACEBOOK_RESERVED_SEGMENTS.has(user.toLowerCase())) return null;
+  if (user.endsWith(".php")) return null;
+  if (pathname.includes("/posts/") || pathname.includes("/videos/")) return null;
+  return user;
+}
 
 function parseFromUrl(raw: string): ParsedProfile | null {
   let url: URL;
@@ -97,11 +168,14 @@ function parseFromUrl(raw: string): ParsedProfile | null {
 
   for (const pattern of PLATFORM_PATTERNS) {
     if (!pattern.hostPattern.test(host)) continue;
-    const username = pattern.extractUsername(pathname, segments);
+    const username = pattern.extractUsername(pathname, segments, url);
     if (!username) continue;
 
     const normalized_username = normalizeUsername(username);
-    const profile_url = buildCanonicalProfileUrl(pattern.platform, normalized_username);
+    const profile_url =
+      pattern.platform === "facebook" && normalized_username.startsWith("id:")
+        ? `https://www.facebook.com/profile.php?id=${normalized_username.slice(3)}`
+        : buildCanonicalProfileUrl(pattern.platform, normalized_username);
 
     return {
       platform: pattern.platform,

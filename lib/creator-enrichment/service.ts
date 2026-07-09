@@ -19,11 +19,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildCanonicalProfileUrl, isSocialPlatform } from "@/lib/social/platforms";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 
+import { mergeContactLinks } from "@/lib/creators/contact-info";
 import { persistInfluencerPlatformAvatarDetailed } from "@/lib/performance/metrics-collector/persist";
 import { isUsableAvatarUrl, normalizeAvatarSource } from "@/lib/performance/avatar-sync-policy";
 import { persistCreatorPrimaryIdentity } from "@/lib/creators/persist-primary-avatar";
 
-import { fetchApifyProfile } from "./apify-profile";
+import {
+  inferCategoriesFromProfileSignals,
+  mergeInferredCategories,
+} from "./category-inference";
+import { fetchProfileWithIpl } from "@/lib/intelligence-persistence";
+import { bridgeSnapshotToCreatorDna } from "@/lib/intelligence-persistence/services/dna-bridge";
 import { writeEnrichmentRun } from "./audit";
 import {
   canEnqueueCreatorEnrichment,
@@ -33,7 +39,10 @@ import {
 } from "./enabled";
 import { decideEnrichment, computeNextRefreshAt } from "./policy";
 import { resolveApifyAvatarPersistOptions } from "./enrichment-avatar-policy";
+import { syncEnrichmentAvatarToStorage } from "./enrichment-avatar-storage";
 import { mergeSourcedFields, type IncomingField } from "./merge";
+import { enrichmentUpdatedMeaningfulFields } from "./enrichment-metrics";
+import { accountsHaveUsableBaselineData, accountHasUsableBaselineData } from "./preview-baseline";
 import {
   recentPublicationsLackThumbnails,
 } from "@/lib/creators/recent-publication-thumb";
@@ -194,7 +203,7 @@ export async function runCreatorEnrichment(
 
   const { data: creator, error: creatorError } = await supabase
     .from("influencers")
-    .select("id, last_enriched_at, field_sources, profile_data_version")
+    .select("id, last_enriched_at, field_sources, profile_data_version, categories")
     .eq("id", payload.influencerId)
     .maybeSingle();
 
@@ -213,6 +222,7 @@ export async function runCreatorEnrichment(
     last_enriched_at: string | null;
     field_sources: FieldSourceMap | null;
     profile_data_version: number | null;
+    categories: string[] | null;
   };
 
   const scope = payload.scope ?? "all";
@@ -336,6 +346,7 @@ export async function runCreatorEnrichment(
   let topFollowers = 0;
   let lastApifyRunId: string | null = null;
   const errors: string[] = [];
+  let rollupInfluencerCategories = [...(creatorRow.categories ?? [])];
   const { forceSync: forceAvatarSync, forceAvatarReplace } = resolveApifyAvatarPersistOptions({
     scope,
     force: payload.force,
@@ -383,10 +394,21 @@ export async function runCreatorEnrichment(
       profileUrl,
     });
 
-    const fetched = await fetchApifyProfile({
+    const fetched = await fetchProfileWithIpl(supabase, {
+      influencerId: payload.influencerId,
+      platformAccountId: account.id,
+      discoveredProfileId: payload.discoveredProfileId,
       platform: platformKey,
       username,
       profileUrl,
+      force: Boolean(payload.force),
+      followerCount: account.follower_count,
+      deferDnaBridge: true,
+      auditMetadata: {
+        trigger: payload.trigger,
+        jobId: options?.jobId ?? null,
+        requestedBy: payload.requestedBy ?? null,
+      },
     });
 
     if (!fetched.ok) {
@@ -396,6 +418,7 @@ export async function runCreatorEnrichment(
         username,
         available: fetched.available,
         fallbackReason: fetched.reason,
+        iplProviderRunId: fetched.providerRunId,
       });
       const avatarSource = normalizeAvatarSource(account.avatar_source);
       if (
@@ -413,9 +436,29 @@ export async function runCreatorEnrichment(
       continue;
     }
 
+    if (fetched.cacheHit) {
+      logCreatorEnrichment("IPL cache hit", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        snapshotId: fetched.snapshotId,
+        providerRunId: fetched.providerRunId,
+      });
+    }
+
     anyApifyAvailable = true;
     const data = fetched.data;
     lastApifyRunId = data.apifyRunId ?? lastApifyRunId;
+
+    const inferredCategories = inferCategoriesFromProfileSignals({
+      bio: data.bio,
+      hashtags: data.hashtags,
+      mentions: data.mentions,
+      extraTerms: data.categories,
+    });
+    const enrichedInterestCategories = mergeInferredCategories(
+      data.categories,
+      inferredCategories
+    );
 
     const incoming: IncomingField[] = [
       { field: "profile_display_name", value: data.displayName, source: APIFY },
@@ -431,10 +474,14 @@ export async function runCreatorEnrichment(
       { field: "audience_country", value: data.audienceCountry, source: APIFY },
       { field: "hashtags", value: data.hashtags, source: APIFY },
       { field: "mentions", value: data.mentions, source: APIFY },
-      { field: "interest_categories", value: data.categories, source: APIFY },
+      {
+        field: "interest_categories",
+        value: enrichedInterestCategories,
+        source: APIFY,
+      },
       {
         field: "audience_interests",
-        value: data.categories.length > 0 ? data.categories : null,
+        value: enrichedInterestCategories.length > 0 ? enrichedInterestCategories : null,
         source: APIFY,
       },
       { field: "recent_publications", value: data.recentPublications, source: APIFY },
@@ -449,11 +496,22 @@ export async function runCreatorEnrichment(
 
     const scopedIncoming = filterIncomingByScope(incoming, scope);
 
+    const mergedContactLinks = mergeContactLinks(
+      account.contact_links,
+      data.contactLinks
+    );
+    const contactLinksIncoming = scopedIncoming.find((field) => field.field === "contact_links");
+    if (contactLinksIncoming) {
+      contactLinksIncoming.value =
+        mergedContactLinks.length > 0 ? mergedContactLinks : null;
+    }
+
     const merged = mergeSourcedFields(resolveAccountFieldSources(account), scopedIncoming, {
       existingValues: accountExistingValues(account),
       fillMissingOnly: payload.trigger !== "manual",
       metadata: account.metadata,
       forceInterestReplace,
+      enableInterestMerge: true,
     });
 
     const metadataFields = [
@@ -503,12 +561,16 @@ export async function runCreatorEnrichment(
 
     if (merged.fieldsUpdated.length > 0) {
       const nowIso = new Date().toISOString();
+      const platformFieldPaths = merged.fieldsUpdated.map((field) => `${platformKey}.${field}`);
+      const platformEnrichmentStatus = enrichmentUpdatedMeaningfulFields(platformFieldPaths)
+        ? "enriched"
+        : "partial";
       const { error: updateError } = await supabase
         .from("influencer_platform_accounts")
         .update({
           ...merged.updates,
           field_sources: merged.fieldSources,
-          enrichment_status: "enriched",
+          enrichment_status: platformEnrichmentStatus,
           last_enriched_at: nowIso,
           apify_run_id: data.apifyRunId,
           profile_data_version: ((account as { profile_data_version?: number }).profile_data_version ?? 0) + 1,
@@ -522,11 +584,20 @@ export async function runCreatorEnrichment(
       if (updateError) {
         errors.push(`${platformKey}: ${updateError.message}`);
       } else {
-        anySuccess = true;
-        allFieldsUpdated.push(...merged.fieldsUpdated.map((f) => `${platformKey}.${f}`));
+        if (enrichmentUpdatedMeaningfulFields(platformFieldPaths)) {
+          anySuccess = true;
+        }
+        allFieldsUpdated.push(...platformFieldPaths);
       }
-    } else {
+    } else if (accountHasUsableBaselineData(account)) {
       anySuccess = true;
+    }
+
+    if (inferredCategories.length > 0) {
+      rollupInfluencerCategories = mergeInferredCategories(
+        rollupInfluencerCategories,
+        inferredCategories
+      );
     }
 
     // Always attempt when Apify returned a photo. Metrics refresh still honors
@@ -567,6 +638,32 @@ export async function runCreatorEnrichment(
       if (avatarResult.saved) {
         allFieldsUpdated.push(`${platformKey}.profile_picture_url`);
       }
+
+      const avatarUrlForStorage =
+        (avatarRow as { profile_picture_url?: string | null } | null)?.profile_picture_url?.trim() ||
+        data.profilePictureUrl.trim();
+      if (avatarUrlForStorage && username) {
+        const storageResult = await syncEnrichmentAvatarToStorage(supabase, {
+          influencerId: payload.influencerId,
+          platformAccountId: account.id,
+          platform: platformKey,
+          username,
+          providerAvatarUrl: avatarUrlForStorage,
+        });
+
+        logCreatorEnrichment("Avatar storage sync", {
+          influencerId: payload.influencerId,
+          platform: platformKey,
+          username,
+          uploaded: storageResult.uploaded,
+          reason: storageResult.uploaded ? undefined : storageResult.reason,
+          url: storageResult.uploaded ? storageResult.url : undefined,
+        });
+
+        if (storageResult.uploaded) {
+          allFieldsUpdated.push(`${platformKey}.profile_picture_url`);
+        }
+      }
     } else {
       console.log(
         `[avatar] provider returned empty avatar influencer=${payload.influencerId} platform=${platformKey} username=${username ?? "unknown"}`
@@ -589,33 +686,96 @@ export async function runCreatorEnrichment(
     }
 
     if ((data.followers ?? 0) > topFollowers) topFollowers = data.followers ?? 0;
+
+    if (fetched.snapshotId) {
+      const { data: avatarRowForDna } = await supabase
+        .from("influencer_platform_accounts")
+        .select("profile_picture_url")
+        .eq("id", account.id)
+        .maybeSingle();
+
+      const avatarUrlOverride =
+        (avatarRowForDna as { profile_picture_url?: string | null } | null)
+          ?.profile_picture_url?.trim() || data.profilePictureUrl?.trim() || null;
+
+      const bridgeResult = await bridgeSnapshotToCreatorDna(supabase, fetched.snapshotId, {
+        avatarUrlOverride,
+      });
+
+      if (bridgeResult.ok) {
+        logCreatorEnrichment("DNA bridge completed", {
+          influencerId: payload.influencerId,
+          platform: platformKey,
+          snapshotId: fetched.snapshotId,
+          avatarUrlOverride: avatarUrlOverride ? "set" : "none",
+        });
+      } else {
+        logCreatorEnrichment("DNA bridge failed", {
+          influencerId: payload.influencerId,
+          platform: platformKey,
+          snapshotId: fetched.snapshotId,
+          message: bridgeResult.message,
+        });
+        errors.push(`${platformKey}: DNA bridge — ${bridgeResult.message}`);
+      }
+    }
   }
 
   // ---- Persist creator-level orchestration metadata ------------------------
   const completedAt = new Date().toISOString();
-  const finalStatus: CreatorEnrichmentResult["status"] = anySuccess
-    ? allFieldsUpdated.length > 0
+  const hasBaselinePreview = accountsHaveUsableBaselineData(accounts);
+  const hasMeaningfulMetrics =
+    topFollowers > 0 ||
+    enrichmentUpdatedMeaningfulFields(allFieldsUpdated) ||
+    accounts.some((account) => (account.follower_count ?? 0) > 0);
+  const effectiveSuccess = anySuccess && (hasMeaningfulMetrics || hasBaselinePreview);
+
+  const finalStatus: CreatorEnrichmentResult["status"] = effectiveSuccess
+    ? allFieldsUpdated.length > 0 && enrichmentUpdatedMeaningfulFields(allFieldsUpdated)
       ? "enriched"
       : "partial"
     : anyApifyAvailable
-      ? "failed"
-      : "skipped";
+      ? hasBaselinePreview
+        ? "partial"
+        : "failed"
+      : hasBaselinePreview
+        ? "partial"
+        : "skipped";
+
+  const influencerCategoriesChanged =
+    JSON.stringify(rollupInfluencerCategories) !==
+    JSON.stringify(creatorRow.categories ?? []);
 
   await supabase
     .from("influencers")
     .update({
-      enrichment_status: finalStatus === "skipped" ? "partial" : finalStatus,
-      enrichment_source: anySuccess ? "apify" : null,
+      enrichment_status:
+        finalStatus === "skipped"
+          ? "never"
+          : finalStatus,
+      enrichment_source: effectiveSuccess && enrichmentUpdatedMeaningfulFields(allFieldsUpdated)
+        ? "apify"
+        : null,
       enrichment_priority: payload.priority,
-      last_enriched_at: anySuccess ? completedAt : creatorRow.last_enriched_at,
+      last_enriched_at:
+        effectiveSuccess && enrichmentUpdatedMeaningfulFields(allFieldsUpdated)
+          ? completedAt
+          : creatorRow.last_enriched_at,
       next_refresh_at: computeNextRefreshAt({ followers: topFollowers }).toISOString(),
       apify_run_id: lastApifyRunId,
       profile_data_version: (creatorRow.profile_data_version ?? 0) + 1,
+      ...(influencerCategoriesChanged
+        ? { categories: rollupInfluencerCategories }
+        : {}),
       updated_at: completedAt,
     } as never)
     .eq("id", payload.influencerId);
 
-  if (anySuccess) {
+  if (influencerCategoriesChanged) {
+    allFieldsUpdated.push("influencer.categories");
+  }
+
+  if (effectiveSuccess) {
     await persistCreatorPrimaryIdentity(supabase, payload.influencerId);
   }
 
@@ -630,7 +790,7 @@ export async function runCreatorEnrichment(
           ? "completed"
           : "partial"
         : "failed",
-    source: anySuccess ? "apify" : null,
+    source: effectiveSuccess && enrichmentUpdatedMeaningfulFields(allFieldsUpdated) ? "apify" : null,
     apifyRunId: lastApifyRunId,
     forced: Boolean(payload.force),
     fieldsUpdated: allFieldsUpdated,
@@ -643,6 +803,17 @@ export async function runCreatorEnrichment(
   });
 
   if (!anyApifyAvailable && !anySuccess) {
+    if (hasBaselinePreview) {
+      return {
+        ok: true,
+        status: "partial",
+        message:
+          errors.length > 0
+            ? `Apify unavailable; kept profile preview. ${errors.join("; ")}`
+            : "Apify unavailable; kept profile preview data.",
+        fieldsUpdated: allFieldsUpdated,
+      };
+    }
     return {
       ok: false,
       status: "failed",
@@ -651,11 +822,31 @@ export async function runCreatorEnrichment(
     };
   }
 
+  if (finalStatus === "partial" && !anySuccess && hasBaselinePreview) {
+    return {
+      ok: true,
+      status: "partial",
+      message:
+        errors.length > 0
+          ? `Full Apify enrichment failed; kept profile preview. ${errors.join("; ")}`
+          : "Full Apify enrichment failed; kept profile preview data.",
+      fieldsUpdated: allFieldsUpdated,
+      apifyRunId: lastApifyRunId,
+    };
+  }
+
   if (finalStatus === "failed") {
-    // Surface failure so BullMQ retries / dead-letters the job.
-    throw new Error(
-      errors.length > 0 ? errors.join("; ") : "Enrichment failed for all platform accounts."
-    );
+    // Apify may already have been billed — do not throw (BullMQ would retry up to 3×).
+    return {
+      ok: false,
+      status: "failed",
+      message:
+        errors.length > 0
+          ? errors.join("; ")
+          : "Enrichment failed for all platform accounts.",
+      fieldsUpdated: allFieldsUpdated,
+      apifyRunId: lastApifyRunId,
+    };
   }
 
   return {

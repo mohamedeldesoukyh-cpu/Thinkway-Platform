@@ -7,12 +7,23 @@ import {
 } from "@/lib/performance/metrics-collector/persist";
 
 const DEFAULT_MAX_ATTEMPTS = 3;
+const STALLED_JOB_FAILURE_PATTERN = /stalled more than allowable limit/i;
 
 export function isMetricsJobAttemptsExhausted(
   attemptsMade: number,
   maxAttempts = DEFAULT_MAX_ATTEMPTS
 ): boolean {
   return attemptsMade >= maxAttempts;
+}
+
+/** BullMQ stalled jobs land in failed with attemptsMade=1 — still terminal for DB status. */
+export function isTerminalMetricsJobFailure(
+  error: string,
+  attemptsMade: number,
+  maxAttempts = DEFAULT_MAX_ATTEMPTS
+): boolean {
+  if (STALLED_JOB_FAILURE_PATTERN.test(error)) return true;
+  return isMetricsJobAttemptsExhausted(attemptsMade, maxAttempts);
 }
 
 export async function handlePublicationMetricsJobFailure(
@@ -29,7 +40,7 @@ export async function handlePublicationMetricsJobFailure(
   }
 ): Promise<boolean> {
   const maxAttempts = input.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-  if (!isMetricsJobAttemptsExhausted(input.attemptsMade, maxAttempts)) {
+  if (!isTerminalMetricsJobFailure(input.error, input.attemptsMade, maxAttempts)) {
     return false;
   }
 

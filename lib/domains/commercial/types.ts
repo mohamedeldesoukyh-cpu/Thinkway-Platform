@@ -88,6 +88,8 @@ export type CommercialTotals = {
   totalGpValueEgp: number;
   /** Blended GP% = total GP value / total revenue, as a percent. 0 when no revenue. */
   totalGpPct: number;
+  /** Blended PM% (markup margin) = total GP value / total cost, as a percent. 0 when no cost. */
+  totalPmPct: number;
   /** Sum of line AF values (EGP). */
   totalAfValueEgp: number;
   /** Total GP + total AF (full agency margin). */

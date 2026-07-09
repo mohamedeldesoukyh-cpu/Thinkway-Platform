@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import {
   ASSIGNMENT_SHORTCUTS,
   GLOBAL_SHORTCUTS,
+  QUOTATION_SHORTCUTS,
 } from "@/lib/productivity/keyboard-shortcuts";
 import { useMemo, useState } from "react";
 
@@ -25,7 +26,7 @@ type KeyboardHelpDialogProps = {
 export function KeyboardHelpDialog({ open, onOpenChange }: KeyboardHelpDialogProps) {
   const [query, setQuery] = useState("");
   const all = useMemo(
-    () => [...GLOBAL_SHORTCUTS, ...ASSIGNMENT_SHORTCUTS],
+    () => [...GLOBAL_SHORTCUTS, ...ASSIGNMENT_SHORTCUTS, ...QUOTATION_SHORTCUTS],
     []
   );
 

@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 import { safeOperationalQuery } from "@/lib/platform/safe-query";
 
 import type {
@@ -9,21 +9,11 @@ import type {
 } from "./types";
 
 async function requireClientAccessRead() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) throw new Error(error?.message ?? "Unauthorized");
+  const { supabase, userId, roleSlug } = await requireRequestUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role:roles(slug)")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const roleSlug =
-    (profile as { role: { slug: string } | null } | null)?.role?.slug ?? null;
+  if (roleSlug === "super_admin" || roleSlug === "admin") {
+    return { supabase, userId };
+  }
 
   const { data: canRead } = await (supabase as any).rpc("has_permission", {
     p_permission: "client_access.read",
@@ -40,8 +30,6 @@ async function requireClientAccessRead() {
 
   if (
     !(
-      roleSlug === "super_admin" ||
-      roleSlug === "admin" ||
       Boolean(canRead) ||
       Boolean(canWrite) ||
       Boolean(canSettings) ||
@@ -51,11 +39,11 @@ async function requireClientAccessRead() {
     throw new Error("Client access management is not permitted.");
   }
 
-  return { supabase, userId: user.id };
+  return { supabase, userId };
 }
 
 async function mapClientUsersRows(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: RequestUser["supabase"],
   memberships: {
     client_id: string;
     profile_id: string;

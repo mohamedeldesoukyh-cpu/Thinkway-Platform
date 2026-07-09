@@ -112,6 +112,8 @@ const navItems: NavItem[] = [
       { href: "/settings/client-access", label: "Client Access" },
       { href: "/settings/client-classification-review", label: "Classification Review" },
       { href: "/settings/email", label: "Email" },
+      { href: "/settings/discovery-engine", label: "Discovery Engine" },
+      { href: "/settings/discovery-diagnostics", label: "Discovery Diagnostics" },
     ],
   },
 ];

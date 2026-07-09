@@ -181,6 +181,8 @@ assert.equal(formatDualCurrency({ amount: 1000, currency: "EGP", egpAmount: 1000
   assert.equal(totals.totalAgencyMarginEgp, 16666.66);
   // Blended GP% = 12333.33 / 43333.33 * 100 ≈ 28.4615
   assert.ok(Math.abs(totals.totalGpPct - 28.4615) < 0.01);
+  // Blended PM% = 12333.33 / 31000 * 100 ≈ 39.7849
+  assert.ok(Math.abs(totals.totalPmPct - 39.7849) < 0.01);
 }
 
 // Empty aggregation → zeros, no divide-by-zero
@@ -188,6 +190,7 @@ assert.equal(formatDualCurrency({ amount: 1000, currency: "EGP", egpAmount: 1000
   const totals = aggregateEgpTotals([]);
   assert.equal(totals.totalRevenueEgp, 0);
   assert.equal(totals.totalGpPct, 0);
+  assert.equal(totals.totalPmPct, 0);
   assert.equal(totals.totalAfValueEgp, 0);
   assert.equal(totals.totalAgencyMarginEgp, 0);
   assert.equal(totals.lineCount, 0);

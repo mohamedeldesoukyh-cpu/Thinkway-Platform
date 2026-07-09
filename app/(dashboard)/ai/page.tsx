@@ -1,15 +1,53 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { AiAnalystWorkspace } from "@/features/ai-analyst/components/ai-analyst-workspace";
+import { IntelligenceWorkspace } from "@/features/ai-workspace/components/intelligence-workspace";
+import { AI_WORKSPACE_COPY } from "@/features/ai-workspace/constants/ai-copy";
+import {
+  buildWorkspaceContextInput,
+  normalizeWorkspaceContext,
+  parseWorkspaceParams,
+  workspaceLabelFromContext,
+} from "@/features/ai-workspace/services/workspace-context-service";
+import { getAuthUser } from "@/lib/supabase/server";
 
-export default function AiAnalystPage() {
+type AiPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function AiPage({ searchParams }: AiPageProps) {
+  const params = parseWorkspaceParams(await searchParams);
+  const { user } = await getAuthUser();
+
+  let workspaceLabel: string | undefined;
+  if (user && (params.workspace || params.id)) {
+    const { createSupabaseServerClient } = await import("@/lib/supabase/server");
+    const supabase = await createSupabaseServerClient();
+    const contextInput = await buildWorkspaceContextInput(
+      supabase,
+      { id: user.id },
+      params
+    );
+    workspaceLabel = workspaceLabelFromContext({
+      workspace: normalizeWorkspaceContext(contextInput.workspace),
+      campaign: contextInput.campaign,
+      client: contextInput.client,
+      shortlist: contextInput.shortlist,
+    });
+  }
+
   return (
     <DashboardShell
-      title="AI Analyst"
-      description="Ask questions, uncover trends, and get smart insights about your campaigns and performance."
+      title={AI_WORKSPACE_COPY.title}
+      description={AI_WORKSPACE_COPY.subtitle}
+      hidePageHeader
+      containedMain
+      mainClassName="p-0 md:p-0"
     >
       <PlatformErrorBoundary surface="analytics">
-        <AiAnalystWorkspace />
+        <IntelligenceWorkspace
+          workspaceParams={params}
+          workspaceLabel={workspaceLabel}
+        />
       </PlatformErrorBoundary>
     </DashboardShell>
   );

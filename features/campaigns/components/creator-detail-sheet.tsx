@@ -12,9 +12,14 @@ import {
   ExternalLinkIcon,
   ImageIcon,
   Loader2Icon,
+  LinkIcon,
+  MailIcon,
   PanelLeftIcon,
+  PhoneIcon,
+  PlusIcon,
   RefreshCwIcon,
   ShieldCheckIcon,
+  TextQuoteIcon,
   TrendingUpIcon,
   UsersIcon,
   XIcon,
@@ -24,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshCreatorMenu } from "@/features/discovery/enrichment/components/refresh-creator-menu";
+import { AddCreatorPlatformDialog } from "@/features/discovery/components/add-creator-platform-dialog";
 import { RecentPublicationsGallery } from "@/features/discovery/enrichment/components/recent-publications-gallery";
 import { CreatorSourceBadge } from "@/features/campaigns/components/creator-source-badge";
 import {
@@ -37,6 +43,9 @@ import {
   getSimilarCreatorsAction,
   getUnifiedCreatorDetailAction,
 } from "@/features/campaigns/creator-discovery-actions";
+import { getInfluencerQuotationPriceReferenceAction } from "@/features/quotations/actions";
+import { CreatorQuotationPriceReferencePanel } from "@/components/creator/creator-quotation-price-reference-panel";
+import type { CreatorQuotationPriceReference } from "@/lib/creators/quotation-price-reference";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { isAssignableCreator } from "@/lib/creators/adapters";
 import {
@@ -44,6 +53,7 @@ import {
   sortPlatformsStable,
 } from "@/lib/creators/creator-centric";
 import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
+import { hasCreatorContact, resolveCreatorContactFields } from "@/lib/creators/contact-info";
 import type {
   CreatorHistoricalMetrics,
   MetricConfidenceLevel,
@@ -63,7 +73,7 @@ type Props = {
   campaignHeaderId?: string;
 };
 
-type DetailTab = "overview" | "publications" | "confidence" | "similar";
+type DetailTab = "overview" | "contact" | "publications" | "confidence" | "similar";
 
 const CREATOR_DETAIL_SHEET_STYLE = {
   width: "min(820px, 100vw)",
@@ -178,6 +188,68 @@ function PlatformChip({
   );
 }
 
+function ProfileTagChips({
+  tags,
+  variant,
+}: {
+  tags: string[];
+  variant: "hashtag" | "mention";
+}) {
+  if (tags.length === 0) {
+    return <span className="text-[11px] text-muted-foreground/60">None tagged</span>;
+  }
+
+  const chipClass =
+    variant === "hashtag"
+      ? "bg-primary/10 text-primary dark:bg-primary/15"
+      : "bg-muted text-muted-foreground";
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className={cn(
+            "inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-medium",
+            chipClass
+          )}
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ContactFieldRow({
+  label,
+  value,
+  href,
+  external,
+}: {
+  label: string;
+  value: string;
+  href: string;
+  external?: boolean;
+}) {
+  return (
+    <div>
+      <p className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground">
+        {label}
+      </p>
+      <a
+        href={href}
+        target={external ? "_blank" : undefined}
+        rel={external ? "noopener noreferrer" : undefined}
+        className="inline-flex items-center gap-1 text-[12px] text-blue-600 hover:underline dark:text-blue-400"
+      >
+        <span className="break-all">{value}</span>
+        {external ? <ExternalLinkIcon className="size-3 shrink-0" aria-hidden /> : null}
+      </a>
+    </div>
+  );
+}
+
 function KpiCard({
   label,
   metric,
@@ -204,6 +276,92 @@ function KpiCard({
         {metric.value == null ? "—" : `${formatCount(metric.value)}${suffix}`}
       </p>
     </div>
+  );
+}
+
+function ContactPanel({
+  displayCreator,
+  selectedPlatform,
+}: {
+  displayCreator: UnifiedCreatorResult;
+  selectedPlatform: UnifiedCreatorResult["platforms"][number] | null;
+}) {
+  const contact = resolveCreatorContactFields(displayCreator);
+  const hasContact = hasCreatorContact(contact);
+  const platformName = selectedPlatform ? platformLabel(selectedPlatform.platform) : null;
+  const platformHandle = selectedPlatform?.handle?.replace(/^@/, "");
+
+  return (
+    <DetailSection className="border-b-0">
+      <SectionTitle icon={<MailIcon className="size-3" />}>Contact information</SectionTitle>
+      {platformName ? (
+        <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+          Showing contact for{" "}
+          <span className="font-medium text-foreground">
+            {platformName}
+            {platformHandle ? ` · @${platformHandle}` : ""}
+          </span>
+          . Switch platform above to view account-specific details.
+        </p>
+      ) : null}
+      {hasContact ? (
+        <div className="space-y-3.5">
+          {contact.contact_email ? (
+            <ContactFieldRow
+              label="Email"
+              value={contact.contact_email}
+              href={`mailto:${contact.contact_email}`}
+            />
+          ) : null}
+          {contact.contact_phone ? (
+            <ContactFieldRow
+              label="Phone"
+              value={contact.contact_phone}
+              href={`tel:${contact.contact_phone.replace(/\s/g, "")}`}
+            />
+          ) : null}
+          {contact.contact_links.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground">
+                {contact.contact_links.length === 1 ? "Website" : "Links"}
+              </p>
+              <div className="space-y-2">
+                {contact.contact_links.map((link, index) => (
+                  <a
+                    key={link}
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-[12px] text-blue-600 transition-colors hover:bg-muted/40 dark:text-blue-400"
+                  >
+                    <LinkIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                    <span className="min-w-0 break-all">
+                      {contact.contact_links.length > 1 ? (
+                        <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {index + 1}
+                        </span>
+                      ) : null}
+                      {link.replace(/^https?:\/\//i, "")}
+                    </span>
+                    <ExternalLinkIcon className="ml-auto size-3 shrink-0" aria-hidden />
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <span className="inline-flex size-10 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
+            <PhoneIcon className="size-4" aria-hidden />
+          </span>
+          <p className="max-w-xs text-[12px] text-muted-foreground">
+            No contact information available yet. Run enrichment or import contact details to
+            populate this section.
+          </p>
+        </div>
+      )}
+    </DetailSection>
   );
 }
 
@@ -391,6 +549,7 @@ type LoadedDetail = {
   unifiedId: string;
   similar: Array<UnifiedCreatorResult & { similarity_score: number }>;
   history: CreatorHistoricalMetrics | null;
+  quotationPriceReference: CreatorQuotationPriceReference | null;
 };
 
 export function CreatorDetailSheet({
@@ -408,6 +567,7 @@ export function CreatorDetailSheet({
   );
   const [enrichmentStatus, setEnrichmentStatus] = useState<CreatorEnrichmentStatus>("never");
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
+  const [addPlatformOpen, setAddPlatformOpen] = useState(false);
 
   useEffect(() => {
     setBaseCreator(creator);
@@ -431,7 +591,12 @@ export function CreatorDetailSheet({
       getUnifiedCreatorDetailAction(unifiedId),
       getSimilarCreatorsAction(unifiedId),
       getCreatorHistoricalMetricsAction(unifiedId),
-    ]).then(([fullCreator, sim, hist]) => {
+      creator.influencer_id
+        ? getInfluencerQuotationPriceReferenceAction(creator.influencer_id).then((res) =>
+            res.ok ? (res.data?.reference ?? null) : null
+          )
+        : Promise.resolve(null),
+    ]).then(([fullCreator, sim, hist, quotationPriceReference]) => {
       if (!active) return;
       if (fullCreator) {
         setBaseCreator(fullCreator);
@@ -444,7 +609,7 @@ export function CreatorDetailSheet({
           );
         });
       }
-      setDetail({ unifiedId, similar: sim, history: hist });
+      setDetail({ unifiedId, similar: sim, history: hist, quotationPriceReference });
     });
     return () => {
       active = false;
@@ -463,9 +628,12 @@ export function CreatorDetailSheet({
   const loading = matchedDetail == null;
   const similar = matchedDetail?.similar ?? [];
   const history = matchedDetail?.history ?? null;
+  const quotationPriceReference = matchedDetail?.quotationPriceReference ?? null;
 
   const primary = selectedPlatform;
   const handle = selectedPlatform?.handle ? `@${selectedPlatform.handle.replace(/^@/, "")}` : null;
+  const contact = resolveCreatorContactFields(displayCreator);
+  const hasContact = hasCreatorContact(contact);
   const profileUrl = selectedPlatform
     ? resolvePrimaryProfileUrl([selectedPlatform])
     : resolvePrimaryProfileUrl(platforms);
@@ -498,11 +666,10 @@ export function CreatorDetailSheet({
     <CreatorAvatarImage
       avatarUrl={primaryAvatarUrl}
       size="lg"
-      sizeClassName="size-[52px]"
       className="border-2 border-background"
     />
   ) : (
-    <span className="inline-flex size-[52px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-indigo-400 text-base font-bold text-white">
+    <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-indigo-400 text-base font-bold text-white">
       {initialsFromName(identityCreator.display_name)}
     </span>
   );
@@ -605,20 +772,32 @@ export function CreatorDetailSheet({
             )}
 
             <div className="min-w-0 flex-1">
-              <CreatorProfileLink
-                source={{
-                  displayName: identityCreator.display_name,
-                  avatarUrl: primaryAvatarUrl,
-                  isVerified: identityCreator.is_platform_verified,
-                }}
-                size="md"
-                showAvatar={false}
-                showHandle={false}
-                showPlatformBadge={false}
-                linkName={false}
-                nameClassName="text-lg font-bold tracking-tight text-foreground"
-                stopPropagation
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <CreatorProfileLink
+                  source={{
+                    displayName: identityCreator.display_name,
+                    avatarUrl: primaryAvatarUrl,
+                    isVerified: identityCreator.is_platform_verified,
+                  }}
+                  size="md"
+                  showAvatar={false}
+                  showHandle={false}
+                  showPlatformBadge={false}
+                  linkName={false}
+                  nameClassName="text-lg font-bold tracking-tight text-foreground"
+                  stopPropagation
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 gap-1 rounded-full border-dashed px-2.5 text-[10px] font-semibold text-primary hover:border-primary/40 hover:bg-primary/5"
+                  onClick={() => setAddPlatformOpen(true)}
+                >
+                  <PlusIcon className="size-3" aria-hidden />
+                  Platform
+                </Button>
+              </div>
 
               {platforms.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -641,8 +820,28 @@ export function CreatorDetailSheet({
                       </button>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={() => setAddPlatformOpen(true)}
+                    className="inline-flex h-6 items-center gap-1 rounded-full border border-dashed border-primary/40 px-2 text-[10px] font-semibold text-primary transition-colors hover:bg-primary/5"
+                    aria-label="Add platform profile"
+                  >
+                    <PlusIcon className="size-3" aria-hidden />
+                    Add
+                  </button>
                 </div>
-              ) : null}
+              ) : (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAddPlatformOpen(true)}
+                    className="inline-flex h-6 items-center gap-1 rounded-full border border-dashed border-primary/40 px-2 text-[10px] font-semibold text-primary transition-colors hover:bg-primary/5"
+                  >
+                    <PlusIcon className="size-3" aria-hidden />
+                    Add platform
+                  </button>
+                </div>
+              )}
 
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 {primary ? (
@@ -712,6 +911,9 @@ export function CreatorDetailSheet({
                 <TabsTrigger value="overview" className={DETAIL_TAB_TRIGGER_CLASS}>
                   Overview
                 </TabsTrigger>
+                <TabsTrigger value="contact" className={DETAIL_TAB_TRIGGER_CLASS}>
+                  Contact
+                </TabsTrigger>
                 <TabsTrigger value="publications" className={DETAIL_TAB_TRIGGER_CLASS}>
                   Publications
                 </TabsTrigger>
@@ -758,6 +960,70 @@ export function CreatorDetailSheet({
                       </div>
                     </div>
                   </DetailSection>
+
+                  {identityCreator.influencer_id ? (
+                    <DetailSection>
+                      <SectionTitle icon={<TrendingUpIcon className="size-3" />}>
+                        Quotation pricing
+                      </SectionTitle>
+                      <CreatorQuotationPriceReferencePanel
+                        reference={quotationPriceReference}
+                        compact={loading && quotationPriceReference == null}
+                      />
+                    </DetailSection>
+                  ) : null}
+
+                  {(displayCreator.bio ||
+                    (displayCreator.hashtags?.length ?? 0) > 0 ||
+                    (displayCreator.mentions?.length ?? 0) > 0) && (
+                    <DetailSection>
+                      <SectionTitle icon={<TextQuoteIcon className="size-3" />}>Profile</SectionTitle>
+                      {displayCreator.bio ? (
+                        <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-foreground">
+                          {displayCreator.bio}
+                        </p>
+                      ) : null}
+                      {(displayCreator.hashtags?.length ?? 0) > 0 ||
+                      (displayCreator.mentions?.length ?? 0) > 0 ? (
+                        <div
+                          className={cn(
+                            "grid grid-cols-1 gap-3.5",
+                            displayCreator.bio ? "mt-3.5" : undefined
+                          )}
+                        >
+                          {(displayCreator.hashtags?.length ?? 0) > 0 ? (
+                            <div>
+                              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground">
+                                Hashtags
+                              </p>
+                              <ProfileTagChips tags={displayCreator.hashtags ?? []} variant="hashtag" />
+                            </div>
+                          ) : null}
+                          {(displayCreator.mentions?.length ?? 0) > 0 ? (
+                            <div>
+                              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-muted-foreground">
+                                Mentions
+                              </p>
+                              <ProfileTagChips tags={displayCreator.mentions ?? []} variant="mention" />
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </DetailSection>
+                  )}
+
+                  {hasContact ? (
+                    <DetailSection>
+                      <SectionTitle icon={<MailIcon className="size-3" />}>Contact</SectionTitle>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("contact")}
+                        className="text-[12px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        View contact details →
+                      </button>
+                    </DetailSection>
+                  ) : null}
 
                   <DetailSection>
                     <SectionTitle icon={<UsersIcon className="size-3" />}>
@@ -840,6 +1106,10 @@ export function CreatorDetailSheet({
               </div>
             </TabsContent>
 
+            <TabsContent value="contact" className="mt-0 outline-none">
+              <ContactPanel displayCreator={displayCreator} selectedPlatform={selectedPlatform} />
+            </TabsContent>
+
             <TabsContent value="publications" className="mt-0 outline-none">
               <DetailSection className="border-b-0">
                 <SectionTitle icon={<ImageIcon className="size-3" />}>All publications</SectionTitle>
@@ -894,6 +1164,24 @@ export function CreatorDetailSheet({
           </div>
         ) : null}
       </SheetContent>
+
+      <AddCreatorPlatformDialog
+        open={addPlatformOpen}
+        onOpenChange={setAddPlatformOpen}
+        creatorName={identityCreator.display_name}
+        unifiedId={identityCreator.unified_id}
+        influencerId={identityCreator.influencer_id}
+        discoveredProfileId={identityCreator.discovered_profile_id}
+        existingPlatforms={platforms.map((p) => p.platform)}
+        onSuccess={(next, platformAccountId) => {
+          handleCreatorUpdated(next);
+          setSelectedPlatformAccountId(platformAccountId);
+        }}
+        onEnrichmentStatusChange={(_unifiedId, status) => {
+          setEnrichmentStatus(status);
+        }}
+        onCreatorUpdated={handleCreatorUpdated}
+      />
     </Sheet>
   );
 }

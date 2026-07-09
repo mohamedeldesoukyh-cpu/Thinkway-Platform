@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireOperationsAccess } from "@/lib/auth/permissions";
+import { requireOperationsAccess } from "@/lib/auth/permissions-server";
 import { getEntityDependencies } from "@/lib/operations/entity-dependencies";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { governanceDb } from "@/lib/supabase/governance-client";

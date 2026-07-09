@@ -12,6 +12,9 @@ import type { CommercialTotals } from "@/lib/commercial/fx-aggregation";
 import { toEgp } from "@/lib/commercial/fx-aggregation";
 import { computeQuotationTotals } from "@/features/quotations/quotation-engine";
 import type { QuotationItemRow } from "@/features/quotations/types";
+import {
+  rollupDeliverableCommercials,
+} from "@/lib/quotations/quotation-deliverable-rollup";
 
 export type QuotationRowDraft = {
   id: string;
@@ -50,16 +53,59 @@ export function calcModeToCommercialMode(
 }
 
 export function draftFromQuotationItem(item: QuotationItemRow): QuotationRowDraft {
-  return {
+  const costCurrency = item.cost_currency || "EGP";
+  const base: QuotationRowDraft = {
     id: item.id,
     mode: item.commercial_input_mode,
     cost: item.cost,
-    costCurrency: item.cost_currency || "EGP",
+    costCurrency,
     gpPct: item.gp_pct,
     revenue: item.revenue,
     gpValue: item.gp_value,
     afPct: item.af_pct,
     fxRateToEgp: item.fx_rate_to_egp,
+  };
+
+  const rolled = rollupDeliverableCommercials(item.deliverables ?? [], {
+    lineCurrency: costCurrency,
+    fxRateToEgp: item.fx_rate_to_egp,
+  });
+  if (!rolled) return base;
+
+  return {
+    ...base,
+    mode: "cost_revenue",
+    cost: rolled.cost,
+    revenue: rolled.revenue,
+    gpPct: rolled.gpPct,
+    gpValue: rolled.gpValue,
+  };
+}
+
+/** Prefer live draft edits, then deliverable rollup, then stored item commercials. */
+export function resolveQuotationRowDraft(
+  item: QuotationItemRow,
+  draft?: QuotationRowDraft
+): QuotationRowDraft {
+  const base = draft ?? draftFromQuotationItem(item);
+
+  if (base.mode === "cost_revenue" && (base.cost > 0 || base.revenue > 0)) {
+    return base;
+  }
+
+  const rolled = rollupDeliverableCommercials(item.deliverables ?? [], {
+    lineCurrency: base.costCurrency,
+    fxRateToEgp: base.fxRateToEgp,
+  });
+  if (!rolled) return base;
+
+  return {
+    ...base,
+    mode: "cost_revenue",
+    cost: rolled.cost,
+    revenue: rolled.revenue,
+    gpPct: rolled.gpPct,
+    gpValue: rolled.gpValue,
   };
 }
 

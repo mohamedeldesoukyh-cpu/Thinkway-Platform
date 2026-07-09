@@ -17,4 +17,8 @@ export const REL = {
   invoiceLineItems: {
     campaignLine: "campaign_lines!invoice_line_items_campaign_line_id_fkey",
   },
+  campaignIntelligenceProfiles: {
+    campaignHeader:
+      "campaign_headers!campaign_intelligence_profiles_campaign_header_id_fkey",
+  },
 } as const;

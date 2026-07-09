@@ -1,3 +1,8 @@
+import {
+  normalizeContactEmail,
+  normalizeContactLinks,
+  normalizeContactPhone,
+} from "@/lib/creators/contact-info";
 import { prepareCreatorAvatarUrlForDisplay } from "@/lib/performance/creator-avatar";
 import {
   isUsableAvatarUrl,
@@ -62,6 +67,9 @@ export function normalizeParsedCreatorRow(
     profile_avatar_source: row.profile_avatar_source ?? null,
     role: row.role?.trim() || null,
     appearances: row.appearances ?? null,
+    contact_email: normalizeContactEmail(row.contact_email),
+    contact_phone: normalizeContactPhone(row.contact_phone),
+    contact_links: normalizeContactLinks(row.contact_links),
   };
 }
 
@@ -76,6 +84,9 @@ export function buildImportFieldSources(
     | "audience_interests"
     | "profile_picture_url"
     | "role"
+    | "contact_email"
+    | "contact_phone"
+    | "contact_links"
   >,
   options?: { hasAvatar?: boolean }
 ): FieldSourceMap {
@@ -91,6 +102,9 @@ export function buildImportFieldSources(
     sources.profile_picture_url = IMPORTED;
   }
   if (row.role?.trim()) sources.creator_role = IMPORTED;
+  if (row.contact_email) sources.contact_email = IMPORTED;
+  if (row.contact_phone) sources.contact_phone = IMPORTED;
+  if (row.contact_links.length > 0) sources.contact_links = IMPORTED;
   return sources;
 }
 

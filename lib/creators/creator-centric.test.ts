@@ -155,6 +155,27 @@ function testBrowseIgnoresStaleStoredPlatformPrimary() {
   assert.equal(result.source, "instagram");
 }
 
+function testBrowsePrefersFreshPlatformAvatarOverStaleStoredInstagramPrimary() {
+  const expiredOe = Math.floor(Date.now() / 1000 - 3600).toString(16);
+  const result = resolvePrimaryAvatar(
+    collectAvatarCandidates({
+      storedPrimaryAvatarUrl: `https://scontent-lax7-1.cdninstagram.com/v/stale.jpg?oe=${expiredOe}`,
+      storedPrimaryAvatarSource: "instagram",
+      accounts: [
+        {
+          id: "ig",
+          platform: "instagram",
+          profile_picture_url: "https://scontent-lga3-2.cdninstagram.com/v/fresh.jpg",
+          avatar_source: "apify",
+        },
+      ],
+      storedPrimaryMode: "operator",
+    })
+  );
+  assert.equal(result.source, "instagram");
+  assert.ok(result.url?.includes("fresh.jpg"));
+}
+
 function testBrowsePrefersApifyPlatformOverStoredUploadedPrimary() {
   const result = resolvePrimaryAvatar(
     collectAvatarCandidates({
@@ -173,6 +194,37 @@ function testBrowsePrefersApifyPlatformOverStoredUploadedPrimary() {
   );
   assert.equal(result.source, "instagram");
   assert.ok(result.url?.includes("cdninstagram.com"));
+}
+
+function testPrefersEnrichmentUploadOverPdfImportCrop() {
+  const result = resolvePrimaryAvatar(
+    collectAvatarCandidates({
+      storedPrimaryAvatarUrl:
+        "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/file/instagram/ali.mahgub.jpg",
+      storedPrimaryAvatarSource: "uploaded",
+      accounts: [
+        {
+          id: "ig",
+          platform: "instagram",
+          profile_picture_url:
+            "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/file/instagram/ali.mahgub.jpg",
+          avatar_source: "uploaded",
+        },
+        {
+          id: "tt",
+          platform: "tiktok",
+          profile_picture_url:
+            "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/inf/tiktok/ali.mahgoub8.jpg",
+          avatar_source: "uploaded",
+        },
+      ],
+      storedPrimaryMode: "all",
+    })
+  );
+  assert.ok(
+    result.url?.includes("/creator-avatars/enrichment/"),
+    "enrichment avatar should win over PDF import crop"
+  );
 }
 
 function testAudienceInterestListFromCreatorSkipsStoredCategories() {
@@ -198,8 +250,10 @@ testResolveDefaultMetricsPlatformAccountId();
 testMergeCreatorInterestTags();
 testCollectAvatarCandidates();
 testBrowsePrefersApifyPlatformOverStoredUploadedPrimary();
+testPrefersEnrichmentUploadOverPdfImportCrop();
 testMultiPlatformNullAvatarSourceDoesNotBeatInstagram();
 testBrowseIgnoresStaleStoredPlatformPrimary();
+testBrowsePrefersFreshPlatformAvatarOverStaleStoredInstagramPrimary();
 testAudienceInterestListFromCreatorSkipsStoredCategories();
 
 console.log("creator-centric.test.ts: all tests passed");

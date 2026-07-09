@@ -1,9 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { persistCreatorPrimaryIdentity } from "@/lib/creators/persist-primary-avatar";
+import {
+  extractEmailFromText,
+  mergeContactLinks,
+  normalizeContactLink,
+} from "@/lib/creators/contact-info";
+import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { refreshCreatorMetrics } from "@/lib/services/creators/creator-enrichment-service";
+import { requireCreatorBaselineDna } from "@/features/creator-dna/services/baseline-dna-populator";
 import { findDuplicatePlatformAccounts } from "@/lib/social/duplicate-check";
 import { enrichCreatorProfile } from "@/lib/social/enrichment/providers/open-graph";
 import { resolveMetricsSourceForEnrichment } from "@/lib/social/enrichment/metrics-status";
@@ -68,7 +75,8 @@ export async function addCreatorByProfileUrl(
     }
 
     const displayName =
-      enrichment?.display_name?.trim() || `@${parsed.normalized_username}`;
+      formatCreatorDisplayName(enrichment?.display_name) ||
+      `@${parsed.normalized_username}`;
 
     const normalized = buildNormalizedPlatformAccount({
       platform: parsed.platform,
@@ -78,7 +86,7 @@ export async function addCreatorByProfileUrl(
       following_count: enrichment?.following_count ?? null,
       engagement_rate: enrichment?.engagement_rate ?? null,
       avg_views: enrichment?.avg_views ?? null,
-      profile_display_name: enrichment?.display_name ?? null,
+      profile_display_name: formatCreatorDisplayName(enrichment?.display_name) || null,
       profile_bio: enrichment?.bio ?? null,
       profile_picture_url: enrichment?.profile_picture_url ?? null,
       is_verified: enrichment?.is_verified ?? false,
@@ -118,6 +126,13 @@ export async function addCreatorByProfileUrl(
     influencerId = influencer.id;
     created = true;
 
+    const profileBio = enrichment?.bio ?? null;
+    const contactEmail = extractEmailFromText(profileBio);
+    const contactLinks = mergeContactLinks(
+      null,
+      normalizeContactLink(parsed.profile_url) ? [parsed.profile_url] : null
+    );
+
     const { error: accountError } = await supabase
       .from("influencer_platform_accounts")
       .insert({
@@ -143,6 +158,8 @@ export async function addCreatorByProfileUrl(
         metrics_source: normalized.metrics_source,
         metrics_last_synced_at: normalized.metrics_last_synced_at,
         metrics_is_manual_override: normalized.metrics_is_manual_override,
+        contact_email: contactEmail,
+        contact_links: contactLinks.length > 0 ? contactLinks : null,
         is_primary: true,
         ...(normalized.profile_picture_url
           ? {
@@ -165,6 +182,21 @@ export async function addCreatorByProfileUrl(
       .from("influencers")
       .update({ display_name: displayName })
       .eq("id", influencerId);
+  }
+
+  try {
+    await requireCreatorBaselineDna(supabase, influencerId);
+  } catch (error) {
+    if (created) {
+      await supabase.from("influencers").delete().eq("id", influencerId);
+    }
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Creator DNA baseline failed — creator cannot exist without DNA.",
+    };
   }
 
   const refresh = await refreshCreatorMetrics(supabase, influencerId, {

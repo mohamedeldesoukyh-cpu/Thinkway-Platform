@@ -8,7 +8,7 @@ import {
 } from "@/lib/clients/classification-audit-columns";
 import { fetchClientVrRateIdSafe } from "@/lib/clients/vr-rate-lookup";
 import { normalizeBrandVrRateId } from "@/lib/clients/vr-inheritance";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import { findDuplicateBrand } from "@/lib/validation/checks";
 import { friendlyActionError } from "@/lib/validation/hierarchy";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -34,15 +34,17 @@ function emptyToNull(value: string | undefined): string | null {
 }
 
 async function requireAuthUser() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) {
-    return { supabase, user: null, error: error?.message ?? "Unauthorized" };
+  try {
+    const { supabase, user } = await requireRequestUser();
+    return { supabase, user, error: null };
+  } catch (error) {
+    const supabase = await createSupabaseServerClient();
+    return {
+      supabase,
+      user: null,
+      error: error instanceof Error ? error.message : "Unauthorized",
+    };
   }
-  return { supabase, user, error: null };
 }
 
 function revalidateBrandPaths(clientId: string, groupId: string | null) {

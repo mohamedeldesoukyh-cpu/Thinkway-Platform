@@ -10,7 +10,7 @@ import {
   fetchVrRatesByIds,
   vrRatePercentFromMap,
 } from "@/lib/clients/vr-rate-lookup";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 import type { ClientDetail, ClientDocumentRow, ClientRow } from "@/types/database";
 
 import { CLIENTS_PAGE_SIZE } from "./constants";
@@ -27,26 +27,9 @@ function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
 }
 
-async function requireUser() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!user) {
-    throw new Error("You must be signed in to continue.");
-  }
-
-  return { supabase, user };
-}
 
 async function fetchClientDocumentsSafe(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: RequestUser["supabase"],
   clientId: string
 ): Promise<ClientDocumentRow[]> {
   const { data, error } = await supabase
@@ -83,7 +66,7 @@ async function fetchClientBrandsSafe(clientId: string): Promise<ClientDetail["br
 }
 
 async function fetchClientCampaignsSafe(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: RequestUser["supabase"],
   clientId: string
 ): Promise<ClientDetail["campaigns"]> {
   const { data, error } = await supabase
@@ -106,7 +89,7 @@ async function fetchClientCampaignsSafe(
 }
 
 async function fetchClientVrRateMapSafe(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: RequestUser["supabase"],
   vrRateId: string | null | undefined
 ) {
   try {
@@ -129,7 +112,7 @@ export async function getClientsList(params: {
   const from = (page - 1) * CLIENTS_PAGE_SIZE;
   const to = from + CLIENTS_PAGE_SIZE - 1;
 
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
 
   const searchFiltersWithNameAr = (pattern: string) =>
     [
@@ -195,7 +178,7 @@ export async function getClientsList(params: {
 }
 
 export async function getClientById(id: string): Promise<ClientDetail | null> {
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
 
   const { client: clientRow, error: clientError } = await fetchClientDetailRowById(
     supabase,

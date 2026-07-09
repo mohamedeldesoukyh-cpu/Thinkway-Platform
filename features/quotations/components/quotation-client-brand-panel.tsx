@@ -12,20 +12,49 @@ import { updateQuotationHeader } from "@/features/quotations/actions";
 import { updateQuotationClientBrand } from "@/features/quotations/lifecycle-actions";
 import type { QuotationDetail, QuotationFormOptions } from "@/features/quotations/types";
 
+type WizardBinding = {
+  useTemporary: boolean;
+  tempClient: string;
+  tempBrand: string;
+  onUseTemporaryChange: (value: boolean) => void;
+  onTempClientChange: (value: string) => void;
+  onTempBrandChange: (value: string) => void;
+};
+
 type Props = {
   detail: QuotationDetail;
   options: QuotationFormOptions;
   disabled?: boolean;
+  wizard?: WizardBinding;
 };
 
-export function QuotationClientBrandPanel({ detail, options, disabled }: Props) {
+export function QuotationClientBrandPanel({ detail, options, disabled, wizard }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [useTemporary, setUseTemporary] = useState(
+  const [localTemporary, setLocalTemporary] = useState(
     detail.is_temporary_client || detail.is_temporary_brand
   );
-  const [tempClient, setTempClient] = useState(detail.temporary_client_name ?? "");
-  const [tempBrand, setTempBrand] = useState(detail.temporary_brand_name ?? "");
+  const [localTempClient, setLocalTempClient] = useState(detail.temporary_client_name ?? "");
+  const [localTempBrand, setLocalTempBrand] = useState(detail.temporary_brand_name ?? "");
+
+  const useTemporary = wizard?.useTemporary ?? localTemporary;
+  const tempClient = wizard?.tempClient ?? localTempClient;
+  const tempBrand = wizard?.tempBrand ?? localTempBrand;
+
+  function setUseTemporary(value: boolean) {
+    if (wizard) wizard.onUseTemporaryChange(value);
+    else setLocalTemporary(value);
+  }
+
+  function setTempClient(value: string) {
+    if (wizard) wizard.onTempClientChange(value);
+    else setLocalTempClient(value);
+  }
+
+  function setTempBrand(value: string) {
+    if (wizard) wizard.onTempBrandChange(value);
+    else setLocalTempBrand(value);
+  }
 
   const clientOptions = useMemo(
     () =>

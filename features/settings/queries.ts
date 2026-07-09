@@ -1,4 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/auth/permissions-server";
+import { requireRequestUser } from "@/lib/supabase/server";
 import { safeOperationalQuery } from "@/lib/platform/safe-query";
 import { devLog } from "@/lib/platform/logger";
 
@@ -12,31 +13,10 @@ import type {
 } from "@/features/settings/types";
 
 async function requireSettingsAccess() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) throw new Error(error?.message ?? "Unauthorized");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, role:roles(slug)")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const roleSlug =
-    (profile as { role: { slug: string } | null } | null)?.role?.slug ?? null;
-
-  const { data: allowed } = await (supabase as any).rpc("has_permission", {
-    p_permission: "settings.read",
-  });
-
-  if (!(roleSlug === "super_admin" || roleSlug === "admin" || Boolean(allowed))) {
-    throw new Error("Settings access denied.");
-  }
-
-  return { supabase, userId: user.id, roleSlug };
+  const { supabase, userId, roleSlug } = await requireRequestUser();
+  const auth = await requirePermission(supabase, "settings.read");
+  if ("error" in auth) throw new Error(auth.error);
+  return { supabase, userId, roleSlug };
 }
 
 export async function getSettingsUsers(params: {

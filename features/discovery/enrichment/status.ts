@@ -1,5 +1,8 @@
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { resolveEnrichmentDisplayStatus as resolveMetricsAwareEnrichmentStatus } from "@/lib/creator-enrichment/enrichment-metrics";
+
 /**
- * Lightweight, dependency-free enrichment view helpers for client components.
+ * Lightweight enrichment view helpers for client components.
  * (Avoids importing the worker/queue lib — which pulls in BullMQ — into the
  * client bundle. Mirrors the canonical type in `lib/creator-enrichment/types`.)
  */
@@ -66,6 +69,14 @@ export function resolveCreatorEnrichmentStatus(
   status: CreatorEnrichmentStatus | null | undefined
 ): CreatorEnrichmentStatus {
   return status ?? "never";
+}
+
+/** Badge status reconciled with followers/ER actually present on the row. */
+export function resolveEnrichmentDisplayStatus(
+  status: CreatorEnrichmentStatus | null | undefined,
+  creator: Pick<UnifiedCreatorResult, "metrics" | "platforms">
+): CreatorEnrichmentStatus {
+  return resolveMetricsAwareEnrichmentStatus(status, creator);
 }
 
 /** True while enrichment is queued or actively collecting. */

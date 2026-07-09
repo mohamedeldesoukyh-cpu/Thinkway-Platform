@@ -10,8 +10,10 @@ import {
   MoreHorizontalIcon,
   PlusIcon,
   RefreshCwIcon,
+  Trash2Icon,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { platformLabel } from "@/features/campaigns/line-assignment";
+import { DeleteDiscoveryCreatorDialog } from "@/features/discovery/delete-creator/delete-discovery-creator-dialog";
 import { isEnrichmentInProgress, resolveCreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
 import { PlatformIcon, PLATFORM_ICON_STYLES } from "@/lib/performance/platform-icon";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -58,6 +61,7 @@ const MENU = {
       select: { bg: "#fffbeb", icon: "#f59e0b" },
       stopRefresh: { bg: "#fff7ed", icon: "#f97316" },
       refreshMetrics: { bg: "#eff6ff", icon: "#3b82f6" },
+      delete: { bg: "#fef2f2", icon: "#ef4444" },
     },
   },
   dark: {
@@ -77,12 +81,13 @@ const MENU = {
       select: { bg: "rgba(245,158,11,0.15)", icon: "#fbbf24" },
       stopRefresh: { bg: "rgba(249,115,22,0.15)", icon: "#fb923c" },
       refreshMetrics: { bg: "rgba(99,102,241,0.15)", icon: "#818cf8" },
+      delete: { bg: "rgba(239,68,68,0.15)", icon: "#f87171" },
     },
   },
   instagramGradient: "linear-gradient(135deg, #f9ce34, #ee2a7b, #6228d7)",
 } as const;
 
-type MenuBadgeVariant = "viewDetails" | "addToList" | "select" | "stopRefresh" | "refreshMetrics";
+type MenuBadgeVariant = "viewDetails" | "addToList" | "select" | "stopRefresh" | "refreshMetrics" | "delete";
 
 type DiscoveryActionMenuItemProps = {
   title: string;
@@ -211,7 +216,8 @@ function badgeClassName(variant: MenuBadgeVariant): string {
     variant === "addToList" && "bg-[#ecfdf5] dark:bg-[rgba(16,185,129,0.15)]",
     variant === "select" && "bg-[#fffbeb] dark:bg-[rgba(245,158,11,0.15)]",
     variant === "stopRefresh" && "bg-[#fff7ed] dark:bg-[rgba(249,115,22,0.15)]",
-    variant === "refreshMetrics" && "bg-[#eff6ff] dark:bg-[rgba(99,102,241,0.15)]"
+    variant === "refreshMetrics" && "bg-[#eff6ff] dark:bg-[rgba(99,102,241,0.15)]",
+    variant === "delete" && "bg-[#fef2f2] dark:bg-[rgba(239,68,68,0.15)]"
   );
 }
 
@@ -221,7 +227,8 @@ function iconColorClass(variant: MenuBadgeVariant): string {
     variant === "addToList" && "text-[#10b981] dark:text-[#34d399]",
     variant === "select" && "text-[#f59e0b] dark:text-[#fbbf24]",
     variant === "stopRefresh" && "text-[#f97316] dark:text-[#fb923c]",
-    variant === "refreshMetrics" && "text-[#3b82f6] dark:text-[#818cf8]"
+    variant === "refreshMetrics" && "text-[#3b82f6] dark:text-[#818cf8]",
+    variant === "delete" && "text-[#ef4444] dark:text-[#f87171]"
   );
 }
 
@@ -298,6 +305,7 @@ export type DiscoveryCreatorActionsMenuProps = {
   onToggleSelect: () => void;
   onRefreshMetrics?: (platformAccountId?: string | null) => void;
   onStopRefresh?: () => void;
+  onCreatorDeleted?: () => void;
   addLabel?: string;
 };
 
@@ -310,8 +318,10 @@ export function DiscoveryCreatorActionsMenu({
   onToggleSelect,
   onRefreshMetrics,
   onStopRefresh,
+  onCreatorDeleted,
   addLabel = "Add",
 }: DiscoveryCreatorActionsMenuProps) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const platforms = sortPlatformsStable(creator.platforms);
   const metricsPlatform =
     platforms.find((p) => p.id === creator.default_metrics_platform_account_id) ?? platforms[0];
@@ -425,6 +435,24 @@ export function DiscoveryCreatorActionsMenu({
           </MenuIcon>
         ),
         iconClassName: badgeClassName("addToList"),
+        trailing: "chevron",
+      },
+    });
+  }
+
+  if (creator.influencer_id) {
+    menuItems.push({
+      key: "delete-creator",
+      onSelect: () => setDeleteOpen(true),
+      content: {
+        title: "Delete from Discovery",
+        subtitle: "Remove when not linked to campaigns or lists",
+        icon: (
+          <MenuIcon variant="delete">
+            <Trash2Icon strokeWidth={2} className="size-full" aria-hidden />
+          </MenuIcon>
+        ),
+        iconClassName: badgeClassName("delete"),
         trailing: "chevron",
       },
     });
@@ -550,6 +578,14 @@ export function DiscoveryCreatorActionsMenu({
           })}
         </DropdownMenuContent>
       </DropdownMenu>
+      {creator.influencer_id ? (
+        <DeleteDiscoveryCreatorDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          creator={creator}
+          onDeleted={onCreatorDeleted}
+        />
+      ) : null}
     </div>
   );
 }

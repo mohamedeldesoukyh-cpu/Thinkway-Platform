@@ -3,16 +3,13 @@ import { NextResponse } from "next/server";
 import { createPdfFromHtmlResponse } from "@/lib/reports/document/report-document-response";
 import { loadCreatorCompareBundle } from "@/lib/creators/creator-compare-bundle";
 import { renderCreatorCompareHtml } from "@/lib/creators/creator-compare-document";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "discovery.read");
+  if ("response" in auth) return auth.response;
 
   let unifiedIds: string[] = [];
   try {

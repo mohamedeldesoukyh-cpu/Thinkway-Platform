@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -13,30 +11,37 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useDebouncedAutosave, type AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
+import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import {
   QUOTATION_DEPARTMENTS,
   QUOTATION_STATUS_LABELS,
   QUOTATION_STATUSES,
   QUOTATION_VERSION_PRESETS,
 } from "@/features/quotations/constants";
-import { updateQuotationHeader } from "@/features/quotations/actions";
+import { useQuotationManualSave } from "@/features/quotations/components/quotation-manual-save";
 import { formatValidityLabel } from "@/features/quotations/quotation-validity";
 import type { QuotationDetail } from "@/features/quotations/types";
-import { cn } from "@/lib/utils";
 import type { QuotationStatus } from "@/types/database";
 
 function SaveIndicator({ status }: { status: AutosaveStatus }) {
+  if (status === "pending")
+    return <span className="thinkway-campaign-badge thinkway-campaign-badge-amber">Unsaved</span>;
   if (status === "saved")
-    return <span className="text-xs text-success">Saved</span>;
+    return <span className="thinkway-campaign-badge thinkway-campaign-badge-green">Saved</span>;
   if (status === "saving")
-    return <span className="text-xs text-muted-foreground">Saving…</span>;
+    return <span className="text-[10px] text-[var(--camp-text-3)]">Saving…</span>;
   if (status === "error")
-    return <span className="text-xs text-destructive">Save failed</span>;
+    return <span className="thinkway-campaign-badge thinkway-campaign-badge-red">Save failed</span>;
   return null;
 }
 
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <div className="thinkway-campaign-field-label mb-1.5">{children}</div>;
+}
+
 export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail }) {
+  const { registerMetaPending, saveStatus, hasUnsavedChanges } = useQuotationManualSave();
   const [preparedBy, setPreparedBy] = useState(detail.prepared_by_name ?? "");
   const [reviewedBy, setReviewedBy] = useState(detail.reviewed_by_name ?? "");
   const [clientSignatory, setClientSignatory] = useState(detail.client_signature_name ?? "");
@@ -47,13 +52,8 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
   const [changeSummary, setChangeSummary] = useState(detail.change_summary ?? "");
   const [status, setStatus] = useState<QuotationStatus>(detail.status);
 
-  const { status: saveStatus, schedule } = useDebouncedAutosave<
-    Parameters<typeof updateQuotationHeader>[0]
-  >(updateQuotationHeader);
-
-  function persist(patch: Partial<Parameters<typeof updateQuotationHeader>[0]>) {
-    schedule({
-      id: detail.id,
+  function persist(patch: Parameters<typeof registerMetaPending>[0]) {
+    registerMetaPending({
       prepared_by_name: preparedBy || null,
       reviewed_by_name: reviewedBy || null,
       client_signature_name: clientSignatory || null,
@@ -67,42 +67,53 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
     });
   }
 
-  return (
-    <div className="space-y-4 rounded-xl border border-border bg-card p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Document details</h3>
-        <div className="flex items-center gap-2">
-          {detail.is_expired ? (
-            <Badge variant="destructive">Expired</Badge>
-          ) : (
-            <Badge variant="secondary">{formatValidityLabel(detail.validity_date)}</Badge>
-          )}
-          <SaveIndicator status={saveStatus} />
-        </div>
-      </div>
+  const validityBadge = detail.is_expired ? (
+    <span className="thinkway-campaign-badge thinkway-campaign-badge-red">Expired</span>
+  ) : (
+    <span className="thinkway-campaign-badge thinkway-campaign-badge-amber">
+      {formatValidityLabel(detail.validity_date)}
+    </span>
+  );
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Field label="Issue date">
+  return (
+    <CampaignFlatSection
+      title="Document details"
+      description="Version, ownership, and validity."
+      actions={
+        <div className="flex items-center gap-2">
+          {validityBadge}
+          {hasUnsavedChanges ? <SaveIndicator status={saveStatus} /> : null}
+        </div>
+      }
+      flushBody
+    >
+      <div className="thinkway-campaign-form-grid">
+        <div>
+          <FieldLabel>Issue date</FieldLabel>
           <Input
             type="date"
+            className="h-8 text-xs"
             value={issueDate}
             onChange={(e) => {
               setIssueDate(e.target.value);
               persist({ issue_date: e.target.value });
             }}
           />
-        </Field>
-        <Field label="Validity date">
+        </div>
+        <div>
+          <FieldLabel>Validity date</FieldLabel>
           <Input
             type="date"
+            className="h-8 text-xs"
             value={validityDate}
             onChange={(e) => {
               setValidityDate(e.target.value);
               persist({ validity_date: e.target.value || null });
             }}
           />
-        </Field>
-        <Field label="Status">
+        </div>
+        <div>
+          <FieldLabel>Status</FieldLabel>
           <Select
             value={status}
             onValueChange={(v) => {
@@ -111,7 +122,7 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
               persist({ status: next });
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -122,8 +133,9 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
               ))}
             </SelectContent>
           </Select>
-        </Field>
-        <Field label="Version">
+        </div>
+        <div>
+          <FieldLabel>Version</FieldLabel>
           <Select
             value={version}
             onValueChange={(v) => {
@@ -131,7 +143,7 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
               persist({ version: v, change_summary: changeSummary || "Version updated" });
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -142,8 +154,9 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
               ))}
             </SelectContent>
           </Select>
-        </Field>
-        <Field label="Department">
+        </div>
+        <div>
+          <FieldLabel>Department</FieldLabel>
           <Select
             value={department}
             onValueChange={(v) => {
@@ -151,7 +164,7 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
               persist({ department: v });
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -162,85 +175,77 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
               ))}
             </SelectContent>
           </Select>
-        </Field>
-        <Field label="Prepared by">
+        </div>
+        <div>
+          <FieldLabel>Prepared by</FieldLabel>
           <Input
+            className="h-8 text-xs"
             value={preparedBy}
+            placeholder="Add name"
             onChange={(e) => {
               setPreparedBy(e.target.value);
               persist({ prepared_by_name: e.target.value || null });
             }}
           />
-        </Field>
-        <Field label="Reviewed by">
+        </div>
+        <div>
+          <FieldLabel>Reviewed by</FieldLabel>
           <Input
+            className="h-8 text-xs"
             value={reviewedBy}
+            placeholder="Add name"
             onChange={(e) => {
               setReviewedBy(e.target.value);
               persist({ reviewed_by_name: e.target.value || null });
             }}
           />
-        </Field>
-        <Field label="Client signatory">
+        </div>
+        <div>
+          <FieldLabel>Client signatory</FieldLabel>
           <Input
+            className="h-8 text-xs"
             value={clientSignatory}
+            placeholder="Add name"
             onChange={(e) => {
               setClientSignatory(e.target.value);
               persist({ client_signature_name: e.target.value || null });
             }}
           />
-        </Field>
-        <Field label="Change summary" className="md:col-span-3">
-          <Textarea
-            rows={2}
-            value={changeSummary}
-            onChange={(e) => {
-              setChangeSummary(e.target.value);
-              persist({ change_summary: e.target.value || null });
-            }}
-            placeholder="Brief note for revision history…"
-          />
-        </Field>
+        </div>
+      </div>
+
+      <div className="px-4 pb-4">
+        <FieldLabel>Change summary</FieldLabel>
+        <Textarea
+          rows={2}
+          className="text-xs"
+          value={changeSummary}
+          placeholder="Brief note for revision history…"
+          onChange={(e) => {
+            setChangeSummary(e.target.value);
+            persist({ change_summary: e.target.value || null });
+          }}
+        />
       </div>
 
       {detail.revisions.length > 0 ? (
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Revision history
-          </p>
-          <ul className="mt-2 space-y-1 text-xs">
-            {detail.revisions.slice(0, 5).map((rev) => (
-              <li key={rev.id} className="flex flex-wrap gap-x-2 text-muted-foreground">
-                <span className="font-medium text-foreground">{rev.version}</span>
-                <span>{rev.updated_by_name ?? "—"}</span>
-                <span>{new Date(rev.created_at).toLocaleDateString("en-GB")}</span>
-                {rev.change_summary ? (
-                  <span className="text-foreground">— {rev.change_summary}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+        <div className="border-t border-[var(--camp-border)]">
+          {detail.revisions.slice(0, 5).map((rev) => (
+            <div key={rev.id} className="thinkway-campaign-activity-item">
+              <div>
+                <div className="thinkway-campaign-act-name">
+                  {rev.version}
+                  {rev.change_summary ? ` · ${rev.change_summary}` : " · Initial quotation created"}
+                </div>
+                <div className="thinkway-campaign-act-by">{rev.updated_by_name ?? "—"}</div>
+              </div>
+              <span className="thinkway-campaign-act-date">
+                {new Date(rev.created_at).toLocaleDateString("en-GB")}
+              </span>
+            </div>
+          ))}
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("space-y-1.5", className)}>
-      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-        {label}
-      </Label>
-      {children}
-    </div>
+    </CampaignFlatSection>
   );
 }

@@ -6,6 +6,7 @@ import {
 } from "@/features/campaigns/queries";
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { unifiedToInfluencerSearch } from "@/lib/creators/adapters";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseNumber(value: string | null): number | undefined {
@@ -15,12 +16,16 @@ function parseNumber(value: string | null): number | undefined {
 }
 
 export async function GET(request: Request) {
+  const supabaseAuth = await createSupabaseServerClient();
+  const auth = await requireApiPermission(supabaseAuth, "influencers.read");
+  if ("response" in auth) return auth.response;
+
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get("mode") ?? "search";
 
   try {
     if (mode === "browse") {
-      const supabase = await createSupabaseServerClient();
+      const supabase = supabaseAuth;
       const unified = await browseUnifiedCreators(supabase, {
         search: searchParams.get("q") ?? undefined,
         platform: searchParams.get("platform") ?? undefined,
@@ -77,6 +82,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const supabase = await createSupabaseServerClient();
+  const auth = await requireApiPermission(supabase, "influencers.read");
+  if ("response" in auth) return auth.response;
+
   try {
     const body = (await request.json()) as { id?: string };
     if (!body.id) {

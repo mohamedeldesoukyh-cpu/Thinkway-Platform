@@ -9,6 +9,13 @@ import type { CommercialInputMode, Database } from "@/types/database";
 
 import type { QuotationItemSeed } from "@/lib/domains/commercial/quotation-types";
 
+import { sortPlatformsStable } from "@/lib/creators/creator-centric";
+import { resolveCreatorFollowersCount } from "@/lib/creators/creator-display-utils";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-source";
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
+
 type Supabase = SupabaseClient<Database>;
 
 export type ShortlistItemForSeed = {
@@ -25,21 +32,59 @@ export type ShortlistItemForSeed = {
   deliverables?: unknown;
 };
 
+function resolveQuotationSeedPlatformAccount(creator: UnifiedCreatorResult) {
+  const platforms = sortPlatformsStable(creator.platforms);
+  return (
+    platforms.find((account) => account.id === creator.default_metrics_platform_account_id) ??
+    platforms[0] ??
+    null
+  );
+}
+
+/** Line-level platform snapshot — null when creator has multiple linked accounts. */
+export function resolveQuotationSeedPlatform(creator: UnifiedCreatorResult): string | null {
+  const linked = sortPlatformsStable(creator.platforms).map((account) =>
+    canonicalPlatformKey(account.platform)
+  );
+  return linked.length === 1 ? linked[0]! : null;
+}
+
 export function buildQuotationSeedFromCreator(
   creator: UnifiedCreatorResult,
   overrides?: Partial<QuotationItemSeed>
 ): QuotationItemSeed {
-  const primary = creator.platforms[0];
+  const metricsAccount = resolveQuotationSeedPlatformAccount(creator);
+  const source = creatorProfileSourceFromUnified(creator);
+  const profileUrl =
+    resolveCreatorProfileUrl(metricsAccount ?? undefined) ?? source.profile_url ?? null;
+  const profileImageUrl =
+    source.avatarUrl ??
+    creator.primaryAvatarUrl ??
+    creator.profile_image_url ??
+    resolveBrowseCreatorProfileImageUrl({
+      platform: metricsAccount?.platform,
+      platformPictureUrl: metricsAccount?.profile_picture_url,
+      discoveryProfileImageUrl: creator.profile_image_url,
+      influencerAvatarUrl: creator.primaryAvatarUrl ?? source.avatarUrl,
+    }) ??
+    null;
+
   return {
     influencer_id: creator.influencer_id ?? null,
     profile_id: creator.discovered_profile_id ?? null,
     unified_id: creator.unified_id,
     creator_name: creator.display_name,
-    platform: primary?.platform ?? null,
-    handle: primary?.handle ?? null,
-    followers: creator.metrics.followers.value ?? primary?.follower_count ?? null,
-    engagement_rate: creator.metrics.engagement_rate.value ?? primary?.engagement_rate ?? null,
+    platform: resolveQuotationSeedPlatform(creator),
+    handle: metricsAccount?.handle ?? null,
+    followers:
+      resolveCreatorFollowersCount(creator, metricsAccount?.platform ?? null) ??
+      metricsAccount?.follower_count ??
+      null,
+    engagement_rate:
+      creator.metrics.engagement_rate.value ?? metricsAccount?.engagement_rate ?? null,
     country_code: creator.country_code ?? creator.estimated_country ?? null,
+    profile_image_url: profileImageUrl,
+    profile_url: profileUrl,
     cost_currency: creator.suggested_currency ?? "EGP",
     ...overrides,
   };

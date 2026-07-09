@@ -26,6 +26,9 @@ const rows = Array.from({ length: 57 }, (_, index) => ({
   profile_picture_url: null,
   role: null,
   appearances: null,
+  contact_email: null,
+  contact_phone: null,
+  contact_links: [],
 }));
 
 const chunks = splitImportRowsAcrossPages(rows, [20, 20, 17]);

@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 
 import {
+  normalizeApifyProfileData,
   pickApifyAudienceCountry,
   pickApifyInterestCategories,
   pickApifyProfilePictureFromRows,
 } from "@/lib/creator-enrichment/apify-profile";
+import { pickApifyAuthorFollowerCount } from "@/lib/performance/apify-author-followers";
 
 const TT_AVATAR =
   "https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/abc~tplv-tiktokx-cropcenter:720:720.jpeg?x-expires=9999999999&x-signature=abc";
@@ -83,5 +85,48 @@ assert.equal(
   TT_AVATAR,
   "top-level profile scraper avatarLarger"
 );
+
+const FB_AVATAR =
+  "https://scontent.xx.fbcdn.net/v/t39.30808-1/435065639_833099202199246_n.jpg";
+
+assert.equal(
+  pickApifyProfilePictureFromRows("facebook", [
+    {
+      title: "NASA Earth",
+      followers: 10_921_894,
+      profilePictureUrl: FB_AVATAR,
+    },
+  ]),
+  FB_AVATAR,
+  "facebook pages scraper profilePictureUrl"
+);
+
+assert.equal(
+  pickApifyAuthorFollowerCount("facebook", { followers: 514_363 }),
+  514_363,
+  "facebook pages scraper followers field"
+);
+
+const facebookProfile = normalizeApifyProfileData({
+  platformKey: "facebook",
+  username: "nasaearth",
+  profileUrl: "https://www.facebook.com/nasaearth",
+  profileRows: [
+    {
+      title: "NASA Earth",
+      pageName: "nasaearth",
+      followers: 10_921_894,
+      intro: "Explore our home planet.",
+      profilePictureUrl: FB_AVATAR,
+    },
+  ],
+  postRows: [],
+  apifyRunId: "run-fb-1",
+});
+assert.ok(facebookProfile);
+assert.equal(facebookProfile?.displayName, "NASA Earth");
+assert.equal(facebookProfile?.followers, 10_921_894);
+assert.equal(facebookProfile?.bio, "Explore our home planet.");
+assert.equal(facebookProfile?.profilePictureUrl, FB_AVATAR);
 
 console.log("apify-profile tests passed");

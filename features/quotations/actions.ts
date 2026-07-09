@@ -2,8 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  resolveCreatorFromRefLookup,
+  resolveUnifiedCreatorsByRefs,
+} from "@/lib/creators/unified-browse";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { CommercialInputMode, Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -17,6 +22,7 @@ import {
   createQuotationFromSelection as createQuotationFromSelectionService,
   createQuotationFromShortlist as createQuotationFromShortlistService,
   duplicateQuotationItems as duplicateQuotationItemsService,
+  addQuotationItemOption as addQuotationItemOptionService,
   findOpenQuotationForShortlist as findOpenQuotationForShortlistService,
   importCampaignAssignmentsToQuotation as importCampaignAssignmentsToQuotationService,
   importShortlistItemsToQuotation as importShortlistItemsToQuotationService,
@@ -28,6 +34,8 @@ import {
 } from "@/lib/services/quotations/quotation-service";
 import {
   removeQuotationItemWithSync,
+  recomputeQuotationTotals,
+  returnQuotationItemToShortlist as returnQuotationItemToShortlistService,
   updateQuotationItemCommercials as updateQuotationItemCommercialsService,
 } from "@/lib/services/quotations/quotation-commercial-service";
 import type {
@@ -152,32 +160,56 @@ export async function addItemsToQuotation(
   return result;
 }
 
-export async function updateQuotationItemCommercials(input: {
-  item_id: string;
-  quotation_id: string;
-  mode: CommercialInputMode;
-  cost: number | null;
-  cost_currency: string;
-  gp_pct?: number | null;
-  revenue?: number | null;
-  gp_value?: number | null;
-  af_pct?: number | null;
-  deliverables?: QuotationDeliverable[];
-}): Promise<
+export async function updateQuotationItemCommercials(
+  input: {
+    item_id: string;
+    quotation_id: string;
+    mode: CommercialInputMode;
+    cost: number | null;
+    cost_currency: string;
+    gp_pct?: number | null;
+    revenue?: number | null;
+    gp_value?: number | null;
+    af_pct?: number | null;
+    deliverables?: QuotationDeliverable[];
+    option_number?: number | null;
+    service_description?: string | null;
+    platform?: string | null;
+    handle?: string | null;
+    followers?: number | null;
+    engagement_rate?: number | null;
+  },
+  options?: { deferRevalidate?: boolean; skipTotalsRecompute?: boolean }
+): Promise<
   ActionResult<{
-    totals: ReturnType<typeof computeQuotationTotals>;
+    totals: ReturnType<typeof computeQuotationTotals> | null;
     fx_rate_to_egp: number;
   }>
 > {
   const actor = await getActor();
   if (!actor.ok) return actor;
-  const result = await updateQuotationItemCommercialsService(actor.supabase, actor.userId, input);
-  if (result.ok) revalidate(input.quotation_id);
+  const result = await updateQuotationItemCommercialsService(
+    actor.supabase,
+    actor.userId,
+    input,
+    { skipTotalsRecompute: options?.skipTotalsRecompute }
+  );
+  if (result.ok && !options?.deferRevalidate) revalidate(input.quotation_id);
   if (!result.ok) return result;
   return {
     ok: true,
     data: { totals: result.totals, fx_rate_to_egp: result.fx_rate_to_egp },
   };
+}
+
+export async function finalizeQuotationSave(
+  quotationId: string
+): Promise<ActionResult<{ totals: ReturnType<typeof computeQuotationTotals> }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const totals = await recomputeQuotationTotals(actor.supabase, quotationId);
+  revalidate(quotationId);
+  return { ok: true, data: { totals } };
 }
 
 export async function updateQuotationHeader(input: {
@@ -206,6 +238,32 @@ export async function updateQuotationHeader(input: {
   return result;
 }
 
+export async function returnQuotationItemToShortlist(input: {
+  item_id: string;
+  quotation_id: string;
+}): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const result = await returnQuotationItemToShortlistService(
+    actor.supabase,
+    actor.userId,
+    input
+  );
+  if (result.ok) {
+    revalidate(input.quotation_id);
+    const { data: quotation } = await actor.supabase
+      .from("quotations")
+      .select("shortlist_id")
+      .eq("id", input.quotation_id)
+      .maybeSingle();
+    const shortlistId = (quotation as { shortlist_id: string | null } | null)?.shortlist_id;
+    if (shortlistId) revalidate(input.quotation_id, shortlistId);
+  }
+  return result.ok
+    ? { ok: true, message: result.message ?? "Creator returned to shortlist." }
+    : { ok: false, message: result.message };
+}
+
 export async function removeQuotationItem(input: {
   item_id: string;
   quotation_id: string;
@@ -228,6 +286,53 @@ export async function duplicateQuotationItems(input: {
   const result = await duplicateQuotationItemsService(actor.supabase, input);
   if (result.ok) revalidate(input.quotation_id);
   return result;
+}
+
+export async function addQuotationItemOption(input: {
+  quotation_id: string;
+  item_id: string;
+}): Promise<ActionResult<{ id: string }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const result = await addQuotationItemOptionService(actor.supabase, input);
+  if (result.ok) revalidate(input.quotation_id);
+  return result;
+}
+
+export type QuotationCreatorPlatformOption = {
+  platform: string;
+  handle: string;
+  followers: number | null;
+  engagement_rate: number | null;
+};
+
+export async function getQuotationCreatorPlatformOptions(input: {
+  unified_id?: string | null;
+  influencer_id?: string | null;
+  profile_id?: string | null;
+}): Promise<ActionResult<{ platforms: QuotationCreatorPlatformOption[] }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const lookup = await resolveUnifiedCreatorsByRefs(actor.supabase, {
+    unifiedIds: input.unified_id ? [input.unified_id] : [],
+    influencerIds: input.influencer_id ? [input.influencer_id] : [],
+    discoveredProfileIds: input.profile_id ? [input.profile_id] : [],
+  });
+
+  const creator = resolveCreatorFromRefLookup(lookup, input);
+  if (!creator) {
+    return { ok: true, data: { platforms: [] } };
+  }
+
+  const platforms = creator.platforms.map((p) => ({
+    platform: canonicalPlatformKey(p.platform),
+    handle: p.handle,
+    followers: p.follower_count ?? creator.metrics.followers.value,
+    engagement_rate: p.engagement_rate ?? creator.metrics.engagement_rate.value,
+  }));
+
+  return { ok: true, data: { platforms } };
 }
 
 export async function archiveQuotation(id: string): Promise<ActionResult> {
@@ -290,4 +395,21 @@ export async function importCampaignAssignmentsToQuotation(input: {
   const result = await importCampaignAssignmentsToQuotationService(actor.supabase, input);
   if (result.ok) revalidate(input.quotationId);
   return result;
+}
+
+export async function getInfluencerQuotationPriceReferenceAction(
+  influencerId: string
+): Promise<
+  ActionResult<{
+    reference: import("@/lib/creators/quotation-price-reference").CreatorQuotationPriceReference | null;
+  }>
+> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const { getQuotationPriceReferenceForInfluencer } = await import(
+    "@/lib/creators/quotation-price-reference"
+  );
+  const reference = await getQuotationPriceReferenceForInfluencer(actor.supabase, influencerId);
+  return { ok: true, data: { reference } };
 }

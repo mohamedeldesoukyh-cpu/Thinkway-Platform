@@ -114,24 +114,8 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     throw new Error("You must be signed in to continue.");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, email")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const greetingName = resolveGreetingName(
-    profile as { full_name: string | null } | null,
-    user.email
-  );
-  const displayName = resolveDisplayName(
-    profile as { full_name: string | null } | null,
-    user.email
-  );
-  const userHandle = user.email?.split("@")[0] ?? displayName;
-  const userInitials = resolveInitials(displayName);
-
   const [
+    profileResult,
     headersResult,
     linesResult,
     vendorsResult,
@@ -139,6 +123,11 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     recentCampaignsResult,
     vendorRowsResult,
   ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", user.id)
+      .maybeSingle(),
     supabase
       .from("campaign_headers")
       .select("id, status, currency_code, po_amount_campaign_currency, po_consumed_amount")
@@ -165,6 +154,18 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
       .eq("status", "active")
       .limit(40),
   ]);
+
+  const profile = profileResult.data;
+  const greetingName = resolveGreetingName(
+    profile as { full_name: string | null } | null,
+    user.email
+  );
+  const displayName = resolveDisplayName(
+    profile as { full_name: string | null } | null,
+    user.email
+  );
+  const userHandle = user.email?.split("@")[0] ?? displayName;
+  const userInitials = resolveInitials(displayName);
 
   const vendorIdsForAccounts = (vendorRowsResult.data ?? []).map((row) => row.id);
   const platformAccountsResult =

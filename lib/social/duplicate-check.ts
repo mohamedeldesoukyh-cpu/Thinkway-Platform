@@ -94,6 +94,15 @@ export async function findDuplicatePlatformAccounts(
     return duplicates;
   }
 
+  // Facebook numeric IDs are keyed by normalized_username (id:…). Legacy rows may have
+  // normalized_profile_url without ?id=, which would false-match every profile.php URL.
+  if (
+    input.platform === "facebook" &&
+    input.normalized_username.startsWith("id:")
+  ) {
+    return duplicates;
+  }
+
   let urlQuery = supabase
     .from("influencer_platform_accounts")
     .select(DUPLICATE_SELECT)

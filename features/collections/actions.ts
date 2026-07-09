@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { recordCollectionPaymentSchema } from "@/features/billing/schemas";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { buildAllocationPlan } from "@/lib/collections/payment-allocation";
 import { syncDeliverableCollectionsForInvoice } from "@/lib/billing/sync-deliverable-collections";
 import { planningDb } from "@/lib/supabase/governance-client";

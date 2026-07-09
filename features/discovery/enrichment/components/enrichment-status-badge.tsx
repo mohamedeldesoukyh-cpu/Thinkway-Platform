@@ -18,7 +18,7 @@ const STATUS_META: Record<
   { label: string; icon: LucideIcon; spin?: boolean }
 > = {
   never: {
-    label: "Imported",
+    label: "Not enriched",
     icon: CircleDashedIcon,
   },
   queued: {

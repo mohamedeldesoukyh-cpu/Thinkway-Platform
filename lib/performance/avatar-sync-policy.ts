@@ -120,6 +120,26 @@ export function isUsableAvatarUrl(url: string | null | undefined): boolean {
   return !isAvatarUrlNeedsRefresh(url);
 }
 
+/**
+ * Browser display — allow signed/expired social CDN URLs; the avatar proxy retries fetch
+ * and falls back to profile OpenGraph. Stricter than usable (sync/persist) only.
+ */
+export function isDisplayableAvatarUrl(url: string | null | undefined): boolean {
+  if (isEmptyAvatarUrl(url)) return false;
+  const trimmed = url!.trim();
+  if (isPlaceholderAvatarUrl(trimmed)) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return (
+      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      Boolean(parsed.hostname) &&
+      parsed.hostname !== "localhost"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function parseSyncedAt(value: string | null | undefined): number | null {
   if (!value?.trim()) return null;
   const ms = Date.parse(value);

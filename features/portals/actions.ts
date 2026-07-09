@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import { uploadEntityDocument } from "@/lib/supabase/storage";
 import { requireClientScope, requireCreatorScope } from "@/features/portals/scope";
 
@@ -266,11 +266,7 @@ export async function markPortalNotificationReadAction(
   }
 
   try {
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return { ok: false, message: "Unauthorized." };
+    const { supabase } = await requireRequestUser();
 
     const { error } = await supabase
       .from("portal_notifications")

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { persistClientDocumentUpload } from "@/lib/clients/persist-client-document-upload";
 import { friendlyClientDocumentError } from "@/lib/clients/client-document-utils";
+import { getClientIp, requireApiPermission } from "@/lib/auth/api-auth";
+import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -15,13 +17,8 @@ export async function POST(request: Request, context: RouteContext) {
   const { clientId } = await context.params;
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "clients.write");
+  if ("response" in auth) return auth.response;
 
   try {
     const formData = await request.formData();
@@ -48,9 +45,18 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    void logAuditEvent(supabase, {
+      userId: auth.userId,
+      action: "create",
+      entityType: "client_document",
+      entityId: routeClientId,
+      metadata: { documentType },
+      ip: getClientIp(request),
+    });
+
     const result = await persistClientDocumentUpload({
       supabase,
-      userId: user.id,
+      userId: auth.userId,
       clientId: routeClientId,
       documentType,
       file,

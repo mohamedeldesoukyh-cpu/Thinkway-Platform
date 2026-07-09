@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import {
   queryAssignmentDeliverables,
@@ -42,17 +42,6 @@ function lineAllowsDeliverableInvoice(line: CampaignLineWorkspace): boolean {
   });
 }
 
-async function requireUser() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) {
-    throw new Error(error?.message ?? "Unauthorized");
-  }
-  return { supabase, user };
-}
 
 const POST_SCHEDULE_OPERATIONAL_SELECT =
   "id, assignment_deliverable_id, sequence_number, live_date, status, notes, metadata, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_amount, billing_status";
@@ -61,7 +50,7 @@ const POST_SCHEDULE_LEGACY_SELECT =
   "id, assignment_deliverable_id, sequence_number, live_date, status, notes, metadata";
 
 async function queryPostSchedulesForLines(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: RequestUser["supabase"],
   lineIds: string[]
 ) {
   const operational = await supabase
@@ -228,7 +217,7 @@ async function loadCampaignAssignmentHierarchy(
   if (!workspace) {
     return { groups: [], currency_code: DEFAULT_PLATFORM_CURRENCY };
   }
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
 
   const lineIds = workspace.lines.map((l) => l.id);
   if (lineIds.length === 0) {

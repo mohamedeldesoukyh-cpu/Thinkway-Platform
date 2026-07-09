@@ -10,11 +10,18 @@
 
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
-import { apifyActorIdForPlatform } from "@/lib/performance/metrics-collector/providers/apify-input";
+import {
+  apifyProfileActorIdForPlatform,
+  buildApifyProfileDetailsInput,
+} from "@/lib/performance/metrics-collector/providers/apify-input";
 import { pickApifyAuthorAvatarUrl } from "@/lib/performance/apify-author-avatar";
 import { pickApifyAuthorFollowerCount } from "@/lib/performance/apify-author-followers";
 import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+
+import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
+import { formatCreatorBio } from "@/lib/text/decode-html-entities";
+import { extractEmailFromText, normalizeContactLinks } from "@/lib/creators/contact-info";
 
 import { isCreatorEnrichmentWorkerEnabled } from "./enabled";
 import type { ApifyProfileData, RecentPublication } from "./types";
@@ -89,19 +96,7 @@ function buildProfileDetailsInput(
   username: string | null,
   profileUrl: string
 ): Record<string, unknown> {
-  const handle = normalizeHandle(username, profileUrl);
-  switch (platformKey) {
-    case "instagram":
-      return { directUrls: [profileUrl], resultsType: "details", resultsLimit: 1 };
-    case "tiktok":
-      return handle
-        ? { profiles: [handle], resultsPerPage: 6, shouldDownloadVideos: false }
-        : { postURLs: [profileUrl], resultsPerPage: 6 };
-    case "youtube":
-      return { startUrls: [{ url: profileUrl }], maxResults: 6 };
-    default:
-      return { directUrls: [profileUrl], resultsLimit: 6 };
-  }
+  return buildApifyProfileDetailsInput(platformKey, profileUrl, username);
 }
 
 /** Latest-post scrape input (Instagram only — combined with profile details). */
@@ -119,7 +114,11 @@ function extractHashtags(rows: Record<string, unknown>[]): string[] {
     }
     if (Array.isArray(row.hashtags)) {
       for (const tag of row.hashtags) {
-        const t = str(tag);
+        const fromObject =
+          tag && typeof tag === "object" && !Array.isArray(tag)
+            ? str((tag as { name?: unknown }).name)
+            : null;
+        const t = fromObject ?? str(tag);
         if (t) set.add(t.startsWith("#") ? t : `#${t}`);
       }
     }
@@ -137,8 +136,6 @@ function extractMentions(rows: Record<string, unknown>[]): string[] {
   }
   return [...set].slice(0, 30);
 }
-
-import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
 
 function extractLatestPostRows(head: Record<string, unknown>): Record<string, unknown>[] {
   const rows: Record<string, unknown>[] = [];
@@ -262,6 +259,8 @@ function pickApifyProfilePictureUrl(
   const candidates = [
     pickApifyAuthorAvatarUrl(platformKey, head),
     pickApifyAuthorAvatarUrl(platformKey, owner),
+    str(head.profilePictureUrl),
+    str(head.profilePicUrl),
     str(head.profilePicUrlHD),
     str(head.profilePicUrlHd),
     str(head.hdProfilePicUrl),
@@ -366,7 +365,7 @@ export function pickApifyInterestCategories(
   return [];
 }
 
-function normalizeApifyProfileData(input: {
+export function normalizeApifyProfileData(input: {
   platformKey: string;
   username: string | null;
   profileUrl: string;
@@ -388,15 +387,26 @@ function normalizeApifyProfileData(input: {
         : metricRows;
 
   const followers =
+    num(head.followers) ??
     num(head.followersCount) ??
     num(head.followerCount) ??
+    num(owner.followers) ??
     num(owner.followersCount) ??
     num(owner.followerCount) ??
     num(owner.fans) ??
     pickApifyAuthorFollowerCount(input.platformKey, head);
-  const following = num(head.followsCount) ?? num(owner.following) ?? num(owner.followingCount);
+  const following =
+    num(head.followsCount) ??
+    num(head.following) ??
+    num(owner.following) ??
+    num(owner.followingCount) ??
+    null;
   const postsCount =
-    num(head.postsCount) ?? num(owner.postsCount) ?? num(owner.videoCount) ?? null;
+    num(head.postsCount) ??
+    num(head.likes) ??
+    num(owner.postsCount) ??
+    num(owner.videoCount) ??
+    null;
 
   const recent = toRecentPublications(publicationRows);
   const hashtags = extractHashtags(publicationRows);
@@ -409,16 +419,30 @@ function normalizeApifyProfileData(input: {
       : null;
   const allAvatarRows = [...input.profileRows, ...input.postRows, ...metricRows];
 
+  const bio = formatCreatorBio(
+    str(head.intro) ??
+      str(head.about) ??
+      str(head.biography) ??
+      str(owner.signature) ??
+      str(head.description)
+  );
+
   return {
     platform: input.platformKey,
     username:
       input.username ??
       normalizeHandle(null, input.profileUrl) ??
+      str(head.pageName) ??
       str(head.username) ??
+      str(head.userName) ??
       str(owner.userName) ??
       str(owner.name),
-    displayName: str(head.fullName) ?? str(owner.nickName) ?? str(owner.fullName),
-    bio: str(head.biography) ?? str(owner.signature) ?? str(head.description),
+    displayName:
+      str(head.title) ??
+      str(head.fullName) ??
+      str(owner.nickName) ??
+      str(owner.fullName),
+    bio,
     profilePictureUrl: pickApifyProfilePictureFromRows(input.platformKey, allAvatarRows),
     profileUrl: input.profileUrl,
     followers,
@@ -444,14 +468,165 @@ function normalizeApifyProfileData(input: {
     mentions: extractMentions(publicationRows),
     categories: pickApifyInterestCategories(input.platformKey, head, owner, hashtags),
     recentPublications: recent,
-    contactEmail: str(head.publicEmail) ?? str(head.email),
-    contactPhone: str(head.publicPhoneNumber) ?? null,
-    contactLinks: (() => {
-      const link = str(head.externalUrl) ?? str(head.website);
-      return link ? [link] : [];
-    })(),
+    contactEmail:
+      str(head.publicEmail) ??
+      str(head.email) ??
+      str(head.businessEmail) ??
+      str(owner.email) ??
+      extractEmailFromText(bio),
+    contactPhone:
+      str(head.publicPhoneNumber) ??
+      str(head.contactPhoneNumber) ??
+      str(head.phoneNumber) ??
+      null,
+    contactLinks: normalizeContactLinks(
+      [
+        str(head.externalUrl),
+        str(head.website),
+        str(head.bioLink),
+        str(head.bio_link),
+        str(owner.bioLink),
+        str(owner.link),
+        str(owner.externalUrl),
+      ].filter((value): value is string => Boolean(value))
+    ),
     apifyRunId: input.apifyRunId,
   };
+}
+
+export type ApifyRawFetchSuccess = {
+  profileRows: Record<string, unknown>[];
+  postRows: Record<string, unknown>[];
+  apifyRunId: string | null;
+  detailsRunId: string | null;
+  postsRunId: string | null;
+  durationMs: number;
+};
+
+export type ApifyRawFetchResult =
+  | ({ ok: true } & ApifyRawFetchSuccess)
+  | { ok: false; reason: string; available: boolean; durationMs: number; apifyRunId?: string | null };
+
+/**
+ * Fetch raw Apify actor output without normalization.
+ * Used by IPL to persist immutable raw snapshots before any merge/preview.
+ */
+export async function fetchApifyProfileRaw(input: {
+  platform: string;
+  username: string | null;
+  profileUrl: string;
+  timeoutMs?: number;
+}): Promise<ApifyRawFetchResult> {
+  const started = Date.now();
+
+  if (!isCreatorEnrichmentWorkerEnabled()) {
+    return {
+      ok: false,
+      available: false,
+      reason: "Creator enrichment is disabled.",
+      durationMs: Date.now() - started,
+    };
+  }
+
+  const env = getMetricsCollectorEnv();
+  const platformKey = canonicalPlatformKey(input.platform);
+  const handle = normalizeHandle(input.username, input.profileUrl);
+
+  if (!env.apifyToken) {
+    return {
+      ok: false,
+      available: false,
+      reason: "APIFY_TOKEN not configured.",
+      durationMs: Date.now() - started,
+    };
+  }
+
+  const actorId = apifyProfileActorIdForPlatform(platformKey, env);
+  if (!actorId) {
+    return {
+      ok: false,
+      available: false,
+      reason: "Apify actor id not configured.",
+      durationMs: Date.now() - started,
+    };
+  }
+
+  const timeoutMs = input.timeoutMs ?? 120_000;
+  const detailsInput = buildProfileDetailsInput(platformKey, input.username, input.profileUrl);
+  const postsInput = buildProfilePostsInput(platformKey, input.profileUrl);
+
+  try {
+    const detailsRun = await launchApifyActor({
+      actorId,
+      token: env.apifyToken,
+      body: detailsInput,
+      platformKey,
+      timeoutMs,
+      label: "profile-details",
+    });
+
+    if (detailsRun.error && detailsRun.rows.length === 0) {
+      return {
+        ok: false,
+        available: true,
+        reason: detailsRun.error,
+        durationMs: Date.now() - started,
+        apifyRunId: detailsRun.runId,
+      };
+    }
+
+    let postRows: Record<string, unknown>[] = [];
+    let apifyRunId = detailsRun.runId;
+    let postsRunId: string | null = null;
+
+    if (postsInput) {
+      const postsRun = await launchApifyActor({
+        actorId,
+        token: env.apifyToken,
+        body: postsInput,
+        platformKey,
+        timeoutMs,
+        label: "profile-posts",
+      });
+      if (postsRun.error && postsRun.rows.length === 0) {
+        logApifyEnrichment("Apify posts fetch failed", {
+          platform: platformKey,
+          fallbackReason: postsRun.error,
+          apifyRunId: postsRun.runId,
+        });
+      } else {
+        postRows = postsRun.rows;
+        apifyRunId = postsRun.runId ?? apifyRunId;
+        postsRunId = postsRun.runId;
+      }
+    }
+
+    logApifyEnrichment("Raw fetch complete", {
+      platform: platformKey,
+      username: handle,
+      profileRows: detailsRun.rows.length,
+      postRows: postRows.length,
+      apifyRunId,
+    });
+
+    return {
+      ok: true,
+      profileRows: detailsRun.rows,
+      postRows,
+      apifyRunId,
+      detailsRunId: detailsRun.runId,
+      postsRunId,
+      durationMs: Date.now() - started,
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Apify request failed.";
+    return {
+      ok: false,
+      available: true,
+      reason,
+      durationMs: Date.now() - started,
+    };
+  }
 }
 
 /**
@@ -497,7 +672,7 @@ export async function fetchApifyProfile(input: {
     return { ok: false, available: false, reason: "APIFY_TOKEN not configured." };
   }
 
-  const actorId = apifyActorIdForPlatform(platformKey, env);
+  const actorId = apifyProfileActorIdForPlatform(platformKey, env);
   logApifyEnrichment("Actor selected", {
     platform: platformKey,
     actorId,
@@ -511,89 +686,46 @@ export async function fetchApifyProfile(input: {
     return { ok: false, available: false, reason: "Apify actor id not configured." };
   }
 
-  const timeoutMs = input.timeoutMs ?? 120_000;
-  const detailsInput = buildProfileDetailsInput(platformKey, input.username, input.profileUrl);
-  const postsInput = buildProfilePostsInput(platformKey, input.profileUrl);
-
-  try {
-    const detailsRun = await launchApifyActor({
-      actorId,
-      token: env.apifyToken,
-      body: detailsInput,
-      platformKey,
-      timeoutMs,
-      label: "profile-details",
-    });
-
-    if (detailsRun.error && detailsRun.rows.length === 0) {
+  const raw = await fetchApifyProfileRaw(input);
+  if (!raw.ok) {
+    if (raw.available) {
       logApifyEnrichment("Apify profile fetch failed", {
         platform: platformKey,
-        fallbackReason: detailsRun.error,
-        apifyRunId: detailsRun.runId,
+        fallbackReason: raw.reason,
+        apifyRunId: raw.apifyRunId ?? null,
       });
-      return { ok: false, available: true, reason: detailsRun.error };
     }
-
-    let postRows: Record<string, unknown>[] = [];
-    let apifyRunId = detailsRun.runId;
-
-    if (postsInput) {
-      const postsRun = await launchApifyActor({
-        actorId,
-        token: env.apifyToken,
-        body: postsInput,
-        platformKey,
-        timeoutMs,
-        label: "profile-posts",
-      });
-      if (postsRun.error && postsRun.rows.length === 0) {
-        logApifyEnrichment("Apify posts fetch failed", {
-          platform: platformKey,
-          fallbackReason: postsRun.error,
-          apifyRunId: postsRun.runId,
-        });
-      } else {
-        postRows = postsRun.rows;
-        apifyRunId = postsRun.runId ?? apifyRunId;
-      }
-    }
-
-    const data = normalizeApifyProfileData({
-      platformKey,
-      username: input.username,
-      profileUrl: input.profileUrl,
-      profileRows: detailsRun.rows,
-      postRows,
-      apifyRunId,
-    });
-
-    if (!data) {
-      logApifyEnrichment("Apify normalization empty", {
-        platform: platformKey,
-        fallbackReason: "Apify returned no usable items.",
-        apifyRunId,
-      });
-      return { ok: false, available: true, reason: "Apify returned no usable items." };
-    }
-
-    logApifyEnrichment("Normalization output", {
-      platform: platformKey,
-      apifyRunId: data.apifyRunId,
-      followers: data.followers,
-      engagementRate: data.engagementRate,
-      profilePictureUrl: data.profilePictureUrl,
-      recentPublications: data.recentPublications.length,
-      displayName: data.displayName,
-      samplePublication: data.recentPublications[0] ?? null,
-    });
-
-    return { ok: true, data };
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : "Apify request failed.";
-    logApifyEnrichment("Apify request threw", {
-      platform: platformKey,
-      fallbackReason: reason,
-    });
-    return { ok: false, available: true, reason };
+    return { ok: false, available: raw.available, reason: raw.reason };
   }
+
+  const data = normalizeApifyProfileData({
+    platformKey,
+    username: input.username,
+    profileUrl: input.profileUrl,
+    profileRows: raw.profileRows,
+    postRows: raw.postRows,
+    apifyRunId: raw.apifyRunId,
+  });
+
+  if (!data) {
+    logApifyEnrichment("Apify normalization empty", {
+      platform: platformKey,
+      fallbackReason: "Apify returned no usable items.",
+      apifyRunId: raw.apifyRunId,
+    });
+    return { ok: false, available: true, reason: "Apify returned no usable items." };
+  }
+
+  logApifyEnrichment("Normalization output", {
+    platform: platformKey,
+    apifyRunId: data.apifyRunId,
+    followers: data.followers,
+    engagementRate: data.engagementRate,
+    profilePictureUrl: data.profilePictureUrl,
+    recentPublications: data.recentPublications.length,
+    displayName: data.displayName,
+    samplePublication: data.recentPublications[0] ?? null,
+  });
+
+  return { ok: true, data };
 }

@@ -52,7 +52,7 @@ export function CreatorCompareMatrix({ bundle, onRemove, onOpenCreator }: Props)
                 <div className="min-w-0 flex-1">
                   <CreatorProfileLink
                     source={creatorProfileSourceFromUnified(entry.creator)}
-                    size="sm"
+                    size="md"
                     avatarBadge="country"
                     showHandle
                     stopPropagation

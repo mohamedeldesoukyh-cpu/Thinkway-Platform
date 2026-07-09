@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import type { BrandListItem } from "@/types/database";
 
 import { BRANDS_PAGE_SIZE } from "./constants";
@@ -20,23 +20,6 @@ function escapeIlikePattern(value: string): string {
   return value.replace(/[%_\\,]/g, "\\$&");
 }
 
-async function requireUser() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!user) {
-    throw new Error("You must be signed in to continue.");
-  }
-
-  return { supabase, user };
-}
 
 export async function getBrandsList(params: {
   page?: number;
@@ -47,7 +30,7 @@ export async function getBrandsList(params: {
   const from = (page - 1) * BRANDS_PAGE_SIZE;
   const to = from + BRANDS_PAGE_SIZE - 1;
 
-  const { supabase } = await requireUser();
+  const { supabase } = await requireRequestUser();
 
   let query = supabase
     .from("brands")

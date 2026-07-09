@@ -13,6 +13,7 @@ export {
   addItemsToQuotation,
   updateQuotationHeader,
   duplicateQuotationItems,
+  addQuotationItemOption,
   archiveQuotation,
   listShortlistsForImport,
   listCampaignsForImport,
@@ -25,6 +26,7 @@ export {
   updateQuotationItemCommercials,
   recomputeQuotationTotals,
   removeQuotationItemWithSync,
+  returnQuotationItemToShortlist,
 } from "./quotation-commercial-service";
 export {
   updateQuotationClientBrand,

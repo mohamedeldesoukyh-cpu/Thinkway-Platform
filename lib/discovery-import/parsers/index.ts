@@ -1,4 +1,5 @@
 import type { ParsedCreatorRow } from "../types";
+import { parseImportContactFromLookup } from "../parse-contact";
 import {
   isIndahashText,
   normalizeImportPlatform,
@@ -117,6 +118,7 @@ function parseGenericTabularRow(
   const relevance_score = parsePercent(
     lookupCell(lookup, "relevance score", "relevance", "score")
   );
+  const contact = parseImportContactFromLookup(lookup);
 
   return {
     username,
@@ -131,6 +133,7 @@ function parseGenericTabularRow(
     relevance_score,
     profile_picture_url: parseImportProfilePictureUrlRaw(lookup),
     role: parseImportRoleRaw(lookup),
+    ...contact,
   };
 }
 

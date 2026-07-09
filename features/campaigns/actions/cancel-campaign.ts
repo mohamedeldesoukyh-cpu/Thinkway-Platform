@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
+import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import {
   cancelCampaign,
   previewCampaignCancellation,
@@ -87,6 +88,14 @@ export async function cancelCampaignAction(
     return { ok: false, message: result.error };
   }
 
+  void logAuditEvent(supabase, {
+    userId: auth.userId,
+    action: "delete",
+    entityType: "campaign_header",
+    entityId: parsed.data.campaign_id,
+    metadata: { reason: parsed.data.reason, operation: "cancel" },
+  });
+
   revalidatePath(`/campaigns/${parsed.data.campaign_id}`);
   revalidatePath("/campaigns");
   revalidatePath("/finance/invoices");
@@ -122,6 +131,18 @@ export async function reopenCampaignAction(
   if (!result.ok) {
     return { ok: false, message: result.error };
   }
+
+  void logAuditEvent(supabase, {
+    userId: auth.userId,
+    action: "update",
+    entityType: "campaign_header",
+    entityId: parsed.data.campaign_id,
+    metadata: {
+      reason: parsed.data.reason,
+      operation: "reopen",
+      target_status: parsed.data.target_status,
+    },
+  });
 
   revalidatePath(`/campaigns/${parsed.data.campaign_id}`);
   revalidatePath("/campaigns");

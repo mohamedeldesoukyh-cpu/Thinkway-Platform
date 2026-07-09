@@ -5,14 +5,10 @@ import { revalidatePath } from "next/cache";
 import { matchCampaignBrief } from "@/lib/discovery/campaign-match";
 import { enqueueDiscoveryJob, enqueueEnrichmentJob } from "@/lib/discovery/queue";
 import type { CampaignMatchRequest, DiscoveryJobPayload } from "@/lib/discovery/types";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 
 export async function startDiscoveryJobAction(payload: DiscoveryJobPayload) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const { supabase, userId } = await requireRequestUser();
 
   const { data: job, error } = await supabase
     .from("discovery_jobs")
@@ -21,7 +17,7 @@ export async function startDiscoveryJobAction(payload: DiscoveryJobPayload) {
       method: payload.method,
       status: "pending",
       payload,
-      created_by: user.id,
+      created_by: userId,
     })
     .select("id")
     .single();
@@ -34,11 +30,7 @@ export async function startDiscoveryJobAction(payload: DiscoveryJobPayload) {
 }
 
 export async function enrichDiscoveredProfileAction(profileId: string) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const { supabase, userId } = await requireRequestUser();
 
   const { data: job, error } = await supabase
     .from("discovery_jobs")
@@ -46,7 +38,7 @@ export async function enrichDiscoveredProfileAction(profileId: string) {
       job_type: "enrichment:profile",
       status: "pending",
       payload: { profileId },
-      created_by: user.id,
+      created_by: userId,
     })
     .select("id")
     .single();
@@ -68,11 +60,7 @@ export type CreateShortlistInput = {
 };
 
 export async function createShortlistAction(input: CreateShortlistInput) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const { supabase, userId } = await requireRequestUser();
 
   const name = input.name?.trim();
   if (!name) throw new Error("List name is required");
@@ -84,7 +72,7 @@ export async function createShortlistAction(input: CreateShortlistInput) {
     .insert({
       name,
       description: input.description?.trim() || null,
-      owner_id: user.id,
+      owner_id: userId,
       campaign_header_id: input.campaignHeaderId || null,
       metadata: { visibility },
     })
@@ -109,11 +97,7 @@ export async function addToShortlistAction(shortlistId: string, profileId: strin
 }
 
 export async function matchCampaignBriefAction(request: CampaignMatchRequest) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const { supabase } = await requireRequestUser();
 
   const matches = await matchCampaignBrief(supabase, request);
   revalidatePath("/discovery");

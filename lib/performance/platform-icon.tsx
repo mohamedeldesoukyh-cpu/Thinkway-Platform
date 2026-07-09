@@ -24,6 +24,7 @@ export const PLATFORM_ICON_STYLES: Record<string, PlatformIconStyle> = {
     label: "YT",
     title: "YouTube",
     className: "bg-[#FF0000] text-white",
+    imageUrl: "/platform-icons/youtube.svg",
   },
   snapchat: {
     label: "SC",
@@ -34,6 +35,7 @@ export const PLATFORM_ICON_STYLES: Record<string, PlatformIconStyle> = {
     label: "FB",
     title: "Facebook",
     className: "bg-[#1877F2] text-white",
+    imageUrl: "/platform-icons/facebook.svg",
   },
   twitter: {
     label: "X",
@@ -60,6 +62,8 @@ function normalizePlatformKey(platform: string | null | undefined): string {
 type PlatformIconProps = {
   platform: string;
   size?: "xs" | "sm" | "md";
+  /** `logo` = circular brand mark only (no border / ring). */
+  variant?: "default" | "logo";
   className?: string;
 };
 
@@ -69,7 +73,14 @@ const PLATFORM_ICON_DIMENSION = {
   md: "size-10",
 } as const;
 
-export function PlatformIcon({ platform, size = "sm", className }: PlatformIconProps) {
+const LOGO_ICON_CLASS = "rounded-full object-cover border-0 ring-0 shadow-none";
+
+export function PlatformIcon({
+  platform,
+  size = "sm",
+  variant = "default",
+  className,
+}: PlatformIconProps) {
   const key = normalizePlatformKey(platform);
   const badge = PLATFORM_ICON_STYLES[key] ?? {
     label: key.slice(0, 2).toUpperCase() || "?",
@@ -87,7 +98,12 @@ export function PlatformIcon({ platform, size = "sm", className }: PlatformIconP
         alt=""
         title={badge.title}
         aria-label={badge.title}
-        className={cn("shrink-0 object-contain", dimension, className)}
+        className={cn(
+          "shrink-0 object-contain",
+          dimension,
+          variant === "logo" && LOGO_ICON_CLASS,
+          className
+        )}
       />
     );
   }

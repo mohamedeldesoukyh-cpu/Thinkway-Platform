@@ -75,36 +75,136 @@ export async function fetchCampaignInvoices(supabase: SupabaseClient, campaignId
     .order("issue_date", { ascending: false });
 }
 
-export async function fetchCampaignApprovals(supabase: SupabaseClient, campaignId: string) {
-  return supabase
-    .from("approvals")
-    .select(
-      `
+export async function fetchCampaignApprovals(
+  supabase: SupabaseClient,
+  campaignId: string,
+  scope: {
+    vendorIds: string[];
+    deliverableIds: string[];
+  }
+) {
+  const select = `
         id, document_number, entity_type, title, status, due_at, decided_at,
         assignee:profiles!approvals_assigned_to_fkey(full_name, email)
-      `
-    )
-    .or(
-      `and(entity_type.eq.campaign,entity_id.eq.${campaignId}),entity_type.eq.deliverable,entity_type.eq.campaign_influencer`
-    )
-    .order("created_at", { ascending: false })
-    .limit(30);
+      `;
+
+  const requests = [
+    supabase
+      .from("approvals")
+      .select(select)
+      .eq("entity_type", "campaign")
+      .eq("entity_id", campaignId)
+      .order("created_at", { ascending: false })
+      .limit(30),
+  ];
+
+  if (scope.deliverableIds.length > 0) {
+    requests.push(
+      supabase
+        .from("approvals")
+        .select(select)
+        .eq("entity_type", "deliverable")
+        .in("entity_id", scope.deliverableIds)
+        .order("created_at", { ascending: false })
+        .limit(30)
+    );
+  }
+
+  if (scope.vendorIds.length > 0) {
+    requests.push(
+      supabase
+        .from("approvals")
+        .select(select)
+        .eq("entity_type", "campaign_influencer")
+        .in("entity_id", scope.vendorIds)
+        .order("created_at", { ascending: false })
+        .limit(30)
+    );
+  }
+
+  const results = await Promise.all(requests);
+  const firstError = results.find((result) => result.error)?.error;
+  if (firstError) throw firstError;
+
+  const merged = results.flatMap((result) => result.data ?? []);
+  merged.sort((a, b) => {
+    const aCreated = (a as { created_at?: string }).created_at ?? "";
+    const bCreated = (b as { created_at?: string }).created_at ?? "";
+    return bCreated.localeCompare(aCreated);
+  });
+
+  return { data: merged.slice(0, 30), error: null };
 }
 
-export async function fetchCampaignAuditLogs(supabase: SupabaseClient, campaignId: string) {
-  return supabase
-    .from("audit_logs")
-    .select("id, action, entity_type, entity_id, created_at, actor_id, new_data")
-    .or(
-      [
-        `and(entity_type.eq.campaign_headers,entity_id.eq.${campaignId})`,
-        `entity_type.eq.campaign_lines`,
-        `entity_type.eq.campaign_influencers`,
-        `entity_type.eq.deliverables`,
-      ].join(",")
-    )
-    .order("created_at", { ascending: false })
-    .limit(50);
+export async function fetchCampaignAuditLogs(
+  supabase: SupabaseClient,
+  campaignId: string,
+  scope: {
+    lineIds: string[];
+    vendorIds: string[];
+    deliverableIds: string[];
+  }
+) {
+  const select = "id, action, entity_type, entity_id, created_at, actor_id, new_data";
+
+  const requests = [
+    supabase
+      .from("audit_logs")
+      .select(select)
+      .eq("entity_type", "campaign_headers")
+      .eq("entity_id", campaignId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ];
+
+  if (scope.lineIds.length > 0) {
+    requests.push(
+      supabase
+        .from("audit_logs")
+        .select(select)
+        .eq("entity_type", "campaign_lines")
+        .in("entity_id", scope.lineIds)
+        .order("created_at", { ascending: false })
+        .limit(50)
+    );
+  }
+
+  if (scope.vendorIds.length > 0) {
+    requests.push(
+      supabase
+        .from("audit_logs")
+        .select(select)
+        .eq("entity_type", "campaign_influencers")
+        .in("entity_id", scope.vendorIds)
+        .order("created_at", { ascending: false })
+        .limit(50)
+    );
+  }
+
+  if (scope.deliverableIds.length > 0) {
+    requests.push(
+      supabase
+        .from("audit_logs")
+        .select(select)
+        .eq("entity_type", "deliverables")
+        .in("entity_id", scope.deliverableIds)
+        .order("created_at", { ascending: false })
+        .limit(50)
+    );
+  }
+
+  const results = await Promise.all(requests);
+  const firstError = results.find((result) => result.error)?.error;
+  if (firstError) throw firstError;
+
+  const merged = results.flatMap((result) => result.data ?? []);
+  merged.sort((a, b) => {
+    const aCreated = (a as { created_at: string }).created_at;
+    const bCreated = (b as { created_at: string }).created_at;
+    return bCreated.localeCompare(aCreated);
+  });
+
+  return { data: merged.slice(0, 50), error: null };
 }
 
 export async function fetchInfluencerPlatformAccounts(

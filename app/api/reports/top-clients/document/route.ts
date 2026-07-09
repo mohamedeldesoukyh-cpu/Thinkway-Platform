@@ -15,6 +15,7 @@ import {
   createXlsxDocumentResponse,
   parseReportDocumentFormat,
 } from "@/lib/reports/document/report-document-response";
+import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -30,13 +31,8 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, "analytics.read");
+  if ("response" in auth) return auth.response;
 
   try {
     const queryParams: Record<string, string | string[] | undefined> = {};

@@ -1,6 +1,9 @@
+import "server-only";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { getAuthContext, hasPermission } from "@/lib/auth/permissions";
+import { getAuthContext } from "@/lib/auth/permissions-server";
+import { hasPermission } from "@/lib/auth/permissions";
 
 /**
  * Roles allowed to manually override onboarding status.

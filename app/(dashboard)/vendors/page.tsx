@@ -46,12 +46,25 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
   let errorMessage: string | null = null;
 
   try {
-    list = await getVendorsList({
-      page,
-      search,
-      status: status || undefined,
-      platform: platform || undefined,
-    });
+    const [listResult, masterDataResult] = await Promise.allSettled([
+      getVendorsList({
+        page,
+        search,
+        status: status || undefined,
+        platform: platform || undefined,
+      }),
+      getMasterDataOptions(),
+    ]);
+
+    if (listResult.status === "fulfilled") {
+      list = listResult.value;
+    } else {
+      throw listResult.reason;
+    }
+
+    if (masterDataResult.status === "fulfilled") {
+      currencyOptions = buildCurrencyOptions(masterDataResult.value.currencies);
+    }
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to load vendors.";
@@ -62,13 +75,6 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
       pageSize: 10,
       totalPages: 1,
     };
-  }
-
-  try {
-    const masterData = await getMasterDataOptions();
-    currencyOptions = buildCurrencyOptions(masterData.currencies);
-  } catch {
-    currencyOptions = [];
   }
 
   const { vendors, total, totalPages } = list;

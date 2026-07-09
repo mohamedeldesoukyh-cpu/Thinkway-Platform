@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { enrichPlatformAccount } from "@/lib/social/enrich-platform-account";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 

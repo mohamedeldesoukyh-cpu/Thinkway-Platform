@@ -1,8 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
-import { getAuthContext, hasPermission } from "@/lib/auth/permissions";
+import {
+  resolveCreatorFromRefLookup,
+  resolveUnifiedCreatorsByRefs,
+} from "@/lib/creators/unified-browse";
+import { getAuthContext } from "@/lib/auth/permissions-server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
+import { enrichQuotationItemsWithCreatorAvatars } from "@/lib/services/quotations/enrich-quotation-item-avatars";
+import {
+  aggregateQuotationEngagementRate,
+  aggregateQuotationReach,
+} from "@/lib/quotations/quotation-aggregate-metrics";
 import {
   getBrandsForSelect,
   getClientsForSelect,
@@ -33,17 +42,6 @@ function unwrap<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-function aggregateReach(items: QuotationItemRow[]): number {
-  return items.reduce((sum, item) => sum + (item.followers ?? 0), 0);
-}
-
-function aggregateEngagementRate(items: QuotationItemRow[]): number | null {
-  const withEr = items.filter((i) => i.engagement_rate != null);
-  if (!withEr.length) return null;
-  const total = withEr.reduce((sum, i) => sum + Number(i.engagement_rate), 0);
-  return total / withEr.length;
-}
-
 function mapItem(raw: Record<string, unknown>): QuotationItemRow {
   return {
     id: raw.id as string,
@@ -57,9 +55,16 @@ function mapItem(raw: Record<string, unknown>): QuotationItemRow {
     followers: raw.followers != null ? Number(raw.followers) : null,
     engagement_rate: raw.engagement_rate != null ? Number(raw.engagement_rate) : null,
     country_code: (raw.country_code as string | null) ?? null,
+    profile_image_url: (raw.profile_image_url as string | null) ?? null,
+    profile_url: (raw.profile_url as string | null) ?? null,
     deliverables: Array.isArray(raw.deliverables)
       ? (raw.deliverables as QuotationDeliverable[])
       : [],
+    option_number:
+      raw.option_number == null || raw.option_number === ""
+        ? null
+        : Number(raw.option_number),
+    service_description: (raw.service_description as string | null) ?? null,
     commercial_input_mode: (raw.commercial_input_mode as CommercialInputMode) ?? "cost_gp_pct",
     cost: Number(raw.cost ?? 0),
     cost_currency: (raw.cost_currency as string) ?? "EGP",
@@ -260,27 +265,17 @@ async function loadQuotationCreatorPreviews(
 
   if (cappedByQuotation.size === 0) return previews;
 
-  const browse = await browseUnifiedCreators(supabase, { pageSize: 500 });
-  const byUnifiedId = new Map(browse.creators.map((c) => [c.unified_id, c]));
-  const byDiscoveryId = new Map(
-    browse.creators
-      .filter((c) => c.discovered_profile_id)
-      .map((c) => [c.discovered_profile_id!, c])
-  );
-  const byInfluencerId = new Map(
-    browse.creators
-      .filter((c) => c.influencer_id)
-      .map((c) => [c.influencer_id!, c])
-  );
+  const previewItems = [...cappedByQuotation.values()].flat();
+  const lookup = await resolveUnifiedCreatorsByRefs(supabase, {
+    unifiedIds: previewItems.map((item) => item.unified_id),
+    influencerIds: previewItems.map((item) => item.influencer_id),
+    discoveredProfileIds: previewItems.map((item) => item.profile_id),
+  });
 
   for (const [quotationId, quotationItems] of cappedByQuotation) {
     const rowPreviews: QuotationCreatorPreview[] = [];
     for (const item of quotationItems) {
-      const creator =
-        (item.unified_id ? byUnifiedId.get(item.unified_id) : null) ??
-        (item.profile_id ? byDiscoveryId.get(item.profile_id) : null) ??
-        (item.influencer_id ? byInfluencerId.get(item.influencer_id) : null) ??
-        null;
+      const creator = resolveCreatorFromRefLookup(lookup, item);
       const displayName =
         creator?.display_name?.trim() ||
         item.creator_name?.trim() ||
@@ -334,9 +329,12 @@ export async function getQuotationDetail(
   if (!data) return null;
 
   const row = data as Record<string, unknown>;
-  const items = ((row.quotation_items as Record<string, unknown>[]) ?? [])
-    .map(mapItem)
-    .sort((a, b) => a.sort_order - b.sort_order);
+  const items = await enrichQuotationItemsWithCreatorAvatars(
+    supabase,
+    ((row.quotation_items as Record<string, unknown>[]) ?? [])
+      .map(mapItem)
+      .sort((a, b) => a.sort_order - b.sort_order)
+  );
 
   const revisions = ((row.quotation_revisions as Record<string, unknown>[]) ?? [])
     .map(mapRevision)
@@ -452,7 +450,7 @@ export async function getQuotationDetail(
     items,
     revisions,
     canManage,
-    estimated_reach: aggregateReach(items),
-    estimated_engagement_rate: aggregateEngagementRate(items),
+    estimated_reach: aggregateQuotationReach(items),
+    estimated_engagement_rate: aggregateQuotationEngagementRate(items),
   };
 }

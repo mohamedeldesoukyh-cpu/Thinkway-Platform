@@ -7,10 +7,8 @@ import {
   resolveUnifiedCreatorsByRefs,
 } from "@/lib/creators/unified-browse";
 import type { Database, ShortlistItemStatus } from "@/types/database";
-import {
-  getAuthContext,
-  hasPermission,
-} from "@/lib/auth/permissions";
+import { getAuthContext } from "@/lib/auth/permissions-server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listQuotationsByShortlistQuery } from "@/lib/services/quotations/repositories/quotation-repository";
 import type { QuotationStatus } from "@/types/database";
@@ -127,7 +125,8 @@ async function loadCreatorPreviewsByShortlist(
     .from("discovery_shortlist_items")
     .select("shortlist_id, unified_id, profile_id, influencer_id, sort_order")
     .in("shortlist_id", shortlistIds)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .limit(Math.max(shortlistIds.length * 4, 40));
 
   const items = (data ?? []) as Array<{
     shortlist_id: string;
