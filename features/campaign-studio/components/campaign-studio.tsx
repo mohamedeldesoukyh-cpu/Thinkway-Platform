@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-workspace/types/studio-decision-mode";
 
+import { CampaignProposalExportActions } from "./campaign-proposal-export-actions";
 import { useCampaignStudio } from "../hooks/use-campaign-studio";
 import type { CampaignStudioInput } from "../types/campaign-studio";
 import { getSectionLayout } from "./sections";
@@ -128,16 +129,10 @@ export function CampaignStudio({
           </div>
           <div className="flex items-center gap-3">
             {studio.campaignObject?.id && studio.progressPercent >= 100 ? (
-              <a
-                href={`/api/ai/campaign-objects/${studio.campaignObject.id}/export?format=html${
-                  conversationId ? `&conversationId=${encodeURIComponent(conversationId)}` : ""
-                }`}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg border border-[#1D9E75]/40 bg-[#1D9E75]/5 px-3 py-1.5 text-xs font-semibold text-[#1D9E75] transition-colors hover:bg-[#1D9E75]/10"
-              >
-                Export proposal
-              </a>
+              <CampaignProposalExportActions
+                campaignObjectId={studio.campaignObject.id}
+                conversationId={conversationId}
+              />
             ) : null}
             <div className="text-right">
               <p className="text-xs text-muted-foreground">

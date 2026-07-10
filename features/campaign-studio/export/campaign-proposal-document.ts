@@ -21,6 +21,7 @@ import {
   resolveExecutiveStrategy,
   resolveExecutiveSummaryData,
   resolveBudgetData,
+  resolveGroundedKpis,
   resolveKpiData,
   resolvePresentationData,
   resolvePresentationCompletion,
@@ -120,6 +121,16 @@ function resolveProposalVendors(
     }));
 }
 
+/** Budget rationale is stored as an internal audit trail — strip that wording for clients. */
+function clientFacingAllocationNote(note?: string): string | undefined {
+  if (!note?.includes("CampaignFacts")) return note;
+  const stripped = note
+    .replace(/\s*—\s*influencer-only default:.*$/i, "")
+    .replace(/^100% Creator Fees — brief and CampaignFacts[^.]*\.\s*/i, "")
+    .trim();
+  return stripped || "Production is embedded in creator fees — a single influencer investment line.";
+}
+
 /** Activation waves: tier order over the campaign window sustains trend momentum. */
 function buildActivationWaves(
   campaignObject: CampaignObject
@@ -168,13 +179,39 @@ const GENERIC_AMPLIFICATION = [
   ["🤝", "Creator collaboration formats (duets, joint posts) to pool audiences"],
 ] as const;
 
-/** Client-facing campaign proposal — CIO/VIO document language: ink headings, navy cover, green accents only. */
-export function buildCampaignProposalDocumentHtml(
+export type CampaignProposalModel = {
+  campaignName: string;
+  client: string;
+  brand: string;
+  generated: string;
+  presentationVersion: string;
+  trend: boolean;
+  currency: string;
+  clientLogoUrl?: string;
+  objective?: string;
+  executiveSummary: string;
+  recommendedActions: string[];
+  strategyText: string;
+  statTiles: Array<{ label: string; value: string; sub: string }>;
+  understanding: Array<[string, string]>;
+  vendors: ProposalVendor[];
+  mixSource: Array<{ tier: string; count: number; percent: number }>;
+  waves: Array<{ window: string; wave: string; goal: string; tier?: string }>;
+  budget: {
+    total?: number;
+    currency: string;
+    allocations: Array<{ category: string; percent?: number; notes?: string }>;
+  } | null;
+  amplification: Array<readonly [string, string]>;
+  kpis: Array<{ metric: string; target: string; basis: string }>;
+};
+
+/** Shared proposal data model — consumed by the HTML document and the PPTX deck. */
+export function buildCampaignProposalModel(
   campaignObject: CampaignObject,
   hydratedVendors: ProposalVendor[] = [],
   branding: ProposalBranding = {}
-): string {
-  const P = SHORTLIST_PALETTE;
+): CampaignProposalModel {
   const generated = new Date().toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
@@ -199,13 +236,12 @@ export function buildCampaignProposalDocumentHtml(
   const trend = isTrendCampaign(facts);
   const currency = facts ? resolveFactsCurrency(facts) : "USD";
 
-  const clientMark = branding.clientLogoUrl?.trim()
-    ? `<img class="client-logo" src="${escapeHtml(branding.clientLogoUrl)}" alt="${escapeHtml(client)}" />`
-    : `<span class="client-monogram">${escapeHtml((client.trim()[0] ?? "C").toUpperCase())}</span>`;
+  const vendors = resolveProposalVendors(campaignObject, hydratedVendors).map((v, i) => ({
+    ...v,
+    contentIdea:
+      v.contentIdea ?? buildCreatorContentIdea({ categories: [v.reason ?? ""] }, facts, i),
+  }));
 
-  const vendors = resolveProposalVendors(campaignObject, hydratedVendors);
-
-  // ---- Stat tiles (hero numbers — form: stat tile, not a chart) ----
   const statTiles = [
     facts?.budget
       ? { label: "Budget", value: `${formatCompact(facts.budget.amount)} ${currency}`, sub: "100% influencer fees" }
@@ -217,40 +253,23 @@ export function buildCampaignProposalDocumentHtml(
     summary?.estimatedReach
       ? { label: "Est. reach", value: summary.estimatedReach.split(" ")[0] ?? summary.estimatedReach, sub: "projected impressions" }
       : null,
-  ]
-    .filter(Boolean)
-    .map(
-      (t) => `
-      <div class="stat">
-        <div class="stat-label">${escapeHtml(t!.label)}</div>
-        <div class="stat-value">${escapeHtml(t!.value)}</div>
-        <div class="stat-sub">${escapeHtml(t!.sub)}</div>
-      </div>`
-    )
-    .join("");
+  ].filter((t): t is { label: string; value: string; sub: string } => Boolean(t));
 
-  // ---- Understanding grid ----
-  const understandingRows = [
-    ["Client", summary?.client],
-    ["Brand", summary?.brand],
-    ["Product", summary?.product],
-    ["Market", summary?.market],
-    ["Objective", summary?.objective],
-    ["Audience", summary?.targetAudience],
-    ["Platforms", summary?.platforms],
-    ["Deliverables", summary?.deliverables],
-  ]
+  const understanding = (
+    [
+      ["Client", summary?.client],
+      ["Brand", summary?.brand],
+      ["Product", summary?.product],
+      ["Market", summary?.market],
+      ["Objective", summary?.objective],
+      ["Audience", summary?.targetAudience],
+      ["Platforms", summary?.platforms],
+      ["Deliverables", summary?.deliverables],
+    ] as Array<[string, string | undefined]>
+  )
     .filter(([, value]) => value?.toString().trim())
-    .map(
-      ([label, value]) => `
-      <div class="fact">
-        <div class="fact-label">${escapeHtml(String(label))}</div>
-        <div class="fact-value">${escapeHtml(String(value))}</div>
-      </div>`
-    )
-    .join("");
+    .map(([label, value]) => [label, String(value)] as [string, string]);
 
-  // ---- Tier mix proportional bar (identity, ≤5 categories, direct-labeled) ----
   const mixCounts = new Map<string, number>();
   for (const v of vendors) {
     const key = tierColor(v.tier) === TIER_COLORS.Unknown ? "Unclassified" : v.tier!.trim();
@@ -266,6 +285,110 @@ export function buildCampaignProposalDocumentHtml(
         }))
       : strategyMix.map((t) => ({ tier: t.tier, count: t.count, percent: t.percent }));
 
+  const kpiItems = Array.isArray(kpis) ? [] : (kpis?.kpis ?? []);
+  // Grounded KPIs (facts-derived) keep the export complete for legacy objects.
+  const kpiRows: Array<{ metric: string; target: string; basis: string }> =
+    kpiItems.length > 0
+      ? kpiItems.slice(0, 8).map((k) => ({
+          metric: k.metric,
+          target: k.target ?? "",
+          basis: k.benchmark ?? k.platform ?? "",
+        }))
+      : resolveGroundedKpis(campaignObject)
+          .slice(0, 8)
+          .map((k) => ({
+            metric: k.metric,
+            target: k.prediction,
+            basis: k.benchmark ?? k.platform ?? k.calculationSource,
+          }));
+
+  return {
+    campaignName,
+    client,
+    brand,
+    generated,
+    presentationVersion,
+    trend,
+    currency,
+    clientLogoUrl: branding.clientLogoUrl,
+    objective: summary?.objective,
+    executiveSummary:
+      executive?.summary ?? summary?.objective ?? "Campaign proposal prepared by Thinkway.",
+    recommendedActions: executive?.recommendedActions ?? [],
+    strategyText:
+      strategy?.creatorStrategy ?? strategy?.objective ?? strategy?.keyMessage ??
+      "Strategy aligned to brief objectives and audience.",
+    statTiles,
+    understanding,
+    vendors,
+    mixSource,
+    waves: buildActivationWaves(campaignObject),
+    budget: budget
+      ? {
+          total: budget.total,
+          currency: budget.currency ?? currency,
+          allocations: (budget.allocations ?? []).map((a) => ({
+            category: a.category,
+            percent: a.percent,
+            notes: clientFacingAllocationNote(a.notes),
+          })),
+        }
+      : null,
+    amplification: [...(trend ? TREND_AMPLIFICATION : GENERIC_AMPLIFICATION)],
+    kpis: kpiRows,
+  };
+}
+
+/** Client-facing campaign proposal — CIO/VIO document language: ink headings, navy cover, green accents only. */
+export function buildCampaignProposalDocumentHtml(
+  campaignObject: CampaignObject,
+  hydratedVendors: ProposalVendor[] = [],
+  branding: ProposalBranding = {}
+): string {
+  const P = SHORTLIST_PALETTE;
+  const model = buildCampaignProposalModel(campaignObject, hydratedVendors, branding);
+  const facts = getCampaignFacts(campaignObject);
+  const {
+    campaignName,
+    client,
+    generated,
+    presentationVersion,
+    mixSource,
+    waves,
+    understanding,
+    statTiles: modelStatTiles,
+  } = model;
+
+  const clientMark = model.clientLogoUrl?.trim()
+    ? `<img class="client-logo" src="${escapeHtml(model.clientLogoUrl)}" alt="${escapeHtml(client)}" />`
+    : `<span class="client-monogram">${escapeHtml((client.trim()[0] ?? "C").toUpperCase())}</span>`;
+
+  const vendors = model.vendors;
+
+  // ---- Stat tiles (hero numbers — form: stat tile, not a chart) ----
+  const statTiles = modelStatTiles
+    .map(
+      (t) => `
+      <div class="stat">
+        <div class="stat-label">${escapeHtml(t.label)}</div>
+        <div class="stat-value">${escapeHtml(t.value)}</div>
+        <div class="stat-sub">${escapeHtml(t.sub)}</div>
+      </div>`
+    )
+    .join("");
+
+  // ---- Understanding grid ----
+  const understandingRows = understanding
+    .map(
+      ([label, value]) => `
+      <div class="fact">
+        <div class="fact-label">${escapeHtml(label)}</div>
+        <div class="fact-value">${escapeHtml(value)}</div>
+      </div>`
+    )
+    .join("");
+
+  // ---- Tier mix proportional bar (identity, ≤5 categories, direct-labeled) ----
   const tierBar =
     mixSource.length > 0
       ? `<div class="tier-bar">${mixSource
@@ -307,7 +430,6 @@ export function buildCampaignProposalDocumentHtml(
       : `<tr><td colspan="7" class="muted">Creator slate pending discovery run.</td></tr>`;
 
   // ---- Momentum stepper ----
-  const waves = buildActivationWaves(campaignObject);
   const waveSteps = waves
     .map((w, i) => {
       const c = w.tier ? tierColor(w.tier) : { fill: P.accent };
@@ -324,17 +446,17 @@ export function buildCampaignProposalDocumentHtml(
     .join("");
 
   // ---- Budget: single allocation → stat treatment; multi → labeled bars ----
-  const allocations = budget?.allocations ?? [];
-  const budgetBlock = budget
+  const allocations = model.budget?.allocations ?? [];
+  const budgetBlock = model.budget
     ? allocations.length <= 1
       ? `<div class="budget-hero">
            <div class="budget-hero-num">100%</div>
            <div>
-             <div class="budget-hero-title">${escapeHtml(allocations[0]?.category ?? "Creator fees")} — ${escapeHtml(budget.currency ?? currency)} ${budget.total?.toLocaleString() ?? "—"}</div>
+             <div class="budget-hero-title">${escapeHtml(allocations[0]?.category ?? "Creator fees")} — ${escapeHtml(model.budget.currency)} ${model.budget.total?.toLocaleString() ?? "—"}</div>
              <div class="muted">${escapeHtml(allocations[0]?.notes ?? "Influencer campaign model: production embedded in creator fees.")}</div>
            </div>
          </div>`
-      : `<p><strong>Total:</strong> ${escapeHtml(budget.currency ?? currency)} ${budget.total?.toLocaleString() ?? "—"}</p>
+      : `<p><strong>Total:</strong> ${escapeHtml(model.budget.currency)} ${model.budget.total?.toLocaleString() ?? "—"}</p>
          <div class="alloc-bars">${allocations
            .map(
              (a) => `
@@ -347,16 +469,14 @@ export function buildCampaignProposalDocumentHtml(
            .join("")}</div>`
     : `<p class="muted">Budget to be confirmed with client.</p>`;
 
-  const kpiItems = Array.isArray(kpis) ? [] : (kpis?.kpis ?? []);
-  const kpiRows = kpiItems
-    .slice(0, 8)
+  const kpiRows = model.kpis
     .map(
       (k) =>
-        `<tr><td><strong>${escapeHtml(k.metric)}</strong></td><td>${escapeHtml(k.target ?? "")}</td><td class="muted">${escapeHtml(k.benchmark ?? k.platform ?? "")}</td></tr>`
+        `<tr><td><strong>${escapeHtml(k.metric)}</strong></td><td>${escapeHtml(k.target)}</td><td class="muted">${escapeHtml(k.basis)}</td></tr>`
     )
     .join("");
 
-  const amplification = (trend ? TREND_AMPLIFICATION : GENERIC_AMPLIFICATION)
+  const amplification = model.amplification
     .map(
       ([icon, item]) =>
         `<div class="amp"><span class="amp-icon">${icon}</span><span>${escapeHtml(item)}</span></div>`
@@ -447,7 +567,7 @@ export function buildCampaignProposalDocumentHtml(
       </div>
       <div class="kicker" style="margin-top:48px">Campaign Intelligence Proposal</div>
       <h1>${escapeHtml(campaignName)}</h1>
-      ${summary?.objective ? `<p class="goal">${escapeHtml(summary.objective)}</p>` : ""}
+      ${model.objective ? `<p class="goal">${escapeHtml(model.objective)}</p>` : ""}
       <p class="meta">Prepared for ${escapeHtml(client)} · ${escapeHtml(generated)}</p>
     </div>
     <p class="meta">Confidential — for client review only</p>
@@ -460,11 +580,11 @@ export function buildCampaignProposalDocumentHtml(
     <div class="facts">${understandingRows}</div>
 
     <h2><span class="sticker">🧠</span>Executive Summary</h2>
-    <p>${escapeHtml(executive?.summary ?? summary?.objective ?? "Campaign proposal prepared by Thinkway.")}</p>
-    ${executive?.recommendedActions?.length ? `<ul style="margin:6px 0 0 18px">${executive.recommendedActions.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}</ul>` : ""}
+    <p>${escapeHtml(model.executiveSummary)}</p>
+    ${model.recommendedActions.length ? `<ul style="margin:6px 0 0 18px">${model.recommendedActions.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}</ul>` : ""}
 
     <h2><span class="sticker">🧭</span>Strategy</h2>
-    <p>${escapeHtml(strategy?.creatorStrategy ?? strategy?.objective ?? strategy?.keyMessage ?? "Strategy aligned to brief objectives and audience.")}</p>
+    <p>${escapeHtml(model.strategyText)}</p>
 
     <h2><span class="sticker">🚀</span>Activation Plan — Momentum Waves</h2>
     <p class="muted">Staggered creator waves keep the campaign trending instead of peaking on day one.</p>

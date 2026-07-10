@@ -12,6 +12,7 @@ import {
   resolveCreatorIds,
   type ProposalVendor,
 } from "@/features/campaign-studio/export/campaign-proposal-document";
+import { buildCampaignProposalPptxBuffer } from "@/features/campaign-studio/export/campaign-proposal-pptx";
 import {
   buildCreatorContentIdea,
   creatorTierOf,
@@ -20,9 +21,26 @@ import { mapBrowseCreatorToSearchResult } from "@/features/campaign-studio/servi
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { requirePermission } from "@/lib/auth/permissions-server";
+import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+/** Chromium PDF rendering of a full proposal can exceed the default limit. */
+export const maxDuration = 120;
+export const dynamic = "force-dynamic";
+
 type RouteContext = { params: Promise<{ id: string }> };
+
+/** Safe download filename derived from the client/brand name. */
+function proposalFileBaseName(campaignObject: CampaignObject): string {
+  const facts = getCampaignFacts(campaignObject);
+  const raw = facts?.clientName?.trim() || facts?.brandName?.trim() || "campaign-proposal";
+  const slug = raw
+    .replace(/[^\w\s-]+/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+  return `${slug || "campaign"}-proposal`;
+}
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -142,16 +160,49 @@ export async function GET(request: Request, context: RouteContext) {
       },
     });
 
-    if (format === "html") {
-      // Client-facing proposal document (CIO/VIO palette) — print to PDF from the browser.
+    if (format === "html" || format === "pdf" || format === "pptx") {
+      // Client-facing proposal (CIO/VIO palette): html = in-browser preview,
+      // pdf/pptx = downloadable deliverables built from the same shared model.
       const campaignObject = snapshot as unknown as CampaignObject;
       const [vendors, clientLogoUrl] = await Promise.all([
         hydrateProposalVendors(supabase, campaignObject),
         resolveClientLogo(supabase, campaignObject),
       ]);
+      const baseName = proposalFileBaseName(campaignObject);
+
+      if (format === "pptx") {
+        const buffer = await buildCampaignProposalPptxBuffer(campaignObject, vendors, {
+          clientLogoUrl,
+        });
+        return new NextResponse(buffer as unknown as BodyInit, {
+          headers: {
+            "Content-Type":
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "Content-Disposition": `attachment; filename="${baseName}.pptx"`,
+          },
+        });
+      }
+
       const html = buildCampaignProposalDocumentHtml(campaignObject, vendors, {
         clientLogoUrl,
       });
+
+      if (format === "pdf") {
+        const pdfResult = await renderHtmlToPdf(html);
+        if (!pdfResult.ok) {
+          return NextResponse.json(
+            { error: pdfUnavailableMessage(pdfResult.error) },
+            { status: 503 }
+          );
+        }
+        return new NextResponse(pdfResult.buffer as unknown as BodyInit, {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${baseName}.pdf"`,
+          },
+        });
+      }
+
       return new NextResponse(html, {
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
