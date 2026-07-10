@@ -461,11 +461,27 @@ export type StrategySectionData = {
   directorDecisionMinutes?: DirectorDecisionMinute[];
 };
 
+/** Slate-grounded campaign scores recalculated on Apply All Updates. */
+export type CampaignScoreSet = {
+  overall: number;
+  brandFit: number;
+  audienceMatch: number;
+  reach: number;
+  engagementForecast: number;
+  budgetEfficiency: number;
+  contentCoverage: number;
+  risk: number;
+  /** One explainability line per score — how each number was derived. */
+  basis: string[];
+  updatedAt: string;
+};
+
 export type PerformanceSectionData = {
   groundedKpis?: GroundedKpi[];
   kpiReasoning?: KpiReasoningEntry[];
   successProbability?: SuccessProbabilityData;
   industryBenchmark?: IndustryBenchmarkData;
+  campaignScores?: CampaignScoreSet;
 };
 
 export type BudgetSectionExtras = {

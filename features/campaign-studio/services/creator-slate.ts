@@ -44,6 +44,12 @@ export function creatorTierOf(creator: Pick<SearchCreatorCardItem, "followers">)
   return resolveCreatorTierLabel({ followers: creator.followers ?? 0 });
 }
 
+/** True when a follower-tier label satisfies a strategy-mix tier name (e.g. "Mid" → "Mid-Tier"). */
+export function matchesTierLabel(mixTier: string, tierLabel: string): boolean {
+  const accepted = TIER_ALIASES[mixTier.trim().toLowerCase()] ?? [mixTier.trim().toLowerCase()];
+  return accepted.includes(tierLabel.trim().toLowerCase());
+}
+
 /** Largest-remainder allocation of slate slots per tier percent. */
 export function allocateTierCounts(mix: TierMixTarget[], targetCount: number): Map<string, number> {
   const totalPercent = mix.reduce((sum, m) => sum + Math.max(0, m.percent), 0) || 1;

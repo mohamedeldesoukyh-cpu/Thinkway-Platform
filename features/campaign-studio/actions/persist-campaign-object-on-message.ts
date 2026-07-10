@@ -29,7 +29,7 @@ export async function persistCampaignObjectOnMessage(
   conversationId: string,
   messageId: string,
   userId: string,
-  patch: (object: CampaignObject) => CampaignObject
+  patch: (object: CampaignObject) => CampaignObject | Promise<CampaignObject>
 ): Promise<CampaignObject | null> {
   const { supabase } = await requireStudioUser();
   const conversation = await getConversationWithMessages(supabase, conversationId, userId);
@@ -41,7 +41,7 @@ export async function persistCampaignObjectOnMessage(
   const current = deserializeCampaignObject(
     message.metadata.campaignObject as Parameters<typeof deserializeCampaignObject>[0]
   );
-  const next = patch(current);
+  const next = await patch(current);
   const serialized = serializeCampaignObject(next);
 
   await updateMessageMetadata(supabase, messageId, {

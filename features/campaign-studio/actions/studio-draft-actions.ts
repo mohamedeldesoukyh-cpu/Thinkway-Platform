@@ -7,6 +7,7 @@ import type {
   StudioDraftState,
 } from "@/features/campaign-intelligence/types/section-schemas";
 
+import { reoptimizeCampaignAfterApply } from "../services/apply-draft-reoptimize";
 import {
   applyStudioDraftChanges,
   getStudioDraft,
@@ -133,10 +134,10 @@ export async function discardStudioDraftAction(
 }
 
 /**
- * Apply All Updates — processes every staged change in one operation.
- * Today the engine applies creator removals (the slate updates and every
- * dependent section re-derives from it); staged changes it cannot apply yet
- * remain in the draft and are reported back.
+ * Apply All Updates — one bulk operation: apply staged removals and
+ * additions to the slate, re-run slate optimization (re-rank with the
+ * strategy tier mix, refresh creator roles), recompute the campaign
+ * scores from real creator data, and version the result.
  */
 export async function applyStudioDraftAction(
   input: DraftMessageRef
@@ -145,6 +146,7 @@ export async function applyStudioDraftAction(
     removedCount?: number;
     removedCreatorIds?: string[];
     addedCreatorIds?: string[];
+    overallScore?: number;
   }
 > {
   try {
@@ -156,11 +158,23 @@ export async function applyStudioDraftAction(
       input.conversationId,
       input.messageId,
       userId,
-      (object) => {
+      async (object) => {
+        // Additions still waiting on enrichment feed the risk score.
+        const unenrichedCreatorIds = getStudioDraft(object)
+          .changes.filter(
+            (c) =>
+              c.kind === "add_creator" &&
+              c.creator.enrichmentStatus !== "enriched"
+          )
+          .map((c) => (c.kind === "add_creator" ? c.creator.creatorId : ""))
+          .filter(Boolean);
+
         const result = applyStudioDraftChanges(object);
         removedCreatorIds = result.removedCreatorIds;
         addedCreatorIds = result.addedCreatorIds;
-        return result.campaignObject;
+        return reoptimizeCampaignAfterApply(supabase, result.campaignObject, {
+          unenrichedCreatorIds,
+        });
       }
     );
     if (!next) return { ok: false, message: "Campaign studio message not found." };
@@ -177,6 +191,10 @@ export async function applyStudioDraftAction(
     const remaining = getStudioDraft(next);
     const removedCount = removedCreatorIds.length;
     const addedCount = addedCreatorIds.length;
+    const performanceData = next.sections.performance.data as
+      | { campaignScores?: { overall: number } }
+      | undefined;
+    const overallScore = performanceData?.campaignScores?.overall;
 
     const applied = [
       removedCount > 0 ? `${removedCount} removal${removedCount === 1 ? "" : "s"}` : null,
@@ -184,17 +202,19 @@ export async function applyStudioDraftAction(
     ]
       .filter(Boolean)
       .join(" and ");
-    const unapplied = remaining.changes.length;
+    const scoreNote = overallScore != null ? ` Overall campaign score: ${overallScore}/100.` : "";
+    const remainingNote =
+      remaining.changes.length > 0
+        ? ` ${remaining.changes.length} staged change${remaining.changes.length === 1 ? "" : "s"} could not be applied and remain pending.`
+        : "";
     return {
       ok: true,
-      message:
-        unapplied > 0
-          ? `Applied ${applied || "updates"} — ${unapplied} change${unapplied === 1 ? "" : "s"} need the full re-optimization engine.`
-          : `Campaign updated — ${applied || "pending changes"} applied and dependent sections recalculated.`,
+      message: `Campaign updated — ${applied || "pending changes"} applied, slate re-optimized, and scores recalculated.${scoreNote}${remainingNote}`,
       draft: remaining,
       removedCount,
       removedCreatorIds,
       addedCreatorIds,
+      overallScore,
     };
   } catch (error) {
     return {
