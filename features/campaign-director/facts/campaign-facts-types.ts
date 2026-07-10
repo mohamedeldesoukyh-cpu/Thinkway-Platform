@@ -14,6 +14,7 @@ export type CampaignFactsField =
   | "audience"
   | "platforms"
   | "kpis"
+  | "deliverables"
   | "constraints"
   | "risks";
 
@@ -29,6 +30,7 @@ export type CampaignFacts = {
   audience?: string;
   platforms?: string[];
   kpis?: string[];
+  deliverables?: string[];
   constraints?: string[];
   risks?: string[];
   /** Non-authoritative excerpt for context only — never use for factual claims. */

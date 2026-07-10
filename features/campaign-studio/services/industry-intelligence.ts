@@ -178,10 +178,11 @@ export function getIndustryProfile(
 }
 
 export function resolveClientFromBrief(text: string): string {
+  // Client resolution must never leak brand lines or product names into the
+  // client field: only an explicit "Client:" label or a known company counts.
   const patterns = [
+    /\bclient(?:\s*name)?\s*(?:->|[:：])\s*(.+?)(?:\n|$)/i,
     /\b(Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi)\b/i,
-    /(?:client|brand)[:\s]+(.+?)(?:\n|$)/i,
-    /launch\s+([A-Za-z][\w\s&-]+?)\s+(?:in|for|across)/i,
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);

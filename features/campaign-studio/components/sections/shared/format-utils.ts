@@ -92,19 +92,44 @@ export function detectCurrencyFromSources(...sources: Array<string | undefined>)
   return "USD";
 }
 
+const BUDGET_MAGNITUDES: Record<string, number> = {
+  k: 1_000,
+  thousand: 1_000,
+  m: 1_000_000,
+  mn: 1_000_000,
+  mm: 1_000_000,
+  million: 1_000_000,
+  bn: 1_000_000_000,
+  billion: 1_000_000_000,
+};
+
+/** "1M" → 1,000,000 · "250k" → 250,000 · "1,000,000" unchanged. */
+function applyBudgetMagnitude(raw: string, suffix?: string): number {
+  const value = parseFloat(raw.replace(/,/g, ""));
+  if (!Number.isFinite(value)) return NaN;
+  const multiplier = suffix ? BUDGET_MAGNITUDES[suffix.toLowerCase()] ?? 1 : 1;
+  return value * multiplier;
+}
+
+// Number with optional magnitude suffix: 1M, 1.5 mn, 250k, 2 million, 1,000,000
+const BUDGET_AMOUNT = String.raw`([\d,]+(?:\.\d+)?)\s*(k|mm|mn|m|bn|thousand|million|billion)?\b`;
+
 export function parseBudgetTotalFromText(text: string): number | undefined {
   const patterns = [
-    /(?:budget|total)[:\s]*[$]?\s*([\d,]+(?:\.\d+)?)/i,
-    /(?:budget|total)[:\s]*(?:EGP|AED|SAR|USD|EUR|GBP)?\s*([\d,]+(?:\.\d+)?)/i,
-    /\$\s*([\d,]+(?:\.\d+)?)/i,
-    /\b(EGP|AED|SAR|USD|EUR|GBP)\s*([\d,]+(?:\.\d+)?)/i,
-    /([\d,]+(?:\.\d+)?)\s*(EGP|AED|SAR|USD|EUR|GBP)\b/i,
+    new RegExp(String.raw`(?:budget|total)(?:\s+of)?[:\s]*[$€£]?\s*${BUDGET_AMOUNT}`, "i"),
+    new RegExp(
+      String.raw`(?:budget|total)(?:\s+of)?[:\s]*(?:EGP|AED|SAR|USD|EUR|GBP)?\s*${BUDGET_AMOUNT}`,
+      "i"
+    ),
+    new RegExp(String.raw`[$€£]\s*${BUDGET_AMOUNT}`, "i"),
+    new RegExp(String.raw`\b(?:EGP|AED|SAR|USD|EUR|GBP)\s*${BUDGET_AMOUNT}`, "i"),
+    new RegExp(String.raw`${BUDGET_AMOUNT}\s*(?:EGP|AED|SAR|USD|EUR|GBP)\b`, "i"),
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
-    const raw = match?.[2] ?? match?.[1];
+    const raw = match?.[1];
     if (raw && /^[\d,]+/.test(raw)) {
-      const value = parseFloat(raw.replace(/,/g, ""));
+      const value = applyBudgetMagnitude(raw, match?.[2]);
       if (Number.isFinite(value) && value > 0) return value;
     }
   }

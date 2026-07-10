@@ -18,6 +18,7 @@ export function formatCampaignFactsForSpecialist(facts: CampaignFacts): string {
     audience: facts.audience,
     platforms: facts.platforms,
     kpis: facts.kpis,
+    deliverables: facts.deliverables,
     constraints: facts.constraints,
     risks: facts.risks,
     confidence: facts.confidence,
@@ -44,6 +45,7 @@ export function listPopulatedFactsFields(facts: CampaignFacts): string[] {
   if (facts.audience) fields.push("audience");
   if (facts.platforms?.length) fields.push("platforms");
   if (facts.kpis?.length) fields.push("kpis");
+  if (facts.deliverables?.length) fields.push("deliverables");
   if (facts.constraints?.length) fields.push("constraints");
   if (facts.risks?.length) fields.push("risks");
   return fields;

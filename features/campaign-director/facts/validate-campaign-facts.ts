@@ -58,6 +58,11 @@ export function validateCampaignFacts(facts: CampaignFacts): CampaignFacts {
     validated.kpis = validated.kpis.map((k) => k.trim()).filter(Boolean);
   }
 
+  if (validated.deliverables) {
+    validated.deliverables = validated.deliverables.map((d) => d.trim()).filter(Boolean);
+    if (validated.deliverables.length === 0) delete validated.deliverables;
+  }
+
   if (validated.constraints) {
     validated.constraints = validated.constraints.map((c) => c.trim()).filter(Boolean);
   }

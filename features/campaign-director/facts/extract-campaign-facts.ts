@@ -56,12 +56,29 @@ function extractBrandName(input: CampaignFactsExtractInput): {
     return { value: match[1].trim(), source: "brief", confidence: 0.85 };
   }
 
-  return {
-    value: resolveClientFromBrief(input.rawMessage),
-    source: "inferred",
-    confidence: 0.6,
-  };
+  const inferredClient = resolveClientFromBrief(input.rawMessage);
+  if (inferredClient && inferredClient !== "Brand Client") {
+    return { value: inferredClient, source: "inferred", confidence: 0.6 };
+  }
+
+  return { value: undefined, source: "inferred", confidence: 0 };
 }
+
+/** Known markets/countries — free-text "in <phrase>" capture produced junk geography. */
+const KNOWN_GEO_ENTITIES: Array<{ pattern: RegExp; label: string }> = [
+  { pattern: /\begypt\b/i, label: "Egypt" },
+  { pattern: /\b(?:saudi\s*arabia|ksa)\b/i, label: "Saudi Arabia" },
+  { pattern: /\b(?:uae|united\s+arab\s+emirates|dubai|abu\s+dhabi)\b/i, label: "UAE" },
+  { pattern: /\bjordan\b/i, label: "Jordan" },
+  { pattern: /\bkuwait\b/i, label: "Kuwait" },
+  { pattern: /\bqatar\b/i, label: "Qatar" },
+  { pattern: /\bbahrain\b/i, label: "Bahrain" },
+  { pattern: /\boman\b/i, label: "Oman" },
+  { pattern: /\bmorocco\b/i, label: "Morocco" },
+  { pattern: /\blebanon\b/i, label: "Lebanon" },
+  { pattern: /\bgcc\b/i, label: "GCC" },
+  { pattern: /\bmena\b/i, label: "MENA" },
+];
 
 function extractGeography(text: string): string[] {
   const regions = new Set<string>();
@@ -69,13 +86,27 @@ function extractGeography(text: string): string[] {
   const market = parseMarketFromText(text);
   if (market) regions.add(market);
 
-  const inMatch = text.match(/\bin\s+([A-Za-z][\w\s-]+?)(?:\.|,|\s+for|\s+target|\s+budget|$)/i);
-  if (inMatch?.[1]?.trim()) regions.add(inMatch[1].trim());
+  for (const { pattern, label } of KNOWN_GEO_ENTITIES) {
+    if (pattern.test(text)) regions.add(label);
+  }
 
-  const acrossMatch = text.match(/across\s+([A-Za-z][\w\s,&-]+?)(?:\.|,|\s+for|\s+budget|$)/i);
-  if (acrossMatch?.[1]?.trim()) regions.add(acrossMatch[1].trim());
+  // Canonical labels can duplicate parseMarketFromText output with different casing.
+  const deduped = new Map<string, string>();
+  for (const region of regions) {
+    const key = region.trim().toLowerCase();
+    if (key && !deduped.has(key)) deduped.set(key, region.trim());
+  }
+  return [...deduped.values()];
+}
 
-  return [...regions];
+function extractDeliverables(text: string): string[] {
+  const labeled = text.match(/\bdeliverables?\s*(?:->|[:：])\s*(.+?)(?:\.(?:\s|$)|\n|$)/i);
+  if (!labeled?.[1]) return [];
+  return labeled[1]
+    .split(/[,;·|]/)
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .slice(0, 12);
 }
 
 function extractPlatforms(text: string, industry: ReturnType<typeof detectIndustryFromBrief>): string[] {
@@ -240,6 +271,11 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
   const kpis = extractKpis(text, objective);
   if (kpis.length > 0) {
     setField(facts, "kpis", kpis, "brief", 0.8);
+  }
+
+  const deliverables = extractDeliverables(text);
+  if (deliverables.length > 0) {
+    setField(facts, "deliverables", deliverables, "brief", 0.9);
   }
 
   const constraints = extractConstraints(text);
