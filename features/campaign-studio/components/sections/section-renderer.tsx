@@ -1,6 +1,7 @@
 "use client";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { StudioDraftState } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-workspace/types/studio-decision-mode";
 
 import {
@@ -39,6 +40,9 @@ type SectionRendererProps = {
   onVendorDecisionsUpdated?: (
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  studioDraft?: StudioDraftState;
+  onStudioDraftUpdated?: (draft: StudioDraftState) => void;
+  appliedRemovedCreatorIds?: string[];
 };
 
 export function SectionRenderer({
@@ -48,6 +52,9 @@ export function SectionRenderer({
   conversationId,
   messageId,
   onVendorDecisionsUpdated,
+  studioDraft,
+  onStudioDraftUpdated,
+  appliedRemovedCreatorIds,
 }: SectionRendererProps) {
   const common = {
     campaignObject,
@@ -70,6 +77,9 @@ export function SectionRenderer({
           conversationId={conversationId}
           messageId={messageId}
           onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+          studioDraft={studioDraft}
+          onStudioDraftUpdated={onStudioDraftUpdated}
+          appliedRemovedCreatorIds={appliedRemovedCreatorIds}
         />
       );
     case "budget-planner":

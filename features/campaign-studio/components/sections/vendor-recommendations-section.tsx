@@ -7,6 +7,8 @@ import {
   GlobeIcon,
   LanguagesIcon,
   PlusIcon,
+  Trash2Icon,
+  Undo2Icon,
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -15,12 +17,24 @@ import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
+import type {
+  CreatorsSectionData,
+  StudioDraftState,
+} from "@/features/campaign-intelligence/types/section-schemas";
 
 import {
   decideVendorRecommendationAction,
   shortlistVendorRecommendationAction,
 } from "../../actions/vendor-recommendation-actions";
+import {
+  stageStudioDraftChangeAction,
+  unstageStudioDraftChangeAction,
+} from "../../actions/studio-draft-actions";
+import {
+  draftChangeForCreator,
+  getStudioDraft,
+  normalizeCreatorId,
+} from "../../services/studio-draft";
 import { formatEngagement, formatFollowers } from "./shared/format-utils";
 import { SectionSkeleton } from "./shared/section-skeleton";
 import { GroundingBadge } from "./shared/grounding-badge";
@@ -62,6 +76,10 @@ type VendorRecommendationsSectionProps = {
   onVendorDecisionsUpdated?: (
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  studioDraft?: StudioDraftState;
+  onStudioDraftUpdated?: (draft: StudioDraftState) => void;
+  /** Removals already applied this session — filters cards without a reload. */
+  appliedRemovedCreatorIds?: string[];
 };
 
 type DisplayVendor = {
@@ -180,9 +198,22 @@ export function VendorRecommendationsSection({
   conversationId,
   messageId,
   onVendorDecisionsUpdated,
+  studioDraft,
+  onStudioDraftUpdated,
+  appliedRemovedCreatorIds,
 }: VendorRecommendationsSectionProps) {
   const isRunning = status === "running";
   const creatorsData = (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
+  // Draft state is owned by the Studio shell when provided; standalone renders fall back to the object.
+  const [localDraft, setLocalDraft] = useState<StudioDraftState | null>(null);
+  const draft = studioDraft ?? localDraft ?? getStudioDraft(campaignObject);
+  const publishDraft = useCallback(
+    (next: StudioDraftState) => {
+      setLocalDraft(next);
+      onStudioDraftUpdated?.(next);
+    },
+    [onStudioDraftUpdated]
+  );
   const [vendorDecisions, setVendorDecisions] = useState<
     Record<string, "approved" | "rejected" | "shortlisted">
   >(creatorsData.vendorDecisions ?? {});
@@ -272,6 +303,56 @@ export function VendorRecommendationsSection({
     [campaignObject, conversationId, messageId, onVendorDecisionsUpdated]
   );
 
+  const stageRemoval = useCallback(
+    async (vendor: DisplayVendor) => {
+      if (!conversationId || !messageId || !vendor.id) return;
+      setPendingCreatorId(vendor.id);
+      try {
+        const result = await stageStudioDraftChangeAction({
+          conversationId,
+          messageId,
+          change: {
+            kind: "remove_creator",
+            creatorId: vendor.id,
+            displayName: vendor.displayName,
+          },
+        });
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        if (result.draft) publishDraft(result.draft);
+        toast.success(result.message);
+      } finally {
+        setPendingCreatorId(null);
+      }
+    },
+    [conversationId, messageId, publishDraft]
+  );
+
+  const undoDraftChange = useCallback(
+    async (creatorId: string) => {
+      if (!conversationId || !messageId) return;
+      setPendingCreatorId(creatorId);
+      try {
+        const result = await unstageStudioDraftChangeAction({
+          conversationId,
+          messageId,
+          creatorId,
+        });
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        if (result.draft) publishDraft(result.draft);
+        toast.success(result.message);
+      } finally {
+        setPendingCreatorId(null);
+      }
+    },
+    [conversationId, messageId, publishDraft]
+  );
+
   const parsedVendors = resolveVendorRecommendations(campaignObject);
   const { ids, rationale, avgFitScore, creatorFitScores } = resolveCreatorIds(campaignObject);
   const safeRationale = isEmptyGlobalRationale(rationale) ? undefined : rationale;
@@ -296,12 +377,22 @@ export function VendorRecommendationsSection({
 
   const campaignFacts = getCampaignFacts(campaignObject);
 
+  const removedIdSet = useMemo(
+    () => new Set((appliedRemovedCreatorIds ?? []).map(normalizeCreatorId)),
+    [appliedRemovedCreatorIds]
+  );
+
   const vendors: DisplayVendor[] = useMemo(
     () =>
       hydrated.length > 0
         ? dedupeByCreatorId(
             hydrated
-              .filter((v) => !v.id || vendorDecisions[v.id] !== "rejected")
+              .filter(
+                (v) =>
+                  !v.id ||
+                  (vendorDecisions[v.id] !== "rejected" &&
+                    !removedIdSet.has(normalizeCreatorId(v.id)))
+              )
               .map((v, i) => ({
                 id: v.id,
                 rank: i + 1,
@@ -331,7 +422,12 @@ export function VendorRecommendationsSection({
           ).items
         : dedupeByCreatorId(
             parsedVendors
-              .filter((v) => !v.id || vendorDecisions[v.id] !== "rejected")
+              .filter(
+                (v) =>
+                  !v.id ||
+                  (vendorDecisions[v.id] !== "rejected" &&
+                    !removedIdSet.has(normalizeCreatorId(v.id)))
+              )
               .map((v, i) => ({
                 ...v,
                 tier: resolveCreatorTierLabel({ followers: v.followers }),
@@ -343,7 +439,7 @@ export function VendorRecommendationsSection({
               })),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items,
-    [hydrated, parsedVendors, vendorDecisions, campaignFacts]
+    [hydrated, parsedVendors, vendorDecisions, campaignFacts, removedIdSet]
   );
 
   const visibleVendors = showAllVendors
@@ -422,6 +518,8 @@ export function VendorRecommendationsSection({
       {visibleVendors.map((vendor, index) => {
         const decision = vendor.id ? vendorDecisions[vendor.id] : undefined;
         const isPending = pendingCreatorId === vendor.id;
+        const draftChange = draftChangeForCreator(draft, vendor.id);
+        const pendingRemoval = draftChange?.kind === "remove_creator";
         const grounding = resolveVendorGrounding(
           {
             displayName: vendor.displayName,
@@ -446,7 +544,11 @@ export function VendorRecommendationsSection({
         return (
           <div
             key={vendor.id ?? `${vendor.handle}-${index}`}
-            className="min-w-0 rounded-xl border border-border/70 bg-background/80 p-3 transition-all duration-300 hover:border-violet-300/50 hover:shadow-sm"
+            className={
+              pendingRemoval
+                ? "min-w-0 rounded-xl border border-amber-300 bg-amber-50/50 p-3 opacity-75 transition-all duration-300 dark:border-amber-800 dark:bg-amber-950/20"
+                : "min-w-0 rounded-xl border border-border/70 bg-background/80 p-3 transition-all duration-300 hover:border-violet-300/50 hover:shadow-sm"
+            }
           >
             <div className="flex items-start gap-3">
               <VendorAvatar
@@ -471,6 +573,11 @@ export function VendorRecommendationsSection({
                     <span className="text-[10px] capitalize">{vendor.platform}</span>
                   </div>
                   {vendor.tier ? <CreatorTierBadge tier={vendor.tier} /> : null}
+                  {pendingRemoval ? (
+                    <Badge className="h-auto bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+                      Pending removal
+                    </Badge>
+                  ) : null}
                   {vendor.fitScore != null ? (
                     <Badge
                       variant="secondary"
@@ -535,41 +642,69 @@ export function VendorRecommendationsSection({
               >
                 View details
               </Button>
-              <Button
-                type="button"
-                size="xs"
-                disabled={!canAct || isPending || decision === "approved"}
-                className="h-7 bg-[#1D9E75] px-2.5 hover:bg-[#178f69] disabled:opacity-50"
-                onClick={() => vendor.id && void applyDecision(vendor.id, "approve")}
-              >
-                <CheckIcon className="size-3" />
-                {decision === "approved" ? "Approved" : "Approve"}
-              </Button>
-              <Button
-                type="button"
-                size="xs"
-                variant="outline"
-                disabled={!canAct || isPending}
-                className="h-7 px-2.5"
-                onClick={() => vendor.id && void applyDecision(vendor.id, "reject")}
-              >
-                <XIcon className="size-3" />
-                Reject
-              </Button>
-              <Button
-                type="button"
-                size="xs"
-                variant="secondary"
-                disabled={!canAct || isPending || decision === "shortlisted"}
-                className="h-7 px-2.5"
-                onClick={() =>
-                  vendor.id &&
-                  void applyDecision(vendor.id, "shortlist", vendor.id)
-                }
-              >
-                <PlusIcon className="size-3" />
-                {decision === "shortlisted" ? "Shortlisted" : "Shortlist"}
-              </Button>
+              {pendingRemoval ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  disabled={!canAct || isPending}
+                  className="h-7 border-amber-300 px-2.5 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300"
+                  onClick={() => vendor.id && void undoDraftChange(vendor.id)}
+                >
+                  <Undo2Icon className="size-3" />
+                  Undo removal
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    size="xs"
+                    disabled={!canAct || isPending || decision === "approved"}
+                    className="h-7 bg-[#1D9E75] px-2.5 hover:bg-[#178f69] disabled:opacity-50"
+                    onClick={() => vendor.id && void applyDecision(vendor.id, "approve")}
+                  >
+                    <CheckIcon className="size-3" />
+                    {decision === "approved" ? "Approved" : "Approve"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="outline"
+                    disabled={!canAct || isPending}
+                    className="h-7 px-2.5"
+                    onClick={() => vendor.id && void applyDecision(vendor.id, "reject")}
+                  >
+                    <XIcon className="size-3" />
+                    Reject
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="secondary"
+                    disabled={!canAct || isPending || decision === "shortlisted"}
+                    className="h-7 px-2.5"
+                    onClick={() =>
+                      vendor.id &&
+                      void applyDecision(vendor.id, "shortlist", vendor.id)
+                    }
+                  >
+                    <PlusIcon className="size-3" />
+                    {decision === "shortlisted" ? "Shortlisted" : "Shortlist"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    disabled={!canAct || isPending}
+                    className="h-7 px-2.5 text-muted-foreground hover:text-destructive"
+                    onClick={() => void stageRemoval(vendor)}
+                    title="Stage removal — recalculated on Apply All Updates"
+                  >
+                    <Trash2Icon className="size-3" />
+                    Remove
+                  </Button>
+                </>
+              )}
             </div>
             {!canAct ? (
               <p className="mt-1 text-[10px] text-muted-foreground">

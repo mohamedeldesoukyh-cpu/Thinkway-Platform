@@ -1,20 +1,17 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import {
   deserializeCampaignObject,
-  serializeCampaignObject,
   type CampaignObject,
 } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import { createShortlistV2, addCreatorsToShortlistsV2 } from "@/features/discovery/shortlists/actions";
+import { getConversationWithMessages } from "@/features/ai-workspace/services/conversation-service";
+
 import {
-  getConversationWithMessages,
-  updateMessageMetadata,
-} from "@/features/ai-workspace/services/conversation-service";
-import { requirePermission } from "@/lib/auth/permissions-server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+  persistCampaignObjectOnMessage,
+  requireStudioUser,
+} from "./persist-campaign-object-on-message";
 
 export type VendorRecommendationDecision = "approved" | "rejected" | "shortlisted";
 
@@ -25,15 +22,6 @@ export type VendorRecommendationActionResult = {
   linkedShortlistId?: string;
   shortlistUrl?: string;
 };
-
-async function requireStudioUser() {
-  const supabase = await createSupabaseServerClient();
-  const auth = await requirePermission(supabase, "ai.write");
-  if ("error" in auth) {
-    throw new Error(auth.error);
-  }
-  return { supabase, userId: auth.userId };
-}
 
 function patchCampaignObjectVendorDecisions(
   campaignObject: CampaignObject,
@@ -61,34 +49,6 @@ function patchCampaignObjectVendorDecisions(
     },
     updatedAt: new Date().toISOString(),
   };
-}
-
-async function persistCampaignObjectOnMessage(
-  conversationId: string,
-  messageId: string,
-  userId: string,
-  patch: (object: CampaignObject) => CampaignObject
-): Promise<CampaignObject | null> {
-  const { supabase } = await requireStudioUser();
-  const conversation = await getConversationWithMessages(supabase, conversationId, userId);
-  if (!conversation?.messages) return null;
-
-  const message = conversation.messages.find((m) => m.id === messageId);
-  if (!message?.metadata?.campaignObject) return null;
-
-  const current = deserializeCampaignObject(
-    message.metadata.campaignObject as Parameters<typeof deserializeCampaignObject>[0]
-  );
-  const next = patch(current);
-  const serialized = serializeCampaignObject(next);
-
-  await updateMessageMetadata(supabase, messageId, {
-    ...message.metadata,
-    campaignObject: serialized,
-  });
-
-  revalidatePath(`/ai/${conversationId}`);
-  return next;
 }
 
 export async function decideVendorRecommendationAction(input: {

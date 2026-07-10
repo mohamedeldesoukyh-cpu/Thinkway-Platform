@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { StudioDraftState } from "@/features/campaign-intelligence/types/section-schemas";
 
 import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-workspace/types/studio-decision-mode";
 
@@ -27,6 +28,11 @@ type StudioSectionCardProps = {
   onVendorDecisionsUpdated?: (
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  studioDraft?: StudioDraftState;
+  onStudioDraftUpdated?: (draft: StudioDraftState) => void;
+  appliedRemovedCreatorIds?: string[];
+  /** Pending draft changes invalidate this section until Apply All Updates runs. */
+  outdated?: boolean;
 };
 
 const STATUS_STYLES = {
@@ -78,6 +84,10 @@ export function StudioSectionCard({
   conversationId,
   messageId,
   onVendorDecisionsUpdated,
+  studioDraft,
+  onStudioDraftUpdated,
+  appliedRemovedCreatorIds,
+  outdated,
 }: StudioSectionCardProps) {
   const styles = STATUS_STYLES[section.status as keyof typeof STATUS_STYLES];
   const isLoading = section.status === "pending";
@@ -109,10 +119,12 @@ export function StudioSectionCard({
         <span
           className={cn(
             "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
-            styles.badge
+            outdated
+              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+              : styles.badge
           )}
         >
-          {styles.label}
+          {outdated ? "Outdated" : styles.label}
         </span>
       </header>
 
@@ -129,6 +141,9 @@ export function StudioSectionCard({
             conversationId={conversationId}
             messageId={messageId}
             onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+            studioDraft={studioDraft}
+            onStudioDraftUpdated={onStudioDraftUpdated}
+            appliedRemovedCreatorIds={appliedRemovedCreatorIds}
           />
         ) : (
           <SectionLoadingState sectionId={section.id} />

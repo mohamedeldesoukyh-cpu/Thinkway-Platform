@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   BarChart3Icon,
   CalendarIcon,
@@ -29,8 +29,11 @@ import { CAMPAIGN_STUDIO_COPY } from "../constants/copy";
 import { cn } from "@/lib/utils";
 
 import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-workspace/types/studio-decision-mode";
+import type { StudioDraftState } from "@/features/campaign-intelligence/types/section-schemas";
 
 import { CampaignProposalExportActions } from "./campaign-proposal-export-actions";
+import { StudioDraftBar } from "./studio-draft-bar";
+import { getStudioDraft, outdatedSectionsForDraft } from "../services/studio-draft";
 import { useCampaignStudio } from "../hooks/use-campaign-studio";
 import type { CampaignStudioInput } from "../types/campaign-studio";
 import { getSectionLayout } from "./sections";
@@ -83,6 +86,15 @@ export function CampaignStudio({
   ...input
 }: CampaignStudioProps) {
   const studio = useCampaignStudio(input);
+
+  // Draft edits (remove/replace/add creators) stay staged until Apply All Updates.
+  const [draftOverride, setDraftOverride] = useState<StudioDraftState | null>(null);
+  const [appliedRemovedCreatorIds, setAppliedRemovedCreatorIds] = useState<string[]>([]);
+  const studioDraft = draftOverride ?? getStudioDraft(studio?.campaignObject);
+  const outdatedSections = useMemo(
+    () => outdatedSectionsForDraft(studioDraft),
+    [studioDraft]
+  );
 
   const actionCardHydration = useMemo(() => {
     const facts = getCampaignFacts(studio?.campaignObject);
@@ -152,6 +164,18 @@ export function CampaignStudio({
             style={{ width: `${studio.progressPercent}%` }}
           />
         </div>
+
+        {conversationId && messageId && studioDraft.changes.length > 0 ? (
+          <StudioDraftBar
+            conversationId={conversationId}
+            messageId={messageId}
+            draft={studioDraft}
+            onDraftUpdated={setDraftOverride}
+            onCreatorsRemoved={(ids) =>
+              setAppliedRemovedCreatorIds((prev) => [...prev, ...ids])
+            }
+          />
+        ) : null}
 
         {studio.inferredFields && studio.inferredFields.length > 0 ? (
           <div className="rounded-lg border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-3 py-2">
@@ -241,6 +265,10 @@ export function CampaignStudio({
                       conversationId={conversationId}
                       messageId={messageId}
                       onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+                      studioDraft={studioDraft}
+                      onStudioDraftUpdated={setDraftOverride}
+                      appliedRemovedCreatorIds={appliedRemovedCreatorIds}
+                      outdated={outdatedSections.has(section.id)}
                       sectionFooter={
                         decisionMode && section.id === "budget-planner" ? (
                           <BudgetDecisionOverlay decisionMode={decisionMode} />

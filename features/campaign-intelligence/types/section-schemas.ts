@@ -103,6 +103,39 @@ export type CreatorRecommendationSectionData = {
   rejectedReasoning?: VendorRejectedReasoning[];
 };
 
+/** A creator referenced by a staged draft change (add / replace targets). */
+export type StudioDraftCreatorRef = {
+  creatorId: string;
+  displayName?: string;
+  handle?: string;
+  platform?: string;
+  followers?: number;
+  avatarUrl?: string;
+  /** Where the creator came from — controls enrichment behavior. */
+  source: "discovery" | "external_url";
+  /** External-URL creators auto-enrich; discovery creators wait for manual refresh. */
+  enrichmentStatus?: "not_requested" | "pending" | "enriched" | "failed";
+};
+
+/** One staged Studio edit — nothing recalculates until Apply All Updates. */
+export type StudioDraftChange =
+  | { kind: "remove_creator"; creatorId: string; displayName?: string; stagedAt: string }
+  | {
+      kind: "replace_creator";
+      creatorId: string;
+      displayName?: string;
+      replacement: StudioDraftCreatorRef;
+      stagedAt: string;
+    }
+  | { kind: "add_creator"; creator: StudioDraftCreatorRef; stagedAt: string }
+  | { kind: "refresh_intelligence"; creatorId: string; displayName?: string; stagedAt: string };
+
+/** Draft state for Studio edits — persisted with the campaign object, applied in one bulk operation. */
+export type StudioDraftState = {
+  changes: StudioDraftChange[];
+  updatedAt: string;
+};
+
 export type CreatorsSectionData = {
   phase?: "discovery" | "shortlist" | "complete";
   discovery?: CreatorDiscoverySectionData;
@@ -123,6 +156,8 @@ export type CreatorsSectionData = {
   linkedShortlistId?: string;
   /** Legacy Studio grounding payload stripped on creator re-runs. */
   vendorGrounding?: GroundedVendor[];
+  /** Pending Studio edits — draft until the user applies all updates. */
+  studioDraft?: StudioDraftState;
 };
 
 export type ExecutiveStrategyReasoning = {
