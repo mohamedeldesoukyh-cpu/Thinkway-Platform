@@ -30,6 +30,12 @@ import { dedupeByCreatorId } from "@/lib/creators/dedupe-creators";
 import { requireToolAuthContext } from "./tool-auth";
 import { searchCreatorsFromCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/search-creators-from-profile";
 import { mapBrowseCreatorToSearchResult } from "@/features/campaign-studio/services/creator-platform-utils";
+import {
+  buildCreatorContentIdea,
+  composeCreatorSlate,
+} from "@/features/campaign-studio/services/creator-slate";
+import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
+import { getIndustryCreatorMix } from "@/features/campaign-studio/services/presentation-intelligence";
 
 export async function executeSearchCreatorsProduction(
   input: SearchCreatorsInput,
@@ -128,8 +134,34 @@ export async function executeSearchCreatorsProduction(
 
   const { items: dedupedCreators } = dedupeByCreatorId(mappedCreators, (c) => c.id);
 
+  // Strategy coherence on the keyword/progressive path too: explicit platforms
+  // are a hard constraint and the slate tracks the industry tier mix — the
+  // CIP path applies the same composition inside search-creators-from-profile.
+  const industry = detectIndustryFromBrief(rawQuery);
+  const slate = composeCreatorSlate(dedupedCreators, {
+    platforms: input.platforms ?? resolved.merged.platforms,
+    tierMix: getIndustryCreatorMix(industry).map((t) => ({
+      tier: t.tier,
+      percent: t.percent,
+    })),
+  });
+  const factsLite = { objective: rawQuery, rawBriefExcerpt: rawQuery };
+  const slateCreators = slate.creators.map((creator, index) => ({
+    ...creator,
+    contentIdea:
+      creator.contentIdea ?? buildCreatorContentIdea(creator, factsLite, index),
+  }));
+
+  searchTrace("keyword_search_slate_composition", {
+    industry,
+    requestedMix: slate.meta.requestedMix,
+    achievedMix: slate.meta.achievedMix,
+    platformFiltered: slate.meta.platformFiltered,
+    platformFallback: slate.meta.platformFallback,
+  }, { path: "ai" });
+
   const output = {
-    creators: dedupedCreators,
+    creators: slateCreators,
     total: result.total,
   };
 
