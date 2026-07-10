@@ -1,4 +1,7 @@
-import { creatorMatchesBrowseCategories } from "@/lib/creators/category-filter";
+import {
+  creatorBrowseCategoryTags,
+  creatorMatchesBrowseCategories,
+} from "@/lib/creators/category-filter";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
 import type { DiscoverySearchFilterKey } from "@/features/campaign-intelligence-profile/services/discovery-search-mapping/types";
@@ -13,6 +16,19 @@ export const CAMPAIGN_RELEVANCE_MIN_SCORE = 15;
 
 /** When filtering by min score and none qualify, return up to this many best partial matches. */
 export const CAMPAIGN_RELEVANCE_FALLBACK_TOP_N = 30;
+
+/**
+ * Tri-state criterion outcome. `unknown` means the creator has NO data for the
+ * field group (unenriched), which must discount relevance rather than count as
+ * a proven mismatch — otherwise ranking rewards database completeness over fit.
+ */
+export type CriterionEvaluation = "match" | "no_match" | "unknown";
+
+/**
+ * Unknown data costs half a mismatch: score = matched / (known + 0.5 × unknown).
+ * A sparse creator is discounted for what we can't verify, never disqualified by it.
+ */
+export const UNKNOWN_CRITERION_WEIGHT_DISCOUNT = 0.5;
 
 /** True when AI campaign search is active with at least one enabled strategy criterion. */
 export function isCampaignRelevanceSearchActive(
@@ -33,7 +49,16 @@ export type CampaignRelevanceBreakdown = {
   totalWeight: number;
   matchedCount: number;
   criterionCount: number;
+  /** Weight of criteria the creator has data for (match + no_match). */
+  knownWeight: number;
+  /** Weight of criteria with no underlying creator data. */
+  unknownWeight: number;
+  unknownCount: number;
 };
+
+function toEvaluation(matched: boolean): CriterionEvaluation {
+  return matched ? "match" : "no_match";
+}
 
 function normalizeCountryCode(value: string | null | undefined): string {
   return (value ?? "").trim().toUpperCase();
@@ -67,90 +92,134 @@ function haystackText(creator: UnifiedCreatorResult): string {
     .toLowerCase();
 }
 
-function matchesCountry(creator: UnifiedCreatorResult, code: string): boolean {
-  const target = normalizeCountryCode(code);
-  if (!target) return false;
-  if (creatorCountryCodes(creator).includes(target)) return true;
-
-  const demographics = creator.audience_demographics;
-  if (demographics && demographics.source !== "unavailable") {
-    const filter = audienceFilterFromSearchFields({ audienceCountry: target });
-    if (matchesAudienceFilter(demographics, filter)) return true;
-  }
-
-  return creator.platforms.some(
-    (platform) => normalizeCountryCode(platform.audience_country) === target
+/** Content intelligence beyond name/handle — absence means text criteria are unverifiable. */
+function hasContentSignal(creator: UnifiedCreatorResult): boolean {
+  return Boolean(
+    creator.bio?.trim() ||
+      creator.ai_category?.trim() ||
+      creator.ai_niche?.trim() ||
+      (creator.audience_interests?.length ?? 0) > 0 ||
+      creator.categories.length > 0 ||
+      (creator.browse_category_tags?.length ?? 0) > 0 ||
+      (creator.hashtags?.length ?? 0) > 0
   );
 }
 
-function matchesNicheOrTag(creator: UnifiedCreatorResult, tag: string): boolean {
+function demographicsAvailable(creator: UnifiedCreatorResult): boolean {
+  return Boolean(
+    creator.audience_demographics && creator.audience_demographics.source !== "unavailable"
+  );
+}
+
+function evaluateCountry(creator: UnifiedCreatorResult, code: string): CriterionEvaluation {
+  const target = normalizeCountryCode(code);
+  if (!target) return "unknown";
+
+  const codes = creatorCountryCodes(creator);
+  if (codes.includes(target)) return "match";
+
+  if (demographicsAvailable(creator)) {
+    const filter = audienceFilterFromSearchFields({ audienceCountry: target });
+    if (matchesAudienceFilter(creator.audience_demographics!, filter)) return "match";
+  }
+
+  const hasGeoSignal = codes.length > 0 || demographicsAvailable(creator);
+  return hasGeoSignal ? "no_match" : "unknown";
+}
+
+function evaluateNicheOrTag(creator: UnifiedCreatorResult, tag: string): CriterionEvaluation {
   const needle = tag.trim().toLowerCase().replace(/^#/, "");
-  if (!needle) return false;
-  return haystackText(creator).includes(needle);
+  if (!needle) return "unknown";
+  if (haystackText(creator).includes(needle)) return "match";
+  return hasContentSignal(creator) ? "no_match" : "unknown";
 }
 
-function matchesPlatform(creator: UnifiedCreatorResult, platform: string): boolean {
+function evaluateCategory(creator: UnifiedCreatorResult, value: string): CriterionEvaluation {
+  if (creatorMatchesBrowseCategories(creator, [value])) return "match";
+  const hasCategorySignal =
+    creatorBrowseCategoryTags(creator).length > 0 ||
+    (creator.audience_interests?.length ?? 0) > 0;
+  return hasCategorySignal ? "no_match" : "unknown";
+}
+
+function evaluatePlatform(creator: UnifiedCreatorResult, platform: string): CriterionEvaluation {
+  if (creator.platforms.length === 0) return "unknown";
   const target = platform.trim().toLowerCase();
-  return creator.platforms.some((p) => p.platform.toLowerCase() === target);
+  return toEvaluation(creator.platforms.some((p) => p.platform.toLowerCase() === target));
 }
 
-function matchesLanguage(creator: UnifiedCreatorResult, language: string): boolean {
+function evaluateLanguage(creator: UnifiedCreatorResult, language: string): CriterionEvaluation {
   const needle = language.trim().toLowerCase();
-  if (!needle) return false;
-  return creator.language_codes.some((code) => code.toLowerCase().includes(needle));
+  if (!needle) return "unknown";
+  if (creator.language_codes.length === 0) return "unknown";
+  return toEvaluation(creator.language_codes.some((code) => code.toLowerCase().includes(needle)));
 }
 
-function matchesFollowerMin(creator: UnifiedCreatorResult, min: string): boolean {
+function creatorFollowerValue(creator: UnifiedCreatorResult): number | null {
+  return creator.metrics.followers.value ?? creator.platforms[0]?.follower_count ?? null;
+}
+
+function evaluateFollowerMin(creator: UnifiedCreatorResult, min: string): CriterionEvaluation {
   const threshold = Number(min);
-  if (Number.isNaN(threshold)) return false;
-  const followers = creator.metrics.followers.value ?? creator.platforms[0]?.follower_count ?? 0;
-  return followers >= threshold;
+  if (Number.isNaN(threshold)) return "unknown";
+  const followers = creatorFollowerValue(creator);
+  if (followers == null) return "unknown";
+  return toEvaluation(followers >= threshold);
 }
 
-function matchesFollowerMax(creator: UnifiedCreatorResult, max: string): boolean {
+function evaluateFollowerMax(creator: UnifiedCreatorResult, max: string): CriterionEvaluation {
   const threshold = Number(max);
-  if (Number.isNaN(threshold)) return false;
-  const followers = creator.metrics.followers.value ?? creator.platforms[0]?.follower_count ?? 0;
-  return followers <= threshold;
+  if (Number.isNaN(threshold)) return "unknown";
+  const followers = creatorFollowerValue(creator);
+  if (followers == null) return "unknown";
+  return toEvaluation(followers <= threshold);
 }
 
-function matchesEngagementMin(creator: UnifiedCreatorResult, min: string): boolean {
+function evaluateEngagementMin(creator: UnifiedCreatorResult, min: string): CriterionEvaluation {
   const threshold = Number(min);
-  if (Number.isNaN(threshold)) return false;
-  const rate = creator.metrics.engagement_rate.value ?? creator.platforms[0]?.engagement_rate ?? 0;
-  return rate >= threshold;
+  if (Number.isNaN(threshold)) return "unknown";
+  const rate =
+    creator.metrics.engagement_rate.value ?? creator.platforms[0]?.engagement_rate ?? null;
+  if (rate == null) return "unknown";
+  return toEvaluation(rate >= threshold);
 }
 
-function matchesBrandSafetyMin(creator: UnifiedCreatorResult, min: string): boolean {
+function evaluateBrandSafetyMin(creator: UnifiedCreatorResult, min: string): CriterionEvaluation {
   const threshold = Number(min);
-  if (Number.isNaN(threshold)) return false;
-  const score = creator.authenticity_score ?? creator.brand_fit_score ?? 0;
-  return score >= threshold;
+  if (Number.isNaN(threshold)) return "unknown";
+  const score = creator.authenticity_score ?? creator.brand_fit_score ?? null;
+  if (score == null) return "unknown";
+  return toEvaluation(score >= threshold);
 }
 
-function matchesBrandFitMin(creator: UnifiedCreatorResult, min: string): boolean {
+/**
+ * Brand fit uses brand_fit_score ONLY. The legacy fallback to thinkway_score is
+ * intentionally removed: thinkway_score measures data quality, not brand fit,
+ * and the fallback leaked completeness into fit ranking.
+ */
+function evaluateBrandFitMin(creator: UnifiedCreatorResult, min: string): CriterionEvaluation {
   const threshold = Number(min);
-  if (Number.isNaN(threshold)) return false;
-  return (creator.brand_fit_score ?? creator.thinkway_score ?? 0) >= threshold;
+  if (Number.isNaN(threshold)) return "unknown";
+  if (creator.brand_fit_score == null) return "unknown";
+  return toEvaluation(creator.brand_fit_score >= threshold);
 }
 
-function matchesAudienceDemographics(
+function evaluateAudienceDemographics(
   creator: UnifiedCreatorResult,
   fields: {
     gender?: string;
     ageMin?: string;
     ageMax?: string;
   }
-): boolean {
+): CriterionEvaluation {
   const filter = audienceFilterFromSearchFields({
     gender: fields.gender,
     ageMin: fields.ageMin,
     ageMax: fields.ageMax,
   });
-  if (!hasAnyAudienceFilter(filter)) return true;
-  const demographics = creator.audience_demographics;
-  if (!demographics || demographics.source === "unavailable") return false;
-  return matchesAudienceFilter(demographics, filter);
+  if (!hasAnyAudienceFilter(filter)) return "match";
+  if (!demographicsAvailable(creator)) return "unknown";
+  return toEvaluation(matchesAudienceFilter(creator.audience_demographics!, filter));
 }
 
 function criterionRawValue(criterion: CampaignSearchCriterion): string {
@@ -158,53 +227,53 @@ function criterionRawValue(criterion: CampaignSearchCriterion): string {
   return raw != null ? String(raw) : criterion.value.trim();
 }
 
-function criterionMatches(
+function evaluateCriterion(
   creator: UnifiedCreatorResult,
   criterion: CampaignSearchCriterion
-): boolean {
+): CriterionEvaluation {
   const key = criterion.meta?.discoveryKey as DiscoverySearchFilterKey | undefined;
   const value = criterionRawValue(criterion);
-  if (!value) return false;
+  if (!value) return "unknown";
 
   if (key) {
     switch (key) {
       case "category":
-        return creatorMatchesBrowseCategories(creator, [value]);
+        return evaluateCategory(creator, value);
       case "niche":
       case "content_tag":
       case "content_keyword":
-        return matchesNicheOrTag(creator, value);
+        return evaluateNicheOrTag(creator, value);
       case "creator_country":
       case "creator_city":
       case "audience_country":
       case "audience_city":
-        return matchesCountry(creator, value);
+        return evaluateCountry(creator, value);
       case "creator_gender":
       case "audience_gender":
-        return matchesAudienceDemographics(creator, { gender: value.toLowerCase() });
+        return evaluateAudienceDemographics(creator, { gender: value.toLowerCase() });
       case "creator_age_min":
       case "audience_age_min":
-        return matchesAudienceDemographics(creator, { ageMin: value });
+        return evaluateAudienceDemographics(creator, { ageMin: value });
       case "creator_age_max":
       case "audience_age_max":
-        return matchesAudienceDemographics(creator, { ageMax: value });
+        return evaluateAudienceDemographics(creator, { ageMax: value });
       case "language":
-        return matchesLanguage(creator, value);
+        return evaluateLanguage(creator, value);
       case "platform":
-        return matchesPlatform(creator, value);
+        return evaluatePlatform(creator, value);
       case "follower_min":
-        return matchesFollowerMin(creator, value);
+        return evaluateFollowerMin(creator, value);
       case "follower_max":
-        return matchesFollowerMax(creator, value);
+        return evaluateFollowerMax(creator, value);
       case "engagement_min":
-        return matchesEngagementMin(creator, value);
+        return evaluateEngagementMin(creator, value);
       case "brand_safety_min":
-        return matchesBrandSafetyMin(creator, value);
+        return evaluateBrandSafetyMin(creator, value);
       case "brand_fit_min":
-        return matchesBrandFitMin(creator, value);
+        return evaluateBrandFitMin(creator, value);
       case "engagement_max":
       case "verified":
-        return true;
+        return "match";
       default:
         break;
     }
@@ -212,30 +281,30 @@ function criterionMatches(
 
   switch (criterion.kind) {
     case "category":
-      return creatorMatchesBrowseCategories(creator, [value]);
+      return evaluateCategory(creator, value);
     case "niche":
-      return matchesNicheOrTag(creator, value);
+      return evaluateNicheOrTag(creator, value);
     case "country":
     case "city":
-      return matchesCountry(creator, value);
+      return evaluateCountry(creator, value);
     case "platform":
-      return matchesPlatform(creator, value);
+      return evaluatePlatform(creator, value);
     case "language":
-      return matchesLanguage(creator, value);
+      return evaluateLanguage(creator, value);
     case "engagement":
-      return matchesEngagementMin(creator, value);
+      return evaluateEngagementMin(creator, value);
     case "brand_fit":
     case "authenticity":
-      return matchesBrandSafetyMin(creator, value);
+      return evaluateBrandSafetyMin(creator, value);
     case "luxury":
-      return matchesBrandFitMin(creator, value);
+      return evaluateBrandFitMin(creator, value);
     case "audience":
       if (/^\d+$/.test(value)) {
-        return matchesAudienceDemographics(creator, { ageMin: value });
+        return evaluateAudienceDemographics(creator, { ageMin: value });
       }
-      return matchesAudienceDemographics(creator, { gender: value.toLowerCase() });
+      return evaluateAudienceDemographics(creator, { gender: value.toLowerCase() });
     default:
-      return matchesNicheOrTag(creator, value);
+      return evaluateNicheOrTag(creator, value);
   }
 }
 
@@ -245,7 +314,12 @@ function criterionWeight(criterion: CampaignSearchCriterion): number {
   return 1;
 }
 
-/** Weighted partial-match score for one creator against campaign criteria (0–100). */
+/**
+ * Weighted partial-match score for one creator against campaign criteria (0–100).
+ * Criteria the creator has no data for count at UNKNOWN_CRITERION_WEIGHT_DISCOUNT
+ * of a mismatch, so fit ranking never punishes sparse enrichment as if it were
+ * a proven mismatch (and never rewards it as a match).
+ */
 export function scoreCreatorCampaignRelevance(
   creator: UnifiedCreatorResult,
   criteria: CampaignSearchCriterion[]
@@ -258,24 +332,39 @@ export function scoreCreatorCampaignRelevance(
       totalWeight: 0,
       matchedCount: 0,
       criterionCount: 0,
+      knownWeight: 0,
+      unknownWeight: 0,
+      unknownCount: 0,
     };
   }
 
   let matchedWeight = 0;
   let totalWeight = 0;
   let matchedCount = 0;
+  let knownWeight = 0;
+  let unknownWeight = 0;
+  let unknownCount = 0;
 
   for (const criterion of enabled) {
     const weight = criterionWeight(criterion);
     totalWeight += weight;
-    if (criterionMatches(creator, criterion)) {
+    const evaluation = evaluateCriterion(creator, criterion);
+    if (evaluation === "match") {
       matchedWeight += weight;
       matchedCount += 1;
+      knownWeight += weight;
+    } else if (evaluation === "no_match") {
+      knownWeight += weight;
+    } else {
+      unknownWeight += weight;
+      unknownCount += 1;
     }
   }
 
+  const effectiveWeight =
+    knownWeight + UNKNOWN_CRITERION_WEIGHT_DISCOUNT * unknownWeight;
   const score =
-    totalWeight > 0 ? Math.round((matchedWeight / totalWeight) * 100) : 0;
+    effectiveWeight > 0 ? Math.round((matchedWeight / effectiveWeight) * 100) : 0;
 
   return {
     score,
@@ -283,6 +372,9 @@ export function scoreCreatorCampaignRelevance(
     totalWeight,
     matchedCount,
     criterionCount: enabled.length,
+    knownWeight,
+    unknownWeight,
+    unknownCount,
   };
 }
 

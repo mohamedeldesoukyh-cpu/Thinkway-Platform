@@ -1,16 +1,20 @@
 /**
  * INVESTIGATION REPRO — Thinkway 3.0 increment 1 (fit-first ranking).
- * Untracked evidence script; not part of the codebase. Run: npx tsx repro-fit-bias.investigation.ts
+ * Evidence script; not part of the app. Run: npx tsx repro-fit-bias.investigation.ts
  *
- * Demonstrates two defects in campaign-fit ranking:
- *   D1 — Missing creator data counts as a FAILED criterion (unknown == mismatch),
- *        so a sparse-DNA perfect-fit creator ranks below an enriched off-brief creator.
- *   D2 — AI search candidate pool is the top-N of the database ordered by
- *        thinkway_score (data-quality proxy), so great-fit creators outside that
- *        slice are never even scored (pool truncation).
+ * Documented two defects (pre-fix output preserved in the increment log):
+ *   D1 — Missing creator data counted as a FAILED criterion (unknown == mismatch):
+ *        Sparse Perfect Fit scored 56, Enriched Off-Brief 69 → off-brief ranked first.
+ *   D2 — AI candidate pool was one thinkway_score-ordered page (200), so the best-fit
+ *        creator (#221 by data-quality) was never scored at all.
+ *
+ * After the fix (tri-state scoring + dual-pool merge) this script demonstrates:
+ *   D1 — Sparse Perfect Fit outranks Enriched Off-Brief (fit beats completeness).
+ *   D2 — The strict pool rescues the best-fit creator into the ranked results.
  */
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
+import { mergeAiCandidatePools } from "@/lib/discovery/ai-candidate-pool";
 import {
   rankCreatorsByCampaignRelevance,
   scoreCreatorCampaignRelevance,
@@ -152,12 +156,25 @@ for (let i = 0; i < 220; i++) {
 }
 database.push(sparsePerfectFit); // thinkway_score 25 → ranks #221 of 221 by data-quality
 
-const serverPool = [...database]
+const relaxedPool = [...database]
   .sort((a, b) => (b.thinkway_score ?? 0) - (a.thinkway_score ?? 0))
-  .slice(0, 200); // what the client receives in AI mode
+  .slice(0, 200); // legacy AI-mode pool: one page ordered by data-quality
 
-const aiResults = rankCreatorsByCampaignRelevance(serverPool, briefCriteria, { minScore: 30 });
-const perfectFitVisible = aiResults.some((c) => c.unified_id === "inf:sparse-perfect");
-console.log(`Database size: ${database.length}; pool sent to ranking: ${serverPool.length}`);
-console.log(`Best-fit creator present in AI results: ${perfectFitVisible}`);
-console.log(`Top 3 shown instead: ${aiResults.slice(0, 3).map((c) => `${c.display_name} [${c.campaign_relevance_score}]`).join(", ")}`);
+const legacyResults = rankCreatorsByCampaignRelevance(relaxedPool, briefCriteria, { minScore: 30 });
+console.log(`Database size: ${database.length}; relaxed pool: ${relaxedPool.length}`);
+console.log(
+  `LEGACY single pool — best-fit creator visible: ${legacyResults.some((c) => c.unified_id === "inf:sparse-perfect")}`
+);
+
+// Fixed pipeline: strict (brief-filtered) pool merged in front of the relaxed pool.
+const strictPool = database.filter(
+  (c) => c.country_code === "SA" && c.categories.includes("beauty")
+);
+const mergedPool = mergeAiCandidatePools(strictPool, relaxedPool);
+const fixedResults = rankCreatorsByCampaignRelevance(mergedPool, briefCriteria, { minScore: 30 });
+console.log(
+  `FIXED dual pool  — best-fit creator visible: ${fixedResults.some((c) => c.unified_id === "inf:sparse-perfect")}`
+);
+console.log(
+  `Top 3 now: ${fixedResults.slice(0, 3).map((c) => `${c.display_name} [${c.campaign_relevance_score}]`).join(", ")}`
+);

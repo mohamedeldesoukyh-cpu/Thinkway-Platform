@@ -98,6 +98,7 @@ import {
   rankCreatorsByCampaignRelevance,
 } from "@/lib/discovery/campaign-relevance-scoring";
 import { dedupeCreatorsByPlatformHandle } from "@/lib/discovery/creator-result-dedupe";
+import { mergeAiCandidatePools } from "@/lib/discovery/ai-candidate-pool";
 import { stashDiscoverySelection } from "./discovery-selection-storage";
 import {
   useCreatorSelection,
@@ -648,18 +649,62 @@ export function CreatorSearchWorkspace({
           internal_count: pool.length,
           discovery_count: 0,
         };
+      } else if (useAiRelevance) {
+        setApifySourceUnifiedIds(new Set());
+        // Dual-pool fetch: the relaxed pool (platform-only SQL filter) is ordered by
+        // thinkway_score, so on-brief creators outside its single page never reach the
+        // ranker. The strict pool applies the brief's real filters in SQL, guaranteeing
+        // on-brief creators enter the candidate pool regardless of enrichment rank.
+        const sessionId = acquisitionSessionRef.current.getSessionId();
+        const invocation = {
+          caller,
+          requestId,
+          acquisitionJobId: acquisitionPollJobRef.current[0] ?? null,
+        };
+        const [strictSettled, relaxedSettled] = await Promise.allSettled([
+          browseUnifiedCreatorsAction(
+            {
+              ...filtersToBrowseParams(mergedFilters, pageNum, AI_CAMPAIGN_PAGE_SIZE),
+              searchSessionId: sessionId,
+              skipCoverageBackfill: true,
+            },
+            invocation
+          ),
+          browseUnifiedCreatorsAction(
+            {
+              ...filtersToRelaxedBrowseParams(mergedFilters, pageNum, AI_CAMPAIGN_PAGE_SIZE),
+              searchSessionId: sessionId,
+              skipCoverageBackfill: true,
+            },
+            invocation
+          ),
+        ]);
+        if (controller.signal.aborted || requestId !== reqIdRef.current) return;
+        if (strictSettled.status === "rejected" && relaxedSettled.status === "rejected") {
+          throw relaxedSettled.reason;
+        }
+        const strictCreators =
+          strictSettled.status === "fulfilled" ? strictSettled.value.creators : [];
+        const baseResult =
+          relaxedSettled.status === "fulfilled"
+            ? relaxedSettled.value
+            : (strictSettled as PromiseFulfilledResult<
+                Awaited<ReturnType<typeof browseUnifiedCreatorsAction>>
+              >).value;
+        pool = mergeAiCandidatePools(strictCreators, baseResult.creators);
+        result = {
+          ...baseResult,
+          creators: pool,
+          total: pool.length,
+          has_more: false,
+        };
       } else {
         setApifySourceUnifiedIds(new Set());
-        const browseParams = useAiRelevance
-          ? filtersToRelaxedBrowseParams(mergedFilters, pageNum, AI_CAMPAIGN_PAGE_SIZE)
-          : filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE);
         result = await browseUnifiedCreatorsAction(
           {
-            ...browseParams,
+            ...filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE),
             searchSessionId: acquisitionSessionRef.current.getSessionId(),
-            ...(options?.skipCoverageBackfill || useAiRelevance
-              ? { skipCoverageBackfill: true }
-              : {}),
+            ...(options?.skipCoverageBackfill ? { skipCoverageBackfill: true } : {}),
           },
           {
             caller,
