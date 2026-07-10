@@ -22,13 +22,30 @@ const CAMPAIGN_TAGLINE_PATTERN = /\b(summer|winter|spring|fall|autumn|q[1-4])\s+
 const BRAND_STOPWORDS_IN_NAME =
   /\b(campaign|objective|awareness|engagement|launch|amplify|targeting|creator|influencer|brief|strategy)\b/i;
 
+/** Field labels that bleed into adjacent values in flattened docx/table briefs. */
+const GLUED_LABEL_PATTERN = new RegExp(
+  String.raw`([a-z0-9&).])(?:Market|Brand|Client|Industry|Campaign|Objective|Audience|Budget|Duration|Platforms?|Product|Country|Categor(?:y|ies)|Deliverables?|KPIs?|Timeline)(?:\s*Name)?$`
+);
+
+/** Leading label text the LLM sometimes keeps inside the value ("Client: Nestlé"). */
+const LEADING_LABEL_PATTERN =
+  /^(?:client|brand|product|company)\s*(?:\/\s*(?:client|brand))?\s*(?:name)?\s*(?:->|[:：\-–|])\s*/i;
+
 /** Strip field-label bleed from adjacent docx rows (e.g. "Paris" + "Market" → "ParisMa"). */
 export function sanitizeBrandName(value: string): string {
   let v = value.trim();
   if (!v) return v;
 
+  v = v.replace(LEADING_LABEL_PATTERN, "");
   v = v.replace(/ParisMa(?:rket)?$/i, "Paris");
   v = v.replace(/([a-z])(Ma(?:rket)?)$/i, "$1");
+
+  // Repeatedly strip glued trailing labels: "Nestlé EgyptBrandMarket" → "Nestlé Egypt".
+  for (let i = 0; i < 4; i += 1) {
+    const stripped = v.replace(GLUED_LABEL_PATTERN, "$1");
+    if (stripped === v) break;
+    v = stripped;
+  }
 
   return v.trim();
 }
@@ -56,6 +73,45 @@ export function isValidBrandName(value: string): boolean {
   if (BRAND_STOPWORDS_IN_NAME.test(v) && words.length > 2 && !hasKnownBrandToken) return false;
 
   return true;
+}
+
+/**
+ * Client names are legal entities — allow longer values than brand names
+ * ("Landmark Retail Investment Co. L.L.C") but reject fragments and copy.
+ */
+export function isValidClientName(value: string): boolean {
+  const v = sanitizeBrandName(value);
+  if (!v || v.length < 2 || v.length > 70) return false;
+  if (isConcatenatedGarbage(v)) return false;
+  if (SENTENCE_FRAGMENT_START.test(v)) return false;
+  if (OBJECTIVE_VERB_START.test(v)) return false;
+  if (CAMPAIGN_TAGLINE_PATTERN.test(v)) return false;
+  if (v.split(/\s+/).filter(Boolean).length > 8) return false;
+  return true;
+}
+
+/**
+ * Deterministic backstop: recover an explicitly labeled entity ("Client: X")
+ * from the flattened brief text when extraction missed or mangled it. An
+ * explicit client in the brief must never be replaced by inference.
+ */
+export function recoverLabeledEntityFromText(
+  text: string,
+  label: "client" | "brand" | "product"
+): string | undefined {
+  if (!text.trim()) return undefined;
+  const pattern = new RegExp(
+    String.raw`^[\s>*•|-]*${label}(?:\s*name)?\s*(?:->|[:：\-–|])\s*(.+?)\s*$`,
+    "im"
+  );
+  const match = text.match(pattern);
+  const raw = match?.[1]?.trim().replace(/[|•*\s]+$/, "");
+  if (!raw) return undefined;
+
+  const sanitized = sanitizeBrandName(raw);
+  const valid =
+    label === "client" ? isValidClientName(sanitized) : isValidBrandName(sanitized);
+  return valid ? sanitized : undefined;
 }
 
 export function isConcatenatedGarbage(value: string): boolean {

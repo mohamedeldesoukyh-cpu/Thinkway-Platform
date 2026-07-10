@@ -20,6 +20,8 @@ import {
   resolveCountryCode,
   sanitizeBrandName,
   isValidBrandName,
+  isValidClientName,
+  recoverLabeledEntityFromText,
 } from "./validators";
 import {
   createEmptyNormalizedEntities,
@@ -116,9 +118,43 @@ export function normalizeCampaignIntelligence(
   const rawBrand = profile.brandName?.trim();
   const rawClient = profile.clientName?.trim();
   const sanitizedBrand = rawBrand ? sanitizeBrandName(rawBrand) : undefined;
-  const brandName =
+  let brandName =
     sanitizedBrand && isValidBrandName(sanitizedBrand) ? sanitizedBrand : undefined;
-  const clientName = rawClient ? sanitizeBrandName(rawClient) : undefined;
+  const sanitizedClient = rawClient ? sanitizeBrandName(rawClient) : undefined;
+  let clientName =
+    sanitizedClient && isValidClientName(sanitizedClient) ? sanitizedClient : undefined;
+  if (rawClient && !clientName) {
+    pushIssue(
+      issues,
+      "clientName",
+      rawClient,
+      "Rejected as sentence fragment or invalid client name",
+      "warning"
+    );
+    issues[issues.length - 1]!.kind = "malformed";
+  }
+
+  // Explicitly labeled entities in the brief text are authoritative — recover
+  // them when extraction missed or mangled the value (never infer over them).
+  const briefText = [profile.structuredBrief?.llmBriefText, profile.rawBriefExcerpt]
+    .filter(Boolean)
+    .join("\n");
+  let clientRecovered = false;
+  let brandRecovered = false;
+  if (!clientName && briefText) {
+    const recovered = recoverLabeledEntityFromText(briefText, "client");
+    if (recovered) {
+      clientName = recovered;
+      clientRecovered = true;
+    }
+  }
+  if (!brandName && briefText) {
+    const recovered = recoverLabeledEntityFromText(briefText, "brand");
+    if (recovered) {
+      brandName = recovered;
+      brandRecovered = true;
+    }
+  }
   if (rawBrand && brandName && brandName !== rawBrand) {
     pushIssue(
       issues,
@@ -144,14 +180,24 @@ export function normalizeCampaignIntelligence(
     setEvidence(
       normalized,
       "brand.brandName",
-      rawBrand !== brandName
-        ? normalizedProvenance(profile, "brandName")
-        : extractedProvenance(profile, "brandName")
+      brandRecovered
+        ? { level: "normalized", confidence: 0.9, sourceField: "structuredBrief.brand" }
+        : rawBrand !== brandName
+          ? normalizedProvenance(profile, "brandName")
+          : extractedProvenance(profile, "brandName")
     );
   }
   if (clientName) {
     normalized.brand.clientName = clientName;
-    setEvidence(normalized, "brand.clientName", extractedProvenance(profile, "clientName"));
+    setEvidence(
+      normalized,
+      "brand.clientName",
+      clientRecovered
+        ? { level: "normalized", confidence: 0.9, sourceField: "structuredBrief.client" }
+        : rawClient !== clientName
+          ? normalizedProvenance(profile, "clientName")
+          : extractedProvenance(profile, "clientName")
+    );
   }
 
   const resolvedCountries = new Map<string, { raw: string; provenance: FieldProvenance }>();

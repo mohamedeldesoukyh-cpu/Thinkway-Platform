@@ -87,6 +87,13 @@ test("audience composes from structured detail when prose audience is missing", 
   assert.equal(prose.audience, "Young mothers in Cairo");
 });
 
+test("products map into the facts product field", () => {
+  const facts = profileToCampaignFacts(
+    profileWith({ products: ["Vitamin C Serum", "Night Cream"] })
+  );
+  assert.equal(facts.product, "Vitamin C Serum, Night Cream");
+});
+
 test("deliverables, multiple objectives, and budget flow through to facts", () => {
   const facts = profileToCampaignFacts(
     profileWith({

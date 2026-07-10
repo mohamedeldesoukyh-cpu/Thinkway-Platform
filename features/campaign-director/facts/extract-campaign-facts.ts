@@ -6,6 +6,7 @@ import {
   parseDurationFromText,
   parseMarketFromText,
   parseObjectiveFromText,
+  parseProductFromText,
 } from "@/features/campaign-studio/components/sections/shared/format-utils";
 import {
   detectIndustryFromBrief,
@@ -206,6 +207,9 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
   const profile = getIndustryProfile(industryKey, text);
   setField(facts, "industry", profile.label, "brief", 0.85);
   setField(facts, "campaignType", profile.campaignType, "inferred", 0.75);
+
+  const product = parseProductFromText(text);
+  if (product) setField(facts, "product", product, "brief", 0.85);
 
   const objective = parseObjectiveFromText(text) ?? "Brand awareness and engagement";
   setField(

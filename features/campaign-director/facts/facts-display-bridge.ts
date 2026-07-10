@@ -299,6 +299,8 @@ export function applyFactsToSummaryData(
   const brand = resolveFactsBrandName(facts);
   if (brand) result.brand = brand;
 
+  if (facts.product) result.product = facts.product;
+
   const objective = resolveFactsObjective(facts);
   if (objective) result.objective = objective;
 

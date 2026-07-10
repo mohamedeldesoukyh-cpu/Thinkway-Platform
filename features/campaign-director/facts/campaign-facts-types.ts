@@ -7,6 +7,7 @@ export type CampaignFactsField =
   | "brandName"
   | "industry"
   | "campaignType"
+  | "product"
   | "objective"
   | "budget"
   | "durationWeeks"
@@ -23,6 +24,7 @@ export type CampaignFacts = {
   brandName?: string;
   industry?: string;
   campaignType?: string;
+  product?: string;
   objective?: string;
   budget?: { amount: number; currency: string };
   durationWeeks?: number;
