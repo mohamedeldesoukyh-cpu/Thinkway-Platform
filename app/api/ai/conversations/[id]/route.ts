@@ -8,6 +8,7 @@ import {
   updateConversationTitle,
 } from "@/features/ai-workspace/services/conversation-service";
 import { hydrateConversationCampaignObject } from "@/features/ai-workspace/services/conversation-campaign-hydration";
+import { hasPermission } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -28,6 +29,23 @@ export async function GET(_request: Request, context: RouteContext) {
       auth.userId
     );
     if (!conversation) {
+      // A conversation the user just streamed into must never be invisible here.
+      // Log which RLS predicate fails so environment drift is diagnosable from
+      // a single reload instead of a silent 404 (see 20260715090000 migration).
+      const [sqlHasAiRead, sqlHasAiWrite] = await Promise.all([
+        hasPermission(supabase, "ai.read"),
+        hasPermission(supabase, "ai.write"),
+      ]);
+      console.error(
+        "[ai-conversations] GET 404 diagnosis:",
+        JSON.stringify({
+          conversationId: id,
+          userId: auth.userId,
+          roleSlug: auth.roleSlug,
+          sqlHasAiRead,
+          sqlHasAiWrite,
+        })
+      );
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     const hydrated = await hydrateConversationCampaignObject(supabase, conversation);
