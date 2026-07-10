@@ -35,6 +35,7 @@ import {
   getStudioDraft,
   normalizeCreatorId,
 } from "../../services/studio-draft";
+import { AddCreatorPanel } from "./add-creator-panel";
 import { formatEngagement, formatFollowers } from "./shared/format-utils";
 import { SectionSkeleton } from "./shared/section-skeleton";
 import { GroundingBadge } from "./shared/grounding-badge";
@@ -724,6 +725,14 @@ export function VendorRecommendationsSection({
         >
           Show all {vendors.length} creators ({hiddenCount} more)
         </Button>
+      ) : null}
+      {conversationId && messageId ? (
+        <AddCreatorPanel
+          conversationId={conversationId}
+          messageId={messageId}
+          draft={draft}
+          onDraftUpdated={publishDraft}
+        />
       ) : null}
       {!onCreatorClick ? (
         <CreatorDrawer creator={drawerCreator} open={drawerOpen} onOpenChange={setDrawerOpen} />

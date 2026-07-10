@@ -2,8 +2,11 @@ import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   CreatorsSectionData,
   StudioDraftChange,
+  StudioDraftCreatorRef,
   StudioDraftState,
+  VendorSelectedReasoning,
 } from "@/features/campaign-intelligence/types/section-schemas";
+import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 
 import type { CampaignStudioSectionId } from "../types/campaign-studio";
 
@@ -141,52 +144,100 @@ export function withStudioDraft(
   };
 }
 
+/** Persist an enrichment-status transition on a staged add_creator change. */
+export function updateDraftCreatorEnrichment(
+  draft: StudioDraftState,
+  creatorId: string,
+  enrichmentStatus: NonNullable<StudioDraftCreatorRef["enrichmentStatus"]>
+): StudioDraftState {
+  return {
+    changes: draft.changes.map((change) =>
+      change.kind === "add_creator" && sameCreator(change.creator.creatorId, creatorId)
+        ? { ...change, creator: { ...change.creator, enrichmentStatus } }
+        : change
+    ),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function reasoningForAddedCreator(ref: StudioDraftCreatorRef): VendorSelectedReasoning {
+  const tier = resolveCreatorTierLabel({ followers: ref.followers });
+  const sourceLabel =
+    ref.source === "external_url" ? "added from a profile link" : "picked from Discovery";
+  return {
+    creatorId: ref.creatorId,
+    displayName: ref.displayName,
+    whySelected: `Hand-${ref.source === "external_url" ? "added" : "picked"} by the team (${sourceLabel}) and confirmed on apply.`,
+    expectedRole: tier,
+    audienceMatch: "Team judgement — validate against the campaign audience.",
+    risk: ref.enrichmentStatus === "enriched" ? "Low — profile intelligence refreshed." : "Verify with an intelligence refresh before contracting.",
+    alternative: "AI-recommended slate retained alongside this addition.",
+    confidence: ref.enrichmentStatus === "enriched" ? 0.75 : 0.6,
+    evidence: `Manual Studio addition (${sourceLabel}).`,
+    tradeoff: "Manual picks bypass AI ranking until the next re-optimization.",
+  };
+}
+
 export type ApplyStudioDraftResult = {
   campaignObject: CampaignObject;
   removedCreatorIds: string[];
+  addedCreatorIds: string[];
   /** Changes the apply engine does not handle yet — kept staged. */
   unappliedChanges: StudioDraftChange[];
 };
 
 /**
- * Apply staged removals to the recommendation slate in one operation:
- * filter creator ids, reasoning, and fit scores, then clear applied changes.
- * Dependent sections derive from the slate at render/export time, so they
- * refresh automatically once the slate updates.
+ * Apply staged slate edits in one operation: removals filter creator ids,
+ * reasoning, and fit scores; additions append to the slate with team-pick
+ * reasoning. Dependent sections derive from the slate at render/export time,
+ * so they refresh automatically once the slate updates.
  */
-export function applyStudioDraftRemovals(campaignObject: CampaignObject): ApplyStudioDraftResult {
+export function applyStudioDraftChanges(campaignObject: CampaignObject): ApplyStudioDraftResult {
   const draft = getStudioDraft(campaignObject);
   const removals = draft.changes.filter((c) => c.kind === "remove_creator");
-  const unappliedChanges = draft.changes.filter((c) => c.kind !== "remove_creator");
+  const additions = draft.changes.filter((c) => c.kind === "add_creator");
+  // Refresh markers are display invalidations only — consumed by the apply.
+  const unappliedChanges = draft.changes.filter(
+    (c) => c.kind !== "remove_creator" && c.kind !== "add_creator" && c.kind !== "refresh_intelligence"
+  );
 
-  if (removals.length === 0) {
-    return { campaignObject, removedCreatorIds: [], unappliedChanges };
+  if (removals.length === 0 && additions.length === 0 && unappliedChanges.length === draft.changes.length) {
+    return { campaignObject, removedCreatorIds: [], addedCreatorIds: [], unappliedChanges };
   }
 
   const removedIds = new Set(removals.map((c) => normalizeCreatorId(c.creatorId)));
   const keep = (id: string) => !removedIds.has(normalizeCreatorId(id));
 
   const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
-  const recommendations = creatorsData.recommendations;
+  const recommendations = creatorsData.recommendations ?? { creatorIds: [] };
 
-  const nextRecommendations = recommendations
-    ? {
-        ...recommendations,
-        creatorIds: (recommendations.creatorIds ?? []).filter(keep),
-        selectedReasoning: recommendations.selectedReasoning?.filter((r) =>
-          keep(r.creatorId)
-        ),
-        creatorFitScores: recommendations.creatorFitScores
-          ? Object.fromEntries(
-              Object.entries(recommendations.creatorFitScores).filter(([id]) => keep(id))
-            )
-          : undefined,
-      }
-    : recommendations;
+  const existingIds = new Set(
+    (recommendations.creatorIds ?? []).map((id) => normalizeCreatorId(id))
+  );
+  const appendedRefs = additions
+    .map((c) => c.creator)
+    .filter((ref) => !existingIds.has(normalizeCreatorId(ref.creatorId)) && keep(ref.creatorId));
+
+  const nextRecommendations = {
+    ...recommendations,
+    creatorIds: [
+      ...(recommendations.creatorIds ?? []).filter(keep),
+      ...appendedRefs.map((ref) => ref.creatorId),
+    ],
+    selectedReasoning: [
+      ...(recommendations.selectedReasoning ?? []).filter((r) => keep(r.creatorId)),
+      ...appendedRefs.map(reasoningForAddedCreator),
+    ],
+    creatorFitScores: recommendations.creatorFitScores
+      ? Object.fromEntries(
+          Object.entries(recommendations.creatorFitScores).filter(([id]) => keep(id))
+        )
+      : undefined,
+  };
 
   const nextData: CreatorsSectionData = {
     ...creatorsData,
-    ...(nextRecommendations ? { recommendations: nextRecommendations } : {}),
+    recommendations: nextRecommendations,
   };
   if (unappliedChanges.length === 0) {
     delete nextData.studioDraft;
@@ -204,6 +255,7 @@ export function applyStudioDraftRemovals(campaignObject: CampaignObject): ApplyS
       updatedAt: new Date().toISOString(),
     },
     removedCreatorIds: removals.map((c) => c.creatorId),
+    addedCreatorIds: appendedRefs.map((ref) => ref.creatorId),
     unappliedChanges,
   };
 }

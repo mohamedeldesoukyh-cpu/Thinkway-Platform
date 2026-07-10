@@ -8,12 +8,13 @@ import type {
 } from "@/features/campaign-intelligence/types/section-schemas";
 
 import {
-  applyStudioDraftRemovals,
+  applyStudioDraftChanges,
   draftChangeForCreator,
   getStudioDraft,
   outdatedSectionsForDraft,
   stageDraftChange,
   unstageDraftChange,
+  updateDraftCreatorEnrichment,
   withStudioDraft,
 } from "./studio-draft";
 
@@ -138,7 +139,7 @@ test("applying removals filters ids, reasoning, and fit scores, and clears the d
     },
   });
 
-  const result = applyStudioDraftRemovals(base);
+  const result = applyStudioDraftChanges(base);
   const data = result.campaignObject.sections.creators.data as CreatorsSectionData;
 
   assert.deepEqual(data.recommendations?.creatorIds, ["inf:a", "inf:c"]);
@@ -152,7 +153,7 @@ test("applying removals filters ids, reasoning, and fit scores, and clears the d
   assert.equal(result.unappliedChanges.length, 0);
 });
 
-test("apply keeps changes the engine does not handle yet staged", () => {
+test("apply handles removals and additions together and clears refresh markers", () => {
   const base = objectWithCreators({
     recommendations: { creatorIds: ["inf:a", "inf:b"] },
     studioDraft: {
@@ -160,7 +161,41 @@ test("apply keeps changes the engine does not handle yet staged", () => {
         { kind: "remove_creator", creatorId: "a", stagedAt: NOW },
         {
           kind: "add_creator",
-          creator: { creatorId: "z", source: "external_url" },
+          creator: {
+            creatorId: "inf:z",
+            displayName: "New Creator",
+            followers: 1_200_000,
+            source: "external_url",
+            enrichmentStatus: "enriched",
+          },
+          stagedAt: NOW,
+        },
+        { kind: "refresh_intelligence", creatorId: "b", stagedAt: NOW },
+      ],
+      updatedAt: NOW,
+    },
+  });
+
+  const result = applyStudioDraftChanges(base);
+  const data = result.campaignObject.sections.creators.data as CreatorsSectionData;
+
+  assert.deepEqual(data.recommendations?.creatorIds, ["inf:b", "inf:z"]);
+  assert.deepEqual(result.addedCreatorIds, ["inf:z"]);
+  assert.equal(data.studioDraft, undefined);
+
+  const added = data.recommendations?.selectedReasoning?.find((r) => r.creatorId === "inf:z");
+  assert.ok(added, "added creator gets a reasoning entry");
+  assert.equal(added?.expectedRole, "Macro");
+});
+
+test("apply skips additions that duplicate the existing slate", () => {
+  const base = objectWithCreators({
+    recommendations: { creatorIds: ["inf:a"] },
+    studioDraft: {
+      changes: [
+        {
+          kind: "add_creator",
+          creator: { creatorId: "a", source: "discovery" },
           stagedAt: NOW,
         },
       ],
@@ -168,10 +203,30 @@ test("apply keeps changes the engine does not handle yet staged", () => {
     },
   });
 
-  const result = applyStudioDraftRemovals(base);
+  const result = applyStudioDraftChanges(base);
   const data = result.campaignObject.sections.creators.data as CreatorsSectionData;
+  assert.deepEqual(data.recommendations?.creatorIds, ["inf:a"]);
+  assert.deepEqual(result.addedCreatorIds, []);
+});
 
-  assert.deepEqual(data.recommendations?.creatorIds, ["inf:b"]);
-  assert.equal(data.studioDraft?.changes.length, 1);
-  assert.equal(data.studioDraft?.changes[0]?.kind, "add_creator");
+test("enrichment status transitions update only the targeted staged addition", () => {
+  let draft = stageDraftChange(EMPTY, {
+    kind: "add_creator",
+    creator: { creatorId: "inf:z", source: "external_url", enrichmentStatus: "pending" },
+    stagedAt: NOW,
+  });
+  draft = stageDraftChange(draft, {
+    kind: "remove_creator",
+    creatorId: "other",
+    stagedAt: NOW,
+  });
+
+  draft = updateDraftCreatorEnrichment(draft, "z", "enriched");
+  const change = draftChangeForCreator(draft, "inf:z");
+  assert.equal(change?.kind, "add_creator");
+  assert.equal(
+    change?.kind === "add_creator" ? change.creator.enrichmentStatus : undefined,
+    "enriched"
+  );
+  assert.ok(draftChangeForCreator(draft, "other"));
 });

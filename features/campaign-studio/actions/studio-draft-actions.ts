@@ -3,14 +3,16 @@
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import type {
   StudioDraftChange,
+  StudioDraftCreatorRef,
   StudioDraftState,
 } from "@/features/campaign-intelligence/types/section-schemas";
 
 import {
-  applyStudioDraftRemovals,
+  applyStudioDraftChanges,
   getStudioDraft,
   stageDraftChange,
   unstageDraftChange,
+  updateDraftCreatorEnrichment,
   withStudioDraft,
 } from "../services/studio-draft";
 import {
@@ -27,7 +29,8 @@ export type StudioDraftActionResult = {
 /** Client sends the change without a timestamp — the server stamps it. */
 export type StageStudioDraftChangeInput =
   | { kind: "remove_creator"; creatorId: string; displayName?: string }
-  | { kind: "refresh_intelligence"; creatorId: string; displayName?: string };
+  | { kind: "refresh_intelligence"; creatorId: string; displayName?: string }
+  | { kind: "add_creator"; creator: StudioDraftCreatorRef };
 
 type DraftMessageRef = { conversationId: string; messageId: string };
 
@@ -58,14 +61,13 @@ export async function stageStudioDraftChangeAction(
     );
     if (!draft) return { ok: false, message: "Campaign studio message not found." };
 
-    return {
-      ok: true,
-      message:
-        input.change.kind === "remove_creator"
-          ? "Removal staged — apply all updates to recalculate the plan."
-          : "Intelligence refresh staged — apply all updates to recalculate.",
-      draft,
-    };
+    const message =
+      input.change.kind === "remove_creator"
+        ? "Removal staged — apply all updates to recalculate the plan."
+        : input.change.kind === "add_creator"
+          ? "Creator staged for addition — apply all updates to bring them into the plan."
+          : "Intelligence refresh staged — apply all updates to recalculate.";
+    return { ok: true, message, draft };
   } catch (error) {
     return {
       ok: false,
@@ -87,6 +89,27 @@ export async function unstageStudioDraftChangeAction(
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Could not undo the change.",
+    };
+  }
+}
+
+/** Persist enrichment progress (pending → enriched/failed) on a staged addition. */
+export async function updateStudioDraftEnrichmentAction(
+  input: DraftMessageRef & {
+    creatorId: string;
+    enrichmentStatus: NonNullable<StudioDraftCreatorRef["enrichmentStatus"]>;
+  }
+): Promise<StudioDraftActionResult> {
+  try {
+    const draft = await patchDraftOnMessage(input, (current) =>
+      updateDraftCreatorEnrichment(current, input.creatorId, input.enrichmentStatus)
+    );
+    if (!draft) return { ok: false, message: "Campaign studio message not found." };
+    return { ok: true, message: "Enrichment status updated.", draft };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not update enrichment status.",
     };
   }
 }
@@ -117,18 +140,26 @@ export async function discardStudioDraftAction(
  */
 export async function applyStudioDraftAction(
   input: DraftMessageRef
-): Promise<StudioDraftActionResult & { removedCount?: number; removedCreatorIds?: string[] }> {
+): Promise<
+  StudioDraftActionResult & {
+    removedCount?: number;
+    removedCreatorIds?: string[];
+    addedCreatorIds?: string[];
+  }
+> {
   try {
     const { supabase, userId } = await requireStudioUser();
     let removedCreatorIds: string[] = [];
+    let addedCreatorIds: string[] = [];
 
     const next = await persistCampaignObjectOnMessage(
       input.conversationId,
       input.messageId,
       userId,
       (object) => {
-        const result = applyStudioDraftRemovals(object);
+        const result = applyStudioDraftChanges(object);
         removedCreatorIds = result.removedCreatorIds;
+        addedCreatorIds = result.addedCreatorIds;
         return result.campaignObject;
       }
     );
@@ -145,17 +176,25 @@ export async function applyStudioDraftAction(
 
     const remaining = getStudioDraft(next);
     const removedCount = removedCreatorIds.length;
+    const addedCount = addedCreatorIds.length;
 
+    const applied = [
+      removedCount > 0 ? `${removedCount} removal${removedCount === 1 ? "" : "s"}` : null,
+      addedCount > 0 ? `${addedCount} addition${addedCount === 1 ? "" : "s"}` : null,
+    ]
+      .filter(Boolean)
+      .join(" and ");
     const unapplied = remaining.changes.length;
     return {
       ok: true,
       message:
         unapplied > 0
-          ? `Applied ${removedCount} removal${removedCount === 1 ? "" : "s"} — ${unapplied} change${unapplied === 1 ? "" : "s"} need the full re-optimization engine.`
-          : `Campaign updated — ${removedCount} creator${removedCount === 1 ? "" : "s"} removed and dependent sections recalculated.`,
+          ? `Applied ${applied || "updates"} — ${unapplied} change${unapplied === 1 ? "" : "s"} need the full re-optimization engine.`
+          : `Campaign updated — ${applied || "pending changes"} applied and dependent sections recalculated.`,
       draft: remaining,
       removedCount,
       removedCreatorIds,
+      addedCreatorIds,
     };
   } catch (error) {
     return {
