@@ -92,6 +92,8 @@ export function CampaignStudio({
     };
   }, [studio?.campaignObject?.meta.campaignFacts]);
 
+  const clientName = getCampaignFacts(studio?.campaignObject)?.clientName;
+
   if (!studio) return null;
 
   return (
@@ -115,6 +117,14 @@ export function CampaignStudio({
                 {studio.workflowName}
               </h2>
             </div>
+            {clientName ? (
+              <span className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 py-1 pr-3 pl-1 text-xs font-semibold text-foreground">
+                <span className="flex size-6 items-center justify-center rounded-full bg-[#1D9E75] text-[11px] font-bold text-white">
+                  {clientName.trim().charAt(0).toUpperCase()}
+                </span>
+                {clientName}
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             {studio.campaignObject?.id && studio.progressPercent >= 100 ? (
