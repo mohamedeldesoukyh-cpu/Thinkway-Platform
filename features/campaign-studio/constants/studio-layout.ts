@@ -43,6 +43,98 @@ export function isFullWidthSection(sectionId: CampaignStudioSectionId): boolean 
   return getSectionLayout(sectionId) !== "pair";
 }
 
+/**
+ * Narrative story arc — Studio reads like a strategy deck, not a card dump:
+ * brief → strategy → creators → plan → forecast → sign-off. Presentation
+ * only: every section still renders; unmapped ids append to the final phase.
+ */
+export const STUDIO_STORY_ARC: ReadonlyArray<{
+  id: string;
+  label: string;
+  description: string;
+  sections: CampaignStudioSectionId[];
+}> = [
+  {
+    id: "brief",
+    label: "The Brief",
+    description: "What the client asked for",
+    sections: ["campaign-summary"],
+  },
+  {
+    id: "strategy",
+    label: "The Strategy",
+    description: "How we win this campaign",
+    sections: ["executive-strategy", "creative-concepts", "why-ai"],
+  },
+  {
+    id: "creators",
+    label: "The Creators",
+    description: "Who tells the story — with evidence",
+    sections: ["creator-discovery", "creator-recommendations", "creator-mix"],
+  },
+  {
+    id: "plan",
+    label: "The Plan",
+    description: "Budget, content, and timing",
+    sections: ["budget-planner", "content-plan", "timeline"],
+  },
+  {
+    id: "forecast",
+    label: "The Forecast",
+    description: "Expected results and risks",
+    sections: [
+      "kpi-forecast",
+      "success-probability",
+      "industry-benchmark",
+      "risk-analysis",
+      "opportunity-finder",
+    ],
+  },
+  {
+    id: "signoff",
+    label: "Sign-off",
+    description: "Executive view and presentation readiness",
+    sections: ["executive-summary", "presentation-status"],
+  },
+] as const;
+
+export type StudioStoryPhase<TSection extends { id: CampaignStudioSectionId }> = {
+  id: string;
+  label: string;
+  description: string;
+  sections: TSection[];
+};
+
+/**
+ * Group sections into story-arc phases, preserving arc order within a phase
+ * and appending unmapped sections to the final phase so nothing is dropped.
+ */
+export function groupSectionsByStoryPhase<TSection extends { id: CampaignStudioSectionId }>(
+  sections: TSection[]
+): Array<StudioStoryPhase<TSection>> {
+  const byId = new Map(sections.map((s) => [s.id, s]));
+  const assigned = new Set<CampaignStudioSectionId>();
+
+  const phases = STUDIO_STORY_ARC.map((phase) => {
+    const phaseSections: TSection[] = [];
+    for (const id of phase.sections) {
+      const section = byId.get(id);
+      if (section) {
+        phaseSections.push(section);
+        assigned.add(id);
+      }
+    }
+    return { id: phase.id, label: phase.label, description: phase.description, sections: phaseSections };
+  });
+
+  const unmapped = sections.filter((s) => !assigned.has(s.id));
+  if (unmapped.length > 0) {
+    phases[phases.length - 1]!.sections.push(...unmapped);
+  }
+
+  return phases.filter((phase) => phase.sections.length > 0);
+}
+
 /** Shared inner grid for KPI Forecast + Risk Analysis half-pair sections. */
 export const PAIR_ANALYTICS_GRID =
   "grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2";

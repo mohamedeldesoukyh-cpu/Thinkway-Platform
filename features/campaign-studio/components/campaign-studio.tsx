@@ -33,6 +33,7 @@ import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-wo
 import { useCampaignStudio } from "../hooks/use-campaign-studio";
 import type { CampaignStudioInput } from "../types/campaign-studio";
 import { getSectionLayout } from "./sections";
+import { groupSectionsByStoryPhase } from "../constants/studio-layout";
 import { StudioSectionCard } from "./campaign-studio-sections";
 import { BudgetDecisionOverlay } from "./decision-overlays/budget-decision-overlay";
 import { VendorDecisionOverlay } from "./decision-overlays/vendor-decision-overlay";
@@ -186,41 +187,55 @@ export function CampaignStudio({
         </div>
       ) : null}
 
-      <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
-        {studio.sections.map((section) => {
-          const Icon = SECTION_ICONS[section.id] ?? BarChart3Icon;
-          const layout = getSectionLayout(section.id);
-          const spansFull = layout === "full" || layout === "dashboard";
-          return (
-            <div
-              key={section.id}
-              className={cn(
-                "flex min-w-0 flex-col",
-                spansFull && "lg:col-span-2",
-                layout === "pair" && "lg:min-h-[18rem]"
-              )}
-            >
-              <StudioSectionCard
-                section={section}
-                campaignObject={studio.campaignObject}
-                layout={layout}
-                icon={Icon}
-                className="h-full flex-1"
-                decisionMode={decisionMode}
-                conversationId={conversationId}
-                messageId={messageId}
-                onVendorDecisionsUpdated={onVendorDecisionsUpdated}
-                sectionFooter={
-                  decisionMode && section.id === "budget-planner" ? (
-                    <BudgetDecisionOverlay decisionMode={decisionMode} />
-                  ) : decisionMode && section.id === "creator-recommendations" ? (
-                    <VendorDecisionOverlay decisionMode={decisionMode} />
-                  ) : undefined
-                }
-              />
+      <div className="min-w-0 space-y-5">
+        {groupSectionsByStoryPhase(studio.sections).map((phase) => (
+          <section key={phase.id} className="min-w-0 space-y-3">
+            <div className="flex items-baseline gap-2 border-b border-border/60 pb-1.5">
+              <h3 className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
+                {phase.label}
+              </h3>
+              <p className="truncate text-[11px] text-muted-foreground/70">
+                {phase.description}
+              </p>
             </div>
-          );
-        })}
+            <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
+              {phase.sections.map((section) => {
+                const Icon = SECTION_ICONS[section.id] ?? BarChart3Icon;
+                const layout = getSectionLayout(section.id);
+                const spansFull = layout === "full" || layout === "dashboard";
+                return (
+                  <div
+                    key={section.id}
+                    className={cn(
+                      "flex min-w-0 flex-col",
+                      spansFull && "lg:col-span-2",
+                      layout === "pair" && "lg:min-h-[18rem]"
+                    )}
+                  >
+                    <StudioSectionCard
+                      section={section}
+                      campaignObject={studio.campaignObject}
+                      layout={layout}
+                      icon={Icon}
+                      className="h-full flex-1"
+                      decisionMode={decisionMode}
+                      conversationId={conversationId}
+                      messageId={messageId}
+                      onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+                      sectionFooter={
+                        decisionMode && section.id === "budget-planner" ? (
+                          <BudgetDecisionOverlay decisionMode={decisionMode} />
+                        ) : decisionMode && section.id === "creator-recommendations" ? (
+                          <VendorDecisionOverlay decisionMode={decisionMode} />
+                        ) : undefined
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
 
       {studio.actionCards?.length && conversationId && messageId ? (
