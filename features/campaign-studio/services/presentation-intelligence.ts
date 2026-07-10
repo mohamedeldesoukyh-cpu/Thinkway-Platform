@@ -242,6 +242,38 @@ const CONCEPT_TEMPLATES: Record<
       hashtagBase: ["#TrustVerified", "#CustomerStories", "#BankWithConfidence"],
     },
   ],
+  telecom: [
+    {
+      name: "Own The Sound",
+      bigIdea: "Turn the campaign song into the market's default summer soundtrack through creator-led waves",
+      hook: "Two celebrity anchors drop the sound — the market's favorite creators make it theirs within 48 hours",
+      keyVisual: "Split-screen duets stitching celebrity original with creator interpretations",
+      contentTheme: "Sound-first native content: dance challenges, lip-syncs, comedy skits on one recognizable hook",
+      cta: "Use the sound — join the moment",
+      sampleCaption: "This song lives in my head rent free 🎵 who's doing this challenge with me?",
+      hashtagBase: ["Challenge", "Summer", "Sound"],
+    },
+    {
+      name: "Momentum Waves",
+      bigIdea: "Never let the trend cool: weekly creator waves re-ignite the sound before decay sets in",
+      hook: "Week 1 ignites, week 2 amplifies with duets, week 3 remixes, week 4 crowns the best UGC",
+      keyVisual: "Trend graph overlay showing each wave re-spiking sound usage",
+      contentTheme: "Phased activation — anchor drops, duet chains, remix twists, UGC spotlights",
+      cta: "Your version could be next — post it",
+      sampleCaption: "Okay the remixes are getting out of hand 😂 keep them coming",
+      hashtagBase: ["Remix", "Trend", "UGC"],
+    },
+    {
+      name: "Everyday Anthem",
+      bigIdea: "Creators embed the song in relatable daily moments so the brand rides every scroll",
+      hook: "Not an ad — the soundtrack to commutes, coffee runs, and summer plans",
+      keyVisual: "POV lifestyle clips cut to the hook's beat drop",
+      contentTheme: "Comedy and relatable skits where the sound punchlines real-life situations",
+      cta: "Tag the friend who does this",
+      sampleCaption: "POV: your ringtone is the song of the summer 📱",
+      hashtagBase: ["POV", "Relatable", "SummerVibes"],
+    },
+  ],
   general: [
     {
       name: "Brand Story",
@@ -304,6 +336,10 @@ const CONCEPT_ENHANCEMENTS: Record<
     { targetEmotion: "Empowerment & clarity", contentStyle: "Animated explainer", creatorStyle: "Finance educator", visualDirection: "Clean infographics, blue/green palette" },
     { targetEmotion: "Security & progress", contentStyle: "Life stage storytelling", creatorStyle: "Professional lifestyle creator", visualDirection: "Warm progression montage" },
     { targetEmotion: "Trust & credibility", contentStyle: "Testimonial interview", creatorStyle: "Verified customer creator", visualDirection: "Direct-to-camera, neutral backdrop" },
+  ],
+  telecom: [
+    { targetEmotion: "Belonging to the moment", contentStyle: "Native, sound-first, fast-cut", creatorStyle: "Trend-fluent entertainers with duet-friendly formats", visualDirection: "Bright summer palettes, on-beat cuts, captions burned in" },
+    { targetEmotion: "Playful competitiveness", contentStyle: "Challenge and remix mechanics", creatorStyle: "Dance and comedy creators who spark imitation", visualDirection: "Vertical full-frame, hook within first 2 seconds" },
   ],
   general: [
     { targetEmotion: "Curiosity & discovery", contentStyle: "Brand narrative reel", creatorStyle: "Category creator", visualDirection: "Brand colors, hero product focus" },
@@ -377,6 +413,12 @@ const MIX_BY_INDUSTRY: Record<CampaignIndustry, CreatorMixTier[]> = {
     { tier: "Nano", count: 3, percent: 10, reasoning: "Customer testimonial style UGC" },
     { tier: "Celebrity", count: 0, percent: 5, reasoning: "Credibility over fame in finance" },
   ],
+  telecom: [
+    { tier: "Celebrity", count: 2, percent: 25, reasoning: "Celebrity anchors launch the sound with instant mass awareness" },
+    { tier: "Macro", count: 4, percent: 30, reasoning: "Macro entertainers convert awareness into challenge participation" },
+    { tier: "Micro", count: 12, percent: 30, reasoning: "Micro trend waves keep the sound alive week over week" },
+    { tier: "Nano", count: 15, percent: 15, reasoning: "Nano creators make participation feel organic and community-owned" },
+  ],
   general: [
     { tier: "Mid", count: 3, percent: 30, reasoning: "Core campaign creators" },
     { tier: "Micro", count: 5, percent: 40, reasoning: "Engagement-focused content" },
@@ -436,6 +478,14 @@ const CONTENT_DELIVERABLES: Record<
     { platform: "LinkedIn", contentType: "Posts", quantity: 4, creatorTier: "Mid", objective: "Trust" },
     { platform: "YouTube", contentType: "Explainers", quantity: 3, creatorTier: "Macro", objective: "Adoption" },
     { platform: "Instagram", contentType: "Stories", quantity: 8, creatorTier: "Micro", objective: "Engagement" },
+  ],
+  telecom: [
+    { platform: "TikTok", contentType: "Sound launch anthem video", quantity: 2, creatorTier: "Celebrity", objective: "Awareness" },
+    { platform: "TikTok", contentType: "Dance challenge videos", quantity: 8, creatorTier: "Macro", objective: "Engagement" },
+    { platform: "TikTok", contentType: "Comedy skits / lip-syncs on the sound", quantity: 12, creatorTier: "Micro", objective: "UGC volume" },
+    { platform: "TikTok", contentType: "Duet / stitch reaction chains", quantity: 10, creatorTier: "Micro", objective: "Engagement" },
+    { platform: "Instagram", contentType: "Reels adaptations of top TikToks", quantity: 6, creatorTier: "Macro", objective: "Awareness" },
+    { platform: "Instagram", contentType: "Stories countdowns + UGC reshares", quantity: 12, creatorTier: "Nano", objective: "UGC volume" },
   ],
   general: [
     { platform: "TikTok", contentType: "Videos", quantity: 5, creatorTier: "Micro", objective: "Awareness" },
@@ -503,6 +553,12 @@ export function deriveWhyAiInsights(
       evidence: "38 banking campaigns · compliance pass rate 100% · lead CPL -22% vs avg",
       source: "Industry",
       confidence: 90,
+    },
+    telecom: {
+      rationale: "AI matched trend-fluent entertainers whose audiences drive sound adoption and challenge participation",
+      evidence: "71 mass-awareness campaigns · avg fit score 84/100 · trend participation lift 3.2x",
+      source: "Historical",
+      confidence: 88,
     },
     general: {
       rationale: "AI analyzed creator profiles to find optimal category fit",
@@ -581,6 +637,7 @@ export function deriveExecutiveStrategyFields(
     baby: "Building trust with skeptical first-time parents in crowded diaper category",
     retail: "Driving product trial and conversion during competitive launch window",
     finance: "Overcoming trust barriers and regulatory constraints in financial product adoption",
+    telecom: "Making a branded sound feel organic enough that the market adopts it as their own",
     general: "Breaking through category noise with authentic creator-led storytelling",
   };
 
@@ -590,6 +647,7 @@ export function deriveExecutiveStrategyFields(
     baby: "Moms trust other moms 3x more than brand messaging for product decisions",
     retail: "Try-on and fit content reduces purchase hesitation by 40% in sportswear",
     finance: "Financial decisions require repeated exposure to trusted educators before action",
+    telecom: "Trends live or die in the first 72 hours — sustained creator waves beat one-off celebrity posts",
     general: "Creator recommendations drive 4x higher engagement than brand-owned content",
   };
 
@@ -599,6 +657,7 @@ export function deriveExecutiveStrategyFields(
     baby: "Awareness → Peer validation → Trial → Loyalty",
     retail: "Hype → Try-on → Purchase → Advocacy",
     finance: "Education → Trust building → Consideration → Application",
+    telecom: "Hear the sound → Watch the challenge → Create with it → Share and tag",
     general: "Awareness → Engagement → Consideration → Action",
   };
 
@@ -608,6 +667,7 @@ export function deriveExecutiveStrategyFields(
     baby: "Verified mom creator community with authentic parenting content",
     retail: "Multi-tier creator mix optimized for launch velocity and conversion",
     finance: "Compliance-vetted finance educators with regulatory-safe content track record",
+    telecom: "Trend-native creator waves with duet mechanics and reactive amplification budget",
     general: "AI-optimized creator mix based on category performance data",
   };
 
@@ -963,6 +1023,7 @@ export function deriveSuccessProbability(
     baby: 88,
     retail: 82,
     finance: 74,
+    telecom: 82,
     general: 75,
   };
 
@@ -996,6 +1057,12 @@ export function deriveSuccessProbability(
       weaknesses: ["Extended legal review cycles", "Lower organic ER in finance vertical"],
       risks: ["Regulatory non-compliance in scripts", "Low trust transfer from entertainment creators"],
       improvements: ["Mandatory compliance review pre-shoot", "Prioritize verified educators over reach", "Use demo environments for app screenshots"],
+    },
+    telecom: {
+      strengths: ["Celebrity anchors guarantee launch reach", "Wave-based activation sustains momentum past the usual 72-hour decay", "Sound-first formats are native to platform algorithms"],
+      weaknesses: ["Trend adoption is winner-takes-most — slow starts are hard to recover", "Branded sounds face skepticism if creators feel scripted", "Peak-summer creator calendars limit availability"],
+      risks: ["Competing viral moments can bury the sound", "Challenge mechanics may skew younger than target", "Platform algorithm shifts mid-flight"],
+      improvements: ["Reserve reactive budget to boost breakout creators within 24h", "Pre-clear duet/stitch permissions with all anchors", "Localize challenge mechanics per market dialect"],
     },
     general: {
       strengths: ["Balanced creator mix", "Multi-platform reach", "Flexible content plan"],
@@ -1078,6 +1145,11 @@ export function deriveOpportunities(
       { category: "Budget Optimization", title: "Shift 5% to LinkedIn paid", description: "LinkedIn CPL 35% lower than Instagram for finance products in UAE", impact: "high", source: "Historical" },
       { category: "Content Gap", title: "Life milestone banking content", description: "Competitors focus on product features — life event storytelling underserved", impact: "medium", source: "Industry" },
     ],
+    telecom: [
+      { category: "Momentum", title: "Reactive boost pool", description: "Hold 10% amplification to double-down on breakout creators within 24 hours of a spike", impact: "high", source: "Historical" },
+      { category: "Untapped Formats", title: "Remix drop week 3", description: "A sped-up / regional remix re-ignites sound usage when the original curve decays", impact: "high", source: "Industry" },
+      { category: "Missing Platforms", title: "YouTube Shorts compilation", description: "Best-of UGC compilations extend reach beyond TikTok-first audiences", impact: "medium", source: "Industry" },
+    ],
     general: [
       { category: "Untapped Audiences", title: "Secondary demographic segment", description: "Brief analysis suggests 30% reach opportunity in adjacent audience", impact: "medium", source: "AI" },
       { category: "Missing Platforms", title: "YouTube long-form", description: "Category content performs well on YouTube — not in current plan", impact: "medium", source: "Industry" },
@@ -1108,6 +1180,7 @@ export function deriveExecutiveSummary(
     baby: `${client} launches with an authenticity-first UGC strategy activating mom creators on Instagram and TikTok. The ${weeks}-week plan builds purchase trust through peer validation at scale — 80+ authentic reviews targeted.`,
     retail: `${client} product launch demands high-velocity creator activation across nano, micro, and mid tiers. The ${weeks}-week plan front-loads try-on and fit content to drive conversion during the competitive launch window.`,
     finance: `${client} requires a trust-building campaign through verified finance educators on Instagram, LinkedIn, and YouTube. The ${weeks}-week plan prioritizes compliance-safe content and repeated exposure to drive card adoption.`,
+    telecom: `${client} needs a cultural-moment campaign that turns the brand sound into the market's summer anthem. The ${weeks}-week plan launches with celebrity anchors, then sustains trend momentum through weekly creator waves — dance challenges, duets, and remixes — backed by reactive amplification on breakout content.`,
     general: `${client} campaign leverages creator-led storytelling across Instagram and TikTok. The ${weeks}-week integrated plan balances awareness, engagement, and conversion objectives.`,
   };
 
@@ -1173,6 +1246,7 @@ export function deriveVendorRankingFactors(
     baby: 5.2,
     retail: 3.9,
     finance: 2.4,
+    telecom: 5.8,
     general: 4.0,
   };
 

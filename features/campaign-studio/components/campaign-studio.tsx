@@ -116,13 +116,27 @@ export function CampaignStudio({
               </h2>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">
-              Step {studio.currentStep}/{studio.totalSteps}
-            </p>
-            <p className="text-sm font-semibold text-[#1D9E75]">
-              {studio.progressPercent}%
-            </p>
+          <div className="flex items-center gap-3">
+            {studio.campaignObject?.id && studio.progressPercent >= 100 ? (
+              <a
+                href={`/api/ai/campaign-objects/${studio.campaignObject.id}/export?format=html${
+                  conversationId ? `&conversationId=${encodeURIComponent(conversationId)}` : ""
+                }`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-[#1D9E75]/40 bg-[#1D9E75]/5 px-3 py-1.5 text-xs font-semibold text-[#1D9E75] transition-colors hover:bg-[#1D9E75]/10"
+              >
+                Export proposal
+              </a>
+            ) : null}
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">
+                Step {studio.currentStep}/{studio.totalSteps}
+              </p>
+              <p className="text-sm font-semibold text-[#1D9E75]">
+                {studio.progressPercent}%
+              </p>
+            </div>
           </div>
           {studioModeToggle}
         </div>

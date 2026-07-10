@@ -66,6 +66,44 @@ test("client comes from an explicit Client label — brand lines never leak into
   assert.equal(facts.brandName, "Nido");
 });
 
+test("e& trend brief: client, brand, industry, and multi-line deliverables resolve", () => {
+  const brief = [
+    "We have an upcoming summer campaign for e&, we're planning to launch an influencer campaign across TikTok to encourage audiences to engage with the campaign song and generate maximum buzz.",
+    "",
+    "Campaign is supposed to launch Mid July, and the budget is EGP 1M.",
+    "",
+    "Agency Deliverables:",
+    "Influencer recommendation list with rationale.",
+    "Activation strategy by creator tier and content category.",
+    "Content concepts tailored to each creator.",
+    "Posting timeline to sustain momentum throughout the campaign.",
+    "Amplification recommendations to maximize trend adoption.",
+    "Performance measurement report including reach, engagement, video views, sound usage, UGC volume, and trend participation",
+    "",
+    "Goal: Turn the campaign song into one of the biggest TikTok sounds of Summer 2026",
+  ].join("\n");
+
+  const facts = extractCampaignFacts({ rawMessage: brief });
+  assert.equal(facts.clientName, "e&");
+  assert.equal(facts.brandName, "e&");
+  assert.equal(facts.industry, "Telecom");
+  assert.deepEqual(facts.budget, { amount: 1_000_000, currency: "EGP" });
+  assert.equal(facts.deliverables?.length, 6);
+  assert.equal(facts.deliverables?.[0], "Influencer recommendation list with rationale");
+  assert.ok(facts.deliverables?.[5]?.startsWith("Performance measurement report"));
+  // The old bug: "launch an influencer campaign" must never become the brand.
+  assert.notEqual(facts.brandName, "an influencer");
+  assert.notEqual(facts.clientName, "an influencer");
+});
+
+test("article-led captures never become brand or client", () => {
+  const facts = extractCampaignFacts({
+    rawMessage: "We're planning to launch an influencer campaign across TikTok this summer.",
+  });
+  assert.notEqual(facts.brandName, "an influencer");
+  assert.notEqual(facts.clientName, "an influencer");
+});
+
 test("labeled deliverables are extracted as a list", () => {
   const facts = extractCampaignFacts({
     rawMessage:

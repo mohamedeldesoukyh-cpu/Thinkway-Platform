@@ -16,6 +16,7 @@ export type CampaignIndustry =
   | "baby"
   | "retail"
   | "finance"
+  | "telecom"
   | "general";
 
 export type IndustryProfile = {
@@ -48,6 +49,12 @@ const INDUSTRY_SIGNALS: Array<{ industry: CampaignIndustry; patterns: RegExp[] }
     patterns: [/adidas|nike|sportswear|retail|fashion|apparel|sneaker|store launch|coca-?cola|pepsi|beverage|fmcg/i],
   },
   {
+    industry: "telecom",
+    patterns: [
+      /\be&(?!\w)|etisalat|vodafone|\bstc\b|\bzain\b|telecom|telco|mobile operator|mobile network|\b5g\b/i,
+    ],
+  },
+  {
     industry: "finance",
     patterns: [/emirates nbd|bank|finance|fintech|insurance|credit card|wealth/i],
   },
@@ -78,6 +85,23 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     ],
     cpmAssumption: "$18–$32 CPM (premium inventory)",
     cpeAssumption: "$0.45–$0.85 CPE (luxury benchmark)",
+  },
+  telecom: {
+    label: "Telecom",
+    campaignType: "Mass awareness & cultural moments",
+    platforms: ["TikTok", "Instagram", "YouTube"],
+    creatorMixSummary: "Mega + Macro anchors · Micro/Nano trend waves",
+    estimatedReach: "5M–12M impressions",
+    budgetWeights: [
+      { category: "Creator fees", percent: 55 },
+      { category: "Content production", percent: 10 },
+      { category: "Usage rights", percent: 8 },
+      { category: "Paid amplification", percent: 17 },
+      { category: "Agency coordination", percent: 7 },
+      { category: "Contingency reserve", percent: 3 },
+    ],
+    cpmAssumption: "$4–$9 CPM (mass reach inventory)",
+    cpeAssumption: "$0.05–$0.15 CPE (telecom/mass benchmark)",
   },
   tourism: {
     label: "Tourism",
@@ -177,12 +201,16 @@ export function getIndustryProfile(
   return { industry, ...base, estimatedReach: reach };
 }
 
+/** MENA-relevant companies recognized without an explicit label (client or brand). */
+export const KNOWN_COMPANY_PATTERN =
+  /\b(e&(?!\w)|(?:Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi|Etisalat|Vodafone|Orange Egypt|STC|Zain|Careem|Talabat|Nestl[eé](?:\s+Egypt)?|L'Or[eé]al(?:\s+Paris)?)\b)/i;
+
 export function resolveClientFromBrief(text: string): string {
   // Client resolution must never leak brand lines or product names into the
   // client field: only an explicit "Client:" label or a known company counts.
   const patterns = [
     /\bclient(?:\s*name)?\s*(?:->|[:：])\s*(.+?)(?:\n|$)/i,
-    /\b(Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi)\b/i,
+    KNOWN_COMPANY_PATTERN,
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
@@ -212,6 +240,14 @@ export function getIndustryKpis(
       : `${base}M impressions`;
 
   switch (industry) {
+    case "telecom":
+      return [
+        { metric: "Reach", target: formatReach(6), platform: "TikTok" },
+        { metric: "Video views", target: formatReach(9).replace("impressions", "views"), platform: "TikTok" },
+        { metric: "Sound usage / creations", target: "25K+ UGC creations", benchmark: "Viral sound benchmark" },
+        { metric: "Trend participation", target: "Top 10 sound in market", benchmark: "TikTok Sounds chart" },
+        { metric: "Engagement rate", target: "6%+ avg", benchmark: "Telecom mass campaigns 4–8%" },
+      ];
     case "luxury":
       return [
         { metric: "Brand favorability lift", target: "+12–18 pts", benchmark: "Luxury benchmark +10" },
@@ -610,6 +646,38 @@ const BUDGET_REASONS: Record<
       confidence: 78,
     },
   },
+  telecom: {
+    "Creator fees": {
+      reason: "Mass-reach roster (mega/macro anchors + micro waves) carries trend campaigns — 50–60% creator allocation in telecom activations",
+      source: "Historical",
+      confidence: 90,
+    },
+    "Content production": {
+      reason: "Native, fast-turnaround content — sound-first formats need minimal production overhead",
+      source: "Industry",
+      confidence: 88,
+    },
+    "Usage rights": {
+      reason: "Sound and top-performing UGC boosted across brand channels during peak weeks",
+      source: "Industry",
+      confidence: 85,
+    },
+    "Paid amplification": {
+      reason: "Spark Ads on top creator posts sustain trend momentum between organic waves",
+      source: "Historical",
+      confidence: 91,
+    },
+    "Agency coordination": {
+      reason: "High-velocity creator ops — weekly waves need active coordination",
+      source: "Industry",
+      confidence: 86,
+    },
+    "Contingency reserve": {
+      reason: "Reactive budget to double-down on breakout creators mid-flight",
+      source: "Industry",
+      confidence: 84,
+    },
+  },
   general: {
     "Creator fees": {
       reason: "Core creator investment aligned to category benchmarks",
@@ -672,6 +740,7 @@ export function getGroundedKpis(
     baby: 124,
     retail: 156,
     finance: 38,
+    telecom: 71,
     general: 62,
   };
 
@@ -718,6 +787,13 @@ export function getGroundedKpis(
       { reason: "Trust score from verified finance creator audience ratings", calculationSource: "Creator intelligence", confidence: 92 },
       { reason: "YouTube explainer completion from finance vertical benchmarks", calculationSource: "Industry benchmark", confidence: 88 },
       { reason: "CPL from budget ÷ target lead count", calculationSource: "Budget efficiency model", confidence: 86 },
+    ],
+    telecom: [
+      { reason: "Reach model from 71 MENA mass-awareness campaigns with trend mechanics", calculationSource: "71 historical campaigns", confidence: 89 },
+      { reason: "TikTok view projections from mega/macro anchor roster + duet waves", calculationSource: "Creator reach aggregation", confidence: 90 },
+      { reason: "Sound adoption curve from comparable branded-sound launches", calculationSource: "Viral sound benchmark", confidence: 84 },
+      { reason: "Trend chart position from seeded challenge + paid spark support", calculationSource: "TikTok Sounds chart history", confidence: 80 },
+      { reason: "Engagement benchmarks for telecom mass campaigns in MENA", calculationSource: "Industry benchmark", confidence: 88 },
     ],
     general: [
       { reason: "Reach model from creator roster aggregation", calculationSource: "Creator reach aggregation", confidence: 85 },

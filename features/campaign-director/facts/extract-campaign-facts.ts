@@ -14,6 +14,10 @@ import {
   resolveClientFromBrief,
 } from "@/features/campaign-studio/services/industry-intelligence";
 import { parseDurationWeeks } from "@/features/campaign-studio/services/timeline-duration";
+import {
+  isValidBrandName,
+  sanitizeBrandName,
+} from "@/features/campaign-intelligence-profile/services/normalization/validators";
 
 import type {
   CampaignFacts,
@@ -38,10 +42,33 @@ function setField<T extends CampaignFactsField>(
   facts.sources[field] = source;
 }
 
+/**
+ * "campaign for <X>" names the paying client/brand — the capture must accept
+ * brand punctuation ("e&", "P&G", "L'Oréal") and never swallow article-led
+ * phrases ("launch an influencer campaign" → "an influencer").
+ */
+const FOR_ATTRIBUTION_PATTERN =
+  /(?:campaign|activation|launch)\s+for\s+([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})/i;
+
+const LAUNCH_PATTERN =
+  /(?:launch|create\s+(?:a\s+)?(?:new\s+)?campaign\s+for)\s+([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})/i;
+
+const ARTICLE_LED = /^(?:a|an|the|our|your|their|this|that|new)\b/i;
+const GENERIC_CAMPAIGN_NOUN =
+  /^(?:influencer|creator|marketing|social|media|summer|winter|awareness|ugc|brand)\b/i;
+
+function cleanEntityCapture(raw: string | undefined): string | undefined {
+  const value = raw?.trim().replace(/[.,;:]+$/, "");
+  if (!value) return undefined;
+  if (ARTICLE_LED.test(value) || GENERIC_CAMPAIGN_NOUN.test(value)) return undefined;
+  return isValidBrandName(value) ? sanitizeBrandName(value) : undefined;
+}
+
 function extractBrandName(input: CampaignFactsExtractInput): {
   value?: string;
   source: CampaignFactsSource;
   confidence: number;
+  fromForAttribution?: boolean;
 } {
   if (input.brandName?.trim()) {
     return { value: input.brandName.trim(), source: "brief", confidence: 0.95 };
@@ -50,11 +77,21 @@ function extractBrandName(input: CampaignFactsExtractInput): {
   const parsed = parseBrandFromText(input.rawMessage);
   if (parsed) return { value: parsed, source: "brief", confidence: 0.9 };
 
-  const match = input.rawMessage.match(
-    /(?:campaign\s+for|launch|create\s+(?:a\s+)?(?:new\s+)?campaign\s+for?)\s+([A-Za-z0-9][\w\s-]*?)(?:\s+campaign|\s+in\s|\s*$|[.,!?])/i
+  const forAttribution = cleanEntityCapture(
+    input.rawMessage.match(FOR_ATTRIBUTION_PATTERN)?.[1]
   );
-  if (match?.[1]?.trim()) {
-    return { value: match[1].trim(), source: "brief", confidence: 0.85 };
+  if (forAttribution) {
+    return {
+      value: forAttribution,
+      source: "brief",
+      confidence: 0.9,
+      fromForAttribution: true,
+    };
+  }
+
+  const launched = cleanEntityCapture(input.rawMessage.match(LAUNCH_PATTERN)?.[1]);
+  if (launched) {
+    return { value: launched, source: "brief", confidence: 0.8 };
   }
 
   const inferredClient = resolveClientFromBrief(input.rawMessage);
@@ -100,12 +137,41 @@ function extractGeography(text: string): string[] {
   return [...deduped.values()];
 }
 
+const DELIVERABLES_LABEL = /\b(?:agency\s+)?deliverables?\s*(?:->|[:：])\s*(.*)$/i;
+const NEXT_LABEL_LINE = /^\s*[A-Za-z][A-Za-z\s/&]{0,40}[:：]\s*/;
+
 function extractDeliverables(text: string): string[] {
-  const labeled = text.match(/\bdeliverables?\s*(?:->|[:：])\s*(.+?)(?:\.(?:\s|$)|\n|$)/i);
-  if (!labeled?.[1]) return [];
-  return labeled[1]
-    .split(/[,;·|]/)
-    .map((d) => d.trim())
+  const lines = text.split(/\r?\n/);
+  const items: string[] = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const label = lines[i].match(DELIVERABLES_LABEL);
+    if (!label) continue;
+
+    // Same-line list: "Deliverables: 2 reels, 4 stories." — when the label sits
+    // mid-sentence, stop the inline list at the first sentence boundary.
+    const labelAtLineStart = /^\s*(?:agency\s+)?deliverables?/i.test(lines[i]);
+    let inline = label[1]?.trim() ?? "";
+    if (!labelAtLineStart) {
+      inline = inline.split(/\.(?:\s|$)/)[0] ?? "";
+    }
+    inline = inline.replace(/\.\s*$/, "").trim();
+    if (inline) {
+      items.push(...inline.split(/[,;·|]/));
+    }
+
+    // Following bullet/plain lines until a blank line or the next "Label:" line.
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const line = lines[j].trim();
+      if (!line) break;
+      if (NEXT_LABEL_LINE.test(line) && !/^[-•*]/.test(lines[j].trim())) break;
+      items.push(line.replace(/^[-•*\d.)\s]+/, ""));
+    }
+    break;
+  }
+
+  return items
+    .map((d) => d.trim().replace(/\.$/, ""))
     .filter(Boolean)
     .slice(0, 12);
 }
@@ -200,6 +266,9 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
     const client = resolveClientFromBrief(text);
     if (client && client !== "Brand Client") {
       setField(facts, "clientName", client, "inferred", 0.7);
+    } else if (brand.fromForAttribution && brand.value) {
+      // "campaign for e&" — the named company is the paying client.
+      setField(facts, "clientName", brand.value, "brief", 0.85);
     }
   }
 
