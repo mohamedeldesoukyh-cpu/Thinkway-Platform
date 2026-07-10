@@ -21,6 +21,15 @@ function defaultCreatorTierStrategy(
     ];
   }
 
+  if (profile.label === "Telecom") {
+    return [
+      { tier: "Celebrity", allocationPercent: 25, why: "Celebrity anchors launch the sound with instant mass awareness" },
+      { tier: "Macro", allocationPercent: 30, why: "Macro entertainers convert awareness into challenge participation" },
+      { tier: "Micro", allocationPercent: 30, why: "Micro trend waves keep the sound alive week over week" },
+      { tier: "Nano", allocationPercent: 15, why: "Nano creators make participation feel organic and community-owned" },
+    ];
+  }
+
   if (/beverage|cpg|fmcg/i.test(profile.label)) {
     return [
       { tier: "Mega", allocationPercent: 20, why: "Mega creators anchor mass reach for summer engagement peaks" },

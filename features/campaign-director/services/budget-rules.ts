@@ -219,7 +219,10 @@ export function buildDirectorBudgetFromStrategy(
   const currency =
     campaignFacts?.budget?.currency ?? strategy.understanding.budget?.currency ?? "USD";
 
-  const splitKeywords = detectBudgetSplitKeywords(briefText, campaignFacts);
+  // Split keywords must come from the brief itself — generated strategy text
+  // mentions "production"/"amplification" and must never split the budget.
+  const briefSource = campaignFacts?.rawBriefExcerpt?.trim() || briefText;
+  const splitKeywords = detectBudgetSplitKeywords(briefSource, campaignFacts);
   let allocations = deriveInfluencerBudgetAllocations(industry, strategy.narrative, total);
 
   if (splitKeywords.length === 0) {

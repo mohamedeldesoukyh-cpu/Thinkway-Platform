@@ -248,11 +248,13 @@ export function buildBudgetSectionDataFromFacts(
   const industry = detectIndustryFromBrief(facts.industry ?? contextText);
   const total = facts.budget?.amount;
   const currency = resolveFactsCurrency(facts);
-  const allocations = briefRequiresOptionalCategories(contextText, facts)
-    ? deriveInfluencerBudgetAllocations(industry, contextText, total)
+  // Budget split decisions read the brief itself, never generated section text.
+  const briefSource = facts.rawBriefExcerpt?.trim() || contextText;
+  const allocations = briefRequiresOptionalCategories(briefSource, facts)
+    ? deriveInfluencerBudgetAllocations(industry, briefSource, total)
     : buildSingleCreatorFeesAllocation(
         total,
-        defaultCreatorFeesRationale(contextText, facts)
+        defaultCreatorFeesRationale(briefSource, facts)
       );
 
   return { currency, total, allocations };

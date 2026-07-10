@@ -16,6 +16,12 @@ import { normalizeCampaignIntelligenceProfile } from "../services/normalize-prof
 import type { CampaignIntelligenceProfile } from "../types/profile";
 
 import { mapBrowseCreatorToSearchResult } from "@/features/campaign-studio/services/creator-platform-utils";
+import {
+  buildCreatorContentIdea,
+  composeCreatorSlate,
+} from "@/features/campaign-studio/services/creator-slate";
+import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
+import { getIndustryCreatorMix } from "@/features/campaign-studio/services/presentation-intelligence";
 
 /** Studio + tools — search creators from CIP with coverage backfill + re-browse. */
 export async function searchCreatorsFromCampaignIntelligenceProfile(
@@ -112,9 +118,49 @@ export async function searchCreatorsFromProfileData(
 
   const { items: dedupedCreators } = dedupeByCreatorId(mappedCreators, (c) => c.id);
 
+  // Strategy coherence: recommendations must execute the strategy — explicit
+  // brief platforms are a hard constraint and the slate tracks the industry
+  // tier mix (the same mix the strategy document uses).
+  const industry = detectIndustryFromBrief(
+    profile.industry,
+    profile.rawBriefExcerpt,
+    profile.objective
+  );
+  const tierMix = getIndustryCreatorMix(industry).map((t) => ({
+    tier: t.tier,
+    percent: t.percent,
+  }));
+  const slate = composeCreatorSlate(dedupedCreators, {
+    platforms: preferredPlatforms,
+    tierMix,
+  });
+  const factsLite = {
+    objective: profile.objective ?? profile.objectives?.join(" "),
+    rawBriefExcerpt: profile.rawBriefExcerpt,
+  };
+  const slateCreators = slate.creators.map((creator, index) => ({
+    ...creator,
+    contentIdea:
+      creator.contentIdea ?? buildCreatorContentIdea(creator, factsLite, index),
+  }));
+
+  searchTrace(
+    "cip_search_slate_composition",
+    {
+      profileId,
+      industry,
+      requestedMix: slate.meta.requestedMix,
+      achievedMix: slate.meta.achievedMix,
+      platformFiltered: slate.meta.platformFiltered,
+      platformFallback: slate.meta.platformFallback,
+    },
+    { path: "ai" }
+  );
+
   return {
-    creators: dedupedCreators,
+    creators: slateCreators,
     total: result.total,
     backfill: result.backfill,
+    slate: slate.meta,
   };
 }

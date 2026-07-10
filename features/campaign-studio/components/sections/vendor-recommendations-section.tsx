@@ -41,6 +41,7 @@ import {
   type CreatorTierLabel,
 } from "@/lib/creators/creator-tier";
 import { useCreatorHydration } from "../../hooks/use-creator-hydration";
+import { buildCreatorContentIdea } from "../../services/creator-slate";
 import {
   getCampaignFacts,
   resolveInfluencerEstimateCurrency,
@@ -82,6 +83,7 @@ type DisplayVendor = {
   thinkwayScore?: number;
   matchPercent?: number;
   tier?: CreatorTierLabel;
+  contentIdea?: string;
 };
 
 function PlatformBadge({ platform }: { platform: string }) {
@@ -292,6 +294,8 @@ export function VendorRecommendationsSection({
     mapperOptions
   );
 
+  const campaignFacts = getCampaignFacts(campaignObject);
+
   const vendors: DisplayVendor[] = useMemo(
     () =>
       hydrated.length > 0
@@ -317,19 +321,29 @@ export function VendorRecommendationsSection({
                 thinkwayScore: v.thinkwayScore,
                 matchPercent: v.matchPercent,
                 tier: v.tier,
+                contentIdea: buildCreatorContentIdea(
+                  { categories: [v.audienceSummary ?? ""] },
+                  campaignFacts,
+                  i
+                ),
               })),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items
         : dedupeByCreatorId(
             parsedVendors
               .filter((v) => !v.id || vendorDecisions[v.id] !== "rejected")
-              .map((v) => ({
+              .map((v, i) => ({
                 ...v,
                 tier: resolveCreatorTierLabel({ followers: v.followers }),
+                contentIdea: buildCreatorContentIdea(
+                  { categories: [v.reason ?? ""] },
+                  campaignFacts,
+                  i
+                ),
               })),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items,
-    [hydrated, parsedVendors, vendorDecisions]
+    [hydrated, parsedVendors, vendorDecisions, campaignFacts]
   );
 
   const visibleVendors = showAllVendors
@@ -492,6 +506,11 @@ export function VendorRecommendationsSection({
                 <p className="mt-1.5 break-words text-[11px] font-medium text-foreground">
                   Why: {grounding.whySelected}
                 </p>
+                {vendor.contentIdea ? (
+                  <p className="mt-1 break-words text-[11px] text-violet-700 dark:text-violet-300">
+                    Content concept: {vendor.contentIdea}
+                  </p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {grounding.factors.slice(0, 5).map((f) => (
                     <Badge

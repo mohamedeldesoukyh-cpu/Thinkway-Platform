@@ -254,7 +254,7 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
     extractedAt: now,
     confidence: {},
     sources: {},
-    rawBriefExcerpt: text.slice(0, 280),
+    rawBriefExcerpt: text.slice(0, 1500),
   };
 
   const brand = extractBrandName(input);

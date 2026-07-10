@@ -440,6 +440,11 @@ export function deriveCreatorMix(
   return MIX_BY_INDUSTRY[industry].filter((t) => t.percent > 0 || t.count > 0);
 }
 
+/** Strategy tier mix per industry — the SSOT the creator slate must track. */
+export function getIndustryCreatorMix(industry: CampaignIndustry): CreatorMixTier[] {
+  return MIX_BY_INDUSTRY[industry] ?? MIX_BY_INDUSTRY.general;
+}
+
 const CONTENT_DELIVERABLES: Record<
   CampaignIndustry,
   Array<{ platform: string; contentType: string; quantity: number; creatorTier: string; objective: string }>

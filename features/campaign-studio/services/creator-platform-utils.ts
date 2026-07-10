@@ -12,6 +12,12 @@ export type SearchCreatorCardItem = {
   profileUrl?: string;
   /** Campaign relevance % from CIP criteria scoring (Discovery AI parity). */
   campaignRelevanceScore?: number;
+  /** Creator content categories — drives per-creator content concepts. */
+  categories?: string[];
+  /** Follower tier label assigned by strategy-coherent slate composition. */
+  tier?: string;
+  /** Proposed content concept matched to the creator's category. */
+  contentIdea?: string;
 };
 
 /** Build external profile URL from platform + handle when DB URL is missing. */
@@ -108,5 +114,11 @@ export function mapBrowseCreatorToSearchResult(
     avatarUrl: avatarUrl || undefined,
     profileUrl: profileUrl || undefined,
     campaignRelevanceScore: creator.campaign_relevance_score ?? undefined,
+    categories: [
+      ...(creator.browse_category_tags ?? []),
+      ...creator.categories,
+      ...(creator.ai_category ? [creator.ai_category] : []),
+      ...(creator.ai_niche ? [creator.ai_niche] : []),
+    ].filter(Boolean),
   };
 }
