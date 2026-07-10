@@ -234,6 +234,40 @@ export class CampaignDirector {
   }
 }
 
+export type PersistWithFallbackResult = {
+  campaignObject: CampaignObject;
+  /** Set when the DB write failed and the object survived via memory + message metadata only. */
+  dbPersistError?: string;
+};
+
+/**
+ * Persist the director's object, falling back to memory-only persistence when the
+ * DB write fails. The completed workflow output must always reach the assistant
+ * message row (metadata carries the serialized object) — a campaign_objects write
+ * failure degrades durability but must never lose the user's finished campaign.
+ */
+export async function persistCampaignObjectWithFallback(
+  director: CampaignDirector,
+  conversationId: string,
+  options?: CampaignDirectorPersistOptions
+): Promise<PersistWithFallbackResult> {
+  try {
+    const campaignObject = await director.persist(conversationId, options);
+    return { campaignObject };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      "[workflow-lifecycle] campaign object DB persist failed — continuing with message-row persistence:",
+      message
+    );
+    const campaignObject = await director.persist(conversationId, {
+      ...options,
+      persistToDb: false,
+    });
+    return { campaignObject, dbPersistError: message };
+  }
+}
+
 /** Apply all completed task results from workflow state to a campaign object. */
 export function buildCampaignObjectFromWorkflowState(
   campaignObject: CampaignObject,

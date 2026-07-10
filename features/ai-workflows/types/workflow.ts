@@ -140,6 +140,8 @@ export interface WorkflowResponseMetadata {
   inferredFields?: string[];
   /** Canonical campaign state for create-campaign workflow (Sprint 8). */
   campaignObject?: Record<string, unknown>;
+  /** Set when the campaign_objects DB write failed and the object survives via message metadata only. */
+  campaignObjectDbPersistError?: string;
 }
 
 export interface WorkflowProgressEvent {

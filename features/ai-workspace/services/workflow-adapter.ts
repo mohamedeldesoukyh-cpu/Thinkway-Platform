@@ -11,6 +11,7 @@ import {
   CampaignDirector,
   attachCampaignObjectToSnapshot,
   loadCampaignObjectForConversation,
+  persistCampaignObjectWithFallback,
   serializeCampaignObject,
   type SaveCampaignObjectOptions,
 } from "@/features/campaign-intelligence";
@@ -169,7 +170,11 @@ async function enrichCampaignWorkflowMetadata(
   director.syncFromWorkflowState(execution.state);
   director.syncFromMetadata(metadata);
 
-  const campaignObject = await director.persist(
+  // Never let a campaign_objects DB failure destroy the finished workflow output:
+  // the assistant message row (metadata) and the context snapshot both carry the
+  // full serialized object, so Studio still renders after a fallback persist.
+  const { campaignObject, dbPersistError } = await persistCampaignObjectWithFallback(
+    director,
     input.conversationId,
     buildPersistenceOptions(options, "workflow_complete")
   );
@@ -179,6 +184,7 @@ async function enrichCampaignWorkflowMetadata(
     ...metadata,
     campaignObject: serialized,
     inferredFields: metadata.inferredFields ?? input.inferredFields,
+    ...(dbPersistError ? { campaignObjectDbPersistError: dbPersistError } : {}),
   };
 
   const contextSnapshotPatch = attachCampaignObjectToSnapshot(

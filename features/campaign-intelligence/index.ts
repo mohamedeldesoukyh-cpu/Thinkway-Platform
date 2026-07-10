@@ -60,10 +60,14 @@ export {
 export {
   CampaignDirector,
   buildCampaignObjectFromWorkflowState,
+  persistCampaignObjectWithFallback,
   processWorkflowForCampaignObject,
 } from "./services/campaign-director";
 
-export type { CampaignDirectorPersistOptions } from "./services/campaign-director";
+export type {
+  CampaignDirectorPersistOptions,
+  PersistWithFallbackResult,
+} from "./services/campaign-director";
 
 export {
   CampaignObjectPersistenceService,

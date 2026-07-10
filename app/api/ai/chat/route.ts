@@ -289,21 +289,30 @@ export async function POST(request: Request) {
             ...(workflowResult.contextSnapshotPatch ?? {}),
           };
 
-          await updateConversationContextSnapshot(
-            supabase,
-            conversationId,
-            auth.userId,
-            pausedSnapshot
-              ? { ...baseContextSnapshot, pausedWorkflow: pausedSnapshot }
-              : baseContextSnapshot
-          );
-
-          if (body.message.trim().length > 0) {
-            await updateConversationTitle(
+          // Auxiliary writes: the assistant message row is already persisted, so a
+          // snapshot/title failure must not abort the stream and hide the result.
+          try {
+            await updateConversationContextSnapshot(
               supabase,
               conversationId,
               auth.userId,
-              deriveConversationTitle(body.message)
+              pausedSnapshot
+                ? { ...baseContextSnapshot, pausedWorkflow: pausedSnapshot }
+                : baseContextSnapshot
+            );
+
+            if (body.message.trim().length > 0) {
+              await updateConversationTitle(
+                supabase,
+                conversationId,
+                auth.userId,
+                deriveConversationTitle(body.message)
+              );
+            }
+          } catch (auxError) {
+            console.error(
+              "[workflow-lifecycle] auxiliary conversation update failed:",
+              auxError instanceof Error ? auxError.message : auxError
             );
           }
 
