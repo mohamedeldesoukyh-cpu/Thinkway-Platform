@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Link2Icon,
   Loader2Icon,
@@ -22,7 +22,10 @@ import type {
 } from "@/features/campaign-intelligence/types/section-schemas";
 import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
 import { addCreatorByProfileUrlAction } from "@/features/discovery/add-creator-by-url/actions";
-import { refreshCreatorAllAction } from "@/features/discovery/enrichment/actions";
+import {
+  getCreatorEnrichmentStatusAction,
+  refreshCreatorAllAction,
+} from "@/features/discovery/enrichment/actions";
 import { pollCreatorAfterRefresh } from "@/features/discovery/enrichment/poll-creator-refresh";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
@@ -144,6 +147,43 @@ export function AddCreatorPanel({
     [conversationId, messageId, onDraftUpdated]
   );
 
+  // A persisted "pending" chip only means a poll was running in some session.
+  // Reconcile against the real backend status once per creator, and resume
+  // polling when the job is still queued/collecting — never trust the stored
+  // optimistic state after a reload.
+  const reconciledRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const change of stagedAdditions) {
+      if (change.kind !== "add_creator") continue;
+      const ref = change.creator;
+      if (ref.enrichmentStatus !== "pending") continue;
+      if (reconciledRef.current.has(ref.creatorId)) continue;
+      reconciledRef.current.add(ref.creatorId);
+
+      const influencerId = ref.creatorId.startsWith("inf:")
+        ? ref.creatorId.slice(4)
+        : !ref.creatorId.startsWith("dis:")
+          ? ref.creatorId
+          : null;
+      if (!influencerId) continue;
+
+      void getCreatorEnrichmentStatusAction(influencerId).then((status) => {
+        if (status === "completed") return setEnrichment(ref.creatorId, "enriched");
+        if (status === "failed" || status === "pending") {
+          // "pending" here means no job and no queued row — enrichment is not running.
+          return setEnrichment(ref.creatorId, "failed");
+        }
+        // queued / collecting — a job really is in flight; resume the poll.
+        return pollCreatorAfterRefresh(
+          { unifiedId: ref.creatorId, influencerId },
+          { onUpdated: () => undefined }
+        ).then((terminal) =>
+          setEnrichment(ref.creatorId, terminal === "completed" ? "enriched" : "failed")
+        );
+      });
+    }
+  }, [stagedAdditions, setEnrichment]);
+
   const enrichStagedCreator = useCallback(
     async (ref: StudioDraftCreatorRef) => {
       const influencerId = ref.creatorId.startsWith("inf:")
@@ -214,10 +254,12 @@ export function AddCreatorPanel({
         toast.error(result.message);
         return;
       }
+      // Status must mirror the backend: only a confirmed queue insert may show
+      // progress; anything else stays "not enriched" with the server's reason.
       const ref = toDraftRef(
         result.creator,
         "external_url",
-        result.enrichmentQueued ? "pending" : "enriched"
+        result.enrichmentQueued ? "pending" : "not_requested"
       );
       const staged = await stageAddition(ref);
       if (!staged) return;
@@ -231,6 +273,8 @@ export function AddCreatorPanel({
         ).then((status) =>
           setEnrichment(ref.creatorId, status === "completed" ? "enriched" : "failed")
         );
+      } else if (!result.enrichmentQueued) {
+        toast.warning("Creator added without enrichment", { description: result.message });
       }
     } finally {
       setAddingUrl(false);

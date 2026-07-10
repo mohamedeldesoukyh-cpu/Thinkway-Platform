@@ -133,14 +133,21 @@ function getSharedQueue(): Queue<CreatorEnrichmentJobPayload> | null {
   return sharedQueue;
 }
 
+/**
+ * Every enrichment job is enqueued with a priority (1–4), so pending jobs sit
+ * in BullMQ's `prioritized` state — NOT `waiting`. Any state list that omits
+ * `prioritized` is blind to the entire backlog.
+ */
+const PENDING_OR_ACTIVE_STATES = ["active", "waiting", "prioritized", "delayed"] as const;
+
 /** BullMQ depth for health checks and stale recovery. */
 export async function getCreatorEnrichmentQueueStats(): Promise<CreatorEnrichmentQueueStats | null> {
   const queue = getSharedQueue();
   if (!queue) return null;
   try {
-    const counts = await queue.getJobCounts("waiting", "active", "delayed");
+    const counts = await queue.getJobCounts("waiting", "prioritized", "active", "delayed");
     return {
-      waiting: counts.waiting ?? 0,
+      waiting: (counts.waiting ?? 0) + (counts.prioritized ?? 0),
       active: counts.active ?? 0,
       delayed: counts.delayed ?? 0,
     };
@@ -157,7 +164,7 @@ export async function creatorHasInflightEnrichmentJob(
   if (!queue) return false;
 
   try {
-    const jobs = await queue.getJobs(["active", "waiting", "delayed"], 0, 499);
+    const jobs = await queue.getJobs([...PENDING_OR_ACTIVE_STATES], 0, 499);
     return jobs.some((job) => job.data.influencerId === influencerId);
   } catch {
     return false;
@@ -194,7 +201,7 @@ export async function cancelCreatorEnrichmentJobs(
       }
     }
 
-    const jobs = await queue.getJobs(["active", "waiting", "delayed"], 0, 499);
+    const jobs = await queue.getJobs([...PENDING_OR_ACTIVE_STATES], 0, 499);
     for (const job of jobs) {
       if (job.data.influencerId !== influencerId) continue;
       if (job.id === `creator-enrich-${influencerId}`) continue;
