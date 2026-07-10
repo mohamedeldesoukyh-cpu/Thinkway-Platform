@@ -411,6 +411,7 @@ export type SummarySectionData = {
   creatorMix?: string;
   estimatedReach?: string;
   campaignStatus?: string;
+  deliverables?: string;
 };
 
 export type StrategySectionData = {

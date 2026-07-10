@@ -319,6 +319,10 @@ export function applyFactsToSummaryData(
     result.market = facts.geography.join(", ");
   }
 
+  if (facts.deliverables?.length) {
+    result.deliverables = facts.deliverables.join(", ");
+  }
+
   return result;
 }
 

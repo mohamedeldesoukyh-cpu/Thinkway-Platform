@@ -45,6 +45,7 @@ export function CampaignSummarySection({
     { label: "Budget", value: data.budget ?? "", accent: "green" as const },
     { label: "Duration", value: data.duration ?? "", accent: "neutral" as const },
     { label: "Campaign Type", value: data.campaignType ?? "", accent: "purple" as const },
+    { label: "Deliverables", value: data.deliverables ?? "", accent: "neutral" as const },
     { label: "Platforms", value: data.platforms ?? "", accent: "neutral" as const },
     { label: "Creator Mix", value: data.creatorMix ?? "", accent: "green" as const },
     { label: "Estimated Reach", value: data.estimatedReach ?? "", accent: "green" as const },
