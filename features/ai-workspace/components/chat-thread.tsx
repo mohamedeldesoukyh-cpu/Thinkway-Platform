@@ -41,6 +41,8 @@ type ChatThreadProps = {
   onRetryMessage?: (message: AiMessage) => void;
   onDeleteMessage?: (messageId: string) => void;
   className?: string;
+  /** In two-pane mode the studio lives in the side panel — render studio messages as compact summaries. */
+  studioInSidePanel?: boolean;
 };
 
 export function ChatThread({
@@ -58,6 +60,7 @@ export function ChatThread({
   onRetryMessage,
   onDeleteMessage,
   className,
+  studioInSidePanel = false,
 }: ChatThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -178,6 +181,7 @@ export function ChatThread({
             isLastUserMessage={message.id === lastUserMessageId}
             isEditing={editingUserMessageId === message.id}
             isStreaming={isStreaming}
+            studioInSidePanel={studioInSidePanel}
             onCardUpdated={onCardUpdated}
             onVendorDecisionsUpdated={onVendorDecisionsUpdated}
             onEdit={() => onEditStart?.(message.id)}
@@ -192,7 +196,7 @@ export function ChatThread({
         ))}
 
         {isStreaming ? (
-          streamingCampaignStudio && streamingStudioInput ? (
+          streamingCampaignStudio && streamingStudioInput && !studioInSidePanel ? (
             <div className="ai-msg-in px-4 sm:px-6">
               <CampaignStudioHost {...streamingStudioInput} />
             </div>
@@ -236,6 +240,7 @@ const MessageBubble = memo(function MessageBubble({
   isLastUserMessage,
   isEditing,
   isStreaming,
+  studioInSidePanel,
   onCardUpdated,
   onVendorDecisionsUpdated,
   onEdit,
@@ -249,6 +254,7 @@ const MessageBubble = memo(function MessageBubble({
   isLastUserMessage?: boolean;
   isEditing?: boolean;
   isStreaming?: boolean;
+  studioInSidePanel?: boolean;
   onCardUpdated?: (messageId: string, cardId: string, status: string) => void;
   onVendorDecisionsUpdated?: (
     messageId: string,
@@ -339,6 +345,33 @@ const MessageBubble = memo(function MessageBubble({
     const showCaption =
       caption.length > 0 &&
       !shouldHideCampaignStudioCaption(message.metadata, caption);
+
+    // Two-pane mode: the studio lives in the side panel. Show only the Copilot's
+    // change summary here so the conversation stays a conversation.
+    if (studioInSidePanel) {
+      const summaryText = caption || "Campaign updated in the Studio.";
+      return (
+        <div className="group ai-msg-in mb-[18px] space-y-2 px-4 sm:px-6">
+          <div className="flex gap-2.5">
+            <AiOrbIcon size="md" className="mt-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.35)]" />
+            <div className="max-w-[80%] space-y-1.5">
+              <div className="rounded-[4px_12px_12px_12px] border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-foreground">
+                {summaryText}
+              </div>
+              <p className="text-[11px] text-muted-foreground">Updated in the Campaign Studio →</p>
+            </div>
+          </div>
+          <MessageActions
+            role="assistant"
+            content={message.content}
+            disabled={actionsDisabled}
+            onRetry={onRetry}
+            onDelete={onDelete}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="group ai-msg-in mb-[18px] space-y-2 px-4 sm:px-6">
         {showCaption ? (

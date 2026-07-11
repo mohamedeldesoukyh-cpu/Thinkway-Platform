@@ -279,7 +279,10 @@ export async function POST(request: Request) {
                   agentId: "campaign-copilot",
                   copilotEdit: true,
                   copilotIntent: copilot.intentKind,
+                  // workflow:true + a campaign workflowId make this render as a studio.
+                  workflow: true,
                   workflowId,
+                  workflowName: "Campaign Studio",
                   workflowStatus: "complete",
                   campaignObject: serializeCampaignObject(copilot.campaignObject),
                 }

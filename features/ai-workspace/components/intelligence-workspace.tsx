@@ -17,6 +17,7 @@ import { AiChatInput } from "./ai-chat-input";
 import { AiWelcomeScreen } from "./ai-welcome-screen";
 import { AiWorkspaceTopbar } from "./ai-workspace-topbar";
 import { ChatThread } from "./chat-thread";
+import { CampaignStudioPanel, findLatestStudioMessage } from "./campaign-studio-panel";
 import { ConversationList } from "./conversation-list";
 import { SuggestedActionsBar } from "./suggested-actions-bar";
 import "./ai-workspace.css";
@@ -58,6 +59,20 @@ export function IntelligenceWorkspace({
   const [createError, setCreateError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [editingUserMessageId, setEditingUserMessageId] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState<boolean>(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(min-width: 1024px)").matches
+      : true
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktop(mql.matches);
+    // Initial value comes from the lazy initializer; only react to later changes.
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const loadedConversationRef = useRef<string | null>(null);
   const editingUserMessageIdRef = useRef<string | null>(null);
@@ -656,6 +671,16 @@ export function IntelligenceWorkspace({
   const showEmptyState =
     messages.length === 0 && !isStreaming && !loadingConversation;
 
+  // Campaign Editing Mode: once a studio exists, split the workspace — chat on
+  // the left, the live Campaign Studio persistent on the right.
+  const latestStudioMessage = useMemo(
+    () => findLatestStudioMessage(messages),
+    [messages]
+  );
+  const twoPane = Boolean(latestStudioMessage) && !showEmptyState;
+  // Split view is desktop-only; on smaller screens the studio stays inline in chat.
+  const sidePanelVisible = twoPane && isDesktop;
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <AiWorkspaceTopbar workspace={workspace} workspaceLabel={workspaceLabel} />
@@ -676,7 +701,8 @@ export function IntelligenceWorkspace({
 
         <div
           className={cn(
-            "ai-main-surface flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+            "ai-main-surface flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            sidePanelVisible && "lg:max-w-[46%] lg:min-w-[22rem] lg:border-r lg:border-border/60"
           )}
         >
           {loadingConversation && messages.length === 0 ? (
@@ -698,6 +724,7 @@ export function IntelligenceWorkspace({
                 workflowProgress={workflowProgress}
                 conversationId={conversationId}
                 editingUserMessageId={editingUserMessageId}
+                studioInSidePanel={sidePanelVisible}
                 onEditStart={setEditingUserMessageId}
                 onEditCancel={handleEditCancel}
                 onCardUpdated={handleCardUpdated}
@@ -726,6 +753,17 @@ export function IntelligenceWorkspace({
             error={createError ?? error}
           />
         </div>
+
+        {sidePanelVisible && latestStudioMessage ? (
+          <div className="hidden min-h-0 flex-[1.2] lg:flex lg:flex-col">
+            <CampaignStudioPanel
+              message={latestStudioMessage}
+              conversationId={conversationId}
+              onCardUpdated={handleCardUpdated}
+              onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );
