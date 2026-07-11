@@ -74,6 +74,21 @@ export type CampaignObjectMeta = {
   directorDebate?: import("@/features/campaign-director/debate/debate-types").DebateMetadata;
   /** Release 1.1.7 enterprise governance — internal QA/compliance/presentation reports. */
   governance?: import("@/features/campaign-governance/governance-types").CampaignGovernanceMeta;
+  /** Campaign Copilot change history — one entry per applied conversational edit. */
+  copilotChangeLog?: CopilotChangeLogEntry[];
+};
+
+/** A single applied Campaign Copilot edit, for change history and the digest. */
+export type CopilotChangeLogEntry = {
+  /** Human-readable summary, e.g. "Removed all Celebrity creators". */
+  summary: string;
+  /** The structured intent kind that produced this change. */
+  intent: string;
+  /** Campaign object version created by this change, when persisted. */
+  version?: number;
+  /** Overall campaign score after the change, when available. */
+  overallScoreAfter?: number;
+  appliedAt: string;
 };
 
 export type CampaignObject = {

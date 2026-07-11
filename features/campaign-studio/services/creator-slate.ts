@@ -50,6 +50,22 @@ export function matchesTierLabel(mixTier: string, tierLabel: string): boolean {
   return accepted.includes(tierLabel.trim().toLowerCase());
 }
 
+const CANONICAL_TIER_LABELS: Record<string, string> = {
+  celebrity: "Celebrity",
+  mega: "Celebrity",
+  macro: "Macro",
+  mid: "Mid-Tier",
+  "mid-tier": "Mid-Tier",
+  micro: "Micro",
+  nano: "Nano",
+};
+
+/** Canonical display label for any tier/role spelling; passes through unknown roles. */
+export function normalizeTierLabel(tier: string): string {
+  const key = tier.trim().toLowerCase();
+  return CANONICAL_TIER_LABELS[key] ?? tier.trim();
+}
+
 /** Largest-remainder allocation of slate slots per tier percent. */
 export function allocateTierCounts(mix: TierMixTarget[], targetCount: number): Map<string, number> {
   const totalPercent = mix.reduce((sum, m) => sum + Math.max(0, m.percent), 0) || 1;

@@ -4,6 +4,7 @@ import type {
   LlmProvider,
   LlmProviderIdentity,
   LlmStreamChunk,
+  LlmToolCall,
 } from "../types/llm";
 import { LlmProviderError } from "../types/llm";
 
@@ -20,7 +21,13 @@ interface OpenAiChatCompletionResponse {
   id?: string;
   model?: string;
   choices?: Array<{
-    message?: { content?: string | null };
+    message?: {
+      content?: string | null;
+      tool_calls?: Array<{
+        id?: string;
+        function?: { name?: string; arguments?: string };
+      }>;
+    };
     finish_reason?: string | null;
   }>;
   usage?: {
@@ -116,15 +123,26 @@ export class OpenAiProvider implements LlmProvider {
     const choice = payload.choices?.[0];
     const content = choice?.message?.content?.trim();
 
-    if (!content) {
+    const toolCalls: LlmToolCall[] = (choice?.message?.tool_calls ?? [])
+      .filter((call) => call.function?.name)
+      .map((call, index) => ({
+        id: call.id ?? `call_${index}`,
+        name: call.function!.name!,
+        arguments: call.function?.arguments ?? "{}",
+      }));
+
+    // A tool-calling turn legitimately has empty content — only error when the
+    // model returned neither text nor a tool call.
+    if (!content && toolCalls.length === 0) {
       throw new LlmProviderError("OpenAI API returned an empty completion.");
     }
 
     return {
-      content,
+      content: content ?? "",
       model: payload.model ?? request.model ?? this.defaultModel,
       providerId: this.identity.id,
       finishReason: choice?.finish_reason ?? undefined,
+      ...(toolCalls.length > 0 ? { toolCalls } : {}),
       usage: payload.usage
         ? {
             promptTokens: payload.usage.prompt_tokens,

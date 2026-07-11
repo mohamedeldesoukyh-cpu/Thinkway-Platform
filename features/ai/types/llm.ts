@@ -27,6 +27,14 @@ export interface LlmTokenUsage {
   totalTokens?: number;
 }
 
+/** A single tool/function call the model chose to make. */
+export interface LlmToolCall {
+  id: string;
+  name: string;
+  /** Raw JSON arguments string as returned by the model. */
+  arguments: string;
+}
+
 export interface LlmCompletionResponse {
   content: string;
   model: string;
@@ -34,6 +42,8 @@ export interface LlmCompletionResponse {
   finishReason?: string;
   usage?: LlmTokenUsage;
   stub?: boolean;
+  /** Populated when the model responds with tool/function calls instead of text. */
+  toolCalls?: LlmToolCall[];
 }
 
 export interface LlmStreamChunk {
