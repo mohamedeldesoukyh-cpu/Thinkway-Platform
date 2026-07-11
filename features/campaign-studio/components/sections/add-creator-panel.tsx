@@ -28,6 +28,7 @@ import {
 } from "@/features/discovery/enrichment/actions";
 import { pollCreatorAfterRefresh } from "@/features/discovery/enrichment/poll-creator-refresh";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
+import { cn } from "@/lib/utils";
 
 import {
   stageStudioDraftChangeAction,
@@ -35,6 +36,7 @@ import {
   updateStudioDraftEnrichmentAction,
 } from "../../actions/studio-draft-actions";
 import { normalizeCreatorId } from "../../services/studio-draft";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { formatFollowers } from "./shared/format-utils";
 
 type AddCreatorPanelProps = {
@@ -78,7 +80,7 @@ const ENRICHMENT_CHIPS: Record<
   },
   enriched: {
     label: "Intelligence ready",
-    className: "bg-[#1D9E75]/10 text-[#1D9E75]",
+    className: "bg-brand-product/10 text-brand-product",
   },
   failed: {
     label: "Enrichment failed",
@@ -313,7 +315,7 @@ export function AddCreatorPanel({
         return (
           <div
             key={ref.creatorId}
-            className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-[#1D9E75]/50 bg-[#1D9E75]/5 p-3"
+            className="flex flex-col gap-3 rounded-xl border border-dashed border-brand-product/50 bg-brand-product/5 p-3 sm:flex-row sm:items-center"
           >
             <CreatorAvatarImage
               avatarUrl={ref.avatarUrl}
@@ -326,7 +328,7 @@ export function AddCreatorPanel({
                 {ref.handle ? (
                   <span className="break-all text-xs text-muted-foreground">@{ref.handle}</span>
                 ) : null}
-                <Badge className="h-auto bg-[#1D9E75]/10 px-1.5 py-0.5 text-[9px] font-semibold text-[#1D9E75]">
+                <Badge className="h-auto bg-brand-product/10 px-1.5 py-0.5 text-[9px] font-semibold text-brand-product">
                   Pending addition
                 </Badge>
                 <Badge className={`h-auto px-1.5 py-0.5 text-[9px] font-semibold ${chip.className}`}>
@@ -342,7 +344,7 @@ export function AddCreatorPanel({
                 {ref.source === "external_url" ? "Added from profile link" : "Picked from Discovery"}
               </p>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:justify-end">
               {ref.enrichmentStatus !== "pending" && ref.enrichmentStatus !== "enriched" ? (
                 <Button
                   type="button"
@@ -386,25 +388,33 @@ export function AddCreatorPanel({
       ) : (
         <div className="space-y-2.5 rounded-xl border border-border/70 bg-muted/20 p-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-1 rounded-lg bg-muted/60 p-0.5">
+            <div
+              className="flex gap-1 rounded-lg bg-muted/60 p-0.5"
+              role="tablist"
+              aria-label="Add creator source"
+            >
               <Button
                 type="button"
                 size="xs"
+                role="tab"
+                aria-selected={mode === "discovery"}
                 variant={mode === "discovery" ? "secondary" : "ghost"}
-                className="h-7 px-2.5 text-xs"
+                className={cn("h-7 px-2.5 text-xs", STUDIO_CLASSES.focusRingInset)}
                 onClick={() => setMode("discovery")}
               >
-                <SearchIcon className="size-3" />
+                <SearchIcon className="size-3" aria-hidden />
                 From Discovery
               </Button>
               <Button
                 type="button"
                 size="xs"
+                role="tab"
+                aria-selected={mode === "url"}
                 variant={mode === "url" ? "secondary" : "ghost"}
-                className="h-7 px-2.5 text-xs"
+                className={cn("h-7 px-2.5 text-xs", STUDIO_CLASSES.focusRingInset)}
                 onClick={() => setMode("url")}
               >
-                <Link2Icon className="size-3" />
+                <Link2Icon className="size-3" aria-hidden />
                 From profile URL
               </Button>
             </div>
@@ -421,7 +431,7 @@ export function AddCreatorPanel({
 
           {mode === "discovery" ? (
             <div className="space-y-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   value={query}
                   placeholder="Search Discovery creators by name or handle…"
@@ -435,7 +445,7 @@ export function AddCreatorPanel({
                   type="button"
                   size="sm"
                   disabled={searching || !query.trim()}
-                  className="h-8 bg-[#1D9E75] px-3 text-xs hover:bg-[#178f69]"
+                  className={cn("h-8 px-3 text-xs sm:shrink-0", STUDIO_CLASSES.primaryBtn)}
                   onClick={() => void searchDiscovery()}
                 >
                   {searching ? <Loader2Icon className="size-3.5 animate-spin" /> : "Search"}
@@ -468,7 +478,10 @@ export function AddCreatorPanel({
                       type="button"
                       size="xs"
                       disabled={alreadyStaged}
-                      className="h-7 bg-[#1D9E75] px-2.5 hover:bg-[#178f69] disabled:opacity-50"
+                      className={cn(
+                        "h-7 px-2.5 disabled:opacity-50 sm:shrink-0",
+                        STUDIO_CLASSES.primaryBtn
+                      )}
                       onClick={() =>
                         void stageAddition(toDraftRef(creator, "discovery", "not_requested"))
                       }
@@ -482,7 +495,7 @@ export function AddCreatorPanel({
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   value={profileUrl}
                   placeholder="Paste an Instagram / TikTok / YouTube profile link…"
@@ -496,7 +509,7 @@ export function AddCreatorPanel({
                   type="button"
                   size="sm"
                   disabled={addingUrl || !profileUrl.trim()}
-                  className="h-8 bg-[#1D9E75] px-3 text-xs hover:bg-[#178f69]"
+                  className={cn("h-8 px-3 text-xs sm:shrink-0", STUDIO_CLASSES.primaryBtn)}
                   onClick={() => void addFromUrl()}
                 >
                   {addingUrl ? <Loader2Icon className="size-3.5 animate-spin" /> : "Add & enrich"}

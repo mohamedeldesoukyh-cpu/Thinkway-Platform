@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { STUDIO_CLASSES } from "@/features/campaign-studio/constants/studio-tokens";
 
 export type StudioWorkspaceMode = "presentation" | "decision";
 
@@ -22,7 +23,7 @@ export function StudioModeToggle({
   return (
     <div
       className={cn(
-        "inline-flex rounded-lg border border-border/60 bg-muted/30 p-0.5",
+        "inline-flex gap-0.5 rounded-[11px] bg-[#EEF1F8] p-[3px] dark:bg-muted/50",
         className
       )}
       role="tablist"
@@ -35,9 +36,10 @@ export function StudioModeToggle({
         disabled={disabled}
         onClick={() => onModeChange("presentation")}
         className={cn(
-          "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+          "rounded-[9px] px-3.5 py-1.5 text-xs font-bold transition-colors",
+          STUDIO_CLASSES.focusRingInset,
           mode === "presentation"
-            ? "bg-background text-foreground shadow-sm"
+            ? "bg-white text-foreground shadow-[0_1px_2px_rgba(6,8,16,0.05)] dark:bg-background"
             : "text-muted-foreground hover:text-foreground"
         )}
       >
@@ -51,9 +53,10 @@ export function StudioModeToggle({
         title={decisionDisabled ? "Available when the studio workflow completes" : undefined}
         onClick={() => onModeChange("decision")}
         className={cn(
-          "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+          "rounded-[9px] px-3.5 py-1.5 text-xs font-bold transition-colors",
+          STUDIO_CLASSES.focusRingInset,
           mode === "decision"
-            ? "bg-[#1D9E75]/10 text-[#1D9E75] shadow-sm"
+            ? "bg-white text-[#0057FF] shadow-[0_1px_2px_rgba(6,8,16,0.05)] dark:bg-background"
             : "text-muted-foreground hover:text-foreground",
           (disabled || decisionDisabled) && "cursor-not-allowed opacity-50"
         )}

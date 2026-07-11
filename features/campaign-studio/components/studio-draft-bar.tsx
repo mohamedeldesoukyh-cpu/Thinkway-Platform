@@ -78,7 +78,11 @@ export function StudioDraftBar({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
+    <div
+      className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2.5 shadow-sm backdrop-blur-sm dark:border-amber-800 dark:bg-amber-950/80"
+      role="status"
+      aria-live="polite"
+    >
       <div className="flex min-w-0 items-center gap-2.5">
         <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
           <PencilRulerIcon className="size-3.5 text-amber-700 dark:text-amber-300" />

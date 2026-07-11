@@ -44,14 +44,27 @@ export function ContentPlanSection({
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[480px] text-left text-[11px]">
+        <caption className="sr-only">Campaign content plan by platform and objective</caption>
         <thead>
           <tr className="border-b border-border/60 text-[10px] font-bold tracking-wide text-muted-foreground uppercase">
-            <th className="pb-2 pr-3">Platform</th>
-            <th className="pb-2 pr-3">Content Type</th>
-            <th className="pb-2 pr-3">Creator Tier</th>
-            <th className="pb-2 pr-3">Qty</th>
-            <th className="pb-2 pr-3">Posting</th>
-            <th className="pb-2">Objective</th>
+            <th scope="col" className="pb-2 pr-3">
+              Platform
+            </th>
+            <th scope="col" className="pb-2 pr-3">
+              Content Type
+            </th>
+            <th scope="col" className="pb-2 pr-3">
+              Creator Tier
+            </th>
+            <th scope="col" className="pb-2 pr-3">
+              Qty
+            </th>
+            <th scope="col" className="pb-2 pr-3">
+              Posting
+            </th>
+            <th scope="col" className="pb-2">
+              Objective
+            </th>
           </tr>
         </thead>
         <tbody>

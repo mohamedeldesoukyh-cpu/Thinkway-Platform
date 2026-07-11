@@ -10,7 +10,6 @@ import {
   resolveFactsCurrency,
   resolveFactsDurationWeeks,
 } from "@/features/campaign-director/facts/facts-display-bridge";
-import { SHORTLIST_PALETTE } from "@/features/discovery/shortlists/export/shortlist-document-styles";
 import {
   renderThinkwayReportLogoHtml,
   THINKWAY_REPORT_LOGO_STYLES,
@@ -54,16 +53,16 @@ export type ProposalBranding = {
 };
 
 /**
- * Tier palette for charts and chips — validated with the dataviz six-checks
- * (lightness band, chroma floor, adjacent-pair CVD ΔE 24.9, contrast ≥3:1).
- * Every segment/chip is direct-labeled, so identity is never color-alone.
+ * Tier palette for chips and dots — mirrors the reference proposal deck
+ * (blue/purple/amber/pink/green family). Every chip is direct-labeled,
+ * so identity is never color-alone.
  */
 const TIER_COLORS: Record<string, { fill: string; chipBg: string; chipText: string }> = {
-  Celebrity: { fill: "#D97706", chipBg: "rgba(217,119,6,.12)", chipText: "#92400E" },
-  Macro: { fill: "#6366F1", chipBg: "rgba(99,102,241,.12)", chipText: "#3730A3" },
-  "Mid-Tier": { fill: "#1D9E75", chipBg: "rgba(29,158,117,.12)", chipText: "#0F6E50" },
-  Micro: { fill: "#8B5CF6", chipBg: "rgba(139,92,246,.12)", chipText: "#5B21B6" },
-  Nano: { fill: "#0284C7", chipBg: "rgba(2,132,199,.12)", chipText: "#075985" },
+  Celebrity: { fill: "#D97706", chipBg: "#FFE9CC", chipText: "#B45309" },
+  Macro: { fill: "#0057FF", chipBg: "#DDEBFF", chipText: "#0057FF" },
+  "Mid-Tier": { fill: "#D6336C", chipBg: "#FFE0EC", chipText: "#D6336C" },
+  Micro: { fill: "#7C3AED", chipBg: "#E6DFFF", chipText: "#7C3AED" },
+  Nano: { fill: "#0C9D57", chipBg: "#DDF7E8", chipText: "#0C9D57" },
   Unknown: { fill: "#94A3B8", chipBg: "#F1F5F9", chipText: "#475569" },
 };
 
@@ -83,7 +82,7 @@ function tierColor(tier?: string): { fill: string; chipBg: string; chipText: str
 function tierChip(tier?: string): string {
   const label = tier?.trim() || "Unclassified";
   const c = tierColor(tier);
-  return `<span class="tier-chip" style="background:${c.chipBg};color:${c.chipText};border:1px solid ${c.fill}33">${escapeHtml(label)}</span>`;
+  return `<span class="tier-chip" style="background:${c.chipBg};color:${c.chipText}">${escapeHtml(label)}</span>`;
 }
 
 function avatarHtml(vendor: ProposalVendor): string {
@@ -339,13 +338,117 @@ export function buildCampaignProposalModel(
   };
 }
 
-/** Client-facing campaign proposal — CIO/VIO document language: ink headings, navy cover, green accents only. */
+// ---------------------------------------------------------------------------
+// Proposal deck HTML — 1280×720 landscape pages mirroring the reference design
+// (dark gradient cover, per-section pages with eyebrow icons, blue/purple
+// accents, dark close page). Render with preferCSSPageSize for PDF.
+// ---------------------------------------------------------------------------
+
+const DECK = {
+  blue: "#0057FF",
+  navy: "#060810",
+  ink: "#0B0F1A",
+  muted: "#6B7280",
+  green: "#0C9D57",
+  purple: "#7C3AED",
+  amber: "#D97706",
+  pink: "#D6336C",
+} as const;
+
+/** Timeline dot colors, positional — matches the reference activation page. */
+const WAVE_DOT_COLORS = ["#D97706", "#0057FF", "#7C3AED", "#0891B2", "#0C9D57", "#D6336C"];
+
+const CONTACT_LINE =
+  "Thinkway · 44B Saraya Mall, Sheikh Zayed, Giza, Egypt · hello@thinkwaymedia.com";
+
+function deckIcon(path: string, size = 17): string {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+}
+
+const ICONS = {
+  grid: `<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/>`,
+  star: `<path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7L2 9.2l7.1-.6z"/>`,
+  zap: `<path d="M13 2L3 14h7l-1 8 11-13h-7l1-7z"/>`,
+  users: `<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>`,
+  coin: `<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5-1.3 2-3 2.5-3 1.1-3 2.5 1.3 2.5 3 2.5 3-1.1 3-2.5"/>`,
+  chart: `<path d="M3 3v18h18M7 15l4-6 3 3 5-7"/>`,
+  check: `<path d="M20 6L9 17l-5-5"/>`,
+  repeat: `<path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/>`,
+  hash: `<path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/>`,
+  send: `<path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>`,
+} as const;
+
+/** Amplification bullets carry emoji in the shared model — map to line icons for the deck. */
+function ampIconSvg(emoji: string): string {
+  const map: Record<string, string> = {
+    "⚡": ICONS.zap,
+    "#️⃣": ICONS.hash,
+    "🔁": ICONS.repeat,
+    "🏆": ICONS.star,
+    "⭐": ICONS.star,
+    "📣": ICONS.send,
+    "🤝": ICONS.users,
+  };
+  return deckIcon(map[emoji] ?? ICONS.check, 13);
+}
+
+function deckBrandHeader(sectionNumber: number, client: string): string {
+  const logo = renderThinkwayReportLogoHtml({ variant: "header", theme: "light", showText: false });
+  return `
+    <div class="pg-head">
+      <div class="brand">${logo}<span class="tag">Thinkway · Campaign Intelligence</span></div>
+      <div class="tag">${String(sectionNumber).padStart(2, "0")} / ${escapeHtml(client)}</div>
+    </div>`;
+}
+
+function deckFooter(pageNumber: number, client: string): string {
+  return `<div class="pg-foot"><span>Thinkway · Campaign Intelligence Proposal</span><b>${escapeHtml(client)} · Confidential</b><span>${String(pageNumber).padStart(2, "0")}</span></div>`;
+}
+
+function deckEyebrow(icon: string, color: string, bg: string, title: string): string {
+  return `
+    <div class="sec-eyebrow">
+      <div class="ic" style="background:${bg};color:${color};">${icon}</div>
+      <h1>${escapeHtml(title)}</h1>
+    </div>`;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/** Anchor vs trend-wave grouping for the strategy band on the summary page. */
+export function buildProposalStrategyTags(
+  mixSource: Array<{ tier: string; count: number; percent: number }>
+): Array<{ n: string; l: string }> {
+  const isAnchor = (tier: string) => /celebrity|mega|macro|mid/i.test(tier);
+  const anchors = mixSource.filter((m) => isAnchor(m.tier));
+  const waves = mixSource.filter((m) => !isAnchor(m.tier) && m.tier !== "Unclassified");
+  const tags: Array<{ n: string; l: string }> = [];
+  if (anchors.length > 0) {
+    tags.push({ n: anchors.map((m) => m.tier).join(" + "), l: "Anchor waves" });
+  }
+  if (waves.length > 0) {
+    tags.push({ n: waves.map((m) => m.tier).join(" / "), l: "Trend waves" });
+  }
+  return tags;
+}
+
+/** Closing-page headline shared by the PDF document and PPTX deck. */
+export function buildProposalCloseHeadline(model: CampaignProposalModel): string {
+  return model.trend
+    ? `Let's turn ${model.brand}'s campaign into the moment everyone's talking about.`
+    : `Let's bring the ${model.brand} campaign to life.`;
+}
+
+/** Client-facing campaign proposal deck — 1280×720 pages, one section per page. */
 export function buildCampaignProposalDocumentHtml(
   campaignObject: CampaignObject,
   hydratedVendors: ProposalVendor[] = [],
   branding: ProposalBranding = {}
 ): string {
-  const P = SHORTLIST_PALETTE;
   const model = buildCampaignProposalModel(campaignObject, hydratedVendors, branding);
   const facts = getCampaignFacts(campaignObject);
   const {
@@ -353,265 +456,401 @@ export function buildCampaignProposalDocumentHtml(
     client,
     generated,
     presentationVersion,
-    mixSource,
     waves,
     understanding,
-    statTiles: modelStatTiles,
+    statTiles,
+    vendors,
   } = model;
 
+  const clientNameSize = client.length <= 8 ? 104 : client.length <= 16 ? 72 : 48;
   const clientMark = model.clientLogoUrl?.trim()
     ? `<img class="client-logo" src="${escapeHtml(model.clientLogoUrl)}" alt="${escapeHtml(client)}" />`
-    : `<span class="client-monogram">${escapeHtml((client.trim()[0] ?? "C").toUpperCase())}</span>`;
+    : "";
 
-  const vendors = model.vendors;
+  const pages: string[] = [];
+  let sectionNumber = 0;
 
-  // ---- Stat tiles (hero numbers — form: stat tile, not a chart) ----
-  const statTiles = modelStatTiles
+  // ---- Cover ----
+  pages.push(`
+  <div class="page cover">
+    <div class="cover-inner">
+      <div class="cover-top">
+        ${renderThinkwayReportLogoHtml({ variant: "cover", theme: "dark" })}
+        <div class="cover-top-right">${clientMark}<div class="cover-tag">Campaign Intelligence Proposal</div></div>
+      </div>
+      <div class="cover-client" style="font-size:${clientNameSize}px;">${escapeHtml(client)}</div>
+      ${model.objective ? `<p class="cover-obj">${escapeHtml(model.objective)}</p>` : `<p class="cover-obj">${escapeHtml(campaignName)}</p>`}
+      <div class="cover-meta">
+        <div>Prepared for<b>${escapeHtml(client)} · ${escapeHtml(generated)}</b></div>
+        <div>Status<b>Confidential — client review only</b></div>
+        <div>Document ref<b>${escapeHtml(presentationVersion)}</b></div>
+      </div>
+    </div>
+  </div>`);
+
+  // ---- Campaign Understanding ----
+  sectionNumber += 1;
+  const statBoxes = statTiles
     .map(
-      (t) => `
-      <div class="stat">
-        <div class="stat-label">${escapeHtml(t.label)}</div>
-        <div class="stat-value">${escapeHtml(t.value)}</div>
-        <div class="stat-sub">${escapeHtml(t.sub)}</div>
-      </div>`
+      (t) =>
+        `<div class="stat-box"><div class="l">${escapeHtml(t.label)}</div><div class="v">${escapeHtml(t.value)}</div><div class="s">${escapeHtml(t.sub)}</div></div>`
     )
     .join("");
-
-  // ---- Understanding grid ----
-  const understandingRows = understanding
+  const detailItems = understanding
+    .slice(0, 8)
     .map(
-      ([label, value]) => `
-      <div class="fact">
-        <div class="fact-label">${escapeHtml(label)}</div>
-        <div class="fact-value">${escapeHtml(value)}</div>
-      </div>`
+      ([label, value]) =>
+        `<div class="detail-item"><div class="l">${escapeHtml(label)}</div><div class="v">${escapeHtml(value)}</div></div>`
     )
     .join("");
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client)}
+    ${deckEyebrow(deckIcon(ICONS.grid), DECK.blue, "rgba(0,87,255,.1)", "Campaign Understanding")}
+    ${statBoxes ? `<div class="stat-grid">${statBoxes}</div>` : ""}
+    <div class="detail-grid">${detailItems}</div>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
 
-  // ---- Tier mix proportional bar (identity, ≤5 categories, direct-labeled) ----
-  const tierBar =
-    mixSource.length > 0
-      ? `<div class="tier-bar">${mixSource
-          .map((m) => {
-            const c = tierColor(m.tier);
-            return `<div class="tier-seg" style="flex:${Math.max(m.percent, 4)};background:${c.fill}" title="${escapeHtml(m.tier)} ${m.percent}%"></div>`;
-          })
-          .join("")}</div>
-        <div class="tier-legend">${mixSource
-          .map((m) => {
-            const c = tierColor(m.tier);
-            return `<span class="tier-legend-item"><span class="dot" style="background:${c.fill}"></span>${escapeHtml(m.tier)} · ${m.count} creator${m.count === 1 ? "" : "s"} · ${m.percent}%</span>`;
-          })
-          .join("")}</div>`
+  // ---- Executive Summary ----
+  sectionNumber += 1;
+  const checkItems = model.recommendedActions
+    .slice(0, 6)
+    .map(
+      (a) =>
+        `<div class="check-item"><span class="ck">${deckIcon(ICONS.check, 12)}</span>${escapeHtml(a)}</div>`
+    )
+    .join("");
+  const strategyTags = buildProposalStrategyTags(model.mixSource)
+    .map(
+      (t) =>
+        `<div class="strategy-tag"><div class="n">${escapeHtml(t.n)}</div><div class="l">${escapeHtml(t.l)}</div></div>`
+    )
+    .join("");
+  const strategyPara =
+    model.strategyText && model.strategyText !== model.executiveSummary
+      ? `<p class="summary-text" style="padding-top:14px;">${escapeHtml(model.strategyText)}</p>`
       : "";
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client)}
+    ${deckEyebrow(deckIcon(ICONS.star), DECK.pink, "rgba(214,51,108,.1)", "Executive Summary")}
+    <p class="summary-text">${escapeHtml(model.executiveSummary)}</p>
+    ${checkItems ? `<div class="check-grid">${checkItems}</div>` : strategyPara}
+    ${strategyTags ? `<div class="strategy-row">${strategyTags}</div>` : ""}
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
 
-  // ---- Creator table with avatars, auto tier, content concepts ----
-  const vendorRows =
-    vendors.length > 0
-      ? vendors
-          .map((v, i) => {
-            const idea =
-              v.contentIdea ??
-              buildCreatorContentIdea({ categories: [v.reason ?? ""] }, facts, i);
-            return `
+  // ---- Activation Plan ----
+  if (waves.length > 0) {
+    sectionNumber += 1;
+    const timelineItems = waves
+      .map((w, i) => {
+        const color = WAVE_DOT_COLORS[i % WAVE_DOT_COLORS.length];
+        return `<div class="t-item"><div class="t-dot" style="background:${color};">${i + 1}</div><div><h4>${escapeHtml(w.window)} — ${escapeHtml(w.wave)}</h4><p>${escapeHtml(w.goal)}</p></div></div>`;
+      })
+      .join("");
+    pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client)}
+    ${deckEyebrow(deckIcon(ICONS.zap), DECK.green, "rgba(12,157,87,.1)", "Activation Plan — Momentum Waves")}
+    <p class="sec-sub">Staggered creator waves keep the campaign trending instead of peaking on day one.</p>
+    <div class="timeline">${timelineItems}</div>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+  }
+
+  // ---- Creators (8 rows per page) ----
+  if (vendors.length > 0) {
+    sectionNumber += 1;
+    const vendorPages = chunk(vendors, 8);
+    vendorPages.forEach((pageVendors, pageIndex) => {
+      const rows = pageVendors
+        .map((v, i) => {
+          const idea =
+            v.contentIdea ??
+            buildCreatorContentIdea({ categories: [v.reason ?? ""] }, facts, pageIndex * 8 + i);
+          return `
         <tr>
-          <td class="creator-cell">${avatarHtml(v)}<div><strong>${escapeHtml(v.displayName)}</strong>${
-            v.handle ? `<div class="muted">@${escapeHtml(v.handle.replace(/^@/, ""))}</div>` : ""
-          }</div></td>
+          <td><div class="creator-name">${avatarHtml(v)}<span>${escapeHtml(v.displayName)}</span></div></td>
           <td>${tierChip(v.tier)}</td>
           <td>${escapeHtml(v.platform ?? "—")}</td>
           <td class="num">${formatCompact(v.followers)}</td>
           <td class="num">${v.engagementRate != null ? `${v.engagementRate.toFixed(1)}%` : "—"}</td>
-          <td class="muted">${escapeHtml(v.reason ?? "")}</td>
-          <td class="muted">${escapeHtml(idea)}</td>
+          <td class="concept">${escapeHtml(idea)}</td>
         </tr>`;
-          })
-          .join("")
-      : `<tr><td colspan="7" class="muted">Creator slate pending discovery run.</td></tr>`;
+        })
+        .join("");
+      const title =
+        vendorPages.length > 1
+          ? `Recommended Creators & Content Concepts (${pageIndex + 1}/${vendorPages.length})`
+          : "Recommended Creators & Content Concepts";
+      pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client)}
+    ${deckEyebrow(deckIcon(ICONS.users), DECK.blue, "rgba(0,87,255,.1)", title)}
+    <table class="ctable">
+      <thead><tr><th>Creator</th><th>Tier</th><th>Platform</th><th>Followers</th><th>ER</th><th>Content concept</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+    });
+  }
 
-  // ---- Momentum stepper ----
-  const waveSteps = waves
-    .map((w, i) => {
-      const c = w.tier ? tierColor(w.tier) : { fill: P.accent };
-      return `
-      <div class="wave">
-        <div class="wave-num" style="background:${c.fill}">${i + 1}</div>
-        <div class="wave-body">
-          <div class="wave-window">${escapeHtml(w.window)}</div>
-          <div class="wave-title">${escapeHtml(w.wave)}</div>
-          <div class="muted">${escapeHtml(w.goal)}</div>
-        </div>
-      </div>`;
-    })
-    .join("");
-
-  // ---- Budget: single allocation → stat treatment; multi → labeled bars ----
+  // ---- Budget & Amplification ----
+  sectionNumber += 1;
   const allocations = model.budget?.allocations ?? [];
-  const budgetBlock = model.budget
-    ? allocations.length <= 1
-      ? `<div class="budget-hero">
-           <div class="budget-hero-num">100%</div>
-           <div>
-             <div class="budget-hero-title">${escapeHtml(allocations[0]?.category ?? "Creator fees")} — ${escapeHtml(model.budget.currency)} ${model.budget.total?.toLocaleString() ?? "—"}</div>
-             <div class="muted">${escapeHtml(allocations[0]?.notes ?? "Influencer campaign model: production embedded in creator fees.")}</div>
-           </div>
-         </div>`
-      : `<p><strong>Total:</strong> ${escapeHtml(model.budget.currency)} ${model.budget.total?.toLocaleString() ?? "—"}</p>
-         <div class="alloc-bars">${allocations
-           .map(
-             (a) => `
-           <div class="alloc">
-             <div class="alloc-head"><span>${escapeHtml(a.category)}</span><span class="num">${a.percent ?? 0}%</span></div>
-             <div class="alloc-track"><div class="alloc-fill" style="width:${Math.min(a.percent ?? 0, 100)}%"></div></div>
-             ${a.notes ? `<div class="muted">${escapeHtml(a.notes)}</div>` : ""}
-           </div>`
-           )
-           .join("")}</div>`
-    : `<p class="muted">Budget to be confirmed with client.</p>`;
-
-  const kpiRows = model.kpis
+  const primaryAlloc = allocations[0];
+  const totalText = model.budget?.total != null
+    ? `${model.budget.currency} ${model.budget.total.toLocaleString()}`
+    : "To be confirmed";
+  const budgetHero = model.budget
+    ? `<div class="budget-hero">
+        <div><div class="big">${primaryAlloc?.percent ?? 100}%</div><div class="cap">${escapeHtml(primaryAlloc?.category ?? "Creator fees")} — ${escapeHtml(totalText)}</div></div>
+        <div class="amt">${escapeHtml(primaryAlloc?.notes ?? "Influencer campaign model — production embedded in creator fees unless explicitly separated")}</div>
+      </div>
+      ${
+        allocations.length > 1
+          ? `<div class="alloc-list">${allocations
+              .slice(1)
+              .map(
+                (a) =>
+                  `<div class="alloc-row"><b>${a.percent ?? 0}%</b><span>${escapeHtml(a.category)}</span>${a.notes ? `<i>${escapeHtml(a.notes)}</i>` : ""}</div>`
+              )
+              .join("")}</div>`
+          : ""
+      }`
+    : `<p class="sec-sub">Budget to be confirmed with client.</p>`;
+  const ampItems = model.amplification
     .map(
-      (k) =>
-        `<tr><td><strong>${escapeHtml(k.metric)}</strong></td><td>${escapeHtml(k.target)}</td><td class="muted">${escapeHtml(k.basis)}</td></tr>`
+      ([emoji, item]) =>
+        `<div class="amp-item"><span class="ic">${ampIconSvg(emoji)}</span>${escapeHtml(item)}</div>`
     )
     .join("");
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client)}
+    ${deckEyebrow(deckIcon(ICONS.coin), DECK.amber, "rgba(217,119,6,.12)", "Budget & Amplification")}
+    ${budgetHero}
+    <div class="amp-grid">${ampItems}</div>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
 
-  const amplification = model.amplification
-    .map(
-      ([icon, item]) =>
-        `<div class="amp"><span class="amp-icon">${icon}</span><span>${escapeHtml(item)}</span></div>`
-    )
-    .join("");
+  // ---- Success Metrics ----
+  if (model.kpis.length > 0) {
+    sectionNumber += 1;
+    const kpiRows = model.kpis
+      .slice(0, 6)
+      .map(
+        (k) =>
+          `<tr><td style="font-weight:700;">${escapeHtml(k.metric)}</td><td>${escapeHtml(k.target)}</td><td>${escapeHtml(k.basis)}</td></tr>`
+      )
+      .join("");
+    pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client)}
+    ${deckEyebrow(deckIcon(ICONS.chart), DECK.green, "rgba(12,157,87,.1)", "Success Metrics")}
+    <table class="mtable">
+      <thead><tr><th>Metric</th><th>Target</th><th>Basis</th></tr></thead>
+      <tbody>${kpiRows}</tbody>
+    </table>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+  }
+
+  // ---- Close ----
+  const closeHeadline = buildProposalCloseHeadline(model);
+  pages.push(`
+  <div class="page close">
+    ${renderThinkwayReportLogoHtml({ variant: "closing", theme: "dark" })}
+    <h2>${escapeHtml(closeHeadline)}</h2>
+    <p>Prepared by the Thinkway Campaign Intelligence team · ${escapeHtml(generated)}</p>
+    <div class="contact">${escapeHtml(CONTACT_LINE)}</div>
+  </div>`);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(campaignName)} — Thinkway</title>
-  <style>
-    ${THINKWAY_REPORT_LOGO_STYLES}
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, "Segoe UI", system-ui, sans-serif; color: ${P.ink}; background: #fff; font-size: 12px; line-height: 1.55; }
-    .muted { color: ${P.muted}; font-size: 11px; }
-    .num { font-variant-numeric: tabular-nums; }
+<meta charset="utf-8" />
+<title>${escapeHtml(client)} — Campaign Intelligence Proposal</title>
+<style>
+  @page{ size: 1280px 720px; margin: 0; }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:1280px; }
+  body{
+    font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;
+    color:${DECK.ink};
+    -webkit-font-smoothing:antialiased;
+    background:#fff;
+  }
+  ${THINKWAY_REPORT_LOGO_STYLES}
+  .num{ font-variant-numeric: tabular-nums; }
 
-    /* Cover — navy, matching CIO/VIO document language */
-    .cover { background: ${P.primary}; color: #fff; min-height: 100vh; padding: 52px; display: flex; flex-direction: column; justify-content: space-between; }
-    .cover-top { display: flex; justify-content: space-between; align-items: flex-start; }
-    .cover h1 { font-size: 34px; font-weight: 700; margin-top: 40px; max-width: 640px; letter-spacing: -0.01em; }
-    .cover .goal { margin-top: 18px; font-size: 15px; opacity: 0.92; max-width: 560px; }
-    .cover .kicker { color: ${P.accent}; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-    .cover .meta { opacity: 0.8; font-size: 11px; margin-top: 28px; }
-    .client-logo { max-height: 44px; max-width: 140px; object-fit: contain; background: #fff; border-radius: 10px; padding: 6px 10px; }
-    .client-monogram { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: #fff; color: ${P.primary}; font-size: 20px; font-weight: 700; }
+  .page{
+    width:1280px; height:720px;
+    position:relative;
+    page-break-after: always;
+    overflow:hidden;
+    background:#fff;
+  }
+  .page:last-child{ page-break-after: auto; }
 
-    .page { max-width: 210mm; margin: 0 auto; padding: 36px 42px; }
-    h2 { font-size: 15px; color: ${P.ink}; margin: 30px 0 12px; padding-bottom: 7px; border-bottom: 1px solid ${P.rule}; display: flex; align-items: center; gap: 8px; }
-    h2::after { content: ""; flex: 0 0 34px; height: 3px; background: ${P.accent}; border-radius: 2px; margin-left: auto; }
-    h2 .sticker { font-size: 15px; }
+  /* ---- shared chrome for content pages ---- */
+  .pg-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 34px 56px 0;
+  }
+  .pg-head .brand{ display:flex; align-items:center; gap:10px; }
+  .pg-head .tag{ font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:${DECK.muted}; }
+  .pg-foot{
+    position:absolute; left:0; right:0; bottom:0;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 56px 26px; font-size:10.5px; color:#9AA3B2;
+  }
+  .pg-foot b{ color:${DECK.muted}; }
 
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 18px; }
-    .stat { border: 1px solid ${P.rule}; border-left: 3px solid ${P.accent}; border-radius: 10px; padding: 12px 14px; background: ${P.card}; }
-    .stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: ${P.muted}; }
-    .stat-value { font-size: 22px; font-weight: 700; color: ${P.ink}; margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .stat-sub { font-size: 10px; color: ${P.muted}; margin-top: 2px; }
+  /* ================= COVER ================= */
+  .cover{
+    background:
+      radial-gradient(120% 100% at 100% 0%, rgba(124,58,237,0.55) 0%, rgba(124,58,237,0) 45%),
+      radial-gradient(90% 90% at 0% 100%, rgba(0,87,255,0.55) 0%, rgba(0,87,255,0) 50%),
+      linear-gradient(160deg, #05060c 0%, #0a0d18 55%, #060914 100%);
+    color:#fff;
+  }
+  .cover::before{
+    content:""; position:absolute; inset:0;
+    background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .cover-inner{ position:relative; padding: 56px 64px; height:100%; display:flex; flex-direction:column; }
+  .cover-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .cover-top-right{ display:flex; align-items:center; gap:14px; }
+  .client-logo{ max-height:34px; max-width:120px; object-fit:contain; background:#fff; border-radius:8px; padding:4px 8px; }
+  .cover-tag{
+    font-size:11px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase;
+    background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16);
+    padding:7px 14px; border-radius:999px; color:#C9D8FF;
+  }
+  .cover-client{ font-weight:900; letter-spacing:-4px; margin-top:auto; }
+  .cover-obj{ font-size:19px; color:#B9C4E0; max-width:760px; margin-top:20px; line-height:1.55; }
+  .cover-meta{ display:flex; gap:48px; margin-top:56px; }
+  .cover-meta div{ font-size:12.5px; color:#8791AE; }
+  .cover-meta b{ display:block; color:#fff; font-size:14px; font-weight:700; margin-top:4px; }
 
-    .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
-    .fact { border-bottom: 1px dashed ${P.rule}; padding-bottom: 8px; }
-    .fact-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: ${P.muted}; }
-    .fact-value { margin-top: 2px; color: ${P.ink}; }
+  /* ================= SECTION HEADER ================= */
+  .sec-eyebrow{ display:flex; align-items:center; gap:10px; padding: 40px 56px 0; }
+  .sec-eyebrow .ic{ width:34px;height:34px;border-radius:10px; display:flex;align-items:center;justify-content:center; }
+  .sec-eyebrow h1{ font-size:28px; font-weight:800; letter-spacing:-0.8px; }
+  .sec-sub{ padding: 8px 56px 0; font-size:13.5px; color:${DECK.muted}; max-width:820px; }
 
-    .tier-bar { display: flex; gap: 2px; height: 18px; border-radius: 6px; overflow: hidden; margin: 10px 0 8px; }
-    .tier-seg { min-width: 8px; }
-    .tier-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: ${P.ink}; }
-    .tier-legend-item { display: inline-flex; align-items: center; gap: 6px; }
-    .dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+  /* ================= UNDERSTANDING ================= */
+  .stat-grid{ display:flex; gap:16px; padding: 28px 56px 0; }
+  .stat-box{
+    flex:1;
+    background: linear-gradient(160deg,#F5F8FF,#EEF2FC);
+    background-color:#F5F8FF;
+    border:1px solid rgba(11,15,26,0.08); border-radius:18px; padding:20px 22px;
+    border-top: 4px solid ${DECK.blue};
+  }
+  .stat-box .l{ font-size:11px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:${DECK.muted}; }
+  .stat-box .v{ font-size:30px; font-weight:800; letter-spacing:-0.8px; margin-top:6px; }
+  .stat-box .s{ font-size:12px; color:${DECK.muted}; margin-top:3px; }
 
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
-    th { text-align: left; background: ${P.card}; padding: 8px; border-bottom: 1px solid ${P.rule}; vertical-align: top; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: ${P.muted}; }
-    td { padding: 8px; border-bottom: 1px solid ${P.rule}; vertical-align: top; }
-    .creator-cell { display: flex; gap: 8px; align-items: center; min-width: 150px; }
-    .avatar { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex: 0 0 30px; background: ${P.accentLight}; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: ${P.accent}; border: 1px solid ${P.rule}; }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .tier-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .detail-grid{ display:flex; flex-wrap:wrap; padding: 30px 56px 0; gap: 0 40px; }
+  .detail-item{ width: calc(50% - 20px); padding: 15px 0; border-bottom:1px solid rgba(11,15,26,0.08); }
+  .detail-item .l{ font-size:10.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:${DECK.muted}; margin-bottom:5px; }
+  .detail-item .v{ font-size:15px; font-weight:600; line-height:1.5; }
 
-    .waves { margin-top: 12px; display: grid; gap: 0; }
-    .wave { display: flex; gap: 12px; padding: 10px 0; position: relative; }
-    .wave:not(:last-child)::before { content: ""; position: absolute; left: 13px; top: 38px; bottom: -4px; width: 2px; background: ${P.rule}; }
-    .wave-num { width: 28px; height: 28px; border-radius: 50%; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: 0 0 28px; font-size: 12px; }
-    .wave-window { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: ${P.muted}; }
-    .wave-title { font-weight: 600; color: ${P.ink}; }
+  /* ================= SUMMARY ================= */
+  .summary-text{ padding: 26px 56px 0; font-size:16px; line-height:1.75; color:#374151; max-width: 980px; }
+  .check-grid{ display:flex; flex-wrap:wrap; gap: 14px 24px; padding: 26px 56px 0; }
+  .check-item{
+    width: calc(50% - 12px);
+    display:flex; align-items:flex-start; gap:12px; font-size:14.5px; color:${DECK.ink};
+    background:#FAFBFF; border:1px solid rgba(11,15,26,0.06); border-radius:14px; padding:16px 18px;
+  }
+  .check-item .ck{
+    width:22px;height:22px;border-radius:7px; background:rgba(0,87,255,0.12); color:${DECK.blue};
+    display:flex;align-items:center;justify-content:center; flex-shrink:0; margin-top:1px;
+  }
 
-    .budget-hero { display: flex; gap: 16px; align-items: center; border: 1px solid ${P.rule}; border-radius: 12px; padding: 16px; background: ${P.card}; }
-    .budget-hero-num { font-size: 34px; font-weight: 700; color: ${P.accent}; font-variant-numeric: tabular-nums; }
-    .budget-hero-title { font-weight: 600; color: ${P.ink}; }
-    .alloc { margin-bottom: 10px; }
-    .alloc-head { display: flex; justify-content: space-between; font-weight: 600; }
-    .alloc-track { height: 10px; border-radius: 5px; background: ${P.rule}; margin: 4px 0; overflow: hidden; }
-    .alloc-fill { height: 100%; border-radius: 5px; background: ${P.accent}; }
+  /* ================= STRATEGY / TIMELINE ================= */
+  .strategy-row{ display:flex; gap:18px; padding: 26px 56px 0; }
+  .strategy-tag{
+    flex:1; text-align:center; padding: 28px 18px; border-radius:18px;
+    background-color:#0B0F1A; background-image: linear-gradient(160deg,#0B0F1A,#171D31); color:#fff;
+  }
+  .strategy-tag .n{ font-size:24px; font-weight:800; }
+  .strategy-tag .l{ font-size:12.5px; color:#9AA6C7; margin-top:6px; }
 
-    .amps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin-top: 8px; }
-    .amp { display: flex; gap: 8px; align-items: flex-start; }
-    .amp-icon { flex: 0 0 18px; }
+  .timeline{ position:relative; padding: 30px 56px 0 90px; }
+  .timeline::before{ content:""; position:absolute; left:69px; top:36px; bottom:10px; width:2px; background-color:#7C3AED; background-image:linear-gradient(180deg,#7C3AED,#0057FF,#3D8BFF); }
+  .t-item{ position:relative; padding-bottom: 20px; display:flex; align-items:flex-start; gap:16px; }
+  .t-dot{
+    position:absolute; left:-38px; top:0; width:32px; height:32px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:800;
+    box-shadow: 0 0 0 5px #fff;
+  }
+  .t-item h4{ font-size:15px; font-weight:800; }
+  .t-item p{ font-size:12.5px; color:${DECK.muted}; margin-top:2px; }
 
-    .footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid ${P.rule}; font-size: 10px; color: ${P.muted}; display: flex; justify-content: space-between; }
-    @media print { .cover { page-break-after: always; } h2 { page-break-after: avoid; } tr, .wave, .stat { page-break-inside: avoid; } }
-  </style>
+  /* ================= CREATOR TABLE ================= */
+  .ctable{ width:calc(100% - 112px); margin:26px 56px 0; border-collapse:collapse; font-size:13px; }
+  .ctable th{
+    text-align:left; font-size:10.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+    color:${DECK.muted}; padding: 0 12px 12px; border-bottom:2px solid ${DECK.ink};
+  }
+  .ctable td{ padding: 12px 12px; border-bottom:1px solid rgba(11,15,26,0.08); vertical-align:middle; }
+  .ctable td.concept{ font-size:12.5px; color:#374151; max-width:420px; }
+  .creator-name{ display:flex; align-items:center; gap:10px; font-weight:700; }
+  .avatar{
+    width:28px;height:28px;border-radius:50%; overflow:hidden; flex-shrink:0;
+    background-color:${DECK.blue}; background-image:linear-gradient(135deg,#0057FF,#7C3AED);
+    display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:800;
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+  .tier-chip{ font-size:10.5px; font-weight:800; padding:4px 10px; border-radius:999px; display:inline-block; white-space:nowrap; }
+
+  /* ================= BUDGET ================= */
+  .budget-hero{
+    margin: 30px 56px 0;
+    background-color:${DECK.blue}; background-image: linear-gradient(135deg,#0040CC,#0057FF 55%,#7C3AED);
+    border-radius:22px; padding: 40px 46px; color:#fff; display:flex; align-items:center; justify-content:space-between;
+  }
+  .budget-hero .big{ font-size:64px; font-weight:900; letter-spacing:-2px; }
+  .budget-hero .cap{ font-size:14px; opacity:.85; margin-top:6px; }
+  .budget-hero .amt{ text-align:right; font-family:ui-monospace,'Courier New',monospace; font-size:15px; font-weight:600; line-height:1.7; max-width:420px; }
+  .alloc-list{ padding: 18px 56px 0; }
+  .alloc-row{ display:flex; align-items:baseline; gap:12px; padding:9px 0; border-bottom:1px solid rgba(11,15,26,0.08); font-size:13.5px; }
+  .alloc-row b{ color:${DECK.blue}; font-size:15px; min-width:48px; }
+  .alloc-row i{ color:${DECK.muted}; font-style:normal; font-size:12px; }
+
+  .amp-grid{ display:flex; flex-wrap:wrap; gap: 16px; padding: 30px 56px 0; }
+  .amp-item{
+    width: calc(50% - 8px); display:flex; gap:14px; font-size:14.5px; align-items:flex-start;
+    background:#FAFBFF; border:1px solid rgba(11,15,26,0.06); border-radius:14px; padding:16px 18px;
+  }
+  .amp-item .ic{ width:26px;height:26px;border-radius:8px; background:rgba(0,87,255,0.12); color:${DECK.blue}; display:flex;align-items:center;justify-content:center; flex-shrink:0; }
+
+  /* ================= METRICS + CLOSE ================= */
+  .mtable{ width:calc(100% - 112px); margin: 30px 56px 0; border-collapse:collapse; font-size:15px; }
+  .mtable th{ text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:${DECK.muted}; padding:0 14px 14px; border-bottom:2px solid ${DECK.ink}; }
+  .mtable td{ padding:18px 14px; border-bottom:1px solid rgba(11,15,26,0.08); }
+
+  .close{
+    background-color:#05060c; background-image:
+      radial-gradient(90% 90% at 100% 100%, rgba(0,87,255,0.5) 0%, rgba(0,87,255,0) 50%),
+      linear-gradient(160deg, #05060c 0%, #0a0d18 60%, #060914 100%);
+    color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+  }
+  .close h2{ font-size:38px; font-weight:800; letter-spacing:-1px; max-width:760px; line-height:1.3; }
+  .close p{ font-size:14px; color:#98A3C4; margin-top:20px; }
+  .close .contact{ margin-top: 46px; font-size:13px; color:#7885A8; }
+</style>
 </head>
 <body>
-  <section class="cover">
-    <div>
-      <div class="cover-top">
-        ${renderThinkwayReportLogoHtml({ variant: "cover", theme: "dark" })}
-        ${clientMark}
-      </div>
-      <div class="kicker" style="margin-top:48px">Campaign Intelligence Proposal</div>
-      <h1>${escapeHtml(campaignName)}</h1>
-      ${model.objective ? `<p class="goal">${escapeHtml(model.objective)}</p>` : ""}
-      <p class="meta">Prepared for ${escapeHtml(client)} · ${escapeHtml(generated)}</p>
-    </div>
-    <p class="meta">Confidential — for client review only</p>
-  </section>
-
-  <div class="page">
-    <div class="stats">${statTiles}</div>
-
-    <h2><span class="sticker">🎯</span>Campaign Understanding</h2>
-    <div class="facts">${understandingRows}</div>
-
-    <h2><span class="sticker">🧠</span>Executive Summary</h2>
-    <p>${escapeHtml(model.executiveSummary)}</p>
-    ${model.recommendedActions.length ? `<ul style="margin:6px 0 0 18px">${model.recommendedActions.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}</ul>` : ""}
-
-    <h2><span class="sticker">🧭</span>Strategy</h2>
-    <p>${escapeHtml(model.strategyText)}</p>
-
-    <h2><span class="sticker">🚀</span>Activation Plan — Momentum Waves</h2>
-    <p class="muted">Staggered creator waves keep the campaign trending instead of peaking on day one.</p>
-    <div class="waves">${waveSteps || `<p class="muted">Timeline pending.</p>`}</div>
-
-    <h2><span class="sticker">👥</span>Recommended Creators &amp; Content Concepts</h2>
-    ${tierBar}
-    <table>
-      <thead>
-        <tr><th>Creator</th><th>Tier</th><th>Platform</th><th>Followers</th><th>ER</th><th>Why selected</th><th>Content concept</th></tr>
-      </thead>
-      <tbody>${vendorRows}</tbody>
-    </table>
-
-    <h2><span class="sticker">💰</span>Budget</h2>
-    ${budgetBlock}
-
-    <h2><span class="sticker">📣</span>Amplification Recommendations</h2>
-    <div class="amps">${amplification}</div>
-
-    ${kpiRows ? `<h2><span class="sticker">📈</span>Success Metrics</h2><table><thead><tr><th>Metric</th><th>Target</th><th>Basis</th></tr></thead><tbody>${kpiRows}</tbody></table>` : ""}
-
-    <div class="footer">
-      <span>Generated by Thinkway Platform · ${escapeHtml(generated)}</span>
-      <span>Document ref ${escapeHtml(presentationVersion)}</span>
-    </div>
-  </div>
+${pages.join("\n")}
 </body>
 </html>`;
 }

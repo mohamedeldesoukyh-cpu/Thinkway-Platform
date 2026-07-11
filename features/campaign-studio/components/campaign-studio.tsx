@@ -26,6 +26,7 @@ import {
   resolveInfluencerEstimateCurrency,
 } from "@/features/campaign-director/facts/facts-display-bridge";
 import { CAMPAIGN_STUDIO_COPY } from "../constants/copy";
+import { STUDIO_CLASSES } from "../constants/studio-tokens";
 import { cn } from "@/lib/utils";
 
 import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-workspace/types/studio-decision-mode";
@@ -112,55 +113,65 @@ export function CampaignStudio({
   return (
     <div
       className={cn(
-        "w-full min-w-0 space-y-4 overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-b from-background to-[#fafbff] p-4 shadow-sm dark:to-background sm:p-5",
+        "w-full min-w-0 space-y-4 overflow-hidden rounded-[22px] border border-[#0B0F1A]/6 bg-white p-4 shadow-[0_10px_26px_rgba(0,87,255,0.08),0_2px_6px_rgba(6,8,16,0.05)] dark:border-border dark:bg-background sm:p-5",
         className
       )}
     >
       <header className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-[0_4px_14px_rgba(124,58,237,0.35)]">
-              <SparklesIcon className="size-4 text-white" />
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-[13px] bg-gradient-to-br from-[#7C3AED] to-[#0057FF] shadow-[0_8px_18px_rgba(124,58,237,0.35)]">
+              <ZapIcon className="size-[18px] fill-white text-white" aria-hidden />
             </div>
-            <div>
-              <p className="text-[11px] font-bold tracking-widest text-violet-600 uppercase dark:text-violet-400">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold tracking-[0.6px] text-[#7C3AED] uppercase dark:text-violet-400">
                 {CAMPAIGN_STUDIO_COPY.studioLabel}
               </p>
-              <h2 className="text-base font-semibold text-foreground">
+              <h2 className="text-[17px] font-extrabold tracking-[-0.4px] text-foreground">
                 {studio.workflowName}
               </h2>
             </div>
             {clientName ? (
-              <span className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 py-1 pr-3 pl-1 text-xs font-semibold text-foreground">
-                <span className="flex size-6 items-center justify-center rounded-full bg-[#1D9E75] text-[11px] font-bold text-white">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#060810] py-[3px] pr-2.5 pl-1.5 text-xs font-bold text-white dark:border dark:border-white/15">
+                <span className="flex size-4 items-center justify-center rounded-full bg-white text-[9px] font-extrabold text-[#060810]">
                   {clientName.trim().charAt(0).toUpperCase()}
                 </span>
                 {clientName}
               </span>
             ) : null}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             {studio.campaignObject?.id && studio.progressPercent >= 100 ? (
               <CampaignProposalExportActions
                 campaignObjectId={studio.campaignObject.id}
                 conversationId={conversationId}
               />
             ) : null}
+            {studioModeToggle}
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">
+              <p
+                className="text-[11px] font-semibold text-muted-foreground"
+                id="studio-progress-label"
+              >
                 Step {studio.currentStep}/{studio.totalSteps}
               </p>
-              <p className="text-sm font-semibold text-[#1D9E75]">
+              <p className="text-[15px] font-extrabold text-[#0057FF]" aria-hidden>
                 {studio.progressPercent}%
               </p>
             </div>
           </div>
-          {studioModeToggle}
         </div>
 
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-1 overflow-hidden rounded-full bg-[#E4E9F5] dark:bg-muted"
+          role="progressbar"
+          aria-labelledby="studio-progress-label"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={studio.progressPercent}
+        >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-[#1D9E75] via-violet-500 to-indigo-500 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-[#7C3AED] via-[#0057FF] to-[#3D8BFF] transition-all duration-500 motion-reduce:transition-none"
             style={{ width: `${studio.progressPercent}%` }}
           />
         </div>
@@ -178,8 +189,8 @@ export function CampaignStudio({
         ) : null}
 
         {studio.inferredFields && studio.inferredFields.length > 0 ? (
-          <div className="rounded-lg border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-3 py-2">
-            <p className="text-[10px] font-bold tracking-wide text-[#1D9E75] uppercase">
+          <div className="rounded-lg border border-brand-product/30 bg-brand-product/5 px-3 py-2">
+            <p className={cn(STUDIO_CLASSES.label, STUDIO_CLASSES.primaryText)}>
               {CAMPAIGN_STUDIO_COPY.autoInferred}
             </p>
             <p className="mt-0.5 break-words text-xs text-muted-foreground">
@@ -189,33 +200,30 @@ export function CampaignStudio({
         ) : null}
       </header>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="flex flex-wrap gap-2.5">
         {studio.specialists.map((specialist) => (
           <div
             key={specialist.id}
+            title={specialist.currentTask ?? undefined}
             className={cn(
-              "min-w-0 rounded-lg border px-3 py-2 transition-colors [overflow-wrap:anywhere]",
+              "inline-flex min-w-0 items-center gap-2 rounded-full border px-[13px] py-1.5 text-xs font-semibold shadow-[0_1px_2px_rgba(6,8,16,0.05)] transition-colors motion-reduce:transition-none",
               specialist.status === "working"
-                ? "border-violet-300 bg-violet-50/80 dark:border-violet-800 dark:bg-violet-950/30"
-                : specialist.status === "complete"
-                  ? "border-[#1D9E75]/30 bg-[#1D9E75]/5"
-                  : "border-border/60 bg-muted/30"
+                ? "border-violet-300 bg-violet-50/80 text-foreground dark:border-violet-800 dark:bg-violet-950/30"
+                : "border-[#0B0F1A]/8 bg-white text-foreground dark:border-border dark:bg-background"
             )}
           >
-            <div className="flex items-center gap-2">
-              {specialist.status === "working" ? (
-                <span className="size-2.5 animate-pulse rounded-full bg-violet-500" />
-              ) : specialist.status === "complete" ? (
-                <span className="size-2.5 rounded-full bg-[#1D9E75]" />
-              ) : (
-                <span className="size-2.5 rounded-full bg-muted-foreground/30" />
-              )}
-              <span className="break-words text-xs font-semibold">{specialist.label}</span>
-            </div>
-            {specialist.currentTask ? (
-              <p className="mt-1 break-words text-[10px] text-muted-foreground">
-                {specialist.currentTask}
-              </p>
+            {specialist.status === "working" ? (
+              <span className="size-1.5 shrink-0 rounded-full bg-violet-500 shadow-[0_0_0_3px_rgba(124,58,237,0.15)] motion-safe:animate-pulse" />
+            ) : specialist.status === "complete" ? (
+              <span className="size-1.5 shrink-0 rounded-full bg-[#0C9D57] shadow-[0_0_0_3px_rgba(12,157,87,0.15)]" />
+            ) : (
+              <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
+            )}
+            <span className="truncate">{specialist.label}</span>
+            {specialist.status === "working" && specialist.currentTask ? (
+              <span className="hidden max-w-[180px] truncate text-[10px] font-normal text-muted-foreground sm:inline">
+                · {specialist.currentTask}
+              </span>
             ) : null}
           </div>
         ))}
@@ -232,7 +240,7 @@ export function CampaignStudio({
 
       <div className="min-w-0 space-y-5">
         {groupSectionsByStoryPhase(studio.sections).map((phase) => (
-          <section key={phase.id} className="min-w-0 space-y-3">
+          <section key={phase.id} className={cn("min-w-0 space-y-3", STUDIO_CLASSES.sectionEnter)}>
             <div className="flex items-baseline gap-2 border-b border-border/60 pb-1.5">
               <h3 className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
                 {phase.label}

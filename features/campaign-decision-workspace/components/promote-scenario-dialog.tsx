@@ -38,7 +38,7 @@ export function PromoteScenarioDialog({
     <>
       <Button
         type="button"
-        className="bg-[#1D9E75] hover:bg-[#178f68]"
+        className="bg-[#1D9E75] hover:bg-[#178f69]"
         disabled={disabled || isPromoting}
         onClick={() => onOpenChange(true)}
       >
@@ -68,7 +68,7 @@ export function PromoteScenarioDialog({
             </Button>
             <Button
               type="button"
-              className="bg-[#1D9E75] hover:bg-[#178f68]"
+              className="bg-[#1D9E75] hover:bg-[#178f69]"
               disabled={isPromoting}
               onClick={() => onConfirm(reason)}
             >

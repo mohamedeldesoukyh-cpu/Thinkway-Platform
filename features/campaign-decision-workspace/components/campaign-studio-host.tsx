@@ -161,7 +161,6 @@ function CampaignStudioDecisionHost({
           messageId={messageId}
           onCardUpdated={onCardUpdated}
           onVendorDecisionsUpdated={onVendorDecisionsUpdated}
-          studioModeToggle={toggle}
         />
       </div>
     );
@@ -184,10 +183,9 @@ function CampaignStudioDecisionHost({
             onCardUpdated={onCardUpdated}
             onVendorDecisionsUpdated={onVendorDecisionsUpdated}
             decisionMode={decisionMode}
-            studioModeToggle={toggle}
           />
 
-          <DecisionRightPanel workspace={workspace} className="flex w-full xl:hidden" />
+          <DecisionRightPanel workspace={workspace} variant="stacked" className="xl:hidden" />
         </div>
 
         <DecisionRightPanel workspace={workspace} />

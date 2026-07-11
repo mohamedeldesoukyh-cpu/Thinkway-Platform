@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { GroundedElement } from "../../../services/grounding-types";
+import { STUDIO_CLASSES } from "../../../constants/studio-tokens";
 import { GroundingFooter } from "./grounding-badge";
 
 type ExecutiveCardProps = {
@@ -13,7 +14,7 @@ type ExecutiveCardProps = {
 };
 
 const ACCENT_STYLES = {
-  green: "border-[#1D9E75]/25 bg-[#1D9E75]/5",
+  green: "border-brand-product/25 bg-brand-product/5",
   purple: "border-violet-300/40 bg-violet-50/50 dark:border-violet-800/40 dark:bg-violet-950/20",
   neutral: "border-border/60 bg-muted/20",
 } as const;
@@ -35,7 +36,7 @@ export function ExecutiveCard({
         className
       )}
     >
-      <p className="text-[10px] font-bold tracking-wide text-muted-foreground uppercase">
+      <p className={cn(STUDIO_CLASSES.label, "text-muted-foreground")}>
         {label}
       </p>
       <p className="mt-1 break-words text-sm font-semibold leading-snug text-foreground [overflow-wrap:anywhere] [word-break:break-word]">

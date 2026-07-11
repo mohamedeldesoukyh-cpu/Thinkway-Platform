@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { STUDIO_CLASSES } from "@/features/campaign-studio/constants/studio-tokens";
 
 import type { ScenarioComparison } from "@/features/campaign-decision-engine";
 
@@ -25,7 +26,7 @@ export function ScenarioComparisonTable({
   className,
 }: ScenarioComparisonTableProps) {
   return (
-    <Card size="sm" className={cn("rounded-2xl border-border/80 shadow-none", className)}>
+    <Card size="sm" className={cn(STUDIO_CLASSES.card, "rounded-2xl", className)}>
       <CardHeader className={cn("pb-2", compact && "px-3 pt-3")}>
         <CardTitle className={cn("font-semibold", compact ? "text-xs" : "text-sm")}>
           {compact ? "Scenario Compare" : "Side-by-Side Comparison"}
@@ -76,12 +77,18 @@ export function ScenarioComparisonTable({
               comparison.rows.map((row) => (
               <TableRow
                 key={row.scenarioId}
-                className={cn(row.isWinner && "bg-[#1D9E75]/8 hover:bg-[#1D9E75]/10")}
+                className={cn(row.isWinner && "bg-brand-product/10 hover:bg-brand-product/15")}
               >
                 <TableCell className={cn("font-medium", compact ? "text-[10px]" : "text-xs")}>
                   {row.scenarioName}
                   {row.isWinner && (
-                    <span className="ml-1 text-[10px] font-semibold text-[#1D9E75]">★</span>
+                    <span
+                      className="ml-1 text-[10px] font-semibold text-brand-product"
+                      aria-label="Recommended scenario"
+                      role="img"
+                    >
+                      ★
+                    </span>
                   )}
                 </TableCell>
                 {!compact ? (
@@ -102,7 +109,7 @@ export function ScenarioComparisonTable({
                   {compact ? row.budget.toLocaleString() : Math.round(row.cpm)}
                 </TableCell>
                 {compact ? (
-                  <TableCell className="text-right text-[10px] font-semibold tabular-nums text-[#1D9E75]">
+                  <TableCell className="text-right text-[10px] font-semibold tabular-nums text-brand-product">
                     {row.thinkwayScore}
                   </TableCell>
                 ) : (
@@ -113,7 +120,7 @@ export function ScenarioComparisonTable({
                     <TableCell className="text-right text-xs tabular-nums">
                       {row.creatorCount}
                     </TableCell>
-                    <TableCell className="text-right text-xs font-semibold tabular-nums text-[#1D9E75]">
+                    <TableCell className="text-right text-xs font-semibold tabular-nums text-brand-product">
                       {row.thinkwayScore}
                     </TableCell>
                     <TableCell className="text-right text-xs tabular-nums">

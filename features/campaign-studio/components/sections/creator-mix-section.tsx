@@ -12,13 +12,22 @@ import { PAIR_STRATEGY_CARD } from "../../constants/studio-layout";
 import { resolveCreatorMix, type CreatorMixTier } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
+import { cn } from "@/lib/utils";
 
 const TIER_COLORS: Record<string, string> = {
   Nano: "bg-slate-400",
-  Micro: "bg-[#1D9E75]",
+  Micro: "bg-brand-product",
   Mid: "bg-violet-500",
   Macro: "bg-indigo-500",
   Celebrity: "bg-amber-500",
+};
+
+const TIER_PROGRESS_CLASS: Record<string, string> = {
+  Nano: "mt-2 h-2 [&>div]:bg-slate-400",
+  Micro: "mt-2 h-2 [&>div]:bg-brand-product",
+  Mid: "mt-2 h-2 [&>div]:bg-violet-500",
+  Macro: "mt-2 h-2 [&>div]:bg-indigo-500",
+  Celebrity: "mt-2 h-2 [&>div]:bg-amber-500",
 };
 
 const TIER_HEX_COLORS: Record<string, string> = {
@@ -58,7 +67,7 @@ function CreatorMixDoughnutRing({ tiers }: { tiers: CreatorMixTier[] }) {
       aria-label={`Creator tier distribution: ${segments.map((t) => `${t.tier} ${t.percent}%`).join(", ")}`}
     >
       <div
-        className="size-full rounded-full"
+        className="size-full rounded-full transition-[background] duration-500 motion-reduce:transition-none"
         style={{ background: `conic-gradient(${gradientStops})` }}
       />
       <div className="absolute inset-[22%] flex flex-col items-center justify-center rounded-full bg-background">
@@ -100,7 +109,7 @@ function CreatorMixDistributionPanel({ tiers }: { tiers: CreatorMixTier[] }) {
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                   <span className={`size-3 shrink-0 rounded-full ${TIER_COLORS[tier.tier] ?? "bg-muted"}`} />
                   <span className="text-sm font-bold text-foreground">{tier.tier}</span>
-                  <span className="text-xs font-medium text-[#1D9E75]">{tier.percent}%</span>
+                  <span className="text-xs font-medium text-brand-product">{tier.percent}%</span>
                   <span className="text-xs text-muted-foreground">
                     {tier.count} {tier.count === 1 ? "creator" : "creators"}
                   </span>
@@ -144,7 +153,7 @@ export function CreatorMixSection({
 
   return (
     <div className="min-w-0 space-y-4">
-      <div className="min-w-0 space-y-2">
+      <div className="hidden min-w-0 space-y-2 sm:block">
         {tiers.map((tier) => (
           <div key={tier.tier} className={PAIR_STRATEGY_CARD}>
             <div className="flex items-center justify-between gap-2">
@@ -156,7 +165,10 @@ export function CreatorMixSection({
                 </span>
               </div>
             </div>
-            <Progress value={tier.percent} className="mt-2 h-2 [&>div]:bg-[#1D9E75]" />
+            <Progress
+              value={tier.percent}
+              className={TIER_PROGRESS_CLASS[tier.tier] ?? "mt-2 h-2 [&>div]:bg-muted"}
+            />
             <p className="mt-1.5 break-words text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
               {tier.reasoning}
             </p>

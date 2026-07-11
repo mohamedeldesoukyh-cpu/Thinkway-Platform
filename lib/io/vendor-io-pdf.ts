@@ -19,6 +19,14 @@ export const PERFORMANCE_REPORT_PDF_OPTIONS = {
   margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
 };
 
+/** Slide-deck documents that declare their own @page size (campaign proposals). */
+export const SLIDE_DECK_PDF_OPTIONS = {
+  format: "A4" as const,
+  printBackground: true,
+  preferCSSPageSize: true,
+  margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+};
+
 export type HtmlToPdfOptions = {
   format: "A4";
   printBackground: boolean;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLinkIcon, XIcon } from "lucide-react";
+import { ExternalLinkIcon } from "lucide-react";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
@@ -67,7 +67,7 @@ export function CreatorDrawer({ creator, open, onOpenChange }: CreatorDrawerProp
                   href={creator.profileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]"
+                  className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-product"
                 >
                   <CreatorAvatarImage
                     avatarUrl={creator.avatarUrl}
@@ -101,18 +101,9 @@ export function CreatorDrawer({ creator, open, onOpenChange }: CreatorDrawerProp
                   ) : null}
                 </div>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => onOpenChange(false)}
-                aria-label="Close creator drawer"
-              >
-                <XIcon className="size-4" />
-              </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 gap-3 border-t border-border/60 pt-4 text-sm sm:grid-cols-2">
               {creator.followers != null ? (
                 <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -142,11 +133,11 @@ export function CreatorDrawer({ creator, open, onOpenChange }: CreatorDrawerProp
                 </div>
               ) : null}
               {creator.priceEstimate ? (
-                <div className="col-span-2 rounded-lg border border-[#1D9E75]/30 bg-[#1D9E75]/5 p-3">
+                <div className="col-span-2 rounded-lg border border-brand-product/30 bg-brand-product/5 p-3 sm:col-span-2">
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                     Estimated fee
                   </p>
-                  <p className="mt-0.5 font-semibold text-[#1D9E75]">{creator.priceEstimate}</p>
+                  <p className="mt-0.5 font-semibold text-brand-product">{creator.priceEstimate}</p>
                 </div>
               ) : null}
             </div>
@@ -171,7 +162,7 @@ export function CreatorDrawer({ creator, open, onOpenChange }: CreatorDrawerProp
 
             <div className="flex flex-wrap gap-2">
               {creator.profileUrl ? (
-                <Button type="button" variant="default" className="bg-[#1D9E75] hover:bg-[#178f69]" asChild>
+                <Button type="button" variant="default" className="bg-brand-product hover:bg-brand-product/90" asChild>
                   <a href={creator.profileUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLinkIcon className="size-4" />
                     View social profile

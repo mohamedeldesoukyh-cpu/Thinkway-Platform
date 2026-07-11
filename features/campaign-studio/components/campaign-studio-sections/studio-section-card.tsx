@@ -11,6 +11,7 @@ import type { StudioDraftState } from "@/features/campaign-intelligence/types/se
 import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-workspace/types/studio-decision-mode";
 
 import { SECTION_LOADING_MESSAGES } from "../../constants/copy";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import type { StudioLayoutType } from "../../constants/studio-layout";
 import type { CampaignStudioSection } from "../../types/campaign-studio";
 import { SectionRenderer } from "../sections/section-renderer";
@@ -47,8 +48,8 @@ const STATUS_STYLES = {
     label: "In progress",
   },
   complete: {
-    border: "border-[#1D9E75]/40",
-    badge: "bg-[#1D9E75]/10 text-[#1D9E75]",
+    border: "border-[#0B0F1A]/8 dark:border-border",
+    badge: "bg-[#0C9D57]/10 text-[#0C9D57]",
     label: "Complete",
   },
   blocked: {
@@ -58,14 +59,33 @@ const STATUS_STYLES = {
   },
 } as const;
 
+/** Per-section icon accents — mirrors the reference presentation palette. */
+const SECTION_ICON_ACCENTS: Record<string, { bg: string; text: string }> = {
+  "campaign-summary": { bg: "bg-[#0057FF]/10", text: "text-[#0057FF]" },
+  "executive-summary": { bg: "bg-[#D6336C]/10", text: "text-[#D6336C]" },
+  "executive-strategy": { bg: "bg-[#7C3AED]/10", text: "text-[#7C3AED]" },
+  "creative-concepts": { bg: "bg-[#7C3AED]/10", text: "text-[#7C3AED]" },
+  "why-ai": { bg: "bg-[#7C3AED]/10", text: "text-[#7C3AED]" },
+  "creator-mix": { bg: "bg-[#7C3AED]/10", text: "text-[#7C3AED]" },
+  timeline: { bg: "bg-[#0C9D57]/10", text: "text-[#0C9D57]" },
+  "kpi-forecast": { bg: "bg-[#0C9D57]/10", text: "text-[#0C9D57]" },
+  "success-probability": { bg: "bg-[#0C9D57]/10", text: "text-[#0C9D57]" },
+  "budget-planner": { bg: "bg-[#D97706]/10", text: "text-[#D97706]" },
+  "risk-analysis": { bg: "bg-[#D97706]/10", text: "text-[#D97706]" },
+  "industry-benchmark": { bg: "bg-[#D97706]/10", text: "text-[#D97706]" },
+  "opportunity-finder": { bg: "bg-[#D97706]/10", text: "text-[#D97706]" },
+};
+
+const DEFAULT_ICON_ACCENT = { bg: "bg-[#0057FF]/10", text: "text-[#0057FF]" };
+
 function SectionLoadingState({ sectionId }: { sectionId: CampaignStudioSection["id"] }) {
   const loading = SECTION_LOADING_MESSAGES[sectionId];
   const specialist = loading?.specialist ?? "Specialist";
   const message = loading?.message ?? "Working…";
 
   return (
-    <div className="flex items-center gap-2.5 py-2">
-      <span className="ai-spinner size-3.5 shrink-0 text-violet-500" />
+    <div className="flex items-center gap-2.5 py-2" aria-live="polite" aria-busy="true">
+      <span className="ai-spinner size-3.5 shrink-0 text-violet-500" aria-hidden />
       <p className="text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{specialist}:</span> {message}
       </p>
@@ -94,31 +114,50 @@ export function StudioSectionCard({
   const hasRenderableContent =
     section.status !== "pending" || campaignObject != null;
 
+  const statusId = `studio-section-${section.id}-status`;
+
   return (
     <article
       className={cn(
-        "flex min-w-0 flex-col rounded-xl border bg-background/90 p-4 shadow-sm transition-all duration-300",
+        "flex min-w-0 flex-col rounded-2xl border bg-white p-4 shadow-[0_1px_2px_rgba(6,8,16,0.05)] transition-all duration-300 motion-reduce:transition-none dark:bg-background/90",
         layout === "pair" && "min-h-[18rem]",
         layout === "dashboard" && "p-4 sm:p-5",
         styles.border,
         section.status === "running" && "ring-1 ring-violet-200 dark:ring-violet-800",
         className
       )}
+      aria-labelledby={`studio-section-${section.id}-title`}
+      aria-describedby={statusId}
     >
       <header className="mb-3 flex min-w-0 items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
           {Icon ? (
-            <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-violet-100 dark:bg-violet-950/40">
-              <Icon className="size-3.5 text-violet-600 dark:text-violet-400" />
+            <div
+              className={cn(
+                "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
+                (SECTION_ICON_ACCENTS[section.id] ?? DEFAULT_ICON_ACCENT).bg
+              )}
+            >
+              <Icon
+                className={cn(
+                  "size-[15px]",
+                  (SECTION_ICON_ACCENTS[section.id] ?? DEFAULT_ICON_ACCENT).text
+                )}
+                aria-hidden
+              />
             </div>
           ) : null}
-          <h3 className="min-w-0 flex-1 break-words pt-0.5 text-sm font-semibold text-foreground [overflow-wrap:anywhere] [word-break:break-word]">
+          <h3
+            id={`studio-section-${section.id}-title`}
+            className="min-w-0 flex-1 break-words pt-1 text-[15px] font-extrabold tracking-[-0.3px] text-foreground [overflow-wrap:anywhere] [word-break:break-word]"
+          >
             {section.title}
           </h3>
         </div>
         <span
+          id={statusId}
           className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
+            "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-[0.4px] uppercase",
             outdated
               ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
               : styles.badge
@@ -128,7 +167,12 @@ export function StudioSectionCard({
         </span>
       </header>
 
-      <div className="min-w-0 flex-1 [overflow-wrap:anywhere] [word-break:break-word]">
+      <div
+        className={cn(
+          "min-w-0 flex-1 [overflow-wrap:anywhere] [word-break:break-word]",
+          section.status === "complete" && STUDIO_CLASSES.sectionEnter
+        )}
+      >
         {isLoading && !hasRenderableContent ? (
           <SectionLoadingState sectionId={section.id} />
         ) : hasRenderableContent ? (

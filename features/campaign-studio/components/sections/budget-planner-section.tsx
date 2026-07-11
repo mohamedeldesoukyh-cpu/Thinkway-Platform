@@ -28,7 +28,13 @@ type BudgetPlannerSectionProps = {
   status: CampaignStudioSectionStatus;
 };
 
-function PieChart({ percents }: { percents: number[] }) {
+function PieChart({
+  percents,
+  labels,
+}: {
+  percents: number[];
+  labels: string[];
+}) {
   const colors = ["#1D9E75", "#8b5cf6", "#6366f1", "#f59e0b", "#94a3b8"];
   let cumulative = 0;
   const gradientStops = percents
@@ -39,10 +45,16 @@ function PieChart({ percents }: { percents: number[] }) {
     })
     .join(", ");
 
+  const ariaLabel = labels
+    .map((label, index) => `${label} ${percents[index] ?? 0}%`)
+    .join(", ");
+
   return (
     <div
       className="mx-auto size-24 rounded-full"
       style={{ background: `conic-gradient(${gradientStops})` }}
+      role="img"
+      aria-label={`Budget allocation: ${ariaLabel}`}
     />
   );
 }
@@ -86,7 +98,10 @@ export function BudgetPlannerSection({
 
       <div className={DASHBOARD_BUDGET_TOP}>
         <div className="flex w-full justify-center lg:justify-start">
-          <PieChart percents={percents} />
+          <PieChart
+            percents={percents}
+            labels={budget.allocations.map((line) => line.category)}
+          />
         </div>
         <div className="min-w-0 w-full space-y-2">
           {budget.allocations.map((line, index) => {

@@ -25,11 +25,11 @@ type AiWelcomeScreenProps = {
 };
 
 const CONTEXT_PILLS = [
-  { label: `4,550 ${AI_TERMINOLOGY.vendorPlural}`, dot: "bg-[#1D9E75]" },
-  { label: "1 Campaign active", dot: "bg-violet-600" },
-  { label: "£445K pending payment", dot: "bg-amber-500" },
-  { label: "6 Shortlists", dot: "bg-purple-500" },
-  { label: "EG · MENA", dot: "bg-pink-500" },
+  { label: `4,550 ${AI_TERMINOLOGY.vendorPlural}`, dot: "bg-[#0C9D57]" },
+  { label: "1 Campaign active", dot: "bg-[#7C3AED]" },
+  { label: "£445K pending payment", dot: "bg-[#D97706]" },
+  { label: "6 Shortlists", dot: "bg-[#3D5AFE]" },
+  { label: "EG · MENA", dot: "bg-[#D6336C]" },
 ] as const;
 
 const PROMPT_CARDS = [
@@ -41,8 +41,8 @@ const PROMPT_CARDS = [
       "Find me top 10 Instagram creators in Egypt with over 500K followers in beauty and fashion niche",
     intent: "scout" as AiIntent,
     icon: UsersIcon,
-    iconBg: "bg-pink-50 dark:bg-pink-950/40",
-    iconColor: "text-pink-500",
+    iconBg: "bg-gradient-to-br from-[#FFE3EC] to-[#FFC7DC] dark:from-pink-950/60 dark:to-pink-900/40",
+    iconColor: "text-[#D6336C]",
   },
   {
     id: "create-campaign",
@@ -52,8 +52,8 @@ const PROMPT_CARDS = [
       "Create a new campaign for Arab Bank targeting Gen Z on Instagram and TikTok for Q3 2026",
     intent: "strategize" as AiIntent,
     icon: MegaphoneIcon,
-    iconBg: "bg-violet-50 dark:bg-violet-950/40",
-    iconColor: "text-violet-600",
+    iconBg: "bg-gradient-to-br from-[#E3E9FF] to-[#D6DEFF] dark:from-blue-950/60 dark:to-blue-900/40",
+    iconColor: "text-[#3D5AFE]",
   },
   {
     id: "analyze-campaign",
@@ -63,8 +63,8 @@ const PROMPT_CARDS = [
       "Analyze the performance of Arab Bank × La Liga campaign and give me key insights",
     intent: "analyze" as AiIntent,
     icon: TrendingUpIcon,
-    iconBg: "bg-[#1D9E75]/10 dark:bg-[#1D9E75]/20",
-    iconColor: "text-[#1D9E75]",
+    iconBg: "bg-gradient-to-br from-[#DFFBEA] to-[#C6F5D9] dark:from-emerald-950/60 dark:to-emerald-900/40",
+    iconColor: "text-[#0C9D57]",
   },
   {
     id: "build-shortlist",
@@ -74,8 +74,8 @@ const PROMPT_CARDS = [
       "Build a shortlist of 15 food and lifestyle creators for a restaurant brand launch in Cairo",
     intent: "scout" as AiIntent,
     icon: UserPlusIcon,
-    iconBg: "bg-purple-50 dark:bg-purple-950/40",
-    iconColor: "text-purple-500",
+    iconBg: "bg-gradient-to-br from-[#F0E6FF] to-[#E4D2FF] dark:from-purple-950/60 dark:to-purple-900/40",
+    iconColor: "text-[#7C3AED]",
   },
 ] as const;
 
@@ -130,20 +130,18 @@ export function AiWelcomeScreen({ onSelect, disabled, className }: AiWelcomeScre
         className
       )}
     >
-      <div className="relative z-[1] w-full max-w-[640px]">
+      <div className="relative z-[1] w-full max-w-[720px]">
         <div className="mx-auto mb-6 flex justify-center">
           <AiOrbIcon
             size="lg"
             float
             ring
-            className="shadow-[0_12px_40px_rgba(124,58,237,0.4)]"
+            className="shadow-[0_20px_40px_rgba(0,87,255,0.35)]"
           />
         </div>
 
-        <h2 className="mb-2.5 text-[28px] leading-[1.1] font-extrabold tracking-[-0.8px] text-foreground sm:text-[32px]">
-          How can I help
-          <br />
-          <span className="ai-gradient-text">your campaigns</span> today?
+        <h2 className="mb-3 text-[30px] leading-[1.15] font-extrabold tracking-[-1.2px] text-foreground sm:text-[38px]">
+          How can I help <span className="ai-gradient-text">your campaigns</span> today?
         </h2>
 
         <p className="mx-auto mb-7 max-w-[440px] text-sm leading-relaxed text-muted-foreground">
@@ -157,19 +155,19 @@ export function AiWelcomeScreen({ onSelect, disabled, className }: AiWelcomeScre
           Pick a task below to get started.
         </p>
 
-        <div className="mb-7 flex flex-wrap items-center justify-center gap-2">
+        <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
           {CONTEXT_PILLS.map((pill) => (
             <span
               key={pill.label}
-              className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-border bg-background px-2.5 text-[11px] font-semibold text-foreground/80 shadow-sm"
+              className="inline-flex h-[30px] items-center gap-1.5 rounded-full border border-[#0B0F1A]/8 bg-white px-3.5 text-[12px] font-semibold text-foreground shadow-[0_1px_2px_rgba(6,8,16,0.06)] dark:border-border dark:bg-background"
             >
-              <span className={cn("size-1.5 shrink-0 rounded-full", pill.dot)} />
+              <span className={cn("size-[7px] shrink-0 rounded-full", pill.dot)} />
               {pill.label}
             </span>
           ))}
         </div>
 
-        <div className="mb-5 grid grid-cols-1 gap-2.5 text-left sm:grid-cols-2">
+        <div className="mx-auto mb-5 grid max-w-[640px] grid-cols-1 gap-3.5 text-left sm:grid-cols-2">
           {PROMPT_CARDS.map((card) => {
             const Icon = card.icon;
             return (
@@ -179,23 +177,25 @@ export function AiWelcomeScreen({ onSelect, disabled, className }: AiWelcomeScre
                 disabled={disabled}
                 onClick={() => onSelect(card.prompt, card.intent)}
                 className={cn(
-                  "flex items-start gap-3 rounded-xl border border-border bg-background p-3.5 text-left transition-all",
-                  "hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_4px_20px_rgba(124,58,237,0.1)]",
+                  "flex items-start gap-3.5 rounded-[20px] border border-[#0B0F1A]/8 bg-white p-[18px] text-left shadow-[0_1px_2px_rgba(6,8,16,0.06)] transition-all",
+                  "hover:-translate-y-[3px] hover:border-[#0057FF]/25 hover:shadow-[0_8px_24px_rgba(0,87,255,0.10),0_2px_6px_rgba(6,8,16,0.06)]",
                   "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
-                  "dark:hover:border-violet-800"
+                  "dark:border-border dark:bg-background dark:hover:border-blue-800"
                 )}
               >
                 <div
                   className={cn(
-                    "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+                    "flex size-10 shrink-0 items-center justify-center rounded-xl",
                     card.iconBg
                   )}
                 >
-                  <Icon className={cn("size-[15px]", card.iconColor)} />
+                  <Icon className={cn("size-[19px]", card.iconColor)} strokeWidth={2} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold text-foreground">{card.label}</div>
-                  <div className="text-[11px] leading-snug text-muted-foreground">
+                  <div className="text-[14px] font-bold tracking-[-0.2px] text-foreground">
+                    {card.label}
+                  </div>
+                  <div className="mt-0.5 text-[12px] leading-[1.45] text-muted-foreground">
                     {card.hint}
                   </div>
                 </div>
@@ -204,7 +204,7 @@ export function AiWelcomeScreen({ onSelect, disabled, className }: AiWelcomeScre
           })}
         </div>
 
-        <div className="flex flex-wrap justify-center gap-1.5">
+        <div className="flex flex-wrap justify-center gap-2">
           {CHIP_ACTIONS.map((chip) => {
             const Icon = chip.icon;
             return (
@@ -214,13 +214,13 @@ export function AiWelcomeScreen({ onSelect, disabled, className }: AiWelcomeScre
                 disabled={disabled}
                 onClick={() => onSelect(chip.prompt, chip.intent)}
                 className={cn(
-                  "inline-flex h-[30px] items-center gap-1.5 rounded-full border border-border bg-background px-3.5 text-[11px] font-medium text-foreground/80 transition-all",
-                  "hover:-translate-y-px hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700",
+                  "inline-flex h-[34px] items-center gap-1.5 rounded-full border border-[#0057FF]/15 bg-[#0057FF]/5 px-[15px] text-[12.5px] font-semibold text-[#0057FF] transition-colors",
+                  "hover:bg-[#0057FF]/10",
                   "disabled:pointer-events-none disabled:opacity-50",
-                  "dark:hover:border-violet-800 dark:hover:bg-violet-950/40 dark:hover:text-violet-300"
+                  "dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-950/70"
                 )}
               >
-                <Icon className="size-3" />
+                <Icon className="size-3.5" />
                 {chip.label}
               </button>
             );

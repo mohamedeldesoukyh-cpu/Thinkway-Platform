@@ -44,14 +44,14 @@ export function AiWorkspaceTopbar({
         <button
           type="button"
           aria-label="Help"
-          className="hidden size-[30px] items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted sm:flex"
+          className="hidden size-[30px] items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-[#0057FF]/30 hover:text-[#0057FF] sm:flex"
         >
           <HelpCircleIcon className="size-3.5" />
         </button>
         <button
           type="button"
           aria-label="Settings"
-          className="hidden size-[30px] items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted sm:flex"
+          className="hidden size-[30px] items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-[#0057FF]/30 hover:text-[#0057FF] sm:flex"
         >
           <SettingsIcon className="size-3.5" />
         </button>

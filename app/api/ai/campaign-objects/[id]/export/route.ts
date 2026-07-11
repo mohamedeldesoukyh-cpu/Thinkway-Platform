@@ -21,7 +21,11 @@ import { mapBrowseCreatorToSearchResult } from "@/features/campaign-studio/servi
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { requirePermission } from "@/lib/auth/permissions-server";
-import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import {
+  pdfUnavailableMessage,
+  renderHtmlToPdf,
+  SLIDE_DECK_PDF_OPTIONS,
+} from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Chromium PDF rendering of a full proposal can exceed the default limit. */
@@ -188,7 +192,8 @@ export async function GET(request: Request, context: RouteContext) {
       });
 
       if (format === "pdf") {
-        const pdfResult = await renderHtmlToPdf(html);
+        // Proposal pages are fixed 1280×720 slides — honor the document @page size.
+        const pdfResult = await renderHtmlToPdf(html, SLIDE_DECK_PDF_OPTIONS);
         if (!pdfResult.ok) {
           return NextResponse.json(
             { error: pdfUnavailableMessage(pdfResult.error) },

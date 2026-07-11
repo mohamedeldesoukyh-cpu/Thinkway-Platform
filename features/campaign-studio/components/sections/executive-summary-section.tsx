@@ -7,9 +7,12 @@ import {
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
 import { GroundingFooter } from "./shared/grounding-badge";
+import { ExecutiveCard } from "./shared/executive-card";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { resolveExecutiveSummaryData } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
+import { cn } from "@/lib/utils";
 
 type ExecutiveSummarySectionProps = {
   campaignObject?: CampaignObject;
@@ -17,17 +20,42 @@ type ExecutiveSummarySectionProps = {
   status: CampaignStudioSectionStatus;
 };
 
-function BulletBlock({ label, items, accent }: { label: string; items: string[]; accent?: string }) {
+function BulletBlock({
+  label,
+  items,
+  accent = "neutral",
+}: {
+  label: string;
+  items: string[];
+  accent?: "green" | "purple" | "neutral";
+}) {
   if (items.length === 0) return null;
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-muted/10 px-3 py-2.5">
-      <p className={`text-[10px] font-bold tracking-wide uppercase ${accent ?? "text-muted-foreground"}`}>
+    <div
+      className={cn(
+        "min-w-0 overflow-hidden rounded-xl border px-3 py-2.5",
+        accent === "green" && "border-brand-product/25 bg-brand-product/5",
+        accent === "purple" && "border-violet-300/40 bg-violet-50/30 dark:bg-violet-950/20",
+        accent === "neutral" && "border-border/60 bg-muted/10"
+      )}
+    >
+      <p
+        className={cn(
+          STUDIO_CLASSES.label,
+          accent === "green" && STUDIO_CLASSES.primaryText,
+          accent === "purple" && "text-violet-600",
+          accent === "neutral" && "text-muted-foreground"
+        )}
+      >
         {label}
       </p>
-      <ul className="mt-1.5 space-y-1">
+      <ul className="mt-1.5 list-disc space-y-1 pl-4">
         {items.map((item) => (
-          <li key={item} className="min-w-0 break-words text-[11px] leading-relaxed text-foreground">
-            · {item}
+          <li
+            key={item}
+            className="min-w-0 break-words text-[11px] leading-relaxed text-foreground"
+          >
+            {item}
           </li>
         ))}
       </ul>
@@ -54,8 +82,8 @@ export function ExecutiveSummarySection({
 
   return (
     <div className="min-w-0 space-y-3">
-      <div className="min-w-0 rounded-xl border border-[#1D9E75]/30 bg-gradient-to-br from-[#1D9E75]/5 to-violet-50/30 px-4 py-3 dark:to-violet-950/10">
-        <p className="text-[10px] font-bold tracking-wide text-[#1D9E75] uppercase">
+      <div className="min-w-0 rounded-xl border border-brand-product/30 bg-gradient-to-br from-brand-product/5 to-violet-50/30 px-4 py-3 dark:to-violet-950/10">
+        <p className={cn(STUDIO_CLASSES.label, STUDIO_CLASSES.primaryText)}>
           Executive Summary
         </p>
         <p className="mt-1.5 min-w-0 break-words text-sm leading-relaxed font-medium text-foreground">
@@ -65,15 +93,14 @@ export function ExecutiveSummarySection({
       </div>
 
       <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
-        <BulletBlock label="Key Decisions" items={data.keyDecisions} accent="text-violet-600" />
-        <BulletBlock label="Recommended Actions" items={data.recommendedActions} accent="text-[#1D9E75]" />
-        <BulletBlock label="Immediate Next Steps" items={data.immediateNextSteps} accent="text-indigo-600" />
-        <div className="rounded-xl border border-violet-300/40 bg-violet-50/30 px-3 py-2.5 dark:bg-violet-950/20">
-          <p className="text-[10px] font-bold tracking-wide text-violet-600 uppercase">
-            Expected Business Outcome
-          </p>
-          <p className="mt-1.5 text-sm font-semibold leading-relaxed">{data.expectedBusinessOutcome}</p>
-        </div>
+        <BulletBlock label="Key Decisions" items={data.keyDecisions} accent="purple" />
+        <BulletBlock label="Recommended Actions" items={data.recommendedActions} accent="green" />
+        <BulletBlock label="Immediate Next Steps" items={data.immediateNextSteps} accent="neutral" />
+        <ExecutiveCard
+          label="Expected Business Outcome"
+          value={data.expectedBusinessOutcome}
+          accent="purple"
+        />
       </div>
     </div>
   );

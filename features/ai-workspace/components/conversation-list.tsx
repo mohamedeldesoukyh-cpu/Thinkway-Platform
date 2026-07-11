@@ -46,6 +46,22 @@ type ConversationListProps = {
   className?: string;
 };
 
+/** Date buckets for the sidebar — mirrors the reference Studio design. */
+function bucketLabel(updatedAt: string): string {
+  const updated = new Date(updatedAt);
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayDiff = Math.floor(
+    (startOfDay(now).getTime() - startOfDay(updated).getTime()) / 86_400_000
+  );
+  if (dayDiff <= 0) return "Today";
+  if (dayDiff === 1) return "Yesterday";
+  if (dayDiff < 7) return "This week";
+  return "Earlier";
+}
+
+const BUCKET_ORDER = ["Today", "Yesterday", "This week", "Earlier"] as const;
+
 export function ConversationList({
   conversations,
   loading,
@@ -65,13 +81,20 @@ export function ConversationList({
   );
 
   const pinned = filtered.filter((c) => c.isPinned);
-  const recent = filtered.filter((c) => !c.isPinned);
+  const rest = filtered.filter((c) => !c.isPinned);
+  const buckets = new Map<string, ConversationListItem[]>();
+  for (const item of rest) {
+    const label = bucketLabel(item.updatedAt);
+    const list = buckets.get(label) ?? [];
+    list.push(item);
+    buckets.set(label, list);
+  }
 
   return (
     <aside
       className={cn(
-        "ai-sidebar flex shrink-0 flex-col overflow-hidden border-r border-border bg-background",
-        collapsed ? "w-12" : "w-64",
+        "ai-sidebar ai-sidebar-dark flex shrink-0 flex-col overflow-hidden",
+        collapsed ? "w-12" : "w-[272px]",
         className
       )}
     >
@@ -82,10 +105,7 @@ export function ConversationList({
             onClick={() => onCollapsedChange?.(false)}
             title="Expand conversations"
             aria-label="Expand conversations"
-            className={cn(
-              "flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors",
-              "hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-violet-950/40 dark:hover:text-violet-300"
-            )}
+            className="flex size-8 items-center justify-center rounded-lg text-[#EAF0FF]/60 transition-colors hover:bg-white/10 hover:text-white"
           >
             <ChevronRightIcon className="size-4" />
           </button>
@@ -95,57 +115,54 @@ export function ConversationList({
             onClick={onNewChat}
             title="New chat"
             aria-label="New chat"
-            className={cn(
-              "mt-2 flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors",
-              "hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-violet-950/40 dark:hover:text-violet-300"
-            )}
+            className="mt-2 flex size-8 items-center justify-center rounded-lg text-[#EAF0FF]/60 transition-colors hover:bg-white/10 hover:text-white"
           >
             <PlusIcon className="size-3.5" />
           </button>
 
           <div className="mt-auto flex flex-col items-center gap-1 pb-1">
-            <MessageSquareIcon className="size-4 text-muted-foreground/40" aria-hidden />
+            <MessageSquareIcon className="size-4 text-[#EAF0FF]/30" aria-hidden />
           </div>
         </div>
       ) : (
         <>
-          <div className="border-b border-border px-3.5 pt-3.5 pb-3">
+          <div className="px-3.5 pt-4 pb-2">
             <button
               type="button"
               onClick={onNewChat}
-              className={cn(
-                "mb-2.5 flex h-[34px] w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/50 text-xs font-semibold text-foreground/80 transition-colors",
-                "hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700",
-                "dark:hover:border-violet-800 dark:hover:bg-violet-950/40 dark:hover:text-violet-300"
-              )}
+              className="ai-btn-new flex h-[42px] w-full items-center justify-center gap-2 rounded-[14px] text-sm font-semibold text-white"
             >
-              <PlusIcon className="size-3" />
+              <PlusIcon className="size-4" strokeWidth={2.4} />
               New chat
             </button>
 
-            <div className="relative">
-              <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative mt-3">
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-[#EAF0FF]/40" />
               <Input
                 placeholder="Search conversations"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-[30px] rounded-md border-border bg-muted/50 pr-2.5 pl-7 text-xs"
+                className={cn(
+                  "h-[38px] rounded-xl border-white/10 bg-white/5 pr-2.5 pl-9 text-[13px] text-[#EAF0FF]",
+                  "placeholder:text-[#EAF0FF]/40",
+                  "focus-visible:border-[#3D8BFF]/50 focus-visible:ring-[#0057FF]/30"
+                )}
               />
             </div>
           </div>
 
           {error ? (
-            <p className="px-3 py-4 text-center text-xs text-destructive">{error}</p>
+            <p className="px-3 py-4 text-center text-xs text-red-300">{error}</p>
           ) : null}
 
           {loading && conversations.length === 0 ? (
-            <div className="space-y-2 p-2">
+            <div className="space-y-2 p-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                <Skeleton key={i} className="h-10 w-full rounded-lg bg-white/10" />
               ))}
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 pb-2">
               {pinned.length > 0 ? (
                 <ConversationGroup
                   label="Pinned"
@@ -155,22 +172,27 @@ export function ConversationList({
                   onRefresh={onRefresh}
                 />
               ) : null}
-              {recent.length > 0 ? (
-                <ConversationGroup
-                  label="Recent"
-                  items={recent}
-                  activeId={activeId}
-                  onSelect={onSelect}
-                  onRefresh={onRefresh}
-                />
-              ) : null}
+              {BUCKET_ORDER.map((label) => {
+                const items = buckets.get(label);
+                if (!items || items.length === 0) return null;
+                return (
+                  <ConversationGroup
+                    key={label}
+                    label={label}
+                    items={items}
+                    activeId={activeId}
+                    onSelect={onSelect}
+                    onRefresh={onRefresh}
+                  />
+                );
+              })}
               {conversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 px-4 py-7 text-center text-xs text-muted-foreground">
-                  <MessageSquareIcon className="size-[22px] opacity-35" />
+                <div className="flex flex-col items-center justify-center gap-2 px-4 py-7 text-center text-xs text-[#EAF0FF]/40">
+                  <MessageSquareIcon className="size-[22px] opacity-40" />
                   No conversations yet
                 </div>
               ) : filtered.length === 0 ? (
-                <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+                <p className="px-2 py-4 text-center text-xs text-[#EAF0FF]/40">
                   No matching conversations
                 </p>
               ) : null}
@@ -178,14 +200,11 @@ export function ConversationList({
           )}
 
           {onCollapsedChange ? (
-            <div className="shrink-0 border-t border-border p-2">
+            <div className="shrink-0 border-t border-white/[0.07] p-2">
               <button
                 type="button"
                 onClick={() => onCollapsedChange(true)}
-                className={cn(
-                  "flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium text-muted-foreground transition-colors",
-                  "hover:bg-muted/60 hover:text-foreground"
-                )}
+                className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium text-[#EAF0FF]/50 transition-colors hover:bg-white/[0.06] hover:text-white"
               >
                 <ChevronLeftIcon className="size-3.5" />
                 Collapse
@@ -215,7 +234,7 @@ function ConversationGroup({
 
   return (
     <div>
-      <p className="px-2.5 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+      <p className="px-2.5 pt-3.5 pb-2 text-[10.5px] font-bold tracking-[1px] text-[#EAF0FF]/30 uppercase">
         {label}
       </p>
       <div className="flex flex-col gap-0.5">
@@ -263,10 +282,8 @@ function ConversationRow({
   return (
     <div
       className={cn(
-        "group flex items-center gap-0.5 rounded-[7px] pr-0.5 transition-colors",
-        isActive
-          ? "bg-violet-50 dark:bg-violet-950/30"
-          : "hover:bg-muted/60"
+        "group relative flex items-center gap-0.5 rounded-[10px] pr-0.5 transition-colors",
+        isActive ? "ai-nav-item-active" : "hover:bg-white/5"
       )}
     >
       {renaming ? (
@@ -279,7 +296,7 @@ function ConversationRow({
             if (e.key === "Enter") void handleRename();
             if (e.key === "Escape") setRenaming(false);
           }}
-          className="mx-1 h-8 flex-1 text-xs"
+          className="mx-1 h-8 flex-1 border-white/15 bg-white/10 text-xs text-white"
         />
       ) : (
         <button
@@ -289,16 +306,16 @@ function ConversationRow({
         >
           <div
             className={cn(
-              "truncate text-xs font-medium",
-              isActive ? "font-semibold text-violet-700 dark:text-violet-300" : "text-foreground"
+              "truncate text-[13px]",
+              isActive ? "font-semibold text-white" : "font-medium text-[#DCE6FF]"
             )}
           >
             {item.isPinned ? (
-              <PinIcon className="mr-1 inline size-3 shrink-0 text-violet-500" />
+              <PinIcon className="mr-1 inline size-3 shrink-0 text-[#3D8BFF]" />
             ) : null}
             {item.title}
           </div>
-          <div className="text-[10px] text-muted-foreground">{formattedDate}</div>
+          <div className="text-[11px] text-[#EAF0FF]/30">{formattedDate}</div>
         </button>
       )}
 
@@ -307,7 +324,7 @@ function ConversationRow({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="opacity-0 group-hover:opacity-100"
+            className="text-[#EAF0FF]/60 opacity-0 group-hover:opacity-100 hover:bg-white/10 hover:text-white"
             aria-label="Conversation options"
           >
             <MoreHorizontalIcon className="size-4" />

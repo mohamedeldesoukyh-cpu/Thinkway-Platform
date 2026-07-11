@@ -61,7 +61,7 @@ export function ClientCreatorEvaluator({
           <Button
             type="button"
             size="sm"
-            className="h-8 bg-[#1D9E75] hover:bg-[#178f68]"
+            className="h-8 bg-[#1D9E75] hover:bg-[#178f69]"
             onClick={handleEvaluate}
           >
             Evaluate
