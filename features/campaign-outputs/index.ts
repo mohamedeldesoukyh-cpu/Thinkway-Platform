@@ -96,3 +96,4 @@ export {
   runCompareVersions,
   type OutputCopilotResult,
 } from "./copilot/output-copilot";
+export * from "./hydration";
