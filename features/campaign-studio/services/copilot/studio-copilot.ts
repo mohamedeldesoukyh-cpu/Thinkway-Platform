@@ -28,6 +28,13 @@ import {
 } from "./slate-edit-mutations";
 import { selectCreatorsToAdd, selectSlateCreatorsToRemove } from "./slate-edit-filters";
 import type { StudioDraftChange } from "@/features/campaign-intelligence/types/section-schemas";
+import { authorSection } from "./section-authoring";
+import {
+  targetForStudioSection,
+  studioSectionForTarget,
+  type SectionAuthorTarget,
+  type StudioFocus,
+} from "./section-authoring-types";
 import {
   buildCampaignContextDigest,
   buildChangeSummary,
@@ -143,6 +150,8 @@ type RunInput = {
   campaignObject: CampaignObject;
   message: string;
   provider?: LlmProvider;
+  /** Deictic focus from the UI — which studio section/element is active. */
+  focus?: StudioFocus;
 };
 
 /** The Campaign Copilot: interpret → execute deterministically → persist → summarize. */
@@ -182,6 +191,8 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       return applyFactsEdit(input, digest, "update_market", (obj) =>
         applyGeographyChange(obj, { geography: intent.geography })
       );
+    case "author_section":
+      return authorSectionEdit(input, digest, intent, provider);
     case "undo_last_change":
       return undoLastChange(input);
     case "restore_version":
@@ -474,6 +485,91 @@ async function applyFactsEdit(
     reply: renderChangeSummary(summary),
     changed: true,
     intentKind,
+  };
+}
+
+/** Last studio section the Copilot authored — resolves "this section" conversationally. */
+function conversationalFocusTarget(
+  campaignObject: CampaignObject
+): SectionAuthorTarget | undefined {
+  const log = campaignObject.meta.copilotChangeLog ?? [];
+  for (let i = log.length - 1; i >= 0; i -= 1) {
+    const section = log[i]?.section;
+    if (section) {
+      const target = targetForStudioSection(section);
+      if (target) return target;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Content authoring: the LLM re-writes ONE section's content, validated and
+ * patched in place. No slate/score recompute — content edits don't change the
+ * slate — and every other section is preserved. Saves a new version.
+ */
+async function authorSectionEdit(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  intent: Extract<StudioCopilotIntent, { kind: "author_section" }>,
+  provider: LlmProvider
+): Promise<StudioCopilotResult> {
+  const target =
+    intent.target ??
+    targetForStudioSection(input.focus?.sectionId) ??
+    conversationalFocusTarget(input.campaignObject);
+
+  if (!target) {
+    return {
+      campaignObject: input.campaignObject,
+      reply:
+        "Which part would you like me to rewrite — the strategy or the executive summary? (Or open a section in the studio and say \"rewrite this\".)",
+      changed: false,
+      intentKind: "author_section",
+    };
+  }
+
+  const result = await authorSection(provider, input.campaignObject, {
+    target,
+    instruction: intent.instruction || "Improve this section.",
+    tone: intent.tone,
+    focus: input.focus,
+  });
+
+  if (!result.change) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: result.reason ?? "I couldn't author that section — please try again.",
+      changed: false,
+      intentKind: "author_section",
+    };
+  }
+
+  const summary = buildChangeSummary({
+    headline: "Campaign updated successfully.",
+    changes: [result.change, "Only this section changed — the rest of the campaign is untouched."],
+    scoreBefore: digest.overallScore,
+  });
+
+  const logged = appendChangeLog(result.campaignObject, {
+    summary: result.change,
+    intent: "author_section",
+    section: result.section,
+    overallScoreAfter: digest.overallScore,
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(
+    input.supabase,
+    input.conversationId,
+    input.userId,
+    logged
+  );
+
+  return {
+    campaignObject: persisted,
+    reply: renderChangeSummary(summary),
+    changed: true,
+    intentKind: "author_section",
   };
 }
 

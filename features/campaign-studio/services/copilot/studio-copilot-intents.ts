@@ -10,6 +10,7 @@ import { getCampaignFacts } from "@/features/campaign-director/facts/facts-displ
 
 import { matchesTierLabel, normalizeTierLabel } from "../creator-slate";
 import { normalizeCreatorId } from "../studio-draft";
+import type { SectionAuthorTarget } from "./section-authoring-types";
 
 /**
  * The Campaign Copilot never edits campaign JSON directly. The LLM emits one of
@@ -33,6 +34,7 @@ export type StudioCopilotIntentKind =
   | "update_proposal"
   | "update_creative_concepts"
   | "update_presentation"
+  | "author_section"
   | "undo_last_change"
   | "restore_version"
   | "answer_question"
@@ -87,6 +89,16 @@ export type UpdateObjectivesIntent = { kind: "update_objectives"; objective: str
 export type UpdateAudienceIntent = { kind: "update_audience"; audience: string };
 export type UpdateMarketIntent = { kind: "update_market"; geography: string[] };
 
+export type AuthorSectionIntent = {
+  kind: "author_section";
+  /** Target section; resolved from focus / conversation when omitted. */
+  target?: SectionAuthorTarget;
+  /** What the user wants done, e.g. "make it more premium", "expand this". */
+  instruction: string;
+  /** Optional tone/style, e.g. "premium", "executive", "youth-focused". */
+  tone?: string;
+};
+
 export type AnswerQuestionIntent = { kind: "answer_question"; question: string };
 export type ClarifyIntent = { kind: "clarify"; question: string };
 export type UndoIntent = { kind: "undo_last_change" };
@@ -103,6 +115,7 @@ export type ExecutableStudioCopilotIntent =
   | UpdateObjectivesIntent
   | UpdateAudienceIntent
   | UpdateMarketIntent
+  | AuthorSectionIntent
   | AnswerQuestionIntent
   | ClarifyIntent
   | UndoIntent

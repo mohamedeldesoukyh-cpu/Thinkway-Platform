@@ -127,7 +127,9 @@ test("fallback parser routes remove/undo/question/clarify correctly", () => {
   assert.equal(restore.kind, "restore_version");
   assert.equal(restore.kind === "restore_version" ? restore.version : null, 3);
   assert.equal(parseStudioIntentFallback("why did you choose these creators?").kind, "answer_question");
-  assert.equal(parseStudioIntentFallback("make it better somehow").kind, "clarify");
+  // "make it better" is a vague authoring request — the executor then asks which section.
+  assert.equal(parseStudioIntentFallback("make it better somehow").kind, "author_section");
+  assert.equal(parseStudioIntentFallback("hmm not sure yet").kind, "clarify");
 });
 
 test("fallback parser extracts quoted names and handles", () => {

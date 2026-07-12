@@ -84,6 +84,8 @@ export type CopilotChangeLogEntry = {
   summary: string;
   /** The structured intent kind that produced this change. */
   intent: string;
+  /** The studio section this edit touched — drives "this section" resolution. */
+  section?: string;
   /** Campaign object version created by this change, when persisted. */
   version?: number;
   /** Overall campaign score after the change, when available. */

@@ -152,6 +152,30 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
     },
   },
   {
+    name: "author_section",
+    description:
+      "Rewrite or refine the WRITTEN CONTENT of one campaign section (not its data/creators). Use for: rewrite the strategy, make it more premium/youth/executive/data-driven, strengthen the business case, expand or shorten a section, rewrite the executive summary, make it CMO-ready. Omit `target` to edit the section the user is currently looking at ('this section').",
+    parameters: {
+      type: "object",
+      properties: {
+        target: {
+          type: "string",
+          enum: ["strategy", "executive_summary"],
+          description: "Which section's content to author. Omit to use the focused section.",
+        },
+        instruction: {
+          type: "string",
+          description: "What to do, e.g. 'make it more premium', 'expand this', 'strengthen the business case'.",
+        },
+        tone: {
+          type: "string",
+          description: "Optional tone/style, e.g. premium, executive, youth-focused, data-driven.",
+        },
+      },
+      required: ["instruction"],
+    },
+  },
+  {
     name: "undo_last_change",
     description: "Revert the campaign to the version before the most recent change.",
     parameters: { type: "object", properties: {} },
@@ -325,6 +349,22 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     };
   }
 
+  // Content authoring: rewrite / tone / expand / shorten / strengthen a section.
+  const AUTHOR_RE =
+    /\b(rewrite|reword|rephrase|improve|polish|refine|expand|shorten|lengthen|strengthen|elevate|sharpen|tighten|make it|make the|make this|more)\b/i;
+  if (AUTHOR_RE.test(text)) {
+    const target = /\bexecutive summary|exec summary\b/i.test(text)
+      ? "executive_summary"
+      : /\bstrateg|business case\b/i.test(text)
+        ? "strategy"
+        : undefined;
+    const toneMatch = text.match(
+      /\bmore\s+([a-z]+(?:-[a-z]+)?)\b|\b(premium|executive|youth[-\s]?focused|data[-\s]?driven|creative|cmo[-\s]?ready|concise|bold|aggressive|professional|punchy)\b/i
+    );
+    const tone = (toneMatch?.[1] ?? toneMatch?.[2])?.toLowerCase().replace(/\s+/g, "-");
+    return { kind: "author_section", target, instruction: text, tone };
+  }
+
   if (QUESTION_RE.test(text)) {
     return { kind: "answer_question", question: text };
   }
@@ -417,6 +457,16 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
         geography: Array.isArray(args.geography)
           ? args.geography.filter((g): g is string => typeof g === "string")
           : [],
+      };
+    case "author_section":
+      return {
+        kind: "author_section",
+        target:
+          args.target === "strategy" || args.target === "executive_summary"
+            ? args.target
+            : undefined,
+        instruction: typeof args.instruction === "string" ? args.instruction : "",
+        tone: typeof args.tone === "string" ? args.tone : undefined,
       };
     case "undo_last_change":
       return { kind: "undo_last_change" };

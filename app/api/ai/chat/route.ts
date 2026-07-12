@@ -258,6 +258,7 @@ export async function POST(request: Request) {
             conversationId,
             campaignObject: activeCampaignObject,
             message: body.message.trim(),
+            focus: body.studioFocus,
           });
 
           for (const chunk of chunkTextForStream(copilot.reply)) {
