@@ -20,6 +20,15 @@ import {
   type FactsEditResult,
 } from "./campaign-facts-mutations";
 import {
+  buildAdditionChanges,
+  buildRemovalChanges,
+  hydrateSlateCreators,
+  searchCreatorsForAddition,
+  slateCreatorIdSet,
+} from "./slate-edit-mutations";
+import { selectCreatorsToAdd, selectSlateCreatorsToRemove } from "./slate-edit-filters";
+import type { StudioDraftChange } from "@/features/campaign-intelligence/types/section-schemas";
+import {
   buildCampaignContextDigest,
   buildChangeSummary,
   planRemovalChanges,
@@ -145,6 +154,10 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
   switch (intent.kind) {
     case "remove_creators":
       return removeCreators(input, digest, intent);
+    case "add_creators":
+      return addCreators(input, digest, intent);
+    case "replace_creators":
+      return replaceCreators(input, digest, intent);
     case "update_budget":
       return applyFactsEdit(input, digest, "update_budget", (obj) =>
         applyBudgetChange(obj, { amount: intent.amount, currency: intent.currency })
@@ -191,74 +204,49 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
   }
 }
 
-async function removeCreators(
+/**
+ * Apply a set of slate draft changes (removals + additions) in one deterministic
+ * pass: stage → apply → re-optimize → save a version → summarize.
+ */
+async function commitDraftChanges(
   input: RunInput,
   digest: CampaignContextDigest,
-  intent: Extract<StudioCopilotIntent, { kind: "remove_creators" }>
+  changes: StudioDraftChange[],
+  meta: {
+    intentKind: StudioCopilotResult["intentKind"];
+    changeLines: string[];
+    logSummary: string;
+    removed: number;
+    added: number;
+  }
 ): Promise<StudioCopilotResult> {
-  const { targets, unmatchedNames } = resolveRemovalTargets(input.campaignObject, {
-    tier: intent.tier,
-    names: intent.names,
-  });
-
-  if (targets.length === 0) {
-    const askedTier = intent.tier ? `${intent.tier} ` : "";
-    const present = Object.entries(digest.tierCounts)
-      .map(([tier, count]) => `${count} ${tier}`)
-      .join(", ");
-    return {
-      campaignObject: input.campaignObject,
-      reply:
-        `I couldn't find any ${askedTier}creators to remove in this campaign. ` +
-        `The current slate is: ${present || "empty"}.` +
-        (unmatchedNames.length ? ` No match for: ${unmatchedNames.join(", ")}.` : ""),
-      changed: false,
-      intentKind: "remove_creators",
-    };
-  }
-
-  // Stage every removal, then apply + re-optimize in one deterministic pass.
   let draft = getStudioDraft(input.campaignObject);
-  for (const change of planRemovalChanges(targets)) {
-    draft = stageDraftChange(draft, change);
-  }
+  for (const change of changes) draft = stageDraftChange(draft, change);
   const staged = withStudioDraft(input.campaignObject, draft);
   const applied = applyStudioDraftChanges(staged);
-  const reoptimized = await reoptimizeCampaignAfterApply(
-    input.supabase,
-    applied.campaignObject
-  );
+  const reoptimized = await reoptimizeCampaignAfterApply(input.supabase, applied.campaignObject);
 
-  const scoreBefore = digest.overallScore;
   const scoresAfter = (reoptimized.sections.performance.data as PerformanceSectionData | undefined)
     ?.campaignScores;
 
-  const tierLabel = intent.tier ? `${intent.tier} ` : "";
-  const headline = "Campaign updated successfully.";
-  const changes = [
-    `Removed ${targets.length} ${tierLabel}creator${targets.length === 1 ? "" : "s"} (${targets
-      .map((t) => t.displayName)
-      .join(", ")}).`,
-    "Re-optimized the slate and refreshed creator roles.",
-    "Recalculated campaign scores, budget allocation, and the presentation.",
-  ];
-  if (intent.reason?.trim()) changes.push(`Reason noted: ${intent.reason.trim()}`);
-
   const summary = buildChangeSummary({
-    headline,
-    changes,
-    scoreBefore,
+    headline: "Campaign updated successfully.",
+    changes: [
+      ...meta.changeLines,
+      "Re-optimized the slate, scores, budget allocation, and presentation.",
+    ],
+    scoreBefore: digest.overallScore,
     scoresAfter,
-    creatorsRemoved: targets.length,
+    creatorsRemoved: meta.removed,
+    creatorsAdded: meta.added,
   });
 
   const logged = appendChangeLog(reoptimized, {
-    summary: `Removed ${targets.length} ${tierLabel}creator${targets.length === 1 ? "" : "s"}`.trim(),
-    intent: "remove_creators",
+    summary: meta.logSummary,
+    intent: meta.intentKind,
     overallScoreAfter: scoresAfter?.overall,
     appliedAt: new Date().toISOString(),
   });
-
   const persisted = await persistVersion(
     input.supabase,
     input.conversationId,
@@ -270,8 +258,166 @@ async function removeCreators(
     campaignObject: persisted,
     reply: renderChangeSummary(summary),
     changed: true,
-    intentKind: "remove_creators",
+    intentKind: meta.intentKind,
   };
+}
+
+async function removeCreators(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  intent: Extract<StudioCopilotIntent, { kind: "remove_creators" }>
+): Promise<StudioCopilotResult> {
+  // Tier/name targets resolve from the object; location/engagement need hydration.
+  const { targets, unmatchedNames } = resolveRemovalTargets(input.campaignObject, {
+    tier: intent.tier,
+    names: intent.names,
+  });
+  const changes: StudioDraftChange[] = planRemovalChanges(targets);
+  const removedNames = targets.map((t) => t.displayName);
+
+  const needsHydration = Boolean(intent.city || intent.country || intent.belowEngagement != null);
+  if (needsHydration) {
+    const slate = await hydrateSlateCreators(input.supabase, input.campaignObject);
+    const attributeMatches = selectSlateCreatorsToRemove(slate, {
+      city: intent.city,
+      country: intent.country,
+      belowEngagement: intent.belowEngagement,
+    });
+    for (const change of buildRemovalChanges(attributeMatches)) changes.push(change);
+    for (const creator of attributeMatches) removedNames.push(creator.display_name);
+  }
+
+  if (changes.length === 0) {
+    const present = Object.entries(digest.tierCounts)
+      .map(([tier, count]) => `${count} ${tier}`)
+      .join(", ");
+    const criterion = intent.city
+      ? `in ${intent.city}`
+      : intent.country
+        ? `in ${intent.country}`
+        : intent.belowEngagement != null
+          ? `below ${intent.belowEngagement}% engagement`
+          : intent.tier
+            ? `${intent.tier}`
+            : "matching that";
+    return {
+      campaignObject: input.campaignObject,
+      reply:
+        `I couldn't find any creators ${criterion} to remove. The current slate is: ${present || "empty"}.` +
+        (unmatchedNames.length ? ` No match for: ${unmatchedNames.join(", ")}.` : ""),
+      changed: false,
+      intentKind: "remove_creators",
+    };
+  }
+
+  const tierLabel = intent.tier ? `${intent.tier} ` : "";
+  const changeLines = [
+    `Removed ${changes.length} ${tierLabel}creator${changes.length === 1 ? "" : "s"} (${removedNames.join(", ")}).`,
+  ];
+  if (intent.reason?.trim()) changeLines.push(`Reason noted: ${intent.reason.trim()}`);
+
+  return commitDraftChanges(input, digest, changes, {
+    intentKind: "remove_creators",
+    changeLines,
+    logSummary: `Removed ${changes.length} ${tierLabel}creator${changes.length === 1 ? "" : "s"}`.trim(),
+    removed: changes.length,
+    added: 0,
+  });
+}
+
+async function addCreators(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  intent: Extract<StudioCopilotIntent, { kind: "add_creators" }>
+): Promise<StudioCopilotResult> {
+  const count = Math.min(Math.max(intent.count ?? 3, 1), 10);
+  const candidates = await searchCreatorsForAddition(input.supabase, input.campaignObject, {
+    category: intent.category,
+    tier: intent.tier,
+    city: intent.city,
+    country: intent.country,
+    limit: count,
+  });
+  const picked = selectCreatorsToAdd(candidates, slateCreatorIdSet(input.campaignObject), count);
+
+  if (picked.length === 0) {
+    const what = intent.category ? `${intent.category} ` : intent.tier ? `${intent.tier} ` : "";
+    return {
+      campaignObject: input.campaignObject,
+      reply: `I couldn't find new ${what}creators in Discovery that aren't already on the slate. Try a broader niche or a different tier.`,
+      changed: false,
+      intentKind: "add_creators",
+    };
+  }
+
+  const descriptor = [intent.tier, intent.category].filter(Boolean).join(" ");
+  return commitDraftChanges(input, digest, buildAdditionChanges(picked), {
+    intentKind: "add_creators",
+    changeLines: [
+      `Added ${picked.length} ${descriptor ? `${descriptor} ` : ""}creator${picked.length === 1 ? "" : "s"} from Discovery (${picked.map((c) => c.display_name).join(", ")}).`,
+      "New creators use current metrics — ask me to refresh their intelligence for updated data.",
+    ],
+    logSummary: `Added ${picked.length} ${descriptor || "creator"}${picked.length === 1 ? "" : "s"}`,
+    removed: 0,
+    added: picked.length,
+  });
+}
+
+async function replaceCreators(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  intent: Extract<StudioCopilotIntent, { kind: "replace_creators" }>
+): Promise<StudioCopilotResult> {
+  // Who to remove: tier or named creators from the current slate.
+  const { targets } = resolveRemovalTargets(input.campaignObject, {
+    tier: intent.fromTier,
+    names: intent.fromNames,
+  });
+  if (targets.length === 0) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: `I couldn't find ${intent.fromTier ?? "those"} creators to replace on the current slate.`,
+      changed: false,
+      intentKind: "replace_creators",
+    };
+  }
+
+  // What to bring in: same count, target tier/category, higher engagement optional.
+  const candidates = await searchCreatorsForAddition(input.supabase, input.campaignObject, {
+    tier: intent.toTier ?? intent.fromTier,
+    category: intent.toCategory,
+    limit: targets.length,
+  });
+  let ranked = candidates;
+  if (intent.higherEngagement) {
+    ranked = [...candidates].sort(
+      (a, b) => (b.metrics?.engagement_rate?.value ?? 0) - (a.metrics?.engagement_rate?.value ?? 0)
+    );
+  }
+  const picked = selectCreatorsToAdd(
+    ranked,
+    slateCreatorIdSet(input.campaignObject),
+    targets.length
+  );
+
+  const changes: StudioDraftChange[] = [
+    ...planRemovalChanges(targets),
+    ...buildAdditionChanges(picked),
+  ];
+  const toLabel = intent.toTier ?? intent.toCategory ?? "comparable";
+  const fromLabel = intent.fromTier ?? "selected";
+  return commitDraftChanges(input, digest, changes, {
+    intentKind: "replace_creators",
+    changeLines: [
+      `Removed ${targets.length} ${fromLabel} creator${targets.length === 1 ? "" : "s"} (${targets.map((t) => t.displayName).join(", ")}).`,
+      picked.length > 0
+        ? `Added ${picked.length} ${toLabel} creator${picked.length === 1 ? "" : "s"} (${picked.map((c) => c.display_name).join(", ")}).`
+        : `No matching ${toLabel} replacements were available in Discovery — the slate was re-optimized without them.`,
+    ],
+    logSummary: `Replaced ${targets.length} ${fromLabel} with ${picked.length} ${toLabel}`,
+    removed: targets.length,
+    added: picked.length,
+  });
 }
 
 /**

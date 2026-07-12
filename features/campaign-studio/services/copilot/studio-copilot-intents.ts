@@ -43,8 +43,40 @@ export type RemoveCreatorsIntent = {
   tier?: string;
   /** Specific creators by display name or handle. */
   names?: string[];
+  /** Remove creators located in this city (requires hydration). */
+  city?: string;
+  /** Remove creators located in this country (requires hydration). */
+  country?: string;
+  /** Remove creators with engagement rate below this % (requires hydration). */
+  belowEngagement?: number;
   /** Human phrasing of the reason, surfaced back to the user. */
   reason?: string;
+};
+
+export type AddCreatorsIntent = {
+  kind: "add_creators";
+  /** Content category / niche to search Discovery for, e.g. "parenting". */
+  category?: string;
+  /** Follower tier to target. */
+  tier?: string;
+  city?: string;
+  country?: string;
+  /** How many to add (default 3). */
+  count?: number;
+};
+
+export type ReplaceCreatorsIntent = {
+  kind: "replace_creators";
+  /** Tier to replace out of the slate. */
+  fromTier?: string;
+  /** Specific creators to replace by name/handle. */
+  fromNames?: string[];
+  /** Tier to bring in. */
+  toTier?: string;
+  /** Category to search for replacements. */
+  toCategory?: string;
+  /** Prefer higher-engagement replacements. */
+  higherEngagement?: boolean;
 };
 
 export type UpdateBudgetIntent = { kind: "update_budget"; amount: number; currency?: string };
@@ -61,6 +93,8 @@ export type UndoIntent = { kind: "undo_last_change" };
 /** Intents wired to executors in this increment; the rest are typed for forward-compat. */
 export type ExecutableStudioCopilotIntent =
   | RemoveCreatorsIntent
+  | AddCreatorsIntent
+  | ReplaceCreatorsIntent
   | UpdateBudgetIntent
   | UpdateTimelineIntent
   | UpdatePlatformsIntent

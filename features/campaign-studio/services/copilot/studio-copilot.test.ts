@@ -173,6 +173,42 @@ test("fallback parser reads duration in digits and words", () => {
   );
 });
 
+test("fallback parser routes slate edits: add / replace / location-remove", () => {
+  const add = parseStudioIntentFallback("add parenting creators");
+  assert.equal(add.kind, "add_creators");
+  if (add.kind === "add_creators") assert.match(add.category ?? "", /parenting/i);
+
+  const addTier = parseStudioIntentFallback("add more micro creators");
+  assert.equal(addTier.kind === "add_creators" ? addTier.tier : null, "Micro");
+
+  const replace = parseStudioIntentFallback("replace macro creators with micro creators");
+  assert.equal(replace.kind, "replace_creators");
+  if (replace.kind === "replace_creators") {
+    assert.equal(replace.fromTier, "Macro");
+    assert.equal(replace.toTier, "Micro");
+  }
+
+  const loc = parseStudioIntentFallback("remove creators from Cairo");
+  assert.equal(loc.kind, "remove_creators");
+  if (loc.kind === "remove_creators") assert.equal(loc.city, "Cairo");
+});
+
+test("tool call maps add_creators and replace_creators intents", () => {
+  const add = parseToolCallIntent({
+    id: "1",
+    name: "add_creators",
+    arguments: JSON.stringify({ category: "parenting", count: 4 }),
+  });
+  assert.equal(add?.kind === "add_creators" ? add.category : null, "parenting");
+
+  const rep = parseToolCallIntent({
+    id: "2",
+    name: "replace_creators",
+    arguments: JSON.stringify({ fromTier: "Macro", toTier: "Micro", higherEngagement: true }),
+  });
+  assert.equal(rep?.kind === "replace_creators" ? rep.higherEngagement : null, true);
+});
+
 test("tool calls map to facts intents (budget, timeline, platforms)", () => {
   const budget = parseToolCallIntent({
     id: "1",

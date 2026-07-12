@@ -12,7 +12,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "remove_creators",
     description:
-      "Remove creators from the campaign slate. Use `tier` to remove a whole follower tier (Celebrity, Macro, Mid-Tier, Micro, Nano). Use `names` for specific creators by display name or handle. Provide `reason` with the user's stated reason when given.",
+      "Remove creators from the campaign slate. Use `tier` for a whole follower tier (Celebrity, Macro, Mid-Tier, Micro, Nano), `names` for specific creators, `city`/`country` to remove by creator location, or `belowEngagement` to remove creators under an engagement rate.",
     parameters: {
       type: "object",
       properties: {
@@ -26,7 +26,54 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
           items: { type: "string" },
           description: "Specific creator display names or handles to remove.",
         },
+        city: { type: "string", description: "Remove creators located in this city." },
+        country: { type: "string", description: "Remove creators located in this country." },
+        belowEngagement: {
+          type: "number",
+          description: "Remove creators with engagement rate below this percentage.",
+        },
         reason: { type: "string", description: "The user's stated reason, if any." },
+      },
+    },
+  },
+  {
+    name: "add_creators",
+    description:
+      "Find and add creators to the slate from Discovery. Use `category` for a niche (e.g. 'parenting'), `tier` for a follower tier, `city`/`country` for location. Defaults to the campaign's platform and market.",
+    parameters: {
+      type: "object",
+      properties: {
+        category: { type: "string", description: "Content niche/category to search for." },
+        tier: {
+          type: "string",
+          enum: ["Celebrity", "Macro", "Mid-Tier", "Micro", "Nano"],
+          description: "Follower tier to target.",
+        },
+        city: { type: "string" },
+        country: { type: "string" },
+        count: { type: "number", description: "How many creators to add (default 3)." },
+      },
+    },
+  },
+  {
+    name: "replace_creators",
+    description:
+      "Swap creators out and bring comparable ones in. Use `fromTier`/`fromNames` for who to remove and `toTier`/`toCategory` for what to add. Set `higherEngagement` when the user wants higher-engagement replacements.",
+    parameters: {
+      type: "object",
+      properties: {
+        fromTier: { type: "string", description: "Tier to replace out (Celebrity, Macro, ...)." },
+        fromNames: {
+          type: "array",
+          items: { type: "string" },
+          description: "Specific creators to replace.",
+        },
+        toTier: { type: "string", description: "Tier to bring in." },
+        toCategory: { type: "string", description: "Category to search for replacements." },
+        higherEngagement: {
+          type: "boolean",
+          description: "Prefer higher-engagement replacements.",
+        },
       },
     },
   },
@@ -214,12 +261,52 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     if (weeks) return { kind: "update_timeline", durationWeeks: weeks };
   }
 
+  // "replace macro creators with micro creators" — split on "with", read each side.
+  if (/\breplace\b/i.test(text) && /\bwith\b/i.test(text)) {
+    const [fromPart, toPart] = text.split(/\bwith\b/i);
+    const fromTier = TIER_KEYWORDS.find((t) => t.re.test(fromPart ?? ""))?.tier;
+    const toTier = TIER_KEYWORDS.find((t) => t.re.test(toPart ?? ""))?.tier;
+    if (fromTier || toTier) {
+      return {
+        kind: "replace_creators",
+        fromTier,
+        toTier,
+        higherEngagement: /higher[-\s]?engagement/i.test(text),
+      };
+    }
+  }
+
   if (REMOVE_RE.test(text)) {
+    // "remove creators from/in Cairo" — location-based removal.
+    const location = text.match(
+      /creators?\s+(?:from|in|based in|located in)\s+([A-Za-z][A-Za-z\s'-]{1,40})/i
+    );
+    if (location?.[1]) {
+      return { kind: "remove_creators", city: location[1].trim() };
+    }
     const tier = TIER_KEYWORDS.find((t) => t.re.test(text))?.tier;
     const names = extractNames(text);
     if (tier || names.length > 0) {
       return { kind: "remove_creators", tier, names, reason: text };
     }
+  }
+
+  // "add parenting creators" / "add more micro creators"
+  const addMatch = text.match(
+    /\badd\b\s+(?:some\s+|more\s+|a\s+few\s+)?([\w\s&]+?)\s+(?:creators?|influencers?)\b/i
+  );
+  if (/\badd\b/i.test(text) && addMatch?.[1]) {
+    const descriptor = addMatch[1].trim();
+    const tier = TIER_KEYWORDS.find((t) => t.re.test(descriptor))?.tier;
+    // The non-tier remainder is the content category (e.g. "parenting").
+    const category = tier
+      ? descriptor.replace(TIER_KEYWORDS.find((t) => t.re.test(descriptor))!.re, "").trim()
+      : descriptor;
+    return {
+      kind: "add_creators",
+      tier,
+      category: category && !/^(more|some|new)$/i.test(category) ? category : undefined,
+    };
   }
 
   if (QUESTION_RE.test(text)) {
@@ -250,7 +337,32 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
         names: Array.isArray(args.names)
           ? args.names.filter((n): n is string => typeof n === "string")
           : undefined,
+        city: typeof args.city === "string" ? args.city : undefined,
+        country: typeof args.country === "string" ? args.country : undefined,
+        belowEngagement:
+          typeof args.belowEngagement === "number" ? args.belowEngagement : undefined,
         reason: typeof args.reason === "string" ? args.reason : undefined,
+      };
+    case "add_creators":
+      return {
+        kind: "add_creators",
+        category: typeof args.category === "string" ? args.category : undefined,
+        tier: typeof args.tier === "string" ? args.tier : undefined,
+        city: typeof args.city === "string" ? args.city : undefined,
+        country: typeof args.country === "string" ? args.country : undefined,
+        count: typeof args.count === "number" ? args.count : undefined,
+      };
+    case "replace_creators":
+      return {
+        kind: "replace_creators",
+        fromTier: typeof args.fromTier === "string" ? args.fromTier : undefined,
+        fromNames: Array.isArray(args.fromNames)
+          ? args.fromNames.filter((n): n is string => typeof n === "string")
+          : undefined,
+        toTier: typeof args.toTier === "string" ? args.toTier : undefined,
+        toCategory: typeof args.toCategory === "string" ? args.toCategory : undefined,
+        higherEngagement:
+          typeof args.higherEngagement === "boolean" ? args.higherEngagement : undefined,
       };
     case "update_budget":
       return {
