@@ -772,6 +772,43 @@ export function IntelligenceWorkspace({
     );
   };
 
+  if (campaignMode && latestStudioMessage) {
+    // CAMPAIGN MODE — the Campaign Studio *is* the application. The AI-workspace
+    // identity is gone: no branded topbar, no conversation sidebar, no lavender
+    // AI surface. The Studio owns the page and its own header/navigation; the
+    // Copilot lives in a persistent bottom dock as an editing assistant.
+    return (
+      <div
+        ref={workspaceRootRef}
+        className="ai-studio-enter flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
+      >
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <CampaignStudioPanel
+            message={latestStudioMessage}
+            conversationId={conversationId}
+            onCardUpdated={handleCardUpdated}
+            onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
+            onSendMessage={(message) => void handleSend(message)}
+            focusedSectionId={studioFocusSection}
+            onFocusSection={handleFocusSection}
+            variant="main"
+          />
+        </div>
+        <CampaignCopilotDock
+          collapsed={dockCollapsed}
+          onToggleCollapsed={() => setDockCollapsed((v) => !v)}
+          height={dockHeight}
+          onHeightChange={setDockHeight}
+          subtitle="Editing assistant — refine the Studio live"
+        >
+          {renderChatSurface({ inDock: true })}
+        </CampaignCopilotDock>
+      </div>
+    );
+  }
+
+  // CONVERSATION MODE — full-screen AI workspace (unchanged): branded topbar,
+  // conversation sidebar, full-screen chat. "I'm creating a campaign."
   return (
     <div ref={workspaceRootRef} className="ai-main-surface flex min-h-0 flex-1 flex-col overflow-hidden p-3">
       <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
@@ -788,49 +825,15 @@ export function IntelligenceWorkspace({
           onRefresh={() => void refresh({ background: true })}
         />
 
-        {campaignMode && latestStudioMessage ? (
-          // CAMPAIGN MODE — Studio primary, chat docked at the bottom.
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <AiWorkspaceTopbar
-              ref={topbarRef}
-              workspace={workspace}
-              workspaceLabel={workspaceLabel}
-              className="shrink-0"
-            />
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <CampaignStudioPanel
-                message={latestStudioMessage}
-                conversationId={conversationId}
-                onCardUpdated={handleCardUpdated}
-                onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
-                onSendMessage={(message) => void handleSend(message)}
-                focusedSectionId={studioFocusSection}
-                onFocusSection={handleFocusSection}
-                variant="main"
-              />
-            </div>
-            <CampaignCopilotDock
-              collapsed={dockCollapsed}
-              onToggleCollapsed={() => setDockCollapsed((v) => !v)}
-              height={dockHeight}
-              onHeightChange={setDockHeight}
-              subtitle="Keep refining — the Studio updates live"
-            >
-              {renderChatSurface({ inDock: true })}
-            </CampaignCopilotDock>
-          </div>
-        ) : (
-          // CONVERSATION MODE — full-screen chat, no studio.
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <AiWorkspaceTopbar
-              ref={topbarRef}
-              workspace={workspace}
-              workspaceLabel={workspaceLabel}
-              className="absolute inset-x-0 top-0 z-30"
-            />
-            {renderChatSurface()}
-          </div>
-        )}
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <AiWorkspaceTopbar
+            ref={topbarRef}
+            workspace={workspace}
+            workspaceLabel={workspaceLabel}
+            className="absolute inset-x-0 top-0 z-30"
+          />
+          {renderChatSurface()}
+        </div>
       </div>
     </div>
   );
