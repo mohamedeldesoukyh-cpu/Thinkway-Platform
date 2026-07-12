@@ -5,18 +5,34 @@ import { hydrateSlateCreators } from "@/features/campaign-studio/services/copilo
 import { normalizeCreatorId } from "@/features/campaign-studio/services/studio-draft";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
+import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import {
   canGenerateFromCampaignPlan,
   parseCampaignPlanProvenance,
 } from "@/lib/domains/commercial/campaign-plan-provenance";
 import {
+  attachScheduleHintsToLineSeeds,
+  type ExecutionLineSeed,
+} from "@/lib/domains/commercial/campaign-execution-schedule-inheritance";
+import {
   mapCampaignPlanToLineSeeds,
   resolveCampaignNameFromPlan,
 } from "@/lib/domains/commercial/campaign-plan-execution-mapper";
+import {
+  extractTentativeScheduleFromCampaignPlan,
+  resolveCampaignPlanAnchorStartDate,
+} from "@/lib/domains/commercial/campaign-plan-tentative-schedule";
+import {
+  mapQuotationItemsToExecutionLineSeeds,
+  type QuotationItemExecutionRow,
+} from "@/lib/domains/commercial/quotation-execution-mapper";
+import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 import { promoteDiscoveredProfileToInfluencer } from "@/lib/discovery/promote-profile";
 import { METADATA_PLATFORM_KEY } from "@/lib/campaigns/constants";
+import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 import type { Database } from "@/types/database";
 
+import { applyInheritedTentativeScheduleToLine } from "./apply-inherited-tentative-schedule";
 import { createCampaignLine } from "./campaign-line-service";
 import {
   fetchBrandForCampaignCreate,
@@ -39,6 +55,7 @@ export type GenerateCampaignFromCampaignPlanResult =
       linesCreated: number;
       alreadyExists: boolean;
       message: string;
+      source: "quotation" | "campaign_plan";
     }
   | { ok: false; message: string };
 
@@ -92,7 +109,7 @@ async function resolveBrandId(
 async function resolveInfluencerIds(
   supabase: SupabaseClient<Database>,
   userId: string,
-  creators: Awaited<ReturnType<typeof hydrateSlateCreators>>
+  creators: UnifiedCreatorResult[]
 ): Promise<Map<string, string>> {
   const map = new Map<string, string>();
 
@@ -118,6 +135,21 @@ async function resolveInfluencerIds(
   return map;
 }
 
+async function loadCreatorsByInfluencerIds(
+  supabase: SupabaseClient<Database>,
+  influencerIds: string[]
+): Promise<UnifiedCreatorResult[]> {
+  const unique = [...new Set(influencerIds.filter(Boolean))];
+  if (unique.length === 0) return [];
+
+  const result = await browseUnifiedCreators(
+    supabase,
+    { influencerIds: unique, page: 1, pageSize: unique.length, productionOnly: true },
+    "discovery"
+  );
+  return result.creators;
+}
+
 function addDaysIso(base: string, days: number): string {
   const date = new Date(base);
   date.setUTCDate(date.getUTCDate() + days);
@@ -138,9 +170,119 @@ function resolvePlanDates(campaignObject: import("@/features/campaign-intelligen
   return { startDate, endDate };
 }
 
+function parseQuotationDeliverables(raw: unknown): QuotationDeliverable[] {
+  if (!Array.isArray(raw)) return [];
+  return raw as QuotationDeliverable[];
+}
+
+async function loadQuotationExecutionSource(
+  supabase: SupabaseClient<Database>,
+  campaignObjectId: string
+): Promise<{
+  quotationId: string;
+  issueDate: string | null;
+  currency: string;
+  items: QuotationItemExecutionRow[];
+} | null> {
+  const { data: quotation } = await supabase
+    .from("quotations")
+    .select("id, issue_date, currency")
+    .eq("campaign_object_id", campaignObjectId)
+    .maybeSingle();
+
+  if (!quotation) return null;
+
+  const { data: items } = await supabase
+    .from("quotation_items")
+    .select(
+      "id, influencer_id, unified_id, creator_name, platform, handle, deliverables, cost, revenue, cost_currency, option_number"
+    )
+    .eq("quotation_id", quotation.id)
+    .order("sort_order");
+
+  return {
+    quotationId: quotation.id,
+    issueDate: (quotation as { issue_date?: string | null }).issue_date ?? null,
+    currency: (quotation as { currency?: string }).currency ?? "EGP",
+    items: (items ?? []).map((row) => ({
+      id: row.id,
+      influencer_id: row.influencer_id,
+      unified_id: row.unified_id,
+      creator_name: row.creator_name,
+      platform: row.platform,
+      handle: row.handle,
+      deliverables: parseQuotationDeliverables(row.deliverables),
+      cost: Number(row.cost ?? 0),
+      revenue: Number(row.revenue ?? 0),
+      cost_currency: row.cost_currency ?? "EGP",
+      option_number: row.option_number,
+    })),
+  };
+}
+
+async function resolveExecutionLineSeeds(input: {
+  supabase: SupabaseClient<Database>;
+  userId: string;
+  campaignObject: import("@/features/campaign-intelligence").CampaignObject;
+  quotationSource: Awaited<ReturnType<typeof loadQuotationExecutionSource>>;
+}): Promise<{ seeds: ExecutionLineSeed[]; source: "quotation" | "campaign_plan" }> {
+  const facts = getCampaignFacts(input.campaignObject);
+  const defaultCurrency = facts?.budget?.currency ?? "EGP";
+
+  if (input.quotationSource && input.quotationSource.items.length > 0) {
+    const influencerIds = input.quotationSource.items
+      .map((item) => item.influencer_id)
+      .filter((id): id is string => Boolean(id));
+
+    const creators = await loadCreatorsByInfluencerIds(input.supabase, influencerIds);
+    const influencerIdByCreatorId = await resolveInfluencerIds(
+      input.supabase,
+      input.userId,
+      creators
+    );
+
+    const seeds = mapQuotationItemsToExecutionLineSeeds({
+      items: input.quotationSource.items,
+      creators,
+      influencerIdByCreatorId,
+      defaultCurrency: input.quotationSource.currency || defaultCurrency,
+    });
+
+    return { seeds, source: "quotation" };
+  }
+
+  const hydratedCreators = await hydrateSlateCreators(input.supabase, input.campaignObject);
+  const influencerIdByCreatorId = await resolveInfluencerIds(
+    input.supabase,
+    input.userId,
+    hydratedCreators
+  );
+
+  const planSeeds = mapCampaignPlanToLineSeeds({
+    campaignObject: input.campaignObject,
+    creators: hydratedCreators,
+    influencerIdByCreatorId,
+  });
+
+  const anchorStartDate = resolveCampaignPlanAnchorStartDate({
+    campaignObject: input.campaignObject,
+    issueDate: input.quotationSource?.issueDate ?? null,
+  });
+
+  const scheduleByCreatorKey = extractTentativeScheduleFromCampaignPlan(
+    input.campaignObject,
+    { anchorStartDate, issueDate: input.quotationSource?.issueDate ?? null }
+  );
+
+  return {
+    seeds: attachScheduleHintsToLineSeeds({ seeds: planSeeds, scheduleByCreatorKey }),
+    source: "campaign_plan",
+  };
+}
+
 /**
  * Generates an operational campaign (header + lines + deliverables) from an
- * approved Campaign Plan snapshot. Independent from quotation promotion.
+ * approved Campaign Plan snapshot. Uses quotation commercial snapshot when linked.
  */
 export async function generateCampaignFromCampaignPlan(
   supabase: SupabaseClient<Database>,
@@ -185,6 +327,7 @@ export async function generateCampaignFromCampaignPlan(
       documentNumber: existingHeader.document_number,
       linesCreated: 0,
       alreadyExists: true,
+      source: "campaign_plan",
       message: `Execution campaign ${existingHeader.document_number} already exists for this Campaign Plan.`,
     };
   }
@@ -214,23 +357,20 @@ export async function generateCampaignFromCampaignPlan(
     return { ok: false, message: brandError ?? "Brand not found." };
   }
 
-  const hydratedCreators = await hydrateSlateCreators(supabase, version.campaignObject);
-  const influencerIdByCreatorId = await resolveInfluencerIds(
+  const quotationSource = await loadQuotationExecutionSource(supabase, campaignObjectId);
+  const { seeds: lineSeeds, source } = await resolveExecutionLineSeeds({
     supabase,
     userId,
-    hydratedCreators
-  );
-
-  const lineSeeds = mapCampaignPlanToLineSeeds({
     campaignObject: version.campaignObject,
-    creators: hydratedCreators,
-    influencerIdByCreatorId,
+    quotationSource,
   });
 
   if (lineSeeds.length === 0) {
     return {
       ok: false,
-      message: "No approved slate creators could be resolved to campaign lines.",
+      message: quotationSource
+        ? "No quotation lines could be resolved to campaign execution lines."
+        : "No approved slate creators could be resolved to campaign lines.",
     };
   }
 
@@ -278,6 +418,7 @@ export async function generateCampaignFromCampaignPlan(
   }
 
   let linesCreated = 0;
+  let schedulesApplied = 0;
   const lineFailures: string[] = [];
 
   for (const seed of lineSeeds) {
@@ -305,6 +446,15 @@ export async function generateCampaignFromCampaignPlan(
 
     if (result.ok) {
       linesCreated += 1;
+
+      if (seed.scheduleHints.length > 0) {
+        const applied = await applyInheritedTentativeScheduleToLine(supabase, {
+          campaignLineId: result.lineId,
+          scheduleHints: seed.scheduleHints,
+          fallbackLiveDate: endDate ?? startDate,
+        });
+        schedulesApplied += applied.updatedDeliverables;
+      }
     } else {
       lineFailures.push(result.message);
     }
@@ -335,7 +485,10 @@ export async function generateCampaignFromCampaignPlan(
       audit_action: "campaign_generated_from_plan",
       campaign_object_id: campaignObjectId,
       source_campaign_object_version: head.current_version,
+      execution_source: source,
+      quotation_id: quotationSource?.quotationId ?? null,
       lines_created: linesCreated,
+      schedules_applied: schedulesApplied,
       line_failures: lineFailures.length,
     },
     newData: {
@@ -346,8 +499,8 @@ export async function generateCampaignFromCampaignPlan(
 
   const message =
     lineFailures.length > 0
-      ? `Campaign ${header.document_number} created with ${linesCreated} line(s). ${lineFailures.length} creator(s) could not be added.`
-      : `Campaign ${header.document_number} created with ${linesCreated} vendor line(s).`;
+      ? `Campaign ${header.document_number} created with ${linesCreated} line(s) from ${source === "quotation" ? "quotation snapshot" : "Campaign Plan"}. ${lineFailures.length} creator(s) could not be added.`
+      : `Campaign ${header.document_number} created with ${linesCreated} vendor line(s) and tentative posting schedule inherited.`;
 
   return {
     ok: true,
@@ -355,6 +508,7 @@ export async function generateCampaignFromCampaignPlan(
     documentNumber: header.document_number,
     linesCreated,
     alreadyExists: false,
+    source,
     message,
   };
 }

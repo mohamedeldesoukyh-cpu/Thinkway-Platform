@@ -135,7 +135,7 @@ export async function createCampaignLine(
   supabase: SupabaseClient,
   userId: string,
   parsed: CampaignLineMutationInput
-): Promise<{ ok: true; message: string; clientId?: string } | { ok: false; message: string }> {
+): Promise<{ ok: true; message: string; clientId?: string; lineId: string } | { ok: false; message: string }> {
   const assignmentResult = parseAssignmentJson(parsed.assignment_json);
   if (parsed.pricing_mode !== "per_deliverable" && !assignmentResult.ok) {
     return { ok: false, message: assignmentResult.message };
@@ -328,6 +328,7 @@ export async function createCampaignLine(
     ok: true,
     message: `Influencer assignment ${line.document_number} created.`,
     clientId: header?.client_id as string | undefined,
+    lineId: line.id,
   };
 }
 
