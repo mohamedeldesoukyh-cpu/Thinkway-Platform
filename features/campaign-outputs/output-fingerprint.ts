@@ -37,6 +37,14 @@ function fnv1a(input: string): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
+/** Fingerprint a single input slice. */
+export function computeInputFingerprint(
+  campaignObject: CampaignObject,
+  key: CampaignOutputInputKey
+): string {
+  return fnv1a(stableStringify(resolveInputValue(campaignObject, key)));
+}
+
 /**
  * Fingerprint the given input keys. Keys are sorted so the fingerprint is
  * independent of the order they were declared in the catalog.
@@ -49,4 +57,16 @@ export function computeSourceFingerprint(
     .sort()
     .map((key) => [key, resolveInputValue(campaignObject, key)] as const);
   return fnv1a(stableStringify(payload));
+}
+
+/** Per-input fingerprints — used to name exactly which input made an output stale. */
+export function computeInputFingerprints(
+  campaignObject: CampaignObject,
+  inputKeys: readonly CampaignOutputInputKey[]
+): Partial<Record<CampaignOutputInputKey, string>> {
+  const map: Partial<Record<CampaignOutputInputKey, string>> = {};
+  for (const key of inputKeys) {
+    map[key] = computeInputFingerprint(campaignObject, key);
+  }
+  return map;
 }

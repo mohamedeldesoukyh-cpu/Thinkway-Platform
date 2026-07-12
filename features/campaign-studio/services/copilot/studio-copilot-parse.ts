@@ -271,6 +271,56 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
     },
   },
   {
+    name: "open_output",
+    description:
+      "Open/navigate to a Campaign Output in the Outputs Center. Use for 'open the media plan', 'show me the proposal'.",
+    parameters: {
+      type: "object",
+      properties: {
+        output: { type: "string", enum: OUTPUT_KINDS, description: "Which Campaign Output to open." },
+      },
+      required: ["output"],
+    },
+  },
+  {
+    name: "preview_output",
+    description:
+      "Preview a Campaign Output exactly as it would be exported. Use for 'preview the proposal', 'preview the media plan'.",
+    parameters: {
+      type: "object",
+      properties: {
+        output: { type: "string", enum: OUTPUT_KINDS, description: "Which Campaign Output to preview." },
+      },
+      required: ["output"],
+    },
+  },
+  {
+    name: "explain_output_staleness",
+    description:
+      "Explain precisely why a Campaign Output needs updating. Use for 'why does the proposal need updating?', 'why is the media plan out of date?'.",
+    parameters: {
+      type: "object",
+      properties: {
+        output: { type: "string", enum: OUTPUT_KINDS, description: "Which Campaign Output to explain." },
+      },
+      required: ["output"],
+    },
+  },
+  {
+    name: "compare_output_versions",
+    description:
+      "Compare two versions of a Campaign Output (defaults to the last two). Use for 'compare the last two versions of the strategy', 'compare version 1 and 3 of the media plan'.",
+    parameters: {
+      type: "object",
+      properties: {
+        output: { type: "string", enum: OUTPUT_KINDS, description: "Which Campaign Output to compare." },
+        from: { type: "number", description: "Earlier version number (optional)." },
+        to: { type: "number", description: "Later version number (optional)." },
+      },
+      required: ["output"],
+    },
+  },
+  {
     name: "undo_last_change",
     description: "Revert the campaign to the version before the most recent change.",
     parameters: { type: "object", properties: {} },
@@ -449,6 +499,21 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
   // ("rewrite the strategy", "make it premium") still fall through to authoring.
   const outputKind = resolveOutputKind(text);
   if (outputKind) {
+    // Inspection / navigation ops first (distinct verbs from generate/export).
+    if (/\bwhy\b/i.test(text) && /\b(need|needs|update|updating|out of date|stale|regenerat)/i.test(text)) {
+      return { kind: "explain_output_staleness", output: outputKind };
+    }
+    if (/\bcompare\b/i.test(text)) {
+      const nums = [...text.matchAll(/\bv(?:ersion)?\s*(\d+)\b/gi)].map((m) => Number(m[1]));
+      return {
+        kind: "compare_output_versions",
+        output: outputKind,
+        from: nums[0],
+        to: nums[1],
+      };
+    }
+    if (/\bpreview\b/i.test(text)) return { kind: "preview_output", output: outputKind };
+    if (/\bopen\b/i.test(text)) return { kind: "open_output", output: outputKind };
     if (/\b(export|download)\b/i.test(text)) {
       return { kind: "export_output", output: outputKind };
     }
@@ -458,6 +523,10 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     if (/\b(generate|create|build|produce|assemble)\b/i.test(text)) {
       return { kind: "generate_output", output: outputKind };
     }
+  }
+  // "compare the last two versions" with no explicit output named.
+  if (/\bcompare\b/i.test(text) && /\bversions?\b/i.test(text)) {
+    return { kind: "compare_output_versions" };
   }
 
   // Whole-proposal tone pass — re-author the narrative sections together.
@@ -603,6 +672,19 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
       return { kind: "regenerate_output", output: coerceOutputKind(args.output) };
     case "export_output":
       return { kind: "export_output", output: coerceOutputKind(args.output) };
+    case "open_output":
+      return { kind: "open_output", output: coerceOutputKind(args.output) };
+    case "preview_output":
+      return { kind: "preview_output", output: coerceOutputKind(args.output) };
+    case "explain_output_staleness":
+      return { kind: "explain_output_staleness", output: coerceOutputKind(args.output) };
+    case "compare_output_versions":
+      return {
+        kind: "compare_output_versions",
+        output: coerceOutputKind(args.output),
+        from: typeof args.from === "number" ? args.from : undefined,
+        to: typeof args.to === "number" ? args.to : undefined,
+      };
     case "undo_last_change":
       return { kind: "undo_last_change" };
     case "restore_version":

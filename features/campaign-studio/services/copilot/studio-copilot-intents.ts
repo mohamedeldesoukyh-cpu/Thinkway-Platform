@@ -40,6 +40,10 @@ export type StudioCopilotIntentKind =
   | "generate_output"
   | "regenerate_output"
   | "export_output"
+  | "open_output"
+  | "preview_output"
+  | "explain_output_staleness"
+  | "compare_output_versions"
   | "undo_last_change"
   | "restore_version"
   | "answer_question"
@@ -129,6 +133,19 @@ export type ExportOutputIntent = {
   kind: "export_output";
   output?: CampaignOutputKind;
 };
+/** Outputs Center operations: navigate, preview, explain staleness, compare versions. */
+export type OpenOutputIntent = { kind: "open_output"; output?: CampaignOutputKind };
+export type PreviewOutputIntent = { kind: "preview_output"; output?: CampaignOutputKind };
+export type ExplainStalenessIntent = {
+  kind: "explain_output_staleness";
+  output?: CampaignOutputKind;
+};
+export type CompareVersionsIntent = {
+  kind: "compare_output_versions";
+  output?: CampaignOutputKind;
+  from?: number;
+  to?: number;
+};
 
 export type AnswerQuestionIntent = { kind: "answer_question"; question: string };
 export type ClarifyIntent = { kind: "clarify"; question: string };
@@ -151,6 +168,10 @@ export type ExecutableStudioCopilotIntent =
   | GenerateOutputIntent
   | RegenerateOutputIntent
   | ExportOutputIntent
+  | OpenOutputIntent
+  | PreviewOutputIntent
+  | ExplainStalenessIntent
+  | CompareVersionsIntent
   | AnswerQuestionIntent
   | ClarifyIntent
   | UndoIntent

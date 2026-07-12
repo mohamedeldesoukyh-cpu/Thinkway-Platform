@@ -15,22 +15,34 @@
 export * from "./output-types";
 export {
   OUTPUT_CATALOG,
+  OUTPUT_GROUPS,
   INPUT_KEY_LABELS,
   getOutputDefinition,
   outputsDependingOn,
   type OutputDefinition,
   type OutputGenerator,
 } from "./output-catalog";
-export { computeSourceFingerprint } from "./output-fingerprint";
+export {
+  computeSourceFingerprint,
+  computeInputFingerprint,
+  computeInputFingerprints,
+} from "./output-fingerprint";
+export { describeInputsChanged, INPUT_CHANGE_PHRASES } from "./output-stale-reason";
 export { resolveSlate, resolveInputValue, overallScore, type SlateCreator } from "./output-inputs";
 export {
   getCampaignOutputState,
   getCampaignOutput,
   listCampaignOutputs,
+  listCampaignOutputsByGroup,
   generateCampaignOutput,
   markStaleCampaignOutputs,
   staleCampaignOutputKinds,
+  describeStaleReason,
+  getOutputVersions,
+  compareOutputVersions,
+  restoreOutputVersion,
   type OutputView,
+  type OutputVersionDiff,
   type GenerateCampaignOutputResult,
 } from "./output-registry";
 export { renderOutputMarkdown } from "./output-markdown";
@@ -38,11 +50,17 @@ export {
   generateMediaPlan,
   MEDIA_PLAN_GENERATOR_VERSION,
   type MediaPlanData,
+  type MediaPlanWeek,
+  type MediaPlanDay,
 } from "./generators/media-plan";
 export { generateFullStrategy, STRATEGY_GENERATOR_VERSION } from "./generators/strategy";
 export {
   resolveOutputKind,
   runGenerateOutput,
   runExportOutput,
+  runOpenOutput,
+  runPreviewOutput,
+  runExplainStaleness,
+  runCompareVersions,
   type OutputCopilotResult,
 } from "./copilot/output-copilot";

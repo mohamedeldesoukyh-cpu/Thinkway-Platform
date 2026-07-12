@@ -11,8 +11,12 @@ import {
 } from "@/features/campaign-outputs/output-registry";
 import {
   resolveOutputKind,
+  runCompareVersions,
+  runExplainStaleness,
   runExportOutput,
   runGenerateOutput,
+  runOpenOutput,
+  runPreviewOutput,
 } from "@/features/campaign-outputs/copilot/output-copilot";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
@@ -72,6 +76,10 @@ export type StudioCopilotResult = {
   /** True when the campaign object changed (studio must re-render). */
   changed: boolean;
   intentKind: StudioCopilotIntent["kind"];
+  /** UI directive: focus this output in the Outputs Center. */
+  outputNavigate?: CampaignOutputKind;
+  /** UI directive: open this output's preview. */
+  outputPreview?: CampaignOutputKind;
 };
 
 const SYSTEM_PROMPT = `You are the Thinkway Campaign Copilot. You are permanently editing ONE specific campaign, described in the context below. You already know exactly which campaign this is — NEVER ask the user which campaign or brand they mean.
@@ -221,6 +229,14 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       return generateOutputEdit(input, intent.output, { regenerate: true });
     case "export_output":
       return exportOutputEdit(input, intent.output);
+    case "open_output":
+      return openOutputOp(input, intent.output);
+    case "preview_output":
+      return previewOutputOp(input, intent.output);
+    case "explain_output_staleness":
+      return explainStalenessOp(input, intent.output);
+    case "compare_output_versions":
+      return compareVersionsOp(input, intent.output, intent.from, intent.to);
     case "undo_last_change":
       return undoLastChange(input);
     case "restore_version":
@@ -775,6 +791,108 @@ async function exportOutputEdit(
   const persisted = await persistVersion(input.supabase, input.conversationId, input.userId, logged);
 
   return { campaignObject: persisted, reply: result.reply, changed: true, intentKind: "export_output" };
+}
+
+/** Resolve the output kind for a Center op, or a clarify prompt if none is given. */
+function outputKindOrAsk(
+  input: RunInput,
+  output: CampaignOutputKind | undefined,
+  intentKind: StudioCopilotResult["intentKind"]
+): CampaignOutputKind | StudioCopilotResult {
+  const kind = output ?? resolveOutputKind(input.message);
+  if (kind) return kind;
+  return {
+    campaignObject: input.campaignObject,
+    reply: "Which output do you mean — the Media Plan, the Strategy, the Proposal, or another?",
+    changed: false,
+    intentKind,
+  };
+}
+
+/** Open an output in the Outputs Center (navigation directive for the UI). */
+async function openOutputOp(
+  input: RunInput,
+  output: CampaignOutputKind | undefined
+): Promise<StudioCopilotResult> {
+  const resolved = outputKindOrAsk(input, output, "open_output");
+  if (typeof resolved !== "string") return resolved;
+  const result = runOpenOutput(input.campaignObject, { kind: resolved });
+  return {
+    campaignObject: result.campaignObject,
+    reply: result.reply,
+    changed: false,
+    intentKind: "open_output",
+    outputNavigate: result.navigate,
+  };
+}
+
+/** Preview an output; generate the latest version first if needed (then persist). */
+async function previewOutputOp(
+  input: RunInput,
+  output: CampaignOutputKind | undefined
+): Promise<StudioCopilotResult> {
+  const resolved = outputKindOrAsk(input, output, "preview_output");
+  if (typeof resolved !== "string") return resolved;
+  const result = runPreviewOutput(input.campaignObject, { kind: resolved });
+  if (!result.changed) {
+    return {
+      campaignObject: result.campaignObject,
+      reply: result.reply,
+      changed: false,
+      intentKind: "preview_output",
+      outputPreview: result.preview,
+    };
+  }
+  const label = getOutputDefinition(resolved)?.label ?? resolved;
+  const logged = appendChangeLog(result.campaignObject, {
+    summary: `Generated the ${label} for preview (v${result.record?.version ?? 1})`,
+    intent: "preview_output",
+    overallScoreAfter: overallScore(result.campaignObject),
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(input.supabase, input.conversationId, input.userId, logged);
+  return {
+    campaignObject: persisted,
+    reply: result.reply,
+    changed: true,
+    intentKind: "preview_output",
+    outputPreview: result.preview,
+  };
+}
+
+/** Explain precisely why an output needs updating (read-only). */
+async function explainStalenessOp(
+  input: RunInput,
+  output: CampaignOutputKind | undefined
+): Promise<StudioCopilotResult> {
+  const resolved = outputKindOrAsk(input, output, "explain_output_staleness");
+  if (typeof resolved !== "string") return resolved;
+  const result = runExplainStaleness(input.campaignObject, { kind: resolved });
+  return {
+    campaignObject: result.campaignObject,
+    reply: result.reply,
+    changed: false,
+    intentKind: "explain_output_staleness",
+  };
+}
+
+/** Compare two versions of an output (read-only). */
+async function compareVersionsOp(
+  input: RunInput,
+  output: CampaignOutputKind | undefined,
+  from?: number,
+  to?: number
+): Promise<StudioCopilotResult> {
+  const resolved = outputKindOrAsk(input, output, "compare_output_versions");
+  if (typeof resolved !== "string") return resolved;
+  const result = runCompareVersions(input.campaignObject, { kind: resolved, from, to });
+  return {
+    campaignObject: result.campaignObject,
+    reply: result.reply,
+    changed: false,
+    intentKind: "compare_output_versions",
+    outputNavigate: result.navigate,
+  };
 }
 
 /**

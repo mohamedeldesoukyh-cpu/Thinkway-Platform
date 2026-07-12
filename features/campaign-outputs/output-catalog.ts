@@ -21,6 +21,7 @@ import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   CampaignOutputCategory,
   CampaignOutputContent,
+  CampaignOutputGroup,
   CampaignOutputInputKey,
   CampaignOutputKind,
 } from "./output-types";
@@ -34,13 +35,25 @@ export type OutputDefinition = {
   label: string;
   description: string;
   category: CampaignOutputCategory;
+  /** Top-level Outputs Center group — the metadata that drives card grouping. */
+  group: CampaignOutputGroup;
   /** Campaign inputs this output derives from — drives fingerprint + Source Data / Dependencies. */
   inputKeys: CampaignOutputInputKey[];
+  /** Rough generation time for the card's "Estimated generation time". */
+  estimatedGenerationMs: number;
   /** Deterministic generator; absent until wired (declared for forward-compat). */
   generate?: OutputGenerator;
   /** Semantic version of the wired generator, stored on each record for compare/repro. */
   generatorVersion?: string;
 };
+
+/** Ordered groups + labels for the Outputs Center. Metadata-driven, not hardcoded in the UI. */
+export const OUTPUT_GROUPS: Array<{ group: CampaignOutputGroup; label: string }> = [
+  { group: "strategy", label: "Strategy" },
+  { group: "planning", label: "Planning" },
+  { group: "client", label: "Client" },
+  { group: "internal", label: "Internal" },
+];
 
 export const OUTPUT_CATALOG: OutputDefinition[] = [
   {
@@ -49,6 +62,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     description:
       "The complete strategy: executive summary, objectives, audience, creator & platform strategy, creative direction, activation phases, timeline, budget, KPIs, risks, and recommendations.",
     category: "strategy",
+    group: "strategy",
+    estimatedGenerationMs: 4500,
     inputKeys: ["objective", "audience", "market", "platforms", "creators", "budget", "timeline", "strategy"],
     generate: generateFullStrategy,
     generatorVersion: STRATEGY_GENERATOR_VERSION,
@@ -59,6 +74,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     description:
       "Agency-grade publishing plan: weekly & daily calendar, creator-by-creator schedule, platform allocation, activation waves, review & client approval milestones, optimization & paid amplification windows, contingency windows, creator dependencies, and production/asset deadlines.",
     category: "planning",
+    group: "planning",
+    estimatedGenerationMs: 5000,
     inputKeys: ["creators", "platforms", "timeline", "deliverables_scope"],
     generate: generateMediaPlan,
     generatorVersion: MEDIA_PLAN_GENERATOR_VERSION,
@@ -68,6 +85,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Executive Proposal",
     description: "Client-facing proposal narrative assembled from the strategy and creator slate.",
     category: "presentation",
+    group: "client",
+    estimatedGenerationMs: 6000,
     inputKeys: ["objective", "audience", "creators", "budget", "timeline", "kpis", "strategy"],
   },
   {
@@ -75,6 +94,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "KPI Forecast",
     description: "Projected reach, engagement, and conversion outcomes across the budget and KPI targets.",
     category: "performance",
+    group: "strategy",
+    estimatedGenerationMs: 3000,
     inputKeys: ["budget", "kpis", "platforms"],
   },
   {
@@ -82,6 +103,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Risk & Mitigation Plan",
     description: "Campaign risks and mitigations derived from the slate, timeline, and market.",
     category: "performance",
+    group: "strategy",
+    estimatedGenerationMs: 2500,
     inputKeys: ["creators", "timeline", "market", "risks"],
   },
   {
@@ -89,6 +112,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Budget Allocation Plan",
     description: "How the budget is allocated across creators, tiers, and platforms.",
     category: "planning",
+    group: "planning",
+    estimatedGenerationMs: 2500,
     inputKeys: ["budget", "creators", "platforms"],
   },
   {
@@ -96,6 +121,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Amplification Plan",
     description: "Paid boosting and cross-channel amplification layered over the organic plan.",
     category: "planning",
+    group: "strategy",
+    estimatedGenerationMs: 3000,
     inputKeys: ["creators", "platforms", "budget"],
   },
   {
@@ -103,6 +130,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Content Calendar",
     description: "Day-level content calendar across creators and platforms.",
     category: "planning",
+    group: "planning",
+    estimatedGenerationMs: 4000,
     inputKeys: ["creators", "platforms", "timeline"],
   },
   {
@@ -110,6 +139,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Posting Timeline",
     description: "Sequenced posting timeline and creator dependencies.",
     category: "planning",
+    group: "planning",
+    estimatedGenerationMs: 3000,
     inputKeys: ["creators", "timeline", "platforms"],
   },
   {
@@ -117,6 +148,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Creator Activation Plan",
     description: "Per-creator activation brief and role in the campaign.",
     category: "operations",
+    group: "planning",
+    estimatedGenerationMs: 3500,
     inputKeys: ["creators", "objective", "platforms"],
   },
   {
@@ -124,6 +157,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Campaign Playbook",
     description: "The end-to-end operating playbook for running the campaign.",
     category: "operations",
+    group: "internal",
+    estimatedGenerationMs: 5000,
     inputKeys: ["objective", "creators", "platforms", "timeline"],
   },
   {
@@ -131,6 +166,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Executive Summary",
     description: "One-page executive summary of the campaign.",
     category: "strategy",
+    group: "strategy",
+    estimatedGenerationMs: 2500,
     inputKeys: ["objective", "audience", "creators", "budget"],
   },
   {
@@ -138,6 +175,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Creative Concepts",
     description: "Creative concepts and key messages for the campaign.",
     category: "creative",
+    group: "strategy",
+    estimatedGenerationMs: 3500,
     inputKeys: ["objective", "audience", "creative_concepts"],
   },
   {
@@ -145,6 +184,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Client Presentation (PDF/PPT)",
     description: "Exportable client presentation deck.",
     category: "presentation",
+    group: "client",
+    estimatedGenerationMs: 6000,
     inputKeys: ["objective", "creators", "budget", "timeline", "strategy"],
   },
   {
@@ -152,6 +193,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Campaign Brief (reverse)",
     description: "A campaign brief reverse-generated from the assembled campaign.",
     category: "operations",
+    group: "internal",
+    estimatedGenerationMs: 2500,
     inputKeys: ["objective", "audience", "market", "platforms", "budget", "timeline"],
   },
   {
@@ -159,6 +202,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Statement of Work",
     description: "Scope, deliverables, and terms for the engagement.",
     category: "operations",
+    group: "internal",
+    estimatedGenerationMs: 3000,
     inputKeys: ["deliverables_scope", "creators", "budget", "timeline"],
   },
   {
@@ -166,6 +211,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     label: "Internal Operations Plan",
     description: "Internal execution and operations plan (agency-facing).",
     category: "operations",
+    group: "internal",
+    estimatedGenerationMs: 3500,
     inputKeys: ["creators", "timeline", "platforms", "deliverables_scope"],
   },
 ];

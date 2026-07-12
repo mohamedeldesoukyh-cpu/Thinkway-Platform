@@ -1,9 +1,24 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
-import { resolveOutputKind, runGenerateOutput, runExportOutput } from "./output-copilot";
-import { getCampaignOutput } from "../output-registry";
+import {
+  resolveOutputKind,
+  runGenerateOutput,
+  runExportOutput,
+  runOpenOutput,
+  runPreviewOutput,
+  runExplainStaleness,
+  runCompareVersions,
+} from "./output-copilot";
+import { generateCampaignOutput, getCampaignOutput } from "../output-registry";
 import { buildCampaignObjectFixture } from "../output-test-fixture";
+
+function carryRegistry(
+  base: ReturnType<typeof buildCampaignObjectFixture>,
+  from: ReturnType<typeof buildCampaignObjectFixture>
+) {
+  return { ...base, meta: { ...base.meta, campaignOutputs: from.meta.campaignOutputs } };
+}
 
 test("resolveOutputKind maps conversational phrasings to the right output", () => {
   assert.equal(resolveOutputKind("Generate a Media Plan."), "media_plan");
@@ -71,4 +86,54 @@ test("export of an already-generated, current output does not regenerate", () =>
   const exported = runExportOutput(generated, { kind: "media_plan" });
   assert.equal(exported.changed, false);
   assert.ok(exported.markdown?.includes("Media Plan"));
+});
+
+test("open returns a navigation directive; suggests generating when absent", () => {
+  const obj = buildCampaignObjectFixture();
+  const notYet = runOpenOutput(obj, { kind: "media_plan" });
+  assert.equal(notYet.navigate, "media_plan");
+  assert.match(notYet.reply, /hasn't been generated/);
+
+  const generated = runGenerateOutput(obj, { kind: "media_plan" }).campaignObject;
+  const opened = runOpenOutput(generated, { kind: "media_plan" });
+  assert.equal(opened.navigate, "media_plan");
+  assert.match(opened.reply, /Opening/);
+});
+
+test("preview renders exportable content and sets the preview directive", () => {
+  const obj = buildCampaignObjectFixture();
+  const preview = runPreviewOutput(obj, { kind: "full_strategy" });
+  assert.equal(preview.preview, "full_strategy");
+  assert.ok(preview.markdown?.startsWith("# Full Campaign Strategy"));
+});
+
+test("explain staleness gives the precise reason, not a generic message", () => {
+  const obj = buildCampaignObjectFixture();
+  const generated = runGenerateOutput(obj, { kind: "media_plan" }).campaignObject;
+
+  const upToDate = runExplainStaleness(generated, { kind: "media_plan" });
+  assert.match(upToDate.reply, /up to date/);
+
+  const edited = carryRegistry(buildCampaignObjectFixture({ creators: [{ id: "x", name: "X", tier: "Micro" }] }), generated);
+  const stale = runExplainStaleness(edited, { kind: "media_plan" });
+  assert.match(stale.reply, /needs updating/);
+  assert.match(stale.reply, /Creator slate changed/);
+});
+
+test("compare versions summarizes the last two versions", () => {
+  const obj = buildCampaignObjectFixture({ facts: { durationWeeks: 6 } });
+  const first = generateCampaignOutput(obj, "media_plan");
+  const edited = carryRegistry(buildCampaignObjectFixture({ facts: { durationWeeks: 3 } }), first.campaignObject);
+  const second = generateCampaignOutput(edited, "media_plan");
+
+  const compare = runCompareVersions(second.campaignObject, { kind: "media_plan" });
+  assert.match(compare.reply, /v1 → v2/);
+  assert.match(compare.reply, /Timeline changed/);
+});
+
+test("compare with only one version explains there is nothing to compare", () => {
+  const obj = buildCampaignObjectFixture();
+  const generated = runGenerateOutput(obj, { kind: "media_plan" }).campaignObject;
+  const compare = runCompareVersions(generated, { kind: "media_plan" });
+  assert.match(compare.reply, /only one version/);
 });

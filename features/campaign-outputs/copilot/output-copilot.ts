@@ -12,7 +12,12 @@ import type { CampaignObject } from "@/features/campaign-intelligence";
 
 import type { CampaignOutputKind, CampaignOutputRecord } from "../output-types";
 import { INPUT_KEY_LABELS, getOutputDefinition } from "../output-catalog";
-import { generateCampaignOutput, getCampaignOutput } from "../output-registry";
+import {
+  compareOutputVersions,
+  describeStaleReason,
+  generateCampaignOutput,
+  getCampaignOutput,
+} from "../output-registry";
 import { renderOutputMarkdown } from "../output-markdown";
 
 export type OutputCopilotResult = {
@@ -20,8 +25,12 @@ export type OutputCopilotResult = {
   reply: string;
   changed: boolean;
   record?: CampaignOutputRecord;
-  /** Rendered markdown, present for export. */
+  /** Rendered markdown, present for export/preview. */
   markdown?: string;
+  /** UI directive: focus/open this output in the Outputs Center. */
+  navigate?: CampaignOutputKind;
+  /** UI directive: open this output's preview panel. */
+  preview?: CampaignOutputKind;
 };
 
 /**
@@ -136,4 +145,125 @@ export function runExportOutput(
   const markdown = renderOutputMarkdown(record.content!);
   const reply = `Here is the **${label}**, ready to export${changed ? " (I generated the latest version first)" : ""}:\n\n${markdown}`;
   return { campaignObject: obj, changed, reply, record, markdown };
+}
+
+/** Open an output in the Outputs Center (a navigation directive for the UI). */
+export function runOpenOutput(
+  campaignObject: CampaignObject,
+  input: { kind: CampaignOutputKind }
+): OutputCopilotResult {
+  const label = getOutputDefinition(input.kind)?.label ?? input.kind;
+  const record = getCampaignOutput(campaignObject, input.kind);
+  if (!record) {
+    return {
+      campaignObject,
+      changed: false,
+      reply: `The ${label} hasn't been generated yet. Say "generate the ${label}" and I'll create it, then open it in the Outputs Center.`,
+      navigate: input.kind,
+    };
+  }
+  return {
+    campaignObject,
+    changed: false,
+    reply: `Opening the **${label}** (v${record.version}) in the Outputs Center.`,
+    navigate: input.kind,
+    record,
+  };
+}
+
+/** Preview an output — renders exactly what an export would contain. */
+export function runPreviewOutput(
+  campaignObject: CampaignObject,
+  input: { kind: CampaignOutputKind; now?: string }
+): OutputCopilotResult {
+  const definition = getOutputDefinition(input.kind);
+  const label = definition?.label ?? input.kind;
+  if (!definition?.generate) {
+    return {
+      campaignObject,
+      changed: false,
+      reply: `The ${label} can't be previewed yet — its generator is coming soon. ${NOT_WIRED_HINT}`,
+      preview: input.kind,
+    };
+  }
+
+  let obj = campaignObject;
+  let changed = false;
+  let record = getCampaignOutput(obj, input.kind);
+  if (!record?.content) {
+    const generated = generateCampaignOutput(obj, input.kind, { now: input.now });
+    obj = generated.campaignObject;
+    record = generated.record;
+    changed = true;
+  }
+  const markdown = renderOutputMarkdown(record.content!);
+  return {
+    campaignObject: obj,
+    changed,
+    reply: `Preview of the **${label}** (v${record.version})${changed ? " — generated just now" : ""}:\n\n${markdown}`,
+    markdown,
+    preview: input.kind,
+    record,
+  };
+}
+
+/** Explain precisely why an output needs updating — never a generic message. */
+export function runExplainStaleness(
+  campaignObject: CampaignObject,
+  input: { kind: CampaignOutputKind }
+): OutputCopilotResult {
+  const label = getOutputDefinition(input.kind)?.label ?? input.kind;
+  const record = getCampaignOutput(campaignObject, input.kind);
+  if (!record) {
+    return {
+      campaignObject,
+      changed: false,
+      reply: `The ${label} hasn't been generated yet, so there's nothing to update.`,
+    };
+  }
+  if (record.status !== "needs_update") {
+    return {
+      campaignObject,
+      changed: false,
+      reply: `The ${label} is up to date (v${record.version}) — no regeneration needed.`,
+      record,
+    };
+  }
+  const stale = describeStaleReason(campaignObject, input.kind);
+  return {
+    campaignObject,
+    changed: false,
+    reply: `The **${label}** needs updating.\n\nReason: ${stale?.reason ?? "its source data changed."} Say "regenerate the ${label}" and I'll rebuild it from the current Campaign Object.`,
+    record,
+  };
+}
+
+/** Compare two versions of an output (defaults to the last two). */
+export function runCompareVersions(
+  campaignObject: CampaignObject,
+  input: { kind: CampaignOutputKind; from?: number; to?: number }
+): OutputCopilotResult {
+  const label = getOutputDefinition(input.kind)?.label ?? input.kind;
+  const diff = compareOutputVersions(campaignObject, input.kind, {
+    from: input.from,
+    to: input.to,
+  });
+  if (!diff) {
+    return {
+      campaignObject,
+      changed: false,
+      reply: `The ${label} has only one version so far — there's nothing to compare yet.`,
+    };
+  }
+
+  const lines: string[] = [
+    `Comparing the **${label}** — v${diff.fromVersion} → v${diff.toVersion}${diff.reason ? ` (${diff.reason})` : ""}:`,
+  ];
+  if (diff.changedSections.length) lines.push(`- Changed: ${diff.changedSections.join(", ")}`);
+  if (diff.addedSections.length) lines.push(`- Added: ${diff.addedSections.join(", ")}`);
+  if (diff.removedSections.length) lines.push(`- Removed: ${diff.removedSections.join(", ")}`);
+  if (diff.changedSections.length + diff.addedSections.length + diff.removedSections.length === 0) {
+    lines.push("- No section-level differences — the rendered content is identical.");
+  }
+  return { campaignObject, changed: false, reply: lines.join("\n"), navigate: input.kind };
 }
