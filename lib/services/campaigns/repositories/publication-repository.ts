@@ -2,7 +2,40 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { authorAvatarFromSyncLogSummary } from "@/lib/performance/apify-author-avatar";
+import {
+  isDisplayableAvatarUrl,
+  isUsableAvatarUrl,
+} from "@/lib/performance/avatar-sync-policy";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+
+function metadataAvatarUrl(
+  metadata: Record<string, unknown> | null | undefined
+): string | null {
+  if (typeof metadata?.avatar_url === "string" && metadata.avatar_url.trim()) {
+    return metadata.avatar_url.trim();
+  }
+  if (typeof metadata?.profile_image_url === "string" && metadata.profile_image_url.trim()) {
+    return metadata.profile_image_url.trim();
+  }
+  if (typeof metadata?.opengraph_image === "string" && metadata.opengraph_image.trim()) {
+    return metadata.opengraph_image.trim();
+  }
+  return null;
+}
+
+function firstDisplayableAvatarUrl(
+  ...candidates: Array<string | null | undefined>
+): string | null {
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (trimmed && isUsableAvatarUrl(trimmed)) return trimmed;
+  }
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (trimmed && isDisplayableAvatarUrl(trimmed)) return trimmed;
+  }
+  return null;
+}
 
 export type PublicationRecord = Partial<{
   id: string;
@@ -146,7 +179,7 @@ export async function fetchInfluencerMetaForPublications(
 
   const { data: influencers, error: influencerError } = await supabase
     .from("influencers")
-    .select("id, display_name, profile_id, metadata")
+    .select("id, display_name, profile_id, primary_avatar_url, metadata")
     .in("id", influencerIds);
 
   if (influencerError) {
@@ -157,8 +190,10 @@ export async function fetchInfluencerMetaForPublications(
       const metadata = row.metadata as Record<string, unknown> | null;
       const metadataProfileImage =
         typeof metadata?.profile_image_url === "string" ? metadata.profile_image_url : null;
-      const influencerAvatar =
-        typeof metadata?.avatar_url === "string" ? metadata.avatar_url : null;
+      const influencerAvatar = firstDisplayableAvatarUrl(
+        row.primary_avatar_url,
+        typeof metadata?.avatar_url === "string" ? metadata.avatar_url : null
+      );
       avatars.set(`${row.id}:`, {
         creatorProfileImage: metadataProfileImage,
         influencerAvatar,
@@ -203,9 +238,60 @@ export async function fetchInfluencerMetaForPublications(
     }
   }
 
+  const missingProfileIds = (influencers ?? [])
+    .filter((row) => row.profile_id == null)
+    .map((row) => row.id);
+
+  if (missingProfileIds.length > 0) {
+    const { data: discoveryByInfluencer, error: discoveryByInfluencerError } = await supabase
+      .from("discovered_profiles")
+      .select("influencer_id, profile_image_url")
+      .in("influencer_id", missingProfileIds);
+
+    if (discoveryByInfluencerError) {
+      console.warn(
+        "[performance] creator profile images by influencer_id query failed",
+        discoveryByInfluencerError.message
+      );
+    } else {
+      for (const row of discoveryByInfluencer ?? []) {
+        if (!row.influencer_id) continue;
+        const image = row.profile_image_url as string | null;
+        if (!image) continue;
+        const existing = avatars.get(`${row.influencer_id}:`) ?? {
+          creatorProfileImage: null,
+          influencerAvatar: null,
+          platformPicture: null,
+          followerCount: null,
+          handle: null,
+          profileUrl: null,
+        };
+        avatars.set(`${row.influencer_id}:`, {
+          ...existing,
+          creatorProfileImage: existing.creatorProfileImage ?? image,
+        });
+      }
+    }
+  }
+
+  const { data: discoveryPlatformProfiles, error: discoveryPlatformError } = await supabase
+    .from("discovered_profiles")
+    .select("influencer_id, platform, profile_image_url")
+    .in("influencer_id", influencerIds)
+    .not("profile_image_url", "is", null);
+
+  if (discoveryPlatformError) {
+    console.warn(
+      "[performance] platform discovery profile images query failed",
+      discoveryPlatformError.message
+    );
+  }
+
   const { data: accounts, error: accountError } = await supabase
     .from("influencer_platform_accounts")
-    .select("influencer_id, platform, handle, profile_url, profile_picture_url, follower_count")
+    .select(
+      "influencer_id, platform, handle, profile_url, profile_picture_url, follower_count, metadata"
+    )
     .in("influencer_id", influencerIds);
 
   if (accountError) {
@@ -213,13 +299,31 @@ export async function fetchInfluencerMetaForPublications(
     return { names, avatars };
   }
 
+  const discoveryPictureByInfluencerPlatform = new Map<string, string>();
+  for (const profile of discoveryPlatformProfiles ?? []) {
+    if (!profile.influencer_id) continue;
+    const image = (profile.profile_image_url as string | null)?.trim();
+    if (!image) continue;
+    const platformKey = canonicalPlatformKey(profile.platform ?? "");
+    const key = `${profile.influencer_id}:${platformKey}`;
+    if (!discoveryPictureByInfluencerPlatform.has(key)) {
+      discoveryPictureByInfluencerPlatform.set(key, image);
+    }
+  }
+
   for (const account of accounts ?? []) {
     const platformKey = canonicalPlatformKey(account.platform ?? "");
     const key = `${account.influencer_id}:${platformKey}`;
+    const accountMetadata = account.metadata as Record<string, unknown> | null;
+    const platformPicture = firstDisplayableAvatarUrl(
+      account.profile_picture_url,
+      metadataAvatarUrl(accountMetadata),
+      discoveryPictureByInfluencerPlatform.get(key)
+    );
     avatars.set(key, {
       creatorProfileImage: null,
       influencerAvatar: null,
-      platformPicture: account.profile_picture_url ?? null,
+      platformPicture,
       followerCount: account.follower_count ?? null,
       handle: account.handle ?? null,
       profileUrl: resolveCreatorProfileUrl({
@@ -236,6 +340,20 @@ export async function fetchInfluencerMetaForPublications(
         followerCount: base.followerCount ?? account.follower_count ?? null,
       });
     }
+  }
+
+  for (const [key, image] of discoveryPictureByInfluencerPlatform) {
+    if (avatars.has(key)) continue;
+    const [influencerId] = key.split(":");
+    if (!influencerId) continue;
+    avatars.set(key, {
+      creatorProfileImage: null,
+      influencerAvatar: null,
+      platformPicture: image,
+      followerCount: null,
+      handle: null,
+      profileUrl: null,
+    });
   }
 
   return { names, avatars };

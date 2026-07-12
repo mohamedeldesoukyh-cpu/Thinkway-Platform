@@ -32,6 +32,7 @@ const SIZE_CLASS: Record<CreatorThumbSize, string> = {
 export function CreatorThumbAvatar({
   name,
   avatarUrl,
+  profileUrl,
   platform,
   size,
   shape = "circle",
@@ -39,6 +40,7 @@ export function CreatorThumbAvatar({
 }: {
   name: string;
   avatarUrl?: string | null;
+  profileUrl?: string | null;
   platform?: string | null;
   size: CreatorThumbSize;
   shape?: "circle" | "rounded";
@@ -57,6 +59,7 @@ export function CreatorThumbAvatar({
     return (
       <CreatorAvatarImage
         avatarUrl={avatarUrl}
+        profileUrl={profileUrl}
         sizeClassName={cn(
           sizeClass,
           "shrink-0",

@@ -150,6 +150,7 @@ export function PublicationCreatorName({
   avatarSize = "sm",
   children,
   stopPropagation = false,
+  nameHref,
 }: {
   row: CreatorAvatarRenderInput;
   name?: string | null;
@@ -157,6 +158,8 @@ export function PublicationCreatorName({
   avatarSize?: AvatarSize;
   children?: ReactNode;
   stopPropagation?: boolean;
+  /** Internal route for the name (e.g. vendor profile). Use instead of wrapping in a Link. */
+  nameHref?: string;
 }) {
   const displayName =
     typeof children === "string"
@@ -169,6 +172,7 @@ export function PublicationCreatorName({
       size={avatarSize === "xs" ? "xs" : avatarSize === "lg" ? "md" : "sm"}
       showHandle={false}
       stopPropagation={stopPropagation}
+      nameHref={nameHref}
       className={className}
       nameClassName="font-medium"
     />

@@ -93,7 +93,7 @@ export function ConversationList({
   return (
     <aside
       className={cn(
-        "ai-sidebar ai-sidebar-dark flex shrink-0 flex-col overflow-hidden",
+        "ai-sidebar ai-sidebar-glass ai-sidebar-float flex shrink-0 flex-col self-stretch overflow-hidden",
         collapsed ? "w-12" : "w-[272px]",
         className
       )}
@@ -105,7 +105,7 @@ export function ConversationList({
             onClick={() => onCollapsedChange?.(false)}
             title="Expand conversations"
             aria-label="Expand conversations"
-            className="flex size-8 items-center justify-center rounded-lg text-[#EAF0FF]/60 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex size-8 items-center justify-center rounded-lg text-foreground/55 transition-colors hover:bg-[#0057FF]/[0.08] hover:text-foreground"
           >
             <ChevronRightIcon className="size-4" />
           </button>
@@ -115,13 +115,13 @@ export function ConversationList({
             onClick={onNewChat}
             title="New chat"
             aria-label="New chat"
-            className="mt-2 flex size-8 items-center justify-center rounded-lg text-[#EAF0FF]/60 transition-colors hover:bg-white/10 hover:text-white"
+            className="mt-2 flex size-8 items-center justify-center rounded-lg text-foreground/55 transition-colors hover:bg-[#0057FF]/[0.08] hover:text-foreground"
           >
             <PlusIcon className="size-3.5" />
           </button>
 
           <div className="mt-auto flex flex-col items-center gap-1 pb-1">
-            <MessageSquareIcon className="size-4 text-[#EAF0FF]/30" aria-hidden />
+            <MessageSquareIcon className="size-4 text-foreground/30" aria-hidden />
           </div>
         </div>
       ) : (
@@ -137,28 +137,28 @@ export function ConversationList({
             </button>
 
             <div className="relative mt-3">
-              <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-[#EAF0FF]/40" />
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-foreground/40" />
               <Input
                 placeholder="Search conversations"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className={cn(
-                  "h-[38px] rounded-xl border-white/10 bg-white/5 pr-2.5 pl-9 text-[13px] text-[#EAF0FF]",
-                  "placeholder:text-[#EAF0FF]/40",
-                  "focus-visible:border-[#3D8BFF]/50 focus-visible:ring-[#0057FF]/30"
+                  "h-[38px] rounded-xl border-black/[0.08] bg-white/60 pr-2.5 pl-9 text-[13px] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
+                  "placeholder:text-foreground/40",
+                  "focus-visible:border-[#0057FF]/45 focus-visible:ring-[#0057FF]/25"
                 )}
               />
             </div>
           </div>
 
           {error ? (
-            <p className="px-3 py-4 text-center text-xs text-red-300">{error}</p>
+            <p className="px-3 py-4 text-center text-xs text-destructive">{error}</p>
           ) : null}
 
           {loading && conversations.length === 0 ? (
             <div className="space-y-2 p-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full rounded-lg bg-white/10" />
+                <Skeleton key={i} className="h-10 w-full rounded-lg bg-[#0057FF]/10" />
               ))}
             </div>
           ) : (
@@ -187,12 +187,12 @@ export function ConversationList({
                 );
               })}
               {conversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 px-4 py-7 text-center text-xs text-[#EAF0FF]/40">
+                <div className="flex flex-col items-center justify-center gap-2 px-4 py-7 text-center text-xs text-foreground/50">
                   <MessageSquareIcon className="size-[22px] opacity-40" />
                   No conversations yet
                 </div>
               ) : filtered.length === 0 ? (
-                <p className="px-2 py-4 text-center text-xs text-[#EAF0FF]/40">
+                <p className="px-2 py-4 text-center text-xs text-foreground/50">
                   No matching conversations
                 </p>
               ) : null}
@@ -200,11 +200,11 @@ export function ConversationList({
           )}
 
           {onCollapsedChange ? (
-            <div className="shrink-0 border-t border-white/[0.07] p-2">
+            <div className="shrink-0 border-t border-black/[0.06] p-2">
               <button
                 type="button"
                 onClick={() => onCollapsedChange(true)}
-                className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium text-[#EAF0FF]/50 transition-colors hover:bg-white/[0.06] hover:text-white"
+                className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium text-foreground/55 transition-colors hover:bg-[#0057FF]/[0.08] hover:text-foreground"
               >
                 <ChevronLeftIcon className="size-3.5" />
                 Collapse
@@ -234,7 +234,7 @@ function ConversationGroup({
 
   return (
     <div>
-      <p className="px-2.5 pt-3.5 pb-2 text-[10.5px] font-bold tracking-[1px] text-[#EAF0FF]/30 uppercase">
+      <p className="px-2.5 pt-3.5 pb-2 text-[10.5px] font-bold tracking-[1px] text-foreground/45 uppercase">
         {label}
       </p>
       <div className="flex flex-col gap-0.5">
@@ -283,7 +283,7 @@ function ConversationRow({
     <div
       className={cn(
         "group relative flex items-center gap-0.5 rounded-[10px] pr-0.5 transition-colors",
-        isActive ? "ai-nav-item-active" : "hover:bg-white/5"
+        isActive ? "ai-nav-item-active" : "hover:bg-[#0057FF]/[0.06]"
       )}
     >
       {renaming ? (
@@ -296,7 +296,7 @@ function ConversationRow({
             if (e.key === "Enter") void handleRename();
             if (e.key === "Escape") setRenaming(false);
           }}
-          className="mx-1 h-8 flex-1 border-white/15 bg-white/10 text-xs text-white"
+          className="mx-1 h-8 flex-1 border-black/[0.1] bg-white/70 text-xs text-foreground"
         />
       ) : (
         <button
@@ -307,15 +307,15 @@ function ConversationRow({
           <div
             className={cn(
               "truncate text-[13px]",
-              isActive ? "font-semibold text-white" : "font-medium text-[#DCE6FF]"
+              isActive ? "font-semibold text-[#0057FF]" : "font-medium text-foreground/85"
             )}
           >
             {item.isPinned ? (
-              <PinIcon className="mr-1 inline size-3 shrink-0 text-[#3D8BFF]" />
+              <PinIcon className="mr-1 inline size-3 shrink-0 text-[#0057FF]" />
             ) : null}
             {item.title}
           </div>
-          <div className="text-[11px] text-[#EAF0FF]/30">{formattedDate}</div>
+          <div className="text-[11px] text-foreground/45">{formattedDate}</div>
         </button>
       )}
 
@@ -324,7 +324,7 @@ function ConversationRow({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="text-[#EAF0FF]/60 opacity-0 group-hover:opacity-100 hover:bg-white/10 hover:text-white"
+            className="text-foreground/50 opacity-0 group-hover:opacity-100 hover:bg-[#0057FF]/[0.08] hover:text-foreground"
             aria-label="Conversation options"
           >
             <MoreHorizontalIcon className="size-4" />

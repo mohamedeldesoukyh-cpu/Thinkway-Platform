@@ -1,13 +1,13 @@
 "use client";
 
-import { ExecutiveCard } from "./shared/executive-card";
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
   SectionFallbackContent,
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { DASHBOARD_SUMMARY_GRID } from "../../constants/studio-layout";
+import { DetailItem, StatBox } from "./shared/studio-ui-primitives";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { resolveCampaignSummary } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -35,27 +35,26 @@ export function CampaignSummarySection({
     return <SectionFallbackContent text={fallbackText} />;
   }
 
-  const cards = [
-    { label: "Client", value: data.client ?? data.brand ?? "", accent: "green" as const },
-    { label: "Brand", value: data.brand ?? "", accent: "neutral" as const },
-    { label: "Product", value: data.product ?? "", accent: "neutral" as const },
-    { label: "Market", value: data.market ?? "", accent: "neutral" as const },
-    { label: "Objective", value: data.objective ?? "", accent: "purple" as const },
-    { label: "Audience", value: data.targetAudience ?? "", accent: "purple" as const },
-    { label: "Budget", value: data.budget ?? "", accent: "green" as const },
-    { label: "Duration", value: data.duration ?? "", accent: "neutral" as const },
-    { label: "Campaign Type", value: data.campaignType ?? "", accent: "purple" as const },
-    { label: "Deliverables", value: data.deliverables ?? "", accent: "neutral" as const },
-    { label: "Platforms", value: data.platforms ?? "", accent: "neutral" as const },
-    { label: "Creator Mix", value: data.creatorMix ?? "", accent: "green" as const },
-    { label: "Estimated Reach", value: data.estimatedReach ?? "", accent: "green" as const },
-  ].filter((c) => c.value.trim());
+  const clientBrand = [data.client, data.brand].filter(Boolean).join(" · ") || data.brand || data.client || "";
 
   return (
-    <div className={DASHBOARD_SUMMARY_GRID}>
-      {cards.map((card) => (
-        <ExecutiveCard key={card.label} {...card} className="h-full" />
-      ))}
+    <div className="min-w-0">
+      <div className={STUDIO_CLASSES.statGrid}>
+        <StatBox label="Budget" value={data.budget ?? ""} sub="Influencer program" />
+        <StatBox label="Duration" value={data.duration ?? ""} />
+        <StatBox label="Campaign Type" value={data.campaignType ?? ""} sub="Mass awareness" />
+        <StatBox label="Platforms" value={data.platforms ?? ""} />
+      </div>
+      <div className={STUDIO_CLASSES.detailGrid}>
+        <DetailItem label="Client / Brand" value={clientBrand} />
+        <DetailItem label="Estimated Reach" value={data.estimatedReach ?? ""} />
+        <DetailItem label="Objective" value={data.objective ?? ""} />
+        <DetailItem label="Creator Mix" value={data.creatorMix ?? ""} />
+        <DetailItem label="Audience" value={data.targetAudience ?? ""} />
+        <DetailItem label="Product" value={data.product ?? ""} />
+        <DetailItem label="Market" value={data.market ?? ""} />
+        <DetailItem label="Deliverables" value={data.deliverables ?? ""} />
+      </div>
     </div>
   );
 }

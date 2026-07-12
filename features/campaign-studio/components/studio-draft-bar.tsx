@@ -79,7 +79,7 @@ export function StudioDraftBar({
 
   return (
     <div
-      className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2.5 shadow-sm backdrop-blur-sm dark:border-amber-800 dark:bg-amber-950/80"
+      className="studio-draft-bar sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2.5 shadow-sm backdrop-blur-sm dark:border-amber-800 dark:bg-amber-950/80"
       role="status"
       aria-live="polite"
     >

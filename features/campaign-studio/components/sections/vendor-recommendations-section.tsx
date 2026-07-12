@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import {
   CheckIcon,
-  GlobeIcon,
-  LanguagesIcon,
   PlusIcon,
   Trash2Icon,
   Undo2Icon,
@@ -14,9 +12,6 @@ import {
 import { toast } from "sonner";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
-import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import type {
   CreatorsSectionData,
   StudioDraftState,
@@ -38,7 +33,6 @@ import {
 import { AddCreatorPanel } from "./add-creator-panel";
 import { formatEngagement, formatFollowers } from "./shared/format-utils";
 import { SectionSkeleton } from "./shared/section-skeleton";
-import { GroundingBadge } from "./shared/grounding-badge";
 import {
   SectionFallbackContent,
   SectionPendingMessage,
@@ -63,6 +57,8 @@ import {
 } from "@/features/campaign-director/facts/facts-display-bridge";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
 import { CreatorDrawer } from "@/features/campaign-decision-workspace/components/creator-drawer";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { ShowMoreButton } from "./shared/studio-ui-primitives";
 import { STUDIO_VENDOR_INITIAL_VISIBLE } from "../../constants/hydration-limits";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -105,24 +101,6 @@ type DisplayVendor = {
   contentIdea?: string;
 };
 
-function PlatformBadge({ platform }: { platform: string }) {
-  const normalized = platform.toLowerCase();
-  const label =
-    normalized.includes("instagram")
-      ? "IG"
-      : normalized.includes("youtube")
-        ? "YT"
-        : normalized.includes("tiktok")
-          ? "TT"
-          : platform.slice(0, 2).toUpperCase();
-
-  return (
-    <span className="flex size-5 items-center justify-center rounded-md bg-muted/60 text-[9px] font-bold">
-      {label}
-    </span>
-  );
-}
-
 function toDrawerSelection(vendor: DisplayVendor): CreatorDrawerSelection {
   return {
     id: vendor.id,
@@ -151,12 +129,15 @@ function VendorAvatar({
   onOpenDetails: () => void;
 }) {
   const avatar = (
-    <CreatorAvatarImage
-      avatarUrl={vendor.avatarUrl}
-      profileUrl={vendor.profileUrl}
-      size="sm"
-      alt={vendor.displayName}
-    />
+    <div className="relative size-[38px] shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-[#0057FF] to-[#7C3AED]">
+      <CreatorAvatarImage
+        avatarUrl={vendor.avatarUrl}
+        profileUrl={vendor.profileUrl}
+        size="sm"
+        alt={vendor.displayName}
+        className="size-full"
+      />
+    </div>
   );
 
   if (vendor.profileUrl) {
@@ -547,184 +528,156 @@ export function VendorRecommendationsSection({
             key={vendor.id ?? `${vendor.handle}-${index}`}
             className={
               pendingRemoval
-                ? "min-w-0 rounded-xl border border-amber-300 bg-amber-50/50 p-3 opacity-75 transition-all duration-300 dark:border-amber-800 dark:bg-amber-950/20"
-                : "min-w-0 rounded-xl border border-border/70 bg-background/80 p-3 transition-all duration-300 hover:border-violet-300/50 hover:shadow-sm"
+                ? "mb-2.5 opacity-75"
+                : "mb-2.5"
             }
           >
-            <div className="flex items-start gap-3">
-              <VendorAvatar
-                vendor={vendor}
-                onOpenDetails={() => openCreatorDetails(vendor)}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+            <div
+              className={
+                pendingRemoval
+                  ? "rounded-[14px] border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20"
+                  : STUDIO_CLASSES.creatorCard
+              }
+            >
+              <div className="flex flex-wrap items-center gap-2.5">
+                <VendorAvatar
+                  vendor={vendor}
+                  onOpenDetails={() => openCreatorDetails(vendor)}
+                />
+                <div className="min-w-0 flex-1">
                   {vendor.rank != null ? (
-                    <span className="text-[10px] font-bold text-violet-600">#{vendor.rank}</span>
+                    <span className="text-[11px] font-extrabold text-[#7C3AED]">#{vendor.rank} </span>
                   ) : null}
                   <button
                     type="button"
-                    className="min-w-0 break-words text-left text-sm font-semibold hover:text-[#1D9E75]"
+                    className="text-[14px] font-extrabold text-foreground hover:text-[#0057FF]"
                     onClick={() => openCreatorDetails(vendor)}
                   >
                     {vendor.displayName}
-                  </button>
-                  <span className="break-all text-xs text-muted-foreground">{vendor.handle}</span>
-                  <div className="flex items-center gap-1 rounded-md bg-muted/50 px-1.5 py-0.5">
-                    <PlatformBadge platform={vendor.platform} />
-                    <span className="text-[10px] capitalize">{vendor.platform}</span>
-                  </div>
-                  {vendor.tier ? <CreatorTierBadge tier={vendor.tier} /> : null}
-                  {pendingRemoval ? (
-                    <Badge className="h-auto bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-                      Pending removal
-                    </Badge>
-                  ) : null}
-                  {vendor.fitScore != null ? (
-                    <Badge
-                      variant="secondary"
-                      className="h-auto px-1.5 py-0.5 text-[9px] font-semibold text-[#1D9E75]"
-                    >
-                      Campaign fit {Math.round(vendor.fitScore)}/100
-                    </Badge>
-                  ) : null}
-                  <GroundingBadge
-                    source={grounding.grounding.source}
-                    confidence={grounding.grounding.confidence}
-                  />
+                  </button>{" "}
+                  <span className="text-[11.5px] text-[#6B7280]">{vendor.handle}</span>
                 </div>
-                <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                  <span>{formatFollowers(vendor.followers)} followers</span>
-                  <span>{formatEngagement(vendor.engagementRate)} ER</span>
-                  {vendor.priceEstimate ? (
-                    <span className="font-medium text-[#1D9E75]">{vendor.priceEstimate}</span>
-                  ) : null}
-                  {vendor.country ? (
-                    <span className="flex items-center gap-0.5">
-                      <GlobeIcon className="size-3" />
-                      {vendor.country}
-                    </span>
-                  ) : null}
-                  {vendor.language ? (
-                    <span className="flex items-center gap-0.5">
-                      <LanguagesIcon className="size-3" />
-                      {vendor.language}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-1.5 break-words text-[11px] font-medium text-foreground">
-                  Why: {grounding.whySelected}
-                </p>
-                {vendor.contentIdea ? (
-                  <p className="mt-1 break-words text-[11px] text-violet-700 dark:text-violet-300">
-                    Content concept: {vendor.contentIdea}
-                  </p>
+                {vendor.tier ? (
+                  <span className={STUDIO_CLASSES.pillTier}>{vendor.tier}</span>
                 ) : null}
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {grounding.factors.slice(0, 5).map((f) => (
-                    <Badge
-                      key={f.factor}
-                      variant="outline"
-                      title={f.reason}
-                      className="h-auto whitespace-normal px-1.5 py-0.5 text-[9px] leading-snug"
-                    >
-                      {f.factor} {f.score}
-                    </Badge>
-                  ))}
-                </div>
+                {vendor.fitScore != null ? (
+                  <span className={STUDIO_CLASSES.pillFit}>
+                    Fit {Math.round(vendor.fitScore)}/100
+                  </span>
+                ) : null}
+                {grounding.grounding.confidence != null ? (
+                  <span className={STUDIO_CLASSES.pillAi}>
+                    AI {grounding.grounding.confidence}%
+                  </span>
+                ) : null}
+                {pendingRemoval ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold text-amber-800">
+                    Pending removal
+                  </span>
+                ) : null}
               </div>
-            </div>
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost"
-                className="h-7 px-2.5 text-muted-foreground"
-                onClick={() => openCreatorDetails(vendor)}
-              >
-                View details
-              </Button>
-              {pendingRemoval ? (
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="outline"
-                  disabled={!canAct || isPending}
-                  className="h-7 border-amber-300 px-2.5 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300"
-                  onClick={() => vendor.id && void undoDraftChange(vendor.id)}
-                >
-                  <Undo2Icon className="size-3" />
-                  Undo removal
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    type="button"
-                    size="xs"
-                    disabled={!canAct || isPending || decision === "approved"}
-                    className="h-7 bg-[#1D9E75] px-2.5 hover:bg-[#178f69] disabled:opacity-50"
-                    onClick={() => vendor.id && void applyDecision(vendor.id, "approve")}
-                  >
-                    <CheckIcon className="size-3" />
-                    {decision === "approved" ? "Approved" : "Approve"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="xs"
-                    variant="outline"
-                    disabled={!canAct || isPending}
-                    className="h-7 px-2.5"
-                    onClick={() => vendor.id && void applyDecision(vendor.id, "reject")}
-                  >
-                    <XIcon className="size-3" />
-                    Reject
-                  </Button>
-                  <Button
-                    type="button"
-                    size="xs"
-                    variant="secondary"
-                    disabled={!canAct || isPending || decision === "shortlisted"}
-                    className="h-7 px-2.5"
-                    onClick={() =>
-                      vendor.id &&
-                      void applyDecision(vendor.id, "shortlist", vendor.id)
-                    }
-                  >
-                    <PlusIcon className="size-3" />
-                    {decision === "shortlisted" ? "Shortlisted" : "Shortlist"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="xs"
-                    variant="ghost"
-                    disabled={!canAct || isPending}
-                    className="h-7 px-2.5 text-muted-foreground hover:text-destructive"
-                    onClick={() => void stageRemoval(vendor)}
-                    title="Stage removal — recalculated on Apply All Updates"
-                  >
-                    <Trash2Icon className="size-3" />
-                    Remove
-                  </Button>
-                </>
-              )}
-            </div>
-            {!canAct ? (
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                Save this studio message to enable creator actions.
+
+              <p className="mt-2 text-[11.5px] text-[#6B7280]">
+                {formatFollowers(vendor.followers)} followers ·{" "}
+                <b className="text-foreground">{formatEngagement(vendor.engagementRate)} ER</b>
+                {vendor.priceEstimate ? (
+                  <>
+                    {" "}
+                    · {vendor.priceEstimate}
+                  </>
+                ) : null}
+                {vendor.platform ? <> · est. 1 {vendor.platform} post</> : null}
               </p>
-            ) : null}
+
+              <p className="mt-1.5 text-xs text-foreground">
+                <b>Why:</b> {grounding.whySelected}
+              </p>
+              {vendor.contentIdea ? (
+                <p className="mt-1 text-xs font-semibold text-[#0057FF]">{vendor.contentIdea}</p>
+              ) : null}
+
+              <div className="mt-2 flex flex-wrap gap-1">
+                {grounding.factors.slice(0, 5).map((f) => (
+                  <span key={f.factor} className={STUDIO_CLASSES.fitTag} title={f.reason}>
+                    {f.factor} {f.score}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                {pendingRemoval ? (
+                  <button
+                    type="button"
+                    disabled={!canAct || isPending}
+                    className={STUDIO_CLASSES.actBtn}
+                    onClick={() => vendor.id && void undoDraftChange(vendor.id)}
+                  >
+                    <Undo2Icon className="size-3" />
+                    Undo removal
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={!canAct || isPending || decision === "approved"}
+                      className={STUDIO_CLASSES.actBtnApprove}
+                      onClick={() => vendor.id && void applyDecision(vendor.id, "approve")}
+                    >
+                      <CheckIcon className="size-3" />
+                      {decision === "approved" ? "Approved" : "Approve"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canAct || isPending}
+                      className={STUDIO_CLASSES.actBtn}
+                      onClick={() => vendor.id && void applyDecision(vendor.id, "reject")}
+                    >
+                      <XIcon className="size-3" />
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canAct || isPending || decision === "shortlisted"}
+                      className={STUDIO_CLASSES.actBtn}
+                      onClick={() =>
+                        vendor.id && void applyDecision(vendor.id, "shortlist", vendor.id)
+                      }
+                    >
+                      <PlusIcon className="size-3" />+ Shortlist
+                    </button>
+                    <button
+                      type="button"
+                      className={STUDIO_CLASSES.actBtn}
+                      onClick={() => openCreatorDetails(vendor)}
+                    >
+                      View details
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canAct || isPending}
+                      className={STUDIO_CLASSES.actBtn}
+                      onClick={() => void stageRemoval(vendor)}
+                      title="Stage removal — recalculated on Apply All Updates"
+                    >
+                      <Trash2Icon className="size-3" />
+                      Remove
+                    </button>
+                  </>
+                )}
+              </div>
+              {!canAct ? (
+                <p className="mt-1 text-[10px] text-[#6B7280]">
+                  Save this studio message to enable creator actions.
+                </p>
+              ) : null}
+            </div>
           </div>
         );
       })}
       {hiddenCount > 0 && !showAllVendors ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() => setShowAllVendors(true)}
-        >
-          Show all {vendors.length} creators ({hiddenCount} more)
-        </Button>
+        <ShowMoreButton onClick={() => setShowAllVendors(true)}>
+          + {hiddenCount} more recommended creators · Show all {vendors.length}
+        </ShowMoreButton>
       ) : null}
       {conversationId && messageId ? (
         <AddCreatorPanel

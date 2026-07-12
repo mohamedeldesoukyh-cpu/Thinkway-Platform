@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import {
   BrainIcon,
@@ -569,15 +568,11 @@ export function PublicationWorkspace({
                     </p>
                     <div className="mt-1 text-sm text-foreground">
                       {row.influencer_id ? (
-                        <Link
-                          href={`/vendors/${row.influencer_id}`}
-                          className="hover:text-primary hover:underline"
-                        >
-                          <PublicationCreatorName
-                            row={row}
-                            name={row.influencer_name ?? "View profile"}
-                          />
-                        </Link>
+                        <PublicationCreatorName
+                          row={row}
+                          name={row.influencer_name ?? "View profile"}
+                          nameHref={`/vendors/${row.influencer_id}`}
+                        />
                       ) : (
                         <PublicationCreatorName row={row} name={row.influencer_name} />
                       )}

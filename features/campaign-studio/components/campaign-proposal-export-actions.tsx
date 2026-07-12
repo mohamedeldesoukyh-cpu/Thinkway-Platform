@@ -20,7 +20,7 @@ export function buildProposalExportHref(
 }
 
 const BASE_CLASS =
-  "inline-flex items-center gap-1.5 rounded-[11px] px-3.5 py-2 text-xs font-bold transition-all hover:-translate-y-px active:translate-y-0";
+  "inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[11px] font-bold transition-all hover:-translate-y-px active:translate-y-0";
 
 /** Preview the proposal in a new tab, or download it as PDF / PowerPoint. */
 export function CampaignProposalExportActions({

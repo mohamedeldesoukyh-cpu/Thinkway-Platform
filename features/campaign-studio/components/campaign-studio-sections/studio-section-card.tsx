@@ -12,6 +12,8 @@ import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-wo
 
 import { SECTION_LOADING_MESSAGES } from "../../constants/copy";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { studioSectionDomId } from "../../hooks/use-studio-section-nav";
+import type { CampaignStudioLayoutMode } from "../../types/campaign-studio";
 import type { StudioLayoutType } from "../../constants/studio-layout";
 import type { CampaignStudioSection } from "../../types/campaign-studio";
 import { SectionRenderer } from "../sections/section-renderer";
@@ -22,6 +24,8 @@ type StudioSectionCardProps = {
   layout?: StudioLayoutType;
   className?: string;
   icon?: LucideIcon;
+  /** Optional subtitle under the section title (reference card-desc). */
+  description?: string;
   decisionMode?: CampaignStudioDecisionMode;
   sectionFooter?: ReactNode;
   conversationId?: string;
@@ -34,6 +38,7 @@ type StudioSectionCardProps = {
   appliedRemovedCreatorIds?: string[];
   /** Pending draft changes invalidate this section until Apply All Updates runs. */
   outdated?: boolean;
+  layoutMode?: CampaignStudioLayoutMode;
 };
 
 const STATUS_STYLES = {
@@ -66,8 +71,12 @@ const SECTION_ICON_ACCENTS: Record<string, { bg: string; text: string }> = {
   "executive-strategy": { bg: "bg-[#7C3AED]/10", text: "text-[#7C3AED]" },
   "creative-concepts": { bg: "bg-[#7C3AED]/10", text: "text-[#7C3AED]" },
   "why-ai": { bg: "bg-[#7C3AED]/10", text: "text-[#7C3AED]" },
-  "creator-mix": { bg: "bg-[#7C3AED]/10", text: "text-[#7C3AED]" },
-  timeline: { bg: "bg-[#0C9D57]/10", text: "text-[#0C9D57]" },
+  "creator-discovery": { bg: "bg-[#0057FF]/10", text: "text-[#0057FF]" },
+  "creator-recommendations": { bg: "bg-[#0057FF]/10", text: "text-[#0057FF]" },
+  "creator-mix": { bg: "bg-[#0057FF]/10", text: "text-[#0057FF]" },
+  timeline: { bg: "bg-[#D97706]/12", text: "text-[#D97706]" },
+  "content-plan": { bg: "bg-[#D97706]/12", text: "text-[#D97706]" },
+  "presentation-status": { bg: "bg-[#D6336C]/10", text: "text-[#D6336C]" },
   "kpi-forecast": { bg: "bg-[#0C9D57]/10", text: "text-[#0C9D57]" },
   "success-probability": { bg: "bg-[#0C9D57]/10", text: "text-[#0C9D57]" },
   "budget-planner": { bg: "bg-[#D97706]/10", text: "text-[#D97706]" },
@@ -99,6 +108,7 @@ export function StudioSectionCard({
   layout,
   className,
   icon: Icon,
+  description,
   decisionMode,
   sectionFooter,
   conversationId,
@@ -108,7 +118,9 @@ export function StudioSectionCard({
   onStudioDraftUpdated,
   appliedRemovedCreatorIds,
   outdated,
+  layoutMode = "panel",
 }: StudioSectionCardProps) {
+  const isChatLayout = layoutMode === "chat";
   const styles = STATUS_STYLES[section.status as keyof typeof STATUS_STYLES];
   const isLoading = section.status === "pending";
   const hasRenderableContent =
@@ -118,10 +130,12 @@ export function StudioSectionCard({
 
   return (
     <article
+      id={studioSectionDomId(section.id)}
       className={cn(
-        "flex min-w-0 flex-col rounded-2xl border bg-white p-4 shadow-[0_1px_2px_rgba(6,8,16,0.05)] transition-all duration-300 motion-reduce:transition-none dark:bg-background/90",
+        STUDIO_CLASSES.card,
+        isChatLayout ? STUDIO_CLASSES.scrollTargetChat : STUDIO_CLASSES.scrollTarget,
+        "flex min-w-0 flex-col p-5 transition-all duration-300 motion-reduce:transition-none sm:px-[22px] sm:py-5",
         layout === "pair" && "min-h-[18rem]",
-        layout === "dashboard" && "p-4 sm:p-5",
         styles.border,
         section.status === "running" && "ring-1 ring-violet-200 dark:ring-violet-800",
         className
@@ -129,7 +143,7 @@ export function StudioSectionCard({
       aria-labelledby={`studio-section-${section.id}-title`}
       aria-describedby={statusId}
     >
-      <header className="mb-3 flex min-w-0 items-start justify-between gap-3">
+      <header className="mb-4 flex min-w-0 items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
           {Icon ? (
             <div
@@ -147,12 +161,19 @@ export function StudioSectionCard({
               />
             </div>
           ) : null}
-          <h3
-            id={`studio-section-${section.id}-title`}
-            className="min-w-0 flex-1 break-words pt-1 text-[15px] font-extrabold tracking-[-0.3px] text-foreground [overflow-wrap:anywhere] [word-break:break-word]"
-          >
-            {section.title}
-          </h3>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h3
+              id={`studio-section-${section.id}-title`}
+              className="break-words text-[17px] font-extrabold tracking-[-0.3px] text-foreground [overflow-wrap:anywhere] [word-break:break-word]"
+            >
+              {section.title}
+            </h3>
+            {description ? (
+              <p className="mt-0.5 text-[11.5px] text-[#6B7280] dark:text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </div>
         </div>
         <span
           id={statusId}

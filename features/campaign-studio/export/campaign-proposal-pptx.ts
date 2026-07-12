@@ -1,4 +1,8 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import {
+  detectImageContentType,
+  fetchImageBuffer,
+} from "@/lib/performance/screenshot-capture/storage";
 
 import {
   buildCampaignProposalModel,
@@ -247,6 +251,97 @@ function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
+}
+
+/**
+ * pptxgenjs `data` expects `mime;base64,...` (no `data:` prefix).
+ * Fetches remote avatar URLs so CDN hotlink rules don't break deck write.
+ */
+async function resolvePptxImageData(url?: string | null): Promise<string | null> {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("data:")) {
+    const payload = trimmed.slice("data:".length);
+    return payload.includes(";base64,") ? payload : null;
+  }
+  const buffer = await fetchImageBuffer(trimmed);
+  if (!buffer?.length) return null;
+  const contentType = detectImageContentType(buffer);
+  return `${contentType};base64,${buffer.toString("base64")}`;
+}
+
+async function resolveVendorAvatarData(
+  vendors: ProposalVendor[]
+): Promise<Map<string, string>> {
+  const uniqueUrls = [
+    ...new Set(
+      vendors
+        .map((v) => v.avatarUrl?.trim())
+        .filter((url): url is string => Boolean(url))
+    ),
+  ];
+  const entries = await Promise.all(
+    uniqueUrls.map(async (url) => {
+      const data = await resolvePptxImageData(url);
+      return data ? ([url, data] as const) : null;
+    })
+  );
+  return new Map(entries.filter((e): e is readonly [string, string] => e != null));
+}
+
+const CREATOR_AVATAR_SIZE = 0.34;
+const CREATOR_TABLE_Y = 1.62;
+const CREATOR_ROW_H = 0.56;
+/** Creator col widths — avatar + name need extra room vs name-only. */
+const CREATOR_COL_W = [2.45, 1.1, 1.1, 1.1, 0.8, 5.623] as const;
+
+function formatFollowers(followers?: number): string {
+  if (followers == null) return "—";
+  if (followers >= 1_000_000) return `${(followers / 1_000_000).toFixed(1)}M`;
+  if (followers >= 1_000) return `${Math.round(followers / 1_000)}K`;
+  return String(followers);
+}
+
+function addCreatorAvatar(
+  slide: Slide,
+  vendor: ProposalVendor,
+  avatarData: string | undefined,
+  x: number,
+  y: number
+): void {
+  const size = CREATOR_AVATAR_SIZE;
+  if (avatarData) {
+    slide.addImage({
+      data: avatarData,
+      x,
+      y,
+      w: size,
+      h: size,
+      rounding: true,
+    });
+    return;
+  }
+  const initial = (vendor.displayName.trim()[0] ?? "?").toUpperCase();
+  slide.addShape("ellipse", {
+    x,
+    y,
+    w: size,
+    h: size,
+    fill: { color: BLUE },
+    line: { type: "none" },
+  });
+  slide.addText(initial, {
+    x,
+    y,
+    w: size,
+    h: size,
+    align: "center",
+    valign: "middle",
+    fontFace: FONT,
+    fontSize: 11,
+    bold: true,
+    color: WHITE,
+  });
 }
 
 /** Build the client proposal as a PowerPoint deck matching the reference design. */
@@ -655,6 +750,7 @@ export async function buildCampaignProposalPptxBuffer(
   // ================= CREATORS =================
   if (model.vendors.length > 0) {
     sectionNumber += 1;
+    const avatarDataByUrl = await resolveVendorAvatarData(model.vendors);
     const vendorPages = chunk(model.vendors, 8);
     vendorPages.forEach((slideVendors, pageIndex) => {
       pageNumber += 1;
@@ -676,18 +772,20 @@ export async function buildCampaignProposalPptxBuffer(
         })
       );
       const rows = slideVendors.map((v) => [
-        { text: v.displayName, options: { bold: true, color: INK, fontSize: 10 } },
+        {
+          text: v.displayName,
+          options: {
+            bold: true,
+            color: INK,
+            fontSize: 10,
+            // Leave left inset for the circular avatar overlay.
+            margin: [0.05, 0.06, 0.05, 0.48] as [number, number, number, number],
+          },
+        },
         { text: v.tier ?? "—", options: { color: tierFill(v.tier), bold: true, fontSize: 9.5 } },
         { text: v.platform ?? "—", options: { color: INK, fontSize: 9.5 } },
         {
-          text:
-            v.followers != null
-              ? v.followers >= 1_000_000
-                ? `${(v.followers / 1_000_000).toFixed(1)}M`
-                : v.followers >= 1_000
-                  ? `${Math.round(v.followers / 1_000)}K`
-                  : String(v.followers)
-              : "—",
+          text: formatFollowers(v.followers),
           options: { color: INK, fontSize: 9.5 },
         },
         {
@@ -698,15 +796,31 @@ export async function buildCampaignProposalPptxBuffer(
       ]);
       creators.addTable([header, ...rows] as never, {
         x: MARGIN_X,
-        y: 1.62,
+        y: CREATOR_TABLE_Y,
         w: CONTENT_W,
-        colW: [2.15, 1.15, 1.15, 1.15, 0.85, 5.72],
+        colW: [...CREATOR_COL_W],
         fontFace: FONT,
         border: { type: "solid", color: LINE, pt: 0.5 },
         autoPage: false,
         valign: "middle",
-        rowH: 0.52,
+        rowH: CREATOR_ROW_H,
       });
+
+      // Overlay circular avatars in the Creator column (tables cannot embed images).
+      slideVendors.forEach((v, i) => {
+        const rowTop = CREATOR_TABLE_Y + CREATOR_ROW_H * (i + 1);
+        const avatarX = MARGIN_X + 0.1;
+        const avatarY = rowTop + (CREATOR_ROW_H - CREATOR_AVATAR_SIZE) / 2;
+        const url = v.avatarUrl?.trim();
+        addCreatorAvatar(
+          creators,
+          v,
+          url ? avatarDataByUrl.get(url) : undefined,
+          avatarX,
+          avatarY
+        );
+      });
+
       addPageFooter(creators, pageNumber, client);
     });
   }

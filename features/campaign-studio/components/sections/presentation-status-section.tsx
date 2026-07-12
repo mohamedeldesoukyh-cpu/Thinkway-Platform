@@ -11,19 +11,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-
-import { openCampaignProposalPreview } from "../../export/campaign-proposal-document";
+import { openCampaignProposalPreview } from "../../export/campaign-proposal-preview";
 import { useCreatorHydration } from "../../hooks/use-creator-hydration";
-import { ExecutiveCard } from "./shared/executive-card";
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
   SectionFallbackContent,
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
+import { PsBox } from "./shared/studio-ui-primitives";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import {
   resolveCreatorIds,
   resolvePresentationCompletion,
@@ -40,7 +37,7 @@ type PresentationStatusSectionProps = {
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
-  ready: "Ready for Review",
+  ready: "Ready",
   awaiting_approval: "Awaiting Approval",
   approved: "Approved",
 };
@@ -53,7 +50,6 @@ export function PresentationStatusSection({
   const isRunning = status === "running";
   const presentation = resolvePresentationData(campaignObject);
   const completion = resolvePresentationCompletion(campaignObject);
-  const updatedAt = campaignObject?.updatedAt;
   const { ids } = resolveCreatorIds(campaignObject);
   const { vendors: hydrated } = useCreatorHydration(ids);
 
@@ -90,98 +86,60 @@ export function PresentationStatusSection({
     return <SectionFallbackContent text={fallbackText} />;
   }
 
+  const approvalLabel = STATUS_LABELS[presentation.status] ?? presentation.status;
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <ExecutiveCard label="Version" value={completion.version} accent="neutral" />
-        <ExecutiveCard
-          label="Completion"
-          value={`${completion.completionPercent}%`}
-          accent="green"
-        />
-        <ExecutiveCard
-          label="Sections Complete"
+    <div className="space-y-3.5">
+      <div className={STUDIO_CLASSES.psGrid}>
+        <PsBox label="Version" value={completion.version} />
+        <PsBox label="Completion" value={`${completion.completionPercent}%`} />
+        <PsBox
+          label="Sections"
           value={`${completion.sectionsComplete} / ${completion.totalSections}`}
-          accent="purple"
         />
-        <ExecutiveCard
-          label="Approval Status"
-          value={STATUS_LABELS[presentation.status] ?? presentation.status}
-          accent="green"
-        />
+        <PsBox label="Approval" value={approvalLabel} />
       </div>
 
-      <Progress value={completion.completionPercent} className="h-2 [&>div]:bg-[#1D9E75]" />
-
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <ExecutiveCard
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <PsBox
           label="Client Approval"
           value={presentation.status === "approved" ? "Approved" : "Pending review"}
-          accent={presentation.status === "approved" ? "green" : "purple"}
         />
-        <ExecutiveCard
+        <PsBox
           label="Internal Approval"
-          value={presentation.status === "ready" || presentation.status === "approved" ? "Signed off" : "In progress"}
-          accent="neutral"
-        />
-        <ExecutiveCard
-          label="Campaign"
-          value={presentation.campaignName ?? "Draft in progress"}
-          accent="green"
-        />
-        <ExecutiveCard
-          label="Last Updated"
           value={
-            updatedAt
-              ? new Date(updatedAt).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "Just now"
+            presentation.status === "ready" || presentation.status === "approved"
+              ? "Signed off"
+              : "In progress"
           }
-          accent="neutral"
         />
       </div>
 
-      {presentation.brandName ? (
-        <Badge variant="outline" className="text-[10px]">
-          {presentation.brandName}
-        </Badge>
-      ) : null}
-
-      <div className="flex flex-wrap gap-1.5 pt-1">
-        <Button type="button" size="xs" className="h-7 bg-[#1D9E75] hover:bg-[#178f69]">
-          <CheckIcon className="size-3" />
+      <div className="flex flex-wrap gap-2 pt-1">
+        <button type="button" className={STUDIO_CLASSES.actBtnApprove}>
+          <CheckIcon className="size-3" aria-hidden />
           Approve
-        </Button>
-        <Button type="button" size="xs" variant="outline" className="h-7">
-          <MessageSquareWarningIcon className="size-3" />
+        </button>
+        <button type="button" className={STUDIO_CLASSES.actBtn}>
+          <MessageSquareWarningIcon className="size-3" aria-hidden />
           Request Changes
-        </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant="secondary"
-          className="h-7"
-          onClick={handleExportPdf}
-        >
-          <FileTextIcon className="size-3" />
+        </button>
+        <button type="button" className={STUDIO_CLASSES.actBtn} onClick={handleExportPdf}>
+          <FileTextIcon className="size-3" aria-hidden />
           Export PDF
-        </Button>
-        <Button type="button" size="xs" variant="secondary" className="h-7">
-          <PresentationIcon className="size-3" />
+        </button>
+        <button type="button" className={STUDIO_CLASSES.actBtn}>
+          <PresentationIcon className="size-3" aria-hidden />
           Export PPT
-        </Button>
-        <Button type="button" size="xs" variant="secondary" className="h-7">
-          <ShareIcon className="size-3" />
+        </button>
+        <button type="button" className={STUDIO_CLASSES.actBtn}>
+          <ShareIcon className="size-3" aria-hidden />
           Share
-        </Button>
-        <Button type="button" size="xs" variant="secondary" className="h-7">
-          <CopyIcon className="size-3" />
+        </button>
+        <button type="button" className={STUDIO_CLASSES.actBtn}>
+          <CopyIcon className="size-3" aria-hidden />
           Duplicate
-        </Button>
+        </button>
       </div>
     </div>
   );

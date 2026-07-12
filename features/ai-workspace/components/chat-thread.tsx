@@ -40,6 +40,7 @@ type ChatThreadProps = {
   onEditMessage?: (messageId: string, newContent: string) => void;
   onRetryMessage?: (message: AiMessage) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onScrollContainerChange?: (node: HTMLDivElement | null) => void;
   className?: string;
 };
 
@@ -57,12 +58,23 @@ export function ChatThread({
   onEditMessage,
   onRetryMessage,
   onDeleteMessage,
+  onScrollContainerChange,
   className,
 }: ChatThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const isAtBottomRef = useRef(true);
   const [showNewUpdates, setShowNewUpdates] = useState(false);
+  const [chatScrollContainer, setChatScrollContainer] = useState<HTMLDivElement | null>(null);
+
+  const bindScrollContainer = useCallback(
+    (node: HTMLDivElement | null) => {
+      scrollRef.current = node;
+      setChatScrollContainer(node);
+      onScrollContainerChange?.(node);
+    },
+    [onScrollContainerChange]
+  );
 
   const progressWorkflowId = workflowProgress?.workflowId;
   const progressStep = workflowProgress?.currentStep;
@@ -160,21 +172,23 @@ export function ChatThread({
     isStreaming && isCampaignWorkflow(streamingStudioInput?.workflowId);
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div className="relative flex h-full min-h-0 flex-col">
       <div
-        ref={scrollRef}
+        ref={bindScrollContainer}
         onScroll={handleScroll}
         className={cn(
-          "flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto py-5",
+        "flex h-full min-h-0 flex-col gap-0 overflow-y-auto overscroll-contain pb-[var(--ai-composer-scroll-pad,6rem)] pt-[var(--ai-topbar-scroll-pad,4.25rem)]",
           "[scrollbar-color:#e2e8f0_transparent] [scrollbar-width:thin]",
           className
         )}
+        data-chat-scroll-root
       >
         {visibleMessages.map((message) => (
           <MessageBubble
             key={message.id}
             message={message}
             conversationId={conversationId}
+            chatScrollContainer={chatScrollContainer}
             isLastUserMessage={message.id === lastUserMessageId}
             isEditing={editingUserMessageId === message.id}
             isStreaming={isStreaming}
@@ -193,8 +207,11 @@ export function ChatThread({
 
         {isStreaming ? (
           streamingCampaignStudio && streamingStudioInput ? (
-            <div className="ai-msg-in px-4 sm:px-6">
-              <CampaignStudioHost {...streamingStudioInput} />
+            <div className="studio-chat-embed ai-msg-in-fade">
+              <CampaignStudioHost
+                {...streamingStudioInput}
+                scrollContainer={chatScrollContainer}
+              />
             </div>
           ) : (
             <div className="ai-msg-in flex gap-2.5 px-6">
@@ -220,7 +237,7 @@ export function ChatThread({
         <button
           type="button"
           onClick={() => scrollToBottom("smooth")}
-          className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-md transition hover:bg-muted"
+          className="absolute bottom-[calc(var(--ai-composer-scroll-pad,6rem)+0.5rem)] left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-md transition hover:bg-muted"
         >
           <ChevronDownIcon className="size-3.5" />
           New updates
@@ -233,6 +250,7 @@ export function ChatThread({
 const MessageBubble = memo(function MessageBubble({
   message,
   conversationId,
+  chatScrollContainer,
   isLastUserMessage,
   isEditing,
   isStreaming,
@@ -246,6 +264,7 @@ const MessageBubble = memo(function MessageBubble({
 }: {
   message: AiMessage;
   conversationId?: string;
+  chatScrollContainer?: HTMLDivElement | null;
   isLastUserMessage?: boolean;
   isEditing?: boolean;
   isStreaming?: boolean;
@@ -340,7 +359,7 @@ const MessageBubble = memo(function MessageBubble({
       caption.length > 0 &&
       !shouldHideCampaignStudioCaption(message.metadata, caption);
     return (
-      <div className="group ai-msg-in mb-[18px] space-y-2 px-4 sm:px-6">
+      <div className="studio-chat-embed group ai-msg-in-fade mb-[18px] space-y-2">
         {showCaption ? (
           <div className="flex gap-2.5">
             <AiOrbIcon size="md" className="mt-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.35)]" />
@@ -371,6 +390,7 @@ const MessageBubble = memo(function MessageBubble({
           actionCards={metadata.actionCards as AiActionCard[] | undefined}
           conversationId={conversationId}
           messageId={message.id}
+          scrollContainer={chatScrollContainer}
           onCardUpdated={(cardId, status) =>
             onCardUpdated?.(message.id, cardId, status)
           }

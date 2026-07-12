@@ -11,6 +11,8 @@ import {
   logMessageStateEvent,
 } from "../debug/message-state-logger";
 import { useAiChat } from "../hooks/use-ai-chat";
+import { useAiComposerMetrics } from "../hooks/use-ai-composer-metrics";
+import { useAiTopbarMetrics } from "../hooks/use-ai-topbar-metrics";
 import { useConversations } from "../hooks/use-conversations";
 import type { AiMessage, WorkspaceUrlParams } from "../types";
 import { AiChatInput } from "./ai-chat-input";
@@ -18,7 +20,6 @@ import { AiWelcomeScreen } from "./ai-welcome-screen";
 import { AiWorkspaceTopbar } from "./ai-workspace-topbar";
 import { ChatThread } from "./chat-thread";
 import { ConversationList } from "./conversation-list";
-import { SuggestedActionsBar } from "./suggested-actions-bar";
 import "./ai-workspace.css";
 
 const SIDEBAR_COLLAPSED_KEY = "ai-workspace-sidebar-collapsed";
@@ -61,6 +62,25 @@ export function IntelligenceWorkspace({
 
   const loadedConversationRef = useRef<string | null>(null);
   const editingUserMessageIdRef = useRef<string | null>(null);
+  const workspaceRootRef = useRef<HTMLDivElement>(null);
+  const topbarRef = useRef<HTMLElement>(null);
+  const composerRef = useRef<HTMLElement>(null);
+  const [chatScrollContainer, setChatScrollContainer] = useState<HTMLDivElement | null>(null);
+
+  const handleChatScrollContainerChange = useCallback((node: HTMLDivElement | null) => {
+    setChatScrollContainer(node);
+  }, []);
+
+  useAiTopbarMetrics({
+    topbarRef,
+    rootRef: workspaceRootRef,
+    scrollContainer: chatScrollContainer,
+  });
+
+  useAiComposerMetrics({
+    composerRef,
+    rootRef: workspaceRootRef,
+  });
 
   const { conversations, loading, error: conversationsError, refresh } = useConversations();
 
@@ -657,10 +677,8 @@ export function IntelligenceWorkspace({
     messages.length === 0 && !isStreaming && !loadingConversation;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <AiWorkspaceTopbar workspace={workspace} workspaceLabel={workspaceLabel} />
-
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+    <div ref={workspaceRootRef} className="ai-main-surface flex min-h-0 flex-1 flex-col overflow-hidden p-3">
+      <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
         <ConversationList
           className="hidden lg:flex"
           conversations={conversations}
@@ -674,48 +692,46 @@ export function IntelligenceWorkspace({
           onRefresh={() => void refresh({ background: true })}
         />
 
-        <div
-          className={cn(
-            "ai-main-surface flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-          )}
-        >
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {loadingConversation && messages.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2">
+            <div className="flex h-full flex-col items-center justify-center gap-2 overflow-y-auto pb-[var(--ai-composer-scroll-pad,6rem)] pt-[var(--ai-topbar-scroll-pad,4.25rem)]">
               <span className="ai-spinner size-6" />
               <p className="text-xs text-muted-foreground">Loading conversation…</p>
             </div>
           ) : showEmptyState ? (
             <AiWelcomeScreen
+              className="h-full overflow-y-auto pb-[var(--ai-composer-scroll-pad,6rem)] pt-[var(--ai-topbar-scroll-pad,4.25rem)]"
               onSelect={(p, intent) => void handleSend(p, intent)}
               disabled={isStreaming}
             />
           ) : (
-            <>
-              <ChatThread
-                messages={messages}
-                streamingContent={streamingContent}
-                isStreaming={isStreaming}
-                workflowProgress={workflowProgress}
-                conversationId={conversationId}
-                editingUserMessageId={editingUserMessageId}
-                onEditStart={setEditingUserMessageId}
-                onEditCancel={handleEditCancel}
-                onCardUpdated={handleCardUpdated}
-                onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
-                onEditMessage={(id, content) => void handleEditMessage(id, content)}
-                onRetryMessage={(message) => void handleRetryMessage(message)}
-                onDeleteMessage={handleDeleteMessage}
-              />
-              <SuggestedActionsBar
-                onSelect={(p, intent) => void handleSend(p, intent)}
-                disabled={isStreaming}
-                messages={messages}
-                workspace={workspace}
-              />
-            </>
+            <ChatThread
+              messages={messages}
+              streamingContent={streamingContent}
+              isStreaming={isStreaming}
+              workflowProgress={workflowProgress}
+              conversationId={conversationId}
+              editingUserMessageId={editingUserMessageId}
+              onEditStart={setEditingUserMessageId}
+              onEditCancel={handleEditCancel}
+              onCardUpdated={handleCardUpdated}
+              onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
+              onEditMessage={(id, content) => void handleEditMessage(id, content)}
+              onRetryMessage={(message) => void handleRetryMessage(message)}
+              onDeleteMessage={handleDeleteMessage}
+              onScrollContainerChange={handleChatScrollContainerChange}
+            />
           )}
 
+          <AiWorkspaceTopbar
+            ref={topbarRef}
+            workspace={workspace}
+            workspaceLabel={workspaceLabel}
+            className="absolute inset-x-0 top-0 z-30"
+          />
+
           <AiChatInput
+            ref={composerRef}
             value={prompt}
             onChange={setPrompt}
             onSend={() => void handleSend()}

@@ -45,6 +45,16 @@
   }
 }
 
+/* Campaign Studio embed — opacity only so transform does not break position:sticky. */
+@keyframes ai-msg-in-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes ai-t-bounce {
   0%,
   60%,
@@ -75,6 +85,10 @@
 
 .ai-msg-in {
   animation: ai-msg-in 280ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.ai-msg-in-fade {
+  animation: ai-msg-in-fade 280ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .ai-t-dot {
@@ -121,7 +135,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(60% 45% at 78% 8%, rgba(0, 87, 255, 0.08) 0%, rgba(0, 87, 255, 0) 60%);
+  background: radial-gradient(60% 45% at 78% 8%, rgba(0, 87, 255, 0.05) 0%, rgba(0, 87, 255, 0) 60%);
 }
 
 .dark .ai-welcome-aurora::before {
@@ -133,7 +147,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: radial-gradient(circle, rgba(0, 87, 255, 0.1) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(0, 87, 255, 0.07) 1px, transparent 1px);
   background-size: 28px 28px;
   mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 80%);
   -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 20%, transparent 80%);
@@ -165,22 +179,133 @@
   transition: width 280ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* ---- Dark conversation sidebar (reference StudioMain design) ---- */
-.ai-sidebar-dark {
-  background:
-    radial-gradient(120% 60% at 0% 0%, rgba(0, 87, 255, 0.35) 0%, rgba(0, 87, 255, 0) 55%),
-    linear-gradient(180deg, #070911 0%, #05060c 100%);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  color: #eaf0ff;
+/* ---- Floating glass panels (bleed with chat surface) ---- */
+.ai-glass-float {
+  background: rgba(232, 239, 254, 0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow:
+    0 8px 28px rgba(0, 87, 255, 0.06),
+    0 2px 8px rgba(6, 8, 16, 0.03);
+  color: #0b0f1a;
 }
 
-.ai-sidebar-dark ::-webkit-scrollbar {
+.dark .ai-glass-float {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 12px 40px rgba(0, 87, 255, 0.15),
+    0 4px 14px rgba(0, 0, 0, 0.25);
+  color: hsl(var(--foreground));
+}
+
+.ai-sidebar-float {
+  border-radius: 20px;
+}
+
+.ai-sidebar-float ::-webkit-scrollbar {
   width: 5px;
 }
 
-.ai-sidebar-dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+.ai-sidebar-float ::-webkit-scrollbar-thumb {
+  background: rgba(0, 87, 255, 0.18);
   border-radius: 8px;
+}
+
+.dark .ai-sidebar-float ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---- White frosted glass (sidebar + topbar) ---- */
+.ai-glass-dark,
+.ai-sidebar-glass {
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 16px 48px rgba(0, 87, 255, 0.08),
+    0 4px 14px rgba(6, 8, 16, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.35);
+  color: #0b0f1a;
+}
+
+.ai-sidebar-glass {
+  position: relative;
+}
+
+.ai-glass-dark::before,
+.ai-sidebar-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.18) 38%,
+    rgba(0, 87, 255, 0.04) 100%
+  );
+}
+
+.ai-glass-dark:not(.ai-composer-card) > *,
+.ai-sidebar-glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ai-composer-card > .ai-composer-input,
+.ai-composer-card > .ai-composer-send {
+  position: relative;
+  z-index: 1;
+}
+
+.dark .ai-glass-dark,
+.dark .ai-sidebar-glass {
+  background: rgba(6, 8, 16, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 20px 56px rgba(0, 0, 0, 0.38),
+    0 6px 18px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.dark .ai-glass-dark::before,
+.dark .ai-sidebar-glass::before {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.01) 38%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+
+.ai-topbar-float {
+  border-radius: 16px;
+}
+
+.ai-sidebar-glass ::-webkit-scrollbar-thumb {
+  background: rgba(0, 87, 255, 0.18);
+  border-radius: 8px;
+}
+
+.dark .ai-sidebar-glass ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ai-sidebar-glass .ai-nav-item-active {
+  background: linear-gradient(90deg, rgba(0, 87, 255, 0.14), rgba(0, 87, 255, 0.04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dark .ai-sidebar-glass .ai-nav-item-active {
+  background: linear-gradient(90deg, rgba(0, 87, 255, 0.28), rgba(0, 87, 255, 0.08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .ai-btn-new {
@@ -201,7 +326,7 @@
 }
 
 .ai-nav-item-active {
-  background: linear-gradient(90deg, rgba(0, 87, 255, 0.28), rgba(0, 87, 255, 0.06));
+  background: linear-gradient(90deg, rgba(0, 87, 255, 0.14), rgba(0, 87, 255, 0.03));
 }
 
 .ai-nav-item-active::before {
@@ -217,9 +342,17 @@
 
 /* ---- Main workspace surface (lavender + top-right glow) ---- */
 .ai-main-surface {
+  --ai-topbar-height: 52px;
+  --ai-topbar-scroll-pad: calc(
+    var(--ai-topbar-measured-height, var(--ai-topbar-height)) + 0.75rem
+  );
+  --ai-composer-height: 96px;
+  --ai-composer-scroll-pad: calc(
+    var(--ai-composer-measured-height, var(--ai-composer-height)) + 0.5rem
+  );
   background:
-    radial-gradient(60% 45% at 78% 8%, rgba(0, 87, 255, 0.08) 0%, rgba(0, 87, 255, 0) 60%),
-    #e8effe;
+    radial-gradient(60% 45% at 78% 8%, rgba(0, 87, 255, 0.05) 0%, rgba(0, 87, 255, 0) 60%),
+    #f6f9ff;
 }
 
 .dark .ai-main-surface {
@@ -228,14 +361,102 @@
     hsl(var(--background));
 }
 
-/* ---- Floating composer card ---- */
+/* ---- Floating transparent composer overlay (chat scrolls behind) ---- */
+.ai-composer-footer {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 50;
+  background: transparent !important;
+  border: none;
+  pointer-events: none;
+}
+
+.ai-composer-footer > * {
+  pointer-events: auto;
+}
+
 .ai-composer-card {
+  border: 1px solid rgba(11, 15, 26, 0.12);
+  background: #ffffff;
   box-shadow:
-    0 24px 60px rgba(0, 87, 255, 0.16),
-    0 8px 20px rgba(6, 8, 16, 0.08);
+    0 8px 24px rgba(0, 87, 255, 0.08),
+    0 2px 8px rgba(6, 8, 16, 0.04);
+}
+
+.ai-composer-card:focus-within {
+  border-color: rgba(0, 87, 255, 0.35) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 87, 255, 0.12),
+    0 0 0 3px rgba(0, 87, 255, 0.1);
+}
+
+.dark .ai-composer-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: hsl(var(--card));
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.24),
+    0 2px 8px rgba(0, 0, 0, 0.16);
+}
+
+.dark .ai-composer-card:focus-within {
+  border-color: rgba(0, 87, 255, 0.45) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 87, 255, 0.16),
+    0 0 0 3px rgba(0, 87, 255, 0.14);
 }
 
 .ai-send-btn {
   background: linear-gradient(135deg, #0040cc, #0057ff 55%, #1a6fff);
   box-shadow: 0 8px 18px rgba(0, 87, 255, 0.4);
+}
+
+/* Campaign Studio embedded in AI chat — sticky chrome flush under floating topbar. */
+.studio-shell-chat {
+  font-family: var(--font-sans), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /*
+   * Chat scrollport uses padding-top (--ai-topbar-scroll-pad) for the floating topbar.
+   * Sticky `top` is relative to that padded scrollport, so subtract the pad to pin flush
+   * on the measured topbar bottom edge (see studio-sticky-lab: raw top = +64px gap).
+   */
+  --studio-sticky-top-inset: calc(
+    var(--studio-sticky-top, var(--studio-sticky-top-measured, var(--ai-topbar-measured-height, var(--ai-topbar-height, 3.25rem))))
+    - var(--ai-topbar-scroll-pad)
+  );
+  --studio-scroll-offset: calc(
+    var(--studio-sticky-top, var(--studio-sticky-top-measured, var(--ai-topbar-measured-height, var(--ai-topbar-height, 3.25rem))))
+    + var(--studio-chrome-height, 3.25rem)
+  );
+  /* Sidebar sticky height stops above the docked chat composer. */
+  --studio-sidebar-max-height: calc(
+    100dvh - var(--studio-sticky-top, var(--studio-sticky-top-measured, var(--ai-topbar-measured-height, var(--ai-topbar-height, 3.25rem))))
+      - var(--ai-composer-measured-height, var(--ai-composer-height, 96px)) - 1rem
+  );
+  /* Scale inner canvas only — sticky chrome ancestors stay at zoom: 1. */
+  --studio-chat-zoom: 0.88;
+}
+
+/* Cancel the 0.75rem breathing room in --ai-topbar-scroll-pad so studio chrome meets the topbar. */
+.studio-chat-embed {
+  margin-top: calc(-1 * (var(--ai-topbar-scroll-pad) - var(--studio-sticky-top, var(--ai-topbar-height, 3.25rem))));
+}
+
+.studio-chat-scaled {
+  zoom: var(--studio-chat-zoom);
+}
+
+@supports not (zoom: 1) {
+  .studio-chat-scaled {
+    transform: scale(var(--studio-chat-zoom));
+    transform-origin: top center;
+    width: calc(100% / var(--studio-chat-zoom));
+  }
+}
+
+/* Draft bar sits under sticky top chrome in chat embed — not independently sticky. */
+.studio-shell-chat .studio-draft-bar {
+  position: relative;
+  top: auto;
+  z-index: auto;
 }

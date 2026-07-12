@@ -103,6 +103,7 @@ export function CampaignIntelligenceShell({ conversationId }: CampaignIntelligen
             workflowId={campaignObject.workflowId}
             workflowStatus="complete"
             conversationId={conversationId}
+            layoutMode="panel"
             onCampaignObjectPromoted={setCampaignObject}
           />
         </PlatformErrorBoundary>

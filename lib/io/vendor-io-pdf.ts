@@ -1,5 +1,9 @@
 import { existsSync } from "node:fs";
 
+import { SLIDE_DECK_PAGE } from "@/lib/io/slide-deck-page";
+
+export { SLIDE_DECK_PAGE } from "@/lib/io/slide-deck-page";
+
 const CHROMIUM_PACK_URL =
   "https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.x64.tar";
 
@@ -20,18 +24,31 @@ export const PERFORMANCE_REPORT_PDF_OPTIONS = {
 };
 
 /** Slide-deck documents that declare their own @page size (campaign proposals). */
-export const SLIDE_DECK_PDF_OPTIONS = {
-  format: "A4" as const,
+export const SLIDE_DECK_PDF_OPTIONS: HtmlToPdfOptions = {
+  width: SLIDE_DECK_PAGE.widthIn,
+  height: SLIDE_DECK_PAGE.heightIn,
   printBackground: true,
   preferCSSPageSize: true,
   margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+  viewport: {
+    width: SLIDE_DECK_PAGE.widthPx,
+    height: SLIDE_DECK_PAGE.heightPx,
+    deviceScaleFactor: 1,
+  },
 };
 
 export type HtmlToPdfOptions = {
-  format: "A4";
+  format?: "A4";
+  width?: string;
+  height?: string;
   printBackground: boolean;
   preferCSSPageSize?: boolean;
   margin: { top: string; right: string; bottom: string; left: string };
+  viewport?: {
+    width: number;
+    height: number;
+    deviceScaleFactor?: number;
+  };
 };
 
 const PDF_VIEWPORT = {
@@ -165,6 +182,13 @@ export async function renderHtmlToPdf(
   try {
     browser = await launchBrowser();
     const page = await browser.newPage();
+    if (options.viewport) {
+      await page.setViewport({
+        width: options.viewport.width,
+        height: options.viewport.height,
+        deviceScaleFactor: options.viewport.deviceScaleFactor ?? 1,
+      });
+    }
     // Abort remote image/font fetches that can hang `load` / network idle when
     // a Showcase export still contains a handful of unresolved CDN URLs.
     await page.setRequestInterception(true);

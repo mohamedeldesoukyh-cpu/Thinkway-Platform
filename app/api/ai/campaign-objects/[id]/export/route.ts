@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { getApprovedSnapshot } from "@/features/campaign-intelligence/services/campaign-export";
+import {
+  getApprovedSnapshot,
+  prepareCampaignObjectForExport,
+} from "@/features/campaign-intelligence/services/campaign-export";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   CreatorsSectionData,
@@ -140,9 +143,22 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   try {
+    let contextSnapshot: Record<string, unknown> | undefined;
+    if (conversationId) {
+      const { data: conversationRow } = await supabase
+        .from("ai_conversations")
+        .select("context_snapshot")
+        .eq("id", conversationId)
+        .maybeSingle();
+      contextSnapshot =
+        (conversationRow as { context_snapshot?: Record<string, unknown> } | null)
+          ?.context_snapshot ?? undefined;
+    }
+
     const snapshot = await getApprovedSnapshot(supabase, {
       campaignObjectId: id,
       conversationId,
+      contextSnapshot,
     });
 
     if (!snapshot) {
@@ -167,7 +183,7 @@ export async function GET(request: Request, context: RouteContext) {
     if (format === "html" || format === "pdf" || format === "pptx") {
       // Client-facing proposal (CIO/VIO palette): html = in-browser preview,
       // pdf/pptx = downloadable deliverables built from the same shared model.
-      const campaignObject = snapshot as unknown as CampaignObject;
+      const campaignObject = prepareCampaignObjectForExport(snapshot);
       const [vendors, clientLogoUrl] = await Promise.all([
         hydrateProposalVendors(supabase, campaignObject),
         resolveClientLogo(supabase, campaignObject),

@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
@@ -8,6 +8,8 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
+import { ObjectiveBadge } from "./shared/studio-ui-primitives";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { resolveContentPlan } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -16,12 +18,6 @@ type ContentPlanSectionProps = {
   campaignObject?: CampaignObject;
   fallbackText: string;
   status: CampaignStudioSectionStatus;
-};
-
-const OBJECTIVE_COLORS: Record<string, string> = {
-  Awareness: "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
-  Engagement: "bg-[#1D9E75]/10 text-[#1D9E75]",
-  "UGC volume": "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
 };
 
 export function ContentPlanSection({
@@ -43,46 +39,42 @@ export function ContentPlanSection({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[480px] text-left text-[11px]">
+      <table className={STUDIO_CLASSES.ptable}>
         <caption className="sr-only">Campaign content plan by platform and objective</caption>
         <thead>
-          <tr className="border-b border-border/60 text-[10px] font-bold tracking-wide text-muted-foreground uppercase">
-            <th scope="col" className="pb-2 pr-3">
+          <tr>
+            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
               Platform
             </th>
-            <th scope="col" className="pb-2 pr-3">
+            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
               Content Type
             </th>
-            <th scope="col" className="pb-2 pr-3">
-              Creator Tier
+            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
+              Tier
             </th>
-            <th scope="col" className="pb-2 pr-3">
+            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
               Qty
             </th>
-            <th scope="col" className="pb-2 pr-3">
+            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
               Posting
             </th>
-            <th scope="col" className="pb-2">
+            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
               Objective
             </th>
           </tr>
         </thead>
         <tbody>
           {items.map((item, index) => (
-            <tr key={`${item.platform}-${index}`} className="border-b border-border/30">
-              <td className="py-2 pr-3 font-semibold capitalize">{item.platform}</td>
-              <td className="py-2 pr-3">{item.contentType}</td>
-              <td className="py-2 pr-3">
-                <Badge variant="outline" className="text-[9px]">
-                  {item.creatorTier}
-                </Badge>
+            <tr key={`${item.platform}-${index}`}>
+              <td className={cn(STUDIO_CLASSES.ptableTd, "font-semibold capitalize")}>
+                {item.platform}
               </td>
-              <td className="py-2 pr-3 font-bold">{item.quantity}</td>
-              <td className="py-2 pr-3 text-muted-foreground">{item.postingDate}</td>
-              <td className="py-2">
-                <Badge className={OBJECTIVE_COLORS[item.objective] ?? "bg-muted text-foreground"}>
-                  {item.objective}
-                </Badge>
+              <td className={STUDIO_CLASSES.ptableTd}>{item.contentType}</td>
+              <td className={STUDIO_CLASSES.ptableTd}>{item.creatorTier}</td>
+              <td className={cn(STUDIO_CLASSES.ptableTd, "font-extrabold")}>{item.quantity}</td>
+              <td className={STUDIO_CLASSES.ptableTd}>{item.postingDate}</td>
+              <td className={STUDIO_CLASSES.ptableTd}>
+                <ObjectiveBadge objective={item.objective} />
               </td>
             </tr>
           ))}

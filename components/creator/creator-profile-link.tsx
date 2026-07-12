@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { BadgeCheckIcon, ExternalLinkIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -91,6 +92,12 @@ export type CreatorProfileLinkProps = {
   showExternalIcon?: boolean;
   /** When false, display name is plain text (e.g. row click opens detail sheet). Default true. */
   linkName?: boolean;
+  /**
+   * Internal route for the display name (e.g. `/vendors/{id}`). Takes precedence over the
+   * external profile link on the name; the social profile stays reachable via the avatar /
+   * external icon. Avoids nesting `<a>` inside `<a>` — never wrap this component in a Link.
+   */
+  nameHref?: string;
   /** Opens internal creator detail when name is not an external profile link. */
   onNameClick?: () => void;
   stopPropagation?: boolean;
@@ -148,6 +155,7 @@ export function CreatorProfileLink({
   showPlatformBadge = true,
   showExternalIcon = false,
   linkName = true,
+  nameHref,
   onNameClick,
   stopPropagation = false,
   className,
@@ -211,7 +219,19 @@ export function CreatorProfileLink({
 
   const nameNode = showName ? (
     <div className="flex min-w-0 items-center gap-1.5">
-      {profileUrl && linkName ? (
+      {nameHref ? (
+        <Link
+          href={nameHref}
+          onClick={stopPropagation ? (event) => event.stopPropagation() : undefined}
+          className={cn(
+            "truncate font-semibold text-foreground hover:text-primary hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none",
+            NAME_SIZE_CLASS[size],
+            nameClassName
+          )}
+        >
+          {source.displayName}
+        </Link>
+      ) : profileUrl && linkName ? (
         <ProfileExternalLink
           href={profileUrl}
           tooltip={tooltip}
@@ -241,7 +261,7 @@ export function CreatorProfileLink({
       {source.isVerified ? (
         <BadgeCheckIcon className="size-3.5 shrink-0 text-primary" aria-label="Verified" />
       ) : null}
-      {showExternalIcon && profileUrl ? (
+      {(showExternalIcon || Boolean(nameHref)) && profileUrl ? (
         <ProfileExternalLink
           href={profileUrl}
           tooltip={openOnPlatformTooltip(source.platform)}

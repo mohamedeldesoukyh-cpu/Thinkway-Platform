@@ -199,6 +199,41 @@ export function deserializeCampaignObject(
   };
 }
 
+/** Snapshots stringify structured section content — revive JSON for export resolvers. */
+function reviveSectionContent(content: CampaignSection["content"]): CampaignSection["content"] {
+  if (typeof content !== "string") return content;
+  const trimmed = content.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return content;
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (parsed && typeof parsed === "object") {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    /* keep markdown/text content */
+  }
+  return content;
+}
+
+/** Restore structured section payloads before running studio export resolvers. */
+export function reviveCampaignObjectForExport(
+  snapshot: CampaignObjectSnapshot
+): CampaignObject {
+  const base = deserializeCampaignObject(snapshot);
+  return {
+    ...base,
+    sections: Object.fromEntries(
+      Object.entries(base.sections).map(([key, section]) => [
+        key,
+        {
+          ...section,
+          content: reviveSectionContent(section.content),
+        },
+      ])
+    ) as CampaignObjectSections,
+  };
+}
+
 export function isAutosaveTaskStatus(status: string): boolean {
   return status === "completed" || status === "awaiting_approval";
 }

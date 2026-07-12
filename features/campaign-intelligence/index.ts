@@ -84,7 +84,10 @@ export {
   lifecycleLabel,
 } from "./services/campaign-lifecycle";
 
-export { getApprovedSnapshot } from "./services/campaign-export";
+export {
+  getApprovedSnapshot,
+  prepareCampaignObjectForExport,
+} from "./services/campaign-export";
 
 export {
   enrichCampaignObjectWithStudioData,

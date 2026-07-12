@@ -1,6 +1,6 @@
 "use client";
 
-import { SparklesIcon } from "lucide-react";
+import { ZapIcon } from "lucide-react";
 
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
@@ -8,8 +8,7 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { GroundingBadge } from "./shared/grounding-badge";
-import { PAIR_STRATEGY_CARD, PAIR_STRATEGY_STACK } from "../../constants/studio-layout";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import {
   directorDecisionMinutesToInsights,
   resolveDirectorDecisionMinutes,
@@ -44,29 +43,29 @@ export function WhyAiSection({
   }
 
   return (
-    <div className={PAIR_STRATEGY_STACK}>
+    <div className="min-w-0">
       {insights.map((insight) => (
-        <div key={insight.category} className={PAIR_STRATEGY_CARD}>
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <SparklesIcon className="size-3.5 shrink-0 text-violet-600" />
-            <span className="text-[10px] font-bold tracking-wide text-violet-600 uppercase">
+        <div key={insight.category} className={STUDIO_CLASSES.minuteItem}>
+          <div className={STUDIO_CLASSES.minuteIco}>
+            <ZapIcon className="size-3.5" aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h5 className="text-xs font-extrabold tracking-[0.2px] text-[#7C3AED] uppercase">
               {insight.category}
-            </span>
-            {insight.source ? (
-              <GroundingBadge source={insight.source} confidence={insight.confidence} />
+              {insight.confidence != null ? (
+                <span className="ml-1.5 rounded-full bg-[#0C9D57]/10 px-2 py-0.5 text-[10px] font-extrabold text-[#0C9D57] normal-case">
+                  {insight.confidence}% confidence
+                </span>
+              ) : null}
+            </h5>
+            <p className="mt-1 text-[13.5px] font-bold text-foreground">{insight.title}</p>
+            <p className="mt-0.5 text-xs text-[#6B7280]">{insight.rationale}</p>
+            {insight.evidence ? (
+              <p className="mt-1 text-[10px] italic text-[#6B7280]/80">
+                Evidence: {insight.evidence}
+              </p>
             ) : null}
           </div>
-          <p className="mt-1 break-words text-sm font-semibold text-foreground [overflow-wrap:anywhere]">
-            {insight.title}
-          </p>
-          <p className="mt-1 break-words text-[11px] leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
-            {insight.rationale}
-          </p>
-          {insight.evidence ? (
-            <p className="mt-1 break-words text-[10px] italic text-muted-foreground/80 [overflow-wrap:anywhere]">
-              Evidence: {insight.evidence}
-            </p>
-          ) : null}
         </div>
       ))}
     </div>

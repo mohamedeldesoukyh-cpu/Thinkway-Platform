@@ -2,6 +2,8 @@ import type { WorkflowSummarySection } from "@/features/ai-workflows";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { AiActionCard } from "@/features/ai-workspace/types";
 
+export type CampaignStudioLayoutMode = "panel" | "chat";
+
 export type CampaignStudioSectionId =
   | "campaign-summary"
   | "executive-strategy"

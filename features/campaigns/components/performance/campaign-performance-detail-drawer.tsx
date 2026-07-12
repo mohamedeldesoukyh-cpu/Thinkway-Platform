@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   DownloadIcon,
   ExternalLinkIcon,
@@ -238,9 +237,11 @@ export function CampaignPerformanceDetailDrawer({
                 <div className="px-1">
                   <DetailField label="Creator">
                     {row.influencer_id ? (
-                      <Link href={`/vendors/${row.influencer_id}`} className="hover:text-primary hover:underline">
-                        <PublicationCreatorName row={row} name={row.influencer_name ?? "—"} />
-                      </Link>
+                      <PublicationCreatorName
+                        row={row}
+                        name={row.influencer_name ?? "—"}
+                        nameHref={`/vendors/${row.influencer_id}`}
+                      />
                     ) : (
                       <PublicationCreatorName row={row} name={row.influencer_name ?? "—"} />
                     )}

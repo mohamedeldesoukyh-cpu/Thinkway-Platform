@@ -4,7 +4,7 @@ import { useCallback, useRef, useState, type ReactNode } from "react";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignStudio } from "@/features/campaign-studio/components/campaign-studio";
-import type { CampaignStudioInput } from "@/features/campaign-studio/types/campaign-studio";
+import type { CampaignStudioInput, CampaignStudioLayoutMode } from "@/features/campaign-studio/types/campaign-studio";
 import { cn } from "@/lib/utils";
 
 import { CreatorDrawer, type CreatorDrawerSelection } from "./creator-drawer";
@@ -24,6 +24,8 @@ type CampaignStudioHostProps = CampaignStudioInput & {
   ) => void;
   onCampaignObjectPromoted?: (campaignObject: CampaignObject) => void;
   className?: string;
+  layoutMode?: CampaignStudioLayoutMode;
+  scrollContainer?: HTMLElement | null;
 };
 
 function isWorkflowComplete(workflowStatus?: string): boolean {
@@ -43,8 +45,16 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
   );
 
   if (!decisionReady || mode === "presentation") {
-    const { className, conversationId, messageId, onCardUpdated, onVendorDecisionsUpdated, ...studioInput } =
-      props;
+    const {
+      className,
+      conversationId,
+      messageId,
+      onCardUpdated,
+      onVendorDecisionsUpdated,
+      layoutMode = "chat",
+      scrollContainer,
+      ...studioInput
+    } = props;
     return (
       <div className={cn("space-y-2", className)}>
         {!decisionReady ? (
@@ -59,6 +69,8 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
           onCardUpdated={onCardUpdated}
           onVendorDecisionsUpdated={onVendorDecisionsUpdated}
           studioModeToggle={modeToggle}
+          layoutMode={layoutMode}
+          scrollContainer={scrollContainer}
         />
       </div>
     );
@@ -77,6 +89,8 @@ function CampaignStudioDecisionHost({
   campaignObject,
   modeToggle,
   initialMode,
+  layoutMode = "chat",
+  scrollContainer,
   ...studioInput
 }: CampaignStudioHostProps & {
   modeToggle: ReactNode;
@@ -161,6 +175,8 @@ function CampaignStudioDecisionHost({
           messageId={messageId}
           onCardUpdated={onCardUpdated}
           onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+          layoutMode={layoutMode}
+          scrollContainer={scrollContainer}
         />
       </div>
     );
@@ -183,6 +199,8 @@ function CampaignStudioDecisionHost({
             onCardUpdated={onCardUpdated}
             onVendorDecisionsUpdated={onVendorDecisionsUpdated}
             decisionMode={decisionMode}
+            layoutMode={layoutMode}
+            scrollContainer={scrollContainer}
           />
 
           <DecisionRightPanel workspace={workspace} variant="stacked" className="xl:hidden" />

@@ -41,6 +41,7 @@ type PerformanceExplorerCreatorCellProps = {
   name: string | null | undefined;
   platform: string;
   avatarUrl?: string | null;
+  profileUrl?: string | null;
   influencerId?: string | null;
   onOpenPublication?: () => void;
   className?: string;
@@ -50,6 +51,7 @@ function CreatorVendorAvatarLink({
   influencerId,
   name,
   avatarUrl,
+  profileUrl,
   platform,
   size,
   shape,
@@ -60,6 +62,7 @@ function CreatorVendorAvatarLink({
   influencerId: string;
   name: string;
   avatarUrl?: string | null;
+  profileUrl?: string | null;
   platform: string;
   size: 20 | 38;
   shape?: "circle" | "rounded";
@@ -71,6 +74,7 @@ function CreatorVendorAvatarLink({
     <CreatorThumbAvatar
       name={name}
       avatarUrl={avatarUrl}
+      profileUrl={profileUrl}
       platform={platform}
       size={size}
       shape={shape}
@@ -106,6 +110,7 @@ export function PerformanceExplorerCreatorCell({
   name,
   platform,
   avatarUrl,
+  profileUrl,
   influencerId,
   onOpenPublication,
   className,
@@ -124,6 +129,7 @@ export function PerformanceExplorerCreatorCell({
           influencerId={influencerId}
           name={displayName}
           avatarUrl={avatarUrl}
+          profileUrl={profileUrl}
           platform={platform}
           size={38}
           shape="rounded"
@@ -135,6 +141,7 @@ export function PerformanceExplorerCreatorCell({
           <CreatorThumbAvatar
             name={displayName}
             avatarUrl={avatarUrl}
+            profileUrl={profileUrl}
             platform={platform}
             size={38}
             shape="rounded"
@@ -148,6 +155,7 @@ export function PerformanceExplorerCreatorCell({
             influencerId={influencerId}
             name={displayName}
             avatarUrl={avatarUrl}
+            profileUrl={profileUrl}
             platform={platform}
             size={20}
             className="thinkway-campaign-cr-av-circle border-0"
@@ -156,6 +164,7 @@ export function PerformanceExplorerCreatorCell({
           <CreatorThumbAvatar
             name={displayName}
             avatarUrl={avatarUrl}
+            profileUrl={profileUrl}
             platform={platform}
             size={20}
             className="thinkway-campaign-cr-av-circle border-0"

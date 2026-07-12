@@ -7,6 +7,8 @@ import {
   applyFactsToSummaryData,
   buildCreatorMixFromFacts,
   getCampaignFacts,
+  resolveFactsBrandName,
+  resolveFactsClientName,
   resolveFactsCurrency,
   resolveFactsDurationWeeks,
 } from "@/features/campaign-director/facts/facts-display-bridge";
@@ -14,6 +16,7 @@ import {
   renderThinkwayReportLogoHtml,
   THINKWAY_REPORT_LOGO_STYLES,
 } from "@/lib/reports/document/thinkway-report-logo";
+import { SLIDE_DECK_PAGE } from "@/lib/io/slide-deck-page";
 
 import {
   resolveCampaignSummary,
@@ -24,6 +27,7 @@ import {
   resolveKpiData,
   resolvePresentationData,
   resolvePresentationCompletion,
+  resolveVendorRecommendations,
 } from "../services/section-data-resolver";
 import { buildCreatorContentIdea, isTrendCampaign } from "../services/creator-slate";
 
@@ -111,13 +115,22 @@ function resolveProposalVendors(
   const reasoning: VendorSelectedReasoning[] =
     creatorsData.recommendations?.selectedReasoning ?? [];
 
-  return reasoning
+  const fromReasoning = reasoning
     .filter((r) => r.displayName?.trim())
     .map((r) => ({
       displayName: r.displayName!.trim(),
       reason: r.whySelected,
       tier: r.expectedRole,
     }));
+  if (fromReasoning.length > 0) return fromReasoning;
+
+  const parsed = resolveVendorRecommendations(campaignObject);
+  return parsed.map((v) => ({
+    displayName: v.displayName,
+    handle: v.handle,
+    platform: v.platform,
+    reason: v.reason,
+  }));
 }
 
 /** Budget rationale is stored as an internal audit trail — strip that wording for clients. */
@@ -205,6 +218,24 @@ export type CampaignProposalModel = {
   kpis: Array<{ metric: string; target: string; basis: string }>;
 };
 
+function readPlainSectionText(content: string | Record<string, unknown>): string | undefined {
+  if (typeof content !== "string") return undefined;
+  const trimmed = content.trim();
+  if (!trimmed || trimmed.startsWith("{") || trimmed.startsWith("[")) return undefined;
+  return trimmed;
+}
+
+function appendUnderstandingField(
+  rows: Array<[string, string]>,
+  label: string,
+  value?: string | null
+): void {
+  const text = value?.toString().trim();
+  if (!text) return;
+  if (rows.some(([existing]) => existing === label)) return;
+  rows.push([label, text]);
+}
+
 /** Shared proposal data model — consumed by the HTML document and the PPTX deck. */
 export function buildCampaignProposalModel(
   campaignObject: CampaignObject,
@@ -217,20 +248,29 @@ export function buildCampaignProposalModel(
     year: "numeric",
   });
   const facts = getCampaignFacts(campaignObject);
-  // Facts fill any gap the persisted summary cards leave (legacy objects included).
   const resolvedSummary = resolveCampaignSummary(campaignObject);
   const summary = facts
     ? { ...applyFactsToSummaryData({}, facts), ...(resolvedSummary ?? {}) }
-    : resolvedSummary;
+    : resolvedSummary ?? (facts ? applyFactsToSummaryData({}, facts) : null);
   const strategy = resolveExecutiveStrategy(campaignObject);
   const budget = resolveBudgetData(campaignObject);
   const executive = resolveExecutiveSummaryData(campaignObject);
   const presentation = resolvePresentationData(campaignObject);
   const kpis = resolveKpiData(campaignObject);
   const presentationVersion = resolvePresentationCompletion(campaignObject).version;
+  const summaryText = readPlainSectionText(campaignObject.sections.summary.content);
+  const strategyTextContent = readPlainSectionText(campaignObject.sections.strategy.content);
 
-  const client = summary?.client ?? presentation?.brandName ?? "Client";
-  const brand = presentation?.brandName ?? summary?.brand ?? client;
+  const client =
+    summary?.client ??
+    (facts ? resolveFactsClientName(facts) : undefined) ??
+    presentation?.brandName ??
+    "Client";
+  const brand =
+    summary?.brand ??
+    (facts ? resolveFactsBrandName(facts) : undefined) ??
+    presentation?.brandName ??
+    client;
   const campaignName = presentation?.campaignName ?? `${brand} Campaign Proposal`;
   const trend = isTrendCampaign(facts);
   const currency = facts ? resolveFactsCurrency(facts) : "USD";
@@ -244,8 +284,21 @@ export function buildCampaignProposalModel(
   const statTiles = [
     facts?.budget
       ? { label: "Budget", value: `${formatCompact(facts.budget.amount)} ${currency}`, sub: "100% influencer fees" }
-      : null,
-    { label: "Duration", value: summary?.duration ?? "—", sub: "client-facing window" },
+      : budget?.total
+        ? {
+            label: "Budget",
+            value: `${formatCompact(budget.total)} ${budget.currency ?? currency}`,
+            sub: "100% influencer fees",
+          }
+        : null,
+    {
+      label: "Duration",
+      value:
+        summary?.duration ??
+        (facts ? `${resolveFactsDurationWeeks(facts)} weeks` : undefined) ??
+        "—",
+      sub: "client-facing window",
+    },
     vendors.length > 0
       ? { label: "Creators", value: String(vendors.length), sub: "recommended slate" }
       : null,
@@ -254,20 +307,56 @@ export function buildCampaignProposalModel(
       : null,
   ].filter((t): t is { label: string; value: string; sub: string } => Boolean(t));
 
-  const understanding = (
-    [
-      ["Client", summary?.client],
-      ["Brand", summary?.brand],
-      ["Product", summary?.product],
-      ["Market", summary?.market],
-      ["Objective", summary?.objective],
-      ["Audience", summary?.targetAudience],
-      ["Platforms", summary?.platforms],
-      ["Deliverables", summary?.deliverables],
-    ] as Array<[string, string | undefined]>
-  )
-    .filter(([, value]) => value?.toString().trim())
-    .map(([label, value]) => [label, String(value)] as [string, string]);
+  const understanding: Array<[string, string]> = [];
+  appendUnderstandingField(understanding, "Client", client);
+  appendUnderstandingField(understanding, "Brand", brand);
+  appendUnderstandingField(understanding, "Product", summary?.product);
+  appendUnderstandingField(understanding, "Market", summary?.market);
+  appendUnderstandingField(
+    understanding,
+    "Objective",
+    summary?.objective ?? strategy?.objective ?? facts?.objective
+  );
+  appendUnderstandingField(
+    understanding,
+    "Audience",
+    summary?.targetAudience ?? strategy?.targetAudience ?? facts?.audience
+  );
+  appendUnderstandingField(
+    understanding,
+    "Platforms",
+    summary?.platforms ?? facts?.platforms?.join(", ")
+  );
+  appendUnderstandingField(understanding, "Deliverables", summary?.deliverables);
+  if (facts?.geography?.length) {
+    appendUnderstandingField(understanding, "Geography", facts.geography.join(", "));
+  }
+  if (facts?.campaignType) {
+    appendUnderstandingField(understanding, "Campaign type", facts.campaignType);
+  }
+
+  const executiveSummary =
+    executive?.summary?.trim() ||
+    summary?.objective?.trim() ||
+    strategy?.keyMessage?.trim() ||
+    strategy?.creatorStrategy?.trim() ||
+    summaryText ||
+    strategyTextContent ||
+    "Campaign proposal prepared by Thinkway.";
+
+  const strategyText =
+    strategy?.creatorStrategy?.trim() ||
+    strategy?.objective?.trim() ||
+    strategy?.keyMessage?.trim() ||
+    strategyTextContent ||
+    executiveSummary;
+
+  const recommendedFromExecutive =
+    executive?.recommendedActions?.filter((item) => item.trim()) ?? [];
+  const recommendedActions =
+    recommendedFromExecutive.length > 0
+      ? recommendedFromExecutive
+      : strategy?.successFactors?.filter((item) => item.trim()) ?? [];
 
   const mixCounts = new Map<string, number>();
   for (const v of vendors) {
@@ -310,13 +399,10 @@ export function buildCampaignProposalModel(
     trend,
     currency,
     clientLogoUrl: branding.clientLogoUrl,
-    objective: summary?.objective,
-    executiveSummary:
-      executive?.summary ?? summary?.objective ?? "Campaign proposal prepared by Thinkway.",
-    recommendedActions: executive?.recommendedActions ?? [],
-    strategyText:
-      strategy?.creatorStrategy ?? strategy?.objective ?? strategy?.keyMessage ??
-      "Strategy aligned to brief objectives and audience.",
+    objective: summary?.objective ?? facts?.objective ?? strategy?.objective,
+    executiveSummary,
+    recommendedActions,
+    strategyText,
     statTiles,
     understanding,
     vendors,
@@ -496,21 +582,31 @@ export function buildCampaignProposalDocumentHtml(
         `<div class="stat-box"><div class="l">${escapeHtml(t.label)}</div><div class="v">${escapeHtml(t.value)}</div><div class="s">${escapeHtml(t.sub)}</div></div>`
     )
     .join("");
-  const detailItems = understanding
-    .slice(0, 8)
-    .map(
-      ([label, value]) =>
-        `<div class="detail-item"><div class="l">${escapeHtml(label)}</div><div class="v">${escapeHtml(value)}</div></div>`
-    )
-    .join("");
-  pages.push(`
+  const understandingRows: Array<[string, string]> =
+    understanding.length > 0
+      ? understanding
+      : [["Overview", model.executiveSummary]];
+  const understandingPages = chunk(understandingRows, 6);
+  understandingPages.forEach((pageFields, pageIndex) => {
+    const detailItems = pageFields
+      .map(
+        ([label, value]) =>
+          `<div class="detail-item"><div class="l">${escapeHtml(label)}</div><div class="v">${escapeHtml(value)}</div></div>`
+      )
+      .join("");
+    const title =
+      understandingPages.length > 1
+        ? `Campaign Understanding (${pageIndex + 1}/${understandingPages.length})`
+        : "Campaign Understanding";
+    pages.push(`
   <div class="page">
     ${deckBrandHeader(sectionNumber, client)}
-    ${deckEyebrow(deckIcon(ICONS.grid), DECK.blue, "rgba(0,87,255,.1)", "Campaign Understanding")}
-    ${statBoxes ? `<div class="stat-grid">${statBoxes}</div>` : ""}
+    ${deckEyebrow(deckIcon(ICONS.grid), DECK.blue, "rgba(0,87,255,.1)", title)}
+    ${pageIndex === 0 && statBoxes ? `<div class="stat-grid">${statBoxes}</div>` : ""}
     <div class="detail-grid">${detailItems}</div>
     ${deckFooter(pages.length + 1, client)}
   </div>`);
+  });
 
   // ---- Executive Summary ----
   sectionNumber += 1;
@@ -669,15 +765,22 @@ export function buildCampaignProposalDocumentHtml(
     <div class="contact">${escapeHtml(CONTACT_LINE)}</div>
   </div>`);
 
+  const { widthPx, heightPx, widthIn, heightIn } = SLIDE_DECK_PAGE;
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(client)} — Campaign Intelligence Proposal</title>
 <style>
-  @page{ size: 1280px 720px; margin: 0; }
+  @page{ size: ${widthIn} ${heightIn}; margin: 0; }
   *{ margin:0; padding:0; box-sizing:border-box; }
-  html,body{ width:1280px; }
+  html,body{
+    margin:0; padding:0;
+    width:${widthIn};
+    min-width:${widthIn};
+  }
   body{
     font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;
     color:${DECK.ink};
@@ -688,11 +791,43 @@ export function buildCampaignProposalDocumentHtml(
   .num{ font-variant-numeric: tabular-nums; }
 
   .page{
-    width:1280px; height:720px;
+    width:${widthIn}; height:${heightIn};
     position:relative;
     page-break-after: always;
     overflow:hidden;
     background:#fff;
+  }
+  /* Browser preview: scale fixed 1280×720 slides to fill viewport width (print/PDF unchanged). */
+  @media screen{
+    html,body{
+      width:100%;
+      min-width:0;
+      overflow-x:hidden;
+      background:#0b0f1a;
+    }
+    .page{
+      width:${widthPx}px;
+      height:${heightPx}px;
+      transform-origin:top center;
+      transform:scale(calc(100vw / ${widthPx}));
+      margin-left:auto;
+      margin-right:auto;
+      margin-bottom:calc(${heightPx}px * (100vw / ${widthPx} - 1));
+      page-break-after:auto;
+    }
+  }
+  @media print{
+    html,body{
+      width:${widthIn};
+      margin:0; padding:0;
+    }
+    .page{
+      width:${widthIn};
+      height:${heightIn};
+      transform:none;
+      margin:0;
+      page-break-after:always;
+    }
   }
   .page:last-child{ page-break-after: auto; }
 
@@ -853,19 +988,6 @@ export function buildCampaignProposalDocumentHtml(
 ${pages.join("\n")}
 </body>
 </html>`;
-}
-
-/** Open proposal preview in a new browser tab (print / Save as PDF). */
-export function openCampaignProposalPreview(
-  campaignObject: CampaignObject,
-  hydratedVendors: ProposalVendor[] = [],
-  branding: ProposalBranding = {}
-): void {
-  const html = buildCampaignProposalDocumentHtml(campaignObject, hydratedVendors, branding);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  window.open(url, "_blank", "noopener,noreferrer");
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 // Re-export for components that hydrate vendors client-side

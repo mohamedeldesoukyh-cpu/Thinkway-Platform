@@ -1,12 +1,13 @@
 "use client";
 
-import { ExecutiveCard } from "./shared/executive-card";
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
   SectionFallbackContent,
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
+import { ReasonCard } from "./shared/studio-ui-primitives";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import {
   executiveStrategyReasoningToFields,
   resolveExecutiveStrategyReasoning,
@@ -42,14 +43,17 @@ export function ExecutiveStrategySection({
   }
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+    <div className={STUDIO_CLASSES.reasonGrid}>
       {fields.map((field) => (
-        <ExecutiveCard
+        <ReasonCard
           key={field.label}
           label={field.label}
           value={field.value}
-          accent={field.grounding.source === "Client" ? "green" : field.grounding.source === "Industry" ? "purple" : "neutral"}
-          grounding={field.grounding}
+          badge={
+            field.grounding.confidence != null
+              ? `${field.grounding.confidence}%`
+              : undefined
+          }
         />
       ))}
     </div>

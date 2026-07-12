@@ -258,6 +258,7 @@ export function CampaignPerformanceGrid({
               name={row.influencer_name}
               platform={row.platform}
               avatarUrl={resolvePublicationRowCreatorAvatar(row)}
+              profileUrl={row.influencer_profile_url}
               influencerId={row.influencer_id}
               onOpenPublication={() => schedulePublicationWorkspaceOpen(row.id, onOpenDetail)}
             />
