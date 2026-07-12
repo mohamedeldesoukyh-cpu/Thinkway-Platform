@@ -38,6 +38,8 @@ import {
 import {
   buildCampaignContextDigest,
   buildChangeSummary,
+  describeDominantTiers,
+  extractRationale,
   planRemovalChanges,
   renderChangeSummary,
   renderDigestForPrompt,
@@ -106,6 +108,12 @@ export async function interpretStudioMessage(
 function overallScore(campaignObject: CampaignObject): number | undefined {
   const performance = campaignObject.sections.performance.data as PerformanceSectionData | undefined;
   return performance?.campaignScores?.overall;
+}
+
+/** Turn a builder change line ("Updated budget to X.") into a first-person action ("updated budget to X"). */
+function toAction(change: string): string {
+  const trimmed = change.trim().replace(/[.!?]+$/, "");
+  return trimmed ? trimmed.charAt(0).toLowerCase() + trimmed.slice(1) : trimmed;
 }
 
 function appendChangeLog(
@@ -229,7 +237,10 @@ async function commitDraftChanges(
   changes: StudioDraftChange[],
   meta: {
     intentKind: StudioCopilotResult["intentKind"];
-    changeLines: string[];
+    /** First-person action, e.g. "removed the 2 Celebrity creators (…)". */
+    action: string;
+    /** Grounded reason, when the user gave one. */
+    rationale?: string;
     logSummary: string;
     removed: number;
     added: number;
@@ -244,16 +255,19 @@ async function commitDraftChanges(
   const scoresAfter = (reoptimized.sections.performance.data as PerformanceSectionData | undefined)
     ?.campaignScores;
 
+  // Grounded downstream effects on the actual updated campaign.
+  const effects: string[] = [];
+  if (meta.removed > 0 || meta.added > 0) {
+    effects.push(`the creator mix was rebalanced ${describeDominantTiers(reoptimized)}`);
+    effects.push("the budget was reallocated across the updated slate");
+  }
+
   const summary = buildChangeSummary({
-    headline: "Campaign updated successfully.",
-    changes: [
-      ...meta.changeLines,
-      "Re-optimized the slate, scores, budget allocation, and presentation.",
-    ],
+    action: meta.action,
+    rationale: meta.rationale,
+    effects,
     scoreBefore: digest.overallScore,
     scoresAfter,
-    creatorsRemoved: meta.removed,
-    creatorsAdded: meta.added,
   });
 
   const logged = appendChangeLog(reoptimized, {
@@ -326,14 +340,19 @@ async function removeCreators(
   }
 
   const tierLabel = intent.tier ? `${intent.tier} ` : "";
-  const changeLines = [
-    `Removed ${changes.length} ${tierLabel}creator${changes.length === 1 ? "" : "s"} (${removedNames.join(", ")}).`,
-  ];
-  if (intent.reason?.trim()) changeLines.push(`Reason noted: ${intent.reason.trim()}`);
+  const criterionLabel = intent.city
+    ? ` from ${intent.city}`
+    : intent.country
+      ? ` from ${intent.country}`
+      : intent.belowEngagement != null
+        ? " with the lowest engagement"
+        : "";
+  const action = `removed the ${changes.length} ${tierLabel}creator${changes.length === 1 ? "" : "s"}${criterionLabel} (${removedNames.join(", ")})`;
 
   return commitDraftChanges(input, digest, changes, {
     intentKind: "remove_creators",
-    changeLines,
+    action,
+    rationale: extractRationale(intent.reason),
     logSummary: `Removed ${changes.length} ${tierLabel}creator${changes.length === 1 ? "" : "s"}`.trim(),
     removed: changes.length,
     added: 0,
@@ -366,12 +385,10 @@ async function addCreators(
   }
 
   const descriptor = [intent.tier, intent.category].filter(Boolean).join(" ");
+  const action = `added ${picked.length} ${descriptor ? `${descriptor} ` : ""}creator${picked.length === 1 ? "" : "s"} from Discovery (${picked.map((c) => c.display_name).join(", ")})`;
   return commitDraftChanges(input, digest, buildAdditionChanges(picked), {
     intentKind: "add_creators",
-    changeLines: [
-      `Added ${picked.length} ${descriptor ? `${descriptor} ` : ""}creator${picked.length === 1 ? "" : "s"} from Discovery (${picked.map((c) => c.display_name).join(", ")}).`,
-      "New creators use current metrics — ask me to refresh their intelligence for updated data.",
-    ],
+    action,
     logSummary: `Added ${picked.length} ${descriptor || "creator"}${picked.length === 1 ? "" : "s"}`,
     removed: 0,
     added: picked.length,
@@ -421,14 +438,14 @@ async function replaceCreators(
   ];
   const toLabel = intent.toTier ?? intent.toCategory ?? "comparable";
   const fromLabel = intent.fromTier ?? "selected";
+  const action =
+    picked.length > 0
+      ? `replaced ${targets.length} ${fromLabel} creator${targets.length === 1 ? "" : "s"} (${targets.map((t) => t.displayName).join(", ")}) with ${picked.length} ${toLabel} creator${picked.length === 1 ? "" : "s"} (${picked.map((c) => c.display_name).join(", ")})`
+      : `removed ${targets.length} ${fromLabel} creator${targets.length === 1 ? "" : "s"} (${targets.map((t) => t.displayName).join(", ")}) — no matching ${toLabel} replacements were available in Discovery`;
   return commitDraftChanges(input, digest, changes, {
     intentKind: "replace_creators",
-    changeLines: [
-      `Removed ${targets.length} ${fromLabel} creator${targets.length === 1 ? "" : "s"} (${targets.map((t) => t.displayName).join(", ")}).`,
-      picked.length > 0
-        ? `Added ${picked.length} ${toLabel} creator${picked.length === 1 ? "" : "s"} (${picked.map((c) => c.display_name).join(", ")}).`
-        : `No matching ${toLabel} replacements were available in Discovery — the slate was re-optimized without them.`,
-    ],
+    action,
+    rationale: intent.higherEngagement ? "you asked for higher-engagement creators" : undefined,
     logSummary: `Replaced ${targets.length} ${fromLabel} with ${picked.length} ${toLabel}`,
     removed: targets.length,
     added: picked.length,
@@ -463,8 +480,8 @@ async function applyFactsEdit(
     ?.campaignScores;
 
   const summary = buildChangeSummary({
-    headline: "Campaign updated successfully.",
-    changes: [result.change, "Refreshed the studio, budget, and scores from the new inputs."],
+    action: toAction(result.change),
+    effects: ["the studio, budget allocation, and campaign scores were refreshed from the new inputs"],
     scoreBefore: digest.overallScore,
     scoresAfter,
   });
@@ -548,9 +565,8 @@ async function authorSectionEdit(
   }
 
   const summary = buildChangeSummary({
-    headline: "Campaign updated successfully.",
-    changes: [result.change, "Only this section changed — the rest of the campaign is untouched."],
-    scoreBefore: digest.overallScore,
+    action: toAction(result.change),
+    effects: ["only this section changed — the creators, budget, and every other section are untouched"],
   });
 
   const logged = appendChangeLog(result.campaignObject, {
@@ -615,12 +631,8 @@ async function retoneProposal(
   }
 
   const summary = buildChangeSummary({
-    headline: "Campaign updated successfully.",
-    changes: [
-      `Applied a more ${tone} tone across the proposal (${changes.length} section${changes.length === 1 ? "" : "s"}).`,
-      "Facts, creators, and budget are unchanged — only the writing was refined.",
-    ],
-    scoreBefore: digest.overallScore,
+    action: `rewrote the proposal in a more ${tone} tone across ${changes.length} section${changes.length === 1 ? "" : "s"}`,
+    effects: ["the facts, creators, and budget are unchanged — only the writing was refined"],
   });
 
   const logged = appendChangeLog(obj, {

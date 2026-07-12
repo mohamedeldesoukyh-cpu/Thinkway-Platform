@@ -7,6 +7,7 @@ import type { CreatorsSectionData } from "@/features/campaign-intelligence/types
 import {
   buildCampaignContextDigest,
   buildChangeSummary,
+  extractRationale,
   planRemovalChanges,
   renderChangeSummary,
   renderDigestForPrompt,
@@ -246,27 +247,51 @@ test("tool calls map to facts intents (budget, timeline, platforms)", () => {
   );
 });
 
-test("change summary renders transparent before/after block", () => {
-  const summary = buildChangeSummary({
-    headline: "Campaign updated successfully.",
-    changes: ["Removed all Celebrity creators."],
-    scoreBefore: 82,
-    scoresAfter: {
-      overall: 86,
-      brandFit: 0,
-      audienceMatch: 0,
-      reach: 0,
-      engagementForecast: 0,
-      budgetEfficiency: 0,
-      contentCoverage: 0,
-      risk: 0,
-      basis: [],
-      updatedAt: NOW,
-    },
-    creatorsRemoved: 2,
-  });
-  const md = renderChangeSummary(summary);
-  assert.match(md, /✅ Campaign updated successfully\./);
-  assert.match(md, /Overall Campaign Score: 82 → 86/);
-  assert.match(md, /Creators removed: 2/);
+function scoreSet(overall: number) {
+  return {
+    overall, brandFit: 0, audienceMatch: 0, reach: 0, engagementForecast: 0,
+    budgetEfficiency: 0, contentCoverage: 0, risk: 0, basis: [], updatedAt: NOW,
+  };
+}
+
+test("change summary explains what changed AND why, grounded in effects + score", () => {
+  const md = renderChangeSummary(
+    buildChangeSummary({
+      action: "removed the 2 Celebrity creators (Salma Dance, Nour Beats)",
+      rationale: "the client will handle them",
+      effects: ["the creator mix was rebalanced toward macro and mid-tier creators", "the budget was reallocated across the updated slate"],
+      scoreBefore: 84,
+      scoresAfter: scoreSet(84),
+    })
+  );
+  assert.match(md, /^I removed the 2 Celebrity creators \(Salma Dance, Nour Beats\) because the client will handle them\./);
+  assert.match(md, /creator mix was rebalanced toward macro and mid-tier creators/);
+  assert.match(md, /budget was reallocated/);
+  assert.match(md, /campaign score held steady at 84\/100/);
+});
+
+test("change summary reports a score change directionally", () => {
+  const up = renderChangeSummary(
+    buildChangeSummary({ action: "added 3 creators", effects: [], scoreBefore: 80, scoresAfter: scoreSet(86) })
+  );
+  assert.match(up, /score rose from 80 to 86\/100/);
+
+  const down = renderChangeSummary(
+    buildChangeSummary({ action: "removed 4 creators", effects: [], scoreBefore: 84, scoresAfter: scoreSet(79) })
+  );
+  assert.match(down, /score moved from 84 to 79\/100/);
+});
+
+test("change summary omits the reason clause when none was given", () => {
+  const md = renderChangeSummary(
+    buildChangeSummary({ action: "rewrote the strategy in a more premium tone", effects: ["only this section changed"] })
+  );
+  assert.match(md, /^I rewrote the strategy in a more premium tone\. Only this section changed\.$/);
+  assert.doesNotMatch(md, /because/);
+});
+
+test("extractRationale pulls the reason clause from the instruction", () => {
+  assert.equal(extractRationale("remove celebrities as the client will handle them"), "the client will handle them");
+  assert.equal(extractRationale("drop the macros because they're too expensive"), "they're too expensive");
+  assert.equal(extractRationale("remove the celebrities"), undefined);
 });

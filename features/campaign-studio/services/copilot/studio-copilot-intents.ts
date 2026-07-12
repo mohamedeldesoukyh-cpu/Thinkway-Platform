@@ -336,43 +336,86 @@ export function planRemovalChanges(targets: CampaignSlateEntry[]): StudioDraftCh
 // ---------------------------------------------------------------------------
 
 export type CampaignChangeSummary = {
-  headline: string;
-  changes: string[];
+  /** First-person past-tense action, e.g. "removed the 2 Celebrity creators". */
+  action: string;
+  /** The grounded reason, e.g. "the client will handle them". */
+  rationale?: string;
+  /** Downstream effects on the campaign, e.g. "the creator mix was rebalanced...". */
+  effects: string[];
   scoreBefore?: number;
   scoreAfter?: number;
-  creatorsRemoved: number;
-  creatorsAdded: number;
 };
 
 export function buildChangeSummary(input: {
-  headline: string;
-  changes: string[];
+  action: string;
+  rationale?: string;
+  effects?: string[];
   scoreBefore?: number;
   scoresAfter?: CampaignScoreSet;
-  creatorsRemoved?: number;
-  creatorsAdded?: number;
 }): CampaignChangeSummary {
   return {
-    headline: input.headline,
-    changes: input.changes,
+    action: input.action,
+    rationale: input.rationale,
+    effects: input.effects ?? [],
     scoreBefore: input.scoreBefore,
     scoreAfter: input.scoresAfter?.overall,
-    creatorsRemoved: input.creatorsRemoved ?? 0,
-    creatorsAdded: input.creatorsAdded ?? 0,
   };
 }
 
-/** Render the change summary as the markdown reply the chat shows. */
+/** Pull a grounded reason clause out of the user's instruction ("... because X"). */
+export function extractRationale(text?: string): string | undefined {
+  if (!text) return undefined;
+  const m = text.match(/\b(?:because|since|so that|as)\b\s+(.+)$/i);
+  if (!m?.[1]) return undefined;
+  const clause = m[1].trim().replace(/[.!?]+$/, "");
+  // Ignore trivially short or non-reason fragments.
+  if (clause.split(/\s+/).length < 2) return undefined;
+  return clause;
+}
+
+/** "toward macro and mid-tier creators" — the tiers the updated slate now leans on. */
+export function describeDominantTiers(campaignObject: CampaignObject): string {
+  const counts = tierCountsOf(resolveCampaignSlate(campaignObject));
+  const ranked = Object.entries(counts)
+    .filter(([tier]) => tier !== "Unclassified")
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([tier]) => tier.toLowerCase());
+  if (ranked.length === 0) return "across the remaining creators";
+  return `toward ${ranked.join(" and ")} creators`;
+}
+
+function scoreSentence(before?: number, after?: number): string | undefined {
+  if (after == null) return before == null ? undefined : undefined;
+  if (before == null) return `the overall campaign score is ${after}/100`;
+  if (Math.abs(after - before) <= 1) return `the campaign score held steady at ${after}/100`;
+  if (after > before) return `the campaign score rose from ${before} to ${after}/100`;
+  return `the campaign score moved from ${before} to ${after}/100`;
+}
+
+function joinClauses(clauses: string[]): string {
+  const parts = clauses.filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0]!;
+  if (parts.length === 2) return `${parts[0]}, and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
+}
+
+function capitalizeFirst(text: string): string {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
+/**
+ * Render the change as a strategist's explanation: what changed, WHY, and the
+ * grounded downstream effect on the campaign — never a bare changelog.
+ */
 export function renderChangeSummary(summary: CampaignChangeSummary): string {
-  const lines: string[] = [`✅ ${summary.headline}`, "", "Changes applied:"];
-  for (const change of summary.changes) lines.push(`- ${change}`);
-  if (summary.scoreBefore != null || summary.scoreAfter != null) {
-    lines.push("");
-    lines.push(
-      `Overall Campaign Score: ${summary.scoreBefore ?? "—"} → ${summary.scoreAfter ?? "—"}`
-    );
-  }
-  if (summary.creatorsRemoved > 0) lines.push(`Creators removed: ${summary.creatorsRemoved}`);
-  if (summary.creatorsAdded > 0) lines.push(`Creators added: ${summary.creatorsAdded}`);
-  return lines.join("\n");
+  const lead = `I ${summary.action}${summary.rationale ? ` because ${summary.rationale}` : ""}.`;
+
+  const tail = [...summary.effects];
+  const score = scoreSentence(summary.scoreBefore, summary.scoreAfter);
+  if (score) tail.push(score);
+
+  const second = tail.length > 0 ? `${capitalizeFirst(joinClauses(tail))}.` : "";
+  return [lead, second].filter(Boolean).join(" ");
 }
