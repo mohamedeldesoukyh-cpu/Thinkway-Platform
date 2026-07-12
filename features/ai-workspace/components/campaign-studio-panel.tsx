@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { SparklesIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { CampaignStudioHost } from "@/features/campaign-decision-workspace/components/campaign-studio-host";
@@ -77,15 +76,9 @@ export function CampaignStudioPanel({
         variant === "side" ? "border-l border-border/80 bg-muted/20" : "bg-background"
       )}
     >
-      <div className="border-b border-border/60 px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <SparklesIcon className="size-4 text-[#1D9E75]" />
-          <p className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
-            Live Campaign Studio
-          </p>
-        </div>
-        {onFocusSection ? (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {onFocusSection ? (
+        <div className="border-b border-border/60 px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] font-medium text-muted-foreground">Edit target:</span>
             {FOCUSABLE_SECTIONS.map((s) => {
               const active = focusedSectionId === s.id;
@@ -107,8 +100,8 @@ export function CampaignStudioPanel({
               );
             })}
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
         <CampaignStudioHost
           workflowId={display.workflowId}
