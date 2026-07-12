@@ -30,6 +30,7 @@ export type ImportTentativeScheduleFromPlanResult =
     }
   | { ok: false; message: string };
 
+/** Internal-only — used by Phase 3 service; quotation generation applies schedule during mapping. */
 export async function importTentativeScheduleFromPlanAction(
   input: ImportTentativeScheduleFromPlanInput
 ): Promise<ImportTentativeScheduleFromPlanResult> {
