@@ -53,3 +53,16 @@ export function appendQuotationTemplateParam(
     params.set("template", template);
   }
 }
+
+/** Bust browser/CDN caches when quotation header fields (e.g. status) change. */
+export function appendQuotationExportRevision(
+  params: URLSearchParams,
+  revision: string | null | undefined
+): void {
+  const trimmed = revision?.trim();
+  if (trimmed) {
+    params.set("v", trimmed);
+  } else {
+    params.delete("v");
+  }
+}

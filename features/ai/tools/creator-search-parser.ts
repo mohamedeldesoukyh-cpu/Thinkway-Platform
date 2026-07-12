@@ -9,18 +9,14 @@ import {
   type CreatorSearchFilters,
 } from "@/features/discovery/components/creator-search/creator-search-types";
 
+import { TIER_FILTER_RANGES } from "@/lib/creators/influencer-tier";
+
 /** Follower presets aligned with Discovery creator-search-filter-fields.tsx */
-const FOLLOWER_TIER_KEYWORDS: ReadonlyArray<{
-  id: string;
-  min: number;
-  max?: number;
-}> = [
-  { id: "nano", min: 1_000, max: 10_000 },
-  { id: "micro", min: 10_000, max: 50_000 },
-  { id: "mid", min: 50_000, max: 500_000 },
-  { id: "macro", min: 500_000, max: 1_000_000 },
-  { id: "mega", min: 1_000_000 },
-];
+const FOLLOWER_TIER_KEYWORDS = TIER_FILTER_RANGES.map((range) => ({
+  id: range.id,
+  min: range.min,
+  max: range.max,
+}));
 
 const CATEGORY_KEYWORDS = CREATOR_CATEGORY_KEYWORDS;
 

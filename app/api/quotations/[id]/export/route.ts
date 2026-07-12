@@ -24,6 +24,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 
+const EXPORT_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate",
+  Pragma: "no-cache",
+} as const;
+
+function withExportCacheHeaders(headers: Record<string, string>): Record<string, string> {
+  return { ...headers, ...EXPORT_CACHE_HEADERS };
+}
+
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
@@ -71,13 +80,13 @@ export async function GET(request: Request, context: RouteContext) {
     );
 
     if (format === "excel") {
-      const buffer = await buildQuotationExcel(detail);
+      const buffer = await buildQuotationExcel(enriched);
       return new NextResponse(buffer as unknown as BodyInit, {
-        headers: {
+        headers: withExportCacheHeaders({
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           "Content-Disposition": `attachment; filename="${baseName}.xlsx"`,
-        },
+        }),
       });
     }
 
@@ -86,10 +95,10 @@ export async function GET(request: Request, context: RouteContext) {
     if (format === "word") {
       // Word opens HTML content saved as .doc with full fidelity (no extra deps).
       return new NextResponse(html, {
-        headers: {
+        headers: withExportCacheHeaders({
           "Content-Type": "application/msword",
           "Content-Disposition": `attachment; filename="${baseName}${templateSuffix}.doc"`,
-        },
+        }),
       });
     }
 
@@ -102,19 +111,19 @@ export async function GET(request: Request, context: RouteContext) {
         );
       }
       return new NextResponse(pdfResult.buffer as unknown as BodyInit, {
-        headers: {
+        headers: withExportCacheHeaders({
           "Content-Type": "application/pdf",
           "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pdf"`,
-        },
+        }),
       });
     }
 
     // Default: preview (inline HTML)
     return new NextResponse(html, {
-      headers: {
+      headers: withExportCacheHeaders({
         "Content-Type": "text/html; charset=utf-8",
         "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.html"`,
-      },
+      }),
     });
   } catch (error) {
     const message =

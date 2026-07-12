@@ -10,6 +10,19 @@ import {
 } from "@/lib/reports/document/excel-report-builder";
 import { buildQuotationDocument } from "./quotation-document";
 
+function breakdownRows(
+  title: string,
+  rows: Array<{ label: string; count: number; sharePct: string }>
+): StyledDataRow[] {
+  return [
+    { kind: "emphasis", values: [title, "", ""] },
+    ...rows.map((row) => ({
+      kind: "data" as const,
+      values: [row.label, row.count, row.sharePct],
+    })),
+  ];
+}
+
 export async function buildQuotationExcel(
   detail: import("../types").QuotationDetail
 ): Promise<Buffer> {
@@ -112,5 +125,40 @@ export async function buildQuotationExcel(
     ],
   };
 
-  return buildStyledExcelBuffer([sheet]);
+  const summaryRows: StyledDataRow[] = [
+    { kind: "emphasis", values: ["Campaign mix insight", "", ""] },
+    ...doc.summary.insightBullets.map((bullet) => ({
+      kind: "data" as const,
+      values: [bullet, "", ""],
+    })),
+    ...breakdownRows("Creators by Category", doc.summary.categoryBreakdown),
+    ...breakdownRows("Creators by Tier", doc.summary.tierBreakdown),
+    {
+      kind: "total",
+      values: ["Total unique creators", doc.summary.creatorCount, "100.0%"],
+    },
+  ];
+
+  const summarySheet: StyledSheetConfig = {
+    name: "Creator Summary",
+    header: {
+      title: `Thinkway — Creator Summary ${doc.serial}`,
+      entityLine: `${doc.clientName} · ${doc.brandName}`,
+      meta: [
+        { label: "Quotation", value: doc.name },
+        { label: "Campaign", value: doc.campaignName },
+        { label: "Estimated reach", value: doc.summary.estimatedReach },
+        { label: "Estimated engagement", value: doc.summary.estimatedEngagement },
+      ],
+      generatedAt: new Date(),
+      notes: [
+        "Categories are counted once per creator. Creators with multiple category tags are included in each relevant category.",
+      ],
+    },
+    columnHeaders: [["Summary", "Creators", "Share"]],
+    rows: summaryRows,
+    columnFormats: ["text", "text", "text"],
+  };
+
+  return buildStyledExcelBuffer([sheet, summarySheet]);
 }

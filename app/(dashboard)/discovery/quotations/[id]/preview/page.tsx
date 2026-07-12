@@ -6,10 +6,15 @@ import { PageBackButton } from "@/components/navigation/page-back-button";
 import { QuotationPreviewDownloads } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationPreviewTemplateToggle } from "@/features/quotations/components/quotation-preview-template-toggle";
 import { quotationDetailPath } from "@/features/quotations/constants";
-import { resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
+import {
+  appendQuotationExportRevision,
+  resolveQuotationTemplate,
+} from "@/features/quotations/export/quotation-template";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/validation/uuid";
+
+export const dynamic = "force-dynamic";
 
 type QuotationPreviewPageProps = {
   params: Promise<{ id: string }>;
@@ -59,10 +64,12 @@ export default async function QuotationPreviewPage({
 
   const templateLabel = quotationTemplateLabel(template);
   const serial = detail.serial_number ?? "QT-PENDING";
-  const previewSrc =
-    template === "detailed"
-      ? `/api/quotations/${id}/export?format=preview`
-      : `/api/quotations/${id}/export?format=preview&template=${template}`;
+  const previewParams = new URLSearchParams({ format: "preview" });
+  if (template !== "detailed") {
+    previewParams.set("template", template);
+  }
+  appendQuotationExportRevision(previewParams, detail.updated_at);
+  const previewSrc = `/api/quotations/${id}/export?${previewParams.toString()}`;
 
   return (
     <DashboardShell
@@ -85,7 +92,11 @@ export default async function QuotationPreviewPage({
               />
             </Suspense>
           </div>
-          <QuotationPreviewDownloads quotationId={id} template={template} />
+          <QuotationPreviewDownloads
+            quotationId={id}
+            template={template}
+            exportRevision={detail.updated_at}
+          />
         </div>
       </div>
 

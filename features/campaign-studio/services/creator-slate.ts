@@ -1,3 +1,9 @@
+import {
+  canonicalTierLabel,
+  matchesInfluencerTier,
+  normalizeInfluencerTier,
+  type InfluencerTier,
+} from "@/lib/creators/influencer-tier";
 import { resolveCreatorTierLabel, type CreatorTierLabel } from "@/lib/creators/creator-tier";
 
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
@@ -23,10 +29,10 @@ export type SlateCompositionMeta = {
 /** Lowercased tier labels accepted per strategy-mix tier name. */
 const TIER_ALIASES: Record<string, string[]> = {
   celebrity: ["celebrity"],
-  mega: ["celebrity", "macro"],
+  mega: ["mega"],
   macro: ["macro"],
-  mid: ["mid-tier"],
-  "mid-tier": ["mid-tier"],
+  mid: ["mid"],
+  "mid-tier": ["mid"],
   micro: ["micro"],
   nano: ["nano"],
 };
@@ -44,26 +50,17 @@ export function creatorTierOf(creator: Pick<SearchCreatorCardItem, "followers">)
   return resolveCreatorTierLabel({ followers: creator.followers ?? 0 });
 }
 
-/** True when a follower-tier label satisfies a strategy-mix tier name (e.g. "Mid" → "Mid-Tier"). */
+/** True when a follower-tier label satisfies a strategy-mix tier name. */
 export function matchesTierLabel(mixTier: string, tierLabel: string): boolean {
-  const accepted = TIER_ALIASES[mixTier.trim().toLowerCase()] ?? [mixTier.trim().toLowerCase()];
-  return accepted.includes(tierLabel.trim().toLowerCase());
+  const mixKey = mixTier.trim().toLowerCase();
+  const accepted = TIER_ALIASES[mixKey] ?? [mixKey];
+  const normalizedLabel = normalizeInfluencerTier(tierLabel)?.toLowerCase() ?? tierLabel.trim().toLowerCase();
+  return accepted.includes(normalizedLabel) || matchesInfluencerTier(mixTier, tierLabel);
 }
-
-const CANONICAL_TIER_LABELS: Record<string, string> = {
-  celebrity: "Celebrity",
-  mega: "Celebrity",
-  macro: "Macro",
-  mid: "Mid-Tier",
-  "mid-tier": "Mid-Tier",
-  micro: "Micro",
-  nano: "Nano",
-};
 
 /** Canonical display label for any tier/role spelling; passes through unknown roles. */
 export function normalizeTierLabel(tier: string): string {
-  const key = tier.trim().toLowerCase();
-  return CANONICAL_TIER_LABELS[key] ?? tier.trim();
+  return canonicalTierLabel(tier);
 }
 
 /** Largest-remainder allocation of slate slots per tier percent. */
@@ -240,3 +237,5 @@ export function buildCreatorContentIdea(
   }
   return GENERIC_CONCEPTS[fallbackIndex % GENERIC_CONCEPTS.length]!;
 }
+
+export type { InfluencerTier };

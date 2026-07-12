@@ -15,7 +15,9 @@ import {
   computeQuotationRowComputed,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
+import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
 import { quotationCreatorDuplicateKey } from "@/features/quotations/export/quotation-export-utils";
+import { computeReachForecast } from "@/lib/performance/reach-forecast-engine";
 import type { CreatorRecentPublication } from "@/lib/creators/types";
 function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
   return {
@@ -223,9 +225,44 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes(">Option<"));
   assert.ok(html.includes("creator-quote-block"));
   assert.ok(html.includes("creator-name"));
+  assert.ok(html.includes("Campaign mix insight"));
+  assert.ok(html.includes("Creators by Category"));
+  assert.ok(html.includes("summary-overview-page"), "Summary overview uses dedicated page-2 class");
+  assert.ok(html.includes("FULL INFLUENCER BREAKDOWN BY TIER"), "Tier breakdown title present");
+  assert.ok(html.includes("tier-breakdown-table"), "Tier breakdown table rendered");
+  assert.ok(html.includes(">Handle<"), "Tier breakdown includes Handle column");
+  assert.ok(!html.includes(">EG Audience %<"), "Tier breakdown must not include EG Audience column");
+  assert.ok(html.includes("tier-breakdown-grand-total"), "Tier breakdown grand total rendered");
+  const coverEnd = html.indexOf("</section>");
+  const categoryPos = html.indexOf("Creators by Category");
+  const tierPos = html.indexOf("FULL INFLUENCER BREAKDOWN BY TIER");
+  const commercialPos = html.indexOf("Commercial Summary");
+  const termsPos = html.indexOf("Terms &amp; Conditions");
+  assert.ok(
+    categoryPos > coverEnd,
+    "Category summary appears after cover page"
+  );
+  assert.ok(
+    tierPos > categoryPos,
+    "Tier breakdown appears after category summary table"
+  );
+  assert.ok(
+    commercialPos < 0 || tierPos < commercialPos,
+    "Tier breakdown appears before commercial section"
+  );
+  assert.ok(
+    categoryPos < termsPos,
+    "Category summary appears before terms"
+  );
   assert.ok(!html.includes("<th>Creator</th>"), "Creator belongs in group header, not table columns");
   assert.ok(html.includes("platform-cell"), "Platform icons column appears in client option table");
-  assert.ok(!html.includes(">Followers<"), "Followers column must not appear in client option table");
+  const commercialSectionStart = html.indexOf('id="section-commercial"');
+  const commercialSectionHtml =
+    commercialSectionStart >= 0 ? html.slice(commercialSectionStart) : html;
+  assert.ok(
+    !commercialSectionHtml.includes(">Followers<"),
+    "Followers column must not appear in client option table"
+  );
   assert.ok(!html.includes("Agency fee (AF)"), "Per-line AF must not appear in client line table");
   assert.ok(!html.includes(">AF %<"), "Per-line AF % must not appear in client line table");
   assert.ok(html.includes('class="money"'));
@@ -245,6 +282,25 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     !summaryHtml.includes(QUOTATION_CLIENT_LABELS.totalAgencyMargin),
     "Agency margin must not appear in detailed client export"
   );
+}
+
+{
+  const sentDetail = mockDetail({
+    status: "sent",
+    version: "v2.0",
+    serial_number: "QT-2026-0009-V2",
+    issue_date: "2026-07-01",
+    validity_date: "2026-07-24",
+    is_expired: false,
+    valid_days_remaining: 13,
+  });
+  const doc = buildQuotationDocument(sentDetail);
+  assert.equal(doc.status, "sent");
+  assert.equal(doc.statusLabel, "Sent");
+  const html = buildQuotationHtml(doc);
+  assert.ok(html.includes(">Sent</span>"), "Cover page shows Sent status from quotations.status");
+  assert.ok(html.includes("v2.0 ·"), "Cover page includes document version label");
+  assert.ok(!html.includes(">Draft</span>"), "Cover page must not show Draft when status is sent");
 }
 
 {
@@ -600,14 +656,40 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const item = mockItem({
     creator_categories: ["Beauty", "Lifestyle"],
   });
-  const detail = mockDetail({ items: [item] });
+  const detail = mockDetail({
+    items: [
+      item,
+      mockItem({
+        id: "item-2",
+        influencer_id: "inf-2",
+        unified_id: "inf:inf-2",
+        creator_name: "Creator B",
+        handle: "@creatorb",
+        creator_categories: ["Beauty, Sport"],
+        sort_order: 1,
+      }),
+    ],
+  });
   const detailedDoc = buildQuotationDocument(detail, { template: "detailed" });
   assert.deepEqual(detailedDoc.creatorGroups[0]?.categories, ["Beauty", "Lifestyle"]);
+  assert.deepEqual(
+    detailedDoc.summary.categoryBreakdown.map((row) => [row.label, row.count]),
+    [
+      ["Beauty", 2],
+      ["Lifestyle", 1],
+      ["Sports", 1],
+    ]
+  );
+  assert.ok(
+    detailedDoc.summary.insightBullets.some((bullet) => bullet.includes("Category mix"))
+  );
 
   const detailedHtml = buildQuotationHtml(detailedDoc);
   assert.ok(detailedHtml.includes("creator-category-chip"));
   assert.ok(detailedHtml.includes("Beauty"));
   assert.ok(detailedHtml.includes("Lifestyle"));
+  assert.ok(detailedHtml.includes("Sport"));
+  assert.ok(detailedHtml.includes("2 creators"));
 
   const showcaseHtml = buildQuotationHtml(
     buildQuotationDocument(detail, { template: "showcase" })
@@ -632,6 +714,81 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   );
   assert.ok(showcaseLumpHtml.includes("Beauty"));
   assert.ok(showcaseLumpHtml.includes("Lifestyle"));
+}
+
+{
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "item-1",
+        influencer_id: "inf-1",
+        creator_categories: ["Beauty", "Lifestyle"],
+        option_number: 1,
+      }),
+      mockItem({
+        id: "item-2",
+        influencer_id: "inf-1",
+        creator_categories: ["Beauty", "Lifestyle"],
+        option_number: 2,
+        sort_order: 1,
+      }),
+      mockItem({
+        id: "item-3",
+        influencer_id: "inf-2",
+        creator_categories: ["Recipe creator"],
+        sort_order: 2,
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail, { template: "detailed" });
+  assert.equal(doc.summary.creatorCount, 2, "Two unique creators");
+  assert.deepEqual(
+    doc.summary.categoryBreakdown.map((row) => [row.label, row.count]),
+    [
+      ["Beauty", 1],
+      ["Food", 1],
+      ["Lifestyle", 1],
+    ],
+    "Category summary counts unique creators under main categories"
+  );
+}
+
+{
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        creator_categories: ["Skincare", "Makeup"],
+      }),
+      mockItem({
+        id: "item-2",
+        influencer_id: "inf-2",
+        creator_categories: ["Housewives", "Lifestyle"],
+        sort_order: 1,
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  assert.deepEqual(
+    doc.summary.categoryBreakdown.map((row) => [row.label, row.count]),
+    [
+      ["Beauty", 1],
+      ["Lifestyle", 1],
+      ["Parenting", 1],
+    ]
+  );
+  const tierRows = doc.summary.fullTierBreakdown.sections.flatMap(
+    (section) => section.creators
+  );
+  assert.equal(
+    tierRows.find((row) => row.category === "Beauty")?.category,
+    "Beauty",
+    "Skincare and Makeup roll up to Beauty in tier breakdown"
+  );
+  assert.equal(
+    tierRows.find((row) => row.category.includes("Parenting"))?.category,
+    "Lifestyle, Parenting",
+    "Tier row shows comma-separated main categories matching category summary buckets"
+  );
 }
 
 {
@@ -664,6 +821,353 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(showcaseHtml.includes('class="showcase-pub-play"'), "Video shots render play overlay");
   const playCount = (showcaseHtml.match(/class="showcase-pub-play"/g) ?? []).length;
   assert.equal(playCount, 1, "Only video publications get a play overlay");
+}
+
+{
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "item-1",
+        creator_name: "Noura",
+        handle: "noura.eg",
+        creator_categories: [],
+        followers: 120_000,
+        country_code: "EG",
+      }),
+      mockItem({
+        id: "item-2",
+        influencer_id: "inf-2",
+        creator_name: "Layla",
+        handle: "layla_kw",
+        creator_categories: [],
+        followers: 80_000,
+        country_code: "KW",
+        sort_order: 1,
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail, { template: "detailed" });
+  assert.ok(
+    !doc.summary.categoryBreakdown.some((row) => row.label === "Uncategorized"),
+    "Handle/name-only creators should not appear as Uncategorized"
+  );
+  assert.deepEqual(
+    doc.summary.categoryBreakdown.map((row) => row.label),
+    ["Lifestyle"],
+    "Thin-profile MENA creators should fall back to Lifestyle"
+  );
+}
+
+{
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "item-1",
+        influencer_id: "inf-1",
+        creator_categories: [],
+        option_number: 1,
+      }),
+      mockItem({
+        id: "item-2",
+        influencer_id: "inf-1",
+        creator_categories: ["Recipe creator"],
+        option_number: 2,
+        sort_order: 1,
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  assert.ok(
+    doc.creatorGroups[0]?.categories.includes("Recipe creator"),
+    "Creator group should merge categories across options"
+  );
+  assert.deepEqual(
+    doc.summary.categoryBreakdown
+      .map((row) => [row.label, row.count] as const)
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    [
+      ["Food", 1],
+      ["Lifestyle", 1],
+    ],
+    "Merged option categories should roll up in summary"
+  );
+  const tierRow = doc.summary.fullTierBreakdown.sections
+    .flatMap((section) => section.creators)
+    .find((row) => row.category.includes("Food"));
+  assert.equal(
+    tierRow?.category,
+    "Food, Lifestyle",
+    "Tier row merges categories across options like category summary"
+  );
+}
+
+{
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "item-1",
+        influencer_id: "inf-1",
+        handle: "foodmom",
+        creator_categories: ["Recipe creator", "Housewives"],
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  assert.deepEqual(
+    doc.summary.categoryBreakdown.map((row) => [row.label, row.count]),
+    [
+      ["Food", 1],
+      ["Parenting", 1],
+    ],
+    "Food+Parenting creator counts in both category buckets"
+  );
+  const tierRow = doc.summary.fullTierBreakdown.sections
+    .flatMap((section) => section.creators)[0];
+  assert.equal(
+    tierRow?.category,
+    "Food, Parenting",
+    "Food+Parenting creator shows same mains in tier row"
+  );
+}
+
+{
+  const detail = mockDetail({
+    campaign_name: "Tuna Dolphin Delta",
+    items: [
+      mockItem({
+        id: "item-mega",
+        influencer_id: "inf-mega",
+        handle: "dr.fitn3ss",
+        platform: "instagram",
+        followers: 5_500_000,
+        engagement_rate: 0.05,
+        creator_categories: ["Fitness"],
+      }),
+      mockItem({
+        id: "item-macro",
+        influencer_id: "inf-macro",
+        handle: "menna_tawfek",
+        platform: "instagram",
+        followers: 1_200_000,
+        engagement_rate: 3.51,
+        creator_categories: ["Recipe creator"],
+        sort_order: 1,
+      }),
+      mockItem({
+        id: "item-mid",
+        influencer_id: "inf-mid",
+        handle: "hebaelsopkey",
+        platform: "instagram",
+        followers: 124_000,
+        engagement_rate: 4.01,
+        creator_categories: ["Recipe creator"],
+        sort_order: 2,
+      }),
+      mockItem({
+        id: "item-micro",
+        influencer_id: "inf-micro",
+        handle: "withpassanteto",
+        platform: "instagram",
+        followers: 35_000,
+        engagement_rate: 8.43,
+        creator_categories: ["Housewives"],
+        sort_order: 3,
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  assert.equal(doc.summary.fullTierBreakdown.sections.length, 4);
+  assert.equal(doc.summary.fullTierBreakdown.sections[0]?.sectionLabel, "CELEBRITY");
+  assert.equal(doc.summary.fullTierBreakdown.sections[1]?.sectionLabel, "MEGA");
+  assert.equal(doc.summary.fullTierBreakdown.sections[2]?.sectionLabel, "MID");
+  assert.equal(doc.summary.fullTierBreakdown.sections[3]?.sectionLabel, "MICRO");
+  assert.equal(doc.summary.fullTierBreakdown.sections[0]?.creators[0]?.handle, "dr.fitn3ss");
+  assert.equal(
+    doc.summary.fullTierBreakdown.sections[0]?.creators[0]?.category,
+    "Fitness",
+    "Tier row category uses main category rollup"
+  );
+  assert.equal(
+    doc.summary.fullTierBreakdown.sections[1]?.creators[0]?.category,
+    "Food",
+    "Recipe creator rolls up to Food in tier breakdown"
+  );
+  assert.equal(
+    doc.summary.fullTierBreakdown.sections[3]?.creators[0]?.category,
+    "Parenting",
+    "Housewives rolls up to Parenting in tier breakdown"
+  );
+  assert.ok(doc.summary.fullTierBreakdown.title.includes("TUNA DOLPHIN DELTA"));
+
+  const html = buildQuotationHtml(doc);
+  assert.ok(html.includes("tier-breakdown-header"));
+  assert.ok(html.includes("CELEBRITY"));
+  assert.ok(html.includes("MEGA"));
+  assert.ok(html.includes("MID"));
+  assert.ok(html.includes("MICRO"));
+  assert.ok(html.includes("dr.fitn3ss"));
+  assert.ok(html.includes("Subtotal: 1 influencer"));
+  assert.ok(html.includes("GRAND TOTAL | 4 Influencers"));
+}
+
+{
+  const followers = 639_850;
+  const platform = "instagram";
+  const expectedReach = computeReachForecast({ followers, platform }).forecastReach;
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "item-1",
+        influencer_id: "inf-hgabr",
+        handle: "hgabr",
+        platform: null,
+        followers: null,
+        engagement_rate: null,
+        option_number: 1,
+      }),
+      mockItem({
+        id: "item-2",
+        influencer_id: "inf-hgabr",
+        handle: "hgabr",
+        platform,
+        followers,
+        engagement_rate: 2.15,
+        option_number: 2,
+        sort_order: 1,
+      }),
+      mockItem({
+        id: "item-3",
+        influencer_id: "inf-radwa",
+        handle: "radwaadeeel",
+        platform: null,
+        followers: null,
+        option_number: 1,
+        sort_order: 2,
+      }),
+      mockItem({
+        id: "item-4",
+        influencer_id: "inf-radwa",
+        handle: "radwaadeeel",
+        creator_profile_source: {
+          displayName: "radwaadeeel",
+          platform: "instagram",
+          handle: "radwaadeeel",
+          profile_url: "https://www.instagram.com/radwaadeeel/",
+        },
+        platform: "instagram",
+        followers: 210_000,
+        engagement_rate: 4.2,
+        option_number: 2,
+        sort_order: 3,
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  const tierRows = doc.summary.fullTierBreakdown.sections.flatMap(
+    (section) => section.creators
+  );
+
+  const hgabrRow = tierRows.find((row) => row.handle === "hgabr");
+  assert.equal(hgabrRow?.platform, "Instagram", "Platform merges from later option");
+  assert.equal(
+    hgabrRow?.estimatedReach,
+    expectedReach != null ? formatCreatorCount(expectedReach) : "—",
+    "Est. reach uses merged followers and platform"
+  );
+
+  const radwaRow = tierRows.find((row) => row.handle === "radwaadeeel");
+  assert.equal(radwaRow?.platform, "Instagram", "Platform resolves from enriched option");
+  assert.notEqual(radwaRow?.estimatedReach, "—", "Est. reach should not be empty when followers exist");
+}
+
+{
+  const followers = 500_000;
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "item-hgabr",
+        influencer_id: "inf-hgabr",
+        handle: "hgabr",
+        platform: null,
+        followers,
+        engagement_rate: 2.1,
+        creator_profile_source: {
+          displayName: "hgabr",
+          avatarUrl: null,
+          platform: null,
+          linkedPlatforms: ["instagram", "tiktok"],
+          handle: "hgabr",
+          profile_url: "https://www.instagram.com/hgabr/",
+        },
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  const row = doc.summary.fullTierBreakdown.sections
+    .flatMap((section) => section.creators)
+    .find((entry) => entry.handle === "hgabr");
+  assert.equal(row?.platform, "Instagram", "Multi-platform creators prefer Instagram in tier export");
+  assert.notEqual(row?.estimatedReach, "—", "Est. reach resolves when followers exist without line platform");
+}
+
+{
+  const followers = 180_000;
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "item-abeer",
+        handle: "abeer_kittchen",
+        platform: null,
+        followers,
+        profile_url: "https://www.instagram.com/abeer_kittchen/",
+        country_code: "EG",
+        creator_profile_source: {
+          displayName: "abeer_kittchen",
+          avatarUrl: null,
+          platform: null,
+          handle: "abeer_kittchen",
+          profile_url: "https://www.instagram.com/abeer_kittchen/",
+        },
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  const row = doc.summary.fullTierBreakdown.sections
+    .flatMap((section) => section.creators)
+    .find((entry) => entry.handle === "abeer_kittchen");
+  assert.equal(row?.platform, "Instagram", "Profile URL infers platform for handle-only lines");
+  assert.notEqual(row?.estimatedReach, "—", "Est. reach uses inferred Instagram platform");
+}
+
+{
+  const followers = 42_000;
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "item-passant",
+        handle: "withpassanteto",
+        platform: null,
+        followers,
+        country_code: "EG",
+        creator_profile_source: {
+          displayName: "withpassanteto",
+          avatarUrl: null,
+          platform: null,
+          handle: "withpassanteto",
+        },
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  const row = doc.summary.fullTierBreakdown.sections
+    .flatMap((section) => section.creators)
+    .find((entry) => entry.handle === "withpassanteto");
+  assert.equal(
+    row?.platform,
+    "Instagram",
+    "MENA handle-only creators default to Instagram in tier export"
+  );
+  assert.notEqual(row?.estimatedReach, "—", "Est. reach defaults platform to Instagram when followers exist");
 }
 
 console.log("quotation-document.test.ts passed");

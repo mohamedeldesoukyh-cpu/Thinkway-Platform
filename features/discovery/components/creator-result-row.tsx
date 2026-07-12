@@ -16,10 +16,11 @@ import { resolveCreatorDiscoverySource } from "@/features/discovery/components/c
 import { DiscoveryCreatorActionsMenu } from "@/features/discovery/components/discovery-creator-actions-menu";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { filterPlatformsForDisplay } from "@/lib/creators/creator-centric";
 import {
-  audienceInterestListFromCreator,
-  filterPlatformsForDisplay,
-} from "@/lib/creators/creator-centric";
+  DISCOVERY_CREATOR_CATEGORY_CHIP_LIMIT,
+  resolveDiscoveryCreatorDisplayCategories,
+} from "@/lib/creators/creator-display-categories";
 import { resolvePrimaryProfileUrl } from "@/lib/discovery/profile-url";
 import { cn } from "@/lib/utils";
 
@@ -76,13 +77,15 @@ export function InterestChips({
   interests,
   variant = "default",
   maxVisible = 3,
+  emptyLabel = "No interests tagged",
 }: {
   interests: string[];
   variant?: "default" | "compact";
   maxVisible?: number;
+  emptyLabel?: string;
 }) {
   if (interests.length === 0) {
-    return <span className="text-[11px] text-muted-foreground/60">No interests tagged</span>;
+    return <span className="text-[11px] text-muted-foreground/60">{emptyLabel}</span>;
   }
 
   const visible = interests.slice(0, maxVisible);
@@ -268,7 +271,7 @@ export const CreatorResultRow = memo(function CreatorResultRow({
   const profileUrl = resolvePrimaryProfileUrl(creator.platforms);
   const displayCountry = audienceCountryLabel(creator);
   const hasCountryCode = Boolean(normalizeCountryCode(displayCountry));
-  const audienceInterests = audienceInterestListFromCreator(creator);
+  const displayCategories = resolveDiscoveryCreatorDisplayCategories(creator);
   const safety = brandSafetyMeta(creator.authenticity_score);
   const relevanceScore = showCampaignRelevance ? (creator.campaign_relevance_score ?? null) : null;
   const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
@@ -346,7 +349,10 @@ export const CreatorResultRow = memo(function CreatorResultRow({
           <span>{displayCountry}</span>
         </div>
         <div className="min-w-0 self-center">
-          <InterestChips interests={audienceInterests.slice(0, 3)} />
+          <InterestChips
+            interests={displayCategories.slice(0, DISCOVERY_CREATOR_CATEGORY_CHIP_LIMIT)}
+            emptyLabel="No categories"
+          />
         </div>
         <div className="self-center text-right text-[12px] font-semibold tabular-nums text-foreground">
           {avgEr}
@@ -407,7 +413,10 @@ export const CreatorResultRow = memo(function CreatorResultRow({
               {displayCountry !== "—" ? displayCountry : ""}
             </div>
           ) : null}
-          <InterestChips interests={audienceInterests.slice(0, 4)} />
+          <InterestChips
+            interests={displayCategories.slice(0, 4)}
+            emptyLabel="No categories"
+          />
           <div className="flex items-center justify-between gap-3">
             {!isShortlist && showCampaignRelevance ? (
               <RelevanceScore score={relevanceScore} />

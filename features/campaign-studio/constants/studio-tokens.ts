@@ -134,6 +134,7 @@ export const STUDIO_CLASSES = {
 
 export const STUDIO_TIER_COLORS: Record<string, string> = {
   Celebrity: "#D97706",
+  Mega: "#EA580C",
   Macro: "#0057FF",
   Micro: "#0C9D57",
   Mid: "#7C3AED",

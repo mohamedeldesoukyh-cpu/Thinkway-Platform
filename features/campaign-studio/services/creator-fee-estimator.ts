@@ -49,6 +49,7 @@ const TIER_BENCHMARK_KEY: Record<string, keyof typeof EGP_POST_BENCHMARKS> = {
   "mid-tier": "mid",
   mid: "mid",
   macro: "macro",
+  mega: "mega",
   celebrity: "celebrity",
   unknown: "mid",
 };

@@ -1,18 +1,22 @@
 import { StatusBadge } from "@/components/shared/status/status-badge";
 import { resolveStatusTone } from "@/components/shared/status/status-utils";
-import { QUOTATION_STATUS_LABELS } from "@/features/quotations/constants";
+import { resolveQuotationStatusLabel } from "@/features/quotations/constants";
 import type { QuotationStatus } from "@/types/database";
 
 export function QuotationStatusBadge({
   status,
   className,
+  validityDate,
+  isExpired,
 }: {
   status: QuotationStatus;
   className?: string;
+  validityDate?: string | null;
+  isExpired?: boolean;
 }) {
   return (
     <StatusBadge
-      label={QUOTATION_STATUS_LABELS[status]}
+      label={resolveQuotationStatusLabel({ status, validityDate, isExpired })}
       tone={resolveStatusTone("quotation", status)}
       appearance="ghost"
       className={className}

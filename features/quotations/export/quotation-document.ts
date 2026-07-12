@@ -4,7 +4,7 @@
 import { formatDualCurrency, REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
 import {
   QUOTATION_CLIENT_LABELS,
-  QUOTATION_STATUS_LABELS,
+  resolveQuotationStatusLabel,
 } from "@/features/quotations/constants";
 import { parseQuotationTermsText } from "@/features/quotations/quotation-default-terms";
 import { gpHealthExportColor } from "@/features/quotations/quotation-gp-health";
@@ -14,6 +14,15 @@ import {
   isQuotationExpired,
 } from "@/features/quotations/quotation-validity";
 import type { QuotationDetail, QuotationItemRow } from "../types";
+import type { CreatorTierLabel } from "@/lib/creators/creator-tier";
+import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
+import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
+import { computeReachForecast } from "@/lib/performance/reach-forecast-engine";
+import {
+  buildQuotationMainCategoryBreakdown,
+  formatQuotationMainCategoryLabels,
+  resolveQuotationCreatorMainCategories,
+} from "@/lib/quotations/quotation-creator-categories";
 import {
   countUniqueQuotationCreators,
   exportItemPlatformIcons,
@@ -23,6 +32,10 @@ import {
   groupQuotationExportItems,
   optionNumberLabel,
   resolveExportCreatorProfile,
+  resolveExportGroupEngagementRate,
+  resolveExportGroupFollowers,
+  resolveExportGroupPlatform,
+  resolveExportItemCreatorCategories,
   type QuotationExportItem,
 } from "./quotation-export-utils";
 import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
@@ -98,6 +111,45 @@ export type QuotationDocumentKpi = {
   valueColor?: string;
 };
 
+export type QuotationDocumentBreakdown = {
+  label: string;
+  count: number;
+  sharePct: string;
+};
+
+export type QuotationDocumentTierRow = {
+  handle: string;
+  platform: string;
+  followers: string;
+  category: string;
+  engagementRate: string;
+  estimatedReach: string;
+};
+
+export type QuotationDocumentTierSection = {
+  tier: CreatorTierLabel;
+  sectionLabel: string;
+  profileCount: number;
+  totalFollowersLabel: string;
+  estimatedReachLabel: string;
+  reachSharePct: string;
+  avgEngagementRate: string;
+  creators: QuotationDocumentTierRow[];
+  subtotalLabel: string;
+  subtotalFollowers: string;
+  subtotalEngagementRate: string;
+  subtotalEstimatedReach: string;
+};
+
+export type QuotationDocumentFullTierBreakdown = {
+  title: string;
+  sections: QuotationDocumentTierSection[];
+  grandTotalLabel: string;
+  grandTotalFollowers: string;
+  grandTotalEstimatedReach: string;
+  grandTotalEngagementRate: string;
+};
+
 export type QuotationDocument = {
   audience: QuotationDocumentAudience;
   template: QuotationTemplateVariant;
@@ -134,6 +186,10 @@ export type QuotationDocument = {
     creatorCount: number;
     estimatedReach: string;
     estimatedEngagement: string;
+    categoryBreakdown: QuotationDocumentBreakdown[];
+    tierBreakdown: QuotationDocumentBreakdown[];
+    fullTierBreakdown: QuotationDocumentFullTierBreakdown;
+    insightBullets: string[];
   };
   notes: string | null;
   termsSections: Array<{ title: string; body: string }>;
@@ -147,6 +203,240 @@ const num = (n: number, decimals = 0) =>
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(Number.isFinite(n) ? n : 0);
+
+const TIER_SECTION_ORDER: CreatorTierLabel[] = [
+  "Celebrity",
+  "Mega",
+  "Macro",
+  "Mid",
+  "Micro",
+  "Nano",
+  "Unknown",
+];
+
+const TIER_SECTION_LABEL: Record<CreatorTierLabel, string> = {
+  Celebrity: "CELEBRITY",
+  Mega: "MEGA",
+  Macro: "MACRO",
+  Mid: "MID",
+  Micro: "MICRO",
+  Nano: "NANO",
+  Unknown: "UNKNOWN",
+};
+
+function exportHandleLabel(handle: string | null | undefined): string {
+  const trimmed = handle?.trim().replace(/^@/, "") ?? "";
+  return trimmed || "—";
+}
+
+function exportPlatformLabel(platform: string | null | undefined): string {
+  const trimmed = platform?.trim();
+  if (!trimmed) return "—";
+  const key = trimmed.toLowerCase();
+  if (key === "instagram") return "Instagram";
+  if (key === "tiktok") return "TikTok";
+  if (key === "facebook") return "Facebook";
+  if (key === "youtube") return "YouTube";
+  if (key === "snapchat") return "Snapchat";
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+function exportEngagementRateLabel(rate: number | null | undefined): string {
+  if (rate == null || !Number.isFinite(rate)) return "—";
+  return `${num(rate, 2)}%`;
+}
+
+function exportGroupEstimatedReach(input: {
+  followers: number | null;
+  platform: string | null;
+}): number | null {
+  const platform =
+    input.platform ?? (input.followers != null ? "instagram" : null);
+  return computeReachForecast({
+    followers: input.followers,
+    platform,
+  }).forecastReach;
+}
+
+function averageFinite(values: number[]): number | null {
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function buildQuotationFullTierBreakdown(input: {
+  groups: ReturnType<typeof groupQuotationExportItems>;
+  campaignName: string;
+}): QuotationDocumentFullTierBreakdown {
+  type CreatorEntry = {
+    tier: CreatorTierLabel;
+    handle: string;
+    platform: string;
+    followers: number | null;
+    followersLabel: string;
+    category: string;
+    engagementRate: number | null;
+    engagementRateLabel: string;
+    estimatedReach: number | null;
+    estimatedReachLabel: string;
+  };
+
+  const entries: CreatorEntry[] = input.groups.map((group) => {
+    const headerItem = group.items[0]!;
+    const platform = resolveExportGroupPlatform(group.items);
+    const followers = resolveExportGroupFollowers(group.items);
+    const engagementRate = resolveExportGroupEngagementRate(group.items, followers);
+    const tier = resolveCreatorTierLabel({ followers });
+    const estimatedReach = exportGroupEstimatedReach({ followers, platform });
+    const mainCategories = resolveQuotationCreatorMainCategories(
+      mergeCreatorGroupCategories(group.items)
+    );
+
+    return {
+      tier,
+      handle: exportHandleLabel(headerItem.handle),
+      platform: exportPlatformLabel(platform),
+      followers,
+      followersLabel:
+        followers != null ? formatCreatorCount(followers) : "—",
+      category: formatQuotationMainCategoryLabels(mainCategories),
+      engagementRate,
+      engagementRateLabel: exportEngagementRateLabel(engagementRate),
+      estimatedReach,
+      estimatedReachLabel:
+        estimatedReach != null ? formatCreatorCount(estimatedReach) : "—",
+    };
+  });
+
+  const totalEstimatedReach = entries.reduce(
+    (sum, entry) => sum + (entry.estimatedReach ?? 0),
+    0
+  );
+
+  const sections: QuotationDocumentTierSection[] = TIER_SECTION_ORDER.flatMap(
+    (tier) => {
+      const creators = entries
+        .filter((entry) => entry.tier === tier)
+        .sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0));
+
+      if (!creators.length) return [];
+
+      const totalFollowers = creators.reduce(
+        (sum, entry) => sum + (entry.followers ?? 0),
+        0
+      );
+      const sectionReach = creators.reduce(
+        (sum, entry) => sum + (entry.estimatedReach ?? 0),
+        0
+      );
+      const engagementRates = creators
+        .map((entry) => entry.engagementRate)
+        .filter((value): value is number => value != null && Number.isFinite(value));
+      const avgEr = averageFinite(engagementRates);
+
+      return [
+        {
+          tier,
+          sectionLabel: TIER_SECTION_LABEL[tier],
+          profileCount: creators.length,
+          totalFollowersLabel: formatCreatorCount(totalFollowers),
+          estimatedReachLabel: formatCreatorCount(sectionReach),
+          reachSharePct:
+            totalEstimatedReach > 0
+              ? `${num((sectionReach / totalEstimatedReach) * 100, 1)}%`
+              : "0.0%",
+          avgEngagementRate: exportEngagementRateLabel(avgEr),
+          creators: creators.map((entry) => ({
+            handle: entry.handle,
+            platform: entry.platform,
+            followers: entry.followersLabel,
+            category: entry.category,
+            engagementRate: entry.engagementRateLabel,
+            estimatedReach: entry.estimatedReachLabel,
+          })),
+          subtotalLabel: `Subtotal: ${creators.length} influencer${creators.length === 1 ? "" : "s"}`,
+          subtotalFollowers: formatCreatorCount(totalFollowers),
+          subtotalEngagementRate: exportEngagementRateLabel(avgEr),
+          subtotalEstimatedReach: formatCreatorCount(sectionReach),
+        },
+      ];
+    }
+  );
+
+  const grandTotalFollowers = entries.reduce(
+    (sum, entry) => sum + (entry.followers ?? 0),
+    0
+  );
+  const grandTotalEngagementRates = entries
+    .map((entry) => entry.engagementRate)
+    .filter((value): value is number => value != null && Number.isFinite(value));
+  const grandTotalAvgEr = averageFinite(grandTotalEngagementRates);
+  const campaignLabel =
+    input.campaignName.trim() && input.campaignName !== "—"
+      ? input.campaignName.trim()
+      : "Campaign";
+
+  return {
+    title: `${campaignLabel.toUpperCase()} | FULL INFLUENCER BREAKDOWN BY TIER`,
+    sections,
+    grandTotalLabel: `GRAND TOTAL | ${entries.length} Influencer${entries.length === 1 ? "" : "s"}`,
+    grandTotalFollowers: formatCreatorCount(grandTotalFollowers),
+    grandTotalEstimatedReach: formatCreatorCount(totalEstimatedReach),
+    grandTotalEngagementRate: exportEngagementRateLabel(grandTotalAvgEr),
+  };
+}
+
+function buildBreakdown(
+  entries: string[],
+  totalCreators: number
+): QuotationDocumentBreakdown[] {
+  const counts = new Map<string, number>();
+  for (const entry of entries) {
+    const label = entry.trim() || "Uncategorized";
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .map(([label, count]) => ({
+      label,
+      count,
+      sharePct: totalCreators > 0 ? `${num((count / totalCreators) * 100, 1)}%` : "0.0%",
+    }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+function buildSummaryInsightBullets(input: {
+  creatorCount: number;
+  categoryBreakdown: QuotationDocumentBreakdown[];
+  tierBreakdown: QuotationDocumentBreakdown[];
+  estimatedReach: string;
+  estimatedEngagement: string;
+}): string[] {
+  const bullets: string[] = [];
+  const topCategories = input.categoryBreakdown.slice(0, 3);
+  const topTiers = input.tierBreakdown.slice(0, 3);
+
+  if (topCategories.length > 0) {
+    bullets.push(
+      `Category mix: ${topCategories
+        .map((item) => `${item.label} ${item.count}`)
+        .join(" · ")}.`
+    );
+  }
+
+  if (topTiers.length > 0) {
+    bullets.push(
+      `Tier mix: ${topTiers.map((item) => `${item.label} ${item.count}`).join(" · ")}.`
+    );
+  }
+
+  if (input.creatorCount > 0) {
+    bullets.push(
+      `Campaign scale: ${input.creatorCount} creator${input.creatorCount === 1 ? "" : "s"} with estimated reach ${input.estimatedReach} and average ER ${input.estimatedEngagement}.`
+    );
+  }
+
+  return bullets;
+}
 
 function deliverablesLabel(item: QuotationItemRow): string {
   if (!item.deliverables.length) return "—";
@@ -209,6 +499,16 @@ function buildDocRow(
   return row;
 }
 
+function mergeCreatorGroupCategories(items: QuotationExportItem[]): string[] {
+  const merged = new Set<string>();
+  for (const item of items) {
+    for (const category of resolveExportItemCreatorCategories(item)) {
+      merged.add(category);
+    }
+  }
+  return [...merged].slice(0, 3);
+}
+
 function buildCreatorGroup(
   group: ReturnType<typeof groupQuotationExportItems>[number],
   audience: QuotationDocumentAudience,
@@ -238,7 +538,7 @@ function buildCreatorGroup(
         ? `${num(headerItem.engagement_rate, 2)}%`
         : "—",
     country: headerItem.country_code ?? "—",
-    categories: headerItem.creator_categories ?? [],
+    categories: mergeCreatorGroupCategories(group.items),
     isVerified: Boolean(profileSource.isVerified),
     optionCount: group.items.length,
     publicationShots: publicationShotsByCreatorKey?.get(group.creatorKey) ?? [],
@@ -262,16 +562,35 @@ export function buildQuotationDocument(
     : undefined;
   const items = detail.items as QuotationExportItem[];
   const expired = detail.is_expired || isQuotationExpired(detail.validity_date);
-  const statusLabel =
-    expired && detail.status === "draft"
-      ? "Expired"
-      : QUOTATION_STATUS_LABELS[detail.status] ?? detail.status;
+  const statusLabel = resolveQuotationStatusLabel({
+    status: detail.status,
+    validityDate: detail.validity_date,
+    isExpired: expired,
+  });
 
   const creatorGroups = groupQuotationExportItems(items).map((group) =>
     buildCreatorGroup(group, audience, detail.gp_target_pct, publicationShotsByCreatorKey)
   );
+  const exportGroups = groupQuotationExportItems(items);
   const rows = creatorGroups.flatMap((group) => group.rows);
   const uniqueCreatorCount = countUniqueQuotationCreators(items);
+  const categoryBreakdown = buildQuotationMainCategoryBreakdown({
+    creatorGroups,
+    totalCreators: uniqueCreatorCount,
+    formatSharePct: (count, total) =>
+      total > 0 ? `${num((count / total) * 100, 1)}%` : "0.0%",
+  });
+  const tierBreakdown = buildBreakdown(
+    creatorGroups.map((group) => {
+      const tier = group.rows[0]?.tier?.trim();
+      return tier && tier !== "—" ? tier : "Unknown";
+    }),
+    uniqueCreatorCount
+  );
+  const fullTierBreakdown = buildQuotationFullTierBreakdown({
+    groups: exportGroups,
+    campaignName: detail.campaign_name ?? detail.name,
+  });
 
   const gpColor = gpHealthExportColor({
     gpValueEgp: detail.total_gp_value_egp,
@@ -288,6 +607,13 @@ export function buildQuotationDocument(
   const totalAf = `${num(detail.total_af_egp, 2)} ${REPORTING_CURRENCY}`;
   const totalAgencyMargin = `${num(detail.total_agency_margin_egp, 2)} ${REPORTING_CURRENCY}`;
   const grandTotal = `${num(detail.total_revenue_egp + detail.total_af_egp, 2)} ${REPORTING_CURRENCY}`;
+  const insightBullets = buildSummaryInsightBullets({
+    creatorCount: uniqueCreatorCount,
+    categoryBreakdown,
+    tierBreakdown,
+    estimatedReach: num(detail.estimated_reach),
+    estimatedEngagement: avgEr,
+  });
 
   const clientKpis: QuotationDocumentKpi[] = [
     { label: "Creators", value: String(uniqueCreatorCount) },
@@ -360,6 +686,10 @@ export function buildQuotationDocument(
       creatorCount: uniqueCreatorCount,
       estimatedReach: num(detail.estimated_reach),
       estimatedEngagement: avgEr,
+      categoryBreakdown,
+      tierBreakdown,
+      fullTierBreakdown,
+      insightBullets,
     },
     notes: detail.notes,
     termsSections: parseQuotationTermsText(detail.terms),

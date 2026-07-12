@@ -25,6 +25,9 @@ import {
   isQuotationExpired,
   validDaysRemaining,
 } from "@/lib/commercial/quotation-validity";
+import {
+  fetchLinkedShortlistSummary,
+} from "@/lib/services/quotations/repositories/quotation-document-repository";
 import type {
   PromoteWizardOptions,
   QuotationDeliverable,
@@ -313,14 +316,7 @@ export async function getQuotationDetail(
        issue_date, validity_date, version, department, change_summary,
        is_archived, created_at, updated_at,
        is_temporary_client, is_temporary_brand, temporary_client_name, temporary_brand_name,
-       parent_quotation_id, version_number, revision_notes,
-       clients:client_id(name, onboarding_status),
-       brands:brand_id(name),
-       campaign_headers:campaign_header_id(name, document_number),
-       discovery_shortlists:shortlist_id(serial_number),
-       owner:owner_id(full_name),
-       quotation_items(*),
-       quotation_revisions(id, version, updated_by_name, change_summary, created_at)`
+       parent_quotation_id, version_number, revision_notes`
     )
     .eq("id", id)
     .maybeSingle();
@@ -329,18 +325,90 @@ export async function getQuotationDetail(
   if (!data) return null;
 
   const row = data as Record<string, unknown>;
+  const clientId = (row.client_id as string | null) ?? null;
+  const brandId = (row.brand_id as string | null) ?? null;
+  const campaignHeaderId = (row.campaign_header_id as string | null) ?? null;
+  const shortlistId = (row.shortlist_id as string | null) ?? null;
+  const ownerId = (row.owner_id as string | null) ?? null;
+
+  const [
+    itemsResult,
+    revisionsResult,
+    clientResult,
+    brandResult,
+    campaignResult,
+    shortlistResult,
+    ownerResult,
+  ] = await Promise.all([
+    supabase
+      .from("quotation_items")
+      .select("*")
+      .eq("quotation_id", id)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("quotation_revisions")
+      .select("id, version, updated_by_name, change_summary, created_at")
+      .eq("quotation_id", id)
+      .order("created_at", { ascending: false }),
+    clientId
+      ? supabase
+          .from("clients")
+          .select("name, onboarding_status")
+          .eq("id", clientId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    brandId
+      ? supabase.from("brands").select("name").eq("id", brandId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    campaignHeaderId
+      ? supabase
+          .from("campaign_headers")
+          .select("name, document_number")
+          .eq("id", campaignHeaderId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    shortlistId
+      ? fetchLinkedShortlistSummary(supabase, shortlistId)
+      : Promise.resolve({ data: null, error: null }),
+    ownerId
+      ? supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", ownerId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  if (itemsResult.error) throw new Error(itemsResult.error.message);
+  if (revisionsResult.error) throw new Error(revisionsResult.error.message);
+  if (clientResult.error) throw new Error(clientResult.error.message);
+  if (brandResult.error) throw new Error(brandResult.error.message);
+  if (campaignResult.error) throw new Error(campaignResult.error.message);
+  if (shortlistResult.error) throw new Error(shortlistResult.error.message);
+  if (ownerResult.error) throw new Error(ownerResult.error.message);
+
   const items = await enrichQuotationItemsWithCreatorAvatars(
     supabase,
-    ((row.quotation_items as Record<string, unknown>[]) ?? [])
-      .map(mapItem)
-      .sort((a, b) => a.sort_order - b.sort_order)
+    ((itemsResult.data as Record<string, unknown>[]) ?? []).map(mapItem)
   );
 
-  const revisions = ((row.quotation_revisions as Record<string, unknown>[]) ?? [])
+  const revisions = ((revisionsResult.data as Record<string, unknown>[]) ?? [])
     .map(mapRevision)
     .sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
+
+  const clientRow = clientResult.data as {
+    name: string;
+    onboarding_status: string | null;
+  } | null;
+  const brandRow = brandResult.data as { name: string } | null;
+  const campaignRow = campaignResult.data as {
+    name: string;
+    document_number: string | null;
+  } | null;
+  const shortlistRow = shortlistResult.data as { serial_number: string | null } | null;
+  const ownerRow = ownerResult.data as { full_name: string | null } | null;
 
   const validityDate = (row.validity_date as string | null) ?? null;
   const issueDate =
@@ -376,33 +444,22 @@ export async function getQuotationDetail(
     name: row.name as string,
     status,
     shortlist_id: (row.shortlist_id as string | null) ?? null,
-    shortlist_serial:
-      unwrap(row.discovery_shortlists as { serial_number: string | null } | null)
-        ?.serial_number ?? null,
-    client_id: (row.client_id as string | null) ?? null,
-    client_name: isTemporaryClient
-      ? tempClientName
-      : unwrap(row.clients as { name: string } | null)?.name ?? null,
+    shortlist_serial: shortlistRow?.serial_number ?? null,
+    client_id: clientId,
+    client_name: isTemporaryClient ? tempClientName : clientRow?.name ?? null,
     client_onboarding_status: isTemporaryClient
       ? null
-      : (unwrap(row.clients as { onboarding_status: string | null } | null)
-          ?.onboarding_status as import("@/types/database").ClientOnboardingStatus | null) ??
+      : (clientRow?.onboarding_status as import("@/types/database").ClientOnboardingStatus | null) ??
         null,
     is_temporary_client: isTemporaryClient,
     is_temporary_brand: isTemporaryBrand,
     temporary_client_name: tempClientName,
     temporary_brand_name: tempBrandName,
-    brand_id: (row.brand_id as string | null) ?? null,
-    brand_name: isTemporaryBrand
-      ? tempBrandName
-      : unwrap(row.brands as { name: string } | null)?.name ?? null,
-    campaign_header_id: (row.campaign_header_id as string | null) ?? null,
-    campaign_name:
-      unwrap(row.campaign_headers as { name: string } | null)?.name ?? null,
-    campaign_document_number:
-      unwrap(
-        row.campaign_headers as { document_number: string | null } | null
-      )?.document_number ?? null,
+    brand_id: brandId,
+    brand_name: isTemporaryBrand ? tempBrandName : brandRow?.name ?? null,
+    campaign_header_id: campaignHeaderId,
+    campaign_name: campaignRow?.name ?? null,
+    campaign_document_number: campaignRow?.document_number ?? null,
     parent_quotation_id: (row.parent_quotation_id as string | null) ?? null,
     version_number: versionNumber,
     revision_notes: (row.revision_notes as string | null) ?? null,
@@ -417,8 +474,8 @@ export async function getQuotationDetail(
             status,
           },
         ],
-    owner_id: (row.owner_id as string | null) ?? null,
-    owner_name: unwrap(row.owner as { full_name: string } | null)?.full_name ?? null,
+    owner_id: ownerId,
+    owner_name: ownerRow?.full_name ?? null,
     approved_by: (row.approved_by as string | null) ?? null,
     approved_at: (row.approved_at as string | null) ?? null,
     currency: (row.currency as string) ?? "EGP",

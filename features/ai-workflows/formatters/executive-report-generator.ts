@@ -5,6 +5,7 @@ import {
   rankCreators,
   normalizeCreators,
 } from "./creator-formatter";
+import { getInfluencerTier } from "@/lib/creators/influencer-tier";
 import { workflowTrace } from "@/lib/creators/search-trace";
 
 /** Canonical 8-section executive report structure. */
@@ -122,10 +123,7 @@ function formatEngagement(rate: number | undefined): string {
 
 function followerTier(followers: number | undefined): string {
   if (followers == null) return "unknown reach";
-  if (followers >= 500_000) return "macro";
-  if (followers >= 100_000) return "mid-tier";
-  if (followers >= 10_000) return "micro";
-  return "nano";
+  return getInfluencerTier(followers).toLowerCase();
 }
 
 function tokenizeQuery(query: string): string[] {
@@ -230,7 +228,7 @@ function buildAudienceFit(creator: RankedCreator): string {
   if (tier === "macro" && engagement != null && engagement < 2) {
     return `${tier} reach with moderate engagement — suited for broad awareness`;
   }
-  if (tier === "micro" || tier === "mid-tier") {
+  if (tier === "micro" || tier === "mid") {
     return `${tier} audience with typically higher trust and niche affinity`;
   }
   if (engagement != null && engagement >= 4) {
@@ -259,7 +257,7 @@ function buildPotentialRisks(creator: RankedCreator, allCreators: RankedCreator[
     risks.push("platform concentration in shortlist — diversify for reach");
   }
   if (creator.followers != null && creator.followers >= 500_000) {
-    risks.push("macro rates may exceed budget — confirm fee expectations");
+    risks.push("upper-tier rates may exceed budget — confirm fee expectations");
   }
 
   return risks.length > 0 ? risks.join("; ") : "no significant flags from available data";
@@ -319,7 +317,7 @@ function buildAudienceInsights(creators: GroundedCreator[], query?: string): str
   if (macroCount > microCount) {
     lines.push("Audience profile leans mass-reach — optimize for awareness and brand recall KPIs.");
   } else if (microCount > 0) {
-    lines.push("Micro and mid-tier creators present — favorable for niche trust and conversion metrics.");
+    lines.push("Micro and Mid creators present — favorable for niche trust and conversion metrics.");
   }
 
   if (query?.trim()) {

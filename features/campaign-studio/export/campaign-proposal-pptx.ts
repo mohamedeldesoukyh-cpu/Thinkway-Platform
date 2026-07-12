@@ -45,7 +45,7 @@ const CONTENT_W = PAGE_W - MARGIN_X * 2;
 
 const TIER_FILL: Record<string, string> = {
   celebrity: AMBER,
-  mega: AMBER,
+  mega: "EA580C",
   macro: BLUE,
   "mid-tier": PINK,
   mid: PINK,

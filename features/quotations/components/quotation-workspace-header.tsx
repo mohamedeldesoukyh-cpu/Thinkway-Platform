@@ -33,6 +33,7 @@ import { QUOTATIONS_LIST_PATH } from "@/features/quotations/constants";
 import { archiveQuotation, updateQuotationHeader } from "@/features/quotations/actions";
 import {
   QUOTATION_TEMPLATE_OPTIONS as TEMPLATE_OPTIONS,
+  appendQuotationExportRevision,
   appendQuotationTemplateParam,
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
@@ -42,10 +43,12 @@ import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotation
 
 function quotationPreviewHref(
   quotationId: string,
-  template: QuotationTemplateVariant
+  template: QuotationTemplateVariant,
+  exportRevision?: string | null
 ): string {
   const params = new URLSearchParams();
   appendQuotationTemplateParam(params, template);
+  appendQuotationExportRevision(params, exportRevision);
   const query = params.toString();
   return `/discovery/quotations/${quotationId}/preview${query ? `?${query}` : ""}`;
 }
@@ -135,7 +138,12 @@ export function QuotationWorkspaceHeader({
               className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
             />
             <h1 className="thinkway-campaign-title truncate">{detail.name}</h1>
-            <QuotationStatusBadge status={detail.status} className="thinkway-campaign-status-chip" />
+            <QuotationStatusBadge
+              status={detail.status}
+              validityDate={detail.validity_date}
+              isExpired={detail.is_expired}
+              className="thinkway-campaign-status-chip"
+            />
             <SaveIndicator status={saveStatus} />
             <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
               {detail.canManage ? (
@@ -215,8 +223,15 @@ export function QuotationWorkspaceHeader({
                     // Bake template into each href so PDF/Word/Excel do not use a
                     // stale exportTemplate from a prior selection in the same menu.
                     const templateExportHref = (format: string) =>
-                      buildExportHref(detail.id, format, option.id, { download: true });
-                    const templatePreviewHref = quotationPreviewHref(detail.id, option.id);
+                      buildExportHref(detail.id, format, option.id, {
+                        download: true,
+                        exportRevision: detail.updated_at,
+                      });
+                    const templatePreviewHref = quotationPreviewHref(
+                      detail.id,
+                      option.id,
+                      detail.updated_at
+                    );
 
                     return (
                       <DropdownMenuSub key={option.id}>

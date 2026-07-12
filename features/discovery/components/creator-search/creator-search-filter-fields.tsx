@@ -5,6 +5,10 @@ import { useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { toggleCategoryInList } from "@/lib/creators/category-filter";
+import {
+  TIER_FILTER_RANGES,
+  tierFilterPresetFields,
+} from "@/lib/creators/influencer-tier";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
 import { cn } from "@/lib/utils";
 
@@ -33,13 +37,11 @@ const PLATFORM_LABELS: Record<string, string> = {
   twitter: "X (Twitter)",
 };
 
-const FOLLOWER_PRESETS = [
-  { id: "nano", label: "Nano · 1k–10k", min: "1000", max: "10000" },
-  { id: "micro", label: "Micro · 10k–50k", min: "10000", max: "50000" },
-  { id: "mid", label: "Mid · 50k–500k", min: "50000", max: "500000" },
-  { id: "macro", label: "Macro · 500k–1M", min: "500000", max: "1000000" },
-  { id: "mega", label: "Mega · 1M+", min: "1000000", max: "" },
-] as const;
+const FOLLOWER_PRESETS = TIER_FILTER_RANGES.map((range) => ({
+  id: range.id,
+  label: range.label,
+  ...tierFilterPresetFields(range),
+}));
 
 const ENGAGEMENT_PRESETS = ["1", "2", "3", "5"] as const;
 

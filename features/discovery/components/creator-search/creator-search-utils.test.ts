@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
-import { audienceInterestList, sortCreators } from "./creator-search-utils";
+import { audienceInterestList, categoriesLabel, sortCreators } from "./creator-search-utils";
 import { DEFAULT_CREATOR_SEARCH_SORT } from "./creator-search-types";
 
 function baseCreator(
@@ -59,6 +59,34 @@ assert.deepEqual(
 
 console.log(
   "features/discovery/components/creator-search/creator-search-utils.test.ts — audienceInterestList passed"
+);
+
+assert.equal(
+  categoriesLabel(
+    baseCreator({
+      display_name: "Dr.dina muhamad| Nutritionist 💫 (@dr.dinamuhamad)",
+      bio: "Nutritionist. ✨Birth doula. ✨Full time mum.",
+      platforms: [
+        {
+          id: "pa1",
+          platform: "instagram",
+          handle: "dr.dinamuhamad",
+          profile_url: null,
+          follower_count: 100_000,
+          engagement_rate: 2.5,
+          audience_country: "EG",
+          profile_bio: "Nutritionist. ✨Birth doula. ✨Full time mum.",
+        },
+      ],
+    })
+  ),
+  "Health & Wellness, Parenting",
+  "Discovery search categoriesLabel should infer from profile signals when stored tags are empty"
+);
+
+assert.equal(
+  categoriesLabel(baseCreator({ display_name: "", bio: null, platforms: [] })),
+  "—"
 );
 
 const alpha = baseCreator({

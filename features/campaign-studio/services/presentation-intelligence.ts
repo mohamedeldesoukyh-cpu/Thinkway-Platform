@@ -47,7 +47,7 @@ export type ContentPlanItem = {
 };
 
 export type CreatorMixTier = {
-  tier: "Nano" | "Micro" | "Mid" | "Macro" | "Celebrity";
+  tier: "Nano" | "Micro" | "Mid" | "Macro" | "Mega" | "Celebrity";
   count: number;
   percent: number;
   reasoning: string;

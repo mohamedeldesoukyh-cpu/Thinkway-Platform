@@ -1,6 +1,6 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { discoveryCreatorCategoriesLabel } from "@/lib/creators/creator-display-categories";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
-import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
 
 export {
   applyCreatorSearchHeaderSort,
@@ -65,8 +65,7 @@ export function audienceCountryLabel(creator: UnifiedCreatorResult): string {
 }
 
 export function categoriesLabel(creator: UnifiedCreatorResult): string {
-  const parts = creatorStoredCategoriesForDisplay(creator).slice(0, 3);
-  return parts.length ? parts.join(", ") : "—";
+  return discoveryCreatorCategoriesLabel(creator);
 }
 
 export function estimatedPricingLabel(_creator: UnifiedCreatorResult): string {

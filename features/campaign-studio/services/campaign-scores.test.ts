@@ -28,11 +28,12 @@ const STRONG_SLATE = [
 ];
 
 const MIX = [
-  { tier: "Celebrity", percent: 20 },
-  { tier: "Macro", percent: 20 },
-  { tier: "Mid-Tier", percent: 20 },
-  { tier: "Micro", percent: 20 },
-  { tier: "Nano", percent: 20 },
+  { tier: "Celebrity", percent: 17 },
+  { tier: "Mega", percent: 17 },
+  { tier: "Macro", percent: 17 },
+  { tier: "Mid", percent: 17 },
+  { tier: "Micro", percent: 16 },
+  { tier: "Nano", percent: 16 },
 ];
 
 test("a strong on-platform slate scores high across the board", () => {

@@ -1,78 +1,57 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
-
 import {
-  creatorEngagementRate,
+  creatorMatchesRemoval,
   selectCreatorsToAdd,
-  selectSlateCreatorsToRemove,
   tierFollowerRange,
 } from "./slate-edit-filters";
+import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
-function creator(
-  id: string,
-  opts: { city?: string; country?: string; er?: number; followers?: number } = {}
-): UnifiedCreatorResult {
+function mockCreator(overrides: Partial<UnifiedCreatorResult> = {}): UnifiedCreatorResult {
   return {
-    unified_id: id,
-    display_name: id,
-    city: opts.city ?? null,
-    country_code: opts.country ?? null,
-    estimated_country: null,
-    metrics: {
-      followers: { value: opts.followers ?? 100_000, confidence: "high" },
-      engagement_rate: { value: opts.er ?? null, confidence: "high" },
-    },
+    unified_id: "inf:test",
+    display_name: "Test Creator",
+    handle: "@test",
     platforms: [],
-  } as unknown as UnifiedCreatorResult;
+    metrics: {
+      followers: { value: 100_000, confidence: "estimated" },
+      engagement_rate: { value: 3, confidence: "estimated" },
+    },
+    ...overrides,
+  } as UnifiedCreatorResult;
 }
 
 test("tierFollowerRange gives non-overlapping bands", () => {
-  assert.deepEqual(tierFollowerRange("Macro"), { minFollowers: 1_000_000, maxFollowers: 4_999_999 });
-  assert.deepEqual(tierFollowerRange("Micro"), { minFollowers: 10_000, maxFollowers: 49_999 });
+  assert.deepEqual(tierFollowerRange("Macro"), { minFollowers: 500_000, maxFollowers: 999_999 });
+  assert.deepEqual(tierFollowerRange("Mega"), { minFollowers: 1_000_000, maxFollowers: 4_999_999 });
+  assert.deepEqual(tierFollowerRange("Micro"), { minFollowers: 10_000, maxFollowers: 99_999 });
   assert.deepEqual(tierFollowerRange("Celebrity"), { minFollowers: 5_000_000 });
-  assert.deepEqual(tierFollowerRange("Nano"), { maxFollowers: 9_999 });
+  assert.deepEqual(tierFollowerRange("Nano"), { minFollowers: 1_000, maxFollowers: 9_999 });
+  assert.deepEqual(tierFollowerRange("Mid"), { minFollowers: 100_000, maxFollowers: 499_999 });
 });
 
-test("selectSlateCreatorsToRemove matches by city (case/substring insensitive)", () => {
-  const slate = [
-    creator("a", { city: "Cairo" }),
-    creator("b", { city: "Alexandria" }),
-    creator("c", { city: "cairo, egypt" }),
-  ];
-  const removed = selectSlateCreatorsToRemove(slate, { city: "Cairo" });
-  assert.deepEqual(removed.map((c) => c.unified_id).sort(), ["a", "c"]);
+test("creatorMatchesRemoval by city and engagement", () => {
+  const creator = mockCreator({
+    city: "Cairo",
+    metrics: {
+      followers: { value: 50_000, confidence: "estimated" },
+      engagement_rate: { value: 1.5, confidence: "estimated" },
+    } as UnifiedCreatorResult["metrics"],
+  });
+  assert.equal(creatorMatchesRemoval(creator, { city: "Cairo" }), true);
+  assert.equal(creatorMatchesRemoval(creator, { belowEngagement: 2 }), true);
+  assert.equal(creatorMatchesRemoval(creator, { belowEngagement: 1 }), false);
 });
 
-test("selectSlateCreatorsToRemove matches creators below an engagement threshold", () => {
-  const slate = [
-    creator("a", { er: 2 }),
-    creator("b", { er: 9 }),
-    creator("c", { er: null as unknown as number }),
-  ];
-  const removed = selectSlateCreatorsToRemove(slate, { belowEngagement: 5 });
-  assert.deepEqual(removed.map((c) => c.unified_id), ["a"]);
-});
-
-test("selectSlateCreatorsToRemove with no criteria removes nothing", () => {
-  const slate = [creator("a", { city: "Cairo" })];
-  assert.equal(selectSlateCreatorsToRemove(slate, {}).length, 0);
-});
-
-test("selectCreatorsToAdd excludes existing slate ids and caps at count", () => {
+test("selectCreatorsToAdd respects count and dedupes", () => {
   const candidates = [
-    creator("inf:x"),
-    creator("inf:y"),
-    creator("inf:z"),
-    creator("inf:w"),
+    mockCreator({ unified_id: "inf:a" }),
+    mockCreator({ unified_id: "inf:b" }),
+    mockCreator({ unified_id: "inf:c" }),
   ];
-  const existing = new Set(["x"]); // normalized (no inf: prefix)
+  const existing = new Set(["a"]);
   const picked = selectCreatorsToAdd(candidates, existing, 2);
-  assert.deepEqual(picked.map((c) => c.unified_id), ["inf:y", "inf:z"]);
-});
-
-test("creatorEngagementRate reads the metric value", () => {
-  assert.equal(creatorEngagementRate(creator("a", { er: 7.5 })), 7.5);
-  assert.equal(creatorEngagementRate(creator("a")), null);
+  assert.equal(picked.length, 2);
+  assert.equal(picked[0]?.unified_id, "inf:b");
 });

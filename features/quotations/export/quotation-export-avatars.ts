@@ -12,10 +12,16 @@ import {
   compressExportDataUri,
   toCompressedExportDataUri,
 } from "@/lib/io/compress-export-image";
+import { quotationCreatorCategoriesMapToMain } from "@/lib/quotations/quotation-creator-categories";
 import type { QuotationDetail } from "@/features/quotations/types";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import type { QuotationDocument } from "./quotation-document";
 import type { QuotationExportItem } from "./quotation-export-utils";
+import {
+  groupQuotationExportItems,
+  resolveExportGroupFollowers,
+  resolveExportGroupPlatform,
+} from "./quotation-export-utils";
 import { isShowcaseTemplate } from "./quotation-template";
 
 function quotationItemHasUsableAvatar(item: QuotationItemRow): boolean {
@@ -34,7 +40,6 @@ export function quotationItemsAvatarEnriched(items: QuotationItemRow[]): boolean
     );
     if (!hasCreatorRef) return true;
     if (item.creator_profile_source == null) return false;
-    if (!Array.isArray(item.creator_categories)) return false;
     if (quotationItemHasUsableAvatar(item)) return true;
     const profileUrl =
       item.creator_profile_source.profile_url?.trim() ||
@@ -44,6 +49,40 @@ export function quotationItemsAvatarEnriched(items: QuotationItemRow[]): boolean
     // on the linked influencer (expired CDN snapshots should be refreshed).
     return Boolean(profileUrl) && !item.profile_image_url?.trim();
   });
+}
+
+/** True when every line has display categories that map to a main category. */
+export function quotationItemsCategoriesEnriched(items: QuotationItemRow[]): boolean {
+  return items.every((item) => quotationCreatorCategoriesMapToMain(item.creator_categories));
+}
+
+/** True when each creator group can resolve platform and followers for tier export. */
+export function quotationItemsExportMetricsReady(items: QuotationItemRow[]): boolean {
+  const clone = items.map((item) => ({ ...item })) as QuotationExportItem[];
+  const groups = groupQuotationExportItems(clone);
+
+  return groups.every((group) => {
+    const hasCreatorRef = group.items.some(
+      (item) =>
+        item.influencer_id ||
+        item.profile_id ||
+        item.unified_id ||
+        item.handle?.trim()
+    );
+    if (!hasCreatorRef) return true;
+    return (
+      resolveExportGroupPlatform(group.items) != null &&
+      resolveExportGroupFollowers(group.items) != null
+    );
+  });
+}
+
+export function quotationItemsFullyEnrichedForExport(items: QuotationItemRow[]): boolean {
+  return (
+    quotationItemsAvatarEnriched(items) &&
+    quotationItemsCategoriesEnriched(items) &&
+    quotationItemsExportMetricsReady(items)
+  );
 }
 
 export function resolveQuotationExportSiteOrigin(
@@ -63,7 +102,7 @@ export async function enrichQuotationDetailForExport(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   detail: QuotationDetail
 ): Promise<QuotationDetail & { items: QuotationExportItem[] }> {
-  if (quotationItemsAvatarEnriched(detail.items)) {
+  if (quotationItemsFullyEnrichedForExport(detail.items)) {
     return { ...detail, items: detail.items as QuotationExportItem[] };
   }
 

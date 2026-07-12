@@ -10,7 +10,7 @@ import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
 import { resolveCreatorTierFromUnified } from "@/lib/creators/creator-tier";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { filterPlatformsForDisplay } from "@/lib/creators/creator-centric";
-import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
+import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
 import {
   brandSafetyMeta,
   formatEngagementRate,
@@ -236,7 +236,7 @@ function CreatorDataRow({
       </td>
       <td className={cn(TD_CLASS, "max-w-[9rem] overflow-hidden")}>
         <InterestChips
-          interests={creatorStoredCategoriesForDisplay(creator)}
+          interests={resolveDiscoveryCreatorDisplayCategories(creator)}
           variant="compact"
           maxVisible={2}
         />

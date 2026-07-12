@@ -63,8 +63,9 @@ export type ProposalBranding = {
  */
 const TIER_COLORS: Record<string, { fill: string; chipBg: string; chipText: string }> = {
   Celebrity: { fill: "#D97706", chipBg: "#FFE9CC", chipText: "#B45309" },
+  Mega: { fill: "#EA580C", chipBg: "#FFEDD5", chipText: "#C2410C" },
   Macro: { fill: "#0057FF", chipBg: "#DDEBFF", chipText: "#0057FF" },
-  "Mid-Tier": { fill: "#D6336C", chipBg: "#FFE0EC", chipText: "#D6336C" },
+  Mid: { fill: "#D6336C", chipBg: "#FFE0EC", chipText: "#D6336C" },
   Micro: { fill: "#7C3AED", chipBg: "#E6DFFF", chipText: "#7C3AED" },
   Nano: { fill: "#0C9D57", chipBg: "#DDF7E8", chipText: "#0C9D57" },
   Unknown: { fill: "#94A3B8", chipBg: "#F1F5F9", chipText: "#475569" },
@@ -75,9 +76,10 @@ function tierColor(tier?: string): { fill: string; chipBg: string; chipText: str
   const exact = TIER_COLORS[key];
   if (exact) return exact;
   const norm = key.toLowerCase();
-  if (norm.startsWith("celebrity") || norm.startsWith("mega")) return TIER_COLORS.Celebrity!;
+  if (norm.startsWith("celebrity")) return TIER_COLORS.Celebrity!;
+  if (norm.startsWith("mega")) return TIER_COLORS.Mega!;
   if (norm.startsWith("macro")) return TIER_COLORS.Macro!;
-  if (norm.startsWith("mid")) return TIER_COLORS["Mid-Tier"]!;
+  if (norm.startsWith("mid")) return TIER_COLORS.Mid!;
   if (norm.startsWith("micro")) return TIER_COLORS.Micro!;
   if (norm.startsWith("nano")) return TIER_COLORS.Nano!;
   return TIER_COLORS.Unknown!;

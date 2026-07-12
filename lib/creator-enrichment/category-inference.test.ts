@@ -37,6 +37,17 @@ assert.deepEqual(
 );
 
 assert.deepEqual(
+  inferCategoriesFromProfileSignals({
+    displayName: "Dr.dina muhamad| Nutritionist 💫 (@dr.dinamuhamad)",
+    handle: "dr.dinamuhamad",
+    bio: "Nutritionist. ✨Birth doula. ✨Full time mum.",
+    hashtags: [],
+    mentions: [],
+  }).sort(),
+  ["Health & Wellness", "Parenting"]
+);
+
+assert.deepEqual(
   mergeInferredCategories(["Beauty", "Fashion"], ["beauty", "Travel"]),
   ["Beauty", "Fashion", "Travel"]
 );
@@ -54,6 +65,34 @@ assert.deepEqual(
 assert.deepEqual(
   mergeInferredCategories(["Beauty"], []),
   ["Beauty"]
+);
+
+assert.deepEqual(
+  inferCategoriesFromProfileSignals({
+    extraTerms: ["جمال"],
+  }),
+  ["Beauty"],
+  "Arabic category tag جمال should map to Beauty"
+);
+
+assert.deepEqual(
+  inferCategoriesFromProfileSignals({
+    bio: "صانعة محتوى رياضي · نصائح يومية للياقة",
+    hashtags: [],
+    mentions: [],
+  }).sort(),
+  ["Fitness", "Sports"],
+  "Arabic bio with رياضة and لياقة should infer Sports and Fitness"
+);
+
+assert.deepEqual(
+  inferCategoriesFromProfileSignals({
+    bio: "Beauty & جمال content · #مكياج tutorials",
+    hashtags: ["#مكياج"],
+    extraTerms: ["Fashion", "موضة"],
+  }).sort(),
+  ["Beauty", "Fashion"],
+  "Mixed Arabic/English profile should resolve both languages"
 );
 
 console.log("category-inference.test.ts: all assertions passed");

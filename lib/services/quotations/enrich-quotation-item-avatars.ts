@@ -5,7 +5,7 @@ import {
   avatarStorageQualityRank,
   sortPlatformsStable,
 } from "@/lib/creators/creator-centric";
-import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
+import { resolveQuotationCreatorDisplayCategories } from "@/lib/quotations/quotation-creator-categories";
 import {
   isPositiveNumericMetric,
   normalizeCountryCode,
@@ -196,9 +196,19 @@ function resolveLineEngagementRate(
 }
 
 function resolveLineCreatorCategories(
+  item: QuotationItemRow,
   creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>
 ): string[] {
-  return creatorStoredCategoriesForDisplay(creator).slice(0, 3);
+  const platformAccount = resolveLinePlatformAccount(item, creator);
+  return resolveQuotationCreatorDisplayCategories({
+    itemCategories: item.creator_categories,
+    creator,
+    creatorName: item.creator_name,
+    handle: item.handle ?? platformAccount?.handle,
+    linePlatform: item.platform,
+    followers: resolveLineFollowers(item, creator),
+    countryCode: item.country_code,
+  });
 }
 
 function resolveLineAvatarFields(
@@ -207,19 +217,27 @@ function resolveLineAvatarFields(
 ): {
   profile_image_url: string | null;
   profile_url: string | null;
+  platform: string | null;
   followers: number | null;
   engagement_rate: number | null;
   creator_profile_source: CreatorProfileSource;
   creator_categories: string[];
 } {
   const creatorProfileSource = resolveLineCreatorProfileSource(item, creator);
+  const resolvedPlatform =
+    item.platform?.trim() ||
+    creatorProfileSource.platform?.trim() ||
+    (creatorProfileSource.linkedPlatforms?.length === 1
+      ? creatorProfileSource.linkedPlatforms[0]!
+      : null);
   return {
     profile_image_url: creatorProfileSource.avatarUrl ?? null,
     profile_url: creatorProfileSource.profile_url ?? null,
+    platform: resolvedPlatform,
     followers: resolveLineFollowers(item, creator),
     engagement_rate: resolveLineEngagementRate(item, creator),
     creator_profile_source: creatorProfileSource,
-    creator_categories: resolveLineCreatorCategories(creator),
+    creator_categories: resolveLineCreatorCategories(item, creator),
   };
 }
 
@@ -236,26 +254,90 @@ function fallbackAvatarFields(item: QuotationItemRow): {
   };
 }
 
+async function resolveInfluencerIdsByHandles(
+  supabase: SupabaseClient<Database>,
+  handles: Array<string | null | undefined>
+): Promise<Map<string, string>> {
+  const normalized = [
+    ...new Set(
+      handles
+        .map((handle) => handle?.trim().replace(/^@+/, "").toLowerCase() ?? "")
+        .filter(Boolean)
+    ),
+  ];
+  const byHandle = new Map<string, string>();
+  if (!normalized.length) return byHandle;
+
+  await Promise.all(
+    normalized.map(async (handle) => {
+      const { data, error } = await supabase
+        .from("influencer_platform_accounts")
+        .select("influencer_id, handle")
+        .ilike("handle", handle)
+        .limit(5);
+      if (error) throw new Error(error.message);
+      const match = (data ?? []).find(
+        (row) => row.handle?.trim().replace(/^@+/, "").toLowerCase() === handle
+      );
+      if (match?.influencer_id) {
+        byHandle.set(handle, match.influencer_id);
+      }
+    })
+  );
+
+  return byHandle;
+}
+
+function resolveCreatorForQuotationItem(
+  lookup: Awaited<ReturnType<typeof resolveUnifiedCreatorsByRefs>>,
+  item: QuotationItemRow,
+  influencerIdsByHandle: Map<string, string>
+) {
+  const byRef = resolveCreatorFromRefLookup(lookup, item);
+  if (byRef) return byRef;
+
+  const handle = item.handle?.trim().replace(/^@+/, "").toLowerCase();
+  if (!handle) return null;
+  const influencerId = influencerIdsByHandle.get(handle);
+  if (!influencerId) return null;
+  return lookup.byInfluencerId.get(influencerId) ?? null;
+}
+
 export async function enrichQuotationItemsWithCreatorAvatars(
   supabase: SupabaseClient<Database>,
   items: QuotationItemRow[]
 ): Promise<QuotationItemRow[]> {
   if (items.length === 0) return items;
 
+  const influencerIdsByHandle = await resolveInfluencerIdsByHandles(
+    supabase,
+    items.map((item) => item.handle)
+  );
+
   const lookup = await resolveUnifiedCreatorsByRefs(supabase, {
     unifiedIds: items.map((item) => item.unified_id),
-    influencerIds: items.map((item) => item.influencer_id),
+    influencerIds: [
+      ...items.map((item) => item.influencer_id),
+      ...influencerIdsByHandle.values(),
+    ],
     discoveredProfileIds: items.map((item) => item.profile_id),
   });
 
   const enriched = items.map((item) => {
-    const creator = resolveCreatorFromRefLookup(lookup, item);
+    const creator = resolveCreatorForQuotationItem(lookup, item, influencerIdsByHandle);
     if (!creator) {
       return {
         ...item,
         ...fallbackAvatarFields(item),
         creator_profile_source: null,
-        creator_categories: [],
+        creator_categories: resolveQuotationCreatorDisplayCategories({
+          itemCategories: item.creator_categories,
+          creatorName: item.creator_name,
+          handle: item.handle,
+          linePlatform: item.platform,
+          followers: item.followers,
+          countryCode: item.country_code,
+        }),
       };
     }
 
@@ -282,18 +364,35 @@ async function persistQuotationItemAvatars(
       const urlChanged = item.profile_url && item.profile_url !== prev.profile_url;
       const followersChanged =
         isPositiveNumericMetric(item.followers) && item.followers !== prev.followers;
+      const platformChanged =
+        item.platform?.trim() &&
+        item.platform.trim() !== (prev.platform?.trim() ?? "");
       const erChanged =
         item.engagement_rate != null &&
         Number.isFinite(item.engagement_rate) &&
         item.engagement_rate !== prev.engagement_rate;
-      if (!imageChanged && !urlChanged && !followersChanged && !erChanged) return;
+      const categoriesChanged =
+        (item.creator_categories?.length ?? 0) > 0 &&
+        JSON.stringify(item.creator_categories) !== JSON.stringify(prev.creator_categories ?? []);
+      if (
+        !imageChanged &&
+        !urlChanged &&
+        !followersChanged &&
+        !platformChanged &&
+        !erChanged &&
+        !categoriesChanged
+      ) {
+        return;
+      }
 
       await supabase
         .from("quotation_items")
         .update({
           profile_image_url: item.profile_image_url,
           profile_url: item.profile_url,
+          ...(categoriesChanged ? { creator_categories: item.creator_categories } : {}),
           ...(followersChanged ? { followers: item.followers } : {}),
+          ...(platformChanged ? { platform: item.platform } : {}),
           ...(erChanged ? { engagement_rate: item.engagement_rate } : {}),
         } as never)
         .eq("id", item.id);

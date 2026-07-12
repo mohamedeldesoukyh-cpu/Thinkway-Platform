@@ -93,6 +93,7 @@ import {
   optionNumberLabel,
 } from "@/lib/quotations/quotation-deliverable-types";
 import {
+  appendQuotationExportRevision,
   appendQuotationTemplateParam,
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
@@ -424,9 +425,10 @@ function QuotationWorkspaceContent({
   const previewHref = useMemo(() => {
     const params = new URLSearchParams();
     appendQuotationTemplateParam(params, exportTemplate);
+    appendQuotationExportRevision(params, detail.updated_at);
     const query = params.toString();
     return `/discovery/quotations/${detail.id}/preview${query ? `?${query}` : ""}`;
-  }, [detail.id, exportTemplate]);
+  }, [detail.id, detail.updated_at, exportTemplate]);
 
   const focusCreatorSearch = useCallback(() => {
     const el =

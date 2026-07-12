@@ -141,6 +141,127 @@ export function buildQuotationDocumentStyles(generatedLabel: string): string {
   .summary-box tr.gp td.num { font-weight: 700; }
   .summary-box td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
+  .summary-insight {
+    margin: 4px 0 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(29,158,117,.28);
+    border-left: 4px solid #1D9E75;
+    border-radius: 6px;
+    background: #F2FBF7;
+  }
+  .summary-insight-title {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: #0F766E;
+    margin-bottom: 6px;
+  }
+  .summary-insight ul { margin: 0; padding-left: 16px; }
+  .summary-insight li { margin: 3px 0; font-size: 11px; line-height: 1.45; color: var(--ink); }
+
+  .summary-overview-page,
+  .category-summary-page {
+    page-break-before: always;
+    break-before: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    min-height: 0;
+  }
+  .category-summary-table { max-width: 520px; }
+  .category-summary-table td:last-child,
+  .category-summary-table th:last-child { text-align: right; }
+  .category-summary-note { margin-top: 8px; font-size: 10px; color: var(--muted); }
+
+  .tier-breakdown-divider {
+    margin: 18px 0 14px;
+    border-top: 1px solid var(--rule);
+  }
+  .tier-breakdown-section { margin-top: 4px; }
+  .tier-breakdown-title {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--ink);
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  .tier-breakdown-block {
+    margin-bottom: 14px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .tier-breakdown-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    align-items: center;
+    padding: 8px 12px;
+    background: #F1F5F9;
+    border-bottom: 1px solid var(--rule);
+    font-size: 10px;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .tier-breakdown-header strong {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    color: ${P.secondary};
+  }
+  .tier-breakdown-header span { color: var(--muted); }
+  .tier-breakdown-table {
+    border: none;
+    border-radius: 0;
+    font-size: 10px;
+  }
+  .tier-breakdown-table thead th {
+    background: #fff;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+  }
+  .tier-breakdown-table tbody td {
+    padding: 6px 10px;
+    vertical-align: top;
+  }
+  .tier-breakdown-table tbody tr:nth-child(even):not(.tier-subtotal-row) td {
+    background: #FAFBFC;
+  }
+  .tier-breakdown-table .tier-subtotal-row td {
+    font-weight: 700;
+    background: #EEF2FF;
+    border-top: 1px solid var(--rule);
+    color: var(--ink);
+  }
+  .tier-breakdown-grand-total {
+    margin-top: 6px;
+    padding: 10px 12px;
+    border: 1px solid ${P.secondary};
+    border-radius: 6px;
+    background: ${P.secondary};
+    color: #fff;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .tier-breakdown-grand-total strong {
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  .tier-breakdown-empty {
+    font-size: 11px;
+    padding: 12px 0;
+  }
+
   .terms-list { list-style: none; margin: 0; padding: 0; }
   .terms-list li { margin-bottom: 12px; break-inside: avoid; }
   .terms-list h4 { font-size: 11px; font-weight: 700; margin-bottom: 4px; color: var(--ink); }

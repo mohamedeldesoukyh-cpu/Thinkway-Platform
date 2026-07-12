@@ -2,6 +2,7 @@ import type { GroundedCreator, RankedCreator } from "@/features/ai-workflows/for
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
 import type { DebateResult } from "@/features/campaign-director/debate";
+import { getInfluencerTier } from "@/lib/creators/influencer-tier";
 
 import { buildIs1CampaignContext } from "./campaign-context";
 import { buildEvidenceBasedSelection } from "./evidence-vendor-reasoning";
@@ -42,11 +43,7 @@ function inferTier(
   strategy: CampaignStrategyDocument
 ): string {
   const followers = creator.followers ?? 0;
-  if (followers >= 1_000_000) return "Mega";
-  if (followers >= 250_000) return "Macro";
-  if (followers >= 50_000) return "Mid";
-  if (followers >= 10_000) return "Micro";
-  if (followers > 0) return "Nano";
+  if (followers > 0) return getInfluencerTier(followers);
   const tiers = strategy.creatorTierStrategy.map((t) => t.tier);
   return tiers[index % tiers.length] ?? "Micro";
 }

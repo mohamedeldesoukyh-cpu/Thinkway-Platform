@@ -32,6 +32,8 @@ function coerceOutputKind(value: unknown): CampaignOutputKind | undefined {
     : undefined;
 }
 
+const COPILOT_TIER_ENUM = ["Celebrity", "Mega", "Macro", "Mid", "Micro", "Nano"] as const;
+
 const AUTHOR_TARGETS: SectionAuthorTarget[] = [
   "strategy",
   "executive_summary",
@@ -42,7 +44,7 @@ const AUTHOR_TARGETS: SectionAuthorTarget[] = [
 
 /**
  * Tool schema the Campaign Copilot exposes to the model. The model only chooses
- * a tool + arguments — it never writes campaign data. Executors (deterministic)
+ * a tool + arguments â€” it never writes campaign data. Executors (deterministic)
  * run the actual mutation. Intents beyond this increment's executors are still
  * declared so the model's vocabulary stays stable across releases.
  */
@@ -50,13 +52,13 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "remove_creators",
     description:
-      "Remove creators from the campaign slate. Use `tier` for a whole follower tier (Celebrity, Macro, Mid-Tier, Micro, Nano), `names` for specific creators, `city`/`country` to remove by creator location, or `belowEngagement` to remove creators under an engagement rate.",
+      "Remove creators from the campaign slate. Use `tier` for a whole follower tier (Celebrity, Mega, Macro, Mid, Micro, Nano), `names` for specific creators, `city`/`country` to remove by creator location, or `belowEngagement` to remove creators under an engagement rate.",
     parameters: {
       type: "object",
       properties: {
         tier: {
           type: "string",
-          enum: ["Celebrity", "Macro", "Mid-Tier", "Micro", "Nano"],
+          enum: [...COPILOT_TIER_ENUM],
           description: "Follower tier to remove entirely.",
         },
         names: {
@@ -84,7 +86,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
         category: { type: "string", description: "Content niche/category to search for." },
         tier: {
           type: "string",
-          enum: ["Celebrity", "Macro", "Mid-Tier", "Micro", "Nano"],
+          enum: [...COPILOT_TIER_ENUM],
           description: "Follower tier to target.",
         },
         city: { type: "string" },
@@ -218,7 +220,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "retone_proposal",
     description:
-      "Apply a tone across the WHOLE proposal — re-authors the strategy and executive summary together. Use for 'make the whole proposal more executive/premium/data-driven', 'make the presentation CMO-ready'.",
+      "Apply a tone across the WHOLE proposal â€” re-authors the strategy and executive summary together. Use for 'make the whole proposal more executive/premium/data-driven', 'make the presentation CMO-ready'.",
     parameters: {
       type: "object",
       properties: {
@@ -233,7 +235,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "generate_output",
     description:
-      "Generate a Campaign Output (a whole-campaign artifact — NOT a creator asset) from the Campaign Object: Full Campaign Strategy, Executive Proposal, Media Plan, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, etc. Use for 'generate a media plan', 'create a full strategy', 'generate only the timeline'. Only the requested output is generated.",
+      "Generate a Campaign Output (a whole-campaign artifact â€” NOT a creator asset) from the Campaign Object: Full Campaign Strategy, Executive Proposal, Media Plan, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, etc. Use for 'generate a media plan', 'create a full strategy', 'generate only the timeline'. Only the requested output is generated.",
     parameters: {
       type: "object",
       properties: {
@@ -323,7 +325,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "review_campaign",
     description:
-      "Have the AI Campaign Director review the whole campaign and propose improvements (publishing order, phases, waves, platform priority, service types, amplification windows, budget, pacing, contingency, timeline, creator diversity). Use for 'review the campaign', 'what do you recommend', 'how can I improve this', 'recommend the publishing order'. Read-only — it proposes; the user approves.",
+      "Have the AI Campaign Director review the whole campaign and propose improvements (publishing order, phases, waves, platform priority, service types, amplification windows, budget, pacing, contingency, timeline, creator diversity). Use for 'review the campaign', 'what do you recommend', 'how can I improve this', 'recommend the publishing order'. Read-only â€” it proposes; the user approves.",
     parameters: { type: "object", properties: {} },
   },
   {
@@ -357,7 +359,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "clarify",
     description:
-      "Ask ONE specific clarifying question that references the current campaign's actual contents. Use only when the request is genuinely ambiguous — never ask which campaign.",
+      "Ask ONE specific clarifying question that references the current campaign's actual contents. Use only when the request is genuinely ambiguous â€” never ask which campaign.",
     parameters: {
       type: "object",
       properties: {
@@ -369,9 +371,10 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
 ];
 
 const TIER_KEYWORDS: Array<{ re: RegExp; tier: string }> = [
-  { re: /\bcelebrit(?:y|ies)\b|\bmega\b/i, tier: "Celebrity" },
+  { re: /\bcelebrit(?:y|ies)\b/i, tier: "Celebrity" },
+  { re: /\bmega\b/i, tier: "Mega" },
   { re: /\bmacros?\b/i, tier: "Macro" },
-  { re: /\bmid[-\s]?tiers?\b|\bmids?\b/i, tier: "Mid-Tier" },
+  { re: /\bmid[-\s]?tiers?\b|\bmids?\b/i, tier: "Mid" },
   { re: /\bmicros?\b/i, tier: "Micro" },
   { re: /\bnanos?\b/i, tier: "Nano" },
 ];
@@ -452,7 +455,7 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     if (weeks) return { kind: "update_timeline", durationWeeks: weeks };
   }
 
-  // "replace macro creators with micro creators" — split on "with", read each side.
+  // "replace macro creators with micro creators" â€” split on "with", read each side.
   if (/\breplace\b/i.test(text) && /\bwith\b/i.test(text)) {
     const [fromPart, toPart] = text.split(/\bwith\b/i);
     const fromTier = TIER_KEYWORDS.find((t) => t.re.test(fromPart ?? ""))?.tier;
@@ -468,7 +471,7 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
   }
 
   if (REMOVE_RE.test(text)) {
-    // "remove creators from/in Cairo" — location-based removal.
+    // "remove creators from/in Cairo" â€” location-based removal.
     const location = text.match(
       /creators?\s+(?:from|in|based in|located in)\s+([A-Za-z][A-Za-z\s'-]{1,40})/i
     );
@@ -500,7 +503,7 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     };
   }
 
-  // Campaign Outputs Engine — generate / regenerate / export a whole-campaign
+  // Campaign Outputs Engine â€” generate / regenerate / export a whole-campaign
   // output. Requires an explicit output verb so content-editing phrasings
   // ("rewrite the strategy", "make it premium") still fall through to authoring.
   const outputKind = resolveOutputKind(text);
@@ -535,7 +538,7 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     return { kind: "compare_output_versions" };
   }
 
-  // AI Campaign Director — proactive review of the whole campaign.
+  // AI Campaign Director â€” proactive review of the whole campaign.
   if (
     /\b(recommend|recommendations?|review the campaign|improve the campaign|suggest (some )?improvements?|what (should|can|would) (i|we|you))\b/i.test(
       text
@@ -544,7 +547,7 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     return { kind: "review_campaign" };
   }
 
-  // Whole-proposal tone pass — re-author the narrative sections together.
+  // Whole-proposal tone pass â€” re-author the narrative sections together.
   const TONE_RE =
     /\b(premium|executive|youth[-\s]?focused|data[-\s]?driven|creative|cmo[-\s]?ready|concise|bold|aggressive|professional|punchy|luxurious|sophisticated)\b/i;
   const WHOLE_PROPOSAL_RE = /\b(whole|entire|full|overall|the)\s+(proposal|presentation|deck|document|campaign)\b/i;
@@ -584,7 +587,7 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
   return {
     kind: "clarify",
     question:
-      "Could you tell me exactly which part of the campaign you'd like to change — the creators, budget, timeline, audience, or strategy?",
+      "Could you tell me exactly which part of the campaign you'd like to change â€” the creators, budget, timeline, audience, or strategy?",
   };
 }
 

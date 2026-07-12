@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -51,6 +51,29 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
   const [department, setDepartment] = useState(detail.department ?? "Influencer Marketing");
   const [changeSummary, setChangeSummary] = useState(detail.change_summary ?? "");
   const [status, setStatus] = useState<QuotationStatus>(detail.status);
+
+  useEffect(() => {
+    setPreparedBy(detail.prepared_by_name ?? "");
+    setReviewedBy(detail.reviewed_by_name ?? "");
+    setClientSignatory(detail.client_signature_name ?? "");
+    setIssueDate(detail.issue_date);
+    setValidityDate(detail.validity_date ?? "");
+    setVersion(detail.version);
+    setDepartment(detail.department ?? "Influencer Marketing");
+    setChangeSummary(detail.change_summary ?? "");
+    setStatus(detail.status);
+  }, [
+    detail.id,
+    detail.prepared_by_name,
+    detail.reviewed_by_name,
+    detail.client_signature_name,
+    detail.issue_date,
+    detail.validity_date,
+    detail.version,
+    detail.department,
+    detail.change_summary,
+    detail.status,
+  ]);
 
   function persist(patch: Parameters<typeof registerMetaPending>[0]) {
     registerMetaPending({

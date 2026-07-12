@@ -14,6 +14,7 @@ import {
 } from "@/features/quotations/queries";
 import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher";
 import { seedFromQuotation } from "@/features/campaign-outputs/hydration/seed-adapters";
+import { isUuid } from "@/lib/validation/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,8 @@ type PageProps = {
 
 export default async function QuotationDetailPage({ params }: PageProps) {
   const { id } = await params;
+  if (!isUuid(id)) notFound();
+
   const [detail, formOptions, promoteOptions] = await Promise.all([
     getQuotationDetail(id),
     getQuotationFormOptions(),
@@ -44,7 +47,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
           <div className="min-h-0 flex-1 overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-2 md:px-6">
               <Button asChild variant="ghost" size="sm" className="-ml-2">
-                <Link href={QUOTATIONS_LIST_PATH}>← Back to client quotations</Link>
+                <Link href={QUOTATIONS_LIST_PATH}>â† Back to client quotations</Link>
               </Button>
               <GenerateOutputsLauncher
                 seed={seedFromQuotation(detail)}

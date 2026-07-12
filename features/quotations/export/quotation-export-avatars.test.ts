@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 
-import { quotationItemsAvatarEnriched } from "@/features/quotations/export/quotation-export-avatars";
+import {
+  quotationItemsAvatarEnriched,
+  quotationItemsCategoriesEnriched,
+  quotationItemsExportMetricsReady,
+  quotationItemsFullyEnrichedForExport,
+} from "@/features/quotations/export/quotation-export-avatars";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
 function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
@@ -19,6 +24,7 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     deliverables: [],
     profile_image_url: null,
     profile_url: "https://www.instagram.com/creator/",
+    creator_categories: ["Beauty"],
     creator_profile_source: {
       displayName: "Creator",
       avatarUrl: null,
@@ -53,6 +59,7 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     quotationItemsAvatarEnriched([
       item({
         profile_image_url: fresh,
+        creator_categories: ["Beauty"],
         creator_profile_source: {
           displayName: "Creator",
           avatarUrl: fresh,
@@ -96,10 +103,168 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
         profile_id: null,
         unified_id: null,
         creator_profile_source: null,
+        creator_categories: [],
       }),
     ]),
     true,
-    "lines without creator refs skip enrichment"
+    "lines without creator refs skip avatar enrichment"
+  );
+}
+
+{
+  assert.equal(
+    quotationItemsCategoriesEnriched([
+      item({
+        influencer_id: null,
+        profile_id: null,
+        unified_id: null,
+        creator_profile_source: null,
+        creator_categories: ["Beauty"],
+      }),
+    ]),
+    true,
+    "main-category tags count as category-enriched"
+  );
+}
+
+{
+  assert.equal(
+    quotationItemsCategoriesEnriched([
+      item({
+        influencer_id: null,
+        profile_id: null,
+        unified_id: null,
+        creator_profile_source: null,
+        creator_categories: ["General influencer"],
+      }),
+    ]),
+    false,
+    "non-mapping stored tags must re-run category inference"
+  );
+}
+
+{
+  assert.equal(
+    quotationItemsFullyEnrichedForExport([
+      item({
+        profile_image_url:
+          "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=6A539B1C",
+        creator_categories: ["General influencer"],
+        creator_profile_source: {
+          displayName: "Creator",
+          avatarUrl:
+            "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=6A539B1C",
+          platform: "instagram",
+          handle: "creator",
+          profile_url: "https://www.instagram.com/creator/",
+        },
+      }),
+    ]),
+    false,
+    "usable avatar with non-mapping categories must re-enrich"
+  );
+}
+
+{
+  const fresh =
+    "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=6A539B1C";
+  assert.equal(
+    quotationItemsExportMetricsReady([
+      item({
+        id: "item-1",
+        influencer_id: "inf-hgabr",
+        handle: "hgabr",
+        platform: null,
+        followers: null,
+        profile_image_url: fresh,
+        creator_profile_source: {
+          displayName: "hgabr",
+          avatarUrl: fresh,
+          platform: null,
+          linkedPlatforms: ["instagram", "tiktok"],
+          handle: "hgabr",
+          profile_url: "https://www.instagram.com/hgabr/",
+        },
+      }),
+      item({
+        id: "item-2",
+        influencer_id: "inf-hgabr",
+        handle: "hgabr",
+        platform: "instagram",
+        followers: 639_850,
+        sort_order: 1,
+        profile_image_url: fresh,
+        creator_profile_source: {
+          displayName: "hgabr",
+          avatarUrl: fresh,
+          platform: "instagram",
+          handle: "hgabr",
+          profile_url: "https://www.instagram.com/hgabr/",
+        },
+      }),
+    ]),
+    true,
+    "group-level metrics merge satisfies export readiness"
+  );
+
+  assert.equal(
+    quotationItemsExportMetricsReady([
+      item({
+        id: "item-1",
+        influencer_id: "inf-hgabr",
+        handle: "hgabr",
+        platform: null,
+        followers: null,
+        profile_image_url: fresh,
+        creator_profile_source: {
+          displayName: "hgabr",
+          avatarUrl: fresh,
+          platform: null,
+          linkedPlatforms: ["instagram", "tiktok"],
+          handle: "hgabr",
+        },
+      }),
+      item({
+        id: "item-2",
+        influencer_id: "inf-hgabr",
+        handle: "hgabr",
+        platform: null,
+        followers: null,
+        sort_order: 1,
+        profile_image_url: fresh,
+        creator_profile_source: {
+          displayName: "hgabr",
+          avatarUrl: fresh,
+          platform: null,
+          linkedPlatforms: ["instagram", "tiktok"],
+          handle: "hgabr",
+        },
+      }),
+    ]),
+    false,
+    "missing group platform and followers must trigger re-enrichment"
+  );
+
+  assert.equal(
+    quotationItemsFullyEnrichedForExport([
+      item({
+        profile_image_url: fresh,
+        creator_categories: ["Beauty"],
+        influencer_id: "inf-hgabr",
+        handle: "hgabr",
+        platform: null,
+        followers: null,
+        creator_profile_source: {
+          displayName: "hgabr",
+          avatarUrl: fresh,
+          platform: null,
+          linkedPlatforms: ["instagram", "tiktok"],
+          handle: "hgabr",
+        },
+      }),
+    ]),
+    false,
+    "avatar-enriched lines without export metrics must re-enrich"
   );
 }
 

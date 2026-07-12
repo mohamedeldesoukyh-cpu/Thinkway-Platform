@@ -1,26 +1,13 @@
-import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
+import { getTierFollowerRange } from "@/lib/creators/influencer-tier";
 
-import { normalizeTierLabel } from "../creator-slate";
+import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
 /** Follower band for a tier label — used to search Discovery for replacements. */
 export function tierFollowerRange(tier: string): {
   minFollowers?: number;
   maxFollowers?: number;
 } {
-  switch (normalizeTierLabel(tier)) {
-    case "Celebrity":
-      return { minFollowers: 5_000_000 };
-    case "Macro":
-      return { minFollowers: 1_000_000, maxFollowers: 4_999_999 };
-    case "Mid-Tier":
-      return { minFollowers: 50_000, maxFollowers: 999_999 };
-    case "Micro":
-      return { minFollowers: 10_000, maxFollowers: 49_999 };
-    case "Nano":
-      return { maxFollowers: 9_999 };
-    default:
-      return {};
-  }
+  return getTierFollowerRange(tier);
 }
 
 export function creatorCity(creator: UnifiedCreatorResult): string | null {

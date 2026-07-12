@@ -2,10 +2,13 @@
  * Export-only helpers — grouping, labels, and field mapping for quotation templates.
  * Does not affect the quotation workspace UI.
  */
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
-import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
+import { resolveQuotationCreatorDisplayCategories } from "@/lib/quotations/quotation-creator-categories";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorProfileUrl, type ProfileUrlSource } from "@/lib/discovery/profile-url";
+import { parseProfileInput } from "@/lib/social/parse-profile-url";
+import { isSocialPlatform } from "@/lib/social/platforms";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
 import {
@@ -126,11 +129,39 @@ export function formatCreatorHandle(handle: string | null | undefined): string {
   return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
 }
 
-/** Stored influencer categories for export (max 3 tags, matches shortlist export). */
+/** Stored influencer categories for export (max 3 tags, with DNA fallback). */
 export function quotationCreatorCategoriesFromUnified(
-  creator: Pick<UnifiedCreatorResult, "browse_category_tags" | "categories">
+  creator: Pick<
+    UnifiedCreatorResult,
+    | "browse_category_tags"
+    | "categories"
+    | "ai_category"
+    | "ai_niche"
+    | "audience_interests"
+    | "bio"
+    | "hashtags"
+    | "mentions"
+    | "platforms"
+    | "display_name"
+  >,
+  profile?: {
+    creatorName?: string | null;
+    handle?: string | null;
+  }
 ): string[] {
-  return creatorStoredCategoriesForDisplay(creator).slice(0, 3);
+  return resolveQuotationCreatorDisplayCategories({ creator, ...profile });
+}
+
+/** Resolve display categories for an export line (same pipeline as enrichment). */
+export function resolveExportItemCreatorCategories(item: QuotationExportItem): string[] {
+  return resolveQuotationCreatorDisplayCategories({
+    itemCategories: item.creator_categories,
+    creatorName: item.creator_name,
+    handle: item.handle,
+    linePlatform: item.platform,
+    followers: item.followers,
+    countryCode: item.country_code,
+  });
 }
 
 export function formatQuotationCreatorCategories(
@@ -223,6 +254,147 @@ export function exportItemPlatformIcons(item: QuotationExportItem): {
   }
 
   return { platformIcons: [...platformIcons], allPlatforms };
+}
+
+export function isPositiveExportFollowers(
+  followers: number | null | undefined
+): followers is number {
+  return followers != null && Number.isFinite(followers) && followers > 0;
+}
+
+const MENA_COUNTRY_CODES = new Set([
+  "EG",
+  "SA",
+  "AE",
+  "KW",
+  "QA",
+  "BH",
+  "OM",
+  "JO",
+  "LB",
+  "IQ",
+  "MA",
+  "TN",
+  "DZ",
+  "LY",
+  "SD",
+  "YE",
+  "PS",
+  "SY",
+]);
+
+function isMenaCountryCode(countryCode: string | null | undefined): boolean {
+  const code = countryCode?.trim().toUpperCase();
+  if (!code) return true;
+  return MENA_COUNTRY_CODES.has(code);
+}
+
+function resolvePreferredLinkedPlatform(linkedPlatforms: string[]): string | null {
+  const canonical = linkedPlatforms
+    .map((platform) => canonicalPlatformKey(platform))
+    .filter((platform) => platform !== "unknown" && isSocialPlatform(platform));
+  if (canonical.length === 1) return canonical[0]!;
+  if (canonical.includes("instagram")) return "instagram";
+  return canonical[0] ?? null;
+}
+
+function resolveExportPlatformFromProfileUrl(item: QuotationExportItem): string | null {
+  const urls = [
+    item.profile_url,
+    item.creator_profile_source?.profile_url,
+    resolveExportCreatorProfile(item).profileUrl,
+  ];
+  for (const url of urls) {
+    if (!url?.trim()) continue;
+    const parsed = parseProfileInput(url);
+    if (parsed?.platform) return parsed.platform;
+  }
+  return null;
+}
+
+function resolveExportPlatformFromDeliverables(item: QuotationExportItem): string | null {
+  const { platformIcons } = exportItemPlatformIcons(item);
+  return resolvePreferredLinkedPlatform(platformIcons);
+}
+
+/** Platform for export — line item, enriched profile source, or creator profile fallback. */
+export function resolveExportItemPlatform(item: QuotationExportItem): string | null {
+  const itemPlatform = item.platform?.trim();
+  if (itemPlatform) return itemPlatform;
+
+  const sourcePlatform = item.creator_profile_source?.platform?.trim();
+  if (sourcePlatform) return sourcePlatform;
+
+  const linkedPlatform = resolvePreferredLinkedPlatform(
+    item.creator_profile_source?.linkedPlatforms ?? []
+  );
+  if (linkedPlatform) return linkedPlatform;
+
+  const fromProfileUrl = resolveExportPlatformFromProfileUrl(item);
+  if (fromProfileUrl) return fromProfileUrl;
+
+  const fromDeliverables = resolveExportPlatformFromDeliverables(item);
+  if (fromDeliverables) return fromDeliverables;
+
+  const profilePlatform = resolveExportCreatorProfile(item).platform?.trim();
+  if (profilePlatform) return profilePlatform;
+
+  const handle = item.handle?.trim().replace(/^@+/, "");
+  if (
+    handle &&
+    isMenaCountryCode(item.country_code ?? item.creator_profile_source?.countryCode)
+  ) {
+    return "instagram";
+  }
+
+  return null;
+}
+
+/** Follower count for export — positive line snapshot only. */
+export function resolveExportItemFollowers(item: QuotationExportItem): number | null {
+  return isPositiveExportFollowers(item.followers) ? item.followers : null;
+}
+
+/** Best platform across creator options (first option may lack platform metadata). */
+export function resolveExportGroupPlatform(items: QuotationExportItem[]): string | null {
+  for (const item of items) {
+    const platform = resolveExportItemPlatform(item);
+    if (platform) return platform;
+  }
+  return null;
+}
+
+/** Highest follower count across creator options. */
+export function resolveExportGroupFollowers(items: QuotationExportItem[]): number | null {
+  let best: number | null = null;
+  for (const item of items) {
+    const followers = resolveExportItemFollowers(item);
+    if (followers == null) continue;
+    if (best == null || followers > best) best = followers;
+  }
+  return best;
+}
+
+/** Engagement rate from the option supplying followers, else first finite value. */
+export function resolveExportGroupEngagementRate(
+  items: QuotationExportItem[],
+  followers: number | null
+): number | null {
+  if (followers != null) {
+    const matching = items.find(
+      (item) => item.followers === followers && item.engagement_rate != null
+    );
+    if (matching?.engagement_rate != null && Number.isFinite(matching.engagement_rate)) {
+      return matching.engagement_rate;
+    }
+  }
+
+  for (const item of items) {
+    if (item.engagement_rate != null && Number.isFinite(item.engagement_rate)) {
+      return item.engagement_rate;
+    }
+  }
+  return null;
 }
 
 export function resolveExportCreatorProfile(item: QuotationExportItem) {

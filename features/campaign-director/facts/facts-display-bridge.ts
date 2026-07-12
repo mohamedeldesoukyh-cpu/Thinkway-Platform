@@ -116,14 +116,15 @@ export function formatFactsDurationDisplay(facts: CampaignFacts): string {
 function normalizeCreatorTier(tier: string): CreatorMixTier["tier"] {
   const lower = tier.toLowerCase();
   if (lower === "celebrity") return "Celebrity";
-  if (lower === "mega" || lower === "macro") return "Macro";
-  if (lower === "mid") return "Mid";
+  if (lower === "mega") return "Mega";
+  if (lower === "macro") return "Macro";
+  if (lower === "mid" || lower === "mid-tier") return "Mid";
   if (lower === "micro") return "Micro";
   if (lower === "nano") return "Nano";
   return "Macro";
 }
 
-/** Merge duplicate tier labels (e.g. Mega + Macro both normalize to Macro). */
+/** Merge duplicate tier labels after normalization. */
 export function dedupeCreatorMixTiers(tiers: CreatorMixTier[]): CreatorMixTier[] {
   const merged = new Map<CreatorMixTier["tier"], CreatorMixTier>();
   const order: CreatorMixTier["tier"][] = [];

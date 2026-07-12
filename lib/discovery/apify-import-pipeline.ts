@@ -147,6 +147,8 @@ async function ensureCommercialCreatorFromApifyData(
       hashtags: normalized.hashtags,
       mentions: normalized.mentions,
       extraTerms: normalized.categories,
+      displayName: normalized.displayName,
+      handle: username,
     })
   );
 

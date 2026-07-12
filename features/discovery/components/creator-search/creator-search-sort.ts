@@ -1,4 +1,4 @@
-import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
+import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorDiscoverySource } from "@/features/discovery/components/creator-search/creator-discovery-source";
 
@@ -56,7 +56,7 @@ function resolveSortCountry(creator: UnifiedCreatorResult): string {
 }
 
 function resolveSortCategories(creator: UnifiedCreatorResult): string {
-  const parts = creatorStoredCategoriesForDisplay(creator);
+  const parts = resolveDiscoveryCreatorDisplayCategories(creator);
   return parts.length > 0 ? parts.join(", ").toLowerCase() : "";
 }
 

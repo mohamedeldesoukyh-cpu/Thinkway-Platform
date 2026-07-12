@@ -35,8 +35,9 @@ export type BuildQuotationHtmlOptions = {
 
 const TIER_BADGE_STYLE: Record<CreatorTierLabel, string> = {
   Celebrity: "background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#92400e;",
+  Mega: "background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.35);color:#c2410c;",
   Macro: "background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);color:#3730a3;",
-  "Mid-Tier": "background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);color:#5b21b6;",
+  Mid: "background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.35);color:#5b21b6;",
   Micro: "background:rgba(29,158,117,.12);border:1px solid rgba(29,158,117,.35);color:#178f69;",
   Nano: "background:rgba(100,116,139,.12);border:1px solid rgba(148,163,184,.35);color:#334155;",
   Unknown: "background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;",
@@ -879,6 +880,120 @@ function renderKpiGrid(kpis: QuotationDocument["commercialKpis"]): string {
     .join("")}</div>`;
 }
 
+function renderSummaryInsights(doc: QuotationDocument): string {
+  if (!doc.summary.insightBullets.length) return "";
+  return `<div class="summary-insight avoid-break">
+    <div class="summary-insight-title">Campaign mix insight</div>
+    <ul>${doc.summary.insightBullets.map((bullet) => `<li>${esc(bullet)}</li>`).join("")}</ul>
+  </div>`;
+}
+
+function renderCategorySummaryRows(doc: QuotationDocument): string {
+  if (!doc.summary.categoryBreakdown.length) {
+    return `<tr><td colspan="3" class="muted" style="text-align:center;padding:18px">No creator categories available.</td></tr>`;
+  }
+  return doc.summary.categoryBreakdown
+    .map(
+      (item) => `
+      <tr>
+        <td>${esc(item.label)}</td>
+        <td>${item.count} creator${item.count === 1 ? "" : "s"}</td>
+        <td class="num">${esc(item.sharePct)}</td>
+      </tr>`
+    )
+    .join("");
+}
+
+function renderTierBreakdownSection(doc: QuotationDocument): string {
+  const breakdown = doc.summary.fullTierBreakdown;
+  if (!breakdown.sections.length) {
+    return `<div class="tier-breakdown-empty muted">No creator tier data available.</div>`;
+  }
+
+  const sections = breakdown.sections
+    .map((section) => {
+      const rows = section.creators
+        .map(
+          (row) => `
+        <tr>
+          <td>${esc(row.handle)}</td>
+          <td>${esc(row.platform)}</td>
+          <td class="num">${esc(row.followers)}</td>
+          <td>${esc(row.category)}</td>
+          <td class="num">${esc(row.engagementRate)}</td>
+          <td class="num">${esc(row.estimatedReach)}</td>
+        </tr>`
+        )
+        .join("");
+
+      return `<div class="tier-breakdown-block avoid-break">
+        <div class="tier-breakdown-header">
+          <strong>${esc(section.sectionLabel)}</strong>
+          <span>${section.profileCount} profile${section.profileCount === 1 ? "" : "s"}</span>
+          <span>${esc(section.totalFollowersLabel)} followers</span>
+          <span>Est. Reach: ${esc(section.estimatedReachLabel)} (${esc(section.reachSharePct)} of total)</span>
+          <span>Avg ER: ${esc(section.avgEngagementRate)}</span>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table tier-breakdown-table">
+            <thead>
+              <tr>
+                <th>Handle</th>
+                <th>Platform</th>
+                <th class="num">Followers</th>
+                <th>Category</th>
+                <th class="num">ER %</th>
+                <th class="num">Est. Reach</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+              <tr class="tier-subtotal-row">
+                <td colspan="2">${esc(section.subtotalLabel)}</td>
+                <td class="num">${esc(section.subtotalFollowers)}</td>
+                <td>—</td>
+                <td class="num">${esc(section.subtotalEngagementRate)}</td>
+                <td class="num">${esc(section.subtotalEstimatedReach)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  return `<div class="tier-breakdown-section">
+      <div class="tier-breakdown-title">${esc(breakdown.title)}</div>
+      ${sections}
+      <div class="tier-breakdown-grand-total avoid-break">
+        <strong>${esc(breakdown.grandTotalLabel)}</strong>
+        <span>${esc(breakdown.grandTotalFollowers)} followers</span>
+        <span>Est. Reach: ${esc(breakdown.grandTotalEstimatedReach)}</span>
+        <span>Avg ER: ${esc(breakdown.grandTotalEngagementRate)}</span>
+      </div>
+    </div>`;
+}
+
+function renderCreatorCategorySummarySection(
+  doc: QuotationDocument,
+  sectionNum: number
+): string {
+  return `<div class="section summary-overview-page" id="section-category-summary">
+      ${sectionLabel(String(sectionNum).padStart(2, "0"), "Creators by Category")}
+      <div class="table-scroll">
+        <table class="data-table category-summary-table">
+          <thead>
+            <tr><th>Category</th><th>Creators</th><th class="num">Share</th></tr>
+          </thead>
+          <tbody>${renderCategorySummaryRows(doc)}</tbody>
+        </table>
+      </div>
+      <p class="category-summary-note">Categories are counted once per creator. Creators with multiple category tags are included in each relevant category.</p>
+      <div class="tier-breakdown-divider"></div>
+      ${renderTierBreakdownSection(doc)}
+    </div>`;
+}
+
 /**
  * Showcase cover/title prefix (same for showcase + showcase-lump-sum).
  * Export header never says "Lump Sum" — UI dropdown may still distinguish templates.
@@ -961,6 +1076,7 @@ function renderDetailedCommercialSection(
       ${sectionLabel(String(sectionNum).padStart(2, "0"), "Commercial Summary")}
       ${renderKpiGrid(doc.commercialKpis.slice(0, 3))}
       ${doc.commercialKpis.length > 3 ? renderKpiGrid(doc.commercialKpis.slice(3)) : ""}
+      ${renderSummaryInsights(doc)}
       ${renderCreatorTables(doc, siteOrigin)}
       <div class="summary-box avoid-break">
         <table>${renderDetailedSummaryRows(doc)}</table>
@@ -976,6 +1092,7 @@ function renderLumpSumCommercialSection(
       ${sectionLabel(String(sectionNum).padStart(2, "0"), "Commercial Summary")}
       ${renderKpiGrid(doc.commercialKpis.slice(0, 3))}
       ${doc.commercialKpis.length > 3 ? renderKpiGrid(doc.commercialKpis.slice(3)) : ""}
+      ${renderSummaryInsights(doc)}
       <div class="summary-box avoid-break">
         <table>${renderLumpSumSummaryRows(doc)}</table>
       </div>
@@ -1116,7 +1233,7 @@ function renderShowcaseCreatorPage(
     doc.audience === "internal" ? "<th>Deliverables</th>" : "";
 
   return `<section class="showcase-creator-page avoid-break" id="showcase-creator-${index}">
-      ${sectionLabel(String(index + 1).padStart(2, "0"), `Creator ${index + 1} of ${total}`)}
+      ${sectionLabel(String(index + 2).padStart(2, "0"), `Creator ${index + 1} of ${total}`)}
       <div class="showcase-creator-sheet avoid-break">
       ${hero}
       ${renderShowcaseCreatorKpis(group)}
@@ -1152,7 +1269,7 @@ function renderShowcaseCreatorPages(
 ): string {
   if (!doc.creatorGroups.length) {
     return `<section class="showcase-creator-page avoid-break">
-      ${sectionLabel("01", "Creators")}
+      ${sectionLabel("02", "Creators")}
       <p class="report-note">No creators added yet.</p>
     </section>`;
   }
@@ -1182,7 +1299,7 @@ function renderShowcaseRosterSection(doc: QuotationDocument): string {
     .join("");
 
   return `<div class="section page-break" id="section-roster">
-      ${sectionLabel(String(doc.creatorGroups.length + 1).padStart(2, "0"), `Creator Roster (${doc.summary.creatorCount})`)}
+      ${sectionLabel(String(doc.creatorGroups.length + 2).padStart(2, "0"), `Creator Roster (${doc.summary.creatorCount})`)}
       <div class="table-scroll">
         <table class="data-table">
           <thead>
@@ -1213,6 +1330,7 @@ function buildShowcaseQuotationHtml(
     : "";
   const showcaseTitle = formatShowcaseQuotationTitle(doc.name);
   const includeLumpSumTotals = doc.template === "showcase-lump-sum";
+  const categorySummarySection = renderCreatorCategorySummarySection(doc, 1);
   const commercialSectionNum = doc.creatorGroups.length + 2;
   const commercialSection = includeLumpSumTotals
     ? renderLumpSumCommercialSection(doc, commercialSectionNum)
@@ -1232,6 +1350,7 @@ ${baseTag}
   <div class="page">
     ${renderCoverPage(doc)}
     <div class="report-body">
+      ${categorySummarySection}
       ${renderShowcaseCreatorPages(doc, siteOrigin)}
       ${renderShowcaseRosterSection(doc)}
       ${commercialSection}
@@ -1258,7 +1377,8 @@ export function buildQuotationHtml(
   const baseTag = siteOrigin
     ? `<base href="${esc(siteOrigin.replace(/\/$/, ""))}/" />`
     : "";
-  let sectionNum = 1;
+  const categorySummarySection = renderCreatorCategorySummarySection(doc, 1);
+  let sectionNum = 2;
 
   const commercialSection =
     doc.template === "lump-sum"
@@ -1310,6 +1430,7 @@ ${baseTag}
   <div class="page">
     ${renderCoverPage(doc)}
     <div class="report-body">
+      ${categorySummarySection}
       ${commercialSection}
       ${notesSection}
       ${lumpSumCreatorsSection}
