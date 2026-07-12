@@ -321,6 +321,12 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
     },
   },
   {
+    name: "review_campaign",
+    description:
+      "Have the AI Campaign Director review the whole campaign and propose improvements (publishing order, phases, waves, platform priority, service types, amplification windows, budget, pacing, contingency, timeline, creator diversity). Use for 'review the campaign', 'what do you recommend', 'how can I improve this', 'recommend the publishing order'. Read-only — it proposes; the user approves.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
     name: "undo_last_change",
     description: "Revert the campaign to the version before the most recent change.",
     parameters: { type: "object", properties: {} },
@@ -529,6 +535,15 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     return { kind: "compare_output_versions" };
   }
 
+  // AI Campaign Director — proactive review of the whole campaign.
+  if (
+    /\b(recommend|recommendations?|review the campaign|improve the campaign|suggest (some )?improvements?|what (should|can|would) (i|we|you))\b/i.test(
+      text
+    )
+  ) {
+    return { kind: "review_campaign" };
+  }
+
   // Whole-proposal tone pass — re-author the narrative sections together.
   const TONE_RE =
     /\b(premium|executive|youth[-\s]?focused|data[-\s]?driven|creative|cmo[-\s]?ready|concise|bold|aggressive|professional|punchy|luxurious|sophisticated)\b/i;
@@ -685,6 +700,8 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
         from: typeof args.from === "number" ? args.from : undefined,
         to: typeof args.to === "number" ? args.to : undefined,
       };
+    case "review_campaign":
+      return { kind: "review_campaign" };
     case "undo_last_change":
       return { kind: "undo_last_change" };
     case "restore_version":

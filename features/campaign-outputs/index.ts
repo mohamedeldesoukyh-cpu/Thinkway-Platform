@@ -97,3 +97,4 @@ export {
   type OutputCopilotResult,
 } from "./copilot/output-copilot";
 export * from "./hydration";
+export * from "./director";

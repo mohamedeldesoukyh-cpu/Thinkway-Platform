@@ -44,6 +44,7 @@ export type StudioCopilotIntentKind =
   | "preview_output"
   | "explain_output_staleness"
   | "compare_output_versions"
+  | "review_campaign"
   | "undo_last_change"
   | "restore_version"
   | "answer_question"
@@ -147,6 +148,9 @@ export type CompareVersionsIntent = {
   to?: number;
 };
 
+/** AI Campaign Director: review the whole Campaign Object and propose improvements. */
+export type ReviewCampaignIntent = { kind: "review_campaign" };
+
 export type AnswerQuestionIntent = { kind: "answer_question"; question: string };
 export type ClarifyIntent = { kind: "clarify"; question: string };
 export type UndoIntent = { kind: "undo_last_change" };
@@ -172,6 +176,7 @@ export type ExecutableStudioCopilotIntent =
   | PreviewOutputIntent
   | ExplainStalenessIntent
   | CompareVersionsIntent
+  | ReviewCampaignIntent
   | AnswerQuestionIntent
   | ClarifyIntent
   | UndoIntent

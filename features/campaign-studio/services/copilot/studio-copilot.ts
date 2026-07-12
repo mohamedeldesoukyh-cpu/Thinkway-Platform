@@ -18,6 +18,7 @@ import {
   runOpenOutput,
   runPreviewOutput,
 } from "@/features/campaign-outputs/copilot/output-copilot";
+import { runReviewCampaign } from "@/features/campaign-outputs/director/director-copilot";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { getDefaultLlmProvider } from "@/features/ai/llm";
@@ -237,6 +238,8 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       return explainStalenessOp(input, intent.output);
     case "compare_output_versions":
       return compareVersionsOp(input, intent.output, intent.from, intent.to);
+    case "review_campaign":
+      return reviewCampaignOp(input);
     case "undo_last_change":
       return undoLastChange(input);
     case "restore_version":
@@ -892,6 +895,17 @@ async function compareVersionsOp(
     changed: false,
     intentKind: "compare_output_versions",
     outputNavigate: result.navigate,
+  };
+}
+
+/** AI Campaign Director: review the campaign and propose improvements (read-only). */
+async function reviewCampaignOp(input: RunInput): Promise<StudioCopilotResult> {
+  const result = runReviewCampaign(input.campaignObject);
+  return {
+    campaignObject: result.campaignObject,
+    reply: result.reply,
+    changed: false,
+    intentKind: "review_campaign",
   };
 }
 
