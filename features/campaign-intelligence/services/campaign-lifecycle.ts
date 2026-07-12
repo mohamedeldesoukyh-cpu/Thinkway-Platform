@@ -10,8 +10,8 @@ const TRANSITIONS: Record<
 > = {
   draft: ["in_review", "archived"],
   in_review: ["approved", "draft", "archived"],
-  approved: ["published", "archived", "in_review"],
-  published: ["archived"],
+  approved: ["published", "archived", "in_review", "draft"],
+  published: ["archived", "draft"],
   archived: ["draft"],
 };
 

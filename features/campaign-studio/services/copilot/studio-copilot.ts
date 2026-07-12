@@ -21,6 +21,7 @@ import {
 import { runReviewCampaign } from "@/features/campaign-outputs/director/director-copilot";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
+import { isCampaignPlanLockedForEdits, APPROVED_PLAN_EDIT_BLOCKED_MESSAGE } from "@/lib/domains/commercial/campaign-plan-approval";
 import { getDefaultLlmProvider } from "@/features/ai/llm";
 import type { LlmProvider } from "@/features/ai/types/llm";
 
@@ -733,6 +734,22 @@ async function generateOutputEdit(
       campaignObject: input.campaignObject,
       reply:
         "Which output would you like me to generate — the Media Plan, the Full Campaign Strategy, the Executive Proposal, the KPI Forecast, or another?",
+      changed: false,
+      intentKind,
+    };
+  }
+
+  const { data: head } = await input.supabase
+    .from("campaign_objects")
+    .select("lifecycle_status")
+    .eq("id", input.campaignObject.id)
+    .maybeSingle();
+
+  const lifecycle = (head as { lifecycle_status?: string } | null)?.lifecycle_status;
+  if (isCampaignPlanLockedForEdits(lifecycle)) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: APPROVED_PLAN_EDIT_BLOCKED_MESSAGE,
       changed: false,
       intentKind,
     };

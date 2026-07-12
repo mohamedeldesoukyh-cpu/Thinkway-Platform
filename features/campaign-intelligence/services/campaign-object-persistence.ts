@@ -28,7 +28,12 @@ export type SaveCampaignObjectVersionInput = {
   userId: string;
   conversationId: string;
   campaignHeaderId?: string | null;
-  saveReason?: "task_complete" | "workflow_complete" | "manual";
+  saveReason?:
+    | "task_complete"
+    | "workflow_complete"
+    | "manual"
+    | "review_submitted"
+    | "approved";
 };
 
 export type SaveCampaignObjectVersionResult = {

@@ -242,6 +242,8 @@ function buildCreatorServiceDescription(
 }
 
 /** Map approved Campaign Plan strategy and operations context into quotation header notes. */
+// @tech-debt: quotation.notes overloads key messages, pillars, and ops context — migrate to
+// structured quotation fields when Phase 6+ commercial schema lands.
 export function mapCampaignPlanToQuotationHeaderSeed(
   campaignObject: CampaignObject,
   contextText?: string

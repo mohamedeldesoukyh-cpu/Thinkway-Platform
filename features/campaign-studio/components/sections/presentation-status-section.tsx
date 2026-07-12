@@ -1,15 +1,26 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckIcon,
   CopyIcon,
   FileTextIcon,
   MessageSquareWarningIcon,
   PresentationIcon,
+  SendIcon,
   ShareIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+
+import { serializeCampaignObject } from "@/features/campaign-intelligence";
+import {
+  approveCampaignPlanAction,
+  getCampaignPlanApprovalContext,
+  requestCampaignPlanChangesAction,
+  submitCampaignPlanForReviewAction,
+  type CampaignPlanApprovalContext,
+} from "@/features/campaign-plan/actions/campaign-plan-approval";
 
 import { openCampaignProposalPreview } from "../../export/campaign-proposal-preview";
 import { useCreatorHydration } from "../../hooks/use-creator-hydration";
@@ -31,11 +42,13 @@ import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
 type PresentationStatusSectionProps = {
   campaignObject?: CampaignObject;
+  campaignObjectId?: string;
+  conversationId?: string;
   fallbackText: string;
   status: CampaignStudioSectionStatus;
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const PRESENTATION_STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   ready: "Ready",
   awaiting_approval: "Awaiting Approval",
@@ -44,14 +57,52 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function PresentationStatusSection({
   campaignObject,
+  campaignObjectId,
+  conversationId,
   fallbackText,
   status,
 }: PresentationStatusSectionProps) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [approvalContext, setApprovalContext] = useState<CampaignPlanApprovalContext | null>(
+    null
+  );
+  const [loadingContext, setLoadingContext] = useState(Boolean(campaignObjectId));
+
   const isRunning = status === "running";
   const presentation = resolvePresentationData(campaignObject);
   const completion = resolvePresentationCompletion(campaignObject);
   const { ids } = resolveCreatorIds(campaignObject);
   const { vendors: hydrated } = useCreatorHydration(ids);
+
+  const resolvedCampaignObjectId = campaignObjectId ?? campaignObject?.id;
+
+  useEffect(() => {
+    if (!resolvedCampaignObjectId) {
+      setLoadingContext(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingContext(true);
+    void getCampaignPlanApprovalContext({
+      campaignObjectId: resolvedCampaignObjectId,
+      conversationId,
+      campaignObject,
+    }).then((result) => {
+      if (cancelled) return;
+      if ("error" in result) {
+        setApprovalContext(null);
+      } else {
+        setApprovalContext(result);
+      }
+      setLoadingContext(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedCampaignObjectId, conversationId, campaignObject]);
 
   const exportVendors = useMemo(
     () =>
@@ -75,6 +126,41 @@ export function PresentationStatusSection({
     toast.success("Client proposal opened — use Print → Save as PDF.");
   }
 
+  function runApprovalAction(
+    action: "submit" | "approve" | "request_changes",
+    options?: { message?: string }
+  ) {
+    if (!campaignObject || !resolvedCampaignObjectId) {
+      toast.error("Campaign Plan data is not ready.");
+      return;
+    }
+
+    startTransition(async () => {
+      const payload = {
+        campaignObjectId: resolvedCampaignObjectId,
+        conversationId,
+        campaignObject: serializeCampaignObject(campaignObject) as Record<string, unknown>,
+      };
+
+      const result =
+        action === "submit"
+          ? await submitCampaignPlanForReviewAction(payload)
+          : action === "approve"
+            ? await approveCampaignPlanAction(payload)
+            : await requestCampaignPlanChangesAction({
+                ...payload,
+                message: options?.message,
+              });
+
+      if (result.ok) {
+        toast.success(result.message);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
+  }
+
   if (isRunning && !presentation) {
     return <SectionSkeleton variant="cards" />;
   }
@@ -86,7 +172,14 @@ export function PresentationStatusSection({
     return <SectionFallbackContent text={fallbackText} />;
   }
 
-  const approvalLabel = STATUS_LABELS[presentation.status] ?? presentation.status;
+  const lifecycleLabel = approvalContext?.lifecycleLabel ?? "—";
+  const presentationStatus =
+    approvalContext?.presentationStatus ?? presentation.status;
+  const approvalLabel =
+    PRESENTATION_STATUS_LABELS[presentationStatus] ?? presentationStatus;
+  const isApproved =
+    approvalContext?.lifecycleStatus === "approved" ||
+    approvalContext?.lifecycleStatus === "published";
 
   return (
     <div className="space-y-3.5">
@@ -97,50 +190,95 @@ export function PresentationStatusSection({
           label="Sections"
           value={`${completion.sectionsComplete} / ${completion.totalSections}`}
         />
-        <PsBox label="Approval" value={approvalLabel} />
+        <PsBox label="Lifecycle" value={lifecycleLabel} />
+        <PsBox label="Presentation" value={approvalLabel} />
       </div>
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <PsBox
           label="Client Approval"
-          value={presentation.status === "approved" ? "Approved" : "Pending review"}
+          value={isApproved ? "Approved" : "Pending review"}
         />
         <PsBox
-          label="Internal Approval"
+          label="Director Review"
           value={
-            presentation.status === "ready" || presentation.status === "approved"
-              ? "Signed off"
-              : "In progress"
+            approvalContext?.lifecycleStatus === "in_review"
+              ? "Awaiting sign-off"
+              : isApproved
+                ? "Signed off"
+                : "Not submitted"
           }
         />
       </div>
 
+      {approvalContext?.lifecycleStatus === "in_review" ? (
+        <p className="text-[11px] text-amber-700 dark:text-amber-300">
+          Campaign Plan is awaiting Campaign Director review. Quotation and execution
+          generation unlock after approval.
+        </p>
+      ) : null}
+
+      {approvalContext?.canSubmitForReview ? (
+        <p className="text-[11px] text-muted-foreground">
+          The plan is ready to submit for director review.
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap gap-2 pt-1">
-        <button type="button" className={STUDIO_CLASSES.actBtnApprove}>
-          <CheckIcon className="size-3" aria-hidden />
-          Approve
-        </button>
-        <button type="button" className={STUDIO_CLASSES.actBtn}>
-          <MessageSquareWarningIcon className="size-3" aria-hidden />
-          Request Changes
-        </button>
+        {approvalContext?.canSubmitForReview ? (
+          <button
+            type="button"
+            className={STUDIO_CLASSES.actBtn}
+            disabled={pending}
+            onClick={() => runApprovalAction("submit")}
+          >
+            <SendIcon className="size-3" aria-hidden />
+            Submit for Review
+          </button>
+        ) : null}
+        {approvalContext?.canApprove ? (
+          <button
+            type="button"
+            className={STUDIO_CLASSES.actBtnApprove}
+            disabled={pending}
+            onClick={() => runApprovalAction("approve")}
+          >
+            <CheckIcon className="size-3" aria-hidden />
+            Approve
+          </button>
+        ) : null}
+        {approvalContext?.canRequestChanges ? (
+          <button
+            type="button"
+            className={STUDIO_CLASSES.actBtn}
+            disabled={pending}
+            onClick={() => runApprovalAction("request_changes")}
+          >
+            <MessageSquareWarningIcon className="size-3" aria-hidden />
+            Request Changes
+          </button>
+        ) : null}
         <button type="button" className={STUDIO_CLASSES.actBtn} onClick={handleExportPdf}>
           <FileTextIcon className="size-3" aria-hidden />
           Export PDF
         </button>
-        <button type="button" className={STUDIO_CLASSES.actBtn}>
+        <button type="button" className={STUDIO_CLASSES.actBtn} disabled>
           <PresentationIcon className="size-3" aria-hidden />
           Export PPT
         </button>
-        <button type="button" className={STUDIO_CLASSES.actBtn}>
+        <button type="button" className={STUDIO_CLASSES.actBtn} disabled>
           <ShareIcon className="size-3" aria-hidden />
           Share
         </button>
-        <button type="button" className={STUDIO_CLASSES.actBtn}>
+        <button type="button" className={STUDIO_CLASSES.actBtn} disabled>
           <CopyIcon className="size-3" aria-hidden />
           Duplicate
         </button>
       </div>
+
+      {loadingContext ? (
+        <p className="text-[10px] text-muted-foreground">Loading approval status…</p>
+      ) : null}
     </div>
   );
 }

@@ -11,6 +11,8 @@ import {
   getCampaignPlanQuotationContext,
   type CampaignPlanQuotationContext,
 } from "../actions/generate-quotation-from-plan";
+import { getCampaignPlanApprovalContext } from "../actions/campaign-plan-approval";
+import { CampaignPlanLifecycleHint } from "./campaign-plan-lifecycle-hint";
 import { GenerateQuotationEntry } from "./generate-quotation-entry";
 
 export type GenerateQuotationLauncherProps = {
@@ -28,29 +30,40 @@ export function GenerateQuotationLauncher({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [context, setContext] = useState<CampaignPlanQuotationContext | null>(null);
+  const [canSubmitForReview, setCanSubmitForReview] = useState(false);
   const [loadingContext, setLoadingContext] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingContext(true);
-    void getCampaignPlanQuotationContext({
-      campaignObjectId: campaignObject.id,
-      conversationId,
-    }).then((result) => {
+    void Promise.all([
+      getCampaignPlanQuotationContext({
+        campaignObjectId: campaignObject.id,
+        conversationId,
+      }),
+      getCampaignPlanApprovalContext({
+        campaignObjectId: campaignObject.id,
+        conversationId,
+        campaignObject,
+      }),
+    ]).then(([quotationResult, approvalResult]) => {
       if (cancelled) return;
-      if ("error" in result) {
+      if ("error" in quotationResult) {
         setContext(null);
-        setError(result.error);
+        setError(quotationResult.error);
       } else {
-        setContext(result);
+        setContext(quotationResult);
         setError(null);
       }
+      setCanSubmitForReview(
+        !("error" in approvalResult) && approvalResult.canSubmitForReview
+      );
       setLoadingContext(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [campaignObject.id, conversationId]);
+  }, [campaignObject, campaignObject.id, conversationId]);
 
   if (loadingContext) {
     return (
@@ -60,7 +73,11 @@ export function GenerateQuotationLauncher({
     );
   }
 
-  if (!context?.canGenerate) return null;
+  if (!context) {
+    return error ? (
+      <p className={cn("text-[11px] text-red-500", className)}>{error}</p>
+    ) : null;
+  }
 
   const launch = () => {
     startTransition(async () => {
@@ -77,10 +94,15 @@ export function GenerateQuotationLauncher({
 
   return (
     <div className={cn("space-y-2", className)}>
+      <CampaignPlanLifecycleHint
+        lifecycleStatus={context.lifecycleStatus}
+        canGenerate={context.canGenerate}
+        canSubmitForReview={canSubmitForReview}
+      />
       <GenerateQuotationEntry
         campaignObject={campaignObject}
         context={context}
-        onGenerate={pending ? undefined : launch}
+        onGenerate={context.canGenerate && !pending ? launch : undefined}
       />
       {pending ? (
         <p className="text-[11px] text-muted-foreground">Generating quotation…</p>

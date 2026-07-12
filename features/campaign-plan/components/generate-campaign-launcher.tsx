@@ -11,6 +11,8 @@ import {
   getCampaignPlanExecutionContext,
   type CampaignPlanExecutionContext,
 } from "../actions/generate-campaign-from-plan";
+import { getCampaignPlanApprovalContext } from "../actions/campaign-plan-approval";
+import { CampaignPlanLifecycleHint } from "./campaign-plan-lifecycle-hint";
 import { GenerateCampaignEntry } from "./generate-campaign-entry";
 
 export type GenerateCampaignLauncherProps = {
@@ -28,29 +30,40 @@ export function GenerateCampaignLauncher({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [context, setContext] = useState<CampaignPlanExecutionContext | null>(null);
+  const [canSubmitForReview, setCanSubmitForReview] = useState(false);
   const [loadingContext, setLoadingContext] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingContext(true);
-    void getCampaignPlanExecutionContext({
-      campaignObjectId: campaignObject.id,
-      conversationId,
-    }).then((result) => {
+    void Promise.all([
+      getCampaignPlanExecutionContext({
+        campaignObjectId: campaignObject.id,
+        conversationId,
+      }),
+      getCampaignPlanApprovalContext({
+        campaignObjectId: campaignObject.id,
+        conversationId,
+        campaignObject,
+      }),
+    ]).then(([executionResult, approvalResult]) => {
       if (cancelled) return;
-      if ("error" in result) {
+      if ("error" in executionResult) {
         setContext(null);
-        setError(result.error);
+        setError(executionResult.error);
       } else {
-        setContext(result);
+        setContext(executionResult);
         setError(null);
       }
+      setCanSubmitForReview(
+        !("error" in approvalResult) && approvalResult.canSubmitForReview
+      );
       setLoadingContext(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [campaignObject.id, conversationId]);
+  }, [campaignObject, campaignObject.id, conversationId]);
 
   if (loadingContext) {
     return (
@@ -60,7 +73,11 @@ export function GenerateCampaignLauncher({
     );
   }
 
-  if (!context?.canGenerate) return null;
+  if (!context) {
+    return error ? (
+      <p className={cn("text-[11px] text-red-500", className)}>{error}</p>
+    ) : null;
+  }
 
   const launch = () => {
     startTransition(async () => {
@@ -77,10 +94,15 @@ export function GenerateCampaignLauncher({
 
   return (
     <div className={cn("space-y-2", className)}>
+      <CampaignPlanLifecycleHint
+        lifecycleStatus={context.lifecycleStatus}
+        canGenerate={context.canGenerate}
+        canSubmitForReview={canSubmitForReview}
+      />
       <GenerateCampaignEntry
         campaignObject={campaignObject}
         context={context}
-        onGenerate={pending ? undefined : launch}
+        onGenerate={context.canGenerate && !pending ? launch : undefined}
       />
       {pending ? (
         <p className="text-[11px] text-muted-foreground">Generating execution campaign…</p>

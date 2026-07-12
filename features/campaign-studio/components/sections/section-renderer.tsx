@@ -107,7 +107,13 @@ export function SectionRenderer({
     case "executive-summary":
       return <ExecutiveSummarySection {...common} />;
     case "presentation-status":
-      return <PresentationStatusSection {...common} />;
+      return (
+        <PresentationStatusSection
+          {...common}
+          campaignObjectId={campaignObject?.id}
+          conversationId={conversationId}
+        />
+      );
     default:
       return null;
   }

@@ -46,7 +46,12 @@ export type SaveCampaignObjectOptions = {
   userId?: string;
   campaignHeaderId?: string | null;
   persistToDb?: boolean;
-  saveReason?: "task_complete" | "workflow_complete" | "manual";
+  saveReason?:
+    | "task_complete"
+    | "workflow_complete"
+    | "manual"
+    | "review_submitted"
+    | "approved";
 };
 
 export function getCampaignObjectFromSnapshot(
