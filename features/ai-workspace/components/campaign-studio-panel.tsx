@@ -24,7 +24,19 @@ type CampaignStudioPanelProps = {
   ) => void;
   /** Restore sends a Copilot message through the normal chat flow. */
   onSendMessage?: (message: string) => void;
+  /** Studio card id currently selected as the "this section" edit target. */
+  focusedSectionId?: string;
+  onFocusSection?: (sectionId?: string) => void;
 };
+
+/** Sections the Copilot can author — clicking one sets "this section" for the next message. */
+const FOCUSABLE_SECTIONS: Array<{ id: string; label: string }> = [
+  { id: "executive-strategy", label: "Strategy" },
+  { id: "executive-summary", label: "Exec summary" },
+  { id: "creative-concepts", label: "Concepts" },
+  { id: "kpi-forecast", label: "KPIs" },
+  { id: "risk-analysis", label: "Risks" },
+];
 
 /**
  * The persistent right-pane Campaign Studio. It binds to the latest campaign
@@ -37,6 +49,8 @@ export function CampaignStudioPanel({
   onCardUpdated,
   onVendorDecisionsUpdated,
   onSendMessage,
+  focusedSectionId,
+  onFocusSection,
 }: CampaignStudioPanelProps) {
   const display = useMemo(
     () => toWorkflowDisplayMetadata(message.metadata),
@@ -54,13 +68,37 @@ export function CampaignStudioPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden border-l border-border/80 bg-muted/20">
-      <div className="flex items-center gap-2 border-b border-border/60 px-4 py-2.5">
-        <SparklesIcon className="size-4 text-[#1D9E75]" />
-        <div className="min-w-0">
+      <div className="border-b border-border/60 px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <SparklesIcon className="size-4 text-[#1D9E75]" />
           <p className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
             Live Campaign Studio
           </p>
         </div>
+        {onFocusSection ? (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-medium text-muted-foreground">Edit target:</span>
+            {FOCUSABLE_SECTIONS.map((s) => {
+              const active = focusedSectionId === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={
+                    active
+                      ? "rounded-full border border-[#1D9E75] bg-[#1D9E75]/10 px-2 py-0.5 text-[10px] font-semibold text-[#1D9E75]"
+                      : "rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:border-[#1D9E75]/50 hover:text-foreground"
+                  }
+                  aria-pressed={active}
+                  onClick={() => onFocusSection(active ? undefined : s.id)}
+                  title={active ? `"this section" = ${s.label} (click to clear)` : `Set "this section" to ${s.label}`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
         <CampaignStudioHost

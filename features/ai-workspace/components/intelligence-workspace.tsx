@@ -64,6 +64,13 @@ export function IntelligenceWorkspace({
       ? window.matchMedia("(min-width: 1024px)").matches
       : true
   );
+  // Which studio section "this" refers to when the user selects one to edit.
+  const [studioFocusSection, setStudioFocusSection] = useState<string | undefined>(undefined);
+  const studioFocusRef = useRef<string | undefined>(undefined);
+  const handleFocusSection = useCallback((sectionId?: string) => {
+    studioFocusRef.current = sectionId;
+    setStudioFocusSection(sectionId);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -309,7 +316,12 @@ export function IntelligenceWorkspace({
         );
       }
 
-      const result = await sendMessage(message, intent, sendOptions);
+      const result = await sendMessage(message, intent, {
+        ...sendOptions,
+        studioFocus:
+          sendOptions?.studioFocus ??
+          (studioFocusRef.current ? { sectionId: studioFocusRef.current } : undefined),
+      });
       if (result && !("failed" in result) && !("cancelled" in result)) {
         logMessageStateEvent("handleSend onWorkflowComplete", {
           workflowId: result.workflowMetadata?.workflowId,
@@ -762,6 +774,8 @@ export function IntelligenceWorkspace({
               onCardUpdated={handleCardUpdated}
               onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
               onSendMessage={(message) => void handleSend(message)}
+              focusedSectionId={studioFocusSection}
+              onFocusSection={handleFocusSection}
             />
           </div>
         ) : null}

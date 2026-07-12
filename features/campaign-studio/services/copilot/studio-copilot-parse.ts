@@ -187,6 +187,21 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
     },
   },
   {
+    name: "retone_proposal",
+    description:
+      "Apply a tone across the WHOLE proposal — re-authors the strategy and executive summary together. Use for 'make the whole proposal more executive/premium/data-driven', 'make the presentation CMO-ready'.",
+    parameters: {
+      type: "object",
+      properties: {
+        tone: {
+          type: "string",
+          description: "The tone to apply, e.g. executive, premium, data-driven, youth-focused.",
+        },
+      },
+      required: ["tone"],
+    },
+  },
+  {
     name: "undo_last_change",
     description: "Revert the campaign to the version before the most recent change.",
     parameters: { type: "object", properties: {} },
@@ -360,6 +375,16 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     };
   }
 
+  // Whole-proposal tone pass — re-author the narrative sections together.
+  const TONE_RE =
+    /\b(premium|executive|youth[-\s]?focused|data[-\s]?driven|creative|cmo[-\s]?ready|concise|bold|aggressive|professional|punchy|luxurious|sophisticated)\b/i;
+  const WHOLE_PROPOSAL_RE = /\b(whole|entire|full|overall|the)\s+(proposal|presentation|deck|document|campaign)\b/i;
+  if ((WHOLE_PROPOSAL_RE.test(text) || /\bpresentation\b/i.test(text)) && /\bmore\b|\bmake\b/i.test(text)) {
+    const toneMatch = text.match(TONE_RE) ?? text.match(/\bmore\s+([a-z]+(?:-[a-z]+)?)\b/i);
+    const tone = (toneMatch?.[1] ?? toneMatch?.[0])?.toLowerCase().replace(/\s+/g, "-");
+    if (tone) return { kind: "retone_proposal", tone };
+  }
+
   // Content authoring: rewrite / tone / expand / shorten / strengthen / list edits.
   const LIST_NOUN_RE = /\b(concepts?|kpis?|kpi recommendations?|risks?|mitigations?)\b/i;
   const AUTHOR_RE =
@@ -485,6 +510,8 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
         instruction: typeof args.instruction === "string" ? args.instruction : "",
         tone: typeof args.tone === "string" ? args.tone : undefined,
       };
+    case "retone_proposal":
+      return { kind: "retone_proposal", tone: typeof args.tone === "string" ? args.tone : "" };
     case "undo_last_change":
       return { kind: "undo_last_change" };
     case "restore_version":

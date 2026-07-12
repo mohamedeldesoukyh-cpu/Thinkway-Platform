@@ -193,6 +193,8 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       );
     case "author_section":
       return authorSectionEdit(input, digest, intent, provider);
+    case "retone_proposal":
+      return retoneProposal(input, digest, intent.tone, provider);
     case "undo_last_change":
       return undoLastChange(input);
     case "restore_version":
@@ -570,6 +572,76 @@ async function authorSectionEdit(
     reply: renderChangeSummary(summary),
     changed: true,
     intentKind: "author_section",
+  };
+}
+
+/** Apply a tone across the whole proposal — re-author the narrative sections together. */
+async function retoneProposal(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  tone: string,
+  provider: LlmProvider
+): Promise<StudioCopilotResult> {
+  if (!tone.trim()) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: "What tone should I apply — for example executive, premium, or data-driven?",
+      changed: false,
+      intentKind: "retone_proposal",
+    };
+  }
+
+  let obj = input.campaignObject;
+  const changes: string[] = [];
+  for (const target of ["strategy", "executive_summary"] as const) {
+    const result = await authorSection(provider, obj, {
+      target,
+      instruction: `Rewrite this to be more ${tone}, preserving all facts and structure.`,
+      tone,
+    });
+    if (result.change) {
+      obj = result.campaignObject;
+      changes.push(result.change);
+    }
+  }
+
+  if (changes.length === 0) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: `I couldn't retone the proposal just now — please try again.`,
+      changed: false,
+      intentKind: "retone_proposal",
+    };
+  }
+
+  const summary = buildChangeSummary({
+    headline: "Campaign updated successfully.",
+    changes: [
+      `Applied a more ${tone} tone across the proposal (${changes.length} section${changes.length === 1 ? "" : "s"}).`,
+      "Facts, creators, and budget are unchanged — only the writing was refined.",
+    ],
+    scoreBefore: digest.overallScore,
+  });
+
+  const logged = appendChangeLog(obj, {
+    summary: `Retoned the proposal (${tone})`,
+    intent: "retone_proposal",
+    section: "executive-strategy",
+    overallScoreAfter: digest.overallScore,
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(
+    input.supabase,
+    input.conversationId,
+    input.userId,
+    logged
+  );
+
+  return {
+    campaignObject: persisted,
+    reply: renderChangeSummary(summary),
+    changed: true,
+    intentKind: "retone_proposal",
   };
 }
 

@@ -35,6 +35,7 @@ export type StudioCopilotIntentKind =
   | "update_creative_concepts"
   | "update_presentation"
   | "author_section"
+  | "retone_proposal"
   | "undo_last_change"
   | "restore_version"
   | "answer_question"
@@ -99,6 +100,13 @@ export type AuthorSectionIntent = {
   tone?: string;
 };
 
+/** Apply a tone across the whole proposal's narrative sections in one edit. */
+export type RetoneProposalIntent = {
+  kind: "retone_proposal";
+  tone: string;
+  instruction?: string;
+};
+
 export type AnswerQuestionIntent = { kind: "answer_question"; question: string };
 export type ClarifyIntent = { kind: "clarify"; question: string };
 export type UndoIntent = { kind: "undo_last_change" };
@@ -116,6 +124,7 @@ export type ExecutableStudioCopilotIntent =
   | UpdateAudienceIntent
   | UpdateMarketIntent
   | AuthorSectionIntent
+  | RetoneProposalIntent
   | AnswerQuestionIntent
   | ClarifyIntent
   | UndoIntent

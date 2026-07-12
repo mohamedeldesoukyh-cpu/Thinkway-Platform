@@ -56,6 +56,8 @@ export type ChatSendOptions = {
   rerunUserMessageId?: string;
   /** Skip optimistic user bubble — message already present locally (edit re-run or prompt re-send). */
   skipOptimisticUser?: boolean;
+  /** Deictic focus so "this section" resolves to the studio card the user selected. */
+  studioFocus?: ChatRequestBody["studioFocus"];
 };
 
 export function useAiChat(options: {
@@ -231,6 +233,7 @@ export function useAiChat(options: {
             rerunUserMessageId: sendOptions?.rerunUserMessageId,
             intent,
             workspace: workspaceRef.current,
+            studioFocus: sendOptions?.studioFocus,
           } satisfies ChatRequestBody),
           signal: controller.signal,
         });

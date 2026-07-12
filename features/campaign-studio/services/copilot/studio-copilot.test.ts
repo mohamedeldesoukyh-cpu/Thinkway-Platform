@@ -178,6 +178,19 @@ test("fallback parser reads duration in digits and words", () => {
   );
 });
 
+test("fallback parser routes whole-proposal retone with tone", () => {
+  const a = parseStudioIntentFallback("make the whole proposal more executive");
+  assert.equal(a.kind, "retone_proposal");
+  assert.equal(a.kind === "retone_proposal" ? a.tone : null, "executive");
+
+  const b = parseStudioIntentFallback("make the presentation more premium");
+  assert.equal(b.kind, "retone_proposal");
+  assert.equal(b.kind === "retone_proposal" ? b.tone : null, "premium");
+
+  // A single-section rewrite is NOT a whole-proposal retone.
+  assert.equal(parseStudioIntentFallback("make the strategy more premium").kind, "author_section");
+});
+
 test("fallback parser routes slate edits: add / replace / location-remove", () => {
   const add = parseStudioIntentFallback("add parenting creators");
   assert.equal(add.kind, "add_creators");
