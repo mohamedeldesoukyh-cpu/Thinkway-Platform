@@ -220,6 +220,8 @@ export type CampaignHeaderRow = {
   fx_snapshot_at: string | null;
   shortlist_id: string | null;
   quotation_id: string | null;
+  campaign_object_id: string | null;
+  source_campaign_object_version: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -827,6 +829,8 @@ export type Database = {
           metadata?: Record<string, unknown>;
           shortlist_id?: string | null;
           quotation_id?: string | null;
+          campaign_object_id?: string | null;
+          source_campaign_object_version?: number | null;
           created_by?: string | null;
         };
         Update: Partial<
@@ -2438,6 +2442,8 @@ export type Database = {
           commercial_updated_at: string | null;
           item_status: ShortlistItemStatus;
           platform_account_ids: string[];
+          option_number: number | null;
+          service_description: string | null;
         };
         Insert: {
           id?: string;
@@ -2463,6 +2469,8 @@ export type Database = {
           gp_value_egp?: number | null;
           deliverables?: Json;
           commercial_updated_at?: string | null;
+          option_number?: number | null;
+          service_description?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["discovery_shortlist_items"]["Insert"]
@@ -2519,6 +2527,8 @@ export type Database = {
           is_temporary_brand: boolean;
           temporary_client_name: string | null;
           temporary_brand_name: string | null;
+          campaign_object_id: string | null;
+          source_campaign_object_version: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -2531,6 +2541,8 @@ export type Database = {
           client_id?: string | null;
           brand_id?: string | null;
           campaign_header_id?: string | null;
+          campaign_object_id?: string | null;
+          source_campaign_object_version?: number | null;
           owner_id?: string | null;
           created_by?: string | null;
           approved_by?: string | null;
@@ -2654,6 +2666,9 @@ export type Database = {
           af_value_egp: number;
           sort_order: number;
           option_number: number | null;
+          service_description: string | null;
+          profile_image_url: string | null;
+          profile_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -2686,6 +2701,9 @@ export type Database = {
           af_value_egp?: number;
           sort_order?: number;
           option_number?: number | null;
+          service_description?: string | null;
+          profile_image_url?: string | null;
+          profile_url?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["quotation_items"]["Insert"]

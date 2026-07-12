@@ -118,6 +118,9 @@ export type QuotationDetail = {
   campaign_header_id: string | null;
   campaign_name: string | null;
   campaign_document_number: string | null;
+  /** Campaign Plan (campaign_objects) this quotation was generated from. */
+  campaign_object_id: string | null;
+  source_campaign_object_version: number | null;
   parent_quotation_id: string | null;
   version_number: number;
   revision_notes: string | null;

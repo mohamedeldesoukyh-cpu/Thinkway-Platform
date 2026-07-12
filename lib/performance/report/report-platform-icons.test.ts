@@ -64,6 +64,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     campaign_header_id: null,
     campaign_name: null,
     campaign_document_number: null,
+    campaign_object_id: null,
+    source_campaign_object_version: null,
     parent_quotation_id: null,
     version_number: 1,
     revision_notes: null,

@@ -316,7 +316,8 @@ export async function getQuotationDetail(
        issue_date, validity_date, version, department, change_summary,
        is_archived, created_at, updated_at,
        is_temporary_client, is_temporary_brand, temporary_client_name, temporary_brand_name,
-       parent_quotation_id, version_number, revision_notes`
+       parent_quotation_id, version_number, revision_notes,
+       campaign_object_id, source_campaign_object_version`
     )
     .eq("id", id)
     .maybeSingle();
@@ -460,6 +461,11 @@ export async function getQuotationDetail(
     campaign_header_id: campaignHeaderId,
     campaign_name: campaignRow?.name ?? null,
     campaign_document_number: campaignRow?.document_number ?? null,
+    campaign_object_id: (row.campaign_object_id as string | null) ?? null,
+    source_campaign_object_version:
+      row.source_campaign_object_version != null
+        ? Number(row.source_campaign_object_version)
+        : null,
     parent_quotation_id: (row.parent_quotation_id as string | null) ?? null,
     version_number: versionNumber,
     revision_notes: (row.revision_notes as string | null) ?? null,

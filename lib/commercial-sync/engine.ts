@@ -107,6 +107,8 @@ type ShortlistCommercialRow = {
   gp_value_egp?: number | null;
   deliverables: unknown;
   sort_order: number;
+  option_number: number | null;
+  service_description: string | null;
 };
 
 type QuotationCommercialRow = {
@@ -136,7 +138,7 @@ type QuotationCommercialRow = {
   gp_value_egp: number;
   af_value_egp: number;
   sort_order: number;
-  option_number: number;
+  option_number: number | null;
   service_description: string | null;
 };
 
@@ -153,6 +155,8 @@ function commercialPatchFromShortlistItem(item: ShortlistCommercialRow) {
     revenue_egp: item.revenue_egp ?? 0,
     gp_value_egp: item.gp_value_egp ?? 0,
     deliverables: item.deliverables,
+    option_number: item.option_number,
+    service_description: item.service_description,
   };
 }
 
@@ -211,7 +215,7 @@ export async function syncShortlistChangeToQuotation(
     const { data: slItem } = await supabase
       .from("discovery_shortlist_items")
       .select(
-        "id, influencer_id, profile_id, unified_id, commercial_input_mode, cost, cost_currency, gp_pct, revenue, gp_value, cost_egp, revenue_egp, gp_value_egp, deliverables, sort_order"
+        "id, influencer_id, profile_id, unified_id, commercial_input_mode, cost, cost_currency, gp_pct, revenue, gp_value, cost_egp, revenue_egp, gp_value_egp, deliverables, sort_order, option_number, service_description"
       )
       .eq("id", input.shortlistItemId)
       .maybeSingle();
@@ -283,6 +287,8 @@ export async function syncShortlistChangeToQuotation(
       gp_value_egp: item.gp_value_egp ?? 0,
       af_value_egp: 0,
       sort_order: sortOrder,
+      option_number: item.option_number,
+      service_description: item.service_description,
     } as never);
 
     await logQuotationLifecycleEvent(supabase, {
@@ -366,6 +372,8 @@ export async function syncQuotationChangeToShortlist(
         revenue_egp: item.revenue_egp,
         gp_value_egp: item.gp_value_egp,
         sort_order: item.sort_order,
+        option_number: item.option_number,
+        service_description: item.service_description,
       } as never)
       .select("id")
       .single();

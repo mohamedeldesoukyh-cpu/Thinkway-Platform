@@ -30,6 +30,8 @@ export type ShortlistItemForSeed = {
   revenue?: number | null;
   gp_value?: number | null;
   deliverables?: unknown;
+  option_number?: number | null;
+  service_description?: string | null;
 };
 
 function resolveQuotationSeedPlatformAccount(creator: UnifiedCreatorResult) {
