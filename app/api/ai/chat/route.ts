@@ -33,6 +33,20 @@ import { tryExecuteWorkflow, buildPausedWorkflowSnapshot, getPausedWorkflowSnaps
 import type { ChatRequestBody } from "@/features/ai-workspace/types";
 import { createStreamingOpenAiProvider } from "@/features/ai-workspace/services/streaming-openai-provider";
 import { runWithToolAuthContext } from "@/features/ai/tools/tool-auth";
+import {
+  attachCampaignObjectToSnapshot,
+  loadCampaignObjectForConversation,
+  serializeCampaignObject,
+} from "@/features/campaign-intelligence";
+import { CREATE_CAMPAIGN_WORKFLOW_ID, isCampaignWorkflow } from "@/features/campaign-studio/constants/workflow-ids";
+import { runStudioCopilot } from "@/features/campaign-studio/services/copilot/studio-copilot";
+
+/** The user explicitly wants a brand-new campaign — leave Campaign Editing Mode. */
+function isNewCampaignRequest(message: string): boolean {
+  return /\b(new|another|different|start over|restart|fresh|create a)\b[^.]*\bcampaign\b/i.test(
+    message
+  );
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -225,6 +239,95 @@ export async function POST(request: Request) {
         const pausedWorkflow = getPausedWorkflowSnapshot(
           existingConversation?.contextSnapshot as Record<string, unknown> | undefined
         );
+
+        // Campaign Editing Mode (highest routing priority): once a studio exists
+        // for this conversation, the Campaign Copilot owns every follow-up turn —
+        // unless a create-campaign workflow is paused for missing info, or the
+        // user explicitly asks to start a new campaign.
+        const contextSnapshot = existingConversation?.contextSnapshot as
+          | Record<string, unknown>
+          | undefined;
+        const activeCampaignObject = pausedWorkflow
+          ? null
+          : await loadCampaignObjectForConversation(supabase, conversationId, contextSnapshot);
+
+        if (activeCampaignObject && !isNewCampaignRequest(body.message)) {
+          const copilot = await runStudioCopilot({
+            supabase,
+            userId: auth.userId,
+            conversationId,
+            campaignObject: activeCampaignObject,
+            message: body.message.trim(),
+            focus: body.studioFocus,
+          });
+
+          for (const chunk of chunkTextForStream(copilot.reply)) {
+            send("delta", { content: chunk });
+          }
+
+          const workflowId = isCampaignWorkflow(copilot.campaignObject.workflowId)
+            ? copilot.campaignObject.workflowId
+            : CREATE_CAMPAIGN_WORKFLOW_ID;
+
+          // Only edits carry the refreshed campaign object (studio re-renders);
+          // answers and clarifications stay as plain chat text.
+          const assistantMessage = await appendMessage(supabase, {
+            conversationId,
+            role: "assistant",
+            content: copilot.reply,
+            metadata: copilot.changed
+              ? {
+                  agentId: "campaign-copilot",
+                  copilotEdit: true,
+                  copilotIntent: copilot.intentKind,
+                  // workflow:true + a campaign workflowId make this render as a studio.
+                  workflow: true,
+                  workflowId,
+                  workflowName: "Campaign Studio",
+                  workflowStatus: "complete",
+                  campaignObject: serializeCampaignObject(copilot.campaignObject),
+                }
+              : { agentId: "campaign-copilot", copilotIntent: copilot.intentKind },
+          });
+
+          if (copilot.changed) {
+            try {
+              await updateConversationContextSnapshot(
+                supabase,
+                conversationId,
+                auth.userId,
+                attachCampaignObjectToSnapshot(
+                  { ...(contextSnapshot ?? {}) },
+                  copilot.campaignObject
+                )
+              );
+            } catch (snapshotError) {
+              console.error(
+                "[studio-copilot] context snapshot update failed:",
+                snapshotError instanceof Error ? snapshotError.message : snapshotError
+              );
+            }
+          }
+
+          send("action_cards", { cards: [], messageId: assistantMessage.id });
+          send("done", {
+            conversationId,
+            messageId: assistantMessage.id,
+            agentId: "campaign-copilot",
+            workflow: copilot.changed,
+          });
+          recordWorkflowMetrics({
+            route: "/api/ai/chat",
+            startedAt,
+            status: "success",
+            userId: auth.userId,
+            conversationId,
+            campaignId: contextInput.campaign?.id,
+            agentId: "campaign-copilot",
+            handled: true,
+          });
+          return;
+        }
 
         const workflowResult = await tryExecuteWorkflow(
           aiRequest,

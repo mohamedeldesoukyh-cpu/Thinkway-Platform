@@ -19,6 +19,7 @@ import { AiChatInput } from "./ai-chat-input";
 import { AiWelcomeScreen } from "./ai-welcome-screen";
 import { AiWorkspaceTopbar } from "./ai-workspace-topbar";
 import { ChatThread } from "./chat-thread";
+import { CampaignStudioPanel, findLatestStudioMessage } from "./campaign-studio-panel";
 import { ConversationList } from "./conversation-list";
 import "./ai-workspace.css";
 
@@ -59,6 +60,27 @@ export function IntelligenceWorkspace({
   const [createError, setCreateError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [editingUserMessageId, setEditingUserMessageId] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState<boolean>(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(min-width: 1024px)").matches
+      : true
+  );
+  // Which studio section "this" refers to when the user selects one to edit.
+  const [studioFocusSection, setStudioFocusSection] = useState<string | undefined>(undefined);
+  const studioFocusRef = useRef<string | undefined>(undefined);
+  const handleFocusSection = useCallback((sectionId?: string) => {
+    studioFocusRef.current = sectionId;
+    setStudioFocusSection(sectionId);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktop(mql.matches);
+    // Initial value comes from the lazy initializer; only react to later changes.
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const loadedConversationRef = useRef<string | null>(null);
   const editingUserMessageIdRef = useRef<string | null>(null);
@@ -314,7 +336,12 @@ export function IntelligenceWorkspace({
         );
       }
 
-      const result = await sendMessage(message, intent, sendOptions);
+      const result = await sendMessage(message, intent, {
+        ...sendOptions,
+        studioFocus:
+          sendOptions?.studioFocus ??
+          (studioFocusRef.current ? { sectionId: studioFocusRef.current } : undefined),
+      });
       if (result && !("failed" in result) && !("cancelled" in result)) {
         logMessageStateEvent("handleSend onWorkflowComplete", {
           workflowId: result.workflowMetadata?.workflowId,
@@ -676,6 +703,16 @@ export function IntelligenceWorkspace({
   const showEmptyState =
     messages.length === 0 && !isStreaming && !loadingConversation;
 
+  // Campaign Editing Mode: once a studio exists, split the workspace — chat on
+  // the left, the live Campaign Studio persistent on the right.
+  const latestStudioMessage = useMemo(
+    () => findLatestStudioMessage(messages),
+    [messages]
+  );
+  const twoPane = Boolean(latestStudioMessage) && !showEmptyState;
+  // Split view is desktop-only; on smaller screens the studio stays inline in chat.
+  const sidePanelVisible = twoPane && isDesktop;
+
   return (
     <div ref={workspaceRootRef} className="ai-main-surface flex min-h-0 flex-1 flex-col overflow-hidden p-3">
       <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
@@ -692,7 +729,12 @@ export function IntelligenceWorkspace({
           onRefresh={() => void refresh({ background: true })}
         />
 
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div
+          className={cn(
+            "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            sidePanelVisible && "lg:max-w-[46%] lg:min-w-[22rem] lg:border-r lg:border-border/60"
+          )}
+        >
           {loadingConversation && messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 overflow-y-auto pb-[var(--ai-composer-scroll-pad,6rem)] pt-[var(--ai-topbar-scroll-pad,4.25rem)]">
               <span className="ai-spinner size-6" />
@@ -712,6 +754,7 @@ export function IntelligenceWorkspace({
               workflowProgress={workflowProgress}
               conversationId={conversationId}
               editingUserMessageId={editingUserMessageId}
+              studioInSidePanel={sidePanelVisible}
               onEditStart={setEditingUserMessageId}
               onEditCancel={handleEditCancel}
               onCardUpdated={handleCardUpdated}
@@ -742,6 +785,20 @@ export function IntelligenceWorkspace({
             error={createError ?? error}
           />
         </div>
+
+        {sidePanelVisible && latestStudioMessage ? (
+          <div className="hidden min-h-0 flex-[1.2] lg:flex lg:flex-col">
+            <CampaignStudioPanel
+              message={latestStudioMessage}
+              conversationId={conversationId}
+              onCardUpdated={handleCardUpdated}
+              onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
+              onSendMessage={(message) => void handleSend(message)}
+              focusedSectionId={studioFocusSection}
+              onFocusSection={handleFocusSection}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

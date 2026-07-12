@@ -124,6 +124,12 @@ export type ChatRequestBody = {
   rerunUserMessageId?: string;
   intent?: AiIntent;
   workspace?: WorkspaceUrlParams;
+  /** Deictic focus so "this section" resolves to the studio card the user is viewing. */
+  studioFocus?: {
+    sectionId?: string;
+    elementIndex?: number;
+    elementKind?: string;
+  };
 };
 
 export type SuggestedAction = {
