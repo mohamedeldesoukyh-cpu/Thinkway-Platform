@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { SparklesIcon } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { CampaignStudioHost } from "@/features/campaign-decision-workspace/components/campaign-studio-host";
 
 import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
@@ -27,6 +28,8 @@ type CampaignStudioPanelProps = {
   /** Studio card id currently selected as the "this section" edit target. */
   focusedSectionId?: string;
   onFocusSection?: (sectionId?: string) => void;
+  /** "main" fills the whole workspace (Campaign Mode); "side" is the bordered right pane. */
+  variant?: "main" | "side";
 };
 
 /** Sections the Copilot can author — clicking one sets "this section" for the next message. */
@@ -51,6 +54,7 @@ export function CampaignStudioPanel({
   onSendMessage,
   focusedSectionId,
   onFocusSection,
+  variant = "side",
 }: CampaignStudioPanelProps) {
   const display = useMemo(
     () => toWorkflowDisplayMetadata(message.metadata),
@@ -67,7 +71,12 @@ export function CampaignStudioPanel({
     : 100;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden border-l border-border/80 bg-muted/20">
+    <div
+      className={cn(
+        "flex h-full min-h-0 flex-col overflow-hidden",
+        variant === "side" ? "border-l border-border/80 bg-muted/20" : "bg-background"
+      )}
+    >
       <div className="border-b border-border/60 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <SparklesIcon className="size-4 text-[#1D9E75]" />
