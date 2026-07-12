@@ -13,3 +13,4 @@ export {
   readinessForOutput,
   type OutputReadiness,
 } from "./missing-info";
+export { planGenerateFromSource, type GenerateFromSourcePlan } from "./generate-plan";
