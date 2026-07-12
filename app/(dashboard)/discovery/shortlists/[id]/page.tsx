@@ -11,6 +11,8 @@ import {
   getShortlistCampaignOptions,
   getShortlistDetail,
 } from "@/features/discovery/shortlists/queries";
+import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher";
+import { seedFromShortlist } from "@/features/campaign-outputs/hydration/seed-adapters";
 
 export default async function ShortlistDetailPage({
   params,
@@ -40,13 +42,21 @@ export default async function ShortlistDetailPage({
           <DiscoverySubNav activeHref="/discovery/shortlists" />
           <div className="min-h-0 flex-1 overflow-y-auto bg-muted/30">
             <div className="mx-auto w-full max-w-[1800px] px-5 py-6 sm:px-8">
-              <Link
-                href="/discovery/shortlists"
-                className="mb-5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <ArrowLeftIcon className="size-3.5" strokeWidth={2} />
-                Back to shortlists
-              </Link>
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <Link
+                  href="/discovery/shortlists"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <ArrowLeftIcon className="size-3.5" strokeWidth={2} />
+                  Back to shortlists
+                </Link>
+                <GenerateOutputsLauncher
+                  seed={seedFromShortlist(detail)}
+                  tab="outputs"
+                  workspace={{ type: "shortlist", id: detail.id }}
+                  className="w-full max-w-md sm:w-auto"
+                />
+              </div>
               <ShortlistWorkspace detail={detail} campaigns={campaigns} brands={brands} />
             </div>
           </div>

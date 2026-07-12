@@ -49,6 +49,12 @@ export function IntelligenceWorkspace({
   workspaceLabel,
 }: IntelligenceWorkspaceProps) {
   const searchParams = useSearchParams();
+  // Deep-link target for the studio tabs (Studio / Outputs / Director). The panel
+  // captures it as its initial view; local state takes over afterward.
+  const initialStudioView = useMemo<"studio" | "outputs" | "director" | undefined>(() => {
+    const tab = searchParams.get("studioTab");
+    return tab === "outputs" || tab === "director" || tab === "studio" ? tab : undefined;
+  }, [searchParams]);
   const [conversationId, setConversationId] = useState<string | undefined>(
     initialConversationId
   );
@@ -792,6 +798,7 @@ export function IntelligenceWorkspace({
             focusedSectionId={studioFocusSection}
             onFocusSection={handleFocusSection}
             variant="main"
+            initialView={initialStudioView}
           />
         </div>
         <CampaignCopilotDock

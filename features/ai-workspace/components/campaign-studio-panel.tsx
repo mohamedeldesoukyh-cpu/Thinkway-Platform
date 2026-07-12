@@ -39,6 +39,8 @@ type CampaignStudioPanelProps = {
   onFocusSection?: (sectionId?: string) => void;
   /** "main" fills the whole workspace (Campaign Mode); "side" is the bordered right pane. */
   variant?: "main" | "side";
+  /** Deep-link target: open directly to Studio / Outputs / Director. */
+  initialView?: StudioView;
 };
 
 /** Sections the Copilot can author — clicking one sets "this section" for the next message. */
@@ -64,12 +66,13 @@ export function CampaignStudioPanel({
   focusedSectionId,
   onFocusSection,
   variant = "side",
+  initialView,
 }: CampaignStudioPanelProps) {
   const display = useMemo(
     () => toWorkflowDisplayMetadata(message.metadata),
     [message.id, message.metadata]
   );
-  const [view, setView] = useState<StudioView>("studio");
+  const [view, setView] = useState<StudioView>(initialView ?? "studio");
 
   if (!display.campaignObject) return null;
 

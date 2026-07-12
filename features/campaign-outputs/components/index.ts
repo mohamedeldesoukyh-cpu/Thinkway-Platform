@@ -9,3 +9,7 @@ export {
 } from "./director-recommendations-panel";
 export { StudioOutputsView, type StudioOutputsViewProps } from "./studio-outputs-view";
 export { GenerateOutputsEntry, type GenerateOutputsEntryProps } from "./generate-outputs-entry";
+export {
+  GenerateOutputsLauncher,
+  type GenerateOutputsLauncherProps,
+} from "./generate-outputs-launcher";
