@@ -8,6 +8,19 @@ export type QuotationDeliverableTypeLine = {
   quantity: number;
 };
 
+/** Commercial frozen snapshot of planned posting timing (distinct from operational live_date). */
+export type QuotationTentativeScheduleSource = "campaign_plan" | "manual";
+
+export type QuotationTentativeScheduleFields = {
+  /** ISO date when a calendar anchor exists. */
+  tentative_posting_date?: string | null;
+  /** Planning label e.g. "Week 2 · Tuesday". */
+  tentative_posting_label?: string | null;
+  planned_week?: number | null;
+  planned_day?: string | null;
+  schedule_source?: QuotationTentativeScheduleSource | null;
+};
+
 export type QuotationDeliverable = {
   platform: string;
   /** Primary type (legacy); use `type_lines` for per-type units. */
@@ -27,7 +40,7 @@ export type QuotationDeliverable = {
   gp_pct?: number | null;
   gp_value?: number | null;
   af_pct?: number | null;
-};
+} & QuotationTentativeScheduleFields;
 
 export type QuotationMutationResult<T = undefined> =
   | { ok: true; message?: string; data?: T }

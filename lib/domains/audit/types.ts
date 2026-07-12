@@ -68,7 +68,8 @@ export type QuotationLifecycleAuditEvent =
   | "quotation.client_promoted"
   | "quotation.brand_promoted"
   | "quotation.sync_shortlist_to_quotation"
-  | "quotation.sync_quotation_to_shortlist";
+  | "quotation.sync_quotation_to_shortlist"
+  | "quotation.tentative_schedule_imported";
 
 export type AuditVerdict = "PASS" | "WARN" | "FAIL";
 
