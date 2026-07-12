@@ -12,13 +12,16 @@ import {
   lifecycleLabel,
 } from "@/features/campaign-intelligence/services/campaign-lifecycle";
 import type { CampaignObjectLifecycleStatus } from "@/features/campaign-intelligence/types/campaign-lifecycle";
-import { resolvePresentationCompletion } from "@/features/campaign-studio/services/section-data-resolver";
-import { requirePermission } from "@/lib/auth/permissions-server";
 import {
   deriveCampaignPlanApprovalFlags,
   isCampaignPlanLockedForEdits,
   mapLifecycleToPresentationStatus,
 } from "@/lib/domains/commercial/campaign-plan-approval";
+import {
+  evaluateCampaignPlanReadiness,
+  type CampaignPlanReadiness,
+} from "@/lib/domains/commercial/campaign-plan-readiness";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import {
   approveCampaignPlan,
   requestCampaignPlanChanges,
@@ -44,7 +47,7 @@ export type CampaignPlanApprovalContext = {
   canSubmitForReview: boolean;
   canRequestChanges: boolean;
   canGenerate: boolean;
-  completionPercent: number;
+  readiness: CampaignPlanReadiness;
   currentVersion: number;
 };
 
@@ -85,13 +88,21 @@ export async function getCampaignPlanApprovalContext(input: {
   if (!head) return { error: "Campaign Plan not found." };
 
   const lifecycleStatus = head.lifecycle_status as CampaignObjectLifecycleStatus;
-  const completionPercent = input.campaignObject
-    ? resolvePresentationCompletion(input.campaignObject).completionPercent
-    : 0;
+  const readiness = input.campaignObject
+    ? evaluateCampaignPlanReadiness(input.campaignObject)
+    : {
+        status: "not_ready" as const,
+        statusLabel: "Not Ready",
+        mandatory: [],
+        optional: [],
+        mandatoryMissing: [],
+        optionalRemaining: 0,
+        items: [],
+      };
 
   const flags = deriveCampaignPlanApprovalFlags({
     lifecycleStatus,
-    completionPercent,
+    readiness,
   });
 
   const [canApprove, canSubmitForReview, canRequestChanges] = await Promise.all([
@@ -114,7 +125,7 @@ export async function getCampaignPlanApprovalContext(input: {
     canSubmitForReview,
     canRequestChanges,
     canGenerate: flags.canGenerate,
-    completionPercent,
+    readiness,
     currentVersion: head.current_version,
   };
 }

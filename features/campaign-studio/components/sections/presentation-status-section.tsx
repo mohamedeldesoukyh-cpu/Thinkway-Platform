@@ -21,6 +21,7 @@ import {
   submitCampaignPlanForReviewAction,
   type CampaignPlanApprovalContext,
 } from "@/features/campaign-plan/actions/campaign-plan-approval";
+import { CampaignPlanReadinessChecklist } from "@/features/campaign-plan/components/campaign-plan-readiness-checklist";
 
 import { openCampaignProposalPreview } from "../../export/campaign-proposal-preview";
 import { useCreatorHydration } from "../../hooks/use-creator-hydration";
@@ -34,7 +35,6 @@ import { PsBox } from "./shared/studio-ui-primitives";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import {
   resolveCreatorIds,
-  resolvePresentationCompletion,
   resolvePresentationData,
 } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -71,7 +71,6 @@ export function PresentationStatusSection({
 
   const isRunning = status === "running";
   const presentation = resolvePresentationData(campaignObject);
-  const completion = resolvePresentationCompletion(campaignObject);
   const { ids } = resolveCreatorIds(campaignObject);
   const { vendors: hydrated } = useCreatorHydration(ids);
 
@@ -183,15 +182,15 @@ export function PresentationStatusSection({
 
   return (
     <div className="space-y-3.5">
+      {approvalContext?.readiness ? (
+        <CampaignPlanReadinessChecklist readiness={approvalContext.readiness} />
+      ) : null}
+
       <div className={STUDIO_CLASSES.psGrid}>
-        <PsBox label="Version" value={completion.version} />
-        <PsBox label="Completion" value={`${completion.completionPercent}%`} />
-        <PsBox
-          label="Sections"
-          value={`${completion.sectionsComplete} / ${completion.totalSections}`}
-        />
+        <PsBox label="Version" value={`v${approvalContext?.currentVersion ?? 0}`} />
         <PsBox label="Lifecycle" value={lifecycleLabel} />
         <PsBox label="Presentation" value={approvalLabel} />
+        <PsBox label="Status" value={approvalContext?.readiness.statusLabel ?? "—"} />
       </div>
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -218,9 +217,10 @@ export function PresentationStatusSection({
         </p>
       ) : null}
 
-      {approvalContext?.canSubmitForReview ? (
+      {approvalContext?.lifecycleStatus === "draft" &&
+      approvalContext.readiness.status === "not_ready" ? (
         <p className="text-[11px] text-muted-foreground">
-          The plan is ready to submit for director review.
+          Complete all mandatory readiness items before submitting for director review.
         </p>
       ) : null}
 

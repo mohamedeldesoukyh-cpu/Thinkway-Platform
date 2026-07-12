@@ -11,7 +11,6 @@ import {
   getCampaignPlanExecutionContext,
   type CampaignPlanExecutionContext,
 } from "../actions/generate-campaign-from-plan";
-import { getCampaignPlanApprovalContext } from "../actions/campaign-plan-approval";
 import { CampaignPlanLifecycleHint } from "./campaign-plan-lifecycle-hint";
 import { GenerateCampaignEntry } from "./generate-campaign-entry";
 
@@ -30,23 +29,15 @@ export function GenerateCampaignLauncher({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [context, setContext] = useState<CampaignPlanExecutionContext | null>(null);
-  const [canSubmitForReview, setCanSubmitForReview] = useState(false);
   const [loadingContext, setLoadingContext] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingContext(true);
-    void Promise.all([
-      getCampaignPlanExecutionContext({
-        campaignObjectId: campaignObject.id,
-        conversationId,
-      }),
-      getCampaignPlanApprovalContext({
-        campaignObjectId: campaignObject.id,
-        conversationId,
-        campaignObject,
-      }),
-    ]).then(([executionResult, approvalResult]) => {
+    void getCampaignPlanExecutionContext({
+      campaignObjectId: campaignObject.id,
+      conversationId,
+    }).then((executionResult) => {
       if (cancelled) return;
       if ("error" in executionResult) {
         setContext(null);
@@ -55,9 +46,6 @@ export function GenerateCampaignLauncher({
         setContext(executionResult);
         setError(null);
       }
-      setCanSubmitForReview(
-        !("error" in approvalResult) && approvalResult.canSubmitForReview
-      );
       setLoadingContext(false);
     });
     return () => {
@@ -97,7 +85,6 @@ export function GenerateCampaignLauncher({
       <CampaignPlanLifecycleHint
         lifecycleStatus={context.lifecycleStatus}
         canGenerate={context.canGenerate}
-        canSubmitForReview={canSubmitForReview}
       />
       <GenerateCampaignEntry
         campaignObject={campaignObject}

@@ -5,14 +5,12 @@ import { cn } from "@/lib/utils";
 export type CampaignPlanLifecycleHintProps = {
   lifecycleStatus: string;
   canGenerate: boolean;
-  canSubmitForReview?: boolean;
   className?: string;
 };
 
 export function CampaignPlanLifecycleHint({
   lifecycleStatus,
   canGenerate,
-  canSubmitForReview,
   className,
 }: CampaignPlanLifecycleHintProps) {
   if (canGenerate) return null;
@@ -21,12 +19,9 @@ export function CampaignPlanLifecycleHint({
   if (lifecycleStatus === "in_review") {
     message =
       "Awaiting Campaign Director approval. Quotation and execution generation unlock after the plan is approved.";
-  } else if (lifecycleStatus === "draft" && canSubmitForReview) {
-    message =
-      "Submit the Campaign Plan for director review from the Presentation section to unlock generation.";
   } else if (lifecycleStatus === "draft") {
     message =
-      "Complete key sections and submit the Campaign Plan for review before generating outputs.";
+      "Complete the Campaign Plan readiness checklist and submit for director review from the Presentation section.";
   } else {
     message = `Campaign Plan is ${lifecycleStatus.replaceAll("_", " ")}. Approval is required before generation.`;
   }

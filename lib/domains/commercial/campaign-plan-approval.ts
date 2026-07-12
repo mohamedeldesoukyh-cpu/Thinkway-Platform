@@ -2,9 +2,7 @@ import type { CampaignObjectLifecycleStatus } from "@/types/database";
 import type { PresentationStatusSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 
 import { canGenerateFromCampaignPlan } from "./campaign-plan-provenance";
-
-/** Minimum section completion before a plan may enter director review. */
-export const CAMPAIGN_PLAN_REVIEW_COMPLETION_THRESHOLD = 80;
+import type { CampaignPlanReadiness } from "./campaign-plan-readiness";
 
 export const APPROVED_PLAN_EDIT_BLOCKED_MESSAGE =
   "Request changes to edit an approved Campaign Plan.";
@@ -28,12 +26,9 @@ export function mapLifecycleToPresentationStatus(
 /** Whether the plan may be submitted for Campaign Director review. */
 export function canSubmitCampaignPlanForReview(
   lifecycleStatus: CampaignObjectLifecycleStatus | string | null | undefined,
-  completionPercent: number
+  readiness: Pick<CampaignPlanReadiness, "status">
 ): boolean {
-  return (
-    lifecycleStatus === "draft" &&
-    completionPercent >= CAMPAIGN_PLAN_REVIEW_COMPLETION_THRESHOLD
-  );
+  return lifecycleStatus === "draft" && readiness.status === "ready_for_review";
 }
 
 /** Whether a director may approve a plan currently in review. */
@@ -70,12 +65,12 @@ export type CampaignPlanApprovalFlags = {
 
 export function deriveCampaignPlanApprovalFlags(input: {
   lifecycleStatus: CampaignObjectLifecycleStatus | string | null | undefined;
-  completionPercent: number;
+  readiness: Pick<CampaignPlanReadiness, "status">;
 }): CampaignPlanApprovalFlags {
   return {
     canSubmitForReview: canSubmitCampaignPlanForReview(
       input.lifecycleStatus,
-      input.completionPercent
+      input.readiness
     ),
     canApprove: canApproveCampaignPlan(input.lifecycleStatus),
     canRequestChanges: canRequestCampaignPlanChanges(input.lifecycleStatus),

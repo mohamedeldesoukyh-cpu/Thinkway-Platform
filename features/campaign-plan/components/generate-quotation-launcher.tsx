@@ -11,7 +11,6 @@ import {
   getCampaignPlanQuotationContext,
   type CampaignPlanQuotationContext,
 } from "../actions/generate-quotation-from-plan";
-import { getCampaignPlanApprovalContext } from "../actions/campaign-plan-approval";
 import { CampaignPlanLifecycleHint } from "./campaign-plan-lifecycle-hint";
 import { GenerateQuotationEntry } from "./generate-quotation-entry";
 
@@ -30,23 +29,15 @@ export function GenerateQuotationLauncher({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [context, setContext] = useState<CampaignPlanQuotationContext | null>(null);
-  const [canSubmitForReview, setCanSubmitForReview] = useState(false);
   const [loadingContext, setLoadingContext] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoadingContext(true);
-    void Promise.all([
-      getCampaignPlanQuotationContext({
-        campaignObjectId: campaignObject.id,
-        conversationId,
-      }),
-      getCampaignPlanApprovalContext({
-        campaignObjectId: campaignObject.id,
-        conversationId,
-        campaignObject,
-      }),
-    ]).then(([quotationResult, approvalResult]) => {
+    void getCampaignPlanQuotationContext({
+      campaignObjectId: campaignObject.id,
+      conversationId,
+    }).then((quotationResult) => {
       if (cancelled) return;
       if ("error" in quotationResult) {
         setContext(null);
@@ -55,9 +46,6 @@ export function GenerateQuotationLauncher({
         setContext(quotationResult);
         setError(null);
       }
-      setCanSubmitForReview(
-        !("error" in approvalResult) && approvalResult.canSubmitForReview
-      );
       setLoadingContext(false);
     });
     return () => {
@@ -97,7 +85,6 @@ export function GenerateQuotationLauncher({
       <CampaignPlanLifecycleHint
         lifecycleStatus={context.lifecycleStatus}
         canGenerate={context.canGenerate}
-        canSubmitForReview={canSubmitForReview}
       />
       <GenerateQuotationEntry
         campaignObject={campaignObject}

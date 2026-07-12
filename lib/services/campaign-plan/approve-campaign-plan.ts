@@ -21,14 +21,16 @@ import {
   updateConversationContextSnapshot,
   updateMessageMetadata,
 } from "@/features/ai-workspace/services/conversation-service";
-import { filterExecutionCreatorIds } from "@/lib/domains/commercial/campaign-plan-execution-mapper";
 import {
   canApproveCampaignPlan,
   canRequestCampaignPlanChanges,
   canSubmitCampaignPlanForReview,
   mapLifecycleToPresentationStatus,
 } from "@/lib/domains/commercial/campaign-plan-approval";
-import { resolvePresentationCompletion } from "@/features/campaign-studio/services/section-data-resolver";
+import {
+  evaluateCampaignPlanReadiness,
+  formatCampaignPlanReadinessBlockers,
+} from "@/lib/domains/commercial/campaign-plan-readiness";
 import type { Database } from "@/types/database";
 
 export type CampaignPlanApprovalResult =
@@ -101,25 +103,19 @@ function applyPresentationStatus(
 
 function validateSubmitReadiness(
   campaignObject: CampaignObject
-): { ok: true; completionPercent: number } | { ok: false; message: string } {
-  const completion = resolvePresentationCompletion(campaignObject);
-  const creatorCount = filterExecutionCreatorIds(campaignObject).length;
+): { ok: true } | { ok: false; message: string } {
+  const readiness = evaluateCampaignPlanReadiness(campaignObject);
 
-  if (creatorCount === 0) {
+  if (!canSubmitCampaignPlanForReview("draft", readiness)) {
     return {
       ok: false,
-      message: "Add at least one creator to the slate before submitting for review.",
+      message:
+        formatCampaignPlanReadinessBlockers(readiness) ||
+        "Campaign Plan is not ready for director review.",
     };
   }
 
-  if (!canSubmitCampaignPlanForReview("draft", completion.completionPercent)) {
-    return {
-      ok: false,
-      message: `Campaign Plan is ${completion.completionPercent}% complete. Finish key sections before submitting for review.`,
-    };
-  }
-
-  return { ok: true, completionPercent: completion.completionPercent };
+  return { ok: true };
 }
 
 async function persistCampaignObjectToConversation(
