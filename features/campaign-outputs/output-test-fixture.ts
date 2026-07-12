@@ -1,7 +1,7 @@
 /**
- * Test-only fixture builder for the Deliverables Engine. Produces a minimal but
- * realistic Campaign Object with facts + a creator slate, so generators and the
- * dependency graph can be exercised without the full pipeline.
+ * Test-only fixture builder for the Campaign Outputs Engine. Produces a minimal
+ * but realistic Campaign Object with facts + a creator slate, so generators and
+ * the dependency graph can be exercised without the full pipeline.
  */
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -44,10 +44,7 @@ export function buildCampaignObjectFixture(overrides?: {
   }));
 
   const creatorsData: CreatorsSectionData = {
-    recommendations: {
-      creatorIds: creators.map((c) => c.id),
-      selectedReasoning,
-    },
+    recommendations: { creatorIds: creators.map((c) => c.id), selectedReasoning },
   };
 
   const facts: CampaignFacts = {
@@ -76,10 +73,16 @@ export function buildCampaignObjectFixture(overrides?: {
       summary: emptySection(),
       audience: emptySection(),
       strategy: {
-        content: overrides?.strategyContent ?? "The strategy leads with Celebrity reach, then sustains with Macro and Micro creators.",
+        content:
+          overrides?.strategyContent ??
+          "The strategy leads with Celebrity reach, then sustains with Macro and Micro creators.",
         status: "complete",
       },
-      creators: { content: "", data: creatorsData as unknown as Record<string, unknown>, status: "complete" },
+      creators: {
+        content: "",
+        data: creatorsData as unknown as Record<string, unknown>,
+        status: "complete",
+      },
       budget: emptySection(),
       timeline: emptySection(),
       performance: emptySection(),

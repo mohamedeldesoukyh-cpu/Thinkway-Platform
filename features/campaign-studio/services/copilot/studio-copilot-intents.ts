@@ -1,4 +1,5 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CampaignOutputKind } from "@/features/campaign-outputs/output-types";
 import type {
   CampaignScoreSet,
   CreatorsSectionData,
@@ -36,6 +37,9 @@ export type StudioCopilotIntentKind =
   | "update_presentation"
   | "author_section"
   | "retone_proposal"
+  | "generate_output"
+  | "regenerate_output"
+  | "export_output"
   | "undo_last_change"
   | "restore_version"
   | "answer_question"
@@ -107,6 +111,25 @@ export type RetoneProposalIntent = {
   instruction?: string;
 };
 
+/**
+ * Campaign Outputs Engine intents. The Copilot resolves which output the user
+ * means (kind) and whether to force a rebuild; a deterministic Output Generator
+ * executes it. Only the requested output is (re)generated.
+ */
+export type GenerateOutputIntent = {
+  kind: "generate_output";
+  /** Which Campaign Output to generate; resolved from the request when omitted. */
+  output?: CampaignOutputKind;
+};
+export type RegenerateOutputIntent = {
+  kind: "regenerate_output";
+  output?: CampaignOutputKind;
+};
+export type ExportOutputIntent = {
+  kind: "export_output";
+  output?: CampaignOutputKind;
+};
+
 export type AnswerQuestionIntent = { kind: "answer_question"; question: string };
 export type ClarifyIntent = { kind: "clarify"; question: string };
 export type UndoIntent = { kind: "undo_last_change" };
@@ -125,6 +148,9 @@ export type ExecutableStudioCopilotIntent =
   | UpdateMarketIntent
   | AuthorSectionIntent
   | RetoneProposalIntent
+  | GenerateOutputIntent
+  | RegenerateOutputIntent
+  | ExportOutputIntent
   | AnswerQuestionIntent
   | ClarifyIntent
   | UndoIntent

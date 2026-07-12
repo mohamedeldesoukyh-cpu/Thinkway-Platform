@@ -3,6 +3,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
 import type { PerformanceSectionData } from "@/features/campaign-intelligence/types/section-schemas";
+import type { CampaignOutputKind } from "@/features/campaign-outputs/output-types";
+import { getOutputDefinition } from "@/features/campaign-outputs/output-catalog";
+import {
+  markStaleCampaignOutputs,
+  staleCampaignOutputKinds,
+} from "@/features/campaign-outputs/output-registry";
+import {
+  resolveOutputKind,
+  runExportOutput,
+  runGenerateOutput,
+} from "@/features/campaign-outputs/copilot/output-copilot";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { getDefaultLlmProvider } from "@/features/ai/llm";
@@ -69,6 +80,7 @@ You do not edit campaign data directly. You choose exactly ONE tool that best ma
 
 Rules:
 - To remove creators, call remove_creators (use tier for a whole follower tier, names for specific creators).
+- To generate a Campaign Output (Media Plan, Full Campaign Strategy, Executive Proposal, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, …), call generate_output. To rebuild one after changes, call regenerate_output. To export one, call export_output. Generate ONLY the output the user asked for — never regenerate unrelated outputs.
 - To undo, call undo_last_change.
 - To answer a question about the campaign, call answer_question.
 - Only call clarify when the request is genuinely ambiguous, and reference the campaign's real contents in your question (e.g. mention how many Celebrity creators it currently has).
@@ -203,6 +215,12 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       return authorSectionEdit(input, digest, intent, provider);
     case "retone_proposal":
       return retoneProposal(input, digest, intent.tone, provider);
+    case "generate_output":
+      return generateOutputEdit(input, intent.output, { regenerate: false });
+    case "regenerate_output":
+      return generateOutputEdit(input, intent.output, { regenerate: true });
+    case "export_output":
+      return exportOutputEdit(input, intent.output);
     case "undo_last_change":
       return undoLastChange(input);
     case "restore_version":
@@ -251,16 +269,21 @@ async function commitDraftChanges(
   const staged = withStudioDraft(input.campaignObject, draft);
   const applied = applyStudioDraftChanges(staged);
   const reoptimized = await reoptimizeCampaignAfterApply(input.supabase, applied.campaignObject);
+  const { campaignObject: finalObject, effect: staleEffect } = applyOutputStaleness(
+    reoptimized,
+    input.campaignObject
+  );
 
-  const scoresAfter = (reoptimized.sections.performance.data as PerformanceSectionData | undefined)
+  const scoresAfter = (finalObject.sections.performance.data as PerformanceSectionData | undefined)
     ?.campaignScores;
 
   // Grounded downstream effects on the actual updated campaign.
   const effects: string[] = [];
   if (meta.removed > 0 || meta.added > 0) {
-    effects.push(`the creator mix was rebalanced ${describeDominantTiers(reoptimized)}`);
+    effects.push(`the creator mix was rebalanced ${describeDominantTiers(finalObject)}`);
     effects.push("the budget was reallocated across the updated slate");
   }
+  if (staleEffect) effects.push(staleEffect);
 
   const summary = buildChangeSummary({
     action: meta.action,
@@ -270,7 +293,7 @@ async function commitDraftChanges(
     scoresAfter,
   });
 
-  const logged = appendChangeLog(reoptimized, {
+  const logged = appendChangeLog(finalObject, {
     summary: meta.logSummary,
     intent: meta.intentKind,
     overallScoreAfter: scoresAfter?.overall,
@@ -476,17 +499,24 @@ async function applyFactsEdit(
   }
 
   const reoptimized = await reoptimizeCampaignAfterApply(input.supabase, result.campaignObject);
-  const scoresAfter = (reoptimized.sections.performance.data as PerformanceSectionData | undefined)
+  const { campaignObject: finalObject, effect: staleEffect } = applyOutputStaleness(
+    reoptimized,
+    input.campaignObject
+  );
+  const scoresAfter = (finalObject.sections.performance.data as PerformanceSectionData | undefined)
     ?.campaignScores;
+
+  const effects = ["the studio, budget allocation, and campaign scores were refreshed from the new inputs"];
+  if (staleEffect) effects.push(staleEffect);
 
   const summary = buildChangeSummary({
     action: toAction(result.change),
-    effects: ["the studio, budget allocation, and campaign scores were refreshed from the new inputs"],
+    effects,
     scoreBefore: digest.overallScore,
     scoresAfter,
   });
 
-  const logged = appendChangeLog(reoptimized, {
+  const logged = appendChangeLog(finalObject, {
     summary: result.change,
     intent: intentKind,
     overallScoreAfter: scoresAfter?.overall,
@@ -564,12 +594,20 @@ async function authorSectionEdit(
     };
   }
 
+  const { campaignObject: finalObject, effect: staleEffect } = applyOutputStaleness(
+    result.campaignObject,
+    input.campaignObject
+  );
+
+  const effects = ["only this section changed — the creators, budget, and every other section are untouched"];
+  if (staleEffect) effects.push(staleEffect);
+
   const summary = buildChangeSummary({
     action: toAction(result.change),
-    effects: ["only this section changed — the creators, budget, and every other section are untouched"],
+    effects,
   });
 
-  const logged = appendChangeLog(result.campaignObject, {
+  const logged = appendChangeLog(finalObject, {
     summary: result.change,
     intent: "author_section",
     section: result.section,
@@ -654,6 +692,108 @@ async function retoneProposal(
     reply: renderChangeSummary(summary),
     changed: true,
     intentKind: "retone_proposal",
+  };
+}
+
+/**
+ * Campaign Outputs Engine: generate or regenerate a single output, then persist
+ * a version. The deterministic Output Generator does the work; the Copilot only
+ * routes to it. Only the requested output changes — never anything else.
+ */
+async function generateOutputEdit(
+  input: RunInput,
+  output: CampaignOutputKind | undefined,
+  options: { regenerate: boolean }
+): Promise<StudioCopilotResult> {
+  const intentKind: StudioCopilotResult["intentKind"] = options.regenerate
+    ? "regenerate_output"
+    : "generate_output";
+  const kind = output ?? resolveOutputKind(input.message);
+  if (!kind) {
+    return {
+      campaignObject: input.campaignObject,
+      reply:
+        "Which output would you like me to generate — the Media Plan, the Full Campaign Strategy, the Executive Proposal, the KPI Forecast, or another?",
+      changed: false,
+      intentKind,
+    };
+  }
+
+  const result = runGenerateOutput(input.campaignObject, {
+    kind,
+    regenerate: options.regenerate,
+  });
+  if (!result.changed) {
+    return { campaignObject: result.campaignObject, reply: result.reply, changed: false, intentKind };
+  }
+
+  const label = getOutputDefinition(kind)?.label ?? kind;
+  const logged = appendChangeLog(result.campaignObject, {
+    summary: `${options.regenerate ? "Regenerated" : "Generated"} the ${label} (v${result.record?.version ?? 1})`,
+    intent: intentKind,
+    overallScoreAfter: overallScore(result.campaignObject),
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(input.supabase, input.conversationId, input.userId, logged);
+
+  return { campaignObject: persisted, reply: result.reply, changed: true, intentKind };
+}
+
+/** Export a Campaign Output, generating the latest version first if needed. */
+async function exportOutputEdit(
+  input: RunInput,
+  output: CampaignOutputKind | undefined
+): Promise<StudioCopilotResult> {
+  const kind = output ?? resolveOutputKind(input.message);
+  if (!kind) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: "Which output should I export — the Strategy, the Proposal, or the Media Plan?",
+      changed: false,
+      intentKind: "export_output",
+    };
+  }
+
+  const result = runExportOutput(input.campaignObject, { kind });
+  if (!result.changed) {
+    // Nothing new persisted (already current) — just return the rendered export.
+    return {
+      campaignObject: result.campaignObject,
+      reply: result.reply,
+      changed: false,
+      intentKind: "export_output",
+    };
+  }
+
+  const label = getOutputDefinition(kind)?.label ?? kind;
+  const logged = appendChangeLog(result.campaignObject, {
+    summary: `Generated the ${label} for export (v${result.record?.version ?? 1})`,
+    intent: "export_output",
+    overallScoreAfter: overallScore(result.campaignObject),
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(input.supabase, input.conversationId, input.userId, logged);
+
+  return { campaignObject: persisted, reply: result.reply, changed: true, intentKind: "export_output" };
+}
+
+/**
+ * After an input-changing edit, flip any generated outputs whose inputs changed
+ * to "Needs Update" (precise dependency graph) and describe the newly-stale ones
+ * so the change summary tells the user what to regenerate.
+ */
+function applyOutputStaleness(
+  edited: CampaignObject,
+  before: CampaignObject
+): { campaignObject: CampaignObject; effect?: string } {
+  const marked = markStaleCampaignOutputs(edited);
+  const beforeStale = new Set(staleCampaignOutputKinds(before));
+  const newly = staleCampaignOutputKinds(marked).filter((kind) => !beforeStale.has(kind));
+  if (newly.length === 0) return { campaignObject: marked };
+  const labels = newly.map((kind) => getOutputDefinition(kind)?.label ?? kind).join(", ");
+  return {
+    campaignObject: marked,
+    effect: `${newly.length} generated output${newly.length === 1 ? "" : "s"} now need${newly.length === 1 ? "s" : ""} regenerating (${labels})`,
   };
 }
 

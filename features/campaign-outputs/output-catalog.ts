@@ -1,67 +1,67 @@
 /**
- * Deliverable catalog — the declarative registry of every deliverable, the
+ * Output catalog — the declarative registry of every Campaign Output, the
  * campaign inputs it depends on, and (where wired) its deterministic generator.
  *
- * The catalog is the dependency graph's source of truth: `inputKeys` both
- * fingerprints the deliverable and tells the panel its "Source Data". New
- * deliverables are declared here with their inputs even before a generator
- * exists, so the vocabulary is stable and the panel can list them as
- * "Not Generated" — mirroring how the Copilot declares intents ahead of executors.
+ * The catalog is the dependency graph's source of truth. `inputKeys` both
+ * fingerprints an output and tells the Outputs Center its "Source Data" /
+ * "Dependencies". The dependency map is tuned to the platform's stale rules:
+ *
+ *   • creators change → Strategy, Media Plan, Timeline, Proposal, Budget Allocation
+ *   • budget   change → Strategy, Budget Allocation, KPI Forecast, Proposal
+ *   • kpis     change → ONLY KPI Forecast and Proposal   (kpis is depended on by
+ *                        exactly those two outputs — nothing else goes stale)
+ *
+ * New outputs are declared here with their inputs even before a generator
+ * exists, so the vocabulary is stable and the Center can list them as
+ * "Not Generated".
  */
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 
 import type {
-  DeliverableCategory,
-  DeliverableContent,
-  DeliverableInputKey,
-  DeliverableKind,
-} from "./deliverable-types";
-import { generateMediaPlan } from "./generators/media-plan";
-import { generateFullStrategy } from "./generators/strategy";
+  CampaignOutputCategory,
+  CampaignOutputContent,
+  CampaignOutputInputKey,
+  CampaignOutputKind,
+} from "./output-types";
+import { generateMediaPlan, MEDIA_PLAN_GENERATOR_VERSION } from "./generators/media-plan";
+import { generateFullStrategy, STRATEGY_GENERATOR_VERSION } from "./generators/strategy";
 
-export type DeliverableGenerator = (campaignObject: CampaignObject) => DeliverableContent;
+export type OutputGenerator = (campaignObject: CampaignObject) => CampaignOutputContent;
 
-export type DeliverableDefinition = {
-  kind: DeliverableKind;
+export type OutputDefinition = {
+  kind: CampaignOutputKind;
   label: string;
   description: string;
-  category: DeliverableCategory;
-  /** Campaign inputs this deliverable derives from — drives fingerprint + "Source Data". */
-  inputKeys: DeliverableInputKey[];
+  category: CampaignOutputCategory;
+  /** Campaign inputs this output derives from — drives fingerprint + Source Data / Dependencies. */
+  inputKeys: CampaignOutputInputKey[];
   /** Deterministic generator; absent until wired (declared for forward-compat). */
-  generate?: DeliverableGenerator;
+  generate?: OutputGenerator;
+  /** Semantic version of the wired generator, stored on each record for compare/repro. */
+  generatorVersion?: string;
 };
 
-export const DELIVERABLE_CATALOG: DeliverableDefinition[] = [
+export const OUTPUT_CATALOG: OutputDefinition[] = [
   {
     kind: "full_strategy",
     label: "Full Campaign Strategy",
     description:
-      "The complete strategy: objectives, audience, creator & platform strategy, creative direction, timeline, budget, KPIs, risks, and recommendations.",
+      "The complete strategy: executive summary, objectives, audience, creator & platform strategy, creative direction, activation phases, timeline, budget, KPIs, risks, and recommendations.",
     category: "strategy",
-    inputKeys: [
-      "objective",
-      "audience",
-      "market",
-      "platforms",
-      "creators",
-      "budget",
-      "timeline",
-      "kpis",
-      "strategy",
-      "risks",
-    ],
+    inputKeys: ["objective", "audience", "market", "platforms", "creators", "budget", "timeline", "strategy"],
     generate: generateFullStrategy,
+    generatorVersion: STRATEGY_GENERATOR_VERSION,
   },
   {
     kind: "media_plan",
     label: "Media Plan",
     description:
-      "Creator-by-creator publishing calendar: weekly and daily schedule, platform allocation, waves, dependencies, review and approval milestones, and optimization windows.",
+      "Agency-grade publishing plan: weekly & daily calendar, creator-by-creator schedule, platform allocation, activation waves, review & client approval milestones, optimization & paid amplification windows, contingency windows, creator dependencies, and production/asset deadlines.",
     category: "planning",
     inputKeys: ["creators", "platforms", "timeline", "deliverables_scope"],
     generate: generateMediaPlan,
+    generatorVersion: MEDIA_PLAN_GENERATOR_VERSION,
   },
   {
     kind: "executive_proposal",
@@ -73,9 +73,9 @@ export const DELIVERABLE_CATALOG: DeliverableDefinition[] = [
   {
     kind: "kpi_forecast",
     label: "KPI Forecast",
-    description: "Projected reach, engagement, and conversion outcomes across the slate and budget.",
+    description: "Projected reach, engagement, and conversion outcomes across the budget and KPI targets.",
     category: "performance",
-    inputKeys: ["creators", "budget", "platforms", "kpis"],
+    inputKeys: ["budget", "kpis", "platforms"],
   },
   {
     kind: "risk_plan",
@@ -108,7 +108,7 @@ export const DELIVERABLE_CATALOG: DeliverableDefinition[] = [
   {
     kind: "posting_timeline",
     label: "Posting Timeline",
-    description: "Sequenced posting timeline and dependencies.",
+    description: "Sequenced posting timeline and creator dependencies.",
     category: "planning",
     inputKeys: ["creators", "timeline", "platforms"],
   },
@@ -124,14 +124,14 @@ export const DELIVERABLE_CATALOG: DeliverableDefinition[] = [
     label: "Campaign Playbook",
     description: "The end-to-end operating playbook for running the campaign.",
     category: "operations",
-    inputKeys: ["objective", "creators", "platforms", "timeline", "kpis"],
+    inputKeys: ["objective", "creators", "platforms", "timeline"],
   },
   {
     kind: "executive_summary",
     label: "Executive Summary",
     description: "One-page executive summary of the campaign.",
     category: "strategy",
-    inputKeys: ["objective", "audience", "creators", "budget", "kpis"],
+    inputKeys: ["objective", "audience", "creators", "budget"],
   },
   {
     kind: "creative_concepts",
@@ -145,14 +145,14 @@ export const DELIVERABLE_CATALOG: DeliverableDefinition[] = [
     label: "Client Presentation (PDF/PPT)",
     description: "Exportable client presentation deck.",
     category: "presentation",
-    inputKeys: ["objective", "creators", "budget", "timeline", "kpis", "strategy"],
+    inputKeys: ["objective", "creators", "budget", "timeline", "strategy"],
   },
   {
     kind: "campaign_brief",
     label: "Campaign Brief (reverse)",
     description: "A campaign brief reverse-generated from the assembled campaign.",
     category: "operations",
-    inputKeys: ["objective", "audience", "market", "platforms", "budget", "timeline", "kpis"],
+    inputKeys: ["objective", "audience", "market", "platforms", "budget", "timeline"],
   },
   {
     kind: "statement_of_work",
@@ -170,16 +170,23 @@ export const DELIVERABLE_CATALOG: DeliverableDefinition[] = [
   },
 ];
 
-const CATALOG_BY_KIND = new Map<DeliverableKind, DeliverableDefinition>(
-  DELIVERABLE_CATALOG.map((definition) => [definition.kind, definition])
+const CATALOG_BY_KIND = new Map<CampaignOutputKind, OutputDefinition>(
+  OUTPUT_CATALOG.map((definition) => [definition.kind, definition])
 );
 
-export function getDeliverableDefinition(kind: DeliverableKind): DeliverableDefinition | undefined {
+export function getOutputDefinition(kind: CampaignOutputKind): OutputDefinition | undefined {
   return CATALOG_BY_KIND.get(kind);
 }
 
-/** Human labels for input keys — shown as the deliverable's "Source Data". */
-export const INPUT_KEY_LABELS: Record<DeliverableInputKey, string> = {
+/** Every output that declares a dependency on the given input key. */
+export function outputsDependingOn(inputKey: CampaignOutputInputKey): CampaignOutputKind[] {
+  return OUTPUT_CATALOG.filter((definition) => definition.inputKeys.includes(inputKey)).map(
+    (definition) => definition.kind
+  );
+}
+
+/** Human labels for input keys — shown as an output's "Source Data" / "Dependencies". */
+export const INPUT_KEY_LABELS: Record<CampaignOutputInputKey, string> = {
   objective: "Objective",
   audience: "Audience",
   market: "Market",

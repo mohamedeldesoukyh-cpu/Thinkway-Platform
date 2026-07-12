@@ -1,10 +1,12 @@
 /**
- * Media Plan generator — deterministic, standalone deliverable.
+ * Media Plan generator — a dedicated, agency-grade Campaign Output.
  *
- * Input:  Campaign Object (creators + timeline + platforms + deliverables scope).
- * Output: a creator-by-creator publishing calendar — weekly & daily schedule,
- *         platform allocation, wave planning, dependencies, review & client
- *         approval milestones, and optimization windows.
+ * The Media Plan is NOT the campaign timeline. It is a client-approval-ready
+ * publishing plan derived from the Campaign Object (creators + timeline +
+ * platforms + deliverables scope): weekly & daily calendar, creator-by-creator
+ * schedule, platform allocation, activation waves, review & client approval
+ * milestones, optimization & paid amplification windows, contingency windows,
+ * creator dependencies, and internal production / asset delivery deadlines.
  *
  * Pure and deterministic: the same Campaign Object always yields the same plan,
  * so it can be regenerated independently and diffed across versions.
@@ -13,8 +15,10 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
-import type { DeliverableContent, DeliverableContentSection } from "../deliverable-types";
-import { resolveSlate, type SlateCreator } from "../deliverable-inputs";
+import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
+import { resolveSlate, type SlateCreator } from "../output-inputs";
+
+export const MEDIA_PLAN_GENERATOR_VERSION = "1.0.0";
 
 const TIER_PRIORITY: Record<string, number> = {
   celebrity: 0,
@@ -30,6 +34,10 @@ const DEFAULT_DURATION_WEEKS = 6;
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 /** Days that carry creator publishing (the rest are Stories / Boost / Monitoring). */
 const CONTENT_DAY_INDEXES = [0, 1, 2, 4] as const;
+/** Assets must be delivered this many days before the publish date. */
+const ASSET_LEAD_DAYS = 3;
+/** Production must start this many days before the publish date. */
+const PRODUCTION_LEAD_DAYS = 7;
 
 export type MediaPlanDayType = "content" | "stories" | "boost" | "monitoring";
 
@@ -49,16 +57,22 @@ export type MediaPlanWeek = {
   days: MediaPlanDay[];
 };
 
-export type MediaPlanWave = {
-  wave: number;
-  weeks: number[];
-  theme: string;
-};
+export type MediaPlanWave = { wave: number; weeks: number[]; theme: string };
 
 export type MediaPlanMilestone = {
-  type: "review" | "client_approval" | "optimization";
+  type: "review" | "client_approval" | "optimization" | "amplification" | "contingency";
   week: number;
   label: string;
+};
+
+export type MediaPlanDependency = { creator: string; dependsOn: string; note: string };
+
+export type MediaPlanDeadline = {
+  creator: string;
+  publishWeek: number;
+  publishDay: string;
+  productionStart: string;
+  assetDelivery: string;
 };
 
 export type MediaPlanData = {
@@ -67,13 +81,15 @@ export type MediaPlanData = {
   waves: MediaPlanWave[];
   milestones: MediaPlanMilestone[];
   platformAllocation: Record<string, number>;
+  dependencies: MediaPlanDependency[];
+  deadlines: MediaPlanDeadline[];
   creatorCount: number;
+  generatorVersion: string;
 };
 
 function tierRank(tier?: string): number {
   if (!tier) return 5;
-  const key = tier.trim().toLowerCase();
-  return TIER_PRIORITY[key] ?? 5;
+  return TIER_PRIORITY[tier.trim().toLowerCase()] ?? 5;
 }
 
 function sortSlateByTier(slate: SlateCreator[]): SlateCreator[] {
@@ -93,13 +109,17 @@ function phaseForWeek(week: number, durationWeeks: number): string {
   return "Publishing";
 }
 
-/**
- * Build the week→day schedule. Creators are ordered by tier and assigned
- * round-robin into the content slots across all weeks, so every creator lands on
- * the calendar and higher tiers lead each week. Non-content days carry the
- * recurring Stories / Boost / Monitoring rhythm from the standard plan.
- */
-export function generateMediaPlan(campaignObject: CampaignObject): DeliverableContent {
+/** "Week 2 · Tuesday" minus N days, expressed as a readable production/asset date. */
+function leadDate(week: number, dayIndex: number, leadDays: number): string {
+  const absoluteDay = (week - 1) * 7 + dayIndex; // 0-based day across the campaign
+  const target = absoluteDay - leadDays;
+  if (target < 0) return "Pre-campaign (before Week 1)";
+  const w = Math.floor(target / 7) + 1;
+  const d = DAYS[target % 7]!;
+  return `Week ${w} · ${d}`;
+}
+
+export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutputContent {
   const facts = getCampaignFacts(campaignObject);
   const durationWeeks = Math.max(1, Math.min(52, facts?.durationWeeks ?? DEFAULT_DURATION_WEEKS));
   const platforms = facts?.platforms?.length ? facts.platforms : ["Instagram"];
@@ -107,6 +127,7 @@ export function generateMediaPlan(campaignObject: CampaignObject): DeliverableCo
   const waveCount = durationWeeks >= 6 ? 3 : durationWeeks >= 3 ? 2 : 1;
 
   const platformAllocation: Record<string, number> = {};
+  const deadlines: MediaPlanDeadline[] = [];
   let contentSlotCursor = 0;
   let platformCursor = 0;
 
@@ -116,16 +137,20 @@ export function generateMediaPlan(campaignObject: CampaignObject): DeliverableCo
     const phase = phaseForWeek(week, durationWeeks);
     const days: MediaPlanDay[] = DAYS.map((day, index) => {
       if ((CONTENT_DAY_INDEXES as readonly number[]).includes(index)) {
-        // Assign the next creator (round-robin) to this content slot.
         const creator = slate.length ? slate[contentSlotCursor % slate.length] : undefined;
         contentSlotCursor += 1;
-        if (!creator) {
-          return { day, type: "content", label: "Content publishing" };
-        }
+        if (!creator) return { day, type: "content", label: "Content publishing" };
         const platform = platforms[platformCursor % platforms.length]!;
         platformCursor += 1;
         platformAllocation[platform] = (platformAllocation[platform] ?? 0) + 1;
         const format = tierRank(creator.tier) <= 1 ? "Reel" : "Post";
+        deadlines.push({
+          creator: creator.displayName,
+          publishWeek: week,
+          publishDay: day,
+          productionStart: leadDate(week, index, PRODUCTION_LEAD_DAYS),
+          assetDelivery: leadDate(week, index, ASSET_LEAD_DAYS),
+        });
         return {
           day,
           type: "content",
@@ -156,15 +181,43 @@ export function generateMediaPlan(campaignObject: CampaignObject): DeliverableCo
     return { wave, weeks: weekNumbers, theme };
   });
 
+  // Creator dependencies: higher-tier creators lead; the next tier follows their launch.
+  const dependencies: MediaPlanDependency[] = [];
+  for (let i = 1; i < slate.length; i += 1) {
+    const current = slate[i]!;
+    const lead = slate[i - 1]!;
+    if (tierRank(current.tier) > tierRank(lead.tier)) {
+      dependencies.push({
+        creator: current.displayName,
+        dependsOn: lead.displayName,
+        note: `${current.displayName} activates after ${lead.displayName}'s content sets the narrative`,
+      });
+    }
+  }
+
   const milestones: MediaPlanMilestone[] = [];
-  milestones.push({ type: "client_approval", week: 1, label: "Client sign-off on content & schedule before launch" });
+  milestones.push({
+    type: "client_approval",
+    week: 1,
+    label: "Client sign-off on content & schedule before launch",
+  });
   for (const week of weeks) {
     milestones.push({ type: "review", week: week.week, label: `Week ${week.week} content review & approvals` });
+    milestones.push({ type: "amplification", week: week.week, label: `Paid amplification window (Saturday boost, Week ${week.week})` });
   }
   if (durationWeeks >= 3) {
     const midpoint = Math.ceil(durationWeeks / 2);
     milestones.push({ type: "client_approval", week: midpoint, label: "Mid-campaign client checkpoint" });
-    milestones.push({ type: "optimization", week: durationWeeks - 1, label: "Optimization window — reallocate boost to top performers" });
+    milestones.push({
+      type: "optimization",
+      week: durationWeeks - 1,
+      label: "Optimization window — reallocate boost to top performers",
+    });
+    milestones.push({
+      type: "contingency",
+      week: durationWeeks,
+      label: "Contingency buffer for reshoots / rescheduled posts",
+    });
   }
 
   const data: MediaPlanData = {
@@ -173,31 +226,34 @@ export function generateMediaPlan(campaignObject: CampaignObject): DeliverableCo
     waves,
     milestones,
     platformAllocation,
+    dependencies,
+    deadlines,
     creatorCount: slate.length,
+    generatorVersion: MEDIA_PLAN_GENERATOR_VERSION,
   };
 
   return {
     title: "Media Plan",
-    summary: `${durationWeeks}-week publishing calendar across ${slate.length} creator${slate.length === 1 ? "" : "s"} and ${platforms.length} platform${platforms.length === 1 ? "" : "s"}, organized into ${waveCount} wave${waveCount === 1 ? "" : "s"}.`,
+    summary: `${durationWeeks}-week client-approval-ready publishing plan across ${slate.length} creator${slate.length === 1 ? "" : "s"} and ${platforms.length} platform${platforms.length === 1 ? "" : "s"}, organized into ${waveCount} wave${waveCount === 1 ? "" : "s"}.`,
     sections: buildSections(data),
     data: data as unknown as Record<string, unknown>,
   };
 }
 
-function buildSections(data: MediaPlanData): DeliverableContentSection[] {
-  const sections: DeliverableContentSection[] = [];
+function buildSections(data: MediaPlanData): CampaignOutputContentSection[] {
+  const sections: CampaignOutputContentSection[] = [];
 
   sections.push({
-    heading: "Waves",
-    items: data.waves.map(
-      (wave) => `Wave ${wave.wave} — ${wave.theme} (weeks ${wave.weeks.join(", ")})`
-    ),
+    heading: "Activation Waves",
+    items: data.waves.map((wave) => `Wave ${wave.wave} — ${wave.theme} (weeks ${wave.weeks.join(", ")})`),
   });
 
   for (const week of data.weeks) {
     sections.push({
       heading: `Week ${week.week} — ${week.phase} (Wave ${week.wave})`,
-      items: week.days.map((day) => `${day.day}: ${day.label}${day.platform ? ` · ${day.platform}` : ""}`),
+      items: week.days.map(
+        (day) => `${day.day}: ${day.label}${day.platform ? ` · ${day.platform}` : ""}`
+      ),
     });
   }
 
@@ -209,16 +265,39 @@ function buildSections(data: MediaPlanData): DeliverableContentSection[] {
     });
   }
 
+  if (data.dependencies.length) {
+    sections.push({
+      heading: "Creator Dependencies",
+      items: data.dependencies.map((dep) => dep.note),
+    });
+  }
+
+  if (data.deadlines.length) {
+    sections.push({
+      heading: "Production & Asset Delivery Deadlines",
+      table: {
+        columns: ["Creator", "Publish", "Production starts", "Assets due"],
+        rows: data.deadlines.map((d) => [
+          d.creator,
+          `Week ${d.publishWeek} · ${d.publishDay}`,
+          d.productionStart,
+          d.assetDelivery,
+        ]),
+      },
+    });
+  }
+
   sections.push({
-    heading: "Milestones",
+    heading: "Milestones & Windows",
     items: data.milestones.map((milestone) => {
-      const tag =
-        milestone.type === "client_approval"
-          ? "Client approval"
-          : milestone.type === "optimization"
-            ? "Optimization"
-            : "Review";
-      return `Week ${milestone.week} · ${tag}: ${milestone.label}`;
+      const tag: Record<MediaPlanMilestone["type"], string> = {
+        client_approval: "Client approval",
+        optimization: "Optimization",
+        amplification: "Amplification",
+        contingency: "Contingency",
+        review: "Review",
+      };
+      return `Week ${milestone.week} · ${tag[milestone.type]}: ${milestone.label}`;
     }),
   });
 

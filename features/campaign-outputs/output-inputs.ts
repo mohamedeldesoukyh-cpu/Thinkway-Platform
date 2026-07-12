@@ -1,11 +1,11 @@
 /**
- * Deliverable input extraction — the read side of the dependency graph.
+ * Output input extraction — the read side of the dependency graph.
  *
  * Every input key maps to a normalized, JSON-serializable slice of the Campaign
  * Object. The same values feed both the fingerprint (staleness detection) and
- * the generators, so a deliverable and its "Needs Update" flag always agree on
- * what "the inputs" are. This module is intentionally self-contained (no Copilot
- * imports) so the Deliverables Engine has no cycle with the Copilot.
+ * the generators, so an output and its "Needs Update" flag always agree on what
+ * "the inputs" are. Self-contained (no Copilot imports) so the Engine has no
+ * cycle with the Copilot.
  */
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -15,7 +15,7 @@ import type {
 } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
-import type { DeliverableInputKey } from "./deliverable-types";
+import type { CampaignOutputInputKey } from "./output-types";
 
 /** One creator on the slate, resolved from the object's own reasoning (no hydration). */
 export type SlateCreator = {
@@ -44,7 +44,10 @@ export function resolveSlate(campaignObject: CampaignObject): SlateCreator[] {
   });
 }
 
-function stringContent(campaignObject: CampaignObject, section: keyof CampaignObject["sections"]): string {
+function stringContent(
+  campaignObject: CampaignObject,
+  section: keyof CampaignObject["sections"]
+): string {
   const content = campaignObject.sections[section]?.content;
   if (typeof content === "string") return content;
   if (content && typeof content === "object") {
@@ -71,7 +74,7 @@ export function overallScore(campaignObject: CampaignObject): number | undefined
  */
 export function resolveInputValue(
   campaignObject: CampaignObject,
-  key: DeliverableInputKey
+  key: CampaignOutputInputKey
 ): unknown {
   const facts = getCampaignFacts(campaignObject);
   switch (key) {
@@ -88,7 +91,9 @@ export function resolveInputValue(
         .map((c) => `${normalizeId(c.creatorId)}:${(c.tier ?? "").toLowerCase()}`)
         .sort();
     case "budget":
-      return facts?.budget ? { amount: facts.budget.amount, currency: facts.budget.currency } : null;
+      return facts?.budget
+        ? { amount: facts.budget.amount, currency: facts.budget.currency }
+        : null;
     case "timeline":
       return facts?.durationWeeks ?? null;
     case "kpis":
@@ -98,7 +103,6 @@ export function resolveInputValue(
     case "strategy":
       return stringContent(campaignObject, "strategy");
     case "creative_concepts":
-      // Creative concepts live in the strategy section's data in the current model.
       return stringContent(campaignObject, "strategy").slice(0, 4000);
     case "risks":
       return [...(facts?.risks ?? [])].sort();

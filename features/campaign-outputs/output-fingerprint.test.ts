@@ -1,8 +1,8 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
-import { computeSourceFingerprint } from "./deliverable-fingerprint";
-import { buildCampaignObjectFixture } from "./deliverable-test-fixture";
+import { computeSourceFingerprint } from "./output-fingerprint";
+import { buildCampaignObjectFixture } from "./output-test-fixture";
 
 test("same inputs produce a stable fingerprint", () => {
   const a = buildCampaignObjectFixture();
@@ -34,13 +34,13 @@ test("changing creators changes the creators fingerprint", () => {
 
 test("changing an unrelated input does not change the creators fingerprint", () => {
   const before = buildCampaignObjectFixture();
-  const after = buildCampaignObjectFixture({ facts: { budget: { amount: 9_000_000, currency: "EGP" } } });
-  // Budget changed, but the creators slice is identical.
+  const after = buildCampaignObjectFixture({
+    facts: { budget: { amount: 9_000_000, currency: "EGP" } },
+  });
   assert.equal(
     computeSourceFingerprint(before, ["creators"]),
     computeSourceFingerprint(after, ["creators"])
   );
-  // ...and the budget slice differs.
   assert.notEqual(
     computeSourceFingerprint(before, ["budget"]),
     computeSourceFingerprint(after, ["budget"])

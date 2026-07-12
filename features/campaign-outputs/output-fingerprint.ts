@@ -1,17 +1,17 @@
 /**
- * Deliverable fingerprints — the comparison side of the dependency graph.
+ * Output fingerprints — the comparison side of the dependency graph.
  *
- * A deliverable's fingerprint is a stable hash of the input slices it depends
- * on. When a Copilot edit changes an input, the recomputed fingerprint differs
- * from the one stored at generation time, so the deliverable is flagged
- * "Needs Update" — and *only* the deliverables that actually depend on the
- * changed input, never everything.
+ * An output's fingerprint is a stable hash of the input slices it depends on.
+ * When a Copilot edit changes an input, the recomputed fingerprint differs from
+ * the one stored at generation time, so the output is flagged "Needs Update" —
+ * and *only* the outputs that actually depend on the changed input, never
+ * everything.
  */
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 
-import type { DeliverableInputKey } from "./deliverable-types";
-import { resolveInputValue } from "./deliverable-inputs";
+import type { CampaignOutputInputKey } from "./output-types";
+import { resolveInputValue } from "./output-inputs";
 
 /** Deterministic JSON: object keys sorted so equal data always serializes equally. */
 function stableStringify(value: unknown): string {
@@ -43,7 +43,7 @@ function fnv1a(input: string): string {
  */
 export function computeSourceFingerprint(
   campaignObject: CampaignObject,
-  inputKeys: readonly DeliverableInputKey[]
+  inputKeys: readonly CampaignOutputInputKey[]
 ): string {
   const payload = [...inputKeys]
     .sort()

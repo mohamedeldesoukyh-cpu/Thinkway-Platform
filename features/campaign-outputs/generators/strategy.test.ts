@@ -2,11 +2,10 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
 import { generateFullStrategy } from "./strategy";
-import { buildCampaignObjectFixture } from "../deliverable-test-fixture";
+import { buildCampaignObjectFixture } from "../output-test-fixture";
 
 test("full strategy includes the standard strategy sections", () => {
-  const obj = buildCampaignObjectFixture();
-  const content = generateFullStrategy(obj);
+  const content = generateFullStrategy(buildCampaignObjectFixture());
   const headings = content.sections.map((s) => s.heading);
   for (const required of [
     "Executive Summary",
@@ -14,6 +13,8 @@ test("full strategy includes the standard strategy sections", () => {
     "Audience Strategy",
     "Creator Strategy",
     "Platform Strategy",
+    "Activation Phases & Timeline",
+    "Creator Mix & Content Plan",
     "Budget Allocation",
     "Risk Assessment",
     "Recommendations",
@@ -23,15 +24,13 @@ test("full strategy includes the standard strategy sections", () => {
 });
 
 test("creator strategy reflects the actual tier mix", () => {
-  const obj = buildCampaignObjectFixture();
-  const content = generateFullStrategy(obj);
+  const content = generateFullStrategy(buildCampaignObjectFixture());
   const creatorSection = content.sections.find((s) => s.heading === "Creator Strategy");
   assert.ok(creatorSection?.items?.some((i) => /Celebrity/.test(i)));
   assert.ok(creatorSection?.items?.some((i) => /Macro/.test(i)));
 });
 
 test("strategy derives from facts without inventing a budget", () => {
-  const obj = buildCampaignObjectFixture({ facts: { budget: undefined } });
-  const content = generateFullStrategy(obj);
+  const content = generateFullStrategy(buildCampaignObjectFixture({ facts: { budget: undefined } }));
   assert.ok(!content.sections.some((s) => s.heading === "Budget Allocation"));
 });

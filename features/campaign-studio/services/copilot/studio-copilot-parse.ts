@@ -1,7 +1,36 @@
 import type { LlmToolCall, LlmToolDefinition } from "@/features/ai/types/llm";
+import type { CampaignOutputKind } from "@/features/campaign-outputs/output-types";
+import { resolveOutputKind } from "@/features/campaign-outputs/copilot/output-copilot";
 
 import type { StudioCopilotIntent } from "./studio-copilot-intents";
 import type { SectionAuthorTarget } from "./section-authoring-types";
+
+/** The Campaign Output kinds the Copilot can generate/regenerate/export. */
+const OUTPUT_KINDS: CampaignOutputKind[] = [
+  "full_strategy",
+  "executive_proposal",
+  "media_plan",
+  "content_calendar",
+  "posting_timeline",
+  "creator_activation",
+  "campaign_playbook",
+  "kpi_forecast",
+  "risk_plan",
+  "budget_allocation",
+  "amplification_plan",
+  "executive_summary",
+  "creative_concepts",
+  "client_presentation",
+  "statement_of_work",
+  "campaign_brief",
+  "internal_operations",
+];
+
+function coerceOutputKind(value: unknown): CampaignOutputKind | undefined {
+  return typeof value === "string" && (OUTPUT_KINDS as string[]).includes(value)
+    ? (value as CampaignOutputKind)
+    : undefined;
+}
 
 const AUTHOR_TARGETS: SectionAuthorTarget[] = [
   "strategy",
@@ -202,6 +231,46 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
     },
   },
   {
+    name: "generate_output",
+    description:
+      "Generate a Campaign Output (a whole-campaign artifact — NOT a creator asset) from the Campaign Object: Full Campaign Strategy, Executive Proposal, Media Plan, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, etc. Use for 'generate a media plan', 'create a full strategy', 'generate only the timeline'. Only the requested output is generated.",
+    parameters: {
+      type: "object",
+      properties: {
+        output: {
+          type: "string",
+          enum: OUTPUT_KINDS,
+          description: "Which Campaign Output to generate.",
+        },
+      },
+      required: ["output"],
+    },
+  },
+  {
+    name: "regenerate_output",
+    description:
+      "Rebuild an existing Campaign Output after inputs changed. Use for 'regenerate the media plan', 'rebuild the KPI forecast', 'update the timeline', 'refresh the proposal'. Only the requested output is rebuilt.",
+    parameters: {
+      type: "object",
+      properties: {
+        output: { type: "string", enum: OUTPUT_KINDS, description: "Which Campaign Output to rebuild." },
+      },
+      required: ["output"],
+    },
+  },
+  {
+    name: "export_output",
+    description:
+      "Export a Campaign Output (generating the latest version first if needed). Use for 'export the strategy', 'export the proposal', 'download the media plan'.",
+    parameters: {
+      type: "object",
+      properties: {
+        output: { type: "string", enum: OUTPUT_KINDS, description: "Which Campaign Output to export." },
+      },
+      required: ["output"],
+    },
+  },
+  {
     name: "undo_last_change",
     description: "Revert the campaign to the version before the most recent change.",
     parameters: { type: "object", properties: {} },
@@ -375,6 +444,22 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     };
   }
 
+  // Campaign Outputs Engine — generate / regenerate / export a whole-campaign
+  // output. Requires an explicit output verb so content-editing phrasings
+  // ("rewrite the strategy", "make it premium") still fall through to authoring.
+  const outputKind = resolveOutputKind(text);
+  if (outputKind) {
+    if (/\b(export|download)\b/i.test(text)) {
+      return { kind: "export_output", output: outputKind };
+    }
+    if (/\b(regenerate|rebuild|re-?generate|re-?run|refresh)\b/i.test(text)) {
+      return { kind: "regenerate_output", output: outputKind };
+    }
+    if (/\b(generate|create|build|produce|assemble)\b/i.test(text)) {
+      return { kind: "generate_output", output: outputKind };
+    }
+  }
+
   // Whole-proposal tone pass — re-author the narrative sections together.
   const TONE_RE =
     /\b(premium|executive|youth[-\s]?focused|data[-\s]?driven|creative|cmo[-\s]?ready|concise|bold|aggressive|professional|punchy|luxurious|sophisticated)\b/i;
@@ -512,6 +597,12 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
       };
     case "retone_proposal":
       return { kind: "retone_proposal", tone: typeof args.tone === "string" ? args.tone : "" };
+    case "generate_output":
+      return { kind: "generate_output", output: coerceOutputKind(args.output) };
+    case "regenerate_output":
+      return { kind: "regenerate_output", output: coerceOutputKind(args.output) };
+    case "export_output":
+      return { kind: "export_output", output: coerceOutputKind(args.output) };
     case "undo_last_change":
       return { kind: "undo_last_change" };
     case "restore_version":

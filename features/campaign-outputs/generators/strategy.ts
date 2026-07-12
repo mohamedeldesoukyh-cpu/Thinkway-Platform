@@ -1,17 +1,19 @@
 /**
  * Full Campaign Strategy generator — a derived *view* over the Campaign Object.
  *
- * This assembles the complete strategy document from data that already lives on
- * the Campaign Object (facts + slate + strategy section). It never invents facts
- * and never stores a second copy of them — it renders the SSOT into the standard
- * strategy structure. Deterministic, so it can be regenerated on demand.
+ * Assembles the complete strategy from data that already lives on the Campaign
+ * Object (facts + slate + strategy section). It never invents facts and never
+ * stores a second copy of them — it renders the SSOT into the standard strategy
+ * structure. Deterministic, so it can be regenerated on demand.
  */
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
-import type { DeliverableContent, DeliverableContentSection } from "../deliverable-types";
-import { resolveSlate, type SlateCreator } from "../deliverable-inputs";
+import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
+import { resolveSlate, type SlateCreator } from "../output-inputs";
+
+export const STRATEGY_GENERATOR_VERSION = "1.0.0";
 
 function tierMix(slate: SlateCreator[]): string[] {
   const counts: Record<string, number> = {};
@@ -28,10 +30,10 @@ function strategyNarrative(campaignObject: CampaignObject): string | undefined {
   return undefined;
 }
 
-export function generateFullStrategy(campaignObject: CampaignObject): DeliverableContent {
+export function generateFullStrategy(campaignObject: CampaignObject): CampaignOutputContent {
   const facts = getCampaignFacts(campaignObject);
   const slate = resolveSlate(campaignObject);
-  const sections: DeliverableContentSection[] = [];
+  const sections: CampaignOutputContentSection[] = [];
 
   const brand = facts?.brandName ?? facts?.clientName ?? "the brand";
   const objective = facts?.objective;
@@ -50,16 +52,12 @@ export function generateFullStrategy(campaignObject: CampaignObject): Deliverabl
       `A ${durationWeeks ? `${durationWeeks}-week ` : ""}influencer campaign for ${brand}${objective ? ` focused on ${objective}` : ""}, activating ${slate.length} creator${slate.length === 1 ? "" : "s"}${platforms.length ? ` across ${platforms.join(", ")}` : ""}.`,
   });
 
-  if (objective) {
-    sections.push({ heading: "Campaign Objectives", body: objective });
-  }
-  if (audience) {
-    sections.push({ heading: "Audience Strategy", body: audience });
-  }
+  if (objective) sections.push({ heading: "Campaign Objectives", body: objective });
+  if (audience) sections.push({ heading: "Audience Strategy", body: audience });
 
   sections.push({
     heading: "Creator Strategy",
-    body: `The slate blends tiers to balance reach and authenticity.`,
+    body: "The slate blends tiers to balance reach and authenticity.",
     items: tierMix(slate).length ? tierMix(slate) : ["No creators selected yet"],
   });
 
@@ -70,9 +68,7 @@ export function generateFullStrategy(campaignObject: CampaignObject): Deliverabl
     });
   }
 
-  if (narrative) {
-    sections.push({ heading: "Creative Direction & Key Messages", body: narrative });
-  }
+  if (narrative) sections.push({ heading: "Creative Direction & Key Messages", body: narrative });
 
   sections.push({
     heading: "Activation Phases & Timeline",
@@ -85,6 +81,14 @@ export function generateFullStrategy(campaignObject: CampaignObject): Deliverabl
     ],
   });
 
+  sections.push({
+    heading: "Creator Mix & Content Plan",
+    items: [
+      ...(tierMix(slate).length ? tierMix(slate) : ["Creator mix pending"]),
+      "Content plan: Reels/Posts from lead tiers, Stories for frequency, paid boost on top performers",
+    ],
+  });
+
   if (budget) {
     sections.push({
       heading: "Budget Allocation",
@@ -92,13 +96,13 @@ export function generateFullStrategy(campaignObject: CampaignObject): Deliverabl
     });
   }
 
-  if (kpis.length) {
-    sections.push({ heading: "KPI Forecast & Success Metrics", items: kpis });
-  }
+  if (kpis.length) sections.push({ heading: "KPI Forecast & Success Metrics", items: kpis });
 
   sections.push({
     heading: "Risk Assessment",
-    items: risks.length ? risks : ["No material risks flagged — monitor delivery and engagement quality."],
+    items: risks.length
+      ? risks
+      : ["No material risks flagged — monitor delivery and engagement quality."],
   });
 
   sections.push({
