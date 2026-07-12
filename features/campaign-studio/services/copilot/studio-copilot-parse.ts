@@ -1,6 +1,15 @@
 import type { LlmToolCall, LlmToolDefinition } from "@/features/ai/types/llm";
 
 import type { StudioCopilotIntent } from "./studio-copilot-intents";
+import type { SectionAuthorTarget } from "./section-authoring-types";
+
+const AUTHOR_TARGETS: SectionAuthorTarget[] = [
+  "strategy",
+  "executive_summary",
+  "creative_concepts",
+  "kpis",
+  "risks",
+];
 
 /**
  * Tool schema the Campaign Copilot exposes to the model. The model only chooses
@@ -160,12 +169,14 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
       properties: {
         target: {
           type: "string",
-          enum: ["strategy", "executive_summary"],
-          description: "Which section's content to author. Omit to use the focused section.",
+          enum: ["strategy", "executive_summary", "creative_concepts", "kpis", "risks"],
+          description:
+            "Which section's content to author (strategy, executive_summary, creative_concepts, kpis, risks). Omit to use the focused section.",
         },
         instruction: {
           type: "string",
-          description: "What to do, e.g. 'make it more premium', 'expand this', 'strengthen the business case'.",
+          description:
+            "What to do, e.g. 'make it more premium', 'replace the creative concepts', 'add KPI recommendations', 'add risks and mitigations', 'make the second concept stronger', 'remove this KPI'.",
         },
         tone: {
           type: "string",
@@ -349,15 +360,22 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     };
   }
 
-  // Content authoring: rewrite / tone / expand / shorten / strengthen a section.
+  // Content authoring: rewrite / tone / expand / shorten / strengthen / list edits.
+  const LIST_NOUN_RE = /\b(concepts?|kpis?|kpi recommendations?|risks?|mitigations?)\b/i;
   const AUTHOR_RE =
-    /\b(rewrite|reword|rephrase|improve|polish|refine|expand|shorten|lengthen|strengthen|elevate|sharpen|tighten|make it|make the|make this|more)\b/i;
-  if (AUTHOR_RE.test(text)) {
-    const target = /\bexecutive summary|exec summary\b/i.test(text)
+    /\b(rewrite|reword|rephrase|improve|polish|refine|expand|shorten|lengthen|strengthen|elevate|sharpen|tighten|make it|make the|make this|more|replace|add|remove)\b/i;
+  if (AUTHOR_RE.test(text) && (LIST_NOUN_RE.test(text) || !/\bcreator|influencer|budget|platform|version\b/i.test(text))) {
+    const target: SectionAuthorTarget | undefined = /\bexecutive summary|exec summary\b/i.test(text)
       ? "executive_summary"
-      : /\bstrateg|business case\b/i.test(text)
-        ? "strategy"
-        : undefined;
+      : /\bconcepts?\b/i.test(text)
+        ? "creative_concepts"
+        : /\bkpi/i.test(text)
+          ? "kpis"
+          : /\brisks?|mitigations?\b/i.test(text)
+            ? "risks"
+            : /\bstrateg|business case\b/i.test(text)
+              ? "strategy"
+              : undefined;
     const toneMatch = text.match(
       /\bmore\s+([a-z]+(?:-[a-z]+)?)\b|\b(premium|executive|youth[-\s]?focused|data[-\s]?driven|creative|cmo[-\s]?ready|concise|bold|aggressive|professional|punchy)\b/i
     );
@@ -461,10 +479,9 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
     case "author_section":
       return {
         kind: "author_section",
-        target:
-          args.target === "strategy" || args.target === "executive_summary"
-            ? args.target
-            : undefined,
+        target: AUTHOR_TARGETS.includes(args.target as SectionAuthorTarget)
+          ? (args.target as SectionAuthorTarget)
+          : undefined,
         instruction: typeof args.instruction === "string" ? args.instruction : "",
         tone: typeof args.tone === "string" ? args.tone : undefined,
       };

@@ -1,7 +1,12 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
+  CreativeConcept,
   ExecutiveSummaryData,
   GroundedStrategyField,
+  KpiForecastSectionData,
+  KpiTarget,
+  RiskAnalysisSectionData,
+  RiskItem,
   StrategySectionData,
 } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
@@ -18,6 +23,13 @@ import {
   type SectionAuthorTarget,
   type StudioFocus,
 } from "./section-authoring-types";
+import {
+  authorList,
+  parseOrdinalIndex,
+  resolveListOperation,
+  type ListAuthorConfig,
+  type ListOperation,
+} from "./section-authoring-lists";
 
 export type SectionAuthorResult = {
   campaignObject: CampaignObject;
@@ -261,6 +273,215 @@ async function authorExecutiveSummary(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Structured-list authoring (7b): creative concepts, KPIs, risks.
+// ---------------------------------------------------------------------------
+
+function str(v: unknown): string | undefined {
+  return typeof v === "string" && v.trim() ? v.trim() : undefined;
+}
+
+const CONCEPT_CONFIG: ListAuthorConfig<CreativeConcept> = {
+  noun: "creative concept",
+  itemSchemaHint:
+    '{ "name": string, "bigIdea": string, "hook": string, "keyVisual": string, "contentTheme": string, "cta": string, "sampleCaption": string, "hashtags": string[] }',
+  coerce: (raw) => ({
+    name: raw.name ?? "Concept",
+    bigIdea: raw.bigIdea ?? raw.idea ?? "",
+    hook: raw.hook ?? "",
+    keyVisual: raw.keyVisual ?? "",
+    contentTheme: raw.contentTheme ?? "",
+    cta: raw.cta ?? "",
+    sampleCaption: raw.sampleCaption ?? "",
+    hashtags: Array.isArray(raw.hashtags) ? raw.hashtags.filter((h) => typeof h === "string") : [],
+    ...raw,
+  }),
+  validate: (item): item is CreativeConcept =>
+    Boolean(item) &&
+    typeof item === "object" &&
+    Boolean(str((item as CreativeConcept).name)) &&
+    Boolean(str((item as CreativeConcept).bigIdea)) &&
+    Boolean(str((item as CreativeConcept).hook)),
+};
+
+const KPI_CONFIG: ListAuthorConfig<KpiTarget> = {
+  noun: "KPI",
+  itemSchemaHint: '{ "metric": string, "target": string, "benchmark"?: string, "platform"?: string }',
+  validate: (item): item is KpiTarget =>
+    Boolean(item) &&
+    typeof item === "object" &&
+    Boolean(str((item as KpiTarget).metric)) &&
+    Boolean(str((item as KpiTarget).target)),
+};
+
+const RISK_CONFIG: ListAuthorConfig<RiskItem> = {
+  noun: "risk",
+  itemSchemaHint:
+    '{ "risk": string, "severity": "low"|"medium"|"high", "mitigation": string, "category"?: string }',
+  coerce: (raw) => ({
+    ...raw,
+    severity: ["low", "medium", "high"].includes(String(raw.severity)) ? raw.severity : "medium",
+  }),
+  validate: (item): item is RiskItem =>
+    Boolean(item) &&
+    typeof item === "object" &&
+    Boolean(str((item as RiskItem).risk)) &&
+    ["low", "medium", "high"].includes((item as RiskItem).severity),
+};
+
+function patchSectionContent(
+  campaignObject: CampaignObject,
+  sectionKey: "performance" | "operations",
+  content: Record<string, unknown>
+): CampaignObject {
+  const section = campaignObject.sections[sectionKey];
+  return {
+    ...campaignObject,
+    sections: {
+      ...campaignObject.sections,
+      [sectionKey]: {
+        ...section,
+        content,
+        updatedBy: "director",
+        updatedAt: new Date().toISOString(),
+      },
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function operationVerb(op: ListOperation): string {
+  return op === "add" ? "Added" : op === "remove" ? "Removed" : op === "improve" ? "Improved" : "Rewrote";
+}
+
+async function runListAuthor<T>(
+  provider: LlmProvider,
+  campaignObject: CampaignObject,
+  target: SectionAuthorTarget,
+  config: ListAuthorConfig<T>,
+  current: T[],
+  instruction: string,
+  tone: string | undefined,
+  focus: StudioFocus | undefined,
+  writeBack: (list: T[]) => CampaignObject
+): Promise<SectionAuthorResult> {
+  const section = studioSectionForTarget(target);
+  const index =
+    typeof focus?.elementIndex === "number" ? focus.elementIndex : parseOrdinalIndex(instruction);
+  const operation = resolveListOperation(instruction, index != null);
+
+  if ((operation === "improve" || operation === "remove") && current.length === 0) {
+    return { campaignObject, change: null, reason: `There are no ${config.noun}s to ${operation} yet.`, section };
+  }
+
+  const digest = renderDigestForPrompt(buildCampaignContextDigest(campaignObject));
+  const result = await authorList(provider, config, {
+    digest,
+    current,
+    instruction,
+    tone,
+    operation,
+    index,
+  });
+  if (!result) {
+    return {
+      campaignObject,
+      change: null,
+      reason: `I couldn't ${operation} that ${config.noun} — please try again.`,
+      section,
+    };
+  }
+
+  const next = writeBack(result.list);
+  const countLabel =
+    result.operation === "replace"
+      ? `${result.affected} ${config.noun}s`
+      : `a ${config.noun}`;
+  return {
+    campaignObject: next,
+    change: `${operationVerb(result.operation)} ${countLabel}${tone ? ` (${tone})` : ""}.`,
+    section,
+  };
+}
+
+async function authorCreativeConcepts(
+  provider: LlmProvider,
+  campaignObject: CampaignObject,
+  instruction: string,
+  tone: string | undefined,
+  focus: StudioFocus | undefined
+): Promise<SectionAuthorResult> {
+  const current = readStrategyData(campaignObject).creativeConcepts ?? [];
+  return runListAuthor(
+    provider,
+    campaignObject,
+    "creative_concepts",
+    CONCEPT_CONFIG,
+    current,
+    instruction,
+    tone,
+    focus,
+    (list) => patchSectionData(campaignObject, "strategy", { creativeConcepts: list })
+  );
+}
+
+async function authorKpis(
+  provider: LlmProvider,
+  campaignObject: CampaignObject,
+  instruction: string,
+  tone: string | undefined,
+  focus: StudioFocus | undefined
+): Promise<SectionAuthorResult> {
+  const content = campaignObject.sections.performance.content;
+  const current =
+    content && typeof content === "object" && Array.isArray((content as KpiForecastSectionData).kpis)
+      ? (content as KpiForecastSectionData).kpis
+      : [];
+  return runListAuthor(
+    provider,
+    campaignObject,
+    "kpis",
+    KPI_CONFIG,
+    current,
+    instruction,
+    tone,
+    focus,
+    (list) => patchSectionContent(campaignObject, "performance", { kpis: list })
+  );
+}
+
+async function authorRisks(
+  provider: LlmProvider,
+  campaignObject: CampaignObject,
+  instruction: string,
+  tone: string | undefined,
+  focus: StudioFocus | undefined
+): Promise<SectionAuthorResult> {
+  const content = campaignObject.sections.operations.content;
+  const current =
+    content && typeof content === "object" && Array.isArray((content as RiskAnalysisSectionData).risks)
+      ? (content as RiskAnalysisSectionData).risks
+      : [];
+  return runListAuthor(
+    provider,
+    campaignObject,
+    "risks",
+    RISK_CONFIG,
+    current,
+    instruction,
+    tone,
+    focus,
+    (list) => {
+      const highCount = list.filter((r) => r.severity === "high").length;
+      const overallRiskLevel = highCount >= 2 ? "high" : highCount >= 1 ? "medium" : "low";
+      return patchSectionContent(campaignObject, "operations", {
+        risks: list,
+        overallRiskLevel,
+      });
+    }
+  );
+}
+
 /** Dispatch section authoring to the right editor. Only the target section changes. */
 export async function authorSection(
   provider: LlmProvider,
@@ -272,6 +493,12 @@ export async function authorSection(
       return authorStrategy(provider, campaignObject, input.instruction, input.tone, input.focus);
     case "executive_summary":
       return authorExecutiveSummary(provider, campaignObject, input.instruction, input.tone);
+    case "creative_concepts":
+      return authorCreativeConcepts(provider, campaignObject, input.instruction, input.tone, input.focus);
+    case "kpis":
+      return authorKpis(provider, campaignObject, input.instruction, input.tone, input.focus);
+    case "risks":
+      return authorRisks(provider, campaignObject, input.instruction, input.tone, input.focus);
     default:
       return {
         campaignObject,

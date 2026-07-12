@@ -165,6 +165,80 @@ test("fallback parser routes authoring phrasings with tone + target", () => {
   assert.equal(thisSection.kind === "author_section" ? thisSection.target : "x", undefined);
 });
 
+test("replacing creative concepts writes strategy.data.creativeConcepts only", async () => {
+  const obj = campaignObject();
+  const provider = stubProvider(
+    JSON.stringify([
+      { name: "Sound Wave", bigIdea: "Own the summer sound", hook: "First 3 seconds", keyVisual: "beach", contentTheme: "music", cta: "Use the sound", sampleCaption: "🎵", hashtags: ["#summer"] },
+      { name: "Duet Chain", bigIdea: "Seed duets", hook: "Reaction", keyVisual: "split", contentTheme: "ugc", cta: "Duet this", sampleCaption: "😍", hashtags: ["#duet"] },
+    ])
+  );
+  const result = await authorSection(provider, obj, {
+    target: "creative_concepts",
+    instruction: "replace the creative concepts",
+  });
+  assert.ok(result.change);
+  const sd = result.campaignObject.sections.strategy.data as StrategySectionData;
+  assert.equal(sd.creativeConcepts?.length, 2);
+  assert.match(sd.creativeConcepts![0]!.name, /Sound Wave/);
+  assert.equal(result.campaignObject.sections.performance, obj.sections.performance);
+});
+
+test("adding a KPI appends to performance.content.kpis", async () => {
+  const obj = campaignObject();
+  (obj.sections.performance as { content: unknown }).content = {
+    kpis: [{ metric: "Reach", target: "8M" }],
+  };
+  const provider = stubProvider(JSON.stringify([{ metric: "Sound usage", target: "25K UGC" }]));
+  const result = await authorSection(provider, obj, {
+    target: "kpis",
+    instruction: "add a KPI recommendation",
+  });
+  assert.ok(result.change);
+  const kpis = (result.campaignObject.sections.performance.content as { kpis: unknown[] }).kpis;
+  assert.equal(kpis.length, 2);
+});
+
+test("adding risks writes operations.content with overall risk level", async () => {
+  const obj = campaignObject();
+  const provider = stubProvider(
+    JSON.stringify([
+      { risk: "Sound doesn't trend", severity: "high", mitigation: "Seed with anchors" },
+      { risk: "Creator delays", severity: "medium", mitigation: "Buffer the timeline" },
+    ])
+  );
+  const result = await authorSection(provider, obj, {
+    target: "risks",
+    instruction: "add risks and mitigations",
+  });
+  assert.ok(result.change);
+  const content = result.campaignObject.sections.operations.content as {
+    risks: unknown[];
+    overallRiskLevel: string;
+  };
+  assert.equal(content.risks.length, 2);
+  assert.equal(content.overallRiskLevel, "medium");
+});
+
+test("improving the second concept edits only that item", async () => {
+  const obj = campaignObject();
+  (obj.sections.strategy.data as StrategySectionData).creativeConcepts = [
+    { name: "A", bigIdea: "a", hook: "a", keyVisual: "", contentTheme: "", cta: "", sampleCaption: "", hashtags: [] },
+    { name: "B", bigIdea: "b", hook: "b", keyVisual: "", contentTheme: "", cta: "", sampleCaption: "", hashtags: [] },
+  ];
+  const provider = stubProvider(
+    JSON.stringify({ name: "B stronger", bigIdea: "bolder", hook: "sharper", keyVisual: "", contentTheme: "", cta: "", sampleCaption: "", hashtags: [] })
+  );
+  const result = await authorSection(provider, obj, {
+    target: "creative_concepts",
+    instruction: "make the second concept stronger",
+  });
+  assert.ok(result.change);
+  const concepts = (result.campaignObject.sections.strategy.data as StrategySectionData).creativeConcepts!;
+  assert.equal(concepts[0]!.name, "A");
+  assert.match(concepts[1]!.name, /stronger/);
+});
+
 test("tool call maps author_section with target + tone", () => {
   const intent = parseToolCallIntent({
     id: "1",
