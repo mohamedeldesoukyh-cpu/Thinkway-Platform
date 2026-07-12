@@ -1,19 +1,23 @@
 "use client";
 
 import { FileTextIcon, InfoIcon, PencilIcon } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { CampaignIntelligenceReference } from "@/features/campaigns/components/campaign-intelligence-reference";
+import { CampaignOperationalReadinessChecklist } from "@/features/campaigns/components/campaign-operational-readiness-checklist";
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
 import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
 import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
 import { ClientIoCampaignChrome } from "@/features/io/components/client-io-campaign-chrome";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
+import { evaluateCampaignOperationalReadiness } from "@/lib/domains/commercial/campaign-operational-readiness";
 
 type CampaignOverviewTabProps = {
   workspace: CampaignWorkspace;
+  assignmentHierarchy: AssignmentHierarchy;
   accountManagers: { id: string; full_name: string | null; email: string }[];
   teams: { id: string; name: string }[];
   groups: { id: string; name: string; document_number: string }[];
@@ -23,6 +27,7 @@ type CampaignOverviewTabProps = {
 
 export function CampaignOverviewTab({
   workspace,
+  assignmentHierarchy,
   accountManagers,
   teams,
   groups,
@@ -31,6 +36,10 @@ export function CampaignOverviewTab({
 }: CampaignOverviewTabProps) {
   const [editOpen, setEditOpen] = useState(false);
   const currency = workspace.currency_code;
+  const operationalReadiness = useMemo(
+    () => evaluateCampaignOperationalReadiness(workspace, assignmentHierarchy),
+    [workspace, assignmentHierarchy]
+  );
 
   return (
     <>
@@ -66,6 +75,8 @@ export function CampaignOverviewTab({
       </div>
 
       <div className="space-y-3.5">
+        <CampaignOperationalReadinessChecklist readiness={operationalReadiness} />
+
         <CampaignOverviewDetails workspace={workspace} layout="grid" />
 
         <CampaignFlatSection

@@ -354,6 +354,7 @@ export function CampaignWorkspaceView({
           <CampaignWorkspaceTabPanel>
             <CampaignOverviewTab
               workspace={workspace}
+              assignmentHierarchy={assignmentHierarchy}
               accountManagers={accountManagers}
               teams={teams}
               groups={groups}

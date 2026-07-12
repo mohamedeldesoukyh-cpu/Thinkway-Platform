@@ -316,6 +316,10 @@ export type CampaignWorkspace = {
     client_country_code: string | null;
     default_revenue_vat_percent: number;
   };
+  /** Linked approved campaign plan object — optional for legacy campaigns. */
+  campaign_object_id?: string | null;
+  /** Source quotation snapshot — optional for legacy campaigns. */
+  quotation_id?: string | null;
 };
 
 export function formatMarginPercent(revenue: number, gp: number): number {

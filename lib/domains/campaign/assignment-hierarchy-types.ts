@@ -30,6 +30,8 @@ export type AssignmentPostOperationalRow = {
   invoice_document_number: string | null;
   payout_status: VendorPaymentStatus | null;
   is_locked: boolean;
+  /** Execution schedule metadata (tentative/confirmed posting dates). */
+  metadata?: Record<string, unknown>;
 };
 
 /** Level 2 — deliverable rollup row (assignment_deliverables). */

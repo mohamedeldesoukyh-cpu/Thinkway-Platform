@@ -766,6 +766,9 @@ export async function getCampaignWorkspace(
       client_country_code: clientCountryCode,
       default_revenue_vat_percent: defaultRevenueVatPercent,
     },
+    campaign_object_id:
+      (headerRow as { campaign_object_id?: string | null }).campaign_object_id ?? null,
+    quotation_id: (headerRow as { quotation_id?: string | null }).quotation_id ?? null,
   };
 
   if (process.env.NODE_ENV === "development") {

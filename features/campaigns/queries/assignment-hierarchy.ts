@@ -395,6 +395,7 @@ async function loadCampaignAssignmentHierarchy(
       invoice_document_number: null,
       payout_status: null,
       is_locked: false,
+      metadata: row.metadata ?? undefined,
     });
     postsByDeliverable.set(row.assignment_deliverable_id, list);
   }
