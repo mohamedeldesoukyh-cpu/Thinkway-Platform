@@ -17,7 +17,9 @@ test("backward compat: no meta.campaignOutputs lists everything as not_generated
   assert.ok(views.every((v) => v.status === "not_generated" && v.version === 0));
   assert.equal(views.find((v) => v.kind === "media_plan")?.generatable, true);
   assert.equal(views.find((v) => v.kind === "full_strategy")?.generatable, true);
-  assert.equal(views.find((v) => v.kind === "kpi_forecast")?.generatable, false);
+  assert.equal(views.find((v) => v.kind === "kpi_forecast")?.generatable, true);
+  // posting_timeline is declared but not yet wired to a generator.
+  assert.equal(views.find((v) => v.kind === "posting_timeline")?.generatable, false);
 });
 
 test("views expose source data, dependencies, and generator version", () => {
@@ -90,5 +92,5 @@ test("markStaleCampaignOutputs is idempotent when nothing changed", () => {
 
 test("generating an unwired output throws", () => {
   const obj = buildCampaignObjectFixture();
-  assert.throws(() => generateCampaignOutput(obj, "kpi_forecast"), /No generator/);
+  assert.throws(() => generateCampaignOutput(obj, "posting_timeline"), /No generator/);
 });

@@ -54,6 +54,38 @@ export {
   type MediaPlanDay,
 } from "./generators/media-plan";
 export { generateFullStrategy, STRATEGY_GENERATOR_VERSION } from "./generators/strategy";
+export { generateKpiForecast, KPI_FORECAST_GENERATOR_VERSION } from "./generators/kpi-forecast";
+export { generateRiskPlan, RISK_PLAN_GENERATOR_VERSION } from "./generators/risk-plan";
+export {
+  generateAmplificationPlan,
+  AMPLIFICATION_PLAN_GENERATOR_VERSION,
+} from "./generators/amplification-plan";
+export {
+  generateBudgetAllocation,
+  BUDGET_ALLOCATION_GENERATOR_VERSION,
+} from "./generators/budget-allocation";
+export {
+  generateCreatorActivation,
+  CREATOR_ACTIVATION_GENERATOR_VERSION,
+} from "./generators/creator-activation";
+export {
+  generateContentCalendar,
+  CONTENT_CALENDAR_GENERATOR_VERSION,
+} from "./generators/content-calendar";
+export {
+  generateInternalOperations,
+  INTERNAL_OPERATIONS_GENERATOR_VERSION,
+} from "./generators/internal-operations";
+export {
+  generateExecutiveProposal,
+  EXECUTIVE_PROPOSAL_GENERATOR_VERSION,
+} from "./generators/executive-proposal";
+export {
+  recommendServices,
+  primaryService,
+  parseKpiTargets,
+  benchmarkFor,
+} from "./generators/generator-utils";
 export {
   resolveOutputKind,
   runGenerateOutput,

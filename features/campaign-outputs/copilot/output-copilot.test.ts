@@ -67,7 +67,8 @@ test("regenerate always rebuilds and bumps the version", () => {
 
 test("generating an unwired output is honest, not a silent no-op", () => {
   const obj = buildCampaignObjectFixture();
-  const result = runGenerateOutput(obj, { kind: "kpi_forecast" });
+  // posting_timeline is declared but not yet wired to a generator.
+  const result = runGenerateOutput(obj, { kind: "posting_timeline" });
   assert.equal(result.changed, false);
   assert.match(result.reply, /isn't wired up yet/);
 });

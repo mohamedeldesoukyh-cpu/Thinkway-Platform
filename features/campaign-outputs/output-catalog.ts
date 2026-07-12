@@ -27,6 +27,32 @@ import type {
 } from "./output-types";
 import { generateMediaPlan, MEDIA_PLAN_GENERATOR_VERSION } from "./generators/media-plan";
 import { generateFullStrategy, STRATEGY_GENERATOR_VERSION } from "./generators/strategy";
+import { generateKpiForecast, KPI_FORECAST_GENERATOR_VERSION } from "./generators/kpi-forecast";
+import { generateRiskPlan, RISK_PLAN_GENERATOR_VERSION } from "./generators/risk-plan";
+import {
+  generateAmplificationPlan,
+  AMPLIFICATION_PLAN_GENERATOR_VERSION,
+} from "./generators/amplification-plan";
+import {
+  generateBudgetAllocation,
+  BUDGET_ALLOCATION_GENERATOR_VERSION,
+} from "./generators/budget-allocation";
+import {
+  generateCreatorActivation,
+  CREATOR_ACTIVATION_GENERATOR_VERSION,
+} from "./generators/creator-activation";
+import {
+  generateContentCalendar,
+  CONTENT_CALENDAR_GENERATOR_VERSION,
+} from "./generators/content-calendar";
+import {
+  generateInternalOperations,
+  INTERNAL_OPERATIONS_GENERATOR_VERSION,
+} from "./generators/internal-operations";
+import {
+  generateExecutiveProposal,
+  EXECUTIVE_PROPOSAL_GENERATOR_VERSION,
+} from "./generators/executive-proposal";
 
 export type OutputGenerator = (campaignObject: CampaignObject) => CampaignOutputContent;
 
@@ -88,6 +114,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     group: "client",
     estimatedGenerationMs: 6000,
     inputKeys: ["objective", "audience", "creators", "budget", "timeline", "kpis", "strategy"],
+    generate: generateExecutiveProposal,
+    generatorVersion: EXECUTIVE_PROPOSAL_GENERATOR_VERSION,
   },
   {
     kind: "kpi_forecast",
@@ -97,6 +125,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     group: "strategy",
     estimatedGenerationMs: 3000,
     inputKeys: ["budget", "kpis", "platforms"],
+    generate: generateKpiForecast,
+    generatorVersion: KPI_FORECAST_GENERATOR_VERSION,
   },
   {
     kind: "risk_plan",
@@ -106,6 +136,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     group: "strategy",
     estimatedGenerationMs: 2500,
     inputKeys: ["creators", "timeline", "market", "risks"],
+    generate: generateRiskPlan,
+    generatorVersion: RISK_PLAN_GENERATOR_VERSION,
   },
   {
     kind: "budget_allocation",
@@ -115,6 +147,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     group: "planning",
     estimatedGenerationMs: 2500,
     inputKeys: ["budget", "creators", "platforms"],
+    generate: generateBudgetAllocation,
+    generatorVersion: BUDGET_ALLOCATION_GENERATOR_VERSION,
   },
   {
     kind: "amplification_plan",
@@ -124,6 +158,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     group: "strategy",
     estimatedGenerationMs: 3000,
     inputKeys: ["creators", "platforms", "budget"],
+    generate: generateAmplificationPlan,
+    generatorVersion: AMPLIFICATION_PLAN_GENERATOR_VERSION,
   },
   {
     kind: "content_calendar",
@@ -133,6 +169,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     group: "planning",
     estimatedGenerationMs: 4000,
     inputKeys: ["creators", "platforms", "timeline"],
+    generate: generateContentCalendar,
+    generatorVersion: CONTENT_CALENDAR_GENERATOR_VERSION,
   },
   {
     kind: "posting_timeline",
@@ -151,6 +189,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     group: "planning",
     estimatedGenerationMs: 3500,
     inputKeys: ["creators", "objective", "platforms"],
+    generate: generateCreatorActivation,
+    generatorVersion: CREATOR_ACTIVATION_GENERATOR_VERSION,
   },
   {
     kind: "campaign_playbook",
@@ -214,6 +254,8 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     group: "internal",
     estimatedGenerationMs: 3500,
     inputKeys: ["creators", "timeline", "platforms", "deliverables_scope"],
+    generate: generateInternalOperations,
+    generatorVersion: INTERNAL_OPERATIONS_GENERATOR_VERSION,
   },
 ];
 
