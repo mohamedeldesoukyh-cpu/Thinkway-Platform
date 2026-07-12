@@ -31,6 +31,80 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
     },
   },
   {
+    name: "update_budget",
+    description:
+      "Set the campaign's total budget. Interpret shorthand (e.g. 'EGP 2M' = 2000000). Include currency only if the user changes it.",
+    parameters: {
+      type: "object",
+      properties: {
+        amount: { type: "number", description: "Total budget amount as a plain number." },
+        currency: { type: "string", description: "ISO/short currency code, e.g. EGP, USD, AED." },
+      },
+      required: ["amount"],
+    },
+  },
+  {
+    name: "update_timeline",
+    description: "Set the campaign duration in weeks (e.g. 'four weeks' = 4).",
+    parameters: {
+      type: "object",
+      properties: {
+        durationWeeks: { type: "number", description: "Campaign duration in weeks (1-52)." },
+      },
+      required: ["durationWeeks"],
+    },
+  },
+  {
+    name: "update_platforms",
+    description:
+      "Set which platforms the campaign focuses on, in priority order (first = primary). 'Focus more on TikTok than Instagram' => ['TikTok','Instagram'].",
+    parameters: {
+      type: "object",
+      properties: {
+        platforms: {
+          type: "array",
+          items: { type: "string" },
+          description: "Platforms in priority order, e.g. ['TikTok','Instagram'].",
+        },
+      },
+      required: ["platforms"],
+    },
+  },
+  {
+    name: "update_objectives",
+    description: "Rewrite or update the campaign objective.",
+    parameters: {
+      type: "object",
+      properties: { objective: { type: "string", description: "The new objective statement." } },
+      required: ["objective"],
+    },
+  },
+  {
+    name: "update_audience",
+    description:
+      "Update the target audience description (e.g. 'increase the female audience' => a revised audience statement).",
+    parameters: {
+      type: "object",
+      properties: { audience: { type: "string", description: "The new audience description." } },
+      required: ["audience"],
+    },
+  },
+  {
+    name: "update_market",
+    description: "Change the campaign's market / geography (countries or cities).",
+    parameters: {
+      type: "object",
+      properties: {
+        geography: {
+          type: "array",
+          items: { type: "string" },
+          description: "Markets, e.g. ['Egypt'] or ['UAE','Saudi Arabia'].",
+        },
+      },
+      required: ["geography"],
+    },
+  },
+  {
     name: "undo_last_change",
     description: "Revert the campaign to the version before the most recent change.",
     parameters: { type: "object", properties: {} },
@@ -73,6 +147,39 @@ const REMOVE_RE = /\b(remove|drop|exclude|delete|take out|get rid of|cut)\b/i;
 const UNDO_RE = /\b(undo|revert|roll ?back|go back)\b/i;
 const QUESTION_RE = /\b(why|what|which|how|show me|explain|who|when)\b|\?\s*$/i;
 
+const NUMBER_WORDS: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
+  nine: 9, ten: 10, eleven: 11, twelve: 12,
+};
+
+const MAGNITUDES: Record<string, number> = {
+  k: 1_000, thousand: 1_000, m: 1_000_000, mn: 1_000_000, million: 1_000_000,
+  bn: 1_000_000_000, billion: 1_000_000_000,
+};
+
+const CURRENCY_RE = /\b(EGP|USD|AED|SAR|EUR|GBP|QAR|KWD|BHD|OMR)\b/i;
+
+function parseWeeks(text: string): number | null {
+  const digit = text.match(/(\d+)\s*weeks?/i);
+  if (digit) return Number(digit[1]);
+  const word = text.match(
+    /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b\s*weeks?/i
+  );
+  if (word) return NUMBER_WORDS[word[1]!.toLowerCase()] ?? null;
+  return null;
+}
+
+function parseBudgetAmount(text: string): { amount: number; currency?: string } | null {
+  // e.g. "EGP 2M", "2,000,000", "budget to 2m"
+  const m = text.match(/([\d][\d,.]*)\s*(k|m|mn|bn|thousand|million|billion)?/i);
+  if (!m) return null;
+  const base = Number(m[1]!.replace(/,/g, ""));
+  if (!Number.isFinite(base) || base <= 0) return null;
+  const magnitude = m[2] ? (MAGNITUDES[m[2].toLowerCase()] ?? 1) : 1;
+  const currency = text.match(CURRENCY_RE)?.[1]?.toUpperCase();
+  return { amount: base * magnitude, currency };
+}
+
 /** Extract quoted names or @handles for name-based removal. */
 function extractNames(message: string): string[] {
   const names: string[] = [];
@@ -93,6 +200,18 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
 
   if (UNDO_RE.test(text) && !REMOVE_RE.test(text)) {
     return { kind: "undo_last_change" };
+  }
+
+  if (/\bbudget\b/i.test(text)) {
+    const budget = parseBudgetAmount(text);
+    if (budget) {
+      return { kind: "update_budget", amount: budget.amount, currency: budget.currency };
+    }
+  }
+
+  if (/\b(duration|weeks?|timeline|length)\b/i.test(text)) {
+    const weeks = parseWeeks(text);
+    if (weeks) return { kind: "update_timeline", durationWeeks: weeks };
   }
 
   if (REMOVE_RE.test(text)) {
@@ -132,6 +251,44 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
           ? args.names.filter((n): n is string => typeof n === "string")
           : undefined,
         reason: typeof args.reason === "string" ? args.reason : undefined,
+      };
+    case "update_budget":
+      return {
+        kind: "update_budget",
+        amount: typeof args.amount === "number" ? args.amount : Number(args.amount) || 0,
+        currency: typeof args.currency === "string" ? args.currency : undefined,
+      };
+    case "update_timeline":
+      return {
+        kind: "update_timeline",
+        durationWeeks:
+          typeof args.durationWeeks === "number"
+            ? args.durationWeeks
+            : Number(args.durationWeeks) || 0,
+      };
+    case "update_platforms":
+      return {
+        kind: "update_platforms",
+        platforms: Array.isArray(args.platforms)
+          ? args.platforms.filter((p): p is string => typeof p === "string")
+          : [],
+      };
+    case "update_objectives":
+      return {
+        kind: "update_objectives",
+        objective: typeof args.objective === "string" ? args.objective : "",
+      };
+    case "update_audience":
+      return {
+        kind: "update_audience",
+        audience: typeof args.audience === "string" ? args.audience : "",
+      };
+    case "update_market":
+      return {
+        kind: "update_market",
+        geography: Array.isArray(args.geography)
+          ? args.geography.filter((g): g is string => typeof g === "string")
+          : [],
       };
     case "undo_last_change":
       return { kind: "undo_last_change" };

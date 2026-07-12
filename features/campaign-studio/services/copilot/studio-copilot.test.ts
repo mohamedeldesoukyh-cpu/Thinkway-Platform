@@ -148,6 +148,50 @@ test("parseToolCallIntent maps model tool calls to typed intents", () => {
   assert.equal(bad?.kind, "answer_question");
 });
 
+test("fallback parser reads budget with magnitude + currency", () => {
+  const intent = parseStudioIntentFallback("increase the budget to EGP 2M");
+  assert.equal(intent.kind, "update_budget");
+  if (intent.kind === "update_budget") {
+    assert.equal(intent.amount, 2_000_000);
+    assert.equal(intent.currency, "EGP");
+  }
+
+  const plain = parseStudioIntentFallback("set the budget to 500,000");
+  assert.equal(plain.kind === "update_budget" ? plain.amount : null, 500_000);
+});
+
+test("fallback parser reads duration in digits and words", () => {
+  assert.equal(
+    (parseStudioIntentFallback("reduce the campaign duration to four weeks") as { durationWeeks?: number })
+      .durationWeeks,
+    4
+  );
+  assert.equal(
+    (parseStudioIntentFallback("make the timeline 8 weeks") as { durationWeeks?: number })
+      .durationWeeks,
+    8
+  );
+});
+
+test("tool calls map to facts intents (budget, timeline, platforms)", () => {
+  const budget = parseToolCallIntent({
+    id: "1",
+    name: "update_budget",
+    arguments: JSON.stringify({ amount: 2000000, currency: "EGP" }),
+  });
+  assert.equal(budget?.kind === "update_budget" ? budget.amount : null, 2_000_000);
+
+  const platforms = parseToolCallIntent({
+    id: "2",
+    name: "update_platforms",
+    arguments: JSON.stringify({ platforms: ["TikTok", "Instagram"] }),
+  });
+  assert.deepEqual(
+    platforms?.kind === "update_platforms" ? platforms.platforms : null,
+    ["TikTok", "Instagram"]
+  );
+});
+
 test("change summary renders transparent before/after block", () => {
   const summary = buildChangeSummary({
     headline: "Campaign updated successfully.",

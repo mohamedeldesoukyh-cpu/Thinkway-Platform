@@ -26,6 +26,7 @@ export type StudioCopilotIntentKind =
   | "update_objectives"
   | "update_audience"
   | "update_platforms"
+  | "update_market"
   | "update_strategy"
   | "update_deliverables"
   | "update_kpis"
@@ -46,6 +47,13 @@ export type RemoveCreatorsIntent = {
   reason?: string;
 };
 
+export type UpdateBudgetIntent = { kind: "update_budget"; amount: number; currency?: string };
+export type UpdateTimelineIntent = { kind: "update_timeline"; durationWeeks: number };
+export type UpdatePlatformsIntent = { kind: "update_platforms"; platforms: string[] };
+export type UpdateObjectivesIntent = { kind: "update_objectives"; objective: string };
+export type UpdateAudienceIntent = { kind: "update_audience"; audience: string };
+export type UpdateMarketIntent = { kind: "update_market"; geography: string[] };
+
 export type AnswerQuestionIntent = { kind: "answer_question"; question: string };
 export type ClarifyIntent = { kind: "clarify"; question: string };
 export type UndoIntent = { kind: "undo_last_change" };
@@ -53,6 +61,12 @@ export type UndoIntent = { kind: "undo_last_change" };
 /** Intents wired to executors in this increment; the rest are typed for forward-compat. */
 export type ExecutableStudioCopilotIntent =
   | RemoveCreatorsIntent
+  | UpdateBudgetIntent
+  | UpdateTimelineIntent
+  | UpdatePlatformsIntent
+  | UpdateObjectivesIntent
+  | UpdateAudienceIntent
+  | UpdateMarketIntent
   | AnswerQuestionIntent
   | ClarifyIntent
   | UndoIntent;

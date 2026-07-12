@@ -11,6 +11,15 @@ import type { LlmProvider } from "@/features/ai/types/llm";
 import { applyStudioDraftChanges, getStudioDraft, stageDraftChange, withStudioDraft } from "../studio-draft";
 import { reoptimizeCampaignAfterApply } from "../apply-draft-reoptimize";
 import {
+  applyAudienceChange,
+  applyBudgetChange,
+  applyGeographyChange,
+  applyObjectiveChange,
+  applyPlatformsChange,
+  applyTimelineChange,
+  type FactsEditResult,
+} from "./campaign-facts-mutations";
+import {
   buildCampaignContextDigest,
   buildChangeSummary,
   planRemovalChanges,
@@ -136,6 +145,30 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
   switch (intent.kind) {
     case "remove_creators":
       return removeCreators(input, digest, intent);
+    case "update_budget":
+      return applyFactsEdit(input, digest, "update_budget", (obj) =>
+        applyBudgetChange(obj, { amount: intent.amount, currency: intent.currency })
+      );
+    case "update_timeline":
+      return applyFactsEdit(input, digest, "update_timeline", (obj) =>
+        applyTimelineChange(obj, { durationWeeks: intent.durationWeeks })
+      );
+    case "update_platforms":
+      return applyFactsEdit(input, digest, "update_platforms", (obj) =>
+        applyPlatformsChange(obj, { platforms: intent.platforms })
+      );
+    case "update_objectives":
+      return applyFactsEdit(input, digest, "update_objectives", (obj) =>
+        applyObjectiveChange(obj, { objective: intent.objective })
+      );
+    case "update_audience":
+      return applyFactsEdit(input, digest, "update_audience", (obj) =>
+        applyAudienceChange(obj, { audience: intent.audience })
+      );
+    case "update_market":
+      return applyFactsEdit(input, digest, "update_market", (obj) =>
+        applyGeographyChange(obj, { geography: intent.geography })
+      );
     case "undo_last_change":
       return undoLastChange(input);
     case "answer_question":
@@ -238,6 +271,61 @@ async function removeCreators(
     reply: renderChangeSummary(summary),
     changed: true,
     intentKind: "remove_creators",
+  };
+}
+
+/**
+ * Facts-level edits (budget, timeline, platforms, objective, audience, market):
+ * mutate the facts SSOT, re-optimize the slate + scores from the new facts, save
+ * a version, and summarize. Budget/duration/mix/waves re-derive from facts at
+ * read time, so the studio and exports update automatically.
+ */
+async function applyFactsEdit(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  intentKind: StudioCopilotResult["intentKind"],
+  mutate: (campaignObject: CampaignObject) => FactsEditResult
+): Promise<StudioCopilotResult> {
+  const result = mutate(input.campaignObject);
+  if (!result.change) {
+    return {
+      campaignObject: input.campaignObject,
+      reply:
+        "I couldn't apply that change — please restate the exact value (for example \"set the budget to EGP 2,000,000\" or \"make it 4 weeks\").",
+      changed: false,
+      intentKind,
+    };
+  }
+
+  const reoptimized = await reoptimizeCampaignAfterApply(input.supabase, result.campaignObject);
+  const scoresAfter = (reoptimized.sections.performance.data as PerformanceSectionData | undefined)
+    ?.campaignScores;
+
+  const summary = buildChangeSummary({
+    headline: "Campaign updated successfully.",
+    changes: [result.change, "Refreshed the studio, budget, and scores from the new inputs."],
+    scoreBefore: digest.overallScore,
+    scoresAfter,
+  });
+
+  const logged = appendChangeLog(reoptimized, {
+    summary: result.change,
+    intent: intentKind,
+    overallScoreAfter: scoresAfter?.overall,
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(
+    input.supabase,
+    input.conversationId,
+    input.userId,
+    logged
+  );
+
+  return {
+    campaignObject: persisted,
+    reply: renderChangeSummary(summary),
+    changed: true,
+    intentKind,
   };
 }
 
