@@ -61,6 +61,8 @@ export async function insertCampaignHeader(
     account_manager_id: string | null;
     metadata: Record<string, unknown>;
     created_by: string;
+    campaign_object_id?: string | null;
+    source_campaign_object_version?: number | null;
   }
 ) {
   return supabase
@@ -81,6 +83,8 @@ export async function insertCampaignHeader(
       account_manager_id: input.account_manager_id,
       metadata: input.metadata,
       created_by: input.created_by,
+      campaign_object_id: input.campaign_object_id ?? null,
+      source_campaign_object_version: input.source_campaign_object_version ?? null,
     })
     .select("id, document_number")
     .single();

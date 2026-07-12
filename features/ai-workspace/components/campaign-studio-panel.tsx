@@ -5,6 +5,7 @@ import { LayersIcon, LayoutDashboardIcon, SparklesIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { CampaignStudioHost } from "@/features/campaign-decision-workspace/components/campaign-studio-host";
+import { GenerateCampaignLauncher } from "@/features/campaign-plan/components/generate-campaign-launcher";
 import { StudioOutputsView } from "@/features/campaign-outputs/components/studio-outputs-view";
 
 import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
@@ -179,6 +180,12 @@ export function CampaignStudioPanel({
         </>
       ) : view === "outputs" ? (
         <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="border-b border-border/60 px-4 py-3">
+            <GenerateCampaignLauncher
+              campaignObject={display.campaignObject}
+              conversationId={conversationId}
+            />
+          </div>
           <StudioOutputsView
             campaignObject={display.campaignObject}
             mode="outputs"
