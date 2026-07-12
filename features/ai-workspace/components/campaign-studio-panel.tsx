@@ -5,7 +5,10 @@ import { SparklesIcon } from "lucide-react";
 
 import { CampaignStudioHost } from "@/features/campaign-decision-workspace/components/campaign-studio-host";
 
+import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
+
 import type { AiActionCard, AiMessage } from "../types";
+import { CampaignHistoryPanel } from "./campaign-history-panel";
 import { findLatestStudioMessage } from "./campaign-studio-panel-utils";
 import { toWorkflowDisplayMetadata } from "./workflow-dashboard-panel";
 
@@ -19,6 +22,8 @@ type CampaignStudioPanelProps = {
     messageId: string,
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  /** Restore sends a Copilot message through the normal chat flow. */
+  onSendMessage?: (message: string) => void;
 };
 
 /**
@@ -31,6 +36,7 @@ export function CampaignStudioPanel({
   conversationId,
   onCardUpdated,
   onVendorDecisionsUpdated,
+  onSendMessage,
 }: CampaignStudioPanelProps) {
   const display = useMemo(
     () => toWorkflowDisplayMetadata(message.metadata),
@@ -38,6 +44,9 @@ export function CampaignStudioPanel({
   );
 
   if (!display.campaignObject) return null;
+
+  const campaignObjectId = display.campaignObject.id;
+  const changeLog = (display.campaignObject.meta.copilotChangeLog ?? []) as CopilotChangeLogEntry[];
 
   const progressPercent = display.totalSteps
     ? Math.round((display.completedTasks.length / display.totalSteps) * 100)
@@ -76,6 +85,15 @@ export function CampaignStudioPanel({
           }
         />
       </div>
+      {campaignObjectId ? (
+        <CampaignHistoryPanel
+          campaignObjectId={campaignObjectId}
+          changeLog={changeLog}
+          onRestore={
+            onSendMessage ? (version) => onSendMessage(`Restore version ${version}`) : undefined
+          }
+        />
+      ) : null}
     </div>
   );
 }

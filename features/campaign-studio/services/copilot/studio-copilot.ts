@@ -184,6 +184,8 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       );
     case "undo_last_change":
       return undoLastChange(input);
+    case "restore_version":
+      return restoreVersion(input, intent.version);
     case "answer_question":
       return answerQuestion(input, digest, intent.question, provider);
     case "clarify":
@@ -528,6 +530,61 @@ async function undoLastChange(input: RunInput): Promise<StudioCopilotResult> {
         "I couldn't undo the last change — version history isn't available for this campaign yet.",
       changed: false,
       intentKind: "undo_last_change",
+    };
+  }
+}
+
+/**
+ * Restore a specific earlier version: load its snapshot and save it as a new
+ * current version (forward-restore — the history is preserved, never rewritten).
+ */
+async function restoreVersion(input: RunInput, version: number): Promise<StudioCopilotResult> {
+  if (!Number.isFinite(version) || version < 1) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: "Please tell me which version number to restore (for example \"restore version 2\").",
+      changed: false,
+      intentKind: "restore_version",
+    };
+  }
+  try {
+    const target = await CampaignObjectPersistenceService.loadVersion(
+      input.supabase,
+      input.campaignObject.id,
+      version
+    );
+    if (!target) {
+      return {
+        campaignObject: input.campaignObject,
+        reply: `I couldn't find version ${version} for this campaign.`,
+        changed: false,
+        intentKind: "restore_version",
+      };
+    }
+    const restored = appendChangeLog(target.campaignObject, {
+      summary: `Restored version ${version}`,
+      intent: "restore_version",
+      overallScoreAfter: overallScore(target.campaignObject),
+      appliedAt: new Date().toISOString(),
+    });
+    const persisted = await persistVersion(
+      input.supabase,
+      input.conversationId,
+      input.userId,
+      restored
+    );
+    return {
+      campaignObject: persisted,
+      reply: `✅ Restored version ${version}. The studio now reflects that earlier state (saved as a new version, so nothing is lost).`,
+      changed: true,
+      intentKind: "restore_version",
+    };
+  } catch {
+    return {
+      campaignObject: input.campaignObject,
+      reply: "I couldn't restore that version — version history isn't available yet.",
+      changed: false,
+      intentKind: "restore_version",
     };
   }
 }

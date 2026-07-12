@@ -157,6 +157,17 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
     parameters: { type: "object", properties: {} },
   },
   {
+    name: "restore_version",
+    description: "Restore the campaign to a specific earlier version by its version number.",
+    parameters: {
+      type: "object",
+      properties: {
+        version: { type: "number", description: "The version number to restore." },
+      },
+      required: ["version"],
+    },
+  },
+  {
     name: "answer_question",
     description:
       "Answer a question about the current campaign (why creators were chosen, budget split, strategy, alternatives) grounded strictly in the campaign context. Does not modify the campaign.",
@@ -244,6 +255,11 @@ function extractNames(message: string): string[] {
  */
 export function parseStudioIntentFallback(message: string): StudioCopilotIntent {
   const text = message.trim();
+
+  const restoreMatch = text.match(/\b(?:restore|revert|go back)\b[^\d]*version\s+(\d+)/i);
+  if (restoreMatch) {
+    return { kind: "restore_version", version: Number(restoreMatch[1]) };
+  }
 
   if (UNDO_RE.test(text) && !REMOVE_RE.test(text)) {
     return { kind: "undo_last_change" };
@@ -404,6 +420,11 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
       };
     case "undo_last_change":
       return { kind: "undo_last_change" };
+    case "restore_version":
+      return {
+        kind: "restore_version",
+        version: typeof args.version === "number" ? args.version : Number(args.version) || 0,
+      };
     case "answer_question":
       return {
         kind: "answer_question",

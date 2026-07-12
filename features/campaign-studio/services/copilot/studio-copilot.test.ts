@@ -123,6 +123,9 @@ test("fallback parser routes remove/undo/question/clarify correctly", () => {
   assert.equal(removeIntent.kind === "remove_creators" ? removeIntent.tier : null, "Celebrity");
 
   assert.equal(parseStudioIntentFallback("undo the last change").kind, "undo_last_change");
+  const restore = parseStudioIntentFallback("restore version 3");
+  assert.equal(restore.kind, "restore_version");
+  assert.equal(restore.kind === "restore_version" ? restore.version : null, 3);
   assert.equal(parseStudioIntentFallback("why did you choose these creators?").kind, "answer_question");
   assert.equal(parseStudioIntentFallback("make it better somehow").kind, "clarify");
 });

@@ -761,6 +761,7 @@ export function IntelligenceWorkspace({
               conversationId={conversationId}
               onCardUpdated={handleCardUpdated}
               onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
+              onSendMessage={(message) => void handleSend(message)}
             />
           </div>
         ) : null}

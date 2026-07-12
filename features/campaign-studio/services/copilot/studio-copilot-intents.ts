@@ -34,6 +34,7 @@ export type StudioCopilotIntentKind =
   | "update_creative_concepts"
   | "update_presentation"
   | "undo_last_change"
+  | "restore_version"
   | "answer_question"
   | "clarify";
 
@@ -89,6 +90,7 @@ export type UpdateMarketIntent = { kind: "update_market"; geography: string[] };
 export type AnswerQuestionIntent = { kind: "answer_question"; question: string };
 export type ClarifyIntent = { kind: "clarify"; question: string };
 export type UndoIntent = { kind: "undo_last_change" };
+export type RestoreVersionIntent = { kind: "restore_version"; version: number };
 
 /** Intents wired to executors in this increment; the rest are typed for forward-compat. */
 export type ExecutableStudioCopilotIntent =
@@ -103,7 +105,8 @@ export type ExecutableStudioCopilotIntent =
   | UpdateMarketIntent
   | AnswerQuestionIntent
   | ClarifyIntent
-  | UndoIntent;
+  | UndoIntent
+  | RestoreVersionIntent;
 
 export type StudioCopilotIntent =
   | ExecutableStudioCopilotIntent
