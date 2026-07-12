@@ -76,6 +76,13 @@ export type CampaignObjectMeta = {
   governance?: import("@/features/campaign-governance/governance-types").CampaignGovernanceMeta;
   /** Campaign Copilot change history — one entry per applied conversational edit. */
   copilotChangeLog?: CopilotChangeLogEntry[];
+  /**
+   * Campaign Deliverables registry — generation state + dependency fingerprints
+   * for each client-facing deliverable. Deliverables are generated *views* over
+   * this Campaign Object; this map never holds authoritative campaign data.
+   * Optional for backward compatibility with campaigns created before the engine.
+   */
+  deliverables?: import("@/features/campaign-studio/services/deliverables/deliverable-types").DeliverableRegistryState;
 };
 
 /** A single applied Campaign Copilot edit, for change history and the digest. */
