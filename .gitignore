@@ -54,3 +54,5 @@ services/discovery-worker/.tmp/
 response.html
 .discovery-worker-startup.log*
 services/discovery-worker/*.log
+
+.tmp-compile/

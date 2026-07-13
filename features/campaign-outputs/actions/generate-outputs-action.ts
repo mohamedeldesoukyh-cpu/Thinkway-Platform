@@ -5,7 +5,11 @@ import { randomUUID } from "crypto";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CREATE_CAMPAIGN_WORKFLOW_ID } from "@/features/campaign-studio/constants/workflow-ids";
-import { attachCampaignObjectToSnapshot, loadCampaignObjectForConversation } from "@/features/campaign-intelligence";
+import {
+  attachCampaignObjectToSnapshot,
+  loadCampaignObjectForConversation,
+  type CampaignObject,
+} from "@/features/campaign-intelligence";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import {
   createConversation,
@@ -182,7 +186,7 @@ export async function startCampaignOutputsFromSeed(
     });
 
     const hydrated = hydrateCampaignObject(seed, undefined, syncOptions);
-    let campaignObject = {
+    let campaignObject: CampaignObject = {
       ...hydrated.campaignObject,
       id: randomUUID(),
       conversationId: conversation.id,
