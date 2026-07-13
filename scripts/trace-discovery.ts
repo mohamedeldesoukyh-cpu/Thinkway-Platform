@@ -22,10 +22,15 @@ import "./trace-discovery-enable";
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
+import type { CampaignObject } from "@/features/campaign-intelligence";
 import { loadCampaignObjectForConversation } from "@/features/campaign-intelligence/services/campaign-object-store";
-import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
+import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
+import { getCampaignFacts, buildCreatorMixFromFacts } from "@/features/campaign-director/facts/facts-display-bridge";
+import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import { searchCreatorsInputToBrowseFilters } from "@/features/ai/tools/search-creators-browse";
 import type { SearchCreatorsInput } from "@/features/ai/tools/schemas";
+import { buildCampaignSearchIntent } from "@/features/ai/tools/campaign-search-intent";
+import { proposeInitialCreatorSlateWithStatus } from "@/features/campaign-studio/services/propose-creator-slate";
 import { browseUnifiedCreatorsWithCoverageBackfill } from "@/lib/discovery/coverage-backfill-orchestrator";
 import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
 import { resolveCountryCode } from "@/lib/creators/country-code";
@@ -61,6 +66,109 @@ function format(value: unknown): string {
 function argFlag(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`${name}=`));
   return hit ? hit.slice(name.length + 1) : undefined;
+}
+
+/** First captured funnel stage that dropped a non-empty pool to zero. */
+function firstZeroDrop(events: DropEvent[]): DropEvent | undefined {
+  return events.find((d) => d.before > 0 && d.after === 0);
+}
+
+/** Print a "previous → current" diff row, flagging changes. */
+function diff(label: string, prev: unknown, curr: unknown) {
+  const p = format(prev);
+  const c = format(curr);
+  const changed = p !== c;
+  const flag = changed ? "  ⟵ CHANGED" : "";
+  console.log(`  ${label.padEnd(20)} ${p.slice(0, 40).padEnd(40)} → ${c.slice(0, 40)}${flag}`);
+}
+
+/** Reconstruct the Discovery query from facts (mirrors the Studio search input). */
+function reconstructQuery(facts: CampaignFacts | undefined, override?: string): string {
+  return (
+    override ??
+    facts?.rawBriefExcerpt ??
+    [facts?.brandName, facts?.objective, facts?.audience, facts?.geography?.join(" "), facts?.platforms?.join(" ")]
+      .filter(Boolean)
+      .join(". ")
+  );
+}
+
+/** Human-readable creator-mix summary derived from facts (deterministic). */
+function creatorMixSummary(facts: CampaignFacts | undefined): string {
+  if (!facts) return "—";
+  try {
+    const mix = buildCreatorMixFromFacts(facts);
+    return mix.length ? mix.map((t) => `${t.percent}% ${t.tier}`).join(", ") : "(none)";
+  } catch {
+    return "(unavailable)";
+  }
+}
+
+/** Whether the strategy section carries authored content. */
+function strategyState(campaignObject: Pick<CampaignObject, "sections">): string {
+  const content = campaignObject.sections?.strategy?.content;
+  return typeof content === "string" && content.trim() ? `present (${content.trim().length} chars)` : "empty";
+}
+
+/** Pull the slate funnel numbers stored on a campaign-object snapshot. */
+function slateFunnel(campaignObject: Pick<CampaignObject, "sections">): {
+  discovery: number;
+  recommendations: number;
+  selected: number;
+} {
+  const data = (campaignObject.sections?.creators?.data ?? {}) as Record<string, any>;
+  const discovery = data?.discovery?.creatorIds?.length ?? 0;
+  const recommendations = data?.recommendations?.creatorIds?.length ?? 0;
+  const decisions = data?.vendorDecisions;
+  let selected = recommendations;
+  if (Array.isArray(decisions)) {
+    const chosen = decisions.filter((d: any) => {
+      const v = (d?.decision ?? d?.status ?? "").toString().toLowerCase();
+      return v === "selected" || v === "accepted" || v === "approved" || d?.selected === true;
+    });
+    if (chosen.length > 0) selected = chosen.length;
+  } else if (decisions && typeof decisions === "object") {
+    const chosen = Object.values(decisions).filter((d: any) => {
+      const v = (d?.decision ?? d?.status ?? d ?? "").toString().toLowerCase();
+      return v === "selected" || v === "accepted" || v === "approved" || d?.selected === true;
+    });
+    if (chosen.length > 0) selected = chosen.length;
+  }
+  return { discovery, recommendations, selected };
+}
+
+/**
+ * Walk the version history (newest → oldest, skipping the current version) and
+ * return the most recent snapshot whose recommendations.creatorIds is non-empty.
+ * Read-only: loads snapshots only, never writes. Capped to a sane lookback.
+ */
+async function loadLastSuccessfulVersion(
+  campaignObjectId: string,
+  currentVersion: number | undefined
+): Promise<{ version: number; campaignObject: CampaignObject } | null> {
+  let versions: Array<{ version: number }> = [];
+  try {
+    versions = await CampaignObjectPersistenceService.listVersions(supabase, campaignObjectId);
+  } catch {
+    return null;
+  }
+  const sorted = versions.map((v) => v.version).sort((a, b) => b - a);
+  // When the current version is unknown, treat the newest snapshot as current.
+  const cutoff = currentVersion ?? sorted[0];
+  const candidates = sorted.filter((v) => v < cutoff).slice(0, 25);
+
+  for (const version of candidates) {
+    try {
+      const loaded = await CampaignObjectPersistenceService.loadVersion(supabase, campaignObjectId, version);
+      const co = loaded?.campaignObject;
+      if (!co) continue;
+      const recs = ((co.sections?.creators?.data ?? {}) as Record<string, any>)?.recommendations?.creatorIds ?? [];
+      if (recs.length > 0) return { version, campaignObject: co };
+    } catch {
+      // skip unreadable snapshot
+    }
+  }
+  return null;
 }
 
 // --- capture the existing traceCountDrop funnel (read-only, no logic change) --
@@ -113,6 +221,12 @@ async function main() {
     process.exit(1);
   }
   const facts = getCampaignFacts(campaignObject);
+  const lastSuccess = await loadLastSuccessfulVersion(
+    (campaignObject as any).id,
+    (campaignObject as any).version
+  );
+  const prevObject = lastSuccess?.campaignObject ?? null;
+  const prevFacts = prevObject ? getCampaignFacts(prevObject) : undefined;
   const creatorsData = (campaignObject.sections?.creators?.data ?? {}) as Record<string, any>;
   const storedRecs: string[] = creatorsData?.recommendations?.creatorIds ?? [];
   const storedDiscovery: string[] = creatorsData?.discovery?.creatorIds ?? [];
@@ -224,6 +338,28 @@ async function main() {
     line("backfill", "not triggered");
   }
 
+  // 4b) RANKING DIAGNOSTICS — top 20 ranked candidates before proposal --------
+  header("RANKING DIAGNOSTICS (top 20 ranked candidates — fresh browse)");
+  const ranked: any[] = Array.isArray(result?.creators) ? result.creators : [];
+  if (ranked.length === 0) {
+    console.log("  (ranking produced 0 candidates — proposal has nothing to rank)");
+  } else {
+    console.log(
+      `  ${"#".padStart(2)}  ${"creator".padEnd(24)} ${"score".padStart(6)}  ${"role".padEnd(10)} ${"category".padEnd(16)} platform`
+    );
+    ranked.slice(0, 20).forEach((c, i) => {
+      const name = String(c?.display_name ?? c?.unified_id ?? "—").slice(0, 24);
+      const score = c?.thinkway_score == null ? "—" : Number(c.thinkway_score).toFixed(1);
+      const role = String(c?.role ?? "—").slice(0, 10);
+      const category = String(c?.ai_category ?? c?.categories?.[0] ?? "—").slice(0, 16);
+      const platform = c?.platforms?.[0]?.platform ?? "—";
+      console.log(
+        `  ${String(i + 1).padStart(2)}  ${name.padEnd(24)} ${String(score).padStart(6)}  ${role.padEnd(10)} ${category.padEnd(16)} ${platform}`
+      );
+    });
+    if (ranked.length > 20) console.log(`  … +${ranked.length - 20} more`);
+  }
+
   // 5) Persisted ground truth — latest coverage decision ----------------------
   header("LATEST discovery_coverage_decisions ROW (real Studio run)");
   try {
@@ -256,35 +392,156 @@ async function main() {
   line("pendingProposal", creatorsData?.pendingProposal?.status ?? "—");
   line("phase", creatorsData?.phase);
 
-  // 7) FIRST LOSS POINT -------------------------------------------------------
-  header("FIRST LOSS POINT");
+  // 7) CURRENT vs LAST SUCCESSFUL — comparison sections -----------------------
+  const prevQuery = reconstructQuery(prevFacts);
+  const currQueryForDiff = query;
+
+  header("CAMPAIGN FACTS DIFF (last successful → current)");
+  if (!prevObject) {
+    console.log(`  (no previous successful run in version history — nothing to compare)`);
+  } else {
+    console.log(`  baseline = version ${lastSuccess!.version} (recommendations.creatorIds > 0)\n`);
+    diff("country", prevFacts?.geography, facts?.geography);
+    diff("platforms", prevFacts?.platforms, facts?.platforms);
+    diff("creator mix", creatorMixSummary(prevFacts), creatorMixSummary(facts));
+    diff("objectives", prevFacts?.objective, facts?.objective);
+    diff("audience", prevFacts?.audience, facts?.audience);
+    diff("categories", buildCampaignSearchIntent(prevQuery).categories, buildCampaignSearchIntent(currQueryForDiff).categories);
+    diff("timeline (weeks)", prevFacts?.durationWeeks, facts?.durationWeeks);
+    diff("strategy", prevObject ? strategyState(prevObject) : "—", strategyState(campaignObject));
+  }
+
+  header("SEARCH STRATEGY DIFF (last successful → current)");
+  if (!prevObject) {
+    console.log(`  (no previous successful run to compare)`);
+  } else {
+    const prevIntent = buildCampaignSearchIntent(prevQuery);
+    const currIntent = buildCampaignSearchIntent(currQueryForDiff);
+    diff("industry", prevIntent.industry, currIntent.industry);
+    diff("industryKey", prevIntent.industryKey, currIntent.industryKey);
+    diff("country", prevIntent.country, currIntent.country);
+    diff("platforms", prevIntent.platforms, currIntent.platforms);
+    diff("categories", prevIntent.categories, currIntent.categories);
+    diff("semanticKeywords", prevIntent.semanticKeywords?.slice(0, 8), currIntent.semanticKeywords?.slice(0, 8));
+  }
+
+  header("DISCOVERY FILTER DIFF (last successful → current)");
+  if (!prevObject) {
+    console.log(`  (no previous successful run to compare)`);
+  } else {
+    const prevFilters = searchCreatorsInputToBrowseFilters({
+      query: prevQuery,
+      country: prevFacts?.geography?.[0],
+      platforms: prevFacts?.platforms,
+      limit: 50,
+    } as SearchCreatorsInput);
+    diff("country", prevFilters.country, filters.country);
+    diff("platforms", prevFilters.platforms ?? prevFilters.platform, filters.platforms ?? filters.platform);
+    diff("categories", prevFilters.categories, filters.categories);
+    diff("resolved categories", resolveBrowseCategories(prevFilters), resolvedCategories);
+    diff("minFollowers", prevFilters.minFollowers, filters.minFollowers);
+    diff("maxFollowers", prevFilters.maxFollowers, filters.maxFollowers);
+  }
+
+  header("CANDIDATE POOL DIFF (last successful → current)");
+  {
+    const currFunnel = slateFunnel(campaignObject);
+    if (prevObject) {
+      const prevF = slateFunnel(prevObject);
+      console.log(`  previous (v${lastSuccess!.version}):  discovery ${prevF.discovery} → proposal ${prevF.recommendations} → selected ${prevF.selected}`);
+    } else {
+      console.log(`  previous:            (no successful run recorded)`);
+    }
+    const rpc = rpcStage ? rpcStage.before : freshCount;
+    console.log(`  current (fresh):     RPC ${rpc} → post-filter ${freshCount} → proposal ${currFunnel.recommendations} → selected ${currFunnel.selected}`);
+    if (freshCount === 0 && firstZeroDrop(drops)) {
+      const z = firstZeroDrop(drops)!;
+      console.log(`  loss point:          "${z.filter || z.stage}" filter zeroed the pool (${z.before} → 0)`);
+    }
+  }
+
+  // 8) PROPOSAL DIAGNOSTICS — proposeInitialCreatorSlate (read-only) -----------
+  header("PROPOSAL DIAGNOSTICS — proposeInitialCreatorSlate() (read-only)");
+  {
+    const inputPool =
+      storedDiscovery.length > 0
+        ? storedDiscovery.length
+        : (creatorsData?.recommendations?.selectedReasoning ?? []).filter((r: any) => r?.creatorId?.trim()).length;
+    try {
+      const before = storedRecs.length;
+      const proposalResult = proposeInitialCreatorSlateWithStatus(campaignObject, {});
+      const afterData = (proposalResult.campaignObject.sections?.creators?.data ?? {}) as Record<string, any>;
+      const output = afterData?.recommendations?.creatorIds?.length ?? 0;
+      line("input pool", `${inputPool} creators (source: ${storedDiscovery.length > 0 ? "discovery" : "strategy vendors"})`);
+      line("proposed", proposalResult.proposed);
+      line("output", `${output} creators`);
+      if (before > 0 && output === before && proposalResult.proposed) {
+        line("note", "existing slate committed — proposal short-circuited (no re-rank)");
+      }
+      if (proposalResult.blockedReason) {
+        line("blocked reason", proposalResult.blockedReason.reason);
+        line("blocked message", proposalResult.blockedReason.message);
+      } else if (!proposalResult.proposed) {
+        line("skipped", "proposal returned proposed=false without a blockedReason");
+      }
+    } catch (e) {
+      console.log("  (proposal threw:", (e as Error).message, ")");
+    }
+  }
+
+  // 9) RECOMMENDATION DIAGNOSTICS — persisted slate outputs --------------------
+  header("RECOMMENDATION DIAGNOSTICS (persisted slate outputs)");
+  {
+    const recIds: string[] = creatorsData?.recommendations?.creatorIds ?? [];
+    line("recommendations.creatorIds", recIds.length ? `${recIds.length} [${recIds.slice(0, 5).join(", ")}${recIds.length > 5 ? ", …" : ""}]` : "0 (empty)");
+    const display = creatorsData?.recommendationsDisplay;
+    line("recommendationsDisplay", typeof display === "string" && display.trim() ? `present (${display.trim().length} chars)` : "empty");
+    const decisions = creatorsData?.vendorDecisions;
+    line("vendorDecisions", decisions == null ? "—" : Array.isArray(decisions) ? `${decisions.length} entries` : `${Object.keys(decisions).length} keys`);
+    line("pendingProposal", creatorsData?.pendingProposal ? `${creatorsData.pendingProposal.status}${creatorsData.pendingProposal.error?.reason ? ` (${creatorsData.pendingProposal.error.reason})` : ""}` : "—");
+    line("slateProposalStatus", creatorsData?.slateProposalStatus ? `${creatorsData.slateProposalStatus.status}${creatorsData.slateProposalStatus.reason ? ` (${creatorsData.slateProposalStatus.reason})` : ""}` : "—");
+  }
+
+  // 10) FINAL VERDICT ---------------------------------------------------------
+  header("FINAL VERDICT — FIRST LOSS POINT");
   const firstDrop = drops.find((d) => d.before > 0 && d.after === 0);
+  let verdict: string;
   if (freshCount === 0) {
     if (firstDrop) {
       console.log(`  Stage:   ${firstDrop.stage} (${firstDrop.filter})`);
       console.log(`  Before:  ${firstDrop.before} creators`);
       console.log(`  After:   ${firstDrop.after} creators`);
       console.log(`  Reason:  the "${firstDrop.filter}" filter removed all candidates.`);
+      verdict = `${firstDrop.filter || firstDrop.stage} Filter — dropped ${firstDrop.before} candidates to 0.`;
     } else if (rpcStage && rpcStage.before === 0) {
       console.log(`  Stage:   ${rpcStage.stage} (RPC / SQL WHERE clause)`);
       console.log(`  Reason:  the database query returned 0 rows before any post-filter.`);
+      verdict = `RPC — the database query returned 0 rows (check country/category/follower WHERE clause).`;
     } else {
       console.log(`  Stage:   Database / RPC search`);
       console.log(`  Reason:  Discovery returned 0 candidates. Backfill executed=${result?.backfill?.executed ?? false}` +
         ` (reason: ${result?.backfill?.reason ?? "n/a"}). If backfill was skipped, check coverageThreshold above.`);
+      verdict = `Discovery — 0 candidates and backfill ${result?.backfill?.executed ? "did not recover" : "was skipped"} (${result?.backfill?.reason ?? "n/a"}).`;
     }
   } else if (storedDiscovery.length === 0) {
     console.log(`  Stage:   Studio search → persistence`);
     console.log(`  Fresh Discovery returns ${freshCount}, but the campaign object's discovery.creatorIds is EMPTY.`);
     console.log(`  Reason:  the Studio search did not run/complete or its results were not persisted.`);
+    verdict = `Persistence — Discovery returns ${freshCount} creators, but discovery.creatorIds was never committed.`;
   } else if (storedRecs.length === 0) {
     console.log(`  Stage:   proposeInitialCreatorSlate()`);
     console.log(`  discovery.creatorIds=${storedDiscovery.length} but recommendations.creatorIds is EMPTY.`);
-    console.log(`  Reason:  the proposal stage did not commit (status: ${creatorsData?.slateProposalStatus ?? "?"}).`);
+    console.log(`  Reason:  the proposal stage did not commit (status: ${creatorsData?.slateProposalStatus?.status ?? "?"}).`);
+    verdict = `Proposal — ${storedDiscovery.length} discovered creators, but ranking/proposal produced 0 recommendations (status: ${creatorsData?.slateProposalStatus?.status ?? "?"}).`;
   } else {
     console.log(`  No loss detected in data: Discovery=${freshCount}, discovery.creatorIds=${storedDiscovery.length}, recommendations.creatorIds=${storedRecs.length}.`);
     console.log(`  If the UI still shows no cards, the loss is in rendering/hydration (Vendor Recommendations).`);
+    verdict = `No data loss — Discovery=${freshCount}, discovery=${storedDiscovery.length}, recommendations=${storedRecs.length}. If UI is empty, loss is in rendering/hydration.`;
   }
+
+  console.log(`\n  ══════════════════════════════════════════════════════════════`);
+  console.log(`  ▶ FIRST LOSS POINT: ${verdict}`);
+  console.log(`  ══════════════════════════════════════════════════════════════`);
 
   console.log("");
 }
