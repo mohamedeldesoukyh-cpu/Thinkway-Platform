@@ -15,6 +15,8 @@ import {
   ONBOARDING_STATUS_LABELS,
   type ClientOnboardingStatus,
 } from "@/lib/clients/onboarding-status";
+import { isFinanceOnboardingRequired } from "@/lib/clients/finance-readiness";
+import { assessClientTaxReadiness } from "@/lib/clients/tax-readiness";
 import {
   applyChecklistToCompletion,
   buildOnboardingUpdatePayload,
@@ -75,7 +77,7 @@ export async function updateClientOnboardingChecklistAction(
   const { data: client, error: fetchError } = await supabase
     .from("clients")
     .select(
-      "id, onboarding_status, legal_completed_at, finance_completed_at, contracts_completed_at, tax_completed_at"
+      "id, onboarding_status, legal_completed_at, finance_completed_at, contracts_completed_at, tax_completed_at, tax_id, credit_limit_active"
     )
     .eq("id", parsed.data.client_id)
     .maybeSingle();
@@ -93,7 +95,38 @@ export async function updateClientOnboardingChecklistAction(
     : "legal_pending";
 
   const now = new Date().toISOString();
+  const creditLimitActive = client.credit_limit_active ?? false;
   const checklist = parseChecklistFromRecord(parsed.data);
+  const effectiveChecklist: OnboardingChecklistInput = {
+    ...checklist,
+    finance:
+      checklist.finance ||
+      !isFinanceOnboardingRequired(creditLimitActive),
+  };
+
+  if (effectiveChecklist.tax && !client.tax_completed_at) {
+    const { data: documents, error: documentsError } = await supabase
+      .from("client_documents")
+      .select("document_type")
+      .eq("client_id", parsed.data.client_id);
+
+    if (documentsError) {
+      return { ok: false, message: documentsError.message };
+    }
+
+    const taxReadiness = assessClientTaxReadiness({
+      tax_id: client.tax_id,
+      documentTypes: (documents ?? []).map((doc) => doc.document_type),
+    });
+
+    if (!taxReadiness.complete) {
+      return {
+        ok: false,
+        message: `Tax cannot be marked complete until ${taxReadiness.missing.join(", ")} ${taxReadiness.missing.length === 1 ? "is" : "are"} provided on the Legal tab.`,
+      };
+    }
+  }
+
   const transition = computeOnboardingTransition({
     currentStatus,
     currentCompletion: {
@@ -102,8 +135,9 @@ export async function updateClientOnboardingChecklistAction(
       contracts_completed_at: client.contracts_completed_at,
       tax_completed_at: client.tax_completed_at,
     },
-    checklist,
+    checklist: effectiveChecklist,
     now,
+    credit_limit_active: creditLimitActive,
   });
 
   const payload = buildOnboardingUpdatePayload({

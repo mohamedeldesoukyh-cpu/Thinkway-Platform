@@ -84,6 +84,11 @@ export type CampaignObjectMeta = {
    * campaigns created before the Campaign Outputs Engine.
    */
   campaignOutputs?: import("@/features/campaign-outputs/output-types").CampaignOutputRegistryState;
+  /**
+   * Quotation commercial snapshot (ad types, avatars, fees) — written on quotation
+   * sync and used by Media Plan even when Copilot overwrites creators.data.
+   */
+  quotationCommercials?: import("@/features/campaign-outputs/hydration/quotation-commercials-meta").QuotationCommercialsMeta;
 };
 
 /** A single applied Campaign Copilot edit, for change history and the digest. */

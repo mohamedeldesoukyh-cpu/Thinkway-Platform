@@ -32,10 +32,12 @@ export { resolveSlate, resolveInputValue, overallScore, type SlateCreator } from
 export {
   getCampaignOutputState,
   getCampaignOutput,
+  getOutputContentForDisplay,
   listCampaignOutputs,
   listCampaignOutputsByGroup,
   generateCampaignOutput,
   markStaleCampaignOutputs,
+  regenerateStaleCampaignOutputs,
   staleCampaignOutputKinds,
   describeStaleReason,
   getOutputVersions,
@@ -48,10 +50,15 @@ export {
 export { renderOutputMarkdown } from "./output-markdown";
 export {
   generateMediaPlan,
+  enrichMediaPlanFromSlate,
+  enrichMediaPlanCampaignContext,
+  resolveMediaPlanCampaignContext,
   MEDIA_PLAN_GENERATOR_VERSION,
   type MediaPlanData,
   type MediaPlanWeek,
   type MediaPlanDay,
+  type MediaPlanDeadline,
+  type MediaPlanCampaignContext,
 } from "./generators/media-plan";
 export { generateFullStrategy, STRATEGY_GENERATOR_VERSION } from "./generators/strategy";
 export { generateKpiForecast, KPI_FORECAST_GENERATOR_VERSION } from "./generators/kpi-forecast";

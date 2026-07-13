@@ -34,8 +34,21 @@ function quotationFixture(): QuotationDetail {
         engagement_rate: 3.2,
         country_code: "EG",
         creator_categories: ["beauty"],
-        deliverables: [{ platform: "Instagram", type: "Reel", quantity: 2, type_lines: [{ type: "Reel", quantity: 2 }] }],
+        deliverables: [
+          {
+            platform: "Instagram",
+            type: "instagram_reel",
+            quantity: 2,
+            type_lines: [
+              { type: "instagram_reel", quantity: 1 },
+              { type: "ig_story_set", quantity: 1 },
+              { type: "mirrored_ig", quantity: 1 },
+            ],
+          },
+        ],
         service_description: "2 Reels",
+        profile_image_url: "https://cdn.example/avatar1.jpg",
+        profile_url: "https://instagram.com/nour",
       },
       {
         id: "i2",
@@ -83,10 +96,12 @@ function shortlistFixture(): ShortlistDetail {
 
 // --- Tier inference ------------------------------------------------------------
 
-test("tier inference maps follower counts to tiers", () => {
-  assert.equal(inferTier(2_000_000), "Celebrity");
+test("tier inference maps follower counts to tiers via platform SSOT", () => {
+  assert.equal(inferTier(5_000_000), "Celebrity");
+  assert.equal(inferTier(2_000_000), "Mega");
+  assert.equal(inferTier(1_000_000), "Mega");
   assert.equal(inferTier(600_000), "Macro");
-  assert.equal(inferTier(150_000), "Mid-Tier");
+  assert.equal(inferTier(150_000), "Mid");
   assert.equal(inferTier(40_000), "Micro");
   assert.equal(inferTier(5_000), "Nano");
   assert.equal(inferTier(0), undefined);
@@ -101,7 +116,7 @@ test("quotation hydrates client, budget, platforms, deliverables, and creators",
   assert.deepEqual(new Set(seed.platforms), new Set(["Instagram", "TikTok"]));
   assert.ok(seed.deliverables && seed.deliverables.length > 0);
   assert.equal(seed.creators.length, 2);
-  assert.equal(seed.creators[0]!.tier, "Celebrity"); // inferred from 1.5M followers
+  assert.equal(seed.creators[0]!.tier, "Mega"); // inferred from 1.5M followers
 
   const { campaignObject, missing } = hydrateCampaignObject(seed);
   assert.equal(resolveSlate(campaignObject).length, 2);
@@ -110,6 +125,24 @@ test("quotation hydrates client, budget, platforms, deliverables, and creators",
   assert.ok(missing.missingLabels.includes("Campaign duration"));
   assert.ok(!missing.missingLabels.includes("Budget"));
   assert.ok(!missing.missingLabels.includes("Creators"));
+});
+
+test("quotation seed carries ad types and avatars; re-hydrate syncs them onto slate", () => {
+  const seed = seedFromQuotation(quotationFixture());
+  assert.equal(seed.creators[0]!.serviceLabel, "1× IG Reel · 1× IG Set of stories · 1× Mirrored IG");
+  assert.deepEqual(seed.creators[0]!.serviceTypes, [
+    "1× IG Reel",
+    "1× IG Set of stories",
+    "1× Mirrored IG",
+  ]);
+  assert.equal(seed.creators[0]!.avatarUrl, "https://cdn.example/avatar1.jpg");
+
+  const first = hydrateCampaignObject(seed);
+  const second = hydrateCampaignObject(seed, first.campaignObject);
+  const nour = resolveSlate(second.campaignObject).find((c) => c.creatorId === "cr_1");
+  assert.equal(nour?.serviceLabel, "1× IG Reel · 1× IG Set of stories · 1× Mirrored IG");
+  assert.deepEqual(nour?.serviceTypes, ["1× IG Reel", "1× IG Set of stories", "1× Mirrored IG"]);
+  assert.equal(nour?.avatarUrl, "https://cdn.example/avatar1.jpg");
 });
 
 // --- Shortlist / Discovery hydration ------------------------------------------

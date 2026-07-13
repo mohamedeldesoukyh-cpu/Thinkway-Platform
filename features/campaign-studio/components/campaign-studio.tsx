@@ -77,6 +77,7 @@ type CampaignStudioProps = CampaignStudioInput & {
   onVendorDecisionsUpdated?: (
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  onSlateUpdated?: (campaignObject: Record<string, unknown>) => void;
   decisionMode?: CampaignStudioDecisionMode;
   className?: string;
   /** Presentation vs Decision — shown when workflow supports decision mode. */
@@ -92,6 +93,7 @@ export function CampaignStudio({
   messageId,
   onCardUpdated,
   onVendorDecisionsUpdated,
+  onSlateUpdated,
   decisionMode,
   className,
   studioModeToggle,
@@ -302,6 +304,7 @@ export function CampaignStudio({
                         conversationId={conversationId}
                         messageId={messageId}
                         onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+                        onSlateUpdated={onSlateUpdated}
                         studioDraft={studioDraft}
                         onStudioDraftUpdated={setDraftOverride}
                         appliedRemovedCreatorIds={appliedRemovedCreatorIds}

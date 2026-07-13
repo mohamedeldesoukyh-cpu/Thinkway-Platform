@@ -5,7 +5,7 @@ import { deserializeCampaignObject } from "@/features/campaign-intelligence";
 import { isStudioMessage, findLatestStudioMessage } from "@/features/ai-workspace/components/campaign-studio-panel-utils";
 import type { AiMessage } from "@/features/ai-workspace/types";
 
-import { buildStudioMessageMetadata, workspaceHref } from "./campaign-workspace-message";
+import { buildStudioMessageMetadata, buildCopilotAssistantMetadata, workspaceHref } from "./campaign-workspace-message";
 import { hydrateCampaignObject } from "../hydration/hydrate";
 import { seedFromQuotation } from "../hydration/seed-adapters";
 import { generateCampaignOutput } from "../output-registry";
@@ -35,6 +35,29 @@ test("a seeded studio message is recognized by the existing Studio", () => {
   };
   assert.equal(isStudioMessage(message), true);
   assert.equal(findLatestStudioMessage([message])?.id, "m1");
+});
+
+test("buildCopilotAssistantMetadata always carries campaignObject for studio sync", () => {
+  const withOutput = generateCampaignOutput(buildCampaignObjectFixture(), "kpi_forecast").campaignObject;
+  const metadata = buildCopilotAssistantMetadata(withOutput, {
+    intentKind: "generate_output",
+    changed: false,
+  });
+  const revived = deserializeCampaignObject(metadata.campaignObject as never);
+  assert.equal(metadata.workflow, true);
+  assert.equal(metadata.studioSync, true);
+  assert.ok(revived.meta.campaignOutputs?.kpi_forecast);
+  assert.equal(revived.meta.campaignOutputs?.kpi_forecast?.status, "generated");
+});
+
+test("buildCopilotAssistantMetadata marks persisted edits with copilotEdit", () => {
+  const obj = buildCampaignObjectFixture();
+  const metadata = buildCopilotAssistantMetadata(obj, {
+    intentKind: "update_objectives",
+    changed: true,
+  });
+  assert.equal(metadata.copilotEdit, true);
+  assert.equal(metadata.studioSync, undefined);
 });
 
 test("the seeded message preserves the Campaign Object (incl. generated outputs) through serialization", () => {

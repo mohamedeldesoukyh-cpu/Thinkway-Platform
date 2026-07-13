@@ -95,11 +95,11 @@ export function shortlistDetailPath(shortlistId: string): string {
 
 export function shortlistPreviewPath(
   shortlistId: string,
-  options?: { template?: "summary" | "detailed"; itemIds?: string[] }
+  options?: { template?: "summary" | "detailed" | "showcase"; itemIds?: string[] }
 ): string {
   const params = new URLSearchParams();
-  if (options?.template === "detailed") {
-    params.set("template", "detailed");
+  if (options?.template && options.template !== "summary") {
+    params.set("template", options.template);
   }
   if (options?.itemIds?.length) {
     params.set("items", options.itemIds.join(","));

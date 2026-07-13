@@ -30,6 +30,11 @@ export type OnboardingCompletionFields = {
   tax_completed_at?: string | null;
 };
 
+/** Optional client flags that affect onboarding derivation. */
+export type OnboardingDerivationInput = OnboardingCompletionFields & {
+  credit_limit_active?: boolean;
+};
+
 export type OnboardingSectionProgress = {
   id: OnboardingChecklistSection;
   label: string;
@@ -43,6 +48,52 @@ export type OnboardingProgress = {
   totalCount: number;
   percentage: number;
 };
+
+export function getIncompleteOnboardingSectionLabels(
+  progress: OnboardingProgress,
+  input?: OnboardingDerivationInput
+): string[] {
+  return progress.sections
+    .filter((section) => (input ? isOnboardingSectionApplicable(section.id, input) : true))
+    .filter((section) => !section.completed)
+    .map((section) => section.label);
+}
+
+/** Human-readable step count, e.g. "1 of 3 steps complete" or "Complete". */
+export function formatOnboardingStepProgress(progress: OnboardingProgress): string {
+  if (progress.percentage >= 100) {
+    return "Complete";
+  }
+  return `${progress.completedCount} of ${progress.totalCount} steps complete`;
+}
+
+/** Step count plus remaining section names when incomplete. */
+export function formatOnboardingProgressDetail(
+  progress: OnboardingProgress,
+  input?: OnboardingDerivationInput
+): string {
+  const stepProgress = formatOnboardingStepProgress(progress);
+  if (progress.percentage >= 100) {
+    return stepProgress;
+  }
+  const remaining = getIncompleteOnboardingSectionLabels(progress, input);
+  if (remaining.length === 0) {
+    return stepProgress;
+  }
+  return `${stepProgress} (${remaining.join(", ")} remaining)`;
+}
+
+/** Status badge copy for workspace headers — replaces opaque percentage-only labels. */
+export function formatOnboardingStatusProgressBadge(
+  status: ClientOnboardingStatus,
+  progress: OnboardingProgress
+): string {
+  const statusLabel = ONBOARDING_STATUS_LABELS[status];
+  if (progress.percentage >= 100) {
+    return `${statusLabel} · Complete`;
+  }
+  return `${statusLabel} · ${formatOnboardingStepProgress(progress)}`;
+}
 
 export const ONBOARDING_STATUS_LABELS: Record<ClientOnboardingStatus, string> = {
   draft: "Draft",
@@ -81,22 +132,50 @@ export function isClientOnboardingStatus(value: string): value is ClientOnboardi
   return (CLIENT_ONBOARDING_STATUSES as readonly string[]).includes(value);
 }
 
+export function isFinanceOnboardingSatisfied(input: OnboardingDerivationInput): boolean {
+  if (input.credit_limit_active === false) return true;
+  return Boolean(input.finance_completed_at);
+}
+
+/** Contracts are tracked on the checklist but excluded from progress (like VR% on overview). */
+export function isContractsOnboardingApplicable(): boolean {
+  return false;
+}
+
+export function isOnboardingSectionApplicable(
+  sectionId: OnboardingChecklistSection,
+  input: OnboardingDerivationInput
+): boolean {
+  if (sectionId === "finance" && input.credit_limit_active === false) {
+    return false;
+  }
+  if (sectionId === "contracts" && !isContractsOnboardingApplicable()) {
+    return false;
+  }
+  return true;
+}
+
 export function computeOnboardingProgress(
-  input: OnboardingCompletionFields
+  input: OnboardingDerivationInput
 ): OnboardingProgress {
   const sections = ONBOARDING_CHECKLIST_SECTIONS.map((id) => {
     const key = SECTION_TIMESTAMP_KEY[id];
     const completedAt = input[key] ?? null;
+    const financeNotRequired =
+      id === "finance" && input.credit_limit_active === false;
     return {
       id,
       label: SECTION_LABELS[id],
-      completed: Boolean(completedAt),
-      completedAt,
+      completed: financeNotRequired || Boolean(completedAt),
+      completedAt: financeNotRequired ? null : completedAt,
     };
   });
 
-  const completedCount = sections.filter((s) => s.completed).length;
-  const totalCount = sections.length;
+  const applicableSections = sections.filter((section) =>
+    isOnboardingSectionApplicable(section.id, input)
+  );
+  const completedCount = applicableSections.filter((section) => section.completed).length;
+  const totalCount = applicableSections.length;
   const percentage = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
 
   return { sections, completedCount, totalCount, percentage };
@@ -119,7 +198,7 @@ export function canTransitionOnboardingStatus(
 }
 
 export function deriveOnboardingStatusFromCompletion(
-  input: OnboardingCompletionFields,
+  input: OnboardingDerivationInput,
   current: ClientOnboardingStatus = DEFAULT_PROMOTED_ONBOARDING_STATUS
 ): ClientOnboardingStatus {
   const progress = computeOnboardingProgress(input);
@@ -127,10 +206,10 @@ export function deriveOnboardingStatusFromCompletion(
   // Rule 4: all sections complete → active
   if (progress.percentage >= 100) return "active";
 
-  // Rule 3: finance complete → ready
-  if (input.finance_completed_at) return "ready";
+  // Rule 3: finance satisfied (approved or credit limit not active) → ready
+  if (isFinanceOnboardingSatisfied(input)) return "ready";
 
-  // Rule 2: legal complete → finance_pending
+  // Rule 2: legal complete, finance required but incomplete → finance_pending
   if (input.legal_completed_at) return "finance_pending";
 
   if (current === "draft") return "draft";

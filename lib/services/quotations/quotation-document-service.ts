@@ -354,17 +354,21 @@ export async function getQuotationDetail(
     clientId
       ? supabase
           .from("clients")
-          .select("name, onboarding_status")
+          .select("name, legal_name, onboarding_status, agency_or_direct, group_id")
           .eq("id", clientId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     brandId
-      ? supabase.from("brands").select("name").eq("id", brandId).maybeSingle()
+      ? supabase
+          .from("brands")
+          .select("name, group_id, client_id")
+          .eq("id", brandId)
+          .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     campaignHeaderId
       ? supabase
           .from("campaign_headers")
-          .select("name, document_number")
+          .select("name, document_number, group_id")
           .eq("id", campaignHeaderId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
@@ -401,13 +405,40 @@ export async function getQuotationDetail(
 
   const clientRow = clientResult.data as {
     name: string;
+    legal_name: string | null;
     onboarding_status: string | null;
+    agency_or_direct: import("@/types/database").AgencyOrDirect | null;
+    group_id: string | null;
   } | null;
-  const brandRow = brandResult.data as { name: string } | null;
+  const brandRow = brandResult.data as {
+    name: string;
+    group_id: string | null;
+    client_id: string | null;
+  } | null;
+
   const campaignRow = campaignResult.data as {
     name: string;
     document_number: string | null;
+    group_id: string | null;
   } | null;
+
+  const groupId =
+    brandRow?.group_id ?? clientRow?.group_id ?? campaignRow?.group_id ?? null;
+  let groupName: string | null = null;
+  if (groupId) {
+    const { data: groupRow } = await supabase
+      .from("groups")
+      .select("name")
+      .eq("id", groupId)
+      .maybeSingle();
+    groupName = (groupRow as { name?: string } | null)?.name ?? null;
+  }
+
+  const agencyOrDirect = clientRow?.agency_or_direct ?? null;
+  const agencyName =
+    agencyOrDirect === "agency"
+      ? clientRow?.legal_name?.trim() || clientRow?.name?.trim() || null
+      : null;
   const shortlistRow = shortlistResult.data as { serial_number: string | null } | null;
   const ownerRow = ownerResult.data as { full_name: string | null } | null;
 
@@ -458,6 +489,9 @@ export async function getQuotationDetail(
     temporary_brand_name: tempBrandName,
     brand_id: brandId,
     brand_name: isTemporaryBrand ? tempBrandName : brandRow?.name ?? null,
+    group_name: groupName,
+    agency_or_direct: agencyOrDirect,
+    agency_name: agencyName,
     campaign_header_id: campaignHeaderId,
     campaign_name: campaignRow?.name ?? null,
     campaign_document_number: campaignRow?.document_number ?? null,

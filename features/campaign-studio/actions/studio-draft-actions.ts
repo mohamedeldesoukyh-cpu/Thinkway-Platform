@@ -5,9 +5,10 @@ import type {
   StudioDraftChange,
   StudioDraftCreatorRef,
   StudioDraftState,
+  StudioDraftShortlistPayload,
 } from "@/features/campaign-intelligence/types/section-schemas";
 
-import { reoptimizeCampaignAfterApply } from "../services/apply-draft-reoptimize";
+import { commitCreatorSlateAndRegeneratePlan } from "../services/commit-creator-slate";
 import {
   applyStudioDraftChanges,
   getStudioDraft,
@@ -16,6 +17,7 @@ import {
   updateDraftCreatorEnrichment,
   withStudioDraft,
 } from "../services/studio-draft";
+import { previewCreatorsSectionFromDraft } from "../services/studio-draft-preview";
 import {
   persistCampaignObjectOnMessage,
   requireStudioUser,
@@ -27,11 +29,23 @@ export type StudioDraftActionResult = {
   draft?: StudioDraftState;
 };
 
-/** Client sends the change without a timestamp — the server stamps it. */
 export type StageStudioDraftChangeInput =
   | { kind: "remove_creator"; creatorId: string; displayName?: string }
   | { kind: "refresh_intelligence"; creatorId: string; displayName?: string }
-  | { kind: "add_creator"; creator: StudioDraftCreatorRef };
+  | { kind: "add_creator"; creator: StudioDraftCreatorRef }
+  | { kind: "replace_creator"; creatorId: string; displayName?: string; replacement: StudioDraftCreatorRef }
+  | { kind: "replace_shortlist"; payload: StudioDraftShortlistPayload }
+  | { kind: "merge_shortlist"; payload: StudioDraftShortlistPayload }
+  | { kind: "approve_creator"; creatorId: string; displayName?: string }
+  | { kind: "reject_creator"; creatorId: string; displayName?: string }
+  | { kind: "promote_main"; creatorId: string; displayName?: string }
+  | { kind: "demote_alternative"; creatorId: string; displayName?: string }
+  | {
+      kind: "shortlist_creator";
+      creatorId: string;
+      displayName?: string;
+      linkedShortlistId?: string;
+    };
 
 type DraftMessageRef = { conversationId: string; messageId: string };
 
@@ -49,6 +63,33 @@ async function patchDraftOnMessage(
   return next ? getStudioDraft(next) : null;
 }
 
+function stageMessageForKind(kind: StageStudioDraftChangeInput["kind"]): string {
+  switch (kind) {
+    case "remove_creator":
+      return "Removal staged — apply changes to regenerate the plan.";
+    case "add_creator":
+      return "Creator staged for addition — apply changes to commit.";
+    case "replace_creator":
+      return "Replacement staged — apply changes to commit.";
+    case "replace_shortlist":
+      return "Shortlist replace staged — apply changes to commit.";
+    case "merge_shortlist":
+      return "Shortlist merge staged — apply changes to commit.";
+    case "approve_creator":
+      return "Approval staged — apply changes to commit.";
+    case "reject_creator":
+      return "Rejection staged — apply changes to commit.";
+    case "promote_main":
+      return "Promote to main staged — apply changes to commit.";
+    case "demote_alternative":
+      return "Move to alternatives staged — apply changes to commit.";
+    case "shortlist_creator":
+      return "Shortlist staged — apply changes to commit.";
+    default:
+      return "Change staged — apply changes to regenerate the plan.";
+  }
+}
+
 export async function stageStudioDraftChangeAction(
   input: DraftMessageRef & { change: StageStudioDraftChangeInput }
 ): Promise<StudioDraftActionResult> {
@@ -61,14 +102,7 @@ export async function stageStudioDraftChangeAction(
       stageDraftChange(current, change)
     );
     if (!draft) return { ok: false, message: "Campaign studio message not found." };
-
-    const message =
-      input.change.kind === "remove_creator"
-        ? "Removal staged — apply all updates to recalculate the plan."
-        : input.change.kind === "add_creator"
-          ? "Creator staged for addition — apply all updates to bring them into the plan."
-          : "Intelligence refresh staged — apply all updates to recalculate.";
-    return { ok: true, message, draft };
+    return { ok: true, message: stageMessageForKind(input.change.kind), draft };
   } catch (error) {
     return {
       ok: false,
@@ -94,7 +128,6 @@ export async function unstageStudioDraftChangeAction(
   }
 }
 
-/** Persist enrichment progress (pending → enriched/failed) on a staged addition. */
 export async function updateStudioDraftEnrichmentAction(
   input: DraftMessageRef & {
     creatorId: string;
@@ -133,11 +166,39 @@ export async function discardStudioDraftAction(
   }
 }
 
+export async function previewStudioDraftAction(
+  input: DraftMessageRef
+): Promise<
+  StudioDraftActionResult & {
+    preview?: ReturnType<typeof previewCreatorsSectionFromDraft>;
+  }
+> {
+  try {
+    const { userId } = await requireStudioUser();
+    const object = await persistCampaignObjectOnMessage(
+      input.conversationId,
+      input.messageId,
+      userId,
+      (current) => current
+    );
+    if (!object) return { ok: false, message: "Campaign studio message not found." };
+    const draft = getStudioDraft(object);
+    return {
+      ok: true,
+      message: "Draft preview computed.",
+      draft,
+      preview: previewCreatorsSectionFromDraft(object, draft),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not preview draft.",
+    };
+  }
+}
+
 /**
- * Apply All Updates — one bulk operation: apply staged removals and
- * additions to the slate, re-run slate optimization (re-rank with the
- * strategy tier mix, refresh creator roles), recompute the campaign
- * scores from real creator data, and version the result.
+ * Apply Changes — one deterministic regeneration of the entire Campaign Plan.
  */
 export async function applyStudioDraftAction(
   input: DraftMessageRef
@@ -159,12 +220,10 @@ export async function applyStudioDraftAction(
       input.messageId,
       userId,
       async (object) => {
-        // Additions still waiting on enrichment feed the risk score.
         const unenrichedCreatorIds = getStudioDraft(object)
           .changes.filter(
             (c) =>
-              c.kind === "add_creator" &&
-              c.creator.enrichmentStatus !== "enriched"
+              c.kind === "add_creator" && c.creator.enrichmentStatus !== "enriched"
           )
           .map((c) => (c.kind === "add_creator" ? c.creator.creatorId : ""))
           .filter(Boolean);
@@ -172,15 +231,14 @@ export async function applyStudioDraftAction(
         const result = applyStudioDraftChanges(object);
         removedCreatorIds = result.removedCreatorIds;
         addedCreatorIds = result.addedCreatorIds;
-        return reoptimizeCampaignAfterApply(supabase, result.campaignObject, {
+
+        return commitCreatorSlateAndRegeneratePlan(supabase, result.campaignObject, {
           unenrichedCreatorIds,
         });
       }
     );
     if (!next) return { ok: false, message: "Campaign studio message not found." };
 
-    // Exports read from the versioned campaign_objects store — save a new
-    // version so the applied slate is what previews, PDFs, and decks render.
     await saveCampaignObject(input.conversationId, next, {
       persistToDb: true,
       supabase,
@@ -203,13 +261,9 @@ export async function applyStudioDraftAction(
       .filter(Boolean)
       .join(" and ");
     const scoreNote = overallScore != null ? ` Overall campaign score: ${overallScore}/100.` : "";
-    const remainingNote =
-      remaining.changes.length > 0
-        ? ` ${remaining.changes.length} staged change${remaining.changes.length === 1 ? "" : "s"} could not be applied and remain pending.`
-        : "";
     return {
       ok: true,
-      message: `Campaign updated — ${applied || "pending changes"} applied, slate re-optimized, and scores recalculated.${scoreNote}${remainingNote}`,
+      message: `Campaign plan regenerated — ${applied || "pending changes"} applied across slate, timeline, budget, KPIs, risks, and outputs.${scoreNote}`,
       draft: remaining,
       removedCount,
       removedCreatorIds,

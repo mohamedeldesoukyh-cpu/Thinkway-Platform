@@ -14,6 +14,7 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 
 import type {
+  CampaignOutputContent,
   CampaignOutputGroup,
   CampaignOutputInputKey,
   CampaignOutputKind,
@@ -30,9 +31,25 @@ import {
   computeSourceFingerprint,
 } from "./output-fingerprint";
 import { describeInputsChanged } from "./output-stale-reason";
+import { resolveSlate } from "./output-inputs";
+import {
+  enrichMediaPlanCampaignContext,
+  enrichMediaPlanFromSlate,
+  type MediaPlanData,
+} from "./generators/media-plan";
 
 /** Prior versions kept per output for compare / restore / history. */
 const MAX_OUTPUT_HISTORY = 12;
+
+function enrichMediaPlanForDisplay(
+  data: MediaPlanData,
+  campaignObject: CampaignObject
+): MediaPlanData {
+  return enrichMediaPlanCampaignContext(
+    enrichMediaPlanFromSlate(data, resolveSlate(campaignObject)),
+    campaignObject
+  );
+}
 
 function estimateSizeBytes(record: Pick<CampaignOutputRecord, "content">): number {
   try {
@@ -163,6 +180,45 @@ export function getCampaignOutput(
   return { ...record, status: liveStatus(record, fingerprint) };
 }
 
+/** Render-ready output content — uses cached views; regenerates only when stale or version-mismatched. */
+export function getOutputContentForDisplay(
+  campaignObject: CampaignObject,
+  kind: CampaignOutputKind
+): CampaignOutputContent | undefined {
+  const record = getCampaignOutput(campaignObject, kind);
+  if (!record) return undefined;
+
+  const definition = getOutputDefinition(kind);
+  if (!definition?.generate) return record.content;
+
+  const needsLiveRender =
+    record.status === "needs_update" ||
+    record.generatorVersion !== definition.generatorVersion;
+
+  if (needsLiveRender) {
+    const content = definition.generate(campaignObject);
+    if (kind === "media_plan" && content.data) {
+      const enriched = enrichMediaPlanForDisplay(
+        content.data as unknown as MediaPlanData,
+        campaignObject
+      );
+      return { ...content, data: enriched as unknown as Record<string, unknown> };
+    }
+    return content;
+  }
+
+  const cached = record.content;
+  if (kind === "media_plan" && cached?.data) {
+    const enriched = enrichMediaPlanForDisplay(
+      cached.data as unknown as MediaPlanData,
+      campaignObject
+    );
+    return { ...cached, data: enriched as unknown as Record<string, unknown> };
+  }
+
+  return cached;
+}
+
 export type GenerateCampaignOutputResult = {
   campaignObject: CampaignObject;
   record: CampaignOutputRecord;
@@ -283,6 +339,23 @@ export function staleCampaignOutputKinds(campaignObject: CampaignObject): Campai
   return listCampaignOutputs(campaignObject)
     .filter((view) => view.status === "needs_update")
     .map((view) => view.kind);
+}
+
+/**
+ * Regenerate every output whose inputs changed — keeps stored views in sync with
+ * the Campaign Object without waiting for manual Copilot commands.
+ */
+export function regenerateStaleCampaignOutputs(
+  campaignObject: CampaignObject,
+  options?: { origin?: CampaignOutputOrigin }
+): CampaignObject {
+  let next = campaignObject;
+  for (const kind of staleCampaignOutputKinds(next)) {
+    ({ campaignObject: next } = generateCampaignOutput(next, kind, {
+      origin: options?.origin ?? "automatic",
+    }));
+  }
+  return next;
 }
 
 // ---------------------------------------------------------------------------

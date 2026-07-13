@@ -110,8 +110,6 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
 
   const clientOptions = buildClientSelectOptions(clients);
 
-  const clientNeedsGroup = selectedClient && !selectedClient.group_id;
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -151,15 +149,6 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
                 placeholder="Select client"
               />
               <FieldError messages={state.fieldErrors?.client_id} />
-              {clientNeedsGroup ? (
-                <p className="text-xs text-destructive">
-                  This client must be linked to a holding group before you can add brands.{" "}
-                  <Link href={`/clients/${clientId}`} className="underline">
-                    Link from client profile
-                  </Link>
-                  .
-                </p>
-              ) : null}
             </div>
 
             <div className="grid gap-2">
@@ -215,9 +204,7 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
             <DialogFooter>
               <Button
                 type="submit"
-                disabled={
-                  isPending || !clientId || isDuplicate || checking || Boolean(clientNeedsGroup)
-                }
+                disabled={isPending || !clientId || isDuplicate || checking}
               >
                 {isPending ? "Creating…" : "Create brand"}
               </Button>

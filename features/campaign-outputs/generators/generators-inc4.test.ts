@@ -74,10 +74,17 @@ test("Amplification Plan recommends paid products on top-tier creators", () => {
   assert.ok(targets.table!.rows.some((r) => /Spark Ads|Boosted|Whitelisting/i.test(r[2]! + r[3]!)));
 });
 
-test("Budget Allocation splits creator fees + paid + contingency and totals to budget", () => {
+test("Budget Allocation defaults to 100% creator fees without brief split keywords", () => {
   const content = generateBudgetAllocation(buildCampaignObjectFixture());
-  const data = content.data as { total: number; creatorPool: number; paid: number; contingency: number };
-  assert.equal(data.creatorPool + data.paid + data.contingency, data.total);
+  const data = content.data as {
+    total: number;
+    creatorFeesTotal: number;
+    paid: number;
+    contingency: number;
+  };
+  assert.equal(data.paid, 0);
+  assert.equal(data.contingency, 0);
+  assert.equal(data.creatorFeesTotal, data.total);
   assert.ok(content.sections.some((s) => s.heading === "Creator Fee Allocation"));
 });
 

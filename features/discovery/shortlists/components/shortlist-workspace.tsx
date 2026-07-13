@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import {
   FileTextIcon,
   GitCompareArrowsIcon,
+  PencilIcon,
   SendIcon,
   UserPlusIcon,
 } from "lucide-react";
@@ -61,15 +62,17 @@ import {
   reopenShortlist,
   removeCreatorFromShortlistV2,
 } from "../actions";
-import { canEditCreators, canMoveToCampaign } from "../transitions";
+import { canEditCreators, canMoveToCampaign, isMovementLocked } from "../transitions";
 import type {
   ShortlistBrandOption,
   ShortlistCampaignOption,
+  ShortlistClientOption,
   ShortlistDetail,
 } from "../types";
 import { AddCreatorsDrawer } from "./add-creators-drawer";
 import { GenerateQuotationShortlistDialog } from "./generate-quotation-shortlist-dialog";
 import { MoveToCampaignDialog } from "./move-to-campaign-dialog";
+import { ShortlistEditDialog } from "./shortlist-edit-dialog";
 import {
   ShortlistQuotationActions,
   ShortlistQuotationPanel,
@@ -114,10 +117,12 @@ export function ShortlistWorkspace({
   detail,
   campaigns,
   brands,
+  clients,
 }: {
   detail: ShortlistDetail;
   campaigns: ShortlistCampaignOption[];
   brands: ShortlistBrandOption[];
+  clients: ShortlistClientOption[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -126,7 +131,8 @@ export function ShortlistWorkspace({
   const [addOpen, setAddOpen] = useState(false);
   const [submitAllOpen, setSubmitAllOpen] = useState(false);
   const [quoteAllOpen, setQuoteAllOpen] = useState(false);
-  const [exportTemplate, setExportTemplate] = useState<ShortlistTemplateVariant>("summary");
+  const [editOpen, setEditOpen] = useState(false);
+  const [exportTemplate, setExportTemplate] = useState<ShortlistTemplateVariant>("showcase");
   const [enrichmentOverrides, setEnrichmentOverrides] = useState<
     Map<string, CreatorEnrichmentStatus>
   >(() => new Map());
@@ -142,6 +148,7 @@ export function ShortlistWorkspace({
   const refreshingMetrics = refreshProgress != null && refreshProgress.completed < refreshProgress.total;
 
   const editable = canEditCreators(detail.status) && !detail.is_archived;
+  const canEditDetails = detail.canManage && !detail.is_archived && !isMovementLocked(detail.status);
   const movable = canMoveToCampaign(detail.status);
   const selectable = !detail.is_archived && detail.creators.length > 0;
   const linkedQuotations = detail.linkedQuotations;
@@ -504,9 +511,22 @@ export function ShortlistWorkspace({
           <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             {detail.serial_number ?? "—"}
           </p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
-            {detail.name}
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+              {detail.name}
+            </h1>
+            {canEditDetails ? (
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                disabled={isPending}
+                className="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:border-slate-300 hover:bg-muted/50 hover:text-foreground disabled:opacity-50"
+                aria-label="Edit shortlist"
+              >
+                <PencilIcon className="size-3.5" />
+              </button>
+            ) : null}
+          </div>
           {detail.description ? (
             <p className="text-sm text-muted-foreground">{detail.description}</p>
           ) : null}
@@ -521,11 +541,11 @@ export function ShortlistWorkspace({
                 {detail.owner_name ?? "—"}
               </strong>
             </ShortlistHeaderPill>
+            {detail.client_name ? (
+              <ShortlistHeaderPill>Legal entity: {detail.client_name}</ShortlistHeaderPill>
+            ) : null}
             {detail.brand_name ? (
-              <ShortlistHeaderPill>
-                {detail.brand_name}
-                {detail.client_name ? ` (${detail.client_name})` : ""}
-              </ShortlistHeaderPill>
+              <ShortlistHeaderPill>Brand: {detail.brand_name}</ShortlistHeaderPill>
             ) : null}
           </div>
           {detail.status === "approved" && detail.approved_by_name ? (
@@ -657,6 +677,7 @@ export function ShortlistWorkspace({
                   exportTemplate={exportTemplate}
                   onExportTemplateChange={setExportTemplate}
                   selectedItemIds={selectedItemIdList}
+                  exportRevision={detail.updated_at}
                   busy={isPending || refreshingMetrics}
                   onRefreshMetrics={handleRefreshMetrics}
                 />
@@ -797,6 +818,14 @@ export function ShortlistWorkspace({
           </div>
         )}
       </ShortlistDetailCard>
+
+      <ShortlistEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        detail={detail}
+        clients={clients}
+        brands={brands}
+      />
 
       <MoveToCampaignDialog
         open={moveOpen}

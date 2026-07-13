@@ -38,6 +38,7 @@ import {
   loadCampaignObjectForConversation,
   serializeCampaignObject,
 } from "@/features/campaign-intelligence";
+import { buildCopilotAssistantMetadata } from "@/features/campaign-outputs/actions/campaign-workspace-message";
 import { CREATE_CAMPAIGN_WORKFLOW_ID, isCampaignWorkflow } from "@/features/campaign-studio/constants/workflow-ids";
 import { runStudioCopilot } from "@/features/campaign-studio/services/copilot/studio-copilot";
 
@@ -269,25 +270,19 @@ export async function POST(request: Request) {
             ? copilot.campaignObject.workflowId
             : CREATE_CAMPAIGN_WORKFLOW_ID;
 
-          // Only edits carry the refreshed campaign object (studio re-renders);
-          // answers and clarifications stay as plain chat text.
+          const serializedCampaignObject = serializeCampaignObject(copilot.campaignObject);
+          const assistantMetadata = buildCopilotAssistantMetadata(copilot.campaignObject, {
+            intentKind: copilot.intentKind,
+            changed: copilot.changed,
+            outputNavigate: copilot.outputNavigate,
+            outputPreview: copilot.outputPreview,
+          });
+
           const assistantMessage = await appendMessage(supabase, {
             conversationId,
             role: "assistant",
             content: copilot.reply,
-            metadata: copilot.changed
-              ? {
-                  agentId: "campaign-copilot",
-                  copilotEdit: true,
-                  copilotIntent: copilot.intentKind,
-                  // workflow:true + a campaign workflowId make this render as a studio.
-                  workflow: true,
-                  workflowId,
-                  workflowName: "Campaign Studio",
-                  workflowStatus: "complete",
-                  campaignObject: serializeCampaignObject(copilot.campaignObject),
-                }
-              : { agentId: "campaign-copilot", copilotIntent: copilot.intentKind },
+            metadata: assistantMetadata,
           });
 
           if (copilot.changed) {
@@ -314,7 +309,19 @@ export async function POST(request: Request) {
             conversationId,
             messageId: assistantMessage.id,
             agentId: "campaign-copilot",
-            workflow: copilot.changed,
+            workflow: true,
+            workflowId,
+            workflowMetadata: {
+              workflow: true,
+              workflowId,
+              workflowName: "Campaign Studio",
+              status: "complete",
+              currentStep: 0,
+              totalSteps: 0,
+              completedTasks: [],
+              pendingTasks: [],
+              campaignObject: serializedCampaignObject,
+            },
           });
           recordWorkflowMetrics({
             route: "/api/ai/chat",

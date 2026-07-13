@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  ChevronDownIcon,
-  DollarSignIcon,
+  BriefcaseIcon,
   FileTextIcon,
   MapPinIcon,
   UserIcon,
@@ -30,12 +30,14 @@ import {
   ClientFormKeyboardShortcuts,
   ClientFormSection,
   ClientProfileTabShell,
+  CLIENT_FORM_FIELD_HINT_CLASS,
   CLIENT_FORM_INPUT_CLASS,
   CLIENT_FORM_SELECT_TRIGGER_CLASS,
   CLIENT_FORM_TEXTAREA_CLASS,
 } from "@/features/clients/components/client-form-ui";
 import {
   updateClientOverviewAction,
+  type ClientOverviewSavePatch,
   type FormActionState,
 } from "@/features/clients/actions";
 import { ClientIoTermsEditor } from "@/features/io/components/client-io-terms-editor";
@@ -47,12 +49,14 @@ import {
   type ClientIoTerm,
 } from "@/lib/io/client-io-terms";
 import {
+  AGENCY_OR_DIRECT_OPTIONS,
   CLIENT_STATUS_OPTIONS,
   COUNTRY_OPTIONS,
   getCityOptionsForCountry,
 } from "@/features/clients/constants";
+import { assessClientOverviewCommercialReadiness } from "@/lib/clients/client-profile-readiness";
 import type { MasterDataOptions } from "@/lib/master-data/queries";
-import type { ClientDetail, ClientStatus } from "@/types/database";
+import type { AgencyOrDirect, ClientDetail, ClientStatus } from "@/types/database";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -68,7 +72,9 @@ type ClientOverviewTabProps = {
   onCancel?: () => void;
   /** When false, Ctrl+S is not wired to this form (e.g. another profile tab is active). */
   shortcutsEnabled?: boolean;
-  onboardingSlot?: React.ReactNode;
+  onboardingSlot?: ReactNode;
+  /** Applies persisted overview fields returned by the save action. */
+  onClientPatch?: (patch: ClientOverviewSavePatch) => void;
 };
 
 export function ClientOverviewTab({
@@ -78,7 +84,9 @@ export function ClientOverviewTab({
   onCancel,
   shortcutsEnabled = true,
   onboardingSlot,
+  onClientPatch,
 }: ClientOverviewTabProps) {
+  const router = useRouter();
   const [status, setStatus] = useState(client.status);
   const [groupId, setGroupId] = useState(client.group_id ?? "");
   const [displayName, setDisplayName] = useState(client.name);
@@ -109,6 +117,9 @@ export function ClientOverviewTab({
       return null;
     });
   const [vrRateId, setVrRateId] = useState(client.vr_rate_id ?? "");
+  const [agencyOrDirect, setAgencyOrDirect] = useState<AgencyOrDirect>(
+    (client.agency_or_direct ?? "agency") as AgencyOrDirect
+  );
   const [legalName, setLegalName] = useState(client.legal_name ?? "");
   const [nameAr, setNameAr] = useState(client.name_ar ?? "");
   const [website, setWebsite] = useState(client.website ?? "");
@@ -201,6 +212,7 @@ export function ClientOverviewTab({
     setCategoryManuallySet(false);
     setClassificationMeta(buildClassificationMetaFromClient());
     setVrRateId(client.vr_rate_id ?? "");
+    setAgencyOrDirect((client.agency_or_direct ?? "agency") as AgencyOrDirect);
     setLegalName(client.legal_name ?? "");
     setNameAr(client.name_ar ?? "");
     setWebsite(client.website ?? "");
@@ -233,6 +245,11 @@ export function ClientOverviewTab({
     if (state.ok) {
       toast.success(state.message);
       setIsDirty(false);
+      if (state.clientPatch) {
+        setGroupId(state.clientPatch.group_id ?? "");
+        onClientPatch?.(state.clientPatch);
+      }
+      router.refresh();
       return;
     }
 
@@ -240,12 +257,24 @@ export function ClientOverviewTab({
       ? Object.values(state.fieldErrors).flat().filter(Boolean)
       : [];
     toast.error(fieldMessages.length > 0 ? fieldMessages[0] : state.message);
-  }, [state]);
+  }, [state, router, onClientPatch]);
+
+  useEffect(() => {
+    if (isDirty) {
+      return;
+    }
+    setGroupId(client.group_id ?? "");
+  }, [client.group_id, client.id, isDirty]);
 
   const groupOptions = groups.map((g) => ({
     value: g.id,
     label: g.name,
   }));
+
+  const commercialReadiness = useMemo(
+    () => assessClientOverviewCommercialReadiness(client),
+    [client]
+  );
 
   const clientIoTermsPayload =
     usePlatformIoTerms || termsAreEqual(ioTerms, CLIENT_IO_DEFAULT_TERMS)
@@ -317,11 +346,7 @@ export function ClientOverviewTab({
           value={String(categoryManuallySet)}
         />
         <input type="hidden" name="vr_rate_id" value={vrRateId} />
-        <input
-          type="hidden"
-          name="agency_or_direct"
-          value={client.agency_or_direct ?? "agency"}
-        />
+        <input type="hidden" name="agency_or_direct" value={agencyOrDirect} />
         <input type="hidden" name="client_io_terms_text" value={clientIoTermsPayload} />
 
         {state.fieldErrors && !state.ok ? (
@@ -334,10 +359,35 @@ export function ClientOverviewTab({
           </p>
         ) : null}
 
+        {!groupId ? (
+          <div className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-950">
+            <p className="font-medium">No holding group linked</p>
+            <p className="mt-1 text-[12px] text-amber-900/80">
+              Holding groups are optional. Link one below only if this legal entity belongs
+              to a holding group — brands can be added either way.
+            </p>
+          </div>
+        ) : null}
+
+        {!commercialReadiness.complete ? (
+          <div className="rounded-[10px] border border-amber-300/80 bg-amber-50 px-4 py-3 text-[12px] text-amber-950">
+            <p className="font-medium">Commercial profile incomplete</p>
+            <p className="mt-1 text-[12px] text-amber-900/80">
+              Complete the fields below. Default VR% is optional and does not affect
+              onboarding progress.
+            </p>
+            <ul className="mt-2 list-disc space-y-0.5 pl-4 text-[12px] text-amber-900">
+              {commercialReadiness.missing.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <ClientFormSection
           icon={UserIcon}
           title="Identity"
-          description="Legal name and classification"
+          description="Legal entity name and status"
         >
           <ClientFormGrid columns={3}>
             <ClientFormField label="Client name (English)" htmlFor="name">
@@ -374,98 +424,102 @@ export function ClientOverviewTab({
               />
               <FieldError messages={state.fieldErrors?.name_ar} />
             </ClientFormField>
-            <div className="hidden md:block" aria-hidden />
+            <ClientFormField label="Legal name" htmlFor="legal_name">
+              <Input
+                id="legal_name"
+                name="legal_name"
+                className={CLIENT_FORM_INPUT_CLASS}
+                value={legalName}
+                onChange={(e) => {
+                  setLegalName(e.target.value);
+                  markDirty();
+                }}
+                disabled={isPending}
+              />
+              <FieldError messages={state.fieldErrors?.legal_name} />
+            </ClientFormField>
           </ClientFormGrid>
 
           <ClientFormGrid columns={3}>
-            <ClientCategoryFields
-              categorySlug={categorySlug}
-              subcategorySlug={subcategorySlug}
-              onCategoryChange={(value) => {
-                setCategoryManuallySet(true);
-                setCategorySlug(value);
-                setClassificationMeta(null);
-                markDirty();
-              }}
-              onSubcategoryChange={(value) => {
-                setCategoryManuallySet(true);
-                setSubcategorySlug(value);
-                setClassificationMeta(null);
-                markDirty();
-              }}
-              disabled={isPending}
-              layout="inline"
-            />
-            <ClientFormField label="Administration">
-              <details className="platform-v6-admin-details group">
-                <summary>
-                  <span>Administration</span>
-                  <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
-                </summary>
-                <div className="platform-v6-admin-details-body">
-                  <ClientFormField label="Legal name" htmlFor="legal_name">
-                    <Input
-                      id="legal_name"
-                      name="legal_name"
-                      className={CLIENT_FORM_INPUT_CLASS}
-                      value={legalName}
-                      onChange={(e) => {
-                        setLegalName(e.target.value);
-                        markDirty();
-                      }}
-                      disabled={isPending}
-                    />
-                    <FieldError messages={state.fieldErrors?.legal_name} />
-                  </ClientFormField>
-                  <ClientFormField label="Group">
-                    <SearchableSelect
-                      value={groupId}
-                      onValueChange={(value) => {
-                        setGroupId(value);
-                        markDirty();
-                      }}
-                      options={groupOptions}
-                      disabled={isPending}
-                      className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
-                    />
-                    <FieldError messages={state.fieldErrors?.group_id} />
-                  </ClientFormField>
-                  <ClientFormField label="Status">
-                    <Select
-                      value={status}
-                      onValueChange={(v) => {
-                        setStatus(v as ClientStatus);
-                        markDirty();
-                      }}
-                      disabled={isPending}
-                    >
-                      <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CLIENT_STATUS_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </ClientFormField>
-                </div>
-              </details>
+            <ClientFormField label="Status">
+              <Select
+                value={status}
+                onValueChange={(v) => {
+                  setStatus(v as ClientStatus);
+                  markDirty();
+                }}
+                disabled={isPending}
+              >
+                <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLIENT_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </ClientFormField>
+            <div className="hidden md:block" aria-hidden />
+            <div className="hidden md:block" aria-hidden />
           </ClientFormGrid>
-          <FieldError messages={state.fieldErrors?.client_category} />
-          <FieldError messages={state.fieldErrors?.client_subcategory} />
         </ClientFormSection>
 
         <ClientFormSection
-          icon={DollarSignIcon}
+          icon={BriefcaseIcon}
           iconClassName={PLATFORM_V6_ICON_GREEN}
-          title="Commercial"
-          description="Rates and online presence"
+          title="Commercial profile"
+          description="Classification and rates inherited by brands and campaigns"
         >
           <ClientFormGrid columns={3}>
+            <ClientFormField
+              label="Holding group (optional)"
+              hint="Only if this legal entity belongs to a holding group."
+            >
+              <SearchableSelect
+                value={groupId}
+                onValueChange={(value) => {
+                  setGroupId(value);
+                  markDirty();
+                }}
+                options={groupOptions}
+                disabled={isPending}
+                placeholder={
+                  groups.length > 0 ? "Select holding group" : "No groups yet"
+                }
+                className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+              />
+              <FieldError messages={state.fieldErrors?.group_id} />
+              {groups.length === 0 ? (
+                <p className={CLIENT_FORM_FIELD_HINT_CLASS}>
+                  Create a holding group first if you need group-level reporting.
+                </p>
+              ) : null}
+            </ClientFormField>
+            <ClientFormField label="Relationship type">
+              <Select
+                value={agencyOrDirect}
+                onValueChange={(v) => {
+                  setAgencyOrDirect(v as AgencyOrDirect);
+                  markDirty();
+                }}
+                disabled={isPending}
+              >
+                <SelectTrigger className={cn(CLIENT_FORM_SELECT_TRIGGER_CLASS, "w-full")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AGENCY_OR_DIRECT_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError messages={state.fieldErrors?.agency_or_direct} />
+            </ClientFormField>
             <ClientFormField
               label="Default VR%"
               hint="Brands inherit this rate unless they set an explicit VR% override."
@@ -486,6 +540,30 @@ export function ClientOverviewTab({
               />
               <FieldError messages={state.fieldErrors?.vr_rate_id} />
             </ClientFormField>
+          </ClientFormGrid>
+
+          <ClientCategoryFields
+            categorySlug={categorySlug}
+            subcategorySlug={subcategorySlug}
+            onCategoryChange={(value) => {
+              setCategoryManuallySet(true);
+              setCategorySlug(value);
+              setClassificationMeta(null);
+              markDirty();
+            }}
+            onSubcategoryChange={(value) => {
+              setCategoryManuallySet(true);
+              setSubcategorySlug(value);
+              setClassificationMeta(null);
+              markDirty();
+            }}
+            disabled={isPending}
+            layout="grid"
+          />
+          <FieldError messages={state.fieldErrors?.client_category} />
+          <FieldError messages={state.fieldErrors?.client_subcategory} />
+
+          <ClientFormGrid columns={3}>
             <ClientFormField label="Website" htmlFor="website">
               <Input
                 id="website"
@@ -502,6 +580,7 @@ export function ClientOverviewTab({
               />
               <FieldError messages={state.fieldErrors?.website} />
             </ClientFormField>
+            <div className="hidden md:block" aria-hidden />
             <div className="hidden md:block" aria-hidden />
           </ClientFormGrid>
         </ClientFormSection>

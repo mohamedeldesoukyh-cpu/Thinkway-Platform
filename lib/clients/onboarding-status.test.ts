@@ -5,6 +5,9 @@ import {
   computeOnboardingProgress,
   DEFAULT_PROMOTED_ONBOARDING_STATUS,
   deriveOnboardingStatusFromCompletion,
+  formatOnboardingProgressDetail,
+  formatOnboardingStatusProgressBadge,
+  formatOnboardingStepProgress,
   resolveClientListStatusBadges,
 } from "@/lib/clients/onboarding-status";
 
@@ -21,21 +24,29 @@ assert.equal(canTransitionOnboardingStatus("ready", "active"), true);
 const emptyProgress = computeOnboardingProgress({});
 assert.equal(emptyProgress.percentage, 0);
 assert.equal(emptyProgress.completedCount, 0);
+assert.equal(emptyProgress.totalCount, 3);
 
 const halfProgress = computeOnboardingProgress({
   legal_completed_at: "2026-06-01T00:00:00.000Z",
   finance_completed_at: "2026-06-02T00:00:00.000Z",
+  credit_limit_active: true,
 });
-assert.equal(halfProgress.percentage, 50);
+assert.equal(halfProgress.percentage, 67);
 assert.equal(halfProgress.completedCount, 2);
+assert.equal(halfProgress.totalCount, 3);
 
 const fullProgress = computeOnboardingProgress({
   legal_completed_at: "2026-06-01T00:00:00.000Z",
   finance_completed_at: "2026-06-02T00:00:00.000Z",
-  contracts_completed_at: "2026-06-03T00:00:00.000Z",
   tax_completed_at: "2026-06-04T00:00:00.000Z",
+  credit_limit_active: true,
 });
 assert.equal(fullProgress.percentage, 100);
+assert.equal(formatOnboardingStepProgress(fullProgress), "Complete");
+assert.equal(
+  formatOnboardingStatusProgressBadge("active", fullProgress),
+  "Active · Complete"
+);
 
 assert.equal(
   deriveOnboardingStatusFromCompletion({
@@ -43,6 +54,56 @@ assert.equal(
   }),
   "finance_pending"
 );
+
+assert.equal(
+  deriveOnboardingStatusFromCompletion({
+    legal_completed_at: "2026-06-01T00:00:00.000Z",
+    credit_limit_active: false,
+  }),
+  "ready"
+);
+
+assert.equal(
+  deriveOnboardingStatusFromCompletion({
+    legal_completed_at: "2026-06-01T00:00:00.000Z",
+    credit_limit_active: true,
+  }),
+  "finance_pending"
+);
+
+const financeSkippedProgress = computeOnboardingProgress({
+  legal_completed_at: "2026-06-01T00:00:00.000Z",
+  credit_limit_active: false,
+});
+assert.equal(financeSkippedProgress.completedCount, 1);
+assert.equal(financeSkippedProgress.totalCount, 2);
+assert.equal(financeSkippedProgress.percentage, 50);
+assert.equal(
+  formatOnboardingStepProgress(financeSkippedProgress),
+  "1 of 2 steps complete"
+);
+assert.equal(
+  formatOnboardingProgressDetail(financeSkippedProgress, { credit_limit_active: false }),
+  "1 of 2 steps complete (Tax remaining)"
+);
+assert.equal(
+  formatOnboardingStatusProgressBadge("ready", financeSkippedProgress),
+  "Ready · 1 of 2 steps complete"
+);
+assert.equal(
+  financeSkippedProgress.sections.find((section) => section.id === "finance")?.completed,
+  true
+);
+
+const contractsExcludedProgress = computeOnboardingProgress({
+  legal_completed_at: "2026-06-01T00:00:00.000Z",
+  credit_limit_active: false,
+});
+assert.equal(
+  contractsExcludedProgress.sections.find((section) => section.id === "contracts")?.completed,
+  false
+);
+assert.equal(contractsExcludedProgress.totalCount, 2);
 
 assert.equal(
   deriveOnboardingStatusFromCompletion({
@@ -56,8 +117,17 @@ assert.equal(
   deriveOnboardingStatusFromCompletion({
     legal_completed_at: "2026-06-01T00:00:00.000Z",
     finance_completed_at: "2026-06-02T00:00:00.000Z",
-    contracts_completed_at: "2026-06-03T00:00:00.000Z",
     tax_completed_at: "2026-06-04T00:00:00.000Z",
+    credit_limit_active: true,
+  }),
+  "active"
+);
+
+assert.equal(
+  deriveOnboardingStatusFromCompletion({
+    legal_completed_at: "2026-06-01T00:00:00.000Z",
+    tax_completed_at: "2026-06-04T00:00:00.000Z",
+    credit_limit_active: false,
   }),
   "active"
 );

@@ -31,6 +31,12 @@ function describeChanges(draft: StudioDraftState): string {
     replace_creator: ["creator replacement", "creator replacements"],
     add_creator: ["creator addition", "creator additions"],
     refresh_intelligence: ["intelligence refresh", "intelligence refreshes"],
+    replace_shortlist: ["shortlist replace", "shortlist replaces"],
+    merge_shortlist: ["shortlist merge", "shortlist merges"],
+    approve_creator: ["approval", "approvals"],
+    reject_creator: ["rejection", "rejections"],
+    promote_main: ["promote to main", "promotes to main"],
+    demote_alternative: ["move to alternative", "moves to alternative"],
   };
   return [...counts.entries()]
     .map(([kind, count]) => {
@@ -90,7 +96,7 @@ export function StudioDraftBar({
         <div className="min-w-0">
           <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
             {draft.changes.length} pending change{draft.changes.length === 1 ? "" : "s"} —
-            dependent sections marked outdated
+            plan sections marked outdated until apply
           </p>
           <p className="break-words text-[11px] text-amber-800/80 dark:text-amber-300/80">
             {describeChanges(draft)} · nothing recalculates until you apply
@@ -113,11 +119,11 @@ export function StudioDraftBar({
           type="button"
           size="sm"
           disabled={busy != null}
-          className="h-8 bg-[#1D9E75] px-3 text-xs hover:bg-[#178f69]"
+          className="h-8 bg-[#0057FF] px-3 text-xs hover:bg-[#0040CC]"
           onClick={() => void run("apply")}
         >
           <SparklesIcon className="size-3.5" />
-          {busy === "apply" ? "Applying…" : "Apply All Updates"}
+          {busy === "apply" ? "Applying…" : "Apply Changes"}
         </Button>
       </div>
     </div>

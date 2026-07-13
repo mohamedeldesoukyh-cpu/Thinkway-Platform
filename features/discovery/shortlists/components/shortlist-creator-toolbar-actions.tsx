@@ -6,6 +6,7 @@ import {
   DownloadIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
+  PresentationIcon,
   RefreshCwIcon,
 } from "lucide-react";
 
@@ -29,15 +30,18 @@ type Props = {
   exportTemplate: ShortlistTemplateVariant;
   onExportTemplateChange: (template: ShortlistTemplateVariant) => void;
   selectedItemIds: string[];
+  exportRevision?: string | null;
   busy?: boolean;
   onRefreshMetrics: () => void;
 };
 
 const EXPORT_FORMATS = [
-  { format: "csv" as const, label: "CSV", icon: DownloadIcon },
-  { format: "excel" as const, label: "Excel", icon: FileSpreadsheetIcon },
-  { format: "word" as const, label: "Word", icon: FileTextIcon },
+  { format: "html" as const, label: "HTML", icon: FileTextIcon },
   { format: "pdf" as const, label: "PDF", icon: DownloadIcon },
+  { format: "excel" as const, label: "Excel", icon: FileSpreadsheetIcon },
+  { format: "pptx" as const, label: "PPTX", icon: PresentationIcon, showcaseOnly: true },
+  { format: "csv" as const, label: "CSV", icon: DownloadIcon },
+  { format: "word" as const, label: "Word", icon: FileTextIcon },
 ];
 
 export function ShortlistCreatorToolbarActions({
@@ -45,6 +49,7 @@ export function ShortlistCreatorToolbarActions({
   exportTemplate,
   onExportTemplateChange,
   selectedItemIds,
+  exportRevision,
   busy,
   onRefreshMetrics,
 }: Props) {
@@ -53,7 +58,7 @@ export function ShortlistCreatorToolbarActions({
     template: exportTemplate,
     itemIds,
   });
-  const exportOptions = { itemIds };
+  const exportOptions = { itemIds, exportRevision };
 
   return (
     <>
@@ -108,7 +113,9 @@ export function ShortlistCreatorToolbarActions({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
-          {EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
+          {EXPORT_FORMATS.filter(
+            (entry) => !entry.showcaseOnly || exportTemplate === "showcase"
+          ).map(({ format, label, icon: Icon }) => (
             <DropdownMenuItem key={format} asChild>
               <a
                 href={buildShortlistExportHref(shortlistId, format, exportTemplate, exportOptions)}

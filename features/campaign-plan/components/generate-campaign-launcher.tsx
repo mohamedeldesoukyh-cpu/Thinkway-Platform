@@ -18,12 +18,17 @@ export type GenerateCampaignLauncherProps = {
   campaignObject: CampaignObject;
   conversationId?: string;
   className?: string;
+  /** When false, lifecycle hint is omitted (e.g. parent shows one shared hint). */
+  showLifecycleHint?: boolean;
+  variant?: "default" | "compact";
 };
 
 export function GenerateCampaignLauncher({
   campaignObject,
   conversationId,
   className,
+  showLifecycleHint = true,
+  variant = "default",
 }: GenerateCampaignLauncherProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -37,28 +42,37 @@ export function GenerateCampaignLauncher({
     void getCampaignPlanExecutionContext({
       campaignObjectId: campaignObject.id,
       conversationId,
-    }).then((executionResult) => {
-      if (cancelled) return;
-      if ("error" in executionResult) {
+    })
+      .then((executionResult) => {
+        if (cancelled) return;
+        if (executionResult === null) {
+          setContext(null);
+          setError(null);
+          return;
+        }
+        if ("error" in executionResult) {
+          setContext(null);
+          setError(executionResult.error);
+        } else {
+          setContext(executionResult);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
         setContext(null);
-        setError(executionResult.error);
-      } else {
-        setContext(executionResult);
-        setError(null);
-      }
-      setLoadingContext(false);
-    });
+        setError("Failed to load campaign generation context.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingContext(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [campaignObject, campaignObject.id, conversationId]);
+  }, [campaignObject.id, campaignObject.updatedAt, conversationId]);
 
   if (loadingContext) {
-    return (
-      <p className={cn("text-[11px] text-muted-foreground", className)}>
-        Checking Campaign Plan readiness…
-      </p>
-    );
+    return null;
   }
 
   if (!context) {
@@ -80,21 +94,42 @@ export function GenerateCampaignLauncher({
     });
   };
 
+  const compact = variant === "compact";
+
   return (
-    <div className={cn("space-y-2", className)}>
-      <CampaignPlanLifecycleHint
-        lifecycleStatus={context.lifecycleStatus}
-        canGenerate={context.canGenerate}
-      />
+    <div className={cn(compact ? "" : "space-y-2", className)}>
+      {showLifecycleHint ? (
+        <CampaignPlanLifecycleHint
+          lifecycleStatus={context.lifecycleStatus}
+          canGenerate={context.canGenerate}
+          className={
+            compact
+              ? "rounded-none border-x-0 border-t-0 px-2.5 py-1.5 text-[10px] leading-snug"
+              : undefined
+          }
+        />
+      ) : null}
       <GenerateCampaignEntry
         campaignObject={campaignObject}
         context={context}
+        variant={variant}
         onGenerate={context.canGenerate && !pending ? launch : undefined}
       />
       {pending ? (
-        <p className="text-[11px] text-muted-foreground">Generating execution campaign…</p>
+        <p
+          className={cn(
+            "text-muted-foreground",
+            compact ? "px-2.5 pb-1 text-[10px]" : "text-[11px]"
+          )}
+        >
+          Generating execution campaign…
+        </p>
       ) : null}
-      {error ? <p className="text-[11px] text-red-500">{error}</p> : null}
+      {error ? (
+        <p className={cn("text-red-500", compact ? "px-2.5 pb-1 text-[10px]" : "text-[11px]")}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

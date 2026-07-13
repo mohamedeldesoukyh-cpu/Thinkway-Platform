@@ -52,6 +52,7 @@ export function computeOnboardingTransition(input: {
   currentCompletion: OnboardingCompletionFields;
   checklist: OnboardingChecklistInput;
   now: string;
+  credit_limit_active?: boolean;
 }): OnboardingTransitionResult {
   const completion = applyChecklistToCompletion(
     input.currentCompletion,
@@ -59,7 +60,7 @@ export function computeOnboardingTransition(input: {
     input.now
   );
   const nextStatus = deriveOnboardingStatusFromCompletion(
-    completion,
+    { ...completion, credit_limit_active: input.credit_limit_active },
     input.currentStatus
   );
 

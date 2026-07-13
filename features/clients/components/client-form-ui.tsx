@@ -298,6 +298,7 @@ export function ClientFormSection({
   toolbar,
   bodyClassName,
   footer,
+  compact = false,
 }: {
   icon: LucideIcon;
   title: string;
@@ -308,6 +309,8 @@ export function ClientFormSection({
   toolbar?: ReactNode;
   bodyClassName?: string;
   footer?: ReactNode;
+  /** Tighter padding for dialogs and constrained viewports. */
+  compact?: boolean;
 }) {
   const platformV6 = useClientProfilePlatformV6();
 
@@ -331,13 +334,28 @@ export function ClientFormSection({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--card-shadow)]",
+        "rounded-2xl border border-border bg-card shadow-[var(--card-shadow)]",
+        compact ? "overflow-visible" : "overflow-hidden",
         className
       )}
     >
-      <header className="flex items-center gap-3 border-b border-border px-[22px] py-[18px]">
-        <div className="flex size-[34px] shrink-0 items-center justify-center rounded-[9px] bg-primary/10 text-primary">
-          <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden />
+      <header
+        className={cn(
+          "flex items-center gap-3 border-b border-border",
+          compact ? "px-4 py-3" : "px-[22px] py-[18px]"
+        )}
+      >
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-[9px] bg-primary/10 text-primary",
+            compact ? "size-8" : "size-[34px]"
+          )}
+        >
+          <Icon
+            className={compact ? "size-4" : "size-[18px]"}
+            strokeWidth={1.8}
+            aria-hidden
+          />
         </div>
         <div className="min-w-0">
           <h3 className="text-[15.5px] font-bold tracking-[-0.01em] text-foreground">
@@ -348,7 +366,14 @@ export function ClientFormSection({
           ) : null}
         </div>
       </header>
-      <div className="space-y-[18px] p-[22px]">{children}</div>
+      <div
+        className={cn(
+          compact ? "space-y-3.5 p-4" : "space-y-[18px] p-[22px]",
+          bodyClassName
+        )}
+      >
+        {children}
+      </div>
     </section>
   );
 }

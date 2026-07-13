@@ -2,6 +2,8 @@ import { revalidatePath } from "next/cache";
 
 import { uploadClientDocumentSchema } from "@/lib/domains/clients/document-schemas";
 import { friendlyClientDocumentError } from "@/lib/clients/client-document-utils";
+import { tryCompleteLegalOnboarding } from "@/lib/clients/try-complete-legal-onboarding";
+import { tryCompleteTaxOnboarding } from "@/lib/clients/try-complete-tax-onboarding";
 import {
   removeStorageObject,
   uploadEntityDocument,
@@ -120,6 +122,19 @@ export async function persistClientDocumentUpload(params: {
 
   if (params.revalidate !== false) {
     revalidatePath(`/clients/${parsed.data.client_id}`);
+    revalidatePath("/clients");
+
+    await tryCompleteLegalOnboarding({
+      supabase: params.supabase,
+      clientId: parsed.data.client_id,
+      userId: params.userId,
+    });
+
+    await tryCompleteTaxOnboarding({
+      supabase: params.supabase,
+      clientId: parsed.data.client_id,
+      userId: params.userId,
+    });
   }
 
   return { ok: true, message: "Document uploaded." };

@@ -15,6 +15,7 @@ import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { computeCampaignScores } from "./campaign-scores";
 import { mapBrowseCreatorToSearchResult } from "./creator-platform-utils";
 import { composeCreatorSlate, creatorTierOf } from "./creator-slate";
+import { patchSlateIntelligence } from "./slate-intelligence";
 import { normalizeCreatorId } from "./studio-draft";
 
 /**
@@ -136,7 +137,7 @@ export async function reoptimizeCampaignAfterApply(
       : {}),
   };
 
-  return {
+  const withCreators: CampaignObject = {
     ...campaignObject,
     sections: {
       ...campaignObject.sections,
@@ -159,4 +160,6 @@ export async function reoptimizeCampaignAfterApply(
     },
     updatedAt: new Date().toISOString(),
   };
+
+  return patchSlateIntelligence(withCreators, finalCards);
 }

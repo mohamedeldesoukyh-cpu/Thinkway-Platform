@@ -9,6 +9,7 @@ import { ShortlistWorkspace } from "@/features/discovery/shortlists/components/s
 import {
   getShortlistBrandOptions,
   getShortlistCampaignOptions,
+  getShortlistClientOptions,
   getShortlistDetail,
 } from "@/features/discovery/shortlists/queries";
 import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher";
@@ -24,9 +25,10 @@ export default async function ShortlistDetailPage({
   const detail = await getShortlistDetail(id);
   if (!detail) notFound();
 
-  const [campaigns, brands] = await Promise.all([
+  const [campaigns, brands, clients] = await Promise.all([
     getShortlistCampaignOptions(),
     getShortlistBrandOptions(),
+    getShortlistClientOptions(),
   ]);
 
   return (
@@ -57,7 +59,12 @@ export default async function ShortlistDetailPage({
                   className="w-full max-w-md sm:w-auto"
                 />
               </div>
-              <ShortlistWorkspace detail={detail} campaigns={campaigns} brands={brands} />
+              <ShortlistWorkspace
+                detail={detail}
+                campaigns={campaigns}
+                brands={brands}
+                clients={clients}
+              />
             </div>
           </div>
         </div>

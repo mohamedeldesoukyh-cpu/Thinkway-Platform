@@ -125,9 +125,16 @@ export type ShortlistCampaignOption = {
   document_number: string | null;
 };
 
+export type ShortlistClientOption = {
+  id: string;
+  name: string;
+  legal_name: string | null;
+};
+
 export type ShortlistBrandOption = {
   id: string;
   name: string;
+  client_id: string;
   client_name: string | null;
 };
 

@@ -147,4 +147,17 @@ assert.equal(
   assert.equal(synced.types.join(","), "yt_short,yt_live");
 }
 
+{
+  const lines = deliverableTypeLines({
+    type: "tiktok_video",
+    types: ["tiktok_video", "tiktok_story", "mirrored_fb", "mirrored_ig"],
+    type_lines: [{ type: "tiktok_video", quantity: 1 }],
+  });
+  assert.equal(lines.length, 4);
+  assert.deepEqual(
+    lines.map((line) => line.type),
+    ["tiktok_video", "tiktok_story", "mirrored_fb", "mirrored_ig"]
+  );
+}
+
 console.log("quotation-deliverable-types.test.ts — all tests passed");

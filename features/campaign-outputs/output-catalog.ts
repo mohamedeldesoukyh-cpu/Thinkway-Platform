@@ -98,7 +98,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     kind: "media_plan",
     label: "Media Plan",
     description:
-      "Agency-grade publishing plan: weekly & daily calendar, creator-by-creator schedule, platform allocation, activation waves, review & client approval milestones, optimization & paid amplification windows, contingency windows, creator dependencies, and production/asset deadlines.",
+      "Quotation-aligned publishing calendar: weekly grid with creator avatar, name, and quoted ad type on every slot — synced automatically when the slate or budget changes.",
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 5000,

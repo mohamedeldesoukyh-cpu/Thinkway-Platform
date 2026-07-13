@@ -71,6 +71,17 @@ export type CreatorDiscoverySectionData = {
 export type VendorSelectedReasoning = {
   creatorId: string;
   displayName?: string;
+  /** Quoted client revenue from a commercial source (e.g. quotation line). */
+  quotedRevenue?: number;
+  quotedCurrency?: string;
+  platform?: string;
+  handle?: string;
+  avatarUrl?: string;
+  profileUrl?: string;
+  /** Individual quotation ad types — one calendar slot per entry. */
+  serviceTypes?: string[];
+  /** Primary ad / service type from quotation deliverables (e.g. "1× IG Reel"). */
+  serviceLabel?: string;
   whySelected: string;
   whyNotAnother?: string;
   contribution?: string;
@@ -117,7 +128,14 @@ export type StudioDraftCreatorRef = {
   enrichmentStatus?: "not_requested" | "pending" | "enriched" | "failed";
 };
 
-/** One staged Studio edit — nothing recalculates until Apply All Updates. */
+/** Shortlist payload embedded in staged replace/merge operations. */
+export type StudioDraftShortlistPayload = {
+  shortlistId: string;
+  shortlistName?: string;
+  recommendations: CreatorRecommendationSectionData;
+};
+
+/** One staged Studio edit — nothing recalculates until Apply Changes. */
 export type StudioDraftChange =
   | { kind: "remove_creator"; creatorId: string; displayName?: string; stagedAt: string }
   | {
@@ -128,7 +146,21 @@ export type StudioDraftChange =
       stagedAt: string;
     }
   | { kind: "add_creator"; creator: StudioDraftCreatorRef; stagedAt: string }
-  | { kind: "refresh_intelligence"; creatorId: string; displayName?: string; stagedAt: string };
+  | { kind: "refresh_intelligence"; creatorId: string; displayName?: string; stagedAt: string }
+  | { kind: "replace_shortlist"; payload: StudioDraftShortlistPayload; stagedAt: string }
+  | { kind: "merge_shortlist"; payload: StudioDraftShortlistPayload; stagedAt: string }
+  | { kind: "approve_creator"; creatorId: string; displayName?: string; stagedAt: string }
+  | { kind: "reject_creator"; creatorId: string; displayName?: string; stagedAt: string }
+  | { kind: "promote_main"; creatorId: string; displayName?: string; stagedAt: string }
+  | { kind: "demote_alternative"; creatorId: string; displayName?: string; stagedAt: string }
+  | {
+      kind: "shortlist_creator";
+      creatorId: string;
+      displayName?: string;
+      /** Discovery shortlist id — external UX only until Apply commits plan state. */
+      linkedShortlistId?: string;
+      stagedAt: string;
+    };
 
 /** Draft state for Studio edits — persisted with the campaign object, applied in one bulk operation. */
 export type StudioDraftState = {
@@ -136,8 +168,65 @@ export type StudioDraftState = {
   updatedAt: string;
 };
 
+export type SlateRecommendationRole = "main" | "maybe";
+
+export type SlateRecommendationReasonCode =
+  | "high_price"
+  | "reach_risk"
+  | "client_choice"
+  | "alternate";
+
+export type TierShortageWarning = {
+  tier: string;
+  required: number;
+  actual: number;
+  message: string;
+};
+
+export type SlateCreatorRecommendation = {
+  creatorId: string;
+  tier: string;
+  role: SlateRecommendationRole;
+  reasonCode?: SlateRecommendationReasonCode;
+  reason?: string;
+  suggestedTimelineSlot?: string;
+  /** Activation wave number derived from timeline redistribution. */
+  wave?: number;
+  /** Relative priority within the slate (main picks rank higher). */
+  priority?: "high" | "medium" | "low";
+  /** Primary deliverable / service type from reasoning or heuristics. */
+  serviceType?: string;
+  /** Content pillar matched to creator category. */
+  contentPillar?: string;
+  score?: number;
+};
+
+/** Post-apply slate analysis — tier gaps, main/maybe picks, timeline hints. */
+export type SlateIntelligence = {
+  actualMix: CreatorMixTier[];
+  tierShortages: TierShortageWarning[];
+  recommendations: SlateCreatorRecommendation[];
+  updatedAt: string;
+};
+
+/** Working state while re-running creator proposal — commits only on success. */
+export type PendingCreatorProposal = {
+  status: "generating" | "ready" | "failed";
+  creatorIds?: string[];
+  recommendations?: CreatorRecommendationSectionData;
+  recommendationsDisplay?: string;
+  vendorDecisions?: Record<string, "approved" | "rejected" | "shortlisted">;
+  slateIntelligence?: SlateIntelligence;
+  error?: {
+    reason: "no_discovery_results" | "no_strategy_vendors" | "insufficient_pool";
+    message: string;
+    actionLabel?: string;
+  };
+  generatedAt?: string;
+};
+
 export type CreatorsSectionData = {
-  phase?: "discovery" | "shortlist" | "complete";
+  phase?: "discovery" | "proposal" | "shortlist" | "complete";
   discovery?: CreatorDiscoverySectionData;
   discoveryDisplay?: string;
   recommendations?: CreatorRecommendationSectionData;
@@ -154,10 +243,24 @@ export type CreatorsSectionData = {
   vendorDecisions?: Record<string, "approved" | "rejected" | "shortlisted">;
   /** Discovery shortlist linked when user shortlists recommendations. */
   linkedShortlistId?: string;
+  /** Shortlist ids applied via Replace / Merge in Studio (most recent last). */
+  appliedShortlistIds?: string[];
   /** Legacy Studio grounding payload stripped on creator re-runs. */
   vendorGrounding?: GroundedVendor[];
   /** Pending Studio edits — draft until the user applies all updates. */
   studioDraft?: StudioDraftState;
+  /** Tier shortages, main/maybe grouping, and timeline hints after apply. */
+  slateIntelligence?: SlateIntelligence;
+  /** Auto-proposal outcome after Director strategy approval — surfaces blocked state in UI. */
+  slateProposalStatus?: {
+    status: "proposed" | "blocked";
+    reason?: "no_discovery_results" | "no_strategy_vendors" | "insufficient_pool";
+    message: string;
+    actionLabel?: string;
+    updatedAt: string;
+  };
+  /** Temporary proposal during campaign re-run — discarded or committed atomically. */
+  pendingProposal?: PendingCreatorProposal;
 };
 
 export type ExecutiveStrategyReasoning = {
@@ -459,6 +562,13 @@ export type StrategySectionData = {
   whyAiInsights?: WhyAiInsight[];
   executiveStrategyReasoning?: ExecutiveStrategyReasoning;
   directorDecisionMinutes?: DirectorDecisionMinute[];
+  /** Post-apply actual tier mix from committed slate. */
+  creatorMixActual?: CreatorMixTier[];
+  /** Coverage validation refreshed when slate is applied. */
+  strategyValidation?: {
+    tierCoverage: string;
+    updatedAt: string;
+  };
 };
 
 /** Slate-grounded campaign scores recalculated on Apply All Updates. */
@@ -482,6 +592,7 @@ export type PerformanceSectionData = {
   successProbability?: SuccessProbabilityData;
   industryBenchmark?: IndustryBenchmarkData;
   campaignScores?: CampaignScoreSet;
+  kpiForecastNote?: string;
 };
 
 export type BudgetSectionExtras = {

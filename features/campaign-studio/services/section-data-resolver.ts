@@ -636,7 +636,8 @@ export function resolveVendorRecommendations(
 }
 
 export function resolveCreatorIds(
-  campaignObject: CampaignObject | undefined
+  campaignObject: CampaignObject | undefined,
+  options?: { recommendationsOnly?: boolean }
 ): {
   ids: string[];
   rationale?: string;
@@ -645,7 +646,12 @@ export function resolveCreatorIds(
 } {
   const creatorsData = readCreatorsData(campaignObject);
   const { recommendationIds, discoveryIds } = resolveCreatorCounts(campaignObject);
-  const ids = recommendationIds.length > 0 ? recommendationIds : discoveryIds;
+  const ids =
+    recommendationIds.length > 0
+      ? recommendationIds
+      : options?.recommendationsOnly
+        ? []
+        : discoveryIds;
   return {
     ids,
     rationale: creatorsData.recommendations?.rationale,

@@ -42,12 +42,15 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
     >
       <PlatformErrorBoundary surface="generic">
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <DiscoverySubNav activeHref="/discovery/quotations" showDatabaseStats={false} />
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-2 md:px-6">
+          <div
+            className="thinkway-campaign-workspace min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-[var(--camp-surface)]"
+            data-campaign-workspace-scroll
+          >
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-background px-4 py-2 md:px-6">
               <Button asChild variant="ghost" size="sm" className="-ml-2">
-                <Link href={QUOTATIONS_LIST_PATH}>â† Back to client quotations</Link>
+                <Link href={QUOTATIONS_LIST_PATH}>← Back to client quotations</Link>
               </Button>
               <GenerateOutputsLauncher
                 seed={seedFromQuotation(detail)}

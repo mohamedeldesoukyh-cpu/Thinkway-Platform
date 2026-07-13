@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requirePermission } from "@/lib/auth/permissions-server";
+import { getAuthContext, requirePermission } from "@/lib/auth/permissions-server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   CampaignShortlistAssignmentStatus,
@@ -16,6 +17,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
+import {
+  buildQuotationCommercialPatch,
+  shouldSyncQuotationCommercial,
+} from "./commercial-propagation";
 import { getCampaignShortlistAssignments } from "./queries";
 import { logCreatorMovement, logShortlistLifecycle } from "./movements";
 import { notifyShortlistEvent } from "./notifications";
@@ -86,7 +91,7 @@ async function loadShortlistRow(supabase: Supabase, id: string) {
   const { data, error } = await supabase
     .from("discovery_shortlists")
     .select(
-      "id, name, status, visibility, owner_id, created_by, approved_by, is_archived"
+      "id, name, status, visibility, owner_id, created_by, approved_by, is_archived, client_id, brand_id"
     )
     .eq("id", id)
     .maybeSingle();
@@ -101,8 +106,76 @@ async function loadShortlistRow(supabase: Supabase, id: string) {
         created_by: string | null;
         approved_by: string | null;
         is_archived: boolean;
+        client_id: string | null;
+        brand_id: string | null;
       }
     | null;
+}
+
+async function assertCanManageShortlist(
+  supabase: Supabase,
+  row: NonNullable<Awaited<ReturnType<typeof loadShortlistRow>>>,
+  userId: string
+): Promise<ActionResult | { ok: true }> {
+  const [isAdmin, auth] = await Promise.all([
+    hasPermission(supabase, SHORTLIST_PERMISSIONS.admin),
+    getAuthContext(supabase),
+  ]);
+  const isPrivilegedRole =
+    auth.roleSlug === "super_admin" || auth.roleSlug === "admin";
+  const isOwner = row.owner_id === userId;
+
+  if (!isOwner && !isAdmin && !isPrivilegedRole) {
+    return { ok: false, message: "You do not have permission to edit this shortlist." };
+  }
+  return { ok: true };
+}
+
+async function syncShortlistCommercialToQuotations(
+  supabase: Supabase,
+  input: {
+    shortlistId: string;
+    oldClientId: string | null;
+    oldBrandId: string | null;
+    newClientId: string | null;
+    newBrandId: string | null;
+  }
+): Promise<number> {
+  const patch = buildQuotationCommercialPatch({
+    client_id: input.newClientId,
+    brand_id: input.newBrandId,
+  });
+  if (!patch) return 0;
+
+  const { data, error } = await supabase
+    .from("quotations")
+    .select("id, client_id, brand_id, is_temporary_client, is_temporary_brand")
+    .eq("shortlist_id", input.shortlistId)
+    .eq("is_archived", false);
+
+  if (error) throw new Error(error.message);
+
+  const oldLink = { client_id: input.oldClientId, brand_id: input.oldBrandId };
+  const newLink = { client_id: input.newClientId, brand_id: input.newBrandId };
+  let synced = 0;
+
+  for (const row of (data ?? []) as Array<{
+    id: string;
+    client_id: string | null;
+    brand_id: string | null;
+    is_temporary_client: boolean;
+    is_temporary_brand: boolean;
+  }>) {
+    if (!shouldSyncQuotationCommercial(row, oldLink, newLink)) continue;
+
+    const { error: updateError } = await supabase
+      .from("quotations")
+      .update(patch as never)
+      .eq("id", row.id);
+    if (!updateError) synced += 1;
+  }
+
+  return synced;
 }
 
 function recipientsFor(row: {
@@ -193,6 +266,9 @@ export async function updateShortlistDetails(
     return { ok: false, message: "Cancelled shortlists cannot be edited. Reopen first." };
   }
 
+  const manage = await assertCanManageShortlist(actor.supabase, row, actor.userId);
+  if (!manage.ok) return manage;
+
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) {
     const trimmed = input.name.trim();
@@ -203,8 +279,47 @@ export async function updateShortlistDetails(
   if (input.visibility !== undefined) {
     patch.visibility = input.visibility === "client_shared" ? "team" : input.visibility;
   }
-  if (input.clientId !== undefined) patch.client_id = input.clientId || null;
-  if (input.brandId !== undefined) patch.brand_id = input.brandId || null;
+
+  const commercialChanging =
+    input.clientId !== undefined || input.brandId !== undefined;
+  let resolvedClientId: string | null | undefined;
+  let resolvedBrandId: string | null | undefined;
+
+  if (commercialChanging) {
+    resolvedClientId = input.clientId ?? null;
+    resolvedBrandId = input.brandId ?? null;
+
+    if (resolvedBrandId && !resolvedClientId) {
+      const { data: brandRow } = await actor.supabase
+        .from("brands")
+        .select("client_id")
+        .eq("id", resolvedBrandId)
+        .maybeSingle();
+      resolvedClientId = (brandRow as { client_id: string } | null)?.client_id ?? null;
+    }
+
+    if (resolvedClientId && resolvedBrandId) {
+      const { data: brandRow } = await actor.supabase
+        .from("brands")
+        .select("client_id")
+        .eq("id", resolvedBrandId)
+        .maybeSingle();
+      if (
+        !brandRow ||
+        (brandRow as { client_id: string }).client_id !== resolvedClientId
+      ) {
+        return { ok: false, message: "Selected brand does not belong to the legal entity." };
+      }
+    } else if (resolvedClientId || resolvedBrandId) {
+      return {
+        ok: false,
+        message: "Select both legal entity and brand, or clear the commercial link.",
+      };
+    }
+
+    patch.client_id = resolvedClientId;
+    patch.brand_id = resolvedBrandId;
+  }
 
   if (Object.keys(patch).length === 0) return { ok: true };
 
@@ -214,8 +329,33 @@ export async function updateShortlistDetails(
     .eq("id", input.shortlistId);
 
   if (error) return { ok: false, message: error.message };
+
+  let syncedQuotations = 0;
+  if (commercialChanging) {
+    syncedQuotations = await syncShortlistCommercialToQuotations(actor.supabase, {
+      shortlistId: input.shortlistId,
+      oldClientId: row.client_id,
+      oldBrandId: row.brand_id,
+      newClientId: (patch.client_id as string | null) ?? null,
+      newBrandId: (patch.brand_id as string | null) ?? null,
+    });
+    if (syncedQuotations > 0) {
+      revalidatePath("/discovery/quotations");
+    }
+  }
+
   revalidateShortlist(input.shortlistId);
-  return { ok: true, message: "Shortlist updated." };
+
+  const baseMessage = "Shortlist updated.";
+  if (syncedQuotations > 0) {
+    return {
+      ok: true,
+      message: `${baseMessage} ${syncedQuotations} linked quotation${
+        syncedQuotations === 1 ? "" : "s"
+      } synced to the new commercial link.`,
+    };
+  }
+  return { ok: true, message: baseMessage };
 }
 
 // ---------------------------------------------------------------------------

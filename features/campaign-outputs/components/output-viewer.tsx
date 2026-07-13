@@ -1,6 +1,14 @@
 import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
-import type { MediaPlanData } from "../generators/media-plan";
+import type { MediaPlanCampaignContext, MediaPlanData } from "../generators/media-plan";
 import { MediaPlanCalendar } from "./media-plan-calendar";
+import { MEDIA_PLAN_BRAND } from "./media-plan-brand";
+import { mergeMediaPlanContext } from "./media-plan-context-merge";
+import {
+  MEDIA_PLAN_DEADLINES_HEADING,
+  MediaPlanContextStrip,
+  MediaPlanDeadlinesTable,
+  shouldSkipMediaPlanSection,
+} from "./media-plan-preview-sections";
 
 function isMediaPlanData(data: unknown): data is MediaPlanData {
   return Boolean(
@@ -62,24 +70,48 @@ function SectionBlock({ section }: { section: CampaignOutputContentSection }) {
  * The Media Plan renders as a visual calendar; every output renders its
  * sections (paragraphs, lists, tables) uniformly.
  */
-export function OutputViewer({ content }: { content: CampaignOutputContent }) {
+export function OutputViewer({
+  content,
+  mediaPlanContextOverride,
+}: {
+  content: CampaignOutputContent;
+  mediaPlanContextOverride?: MediaPlanCampaignContext;
+}) {
   const mediaPlan = isMediaPlanData(content.data) ? content.data : undefined;
+  const hasDeadlines = Boolean(mediaPlan?.deadlines?.length);
+  const mediaPlanContext = mergeMediaPlanContext(
+    mediaPlan?.campaignContext,
+    mediaPlanContextOverride
+  );
 
   return (
     <article className="space-y-5">
       <header className="space-y-1">
-        <h2 className="text-lg font-bold text-foreground">{content.title}</h2>
+        <h2 className="text-lg font-extrabold tracking-tight" style={{ color: MEDIA_PLAN_BRAND.deepNavy }}>
+          {content.title}
+        </h2>
         {content.summary ? (
-          <p className="text-[13px] text-muted-foreground">{content.summary}</p>
+          <p className="text-[13px]" style={{ color: MEDIA_PLAN_BRAND.muted }}>
+            {content.summary}
+          </p>
         ) : null}
+        {mediaPlan ? <MediaPlanContextStrip context={mediaPlanContext} /> : null}
       </header>
 
-      {mediaPlan ? <MediaPlanCalendar data={mediaPlan} /> : null}
+      {mediaPlan ? <MediaPlanCalendar data={mediaPlan} orientation="landscape" /> : null}
+
+      {mediaPlan && hasDeadlines ? (
+        <section className="space-y-2">
+          <h3 className="text-sm font-bold" style={{ color: MEDIA_PLAN_BRAND.electricBlue }}>
+            {MEDIA_PLAN_DEADLINES_HEADING}
+          </h3>
+          <MediaPlanDeadlinesTable deadlines={mediaPlan.deadlines} variant="inline" />
+        </section>
+      ) : null}
 
       <div className="space-y-5">
         {content.sections
-          // When the calendar is shown, skip the week-by-week markdown duplicates.
-          .filter((s) => !(mediaPlan && s.heading.startsWith("Week ")))
+          .filter((s) => !mediaPlan || !shouldSkipMediaPlanSection(s.heading, hasDeadlines))
           .map((section, i) => (
             <SectionBlock key={`${section.heading}-${i}`} section={section} />
           ))}

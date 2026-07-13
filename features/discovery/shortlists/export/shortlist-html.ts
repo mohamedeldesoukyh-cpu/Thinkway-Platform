@@ -17,6 +17,8 @@ import type {
   ShortlistSummaryBreakdownItem,
 } from "./shortlist-document";
 import { buildShortlistDocumentStyles } from "./shortlist-document-styles";
+import { buildShowcaseShortlistHtml } from "./shortlist-showcase-html";
+import { isShowcaseTemplate } from "./shortlist-template";
 
 const CREATOR_CELL_STYLES = `
   .creator-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -26,7 +28,7 @@ const CREATOR_CELL_STYLES = `
   }
   .creator-cell-avatar--initials {
     display: inline-flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: #1D9E75;
+    font-size: 11px; font-weight: 700; color: #0057FF;
   }
   .creator-cell-text { min-width: 0; }
   .platform-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -422,7 +424,14 @@ function renderClosingPage(doc: ShortlistDocument): string {
   </section>`;
 }
 
-export function buildShortlistHtml(doc: ShortlistDocument): string {
+export function buildShortlistHtml(
+  doc: ShortlistDocument,
+  options?: { siteOrigin?: string }
+): string {
+  if (isShowcaseTemplate(doc.template)) {
+    return buildShowcaseShortlistHtml(doc, options);
+  }
+
   const templateLabel = doc.template === "detailed" ? "Detailed" : "Summary";
 
   return `<!DOCTYPE html>

@@ -23,7 +23,17 @@ export type SeedCreator = {
   creatorId: string;
   displayName: string;
   tier?: string;
+  /** Client revenue from quotation / commercial line when known. */
+  quotedRevenue?: number;
+  quotedCurrency?: string;
   platform?: string;
+  handle?: string;
+  avatarUrl?: string;
+  profileUrl?: string;
+  /** Individual quotation ad types (e.g. ["1× IG Reel", "1× Mirrored TT"]). */
+  serviceTypes?: string[];
+  /** Summary label when multiple types exist (joined for display elsewhere). */
+  serviceLabel?: string;
   followers?: number;
   engagementRate?: number;
   categories?: string[];
@@ -38,6 +48,10 @@ export type CampaignSeed = {
   campaignName?: string;
   client?: string;
   brand?: string;
+  group?: string;
+  /** When `agency`, `agencyName` (or `client`) is shown on client-facing outputs. */
+  agencyOrDirect?: "agency" | "direct" | "hybrid";
+  agencyName?: string;
   budget?: { amount: number; currency: string };
   market?: string[];
   platforms?: string[];

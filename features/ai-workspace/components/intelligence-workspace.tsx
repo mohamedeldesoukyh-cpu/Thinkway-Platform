@@ -75,9 +75,9 @@ export function IntelligenceWorkspace({
     studioFocusRef.current = sectionId;
     setStudioFocusSection(sectionId);
   }, []);
-  // Campaign Mode chat dock (collapsible + drag-resizable bottom panel).
-  const [dockCollapsed, setDockCollapsed] = useState(false);
-  const [dockHeight, setDockHeight] = useState(360);
+  // Campaign Mode copilot — floating icon; opens a resizable chat panel on click.
+  const [dockCollapsed, setDockCollapsed] = useState(true);
+  const [dockHeight, setDockHeight] = useState(480);
 
   const loadedConversationRef = useRef<string | null>(null);
   const editingUserMessageIdRef = useRef<string | null>(null);
@@ -673,6 +673,27 @@ export function IntelligenceWorkspace({
     [setMessages]
   );
 
+  const handleSlateUpdated = useCallback(
+    (messageId: string, campaignObject: Record<string, unknown>) => {
+      setMessages(
+        (prev) =>
+          prev.map((message) =>
+            message.id === messageId
+              ? {
+                  ...message,
+                  metadata: {
+                    ...message.metadata,
+                    campaignObject,
+                  },
+                }
+              : message
+          ),
+        "handleSlateUpdated"
+      );
+    },
+    [setMessages]
+  );
+
   const handleCardUpdated = useCallback(
     (messageId: string, cardId: string, status: string) => {
       setMessages(
@@ -707,6 +728,11 @@ export function IntelligenceWorkspace({
     [messages]
   );
   const campaignMode = Boolean(latestStudioMessage) && !showEmptyState;
+
+  const handleStudioSendMessage = useCallback(
+    (message: string) => void handleSend(message),
+    [handleSend]
+  );
 
   // Chat surface — shared between full-screen (Conversation Mode) and the dock.
   // In the dock there is no floating topbar above the thread, so drop the
@@ -748,6 +774,7 @@ export function IntelligenceWorkspace({
               onEditCancel={handleEditCancel}
               onCardUpdated={handleCardUpdated}
               onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
+              onSlateUpdated={handleSlateUpdated}
               onEditMessage={(id, content) => void handleEditMessage(id, content)}
               onRetryMessage={(message) => void handleRetryMessage(message)}
               onDeleteMessage={handleDeleteMessage}
@@ -782,25 +809,31 @@ export function IntelligenceWorkspace({
     // CAMPAIGN MODE — the Campaign Studio *is* the application. The AI-workspace
     // identity is gone: no branded topbar, no conversation sidebar, no lavender
     // AI surface. The Studio owns the page and its own header/navigation; the
-    // Copilot lives in a persistent bottom dock as an editing assistant.
+    // Copilot is a floating chatbot icon; the Studio owns the full viewport.
     return (
       <div
         ref={workspaceRootRef}
-        className="ai-studio-enter flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
+        className="ai-studio-enter relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
       >
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <CampaignStudioPanel
-            message={latestStudioMessage}
-            conversationId={conversationId}
-            onCardUpdated={handleCardUpdated}
-            onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
-            onSendMessage={(message) => void handleSend(message)}
-            focusedSectionId={studioFocusSection}
-            onFocusSection={handleFocusSection}
-            variant="main"
-            initialView={initialStudioView}
-          />
-        </div>
+        <CampaignStudioPanel
+          message={latestStudioMessage}
+          conversationId={conversationId}
+          onCardUpdated={handleCardUpdated}
+          onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
+          onSlateUpdated={handleSlateUpdated}
+          onSendMessage={handleStudioSendMessage}
+          isCopilotStreaming={isStreaming}
+          focusedSectionId={studioFocusSection}
+          onFocusSection={handleFocusSection}
+          variant="main"
+          initialView={initialStudioView}
+          conversations={conversations}
+          conversationsLoading={loading}
+          conversationsError={conversationsError}
+          onSelectConversation={handleSelectConversation}
+          onNewChat={() => void handleNewChat()}
+          onRefreshConversations={() => void refresh({ background: true })}
+        />
         <CampaignCopilotDock
           collapsed={dockCollapsed}
           onToggleCollapsed={() => setDockCollapsed((v) => !v)}

@@ -5,20 +5,27 @@
  * present, otherwise inferred from follower count.
  */
 
-import type { QuotationDetail } from "@/lib/domains/commercial/quotation-detail-types";
+import type { QuotationDetail, QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
+import {
+  deliverableTypeLines,
+  formatTypeLinesSummary,
+  quotationPostTypeLabel,
+} from "@/lib/quotations/quotation-deliverable-types";
+import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
+import { groupQuotationItemsByCreator } from "@/lib/quotations/quotation-creator-options";
+import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import type { ShortlistDetail } from "@/features/discovery/shortlists/types";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
+import { getInfluencerTier, type InfluencerTier } from "@/lib/creators/influencer-tier";
+
 import type { CampaignSeed, SeedCreator } from "./hydration-types";
+import { normalizeCreatorMatchKey, parseAggregatedServiceLabel } from "./quotation-service-types";
 
 /** Follower-count → tier, when a source has no explicit role. */
-export function inferTier(followers?: number | null): string | undefined {
-  if (!followers || followers <= 0) return undefined;
-  if (followers >= 1_000_000) return "Celebrity";
-  if (followers >= 500_000) return "Macro";
-  if (followers >= 100_000) return "Mid-Tier";
-  if (followers >= 10_000) return "Micro";
-  return "Nano";
+export function inferTier(followers?: number | null): InfluencerTier | undefined {
+  if (followers == null || followers <= 0) return undefined;
+  return getInfluencerTier(followers);
 }
 
 function uniqueStrings(values: Array<string | null | undefined>): string[] {
@@ -29,19 +36,97 @@ function uniqueStrings(values: Array<string | null | undefined>): string[] {
 // Quotation → seed
 // ---------------------------------------------------------------------------
 
-export function seedFromQuotation(quotation: QuotationDetail): CampaignSeed {
-  const items = quotation.items ?? [];
+function serviceTypeLabel(line: { type: string; quantity: number }): string {
+  return `${line.quantity}× ${quotationPostTypeLabel(line.type)}`;
+}
 
-  const creators: SeedCreator[] = items.map((item) => ({
+function serviceTypesForItem(item: QuotationItemRow): string[] {
+  const types: string[] = [];
+  for (const deliverable of item.deliverables ?? []) {
+    const lines = deliverableTypeLines(deliverable).filter((line) => line.type.trim());
+    if (lines.length) {
+      for (const line of lines) {
+        types.push(serviceTypeLabel(line));
+      }
+      continue;
+    }
+    const typeSummary = formatTypeLinesSummary(deliverableTypeLines(deliverable));
+    if (typeSummary && typeSummary !== "Select type…") {
+      types.push(...parseAggregatedServiceLabel(typeSummary));
+      continue;
+    }
+    const service = deliverable.service_description?.trim();
+    if (service) types.push(...parseAggregatedServiceLabel(service));
+  }
+  if (!types.length && item.service_description?.trim()) {
+    types.push(...parseAggregatedServiceLabel(item.service_description));
+  }
+  return [...new Set(types)];
+}
+
+function serviceLabelForItem(item: QuotationItemRow): string | undefined {
+  const types = serviceTypesForItem(item);
+  if (types.length) return [...new Set(types)].join(" · ");
+  return undefined;
+}
+
+function seedCreatorFromQuotationItem(item: QuotationItemRow): SeedCreator {
+  const profile = buildQuotationCreatorProfileSource(item);
+  const serviceTypes = serviceTypesForItem(item);
+  return {
     creatorId: item.unified_id ?? item.influencer_id ?? item.profile_id ?? item.id,
-    displayName: item.creator_name ?? "Creator",
+    displayName:
+      formatCreatorDisplayName(profile.displayName) ||
+      formatCreatorDisplayName(item.creator_name) ||
+      "Creator",
     tier: inferTier(item.followers),
-    platform: item.platform ?? undefined,
+    quotedRevenue: item.revenue_egp > 0 ? item.revenue_egp : undefined,
+    quotedCurrency: item.revenue_egp > 0 ? "EGP" : undefined,
+    platform: item.platform ?? profile.platform ?? undefined,
+    handle: profile.handle ?? item.handle ?? undefined,
+    avatarUrl: profile.avatarUrl ?? item.profile_image_url ?? undefined,
+    profileUrl: profile.profile_url ?? item.profile_url ?? undefined,
+    serviceTypes: serviceTypes.length ? serviceTypes : undefined,
+    serviceLabel: serviceTypes.length ? serviceTypes.join(" · ") : undefined,
     followers: item.followers ?? undefined,
     engagementRate: item.engagement_rate ?? undefined,
     categories: item.creator_categories ?? undefined,
     country: item.country_code ?? undefined,
-  }));
+  };
+}
+
+function seedCreatorsFromQuotationItems(items: QuotationItemRow[]): SeedCreator[] {
+  if (!items.length) return [];
+
+  return groupQuotationItemsByCreator(items).map((group) => {
+    const primaryItems = group.optionSets[0]?.items ?? [];
+    const sourceItems = primaryItems.length ? primaryItems : items.slice(0, 1);
+
+    const mergedTypes: string[] = [];
+    let base: SeedCreator | undefined;
+    let quotedRevenue = 0;
+
+    for (const item of sourceItems) {
+      mergedTypes.push(...serviceTypesForItem(item));
+      if (!base) base = seedCreatorFromQuotationItem(item);
+      if (item.revenue_egp > 0) quotedRevenue += item.revenue_egp;
+    }
+
+    const serviceTypes = [...new Set(mergedTypes)];
+    return {
+      ...base!,
+      serviceTypes: serviceTypes.length ? serviceTypes : undefined,
+      serviceLabel: serviceTypes.length ? serviceTypes.join(" · ") : undefined,
+      quotedRevenue: quotedRevenue > 0 ? quotedRevenue : base!.quotedRevenue,
+      quotedCurrency: quotedRevenue > 0 ? "EGP" : base!.quotedCurrency,
+    };
+  });
+}
+
+export function seedFromQuotation(quotation: QuotationDetail): CampaignSeed {
+  const items = quotation.items ?? [];
+
+  const creators: SeedCreator[] = seedCreatorsFromQuotationItems(items);
 
   const deliverables = uniqueStrings(
     items.flatMap((item) =>
@@ -66,6 +151,12 @@ export function seedFromQuotation(quotation: QuotationDetail): CampaignSeed {
     campaignName: quotation.campaign_name ?? quotation.name ?? undefined,
     client: quotation.client_name ?? quotation.temporary_client_name ?? undefined,
     brand: quotation.brand_name ?? quotation.temporary_brand_name ?? undefined,
+    group: quotation.group_name ?? undefined,
+    agencyOrDirect: quotation.agency_or_direct ?? undefined,
+    agencyName:
+      quotation.agency_or_direct === "agency"
+        ? quotation.agency_name ?? quotation.client_name ?? undefined
+        : undefined,
     budget:
       quotation.total_revenue_egp > 0
         ? { amount: quotation.total_revenue_egp, currency: "EGP" }

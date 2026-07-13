@@ -1,9 +1,12 @@
 "use server";
 
+import { randomUUID } from "crypto";
+
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CREATE_CAMPAIGN_WORKFLOW_ID } from "@/features/campaign-studio/constants/workflow-ids";
-import { attachCampaignObjectToSnapshot } from "@/features/campaign-intelligence";
+import { attachCampaignObjectToSnapshot, loadCampaignObjectForConversation } from "@/features/campaign-intelligence";
+import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import {
   createConversation,
   appendMessage,
@@ -12,6 +15,10 @@ import {
 
 import type { CampaignSeed } from "../hydration/hydration-types";
 import { hydrateCampaignObject } from "../hydration/hydrate";
+import { seedFromQuotation } from "../hydration/seed-adapters";
+import { getQuotationDetail } from "@/lib/services/quotations/quotation-document-service";
+import { generateCampaignOutput, getCampaignOutput, markStaleCampaignOutputs, regenerateStaleCampaignOutputs } from "../output-registry";
+import type { CampaignOutputKind } from "../output-types";
 import { buildStudioMessageMetadata, workspaceHref, type StudioTab } from "./campaign-workspace-message";
 
 export type StartCampaignOutputsInput = {
@@ -32,6 +39,88 @@ export type StartCampaignOutputsResult =
   | { ok: true; href: string; reused: boolean }
   | { ok: false; message: string };
 
+async function resolveLaunchSeed(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  input: StartCampaignOutputsInput
+): Promise<CampaignSeed> {
+  if (input.workspace?.type === "quotation" && input.workspace.id) {
+    const detail = await getQuotationDetail(supabase, input.workspace.id);
+    if (detail) return seedFromQuotation(detail);
+  }
+  return input.seed;
+}
+
+async function syncSeedIntoConversation(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  conversationId: string,
+  seed: CampaignSeed,
+  userId: string,
+  options?: { quotationId?: string }
+) {
+  const existing = await loadCampaignObjectForConversation(supabase, conversationId);
+  const hydrated = hydrateCampaignObject(seed, existing ?? undefined, {
+    quotationId: options?.quotationId,
+  });
+  const campaignObject = {
+    ...hydrated.campaignObject,
+    conversationId,
+    workflowId: existing?.workflowId ?? CREATE_CAMPAIGN_WORKFLOW_ID,
+    id: existing?.id ?? hydrated.campaignObject.id,
+  };
+
+  const saved = await saveCampaignObject(conversationId, campaignObject, {
+    supabase,
+    userId,
+    persistToDb: true,
+    saveReason: "manual",
+  });
+
+  let objectForStudio = regenerateStaleCampaignOutputs(markStaleCampaignOutputs(saved), {
+    origin: "automatic",
+  });
+
+  const regenKinds: CampaignOutputKind[] =
+    seed.source === "quotation"
+      ? ["media_plan"]
+      : (["media_plan", "budget_allocation"] as const).filter((kind) =>
+          Boolean(getCampaignOutput(objectForStudio, kind))
+        );
+
+  for (const kind of regenKinds) {
+    ({ campaignObject: objectForStudio } = generateCampaignOutput(objectForStudio, kind, {
+      origin: "automatic",
+    }));
+  }
+
+  if (objectForStudio !== saved) {
+    objectForStudio = await saveCampaignObject(conversationId, objectForStudio, {
+      supabase,
+      userId,
+      persistToDb: true,
+      saveReason: "manual",
+    });
+  }
+
+  await appendMessage(supabase, {
+    conversationId,
+    role: "assistant",
+    content:
+      "Campaign workspace synced from your quotation — creator avatars, ad types, and fees are up to date. The Media Plan calendar has been refreshed from quotation lines.",
+    metadata: buildStudioMessageMetadata(objectForStudio),
+  });
+
+  try {
+    await updateConversationContextSnapshot(
+      supabase,
+      conversationId,
+      userId,
+      attachCampaignObjectToSnapshot({}, objectForStudio)
+    );
+  } catch {
+    /* studio message carries the object */
+  }
+}
+
 /**
  * Open the Campaign Outputs workspace from a business page.
  *
@@ -46,16 +135,27 @@ export async function startCampaignOutputsFromSeed(
 ): Promise<StartCampaignOutputsResult> {
   const tab: StudioTab = input.tab ?? "outputs";
 
-  // Existing campaign — never create another one.
-  if (input.existingConversationId) {
-    return { ok: true, href: workspaceHref(input.existingConversationId, tab), reused: true };
-  }
-
   const supabase = await createSupabaseServerClient();
   const auth = await requirePermission(supabase, "ai.write");
   if ("error" in auth) return { ok: false, message: auth.error };
 
   try {
+    const seed = await resolveLaunchSeed(supabase, input);
+    const quotationId =
+      input.workspace?.type === "quotation" ? input.workspace.id : undefined;
+    const syncOptions = { quotationId };
+
+    if (input.existingConversationId) {
+      await syncSeedIntoConversation(
+        supabase,
+        input.existingConversationId,
+        seed,
+        auth.userId,
+        syncOptions
+      );
+      return { ok: true, href: workspaceHref(input.existingConversationId, tab), reused: true };
+    }
+
     // Reuse an existing workspace conversation for this source, if one exists —
     // never create a second Campaign workspace for the same business object.
     if (input.workspace?.id) {
@@ -71,6 +171,7 @@ export async function startCampaignOutputsFromSeed(
         .maybeSingle();
       const existingId = (existing as { id?: string } | null)?.id;
       if (existingId) {
+        await syncSeedIntoConversation(supabase, existingId, seed, auth.userId, syncOptions);
         return { ok: true, href: workspaceHref(existingId, tab), reused: true };
       }
     }
@@ -80,13 +181,32 @@ export async function startCampaignOutputsFromSeed(
       workspaceId: input.workspace?.id,
     });
 
-    // Hydrate the Campaign Object from the source and bind it to this conversation.
-    const hydrated = hydrateCampaignObject(input.seed);
-    const campaignObject = {
+    const hydrated = hydrateCampaignObject(seed, undefined, syncOptions);
+    let campaignObject = {
       ...hydrated.campaignObject,
+      id: randomUUID(),
       conversationId: conversation.id,
       workflowId: CREATE_CAMPAIGN_WORKFLOW_ID,
     };
+
+    campaignObject = await saveCampaignObject(conversation.id, campaignObject, {
+      supabase,
+      userId: auth.userId,
+      persistToDb: true,
+      saveReason: "manual",
+    });
+
+    if (seed.source === "quotation") {
+      ({ campaignObject } = generateCampaignOutput(campaignObject, "media_plan", {
+        origin: "automatic",
+      }));
+      campaignObject = await saveCampaignObject(conversation.id, campaignObject, {
+        supabase,
+        userId: auth.userId,
+        persistToDb: true,
+        saveReason: "manual",
+      });
+    }
 
     // Seed a single studio message so the existing Studio renders the workspace.
     await appendMessage(supabase, {

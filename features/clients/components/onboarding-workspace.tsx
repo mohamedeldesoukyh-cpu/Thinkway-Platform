@@ -22,6 +22,10 @@ import { useDebouncedAutosave, type AutosaveStatus } from "@/lib/hooks/use-debou
 import {
   CLIENT_ONBOARDING_STATUSES,
   computeOnboardingProgress,
+  deriveOnboardingStatusFromCompletion,
+  formatOnboardingProgressDetail,
+  formatOnboardingStatusProgressBadge,
+  getIncompleteOnboardingSectionLabels,
   ONBOARDING_STATUS_LABELS,
   type ClientOnboardingStatus,
   type OnboardingChecklistSection,
@@ -35,6 +39,7 @@ type OnboardingWorkspaceProps = {
   clientId: string;
   status: ClientOnboardingStatus;
   completion: OnboardingCompletionFields;
+  creditLimitActive?: boolean;
   activatedAt: string | null;
   timeline: ClientOnboardingTimelineEvent[];
   canEditChecklist: boolean;
@@ -51,10 +56,13 @@ type OnboardingWorkspaceProps = {
 
 type ChecklistState = Record<OnboardingChecklistSection, boolean>;
 
-function completionToChecklist(completion: OnboardingCompletionFields): ChecklistState {
+function completionToChecklist(
+  completion: OnboardingCompletionFields,
+  creditLimitActive: boolean
+): ChecklistState {
   return {
     legal: Boolean(completion.legal_completed_at),
-    finance: Boolean(completion.finance_completed_at),
+    finance: Boolean(completion.finance_completed_at) || !creditLimitActive,
     contracts: Boolean(completion.contracts_completed_at),
     tax: Boolean(completion.tax_completed_at),
   };
@@ -84,6 +92,7 @@ export function OnboardingWorkspace({
   clientId,
   status: initialStatus,
   completion,
+  creditLimitActive = false,
   activatedAt,
   timeline,
   canEditChecklist,
@@ -97,7 +106,7 @@ export function OnboardingWorkspace({
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [checklist, setChecklist] = useState<ChecklistState>(() =>
-    completionToChecklist(completion)
+    completionToChecklist(completion, creditLimitActive)
   );
   const [overrideStatus, setOverrideStatus] = useState<ClientOnboardingStatus>(initialStatus);
   const [overridePending, setOverridePending] = useState(false);
@@ -105,15 +114,20 @@ export function OnboardingWorkspace({
   useEffect(() => {
     setStatus(initialStatus);
     setOverrideStatus(initialStatus);
-    setChecklist(completionToChecklist(completion));
-  }, [initialStatus, completion]);
+    setChecklist(completionToChecklist(completion, creditLimitActive));
+  }, [initialStatus, completion, creditLimitActive]);
 
-  const progress = computeOnboardingProgress({
-    legal_completed_at: checklist.legal ? completion.legal_completed_at ?? new Date().toISOString() : null,
-    finance_completed_at: checklist.finance ? completion.finance_completed_at ?? new Date().toISOString() : null,
-    contracts_completed_at: checklist.contracts ? completion.contracts_completed_at ?? new Date().toISOString() : null,
-    tax_completed_at: checklist.tax ? completion.tax_completed_at ?? new Date().toISOString() : null,
-  });
+  const derivationInput = {
+    legal_completed_at: completion.legal_completed_at,
+    finance_completed_at: completion.finance_completed_at,
+    contracts_completed_at: completion.contracts_completed_at,
+    tax_completed_at: completion.tax_completed_at,
+    credit_limit_active: creditLimitActive,
+  };
+
+  const displayStatus = deriveOnboardingStatusFromCompletion(derivationInput, initialStatus);
+
+  const progress = computeOnboardingProgress(derivationInput);
 
   const saveChecklist = useCallback(
     async (payload: ChecklistState) => {
@@ -158,7 +172,7 @@ export function OnboardingWorkspace({
 
   const sectionLabels: Record<OnboardingChecklistSection, string> = {
     legal: "Legal completed",
-    finance: "Finance completed",
+    finance: creditLimitActive ? "Finance completed" : "Finance completed (not required)",
     contracts: "Contracts completed",
     tax: "Tax completed",
   };
@@ -206,6 +220,12 @@ export function OnboardingWorkspace({
         );
 
   if (platformV6) {
+    const incompleteLabels = getIncompleteOnboardingSectionLabels(progress, derivationInput);
+    const progressDetail = formatOnboardingProgressDetail(progress, derivationInput);
+    const statusBadgeLabel = formatOnboardingStatusProgressBadge(displayStatus, progress);
+    const showReadyExplanation =
+      displayStatus === "ready" && progress.percentage < 100;
+
     return (
       <div className={cn("mb-1.5", className)}>
         <div className="platform-v6-progress-bar">
@@ -216,34 +236,62 @@ export function OnboardingWorkspace({
             aria-valuenow={progress.percentage}
             aria-valuemin={0}
             aria-valuemax={100}
+            aria-label={progressDetail}
           />
         </div>
-        <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--tw-text-3,#94a3b8)]">
-          <span>Onboarding progress ↓</span>
-          <span className="platform-v6-badge platform-v6-badge-outline-green">
-            {ONBOARDING_STATUS_LABELS[status]} · {progress.percentage}%
+        <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-[var(--tw-text-3,#94a3b8)]">
+          <span className="min-w-0 truncate" title={progressDetail}>
+            {progress.percentage >= 100 ? "Onboarding complete" : progressDetail}
+          </span>
+          <span
+            className={cn(
+              "platform-v6-badge shrink-0",
+              progress.percentage >= 100
+                ? "platform-v6-badge-outline-green"
+                : "platform-v6-badge-outline-green"
+            )}
+            title={progressDetail}
+          >
+            {statusBadgeLabel}
           </span>
         </div>
+        {incompleteLabels.length > 0 ? (
+          <p className="mt-1 text-[10px] font-medium text-amber-700">
+            Still needed: {incompleteLabels.join(" · ")}
+          </p>
+        ) : null}
+        {showReadyExplanation ? (
+          <p className="mt-0.5 text-[10px] text-[var(--tw-text-3,#94a3b8)]">
+            Ready means finance is cleared. Complete remaining steps to activate fully.
+          </p>
+        ) : null}
       </div>
     );
   }
 
   const progressBar = (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted sm:h-2">
-        <div
-          className="h-full rounded-full bg-primary transition-all"
-          style={{ width: `${progress.percentage}%` }}
-          role="progressbar"
-          aria-valuenow={progress.percentage}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`${progress.percentage}% onboarding complete`}
-        />
+    <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted sm:h-2">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${progress.percentage}%` }}
+            role="progressbar"
+            aria-valuenow={progress.percentage}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={formatOnboardingProgressDetail(progress, derivationInput)}
+          />
+        </div>
+        <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
+          {progress.percentage >= 100 ? "Complete" : `${progress.percentage}%`}
+        </span>
       </div>
-      <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
-        {progress.percentage}%
-      </span>
+      {progress.percentage < 100 ? (
+        <p className="text-[11px] text-muted-foreground">
+          {formatOnboardingProgressDetail(progress, derivationInput)}
+        </p>
+      ) : null}
     </div>
   );
 
@@ -254,13 +302,15 @@ export function OnboardingWorkspace({
         compact && "gap-y-1.5"
       )}
     >
-      {progress.sections.map((section) => (
+      {progress.sections.map((section) => {
+        const financeNotRequired = section.id === "finance" && !creditLimitActive;
+        return (
         <li key={section.id} className="flex items-center gap-2 text-sm">
           {canEditChecklist ? (
             <Checkbox
               id={`onboarding-${section.id}`}
               checked={checklist[section.id]}
-              disabled={saveStatus === "saving"}
+              disabled={saveStatus === "saving" || financeNotRequired}
               onCheckedChange={(checked) =>
                 toggleSection(section.id, checked === true)
               }
@@ -268,8 +318,8 @@ export function OnboardingWorkspace({
             />
           ) : section.completed ? (
             <CheckCircle2Icon className="size-4 shrink-0 text-success" aria-hidden />
-          ) : (
-            <CircleIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            ) : (
+            <CircleIcon className="size-4 shrink-0 text-amber-600" aria-hidden />
           )}
           <Label
             htmlFor={canEditChecklist ? `onboarding-${section.id}` : undefined}
@@ -277,13 +327,14 @@ export function OnboardingWorkspace({
               "font-normal",
               section.completed || checklist[section.id]
                 ? "text-foreground"
-                : "text-muted-foreground"
+                : "font-medium text-amber-700"
             )}
           >
             {sectionLabels[section.id]}
           </Label>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 
@@ -291,7 +342,13 @@ export function OnboardingWorkspace({
     <>
       {!compact ? (
         <p className="text-xs text-muted-foreground">
-          Complete legal, finance, contracts, and tax before activating for campaigns.
+          Complete legal, finance (when credit limit is active), and tax before activating for campaigns.
+        </p>
+      ) : null}
+
+      {getIncompleteOnboardingSectionLabels(progress, derivationInput).length > 0 ? (
+        <p className="text-xs font-medium text-amber-700">
+          Still needed: {getIncompleteOnboardingSectionLabels(progress, derivationInput).join(" · ")}
         </p>
       ) : null}
 
@@ -380,7 +437,7 @@ export function OnboardingWorkspace({
                 </div>
                 <div className="flex items-center gap-2">
                   {canEditChecklist ? <SaveIndicator status={saveStatus} /> : null}
-                  <OnboardingStatusBadge status={status} />
+                  <OnboardingStatusBadge status={displayStatus} />
                 </div>
               </div>
               {progressBar}
@@ -410,13 +467,13 @@ export function OnboardingWorkspace({
           </h3>
           {!compact ? (
             <p className="text-xs text-muted-foreground">
-              Complete legal, finance, contracts, and tax before activating for campaigns.
+              Complete legal, finance (when credit limit is active), and tax before activating for campaigns.
             </p>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
           {canEditChecklist ? <SaveIndicator status={saveStatus} /> : null}
-          <OnboardingStatusBadge status={status} />
+          <OnboardingStatusBadge status={displayStatus} />
         </div>
       </div>
 

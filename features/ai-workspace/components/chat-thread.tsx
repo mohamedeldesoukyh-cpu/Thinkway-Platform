@@ -37,6 +37,7 @@ type ChatThreadProps = {
     messageId: string,
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  onSlateUpdated?: (messageId: string, campaignObject: Record<string, unknown>) => void;
   onEditMessage?: (messageId: string, newContent: string) => void;
   onRetryMessage?: (message: AiMessage) => void;
   onDeleteMessage?: (messageId: string) => void;
@@ -57,6 +58,7 @@ export function ChatThread({
   onEditCancel,
   onCardUpdated,
   onVendorDecisionsUpdated,
+  onSlateUpdated,
   onEditMessage,
   onRetryMessage,
   onDeleteMessage,
@@ -198,6 +200,7 @@ export function ChatThread({
             studioInSidePanel={studioInSidePanel}
             onCardUpdated={onCardUpdated}
             onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+            onSlateUpdated={onSlateUpdated}
             onEdit={() => onEditStart?.(message.id)}
             onEditSave={(content) => {
               onEditCancel?.();
@@ -261,6 +264,7 @@ const MessageBubble = memo(function MessageBubble({
   studioInSidePanel,
   onCardUpdated,
   onVendorDecisionsUpdated,
+  onSlateUpdated,
   onEdit,
   onEditSave,
   onEditCancel,
@@ -279,6 +283,7 @@ const MessageBubble = memo(function MessageBubble({
     messageId: string,
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  onSlateUpdated?: (messageId: string, campaignObject: Record<string, unknown>) => void;
   onEdit?: () => void;
   onEditSave?: (content: string) => void;
   onEditCancel?: () => void;
@@ -429,6 +434,9 @@ const MessageBubble = memo(function MessageBubble({
           }
           onVendorDecisionsUpdated={(decisions) =>
             onVendorDecisionsUpdated?.(message.id, decisions)
+          }
+          onSlateUpdated={(campaignObject) =>
+            onSlateUpdated?.(message.id, campaignObject)
           }
         />
         <MessageActions

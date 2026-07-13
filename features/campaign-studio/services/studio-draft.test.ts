@@ -149,7 +149,7 @@ test("applying removals filters ids, reasoning, and fit scores, and clears the d
   );
   assert.deepEqual(Object.keys(data.recommendations?.creatorFitScores ?? {}), ["inf:a"]);
   assert.equal(data.studioDraft, undefined);
-  assert.deepEqual(result.removedCreatorIds, ["b"]);
+  assert.deepEqual(result.removedCreatorIds, ["inf:b"]);
   assert.equal(result.unappliedChanges.length, 0);
 });
 
@@ -185,7 +185,7 @@ test("apply handles removals and additions together and clears refresh markers",
 
   const added = data.recommendations?.selectedReasoning?.find((r) => r.creatorId === "inf:z");
   assert.ok(added, "added creator gets a reasoning entry");
-  assert.equal(added?.expectedRole, "Macro");
+  assert.equal(added?.expectedRole, "Mega");
 });
 
 test("apply skips additions that duplicate the existing slate", () => {
@@ -229,4 +229,26 @@ test("enrichment status transitions update only the targeted staged addition", (
     "enriched"
   );
   assert.ok(draftChangeForCreator(draft, "other"));
+});
+
+test("apply commits shortlist_creator vendor decision and linked shortlist id", () => {
+  const base = objectWithCreators({
+    recommendations: { creatorIds: ["inf:a"] },
+    studioDraft: {
+      changes: [
+        {
+          kind: "shortlist_creator",
+          creatorId: "inf:a",
+          linkedShortlistId: "sl-99",
+          stagedAt: NOW,
+        },
+      ],
+      updatedAt: NOW,
+    },
+  });
+
+  const result = applyStudioDraftChanges(base);
+  const data = result.campaignObject.sections.creators.data as CreatorsSectionData;
+  assert.equal(data.vendorDecisions?.["inf:a"], "shortlisted");
+  assert.equal(data.linkedShortlistId, "sl-99");
 });

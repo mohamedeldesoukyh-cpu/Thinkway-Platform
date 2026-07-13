@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -52,6 +53,7 @@ export function ClientAddBrandDialog({
   onOpenChange,
   formId = "client-add-brand-form",
 }: ClientAddBrandDialogProps) {
+  const router = useRouter();
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const clientVrRateId = client.vr_rate_id ?? null;
 
@@ -84,10 +86,12 @@ export function ClientAddBrandDialog({
     if (state.ok) {
       toast.success(state.message);
       resetForm();
+      onOpenChange(false);
+      router.refresh();
       return;
     }
     toast.error(state.message);
-  }, [state]);
+  }, [state, onOpenChange, router]);
 
   useEffect(() => {
     if (!open) return;
@@ -106,6 +110,11 @@ export function ClientAddBrandDialog({
             overview unless overridden.
           </DialogDescription>
         </DialogHeader>
+        {!state.ok && state.message ? (
+          <p className="rounded-[10px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            {state.message}
+          </p>
+        ) : null}
         <form id={formId} action={formAction} className="grid gap-4">
           <input type="hidden" name="client_id" value={client.id} />
           <input type="hidden" name="vr_rate_id" value={vrRateId} />

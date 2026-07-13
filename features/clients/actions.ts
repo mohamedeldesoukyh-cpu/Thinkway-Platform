@@ -20,7 +20,12 @@ import {
   friendlyClientDocumentError,
   toJsonSafeFormActionState,
 } from "@/lib/clients/client-document-utils";
+import { assessClientLegalReadiness } from "@/lib/clients/legal-readiness";
 import { persistClientDocumentUpload } from "@/lib/clients/persist-client-document-upload";
+import { tryCompleteLegalOnboarding } from "@/lib/clients/try-complete-legal-onboarding";
+import { tryCompleteTaxOnboarding } from "@/lib/clients/try-complete-tax-onboarding";
+import { tryCompleteFinanceOnboarding } from "@/lib/clients/try-complete-finance-onboarding";
+import type { ClientOnboardingStatus } from "@/lib/clients/onboarding-status";
 import type { AgencyOrDirect, ClientDocumentRow, PaymentTerms } from "@/types/database";
 
 import {
@@ -33,11 +38,21 @@ import {
 } from "./schemas";
 import { parseTermsText, serializeTermsText } from "@/lib/io/client-io-terms";
 
+export type ClientOverviewSavePatch = {
+  group_id: string | null;
+  group: { id: string; name: string; document_number: string } | null;
+  updated_at: string;
+};
+
 export type FormActionState = {
   ok: boolean;
   message?: string;
   fieldErrors?: Record<string, string[]>;
   document?: ClientDocumentRow;
+  /** Fresh persisted overview fields returned after a successful overview save. */
+  clientPatch?: ClientOverviewSavePatch;
+  legalReadiness?: { complete: boolean; missing: string[] };
+  onboardingStatus?: ClientOnboardingStatus;
 };
 
 export type CreateClientFormState = FormActionState & { clientId?: string };
@@ -335,7 +350,94 @@ export async function updateClientOverviewAction(
     revalidatePath(`/groups/${fields.group_id}`);
   }
 
-  return { ok: true, message: "Overview saved." };
+  const { refreshed, refreshError } = await fetchSavedClientOverviewPatch(
+    supabase,
+    client_id
+  );
+
+  if (refreshError) {
+    console.warn(
+      `[clients] overview saved but post-save reload failed for ${client_id}:`,
+      refreshError.message
+    );
+  }
+
+  return {
+    ok: true,
+    message: "Overview saved.",
+    clientPatch: refreshed,
+  };
+}
+
+async function fetchSavedClientOverviewPatch(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  clientId: string
+): Promise<{ refreshed?: ClientOverviewSavePatch; refreshError?: { message: string } }> {
+  const groupSelects = [
+    "group_id, updated_at, group:groups(id, name, document_number)",
+    "group_id, updated_at, group:groups(id, name)",
+  ] as const;
+
+  for (const select of groupSelects) {
+    const { data, error } = await supabase
+      .from("clients")
+      .select(select)
+      .eq("id", clientId)
+      .maybeSingle();
+
+    if (error) {
+      const isMissingGroupDocumentNumber =
+        select.includes("document_number") &&
+        error.message.toLowerCase().includes("document_number");
+      if (isMissingGroupDocumentNumber) {
+        continue;
+      }
+      return { refreshError: error };
+    }
+
+    if (!data) {
+      return { refreshError: { message: "Client not found after save." } };
+    }
+
+    const embeddedGroup = data.group as unknown as
+      | { id: string; name: string; document_number?: string }
+      | null
+      | undefined;
+
+    return {
+      refreshed: {
+        group_id: data.group_id ?? embeddedGroup?.id ?? null,
+        group: embeddedGroup?.id
+          ? {
+              id: embeddedGroup.id,
+              name: embeddedGroup.name,
+              document_number: embeddedGroup.document_number ?? "",
+            }
+          : null,
+        updated_at: data.updated_at,
+      },
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select("group_id, updated_at")
+    .eq("id", clientId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return {
+      refreshError: error ?? { message: "Client not found after save." },
+    };
+  }
+
+  return {
+    refreshed: {
+      group_id: data.group_id,
+      group: null,
+      updated_at: data.updated_at,
+    },
+  };
 }
 
 export async function updateClientLegalAction(
@@ -354,9 +456,9 @@ export async function updateClientLegalAction(
     };
   }
 
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { ok: false, message: authError };
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "You must be signed in to continue." };
   }
 
   const legal_address = {
@@ -383,9 +485,59 @@ export async function updateClientLegalAction(
     return { ok: false, message: error.message };
   }
 
-  revalidatePath(`/clients/${parsed.data.client_id}`);
+  const { data: documents } = await supabase
+    .from("client_documents")
+    .select("document_type")
+    .eq("client_id", parsed.data.client_id);
 
-  return { ok: true, message: "Legal & compliance saved." };
+  const legalReadiness = assessClientLegalReadiness({
+    trade_license_number: emptyToNull(parsed.data.trade_license_number),
+    trade_license_expiry: parsed.data.trade_license_expiry,
+    vat_number: emptyToNull(parsed.data.vat_number),
+    legal_address,
+    documentTypes: (documents ?? []).map((doc) => doc.document_type),
+  });
+
+  const onboardingResult = legalReadiness.complete
+    ? await tryCompleteLegalOnboarding({
+        supabase,
+        clientId: parsed.data.client_id,
+        userId: user.id,
+      })
+    : { completed: false as const };
+
+  const taxOnboardingResult = await tryCompleteTaxOnboarding({
+    supabase,
+    clientId: parsed.data.client_id,
+    userId: user.id,
+  });
+
+  revalidatePath(`/clients/${parsed.data.client_id}`);
+  revalidatePath("/clients");
+
+  const advancedStatus =
+    taxOnboardingResult.onboardingStatus ?? onboardingResult.onboardingStatus;
+
+  const message = onboardingResult.completed
+    ? advancedStatus === "ready"
+      ? "Legal saved. Onboarding advanced to Ready."
+      : advancedStatus === "active"
+        ? "Legal saved. Onboarding is now Active."
+        : "Legal saved. Onboarding advanced to Finance pending."
+    : taxOnboardingResult.completed
+      ? advancedStatus === "active"
+        ? "Legal saved. Onboarding is now Active."
+        : "Legal saved. Tax requirements met."
+      : legalReadiness.complete
+        ? "Legal saved."
+        : "Legal saved. Complete the missing items below to advance onboarding.";
+
+  return {
+    ok: true,
+    message,
+    legalReadiness,
+    onboardingStatus: advancedStatus,
+  };
 }
 
 export async function updateClientFinanceAction(
@@ -404,9 +556,9 @@ export async function updateClientFinanceAction(
     };
   }
 
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { ok: false, message: authError };
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "You must be signed in to continue." };
   }
 
   const { error } = await updateClientWithOptionalColumnRetry(
@@ -428,10 +580,23 @@ export async function updateClientFinanceAction(
     return { ok: false, message: error.message };
   }
 
+  const onboardingResult = !parsed.data.credit_limit_active
+    ? await tryCompleteFinanceOnboarding({
+        supabase,
+        clientId: parsed.data.client_id,
+        userId: user.id,
+      })
+    : { completed: false as const };
+
   revalidatePath(`/clients/${parsed.data.client_id}`);
+  revalidatePath("/clients");
   revalidatePath("/finance/credit-limit");
 
-  return { ok: true, message: "Finance settings saved." };
+  const message = onboardingResult.completed
+    ? "Finance settings saved. Onboarding advanced to Ready."
+    : "Finance settings saved.";
+
+  return { ok: true, message };
 }
 
 export async function updateClientCreditLimitAction(
@@ -450,9 +615,9 @@ export async function updateClientCreditLimitAction(
     };
   }
 
-  const { supabase, error: authError } = await requireAuthUser();
-  if (authError) {
-    return { ok: false, message: authError };
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "You must be signed in to continue." };
   }
 
   const { error } = await updateClientWithOptionalColumnRetry(
@@ -469,10 +634,23 @@ export async function updateClientCreditLimitAction(
     return { ok: false, message: error.message };
   }
 
+  const onboardingResult = !parsed.data.credit_limit_active
+    ? await tryCompleteFinanceOnboarding({
+        supabase,
+        clientId: parsed.data.client_id,
+        userId: user.id,
+      })
+    : { completed: false as const };
+
   revalidatePath(`/clients/${parsed.data.client_id}`);
+  revalidatePath("/clients");
   revalidatePath("/finance/credit-limit");
 
-  return { ok: true, message: "Credit limit saved." };
+  const message = onboardingResult.completed
+    ? "Credit limit saved. Onboarding advanced to Ready."
+    : "Credit limit saved.";
+
+  return { ok: true, message };
 }
 
 export async function uploadClientDocumentAction(

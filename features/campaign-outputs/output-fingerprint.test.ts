@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { computeSourceFingerprint } from "./output-fingerprint";
 import { buildCampaignObjectFixture } from "./output-test-fixture";
+import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 
 test("same inputs produce a stable fingerprint", () => {
   const a = buildCampaignObjectFixture();
@@ -63,5 +64,18 @@ test("creator fingerprint is stable across slate reordering", () => {
   assert.equal(
     computeSourceFingerprint(forward, ["creators"]),
     computeSourceFingerprint(reversed, ["creators"])
+  );
+});
+
+test("changing quotation ad type on a creator changes the creators fingerprint", () => {
+  const before = buildCampaignObjectFixture();
+  const after = buildCampaignObjectFixture();
+  const data = after.sections.creators?.data as CreatorsSectionData;
+  const reasoning = data.recommendations?.selectedReasoning ?? [];
+  if (reasoning[0]) reasoning[0].serviceLabel = "2× IG Reel";
+
+  assert.notEqual(
+    computeSourceFingerprint(before, ["creators"]),
+    computeSourceFingerprint(after, ["creators"])
   );
 });

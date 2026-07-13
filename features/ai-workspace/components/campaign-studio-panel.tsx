@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { LayersIcon, LayoutDashboardIcon, SparklesIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -11,9 +11,10 @@ import { StudioOutputsView } from "@/features/campaign-outputs/components/studio
 
 import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
 
-import type { AiActionCard, AiMessage } from "../types";
+import type { AiActionCard, AiMessage, ConversationListItem } from "../types";
 import { CampaignHistoryPanel } from "./campaign-history-panel";
 import { findLatestStudioMessage } from "./campaign-studio-panel-utils";
+import { StudioConversationControls } from "./studio-conversation-controls";
 import { toWorkflowDisplayMetadata } from "./workflow-dashboard-panel";
 
 type StudioView = "studio" | "outputs" | "director";
@@ -34,8 +35,11 @@ type CampaignStudioPanelProps = {
     messageId: string,
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  onSlateUpdated?: (messageId: string, campaignObject: Record<string, unknown>) => void;
   /** Restore sends a Copilot message through the normal chat flow. */
   onSendMessage?: (message: string) => void;
+  /** True while the Copilot is streaming a response. */
+  isCopilotStreaming?: boolean;
   /** Studio card id currently selected as the "this section" edit target. */
   focusedSectionId?: string;
   onFocusSection?: (sectionId?: string) => void;
@@ -43,6 +47,13 @@ type CampaignStudioPanelProps = {
   variant?: "main" | "side";
   /** Deep-link target: open directly to Studio / Outputs / Director. */
   initialView?: StudioView;
+  /** Campaign Mode — switch chats without leaving the Studio shell. */
+  conversations?: ConversationListItem[];
+  conversationsLoading?: boolean;
+  conversationsError?: string | null;
+  onSelectConversation?: (id: string) => void;
+  onNewChat?: () => void;
+  onRefreshConversations?: () => void;
 };
 
 /** Sections the Copilot can author — clicking one sets "this section" for the next message. */
@@ -64,17 +75,27 @@ export function CampaignStudioPanel({
   conversationId,
   onCardUpdated,
   onVendorDecisionsUpdated,
+  onSlateUpdated,
   onSendMessage,
+  isCopilotStreaming,
   focusedSectionId,
   onFocusSection,
   variant = "side",
   initialView,
+  conversations,
+  conversationsLoading,
+  conversationsError,
+  onSelectConversation,
+  onNewChat,
+  onRefreshConversations,
 }: CampaignStudioPanelProps) {
   const display = useMemo(
     () => toWorkflowDisplayMetadata(message.metadata),
     [message.id, message.metadata]
   );
   const [view, setView] = useState<StudioView>(initialView ?? "studio");
+  const noopSendMessage = useCallback(() => {}, []);
+  const sendMessage = onSendMessage ?? noopSendMessage;
 
   if (!display.campaignObject) return null;
 
@@ -94,28 +115,41 @@ export function CampaignStudioPanel({
     >
       {/* Workspace navigation — Studio / Outputs Center / Director, all reading the
           same Campaign Object. Integrated into the panel, not a separate app shell. */}
-      <div className="flex items-center gap-1 border-b border-border/60 px-3 py-2">
-        {STUDIO_TABS.map((tab) => {
-          const active = view === tab.id;
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setView(tab.id)}
-              aria-pressed={active}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
-                active
-                  ? "bg-[#1D9E75]/10 text-[#1D9E75]"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-              )}
-            >
-              <Icon className="size-3.5" />
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+        <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+          {STUDIO_TABS.map((tab) => {
+            const active = view === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setView(tab.id)}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
+                  active
+                    ? "bg-[#1D9E75]/10 text-[#1D9E75]"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                )}
+              >
+                <Icon className="size-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        {variant === "main" && onNewChat && onSelectConversation && conversations ? (
+          <StudioConversationControls
+            conversations={conversations}
+            loading={conversationsLoading}
+            error={conversationsError}
+            activeId={conversationId}
+            onSelect={onSelectConversation}
+            onNewChat={onNewChat}
+            onRefresh={onRefreshConversations}
+          />
+        ) : null}
       </div>
 
       {view === "studio" ? (
@@ -167,6 +201,9 @@ export function CampaignStudioPanel({
               onVendorDecisionsUpdated={(decisions) =>
                 onVendorDecisionsUpdated?.(message.id, decisions)
               }
+              onSlateUpdated={(campaignObject) =>
+                onSlateUpdated?.(message.id, campaignObject)
+              }
             />
           </div>
           {campaignObjectId ? (
@@ -180,29 +217,38 @@ export function CampaignStudioPanel({
           ) : null}
         </>
       ) : view === "outputs" ? (
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <div className="space-y-3 border-b border-border/60 px-4 py-3">
-            <GenerateCampaignLauncher
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="shrink-0 border-b border-border/60 px-3 py-2">
+            <div className="overflow-hidden rounded-lg border border-border bg-background divide-y divide-border md:grid md:grid-cols-2 md:divide-x md:divide-y-0">
+              <GenerateCampaignLauncher
+                campaignObject={display.campaignObject}
+                conversationId={conversationId}
+                variant="compact"
+              />
+              <GenerateQuotationLauncher
+                campaignObject={display.campaignObject}
+                conversationId={conversationId}
+                variant="compact"
+                showLifecycleHint={false}
+              />
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <StudioOutputsView
               campaignObject={display.campaignObject}
               conversationId={conversationId}
-            />
-            <GenerateQuotationLauncher
-              campaignObject={display.campaignObject}
-              conversationId={conversationId}
+              mode="outputs"
+              onSendMessage={sendMessage}
+              isCopilotStreaming={isCopilotStreaming}
             />
           </div>
-          <StudioOutputsView
-            campaignObject={display.campaignObject}
-            mode="outputs"
-            onSendMessage={onSendMessage ?? (() => {})}
-          />
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <StudioOutputsView
             campaignObject={display.campaignObject}
             mode="director"
-            onSendMessage={onSendMessage ?? (() => {})}
+            onSendMessage={sendMessage}
           />
         </div>
       )}

@@ -170,7 +170,7 @@ export function ClientBrandsTab({
   onGoToOverview,
 }: ClientBrandsTabProps) {
   const platformV6 = useClientProfilePlatformV6();
-  const hasGroup = Boolean(client.group_id ?? client.group?.id);
+  const savedGroupId = client.group_id ?? client.group?.id ?? null;
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [editing, setEditing] = useState<GroupBrandRow | null>(null);
@@ -230,7 +230,6 @@ export function ClientBrandsTab({
       type="button"
       className="platform-v6-btn platform-v6-btn-primary platform-v6-btn-sm"
       onClick={openAddBrandDialog}
-      disabled={!hasGroup}
     >
       + Add new brand
     </button>
@@ -239,7 +238,6 @@ export function ClientBrandsTab({
       type="button"
       className={CLIENT_FORM_PRIMARY_BUTTON_CLASS}
       onClick={openAddBrandDialog}
-      disabled={!hasGroup}
     >
       <PlusIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
       Add new brand
@@ -265,7 +263,7 @@ export function ClientBrandsTab({
         onCancel={onCancel}
       >
         <div className={cn(!platformV6 && "grid gap-[18px]")}>
-          {!hasGroup ? (
+          {!savedGroupId ? (
             <div
               className={cn(
                 platformV6
@@ -273,10 +271,10 @@ export function ClientBrandsTab({
                   : "rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950"
               )}
             >
-              <p className="font-medium">Group required before adding brands</p>
+              <p className="font-medium">No holding group linked</p>
               <p className="mt-1 text-[12px] text-amber-900/80">
-                Link this legal entity to a holding group on the Overview tab, then
-                return here to add brands.
+                You can add brands without a holding group. If this legal entity belongs to
+                one, link it on the Overview tab for group-level reporting.
               </p>
               {onGoToOverview ? (
                 <button
@@ -308,7 +306,7 @@ export function ClientBrandsTab({
               description="Manage brands, VR overrides, and status for this legal entity."
               toolbar={portfolioToolbar}
               bodyClassName={platformV6 ? "platform-v6-wide-form-body-table" : undefined}
-              footer={hasGroup ? portfolioFooter : undefined}
+              footer={portfolioFooter}
             >
               {client.brands.length === 0 ? (
                 <div
@@ -323,16 +321,24 @@ export function ClientBrandsTab({
                   >
                     No brands yet for this legal entity.
                   </p>
-                  {hasGroup && !platformV6 ? (
-                    <button
-                      type="button"
-                      className={CLIENT_FORM_SECONDARY_BUTTON_CLASS}
-                      onClick={openAddBrandDialog}
-                    >
-                      <PlusIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
-                      Add new brand
-                    </button>
-                  ) : null}
+                  <button
+                    type="button"
+                    className={
+                      platformV6
+                        ? "platform-v6-btn platform-v6-btn-sm mt-3"
+                        : CLIENT_FORM_SECONDARY_BUTTON_CLASS
+                    }
+                    onClick={openAddBrandDialog}
+                  >
+                    {platformV6 ? (
+                      "+ Add new brand"
+                    ) : (
+                      <>
+                        <PlusIcon className="size-[15px]" strokeWidth={2.2} aria-hidden />
+                        Add new brand
+                      </>
+                    )}
+                  </button>
                 </div>
               ) : (
                 <div
@@ -354,15 +360,13 @@ export function ClientBrandsTab({
         </div>
       </ClientProfileTabShell>
 
-      {hasGroup ? (
-        <ClientAddBrandDialog
-          client={client}
-          masterData={masterData}
-          open={addDialogOpen}
-          onOpenChange={setAddDialogOpen}
-          formId={CLIENT_ADD_BRAND_FORM_ID}
-        />
-      ) : null}
+      <ClientAddBrandDialog
+        client={client}
+        masterData={masterData}
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        formId={CLIENT_ADD_BRAND_FORM_ID}
+      />
 
       <BrandSheet
         legalEntities={[legalEntity]}

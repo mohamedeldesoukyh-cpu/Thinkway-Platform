@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-
 import {
   PlatformV6EntityBreadcrumb,
   platformV6BadgeClass,
@@ -31,10 +30,12 @@ import type { ClientDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import {
+  deriveOnboardingStatusFromCompletion,
   isClientOnboardingStatus,
   ONBOARDING_STATUS_LABELS,
   type ClientOnboardingStatus,
 } from "@/lib/clients/onboarding-status";
+import { computeClientProfileTabMissingCounts } from "@/lib/clients/client-profile-readiness";
 
 import { ClientProfileTabShell, ClientProfilePlatformProvider } from "./client-form-ui";
 import { ClientAccessTab } from "./tabs/client-access-tab";
@@ -45,7 +46,7 @@ import { ClientFinanceTab } from "./tabs/client-finance-tab";
 import { ClientLegalTab } from "./tabs/client-legal-tab";
 import { ClientOverviewTab } from "./tabs/client-overview-tab";
 import { OnboardingWorkspace } from "./onboarding-workspace";
-
+import type { ClientOverviewSavePatch } from "@/features/clients/actions";
 type ClientProfileProps = {
   client: ClientDetail;
   groups: { id: string; name: string; document_number: string }[];
@@ -81,7 +82,17 @@ function resolveEntityStatusBadge(client: ClientDetail): {
   className: string;
 } {
   if (isClientOnboardingStatus(client.onboarding_status)) {
-    const status = client.onboarding_status as ClientOnboardingStatus;
+    const storedStatus = client.onboarding_status as ClientOnboardingStatus;
+    const status = deriveOnboardingStatusFromCompletion(
+      {
+        legal_completed_at: client.legal_completed_at,
+        finance_completed_at: client.finance_completed_at,
+        contracts_completed_at: client.contracts_completed_at,
+        tax_completed_at: client.tax_completed_at,
+        credit_limit_active: client.credit_limit_active ?? false,
+      },
+      storedStatus
+    );
     if (status === "active") {
       return { label: ONBOARDING_STATUS_LABELS.active, className: platformV6BadgeClass("outline-green") };
     }
@@ -118,35 +129,57 @@ export function ClientProfile({
 }: ClientProfileProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ClientProfileTabId>("overview");
+  const [clientRecord, setClientRecord] = useState(client);
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
-  const { tabOrder } = useWorkspaceTabOrder({
+
+  useEffect(() => {
+    setClientRecord(client);
+  }, [client]);
+
+  const applyClientPatch = useCallback((patch: ClientOverviewSavePatch) => {
+    setClientRecord((current) => ({
+      ...current,
+      group_id: patch.group_id,
+      group: patch.group,
+      updated_at: patch.updated_at,
+    }));
+  }, []);  const { tabOrder } = useWorkspaceTabOrder({
     storageKey: CLIENT_PROFILE_TAB_STORAGE_KEY,
     defaultOrder: CLIENT_PROFILE_TAB_ORDER,
     isValidId: isClientProfileTabId,
   });
 
   const handleCancel = () => router.push("/clients");
-  const entityBadge = resolveEntityStatusBadge(client);
-
+  const entityBadge = resolveEntityStatusBadge(clientRecord);
+  const tabMissingCounts = useMemo(
+    () => computeClientProfileTabMissingCounts(clientRecord),
+    [clientRecord]
+  );
   const tabsById = useMemo(
     (): Record<ClientProfileTabId, OperationalWorkspaceTabDef> => ({
-      overview: { value: "overview", label: "Overview" },
-      brands: { value: "brands", label: "Brands", count: client.brands.length },
-      legal: { value: "legal", label: "Legal" },
-      finance: { value: "finance", label: "Finance" },
+      overview: {
+        value: "overview",
+        label: "Overview",
+        count: tabMissingCounts.overview,
+      },
+      brands: {
+        value: "brands",
+        label: "Brands",
+        count: tabMissingCounts.brands,
+      },
+      legal: { value: "legal", label: "Legal", count: tabMissingCounts.legal },
+      finance: { value: "finance", label: "Finance", count: tabMissingCounts.finance },
       "client-ios": {
         value: "client-ios",
         label: "Client IO",
-        count: clientIos.length,
       },
       campaigns: {
         value: "campaigns",
         label: "Campaign history",
-        count: client.campaigns.length,
       },
       access: { value: "access", label: "Client access" },
     }),
-    [client.brands.length, clientIos.length, client.campaigns.length]
+    [tabMissingCounts]
   );
 
   const tabPanelClassName =
@@ -157,23 +190,24 @@ export function ClientProfile({
       <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientOverviewTab
-            client={client}
+            client={clientRecord}
             groups={groups}
             masterData={masterData}
             onCancel={handleCancel}
             shortcutsEnabled={activeTab === "overview"}
+            onClientPatch={applyClientPatch}
             onboardingSlot={
               <OnboardingWorkspace
-                clientId={client.id}
-                status={client.onboarding_status}
+                clientId={clientRecord.id}
+                status={clientRecord.onboarding_status}
+                creditLimitActive={clientRecord.credit_limit_active ?? false}
                 completion={{
-                  legal_completed_at: client.legal_completed_at,
-                  finance_completed_at: client.finance_completed_at,
-                  contracts_completed_at: client.contracts_completed_at,
-                  tax_completed_at: client.tax_completed_at,
+                  legal_completed_at: clientRecord.legal_completed_at,
+                  finance_completed_at: clientRecord.finance_completed_at,
+                  contracts_completed_at: clientRecord.contracts_completed_at,
+                  tax_completed_at: clientRecord.tax_completed_at,
                 }}
-                activatedAt={client.activated_at ?? null}
-                timeline={onboardingTimeline}
+                activatedAt={clientRecord.activated_at ?? null}                timeline={onboardingTimeline}
                 canEditChecklist={canEditOnboardingChecklist}
                 canOverrideStatus={canOverrideOnboardingStatus}
                 platformV6
@@ -185,7 +219,7 @@ export function ClientProfile({
       <OperationalWorkspaceTabContent value="brands" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientBrandsTab
-            client={client}
+            client={clientRecord}
             masterData={masterData}
             onCancel={handleCancel}
             shortcutsEnabled={activeTab === "brands"}
@@ -196,7 +230,7 @@ export function ClientProfile({
       <OperationalWorkspaceTabContent value="legal" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientLegalTab
-            client={client}
+            client={clientRecord}
             onCancel={handleCancel}
             shortcutsEnabled={activeTab === "legal"}
           />
@@ -205,7 +239,7 @@ export function ClientProfile({
       <OperationalWorkspaceTabContent value="finance" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientFinanceTab
-            client={client}
+            client={clientRecord}
             currencyOptions={currencyOptions}
             onCancel={handleCancel}
             shortcutsEnabled={activeTab === "finance"}
@@ -215,9 +249,9 @@ export function ClientProfile({
       <OperationalWorkspaceTabContent value="client-ios" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ClientClientIosTab
-            clientId={client.id}
-            clientName={client.name}
-            clientIoTermsText={client.client_io_terms_text}
+            clientId={clientRecord.id}
+            clientName={clientRecord.name}
+            clientIoTermsText={clientRecord.client_io_terms_text}
             rows={clientIos}
             recipients={clientIoRecipients}
             onCancel={handleCancel}
@@ -226,7 +260,7 @@ export function ClientProfile({
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="campaigns" className={tabPanelClassName}>
         <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <ClientCampaignsTab client={client} onCancel={handleCancel} />
+          <ClientCampaignsTab client={clientRecord} onCancel={handleCancel} />
         </OperationalWorkspaceTabPanel>
       </OperationalWorkspaceTabContent>
       <OperationalWorkspaceTabContent value="access" className={tabPanelClassName}>
@@ -260,8 +294,7 @@ export function ClientProfile({
       >
         <div className="platform-v6-entity-nav-bar">
           <div className="platform-v6-entity-nav-inner">
-            <span className="platform-v6-entity-title">{client.name}</span>
-            <span className={entityBadge.className}>{entityBadge.label}</span>
+            <span className="platform-v6-entity-title">{clientRecord.name}</span>            <span className={entityBadge.className}>{entityBadge.label}</span>
             <span className="platform-v6-also-view">Also View</span>
           </div>
           <div className="platform-v6-entity-tabs-row" role="tablist">
@@ -278,7 +311,7 @@ export function ClientProfile({
                   className={cn("platform-v6-etab", isActive && "active")}
                 >
                   {tab.label}
-                  {tab.count != null ? ` (${tab.count})` : ""}
+                  {tab.count != null && tab.count > 0 ? ` (${tab.count})` : ""}
                 </button>
               );
             })}

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canGenerateFromCampaignPlan } from "@/lib/domains/commercial/campaign-plan-provenance";
+import { resolveCampaignObjectHead } from "@/lib/domains/commercial/resolve-campaign-object-head";
 import { generateCampaignFromCampaignPlan } from "@/lib/services/campaigns/generate-campaign-from-campaign-plan";
 
 const generateCampaignSchema = z.object({
@@ -40,19 +41,15 @@ export type CampaignPlanExecutionContext = {
 export async function getCampaignPlanExecutionContext(input: {
   campaignObjectId: string;
   conversationId?: string;
-}): Promise<CampaignPlanExecutionContext | { error: string }> {
+}): Promise<CampaignPlanExecutionContext | { error: string } | null> {
   const supabase = await createSupabaseServerClient();
   const auth = await requirePermission(supabase, "campaigns.read");
   if ("error" in auth) return { error: auth.error };
 
-  const { data: head, error } = await supabase
-    .from("campaign_objects")
-    .select("id, lifecycle_status, conversation_id, campaign_header_id")
-    .eq("id", input.campaignObjectId)
-    .maybeSingle();
-
-  if (error) return { error: error.message };
-  if (!head) return { error: "Campaign Plan not found." };
+  const resolved = await resolveCampaignObjectHead(supabase, input);
+  if (resolved.error) return { error: resolved.error };
+  const head = resolved.head;
+  if (!head) return null;
 
   let existingCampaign: CampaignPlanExecutionContext["existingCampaign"] = null;
   if (head.campaign_header_id) {
@@ -71,7 +68,7 @@ export async function getCampaignPlanExecutionContext(input: {
     const { data: byProvenance } = await supabase
       .from("campaign_headers")
       .select("id, document_number")
-      .eq("campaign_object_id", input.campaignObjectId)
+      .eq("campaign_object_id", head.id)
       .maybeSingle();
     if (byProvenance) {
       existingCampaign = {

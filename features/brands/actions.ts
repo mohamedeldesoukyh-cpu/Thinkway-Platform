@@ -59,7 +59,7 @@ function revalidateBrandPaths(clientId: string, groupId: string | null) {
 }
 
 type ClientBrandContext = {
-  group_id: string;
+  group_id: string | null;
   vr_rate_id: string | null;
 };
 
@@ -99,12 +99,6 @@ async function fetchClientBrandContext(
       if (!fallback) {
         return { ok: false, message: "Legal entity not found." };
       }
-      if (!fallback.group_id) {
-        return {
-          ok: false,
-          message: "Client must belong to a group before adding brands.",
-        };
-      }
 
       const vrRateId = await fetchClientVrRateIdSafe(supabase, clientId);
       if (vrRateId.error) {
@@ -113,7 +107,7 @@ async function fetchClientBrandContext(
 
       return {
         ok: true,
-        client: { group_id: fallback.group_id, vr_rate_id: vrRateId.value },
+        client: { group_id: fallback.group_id ?? null, vr_rate_id: vrRateId.value },
       };
     }
 
@@ -124,13 +118,7 @@ async function fetchClientBrandContext(
     return { ok: false, message: "Legal entity not found." };
   }
 
-  const groupId = clientRow.group_id ?? embeddedGroupId(clientRow.group);
-  if (!groupId) {
-    return {
-      ok: false,
-      message: "Client must belong to a group before adding brands.",
-    };
-  }
+  const groupId = clientRow.group_id ?? embeddedGroupId(clientRow.group) ?? null;
 
   const vrRateId = await fetchClientVrRateIdSafe(supabase, clientId);
   if (vrRateId.error) {
@@ -191,7 +179,7 @@ export async function createBrandAction(
 
   const { error } = await supabase.from("brands").insert({
     client_id: parsed.data.client_id,
-    group_id: client.group_id,
+    group_id: client.group_id ?? undefined,
     name: parsed.data.name,
     category_id: emptyToNull(parsed.data.category_id),
     subcategory_id: emptyToNull(parsed.data.subcategory_id),
@@ -245,13 +233,7 @@ export async function updateBrandAction(
 
   const clientResult = await fetchClientBrandContext(supabase, parsed.data.client_id);
   if (!clientResult.ok) {
-    return {
-      ok: false,
-      message:
-        clientResult.message === "Client must belong to a group before adding brands."
-          ? "Invalid legal entity."
-          : clientResult.message,
-    };
+    return { ok: false, message: clientResult.message };
   }
   const client = clientResult.client;
 
@@ -281,7 +263,7 @@ export async function updateBrandAction(
     .from("brands")
     .update({
       client_id: parsed.data.client_id,
-      group_id: client.group_id,
+      group_id: client.group_id ?? undefined,
       name: parsed.data.name,
       status: parsed.data.status,
       category_id: emptyToNull(parsed.data.category_id),

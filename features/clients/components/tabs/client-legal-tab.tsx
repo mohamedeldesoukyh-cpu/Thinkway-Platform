@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { ClipboardListIcon, MapPinIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertCircleIcon, ClipboardListIcon, MapPinIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -29,6 +30,8 @@ import {
   COUNTRY_OPTIONS,
   getCityOptionsForCountry,
 } from "@/features/clients/constants";
+import { assessClientLegalReadiness } from "@/lib/clients/legal-readiness";
+import { assessClientTaxReadiness } from "@/lib/clients/tax-readiness";
 import type { ClientDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +52,7 @@ export function ClientLegalTab({
   onCancel?: () => void;
   shortcutsEnabled?: boolean;
 }) {
+  const router = useRouter();
   const legal = client.legal_address ?? {};
   const [legalCountry, setLegalCountry] = useState(
     readAddress(legal, "country") || client.country || ""
@@ -81,6 +85,63 @@ export function ClientLegalTab({
   const vatDoc = findClientDocumentByType(client.documents, "vat_certificate");
   const taxDoc = findClientDocumentByType(client.documents, "tax_certificate");
 
+  const legalReadiness = useMemo(
+    () =>
+      assessClientLegalReadiness({
+        trade_license_number: tradeLicenseNumber,
+        trade_license_expiry: tradeLicenseExpiry,
+        vat_number: vatNumber,
+        legal_address: {
+          line1: addressLine1,
+          line2: addressLine2,
+          city: legalCity,
+          country: legalCountry,
+          postal_code: postalCode,
+        },
+        documentTypes: client.documents.map((doc) => doc.document_type),
+      }),
+    [
+      tradeLicenseNumber,
+      tradeLicenseExpiry,
+      vatNumber,
+      addressLine1,
+      addressLine2,
+      legalCity,
+      legalCountry,
+      postalCode,
+      client.documents,
+    ]
+  );
+
+  const taxReadiness = useMemo(
+    () =>
+      assessClientTaxReadiness({
+        tax_id: taxId,
+        documentTypes: client.documents.map((doc) => doc.document_type),
+      }),
+    [taxId, client.documents]
+  );
+
+  const pendingItems = useMemo(() => {
+    const items: string[] = [];
+    if (!client.legal_completed_at) {
+      items.push(...legalReadiness.missing);
+    }
+    if (!client.tax_completed_at) {
+      items.push(...taxReadiness.missing);
+    }
+    return items;
+  }, [
+    client.legal_completed_at,
+    client.tax_completed_at,
+    legalReadiness.missing,
+    taxReadiness.missing,
+  ]);
+
+  const showLegalPendingBanner =
+    (client.onboarding_status === "legal_pending" && !client.legal_completed_at) ||
+    (!client.tax_completed_at && pendingItems.length > 0);
+
   const [state, formAction, isPending] = useActionState(
     updateClientLegalAction,
     { ok: false } satisfies FormActionState
@@ -110,10 +171,11 @@ export function ClientLegalTab({
     if (state.ok) {
       toast.success(state.message);
       setIsDirty(false);
+      router.refresh();
       return;
     }
     toast.error(state.message);
-  }, [state]);
+  }, [state, router]);
 
   return (
     <>
@@ -144,6 +206,34 @@ export function ClientLegalTab({
             }
           }}
         >
+          {showLegalPendingBanner ? (
+            <div
+              className={cn(
+                "rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-foreground",
+                pendingItems.length === 0 && "border-primary/30 bg-primary/10"
+              )}
+              role="status"
+            >
+              <div className="flex items-start gap-2">
+                <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {pendingItems.length === 0
+                      ? "All legal and tax requirements are met. Save legal to advance onboarding."
+                      : "Complete the items below, then click Save legal."}
+                  </p>
+                  {pendingItems.length > 0 ? (
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                      {pendingItems.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <input type="hidden" name="client_id" value={client.id} />
           <input type="hidden" name="legal_address_country" value={legalCountry} />
           <input type="hidden" name="legal_address_city" value={legalCity} />
@@ -174,11 +264,12 @@ export function ClientLegalTab({
                   />
                 </div>
               </ClientFormField>
-              <ClientFormField label="Trade license expiry" htmlFor="trade_license_expiry">
+              <ClientFormField label="Trade license expiry" htmlFor="trade_license_expiry" hint="Required for legal approval">
                 <Input
                   id="trade_license_expiry"
                   name="trade_license_expiry"
                   type="date"
+                  required
                   className={CLIENT_FORM_INPUT_CLASS}
                   value={tradeLicenseExpiry}
                   onChange={(e) => {
@@ -269,19 +360,6 @@ export function ClientLegalTab({
             </ClientFormGrid>
 
             <ClientFormGrid columns={4} className="mt-4">
-              <ClientFormField label="City">
-                <SearchableSelect
-                  value={legalCity}
-                  onValueChange={(value) => {
-                    setLegalCity(value);
-                    markDirty();
-                  }}
-                  options={cityOptions}
-                  disabled={isPending || !legalCountry}
-                  placeholder={legalCountry ? "Select city" : "Select country first"}
-                  className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
-                />
-              </ClientFormField>
               <ClientFormField label="Country">
                 <SearchableSelect
                   value={legalCountry}
@@ -292,6 +370,19 @@ export function ClientLegalTab({
                   }}
                   options={COUNTRY_OPTIONS}
                   disabled={isPending}
+                  className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
+                />
+              </ClientFormField>
+              <ClientFormField label="City">
+                <SearchableSelect
+                  value={legalCity}
+                  onValueChange={(value) => {
+                    setLegalCity(value);
+                    markDirty();
+                  }}
+                  options={cityOptions}
+                  disabled={isPending || !legalCountry}
+                  placeholder={legalCountry ? "Select city" : "Select country first"}
                   className={CLIENT_FORM_SELECT_TRIGGER_CLASS}
                 />
               </ClientFormField>

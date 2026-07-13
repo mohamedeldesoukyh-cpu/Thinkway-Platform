@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import {
   CheckIcon,
+  GitMergeIcon,
+  ListRestartIcon,
   PlusIcon,
   Trash2Icon,
   Undo2Icon,
@@ -14,12 +16,14 @@ import { toast } from "sonner";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import type {
   CreatorsSectionData,
+  SlateCreatorRecommendation,
   StudioDraftState,
 } from "@/features/campaign-intelligence/types/section-schemas";
 
 import {
   decideVendorRecommendationAction,
   shortlistVendorRecommendationAction,
+  stageVendorRoleAction,
 } from "../../actions/vendor-recommendation-actions";
 import {
   stageStudioDraftChangeAction,
@@ -30,6 +34,7 @@ import {
   getStudioDraft,
   normalizeCreatorId,
 } from "../../services/studio-draft";
+import { previewCreatorsSectionFromDraft } from "../../services/studio-draft-preview";
 import { AddCreatorPanel } from "./add-creator-panel";
 import { formatEngagement, formatFollowers } from "./shared/format-utils";
 import { SectionSkeleton } from "./shared/section-skeleton";
@@ -62,6 +67,7 @@ import { ShowMoreButton } from "./shared/studio-ui-primitives";
 import { STUDIO_VENDOR_INITIAL_VISIBLE } from "../../constants/hydration-limits";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
+import { ShortlistSlatePickerDialog } from "./shortlist-slate-picker-dialog";
 
 type VendorRecommendationsSectionProps = {
   campaignObject?: CampaignObject;
@@ -77,6 +83,7 @@ type VendorRecommendationsSectionProps = {
   onStudioDraftUpdated?: (draft: StudioDraftState) => void;
   /** Removals already applied this session — filters cards without a reload. */
   appliedRemovedCreatorIds?: string[];
+  onSlateUpdated?: (campaignObject: Record<string, unknown>) => void;
 };
 
 type DisplayVendor = {
@@ -99,6 +106,16 @@ type DisplayVendor = {
   matchPercent?: number;
   tier?: CreatorTierLabel;
   contentIdea?: string;
+  slateRole?: "main" | "maybe";
+  slateReason?: string;
+  slateReasonCode?: SlateCreatorRecommendation["reasonCode"];
+  suggestedTimelineSlot?: string;
+  wave?: number;
+  priority?: SlateCreatorRecommendation["priority"];
+  serviceType?: string;
+  contentPillar?: string;
+  expectedRole?: string;
+  confidence?: number;
 };
 
 function toDrawerSelection(vendor: DisplayVendor): CreatorDrawerSelection {
@@ -172,6 +189,290 @@ function isEmptyGlobalRationale(text: string | undefined): boolean {
   return /no creators available/i.test(text);
 }
 
+const REASON_CODE_LABELS: Record<
+  NonNullable<SlateCreatorRecommendation["reasonCode"]>,
+  string
+> = {
+  high_price: "High price",
+  reach_risk: "Reach risk",
+  client_choice: "Client choice",
+  alternate: "Alternate",
+};
+
+function VendorCardBlock({
+  vendor,
+  index,
+  campaignObject,
+  canAct,
+  pendingCreatorId,
+  vendorDecisions,
+  draft,
+  stageRemoval,
+  undoDraftChange,
+  applyDecision,
+  stageRoleChange,
+  openCreatorDetails,
+}: {
+  vendor: DisplayVendor;
+  index: number;
+  campaignObject?: CampaignObject;
+  canAct: boolean;
+  pendingCreatorId: string | null;
+  vendorDecisions: Record<string, "approved" | "rejected" | "shortlisted">;
+  draft: StudioDraftState;
+  stageRemoval: (vendor: DisplayVendor) => Promise<void>;
+  undoDraftChange: (creatorId: string) => Promise<void>;
+  applyDecision: (
+    creatorId: string,
+    action: "approve" | "reject" | "shortlist",
+    unifiedId?: string
+  ) => Promise<void>;
+  stageRoleChange: (creatorId: string, role: "main" | "alternative", displayName?: string) => Promise<void>;
+  openCreatorDetails: (vendor: DisplayVendor) => void;
+}) {
+  const decision = vendor.id ? vendorDecisions[vendor.id] : undefined;
+  const isPending = pendingCreatorId === vendor.id;
+  const draftChange = draftChangeForCreator(draft, vendor.id);
+  const pendingRemoval = draftChange?.kind === "remove_creator";
+  const pendingApprove = draftChange?.kind === "approve_creator";
+  const pendingReject = draftChange?.kind === "reject_creator";
+  const pendingPromote = draftChange?.kind === "promote_main";
+  const pendingDemote = draftChange?.kind === "demote_alternative";
+  const grounding = resolveVendorGrounding(
+    {
+      displayName: vendor.displayName,
+      handle: vendor.handle,
+      platform: vendor.platform,
+      followers: vendor.followers,
+      engagementRate: vendor.engagementRate,
+      country: vendor.country,
+      audienceSummary: vendor.audienceSummary,
+      priceEstimate: vendor.priceEstimate,
+      brandFit: vendor.fitScore,
+      campaignRelevanceScore: vendor.fitScore,
+      rationale:
+        vendor.reason && !isEmptyGlobalRationale(vendor.reason) ? vendor.reason : undefined,
+    },
+    campaignObject,
+    index
+  );
+
+  return (
+    <div
+      key={vendor.id ?? `${vendor.handle}-${index}`}
+      className={pendingRemoval ? "mb-2.5 opacity-75" : "mb-2.5"}
+    >
+      <div
+        className={
+          pendingRemoval
+            ? "rounded-[14px] border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20"
+            : STUDIO_CLASSES.creatorCard
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2.5">
+          <VendorAvatar vendor={vendor} onOpenDetails={() => openCreatorDetails(vendor)} />
+          <div className="min-w-0 flex-1">
+            {vendor.rank != null ? (
+              <span className="text-[11px] font-extrabold text-[#7C3AED]">#{vendor.rank} </span>
+            ) : null}
+            <button
+              type="button"
+              className="text-[14px] font-extrabold text-foreground hover:text-[#0057FF]"
+              onClick={() => openCreatorDetails(vendor)}
+            >
+              {vendor.displayName}
+            </button>{" "}
+            <span className="text-[11.5px] text-[#6B7280]">{vendor.handle}</span>
+          </div>
+          {vendor.slateRole === "main" ? (
+            <span className="rounded-full bg-[#0057FF]/10 px-2 py-0.5 text-[9px] font-extrabold text-[#0057FF]">
+              Main
+            </span>
+          ) : vendor.slateRole === "maybe" ? (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              Maybe
+            </span>
+          ) : null}
+          {vendor.tier ? <span className={STUDIO_CLASSES.pillTier}>{vendor.tier}</span> : null}
+          {vendor.expectedRole ? (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-semibold text-muted-foreground">
+              {vendor.expectedRole}
+            </span>
+          ) : null}
+          {vendor.wave != null ? (
+            <span className="rounded-full bg-[#0057FF]/10 px-2 py-0.5 text-[9px] font-bold text-[#0057FF]">
+              Wave {vendor.wave}
+            </span>
+          ) : null}
+          {vendor.priority ? (
+            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-semibold text-violet-800 dark:bg-violet-950/40 dark:text-violet-200">
+              {vendor.priority} priority
+            </span>
+          ) : null}
+          {vendor.serviceType ? (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] text-muted-foreground">
+              {vendor.serviceType}
+            </span>
+          ) : null}
+          {vendor.fitScore != null ? (
+            <span className={STUDIO_CLASSES.pillFit}>Fit {Math.round(vendor.fitScore)}/100</span>
+          ) : null}
+          {grounding.grounding.confidence != null ? (
+            <span className={STUDIO_CLASSES.pillAi}>AI {grounding.grounding.confidence}%</span>
+          ) : null}
+          {pendingRemoval ? (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold text-amber-800">
+              Pending removal
+            </span>
+          ) : pendingApprove ? (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-extrabold text-emerald-800">
+              Pending approval
+            </span>
+          ) : pendingReject ? (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-extrabold text-red-800">
+              Pending rejection
+            </span>
+          ) : pendingPromote || pendingDemote ? (
+            <span className="rounded-full bg-[#0057FF]/10 px-2 py-0.5 text-[9px] font-extrabold text-[#0057FF]">
+              Role change staged
+            </span>
+          ) : null}
+        </div>
+
+        <p className="mt-2 text-[11.5px] text-[#6B7280]">
+          {formatFollowers(vendor.followers)} followers ·{" "}
+          <b className="text-foreground">{formatEngagement(vendor.engagementRate)} ER</b>
+          {vendor.priceEstimate ? <> · {vendor.priceEstimate}</> : null}
+          {vendor.platform ? <> · est. 1 {vendor.platform} post</> : null}
+        </p>
+
+        {vendor.suggestedTimelineSlot ? (
+          <p className="mt-1.5 text-[11px] font-semibold text-[#D97706]">
+            Suggested slot: {vendor.suggestedTimelineSlot}
+          </p>
+        ) : null}
+
+        <p className="mt-1.5 text-xs text-foreground">
+          <b>Why:</b> {grounding.whySelected}
+        </p>
+        {vendor.slateReason ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {vendor.slateReasonCode
+              ? `${REASON_CODE_LABELS[vendor.slateReasonCode]} · `
+              : ""}
+            {vendor.slateReason}
+          </p>
+        ) : null}
+        {vendor.contentIdea ? (
+          <p className="mt-1 text-xs font-semibold text-[#0057FF]">{vendor.contentIdea}</p>
+        ) : null}
+
+        {vendor.confidence != null ? (
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Confidence: {Math.round(vendor.confidence * 100)}%
+          </p>
+        ) : null}
+
+        <div className="mt-2 flex flex-wrap gap-1">
+          {grounding.factors.slice(0, 5).map((f) => (
+            <span key={f.factor} className={STUDIO_CLASSES.fitTag} title={f.reason}>
+              {f.factor} {f.score}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {pendingRemoval ? (
+            <button
+              type="button"
+              disabled={!canAct || isPending}
+              className={STUDIO_CLASSES.actBtn}
+              onClick={() => vendor.id && void undoDraftChange(vendor.id)}
+            >
+              <Undo2Icon className="size-3" />
+              Undo removal
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={!canAct || isPending || decision === "approved" || pendingApprove}
+                className={STUDIO_CLASSES.actBtnApprove}
+                onClick={() => vendor.id && void applyDecision(vendor.id, "approve", undefined, vendor.displayName)}
+              >
+                <CheckIcon className="size-3" />
+                {decision === "approved" || pendingApprove ? "Approved (staged)" : "Approve"}
+              </button>
+              <button
+                type="button"
+                disabled={!canAct || isPending || pendingReject}
+                className={STUDIO_CLASSES.actBtn}
+                onClick={() => vendor.id && void applyDecision(vendor.id, "reject", undefined, vendor.displayName)}
+              >
+                <XIcon className="size-3" />
+                {pendingReject ? "Rejected (staged)" : "Reject"}
+              </button>
+              {vendor.slateRole === "maybe" ? (
+                <button
+                  type="button"
+                  disabled={!canAct || isPending}
+                  className={STUDIO_CLASSES.actBtn}
+                  onClick={() =>
+                    vendor.id && void stageRoleChange(vendor.id, "main", vendor.displayName)
+                  }
+                >
+                  Promote to main
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!canAct || isPending}
+                  className={STUDIO_CLASSES.actBtn}
+                  onClick={() =>
+                    vendor.id && void stageRoleChange(vendor.id, "alternative", vendor.displayName)
+                  }
+                >
+                  Move to alt
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={!canAct || isPending || decision === "shortlisted"}
+                className={STUDIO_CLASSES.actBtn}
+                onClick={() => vendor.id && void applyDecision(vendor.id, "shortlist", vendor.id)}
+              >
+                <PlusIcon className="size-3" />+ Shortlist
+              </button>
+              <button
+                type="button"
+                className={STUDIO_CLASSES.actBtn}
+                onClick={() => openCreatorDetails(vendor)}
+              >
+                View details
+              </button>
+              <button
+                type="button"
+                disabled={!canAct || isPending}
+                className={STUDIO_CLASSES.actBtn}
+                onClick={() => void stageRemoval(vendor)}
+                title="Stage removal — recalculated on Apply All Updates"
+              >
+                <Trash2Icon className="size-3" />
+                Remove
+              </button>
+            </>
+          )}
+        </div>
+        {!canAct ? (
+          <p className="mt-1 text-[10px] text-[#6B7280]">
+            Save this studio message to enable creator actions.
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function VendorRecommendationsSection({
   campaignObject,
   fallbackText,
@@ -183,6 +484,7 @@ export function VendorRecommendationsSection({
   studioDraft,
   onStudioDraftUpdated,
   appliedRemovedCreatorIds,
+  onSlateUpdated,
 }: VendorRecommendationsSectionProps) {
   const isRunning = status === "running";
   const creatorsData = (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
@@ -206,6 +508,19 @@ export function VendorRecommendationsSection({
   const [showAllVendors, setShowAllVendors] = useState(false);
   const [drawerCreator, setDrawerCreator] = useState<CreatorDrawerSelection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [shortlistPickerMode, setShortlistPickerMode] = useState<"replace" | "merge" | null>(null);
+
+  const previewCreatorsData = useMemo(() => {
+    if (!campaignObject) return {} as CreatorsSectionData;
+    if (draft.changes.length === 0) {
+      return (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
+    }
+    return previewCreatorsSectionFromDraft(campaignObject, draft);
+  }, [campaignObject, draft]);
+
+  const slateIntelligence = previewCreatorsData.slateIntelligence;
+  const previewVendorDecisions = previewCreatorsData.vendorDecisions ?? vendorDecisions;
+  const creatorsPhase = previewCreatorsData.phase ?? creatorsData.phase;
 
   const openCreatorDetails = useCallback(
     (vendor: DisplayVendor) => {
@@ -226,7 +541,8 @@ export function VendorRecommendationsSection({
     async (
       creatorId: string,
       action: "approve" | "reject" | "shortlist",
-      unifiedId?: string
+      unifiedId?: string,
+      displayName?: string
     ) => {
       if (!conversationId || !messageId || !creatorId) return;
       setPendingCreatorId(creatorId);
@@ -245,11 +561,13 @@ export function VendorRecommendationsSection({
             creatorId,
             creatorUnifiedId: unifiedId,
             campaignName: presentation?.campaignName,
+            displayName,
           });
           if (!result.ok) {
             toast.error(result.message);
             return;
           }
+          if (result.draft) publishDraft(result.draft);
           if (result.vendorDecisions) {
             setVendorDecisions(result.vendorDecisions);
             onVendorDecisionsUpdated?.(result.vendorDecisions);
@@ -268,11 +586,13 @@ export function VendorRecommendationsSection({
           messageId,
           creatorId,
           decision: action === "approve" ? "approved" : "rejected",
+          displayName,
         });
         if (!result.ok) {
           toast.error(result.message);
           return;
         }
+        if (result.draft) publishDraft(result.draft);
         if (result.vendorDecisions) {
           setVendorDecisions(result.vendorDecisions);
           onVendorDecisionsUpdated?.(result.vendorDecisions);
@@ -282,7 +602,32 @@ export function VendorRecommendationsSection({
         setPendingCreatorId(null);
       }
     },
-    [campaignObject, conversationId, messageId, onVendorDecisionsUpdated]
+    [campaignObject, conversationId, messageId, onVendorDecisionsUpdated, publishDraft]
+  );
+
+  const stageRoleChange = useCallback(
+    async (creatorId: string, role: "main" | "alternative", displayName?: string) => {
+      if (!conversationId || !messageId) return;
+      setPendingCreatorId(creatorId);
+      try {
+        const result = await stageVendorRoleAction({
+          conversationId,
+          messageId,
+          creatorId,
+          role,
+          displayName,
+        });
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        if (result.draft) publishDraft(result.draft);
+        toast.success(result.message);
+      } finally {
+        setPendingCreatorId(null);
+      }
+    },
+    [conversationId, messageId, publishDraft]
   );
 
   const stageRemoval = useCallback(
@@ -336,10 +681,28 @@ export function VendorRecommendationsSection({
   );
 
   const parsedVendors = resolveVendorRecommendations(campaignObject);
-  const { ids, rationale, avgFitScore, creatorFitScores } = resolveCreatorIds(campaignObject);
+  const {
+    ids: persistedIds,
+    rationale,
+    avgFitScore,
+    creatorFitScores,
+  } = resolveCreatorIds(campaignObject, { recommendationsOnly: true });
+  const ids =
+    draft.changes.length > 0 && (previewCreatorsData.recommendations?.creatorIds?.length ?? 0) > 0
+      ? (previewCreatorsData.recommendations?.creatorIds ?? persistedIds)
+      : persistedIds;
   const safeRationale = isEmptyGlobalRationale(rationale) ? undefined : rationale;
-  const { recommendationIds, discoveryIds } = resolveCreatorCounts(campaignObject);
-  const hasCreatorIds = recommendationIds.length > 0 || discoveryIds.length > 0;
+  const { recommendationIds } = resolveCreatorCounts(campaignObject);
+  const hasCommittedRecommendations = recommendationIds.length > 0;
+  const pendingProposal = creatorsData.pendingProposal;
+  const isRegeneratingProposal = pendingProposal?.status === "generating";
+  const proposalRegenerationFailed =
+    pendingProposal?.status === "failed" ||
+    (creatorsData.slateProposalStatus?.status === "blocked" && hasCommittedRecommendations);
+  const regenerationFailureMessage =
+    pendingProposal?.error?.message ?? creatorsData.slateProposalStatus?.message;
+  const regenerationFailureAction =
+    pendingProposal?.error?.actionLabel ?? creatorsData.slateProposalStatus?.actionLabel;
 
   const mapperOptions = useMemo(() => {
     const facts = getCampaignFacts(campaignObject);
@@ -364,6 +727,41 @@ export function VendorRecommendationsSection({
     [appliedRemovedCreatorIds]
   );
 
+  const slateRecByCreatorId = useMemo(() => {
+    const map = new Map<string, SlateCreatorRecommendation>();
+    for (const rec of slateIntelligence?.recommendations ?? []) {
+      map.set(normalizeCreatorId(rec.creatorId), rec);
+    }
+    return map;
+  }, [slateIntelligence?.recommendations]);
+
+  const attachSlateMeta = useCallback(
+    (vendor: Omit<DisplayVendor, "slateRole" | "slateReason" | "slateReasonCode" | "suggestedTimelineSlot" | "wave" | "priority" | "serviceType" | "contentPillar" | "expectedRole" | "confidence">): DisplayVendor => {
+      const rec = vendor.id ? slateRecByCreatorId.get(normalizeCreatorId(vendor.id)) : undefined;
+      const reasoning = previewCreatorsData.recommendations?.selectedReasoning?.find(
+        (r) => vendor.id && sameCreatorPreview(r.creatorId, vendor.id)
+      );
+      return {
+        ...vendor,
+        slateRole: rec?.role,
+        slateReason: rec?.reason,
+        slateReasonCode: rec?.reasonCode,
+        suggestedTimelineSlot: rec?.suggestedTimelineSlot,
+        wave: rec?.wave,
+        priority: rec?.priority,
+        serviceType: rec?.serviceType ?? reasoning?.serviceLabel ?? reasoning?.serviceTypes?.[0],
+        contentPillar: rec?.contentPillar,
+        expectedRole: reasoning?.expectedRole,
+        confidence: reasoning?.confidence,
+      };
+    },
+    [slateRecByCreatorId, previewCreatorsData.recommendations?.selectedReasoning]
+  );
+
+  function sameCreatorPreview(a: string, b: string): boolean {
+    return normalizeCreatorId(a) === normalizeCreatorId(b);
+  }
+
   const vendors: DisplayVendor[] = useMemo(
     () =>
       hydrated.length > 0
@@ -372,34 +770,36 @@ export function VendorRecommendationsSection({
               .filter(
                 (v) =>
                   !v.id ||
-                  (vendorDecisions[v.id] !== "rejected" &&
+                  (previewVendorDecisions[v.id] !== "rejected" &&
                     !removedIdSet.has(normalizeCreatorId(v.id)))
               )
-              .map((v, i) => ({
-                id: v.id,
-                rank: i + 1,
-                displayName: v.displayName,
-                handle: v.handle,
-                platform: v.platform,
-                followers: v.followers,
-                engagementRate: v.engagementRate,
-                fitScore: v.brandFit,
-                reason: v.reason,
-                avatarUrl: v.avatarUrl,
-                profileUrl: v.profileUrl,
-                country: v.country,
-                language: v.language,
-                audienceSummary: v.audienceSummary,
-                priceEstimate: v.priceEstimate,
-                thinkwayScore: v.thinkwayScore,
-                matchPercent: v.matchPercent,
-                tier: v.tier,
-                contentIdea: buildCreatorContentIdea(
-                  { categories: [v.audienceSummary ?? ""] },
-                  campaignFacts,
-                  i
-                ),
-              })),
+              .map((v, i) =>
+                attachSlateMeta({
+                  id: v.id,
+                  rank: i + 1,
+                  displayName: v.displayName,
+                  handle: v.handle,
+                  platform: v.platform,
+                  followers: v.followers,
+                  engagementRate: v.engagementRate,
+                  fitScore: v.brandFit,
+                  reason: v.reason,
+                  avatarUrl: v.avatarUrl,
+                  profileUrl: v.profileUrl,
+                  country: v.country,
+                  language: v.language,
+                  audienceSummary: v.audienceSummary,
+                  priceEstimate: v.priceEstimate,
+                  thinkwayScore: v.thinkwayScore,
+                  matchPercent: v.matchPercent,
+                  tier: v.tier,
+                  contentIdea: buildCreatorContentIdea(
+                    { categories: [v.audienceSummary ?? ""] },
+                    campaignFacts,
+                    i
+                  ),
+                })
+              ),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items
         : dedupeByCreatorId(
@@ -407,26 +807,41 @@ export function VendorRecommendationsSection({
               .filter(
                 (v) =>
                   !v.id ||
-                  (vendorDecisions[v.id] !== "rejected" &&
+                  (previewVendorDecisions[v.id] !== "rejected" &&
                     !removedIdSet.has(normalizeCreatorId(v.id)))
               )
-              .map((v, i) => ({
-                ...v,
-                tier: resolveCreatorTierLabel({ followers: v.followers }),
-                contentIdea: buildCreatorContentIdea(
-                  { categories: [v.reason ?? ""] },
-                  campaignFacts,
-                  i
-                ),
-              })),
+              .map((v, i) =>
+                attachSlateMeta({
+                  ...v,
+                  tier: resolveCreatorTierLabel({ followers: v.followers }),
+                  contentIdea: buildCreatorContentIdea(
+                    { categories: [v.reason ?? ""] },
+                    campaignFacts,
+                    i
+                  ),
+                })
+              ),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items,
-    [hydrated, parsedVendors, vendorDecisions, campaignFacts, removedIdSet]
+    [hydrated, parsedVendors, previewVendorDecisions, campaignFacts, removedIdSet, attachSlateMeta]
   );
 
-  const visibleVendors = showAllVendors
-    ? vendors
-    : vendors.slice(0, STUDIO_VENDOR_INITIAL_VISIBLE);
+  const mainVendors = vendors.filter((v) => v.slateRole !== "maybe");
+  const maybeVendors = vendors.filter((v) => v.slateRole === "maybe");
+  const displayGroups =
+    maybeVendors.length > 0
+      ? [
+          { title: "Main picks", items: mainVendors.length > 0 ? mainVendors : vendors },
+          { title: "Maybe / replacements", items: maybeVendors },
+        ]
+      : [{ title: null as string | null, items: vendors }];
+
+  const visibleGroupItems = showAllVendors
+    ? displayGroups
+    : displayGroups.map((group) => ({
+        ...group,
+        items: group.items.slice(0, STUDIO_VENDOR_INITIAL_VISIBLE),
+      }));
   const hiddenCount = Math.max(0, vendors.length - STUDIO_VENDOR_INITIAL_VISIBLE);
   const preferredPlatformLabel = mapperOptions.preferredPlatforms?.[0];
   const discoveryEngine = creatorsData.discoveryEngine;
@@ -434,13 +849,29 @@ export function VendorRecommendationsSection({
     creatorsData.fitScoreCount ??
     (creatorFitScores ? Object.keys(creatorFitScores).length : 0);
 
-  if ((isRunning || loading) && vendors.length === 0 && hasCreatorIds) {
+  if ((isRunning || loading || isRegeneratingProposal) && vendors.length === 0 && hasCommittedRecommendations) {
     return <SectionSkeleton variant="vendors" />;
   }
 
   if (vendors.length === 0) {
-    if (shouldShowPendingPlaceholder(status, hasCreatorIds)) {
-      if (hasCreatorIds) {
+    const proposalBlocked =
+      creatorsData.slateProposalStatus?.status === "blocked" && !hasCommittedRecommendations;
+    if (proposalBlocked) {
+      return (
+        <div className="rounded-xl border border-amber-300/80 bg-amber-50/80 px-4 py-5 text-center dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+            {creatorsData.slateProposalStatus?.message}
+          </p>
+          {creatorsData.slateProposalStatus?.actionLabel ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Next step: {creatorsData.slateProposalStatus.actionLabel}
+            </p>
+          ) : null}
+        </div>
+      );
+    }
+    if (shouldShowPendingPlaceholder(status, hasCommittedRecommendations)) {
+      if (hasCommittedRecommendations) {
         return <SectionSkeleton variant="vendors" />;
       }
       return (
@@ -454,6 +885,38 @@ export function VendorRecommendationsSection({
 
   return (
     <div className="min-w-0 space-y-2">
+      {isRegeneratingProposal ? (
+        <div className="rounded-lg border border-[#0057FF]/30 bg-[#0057FF]/5 px-3 py-2">
+          <p className="text-[11px] font-semibold text-[#0057FF]">Regenerating creator slate…</p>
+          <p className="text-[10px] text-muted-foreground">
+            Your current recommendations stay visible until the new slate is ready.
+          </p>
+        </div>
+      ) : null}
+      {proposalRegenerationFailed && regenerationFailureMessage ? (
+        <div className="rounded-lg border border-amber-300/80 bg-amber-50/80 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="text-[11px] font-semibold text-amber-900 dark:text-amber-100">
+            Could not refresh creator slate
+          </p>
+          <p className="mt-1 text-[10px] text-amber-900/90 dark:text-amber-100/90">
+            {regenerationFailureMessage}
+          </p>
+          {regenerationFailureAction ? (
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Next step: {regenerationFailureAction}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {creatorsPhase === "proposal" ? (
+        <div className="rounded-lg border border-[#0057FF]/40 bg-[#0057FF]/5 px-3 py-2">
+          <p className="text-[11px] font-bold text-[#0057FF]">AI-proposed creator slate</p>
+          <p className="text-[10px] text-muted-foreground">
+            Campaign Director approved the strategy and Thinkway auto-proposed this slate. Review,
+            stage edits, then Apply Changes to regenerate the full plan.
+          </p>
+        </div>
+      ) : null}
       {discoveryEngine ? (
         <p className="rounded-md border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-2.5 py-1.5 text-[10px] text-muted-foreground">
           Discovery:{" "}
@@ -480,12 +943,46 @@ export function VendorRecommendationsSection({
             </span>
           ) : null}
         </p>
-        {recommendationIds.length > 0 ? (
-          <p className="text-[10px] text-muted-foreground">
-            Ranked from {recommendationIds.length} search matches
-          </p>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {recommendationIds.length > 0 ? (
+            <p className="text-[10px] text-muted-foreground">
+              Ranked from {recommendationIds.length} search matches
+            </p>
+          ) : null}
+          {canAct ? (
+            <>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md border border-[#0057FF]/40 bg-[#0057FF]/5 px-2 py-1 text-[10px] font-semibold text-[#0057FF] hover:bg-[#0057FF]/10"
+                onClick={() => setShortlistPickerMode("replace")}
+              >
+                <ListRestartIcon className="size-3" />
+                Replace with shortlist
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-semibold text-foreground hover:bg-muted/50"
+                onClick={() => setShortlistPickerMode("merge")}
+              >
+                <GitMergeIcon className="size-3" />
+                Merge shortlist
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
+      {(slateIntelligence?.tierShortages.length ?? 0) > 0 ? (
+        <div className="space-y-1 rounded-lg border border-amber-300/80 bg-amber-50/80 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="text-[10px] font-bold tracking-wide text-amber-900 uppercase dark:text-amber-200">
+            Strategy validation
+          </p>
+          {slateIntelligence!.tierShortages.map((warning) => (
+            <p key={warning.tier} className="text-[11px] font-medium text-amber-900 dark:text-amber-200">
+              {warning.message}
+            </p>
+          ))}
+        </div>
+      ) : null}
       {linkedShortlistId ? (
         <p className="text-[11px] text-muted-foreground">
           Shortlist:{" "}
@@ -497,183 +994,32 @@ export function VendorRecommendationsSection({
           </Link>
         </p>
       ) : null}
-      {visibleVendors.map((vendor, index) => {
-        const decision = vendor.id ? vendorDecisions[vendor.id] : undefined;
-        const isPending = pendingCreatorId === vendor.id;
-        const draftChange = draftChangeForCreator(draft, vendor.id);
-        const pendingRemoval = draftChange?.kind === "remove_creator";
-        const grounding = resolveVendorGrounding(
-          {
-            displayName: vendor.displayName,
-            handle: vendor.handle,
-            platform: vendor.platform,
-            followers: vendor.followers,
-            engagementRate: vendor.engagementRate,
-            country: vendor.country,
-            audienceSummary: vendor.audienceSummary,
-            priceEstimate: vendor.priceEstimate,
-            brandFit: vendor.fitScore,
-            campaignRelevanceScore: vendor.fitScore,
-            rationale:
-              vendor.reason && !isEmptyGlobalRationale(vendor.reason)
-                ? vendor.reason
-                : undefined,
-          },
-          campaignObject,
-          index
-        );
-
-        return (
-          <div
-            key={vendor.id ?? `${vendor.handle}-${index}`}
-            className={
-              pendingRemoval
-                ? "mb-2.5 opacity-75"
-                : "mb-2.5"
-            }
-          >
-            <div
-              className={
-                pendingRemoval
-                  ? "rounded-[14px] border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/20"
-                  : STUDIO_CLASSES.creatorCard
-              }
-            >
-              <div className="flex flex-wrap items-center gap-2.5">
-                <VendorAvatar
-                  vendor={vendor}
-                  onOpenDetails={() => openCreatorDetails(vendor)}
-                />
-                <div className="min-w-0 flex-1">
-                  {vendor.rank != null ? (
-                    <span className="text-[11px] font-extrabold text-[#7C3AED]">#{vendor.rank} </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="text-[14px] font-extrabold text-foreground hover:text-[#0057FF]"
-                    onClick={() => openCreatorDetails(vendor)}
-                  >
-                    {vendor.displayName}
-                  </button>{" "}
-                  <span className="text-[11.5px] text-[#6B7280]">{vendor.handle}</span>
-                </div>
-                {vendor.tier ? (
-                  <span className={STUDIO_CLASSES.pillTier}>{vendor.tier}</span>
-                ) : null}
-                {vendor.fitScore != null ? (
-                  <span className={STUDIO_CLASSES.pillFit}>
-                    Fit {Math.round(vendor.fitScore)}/100
-                  </span>
-                ) : null}
-                {grounding.grounding.confidence != null ? (
-                  <span className={STUDIO_CLASSES.pillAi}>
-                    AI {grounding.grounding.confidence}%
-                  </span>
-                ) : null}
-                {pendingRemoval ? (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold text-amber-800">
-                    Pending removal
-                  </span>
-                ) : null}
-              </div>
-
-              <p className="mt-2 text-[11.5px] text-[#6B7280]">
-                {formatFollowers(vendor.followers)} followers ·{" "}
-                <b className="text-foreground">{formatEngagement(vendor.engagementRate)} ER</b>
-                {vendor.priceEstimate ? (
-                  <>
-                    {" "}
-                    · {vendor.priceEstimate}
-                  </>
-                ) : null}
-                {vendor.platform ? <> · est. 1 {vendor.platform} post</> : null}
-              </p>
-
-              <p className="mt-1.5 text-xs text-foreground">
-                <b>Why:</b> {grounding.whySelected}
-              </p>
-              {vendor.contentIdea ? (
-                <p className="mt-1 text-xs font-semibold text-[#0057FF]">{vendor.contentIdea}</p>
-              ) : null}
-
-              <div className="mt-2 flex flex-wrap gap-1">
-                {grounding.factors.slice(0, 5).map((f) => (
-                  <span key={f.factor} className={STUDIO_CLASSES.fitTag} title={f.reason}>
-                    {f.factor} {f.score}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                {pendingRemoval ? (
-                  <button
-                    type="button"
-                    disabled={!canAct || isPending}
-                    className={STUDIO_CLASSES.actBtn}
-                    onClick={() => vendor.id && void undoDraftChange(vendor.id)}
-                  >
-                    <Undo2Icon className="size-3" />
-                    Undo removal
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      disabled={!canAct || isPending || decision === "approved"}
-                      className={STUDIO_CLASSES.actBtnApprove}
-                      onClick={() => vendor.id && void applyDecision(vendor.id, "approve")}
-                    >
-                      <CheckIcon className="size-3" />
-                      {decision === "approved" ? "Approved" : "Approve"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canAct || isPending}
-                      className={STUDIO_CLASSES.actBtn}
-                      onClick={() => vendor.id && void applyDecision(vendor.id, "reject")}
-                    >
-                      <XIcon className="size-3" />
-                      Reject
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canAct || isPending || decision === "shortlisted"}
-                      className={STUDIO_CLASSES.actBtn}
-                      onClick={() =>
-                        vendor.id && void applyDecision(vendor.id, "shortlist", vendor.id)
-                      }
-                    >
-                      <PlusIcon className="size-3" />+ Shortlist
-                    </button>
-                    <button
-                      type="button"
-                      className={STUDIO_CLASSES.actBtn}
-                      onClick={() => openCreatorDetails(vendor)}
-                    >
-                      View details
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canAct || isPending}
-                      className={STUDIO_CLASSES.actBtn}
-                      onClick={() => void stageRemoval(vendor)}
-                      title="Stage removal — recalculated on Apply All Updates"
-                    >
-                      <Trash2Icon className="size-3" />
-                      Remove
-                    </button>
-                  </>
-                )}
-              </div>
-              {!canAct ? (
-                <p className="mt-1 text-[10px] text-[#6B7280]">
-                  Save this studio message to enable creator actions.
-                </p>
-              ) : null}
-            </div>
-          </div>
-        );
-      })}
+      {visibleGroupItems.map((group) => (
+        <div key={group.title ?? "all"} className="space-y-2">
+          {group.title ? (
+            <p className="px-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase">
+              {group.title}
+            </p>
+          ) : null}
+          {group.items.map((vendor, index) => (
+            <VendorCardBlock
+              key={vendor.id ?? `${vendor.handle}-${index}`}
+              vendor={vendor}
+              index={index}
+              campaignObject={campaignObject}
+              canAct={canAct}
+              pendingCreatorId={pendingCreatorId}
+              vendorDecisions={previewVendorDecisions}
+              draft={draft}
+              stageRemoval={stageRemoval}
+              undoDraftChange={undoDraftChange}
+              applyDecision={applyDecision}
+              stageRoleChange={stageRoleChange}
+              openCreatorDetails={openCreatorDetails}
+            />
+          ))}
+        </div>
+      ))}
       {hiddenCount > 0 && !showAllVendors ? (
         <ShowMoreButton onClick={() => setShowAllVendors(true)}>
           + {hiddenCount} more recommended creators · Show all {vendors.length}
@@ -685,6 +1031,21 @@ export function VendorRecommendationsSection({
           messageId={messageId}
           draft={draft}
           onDraftUpdated={publishDraft}
+        />
+      ) : null}
+      {conversationId && messageId && shortlistPickerMode ? (
+        <ShortlistSlatePickerDialog
+          open={shortlistPickerMode != null}
+          onOpenChange={(open) => {
+            if (!open) setShortlistPickerMode(null);
+          }}
+          mode={shortlistPickerMode}
+          conversationId={conversationId}
+          messageId={messageId}
+          onApplied={({ linkedShortlistId: nextShortlistId, draft: nextDraft }) => {
+            if (nextShortlistId) setLinkedShortlistId(nextShortlistId);
+            if (nextDraft) publishDraft(nextDraft);
+          }}
         />
       ) : null}
       {!onCreatorClick ? (

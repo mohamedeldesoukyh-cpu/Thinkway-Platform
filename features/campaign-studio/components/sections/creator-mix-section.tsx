@@ -10,6 +10,7 @@ import { MixRow } from "./shared/studio-ui-primitives";
 import { STUDIO_CLASSES, STUDIO_TIER_COLORS } from "../../constants/studio-tokens";
 import { resolveCreatorMix, type CreatorMixTier } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
 function CreatorMixDonut({ tiers }: { tiers: CreatorMixTier[] }) {
@@ -74,6 +75,10 @@ export function CreatorMixSection({
   }
 
   const tiers = resolveCreatorMix(campaignObject);
+  const creatorsData = (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
+  const slateIntelligence = creatorsData.slateIntelligence;
+  const actualMix = slateIntelligence?.actualMix ?? [];
+  const tierShortages = slateIntelligence?.tierShortages ?? [];
   if (tiers.length === 0) {
     if (shouldShowPendingPlaceholder(status, false)) {
       return <SectionPendingMessage label="Creator mix pending…" />;
@@ -88,6 +93,25 @@ export function CreatorMixSection({
 
   return (
     <div className="min-w-0">
+      {tierShortages.length > 0 ? (
+        <div className="mb-3 space-y-1 rounded-lg border border-amber-300/80 bg-amber-50/80 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/30">
+          {tierShortages.map((warning) => (
+            <p key={warning.tier} className="text-[11px] font-medium text-amber-900 dark:text-amber-200">
+              {warning.message}
+            </p>
+          ))}
+        </div>
+      ) : null}
+      {actualMix.length > 0 ? (
+        <div className="mb-3 rounded-lg border border-[#0057FF]/20 bg-[#0057FF]/5 px-3 py-2">
+          <p className="text-[10px] font-extrabold tracking-wide text-[#0057FF] uppercase">
+            Active slate mix
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {actualMix.map((t) => `${t.tier} ${t.count}`).join(" · ")}
+          </p>
+        </div>
+      ) : null}
       {tiers.map((tier) => (
         <MixRow
           key={tier.tier}

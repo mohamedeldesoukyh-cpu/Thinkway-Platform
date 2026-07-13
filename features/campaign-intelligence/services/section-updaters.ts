@@ -24,6 +24,8 @@ import {
   formatRecommendationDisplay,
 } from "./structured-section-builders";
 import { enrichCampaignObjectWithStudioData } from "./studio-section-data-builders";
+import { proposeInitialCreatorSlate } from "@/features/campaign-studio/services/propose-creator-slate";
+import type { GroundedCreator } from "@/features/ai-workflows/formatters/creator-formatter";
 import {
   applyDirectorBudgetRules,
   applyDirectorTimelineRules,
@@ -129,21 +131,21 @@ function extractTaskContent(
   return "";
 }
 
-/** Drop prior vendor lists so a re-run cannot show stale Studio recommendations. */
-function stripStaleCreatorRecommendations(
+/** Mark re-run proposal as in-flight without clearing committed recommendations. */
+function beginPendingCreatorProposal(
   data: CreatorsSectionData
 ): CreatorsSectionData {
-  const {
-    recommendations: _recommendations,
-    recommendationsDisplay: _recommendationsDisplay,
-    vendorDecisions: _vendorDecisions,
-    linkedShortlistId: _linkedShortlistId,
-    vendorGrounding: _vendorGrounding,
-    ...rest
-  } = data;
+  const hasCommittedRecommendations =
+    (data.recommendations?.creatorIds?.length ?? 0) > 0;
+  if (!hasCommittedRecommendations) {
+    return data;
+  }
   return {
-    ...rest,
-    phase: "discovery",
+    ...data,
+    pendingProposal: {
+      status: "generating",
+      generatedAt: new Date().toISOString(),
+    },
   };
 }
 
@@ -354,13 +356,13 @@ function deriveSectionUpdatesFromTask(
           typeof stateData.campaignIntelligenceProfileId === "string"
             ? stateData.campaignIntelligenceProfileId
             : undefined;
-        const cleared = stripStaleCreatorRecommendations(existingData);
+        const discoveryData = beginPendingCreatorProposal(existingData);
         updates.push({
           sectionKey: key,
           content: discoveryDisplay,
           data: {
-            ...cleared,
-            phase: hasResults ? "discovery" : "pending",
+            ...discoveryData,
+            phase: hasResults ? "discovery" : existingData.phase ?? "pending",
             discovery: buildCreatorDiscoveryData(creators, total, query, campaignFacts, strategy),
             discoveryDisplay,
             vendorDiscoveryFunnel: funnel,
@@ -474,7 +476,7 @@ export function applyTaskResultToCampaignObject(
       {
         sectionKey: "creators",
         content: campaignObject.sections.creators.content ?? "",
-        data: stripStaleCreatorRecommendations(creatorsData),
+        data: beginPendingCreatorProposal(creatorsData),
         status: "working",
       },
     ]);
@@ -541,6 +543,13 @@ export function applyTaskResultToCampaignObject(
       | import("@/features/campaign-director/facts/campaign-facts-types").CampaignFacts
       | undefined;
     updated = applyDirectorPipelineToCampaignObject(updated, directorPipeline, campaignFacts);
+    const poolCreators = Array.isArray(stateData.searchResults)
+      ? (stateData.searchResults as GroundedCreator[])
+      : undefined;
+    updated = proposeInitialCreatorSlate(updated, {
+      poolCreators,
+      query: typeof stateData.searchQuery === "string" ? stateData.searchQuery : undefined,
+    });
   }
 
   return enrichCampaignObjectWithStudioData(updated);
@@ -807,4 +816,4 @@ export function syncCampaignObjectMeta(
   };
 }
 
-export { formatSectionContentForDisplay };
+export { formatSectionContentForDisplay, beginPendingCreatorProposal };

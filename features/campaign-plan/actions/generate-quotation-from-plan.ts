@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { QUOTATION_PERMISSIONS, quotationDetailPath } from "@/lib/domains/commercial/quotation-constants";
 import { canGenerateFromCampaignPlan } from "@/lib/domains/commercial/campaign-plan-provenance";
+import { resolveCampaignObjectHead } from "@/lib/domains/commercial/resolve-campaign-object-head";
 import { generateQuotationFromCampaignPlan } from "@/lib/services/quotations/generate-quotation-from-campaign-plan";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -45,24 +46,20 @@ export type CampaignPlanQuotationContext = {
 export async function getCampaignPlanQuotationContext(input: {
   campaignObjectId: string;
   conversationId?: string;
-}): Promise<CampaignPlanQuotationContext | { error: string }> {
+}): Promise<CampaignPlanQuotationContext | { error: string } | null> {
   const supabase = await createSupabaseServerClient();
   const auth = await requirePermission(supabase, QUOTATION_PERMISSIONS.read);
   if ("error" in auth) return { error: auth.error };
 
-  const { data: head, error } = await supabase
-    .from("campaign_objects")
-    .select("id, lifecycle_status, conversation_id")
-    .eq("id", input.campaignObjectId)
-    .maybeSingle();
-
-  if (error) return { error: error.message };
-  if (!head) return { error: "Campaign Plan not found." };
+  const resolved = await resolveCampaignObjectHead(supabase, input);
+  if (resolved.error) return { error: resolved.error };
+  const head = resolved.head;
+  if (!head) return null;
 
   const { data: existingQuotation } = await supabase
     .from("quotations")
     .select("id, serial_number")
-    .eq("campaign_object_id", input.campaignObjectId)
+    .eq("campaign_object_id", head.id)
     .eq("is_archived", false)
     .order("created_at", { ascending: false })
     .limit(1)

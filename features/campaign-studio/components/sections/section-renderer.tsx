@@ -40,6 +40,7 @@ type SectionRendererProps = {
   onVendorDecisionsUpdated?: (
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  onSlateUpdated?: (campaignObject: Record<string, unknown>) => void;
   studioDraft?: StudioDraftState;
   onStudioDraftUpdated?: (draft: StudioDraftState) => void;
   appliedRemovedCreatorIds?: string[];
@@ -52,6 +53,7 @@ export function SectionRenderer({
   conversationId,
   messageId,
   onVendorDecisionsUpdated,
+  onSlateUpdated,
   studioDraft,
   onStudioDraftUpdated,
   appliedRemovedCreatorIds,
@@ -77,6 +79,7 @@ export function SectionRenderer({
           conversationId={conversationId}
           messageId={messageId}
           onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+          onSlateUpdated={onSlateUpdated}
           studioDraft={studioDraft}
           onStudioDraftUpdated={onStudioDraftUpdated}
           appliedRemovedCreatorIds={appliedRemovedCreatorIds}

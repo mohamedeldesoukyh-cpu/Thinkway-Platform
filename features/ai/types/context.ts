@@ -5,6 +5,8 @@ export type WorkspaceType =
   | "brand"
   | "vendor"
   | "discovery"
+  | "shortlist"
+  | "quotation"
   | "general";
 
 export interface WorkspaceContext {

@@ -1,17 +1,14 @@
 "use server";
 
-import {
-  deserializeCampaignObject,
-  type CampaignObject,
-} from "@/features/campaign-intelligence";
-import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import { createShortlistV2, addCreatorsToShortlistsV2 } from "@/features/discovery/shortlists/actions";
 import { getConversationWithMessages } from "@/features/ai-workspace/services/conversation-service";
-
 import {
-  persistCampaignObjectOnMessage,
-  requireStudioUser,
-} from "./persist-campaign-object-on-message";
+  deserializeCampaignObject,
+} from "@/features/campaign-intelligence";
+import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
+
+import { stageStudioDraftChangeAction } from "./studio-draft-actions";
+import { requireStudioUser } from "./persist-campaign-object-on-message";
 
 export type VendorRecommendationDecision = "approved" | "rejected" | "shortlisted";
 
@@ -21,70 +18,84 @@ export type VendorRecommendationActionResult = {
   vendorDecisions?: Record<string, VendorRecommendationDecision>;
   linkedShortlistId?: string;
   shortlistUrl?: string;
+  draft?: import("@/features/campaign-intelligence/types/section-schemas").StudioDraftState;
 };
-
-function patchCampaignObjectVendorDecisions(
-  campaignObject: CampaignObject,
-  creatorId: string,
-  decision: VendorRecommendationDecision,
-  linkedShortlistId?: string
-): CampaignObject {
-  const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
-  const vendorDecisions = { ...(creatorsData.vendorDecisions ?? {}), [creatorId]: decision };
-  const nextData: CreatorsSectionData = {
-    ...creatorsData,
-    vendorDecisions,
-    ...(linkedShortlistId ? { linkedShortlistId } : {}),
-    phase: decision === "shortlisted" ? "shortlist" : creatorsData.phase,
-  };
-
-  return {
-    ...campaignObject,
-    sections: {
-      ...campaignObject.sections,
-      creators: {
-        ...campaignObject.sections.creators,
-        data: nextData,
-      },
-    },
-    updatedAt: new Date().toISOString(),
-  };
-}
 
 export async function decideVendorRecommendationAction(input: {
   conversationId: string;
   messageId: string;
   creatorId: string;
   decision: "approved" | "rejected";
+  displayName?: string;
 }): Promise<VendorRecommendationActionResult> {
   try {
-    const { userId } = await requireStudioUser();
-    const next = await persistCampaignObjectOnMessage(
-      input.conversationId,
-      input.messageId,
-      userId,
-      (object) => patchCampaignObjectVendorDecisions(object, input.creatorId, input.decision)
-    );
+    const kind = input.decision === "approved" ? "approve_creator" : "reject_creator";
+    const result = await stageStudioDraftChangeAction({
+      conversationId: input.conversationId,
+      messageId: input.messageId,
+      change: {
+        kind,
+        creatorId: input.creatorId,
+        displayName: input.displayName,
+      },
+    });
 
-    if (!next) {
-      return { ok: false, message: "Campaign studio message not found." };
+    if (!result.ok) return { ok: false, message: result.message };
+
+    const previewDecisions: Record<string, VendorRecommendationDecision> = {};
+    for (const change of result.draft?.changes ?? []) {
+      if (change.kind === "approve_creator") previewDecisions[change.creatorId] = "approved";
+      if (change.kind === "reject_creator") previewDecisions[change.creatorId] = "rejected";
     }
-
-    const decisions = (next.sections.creators.data as CreatorsSectionData | undefined)
-      ?.vendorDecisions;
 
     return {
       ok: true,
       message:
         input.decision === "approved"
-          ? "Creator approved for this campaign plan."
-          : "Creator removed from recommendations.",
-      vendorDecisions: decisions,
+          ? "Approval staged — apply changes to commit."
+          : "Rejection staged — apply changes to commit.",
+      vendorDecisions: previewDecisions,
+      draft: result.draft,
     };
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Could not save decision.",
+      message: error instanceof Error ? error.message : "Could not stage decision.",
+    };
+  }
+}
+
+export async function stageVendorRoleAction(input: {
+  conversationId: string;
+  messageId: string;
+  creatorId: string;
+  role: "main" | "alternative";
+  displayName?: string;
+}): Promise<VendorRecommendationActionResult> {
+  try {
+    const kind = input.role === "main" ? "promote_main" : "demote_alternative";
+    const result = await stageStudioDraftChangeAction({
+      conversationId: input.conversationId,
+      messageId: input.messageId,
+      change: {
+        kind,
+        creatorId: input.creatorId,
+        displayName: input.displayName,
+      },
+    });
+    if (!result.ok) return { ok: false, message: result.message };
+    return {
+      ok: true,
+      message:
+        input.role === "main"
+          ? "Promote to main staged — apply changes to commit."
+          : "Move to alternatives staged — apply changes to commit.",
+      draft: result.draft,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not stage role change.",
     };
   }
 }
@@ -95,6 +106,7 @@ export async function shortlistVendorRecommendationAction(input: {
   creatorId: string;
   creatorUnifiedId: string;
   campaignName?: string;
+  displayName?: string;
 }): Promise<VendorRecommendationActionResult> {
   try {
     const { supabase, userId } = await requireStudioUser();
@@ -115,6 +127,7 @@ export async function shortlistVendorRecommendationAction(input: {
       ? ((existingObject.sections.creators.data ?? {}) as CreatorsSectionData).linkedShortlistId
       : undefined;
 
+    // Discovery shortlist write is external UX only — Campaign Plan slate state stages until Apply.
     let shortlistId = existingShortlistId;
     if (!shortlistId) {
       const name = input.campaignName?.trim()
@@ -133,28 +146,33 @@ export async function shortlistVendorRecommendationAction(input: {
       return { ok: false, message: addResult.message ?? "Could not add creator to shortlist." };
     }
 
-    const next = await persistCampaignObjectOnMessage(
-      input.conversationId,
-      input.messageId,
-      userId,
-      (object) =>
-        patchCampaignObjectVendorDecisions(
-          object,
-          input.creatorId,
-          "shortlisted",
-          shortlistId
-        )
-    );
+    const stageResult = await stageStudioDraftChangeAction({
+      conversationId: input.conversationId,
+      messageId: input.messageId,
+      change: {
+        kind: "shortlist_creator",
+        creatorId: input.creatorId,
+        displayName: input.displayName,
+        linkedShortlistId: shortlistId,
+      },
+    });
 
-    const decisions = (next?.sections.creators.data as CreatorsSectionData | undefined)
-      ?.vendorDecisions;
+    if (!stageResult.ok) return { ok: false, message: stageResult.message };
+
+    const previewDecisions: Record<string, VendorRecommendationDecision> = {};
+    for (const change of stageResult.draft?.changes ?? []) {
+      if (change.kind === "shortlist_creator") previewDecisions[change.creatorId] = "shortlisted";
+      if (change.kind === "approve_creator") previewDecisions[change.creatorId] = "approved";
+      if (change.kind === "reject_creator") previewDecisions[change.creatorId] = "rejected";
+    }
 
     return {
       ok: true,
-      message: addResult.message ?? "Creator added to shortlist.",
-      vendorDecisions: decisions,
+      message: "Shortlist staged — apply changes to commit to the campaign plan.",
+      vendorDecisions: previewDecisions,
       linkedShortlistId: shortlistId,
       shortlistUrl: `/discovery/shortlists/${shortlistId}`,
+      draft: stageResult.draft,
     };
   } catch (error) {
     return {

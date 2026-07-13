@@ -22,6 +22,7 @@ type CampaignStudioHostProps = CampaignStudioInput & {
   onVendorDecisionsUpdated?: (
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
+  onSlateUpdated?: (campaignObject: Record<string, unknown>) => void;
   onCampaignObjectPromoted?: (campaignObject: CampaignObject) => void;
   className?: string;
   layoutMode?: CampaignStudioLayoutMode;
@@ -51,6 +52,7 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
       messageId,
       onCardUpdated,
       onVendorDecisionsUpdated,
+      onSlateUpdated,
       layoutMode = "chat",
       scrollContainer,
       ...studioInput
@@ -68,6 +70,7 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
           messageId={messageId}
           onCardUpdated={onCardUpdated}
           onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+          onSlateUpdated={onSlateUpdated}
           studioModeToggle={modeToggle}
           layoutMode={layoutMode}
           scrollContainer={scrollContainer}
@@ -84,6 +87,7 @@ function CampaignStudioDecisionHost({
   messageId,
   onCardUpdated,
   onVendorDecisionsUpdated,
+  onSlateUpdated,
   onCampaignObjectPromoted,
   className,
   campaignObject,
@@ -175,6 +179,7 @@ function CampaignStudioDecisionHost({
           messageId={messageId}
           onCardUpdated={onCardUpdated}
           onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+          onSlateUpdated={onSlateUpdated}
           layoutMode={layoutMode}
           scrollContainer={scrollContainer}
         />
@@ -198,6 +203,7 @@ function CampaignStudioDecisionHost({
             messageId={messageId}
             onCardUpdated={onCardUpdated}
             onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+            onSlateUpdated={onSlateUpdated}
             decisionMode={decisionMode}
             layoutMode={layoutMode}
             scrollContainer={scrollContainer}

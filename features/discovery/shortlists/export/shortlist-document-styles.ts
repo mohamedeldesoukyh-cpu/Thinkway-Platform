@@ -2,18 +2,18 @@ import { THINKWAY_REPORT_LOGO_STYLES } from "@/lib/reports/document/thinkway-rep
 
 /**
  * Print/PDF styles for Discovery shortlist exports.
- * Thinkway brand accent (#1D9E75) — cover, body sections, closing page.
+ * Thinkway brand kit — electric blue #0057FF, navy #060810, lavender #E8EFFE.
  */
 export const SHORTLIST_PALETTE = {
-  primary: "#0A0F1E",
-  secondary: "#1A1F36",
-  accent: "#1D9E75",
-  accentLight: "#E8F7F1",
+  primary: "#060810",
+  secondary: "#0B1224",
+  accent: "#0057FF",
+  accentLight: "#E8EFFE",
   text: "#FFFFFF",
-  card: "#F8FAFC",
-  ink: "#1A1F36",
+  card: "#F5F8FF",
+  ink: "#0B0F1A",
   muted: "#6B7280",
-  rule: "#E2E8F0",
+  rule: "#E2E7F5",
 } as const;
 
 export function buildShortlistDocumentStyles(generatedLabel: string): string {

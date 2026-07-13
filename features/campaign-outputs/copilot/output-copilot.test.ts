@@ -54,6 +54,7 @@ test("plain generate on an already-current output is a no-op (no unnecessary reg
   const again = runGenerateOutput(first.campaignObject, { kind: "media_plan" });
   assert.equal(again.changed, false);
   assert.match(again.reply, /already generated and current/);
+  assert.equal(again.preview, "media_plan");
 });
 
 test("regenerate always rebuilds and bumps the version", () => {

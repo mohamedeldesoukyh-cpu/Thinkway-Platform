@@ -2,6 +2,10 @@ import { CheckCircle2Icon, CircleIcon } from "lucide-react";
 
 import {
   computeOnboardingProgress,
+  deriveOnboardingStatusFromCompletion,
+  formatOnboardingProgressDetail,
+  getIncompleteOnboardingSectionLabels,
+  isOnboardingSectionApplicable,
   type ClientOnboardingStatus,
   type OnboardingCompletionFields,
 } from "@/lib/clients/onboarding-status";
@@ -12,6 +16,7 @@ import { OnboardingStatusBadge } from "./onboarding-status-badge";
 type OnboardingProgressTrackerProps = {
   status: ClientOnboardingStatus;
   completion: OnboardingCompletionFields;
+  creditLimitActive?: boolean;
   className?: string;
   compact?: boolean;
 };
@@ -19,10 +24,16 @@ type OnboardingProgressTrackerProps = {
 export function OnboardingProgressTracker({
   status,
   completion,
+  creditLimitActive = false,
   className,
   compact = false,
 }: OnboardingProgressTrackerProps) {
-  const progress = computeOnboardingProgress(completion);
+  const derivationInput = { ...completion, credit_limit_active: creditLimitActive };
+  const displayStatus = deriveOnboardingStatusFromCompletion(derivationInput, status);
+  const progress = computeOnboardingProgress(derivationInput);
+  const applicableSections = progress.sections.filter((section) =>
+    isOnboardingSectionApplicable(section.id, derivationInput)
+  );
 
   return (
     <section
@@ -40,11 +51,11 @@ export function OnboardingProgressTracker({
           </h3>
           {!compact ? (
             <p className="text-xs text-muted-foreground">
-              Complete legal, finance, contracts, and tax before activating for campaigns.
+              Complete legal, finance (when credit limit is active), and tax before activating for campaigns.
             </p>
           ) : null}
         </div>
-        <OnboardingStatusBadge status={status} />
+        <OnboardingStatusBadge status={displayStatus} />
       </div>
 
       <div className="mt-3 flex items-center gap-2">
@@ -56,23 +67,39 @@ export function OnboardingProgressTracker({
             aria-valuenow={progress.percentage}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label={`${progress.percentage}% onboarding complete`}
+            aria-label={formatOnboardingProgressDetail(progress, derivationInput)}
           />
         </div>
         <span className="text-xs font-medium tabular-nums text-muted-foreground">
-          {progress.percentage}%
+          {progress.percentage >= 100 ? "Complete" : `${progress.percentage}%`}
         </span>
       </div>
 
+      {progress.percentage < 100 ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {formatOnboardingProgressDetail(progress, derivationInput)}
+        </p>
+      ) : null}
+
+      {getIncompleteOnboardingSectionLabels(progress, derivationInput).length > 0 ? (
+        <p className="mt-1 text-xs font-medium text-amber-700">
+          Still needed: {getIncompleteOnboardingSectionLabels(progress, derivationInput).join(" · ")}
+        </p>
+      ) : null}
+
       <ul className={cn("mt-3 space-y-2", compact && "mt-2 space-y-1.5")}>
-        {progress.sections.map((section) => (
+        {applicableSections.map((section) => (
           <li key={section.id} className="flex items-center gap-2 text-sm">
             {section.completed ? (
               <CheckCircle2Icon className="size-4 shrink-0 text-success" aria-hidden />
             ) : (
-              <CircleIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <CircleIcon className="size-4 shrink-0 text-amber-600" aria-hidden />
             )}
-            <span className={section.completed ? "text-foreground" : "text-muted-foreground"}>
+            <span
+              className={
+                section.completed ? "text-foreground" : "font-medium text-amber-700"
+              }
+            >
               {section.label}
             </span>
           </li>

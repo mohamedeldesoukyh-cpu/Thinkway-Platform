@@ -9,6 +9,8 @@ import {
 import type { Database, ShortlistItemStatus } from "@/types/database";
 import { getAuthContext } from "@/lib/auth/permissions-server";
 import { hasPermission } from "@/lib/auth/permissions";
+import { getBrandsForSelect, getClientsForSelect } from "@/lib/master-data/queries";
+import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listQuotationsByShortlistQuery } from "@/lib/services/quotations/repositories/quotation-repository";
 import type { QuotationStatus } from "@/types/database";
@@ -17,6 +19,7 @@ import { SHORTLIST_PERMISSIONS } from "./constants";
 import type {
   ShortlistBrandOption,
   ShortlistCampaignOption,
+  ShortlistClientOption,
   ShortlistCreatorItem,
   ShortlistCreatorQuotationRef,
   ShortlistDetail,
@@ -560,24 +563,37 @@ export async function getShortlistCampaignOptions(): Promise<
   return (data as ShortlistCampaignOption[]) ?? [];
 }
 
+export async function getShortlistClientOptions(): Promise<ShortlistClientOption[]> {
+  const clients = await getClientsForSelect();
+  return buildClientSelectOptions(clients).map((client) => ({
+    id: client.value,
+    name: client.label,
+    legal_name: client.description ?? null,
+  }));
+}
+
 export async function getShortlistBrandOptions(): Promise<ShortlistBrandOption[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("brands")
-    .select("id, name, client:clients(name)")
-    .order("name", { ascending: true })
-    .limit(500);
+  const brands = await getBrandsForSelect();
+  if (brands.length === 0) return [];
 
-  if (error) throw new Error(error.message);
+  const clientIds = Array.from(new Set(brands.map((brand) => brand.client_id)));
+  const { data: clientRows } = await supabase
+    .from("clients")
+    .select("id, name")
+    .in("id", clientIds);
+  const clientNames = new Map(
+    ((clientRows ?? []) as Array<{ id: string; name: string }>).map((row) => [
+      row.id,
+      row.name,
+    ])
+  );
 
-  return ((data ?? []) as unknown as Array<{
-    id: string;
-    name: string;
-    client: { name: string | null } | null;
-  }>).map((row) => ({
-    id: row.id,
-    name: row.name,
-    client_name: row.client?.name ?? null,
+  return brands.map((brand) => ({
+    id: brand.id,
+    name: brand.name,
+    client_id: brand.client_id,
+    client_name: clientNames.get(brand.client_id) ?? null,
   }));
 }
 

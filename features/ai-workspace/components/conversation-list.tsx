@@ -43,6 +43,8 @@ type ConversationListProps = {
   onRefresh?: () => void;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  /** Sheet / overlay — full width, no collapse rail. */
+  embedded?: boolean;
   className?: string;
 };
 
@@ -72,6 +74,7 @@ export function ConversationList({
   onRefresh,
   collapsed = false,
   onCollapsedChange,
+  embedded = false,
   className,
 }: ConversationListProps) {
   const [search, setSearch] = useState("");
@@ -90,11 +93,18 @@ export function ConversationList({
     buckets.set(label, list);
   }
 
+  const Root = embedded ? "div" : "aside";
+
   return (
-    <aside
+    <Root
       className={cn(
-        "ai-sidebar ai-sidebar-glass ai-sidebar-float flex shrink-0 flex-col self-stretch overflow-hidden",
-        collapsed ? "w-12" : "w-[272px]",
+        "flex shrink-0 flex-col self-stretch overflow-hidden",
+        embedded
+          ? "min-h-0 w-full"
+          : cn(
+              "ai-sidebar ai-sidebar-glass ai-sidebar-float",
+              collapsed ? "w-12" : "w-[272px]"
+            ),
         className
       )}
     >
@@ -199,7 +209,7 @@ export function ConversationList({
             </div>
           )}
 
-          {onCollapsedChange ? (
+          {onCollapsedChange && !embedded ? (
             <div className="shrink-0 border-t border-black/[0.06] p-2">
               <button
                 type="button"
@@ -213,7 +223,7 @@ export function ConversationList({
           ) : null}
         </>
       )}
-    </aside>
+    </Root>
   );
 }
 

@@ -7,6 +7,7 @@ import type { CampaignOutputKind } from "@/features/campaign-outputs/output-type
 import { getOutputDefinition } from "@/features/campaign-outputs/output-catalog";
 import {
   markStaleCampaignOutputs,
+  regenerateStaleCampaignOutputs,
   staleCampaignOutputKinds,
 } from "@/features/campaign-outputs/output-registry";
 import {
@@ -25,7 +26,7 @@ import { isCampaignPlanLockedForEdits, APPROVED_PLAN_EDIT_BLOCKED_MESSAGE } from
 import { getDefaultLlmProvider } from "@/features/ai/llm";
 import type { LlmProvider } from "@/features/ai/types/llm";
 
-import { applyStudioDraftChanges, getStudioDraft, stageDraftChange, withStudioDraft } from "../studio-draft";
+import { getStudioDraft, stageDraftChange, withStudioDraft } from "../studio-draft";
 import { reoptimizeCampaignAfterApply } from "../apply-draft-reoptimize";
 import {
   applyAudienceChange,
@@ -55,7 +56,6 @@ import {
 import {
   buildCampaignContextDigest,
   buildChangeSummary,
-  describeDominantTiers,
   extractRationale,
   planRemovalChanges,
   renderChangeSummary,
@@ -266,10 +266,10 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
 }
 
 /**
- * Apply a set of slate draft changes (removals + additions) in one deterministic
- * pass: stage → apply → re-optimize → save a version → summarize.
+ * Stage slate draft changes only — Copilot must not apply or regenerate the plan.
+ * The user commits via Apply Changes in the Creator Slate review UI.
  */
-async function commitDraftChanges(
+async function stageDraftChanges(
   input: RunInput,
   digest: CampaignContextDigest,
   changes: StudioDraftChange[],
@@ -287,36 +287,22 @@ async function commitDraftChanges(
   let draft = getStudioDraft(input.campaignObject);
   for (const change of changes) draft = stageDraftChange(draft, change);
   const staged = withStudioDraft(input.campaignObject, draft);
-  const applied = applyStudioDraftChanges(staged);
-  const reoptimized = await reoptimizeCampaignAfterApply(input.supabase, applied.campaignObject);
-  const { campaignObject: finalObject, effect: staleEffect } = applyOutputStaleness(
-    reoptimized,
-    input.campaignObject
-  );
 
-  const scoresAfter = (finalObject.sections.performance.data as PerformanceSectionData | undefined)
-    ?.campaignScores;
-
-  // Grounded downstream effects on the actual updated campaign.
-  const effects: string[] = [];
-  if (meta.removed > 0 || meta.added > 0) {
-    effects.push(`the creator mix was rebalanced ${describeDominantTiers(finalObject)}`);
-    effects.push("the budget was reallocated across the updated slate");
-  }
-  if (staleEffect) effects.push(staleEffect);
+  const effects = [
+    "changes are staged in the creator slate — click Apply Changes to regenerate the full campaign plan",
+  ];
 
   const summary = buildChangeSummary({
     action: meta.action,
     rationale: meta.rationale,
     effects,
     scoreBefore: digest.overallScore,
-    scoresAfter,
   });
 
-  const logged = appendChangeLog(finalObject, {
-    summary: meta.logSummary,
+  const logged = appendChangeLog(staged, {
+    summary: `${meta.logSummary} (staged — not applied)`,
     intent: meta.intentKind,
-    overallScoreAfter: scoresAfter?.overall,
+    overallScoreAfter: digest.overallScore,
     appliedAt: new Date().toISOString(),
   });
   const persisted = await persistVersion(
@@ -328,7 +314,7 @@ async function commitDraftChanges(
 
   return {
     campaignObject: persisted,
-    reply: renderChangeSummary(summary),
+    reply: `${renderChangeSummary(summary)} Use **Apply Changes** in the Creator Slate to commit.`,
     changed: true,
     intentKind: meta.intentKind,
   };
@@ -392,7 +378,7 @@ async function removeCreators(
         : "";
   const action = `removed the ${changes.length} ${tierLabel}creator${changes.length === 1 ? "" : "s"}${criterionLabel} (${removedNames.join(", ")})`;
 
-  return commitDraftChanges(input, digest, changes, {
+  return stageDraftChanges(input, digest, changes, {
     intentKind: "remove_creators",
     action,
     rationale: extractRationale(intent.reason),
@@ -485,7 +471,7 @@ async function replaceCreators(
     picked.length > 0
       ? `replaced ${targets.length} ${fromLabel} creator${targets.length === 1 ? "" : "s"} (${targets.map((t) => t.displayName).join(", ")}) with ${picked.length} ${toLabel} creator${picked.length === 1 ? "" : "s"} (${picked.map((c) => c.display_name).join(", ")})`
       : `removed ${targets.length} ${fromLabel} creator${targets.length === 1 ? "" : "s"} (${targets.map((t) => t.displayName).join(", ")}) — no matching ${toLabel} replacements were available in Discovery`;
-  return commitDraftChanges(input, digest, changes, {
+  return stageDraftChanges(input, digest, changes, {
     intentKind: "replace_creators",
     action,
     rationale: intent.higherEngagement ? "you asked for higher-engagement creators" : undefined,
@@ -760,7 +746,13 @@ async function generateOutputEdit(
     regenerate: options.regenerate,
   });
   if (!result.changed) {
-    return { campaignObject: result.campaignObject, reply: result.reply, changed: false, intentKind };
+    return {
+      campaignObject: result.campaignObject,
+      reply: result.reply,
+      changed: false,
+      intentKind,
+      outputPreview: result.preview,
+    };
   }
 
   const label = getOutputDefinition(kind)?.label ?? kind;
@@ -937,12 +929,13 @@ function applyOutputStaleness(
 ): { campaignObject: CampaignObject; effect?: string } {
   const marked = markStaleCampaignOutputs(edited);
   const beforeStale = new Set(staleCampaignOutputKinds(before));
+  const regenerated = regenerateStaleCampaignOutputs(marked, { origin: "automatic" });
   const newly = staleCampaignOutputKinds(marked).filter((kind) => !beforeStale.has(kind));
-  if (newly.length === 0) return { campaignObject: marked };
+  if (newly.length === 0) return { campaignObject: regenerated };
   const labels = newly.map((kind) => getOutputDefinition(kind)?.label ?? kind).join(", ");
   return {
-    campaignObject: marked,
-    effect: `${newly.length} generated output${newly.length === 1 ? "" : "s"} now need${newly.length === 1 ? "s" : ""} regenerating (${labels})`,
+    campaignObject: regenerated,
+    effect: `${newly.length} output${newly.length === 1 ? "" : "s"} synced automatically (${labels})`,
   };
 }
 

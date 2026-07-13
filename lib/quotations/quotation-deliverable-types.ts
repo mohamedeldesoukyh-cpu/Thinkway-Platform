@@ -64,21 +64,31 @@ export function deliverableTypeLines(
     quantity?: number | null;
   }
 ): QuotationDeliverableTypeLine[] {
-  const fromLines = (deliverable.type_lines ?? []).filter(
-    (line): line is QuotationDeliverableTypeLine =>
-      Boolean(line && typeof line.type === "string")
-  );
-  if (fromLines.length > 0) {
-    return fromLines.map((line) => ({
+  const normalizedLines = (deliverable.type_lines ?? [])
+    .filter(
+      (line): line is QuotationDeliverableTypeLine =>
+        Boolean(line && typeof line.type === "string")
+    )
+    .map((line) => ({
       type: line.type.trim(),
       quantity: normalizeTypeLineQuantity(line.quantity),
     }));
+
+  const filledLines = normalizedLines.filter((line) => line.type);
+  const typeValues = deliverableTypeValues(deliverable);
+
+  // Prefer child type_lines, but merge in every selected `types` entry when the
+  // stored lines are incomplete (common when only the total cell was persisted).
+  if (typeValues.length > 0) {
+    const covered = new Set(filledLines.map((line) => line.type));
+    const missingTypes = typeValues.filter((type) => !covered.has(type));
+    if (filledLines.length === 0 || missingTypes.length > 0) {
+      return typeLinesFromSelectedTypes(typeValues, normalizedLines);
+    }
+    return filledLines;
   }
 
-  const types = deliverableTypeValues(deliverable);
-  if (types.length > 0) {
-    return types.map((type) => ({ type, quantity: 1 }));
-  }
+  if (filledLines.length > 0) return filledLines;
 
   return [{ type: "", quantity: 1 }];
 }

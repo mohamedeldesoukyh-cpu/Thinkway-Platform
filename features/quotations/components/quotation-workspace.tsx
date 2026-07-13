@@ -461,7 +461,7 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div className="thinkway-campaign-workspace flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="thinkway-campaign-workspace flex min-h-0 flex-col">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <QuotationWorkspaceHeader
         detail={detail}
@@ -482,7 +482,7 @@ function QuotationWorkspaceContent({
 
       <div
         className={cn(
-          "thinkway-campaign-content min-h-0 flex-1 overflow-y-auto",
+          "thinkway-campaign-content-inner min-h-0",
           glassFlyoutContentClass(selectedIds.size > 0)
         )}
       >

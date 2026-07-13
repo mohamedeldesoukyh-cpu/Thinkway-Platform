@@ -284,6 +284,11 @@ export function ClientFinanceTab({
               }}
               disabled={isPending}
             />
+            {!creditLimitActive ? (
+              <p className={cn(CLIENT_FORM_FIELD_HINT_CLASS, "mt-3")}>
+                Credit limit not active — finance approval is not required for onboarding.
+              </p>
+            ) : null}
           </ClientFormSection>
 
           <ClientFormSection

@@ -13,6 +13,8 @@ import {
 import { getClientById } from "@/features/clients/queries";
 import { getClientIoSendRecipients, getClientIosForClient } from "@/features/io/queries";
 import { getGroupsForSelect, getMasterDataOptions } from "@/lib/master-data/queries";
+import { tryCompleteFinanceOnboarding } from "@/lib/clients/try-complete-finance-onboarding";
+import { requireRequestUser } from "@/lib/supabase/server";
 
 type ClientProfilePageProps = {
   params: Promise<{ id: string }>;
@@ -41,6 +43,25 @@ export default async function ClientProfilePage({
 
   try {
     client = await getClientById(id);
+    if (
+      client?.onboarding_status === "finance_pending" &&
+      !(client.credit_limit_active ?? false) &&
+      client.legal_completed_at
+    ) {
+      try {
+        const { supabase, user } = await requireRequestUser();
+        const reconciled = await tryCompleteFinanceOnboarding({
+          supabase,
+          clientId: id,
+          userId: user.id,
+        });
+        if (reconciled.completed) {
+          client = await getClientById(id);
+        }
+      } catch {
+        // Unauthenticated or reconcile skipped — profile still renders with derived badge.
+      }
+    }
     [
       groups,
       masterData,

@@ -168,8 +168,8 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
           + New Client
         </button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden rounded-[20px] border-border p-0 shadow-[var(--card-shadow)] sm:max-w-xl">
-        <DialogHeader className="shrink-0 border-b border-border bg-background/70 px-6 py-4 backdrop-blur-md">
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden rounded-[20px] border-border p-0 shadow-[var(--card-shadow)] sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b border-border bg-background/70 px-5 py-3.5 backdrop-blur-md">
           <DialogTitle className="text-[25px] font-extrabold tracking-[-0.02em]">
             New client
           </DialogTitle>
@@ -229,7 +229,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             value={String(categoryTouched)}
           />
 
-          <div className="grid min-h-0 flex-1 gap-[18px] overflow-y-auto px-6 py-5">
+          <div className="flex h-0 min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto overscroll-y-contain px-5 py-4">
             {state.fieldErrors && !state.ok ? (
               <p className="rounded-[10px] border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                 {Object.entries(state.fieldErrors)
@@ -244,6 +244,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               icon={ClipboardListIcon}
               title="Identity"
               description="Legal name and classification"
+              compact
               className="shadow-none"
             >
               <ClientFormGrid>
@@ -345,6 +346,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
               icon={MapPinIcon}
               title="Location & defaults"
               description="Region and billing currency"
+              compact
               className="shadow-none"
             >
               <ClientFormGrid>
@@ -399,7 +401,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                   name="notes"
                   rows={2}
                   disabled={isPending}
-                  className={CLIENT_FORM_TEXTAREA_CLASS}
+                  className={cn(CLIENT_FORM_TEXTAREA_CLASS, "min-h-[72px]")}
                 />
               </ClientFormField>
 
@@ -410,7 +412,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             </ClientFormSection>
           </div>
 
-          <DialogFooter className="shrink-0 gap-2.5 border-t border-border bg-background/90 px-6 py-3.5 backdrop-blur-[14px]">
+          <DialogFooter className="shrink-0 gap-2.5 border-t border-border bg-background/90 px-5 py-3 backdrop-blur-[14px]">
             <button
               type="button"
               className={CLIENT_FORM_GHOST_BUTTON_CLASS}

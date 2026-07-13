@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CreatorProfileLink,
   creatorProfileSourceFromUnified,
@@ -38,11 +38,17 @@ import {
 import { cn } from "@/lib/utils";
 import type { ShortlistCreatorQuotationRef } from "../types";
 import type { ShortlistItemStatus } from "@/types/database";
-import { MoreHorizontalIcon, UsersIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, MoreHorizontalIcon, UsersIcon } from "lucide-react";
 
 import { ShortlistItemStatusBadge, ShortlistCreatorQuotedBadge } from "./shortlist-badges";
 import { SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
 import { ShortlistDetailCheckbox } from "./shortlist-detail-primitives";
+import {
+  applyShortlistHeaderSort,
+  sortShortlistCreators,
+  type ShortlistCreatorSortField,
+  type ShortlistCreatorSortState,
+} from "../shortlist-creator-sort";
 
 type ShortlistRowItem = {
   item_id: string;
@@ -71,6 +77,46 @@ const TH_CLASS =
 const TD_CLASS = "border-b border-border px-4 py-3.5 align-middle text-xs text-muted-foreground";
 const ENRICHING_ROW_CLASS =
   "bg-sky-500/[0.07] ring-1 ring-inset ring-sky-500/25 hover:bg-sky-500/10";
+
+function SortableHeader({
+  label,
+  field,
+  align,
+  sort,
+  onSortChange,
+}: {
+  label: string;
+  field: ShortlistCreatorSortField;
+  align?: "left" | "right";
+  sort: ShortlistCreatorSortState | null;
+  onSortChange: (next: ShortlistCreatorSortState) => void;
+}) {
+  const isActive = sort?.field === field;
+
+  return (
+    <th className={cn(TH_CLASS, align === "right" && "text-right")}>
+      <button
+        type="button"
+        onClick={() => onSortChange(applyShortlistHeaderSort(sort, field))}
+        aria-sort={isActive ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+        className={cn(
+          "inline-flex w-full min-w-0 items-center gap-0.5 transition-colors hover:text-foreground",
+          align === "right" && "justify-end text-right",
+          isActive && "text-foreground"
+        )}
+      >
+        <span className="truncate">{label}</span>
+        {isActive ? (
+          sort.direction === "asc" ? (
+            <ArrowUpIcon className="size-3 shrink-0" aria-hidden />
+          ) : (
+            <ArrowDownIcon className="size-3 shrink-0" aria-hidden />
+          )
+        ) : null}
+      </button>
+    </th>
+  );
+}
 
 function resolveDisplayEngagementRate(
   creator: UnifiedCreatorResult,
@@ -377,6 +423,9 @@ export function ShortlistCreatorList({
   onAddToQuotation,
   onCreatorDeleted,
 }: Props) {
+  const [sort, setSort] = useState<ShortlistCreatorSortState | null>(null);
+  const sortedItems = useMemo(() => sortShortlistCreators(items, sort), [items, sort]);
+
   return (
     <div className="w-full overflow-x-auto px-1 pb-1">
       <table className="w-full min-w-[1040px] table-fixed border-collapse [&_tbody_tr:last-child_td]:border-b-0">
@@ -408,23 +457,50 @@ export function ShortlistCreatorList({
                 />
               ) : null}
             </th>
-            <th className={cn(TH_CLASS, "w-7")}>#</th>
-            <th className={TH_CLASS}>Creator</th>
-            <th className={TH_CLASS}>Platform</th>
-            <th className={cn(TH_CLASS, "text-right")}>Followers</th>
-            <th className={TH_CLASS}>Tier</th>
-            <th className={TH_CLASS}>Country</th>
-            <th className={TH_CLASS}>Audience interests</th>
-            <th className={cn(TH_CLASS, "text-right")}>Avg ER</th>
-            <th className={TH_CLASS}>Brand safety</th>
-            <th className={TH_CLASS}>Sync</th>
-            <th className={TH_CLASS}>Status</th>
-            <th className={TH_CLASS}>{SHORTLIST_QUOTED_COLUMN_LABEL}</th>
+            <SortableHeader label="#" field="rank" sort={sort} onSortChange={setSort} />
+            <SortableHeader label="Creator" field="creator" sort={sort} onSortChange={setSort} />
+            <SortableHeader label="Platform" field="platform" sort={sort} onSortChange={setSort} />
+            <SortableHeader
+              label="Followers"
+              field="followers"
+              align="right"
+              sort={sort}
+              onSortChange={setSort}
+            />
+            <SortableHeader label="Tier" field="tier" sort={sort} onSortChange={setSort} />
+            <SortableHeader label="Country" field="country" sort={sort} onSortChange={setSort} />
+            <SortableHeader
+              label="Audience interests"
+              field="interests"
+              sort={sort}
+              onSortChange={setSort}
+            />
+            <SortableHeader
+              label="Avg ER"
+              field="engagement"
+              align="right"
+              sort={sort}
+              onSortChange={setSort}
+            />
+            <SortableHeader
+              label="Brand safety"
+              field="brand_safety"
+              sort={sort}
+              onSortChange={setSort}
+            />
+            <SortableHeader label="Sync" field="sync" sort={sort} onSortChange={setSort} />
+            <SortableHeader label="Status" field="status" sort={sort} onSortChange={setSort} />
+            <SortableHeader
+              label={SHORTLIST_QUOTED_COLUMN_LABEL}
+              field="quoted"
+              sort={sort}
+              onSortChange={setSort}
+            />
             <th className={cn(TH_CLASS, "w-10")} aria-label="Actions" />
           </tr>
         </thead>
         <tbody>
-          {items.map((item, index) => {
+          {sortedItems.map((item, index) => {
             const isSelected = selectedIds.has(item.item_id);
             const common = {
               item,

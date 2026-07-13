@@ -9,16 +9,34 @@ import {
   shortlistDocumentBaseName,
 } from "@/features/discovery/shortlists/export/shortlist-document";
 import { buildShortlistExcel } from "@/features/discovery/shortlists/export/shortlist-excel";
+import {
+  embedShortlistDocumentPublicationShots,
+  loadShortlistCreatorPublicationShots,
+} from "@/features/discovery/shortlists/export/shortlist-export-publications";
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
-import { resolveShortlistTemplate } from "@/features/discovery/shortlists/export/shortlist-template";
+import { buildShortlistPptxBuffer } from "@/features/discovery/shortlists/export/shortlist-pptx";
+import {
+  isShowcaseTemplate,
+  resolveShortlistTemplate,
+} from "@/features/discovery/shortlists/export/shortlist-template";
 import { getShortlistDetail } from "@/features/discovery/shortlists/queries";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { getClientIp, requireApiPermission } from "@/lib/auth/api-auth";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export const maxDuration = 60;
+/** Showcase embed + Chromium PDF can exceed 60s with many publication shots. */
+export const maxDuration = 120;
 export const dynamic = "force-dynamic";
+
+const EXPORT_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate",
+  Pragma: "no-cache",
+} as const;
+
+function withExportCacheHeaders(headers: Record<string, string>): Record<string, string> {
+  return { ...headers, ...EXPORT_CACHE_HEADERS };
+}
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -31,6 +49,24 @@ function parseItemIds(raw: string | null): string[] | undefined {
     .map((value) => value.trim())
     .filter(Boolean);
   return ids.length > 0 ? ids : undefined;
+}
+
+function resolveShortlistExportSiteOrigin(
+  requestHost?: string | null,
+  requestProto?: string | null
+): string {
+  if (requestHost) {
+    const proto = requestProto?.replace(/:$/, "") || "http";
+    return `${proto}://${requestHost}`;
+  }
+  const envOrigin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (envOrigin) return envOrigin;
+  return "http://localhost:3000";
+}
+
+function templateSuffix(template: ReturnType<typeof resolveShortlistTemplate>): string {
+  if (template === "summary") return "";
+  return `-${template}`;
 }
 
 export async function GET(request: Request, context: RouteContext) {
@@ -56,50 +92,89 @@ export async function GET(request: Request, context: RouteContext) {
       action: "export",
       entityType: "shortlist",
       entityId: id,
-      metadata: { format, download },
+      metadata: { format, download, template },
       ip: getClientIp(request),
     });
 
-    const doc = buildShortlistDocument(detail, { template, itemIds });
+    const filteredItems =
+      itemIds && itemIds.length > 0
+        ? detail.creators.filter((item) => itemIds.includes(item.item_id))
+        : detail.creators;
+
+    const publicationShotsByCreatorKey =
+      isShowcaseTemplate(template) && format !== "excel" && format !== "csv"
+        ? await loadShortlistCreatorPublicationShots(supabase, filteredItems)
+        : undefined;
+
+    let doc = buildShortlistDocument(detail, {
+      template,
+      itemIds,
+      publicationShotsByCreatorKey,
+    });
+
+    if (format !== "excel" && format !== "csv") {
+      doc = await embedShortlistDocumentAvatars(doc);
+      doc = await embedShortlistDocumentPublicationShots(doc);
+    }
+
     const baseName = shortlistDocumentBaseName(doc);
     const disposition = download ? "attachment" : "inline";
-    const templateSuffix = template === "detailed" ? "-detailed" : "";
+    const suffix = templateSuffix(template);
+    const siteOrigin = resolveShortlistExportSiteOrigin(
+      request.headers.get("x-forwarded-host") ?? request.headers.get("host"),
+      request.headers.get("x-forwarded-proto")
+    );
 
     if (format === "csv") {
       const csv = buildShortlistCsv(doc);
       return new NextResponse(csv, {
-        headers: {
+        headers: withExportCacheHeaders({
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.csv"`,
-        },
+          "Content-Disposition": `${disposition}; filename="${baseName}${suffix}.csv"`,
+        }),
       });
     }
 
     if (format === "excel") {
       const buffer = await buildShortlistExcel(doc);
       return new NextResponse(buffer as unknown as BodyInit, {
-        headers: {
+        headers: withExportCacheHeaders({
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "Content-Disposition": `attachment; filename="${baseName}${templateSuffix}.xlsx"`,
-        },
+          "Content-Disposition": `attachment; filename="${baseName}${suffix}.xlsx"`,
+        }),
+      });
+    }
+
+    if (format === "pptx") {
+      if (!isShowcaseTemplate(template)) {
+        return NextResponse.json(
+          { error: "PPTX export is available for the Showcase template only." },
+          { status: 400 }
+        );
+      }
+      const buffer = await buildShortlistPptxBuffer(doc);
+      return new NextResponse(buffer as unknown as BodyInit, {
+        headers: withExportCacheHeaders({
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "Content-Disposition": `attachment; filename="${baseName}${suffix}.pptx"`,
+        }),
       });
     }
 
     if (format === "word") {
-      const exportDoc = await embedShortlistDocumentAvatars(doc);
-      const wordHtml = buildShortlistHtml(exportDoc);
+      const wordHtml = buildShortlistHtml(doc, { siteOrigin });
       return new NextResponse(wordHtml, {
-        headers: {
+        headers: withExportCacheHeaders({
           "Content-Type": "application/msword",
-          "Content-Disposition": `attachment; filename="${baseName}${templateSuffix}.doc"`,
-        },
+          "Content-Disposition": `attachment; filename="${baseName}${suffix}.doc"`,
+        }),
       });
     }
 
     if (format === "pdf") {
-      const exportDoc = await embedShortlistDocumentAvatars(doc);
-      const pdfHtml = buildShortlistHtml(exportDoc);
+      const pdfHtml = buildShortlistHtml(doc, { siteOrigin });
       const pdfResult = await renderHtmlToPdf(pdfHtml);
       if (!pdfResult.ok) {
         return NextResponse.json(
@@ -108,20 +183,19 @@ export async function GET(request: Request, context: RouteContext) {
         );
       }
       return new NextResponse(pdfResult.buffer as unknown as BodyInit, {
-        headers: {
+        headers: withExportCacheHeaders({
           "Content-Type": "application/pdf",
-          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pdf"`,
-        },
+          "Content-Disposition": `${disposition}; filename="${baseName}${suffix}.pdf"`,
+        }),
       });
     }
 
-    const exportDoc = await embedShortlistDocumentAvatars(doc);
-    const html = buildShortlistHtml(exportDoc);
+    const html = buildShortlistHtml(doc, { siteOrigin });
     return new NextResponse(html, {
-      headers: {
+      headers: withExportCacheHeaders({
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.html"`,
-      },
+        "Content-Disposition": `${disposition}; filename="${baseName}${suffix}.html"`,
+      }),
     });
   } catch (error) {
     const message =

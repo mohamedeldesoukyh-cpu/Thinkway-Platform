@@ -101,6 +101,7 @@ export function runGenerateOutput(
       changed: false,
       reply: `The ${label} is already generated and current (v${existing.version}). Say "regenerate the ${label}" if you want me to rebuild it.`,
       record: existing,
+      preview: input.kind,
     };
   }
 

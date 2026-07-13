@@ -666,6 +666,15 @@
     padding: 16px 20px;
   }
 
+  .thinkway-campaign-workspace [data-campaign-workspace-scroll] {
+    min-height: 0 !important;
+    padding: 0;
+  }
+
+  .thinkway-campaign-content-inner {
+    padding: 16px 20px;
+  }
+
   .thinkway-campaign-section-card {
     margin-bottom: 14px;
     overflow: hidden;
