@@ -30,7 +30,7 @@ export async function tryCompleteLegalOnboarding(params: {
   const { data: client, error: fetchError } = await params.supabase
     .from("clients")
     .select(
-      "id, onboarding_status, legal_completed_at, finance_completed_at, contracts_completed_at, tax_completed_at, trade_license_number, trade_license_expiry, vat_number, tax_id, legal_address, credit_limit_active"
+      "id, onboarding_status, legal_completed_at, finance_completed_at, contracts_completed_at, tax_completed_at, trade_license_number, trade_license_expiry, vat_number, legal_address, credit_limit_active"
     )
     .eq("id", params.clientId)
     .maybeSingle();
@@ -59,7 +59,6 @@ export async function tryCompleteLegalOnboarding(params: {
     trade_license_number: client.trade_license_number,
     trade_license_expiry: client.trade_license_expiry,
     vat_number: client.vat_number,
-    tax_id: client.tax_id,
     legal_address:
       client.legal_address && typeof client.legal_address === "object"
         ? (client.legal_address as Record<string, unknown>)
