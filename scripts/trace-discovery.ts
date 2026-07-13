@@ -72,6 +72,13 @@ function argFlag(name: string): string | undefined {
   return hit ? hit.slice(name.length + 1) : undefined;
 }
 
+/** Compact list of an object's top-level keys (for snapshot/metadata probes). */
+function keysOf(value: unknown): string {
+  if (!value || typeof value !== "object") return "—";
+  const keys = Object.keys(value as Record<string, unknown>);
+  return keys.length ? keys.join(", ") : "(empty object)";
+}
+
 /** First captured funnel stage that dropped a non-empty pool to zero. */
 function firstZeroDrop(events: DropEvent[]): DropEvent | undefined {
   return events.find((d) => d.before > 0 && d.after === 0);
@@ -275,6 +282,176 @@ async function resolveCampaignObjectLikeStudio(
   return { campaignObject: null, source: "not_found", probe };
 }
 
+/**
+ * Self-sufficient forensic sweep — runs ONLY when the Campaign Object cannot be
+ * resolved. Instead of exiting with a one-liner, it inspects every layer the
+ * Studio could load from and explains the failure, so the diagnostic never
+ * requires a second investigation to investigate itself. Read-only throughout.
+ */
+async function investigateMissingCampaignObject(
+  conversationId: string,
+  resolution: CampaignObjectResolution
+): Promise<void> {
+  header("WHY THE CAMPAIGN OBJECT COULD NOT BE RESOLVED (self-check)");
+
+  // 1) ai_conversations -------------------------------------------------------
+  console.log("\n  [1] ai_conversations");
+  const { data: convo, error: convoErr } = await supabase
+    .from("ai_conversations")
+    .select("id, title, workspace_type, workspace_id, status, created_by, created_at, updated_at, context_snapshot")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (convoErr) console.log(`      query error: ${convoErr.message}`);
+  if (!convo) {
+    console.log(`      NO ROW for id ${conversationId}.`);
+    console.log(`      → Wrong conversation id, or this trace is pointed at a different environment/database`);
+    console.log(`        than the one the Studio uses. Verify NEXT_PUBLIC_SUPABASE_URL matches the app.`);
+  } else {
+    line("id", convo.id);
+    line("title", convo.title);
+    line("workspace_type", convo.workspace_type);
+    line("workspace_id", convo.workspace_id);
+    line("status", convo.status);
+    line("created_by", convo.created_by);
+    line("created_at", convo.created_at);
+    line("updated_at", convo.updated_at);
+  }
+
+  // 2) context_snapshot -------------------------------------------------------
+  console.log("\n  [2] ai_conversations.context_snapshot");
+  const snapshot = (convo?.context_snapshot ?? null) as Record<string, unknown> | null;
+  if (!convo) {
+    console.log("      (no conversation row — nothing to inspect)");
+  } else if (!snapshot || Object.keys(snapshot).length === 0) {
+    console.log("      context_snapshot is EMPTY.");
+    console.log("      → The Studio never wrote a snapshot (updateConversationContextSnapshot is best-effort");
+    console.log("        and swallows failures), so the fallback load path has nothing to return.");
+  } else {
+    line("top-level keys", keysOf(snapshot));
+    line("has campaignObject", getCampaignObjectFromSnapshot(snapshot) != null);
+    if (getCampaignObjectFromSnapshot(snapshot) == null) {
+      console.log("      → Snapshot exists but carries no `campaignObject` key (only other AI context).");
+    }
+  }
+
+  // 3) latest Studio message metadata -----------------------------------------
+  console.log("\n  [3] ai_messages metadata (latest studio message)");
+  const { data: messages, error: msgErr } = await supabase
+    .from("ai_messages")
+    .select("id, role, metadata, created_at")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false });
+  if (msgErr) console.log(`      query error: ${msgErr.message}`);
+  const rows = (messages ?? []) as Array<{ id: string; role: string; metadata: Record<string, any> | null; created_at: string }>;
+  line("total messages", rows.length);
+  const withMeta = rows.filter((m) => m.metadata && Object.keys(m.metadata).length > 0);
+  line("messages w/ metadata", withMeta.length);
+  const withObject = rows.filter((m) => m.metadata?.campaignObject);
+  line("carry campaignObject", withObject.length);
+  const metaKeyUnion = new Set<string>();
+  for (const m of withMeta) for (const k of Object.keys(m.metadata ?? {})) metaKeyUnion.add(k);
+  line("distinct metadata keys", metaKeyUnion.size ? [...metaKeyUnion].join(", ") : "(none)");
+  if (rows[0]) line("latest msg role/keys", `${rows[0].role} → ${keysOf(rows[0].metadata)}`);
+  if (rows.length > 0 && withObject.length === 0) {
+    console.log("      → Messages exist but none carry `metadata.campaignObject`. If the Studio still");
+    console.log("        renders a campaign, it is hydrating from a source this probe does not cover");
+    console.log("        (e.g. a differently-keyed metadata shape, or an in-memory/route-loader object).");
+  }
+
+  // 4) campaign_objects -------------------------------------------------------
+  console.log("\n  [4] campaign_objects (DB persistence)");
+  const { data: co, error: coErr } = await supabase
+    .from("campaign_objects")
+    .select("id, conversation_id, campaign_header_id, current_version, lifecycle_status, created_by, created_at, updated_at")
+    .eq("conversation_id", conversationId)
+    .maybeSingle();
+  if (coErr) console.log(`      query error: ${coErr.message}`);
+  if (!co) {
+    console.log("      NO ROW for this conversation.");
+    console.log("      → A Campaign Object was never persisted to the durable table for this conversation.");
+  } else {
+    line("id", co.id);
+    line("current_version", co.current_version);
+    line("lifecycle_status", co.lifecycle_status);
+    line("campaign_header_id", co.campaign_header_id);
+    line("created_at", co.created_at);
+    line("updated_at", co.updated_at);
+    if ((co.current_version ?? 0) <= 0) {
+      console.log("      → Row exists but current_version <= 0: persistence was initialized but no version");
+      console.log("        was ever committed, so loadLatestByConversation() returns null.");
+    }
+    // 5) campaign_object_versions --------------------------------------------
+    console.log("\n  [5] campaign_object_versions");
+    const { data: versions } = await supabase
+      .from("campaign_object_versions")
+      .select("version, created_at")
+      .eq("campaign_object_id", co.id)
+      .order("version", { ascending: false });
+    const vrows = (versions ?? []) as Array<{ version: number; created_at: string }>;
+    line("version count", vrows.length);
+    if (vrows[0]) line("latest version", `${vrows[0].version} @ ${vrows[0].created_at}`);
+    if (vrows.length === 0) {
+      console.log("      → No version snapshots exist, so there is nothing for the DB path to deserialize.");
+    }
+  }
+
+  // 6) conversation ↔ workspace link (is the object under a sibling convo?) ---
+  console.log("\n  [6] conversation ↔ workspace link");
+  if (!convo?.workspace_id) {
+    console.log("      Conversation has no workspace_id — it is a standalone/general conversation.");
+  } else {
+    line("workspace", `${convo.workspace_type ?? "—"} / ${convo.workspace_id}`);
+    const { data: siblings } = await supabase
+      .from("ai_conversations")
+      .select("id, status, updated_at")
+      .eq("workspace_type", convo.workspace_type)
+      .eq("workspace_id", convo.workspace_id)
+      .order("updated_at", { ascending: false });
+    const sibRows = (siblings ?? []) as Array<{ id: string; status: string; updated_at: string }>;
+    line("conversations for workspace", sibRows.length);
+    let foundElsewhere: string | null = null;
+    for (const s of sibRows) {
+      if (s.id === conversationId) continue;
+      const { data: sco } = await supabase
+        .from("campaign_objects")
+        .select("id, current_version")
+        .eq("conversation_id", s.id)
+        .maybeSingle();
+      if (sco && (sco.current_version ?? 0) > 0) {
+        foundElsewhere = s.id;
+        break;
+      }
+    }
+    if (foundElsewhere) {
+      console.log(`      → A DIFFERENT conversation for this SAME workspace has a persisted Campaign Object:`);
+      console.log(`        ${foundElsewhere}`);
+      console.log(`        The Studio likely opened that conversation, not ${conversationId}.`);
+      console.log(`        Re-run the trace with that conversation id.`);
+    } else if (sibRows.length > 1) {
+      console.log("      → Sibling conversations exist for this workspace but none has a persisted object.");
+    }
+  }
+
+  // Verdict -------------------------------------------------------------------
+  header("RESOLUTION VERDICT");
+  if (!convo) {
+    console.log("  Cause: conversation does not exist in this database (wrong id or wrong environment).");
+  } else if (co && (co.current_version ?? 0) > 0) {
+    console.log("  Cause: a persisted Campaign Object EXISTS but the standard load path did not return it.");
+    console.log("         Inspect the DB read path / RLS — this is unexpected and worth escalating.");
+  } else if (resolution.probe.snapshotHasObject) {
+    console.log("  Cause: object lives in context_snapshot; it should have resolved. Re-check the snapshot shape.");
+  } else if (resolution.probe.messageMetadataHasObject) {
+    console.log("  Cause: object lives in message metadata; it should have resolved. Re-check the metadata shape.");
+  } else {
+    console.log("  Cause: NO Campaign Object exists in any known layer (DB persistence, context_snapshot,");
+    console.log("         message metadata) for this conversation. Either it was never persisted, it predates");
+    console.log("         the persistence architecture, or the Studio renders it from a source not yet probed.");
+    console.log("         If the Studio DOES render this campaign, that fourth source is the next thing to trace.");
+  }
+  console.log("");
+}
+
 // --- capture the existing traceCountDrop funnel (read-only, no logic change) --
 
 type DropEvent = { stage: string; filter: string; before: number; after: number };
@@ -330,18 +507,8 @@ async function main() {
 
   const campaignObject = resolution.campaignObject;
   if (!campaignObject) {
-    header("CAMPAIGN OBJECT NOT FOUND — cannot start Discovery");
-    if (!resolution.probe.conversationExists) {
-      console.log(`  The conversation ${conversationId} does not exist (wrong id, or wrong environment/database).`);
-    } else {
-      console.log(`  The conversation exists but carries NO Campaign Object in any Studio source:`);
-      console.log(`    • DB persistence (campaign_objects): ${resolution.probe.dbVersion ?? "no row"}`);
-      console.log(`    • ai_conversations.context_snapshot:  ${resolution.probe.snapshotHasObject ? "present" : "empty"}`);
-      console.log(`    • latest studio message metadata:     ${resolution.probe.messageMetadataHasObject ? "present" : "empty"}`);
-      console.log(`  → This conversation was never persisted a Campaign Object (or predates the persistence`);
-      console.log(`    architecture). Open it in Studio once to hydrate/persist, then re-run this trace.`);
-    }
-    console.log("");
+    // Never stop at a one-liner — run the full self-check across every layer.
+    await investigateMissingCampaignObject(conversationId, resolution);
     process.exit(1);
   }
   if (resolution.source !== "db_persistence") {
