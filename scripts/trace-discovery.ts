@@ -23,7 +23,11 @@ import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
-import { loadCampaignObjectForConversation } from "@/features/campaign-intelligence/services/campaign-object-store";
+import {
+  loadCampaignObjectForConversation,
+  getCampaignObjectFromSnapshot,
+  deserializeCampaignObject,
+} from "@/features/campaign-intelligence/services/campaign-object-store";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { getCampaignFacts, buildCreatorMixFromFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
@@ -171,6 +175,106 @@ async function loadLastSuccessfulVersion(
   return null;
 }
 
+// --- Campaign Object resolution — reproduce the EXACT Studio load path --------
+
+type CampaignObjectResolution = {
+  campaignObject: CampaignObject | null;
+  source: "db_persistence" | "context_snapshot" | "message_metadata" | "not_found";
+  probe: {
+    conversationExists: boolean;
+    workspaceType?: string;
+    workspaceId?: string;
+    dbVersion: number | null;
+    snapshotHasObject: boolean;
+    messageMetadataHasObject: boolean;
+    studioMessageCount: number;
+  };
+};
+
+/**
+ * Resolve the Campaign Object the way the Studio does. The chat route and studio
+ * hydration both call:
+ *   loadCampaignObjectForConversation(supabase, conversationId, conversation.contextSnapshot)
+ * where contextSnapshot comes from ai_conversations.context_snapshot. That
+ * function tries the DB persistence table first, then falls back to the
+ * snapshot. The Studio ALSO carries the object in the latest studio message's
+ * metadata (backward-compat mirror), so we probe that as a final source.
+ *
+ * The original diagnostic omitted contextSnapshot entirely, so it only ever saw
+ * the DB persistence table — hence "No campaign object found" for conversations
+ * whose object lives only in the conversation snapshot or message metadata.
+ * Read-only: this only SELECTs.
+ */
+async function resolveCampaignObjectLikeStudio(
+  conversationId: string
+): Promise<CampaignObjectResolution> {
+  const probe: CampaignObjectResolution["probe"] = {
+    conversationExists: false,
+    dbVersion: null,
+    snapshotHasObject: false,
+    messageMetadataHasObject: false,
+    studioMessageCount: 0,
+  };
+
+  // 1) The conversation row → context_snapshot (service role bypasses RLS, so we
+  //    query by id without the created_by filter getConversation() uses).
+  let contextSnapshot: Record<string, unknown> | undefined;
+  const { data: convo } = await supabase
+    .from("ai_conversations")
+    .select("id, workspace_type, workspace_id, context_snapshot")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (convo) {
+    probe.conversationExists = true;
+    probe.workspaceType = convo.workspace_type ?? undefined;
+    probe.workspaceId = convo.workspace_id ?? undefined;
+    contextSnapshot = (convo.context_snapshot ?? {}) as Record<string, unknown>;
+    probe.snapshotHasObject = getCampaignObjectFromSnapshot(contextSnapshot) != null;
+  }
+
+  // 2) Record what the DB persistence table holds (for the resolution report).
+  try {
+    const { data: head } = await supabase
+      .from("campaign_objects")
+      .select("current_version")
+      .eq("conversation_id", conversationId)
+      .maybeSingle();
+    probe.dbVersion = (head as { current_version?: number } | null)?.current_version ?? null;
+  } catch {
+    /* table may be empty / unreadable — leave dbVersion null */
+  }
+
+  // 3) The exact Studio call — DB first, context_snapshot fallback.
+  const restored = await loadCampaignObjectForConversation(
+    supabase,
+    conversationId,
+    contextSnapshot
+  );
+  if (restored) {
+    const source =
+      probe.dbVersion && probe.dbVersion > 0 ? "db_persistence" : "context_snapshot";
+    return { campaignObject: restored, source, probe };
+  }
+
+  // 4) Final Studio-carried source: the latest studio message metadata.
+  const { data: messages } = await supabase
+    .from("ai_messages")
+    .select("metadata, created_at")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false });
+  const rows = (messages ?? []) as Array<{ metadata: Record<string, any> | null }>;
+  probe.studioMessageCount = rows.filter((m) => m?.metadata?.campaignObject).length;
+  probe.messageMetadataHasObject = probe.studioMessageCount > 0;
+  for (const m of rows) {
+    const snap = m?.metadata?.campaignObject;
+    if (snap) {
+      return { campaignObject: deserializeCampaignObject(snap), source: "message_metadata", probe };
+    }
+  }
+
+  return { campaignObject: null, source: "not_found", probe };
+}
+
 // --- capture the existing traceCountDrop funnel (read-only, no logic change) --
 
 type DropEvent = { stage: string; filter: string; before: number; after: number };
@@ -214,12 +318,37 @@ async function main() {
   console.log(`║  DISCOVERY PIPELINE TRACE — conversation ${conversationId.slice(0, 18)}…`);
   console.log(`╚══════════════════════════════════════════════════════════════╝`);
 
-  // 1) Campaign object + facts ------------------------------------------------
-  const campaignObject = await loadCampaignObjectForConversation(supabase, conversationId);
+  // 0) Campaign Object resolution — reproduce the exact Studio load path -------
+  const resolution = await resolveCampaignObjectLikeStudio(conversationId);
+  header("CAMPAIGN OBJECT RESOLUTION (same path as the Studio)");
+  line("conversation exists", resolution.probe.conversationExists);
+  line("workspace", resolution.probe.conversationExists ? `${resolution.probe.workspaceType ?? "—"} / ${resolution.probe.workspaceId ?? "—"}` : "—");
+  line("db persistence version", resolution.probe.dbVersion ?? "none");
+  line("context_snapshot object", resolution.probe.snapshotHasObject);
+  line("message-metadata object", `${resolution.probe.messageMetadataHasObject} (${resolution.probe.studioMessageCount} studio msg)`);
+  line("RESOLVED SOURCE", resolution.source);
+
+  const campaignObject = resolution.campaignObject;
   if (!campaignObject) {
-    console.error(`\nNo campaign object found for conversation ${conversationId}.`);
+    header("CAMPAIGN OBJECT NOT FOUND — cannot start Discovery");
+    if (!resolution.probe.conversationExists) {
+      console.log(`  The conversation ${conversationId} does not exist (wrong id, or wrong environment/database).`);
+    } else {
+      console.log(`  The conversation exists but carries NO Campaign Object in any Studio source:`);
+      console.log(`    • DB persistence (campaign_objects): ${resolution.probe.dbVersion ?? "no row"}`);
+      console.log(`    • ai_conversations.context_snapshot:  ${resolution.probe.snapshotHasObject ? "present" : "empty"}`);
+      console.log(`    • latest studio message metadata:     ${resolution.probe.messageMetadataHasObject ? "present" : "empty"}`);
+      console.log(`  → This conversation was never persisted a Campaign Object (or predates the persistence`);
+      console.log(`    architecture). Open it in Studio once to hydrate/persist, then re-run this trace.`);
+    }
+    console.log("");
     process.exit(1);
   }
+  if (resolution.source !== "db_persistence") {
+    console.log(`  ⚠ NOTE: object resolved from "${resolution.source}", not DB persistence — the Studio`);
+    console.log(`    still works, but this campaign was never durably saved to campaign_objects.`);
+  }
+
   const facts = getCampaignFacts(campaignObject);
   const lastSuccess = await loadLastSuccessfulVersion(
     (campaignObject as any).id,
