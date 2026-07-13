@@ -13,6 +13,13 @@ export const COUNTRY_ALIASES: Readonly<Record<string, string>> = {
   ksa: "SA",
   saudi: "SA",
   "arab republic of egypt": "EG",
+  // Brief scanners match these as phrases too (a brief saying "Cairo" targets EG),
+  // so name/city aliases live here — never in per-feature copies.
+  egypt: "EG",
+  cairo: "EG",
+  alexandria: "EG",
+  riyadh: "SA",
+  jeddah: "SA",
   uk: "GB",
   usa: "US",
 };

@@ -1,4 +1,7 @@
 import { CREATOR_CATEGORY_KEYWORDS } from "@/lib/creators/category-keywords";
+// Single country taxonomy — the shared alias registry carries the name/city
+// aliases; this module must never hold its own copy.
+import { COUNTRY_ALIASES } from "@/lib/creators/country-code";
 import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
 
@@ -131,20 +134,6 @@ const PLATFORM_KEYWORDS: Readonly<Record<string, (typeof DISCOVERY_PLATFORMS)[nu
   youtube: "youtube",
   twitter: "twitter",
   linkedin: "twitter",
-};
-
-const COUNTRY_ALIASES: Readonly<Record<string, string>> = {
-  uae: "AE",
-  emirates: "AE",
-  dubai: "AE",
-  "abu dhabi": "AE",
-  ksa: "SA",
-  saudi: "SA",
-  uk: "GB",
-  usa: "US",
-  egypt: "EG",
-  cairo: "EG",
-  alexandria: "EG",
 };
 
 const CAMPAIGN_BRIEF_SIGNALS =

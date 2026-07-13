@@ -96,7 +96,7 @@ const VALID_PLATFORMS = new Set<DiscoveryPlatform>([
   "twitter",
 ]);
 
-export function resolveBackfillPlatformsFromList(
+function resolveBackfillPlatformsFromList(
   platforms: string[] | undefined
 ): DiscoveryPlatform[] {
   if (!platforms?.length) return ["instagram"];
@@ -109,10 +109,6 @@ export function resolveBackfillPlatformsFromList(
     ordered.push(platform);
   }
   return ordered.length > 0 ? ordered : ["instagram"];
-}
-
-function resolveBackfillPlatformFromList(platforms: string[] | undefined): DiscoveryPlatform {
-  return resolveBackfillPlatformsFromList(platforms)[0];
 }
 
 function defaultLocationQueryForCountry(countryCode: string | undefined): string | null {
@@ -147,7 +143,7 @@ export function isInlineDiscoveryBackfillEnabled(): boolean {
   return process.env.NODE_ENV !== "production";
 }
 
-export function coverageBackfillIntentFromBrowseFilters(
+function coverageBackfillIntentFromBrowseFilters(
   filters: UnifiedCreatorBrowseFilters
 ): CoverageBackfillIntent {
   const intent = filters.coverageIntent;

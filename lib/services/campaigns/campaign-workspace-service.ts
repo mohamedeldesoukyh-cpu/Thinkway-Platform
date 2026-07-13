@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveCountryCode } from "@/lib/creators/country-code";
 import { filterUuids, isUuid } from "@/lib/validation/uuid";
 import { traceCampaignRoute, traceCampaignRouteError } from "@/lib/performance/campaign-route-trace";
 import {
@@ -596,7 +597,14 @@ export async function getCampaignWorkspace(
     po_override_reason?: string | null;
     fx_snapshot_at?: string | null;
   };
-  const clientCountryCode = headerRow.client?.country?.trim().toUpperCase().slice(0, 2) ?? null;
+  // Canonical country resolution — the old slice(0,2) worked for "Egypt"→"EG"
+  // by luck and produced wrong codes for names like "United Arab Emirates"→"UN"
+  // (silently selecting the wrong VAT rate). Unresolvable values become null so
+  // the VAT lookup falls back to its default instead of a false match.
+  const resolvedClientCountry = resolveCountryCode(headerRow.client?.country);
+  const clientCountryCode = /^[A-Z]{2}$/.test(resolvedClientCountry)
+    ? resolvedClientCountry
+    : null;
   const defaultRevenueVatPercent = await resolveVatRateForCountry(
     supabase,
     clientCountryCode
