@@ -236,13 +236,165 @@ function testCoverageAndShadow(): void {
   assert.ok(!creatorIntelligenceMatchesCategories(baseCreator(), ["Entertainment"]));
 }
 
-function run(): void {
+// --- phases A–C: creator type, brand safety, audience intelligence -------------
+
+function testCreatorTypeResolution(): void {
+  // Declared role wins over follower-derived tier.
+  const declared = resolveCreatorIntelligence(baseCreator({ role: "Macro" }));
+  assert.equal(declared.creatorType.value, "Macro");
+  assert.equal(declared.creatorType.source, "declared");
+
+  // 250k followers → Mid tier from platform metrics.
+  const derived = resolveCreatorIntelligence(baseCreator());
+  assert.equal(derived.creatorType.value, "Mid");
+  assert.equal(derived.creatorType.source, "platform_metrics");
+
+  const unknown = resolveCreatorIntelligence(baseCreator({ platforms: [] }));
+  assert.equal(unknown.creatorType.value, null);
+  assert.equal(unknown.creatorType.source, "unresolved");
+}
+
+function testBrandSafetyLadder(): void {
+  const lowRisk = resolveCreatorIntelligence(
+    baseCreator({ is_platform_verified: true, authenticity_score: 82 })
+  );
+  assert.equal(lowRisk.brandSafety.level.value, "low_risk");
+
+  const weak = resolveCreatorIntelligence(baseCreator({ authenticity_score: 25 }));
+  assert.equal(weak.brandSafety.level.value, "moderate_risk");
+  assert.ok(weak.brandSafety.signals.includes("weak_authenticity"));
+
+  // No signals → unknown, never safe.
+  const none = resolveCreatorIntelligence(baseCreator());
+  assert.equal(none.brandSafety.level.value, "unknown");
+}
+
+const demographics = {
+  age: {
+    "13_17": 5,
+    "18_24": 46,
+    "25_34": 30,
+    "35_44": 12,
+    "45_54": 5,
+    "55_plus": 2,
+  },
+  gender: { male: 38, female: 60, unknown: 2 },
+  topCountries: [
+    { code: "EG", percent: 62 },
+    { name: "Saudi Arabia", percent: 15 },
+  ],
+  topCities: null,
+  source: "modash",
+} as NonNullable<UnifiedCreatorResult["audience_demographics"]>;
+
+function testAudienceIntelligence(): void {
+  const ci = resolveCreatorIntelligence(baseCreator({ audience_demographics: demographics }));
+  assert.deepEqual(ci.audience.countries.value, ["EG", "SA"]);
+  assert.equal(ci.audience.countries.source, "platform_metrics");
+  assert.equal(ci.audience.dominantAgeBucket.value, "18_24");
+  assert.deepEqual(ci.audience.genderSplit.value, { male: 38, female: 60 });
+  assert.equal(ci.audience.hasDemographics, true);
+  // Audience languages: honest gap — unresolved until enrichment exists.
+  assert.equal(ci.audience.languages.source, "unresolved");
+
+  // Without demographics: creator country proxy, unresolved age/gender.
+  const proxy = resolveCreatorIntelligence(baseCreator());
+  assert.deepEqual(proxy.audience.countries.value, ["EG"]);
+  assert.equal(proxy.audience.countries.source, "declared");
+  assert.equal(proxy.audience.dominantAgeBucket.value, null);
+  assert.equal(proxy.audience.genderSplit.value, null);
+}
+
+// --- phase D: new matching dimensions --------------------------------------------
+
+function testMatchingDimensionsPhaseD(): void {
+  const requirements = campaignRequirementsFromFacts(facts, {
+    categories: ["Entertainment"],
+    creatorTypes: ["mid", "Macro"],
+  });
+  assert.deepEqual(requirements.creatorTypes, ["Mid", "Macro"]);
+
+  const fit = matchCreatorToCampaign(
+    { ...requirements, audienceAgeBuckets: ["18_24"], audienceGender: "female" },
+    resolveCreatorIntelligence(
+      baseCreator({ ai_category: "Entertainment", audience_demographics: demographics })
+    )
+  );
+  assert.equal(fit.eligible, true);
+  assert.equal(fit.score, 100);
+  for (const dimension of ["creator_type", "audience_age", "audience_gender"] as const) {
+    assert.ok(
+      fit.breakdown.some((b) => b.dimension === dimension && b.evaluation === "match"),
+      `expected ${dimension} match`
+    );
+  }
+
+  // Male-target campaign vs 38% male audience → hard mismatch.
+  const genderMiss = matchCreatorToCampaign(
+    { audienceGender: "male" },
+    resolveCreatorIntelligence(baseCreator({ audience_demographics: demographics }))
+  );
+  assert.equal(genderMiss.eligible, false);
+
+  // Nano-only mix vs Mid creator → hard mismatch; unknown tier discounts only.
+  const tierMiss = matchCreatorToCampaign(
+    { creatorTypes: ["Nano"] },
+    resolveCreatorIntelligence(baseCreator())
+  );
+  assert.equal(tierMiss.eligible, false);
+  const tierUnknown = matchCreatorToCampaign(
+    { creatorTypes: ["Nano"] },
+    resolveCreatorIntelligence(baseCreator({ platforms: [] }))
+  );
+  assert.equal(tierUnknown.eligible, true);
+
+  // Audience-country intelligence feeds the country dimension (SA top country).
+  const saMatch = matchCreatorToCampaign(
+    { country: "SA" },
+    resolveCreatorIntelligence(baseCreator({ audience_demographics: demographics }))
+  );
+  assert.ok(saMatch.breakdown.some((b) => b.dimension === "country" && b.evaluation === "match"));
+}
+
+// --- phase E: flag-gated consumers -------------------------------------------------
+
+async function testRankingConsumerOnMode(): Promise<void> {
+  const { categoryMatchScore } = await import("@/lib/creators/unified-ranking");
+  const intent = { categories: ["Entertainment"] };
+  const aiScored = baseCreator({ ai_category: "Entertainment" });
+  const provenanceOnly = baseCreator({
+    categories: ["Entertainment"],
+    browse_category_tags: ["Entertainment"],
+  });
+
+  const prev = process.env.CREATOR_INTELLIGENCE_MODE;
+  try {
+    process.env.CREATOR_INTELLIGENCE_MODE = "off";
+    // Legacy: provenance tags score a full hit.
+    assert.equal(categoryMatchScore(provenanceOnly, intent), 1);
+
+    process.env.CREATOR_INTELLIGENCE_MODE = "on";
+    // CI: resolved intelligence wins; provenance-only scores as unresolved (0.4).
+    assert.equal(categoryMatchScore(aiScored, intent), 1);
+    assert.equal(categoryMatchScore(provenanceOnly, intent), 0.4);
+  } finally {
+    if (prev === undefined) delete process.env.CREATOR_INTELLIGENCE_MODE;
+    else process.env.CREATOR_INTELLIGENCE_MODE = prev;
+  }
+}
+
+async function run(): Promise<void> {
   testTaxonomy();
   testResolverIgnoresDiscoveryProvenance();
   testResolverPrecedence();
   testMatchingEngine();
   testCoverageAndShadow();
+  testCreatorTypeResolution();
+  testBrandSafetyLadder();
+  testAudienceIntelligence();
+  testMatchingDimensionsPhaseD();
+  await testRankingConsumerOnMode();
   console.log("creator-intelligence.test.ts: PASS");
 }
 
-run();
+void run();

@@ -14,6 +14,7 @@
  * campaign×creator comparisons.
  */
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
+import { normalizeInfluencerTier } from "@/lib/creators/influencer-tier";
 import { UNKNOWN_CRITERION_WEIGHT_DISCOUNT } from "@/lib/discovery/campaign-relevance-scoring";
 
 import {
@@ -40,11 +41,21 @@ import type {
  */
 export function campaignRequirementsFromFacts(
   facts: CampaignFacts | undefined,
-  options: { categories?: string[]; topics?: string[]; languages?: string[] } = {}
+  options: {
+    categories?: string[];
+    topics?: string[];
+    languages?: string[];
+    /** Tier labels from the campaign creator mix (e.g. buildCreatorMixFromFacts). */
+    creatorTypes?: string[];
+  } = {}
 ): CampaignRequirements {
   const platforms = (facts?.platforms ?? [])
     .map((platform) => resolveDiscoveryPlatform(platform))
     .filter((platform): platform is NonNullable<typeof platform> => Boolean(platform));
+
+  const creatorTypes = (options.creatorTypes ?? [])
+    .map((tier) => normalizeInfluencerTier(tier))
+    .filter((tier): tier is NonNullable<typeof tier> => Boolean(tier));
 
   return {
     platforms: platforms.length > 0 ? platforms : undefined,
@@ -56,6 +67,7 @@ export function campaignRequirementsFromFacts(
     languages: options.languages?.length
       ? resolveLanguageCodes(options.languages)
       : undefined,
+    creatorTypes: creatorTypes.length > 0 ? creatorTypes : undefined,
   };
 }
 
@@ -83,16 +95,22 @@ function evaluateDimensions(
   }
 
   if (requirements.country) {
-    const country = ci.audience.primaryCountry.value;
+    // Audience-country intelligence: primary country plus demographics top-countries.
+    const audienceCountries = new Set(
+      [ci.audience.primaryCountry.value, ...ci.audience.countries.value].filter(
+        (code): code is string => Boolean(code)
+      )
+    );
+    const matched = audienceCountries.has(requirements.country);
     breakdown.push({
       dimension: "country",
-      evaluation: country == null ? "unknown" : evaluation(country === requirements.country),
+      evaluation: audienceCountries.size === 0 ? "unknown" : evaluation(matched),
       reason:
-        country == null
+        audienceCountries.size === 0
           ? "audience country unresolved"
-          : country === requirements.country
-            ? `audience in ${country}`
-            : `audience in ${country}, campaign targets ${requirements.country}`,
+          : matched
+            ? `audience in ${requirements.country}`
+            : `audience in ${[...audienceCountries].join("/")}, campaign targets ${requirements.country}`,
     });
   }
 
@@ -138,6 +156,52 @@ function evaluateDimensions(
         : ci.languages.value.length === 0
           ? "languages unresolved"
           : `languages [${ci.languages.value.join(", ")}] miss [${requirements.languages.join(", ")}]`,
+    });
+  }
+
+  if (requirements.creatorTypes?.length) {
+    const tier = ci.creatorType.value;
+    const matched = tier != null && requirements.creatorTypes.includes(tier);
+    breakdown.push({
+      dimension: "creator_type",
+      evaluation: tier == null ? "unknown" : evaluation(matched),
+      reason:
+        tier == null
+          ? "creator tier unresolved"
+          : matched
+            ? `${tier} tier fits mix [${requirements.creatorTypes.join(", ")}]`
+            : `${tier} tier outside mix [${requirements.creatorTypes.join(", ")}]`,
+    });
+  }
+
+  if (requirements.audienceAgeBuckets?.length) {
+    const bucket = ci.audience.dominantAgeBucket.value;
+    const matched = bucket != null && requirements.audienceAgeBuckets.includes(bucket);
+    breakdown.push({
+      dimension: "audience_age",
+      evaluation: bucket == null ? "unknown" : evaluation(matched),
+      reason:
+        bucket == null
+          ? "audience age unresolved"
+          : matched
+            ? `dominant audience age ${bucket}`
+            : `dominant audience age ${bucket} outside target`,
+    });
+  }
+
+  if (requirements.audienceGender) {
+    const split = ci.audience.genderSplit.value;
+    const share = split ? split[requirements.audienceGender] : null;
+    const matched = share != null && share >= 50;
+    breakdown.push({
+      dimension: "audience_gender",
+      evaluation: split == null ? "unknown" : evaluation(matched),
+      reason:
+        split == null
+          ? "audience gender unresolved"
+          : matched
+            ? `${requirements.audienceGender} audience ${share}%`
+            : `${requirements.audienceGender} audience ${share ?? 0}% below 50%`,
     });
   }
 

@@ -16,6 +16,10 @@
  * intelligence.
  */
 import { inferCategoriesFromProfileSignals } from "@/lib/creator-enrichment/category-inference";
+import {
+  getInfluencerTier,
+  normalizeInfluencerTier,
+} from "@/lib/creators/influencer-tier";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 import {
@@ -112,10 +116,72 @@ function resolveLanguages(creator: UnifiedCreatorResult): IntelligenceAttribute<
   return attribute(codes, "declared");
 }
 
+/** Declared role first ("Macro" from imports/DNA), else follower-derived tier. */
+function resolveCreatorType(
+  creator: UnifiedCreatorResult,
+  maxFollowers: number | null
+): CreatorIntelligence["creatorType"] {
+  const declared = normalizeInfluencerTier(creator.role);
+  if (declared) return attribute(declared, "declared");
+  if (maxFollowers != null && maxFollowers > 0) {
+    return attribute(getInfluencerTier(maxFollowers), "platform_metrics");
+  }
+  return attribute<CreatorIntelligence["creatorType"]["value"]>(null, "unresolved");
+}
+
+const AUDIENCE_AGE_BUCKETS = [
+  "13_17",
+  "18_24",
+  "25_34",
+  "35_44",
+  "45_54",
+  "55_plus",
+] as const;
+
 function resolveAudience(creator: UnifiedCreatorResult): CreatorIntelligence["audience"] {
-  const hasDemographics = Boolean(creator.audience_demographics);
+  const demographics = creator.audience_demographics;
+  const hasDemographics = Boolean(demographics);
   const audienceCountry = resolveCountryCode(creator.estimated_country) || null;
   const creatorCountry = resolveCountryCode(creator.country_code) || null;
+
+  // Audience countries: demographics top-countries when known; else creator country proxy.
+  const topCountries = (demographics?.topCountries ?? [])
+    .map((entry) => resolveCountryCode(entry.code ?? entry.name))
+    .filter((code): code is string => Boolean(code));
+  const countries =
+    topCountries.length > 0
+      ? attribute([...new Set(topCountries)], "platform_metrics")
+      : creatorCountry || audienceCountry
+        ? attribute([creatorCountry ?? audienceCountry!], "declared")
+        : attribute<string[]>([], "unresolved");
+
+  // Dominant age bucket: argmax over known shares.
+  let dominantAgeBucket: CreatorIntelligence["audience"]["dominantAgeBucket"] =
+    attribute<(typeof AUDIENCE_AGE_BUCKETS)[number] | null>(null, "unresolved");
+  if (demographics) {
+    let best: { bucket: (typeof AUDIENCE_AGE_BUCKETS)[number]; share: number } | null = null;
+    for (const bucket of AUDIENCE_AGE_BUCKETS) {
+      const share = demographics.age[bucket];
+      if (share != null && (best == null || share > best.share)) {
+        best = { bucket, share };
+      }
+    }
+    if (best) dominantAgeBucket = attribute(best.bucket, "platform_metrics");
+  }
+
+  // Gender split when demographics carry it.
+  let genderSplit: CreatorIntelligence["audience"]["genderSplit"] = attribute<
+    { male: number; female: number } | null
+  >(null, "unresolved");
+  if (demographics && (demographics.gender.male != null || demographics.gender.female != null)) {
+    genderSplit = attribute(
+      {
+        male: demographics.gender.male ?? 0,
+        female: demographics.gender.female ?? 0,
+      },
+      "platform_metrics"
+    );
+  }
 
   return {
     primaryCountry:
@@ -124,20 +190,28 @@ function resolveAudience(creator: UnifiedCreatorResult): CreatorIntelligence["au
         : creatorCountry || audienceCountry
           ? attribute<string | null>(creatorCountry ?? audienceCountry, "declared")
           : attribute<string | null>(null, "unresolved"),
+    countries,
+    // Honest gap: no audience-language enrichment exists yet — stays unresolved
+    // rather than proxying content language as audience language.
+    languages: attribute<string[]>([], "unresolved"),
     interests: (() => {
       const interests = resolveTopics(creator.audience_interests);
       return interests.length > 0
         ? attribute(interests, "platform_metrics")
         : attribute<string[]>([], "unresolved");
     })(),
+    dominantAgeBucket,
+    genderSplit,
     hasDemographics,
   };
 }
 
 /**
  * Brand safety — conservative until dedicated toxicity/content-risk enrichment
- * lands: platform-verified + strong authenticity resolves low_risk; otherwise
- * unknown. NEVER defaults to safe.
+ * lands. Resolution ladder (NEVER defaults to safe; unknown stays unknown):
+ *   verified + authenticity ≥ 70  → low_risk   (platform signals)
+ *   authenticity known but < 40   → moderate_risk (weak-authenticity flag)
+ *   otherwise                      → unknown
  */
 function resolveBrandSafety(creator: UnifiedCreatorResult): CreatorIntelligence["brandSafety"] {
   const signals: string[] = [];
@@ -151,6 +225,10 @@ function resolveBrandSafety(creator: UnifiedCreatorResult): CreatorIntelligence[
   if (creator.is_platform_verified && (creator.authenticity_score ?? 0) >= 70) {
     level = "low_risk";
     source = "platform_metrics";
+  } else if (creator.authenticity_score != null && creator.authenticity_score < 40) {
+    level = "moderate_risk";
+    source = "ai_enrichment";
+    signals.push("weak_authenticity");
   }
 
   return { level: attribute(level, source), signals };
@@ -184,6 +262,7 @@ function resolveMetricsSummary(creator: UnifiedCreatorResult): CreatorIntelligen
  * Pure and deterministic apart from the resolvedAt timestamp.
  */
 export function resolveCreatorIntelligence(creator: UnifiedCreatorResult): CreatorIntelligence {
+  const metrics = resolveMetricsSummary(creator);
   return {
     unifiedId: creator.unified_id,
     sourceType: creator.source_type,
@@ -193,9 +272,10 @@ export function resolveCreatorIntelligence(creator: UnifiedCreatorResult): Creat
     niche: resolveNiche(creator),
     topics: resolveCreatorTopics(creator),
     languages: resolveLanguages(creator),
+    creatorType: resolveCreatorType(creator, metrics.maxFollowers),
     audience: resolveAudience(creator),
     brandSafety: resolveBrandSafety(creator),
-    metrics: resolveMetricsSummary(creator),
+    metrics,
     scores: {
       thinkway: creator.thinkway_score ?? null,
       brandFit: creator.brand_fit_score ?? null,
