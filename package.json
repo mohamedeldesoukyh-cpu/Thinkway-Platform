@@ -98,7 +98,8 @@
     "validate:campaign-persistence": "npx tsx features/campaign-intelligence/validate-campaign-persistence-phase03.ts",
     "validate:cdi-phase-1": "npx tsx scripts/validate-cdi-phase-1.mjs",
     "validate:cdi-phase-2": "npx tsx scripts/validate-cdi-phase-2.mjs",
-    "validate:f1-one-workspace": "npx tsx scripts/validate-f1-one-workspace.mjs"
+    "validate:f1-one-workspace": "npx tsx scripts/validate-f1-one-workspace.mjs",
+    "trace:discovery": "AI_SEARCH_TRACE=1 AI_WORKFLOW_TRACE=1 tsx scripts/trace-discovery.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
