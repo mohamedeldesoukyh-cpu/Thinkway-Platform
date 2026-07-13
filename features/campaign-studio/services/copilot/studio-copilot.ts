@@ -415,7 +415,7 @@ async function addCreators(
 
   const descriptor = [intent.tier, intent.category].filter(Boolean).join(" ");
   const action = `added ${picked.length} ${descriptor ? `${descriptor} ` : ""}creator${picked.length === 1 ? "" : "s"} from Discovery (${picked.map((c) => c.display_name).join(", ")})`;
-  return commitDraftChanges(input, digest, buildAdditionChanges(picked), {
+  return stageDraftChanges(input, digest, buildAdditionChanges(picked), {
     intentKind: "add_creators",
     action,
     logSummary: `Added ${picked.length} ${descriptor || "creator"}${picked.length === 1 ? "" : "s"}`,
