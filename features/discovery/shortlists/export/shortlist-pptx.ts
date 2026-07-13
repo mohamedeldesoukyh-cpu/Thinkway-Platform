@@ -73,16 +73,15 @@ async function avatarDataForPptx(
 ): Promise<string | null> {
   const trimmed = avatarUrl?.trim();
   if (!trimmed) return null;
-  if (trimmed.startsWith("data:")) return trimmed.replace(/^data:/, "");
-
-  try {
-    const result = await fetchImageBuffer(trimmed);
-    if (!result.ok) return null;
-    const contentType = result.contentType || detectImageContentType(result.buffer);
-    return `${contentType};base64,${result.buffer.toString("base64")}`;
-  } catch {
-    return null;
+  if (trimmed.startsWith("data:")) {
+    const payload = trimmed.slice("data:".length);
+    return payload.includes(";base64,") ? payload : null;
   }
+
+  const buffer = await fetchImageBuffer(trimmed);
+  if (!buffer?.length) return null;
+  const contentType = detectImageContentType(buffer);
+  return `${contentType};base64,${buffer.toString("base64")}`;
 }
 
 function addCoverSlide(pptx: PptxGen, doc: ShortlistDocument): void {
@@ -446,13 +445,16 @@ function addRosterSlide(pptx: PptxGen, doc: ShortlistDocument): void {
   ]);
 
   const tableData = [
-    header.map((cell) => ({ text: cell, options: { bold: true, color: WHITE, fill: BLUE } })),
+    header.map((cell) => ({
+      text: cell,
+      options: { bold: true, color: WHITE, fill: { color: BLUE } },
+    })),
     ...rows.map((row, rowIndex) =>
       row.map((cell) => ({
         text: cell,
         options: {
           color: INK,
-          fill: rowIndex % 2 === 0 ? WHITE : CARD_BG,
+          fill: { color: rowIndex % 2 === 0 ? WHITE : CARD_BG },
         },
       }))
     ),
