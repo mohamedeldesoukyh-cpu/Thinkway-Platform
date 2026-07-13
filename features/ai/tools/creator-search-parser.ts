@@ -246,7 +246,7 @@ function extractFollowerTier(text: string): {
 
 function extractCategories(text: string): { categories: string[]; remainder: string } {
   const categories = new Set<string>();
-  let remainder = text;
+  const remainder = text;
 
   for (const [keyword, label] of Object.entries(CATEGORY_KEYWORDS)) {
     const pattern = new RegExp(`(?:^|\\s)${keyword}(?=\\s|$)`, "i");
