@@ -72,11 +72,6 @@ function argFlag(name: string): string | undefined {
   return hit ? hit.slice(name.length + 1) : undefined;
 }
 
-/** Progress marker — printed immediately so a stall is always localized. */
-function step(msg: string) {
-  console.log(`  … ${msg}`);
-}
-
 /**
  * Race a query against a timeout so a hung connection fails LOUDLY with the
  * exact step, instead of leaving the diagnostic silent after the banner.
@@ -85,7 +80,7 @@ function withTimeout<T>(label: string, promise: PromiseLike<T>, ms = 25000): Pro
   let timer: ReturnType<typeof setTimeout>;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(
-      () => reject(new Error(`query timed out after ${ms}ms at: ${label} (check network / Supabase URL / RLS)`)),
+      () => reject(new Error(`__timeout__ query timed out after ${ms}ms at: ${label}`)),
       ms
     );
   });
@@ -93,6 +88,145 @@ function withTimeout<T>(label: string, promise: PromiseLike<T>, ms = 25000): Pro
     Promise.resolve(promise).finally(() => clearTimeout(timer)),
     timeout,
   ]);
+}
+
+// --- Supabase error classification & timed query executor --------------------
+
+/**
+ * Detect a transport-layer failure (DNS / TLS / network / fetch) from a text
+ * blob assembled out of an error's message/details/code/cause. Returns a
+ * classification string, or null when it is not a transport failure. Shared by
+ * both the "thrown" and "returned error object" paths — supabase-js reports
+ * fetch failures both ways depending on the version.
+ */
+function classifyTransportSignature(blob: string): string | null {
+  if (/ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(blob))
+    return "DNS failure — host not resolvable (check NEXT_PUBLIC_SUPABASE_URL)";
+  if (/CERT|certificate|self.signed|unable to get local issuer|ERR_TLS|DEPTH_ZERO|SELF_SIGNED/i.test(blob))
+    return "TLS / certificate failure — run with --use-system-ca (corporate SSL inspection)";
+  if (/ECONNREFUSED|ECONNRESET|ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT|UND_ERR_SOCKET|EHOSTUNREACH|ENETUNREACH/i.test(blob))
+    return "Network/connect failure — often broken IPv6; run with --dns-result-order=ipv4first";
+  if (/fetch failed/i.test(blob)) return "Network failure at transport layer (fetch failed)";
+  return null;
+}
+
+/** Classify an error THROWN by the transport layer (undici/fetch/TLS/DNS). */
+function classifyThrownError(err: any): string {
+  const msg = String(err?.message ?? err ?? "");
+  const cause = err?.cause;
+  const blob = `${String(cause?.code ?? err?.code ?? "")} ${String(cause?.message ?? "")} ${msg}`;
+  if (/__timeout__|timed out/i.test(msg)) return "Timeout (no response before deadline)";
+  if (/invalid url|ERR_INVALID_URL/i.test(blob)) return "Invalid project URL (NEXT_PUBLIC_SUPABASE_URL is malformed)";
+  return classifyTransportSignature(blob) ?? `Unknown transport error: ${msg}`;
+}
+
+/** Classify a PostgREST error object returned in { data, error }. */
+function classifySupabaseError(error: any): string {
+  const code = String(error?.code ?? "");
+  const status = error?.status ?? error?.statusCode;
+  const msg = String(error?.message ?? "");
+  // supabase-js often RETURNS transport failures as an error object (not thrown).
+  const transport = classifyTransportSignature(`${code} ${msg} ${String(error?.details ?? "")}`);
+  if (transport) return transport;
+  if (code === "PGRST116") return "Query succeeded but returned zero rows";
+  if (code === "42P01") return "Table not found";
+  if (code === "42501") return "Authorization / RLS denied";
+  if (status === 401 || /jwt|invalid api key|invalid signature|invalid.*token|no api key/i.test(msg))
+    return "Authentication failure — invalid/expired service role (JWT)";
+  if (status === 403) return "Authorization / RLS denied";
+  if (typeof status === "number") return `HTTP error (status ${status})`;
+  return "Query error (see full error below)";
+}
+
+/** Print the COMPLETE error object — never swallow it. */
+function printFullError(error: any) {
+  const fields = ["message", "code", "status", "statusCode", "details", "hint", "name"] as const;
+  for (const f of fields) {
+    if (error?.[f] != null) console.log(`      ${f}: ${error[f]}`);
+  }
+  if (error?.cause) {
+    console.log(`      cause.code: ${error.cause?.code ?? "—"}`);
+    console.log(`      cause.message: ${error.cause?.message ?? error.cause}`);
+    if (error.cause?.cause) console.log(`      cause.cause: ${error.cause.cause?.code ?? error.cause.cause?.message ?? error.cause.cause}`);
+  }
+  try {
+    const raw = JSON.stringify(error, Object.getOwnPropertyNames(error ?? {}));
+    if (raw && raw !== "{}") console.log(`      raw: ${raw}`);
+  } catch {
+    /* non-serializable — the fields above already cover it */
+  }
+}
+
+type QueryOutcome<T> = { data: T | null; error: any | null; classification: string | null; ms: number };
+
+/**
+ * Execute a Supabase query with timing + error classification. Prints
+ * START / END / FAILED with elapsed ms, and NEVER converts a transport failure
+ * into a "no row" result — a thrown fetch error is surfaced as such.
+ */
+async function runQuery<T = any>(
+  label: string,
+  builder: PromiseLike<{ data: T | null; error: any }>
+): Promise<QueryOutcome<T>> {
+  const start = Date.now();
+  console.log(`  START query: ${label}`);
+  try {
+    const res: any = await withTimeout(label, builder);
+    const ms = Date.now() - start;
+    if (res?.error) {
+      const classification = classifySupabaseError(res.error);
+      console.log(`  FAILED query: ${label} (${ms} ms)`);
+      console.log(`      Reason: ${classification}`);
+      printFullError(res.error);
+      return { data: null, error: res.error, classification, ms };
+    }
+    const rows = Array.isArray(res?.data) ? `${res.data.length} rows` : res?.data ? "1 row" : "0 rows";
+    console.log(`  END query: ${label} (${ms} ms) → ${rows}`);
+    return { data: (res?.data ?? null) as T | null, error: null, classification: null, ms };
+  } catch (err: any) {
+    const ms = Date.now() - start;
+    const classification = classifyThrownError(err);
+    console.log(`  FAILED query: ${label} (${ms} ms)`);
+    console.log(`      Reason: ${classification}`);
+    printFullError(err);
+    return { data: null, error: err, classification, ms };
+  }
+}
+
+/** Mask a secret for safe printing: keep a short prefix + length. */
+function mask(secret: string | undefined): string {
+  if (!secret) return "MISSING";
+  return `${secret.slice(0, 6)}…(${secret.length} chars)`;
+}
+
+/** Print connection diagnostics BEFORE the first query. */
+function printConnectionDiagnostics() {
+  header("CONNECTION DIAGNOSTICS");
+  let host = "—";
+  let projectRef = "—";
+  try {
+    const u = new URL(url ?? "");
+    host = u.host;
+    projectRef = u.host.split(".")[0] ?? "—";
+  } catch {
+    host = `INVALID URL: ${url ?? "(empty)"}`;
+  }
+  line("client impl", "@supabase/supabase-js createClient (service role)");
+  line("node version", process.version);
+  const nodeOpts = process.env.NODE_OPTIONS ?? "";
+  const execArgv = process.execArgv.join(" ");
+  const flags = `${nodeOpts} ${execArgv}`;
+  line("--use-system-ca", /--use-system-ca/.test(flags) ? "active" : "NOT active");
+  line("--dns-result-order", /--dns-result-order=ipv4first/.test(flags) ? "ipv4first" : "default (may prefer IPv6)");
+  line("supabase host", host);
+  line("project ref", projectRef);
+  line("service role key", mask(serviceKey));
+  line("HTTPS_PROXY", process.env.HTTPS_PROXY ?? process.env.https_proxy ?? "(none)");
+  if (!/--use-system-ca/.test(flags) || !/--dns-result-order=ipv4first/.test(flags)) {
+    console.log("  ⚠ TLS/DNS flags are not both active. On a corporate network this causes");
+    console.log("    \"TypeError: fetch failed\". Run via `npm run trace:discovery -- <id>` (the runner");
+    console.log("    applies --use-system-ca and --dns-result-order=ipv4first, matching the dev server).");
+  }
 }
 
 /** Compact list of an object's top-level keys (for snapshot/metadata probes). */
@@ -249,9 +383,8 @@ async function resolveCampaignObjectLikeStudio(
   // 1) The conversation row → context_snapshot (service role bypasses RLS, so we
   //    query by id without the created_by filter getConversation() uses).
   let contextSnapshot: Record<string, unknown> | undefined;
-  step("reading ai_conversations (context_snapshot)…");
-  const { data: convo } = await withTimeout(
-    "ai_conversations",
+  const { data: convo } = await runQuery<any>(
+    "ai_conversations (context_snapshot)",
     supabase
       .from("ai_conversations")
       .select("id, workspace_type, workspace_id, context_snapshot")
@@ -267,27 +400,33 @@ async function resolveCampaignObjectLikeStudio(
   }
 
   // 2) Record what the DB persistence table holds (for the resolution report).
-  step("reading campaign_objects (current_version)…");
-  try {
-    const { data: head } = await withTimeout(
-      "campaign_objects",
-      supabase
-        .from("campaign_objects")
-        .select("current_version")
-        .eq("conversation_id", conversationId)
-        .maybeSingle()
-    );
-    probe.dbVersion = (head as { current_version?: number } | null)?.current_version ?? null;
-  } catch {
-    /* table may be empty / unreadable — leave dbVersion null */
-  }
-
-  // 3) The exact Studio call — DB first, context_snapshot fallback.
-  step("loadCampaignObjectForConversation() — exact Studio path…");
-  const restored = await withTimeout(
-    "loadCampaignObjectForConversation",
-    loadCampaignObjectForConversation(supabase, conversationId, contextSnapshot)
+  const { data: head } = await runQuery<{ current_version?: number }>(
+    "campaign_objects (current_version)",
+    supabase
+      .from("campaign_objects")
+      .select("current_version")
+      .eq("conversation_id", conversationId)
+      .maybeSingle()
   );
+  probe.dbVersion = head?.current_version ?? null;
+
+  // 3) The exact Studio call — DB first, context_snapshot fallback. Wrapped so a
+  //    transport failure is classified, not silently treated as "no object".
+  let restored: CampaignObject | null = null;
+  const loadStart = Date.now();
+  console.log("  START query: loadCampaignObjectForConversation (Studio path)");
+  try {
+    restored = await withTimeout(
+      "loadCampaignObjectForConversation",
+      loadCampaignObjectForConversation(supabase, conversationId, contextSnapshot)
+    );
+    console.log(`  END query: loadCampaignObjectForConversation (${Date.now() - loadStart} ms) → ${restored ? "object" : "null"}`);
+  } catch (err: any) {
+    console.log(`  FAILED query: loadCampaignObjectForConversation (${Date.now() - loadStart} ms)`);
+    console.log(`      Reason: ${classifyThrownError(err)}`);
+    printFullError(err);
+    throw err; // transport failure must NOT be misread as "no campaign object"
+  }
   if (restored) {
     const source =
       probe.dbVersion && probe.dbVersion > 0 ? "db_persistence" : "context_snapshot";
@@ -295,9 +434,8 @@ async function resolveCampaignObjectLikeStudio(
   }
 
   // 4) Final Studio-carried source: the latest studio message metadata.
-  step("reading ai_messages (metadata) — message-metadata fallback…");
-  const { data: messages } = await withTimeout(
-    "ai_messages",
+  const { data: messages } = await runQuery<Array<{ metadata: Record<string, any> | null }>>(
+    "ai_messages (metadata fallback)",
     supabase
       .from("ai_messages")
       .select("metadata, created_at")
@@ -331,7 +469,7 @@ async function investigateMissingCampaignObject(
 
   // 1) ai_conversations -------------------------------------------------------
   console.log("\n  [1] ai_conversations");
-  const { data: convo, error: convoErr } = await withTimeout(
+  const { data: convo } = await runQuery<any>(
     "forensics: ai_conversations",
     supabase
       .from("ai_conversations")
@@ -339,7 +477,6 @@ async function investigateMissingCampaignObject(
       .eq("id", conversationId)
       .maybeSingle()
   );
-  if (convoErr) console.log(`      query error: ${convoErr.message}`);
   if (!convo) {
     console.log(`      NO ROW for id ${conversationId}.`);
     console.log(`      → Wrong conversation id, or this trace is pointed at a different environment/database`);
@@ -374,7 +511,7 @@ async function investigateMissingCampaignObject(
 
   // 3) latest Studio message metadata -----------------------------------------
   console.log("\n  [3] ai_messages metadata (latest studio message)");
-  const { data: messages, error: msgErr } = await withTimeout(
+  const { data: messages } = await runQuery<Array<{ id: string; role: string; metadata: Record<string, any> | null; created_at: string }>>(
     "forensics: ai_messages",
     supabase
       .from("ai_messages")
@@ -382,7 +519,6 @@ async function investigateMissingCampaignObject(
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: false })
   );
-  if (msgErr) console.log(`      query error: ${msgErr.message}`);
   const rows = (messages ?? []) as Array<{ id: string; role: string; metadata: Record<string, any> | null; created_at: string }>;
   line("total messages", rows.length);
   const withMeta = rows.filter((m) => m.metadata && Object.keys(m.metadata).length > 0);
@@ -401,7 +537,7 @@ async function investigateMissingCampaignObject(
 
   // 4) campaign_objects -------------------------------------------------------
   console.log("\n  [4] campaign_objects (DB persistence)");
-  const { data: co, error: coErr } = await withTimeout(
+  const { data: co } = await runQuery<any>(
     "forensics: campaign_objects",
     supabase
       .from("campaign_objects")
@@ -409,7 +545,6 @@ async function investigateMissingCampaignObject(
       .eq("conversation_id", conversationId)
       .maybeSingle()
   );
-  if (coErr) console.log(`      query error: ${coErr.message}`);
   if (!co) {
     console.log("      NO ROW for this conversation.");
     console.log("      → A Campaign Object was never persisted to the durable table for this conversation.");
@@ -426,7 +561,7 @@ async function investigateMissingCampaignObject(
     }
     // 5) campaign_object_versions --------------------------------------------
     console.log("\n  [5] campaign_object_versions");
-    const { data: versions } = await withTimeout(
+    const { data: versions } = await runQuery<Array<{ version: number; created_at: string }>>(
       "forensics: campaign_object_versions",
       supabase
         .from("campaign_object_versions")
@@ -448,7 +583,7 @@ async function investigateMissingCampaignObject(
     console.log("      Conversation has no workspace_id — it is a standalone/general conversation.");
   } else {
     line("workspace", `${convo.workspace_type ?? "—"} / ${convo.workspace_id}`);
-    const { data: siblings } = await withTimeout(
+    const { data: siblings } = await runQuery<Array<{ id: string; status: string; updated_at: string }>>(
       "forensics: sibling conversations",
       supabase
         .from("ai_conversations")
@@ -462,7 +597,7 @@ async function investigateMissingCampaignObject(
     let foundElsewhere: string | null = null;
     for (const s of sibRows) {
       if (s.id === conversationId) continue;
-      const { data: sco } = await withTimeout(
+      const { data: sco } = await runQuery<{ id: string; current_version: number }>(
         "forensics: sibling campaign_objects",
         supabase
           .from("campaign_objects")
@@ -548,7 +683,31 @@ async function main() {
   console.log(`║  DISCOVERY PIPELINE TRACE — conversation ${conversationId.slice(0, 18)}…`);
   console.log(`╚══════════════════════════════════════════════════════════════╝`);
 
-  // 0) Campaign Object resolution — reproduce the exact Studio load path -------
+  // 0a) Connection diagnostics + preflight — prove we can reach Supabase BEFORE
+  //     interpreting any result. A failed query must never be read as "no row".
+  printConnectionDiagnostics();
+
+  header("CONNECTIVITY PREFLIGHT (simple SELECT on ai_conversations)");
+  const preflight = await runQuery<Array<{ id: string }>>(
+    "preflight: SELECT id FROM ai_conversations LIMIT 1",
+    supabase.from("ai_conversations").select("id").limit(1)
+  );
+  if (preflight.error) {
+    header("CONNECTIVITY FAILED — cannot query Supabase (NOT a missing row)");
+    console.log(`  The diagnostic could not execute a basic SELECT. This is a CONNECTION problem,`);
+    console.log(`  not a missing Campaign Object — do not interpret it as "conversation does not exist".`);
+    console.log(`  Classification: ${preflight.classification}`);
+    console.log("");
+    console.log("  Most common fix (matches the dev server): run through the provided runner so Node");
+    console.log("  gets --use-system-ca (corporate SSL inspection) and --dns-result-order=ipv4first:");
+    console.log("      npm run trace:discovery -- <conversationId>");
+    console.log("  If you are invoking tsx directly, add those flags via NODE_OPTIONS.");
+    console.log("");
+    process.exit(1);
+  }
+  console.log("  ✔ connectivity OK — Supabase is reachable and the service role can read.\n");
+
+  // 0b) Campaign Object resolution — reproduce the exact Studio load path ------
   header("RESOLVING CAMPAIGN OBJECT (Studio load path)");
   const resolution = await resolveCampaignObjectLikeStudio(conversationId);
   header("CAMPAIGN OBJECT RESOLUTION (same path as the Studio)");

@@ -99,7 +99,7 @@
     "validate:cdi-phase-1": "npx tsx scripts/validate-cdi-phase-1.mjs",
     "validate:cdi-phase-2": "npx tsx scripts/validate-cdi-phase-2.mjs",
     "validate:f1-one-workspace": "npx tsx scripts/validate-f1-one-workspace.mjs",
-    "trace:discovery": "npx tsx scripts/trace-discovery.ts"
+    "trace:discovery": "node scripts/run-trace-discovery.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
