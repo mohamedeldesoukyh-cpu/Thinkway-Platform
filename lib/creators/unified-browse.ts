@@ -11,6 +11,11 @@ import {
 import { unifiedToInfluencerSearch } from "@/lib/creators/adapters";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import {
+  compareCategoryFiltering,
+  creatorIntelligenceMatchesCategories,
+  getCreatorIntelligenceMode,
+} from "@/lib/creator-intelligence";
+import {
   metricWithConfidence,
   resolveDiscoveryMetricConfidence,
   resolveInternalMetricConfidence,
@@ -299,9 +304,33 @@ function applyPostBrowseFilters(
 
   const categories = resolveBrowseCategories(filters);
   if (categories.length > 0) {
-    const next = results.filter((creator) => creatorMatchesBrowseCategories(creator, categories));
+    // Creator Intelligence rollout (see docs/CREATOR_INTELLIGENCE_ARCHITECTURE.md):
+    //   off (default) — legacy stored-tag matching, unchanged behavior;
+    //   shadow — legacy behavior + logged CI comparison (migration telemetry);
+    //   on — resolved-intelligence matching drives the category decision, with
+    //        legacy tags as a union fallback so sparse enrichment never shrinks
+    //        results below today's behavior during rollout.
+    const ciMode = getCreatorIntelligenceMode();
+    let next: UnifiedCreatorResult[];
+    if (ciMode === "on") {
+      next = results.filter(
+        (creator) =>
+          creatorIntelligenceMatchesCategories(creator, categories) ||
+          creatorMatchesBrowseCategories(creator, categories)
+      );
+    } else {
+      next = results.filter((creator) => creatorMatchesBrowseCategories(creator, categories));
+      if (ciMode === "shadow") {
+        searchTrace(
+          "8_post_filter_ci_shadow",
+          { categories, ...compareCategoryFiltering(results, categories) },
+          pathOpt
+        );
+      }
+    }
     traceCountDrop("8_post_filter", "categories", results.length, next.length, {
       categories,
+      ciMode,
     }, pathOpt);
     results = next;
   }
@@ -1517,7 +1546,7 @@ export async function browseUnifiedCreators(
       ]);
 
       perf?.span("merge");
-      let merged = applyPostBrowseFilters([...internal, ...discovery], filters, tracePath);
+      const merged = applyPostBrowseFilters([...internal, ...discovery], filters, tracePath);
       merged.sort((a, b) => b.thinkway_score - a.thinkway_score);
       const offset = (page - 1) * pageSize;
 
