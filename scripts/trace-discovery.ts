@@ -72,6 +72,29 @@ function argFlag(name: string): string | undefined {
   return hit ? hit.slice(name.length + 1) : undefined;
 }
 
+/** Progress marker — printed immediately so a stall is always localized. */
+function step(msg: string) {
+  console.log(`  … ${msg}`);
+}
+
+/**
+ * Race a query against a timeout so a hung connection fails LOUDLY with the
+ * exact step, instead of leaving the diagnostic silent after the banner.
+ */
+function withTimeout<T>(label: string, promise: PromiseLike<T>, ms = 25000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`query timed out after ${ms}ms at: ${label} (check network / Supabase URL / RLS)`)),
+      ms
+    );
+  });
+  return Promise.race([
+    Promise.resolve(promise).finally(() => clearTimeout(timer)),
+    timeout,
+  ]);
+}
+
 /** Compact list of an object's top-level keys (for snapshot/metadata probes). */
 function keysOf(value: unknown): string {
   if (!value || typeof value !== "object") return "—";
@@ -226,11 +249,15 @@ async function resolveCampaignObjectLikeStudio(
   // 1) The conversation row → context_snapshot (service role bypasses RLS, so we
   //    query by id without the created_by filter getConversation() uses).
   let contextSnapshot: Record<string, unknown> | undefined;
-  const { data: convo } = await supabase
-    .from("ai_conversations")
-    .select("id, workspace_type, workspace_id, context_snapshot")
-    .eq("id", conversationId)
-    .maybeSingle();
+  step("reading ai_conversations (context_snapshot)…");
+  const { data: convo } = await withTimeout(
+    "ai_conversations",
+    supabase
+      .from("ai_conversations")
+      .select("id, workspace_type, workspace_id, context_snapshot")
+      .eq("id", conversationId)
+      .maybeSingle()
+  );
   if (convo) {
     probe.conversationExists = true;
     probe.workspaceType = convo.workspace_type ?? undefined;
@@ -240,22 +267,26 @@ async function resolveCampaignObjectLikeStudio(
   }
 
   // 2) Record what the DB persistence table holds (for the resolution report).
+  step("reading campaign_objects (current_version)…");
   try {
-    const { data: head } = await supabase
-      .from("campaign_objects")
-      .select("current_version")
-      .eq("conversation_id", conversationId)
-      .maybeSingle();
+    const { data: head } = await withTimeout(
+      "campaign_objects",
+      supabase
+        .from("campaign_objects")
+        .select("current_version")
+        .eq("conversation_id", conversationId)
+        .maybeSingle()
+    );
     probe.dbVersion = (head as { current_version?: number } | null)?.current_version ?? null;
   } catch {
     /* table may be empty / unreadable — leave dbVersion null */
   }
 
   // 3) The exact Studio call — DB first, context_snapshot fallback.
-  const restored = await loadCampaignObjectForConversation(
-    supabase,
-    conversationId,
-    contextSnapshot
+  step("loadCampaignObjectForConversation() — exact Studio path…");
+  const restored = await withTimeout(
+    "loadCampaignObjectForConversation",
+    loadCampaignObjectForConversation(supabase, conversationId, contextSnapshot)
   );
   if (restored) {
     const source =
@@ -264,11 +295,15 @@ async function resolveCampaignObjectLikeStudio(
   }
 
   // 4) Final Studio-carried source: the latest studio message metadata.
-  const { data: messages } = await supabase
-    .from("ai_messages")
-    .select("metadata, created_at")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: false });
+  step("reading ai_messages (metadata) — message-metadata fallback…");
+  const { data: messages } = await withTimeout(
+    "ai_messages",
+    supabase
+      .from("ai_messages")
+      .select("metadata, created_at")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false })
+  );
   const rows = (messages ?? []) as Array<{ metadata: Record<string, any> | null }>;
   probe.studioMessageCount = rows.filter((m) => m?.metadata?.campaignObject).length;
   probe.messageMetadataHasObject = probe.studioMessageCount > 0;
@@ -296,11 +331,14 @@ async function investigateMissingCampaignObject(
 
   // 1) ai_conversations -------------------------------------------------------
   console.log("\n  [1] ai_conversations");
-  const { data: convo, error: convoErr } = await supabase
-    .from("ai_conversations")
-    .select("id, title, workspace_type, workspace_id, status, created_by, created_at, updated_at, context_snapshot")
-    .eq("id", conversationId)
-    .maybeSingle();
+  const { data: convo, error: convoErr } = await withTimeout(
+    "forensics: ai_conversations",
+    supabase
+      .from("ai_conversations")
+      .select("id, title, workspace_type, workspace_id, status, created_by, created_at, updated_at, context_snapshot")
+      .eq("id", conversationId)
+      .maybeSingle()
+  );
   if (convoErr) console.log(`      query error: ${convoErr.message}`);
   if (!convo) {
     console.log(`      NO ROW for id ${conversationId}.`);
@@ -336,11 +374,14 @@ async function investigateMissingCampaignObject(
 
   // 3) latest Studio message metadata -----------------------------------------
   console.log("\n  [3] ai_messages metadata (latest studio message)");
-  const { data: messages, error: msgErr } = await supabase
-    .from("ai_messages")
-    .select("id, role, metadata, created_at")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: false });
+  const { data: messages, error: msgErr } = await withTimeout(
+    "forensics: ai_messages",
+    supabase
+      .from("ai_messages")
+      .select("id, role, metadata, created_at")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false })
+  );
   if (msgErr) console.log(`      query error: ${msgErr.message}`);
   const rows = (messages ?? []) as Array<{ id: string; role: string; metadata: Record<string, any> | null; created_at: string }>;
   line("total messages", rows.length);
@@ -360,11 +401,14 @@ async function investigateMissingCampaignObject(
 
   // 4) campaign_objects -------------------------------------------------------
   console.log("\n  [4] campaign_objects (DB persistence)");
-  const { data: co, error: coErr } = await supabase
-    .from("campaign_objects")
-    .select("id, conversation_id, campaign_header_id, current_version, lifecycle_status, created_by, created_at, updated_at")
-    .eq("conversation_id", conversationId)
-    .maybeSingle();
+  const { data: co, error: coErr } = await withTimeout(
+    "forensics: campaign_objects",
+    supabase
+      .from("campaign_objects")
+      .select("id, conversation_id, campaign_header_id, current_version, lifecycle_status, created_by, created_at, updated_at")
+      .eq("conversation_id", conversationId)
+      .maybeSingle()
+  );
   if (coErr) console.log(`      query error: ${coErr.message}`);
   if (!co) {
     console.log("      NO ROW for this conversation.");
@@ -382,11 +426,14 @@ async function investigateMissingCampaignObject(
     }
     // 5) campaign_object_versions --------------------------------------------
     console.log("\n  [5] campaign_object_versions");
-    const { data: versions } = await supabase
-      .from("campaign_object_versions")
-      .select("version, created_at")
-      .eq("campaign_object_id", co.id)
-      .order("version", { ascending: false });
+    const { data: versions } = await withTimeout(
+      "forensics: campaign_object_versions",
+      supabase
+        .from("campaign_object_versions")
+        .select("version, created_at")
+        .eq("campaign_object_id", co.id)
+        .order("version", { ascending: false })
+    );
     const vrows = (versions ?? []) as Array<{ version: number; created_at: string }>;
     line("version count", vrows.length);
     if (vrows[0]) line("latest version", `${vrows[0].version} @ ${vrows[0].created_at}`);
@@ -401,22 +448,28 @@ async function investigateMissingCampaignObject(
     console.log("      Conversation has no workspace_id — it is a standalone/general conversation.");
   } else {
     line("workspace", `${convo.workspace_type ?? "—"} / ${convo.workspace_id}`);
-    const { data: siblings } = await supabase
-      .from("ai_conversations")
-      .select("id, status, updated_at")
-      .eq("workspace_type", convo.workspace_type)
-      .eq("workspace_id", convo.workspace_id)
-      .order("updated_at", { ascending: false });
+    const { data: siblings } = await withTimeout(
+      "forensics: sibling conversations",
+      supabase
+        .from("ai_conversations")
+        .select("id, status, updated_at")
+        .eq("workspace_type", convo.workspace_type)
+        .eq("workspace_id", convo.workspace_id)
+        .order("updated_at", { ascending: false })
+    );
     const sibRows = (siblings ?? []) as Array<{ id: string; status: string; updated_at: string }>;
     line("conversations for workspace", sibRows.length);
     let foundElsewhere: string | null = null;
     for (const s of sibRows) {
       if (s.id === conversationId) continue;
-      const { data: sco } = await supabase
-        .from("campaign_objects")
-        .select("id, current_version")
-        .eq("conversation_id", s.id)
-        .maybeSingle();
+      const { data: sco } = await withTimeout(
+        "forensics: sibling campaign_objects",
+        supabase
+          .from("campaign_objects")
+          .select("id, current_version")
+          .eq("conversation_id", s.id)
+          .maybeSingle()
+      );
       if (sco && (sco.current_version ?? 0) > 0) {
         foundElsewhere = s.id;
         break;
@@ -496,6 +549,7 @@ async function main() {
   console.log(`╚══════════════════════════════════════════════════════════════╝`);
 
   // 0) Campaign Object resolution — reproduce the exact Studio load path -------
+  header("RESOLVING CAMPAIGN OBJECT (Studio load path)");
   const resolution = await resolveCampaignObjectLikeStudio(conversationId);
   header("CAMPAIGN OBJECT RESOLUTION (same path as the Studio)");
   line("conversation exists", resolution.probe.conversationExists);
