@@ -185,16 +185,53 @@ function extractPlatforms(text: string): { platforms: string[]; remainder: strin
   };
 }
 
+const TIER_ALTERNATION = FOLLOWER_TIER_KEYWORDS.map((tier) => tier.id).join("|");
+
+/** Nouns that, adjacent to a tier word, confirm it means a creator-audience tier. */
+const TIER_CONTEXT_NOUN =
+  "(?:tiers?|creators?|influencers?|accounts?|profiles?|talent|handles?|audiences?|followings?|followers?)";
+/** Words that, preceding a tier word, mark a tier selection (including mixes). */
+const TIER_CONTEXT_PREFIX =
+  "(?:tiers?|creators?|influencers?|mix|mixture|blend|range|combination|spread|split|mostly|mainly|primarily)";
+/** Separators for a conjoined tier list, e.g. "mid and macro", "mid/macro". */
+const TIER_CONJUNCTION = "(?:\\s*(?:,|/|&|\\+|and|or|to|through|thru)\\s*|-)";
+
+/**
+ * A bare tier word ("mid", "macro") only denotes a follower tier when the
+ * surrounding text is about creators — NEVER for temporal/phase phrases like
+ * "Mid July", "mid August", or "mid funnel". A tier fires only when it has:
+ *   - a creator/tier noun suffix — "mid-tier", "mid creators", "mid influencers"
+ *   - a mix/selection prefix     — "mix of mid", "range of mid", "mostly mid"
+ *   - an adjacent second tier     — "mid and macro", "mid/macro", "mid to mega"
+ */
+function tierHasCreatorContext(normalized: string, id: string): boolean {
+  const suffix = new RegExp(`(?:^|\\s)${id}[\\s-]+${TIER_CONTEXT_NOUN}(?=\\s|$)`, "i");
+  if (suffix.test(normalized)) return true;
+
+  const prefix = new RegExp(`(?:^|\\s)${TIER_CONTEXT_PREFIX}(?:\\s+of)?\\s+${id}(?=\\s|$)`, "i");
+  if (prefix.test(normalized)) return true;
+
+  const conjoinedAfter = new RegExp(`(?:^|\\s)${id}${TIER_CONJUNCTION}(?:${TIER_ALTERNATION})(?=\\s|$)`, "i");
+  if (conjoinedAfter.test(normalized)) return true;
+
+  const conjoinedBefore = new RegExp(`(?:^|\\s)(?:${TIER_ALTERNATION})${TIER_CONJUNCTION}${id}(?=\\s|$)`, "i");
+  if (conjoinedBefore.test(normalized)) return true;
+
+  return false;
+}
+
 function extractFollowerTier(text: string): {
   minFollowers?: number;
   maxFollowers?: number;
   remainder: string;
 } {
   let remainder = text;
+  const normalized = normalizePhrase(remainder);
 
   for (const tier of FOLLOWER_TIER_KEYWORDS) {
-    const pattern = new RegExp(`(?:^|\\s)${tier.id}(?:-tier|-influencers?)?(?=\\s|$)`, "i");
-    if (!pattern.test(normalizePhrase(remainder))) continue;
+    // Require an explicit creator/tier context so temporal or phase words like
+    // "Mid July" or "mid funnel" never inject a follower-count filter.
+    if (!tierHasCreatorContext(normalized, tier.id)) continue;
 
     remainder = removePhrase(remainder, tier.id);
     return {
