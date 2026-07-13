@@ -225,7 +225,8 @@ function VendorCardBlock({
   applyDecision: (
     creatorId: string,
     action: "approve" | "reject" | "shortlist",
-    unifiedId?: string
+    unifiedId?: string,
+    displayName?: string
   ) => Promise<void>;
   stageRoleChange: (creatorId: string, role: "main" | "alternative", displayName?: string) => Promise<void>;
   openCreatorDetails: (vendor: DisplayVendor) => void;
