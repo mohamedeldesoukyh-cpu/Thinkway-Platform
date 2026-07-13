@@ -22,6 +22,7 @@ import {
 } from "@/features/campaign-studio/services/presentation-intelligence";
 
 import type { SearchCreatorCardItem } from "./creator-platform-utils";
+import { estimateCreatorPostFee } from "./creator-fee-estimator";
 import { creatorTierOf } from "./creator-slate";
 import { parseFeeAmount } from "./plan-section-utils";
 import { resolveCreatorMix } from "./section-data-resolver";
@@ -37,7 +38,12 @@ function isBudgetContent(content: unknown): content is BudgetSectionData {
 function sumCreatorFees(cards: SearchCreatorCardItem[]): number {
   let total = 0;
   for (const card of cards) {
-    const fee = parseFeeAmount(card.priceEstimate);
+    const fee = parseFeeAmount(
+      estimateCreatorPostFee({
+        followers: card.followers,
+        platform: card.platform,
+      })
+    );
     if (fee != null) total += fee;
     else {
       const tier = creatorTierOf(card).toLowerCase();
