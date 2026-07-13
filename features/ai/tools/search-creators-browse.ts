@@ -10,6 +10,7 @@ import {
   parseCreatorSearchQuery,
 } from "./creator-search-parser";
 import type { SearchCreatorsInput } from "./schemas";
+import { resolveDiscoveryPlatform } from "@/lib/social/platforms";
 
 /** Default page size aligned with Discovery search workspace. */
 export const AI_SEARCH_CREATORS_PAGE_SIZE = 50;
@@ -21,10 +22,24 @@ export {
 } from "./creator-search-parser";
 export { buildCampaignSearchIntent, looksLikeCampaignBrief } from "./campaign-search-intent";
 
+/**
+ * Explicit platforms come from stored campaign facts, which are title-case
+ * ("TikTok"). The parser already canonicalizes platforms to the lowercase enum
+ * value, so normalize the explicit ones the same way here — otherwise the raw
+ * title-case value overwrites the canonical one and reaches the discovery enum
+ * boundary as an invalid value. Reuses the shared resolveDiscoveryPlatform.
+ */
+function explicitPlatformsFromInput(platforms?: string[]): string[] {
+  return (
+    platforms
+      ?.map((value) => resolveDiscoveryPlatform(value) ?? value.trim())
+      .filter(Boolean) ?? []
+  );
+}
+
 function mergeParsedWithInput(input: SearchCreatorsInput) {
   const parsed = parseCreatorSearchQuery(input.query);
-  const explicitPlatforms =
-    input.platforms?.map((value) => value.trim()).filter(Boolean) ?? [];
+  const explicitPlatforms = explicitPlatformsFromInput(input.platforms);
   const explicitCategories =
     input.categories?.map((value) => value.trim()).filter(Boolean) ?? [];
 
@@ -41,8 +56,7 @@ function mergeParsedWithInput(input: SearchCreatorsInput) {
 
 function mergedFromCampaignIntent(input: SearchCreatorsInput) {
   const intent = buildCampaignSearchIntent(input.query);
-  const explicitPlatforms =
-    input.platforms?.map((value) => value.trim()).filter(Boolean) ?? [];
+  const explicitPlatforms = explicitPlatformsFromInput(input.platforms);
   const explicitCategories =
     input.categories?.map((value) => value.trim()).filter(Boolean) ?? [];
 

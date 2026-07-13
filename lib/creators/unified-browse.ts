@@ -10,7 +10,6 @@ import {
 } from "@/lib/creators/category-filter";
 import { unifiedToInfluencerSearch } from "@/lib/creators/adapters";
 import { resolveCountryCode } from "@/lib/creators/country-code";
-import { resolveDiscoveryPlatform } from "@/lib/social/platforms";
 import {
   metricWithConfidence,
   resolveDiscoveryMetricConfidence,
@@ -642,11 +641,7 @@ async function fetchInternalCreators(
       accountQuery = accountQuery.in("influencer_id", candidateIds);
     }
 
-    // Normalize to the lowercase social_platform enum before the DB boundary
-    // (e.g. "TikTok" → "tiktok"); skip the filter if unrecognized rather than
-    // sending an invalid enum value to Postgres.
-    const normalizedPlatform = resolveDiscoveryPlatform(platform);
-    if (normalizedPlatform) accountQuery = accountQuery.eq("platform", normalizedPlatform);
+    if (platform) accountQuery = accountQuery.eq("platform", platform);
     if (filters.minFollowers != null) {
       accountQuery = accountQuery.gte("follower_count", filters.minFollowers);
     }
