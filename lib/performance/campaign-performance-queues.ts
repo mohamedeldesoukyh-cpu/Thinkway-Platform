@@ -8,6 +8,7 @@ import {
 } from "@/lib/performance/campaign-performance-queue-options";
 import { PUBLICATION_METRICS_QUEUE } from "@/lib/performance/metrics-collector/queue";
 import { PUBLICATION_SCREENSHOT_QUEUE } from "@/lib/performance/screenshot-capture/config";
+import { createBullMqQueueConnection } from "@/lib/redis/bullmq-connection";
 
 export const CAMPAIGN_PERFORMANCE_QUEUES = {
   discovery: "discovery-run",
@@ -71,8 +72,13 @@ export function isRedisConfigured(): boolean {
   return Boolean(getRedisUrl());
 }
 
-function createQueueConnection(url: string): { url: string } {
-  return { url };
+/**
+ * Producer connections must be built exactly like the worker's — ioredis has
+ * no `url` option key, so the previous `{ url }` object was silently ignored
+ * and fell back to localhost. See lib/redis/bullmq-connection.ts.
+ */
+function createQueueConnection(url: string): ReturnType<typeof createBullMqQueueConnection> {
+  return createBullMqQueueConnection(url);
 }
 
 export async function checkRedisHealth(): Promise<RedisHealth> {
