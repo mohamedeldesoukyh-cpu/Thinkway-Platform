@@ -893,6 +893,88 @@ async function main() {
     console.log("  (failed to query:", (e as Error).message, ")");
   }
 
+  // 5b) ACQUISITION PIPELINE — why the DB pool is empty ------------------------
+  // The browse enqueues a discovery_jobs row + a BullMQ "discovery-run" job that
+  // the SEPARATE services/discovery-worker consumes. If the worker never runs,
+  // jobs stay `pending`; if it runs, they go `running`→`completed`/`failed`.
+  // Combine job status with raw table counts to locate where acquisition stops.
+  header("ACQUISITION PIPELINE (discovery_jobs + raw table counts)");
+
+  const { data: jobs } = await runQuery<Array<any>>(
+    "discovery_jobs (latest 10)",
+    supabase
+      .from("discovery_jobs")
+      .select("id, status, method, job_type, profiles_discovered, error_message, created_at, started_at, completed_at")
+      .order("created_at", { ascending: false })
+      .limit(10)
+  );
+  const jobRows = (jobs ?? []) as Array<Record<string, any>>;
+  const byStatus: Record<string, number> = {};
+  for (const j of jobRows) byStatus[j.status ?? "?"] = (byStatus[j.status ?? "?"] ?? 0) + 1;
+  line("recent jobs", jobRows.length ? jobRows.length : "0 (no discovery_jobs ever created)");
+  line("status breakdown", Object.keys(byStatus).length ? Object.entries(byStatus).map(([s, n]) => `${n} ${s}`) : "—");
+  jobRows.slice(0, 5).forEach((j) => {
+    const when = j.created_at ?? "?";
+    const err = j.error_message ? ` err="${String(j.error_message).slice(0, 80)}"` : "";
+    console.log(`    ${String(j.status ?? "?").padEnd(10)} ${String(j.method ?? j.job_type ?? "?").padEnd(24)} profiles=${j.profiles_discovered ?? 0}  ${when}${err}`);
+  });
+
+  // Raw counts (head+exact returns the count on the builder response, not data).
+  const rawCount = async (label: string, q: any): Promise<number | null> => {
+    const start = Date.now();
+    console.log(`  START query: ${label}`);
+    try {
+      const res: any = await withTimeout(label, q);
+      const ms = Date.now() - start;
+      if (res?.error) {
+        console.log(`  FAILED query: ${label} (${ms} ms) — ${classifySupabaseError(res.error)}`);
+        printFullError(res.error);
+        return null;
+      }
+      console.log(`  END query: ${label} (${ms} ms) → count=${res?.count ?? 0}`);
+      return res?.count ?? 0;
+    } catch (e: any) {
+      console.log(`  FAILED query: ${label} (${Date.now() - start} ms) — ${classifyThrownError(e)}`);
+      printFullError(e);
+      return null;
+    }
+  };
+
+  const discoveredTotal = await rawCount(
+    "discovered_profiles total",
+    supabase.from("discovered_profiles").select("id", { count: "exact", head: true })
+  );
+  const discoveredTikTok = await rawCount(
+    "discovered_profiles where platform=tiktok",
+    supabase.from("discovered_profiles").select("id", { count: "exact", head: true }).eq("platform", "tiktok")
+  );
+  const influencersActive = await rawCount(
+    "influencers where status=active",
+    supabase.from("influencers").select("id", { count: "exact", head: true }).eq("status", "active")
+  );
+
+  header("ACQUISITION VERDICT");
+  if (jobRows.length === 0) {
+    console.log("  No discovery_jobs rows exist — acquisition was never even enqueued/persisted.");
+  } else if ((byStatus["pending"] ?? 0) === jobRows.length || (byStatus["pending"] ?? 0) + (byStatus["running"] ?? 0) === jobRows.length) {
+    console.log("  Jobs are stuck at pending/running — the discovery-worker is NOT consuming the queue.");
+    console.log("  → Start it (separate process): npm run discovery:worker  (needs REDIS_URL + worker .env).");
+    console.log("    Verify local setup with: node scripts/verify-local-discovery.mjs");
+  } else if ((byStatus["failed"] ?? 0) > 0) {
+    console.log("  The worker RAN but jobs FAILED — see error_message above (Apify creds, crawl blocked, etc.).");
+  } else if ((byStatus["completed"] ?? 0) > 0 && (discoveredTotal ?? 0) === 0) {
+    console.log("  The worker COMPLETED but imported 0 profiles — acquisition returned nothing (source/creds/cost caps).");
+  } else if ((discoveredTotal ?? 0) > 0 && (discoveredTikTok ?? 0) === 0) {
+    console.log("  discovered_profiles has rows, but NONE for platform=tiktok — acquisition never covered TikTok.");
+  } else if ((discoveredTikTok ?? 0) > 0 || (influencersActive ?? 0) > 0) {
+    console.log("  The DB HAS candidates, yet browse returned 0 — the loss is in the browse query/filters, not acquisition.");
+    console.log(`  (discovered tiktok=${discoveredTikTok}, active influencers=${influencersActive}). Re-inspect the RPC/category/follower filters.`);
+  } else {
+    console.log("  The database is empty of candidates and acquisition has not populated it.");
+  }
+  console.log("  Note: automaticEnrichment/costProtection (see DISCOVERY CONTROL SETTINGS) can disable Apify");
+  console.log("  even when the worker runs — maxRequestsPerDay=0 / maxCreditsPerDay=0 blocks paid acquisition.");
+
   // 6) Stored campaign-object slate state -------------------------------------
   header("STORED SLATE STATE (what the real Studio run produced)");
   line("discovery.creatorIds", storedDiscovery.length);
