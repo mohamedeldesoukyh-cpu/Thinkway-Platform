@@ -108,8 +108,7 @@ test("propose prefers workflow searchResults pool over strategy fallback", () =>
           handle: "@discovery",
           displayName: "Discovery Vendor",
           platform: "tiktok",
-          fitScore: 90,
-          rank: 1,
+          campaignRelevanceScore: 90,
         },
       ],
     }
@@ -168,8 +167,7 @@ test("re-run success replaces committed creatorIds", () => {
           handle: "@new",
           displayName: "New Creator",
           platform: "tiktok",
-          fitScore: 95,
-          rank: 1,
+          campaignRelevanceScore: 95,
         },
       ],
     }

@@ -88,7 +88,7 @@ export function proposeInitialCreatorSlateWithStatus(
   });
 
   const recommendationData = buildCreatorRecommendationData(
-    ranked.map((c, index) => ({
+    ranked.map((c) => ({
       id: c.id,
       handle: c.handle,
       displayName: c.displayName,
@@ -98,8 +98,6 @@ export function proposeInitialCreatorSlateWithStatus(
       avatarUrl: c.avatarUrl,
       profileUrl: c.profileUrl,
       campaignRelevanceScore: c.campaignRelevanceScore,
-      fitScore: c.campaignRelevanceScore ?? 70,
-      rank: index + 1,
     })),
     options.query,
     facts,
@@ -324,7 +322,7 @@ function groundedFromReasoning(
     handle: entry?.handle ?? `@creator${index + 1}`,
     displayName: entry?.displayName ?? `Creator ${index + 1}`,
     platform: entry?.platform ?? "instagram",
-    fitScore: entry?.confidence != null ? Math.round(entry.confidence * 100) : 70,
-    rank: index + 1,
+    campaignRelevanceScore:
+      entry?.confidence != null ? Math.round(entry.confidence * 100) : 70,
   };
 }
