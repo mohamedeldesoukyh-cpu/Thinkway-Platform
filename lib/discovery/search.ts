@@ -9,6 +9,7 @@ import {
   resolveBrowseCategories,
 } from "@/lib/creators/category-filter";
 import { isSyntheticCreatorUsername } from "@/lib/discovery/demo-data";
+import { resolveCountryCode } from "@/lib/creators/country-code";
 import type {
   DiscoverySearchFilters,
   DiscoverySearchResult,
@@ -108,7 +109,7 @@ export async function searchDiscoveredProfiles(
 
     if (filters.platform) query = query.eq("platform", filters.platform);
     if (filters.country) {
-      query = query.eq("country_code", filters.country.toUpperCase().slice(0, 2));
+      query = query.eq("country_code", resolveCountryCode(filters.country));
     }
     if (filters.categories?.length || filters.category) {
       query = applyCategoriesToArrayColumnQuery(
@@ -168,7 +169,7 @@ export async function searchDiscoveredProfiles(
     query = query.eq("platform", filters.platform);
   }
   if (filters.country) {
-    query = query.eq("country_code", filters.country.toUpperCase().slice(0, 2));
+    query = query.eq("country_code", resolveCountryCode(filters.country));
   }
   if (filters.city) {
     query = query.ilike("city", `%${filters.city}%`);

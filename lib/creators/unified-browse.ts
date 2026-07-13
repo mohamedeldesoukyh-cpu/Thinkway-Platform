@@ -9,6 +9,7 @@ import {
   shouldUseUnifiedBrowseIndexPath,
 } from "@/lib/creators/category-filter";
 import { unifiedToInfluencerSearch } from "@/lib/creators/adapters";
+import { resolveCountryCode } from "@/lib/creators/country-code";
 import {
   metricWithConfidence,
   resolveDiscoveryMetricConfidence,
@@ -188,7 +189,7 @@ async function queryInfluencerIdsForCategoryBrowse(
   pageSize: number
 ): Promise<{ ids: string[]; total: number }> {
   const categories = resolveBrowseCategories(filters);
-  const country = filters.country?.trim() ?? null;
+  const country = resolveCountryCode(filters.country) || null;
   const language = filters.language?.trim() ?? null;
   const from = (page - 1) * pageSize;
 
@@ -224,7 +225,7 @@ async function fetchInternalCreatorsBrowsePage(
   } else {
     let idQuery = supabase.from("influencers").select("id").eq("status", "active");
 
-    const country = filters.country?.trim().toUpperCase() ?? "";
+    const country = resolveCountryCode(filters.country);
     if (country) idQuery = idQuery.eq("country_code", country);
     if (filters.language) idQuery = idQuery.contains("languages", [filters.language]);
 
@@ -270,7 +271,7 @@ async function countInternalCreatorsBrowse(
     .select("id", { count: "exact", head: true })
     .eq("status", "active");
 
-  const country = filters.country?.trim().toUpperCase() ?? "";
+  const country = resolveCountryCode(filters.country);
   if (country) countQuery = countQuery.eq("country_code", country);
   if (filters.language) countQuery = countQuery.contains("languages", [filters.language]);
 
@@ -606,7 +607,7 @@ async function fetchInternalCreators(
   const pathOpt = { path: tracePath };
   const search = filters.search?.trim() ?? "";
   const platform = filters.platform?.trim() ?? "";
-  const country = filters.country?.trim().toUpperCase() ?? "";
+  const country = resolveCountryCode(filters.country);
   const categories = resolveBrowseCategories(filters);
   const resolvedSearchRankById = searchRankById ?? null;
   const omitHeavyFields = options?.omitHeavyFields ?? false;

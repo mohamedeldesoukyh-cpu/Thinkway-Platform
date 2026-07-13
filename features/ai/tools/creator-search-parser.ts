@@ -1,5 +1,6 @@
 import { CREATOR_CATEGORY_KEYWORDS } from "@/lib/creators/category-keywords";
 import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
+import { COUNTRY_ALIASES } from "@/lib/creators/country-code";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
 import { normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
 import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
@@ -65,17 +66,6 @@ const SEARCH_STOP_WORDS = new Set([
   "with",
 ]);
 
-/** Extra geography aliases not covered by COUNTRY_OPTIONS labels alone. */
-const COUNTRY_ALIASES: Readonly<Record<string, string>> = {
-  uae: "AE",
-  emirates: "AE",
-  dubai: "AE",
-  "abu dhabi": "AE",
-  ksa: "SA",
-  saudi: "SA",
-  uk: "GB",
-  usa: "US",
-};
 
 export type ParsedCreatorSearch = {
   /** FTS keywords only — geography and filter tokens stripped. */

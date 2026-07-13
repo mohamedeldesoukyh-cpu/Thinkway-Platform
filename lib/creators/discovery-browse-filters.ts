@@ -1,4 +1,5 @@
 import { creatorMatchesBrowseCategories } from "@/lib/creators/category-filter";
+import { resolveCountryCode } from "@/lib/creators/country-code";
 import type { UnifiedCreatorBrowseFilters, UnifiedCreatorResult } from "@/lib/creators/types";
 import {
   audienceFilterFromSearchFields,
@@ -8,7 +9,9 @@ import {
 import type { AudienceDemographics } from "@/features/discovery/enrichment/components/audience-demographics-section";
 
 function normalizeCountryCode(value: string | null | undefined): string {
-  return (value ?? "").trim().toUpperCase();
+  // Resolve names/aliases → ISO-2 so audience-country matching agrees with the
+  // SQL country_code filter (single shared resolver — no duplicate mapping).
+  return resolveCountryCode(value);
 }
 
 function creatorCountryCodes(creator: UnifiedCreatorResult): string[] {
