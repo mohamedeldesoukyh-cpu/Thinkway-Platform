@@ -5,6 +5,7 @@ import {
   type InfluencerTier,
 } from "@/lib/creators/influencer-tier";
 import { resolveCreatorTierLabel, type CreatorTierLabel } from "@/lib/creators/creator-tier";
+import { resolveDiscoveryPlatform } from "@/lib/social/platforms";
 
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import type { SearchCreatorCardItem } from "./creator-platform-utils";
@@ -37,13 +38,9 @@ const TIER_ALIASES: Record<string, string[]> = {
   nano: ["nano"],
 };
 
+/** Canonical platform slug via the shared taxonomy (no local alias table). */
 function normalizePlatformKey(platform: string): string {
-  const v = platform.trim().toLowerCase();
-  if (v.includes("insta") || v === "ig") return "instagram";
-  if (v.includes("tiktok") || v === "tt") return "tiktok";
-  if (v.includes("youtube") || v === "yt") return "youtube";
-  if (v.includes("snap")) return "snapchat";
-  return v;
+  return resolveDiscoveryPlatform(platform) ?? platform.trim().toLowerCase();
 }
 
 export function creatorTierOf(creator: Pick<SearchCreatorCardItem, "followers">): CreatorTierLabel {

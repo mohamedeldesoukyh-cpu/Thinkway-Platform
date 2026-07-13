@@ -26,8 +26,13 @@
 | Campaign relevance (`campaign-relevance-scoring`) | ✅ migrated (flag) | `on` → CI-first category criterion, legacy union |
 | Acquisition gate (orchestrator) | 🟡 telemetry (flag) | `coverage_ci_shadow` trace; gate decision still legacy |
 | Campaign fit rerank (LLM) | ✅ migrated (flag) | `on` → prompt context uses resolved intelligence (categories+source, tier, topics) instead of stored tags |
-| Studio slate / Director / Outputs / Vendor Recommendations | ⬜ inherit via ranked pools; direct migration pending | Phase E continuation |
-| SQL predicates (`searchDiscoveredProfiles`, internal RPC) | ⬜ pending projection | Phase P4 |
+| Recommendation pipeline (`rankBrowseCreatorsForCampaign`) | ✅ transitively migrated | delegates to the migrated relevance scorer — no duplicate matcher |
+| Studio slate composition (`composeCreatorSlate`) | ✅ taxonomy unified | local platform alias table replaced by `resolveDiscoveryPlatform` |
+| Vendor Recommendations / Director / Outputs (narratives) | ✅ transitively migrated | explain scores produced by CI-consuming scorers; no matching logic of their own |
+| Acquisition writes (worker `category_tags`) | 🟡 flag ready | `DISCOVERY_WRITE_INTENT_TAGS=false` at cutover stops seeding search intent as semantics |
+| SQL projection (`creator_intelligence` table) | ✅ infrastructure shipped | migration + writer + `backfill:creator-intelligence`; **predicate flip pending populated projection (operational)** |
+| SQL predicates (`searchDiscoveredProfiles`, internal RPC) | ⬜ pending backfilled projection + coverage gate | Phase H completion |
+| BullMQ producer/consumer Redis parity | ✅ fixed | `lib/redis/bullmq-connection.ts` + regression test |
 
 **Dependency rule:** consumers import **deep modules**
 (`creator-intelligence/flags`, `/resolver`, `/taxonomy`, `/shadow`) — never the

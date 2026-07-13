@@ -383,6 +383,33 @@ async function testRankingConsumerOnMode(): Promise<void> {
   }
 }
 
+// --- phase H: SQL projection row mapping ------------------------------------------
+
+async function testProjectionRowMapping(): Promise<void> {
+  const { creatorIntelligenceProjectionRow } = await import("./projection");
+  const row = creatorIntelligenceProjectionRow(
+    resolveCreatorIntelligence(
+      baseCreator({
+        ai_category: "Entertainment",
+        ai_niche: "comedy",
+        audience_demographics: demographics,
+        role: "Macro",
+      })
+    )
+  );
+  assert.equal(row.unified_id, "dis:test-1");
+  assert.deepEqual(row.categories, ["Entertainment"]);
+  assert.equal(row.category_source, "ai_enrichment");
+  assert.equal(row.niche, "comedy");
+  assert.equal(row.creator_tier, "Macro");
+  assert.deepEqual(row.audience_countries, ["EG", "SA"]);
+  assert.equal(row.audience_age_bucket, "18_24");
+  assert.equal(row.audience_gender_female, 60);
+  assert.equal(row.brand_safety_level, "unknown");
+  assert.equal(row.max_followers, 250_000);
+  assert.ok(row.resolved_at);
+}
+
 async function run(): Promise<void> {
   testTaxonomy();
   testResolverIgnoresDiscoveryProvenance();
@@ -394,6 +421,7 @@ async function run(): Promise<void> {
   testAudienceIntelligence();
   testMatchingDimensionsPhaseD();
   await testRankingConsumerOnMode();
+  await testProjectionRowMapping();
   console.log("creator-intelligence.test.ts: PASS");
 }
 

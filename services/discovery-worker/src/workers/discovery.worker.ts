@@ -39,13 +39,28 @@ type CrawlMethodResult = {
   usernames?: string[];
 };
 
+/**
+ * Phase I (Creator Intelligence) — discovery is acquisition + provenance only.
+ * Writing the DISCOVERING CAMPAIGN's search categories onto
+ * discovered_profiles.category_tags made crawl provenance masquerade as
+ * creator intelligence. Legacy filtering still reads those tags until the
+ * CREATOR_INTELLIGENCE_MODE cutover, so the write stays ON by default; set
+ * DISCOVERY_WRITE_INTENT_TAGS=false at cutover to stop seeding search intent
+ * as semantics. (Real categories come from enrichment → creator_intelligence.)
+ */
+function shouldWriteIntentTags(): boolean {
+  return process.env.DISCOVERY_WRITE_INTENT_TAGS !== "false";
+}
+
 async function runCrawlMethod(
   job: Job<DiscoveryJobData>,
   tracker: DiscoveryJobTracker
 ): Promise<CrawlMethodResult> {
   const { method, platform = "instagram" } = job.data;
   const countryCode = job.data.coverageIntent?.country ?? job.data.locationCountry;
-  const categoryTags = job.data.coverageIntent?.categories ?? [];
+  const categoryTags = shouldWriteIntentTags()
+    ? job.data.coverageIntent?.categories ?? []
+    : [];
 
   switch (method) {
     case "hashtag":
