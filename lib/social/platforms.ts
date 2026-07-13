@@ -39,6 +39,46 @@ export function isSocialPlatform(value: string): value is SocialPlatform {
   return value in PLATFORM_LABELS;
 }
 
+/**
+ * Case/alias aliases → canonical lowercase platform. Only non-identity aliases
+ * live here; exact canonical values (instagram, tiktok, …) pass through via
+ * `isSocialPlatform`, so the canonical list is never duplicated.
+ */
+const PLATFORM_ALIASES: Readonly<Record<string, SocialPlatform>> = {
+  ig: "instagram",
+  insta: "instagram",
+  gram: "instagram",
+  tt: "tiktok",
+  "tik tok": "tiktok",
+  yt: "youtube",
+  "you tube": "youtube",
+  snap: "snapchat",
+  sc: "snapchat",
+  x: "twitter",
+  "x (twitter)": "twitter",
+  tweet: "twitter",
+  li: "linkedin",
+  "linked in": "linkedin",
+  fb: "facebook",
+  meta: "facebook",
+};
+
+/**
+ * Normalize any casing/alias of a platform name to its canonical enum value —
+ * the platform analogue of resolveCountryCode(). "TikTok" / "tiktok" / "TIKTOK"
+ * → "tiktok"; "X" / "Twitter" → "twitter"; "IG" → "instagram", etc. Returns
+ * undefined for empty/unrecognized input so callers can skip the filter rather
+ * than send an invalid enum value to Postgres. Reuses PLATFORM_LABELS as the
+ * single source of canonical values.
+ */
+export function resolveDiscoveryPlatform(value?: string | null): SocialPlatform | undefined {
+  if (!value) return undefined;
+  const key = value.trim().toLowerCase();
+  if (!key) return undefined;
+  if (isSocialPlatform(key)) return key;
+  return PLATFORM_ALIASES[key];
+}
+
 export function buildCanonicalProfileUrl(
   platform: SocialPlatform,
   username: string

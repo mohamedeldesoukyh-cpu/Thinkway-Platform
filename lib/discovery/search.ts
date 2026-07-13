@@ -10,12 +10,27 @@ import {
 } from "@/lib/creators/category-filter";
 import { isSyntheticCreatorUsername } from "@/lib/discovery/demo-data";
 import { resolveCountryCode } from "@/lib/creators/country-code";
-import type {
-  DiscoverySearchFilters,
-  DiscoverySearchResult,
-  ProfileAiScore,
-  ProfileMetricsSnapshot,
+import { resolveDiscoveryPlatform } from "@/lib/social/platforms";
+import {
+  DISCOVERY_PLATFORMS,
+  type DiscoverySearchFilters,
+  type DiscoverySearchResult,
+  type ProfileAiScore,
+  type ProfileMetricsSnapshot,
 } from "@/lib/discovery/types";
+
+/**
+ * Normalize a caller-supplied platform (e.g. "TikTok") to the lowercase
+ * `discovery_platform` enum value before it reaches Postgres, and drop it when
+ * it is not one of the four discovery platforms — sending a raw/invalid value
+ * throws `invalid input value for enum discovery_platform`.
+ */
+function toDiscoveryPlatformFilter(value?: string): DiscoverySearchFilters["platform"] | undefined {
+  const normalized = resolveDiscoveryPlatform(value);
+  return normalized && (DISCOVERY_PLATFORMS as readonly string[]).includes(normalized)
+    ? (normalized as DiscoverySearchFilters["platform"])
+    : undefined;
+}
 
 const DEFAULT_PAGE_SIZE = 24;
 
@@ -101,13 +116,14 @@ export async function searchDiscoveredProfiles(
   const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? DEFAULT_PAGE_SIZE));
   const from = (page - 1) * pageSize;
   const searchQuery = filters.q?.trim() ?? "";
+  const platformFilter = toDiscoveryPlatformFilter(filters.platform);
 
   if (filters.profileIds?.length) {
     let query = withLatestNestedRowLimits(
       supabase.from("discovered_profiles").select(DISCOVERY_PROFILE_SELECT).in("id", filters.profileIds)
     );
 
-    if (filters.platform) query = query.eq("platform", filters.platform);
+    if (platformFilter) query = query.eq("platform", platformFilter);
     if (filters.country) {
       query = query.eq("country_code", resolveCountryCode(filters.country));
     }
@@ -165,8 +181,8 @@ export async function searchDiscoveredProfiles(
     query = query.order("updated_at", { ascending: false }).range(from, from + pageSize - 1);
   }
 
-  if (filters.platform) {
-    query = query.eq("platform", filters.platform);
+  if (platformFilter) {
+    query = query.eq("platform", platformFilter);
   }
   if (filters.country) {
     query = query.eq("country_code", resolveCountryCode(filters.country));
