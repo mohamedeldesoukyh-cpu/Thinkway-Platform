@@ -1,7 +1,38 @@
 # Creator Intelligence Architecture
 
-**Status:** Approved design direction — Phase 1 implemented (this document + `lib/creator-intelligence/`).
+**Status:** Approved direction — Phases A–D implemented; Phase E in progress (3 consumers migrated behind flag); Phases P4+ pending real-traffic shadow telemetry.
 **Companion spec:** `docs/THINKWAY_SYSTEM_REFERENCE.md`, `docs/ARCHITECTURE_ALIGNMENT.md`.
+
+## Rollout status (source-of-truth ownership map)
+
+| Semantic attribute | Owner (source of truth) | Resolver support | Notes |
+|---|---|---|---|
+| categories | `CreatorIntelligence.categories` | ✅ DNA → AI → bio inference | provenance excluded by design |
+| niche | `CreatorIntelligence.niche` | ✅ AI enrichment | |
+| topics | `CreatorIntelligence.topics` | ✅ hashtags/AI/interests | |
+| languages (content) | `CreatorIntelligence.languages` | ✅ declared | |
+| creator type / tier | `CreatorIntelligence.creatorType` | ✅ declared role → follower-derived | reuses `influencer-tier` |
+| audience countries | `CreatorIntelligence.audience.countries` | ✅ demographics top-countries → creator proxy | |
+| audience age | `CreatorIntelligence.audience.dominantAgeBucket` | ✅ demographics argmax | |
+| audience gender | `CreatorIntelligence.audience.genderSplit` | ✅ demographics | |
+| audience languages | `CreatorIntelligence.audience.languages` | ⛔ unresolved (honest gap — enrichment does not exist yet; never proxied) | |
+| brand safety | `CreatorIntelligence.brandSafety` | ✅ verification/authenticity ladder; unknown never passes | content-risk enrichment future |
+| authenticity/scores | `CreatorIntelligence.scores` | ✅ pass-through | |
+
+| Consumer | Status | Mechanism |
+|---|---|---|
+| Discovery browse category post-filter | ✅ migrated (flag) | off/shadow/on in `unified-browse.ts` |
+| Discovery ranking (`unified-ranking`) | ✅ migrated (flag) | `on` → resolved-intelligence category score |
+| Campaign relevance (`campaign-relevance-scoring`) | ✅ migrated (flag) | `on` → CI-first category criterion, legacy union |
+| Acquisition gate (orchestrator) | 🟡 telemetry (flag) | `coverage_ci_shadow` trace; gate decision still legacy |
+| Campaign fit rerank | ⬜ pending | Phase E continuation |
+| Studio slate / Director / Outputs / Vendor Recommendations | ⬜ inherit via ranked pools; direct migration pending | Phase E continuation |
+| SQL predicates (`searchDiscoveredProfiles`, internal RPC) | ⬜ pending projection | Phase P4 |
+
+**Dependency rule:** consumers import **deep modules**
+(`creator-intelligence/flags`, `/resolver`, `/taxonomy`, `/shadow`) — never the
+package index — because `matching.ts` imports the unknown-discount constant
+from `campaign-relevance-scoring` (index import would cycle).
 
 ## Vision
 

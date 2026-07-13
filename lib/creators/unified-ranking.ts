@@ -1,3 +1,6 @@
+import { getCreatorIntelligenceMode } from "@/lib/creator-intelligence/flags";
+import { resolveCreatorIntelligence } from "@/lib/creator-intelligence/resolver";
+import { categoriesIntersect } from "@/lib/creator-intelligence/taxonomy";
 import type { DiscoveryCoverageIntent } from "@/lib/creators/discovery-coverage";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
@@ -28,6 +31,35 @@ function audienceOverlapScore(creator: UnifiedCreatorResult, audience?: string):
   return Math.min(1, hits / tokens.length);
 }
 
+/**
+ * Creator-Intelligence category score — replaces the legacy stored-tag read in
+ * CREATOR_INTELLIGENCE_MODE=on. Ranks on RESOLVED intelligence (never crawl
+ * provenance): full canonical intersection scores 1; niche/topic partial
+ * overlap scores 0.6; resolved-but-mismatched 0.15; unresolved 0.4 (an
+ * enrichment gap, softer than a proven mismatch — mirrors unknown-discount).
+ */
+function intelligenceCategoryScore(
+  creator: UnifiedCreatorResult,
+  intentCategories: string[]
+): number {
+  const intelligence = resolveCreatorIntelligence(creator);
+  const resolved = intelligence.categories.value;
+  if (categoriesIntersect(resolved, intentCategories)) return 1;
+
+  const partialHaystack = [
+    intelligence.niche.value ?? "",
+    ...intelligence.topics.value,
+  ]
+    .join(" ")
+    .toLowerCase();
+  const partial = intentCategories.some((category) =>
+    partialHaystack.includes(category.trim().toLowerCase())
+  );
+  if (partial) return 0.6;
+
+  return resolved.length === 0 ? 0.4 : 0.15;
+}
+
 function categoryMatchScore(
   creator: UnifiedCreatorResult,
   intent?: DiscoveryCoverageIntent
@@ -37,6 +69,10 @@ function categoryMatchScore(
     .filter(Boolean);
 
   if (intentCategories.length === 0) return 0.55;
+
+  if (getCreatorIntelligenceMode() === "on") {
+    return intelligenceCategoryScore(creator, intentCategories);
+  }
 
   const creatorCategories = [
     ...creator.categories,

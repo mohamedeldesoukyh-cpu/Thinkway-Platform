@@ -16,7 +16,10 @@ import {
   evaluateEnterpriseDiscoveryBackfillNeed,
 } from "@/lib/discovery/enterprise-discovery-gate";
 import { writeDiscoveryCoverageDecision } from "@/lib/creators/discovery-coverage-audit";
-import type { SearchTracePath } from "@/lib/creators/search-trace";
+import { evaluateIntelligenceCoverage } from "@/lib/creator-intelligence/coverage";
+import { getCreatorIntelligenceMode } from "@/lib/creator-intelligence/flags";
+import { resolveCreatorIntelligenceBatch } from "@/lib/creator-intelligence/resolver";
+import { searchTrace, type SearchTracePath } from "@/lib/creators/search-trace";
 import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
 import {
   browseUnifiedCreators,
@@ -74,6 +77,31 @@ export async function browseUnifiedCreatorsWithCoverageBackfill(
           coverageConfig
         )
       : undefined);
+
+  // Creator Intelligence rollout (Phase F telemetry): measure INTELLIGENCE
+  // coverage of the returned pool next to the legacy coverage decision, so the
+  // acquisition gate can migrate from "raw column empty" to "intelligence gap".
+  // Shadow/on only; no behavioral change to the gate yet.
+  if (shouldEvaluate && getCreatorIntelligenceMode() !== "off" && browseResult.creators.length > 0) {
+    try {
+      const ciCoverage = evaluateIntelligenceCoverage(
+        resolveCreatorIntelligenceBatch(browseResult.creators)
+      );
+      searchTrace(
+        "coverage_ci_shadow",
+        {
+          categories: ciCoverage.categories,
+          languages: ciCoverage.languages,
+          audienceCountry: ciCoverage.audienceCountry,
+          brandSafety: ciCoverage.brandSafety,
+          byPlatform: ciCoverage.byPlatform,
+        },
+        { path: tracePath }
+      );
+    } catch {
+      // Telemetry must never break the browse path.
+    }
+  }
 
   const intelligence =
     shouldEvaluate && coverage

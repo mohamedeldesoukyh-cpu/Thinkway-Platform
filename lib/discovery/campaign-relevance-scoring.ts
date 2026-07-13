@@ -2,6 +2,10 @@ import {
   creatorBrowseCategoryTags,
   creatorMatchesBrowseCategories,
 } from "@/lib/creators/category-filter";
+// Deep imports (not the package index) to avoid a cycle: creator-intelligence/
+// matching imports UNKNOWN_CRITERION_WEIGHT_DISCOUNT from this module.
+import { getCreatorIntelligenceMode } from "@/lib/creator-intelligence/flags";
+import { creatorIntelligenceMatchesCategories } from "@/lib/creator-intelligence/shadow";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
 import type { DiscoverySearchFilterKey } from "@/features/campaign-intelligence-profile/services/discovery-search-mapping/types";
@@ -135,6 +139,15 @@ function evaluateNicheOrTag(creator: UnifiedCreatorResult, tag: string): Criteri
 }
 
 function evaluateCategory(creator: UnifiedCreatorResult, value: string): CriterionEvaluation {
+  // Creator Intelligence rollout: in "on" mode the resolved intelligence
+  // categories decide first (legacy tags as union fallback, consistent with
+  // the browse post-filter); off/shadow keep legacy behavior byte-identical.
+  if (
+    getCreatorIntelligenceMode() === "on" &&
+    creatorIntelligenceMatchesCategories(creator, [value])
+  ) {
+    return "match";
+  }
   if (creatorMatchesBrowseCategories(creator, [value])) return "match";
   const hasCategorySignal =
     creatorBrowseCategoryTags(creator).length > 0 ||
