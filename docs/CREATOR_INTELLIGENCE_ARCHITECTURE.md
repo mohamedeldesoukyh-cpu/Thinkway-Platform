@@ -25,7 +25,7 @@
 | Discovery ranking (`unified-ranking`) | ✅ migrated (flag) | `on` → resolved-intelligence category score |
 | Campaign relevance (`campaign-relevance-scoring`) | ✅ migrated (flag) | `on` → CI-first category criterion, legacy union |
 | Acquisition gate (orchestrator) | 🟡 telemetry (flag) | `coverage_ci_shadow` trace; gate decision still legacy |
-| Campaign fit rerank | ⬜ pending | Phase E continuation |
+| Campaign fit rerank (LLM) | ✅ migrated (flag) | `on` → prompt context uses resolved intelligence (categories+source, tier, topics) instead of stored tags |
 | Studio slate / Director / Outputs / Vendor Recommendations | ⬜ inherit via ranked pools; direct migration pending | Phase E continuation |
 | SQL predicates (`searchDiscoveredProfiles`, internal RPC) | ⬜ pending projection | Phase P4 |
 

@@ -3,6 +3,8 @@ import { z } from "zod";
 import type { CampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/types/profile";
 import { getValidatedIntelligence } from "@/features/campaign-intelligence-profile/services/get-validated-intelligence";
 import { resolveBriefTextForExtraction } from "@/features/campaign-intelligence-profile/services/resolve-brief-text";
+import { getCreatorIntelligenceMode } from "@/lib/creator-intelligence/flags";
+import { resolveCreatorIntelligence } from "@/lib/creator-intelligence/resolver";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 export const CAMPAIGN_FIT_RERANK_MODEL = "gpt-4o-mini";
@@ -76,15 +78,29 @@ function resolveBriefTextFromProfile(profile: CampaignIntelligenceProfile, overr
 }
 
 function buildCreatorSummaries(creators: UnifiedCreatorResult[]): string {
+  // Creator Intelligence rollout: in "on" mode the LLM reranker reasons over
+  // RESOLVED intelligence (categories with source, tier, topics) instead of
+  // raw stored tags, which for discovery rows are crawl provenance.
+  const useIntelligence = getCreatorIntelligenceMode() === "on";
   const summaries = creators.map((creator) => {
     const primary =
       creator.platforms.find((p) => p.follower_count != null) ?? creator.platforms[0];
+    const intelligence = useIntelligence ? resolveCreatorIntelligence(creator) : null;
     return {
       id: creator.unified_id,
       displayName: creator.display_name,
       bio: creator.bio?.slice(0, 280) ?? null,
-      categories: creator.categories,
-      browseCategoryTags: creator.browse_category_tags ?? [],
+      ...(intelligence
+        ? {
+            categories: intelligence.categories.value,
+            categorySource: intelligence.categories.source,
+            creatorTier: intelligence.creatorType.value,
+            topics: intelligence.topics.value.slice(0, 8),
+          }
+        : {
+            categories: creator.categories,
+            browseCategoryTags: creator.browse_category_tags ?? [],
+          }),
       aiCategory: creator.ai_category,
       aiNiche: creator.ai_niche,
       platform: primary?.platform ?? null,
