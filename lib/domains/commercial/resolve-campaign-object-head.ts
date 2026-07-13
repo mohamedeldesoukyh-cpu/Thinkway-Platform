@@ -34,7 +34,8 @@ export async function resolveCampaignObjectHead(
       .maybeSingle();
 
     if (error) return { head: null, error: error.message };
-    return { head: (data as CampaignObjectHeadRow | null) ?? null };
+    if (!data) return { head: null };
+    return { head: data as CampaignObjectHeadRow };
   }
 
   if (input.conversationId && isUuid(input.conversationId)) {
@@ -45,7 +46,8 @@ export async function resolveCampaignObjectHead(
       .maybeSingle();
 
     if (error) return { head: null, error: error.message };
-    return { head: (data as CampaignObjectHeadRow | null) ?? null };
+    if (!data) return { head: null };
+    return { head: data as CampaignObjectHeadRow };
   }
 
   return { head: null };
