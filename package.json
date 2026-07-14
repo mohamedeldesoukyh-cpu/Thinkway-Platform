@@ -101,10 +101,14 @@
     "validate:cdi-phase-1": "npx tsx scripts/validate-cdi-phase-1.mjs",
     "validate:cdi-phase-2": "npx tsx scripts/validate-cdi-phase-2.mjs",
     "validate:f1-one-workspace": "npx tsx scripts/validate-f1-one-workspace.mjs",
-    "trace:discovery": "node scripts/run-trace-discovery.mjs",
+    "trace:discovery": "node scripts/run-ops-script.mjs scripts/trace-discovery.ts",
     "test:bullmq-connection": "npx tsx lib/redis/bullmq-connection.test.ts",
-    "backfill:creator-intelligence": "npx tsx scripts/backfill-creator-intelligence.ts",
-    "rollout:preflight": "node scripts/run-rollout-preflight.mjs"
+
+    "trace:discovery": "node scripts/run-ops-script.mjs scripts/trace-discovery.ts",
+"test:bullmq-connection": "npx tsx lib/redis/bullmq-connection.test.ts",
+"backfill:creator-intelligence": "node scripts/run-ops-script.mjs scripts/backfill-creator-intelligence.ts",
+"rollout:preflight": "node scripts/run-ops-script.mjs scripts/rollout-preflight.ts"
+
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

@@ -58,7 +58,7 @@ test("beginPendingCreatorProposal preserves committed recommendations on re-run"
 });
 
 test("beginPendingCreatorProposal is a no-op without committed recommendations", () => {
-  const input: CreatorsSectionData = { phase: "pending" };
+  const input: CreatorsSectionData = { phase: "discovery" };
   const next = beginPendingCreatorProposal(input);
   assert.equal(next.pendingProposal, undefined);
 });
