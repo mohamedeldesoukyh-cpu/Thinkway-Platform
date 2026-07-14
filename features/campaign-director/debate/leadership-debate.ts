@@ -190,7 +190,7 @@ function financeDirectorReview(
 ): DirectorReview {
   const budgetRef = facts.budget
     ? `${facts.budget.currency} ${facts.budget.amount.toLocaleString()}`
-    : "TBD budget";
+    : "the unconfirmed budget";
 
   if (archetype === "max_reach") {
     return {

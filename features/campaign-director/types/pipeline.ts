@@ -124,6 +124,8 @@ export type DirectorPipelineResult = {
   decisionIntelligenceGate?: import("../services/decision-intelligence-gate").DecisionIntelligenceGateResult;
   /** Release 1.1.7 governance pipeline — metadata only, not rendered in UI. */
   governance?: import("@/features/campaign-governance/governance-types").GovernancePipelineResult;
+  /** Self-repair audit: attempted repairs, unresolved blockers, user questions, final outcome. */
+  governanceRepair?: import("@/features/campaign-governance/governance-repair").GovernanceRepairSummary;
   approvedSections: DirectorApprovedSection[];
   /** Internal review conversation — not rendered in client UI. */
   reviewReport?: DirectorReviewReport;

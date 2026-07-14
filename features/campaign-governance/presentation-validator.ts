@@ -115,7 +115,11 @@ export function runPresentationValidator(input: GovernanceValidationInput): Gove
     check(
       "pres_budget_quality",
       "Budget allocations documented with rationale",
-      (budget.allocations?.length ?? 0) >= 2 &&
+      // A single 100% creator-fees allocation is the documented default
+      // (buildDirectorBudgetFromStrategy: briefs without split keywords must
+      // never split the budget) — requiring ≥2 categories failed every
+      // default brief and blocked Director approval.
+      (budget.allocations?.length ?? 0) >= 1 &&
         budget.allocations!.every((a) => Boolean(a.category && a.percent != null)),
       {
         section: "budget",

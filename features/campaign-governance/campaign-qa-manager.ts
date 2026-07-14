@@ -5,7 +5,8 @@ import type {
 } from "./governance-types";
 import { briefForbidsBudgetSplit } from "@/features/campaign-director/services/budget-rules";
 
-const PLACEHOLDER_PATTERNS = [
+/** Shared with governance-repair so the scrubber and the gate agree exactly. */
+export const PLACEHOLDER_PATTERNS = [
   /\btbd\b/i,
   /\btodo\b/i,
   /lorem ipsum/i,

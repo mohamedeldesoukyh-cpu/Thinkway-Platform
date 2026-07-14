@@ -19,6 +19,15 @@ import type {
 import { evaluateApprovalGate } from "./approval-gate";
 import { evaluateDecisionIntelligenceGate } from "./decision-intelligence-gate";
 import { runGovernancePipeline } from "@/features/campaign-governance/governance-pipeline";
+import {
+  buildGovernanceUserQuestions,
+  classifyGovernanceCheck,
+  collectFailingGovernanceChecks,
+  governanceMaxRepairAttempts,
+  repairGovernanceArtifacts,
+  type GovernanceRepairLogEntry,
+  type GovernanceRepairSummary,
+} from "@/features/campaign-governance/governance-repair";
 import { validateBudgetTotals100, buildDirectorBudgetFromStrategy } from "./budget-rules";
 import { runCrossReview } from "./cross-review-engine";
 import {
@@ -91,65 +100,155 @@ export function runCampaignDirectorPipeline(
   });
 
   const approvedOutputs = markSpecialistsApproved(challengeResult.outputs);
-  const budget = buildDirectorBudgetFromStrategy(challengeResult.strategy, briefText, campaignFacts);
-  const clientTimeline = buildClientTimelineFromStrategy(challengeResult.strategy);
-  const timelineClientFacing = !clientTimeline.some((w) => isInternalTimelinePhase(w.phase));
 
-  const reasoningBundle = buildIs1ReasoningBundle(campaignFacts, challengeResult.strategy, {
+  // Governance self-repair loop: evaluate the gates, classify every failing
+  // check, deterministically repair only the affected artifacts, and
+  // re-evaluate — until approved or the configurable retry limit is reached.
+  // A campaign must never stop because of a fixable quality issue; blockers
+  // that need business information the Director cannot invent become clear
+  // user questions instead of a silent rejection.
+  let workingStrategy = challengeResult.strategy;
+  let workingOutputs = approvedOutputs;
+  let workingBudget = buildDirectorBudgetFromStrategy(workingStrategy, briefText, campaignFacts);
+
+  const maxAttempts = governanceMaxRepairAttempts();
+  const repairLog: GovernanceRepairLogEntry[] = [];
+  let attempts = 0;
+
+  let clientTimeline = buildClientTimelineFromStrategy(workingStrategy);
+  let reasoningBundle = buildIs1ReasoningBundle(campaignFacts, workingStrategy, {
     briefText,
-    specialistOutputs: approvedOutputs,
+    specialistOutputs: workingOutputs,
     debateResult,
   });
+  let decisionIntelligenceGate!: ReturnType<typeof evaluateDecisionIntelligenceGate>;
+  let approvalGate!: ReturnType<typeof evaluateApprovalGate>;
+  let governanceResult!: ReturnType<typeof runGovernancePipeline>;
 
-  const decisionIntelligenceGate = evaluateDecisionIntelligenceGate({
-    facts: campaignFacts,
-    strategy: challengeResult.strategy,
-    reasoning: reasoningBundle,
-    budget,
-    briefText,
-  });
+  for (;;) {
+    clientTimeline = buildClientTimelineFromStrategy(workingStrategy);
+    const timelineClientFacing = !clientTimeline.some((w) => isInternalTimelinePhase(w.phase));
+    reasoningBundle = buildIs1ReasoningBundle(campaignFacts, workingStrategy, {
+      briefText,
+      specialistOutputs: workingOutputs,
+      debateResult,
+    });
 
-  let approvalGate = evaluateApprovalGate({
-    challenges: challengeResult.challenges,
-    crossReviewFindings: challengeResult.crossReviewFindings,
-    revisionRounds: challengeResult.revisionRounds,
-    budgetValid: validateBudgetTotals100(budget.allocations),
-    timelineClientFacing,
-  });
+    decisionIntelligenceGate = evaluateDecisionIntelligenceGate({
+      facts: campaignFacts,
+      strategy: workingStrategy,
+      reasoning: reasoningBundle,
+      budget: workingBudget,
+      briefText,
+    });
 
-  if (!decisionIntelligenceGate.passed) {
-    approvalGate = {
-      ...approvalGate,
-      approved: false,
-      blockers: [...approvalGate.blockers, ...decisionIntelligenceGate.blockers],
-    };
+    approvalGate = evaluateApprovalGate({
+      challenges: challengeResult.challenges,
+      crossReviewFindings: challengeResult.crossReviewFindings,
+      revisionRounds: challengeResult.revisionRounds,
+      budgetValid: validateBudgetTotals100(workingBudget.allocations),
+      timelineClientFacing,
+    });
+
+    if (!decisionIntelligenceGate.passed) {
+      approvalGate = {
+        ...approvalGate,
+        approved: false,
+        blockers: [...approvalGate.blockers, ...decisionIntelligenceGate.blockers],
+      };
+    }
+
+    governanceResult = runGovernancePipeline({
+      briefText,
+      facts: campaignFacts,
+      strategy: workingStrategy,
+      specialistOutputs: workingOutputs,
+      budget: workingBudget,
+      timelineWeeks:
+        clientTimeline.length || workingStrategy.understanding.timeline?.durationWeeks || 6,
+    });
+
+    if (!governanceResult.releaseApproved) {
+      approvalGate = {
+        ...approvalGate,
+        approved: false,
+        blockers: [
+          ...approvalGate.blockers,
+          ...governanceResult.directorApproval.decision.blockers,
+        ],
+      };
+    }
+
+    if (approvalGate.approved || attempts >= maxAttempts) break;
+
+    const failing = collectFailingGovernanceChecks(governanceResult);
+    const autoFixable = failing.filter(
+      (check) => classifyGovernanceCheck(check) === "auto_fixable"
+    );
+    if (autoFixable.length === 0) break;
+
+    const repair = repairGovernanceArtifacts(
+      {
+        briefText,
+        facts: campaignFacts,
+        strategy: workingStrategy,
+        specialistOutputs: workingOutputs,
+        budget: workingBudget,
+      },
+      autoFixable,
+      attempts + 1
+    );
+    repairLog.push(...repair.log);
+    for (const entry of repair.log) {
+      console.log(
+        `[governance-repair] attempt=${entry.attempt} check=${entry.checkId}` +
+          `${entry.section ? ` section=${entry.section}` : ""} action="${entry.action}"`
+      );
+    }
+    if (!repair.changed) break;
+
+    workingStrategy = repair.artifacts.strategy;
+    workingOutputs = repair.artifacts.specialistOutputs;
+    workingBudget = repair.artifacts.budget;
+    attempts += 1;
   }
 
-  const governanceResult = runGovernancePipeline({
-    briefText,
-    facts: campaignFacts,
-    strategy: challengeResult.strategy,
-    specialistOutputs: approvedOutputs,
-    budget,
-    timelineWeeks:
-      clientTimeline.length || challengeResult.strategy.understanding.timeline?.durationWeeks || 6,
-  });
-
-  if (!governanceResult.releaseApproved) {
-    approvalGate = {
-      ...approvalGate,
-      approved: false,
-      blockers: [
-        ...approvalGate.blockers,
-        ...governanceResult.directorApproval.decision.blockers,
-      ],
-    };
-  }
+  const finalFailing = approvalGate.approved
+    ? []
+    : collectFailingGovernanceChecks(governanceResult);
+  const userQuestions = approvalGate.approved
+    ? []
+    : buildGovernanceUserQuestions(finalFailing, approvalGate.blockers);
+  const governanceRepair: GovernanceRepairSummary = {
+    attempts,
+    maxAttempts,
+    log: repairLog,
+    unresolved: finalFailing.map((check) => ({
+      checkId: check.id,
+      section: check.section,
+      issue: check.issue,
+      classification: classifyGovernanceCheck(check),
+    })),
+    userQuestions,
+    outcome: approvalGate.approved
+      ? attempts > 0
+        ? "approved_after_repair"
+        : "approved"
+      : attempts >= maxAttempts &&
+          finalFailing.some((check) => classifyGovernanceCheck(check) === "auto_fixable")
+        ? "blocked_after_max_attempts"
+        : "needs_user_input",
+  };
+  console.log(
+    `[governance-repair] outcome=${governanceRepair.outcome} attempts=${attempts}` +
+      `${approvalGate.approved ? "" : ` blockers=${JSON.stringify(approvalGate.blockers)}`}` +
+      `${userQuestions.length > 0 ? ` questions=${userQuestions.length}` : ""}`
+  );
 
   const approvedSections = buildApprovedSections(
-    challengeResult.strategy,
-    approvedOutputs,
-    budget,
+    workingStrategy,
+    workingOutputs,
+    workingBudget,
     clientTimeline,
     approvalGate.approved,
     campaignFacts,
@@ -158,13 +257,14 @@ export function runCampaignDirectorPipeline(
   );
 
   return {
-    strategyDocument: challengeResult.strategy,
-    specialistOutputs: approvedOutputs,
+    strategyDocument: workingStrategy,
+    specialistOutputs: workingOutputs,
     crossReviewFindings: challengeResult.crossReviewFindings,
     challenges: challengeResult.challenges,
     approvalGate,
     decisionIntelligenceGate,
     governance: governanceResult,
+    governanceRepair,
     approvedSections,
     reviewReport: challengeResult.reviewReport,
     debateResult,

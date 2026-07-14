@@ -54,6 +54,8 @@ export type CampaignDirectorPipelineMeta = {
   debateResult?: import("@/features/campaign-director/debate/debate-types").DebateMetadata;
   /** Release 1.1.7 governance reports — metadata only. */
   governance?: import("@/features/campaign-governance/governance-types").CampaignGovernanceMeta;
+  /** Governance self-repair audit — blockers, attempted repairs, user questions, outcome. */
+  governanceRepair?: import("@/features/campaign-governance/governance-repair").GovernanceRepairSummary;
 };
 
 export type CampaignObjectMeta = {
