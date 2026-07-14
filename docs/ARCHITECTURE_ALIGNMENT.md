@@ -235,6 +235,7 @@ Reference reports (§14) require these dimensions to be queryable:
 |---------|----------|
 | Product spec | `docs/THINKWAY_SYSTEM_REFERENCE.md` |
 | This gap analysis | `docs/ARCHITECTURE_ALIGNMENT.md` |
+| Knowledge Center (AI knowledge layer — design) | `docs/KNOWLEDGE_CENTER_ARCHITECTURE.md` |
 | DB schema | `supabase/schema.sql`, `supabase/migrations/` |
 | Hierarchy migration | `supabase/migrations/20260531140000_enterprise_hierarchy.sql` |
 | Group workspace pattern | `features/groups/` |
