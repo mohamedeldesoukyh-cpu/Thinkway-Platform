@@ -90,6 +90,15 @@ export type ExpansionOptions = {
   minShare: number;
   /** Minimum unresolved creators the term would recover. */
   minRecovery: number;
+  /**
+   * Maximum false-positive risk (0..1): share of resolved carriers whose
+   * categories CONTRADICT the proposed one. Applying a keyword adds its
+   * category to every carrier, so contradicting carriers measure exactly how
+   * much wrong signal the mapping would inject into already-resolved profiles.
+   */
+  maxFalsePositiveRisk: number;
+  /** Maximum distinct categories among resolved carriers (ambiguity cap). */
+  maxAmbiguity: number;
   /** Unresolved frequency that flags a NEW-category candidate. */
   newCategoryThreshold: number;
 };
@@ -98,6 +107,8 @@ export const DEFAULT_EXPANSION_OPTIONS: ExpansionOptions = {
   minSupport: 5,
   minShare: 0.7,
   minRecovery: 3,
+  maxFalsePositiveRisk: 0.3,
+  maxAmbiguity: 3,
   newCategoryThreshold: 15,
 };
 
@@ -110,6 +121,10 @@ export type ExpansionProposal = {
   share: number;
   /** Unresolved creators this mapping would recover. */
   recovery: number;
+  /** Share of resolved carriers whose categories contradict the proposal (0..1). */
+  falsePositiveRisk: number;
+  /** Distinct categories among resolved carriers. */
+  ambiguity: number;
 };
 
 export type NewCategoryCandidate = {
@@ -172,9 +187,21 @@ export function proposeTaxonomyExpansions(
     if (ranked[1] && ranked[1][1] === topCount) continue;
     const share = topCount / support;
     if (share < options.minShare) continue;
+    const ambiguity = ranked.length;
+    if (ambiguity > options.maxAmbiguity) continue;
+    const falsePositiveRisk = 1 - share;
+    if (falsePositiveRisk > options.maxFalsePositiveRisk) continue;
     const recovery = unresolvedByTerm.get(term)?.size ?? 0;
     if (recovery < options.minRecovery) continue;
-    proposals.push({ term, category: topCategory, support, share, recovery });
+    proposals.push({
+      term,
+      category: topCategory,
+      support,
+      share,
+      recovery,
+      falsePositiveRisk,
+      ambiguity,
+    });
   }
   proposals.sort((a, b) => b.recovery - a.recovery || b.share - a.share);
 

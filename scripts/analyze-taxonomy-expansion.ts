@@ -79,6 +79,7 @@ function applyToKeywordMap(rows: Array<{ term: string; category: string }>): num
 
 async function main() {
   const apply = process.argv.includes("--apply");
+  const jsonPath = process.argv.find((a) => a.startsWith("--json="))?.slice("--json=".length);
   const options = {
     minSupport: argNumber("--min-support", DEFAULT_EXPANSION_OPTIONS.minSupport),
     minShare: Number(
@@ -86,6 +87,11 @@ async function main() {
         DEFAULT_EXPANSION_OPTIONS.minShare
     ),
     minRecovery: argNumber("--min-recovery", DEFAULT_EXPANSION_OPTIONS.minRecovery),
+    maxFalsePositiveRisk: Number(
+      process.argv.find((a) => a.startsWith("--max-fp-risk="))?.split("=")[1] ??
+        DEFAULT_EXPANSION_OPTIONS.maxFalsePositiveRisk
+    ),
+    maxAmbiguity: argNumber("--max-ambiguity", DEFAULT_EXPANSION_OPTIONS.maxAmbiguity),
     newCategoryThreshold: argNumber(
       "--new-category-threshold",
       DEFAULT_EXPANSION_OPTIONS.newCategoryThreshold
@@ -133,10 +139,12 @@ async function main() {
   console.log(`coverage BEFORE               ${coverageBefore}% (${resolved.length})`);
   console.log(`unresolved                    ${unresolved.length}`);
   console.log("");
-  console.log(`PROPOSALS (${report.proposals.length}) — term → category  [support, share, recovery]:`);
+  console.log(
+    `PROPOSALS (${report.proposals.length}) — term → category  [support, share, +recovery, fpRisk, ambiguity]:`
+  );
   for (const p of report.proposals.slice(0, 60)) {
     console.log(
-      `  ${p.term.padEnd(28)} → ${p.category.padEnd(18)} [${p.support}, ${(p.share * 100).toFixed(0)}%, +${p.recovery}]`
+      `  ${p.term.padEnd(28)} → ${p.category.padEnd(18)} [${p.support}, ${(p.share * 100).toFixed(0)}%, +${p.recovery}, fp ${(p.falsePositiveRisk * 100).toFixed(0)}%, amb ${p.ambiguity}]`
     );
   }
   const projectedAfter =
@@ -150,8 +158,9 @@ async function main() {
     console.log(`  ~${c.label.padEnd(26)} recovery=${c.recovery}  terms: ${c.terms.slice(0, 6).join(", ")}`);
   }
 
+  let applied = 0;
   if (apply) {
-    const applied = applyToKeywordMap(
+    applied = applyToKeywordMap(
       report.proposals.map(({ term, category }) => ({ term, category }))
     );
     console.log(`\nAPPLIED ${applied} keyword(s) to lib/creators/category-keywords.ts.`);
@@ -160,6 +169,28 @@ async function main() {
     console.log("Then re-run this analyzer — iterate until proposals dry up.\n");
   } else {
     console.log("\n(report only — re-run with --apply to write high-confidence rows)\n");
+  }
+
+  if (jsonPath) {
+    const { writeFileSync: writeJson } = await import("node:fs");
+    writeJson(
+      jsonPath,
+      JSON.stringify(
+        {
+          total,
+          resolved: resolved.length,
+          unresolved: unresolved.length,
+          coverageBefore,
+          projectedRecovered: report.projectedRecovered,
+          projectedAfter,
+          proposals: report.proposals,
+          applied,
+          newCategoryCandidates: report.newCategoryCandidates,
+        },
+        null,
+        2
+      )
+    );
   }
 }
 

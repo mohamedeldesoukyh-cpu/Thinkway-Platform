@@ -106,7 +106,8 @@
     "backfill:creator-intelligence": "node scripts/run-ops-script.mjs scripts/backfill-creator-intelligence.ts",
     "rollout:preflight": "node scripts/run-ops-script.mjs scripts/rollout-preflight.ts",
     "audit:creator-intelligence": "node scripts/run-ops-script.mjs scripts/audit-creator-intelligence-gaps.ts",
-    "taxonomy:analyze": "node scripts/run-ops-script.mjs scripts/analyze-taxonomy-expansion.ts"
+    "taxonomy:analyze": "node scripts/run-ops-script.mjs scripts/analyze-taxonomy-expansion.ts",
+    "taxonomy:iterate": "npx tsx scripts/iterate-taxonomy-coverage.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
