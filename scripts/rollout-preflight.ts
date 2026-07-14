@@ -14,12 +14,11 @@
  * Read-only against business data (SELECT + head counts only).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- ops script: service client */
-import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
 import { createBullMqQueueConnection } from "@/lib/redis/bullmq-connection";
 
-config({ path: ".env" });
+// Environment is loaded by scripts/run-ops-script.mjs (single env-loading path).
 
 type Check = { name: string; pass: boolean; detail: string };
 const checks: Check[] = [];
