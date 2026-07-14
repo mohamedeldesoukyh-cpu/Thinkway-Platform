@@ -14,6 +14,9 @@ export const SCRIPT_ENV_RELATIVE_PATHS = [
   "services/discovery-worker/.env",
 ] as const;
 
+/** App-only env files (matches Next.js dev); excludes worker overrides such as sb_secret_* keys. */
+export const APP_SCRIPT_ENV_RELATIVE_PATHS = [".env.local", ".env"] as const;
+
 export type ScriptEnvFileEntry = {
   relative: string;
   path: string;
@@ -82,9 +85,20 @@ export function formatEnvSearchMessage(result: ScriptEnvLoadResult): string {
 }
 
 export function loadScriptEnv(root = getProjectRoot()): ScriptEnvLoadResult {
+  return loadScriptEnvFromPaths(root, SCRIPT_ENV_RELATIVE_PATHS);
+}
+
+export function loadAppScriptEnv(root = getProjectRoot()): ScriptEnvLoadResult {
+  return loadScriptEnvFromPaths(root, APP_SCRIPT_ENV_RELATIVE_PATHS);
+}
+
+function loadScriptEnvFromPaths(
+  root: string,
+  relativePaths: readonly string[]
+): ScriptEnvLoadResult {
   const files: ScriptEnvFileEntry[] = [];
 
-  for (const relative of SCRIPT_ENV_RELATIVE_PATHS) {
+  for (const relative of relativePaths) {
     const filePath = path.join(root, relative);
     const found = existsSync(filePath);
     let loaded = false;

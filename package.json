@@ -104,7 +104,7 @@
     "trace:discovery": "node scripts/run-trace-discovery.mjs",
     "test:bullmq-connection": "npx tsx lib/redis/bullmq-connection.test.ts",
     "backfill:creator-intelligence": "npx tsx scripts/backfill-creator-intelligence.ts",
-    "rollout:preflight": "npx tsx scripts/rollout-preflight.ts"
+    "rollout:preflight": "node scripts/run-rollout-preflight.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

@@ -14,12 +14,11 @@
  * Read-only against business data (SELECT + head counts only).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- ops script: service client */
-import { config } from "dotenv";
-import { createClient } from "@supabase/supabase-js";
-
 import { createBullMqQueueConnection } from "@/lib/redis/bullmq-connection";
-
-config({ path: ".env" });
+import {
+  createScriptSupabase,
+  formatScriptErrorWithDiagnostics,
+} from "@/lib/performance/script-env";
 
 type Check = { name: string; pass: boolean; detail: string };
 const checks: Check[] = [];
@@ -68,13 +67,15 @@ async function main() {
   }
 
   // 3) Database connectivity (classified) --------------------------------------
-  const supabase = createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  }) as any;
+  const supabase = createScriptSupabase() as any;
 
   const probe = await supabase.from("ai_conversations").select("id", { count: "exact", head: true });
   if (probe.error) {
-    record("db: connectivity", false, probe.error.message ?? String(probe.error));
+    const detail = probe.error.message ?? String(probe.error);
+    record("db: connectivity", false, detail);
+    if (detail.includes("fetch failed")) {
+      console.error("\n" + (await formatScriptErrorWithDiagnostics(new Error(detail))) + "\n");
+    }
     console.log("\nVERDICT: BLOCKED — database unreachable (connection problem, NOT missing data).\n");
     process.exit(1);
   }
