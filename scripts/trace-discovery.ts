@@ -19,7 +19,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- diagnostic script: untyped service client + defensive reads */
 import "./trace-discovery-enable";
 
-import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -40,7 +39,7 @@ import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/disc
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import { resolveBrowseCategories } from "@/lib/creators/category-filter";
 
-config({ path: ".env" });
+// Environment is loaded by scripts/run-ops-script.mjs (single env-loading path).
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();

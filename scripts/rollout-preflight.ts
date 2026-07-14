@@ -20,6 +20,7 @@ import {
   formatScriptErrorWithDiagnostics,
 } from "@/lib/performance/script-env";
 
+// Environment is loaded by scripts/run-ops-script.mjs (single env-loading path).
 type Check = { name: string; pass: boolean; detail: string };
 const checks: Check[] = [];
 function record(name: string, pass: boolean, detail: string) {

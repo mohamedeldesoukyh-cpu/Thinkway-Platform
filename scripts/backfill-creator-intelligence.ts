@@ -12,7 +12,6 @@
  * source tables. Requires NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- ops script: service client */
-import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
@@ -20,7 +19,7 @@ import { evaluateIntelligenceCoverage } from "@/lib/creator-intelligence/coverag
 import { upsertCreatorIntelligenceProjection } from "@/lib/creator-intelligence/projection";
 import { resolveCreatorIntelligenceBatch } from "@/lib/creator-intelligence/resolver";
 
-config({ path: ".env" });
+// Environment is loaded by scripts/run-ops-script.mjs (single env-loading path).
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
