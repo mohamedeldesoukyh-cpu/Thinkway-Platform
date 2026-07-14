@@ -72,6 +72,24 @@ function storedIntelligenceCategories(creator: UnifiedCreatorResult): string[] {
   ]);
 }
 
+/**
+ * Every signal the profile already carries that can ground category inference
+ * beyond bio/hashtags/mentions/display name: audience interest tags, the AI
+ * niche phrase, and recent publication captions. These feed the EXISTING
+ * inference engine via its extraTerms slot — no new taxonomy, no new inference
+ * logic — and close the coverage gap for creators whose bio alone is silent.
+ */
+function inferenceExtraTerms(creator: UnifiedCreatorResult): string[] {
+  return [
+    ...(creator.audience_interests ?? []),
+    ...(creator.ai_niche ? [creator.ai_niche] : []),
+    ...(creator.recent_publications ?? [])
+      .map((publication) => publication.caption)
+      .filter((caption): caption is string => Boolean(caption?.trim()))
+      .slice(0, 10),
+  ];
+}
+
 function resolveCategories(
   creator: UnifiedCreatorResult
 ): IntelligenceAttribute<string[]> {
@@ -89,6 +107,7 @@ function resolveCategories(
       hashtags: creator.hashtags,
       mentions: creator.mentions,
       displayName: creator.display_name,
+      extraTerms: inferenceExtraTerms(creator),
     })
   );
   if (inferred.length > 0) return attribute(inferred, "bio_inference");

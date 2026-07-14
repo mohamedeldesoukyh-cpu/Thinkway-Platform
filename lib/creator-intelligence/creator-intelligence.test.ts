@@ -123,6 +123,35 @@ function testResolverPrecedence(): void {
   assert.deepEqual(bioCi.categories.value, ["Fitness"]);
   assert.equal(bioCi.categories.source, "bio_inference");
 
+  // Deep profile-signal inference (enrichment pipeline): audience interests,
+  // AI niche phrases, and publication captions resolve categories when the bio
+  // is silent — via the SAME inference engine (extraTerms), no parallel path.
+  const interestsOnly = resolveCreatorIntelligence(
+    baseCreator({ audience_interests: ["fitness", "gym life"] })
+  );
+  assert.deepEqual(interestsOnly.categories.value, ["Fitness"]);
+  assert.equal(interestsOnly.categories.source, "bio_inference");
+
+  const nicheOnly = resolveCreatorIntelligence(baseCreator({ ai_niche: "comedy skits" }));
+  assert.deepEqual(nicheOnly.categories.value, ["Entertainment"]);
+
+  const captionOnly = resolveCreatorIntelligence(
+    baseCreator({
+      recent_publications: [
+        {
+          url: null,
+          thumbnail: null,
+          likes: null,
+          comments: null,
+          views: null,
+          posted_at: null,
+          caption: "New skincare routine drop! #beauty",
+        },
+      ],
+    })
+  );
+  assert.deepEqual(captionOnly.categories.value, ["Beauty"]);
+
   // Internal influencer stored categories ARE intelligence.
   const internal = baseCreator({
     unified_id: "inf:test-2",
