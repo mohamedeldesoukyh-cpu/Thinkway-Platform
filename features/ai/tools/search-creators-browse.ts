@@ -5,10 +5,7 @@ import {
   buildCampaignSearchIntent,
   looksLikeCampaignBrief,
 } from "./campaign-search-intent";
-import {
-  normalizeAiCreatorSearchQuery,
-  parseCreatorSearchQuery,
-} from "./creator-search-parser";
+import { parseCreatorSearchQuery } from "./creator-search-parser";
 import type { SearchCreatorsInput } from "./schemas";
 import { resolveDiscoveryPlatform } from "@/lib/social/platforms";
 

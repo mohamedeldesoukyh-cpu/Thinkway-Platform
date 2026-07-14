@@ -72,7 +72,6 @@ import {
   coverageIntentFromBrowseFilters,
   evaluateDiscoveryCoverage,
   getDiscoveryCoverageConfig,
-  type DiscoveryCoverageEvaluation,
   type DiscoveryCoverageIntent,
 } from "@/lib/creators/discovery-coverage";
 import { sortUnifiedCreatorsByDiscoveryRank } from "@/lib/creators/unified-ranking";
@@ -494,8 +493,7 @@ function resolveCreatorProfileImageUrl(
   platformPictureUrl: string | null | undefined,
   platformAvatarUrl: string | null | undefined,
   discoveryProfileImageUrl: string | null | undefined,
-  influencerAvatarUrl?: string | null | undefined,
-  logContext?: { handle?: string | null }
+  influencerAvatarUrl?: string | null | undefined
 ): string | null {
   const resolved = resolveBrowseCreatorProfileImageUrl({
     platform,
