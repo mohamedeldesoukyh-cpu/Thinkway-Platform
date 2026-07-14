@@ -48,11 +48,16 @@ export function computeQualityScore(input: ComputeQualityScoreInput): QualitySco
   const { qaReport, complianceReport, presentationReport, factsConfidenceAvg = 0.75 } = input;
 
   const businessLogic = reportToDimensionScore(qaReport);
-  const consistency = Math.round(
-    (reportToDimensionScore(qaReport) +
-      qaReport.checks.filter((c) => c.id.startsWith("qa_") && c.status === "PASS").length * 2) /
-      2
-  );
+  // Average of report health and QA pass RATE (both 0–100). The previous
+  // formula averaged the score with a raw pass COUNT ×2, so with ~19 QA checks
+  // a flawless report scored (100 + 38) / 2 = 69 — structurally capping the
+  // overall score below the approval threshold for every campaign.
+  const qaChecks = qaReport.checks.filter((c) => c.id.startsWith("qa_"));
+  const qaPassRate =
+    qaChecks.length > 0
+      ? (qaChecks.filter((c) => c.status === "PASS").length / qaChecks.length) * 100
+      : 0;
+  const consistency = Math.round((reportToDimensionScore(qaReport) + qaPassRate) / 2);
   const compliance = reportToDimensionScore(complianceReport);
   const presentation = reportToDimensionScore(presentationReport);
 

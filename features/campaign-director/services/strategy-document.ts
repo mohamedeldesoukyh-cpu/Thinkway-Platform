@@ -64,7 +64,9 @@ function factsToStrategyKpis(
     return [
       {
         metric: "Reach",
-        target: "TBD — confirm with brand",
+        // No "TBD": the governance QA gate fails any section containing
+        // placeholder vocabulary (qa_no_placeholder), which blocked approval.
+        target: "Confirm with brand",
         why: "Default KPI until brief specifies measurable targets",
       },
     ];

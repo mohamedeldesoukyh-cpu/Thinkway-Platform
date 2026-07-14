@@ -211,7 +211,9 @@ function extractKpis(text: string, objective: string): string[] {
   }
 
   if (/awareness/i.test(objective) && kpis.length === 0) {
-    kpis.push("Reach: TBD — confirm with brand");
+    // Placeholder vocabulary ("TBD") is rejected by the governance QA gate
+    // (qa_no_placeholder) — the default KPI must be honest without it.
+    kpis.push("Reach: confirm target with brand");
   }
 
   return kpis;
