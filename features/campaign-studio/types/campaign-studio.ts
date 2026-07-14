@@ -4,6 +4,9 @@ import type { AiActionCard } from "@/features/ai-workspace/types";
 
 export type CampaignStudioLayoutMode = "panel" | "chat";
 
+/** Full-viewport Campaign Mode vs embedded side panel / chat embed. */
+export type CampaignStudioViewportMode = "default" | "desktop";
+
 export type CampaignStudioSectionId =
   | "campaign-summary"
   | "executive-strategy"

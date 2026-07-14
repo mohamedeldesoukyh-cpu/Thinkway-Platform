@@ -141,12 +141,18 @@ export function CampaignStudioPanel({
     <div
       className={cn(
         "flex h-full min-h-0 flex-col overflow-hidden",
-        variant === "side" ? "border-l border-border/80 bg-muted/20" : "bg-background"
+        variant === "side" ? "border-l border-border/80 bg-muted/20" : "bg-background",
+        variant === "main" && "studio-desktop-zoom"
       )}
     >
       {/* Workspace navigation — Studio / Outputs Center / Director, all reading the
           same Campaign Object. Integrated into the panel, not a separate app shell. */}
-      <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-2 border-b border-border/60",
+          variant === "main" ? "px-2 py-1" : "px-3 py-2"
+        )}
+      >
         <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
           {STUDIO_TABS.map((tab) => {
             const active = view === tab.id;
@@ -160,14 +166,15 @@ export function CampaignStudioPanel({
                 onClick={() => setView(tab.id)}
                 aria-pressed={active}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md font-semibold transition-colors",
+                  variant === "main" ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-[12px]",
                   active
                     ? "bg-[#1D9E75]/10 text-[#1D9E75]"
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   disabled && "pointer-events-none opacity-40"
                 )}
               >
-                <Icon className="size-3.5" />
+                <Icon className={variant === "main" ? "size-3" : "size-3.5"} />
                 {tab.label}
               </button>
             );
@@ -187,9 +194,14 @@ export function CampaignStudioPanel({
       </div>
 
       {view === "studio" ? (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {onFocusSection ? (
-            <div className="border-b border-border/60 px-4 py-2.5">
+            <div
+              className={cn(
+                "border-b border-border/60",
+                variant === "main" ? "px-2 py-1" : "px-4 py-2.5"
+              )}
+            >
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[10px] font-medium text-muted-foreground">Edit target:</span>
                 {FOCUSABLE_SECTIONS.map((s) => {
@@ -216,13 +228,14 @@ export function CampaignStudioPanel({
           ) : null}
           <div
             className={cn(
-              "min-h-0 flex-1 p-3 sm:p-4",
-              variant === "main" ? "flex flex-col overflow-hidden" : "overflow-y-auto"
+              "min-h-0 flex-1",
+              variant === "main" ? "flex flex-col overflow-hidden" : "overflow-y-auto p-3 sm:p-4"
             )}
           >
             <CampaignStudioHost
               {...studioHostProps}
               layoutMode="panel"
+              viewportMode={variant === "main" ? "desktop" : "default"}
               className={variant === "main" ? "flex min-h-0 flex-1 flex-col" : undefined}
               onCardUpdated={
                 message
@@ -250,7 +263,7 @@ export function CampaignStudioPanel({
               }
             />
           ) : null}
-        </>
+        </div>
       ) : view === "outputs" && hasCampaignObject ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="shrink-0 border-b border-border/60 px-3 py-2">

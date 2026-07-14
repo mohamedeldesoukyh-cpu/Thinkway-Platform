@@ -82,6 +82,8 @@ export function IntelligenceWorkspace({
   // Campaign Mode copilot — floating icon; opens a resizable chat panel on click.
   const [dockCollapsed, setDockCollapsed] = useState(true);
   const [dockHeight, setDockHeight] = useState(480);
+  /** Keep Campaign Mode visible while create-campaign reloads the studio message. */
+  const [awaitingStudioDesktop, setAwaitingStudioDesktop] = useState(false);
 
   const loadedConversationRef = useRef<string | null>(null);
   const editingUserMessageIdRef = useRef<string | null>(null);
@@ -353,6 +355,7 @@ export function IntelligenceWorkspace({
           logMessageStateEvent("handleSend create-campaign reload path", {
             conversationId: result.conversationId,
           });
+          setAwaitingStudioDesktop(true);
           loadedConversationRef.current = null;
           await loadConversation(result.conversationId, true);
         } else if (effectiveSkipOptimistic) {
@@ -399,6 +402,7 @@ export function IntelligenceWorkspace({
         void refresh({ background: true });
       } else if (result && "failed" in result) {
         logMessageStateEvent("handleSend failed", { error: result.error });
+        setAwaitingStudioDesktop(false);
         setMessages(
           (prev) => prev.filter((m) => !m.id.startsWith("optimistic_")),
           "handleSend:failedRemoveOptimistic"
@@ -413,6 +417,7 @@ export function IntelligenceWorkspace({
         logMessageStateEvent("handleSend cancelled", {
           partialLength: result.partialContent.length,
         });
+        setAwaitingStudioDesktop(false);
 
         const convId = result.conversationId ?? conversationId ?? "";
         const optimisticUser = messages.find((m) => m.id.startsWith("optimistic_"));
@@ -763,8 +768,18 @@ export function IntelligenceWorkspace({
   }, [isStreaming, workflowProgress, messages]);
 
   const isCreateCampaignStreaming = Boolean(createCampaignStreamingInput);
+
+  useEffect(() => {
+    if (isCreateCampaignStreaming) setAwaitingStudioDesktop(true);
+  }, [isCreateCampaignStreaming]);
+
+  useEffect(() => {
+    if (latestStudioMessage) setAwaitingStudioDesktop(false);
+  }, [latestStudioMessage?.id]);
+
   const campaignMode =
-    (Boolean(latestStudioMessage) || isCreateCampaignStreaming) && !showEmptyState;
+    (Boolean(latestStudioMessage) || isCreateCampaignStreaming || awaitingStudioDesktop) &&
+    !showEmptyState;
 
   const handleStudioSendMessage = useCallback(
     (message: string) => void handleSend(message),

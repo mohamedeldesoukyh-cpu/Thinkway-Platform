@@ -13,7 +13,7 @@ import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-wo
 import { SECTION_LOADING_MESSAGES } from "../../constants/copy";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { studioSectionDomId } from "../../hooks/use-studio-section-nav";
-import type { CampaignStudioLayoutMode } from "../../types/campaign-studio";
+import type { CampaignStudioLayoutMode, CampaignStudioViewportMode } from "../../types/campaign-studio";
 import type { StudioLayoutType } from "../../constants/studio-layout";
 import type { CampaignStudioSection } from "../../types/campaign-studio";
 import { SectionRenderer } from "../sections/section-renderer";
@@ -40,6 +40,7 @@ type StudioSectionCardProps = {
   /** Pending draft changes invalidate this section until Apply All Updates runs. */
   outdated?: boolean;
   layoutMode?: CampaignStudioLayoutMode;
+  viewportMode?: CampaignStudioViewportMode;
 };
 
 const STATUS_STYLES = {
@@ -121,8 +122,10 @@ export function StudioSectionCard({
   appliedRemovedCreatorIds,
   outdated,
   layoutMode = "panel",
+  viewportMode = "default",
 }: StudioSectionCardProps) {
   const isChatLayout = layoutMode === "chat";
+  const isDesktopViewport = viewportMode === "desktop" && !isChatLayout;
   const styles = STATUS_STYLES[section.status as keyof typeof STATUS_STYLES];
   const isLoading = section.status === "pending";
   const hasRenderableContent =
@@ -136,8 +139,11 @@ export function StudioSectionCard({
       className={cn(
         STUDIO_CLASSES.card,
         isChatLayout ? STUDIO_CLASSES.scrollTargetChat : STUDIO_CLASSES.scrollTarget,
-        "flex min-w-0 flex-col p-5 transition-all duration-300 motion-reduce:transition-none sm:px-[22px] sm:py-5",
-        layout === "pair" && "min-h-[18rem]",
+        "flex min-w-0 flex-col transition-all duration-300 motion-reduce:transition-none",
+        isDesktopViewport
+          ? "p-3 sm:px-3.5 sm:py-3"
+          : "p-5 sm:px-[22px] sm:py-5",
+        layout === "pair" && (isDesktopViewport ? "min-h-[12rem]" : "min-h-[18rem]"),
         styles.border,
         section.status === "running" && "ring-1 ring-violet-200 dark:ring-violet-800",
         className
@@ -145,7 +151,7 @@ export function StudioSectionCard({
       aria-labelledby={`studio-section-${section.id}-title`}
       aria-describedby={statusId}
     >
-      <header className="mb-4 flex min-w-0 items-start justify-between gap-3">
+      <header className={cn("flex min-w-0 items-start justify-between gap-3", isDesktopViewport ? "mb-2.5" : "mb-4")}>
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
           {Icon ? (
             <div
@@ -166,7 +172,10 @@ export function StudioSectionCard({
           <div className="min-w-0 flex-1 pt-0.5">
             <h3
               id={`studio-section-${section.id}-title`}
-              className="break-words text-[17px] font-extrabold tracking-[-0.3px] text-foreground [overflow-wrap:anywhere] [word-break:break-word]"
+              className={cn(
+                "break-words font-extrabold tracking-[-0.3px] text-foreground [overflow-wrap:anywhere] [word-break:break-word]",
+                isDesktopViewport ? "text-[15px]" : "text-[17px]"
+              )}
             >
               {section.title}
             </h3>

@@ -37,6 +37,9 @@ export const STUDIO_CLASSES = {
   card: "rounded-[18px] border border-[#0B0F1A]/8 bg-white shadow-[0_1px_2px_rgba(6,8,16,0.05)] dark:border-border dark:bg-background",
   shell:
     "flex h-[min(900px,85vh)] min-h-0 items-stretch overflow-hidden rounded-[22px] border border-[#0B0F1A]/6 bg-[#EEF2FC] shadow-[0_10px_26px_rgba(0,87,255,0.08),0_2px_6px_rgba(6,8,16,0.05)] dark:border-border dark:bg-background",
+  /** Campaign Mode — full workspace width/height, no card chrome. */
+  shellDesktop:
+    "studio-shell-desktop flex h-full min-h-0 w-full items-stretch overflow-hidden rounded-none border-0 bg-[#EEF2FC] shadow-none dark:bg-background",
   /** Chat embed: grows with section content; scroll is owned by the AI chat thread. */
   shellChat:
     "studio-shell-chat flex w-full min-w-0 flex-row items-start overflow-visible rounded-none border border-[#0B0F1A]/6 border-t-0 bg-[#EEF2FC] shadow-[0_10px_26px_rgba(0,87,255,0.08),0_2px_6px_rgba(6,8,16,0.05)] dark:border-border dark:bg-background",
@@ -53,6 +56,9 @@ export const STUDIO_CLASSES = {
   scrollTargetChat:
     "scroll-mt-[var(--studio-scroll-offset,calc(var(--studio-sticky-top,var(--ai-topbar-measured-height,var(--ai-topbar-height,3.25rem)))+var(--studio-chrome-height,3.25rem)))]",
   canvas: "mx-auto min-w-0 max-w-[1180px] space-y-4 px-4 py-[26px] pb-24 sm:px-8 sm:pb-[100px]",
+  /** Campaign Mode — full-width canvas with compact zoom for density. */
+  canvasDesktop:
+    "mx-auto min-w-0 w-full max-w-none space-y-2 px-1 py-2 pb-10 sm:px-2 sm:pb-12",
   canvasChat:
     "studio-chat-scaled mx-auto min-w-0 w-full max-w-none space-y-4 px-4 py-4 pb-6 sm:px-6 sm:py-5",
   sidebarChatInner: "studio-chat-scaled min-h-0",
@@ -126,6 +132,8 @@ export const STUDIO_CLASSES = {
     "inline-flex min-w-0 items-center gap-2 rounded-full border border-violet-300/60 bg-violet-50/80 px-[13px] py-2 text-[12.5px] font-bold shadow-[0_1px_2px_rgba(6,8,16,0.05)] dark:border-violet-800 dark:bg-violet-950/30",
   topChrome:
     "sticky top-0 z-40 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#0B0F1A]/8 bg-white/90 px-4 py-2 backdrop-blur-[14px] sm:gap-2.5 sm:px-8 dark:border-border dark:bg-background/90",
+  topChromeDesktop:
+    "sticky top-0 z-40 flex shrink-0 flex-wrap items-center justify-between gap-1.5 border-b border-[#0B0F1A]/8 bg-white/90 px-2 py-1 backdrop-blur-[14px] sm:px-3 dark:border-border dark:bg-background/90",
   topChromeChat:
     "sticky top-[var(--studio-sticky-top-inset)] z-50 flex w-full shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#0B0F1A]/8 bg-white/90 px-4 py-2 backdrop-blur-[14px] sm:px-6 dark:border-border dark:bg-background/90",
   sidebarChat:

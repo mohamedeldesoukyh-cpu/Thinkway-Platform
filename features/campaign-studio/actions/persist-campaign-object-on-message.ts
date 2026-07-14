@@ -1,5 +1,3 @@
-import { revalidatePath } from "next/cache";
-
 import {
   deserializeCampaignObject,
   serializeCampaignObject,
@@ -19,6 +17,26 @@ export async function requireStudioUser() {
     throw new Error(auth.error);
   }
   return { supabase, userId: auth.userId };
+}
+
+/**
+ * Read campaign object from a studio message — no write, no cache revalidation.
+ */
+export async function loadCampaignObjectFromMessage(
+  conversationId: string,
+  messageId: string,
+  userId: string
+): Promise<CampaignObject | null> {
+  const { supabase } = await requireStudioUser();
+  const conversation = await getConversationWithMessages(supabase, conversationId, userId);
+  if (!conversation?.messages) return null;
+
+  const message = conversation.messages.find((m) => m.id === messageId);
+  if (!message?.metadata?.campaignObject) return null;
+
+  return deserializeCampaignObject(
+    message.metadata.campaignObject as Parameters<typeof deserializeCampaignObject>[0]
+  );
 }
 
 /**
@@ -49,6 +67,5 @@ export async function persistCampaignObjectOnMessage(
     campaignObject: serialized,
   });
 
-  revalidatePath(`/ai/${conversationId}`);
   return next;
 }

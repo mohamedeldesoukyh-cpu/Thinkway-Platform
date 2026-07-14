@@ -23,6 +23,7 @@ type StudioTopChromeProps = {
   showNavToggle?: boolean;
   layoutMode?: CampaignStudioLayoutMode;
   className?: string;
+  compact?: boolean;
 };
 
 function publishChromeHeight(el: HTMLElement) {
@@ -46,6 +47,7 @@ export function StudioTopChrome({
   showNavToggle,
   layoutMode = "panel",
   className,
+  compact = false,
 }: StudioTopChromeProps) {
   const headerRef = useRef<HTMLElement>(null);
   const isChatLayout = layoutMode === "chat";
@@ -70,29 +72,46 @@ export function StudioTopChrome({
       ref={headerRef}
       data-studio-top-chrome
       className={cn(
-        isChatLayout ? STUDIO_CLASSES.topChromeChat : STUDIO_CLASSES.topChrome,
+        isChatLayout
+          ? STUDIO_CLASSES.topChromeChat
+          : compact
+            ? STUDIO_CLASSES.topChromeDesktop
+            : STUDIO_CLASSES.topChrome,
         className
       )}
     >
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-2.5">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-2">
         {showNavToggle ? (
           <button
             type="button"
             onClick={onOpenNav}
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#0B0F1A]/8 bg-white text-foreground shadow-sm lg:hidden dark:border-border dark:bg-background"
+            className={cn(
+              "inline-flex shrink-0 items-center justify-center rounded-lg border border-[#0B0F1A]/8 bg-white text-foreground shadow-sm lg:hidden dark:border-border dark:bg-background",
+              compact ? "size-7" : "size-8"
+            )}
             aria-label="Open section navigation"
           >
-            <ListIcon className="size-4" aria-hidden />
+            <ListIcon className={compact ? "size-3.5" : "size-4"} aria-hidden />
           </button>
         ) : null}
-        <div className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-gradient-to-br from-[#7C3AED] to-[#0057FF] shadow-[0_4px_10px_rgba(124,58,237,0.28)]">
-          <ZapIcon className="size-3.5 fill-white text-white" aria-hidden />
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-[9px] bg-gradient-to-br from-[#7C3AED] to-[#0057FF] shadow-[0_4px_10px_rgba(124,58,237,0.28)]",
+            compact ? "size-6" : "size-[30px]"
+          )}
+        >
+          <ZapIcon className={cn("fill-white text-white", compact ? "size-3" : "size-3.5")} aria-hidden />
         </div>
         <div className="shrink-0">
           <p className="leading-none text-[10px] font-extrabold tracking-[0.6px] text-[#7C3AED] uppercase dark:text-violet-400">
             {CAMPAIGN_STUDIO_COPY.studioLabel}
           </p>
-          <h2 className="mt-0.5 leading-tight text-[17px] font-extrabold tracking-[-0.3px] text-foreground sm:text-[19px]">
+          <h2
+            className={cn(
+              "mt-0.5 font-extrabold leading-tight tracking-[-0.3px] text-foreground",
+              compact ? "text-[14px]" : "text-[17px] sm:text-[19px]"
+            )}
+          >
             {workflowName}
           </h2>
         </div>
@@ -113,8 +132,13 @@ export function StudioTopChrome({
         ) : null}
         {studioModeToggle}
         <div className="hidden shrink-0 text-right sm:block">
-          <p className="leading-none text-[11px] font-semibold text-muted-foreground">Progress</p>
-          <p className="mt-0.5 text-sm font-extrabold leading-none text-[#0057FF]">
+          <p className="leading-none text-[10px] font-semibold text-muted-foreground">Progress</p>
+          <p
+            className={cn(
+              "mt-0.5 font-extrabold leading-none text-[#0057FF]",
+              compact ? "text-xs" : "text-sm"
+            )}
+          >
             {progressPercent}%
           </p>
         </div>

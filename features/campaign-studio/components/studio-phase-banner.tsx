@@ -5,6 +5,7 @@ type StudioPhaseBannerProps = {
   label: string;
   description: string;
   className?: string;
+  compact?: boolean;
 };
 
 export function StudioPhaseBanner({
@@ -12,16 +13,21 @@ export function StudioPhaseBanner({
   label,
   description,
   className,
+  compact = false,
 }: StudioPhaseBannerProps) {
   return (
     <div
       className={cn(
-        "flex items-center pt-2 pb-4 first:mt-1 sm:mt-[34px] sm:gap-3",
+        "flex items-center first:mt-1 sm:gap-3",
+        compact ? "gap-2 py-1 sm:mt-2" : "pt-2 pb-4 sm:mt-[34px]",
         className
       )}
     >
       <div
-        className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#0B0F1A] text-xs font-extrabold text-white dark:bg-foreground"
+        className={cn(
+          "flex shrink-0 items-center justify-center rounded-lg bg-[#0B0F1A] font-extrabold text-white dark:bg-foreground",
+          compact ? "size-6 text-[10px]" : "size-7 text-xs"
+        )}
         aria-hidden
       >
         {phaseNumber}

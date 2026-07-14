@@ -723,10 +723,9 @@ export function VendorRecommendationsSection({
     avgFitScore,
     creatorFitScores,
   } = resolveCreatorIds(campaignObject, { recommendationsOnly: true });
-  const ids =
-    draft.changes.length > 0 && (previewCreatorsData.recommendations?.creatorIds?.length ?? 0) > 0
-      ? (previewCreatorsData.recommendations?.creatorIds ?? persistedIds)
-      : persistedIds;
+  const previewIds = previewCreatorsData.recommendations?.creatorIds ?? [];
+  const usingDraftPreview = draft.changes.length > 0 && previewIds.length > 0;
+  const ids = usingDraftPreview ? previewIds : persistedIds;
   const safeRationale = isEmptyGlobalRationale(rationale) ? undefined : rationale;
   const { recommendationIds } = resolveCreatorCounts(campaignObject);
   const hasCommittedRecommendations = recommendationIds.length > 0;
@@ -838,7 +837,9 @@ export function VendorRecommendationsSection({
               ),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items
-        : dedupeByCreatorId(
+        : usingDraftPreview
+          ? []
+          : dedupeByCreatorId(
             parsedVendors
               .filter(
                 (v) =>
@@ -859,7 +860,7 @@ export function VendorRecommendationsSection({
               ),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items,
-    [hydrated, parsedVendors, previewVendorDecisions, campaignFacts, removedIdSet, attachSlateMeta]
+    [hydrated, parsedVendors, previewVendorDecisions, campaignFacts, removedIdSet, attachSlateMeta, usingDraftPreview]
   );
 
   const mainVendors = vendors.filter((v) => v.slateRole !== "maybe");
@@ -885,7 +886,7 @@ export function VendorRecommendationsSection({
     creatorsData.fitScoreCount ??
     (creatorFitScores ? Object.keys(creatorFitScores).length : 0);
 
-  if ((isRunning || loading || isRegeneratingProposal) && vendors.length === 0 && hasCommittedRecommendations) {
+  if ((isRunning || loading || isRegeneratingProposal) && vendors.length === 0 && (hasCommittedRecommendations || usingDraftPreview)) {
     return <SectionSkeleton variant="vendors" />;
   }
 

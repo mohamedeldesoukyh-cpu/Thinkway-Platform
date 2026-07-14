@@ -43,7 +43,11 @@ import { getStudioDraft, outdatedSectionsForDraft } from "../services/studio-dra
 import { getSectionCardDescription } from "../services/section-card-description";
 import { useCampaignStudio } from "../hooks/use-campaign-studio";
 import { useStudioSectionNav } from "../hooks/use-studio-section-nav";
-import type { CampaignStudioInput, CampaignStudioLayoutMode } from "../types/campaign-studio";
+import type {
+  CampaignStudioInput,
+  CampaignStudioLayoutMode,
+  CampaignStudioViewportMode,
+} from "../types/campaign-studio";
 import { getSectionLayout } from "./sections";
 import { groupSectionsByStoryPhase } from "../constants/studio-layout";
 import { StudioSectionCard } from "./campaign-studio-sections";
@@ -84,6 +88,8 @@ type CampaignStudioProps = CampaignStudioInput & {
   studioModeToggle?: ReactNode;
   /** panel = fixed-height internal scroll; chat = expand in AI thread (single scroll). */
   layoutMode?: CampaignStudioLayoutMode;
+  /** Full-viewport Campaign Mode — wider, zoomed-out canvas. */
+  viewportMode?: CampaignStudioViewportMode;
   /** Scroll container for section nav when layoutMode is chat (the chat thread element). */
   scrollContainer?: HTMLElement | null;
 };
@@ -98,6 +104,7 @@ export function CampaignStudio({
   className,
   studioModeToggle,
   layoutMode = "panel",
+  viewportMode = "default",
   scrollContainer = null,
   ...input
 }: CampaignStudioProps) {
@@ -105,6 +112,7 @@ export function CampaignStudio({
   const [navOpen, setNavOpen] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
   const isChatLayout = layoutMode === "chat";
+  const isDesktopViewport = viewportMode === "desktop" && !isChatLayout;
 
   const [draftOverride, setDraftOverride] = useState<StudioDraftState | null>(null);
   const [appliedRemovedCreatorIds, setAppliedRemovedCreatorIds] = useState<string[]>([]);
@@ -178,13 +186,20 @@ export function CampaignStudio({
   return (
     <div
       className={cn(
-        isChatLayout ? STUDIO_CLASSES.shellChat : STUDIO_CLASSES.shell,
+        isChatLayout
+          ? STUDIO_CLASSES.shellChat
+          : isDesktopViewport
+            ? STUDIO_CLASSES.shellDesktop
+            : STUDIO_CLASSES.shell,
         !isChatLayout && className?.includes("h-full") && "!h-full max-h-none",
         "min-w-0",
         className
       )}
     >
-      <StudioSectionSidebar {...sidebarProps} />
+      <StudioSectionSidebar
+        {...sidebarProps}
+        className={isDesktopViewport ? "!w-[200px] !px-2" : undefined}
+      />
 
       <StudioSectionSidebarSheet open={navOpen} onOpenChange={setNavOpen}>
         <StudioSectionSidebar {...sidebarProps} embedded />
@@ -208,11 +223,16 @@ export function CampaignStudio({
             onOpenNav={() => setNavOpen(true)}
             showNavToggle
             layoutMode={layoutMode}
+            compact={isDesktopViewport}
           />
 
           <div
             className={
-              isChatLayout ? STUDIO_CLASSES.canvasChat : STUDIO_CLASSES.canvas
+              isChatLayout
+                ? STUDIO_CLASSES.canvasChat
+                : isDesktopViewport
+                  ? STUDIO_CLASSES.canvasDesktop
+                  : STUDIO_CLASSES.canvas
             }
           >
           {conversationId && messageId && studioDraft.changes.length > 0 ? (
@@ -221,6 +241,10 @@ export function CampaignStudio({
               messageId={messageId}
               draft={studioDraft}
               onDraftUpdated={setDraftOverride}
+              onSlateApplied={(campaignObject) => {
+                setDraftOverride(null);
+                onSlateUpdated?.(campaignObject);
+              }}
               onCreatorsRemoved={(ids) =>
                 setAppliedRemovedCreatorIds((prev) => [...prev, ...ids])
               }
@@ -238,7 +262,7 @@ export function CampaignStudio({
             </div>
           ) : null}
 
-          <div className="flex flex-wrap gap-2">
+          <div className={cn("flex flex-wrap gap-2", isDesktopViewport && "gap-1.5")}>
             {studio.specialists.map((specialist) => (
               <div
                 key={specialist.id}
@@ -246,7 +270,8 @@ export function CampaignStudio({
                 className={cn(
                   specialist.status === "working"
                     ? STUDIO_CLASSES.specialistPillWorking
-                    : STUDIO_CLASSES.specialistPill
+                    : STUDIO_CLASSES.specialistPill,
+                  isDesktopViewport && "!px-2.5 !py-1.5 !text-[11px]"
                 )}
               >
                 {specialist.status === "working" ? (
@@ -277,15 +302,16 @@ export function CampaignStudio({
             </div>
           ) : null}
 
-          <div className="space-y-4">
+          <div className={isDesktopViewport ? "space-y-2" : "space-y-4"}>
             {storyPhases.map((phase, phaseIndex) => (
               <section key={phase.id} className={cn("min-w-0", STUDIO_CLASSES.sectionEnter)}>
                 <StudioPhaseBanner
                   phaseNumber={phaseIndex + 1}
                   label={phase.label}
                   description={phase.description}
+                  compact={isDesktopViewport}
                 />
-                <div className="space-y-4">
+                <div className={isDesktopViewport ? "space-y-2" : "space-y-4"}>
                   {phase.sections.map((section) => {
                     const Icon = SECTION_ICONS[section.id] ?? BarChart3Icon;
                     const layout = getSectionLayout(section.id);
@@ -294,6 +320,7 @@ export function CampaignStudio({
                         key={section.id}
                         section={section}
                         layoutMode={layoutMode}
+                        viewportMode={viewportMode}
                         description={getSectionCardDescription(
                           section.id,
                           studio.campaignObject

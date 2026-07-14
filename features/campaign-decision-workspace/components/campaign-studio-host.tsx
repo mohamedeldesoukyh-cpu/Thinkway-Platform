@@ -4,7 +4,11 @@ import { useCallback, useRef, useState, type ReactNode } from "react";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignStudio } from "@/features/campaign-studio/components/campaign-studio";
-import type { CampaignStudioInput, CampaignStudioLayoutMode } from "@/features/campaign-studio/types/campaign-studio";
+import type {
+  CampaignStudioInput,
+  CampaignStudioLayoutMode,
+  CampaignStudioViewportMode,
+} from "@/features/campaign-studio/types/campaign-studio";
 import { cn } from "@/lib/utils";
 
 import { CreatorDrawer, type CreatorDrawerSelection } from "./creator-drawer";
@@ -26,6 +30,7 @@ type CampaignStudioHostProps = CampaignStudioInput & {
   onCampaignObjectPromoted?: (campaignObject: CampaignObject) => void;
   className?: string;
   layoutMode?: CampaignStudioLayoutMode;
+  viewportMode?: CampaignStudioViewportMode;
   scrollContainer?: HTMLElement | null;
 };
 
@@ -55,6 +60,7 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
       onSlateUpdated,
       layoutMode = "chat",
       scrollContainer,
+      viewportMode = "default",
       ...studioInput
     } = props;
     return (
@@ -64,7 +70,7 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
           className
         )}
       >
-        {!decisionReady ? (
+        {!decisionReady && viewportMode !== "desktop" ? (
           <p className="text-right text-[10px] text-muted-foreground">
             Decision Mode unlocks when the studio workflow completes.
           </p>
@@ -78,6 +84,7 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
           onSlateUpdated={onSlateUpdated}
           studioModeToggle={modeToggle}
           layoutMode={layoutMode}
+          viewportMode={viewportMode}
           scrollContainer={scrollContainer}
           className={layoutMode === "panel" ? "h-full min-h-0" : undefined}
         />
@@ -101,6 +108,7 @@ function CampaignStudioDecisionHost({
   initialMode,
   layoutMode = "chat",
   scrollContainer,
+  viewportMode = "default",
   ...studioInput
 }: CampaignStudioHostProps & {
   modeToggle: ReactNode;
@@ -187,6 +195,7 @@ function CampaignStudioDecisionHost({
           onVendorDecisionsUpdated={onVendorDecisionsUpdated}
           onSlateUpdated={onSlateUpdated}
           layoutMode={layoutMode}
+          viewportMode={viewportMode}
           scrollContainer={scrollContainer}
         />
       </div>

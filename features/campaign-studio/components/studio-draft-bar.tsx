@@ -19,6 +19,8 @@ type StudioDraftBarProps = {
   onDraftUpdated: (draft: StudioDraftState) => void;
   /** Applied removals — lets the slate update in place without a reload. */
   onCreatorsRemoved?: (creatorIds: string[]) => void;
+  /** Full campaign object after Apply Changes — refreshes Studio sections in place. */
+  onSlateApplied?: (campaignObject: Record<string, unknown>) => void;
 };
 
 function describeChanges(draft: StudioDraftState): string {
@@ -53,6 +55,7 @@ export function StudioDraftBar({
   draft,
   onDraftUpdated,
   onCreatorsRemoved,
+  onSlateApplied,
 }: StudioDraftBarProps) {
   const [busy, setBusy] = useState<"apply" | "discard" | null>(null);
 
@@ -70,6 +73,9 @@ export function StudioDraftBar({
         return;
       }
       if (result.draft) onDraftUpdated(result.draft);
+      if (action === "apply" && result.campaignObject) {
+        onSlateApplied?.(result.campaignObject);
+      }
       const removedCreatorIds =
         action === "apply" && "removedCreatorIds" in result
           ? ((result as { removedCreatorIds?: string[] }).removedCreatorIds ?? [])
@@ -96,10 +102,10 @@ export function StudioDraftBar({
         <div className="min-w-0">
           <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
             {draft.changes.length} pending change{draft.changes.length === 1 ? "" : "s"} —
-            plan sections marked outdated until apply
+            click Apply Changes to update creators and regenerate the plan
           </p>
           <p className="break-words text-[11px] text-amber-800/80 dark:text-amber-300/80">
-            {describeChanges(draft)} · nothing recalculates until you apply
+            {describeChanges(draft)} · staged edits preview in Vendor Recommendations until apply
           </p>
         </div>
       </div>

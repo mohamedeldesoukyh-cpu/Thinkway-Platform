@@ -1,6 +1,7 @@
 "use server";
 
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
+import { serializeCampaignObject } from "@/features/campaign-intelligence";
 import type {
   StudioDraftChange,
   StudioDraftCreatorRef,
@@ -27,6 +28,7 @@ export type StudioDraftActionResult = {
   ok: boolean;
   message: string;
   draft?: StudioDraftState;
+  campaignObject?: Record<string, unknown>;
 };
 
 export type StageStudioDraftChangeInput =
@@ -265,6 +267,7 @@ export async function applyStudioDraftAction(
       ok: true,
       message: `Campaign plan regenerated — ${applied || "pending changes"} applied across slate, timeline, budget, KPIs, risks, and outputs.${scoreNote}`,
       draft: remaining,
+      campaignObject: serializeCampaignObject(next) as unknown as Record<string, unknown>,
       removedCount,
       removedCreatorIds,
       addedCreatorIds,

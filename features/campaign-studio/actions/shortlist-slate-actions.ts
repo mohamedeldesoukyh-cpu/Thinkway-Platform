@@ -7,7 +7,7 @@ import type { ShortlistListRow } from "@/features/discovery/shortlists/types";
 import { stageStudioDraftChangeAction } from "./studio-draft-actions";
 import { buildRecommendationsFromShortlistCreators } from "../services/slate-intelligence";
 import {
-  persistCampaignObjectOnMessage,
+  loadCampaignObjectFromMessage,
   requireStudioUser,
 } from "./persist-campaign-object-on-message";
 
@@ -48,16 +48,15 @@ export async function listStudioShortlistsAction(input: {
   messageId: string;
 }): Promise<{ ok: true; shortlists: StudioShortlistOption[] } | { ok: false; message: string }> {
   try {
-    const { supabase, userId } = await requireStudioUser();
-    const next = await persistCampaignObjectOnMessage(
+    const { userId } = await requireStudioUser();
+    const object = await loadCampaignObjectFromMessage(
       input.conversationId,
       input.messageId,
-      userId,
-      (object) => object
+      userId
     );
-    if (!next) return { ok: false, message: "Campaign studio message not found." };
+    if (!object) return { ok: false, message: "Campaign studio message not found." };
 
-    const facts = getCampaignFacts(next);
+    const facts = getCampaignFacts(object);
     const rows = await getDiscoveryShortlistsV2();
     const filtered = filterShortlistsForCampaign(
       rows.filter((row) => row.creator_count > 0),
