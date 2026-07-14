@@ -11,6 +11,10 @@ import type { CampaignStudioInput } from "@/features/campaign-studio/types/campa
 
 import { createConversationAction } from "../actions/conversation-actions";
 import {
+  describeStudioMessageCandidate,
+  logStudioBindEvent,
+} from "../debug/studio-bind-logger";
+import {
   createLoggedSetMessages,
   logMessageStateEvent,
 } from "../debug/message-state-logger";
@@ -226,6 +230,16 @@ export function IntelligenceWorkspace({
           fetchedCount: fetched.length,
           fetchedRoles: fetched.map((m) => m.role),
         });
+        // Diagnostics: does the SERVER payload contain a bindable studio
+        // message? Separates missing server data from wrong client selection.
+        for (const candidate of fetched
+          .filter((message) => message.role === "assistant")
+          .slice(-3)) {
+          logStudioBindEvent(`fetched assistant ${candidate.id}`, {
+            verdict: describeStudioMessageCandidate(candidate),
+            contentLength: candidate.content.length,
+          });
+        }
         setMessages(fetched, "loadConversation");
         loadedConversationRef.current = id;
         logMessageStateEvent("loadConversation completed", {
@@ -780,6 +794,48 @@ export function IntelligenceWorkspace({
   const campaignMode =
     (Boolean(latestStudioMessage) || isCreateCampaignStreaming || awaitingStudioDesktop) &&
     !showEmptyState;
+
+  // Diagnostics: the full studio-binding decision, and — when no studio message
+  // binds — the exact predicate each assistant message fails, so a stuck
+  // streaming skeleton is explainable from the console alone.
+  useEffect(() => {
+    const latestAssistant =
+      [...messages].reverse().find((candidate) => candidate.role === "assistant") ?? null;
+    logStudioBindEvent("workspace bind state", {
+      conversationId: conversationId ?? null,
+      messageCount: messages.length,
+      latestAssistantMessageId: latestAssistant?.id ?? null,
+      latestStudioMessageId: latestStudioMessage?.id ?? null,
+      findLatestStudioMessageReturnedNull: !latestStudioMessage,
+      isStreaming,
+      isCreateCampaignStreaming,
+      awaitingStudioDesktop,
+      campaignMode,
+    });
+    if (!latestStudioMessage) {
+      const assistants = messages.filter((candidate) => candidate.role === "assistant");
+      for (const candidate of assistants.slice(-3)) {
+        const metadata = candidate.metadata as Record<string, unknown> | undefined;
+        const completedTasks = metadata?.completedTasks;
+        logStudioBindEvent(`studio candidate rejected ${candidate.id}`, {
+          verdict: describeStudioMessageCandidate(candidate),
+          workflow: metadata?.workflow ?? null,
+          workflowId: metadata?.workflowId ?? null,
+          hasCampaignObject: Boolean(metadata?.campaignObject),
+          completedTasksLength: Array.isArray(completedTasks) ? completedTasks.length : null,
+          contentLength: candidate.content.length,
+        });
+      }
+    }
+  }, [
+    messages,
+    latestStudioMessage,
+    isStreaming,
+    isCreateCampaignStreaming,
+    awaitingStudioDesktop,
+    campaignMode,
+    conversationId,
+  ]);
 
   const handleStudioSendMessage = useCallback(
     (message: string) => void handleSend(message),

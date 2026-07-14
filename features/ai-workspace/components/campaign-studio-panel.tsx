@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LayersIcon, LayoutDashboardIcon, SparklesIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/typ
 import type { CampaignStudioInput } from "@/features/campaign-studio/types/campaign-studio";
 
 import type { AiActionCard, AiMessage, ConversationListItem } from "../types";
+import { logStudioBindEvent } from "../debug/studio-bind-logger";
 import { CampaignHistoryPanel } from "./campaign-history-panel";
 import { findLatestStudioMessage } from "./campaign-studio-panel-utils";
 import { StudioConversationControls } from "./studio-conversation-controls";
@@ -102,6 +103,29 @@ export function CampaignStudioPanel({
   const sendMessage = onSendMessage ?? noopSendMessage;
 
   const hasCampaignObject = Boolean(display?.campaignObject);
+
+  // Diagnostics: which object is the Studio actually rendering right now?
+  useEffect(() => {
+    const sections = display?.campaignObject
+      ? Object.entries(
+          display.campaignObject.sections as Record<string, { status?: string }>
+        )
+      : null;
+    logStudioBindEvent("panel render", {
+      boundMessageId: message?.id ?? null,
+      streamingInputActive: Boolean(streamingInput) && !hasCampaignObject,
+      hasCampaignObject,
+      workflowStatus: display?.status ?? streamingInput?.workflowStatus ?? null,
+      completedTasksLength:
+        display?.completedTasks?.length ?? streamingInput?.completedTasks?.length ?? 0,
+      campaignObjectSectionCount: sections?.length ?? null,
+      sectionStatuses: sections
+        ? sections.map(([key, section]) => `${key}:${section?.status ?? "?"}`).join(" ")
+        : null,
+      willRenderNothing: !hasCampaignObject && !streamingInput,
+    });
+  }, [message?.id, display, streamingInput, hasCampaignObject]);
+
   if (!hasCampaignObject && !streamingInput) return null;
 
   const campaignObjectId = display?.campaignObject?.id;
