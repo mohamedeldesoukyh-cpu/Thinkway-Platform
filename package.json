@@ -103,7 +103,8 @@
     "validate:f1-one-workspace": "npx tsx scripts/validate-f1-one-workspace.mjs",
     "trace:discovery": "node scripts/run-trace-discovery.mjs",
     "test:bullmq-connection": "npx tsx lib/redis/bullmq-connection.test.ts",
-    "backfill:creator-intelligence": "npx tsx scripts/backfill-creator-intelligence.ts"
+    "backfill:creator-intelligence": "npx tsx scripts/backfill-creator-intelligence.ts",
+    "rollout:preflight": "npx tsx scripts/rollout-preflight.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
