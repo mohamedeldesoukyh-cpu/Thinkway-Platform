@@ -7,7 +7,6 @@ import type { CampaignOutputKind } from "@/features/campaign-outputs/output-type
 import { getOutputDefinition } from "@/features/campaign-outputs/output-catalog";
 import {
   markStaleCampaignOutputs,
-  regenerateStaleCampaignOutputs,
   staleCampaignOutputKinds,
 } from "@/features/campaign-outputs/output-registry";
 import {
@@ -203,7 +202,10 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       );
     case "update_timeline":
       return applyFactsEdit(input, digest, "update_timeline", (obj) =>
-        applyTimelineChange(obj, { durationWeeks: intent.durationWeeks })
+        applyTimelineChange(obj, {
+          durationWeeks: intent.durationWeeks,
+          startDate: intent.startDate,
+        })
       );
     case "update_platforms":
       return applyFactsEdit(input, digest, "update_platforms", (obj) =>
@@ -498,7 +500,7 @@ async function applyFactsEdit(
     return {
       campaignObject: input.campaignObject,
       reply:
-        "I couldn't apply that change — please restate the exact value (for example \"set the budget to EGP 2,000,000\" or \"make it 4 weeks\").",
+        "I couldn't apply that change — please restate the exact value (for example \"set the budget to EGP 2,000,000\", \"make it 4 weeks\", or \"start the campaign on 15/07/2026\").",
       changed: false,
       intentKind,
     };
@@ -929,13 +931,12 @@ function applyOutputStaleness(
 ): { campaignObject: CampaignObject; effect?: string } {
   const marked = markStaleCampaignOutputs(edited);
   const beforeStale = new Set(staleCampaignOutputKinds(before));
-  const regenerated = regenerateStaleCampaignOutputs(marked, { origin: "automatic" });
   const newly = staleCampaignOutputKinds(marked).filter((kind) => !beforeStale.has(kind));
-  if (newly.length === 0) return { campaignObject: regenerated };
+  if (newly.length === 0) return { campaignObject: marked };
   const labels = newly.map((kind) => getOutputDefinition(kind)?.label ?? kind).join(", ");
   return {
-    campaignObject: regenerated,
-    effect: `${newly.length} output${newly.length === 1 ? "" : "s"} synced automatically (${labels})`,
+    campaignObject: marked,
+    effect: `${newly.length} output${newly.length === 1 ? "" : "s"} need updating (${labels}) — regenerate from Outputs when ready`,
   };
 }
 

@@ -21,6 +21,8 @@ export type QuotationCommercialsMeta = {
   quotationId?: string;
   syncedAt: string;
   creators: QuotationCommercialCreator[];
+  /** Legal entity (client) — distinct from brand. */
+  clientName?: string;
   brandName?: string;
   groupName?: string;
   agencyOrDirect?: "agency" | "direct" | "hybrid";
@@ -41,6 +43,7 @@ export function quotationCommercialCreatorKey(
 export type QuotationCommercialsContextPatch = {
   quotationId?: string;
   syncedAt?: string;
+  clientName?: string;
   brandName?: string;
   groupName?: string;
   agencyOrDirect?: "agency" | "direct" | "hybrid";
@@ -65,6 +68,7 @@ export function mergeQuotationCommercialsContext(
     quotationId: patch.quotationId ?? existing?.quotationId,
     syncedAt,
     creators: existing?.creators ?? [],
+    clientName: patch.clientName?.trim() || existing?.clientName,
     brandName: patch.brandName?.trim() || existing?.brandName,
     groupName: patch.groupName?.trim() || existing?.groupName,
     agencyOrDirect,
@@ -77,6 +81,7 @@ export function buildQuotationCommercialsMeta(
   options?: {
     quotationId?: string;
     syncedAt?: string;
+    clientName?: string;
     brandName?: string;
     groupName?: string;
     agencyOrDirect?: "agency" | "direct" | "hybrid";
@@ -122,6 +127,7 @@ export function buildQuotationCommercialsMeta(
     quotationId: options?.quotationId,
     syncedAt,
     creators: commercialCreators,
+    clientName: options?.clientName?.trim() || undefined,
     brandName: options?.brandName?.trim() || undefined,
     groupName: options?.groupName?.trim() || undefined,
     agencyOrDirect: options?.agencyOrDirect,

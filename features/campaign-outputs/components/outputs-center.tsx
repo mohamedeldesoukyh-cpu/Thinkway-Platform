@@ -5,6 +5,8 @@ import { GripVerticalIcon, LayersIcon, XIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+import type { CampaignObject } from "@/features/campaign-intelligence";
+
 import type { CampaignOutputContent, CampaignOutputGroup, CampaignOutputKind } from "../output-types";
 import type { OutputView } from "../output-registry";
 import { OUTPUT_GROUPS } from "../output-catalog";
@@ -13,10 +15,13 @@ import { OutputViewer } from "./output-viewer";
 import { OutputDocumentPreview } from "./output-document-preview";
 import { MediaPlanExportActions } from "./media-plan-export-actions";
 import { useDraggablePanel } from "../hooks/use-draggable-panel";
-import { resolveMediaPlanContextForPreview } from "../actions/resolve-media-plan-context";
+import { resolveMediaPlanCampaignContext } from "../generators/media-plan";
 import type { MediaPlanCampaignContext } from "../generators/media-plan";
+import { resolveMediaPlanContextForPreview } from "../actions/resolve-media-plan-context";
 
 export type OutputsCenterProps = {
+  /** Live campaign object — used for instant Media Plan context without a server roundtrip. */
+  campaignObject?: CampaignObject;
   /** All output views (any order) — grouped internally by the metadata-driven group. */
   outputs: OutputView[];
   /** Output currently being generated/regenerated via Copilot. */
@@ -43,6 +48,7 @@ type PanelState = {
  * it never owns campaign data.
  */
 export function OutputsCenter({
+  campaignObject,
   outputs,
   generatingKind,
   getContent,
@@ -76,28 +82,48 @@ export function OutputsCenter({
     return getContent(panel.kind);
   }, [panel?.kind, panel?.mode, getContent]);
 
+  const isMediaPlanPanel = panel?.kind === "media_plan";
+
+  const liveMediaPlanContextFallback = useMemo<MediaPlanCampaignContext | undefined>(() => {
+    if (!campaignObject) return undefined;
+    return resolveMediaPlanCampaignContext(campaignObject);
+  }, [
+    campaignObject?.id,
+    campaignObject?.updatedAt,
+    campaignObject?.meta.quotationCommercials,
+    campaignObject?.meta.campaignFacts,
+  ]);
+
   const [liveMediaPlanContext, setLiveMediaPlanContext] = useState<
     MediaPlanCampaignContext | undefined
-  >();
+  >(undefined);
 
   useEffect(() => {
-    if (panel?.kind !== "media_plan" || !campaignObjectId) {
+    if (!isMediaPlanPanel) {
       setLiveMediaPlanContext(undefined);
       return;
     }
 
+    setLiveMediaPlanContext(liveMediaPlanContextFallback);
+
+    if (!campaignObjectId || !conversationId) return;
+
     let cancelled = false;
-    void resolveMediaPlanContextForPreview({
-      campaignObjectId,
-      conversationId,
-    }).then((context) => {
-      if (!cancelled) setLiveMediaPlanContext(context);
+    void resolveMediaPlanContextForPreview({ campaignObjectId, conversationId }).then((context) => {
+      if (!cancelled && Object.keys(context).length > 0) {
+        setLiveMediaPlanContext(context);
+      }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [panel?.kind, campaignObjectId, conversationId]);
+  }, [
+    isMediaPlanPanel,
+    campaignObjectId,
+    conversationId,
+    liveMediaPlanContextFallback,
+  ]);
 
   const mergedActions = useMemo<OutputCardActions>(
     () => ({
@@ -114,7 +140,6 @@ export function OutputsCenter({
     [actions]
   );
 
-  const isMediaPlanPanel = panel?.kind === "media_plan";
   const isFloatingPreview = panel?.mode === "preview" || isMediaPlanPanel;
   const { offset, dragHandleProps } = useDraggablePanel(Boolean(panel && isFloatingPreview));
 

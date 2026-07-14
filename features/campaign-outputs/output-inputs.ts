@@ -207,7 +207,10 @@ export function resolveInputValue(
         ? { amount: facts.budget.amount, currency: facts.budget.currency }
         : null;
     case "timeline":
-      return facts?.durationWeeks ?? null;
+      return {
+        durationWeeks: facts?.durationWeeks ?? null,
+        campaignStartDate: facts?.campaignStartDate ?? null,
+      };
     case "kpis":
       return facts?.kpis ?? [];
     case "deliverables_scope":

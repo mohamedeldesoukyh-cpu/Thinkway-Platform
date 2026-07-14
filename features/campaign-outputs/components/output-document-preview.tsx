@@ -1,14 +1,7 @@
 import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
 import type { MediaPlanCampaignContext, MediaPlanData } from "../generators/media-plan";
-import { MediaPlanCalendar } from "./media-plan-calendar";
+import { buildMediaPlanPreviewMarkup } from "../export/media-plan-html";
 import { MEDIA_PLAN_BRAND } from "./media-plan-brand";
-import { mergeMediaPlanContext } from "./media-plan-context-merge";
-import {
-  MEDIA_PLAN_DEADLINES_HEADING,
-  MediaPlanContextStrip,
-  MediaPlanDeadlinesTable,
-  shouldSkipMediaPlanSection,
-} from "./media-plan-preview-sections";
 
 function isMediaPlanData(data: unknown): data is MediaPlanData {
   return Boolean(
@@ -70,7 +63,7 @@ function DocumentSection({ section }: { section: CampaignOutputContentSection })
 
 /**
  * Formatted document preview — print-ready layout for client review and export.
- * Media Plan uses landscape orientation to fit the weekly publishing calendar.
+ * Media Plan uses the same HTML builder as PDF export for visual parity.
  */
 export function OutputDocumentPreview({
   content,
@@ -80,84 +73,34 @@ export function OutputDocumentPreview({
   mediaPlanContextOverride?: MediaPlanCampaignContext;
 }) {
   const mediaPlan = isMediaPlanData(content.data) ? content.data : undefined;
-  const hasDeadlines = Boolean(mediaPlan?.deadlines?.length);
-  const mediaPlanContext = mergeMediaPlanContext(
-    mediaPlan?.campaignContext,
-    mediaPlanContextOverride
-  );
+
+  if (mediaPlan) {
+    const markup = buildMediaPlanPreviewMarkup(content, {
+      contextOverride: mediaPlanContextOverride,
+    });
+
+    return (
+      <div
+        className="media-plan-html-preview mx-auto w-full max-w-[1280px] shadow-sm print:max-w-none print:shadow-none"
+        dangerouslySetInnerHTML={{ __html: markup }}
+      />
+    );
+  }
 
   return (
-    <>
-      {mediaPlan ? (
-        <style>{`@media print { @page { size: landscape; margin: 10mm; } }`}</style>
-      ) : null}
-      <article
-        className={
-          mediaPlan
-            ? "media-plan-landscape mx-auto w-full max-w-[1120px] px-6 py-8 shadow-sm print:max-w-none print:shadow-none"
-            : "mx-auto max-w-3xl bg-background px-8 py-10 shadow-sm"
-        }
-        style={mediaPlan ? { backgroundColor: MEDIA_PLAN_BRAND.lavender } : undefined}
-      >
-        <header className="mb-8 overflow-hidden rounded-2xl border border-[#0B0F1A]/8 bg-white shadow-sm">
-          <div className="h-1.5" style={{ background: MEDIA_PLAN_BRAND.gradient }} />
-          <div className="px-6 py-5">
-            <p
-              className="text-[10px] font-extrabold uppercase tracking-[0.35em]"
-              style={{ color: MEDIA_PLAN_BRAND.electricBlue }}
-            >
-              Thinkway
-            </p>
-            <h1
-              className="mt-2 text-2xl font-extrabold tracking-tight"
-              style={{ color: MEDIA_PLAN_BRAND.deepNavy }}
-            >
-              {content.title}
-            </h1>
-            {content.summary ? (
-              <p
-                className="mt-2 text-[14px] leading-relaxed"
-                style={{ color: MEDIA_PLAN_BRAND.muted }}
-              >
-                {content.summary}
-              </p>
-            ) : null}
-            {mediaPlan ? <MediaPlanContextStrip context={mediaPlanContext} /> : null}
-          </div>
-        </header>
-
-        {mediaPlan ? (
-          <section className="mb-8 break-inside-avoid space-y-3">
-            <h2
-              className="text-sm font-extrabold uppercase tracking-[0.5px]"
-              style={{ color: MEDIA_PLAN_BRAND.deepNavy }}
-            >
-              Publishing Calendar
-            </h2>
-            <MediaPlanCalendar data={mediaPlan} orientation="landscape" />
-          </section>
+    <article className="mx-auto max-w-3xl bg-background px-8 py-10 shadow-sm">
+      <header className="mb-8 border-b border-border pb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{content.title}</h1>
+        {content.summary ? (
+          <p className="mt-2 text-sm text-muted-foreground">{content.summary}</p>
         ) : null}
+      </header>
 
-        {mediaPlan && hasDeadlines ? (
-          <section className="mb-8 break-inside-avoid space-y-3">
-            <h2
-              className="text-sm font-extrabold uppercase tracking-[0.5px]"
-              style={{ color: MEDIA_PLAN_BRAND.electricBlue }}
-            >
-              {MEDIA_PLAN_DEADLINES_HEADING}
-            </h2>
-            <MediaPlanDeadlinesTable deadlines={mediaPlan.deadlines} variant="document" />
-          </section>
-        ) : null}
-
-        <div className="space-y-6">
-          {content.sections
-            .filter((s) => !mediaPlan || !shouldSkipMediaPlanSection(s.heading, hasDeadlines))
-            .map((section, i) => (
-              <DocumentSection key={`${section.heading}-${i}`} section={section} />
-            ))}
-        </div>
-      </article>
-    </>
+      <div className="space-y-6">
+        {content.sections.map((section, i) => (
+          <DocumentSection key={`${section.heading}-${i}`} section={section} />
+        ))}
+      </div>
+    </article>
   );
 }

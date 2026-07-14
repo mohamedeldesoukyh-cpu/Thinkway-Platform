@@ -8,6 +8,7 @@ import {
   useState,
   useTransition,
   type RefObject,
+  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -83,10 +84,16 @@ import {
 } from "@/features/quotations/quotation-row-math";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import {
-  buildFilteredQuotationCreatorGroups,
   buildQuotationItemOptionContext,
   countUniqueQuotationCreators,
 } from "@/lib/quotations/quotation-creator-options";
+import {
+  buildCreatorGroupsFromSortedItems,
+  sortQuotationWorkspaceItems,
+  type QuotationWorkspaceSortState,
+} from "@/lib/quotations/quotation-workspace-sort";
+import { QuotationCommercialSummaryDialog } from "@/features/quotations/components/quotation-commercial-summary-dialog";
+import { QuotationWorkspaceSortableHead } from "@/features/quotations/components/quotation-workspace-sort-header";
 import {
   deliverableTypeLines,
   formatTypeLinesSummary,
@@ -222,6 +229,7 @@ function QuotationWorkspaceContent({
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [exportTemplate, setExportTemplate] = useState<QuotationTemplateVariant>("detailed");
   const [addCreatorsOpen, setAddCreatorsOpen] = useState(false);
+  const [tableSort, setTableSort] = useState<QuotationWorkspaceSortState | null>(null);
   const [bulkPending, startBulkTransition] = useTransition();
   const creatorSearchRef = useRef<HTMLInputElement>(null);
 
@@ -270,9 +278,21 @@ function QuotationWorkspaceContent({
     });
   }, [detail.items, creatorSearch, platformFilter]);
 
+  const pendingItemIds = useMemo(() => {
+    const pending = new Set<string>();
+    for (const item of detail.items) {
+      if (manualSave.isLinePending(item.id)) pending.add(item.id);
+    }
+    return pending;
+  }, [detail.items, manualSave]);
+
   const sortedFilteredItems = useMemo(
-    () => [...filteredItems].sort((a, b) => a.sort_order - b.sort_order),
-    [filteredItems]
+    () =>
+      sortQuotationWorkspaceItems(filteredItems, tableSort, {
+        drafts,
+        pendingItemIds,
+      }),
+    [filteredItems, tableSort, drafts, pendingItemIds]
   );
 
   const optionContextByItemId = useMemo(
@@ -281,8 +301,8 @@ function QuotationWorkspaceContent({
   );
 
   const creatorGroups = useMemo(
-    () => buildFilteredQuotationCreatorGroups(detail.items, sortedFilteredItems),
-    [detail.items, sortedFilteredItems]
+    () => buildCreatorGroupsFromSortedItems(sortedFilteredItems),
+    [sortedFilteredItems]
   );
 
   const uniqueCreatorCount = useMemo(
@@ -522,6 +542,9 @@ function QuotationWorkspaceContent({
               platformOptions={platformOptions}
               globalCalcMode={globalCalcMode}
               onGlobalCalcMode={setGlobalCalcMode}
+              commercialSummary={
+                <QuotationCommercialSummaryDialog items={detail.items} drafts={drafts} />
+              }
             />
 
             <BulkToolbar
@@ -551,19 +574,66 @@ function QuotationWorkspaceContent({
                         aria-label="Select all visible creators"
                       />
                     </TableHead>
-                    <TableHead className="min-w-[92px]">Option</TableHead>
-                    <TableHead className="w-[8%] text-right">Followers</TableHead>
-                    <TableHead className="w-[8%]">Tier</TableHead>
-                    <TableHead className="min-w-[140px]">Service description</TableHead>
-                    <TableHead className="w-[4.5rem] text-center">Platform</TableHead>
-                    <TableHead className="min-w-[200px]">Type</TableHead>
-                    <TableHead className="min-w-[11rem] w-auto px-3 text-right whitespace-nowrap">
-                      <span className="text-xs font-bold uppercase tracking-wide">Price</span>
-                      <span className="mt-0.5 block text-[10px] font-normal normal-case text-muted-foreground">
-                        Via +Cost detail
-                      </span>
-                    </TableHead>
-                    <TableHead className="w-[72px]">Status</TableHead>
+                    <QuotationWorkspaceSortableHead
+                      label="Option"
+                      field="option"
+                      sort={tableSort}
+                      onSortChange={setTableSort}
+                      className="min-w-[92px]"
+                    />
+                    <QuotationWorkspaceSortableHead
+                      label="Followers"
+                      field="followers"
+                      align="right"
+                      sort={tableSort}
+                      onSortChange={setTableSort}
+                      className="w-[8%]"
+                    />
+                    <QuotationWorkspaceSortableHead
+                      label="Tier"
+                      field="tier"
+                      sort={tableSort}
+                      onSortChange={setTableSort}
+                      className="w-[8%]"
+                    />
+                    <QuotationWorkspaceSortableHead
+                      label="Service description"
+                      field="service"
+                      sort={tableSort}
+                      onSortChange={setTableSort}
+                      className="min-w-[140px]"
+                    />
+                    <QuotationWorkspaceSortableHead
+                      label="Platform"
+                      field="platform"
+                      align="center"
+                      sort={tableSort}
+                      onSortChange={setTableSort}
+                      className="w-[4.5rem]"
+                    />
+                    <QuotationWorkspaceSortableHead
+                      label="Type"
+                      field="type"
+                      sort={tableSort}
+                      onSortChange={setTableSort}
+                      className="min-w-[200px]"
+                    />
+                    <QuotationWorkspaceSortableHead
+                      label="Price"
+                      subLabel="Via +Cost detail"
+                      field="price"
+                      align="right"
+                      sort={tableSort}
+                      onSortChange={setTableSort}
+                      className="min-w-[11rem] w-auto px-3 whitespace-nowrap"
+                    />
+                    <QuotationWorkspaceSortableHead
+                      label="Status"
+                      field="status"
+                      sort={tableSort}
+                      onSortChange={setTableSort}
+                      className="w-[72px]"
+                    />
                     <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
@@ -672,6 +742,7 @@ function Toolbar({
   platformOptions,
   globalCalcMode,
   onGlobalCalcMode,
+  commercialSummary,
 }: {
   creatorSearch: string;
   onCreatorSearch: (v: string) => void;
@@ -681,6 +752,7 @@ function Toolbar({
   platformOptions: string[];
   globalCalcMode: CalculationModePreference;
   onGlobalCalcMode: (v: CalculationModePreference) => void;
+  commercialSummary?: ReactNode;
 }) {
   return (
     <div className="thinkway-campaign-grid-toolbar border-b px-4 py-3">
@@ -723,6 +795,9 @@ function Toolbar({
           ))}
         </SelectContent>
       </Select>
+      {commercialSummary ? (
+        <div className="thinkway-campaign-grid-actions">{commercialSummary}</div>
+      ) : null}
     </div>
   );
 }

@@ -217,6 +217,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 {
   const html = buildQuotationHtml(buildQuotationDocument(mockDetail()));
   assert.ok(html.includes("Client Quotation"));
+  assert.ok(html.includes('class="thinkway-report-logo'));
+  assert.ok(html.includes('src="/tw-logo-dark.png"'));
   assert.ok(html.includes("Terms &amp; Conditions"));
   assert.ok(html.includes("Prepared exclusively for Acme Corp"));
   assert.ok(html.includes("page-break"));

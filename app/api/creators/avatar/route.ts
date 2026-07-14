@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing avatar source." }, { status: 400 });
   }
 
-  const result = await fetchCreatorAvatarImage({ src, profileUrl });
+  const result = await fetchCreatorAvatarImage({ src, profileUrl, supabase });
   if (!result.ok) {
     return NextResponse.json({ error: "Avatar unavailable." }, { status: result.status });
   }

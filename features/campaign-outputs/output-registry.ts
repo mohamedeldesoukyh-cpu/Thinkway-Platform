@@ -29,6 +29,7 @@ import { OUTPUT_CATALOG, INPUT_KEY_LABELS, getOutputDefinition } from "./output-
 import {
   computeInputFingerprints,
   computeSourceFingerprint,
+  CampaignInputCache,
 } from "./output-fingerprint";
 import { describeInputsChanged } from "./output-stale-reason";
 import { resolveSlate } from "./output-inputs";
@@ -49,6 +50,51 @@ function enrichMediaPlanForDisplay(
     enrichMediaPlanFromSlate(data, resolveSlate(campaignObject)),
     campaignObject
   );
+}
+
+let mediaPlanEnrichCacheKey: string | null = null;
+let mediaPlanEnrichCacheResult: MediaPlanData | null = null;
+
+function mediaPlanDisplayEnrichKey(
+  campaignObject: CampaignObject,
+  record: CampaignOutputRecord,
+  raw: MediaPlanData
+): string {
+  const commercials = campaignObject.meta.quotationCommercials;
+  const inputCache = new CampaignInputCache(campaignObject);
+  return [
+    record.version,
+    record.updatedAt,
+    record.sourceFingerprint,
+    record.generatorVersion,
+    campaignObject.updatedAt,
+    commercials?.syncedAt ?? "",
+    commercials?.clientName ?? "",
+    commercials?.brandName ?? "",
+    commercials?.groupName ?? "",
+    commercials?.agencyName ?? "",
+    inputCache.inputFingerprint("creators"),
+    inputCache.inputFingerprint("budget"),
+    inputCache.inputFingerprint("timeline"),
+    raw.generatorVersion,
+    raw.durationWeeks,
+    raw.creatorCount,
+  ].join("|");
+}
+
+function enrichMediaPlanForDisplayCached(
+  data: MediaPlanData,
+  campaignObject: CampaignObject,
+  record: CampaignOutputRecord
+): MediaPlanData {
+  const key = mediaPlanDisplayEnrichKey(campaignObject, record, data);
+  if (mediaPlanEnrichCacheKey === key && mediaPlanEnrichCacheResult) {
+    return mediaPlanEnrichCacheResult;
+  }
+  const enriched = enrichMediaPlanForDisplay(data, campaignObject);
+  mediaPlanEnrichCacheKey = key;
+  mediaPlanEnrichCacheResult = enriched;
+  return enriched;
 }
 
 function estimateSizeBytes(record: Pick<CampaignOutputRecord, "content">): number {
@@ -127,9 +173,10 @@ export type OutputView = {
  */
 export function listCampaignOutputs(campaignObject: CampaignObject): OutputView[] {
   const state = getCampaignOutputState(campaignObject);
+  const inputCache = new CampaignInputCache(campaignObject);
   return OUTPUT_CATALOG.map((definition) => {
     const record = state[definition.kind];
-    const fingerprint = computeSourceFingerprint(campaignObject, definition.inputKeys);
+    const fingerprint = inputCache.fingerprint(definition.inputKeys);
     const status = liveStatus(record, fingerprint);
     const sourceData = definition.inputKeys.map((key: CampaignOutputInputKey) => INPUT_KEY_LABELS[key]);
     const staleReason =
@@ -198,9 +245,10 @@ export function getOutputContentForDisplay(
   if (needsLiveRender) {
     const content = definition.generate(campaignObject);
     if (kind === "media_plan" && content.data) {
-      const enriched = enrichMediaPlanForDisplay(
+      const enriched = enrichMediaPlanForDisplayCached(
         content.data as unknown as MediaPlanData,
-        campaignObject
+        campaignObject,
+        record
       );
       return { ...content, data: enriched as unknown as Record<string, unknown> };
     }
@@ -209,9 +257,10 @@ export function getOutputContentForDisplay(
 
   const cached = record.content;
   if (kind === "media_plan" && cached?.data) {
-    const enriched = enrichMediaPlanForDisplay(
+    const enriched = enrichMediaPlanForDisplayCached(
       cached.data as unknown as MediaPlanData,
-      campaignObject
+      campaignObject,
+      record
     );
     return { ...cached, data: enriched as unknown as Record<string, unknown> };
   }

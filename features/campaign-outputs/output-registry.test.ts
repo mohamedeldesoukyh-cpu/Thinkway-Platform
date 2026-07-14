@@ -9,6 +9,7 @@ import {
   staleCampaignOutputKinds,
 } from "./output-registry";
 import { buildCampaignObjectFixture } from "./output-test-fixture";
+import { MEDIA_PLAN_GENERATOR_VERSION } from "./generators/media-plan";
 
 test("backward compat: no meta.campaignOutputs lists everything as not_generated", () => {
   const obj = buildCampaignObjectFixture();
@@ -27,7 +28,7 @@ test("views expose source data, dependencies, and generator version", () => {
   const media = listCampaignOutputs(obj).find((v) => v.kind === "media_plan")!;
   assert.deepEqual(media.sourceData, ["Creators", "Platforms", "Timeline", "Deliverables scope"]);
   assert.deepEqual(media.dependencies, media.sourceData);
-  assert.equal(media.generatorVersion, "3.2.2");
+  assert.equal(media.generatorVersion, MEDIA_PLAN_GENERATOR_VERSION);
 });
 
 test("generate sets status generated at version 1 with a cached view + fingerprint", () => {
@@ -36,7 +37,7 @@ test("generate sets status generated at version 1 with a cached view + fingerpri
   assert.equal(record.status, "generated");
   assert.equal(record.version, 1);
   assert.ok(record.sourceFingerprint);
-  assert.equal(record.generatorVersion, "3.2.2");
+  assert.equal(record.generatorVersion, MEDIA_PLAN_GENERATOR_VERSION);
   assert.ok(record.content && record.content.sections.length > 0);
   assert.equal(getCampaignOutput(campaignObject, "media_plan")?.status, "generated");
 });

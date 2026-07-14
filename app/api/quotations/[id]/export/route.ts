@@ -16,6 +16,7 @@ import {
   isShowcaseTemplate,
   resolveQuotationTemplate,
 } from "@/features/quotations/export/quotation-template";
+import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -90,7 +91,8 @@ export async function GET(request: Request, context: RouteContext) {
       });
     }
 
-    const html = buildQuotationHtml(doc, { siteOrigin });
+    const logoSrcs = format === "pdf" ? resolveThinkwayReportLogoSrcsForExport() : undefined;
+    const html = buildQuotationHtml(doc, { siteOrigin, logoSrcs });
 
     if (format === "word") {
       // Word opens HTML content saved as .doc with full fidelity (no extra deps).

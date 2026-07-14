@@ -12,9 +12,37 @@ import { clampCampaignDurationWeeks } from "../timeline-duration";
 export type EditableFactsPatch = Partial<
   Pick<
     CampaignFacts,
-    "budget" | "durationWeeks" | "platforms" | "objective" | "audience" | "geography"
+    | "budget"
+    | "durationWeeks"
+    | "campaignStartDate"
+    | "platforms"
+    | "objective"
+    | "audience"
+    | "geography"
   >
 >;
+
+/** Parse DD/MM/YYYY, DD-MM-YYYY, or YYYY-MM-DD into ISO YYYY-MM-DD. */
+export function parseCampaignStartDateInput(raw: string): string | null {
+  const text = raw.trim();
+  const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  const dmy = text.match(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\b/);
+  if (dmy) {
+    const day = dmy[1]!.padStart(2, "0");
+    const month = dmy[2]!.padStart(2, "0");
+    const year = dmy[3]!;
+    return `${year}-${month}-${day}`;
+  }
+  return null;
+}
+
+function formatCampaignStartDateLabel(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  if (!year || !month || !day) return iso;
+  return `${day}/${month}/${year}`;
+}
 
 /**
  * Mutate the campaign facts SSOT and refresh the stored summary cards from the
@@ -76,17 +104,33 @@ export function applyBudgetChange(
 
 export function applyTimelineChange(
   campaignObject: CampaignObject,
-  input: { durationWeeks: number }
+  input: { durationWeeks?: number; startDate?: string }
 ): FactsEditResult {
   const facts = getCampaignFacts(campaignObject);
-  if (!facts || !Number.isFinite(input.durationWeeks)) {
-    return { campaignObject, change: null };
+  if (!facts) return { campaignObject, change: null };
+
+  const patch: EditableFactsPatch = {};
+  const changes: string[] = [];
+
+  if (input.durationWeeks != null && Number.isFinite(input.durationWeeks)) {
+    patch.durationWeeks = clampCampaignDurationWeeks(Math.round(input.durationWeeks));
+    changes.push(
+      `set campaign duration to ${patch.durationWeeks} week${patch.durationWeeks === 1 ? "" : "s"}`
+    );
   }
-  const weeks = clampCampaignDurationWeeks(Math.round(input.durationWeeks));
-  const next = patchCampaignFacts(campaignObject, { durationWeeks: weeks });
+
+  const startIso = input.startDate ? parseCampaignStartDateInput(input.startDate) : null;
+  if (startIso) {
+    patch.campaignStartDate = startIso;
+    changes.push(`set campaign start date to ${formatCampaignStartDateLabel(startIso)}`);
+  }
+
+  if (changes.length === 0) return { campaignObject, change: null };
+
+  const next = patchCampaignFacts(campaignObject, patch);
   return {
     campaignObject: next,
-    change: `Set campaign duration to ${weeks} week${weeks === 1 ? "" : "s"}.`,
+    change: `Updated ${changes.join(" and ")}.`,
   };
 }
 

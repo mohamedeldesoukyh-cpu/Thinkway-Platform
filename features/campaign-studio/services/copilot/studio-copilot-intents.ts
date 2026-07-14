@@ -93,7 +93,12 @@ export type ReplaceCreatorsIntent = {
 };
 
 export type UpdateBudgetIntent = { kind: "update_budget"; amount: number; currency?: string };
-export type UpdateTimelineIntent = { kind: "update_timeline"; durationWeeks: number };
+export type UpdateTimelineIntent = {
+  kind: "update_timeline";
+  durationWeeks?: number;
+  /** ISO date YYYY-MM-DD */
+  startDate?: string;
+};
 export type UpdatePlatformsIntent = { kind: "update_platforms"; platforms: string[] };
 export type UpdateObjectivesIntent = { kind: "update_objectives"; objective: string };
 export type UpdateAudienceIntent = { kind: "update_audience"; audience: string };
@@ -207,6 +212,7 @@ export type CampaignContextDigest = {
   platforms: string[];
   budget?: { amount: number; currency: string };
   durationWeeks?: number;
+  campaignStartDate?: string;
   deliverables: string[];
   kpis: string[];
   slate: CampaignSlateEntry[];
@@ -278,6 +284,7 @@ export function buildCampaignContextDigest(campaignObject: CampaignObject): Camp
     platforms: facts?.platforms ?? [],
     budget: facts?.budget,
     durationWeeks: facts?.durationWeeks,
+    campaignStartDate: facts?.campaignStartDate,
     deliverables: facts?.deliverables ?? [],
     kpis: facts?.kpis ?? [],
     slate,
@@ -303,6 +310,7 @@ export function renderDigestForPrompt(digest: CampaignContextDigest): string {
   if (digest.budget)
     lines.push(`Budget: ${digest.budget.amount.toLocaleString()} ${digest.budget.currency}`);
   if (digest.durationWeeks) lines.push(`Duration: ${digest.durationWeeks} weeks`);
+  if (digest.campaignStartDate) lines.push(`Start date: ${digest.campaignStartDate}`);
   if (digest.deliverables.length) lines.push(`Deliverables: ${digest.deliverables.join("; ")}`);
   if (digest.kpis.length) lines.push(`KPIs: ${digest.kpis.join("; ")}`);
   if (digest.overallScore != null) lines.push(`Overall score: ${digest.overallScore}/100`);

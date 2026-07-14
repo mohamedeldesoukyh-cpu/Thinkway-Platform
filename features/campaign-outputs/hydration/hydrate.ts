@@ -223,6 +223,7 @@ function quotationContextPatchFromSeed(
 
   const hasContext =
     seed.brand?.trim() ||
+    seed.client?.trim() ||
     seed.group?.trim() ||
     seed.agencyOrDirect ||
     options?.quotationId;
@@ -232,6 +233,7 @@ function quotationContextPatchFromSeed(
   return mergeQuotationCommercialsContext(undefined, {
     quotationId: options?.quotationId,
     syncedAt: options?.now,
+    clientName: seed.client,
     brandName: seed.brand,
     groupName: seed.group,
     agencyOrDirect: seed.agencyOrDirect,
@@ -250,6 +252,7 @@ function buildQuotationCommercialsFromSeed(
   const contextPatch = {
     quotationId: options?.quotationId,
     syncedAt: options?.now,
+    clientName: seed.client,
     brandName: seed.brand,
     groupName: seed.group,
     agencyOrDirect: seed.agencyOrDirect,

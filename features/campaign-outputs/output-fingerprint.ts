@@ -28,7 +28,7 @@ function stableStringify(value: unknown): string {
 }
 
 /** FNV-1a 32-bit — small, dependency-free, browser-safe; sufficient for change detection. */
-function fnv1a(input: string): string {
+export function fnv1a(input: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i);
@@ -69,4 +69,30 @@ export function computeInputFingerprints(
     map[key] = computeInputFingerprint(campaignObject, key);
   }
   return map;
+}
+
+/** Memoize `resolveInputValue` within a single outputs pass — avoids re-parsing the slate N times. */
+export class CampaignInputCache {
+  private readonly values = new Map<CampaignOutputInputKey, unknown>();
+
+  constructor(private readonly campaignObject: CampaignObject) {}
+
+  resolve(key: CampaignOutputInputKey): unknown {
+    const cached = this.values.get(key);
+    if (cached !== undefined) return cached;
+    const value = resolveInputValue(this.campaignObject, key);
+    this.values.set(key, value);
+    return value;
+  }
+
+  fingerprint(inputKeys: readonly CampaignOutputInputKey[]): string {
+    const payload = [...inputKeys]
+      .sort()
+      .map((key) => [key, this.resolve(key)] as const);
+    return fnv1a(stableStringify(payload));
+  }
+
+  inputFingerprint(key: CampaignOutputInputKey): string {
+    return fnv1a(stableStringify(this.resolve(key)));
+  }
 }

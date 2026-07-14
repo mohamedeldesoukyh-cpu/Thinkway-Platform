@@ -7,7 +7,6 @@ import { getQuotationDetail } from "@/lib/services/quotations/quotation-document
 import {
   mergeQuotationCommercialsContext,
   type QuotationCommercialsContextPatch,
-  type QuotationCommercialsMeta,
 } from "./quotation-commercials-meta";
 
 function contextFromQuotationDetail(
@@ -16,6 +15,7 @@ function contextFromQuotationDetail(
 ): QuotationCommercialsContextPatch {
   return {
     quotationId,
+    clientName: detail.client_name ?? detail.temporary_client_name ?? undefined,
     brandName: detail.brand_name ?? detail.temporary_brand_name ?? undefined,
     groupName: detail.group_name ?? undefined,
     agencyOrDirect: detail.agency_or_direct ?? undefined,
@@ -24,16 +24,6 @@ function contextFromQuotationDetail(
         ? detail.agency_name ?? detail.client_name ?? undefined
         : undefined,
   };
-}
-
-function needsQuotationContextEnrichment(
-  snapshot: QuotationCommercialsMeta | undefined
-): boolean {
-  if (!snapshot) return true;
-  if (!snapshot.groupName?.trim()) return true;
-  if (!snapshot.agencyOrDirect) return true;
-  if (snapshot.agencyOrDirect === "agency" && !snapshot.agencyName?.trim()) return true;
-  return false;
 }
 
 function resolveQuotationId(
@@ -52,9 +42,9 @@ function resolveQuotationId(
 }
 
 /**
- * Fill missing group/agency on `meta.quotationCommercials` from the live quotation
- * record — used on conversation load and export so Media Plan preview works without
- * a manual re-sync.
+ * Refresh `meta.quotationCommercials` identity fields from the live quotation
+ * record — used on conversation load, preview, and export so Media Plan reflects
+ * client/brand edits without a manual re-sync.
  */
 export async function enrichCampaignObjectQuotationContext(
   supabase: SupabaseClient,
@@ -66,7 +56,6 @@ export async function enrichCampaignObjectQuotationContext(
   }
 ): Promise<CampaignObject> {
   const existing = campaignObject.meta.quotationCommercials;
-  if (!needsQuotationContextEnrichment(existing)) return campaignObject;
 
   const quotationId = resolveQuotationId(campaignObject, options);
   if (!quotationId) return campaignObject;
@@ -80,6 +69,7 @@ export async function enrichCampaignObjectQuotationContext(
   );
 
   if (
+    merged.clientName === existing?.clientName &&
     merged.brandName === existing?.brandName &&
     merged.groupName === existing?.groupName &&
     merged.agencyOrDirect === existing?.agencyOrDirect &&

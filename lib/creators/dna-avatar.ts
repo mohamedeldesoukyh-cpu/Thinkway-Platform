@@ -1,14 +1,14 @@
 import { parseCreatorDNADocument } from "@/features/creator-dna/services/document-factory";
-import { envelopeHasValue } from "@/features/creator-dna/services/field-envelope";
 import type { CreatorDNADocument } from "@/features/creator-dna/types";
 import type { PrimaryAvatarSource } from "@/lib/creators/creator-centric";
-import { detectAvatarCdn, isTikTokHostedAvatarUrl } from "@/lib/performance/creator-avatar";
+import { detectAvatarCdn, isTikTokHostedAvatarUrl, normalizeThinkwayStoredAvatarUrl } from "@/lib/performance/creator-avatar";
 import {
   isDisplayableAvatarUrl,
   isUsableAvatarUrl,
 } from "@/lib/performance/avatar-sync-policy";
 
-function isDurableStoredAvatarUrl(url: string): boolean {
+/** Thinkway storage or internal proxy — does not expire like social CDN tokens. */
+export function isDurableStoredAvatarUrl(url: string): boolean {
   const trimmed = url.trim().toLowerCase();
   if (trimmed.startsWith("/api/creators/")) return true;
   return trimmed.includes("supabase.co/storage/") || trimmed.includes("supabase.in/storage/");
@@ -19,7 +19,7 @@ function isExpirableSocialCdnAvatarUrl(url: string): boolean {
   return cdn === "instagram" || cdn === "tiktok" || isTikTokHostedAvatarUrl(url);
 }
 
-export function extractDnaAvatarUrl(
+export function readDnaAvatarEnvelopeValue(
   document: CreatorDNADocument | unknown | null | undefined
 ): string | null {
   if (!document) return null;
@@ -27,12 +27,17 @@ export function extractDnaAvatarUrl(
     document && typeof document === "object" && "identity" in document
       ? (document as CreatorDNADocument)
       : parseCreatorDNADocument(document);
+  const url = parsed.identity?.avatarUrl?.value?.trim();
+  return url || null;
+}
 
-  const envelope = parsed.identity?.avatarUrl;
-  if (!envelopeHasValue(envelope)) return null;
-
-  const url = envelope.value?.trim() ?? "";
-  return isDisplayableAvatarUrl(url) ? url : null;
+export function extractDnaAvatarUrl(
+  document: CreatorDNADocument | unknown | null | undefined
+): string | null {
+  const raw = readDnaAvatarEnvelopeValue(document);
+  if (!raw) return null;
+  const normalized = normalizeThinkwayStoredAvatarUrl(raw) ?? raw;
+  return isDisplayableAvatarUrl(normalized) ? normalized : null;
 }
 
 export function avatarSourceFromDnaUrl(url: string): PrimaryAvatarSource {
@@ -97,9 +102,15 @@ export function resolveCreatorAvatarWithDnaFallback(input: {
     return dna;
   }
 
+  if (current && isUsableAvatarUrl(current)) {
+    return current;
+  }
+
+  if (dna) return dna;
+
   if (current && isDisplayableAvatarUrl(current)) {
     return current;
   }
 
-  return dna ?? current;
+  return current;
 }

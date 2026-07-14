@@ -1,18 +1,8 @@
 import type { CampaignOutputContent } from "../output-types";
-import type { MediaPlanData } from "../generators/media-plan";
 import { sanitizeFileNameSegment } from "@/lib/reports/document/report-document-response";
 
-export function isMediaPlanContent(content: CampaignOutputContent): content is CampaignOutputContent & {
-  data: MediaPlanData;
-} {
-  const data = content.data;
-  return Boolean(
-    data &&
-      typeof data === "object" &&
-      Array.isArray((data as { weeks?: unknown }).weeks) &&
-      typeof (data as { durationWeeks?: unknown }).durationWeeks === "number"
-  );
-}
+export { isMediaPlanContent } from "./media-plan-content";
+import { isMediaPlanContent } from "./media-plan-content";
 
 export function mediaPlanExportBaseName(content: CampaignOutputContent): string {
   const data = isMediaPlanContent(content) ? content.data : undefined;

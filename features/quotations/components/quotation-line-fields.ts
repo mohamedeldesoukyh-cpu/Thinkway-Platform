@@ -34,6 +34,10 @@ import { linePendingDiffersFromItem } from "@/lib/quotations/quotation-line-pend
 export type { DeliverableDraft } from "@/lib/quotations/quotation-deliverable-drafts";
 export { fromDeliverableDrafts, newDeliverableKey } from "@/lib/quotations/quotation-deliverable-drafts";
 
+function hasServerLinkedPlatforms(item: QuotationItemRow): boolean {
+  return (item.creator_profile_source?.linkedPlatforms?.length ?? 0) > 0;
+}
+
 export function useQuotationLineFields(
   item: QuotationItemRow,
   onDeliverableCommercialsDerived?: (commercials: DeliverableCommercialRollup) => void,
@@ -65,10 +69,12 @@ export function useQuotationLineFields(
     const cached = getCachedCreatorPlatformOptions(cacheKey);
     if (cached?.length) {
       applyPlatforms(cached);
-      void loadCreatorPlatformOptions(item).then((platforms) => {
-        if (cancelled) return;
-        applyPlatforms(platforms);
-      });
+      if (!hasServerLinkedPlatforms(item)) {
+        void loadCreatorPlatformOptions(item).then((platforms) => {
+          if (cancelled) return;
+          applyPlatforms(platforms);
+        });
+      }
       return () => {
         cancelled = true;
       };
@@ -76,10 +82,12 @@ export function useQuotationLineFields(
 
     if (bootstrap.length > 0) {
       applyPlatforms(bootstrap);
-      void loadCreatorPlatformOptions(item).then((platforms) => {
-        if (cancelled) return;
-        applyPlatforms(platforms);
-      });
+      if (!hasServerLinkedPlatforms(item)) {
+        void loadCreatorPlatformOptions(item).then((platforms) => {
+          if (cancelled) return;
+          applyPlatforms(platforms);
+        });
+      }
       return () => {
         cancelled = true;
       };

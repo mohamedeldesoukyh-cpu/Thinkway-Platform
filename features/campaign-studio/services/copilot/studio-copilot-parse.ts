@@ -4,6 +4,7 @@ import { resolveOutputKind } from "@/features/campaign-outputs/copilot/output-co
 
 import type { StudioCopilotIntent } from "./studio-copilot-intents";
 import type { SectionAuthorTarget } from "./section-authoring-types";
+import { parseCampaignStartDateInput } from "./campaign-facts-mutations";
 
 /** The Campaign Output kinds the Copilot can generate/regenerate/export. */
 const OUTPUT_KINDS: CampaignOutputKind[] = [
@@ -132,13 +133,17 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   },
   {
     name: "update_timeline",
-    description: "Set the campaign duration in weeks (e.g. 'four weeks' = 4).",
+    description:
+      "Set campaign timeline: duration in weeks and/or start date. Use startDate for 'campaign starts 15/07/2026' (ISO YYYY-MM-DD or DD/MM/YYYY). Do not change duration unless the user asks.",
     parameters: {
       type: "object",
       properties: {
         durationWeeks: { type: "number", description: "Campaign duration in weeks (1-52)." },
+        startDate: {
+          type: "string",
+          description: "Campaign start date (YYYY-MM-DD or DD/MM/YYYY).",
+        },
       },
-      required: ["durationWeeks"],
     },
   },
   {
@@ -455,6 +460,11 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     if (weeks) return { kind: "update_timeline", durationWeeks: weeks };
   }
 
+  if (/\b(start(?:ing)?|launch|go[-\s]?live|kick[-\s]?off)\b/i.test(text)) {
+    const startDate = parseCampaignStartDateInput(text);
+    if (startDate) return { kind: "update_timeline", startDate };
+  }
+
   // "replace macro creators with micro creators" â€” split on "with", read each side.
   if (/\breplace\b/i.test(text) && /\bwith\b/i.test(text)) {
     const [fromPart, toPart] = text.split(/\bwith\b/i);
@@ -647,7 +657,15 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
         durationWeeks:
           typeof args.durationWeeks === "number"
             ? args.durationWeeks
-            : Number(args.durationWeeks) || 0,
+            : args.durationWeeks != null
+              ? Number(args.durationWeeks) || undefined
+              : undefined,
+        startDate:
+          typeof args.startDate === "string"
+            ? args.startDate
+            : typeof args.startDate === "number"
+              ? String(args.startDate)
+              : undefined,
       };
     case "update_platforms":
       return {

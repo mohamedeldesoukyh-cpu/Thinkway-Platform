@@ -5,11 +5,12 @@ import { mergeMediaPlanContext } from "./media-plan-context-merge";
 
 test("mergeMediaPlanContext prefers live override values over cached context", () => {
   const merged = mergeMediaPlanContext(
-    { brandName: "Dolphin Tuna" },
-    { groupName: "Food Group", agencyName: "Media Agency Egypt" }
+    { brandName: "Dolphin Tuna", clientName: "Old Client LLC" },
+    { groupName: "Food Group", agencyName: "Media Agency Egypt", clientName: "Dolphin Foods LLC" }
   );
 
   assert.equal(merged?.brandName, "Dolphin Tuna");
+  assert.equal(merged?.clientName, "Dolphin Foods LLC");
   assert.equal(merged?.groupName, "Food Group");
   assert.equal(merged?.agencyName, "Media Agency Egypt");
 });

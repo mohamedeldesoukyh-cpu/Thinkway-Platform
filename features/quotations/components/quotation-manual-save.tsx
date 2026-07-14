@@ -19,6 +19,7 @@ import {
   updateQuotationHeader,
   updateQuotationItemCommercials,
 } from "@/features/quotations/actions";
+import { updateQuotationClientBrand } from "@/features/quotations/lifecycle-actions";
 import type { QuotationDeliverable, QuotationItemRow } from "@/features/quotations/types";
 import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import type { CommercialInputMode, QuotationStatus } from "@/types/database";
@@ -53,12 +54,23 @@ export type QuotationMetaPendingPayload = {
   notes?: string | null;
 };
 
+export type QuotationClientBrandPendingPayload = {
+  useTemporary: boolean;
+  temporary_client_name?: string | null;
+  temporary_brand_name?: string | null;
+  client_id?: string | null;
+  brand_id?: string | null;
+  campaign_header_id?: string | null;
+};
+
 type QuotationManualSaveContextValue = {
   registerLinePending: (itemId: string, payload: QuotationLinePendingPayload) => void;
   registerMetaPending: (patch: QuotationMetaPendingPayload) => void;
+  registerClientBrandPending: (payload: QuotationClientBrandPendingPayload | null) => void;
   registerSaveFlush: (flush: () => void) => () => void;
   isLinePending: (itemId: string) => boolean;
   hasUnsavedChanges: boolean;
+  hasClientBrandPending: boolean;
   saveStatus: AutosaveStatus;
   savePending: boolean;
   saveAll: () => Promise<boolean>;
@@ -76,15 +88,18 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   const router = useRouter();
   const linePendingRef = useRef(new Map<string, QuotationLinePendingPayload>());
   const metaPendingRef = useRef<QuotationMetaPendingPayload | null>(null);
+  const clientBrandPendingRef = useRef<QuotationClientBrandPendingPayload | null>(null);
   const saveFlushHandlersRef = useRef(new Set<() => void>());
   const itemsByIdRef = useRef(new Map(items.map((item) => [item.id, item])));
   itemsByIdRef.current = new Map(items.map((item) => [item.id, item]));
   const [pendingLineIds, setPendingLineIds] = useState<Set<string>>(() => new Set());
   const [hasMetaPending, setHasMetaPending] = useState(false);
+  const [hasClientBrandPending, setHasClientBrandPending] = useState(false);
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [savePending, setSavePending] = useState(false);
 
-  const hasUnsavedChanges = pendingLineIds.size > 0 || hasMetaPending;
+  const hasUnsavedChanges =
+    pendingLineIds.size > 0 || hasMetaPending || hasClientBrandPending;
   const hasUnsavedRef = useRef(hasUnsavedChanges);
   hasUnsavedRef.current = hasUnsavedChanges;
 
@@ -101,8 +116,10 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     });
     const hasLines = linePendingRef.current.size > 0;
     const hasMeta = metaPendingRef.current != null;
+    const hasClientBrand = clientBrandPendingRef.current != null;
     setHasMetaPending(hasMeta);
-    if (!hasLines && !hasMeta) {
+    setHasClientBrandPending(hasClientBrand);
+    if (!hasLines && !hasMeta && !hasClientBrand) {
       setSaveStatus("idle");
     } else {
       setSaveStatus("pending");
@@ -144,6 +161,23 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     []
   );
 
+  const registerClientBrandPending = useCallback(
+    (payload: QuotationClientBrandPendingPayload | null) => {
+      clientBrandPendingRef.current = payload;
+      setHasClientBrandPending(payload != null);
+      if (
+        payload == null &&
+        linePendingRef.current.size === 0 &&
+        metaPendingRef.current == null
+      ) {
+        setSaveStatus("idle");
+      } else if (payload != null) {
+        setSaveStatus("pending");
+      }
+    },
+    []
+  );
+
   const registerSaveFlush = useCallback((flush: () => void) => {
     saveFlushHandlersRef.current.add(flush);
     return () => {
@@ -157,7 +191,12 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   );
 
   const saveAll = useCallback(async (): Promise<boolean> => {
-    if (!hasUnsavedRef.current && linePendingRef.current.size === 0 && !metaPendingRef.current) {
+    if (
+      !hasUnsavedRef.current &&
+      linePendingRef.current.size === 0 &&
+      !metaPendingRef.current &&
+      !clientBrandPendingRef.current
+    ) {
       return true;
     }
 
@@ -220,6 +259,37 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       if (!res.ok) firstError = res.message;
     }
 
+    if (!firstError && clientBrandPendingRef.current) {
+      const cb = clientBrandPendingRef.current;
+      if (cb.useTemporary) {
+        const res = await updateQuotationClientBrand({
+          quotationId,
+          is_temporary_client: true,
+          temporary_client_name: cb.temporary_client_name,
+          temporary_brand_name: cb.temporary_brand_name,
+        });
+        if (!res.ok) firstError = res.message;
+      } else {
+        if (!cb.client_id || !cb.brand_id) {
+          firstError = "Select both legal entity and brand, or use temporary values.";
+        } else {
+          const res = await updateQuotationClientBrand({
+            quotationId,
+            client_id: cb.client_id,
+            brand_id: cb.brand_id,
+          });
+          if (!res.ok) firstError = res.message;
+        }
+        if (!firstError) {
+          const res = await updateQuotationHeader({
+            id: quotationId,
+            campaign_header_id: cb.campaign_header_id ?? null,
+          });
+          if (!res.ok) firstError = res.message;
+        }
+      }
+    }
+
     if (!firstError && pendingEntries.length > 0) {
       const totalsRes = await finalizeQuotationSave(quotationId);
       if (!totalsRes.ok) firstError = totalsRes.message;
@@ -236,8 +306,10 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
 
     linePendingRef.current.clear();
     metaPendingRef.current = null;
+    clientBrandPendingRef.current = null;
     setPendingLineIds(new Set());
     setHasMetaPending(false);
+    setHasClientBrandPending(false);
     setSaveStatus("saved");
     startTransition(() => {
       router.refresh();
@@ -295,9 +367,11 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     () => ({
       registerLinePending,
       registerMetaPending,
+      registerClientBrandPending,
       registerSaveFlush,
       isLinePending,
       hasUnsavedChanges,
+      hasClientBrandPending,
       saveStatus,
       savePending,
       saveAll,
@@ -305,9 +379,11 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     [
       registerLinePending,
       registerMetaPending,
+      registerClientBrandPending,
       registerSaveFlush,
       isLinePending,
       hasUnsavedChanges,
+      hasClientBrandPending,
       saveStatus,
       savePending,
       saveAll,

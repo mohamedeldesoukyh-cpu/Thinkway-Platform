@@ -1,6 +1,10 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
 import {
+  parseCreatorAvatarStoragePathFromUrl,
+  resolveCreatorAvatarPublicUrl,
+} from "@/lib/discovery-import/import-avatar-storage";
+import {
   isDisplayableAvatarUrl,
   isInstagramCdnUrlExpired,
 } from "@/lib/performance/avatar-sync-policy";
@@ -298,6 +302,25 @@ export function prepareCreatorAvatarUrlForDisplay(
   );
 }
 
+/** Rewrite signed/expired creator-avatars storage URLs to stable public paths. */
+export function normalizeThinkwayStoredAvatarUrl(
+  url: string | null | undefined
+): string | null {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+
+  const storagePath = parseCreatorAvatarStoragePathFromUrl(trimmed);
+  if (!storagePath) return trimmed;
+
+  const supabaseUrl =
+    typeof process !== "undefined"
+      ? process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+      : undefined;
+  if (!supabaseUrl) return trimmed;
+
+  return resolveCreatorAvatarPublicUrl(supabaseUrl, storagePath);
+}
+
 /**
  * Browser-safe avatar URL — proxies expiring/blocked Instagram/TikTok CDN links server-side.
  * Optional profile URL enables OpenGraph fallback when the CDN src is expired or blocked.
@@ -308,11 +331,21 @@ export function creatorAvatarBrowserDisplayUrl(
   /** Bust browser/proxy cache after avatar_last_synced_at changes. */
   cacheKey?: string | null
 ): string | null {
-  const trimmed = url?.trim();
+  const trimmed = normalizeThinkwayStoredAvatarUrl(url);
   const profile = profileUrl?.trim();
 
   if (!trimmed && !profile) return null;
   if (trimmed?.startsWith("/api/creators/")) return trimmed;
+
+  // Serve creator-avatars bucket via API so signed/expired public URLs still load.
+  if (trimmed && parseCreatorAvatarStoragePathFromUrl(trimmed)) {
+    const params = new URLSearchParams();
+    params.set("src", trimmed);
+    if (profile) params.set("profileUrl", profile);
+    const bust = cacheKey?.trim();
+    if (bust) params.set("v", bust);
+    return `/api/creators/avatar?${params.toString()}`;
+  }
 
   if (trimmed && !shouldProxyPublicationMediaUrl(trimmed)) {
     return trimmed;

@@ -11,6 +11,7 @@ export type CampaignFactsField =
   | "objective"
   | "budget"
   | "durationWeeks"
+  | "campaignStartDate"
   | "geography"
   | "audience"
   | "platforms"
@@ -28,6 +29,8 @@ export type CampaignFacts = {
   objective?: string;
   budget?: { amount: number; currency: string };
   durationWeeks?: number;
+  /** ISO calendar date (YYYY-MM-DD) for the first day of the campaign. */
+  campaignStartDate?: string;
   geography?: string[];
   audience?: string;
   platforms?: string[];

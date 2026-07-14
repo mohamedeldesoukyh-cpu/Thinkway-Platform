@@ -13,6 +13,8 @@ export const MEDIA_PLAN_BRAND = {
   white: "#FFFFFF",
   gradient: "linear-gradient(145deg, #0040CC 0%, #0057FF 35%, #1A6FFF 65%, #0048DD 100%)",
   gradientAccent: "linear-gradient(145deg, #0040CC, #0057FF, #1A6FFF, #0048DD)",
+  /** Campaign cost highlight — Thinkway primary */
+  campaignCost: "#1D9E75",
 } as const;
 
 /** Distinct ad-type markers — brand blues first, then studio accent complements. */

@@ -12,7 +12,12 @@ import {
   buildCampaignProposalModel,
   type ProposalVendor,
 } from "@/features/campaign-studio/export/campaign-proposal-document";
+import {
+  embedProposalClientLogo,
+  embedProposalExportAssets,
+} from "@/features/campaign-studio/export/campaign-proposal-export-embed";
 import { buildCampaignProposalPptxBuffer } from "@/features/campaign-studio/export/campaign-proposal-pptx";
+import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 
 const CAMPAIGN_FACTS: CampaignFacts = {
   clientName: "BabyJoy",
@@ -138,6 +143,57 @@ test("proposal HTML includes client, vendors, budget, and understanding fields",
   assert.match(html, /Executive Summary/);
   assert.match(html, /@media screen/);
   assert.match(html, /transform:scale\(calc\(100vw/);
+});
+
+test("buildCampaignProposalDocumentHtml embeds Thinkway logo data URIs for PDF export", () => {
+  const snapshot = buildStringifiedSnapshot();
+  const prepared = prepareCampaignObjectForExport(snapshot);
+  const logoSrcs = resolveThinkwayReportLogoSrcsForExport();
+  const html = buildCampaignProposalDocumentHtml(prepared, [], {}, { logoSrcs });
+
+  assert.ok(logoSrcs.logoDarkSrc?.startsWith("data:image/png;base64,"));
+  assert.ok(logoSrcs.logoLightSrc?.startsWith("data:image/png;base64,"));
+  assert.ok(html.includes(logoSrcs.logoDarkSrc!));
+  assert.ok(html.includes(logoSrcs.logoLightSrc!));
+  assert.ok(!html.includes('src="/tw-logo-dark.png"'));
+  assert.ok(!html.includes('src="/tw-logo-light.png"'));
+});
+
+test("buildCampaignProposalDocumentHtml inlines embedded client logo for PDF export", () => {
+  const snapshot = buildStringifiedSnapshot();
+  const prepared = prepareCampaignObjectForExport(snapshot);
+  const clientLogoDataUri =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const remoteLogo = "https://cdn.example/e-and-logo.png";
+  const html = buildCampaignProposalDocumentHtml(
+    prepared,
+    [],
+    { clientLogoUrl: clientLogoDataUri },
+    { logoSrcs: resolveThinkwayReportLogoSrcsForExport() }
+  );
+
+  assert.ok(html.includes('class="client-logo"'));
+  assert.ok(html.includes(clientLogoDataUri));
+  assert.ok(!html.includes(remoteLogo));
+});
+
+test("embedProposalClientLogo preserves existing data URIs", async () => {
+  const dataUri =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const embedded = await embedProposalClientLogo(dataUri);
+  assert.ok(embedded?.startsWith("data:image/"));
+});
+
+test("embedProposalExportAssets strips unfetchable remote avatar URLs for PDF", async () => {
+  const vendors: ProposalVendor[] = [
+    {
+      displayName: "Organic Mom",
+      avatarUrl: "https://cdn.example/avatar.jpg",
+      tier: "Macro",
+    },
+  ];
+  const embedded = await embedProposalExportAssets({ vendors });
+  assert.equal(embedded.vendors[0]?.avatarUrl, undefined);
 });
 
 test("proposal PPTX embeds creator avatars from data URI and initial fallback", async () => {

@@ -17,7 +17,7 @@ const inputSchema = z.object({
 });
 
 /**
- * Resolve Group / Brand / Agency for Media Plan preview at panel-open time.
+ * Resolve Group / Legal entity / Brand / Agency for Media Plan preview at panel-open time.
  * Reads the live quotation (with client/campaign group fallbacks) so chips render
  * without requiring a manual quotation re-sync.
  */

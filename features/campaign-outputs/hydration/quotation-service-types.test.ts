@@ -60,14 +60,17 @@ test("quotation item with four type lines expands to four media plan slots", () 
     .flatMap((week) => week.days)
     .filter((day) => day.creator?.includes("Coach Ghofran"));
 
-  assert.ok(coachDays.length >= 1);
-  assert.deepEqual(coachDays[0]!.serviceTypes, [
-    "1× TT Video",
-    "1× TikTok Story",
-    "1× Mirrored FB",
-    "1× Mirrored IG",
-  ]);
+  assert.ok(coachDays.length >= 4);
+  const scheduledTypes = coachDays.flatMap((day) => day.serviceTypes ?? []);
+  assert.deepEqual(
+    [...new Set(scheduledTypes)].sort(),
+    ["1× Mirrored FB", "1× Mirrored IG", "1× TT Video", "1× TikTok Story"].sort()
+  );
   assert.equal(data.postingSlotCount, 4);
+  assert.equal(
+    Object.values(data.platformAllocation).reduce((sum, count) => sum + count, 0),
+    4
+  );
 });
 
 test("quotation re-hydrate replaces stale slate with per-line ad types", () => {
@@ -155,12 +158,11 @@ test("types array expands when type_lines only has the total-cell primary type",
     .flatMap((week) => week.days)
     .filter((day) => day.creator?.includes("Coach Ghofran"));
 
-  assert.deepEqual(coachDays[0]!.serviceTypes, [
-    "1× TT Video",
-    "1× TikTok Story",
-    "1× Mirrored FB",
-    "1× Mirrored IG",
-  ]);
+  const scheduledTypes = coachDays.flatMap((day) => day.serviceTypes ?? []);
+  assert.deepEqual(
+    [...new Set(scheduledTypes)].sort(),
+    ["1× Mirrored FB", "1× Mirrored IG", "1× TT Video", "1× TikTok Story"].sort()
+  );
 });
 
 test("multiple quotation items for one creator merge all child ad types", () => {
@@ -308,12 +310,16 @@ test("quotation commercials meta supplies slate types when reasoning lacks them"
   assert.equal(slate[0]!.avatarUrl, "https://cdn.example/coach.jpg");
 
   const data = generateMediaPlan(stripped).data as MediaPlanData;
-  const coachDay = data.weeks
+  const coachDays = data.weeks
     .flatMap((week) => week.days)
-    .find((day) => day.handle === "@coach_ghofran" || day.creator?.includes("Coach"));
-  assert.ok(coachDay);
-  assert.deepEqual(coachDay!.serviceTypes, slate[0]!.serviceTypes);
-  assert.equal(coachDay!.avatarUrl, "https://cdn.example/coach.jpg");
+    .filter((day) => day.handle === "@coach_ghofran" || day.creator?.includes("Coach"));
+  assert.ok(coachDays.length >= 1);
+  const scheduledTypes = coachDays.flatMap((day) => day.serviceTypes ?? []);
+  assert.deepEqual(
+    [...new Set(scheduledTypes)].sort(),
+    slate[0]!.serviceTypes!.slice().sort()
+  );
+  assert.equal(coachDays[0]!.avatarUrl, "https://cdn.example/coach.jpg");
 });
 
 test("multiple pricing rows each contribute one ad type to the creator card", () => {

@@ -16,14 +16,21 @@ import {
   creatorProfileSourceFromUnified,
   type CreatorProfileSource,
 } from "@/lib/creators/creator-profile-source";
-import { mergeQuotationItemIntoProfileSource } from "@/lib/quotations/quotation-creator-source";
+import { loadCanonicalDnaByInfluencerIds } from "@/lib/creators/dna-browse-hydration";
+import {
+  extractDnaAvatarUrl,
+  isDurableStoredAvatarUrl,
+  readDnaAvatarEnvelopeValue,
+  resolveCreatorAvatarWithDnaFallback,
+} from "@/lib/creators/dna-avatar";
+import { normalizeThinkwayStoredAvatarUrl } from "@/lib/performance/creator-avatar";
+import type { CreatorDNADocument } from "@/features/creator-dna/types";
 import {
   resolveCreatorFromRefLookup,
   resolveUnifiedCreatorsByRefs,
 } from "@/lib/creators/unified-browse";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
-import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
 import {
   isDisplayableAvatarUrl,
   isUsableAvatarUrl,
@@ -31,39 +38,92 @@ import {
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import type { Database } from "@/types/database";
 
-function firstUsableAvatarUrl(
+function pickBestDisplayableAvatarUrl(
   ...candidates: Array<string | null | undefined>
 ): string | null {
   let best: string | null = null;
+  let bestUsable = false;
   let bestRank = -1;
+
   for (const candidate of candidates) {
     const trimmed = candidate?.trim();
-    if (!trimmed || !isUsableAvatarUrl(trimmed)) continue;
+    if (!trimmed || !isDisplayableAvatarUrl(trimmed)) continue;
+    const usable = isUsableAvatarUrl(trimmed);
     const rank = avatarStorageQualityRank(trimmed);
-    if (!best || rank > bestRank) {
+    if (
+      !best ||
+      (usable && !bestUsable) ||
+      (usable === bestUsable && rank > bestRank)
+    ) {
       best = trimmed;
+      bestUsable = usable;
       bestRank = rank;
     }
   }
-  if (best) return best;
 
-  for (const candidate of candidates) {
-    const trimmed = candidate?.trim();
-    if (trimmed && isDisplayableAvatarUrl(trimmed)) return trimmed;
-  }
-  return null;
+  return best;
 }
 
-function metadataAvatarUrl(
-  metadata: Record<string, unknown> | null | undefined
+function resolveDnaCanonicalAvatarUrl(
+  dnaDocument: CreatorDNADocument | undefined
 ): string | null {
-  if (typeof metadata?.avatar_url === "string" && metadata.avatar_url.trim()) {
-    return metadata.avatar_url.trim();
+  const raw = readDnaAvatarEnvelopeValue(dnaDocument);
+  if (!raw) return extractDnaAvatarUrl(dnaDocument);
+  const normalized = normalizeThinkwayStoredAvatarUrl(raw) ?? raw;
+  if (!isDisplayableAvatarUrl(normalized)) return extractDnaAvatarUrl(dnaDocument);
+  return normalized;
+}
+
+function resolveQuotationLineAvatarUrl(
+  creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>> | null,
+  candidates: Array<string | null | undefined>,
+  dnaDocument: CreatorDNADocument | undefined
+): string | null {
+  const dnaAvatar = resolveDnaCanonicalAvatarUrl(dnaDocument);
+
+  // Creator DNA is canonical for quotations — durable storage always wins.
+  if (dnaAvatar && (isUsableAvatarUrl(dnaAvatar) || isDurableStoredAvatarUrl(dnaAvatar))) {
+    return dnaAvatar;
   }
-  if (typeof metadata?.profile_image_url === "string" && metadata.profile_image_url.trim()) {
-    return metadata.profile_image_url.trim();
-  }
-  return null;
+
+  const enriched =
+    creator?.enrichment_status === "enriched" || creator?.enrichment_status === "partial";
+  const primary = pickBestDisplayableAvatarUrl(...candidates);
+
+  return (
+    resolveCreatorAvatarWithDnaFallback({
+      primaryAvatarUrl: primary,
+      dnaAvatarUrl: dnaAvatar,
+      preferEnrichedDna: Boolean(dnaAvatar) && (enriched || Boolean(primary && !isUsableAvatarUrl(primary))),
+    }) ?? dnaAvatar ?? null
+  );
+}
+
+function resolveDnaOnlyCreatorProfileSource(
+  item: QuotationItemRow,
+  dnaDocument: CreatorDNADocument | undefined
+): CreatorProfileSource | null {
+  const avatarUrl = resolveQuotationLineAvatarUrl(null, [item.profile_image_url], dnaDocument);
+  if (!avatarUrl) return null;
+
+  const profileUrl =
+    item.profile_url?.trim() ||
+    (item.platform
+      ? resolveCreatorProfileUrl({ platform: item.platform, handle: item.handle })
+      : null);
+
+  return {
+    displayName:
+      formatCreatorDisplayName(item.creator_name) ||
+      formatCreatorDisplayName(item.handle) ||
+      "Creator",
+    avatarUrl,
+    platform: item.platform,
+    handle: item.handle,
+    profile_url: profileUrl,
+    countryCode: normalizeCountryCode(item.country_code),
+    linkedPlatforms: item.platform ? [canonicalPlatformKey(item.platform)] : [],
+  };
 }
 
 function resolveMetricsPlatformAccount(
@@ -79,7 +139,8 @@ function resolveMetricsPlatformAccount(
 
 function resolveLineCreatorProfileSource(
   item: QuotationItemRow,
-  creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>
+  creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>,
+  dnaDocument: CreatorDNADocument | undefined
 ): CreatorProfileSource {
   const source = creatorProfileSourceFromUnified(creator);
   const linePlatform = item.platform ? canonicalPlatformKey(item.platform) : null;
@@ -108,51 +169,37 @@ function resolveLineCreatorProfileSource(
     source.profile_url ??
     null;
 
-  // Prefer still-usable URLs: skip expired Instagram CDN snapshots on the line
-  // when the linked influencer/platform account already has a fresh avatar.
-  const platformMetadata =
-    (platformAccount?.metadata as Record<string, unknown> | null | undefined) ?? null;
-  const browseAvatar = resolveBrowseCreatorProfileImageUrl({
-    platform: platformAccount?.platform ?? item.platform,
-    platformPictureUrl: platformAccount?.profile_picture_url,
-    platformAvatarUrl: metadataAvatarUrl(platformMetadata),
-    discoveryProfileImageUrl: creator.profile_image_url,
-    influencerAvatarUrl: creator.primaryAvatarUrl ?? source.avatarUrl,
-  });
+  const dnaAvatar = resolveDnaCanonicalAvatarUrl(dnaDocument);
   const avatarUrl =
-    firstUsableAvatarUrl(
-      source.avatarUrl,
-      creator.primaryAvatarUrl,
-      creator.profile_image_url,
-      ...creator.platforms.map((account) => account.profile_picture_url),
-      platformAccount?.profile_picture_url,
-      browseAvatar,
-      item.profile_image_url
-    ) ?? null;
+    normalizeThinkwayStoredAvatarUrl(
+      resolveCreatorAvatarWithDnaFallback({
+        primaryAvatarUrl: source.avatarUrl,
+        dnaAvatarUrl: dnaAvatar,
+        preferEnrichedDna: Boolean(dnaAvatar),
+      }) ?? source.avatarUrl
+    ) ?? source.avatarUrl;
+  const normalizedAvatarUrl = avatarUrl;
 
   const linkedPlatforms = source.linkedPlatforms ?? [];
   const platform =
     linePlatform ??
     (linkedPlatforms.length === 1 ? linkedPlatforms[0]! : null);
 
-  return mergeQuotationItemIntoProfileSource(
-    {
-      ...source,
-      displayName:
-        source.displayName ||
-        formatCreatorDisplayName(item.creator_name) ||
-        formatCreatorDisplayName(item.handle) ||
-        "Creator",
-      avatarUrl,
-      profile_url: profileUrl,
-      platform,
-      linkedPlatforms,
-      handle: platformAccount?.handle ?? item.handle ?? source.handle,
-      countryCode: source.countryCode ?? normalizeCountryCode(item.country_code) ?? null,
-      isVerified: source.isVerified,
-    },
-    item
-  );
+  return {
+    ...source,
+    displayName:
+      source.displayName ||
+      formatCreatorDisplayName(item.creator_name) ||
+      formatCreatorDisplayName(item.handle) ||
+      "Creator",
+    avatarUrl: normalizedAvatarUrl,
+    profile_url: profileUrl,
+    platform,
+    linkedPlatforms,
+    handle: platformAccount?.handle ?? item.handle ?? source.handle,
+    countryCode: source.countryCode ?? normalizeCountryCode(item.country_code) ?? null,
+    isVerified: source.isVerified,
+  };
 }
 
 function resolveLinePlatformAccount(
@@ -213,7 +260,8 @@ function resolveLineCreatorCategories(
 
 function resolveLineAvatarFields(
   item: QuotationItemRow,
-  creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>
+  creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>,
+  dnaDocument: CreatorDNADocument | undefined
 ): {
   profile_image_url: string | null;
   profile_url: string | null;
@@ -223,7 +271,7 @@ function resolveLineAvatarFields(
   creator_profile_source: CreatorProfileSource;
   creator_categories: string[];
 } {
-  const creatorProfileSource = resolveLineCreatorProfileSource(item, creator);
+  const creatorProfileSource = resolveLineCreatorProfileSource(item, creator, dnaDocument);
   const resolvedPlatform =
     item.platform?.trim() ||
     creatorProfileSource.platform?.trim() ||
@@ -231,12 +279,20 @@ function resolveLineAvatarFields(
       ? creatorProfileSource.linkedPlatforms[0]!
       : null);
   return {
-    profile_image_url: creatorProfileSource.avatarUrl ?? null,
+    profile_image_url: normalizeThinkwayStoredAvatarUrl(creatorProfileSource.avatarUrl) ??
+      creatorProfileSource.avatarUrl ??
+      null,
     profile_url: creatorProfileSource.profile_url ?? null,
     platform: resolvedPlatform,
     followers: resolveLineFollowers(item, creator),
     engagement_rate: resolveLineEngagementRate(item, creator),
-    creator_profile_source: creatorProfileSource,
+    creator_profile_source: {
+      ...creatorProfileSource,
+      avatarUrl:
+        normalizeThinkwayStoredAvatarUrl(creatorProfileSource.avatarUrl) ??
+        creatorProfileSource.avatarUrl ??
+        null,
+    },
     creator_categories: resolveLineCreatorCategories(item, creator),
   };
 }
@@ -323,13 +379,37 @@ export async function enrichQuotationItemsWithCreatorAvatars(
     discoveredProfileIds: items.map((item) => item.profile_id),
   });
 
+  const influencerIdsForDna = [
+    ...new Set([
+      ...influencerIdsByHandle.values(),
+      ...items
+        .map((item) => item.influencer_id)
+        .filter((id): id is string => Boolean(id)),
+      ...[...lookup.byInfluencerId.keys()],
+    ]),
+  ];
+
+  const dnaByInfluencer = await loadCanonicalDnaByInfluencerIds(supabase, influencerIdsForDna);
+
   const enriched = items.map((item) => {
     const creator = resolveCreatorForQuotationItem(lookup, item, influencerIdsByHandle);
+    const handle = item.handle?.trim().replace(/^@+/, "").toLowerCase() ?? "";
+    const influencerId =
+      creator?.influencer_id ??
+      item.influencer_id ??
+      (handle ? influencerIdsByHandle.get(handle) : null) ??
+      null;
+    const dnaDocument = influencerId ? dnaByInfluencer.get(influencerId) : undefined;
+
     if (!creator) {
+      const dnaProfileSource = resolveDnaOnlyCreatorProfileSource(item, dnaDocument);
       return {
         ...item,
-        ...fallbackAvatarFields(item),
-        creator_profile_source: null,
+        profile_image_url: dnaProfileSource?.avatarUrl ?? item.profile_image_url ?? null,
+        profile_url:
+          dnaProfileSource?.profile_url ??
+          fallbackAvatarFields(item).profile_url,
+        creator_profile_source: dnaProfileSource,
         creator_categories: resolveQuotationCreatorDisplayCategories({
           itemCategories: item.creator_categories,
           creatorName: item.creator_name,
@@ -341,11 +421,11 @@ export async function enrichQuotationItemsWithCreatorAvatars(
       };
     }
 
-    const enrichedFields = resolveLineAvatarFields(item, creator);
+    const enrichedFields = resolveLineAvatarFields(item, creator, dnaDocument);
     return { ...item, ...enrichedFields };
   });
 
-  await persistQuotationItemAvatars(supabase, enriched, items);
+  void persistQuotationItemAvatars(supabase, enriched, items);
   return enriched;
 }
 
@@ -360,7 +440,8 @@ async function persistQuotationItemAvatars(
     enriched.map(async (item) => {
       const prev = originalById.get(item.id);
       if (!prev) return;
-      const imageChanged = item.profile_image_url && item.profile_image_url !== prev.profile_image_url;
+      const imageChanged =
+        (item.profile_image_url ?? null) !== (prev.profile_image_url ?? null);
       const urlChanged = item.profile_url && item.profile_url !== prev.profile_url;
       const followersChanged =
         isPositiveNumericMetric(item.followers) && item.followers !== prev.followers;

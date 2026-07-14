@@ -366,12 +366,49 @@ export function IntelligenceWorkspace({
         });
         loadedConversationRef.current = result.conversationId;
         if (result.workflowMetadata?.workflowId === "create-campaign") {
-          logMessageStateEvent("handleSend create-campaign reload path", {
-            conversationId: result.conversationId,
-          });
-          setAwaitingStudioDesktop(true);
-          loadedConversationRef.current = null;
-          await loadConversation(result.conversationId, true);
+          const isCopilotTurn =
+            result.assistantMessage.metadata?.agentId === "campaign-copilot" ||
+            (result.workflowMetadata.totalSteps ?? 0) === 0;
+          if (!isCopilotTurn) {
+            logMessageStateEvent("handleSend create-campaign reload path", {
+              conversationId: result.conversationId,
+            });
+            setAwaitingStudioDesktop(true);
+            loadedConversationRef.current = null;
+            await loadConversation(result.conversationId, true);
+          } else if (effectiveSkipOptimistic) {
+            setMessages(
+              (prev) => {
+                const withoutTransient = prev.filter(
+                  (m) => !m.id.startsWith("optimistic_") && !m.id.startsWith("partial_")
+                );
+                const userMessageId = result.userMessage.id;
+                const existingUserIndex = withoutTransient.findIndex((m) => m.id === userMessageId);
+                const base =
+                  existingUserIndex >= 0
+                    ? withoutTransient.slice(0, existingUserIndex + 1).map((m) =>
+                        m.id === userMessageId ? { ...m, content: result.userMessage.content } : m
+                      )
+                    : [...withoutTransient, result.userMessage];
+                return [...base, result.assistantMessage];
+              },
+              "handleSend:mergeRerunResult"
+            );
+          } else {
+            setMessages(
+              (prev) => {
+                const withoutOptimistic = prev.filter(
+                  (m) => !m.id.startsWith("optimistic_")
+                );
+                return [
+                  ...withoutOptimistic,
+                  result.userMessage,
+                  result.assistantMessage,
+                ];
+              },
+              "handleSend:mergeCopilotResult"
+            );
+          }
         } else if (effectiveSkipOptimistic) {
           setMessages(
             (prev) => {

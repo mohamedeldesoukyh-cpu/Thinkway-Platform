@@ -54,12 +54,10 @@ export function CampaignHistoryPanel({
   }, [campaignObjectId]);
 
   const toggle = useCallback(() => {
-    setOpen((wasOpen) => {
-      // Lazy-load the version list the first time the panel opens.
-      if (!wasOpen && versions === null && !loading) void load();
-      return !wasOpen;
-    });
-  }, [versions, loading, load]);
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen && versions === null && !loading) void load();
+  }, [open, versions, loading, load]);
 
   const recentChanges = [...changeLog].reverse().slice(0, 8);
 

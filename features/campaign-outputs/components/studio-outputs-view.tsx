@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 
 import { listCampaignOutputs, getOutputContentForDisplay } from "../output-registry";
-import { resolveInputValue } from "../output-inputs";
+import { CampaignInputCache } from "../output-fingerprint";
 import { reviewCampaign } from "../director/director-engine";
 import { outputActionCommand } from "../integration/output-commands";
 import type { CampaignOutputKind } from "../output-types";
@@ -33,22 +33,25 @@ export type StudioOutputsViewProps = {
 function buildDisplayContentKey(campaignObject: CampaignObject): string {
   const outputsState = campaignObject.meta.campaignOutputs ?? {};
   const commercials = campaignObject.meta.quotationCommercials;
+  const inputCache = new CampaignInputCache(campaignObject);
   const commercialsKey = commercials
     ? [
         commercials.syncedAt,
         commercials.creators.length,
+        commercials.clientName ?? "",
         commercials.brandName ?? "",
         commercials.groupName ?? "",
         commercials.agencyOrDirect ?? "",
         commercials.agencyName ?? "",
       ].join(":")
     : "";
-  const creatorsKey = JSON.stringify(resolveInputValue(campaignObject, "creators"));
+  const creatorsKey = inputCache.inputFingerprint("creators");
+  const budgetKey = inputCache.inputFingerprint("budget");
   const outputKeys = Object.entries(outputsState)
     .map(([kind, record]) => `${kind}:${record?.version ?? 0}:${record?.status ?? "none"}`)
     .sort()
     .join("|");
-  return `${campaignObject.updatedAt}:${commercialsKey}:${creatorsKey}:${outputKeys}`;
+  return `${campaignObject.updatedAt}:${commercialsKey}:${creatorsKey}:${budgetKey}:${outputKeys}`;
 }
 
 /**
@@ -143,6 +146,7 @@ export function StudioOutputsView({
   return (
     <OutputsCenter
       className="h-full min-h-0"
+      campaignObject={campaignObject}
       outputs={outputs}
       generatingKind={generatingKind}
       getContent={getContent}

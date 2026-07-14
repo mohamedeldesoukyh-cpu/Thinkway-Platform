@@ -15,7 +15,10 @@ import {
   getReportPlatformIconDataUri,
   getReportPlatformIconTitle,
 } from "@/lib/performance/report/report-platform-icons";
-import { renderThinkwayReportLogoHtml } from "@/lib/reports/document/thinkway-report-logo";
+import {
+  renderThinkwayReportLogoHtml,
+  type ThinkwayReportLogoSrcs,
+} from "@/lib/reports/document/thinkway-report-logo";
 import { THINKWAY_REPORT_STYLES } from "@/lib/reports/document/thinkway-report-styles";
 import type {
   QuotationDocCreatorGroup,
@@ -31,6 +34,7 @@ import {
 
 export type BuildQuotationHtmlOptions = {
   siteOrigin?: string;
+  logoSrcs?: ThinkwayReportLogoSrcs;
 };
 
 const TIER_BADGE_STYLE: Record<CreatorTierLabel, string> = {
@@ -1006,7 +1010,7 @@ function formatShowcaseQuotationTitle(name: string): string {
   return `${prefix}${name}`;
 }
 
-function renderCoverPage(doc: QuotationDocument): string {
+function renderCoverPage(doc: QuotationDocument, logoSrcs?: ThinkwayReportLogoSrcs): string {
   const statusClass = doc.isExpired ? "status-badge--expired" : "status-badge--active";
   const campaignDisplay =
     doc.campaignName === "—" ? doc.name : doc.campaignName;
@@ -1033,7 +1037,7 @@ function renderCoverPage(doc: QuotationDocument): string {
   return `<section class="cover-page">
     <div class="cover-overlay">
       <div>
-        ${renderThinkwayReportLogoHtml({ variant: "cover", theme: "dark" })}
+        ${renderThinkwayReportLogoHtml({ variant: "cover", theme: "dark", ...logoSrcs })}
         <div class="cover-kicker">Client Quotation${templateKicker}</div>
         <div class="cover-accent"></div>
         <h1 class="cover-title">${esc(coverTitle)}</h1>
@@ -1348,7 +1352,7 @@ ${baseTag}
 </head>
 <body class="quotation-report quotation-showcase">
   <div class="page">
-    ${renderCoverPage(doc)}
+    ${renderCoverPage(doc, options?.logoSrcs)}
     <div class="report-body">
       ${categorySummarySection}
       ${renderShowcaseCreatorPages(doc, siteOrigin)}
@@ -1428,7 +1432,7 @@ ${baseTag}
 </head>
 <body class="quotation-report">
   <div class="page">
-    ${renderCoverPage(doc)}
+    ${renderCoverPage(doc, options?.logoSrcs)}
     <div class="report-body">
       ${categorySummarySection}
       ${commercialSection}

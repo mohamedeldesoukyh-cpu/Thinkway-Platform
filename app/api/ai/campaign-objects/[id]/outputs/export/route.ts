@@ -5,8 +5,12 @@ import {
   prepareCampaignObjectForExport,
 } from "@/features/campaign-intelligence/services/campaign-export";
 import { enrichCampaignObjectQuotationContext } from "@/features/campaign-outputs/hydration/enrich-quotation-commercials-context";
+import { embedMediaPlanContentAvatars } from "@/features/campaign-outputs/export/media-plan-export-avatars";
 import { buildMediaPlanExcel } from "@/features/campaign-outputs/export/media-plan-excel";
 import { buildMediaPlanHtml } from "@/features/campaign-outputs/export/media-plan-html";
+import { resolveMediaPlanCampaignContext } from "@/features/campaign-outputs/generators/media-plan";
+import { MEDIA_PLAN_PDF_OPTIONS } from "@/features/campaign-outputs/export/media-plan-pdf";
+import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { mediaPlanExportBaseName } from "@/features/campaign-outputs/export/media-plan-export-utils";
 import {
   generateCampaignOutput,
@@ -19,7 +23,6 @@ import {
   createPdfFromHtmlResponse,
   createXlsxDocumentResponse,
 } from "@/lib/reports/document/report-document-response";
-import { PERFORMANCE_REPORT_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -113,10 +116,20 @@ export async function GET(request: Request, context: RouteContext) {
       return createXlsxDocumentResponse(buffer, baseName, download);
     }
 
-    const html = buildMediaPlanHtml(content);
+    let exportContent = content;
+    if (format === "pdf") {
+      exportContent = await embedMediaPlanContentAvatars(content);
+    }
+
+    const logoSrcs = format === "pdf" ? resolveThinkwayReportLogoSrcsForExport() : undefined;
+    const contextOverride = resolveMediaPlanCampaignContext(campaignObject);
+    const html = buildMediaPlanHtml(exportContent, {
+      logoSrcs,
+      contextOverride,
+    });
 
     if (format === "pdf") {
-      return createPdfFromHtmlResponse(html, baseName, download, PERFORMANCE_REPORT_PDF_OPTIONS);
+      return createPdfFromHtmlResponse(html, baseName, download, MEDIA_PLAN_PDF_OPTIONS);
     }
 
     return createHtmlDocumentResponse(html, baseName, download);

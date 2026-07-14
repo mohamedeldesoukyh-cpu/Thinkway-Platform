@@ -41,7 +41,7 @@ test("resolveCreatorAvatarWithDnaFallback prefers enriched DNA over flaky TikTok
 
 test("resolveCreatorAvatarWithDnaFallback keeps usable IG primary over expired DNA CDN", () => {
   const fresh =
-    "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=6A539B1C";
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/fresh.jpg";
   const expired =
     "https://scontent.cdninstagram.com/v/t51.2885-19/stale.jpg?oe=68500000";
   assert.equal(
@@ -54,15 +54,17 @@ test("resolveCreatorAvatarWithDnaFallback keeps usable IG primary over expired D
   );
 });
 
-test("resolveCreatorAvatarWithDnaFallback prefers durable DNA storage over flaky IG CDN", () => {
+test("resolveCreatorAvatarWithDnaFallback prefers displayable DNA over expired social CDN", () => {
+  const expired =
+    "https://scontent.cdninstagram.com/v/t51.2885-19/stale.jpg?oe=68500000";
+  const dna =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/stable.jpg";
   assert.equal(
     resolveCreatorAvatarWithDnaFallback({
-      primaryAvatarUrl:
-        "https://scontent.cdninstagram.com/v/t51.2885-19/live.jpg?oe=6A539B1C",
-      dnaAvatarUrl:
-        "https://example.supabase.co/storage/v1/object/public/creator-avatars/stable.jpg",
-      preferEnrichedDna: true,
+      primaryAvatarUrl: expired,
+      dnaAvatarUrl: dna,
+      preferEnrichedDna: false,
     }),
-    "https://example.supabase.co/storage/v1/object/public/creator-avatars/stable.jpg"
+    dna
   );
 });

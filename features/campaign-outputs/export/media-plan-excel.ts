@@ -9,6 +9,8 @@ import {
 
 import type { CampaignOutputContent } from "../output-types";
 import type { MediaPlanData } from "../generators/media-plan";
+import { formatMoney } from "../generators/generator-utils";
+import { MEDIA_PLAN_COST_VAT_DISCLAIMER } from "../generators/media-plan";
 import { isMediaPlanContent } from "./media-plan-export-utils";
 
 const DAY_HEADERS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -68,6 +70,12 @@ export async function buildMediaPlanExcel(content: CampaignOutputContent): Promi
   if (ctx?.groupName) meta.push({ label: "Group", value: ctx.groupName });
   if (ctx?.brandName) meta.push({ label: "Brand", value: ctx.brandName });
   if (ctx?.agencyName) meta.push({ label: "Agency", value: ctx.agencyName });
+  if (ctx?.campaignCost) {
+    meta.push({
+      label: "Campaign cost",
+      value: `${formatMoney(ctx.campaignCost.amount, ctx.campaignCost.currency)} (${MEDIA_PLAN_COST_VAT_DISCLAIMER})`,
+    });
+  }
 
   const calendarSheet: StyledSheetConfig = {
     name: "Calendar",

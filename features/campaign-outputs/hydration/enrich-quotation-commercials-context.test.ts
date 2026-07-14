@@ -41,17 +41,19 @@ function dolphinTunaQuotationFixture(): QuotationDetail {
 test("seedFromQuotation maps group and agency for temporary Dolphin Tuna brand", () => {
   const seed = seedFromQuotation(dolphinTunaQuotationFixture());
   assert.equal(seed.brand, "Dolphin Tuna");
+  assert.equal(seed.client, "Dolphin Foods LLC");
   assert.equal(seed.group, "Food Group");
   assert.equal(seed.agencyOrDirect, "agency");
   assert.equal(seed.agencyName, "Media Agency Egypt");
 });
 
-test("hydrateCampaignObject persists group and agency on quotationCommercials meta", () => {
+test("hydrateCampaignObject persists client, group and agency on quotationCommercials meta", () => {
   const seed = seedFromQuotation(dolphinTunaQuotationFixture());
   const { campaignObject } = hydrateCampaignObject(seed, undefined, {
     quotationId: "q-dolphin",
   });
 
+  assert.equal(campaignObject.meta.quotationCommercials?.clientName, "Dolphin Foods LLC");
   assert.equal(campaignObject.meta.quotationCommercials?.brandName, "Dolphin Tuna");
   assert.equal(campaignObject.meta.quotationCommercials?.groupName, "Food Group");
   assert.equal(campaignObject.meta.quotationCommercials?.agencyOrDirect, "agency");

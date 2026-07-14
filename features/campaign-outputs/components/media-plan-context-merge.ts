@@ -7,10 +7,20 @@ export function mergeMediaPlanContext(
 ): MediaPlanCampaignContext | undefined {
   if (!cached && !override) return undefined;
   const merged: MediaPlanCampaignContext = {
+    clientName: override?.clientName?.trim() || cached?.clientName,
     brandName: override?.brandName?.trim() || cached?.brandName,
     groupName: override?.groupName?.trim() || cached?.groupName,
     agencyName: override?.agencyName?.trim() || cached?.agencyName,
+    campaignCost: override?.campaignCost ?? cached?.campaignCost,
   };
-  if (!merged.brandName && !merged.groupName && !merged.agencyName) return undefined;
+  if (
+    !merged.clientName &&
+    !merged.brandName &&
+    !merged.groupName &&
+    !merged.agencyName &&
+    !merged.campaignCost
+  ) {
+    return undefined;
+  }
   return merged;
 }

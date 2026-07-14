@@ -15,6 +15,7 @@ import {
 import {
   renderThinkwayReportLogoHtml,
   THINKWAY_REPORT_LOGO_STYLES,
+  type ThinkwayReportLogoSrcs,
 } from "@/lib/reports/document/thinkway-report-logo";
 import { SLIDE_DECK_PAGE } from "@/lib/io/slide-deck-page";
 
@@ -54,6 +55,11 @@ export type ProposalVendor = {
 export type ProposalBranding = {
   /** Client logo URL from the client master — monogram fallback when absent. */
   clientLogoUrl?: string;
+};
+
+export type BuildCampaignProposalDocumentOptions = {
+  /** Data-URI logo srcs for Puppeteer-safe PDF export. */
+  logoSrcs?: ThinkwayReportLogoSrcs;
 };
 
 /**
@@ -480,8 +486,17 @@ function ampIconSvg(emoji: string): string {
   return deckIcon(map[emoji] ?? ICONS.check, 13);
 }
 
-function deckBrandHeader(sectionNumber: number, client: string): string {
-  const logo = renderThinkwayReportLogoHtml({ variant: "header", theme: "light", showText: false });
+function deckBrandHeader(
+  sectionNumber: number,
+  client: string,
+  logoSrcs?: ThinkwayReportLogoSrcs
+): string {
+  const logo = renderThinkwayReportLogoHtml({
+    variant: "header",
+    theme: "light",
+    showText: false,
+    ...logoSrcs,
+  });
   return `
     <div class="pg-head">
       <div class="brand">${logo}<span class="tag">Thinkway · Campaign Intelligence</span></div>
@@ -535,8 +550,10 @@ export function buildProposalCloseHeadline(model: CampaignProposalModel): string
 export function buildCampaignProposalDocumentHtml(
   campaignObject: CampaignObject,
   hydratedVendors: ProposalVendor[] = [],
-  branding: ProposalBranding = {}
+  branding: ProposalBranding = {},
+  options: BuildCampaignProposalDocumentOptions = {}
 ): string {
+  const { logoSrcs } = options;
   const model = buildCampaignProposalModel(campaignObject, hydratedVendors, branding);
   const facts = getCampaignFacts(campaignObject);
   const {
@@ -563,7 +580,7 @@ export function buildCampaignProposalDocumentHtml(
   <div class="page cover">
     <div class="cover-inner">
       <div class="cover-top">
-        ${renderThinkwayReportLogoHtml({ variant: "cover", theme: "dark" })}
+        ${renderThinkwayReportLogoHtml({ variant: "cover", theme: "dark", ...logoSrcs })}
         <div class="cover-top-right">${clientMark}<div class="cover-tag">Campaign Intelligence Proposal</div></div>
       </div>
       <div class="cover-client" style="font-size:${clientNameSize}px;">${escapeHtml(client)}</div>
@@ -602,7 +619,7 @@ export function buildCampaignProposalDocumentHtml(
         : "Campaign Understanding";
     pages.push(`
   <div class="page">
-    ${deckBrandHeader(sectionNumber, client)}
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
     ${deckEyebrow(deckIcon(ICONS.grid), DECK.blue, "rgba(0,87,255,.1)", title)}
     ${pageIndex === 0 && statBoxes ? `<div class="stat-grid">${statBoxes}</div>` : ""}
     <div class="detail-grid">${detailItems}</div>
@@ -631,7 +648,7 @@ export function buildCampaignProposalDocumentHtml(
       : "";
   pages.push(`
   <div class="page">
-    ${deckBrandHeader(sectionNumber, client)}
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
     ${deckEyebrow(deckIcon(ICONS.star), DECK.pink, "rgba(214,51,108,.1)", "Executive Summary")}
     <p class="summary-text">${escapeHtml(model.executiveSummary)}</p>
     ${checkItems ? `<div class="check-grid">${checkItems}</div>` : strategyPara}
@@ -650,7 +667,7 @@ export function buildCampaignProposalDocumentHtml(
       .join("");
     pages.push(`
   <div class="page">
-    ${deckBrandHeader(sectionNumber, client)}
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
     ${deckEyebrow(deckIcon(ICONS.zap), DECK.green, "rgba(12,157,87,.1)", "Activation Plan — Momentum Waves")}
     <p class="sec-sub">Staggered creator waves keep the campaign trending instead of peaking on day one.</p>
     <div class="timeline">${timelineItems}</div>
@@ -685,7 +702,7 @@ export function buildCampaignProposalDocumentHtml(
           : "Recommended Creators & Content Concepts";
       pages.push(`
   <div class="page">
-    ${deckBrandHeader(sectionNumber, client)}
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
     ${deckEyebrow(deckIcon(ICONS.users), DECK.blue, "rgba(0,87,255,.1)", title)}
     <table class="ctable">
       <thead><tr><th>Creator</th><th>Tier</th><th>Platform</th><th>Followers</th><th>ER</th><th>Content concept</th></tr></thead>
@@ -728,7 +745,7 @@ export function buildCampaignProposalDocumentHtml(
     .join("");
   pages.push(`
   <div class="page">
-    ${deckBrandHeader(sectionNumber, client)}
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
     ${deckEyebrow(deckIcon(ICONS.coin), DECK.amber, "rgba(217,119,6,.12)", "Budget & Amplification")}
     ${budgetHero}
     <div class="amp-grid">${ampItems}</div>
@@ -747,7 +764,7 @@ export function buildCampaignProposalDocumentHtml(
       .join("");
     pages.push(`
   <div class="page">
-    ${deckBrandHeader(sectionNumber, client)}
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
     ${deckEyebrow(deckIcon(ICONS.chart), DECK.green, "rgba(12,157,87,.1)", "Success Metrics")}
     <table class="mtable">
       <thead><tr><th>Metric</th><th>Target</th><th>Basis</th></tr></thead>
@@ -761,7 +778,7 @@ export function buildCampaignProposalDocumentHtml(
   const closeHeadline = buildProposalCloseHeadline(model);
   pages.push(`
   <div class="page close">
-    ${renderThinkwayReportLogoHtml({ variant: "closing", theme: "dark" })}
+    ${renderThinkwayReportLogoHtml({ variant: "closing", theme: "dark", ...logoSrcs })}
     <h2>${escapeHtml(closeHeadline)}</h2>
     <p>Prepared by the Thinkway Campaign Intelligence team · ${escapeHtml(generated)}</p>
     <div class="contact">${escapeHtml(CONTACT_LINE)}</div>

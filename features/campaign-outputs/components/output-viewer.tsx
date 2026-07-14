@@ -5,6 +5,7 @@ import { MEDIA_PLAN_BRAND } from "./media-plan-brand";
 import { mergeMediaPlanContext } from "./media-plan-context-merge";
 import {
   MEDIA_PLAN_DEADLINES_HEADING,
+  MediaPlanCampaignCostBadge,
   MediaPlanContextStrip,
   MediaPlanDeadlinesTable,
   shouldSkipMediaPlanSection,
@@ -86,15 +87,20 @@ export function OutputViewer({
 
   return (
     <article className="space-y-5">
-      <header className="space-y-1">
-        <h2 className="text-lg font-extrabold tracking-tight" style={{ color: MEDIA_PLAN_BRAND.deepNavy }}>
-          {content.title}
-        </h2>
-        {content.summary ? (
-          <p className="text-[13px]" style={{ color: MEDIA_PLAN_BRAND.muted }}>
-            {content.summary}
-          </p>
-        ) : null}
+      <header className="space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 space-y-1">
+            <h2 className="text-lg font-extrabold tracking-tight" style={{ color: MEDIA_PLAN_BRAND.deepNavy }}>
+              {content.title}
+            </h2>
+            {content.summary ? (
+              <p className="text-[13px]" style={{ color: MEDIA_PLAN_BRAND.muted }}>
+                {content.summary}
+              </p>
+            ) : null}
+          </div>
+          {mediaPlan ? <MediaPlanCampaignCostBadge cost={mediaPlanContext?.campaignCost} /> : null}
+        </div>
         {mediaPlan ? <MediaPlanContextStrip context={mediaPlanContext} /> : null}
       </header>
 

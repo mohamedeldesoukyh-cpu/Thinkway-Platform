@@ -15,6 +15,7 @@ import {
   resolveCreatorIds,
   type ProposalVendor,
 } from "@/features/campaign-studio/export/campaign-proposal-document";
+import { embedProposalExportAssets } from "@/features/campaign-studio/export/campaign-proposal-export-embed";
 import { buildCampaignProposalPptxBuffer } from "@/features/campaign-studio/export/campaign-proposal-pptx";
 import {
   buildCreatorContentIdea,
@@ -29,6 +30,7 @@ import {
   renderHtmlToPdf,
   SLIDE_DECK_PDF_OPTIONS,
 } from "@/lib/io/vendor-io-pdf";
+import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Chromium PDF rendering of a full proposal can exceed the default limit. */
@@ -203,9 +205,23 @@ export async function GET(request: Request, context: RouteContext) {
         });
       }
 
-      const html = buildCampaignProposalDocumentHtml(campaignObject, vendors, {
-        clientLogoUrl,
-      });
+      let html: string;
+      if (format === "pdf") {
+        const [embeddedAssets, logoSrcs] = await Promise.all([
+          embedProposalExportAssets({ vendors, clientLogoUrl }),
+          Promise.resolve(resolveThinkwayReportLogoSrcsForExport()),
+        ]);
+        html = buildCampaignProposalDocumentHtml(
+          campaignObject,
+          embeddedAssets.vendors,
+          { clientLogoUrl: embeddedAssets.clientLogoUrl },
+          { logoSrcs }
+        );
+      } else {
+        html = buildCampaignProposalDocumentHtml(campaignObject, vendors, {
+          clientLogoUrl,
+        });
+      }
 
       if (format === "pdf") {
         // Proposal pages are fixed 1280×720 slides — honor the document @page size.

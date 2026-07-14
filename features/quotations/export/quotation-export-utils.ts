@@ -11,6 +11,7 @@ import { parseProfileInput } from "@/lib/social/parse-profile-url";
 import { isSocialPlatform } from "@/lib/social/platforms";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
+import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 import {
   deliverableTypeValues,
   platformsFromSelectedPostTypes,
@@ -410,7 +411,11 @@ export function resolveExportCreatorProfile(item: QuotationExportItem) {
     creator: source.displayName,
     handle: formatCreatorHandle(source.handle ?? item.handle),
     profileUrl,
-    avatarUrl: source.avatarUrl?.trim() || item.profile_image_url?.trim() || null,
+    avatarUrl:
+      source.avatarUrl?.trim() ||
+      (item.profile_image_url?.trim() && isUsableAvatarUrl(item.profile_image_url)
+        ? item.profile_image_url.trim()
+        : null),
     platform: source.platform ?? item.platform ?? null,
     linkedPlatforms: source.linkedPlatforms ?? [],
   };

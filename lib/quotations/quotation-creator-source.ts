@@ -4,7 +4,15 @@ import {
 } from "@/lib/creators/creator-profile-source";
 import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
-import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
+import {
+  creatorAvatarBrowserDisplayUrl,
+  normalizeThinkwayStoredAvatarUrl,
+} from "@/lib/performance/creator-avatar";
+import {
+  isUsableAvatarUrl,
+  isDisplayableAvatarUrl,
+} from "@/lib/performance/avatar-sync-policy";
+import { isDurableStoredAvatarUrl } from "@/lib/creators/dna-avatar";
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
@@ -19,6 +27,44 @@ function resolveItemProfileUrl(item: QuotationItemRow): string | null {
 
 function resolveItemCountryCode(item: QuotationItemRow): string | null {
   return normalizeCountryCode(item.country_code);
+}
+
+/** Keep any displayable avatar — matches shortlist / unified browse display rules. */
+function normalizeQuotationAvatarCandidate(
+  url: string | null | undefined
+): string | null {
+  const normalized = normalizeThinkwayStoredAvatarUrl(url);
+  if (!normalized || !isDisplayableAvatarUrl(normalized)) return null;
+  return normalized;
+}
+
+/** Resolve avatar from server-enriched fields first (same priority as shortlist list previews). */
+function resolveQuotationAvatarFromItem(item: QuotationItemRow): string | null {
+  return (
+    normalizeQuotationAvatarCandidate(item.creator_profile_source?.avatarUrl) ??
+    normalizeQuotationAvatarCandidate(item.profile_image_url) ??
+    null
+  );
+}
+
+function resolveQuotationDisplayAvatarUrl(
+  source: CreatorProfileSource,
+  item: QuotationItemRow
+): string | null {
+  const fromSource = normalizeQuotationAvatarCandidate(source.avatarUrl);
+  if (fromSource) return fromSource;
+
+  const fromEnriched = normalizeQuotationAvatarCandidate(item.creator_profile_source?.avatarUrl);
+  if (fromEnriched) return fromEnriched;
+
+  return quotationItemSnapshotAvatar(item);
+}
+
+function quotationItemSnapshotAvatar(item: QuotationItemRow): string | null {
+  const url = normalizeThinkwayStoredAvatarUrl(item.profile_image_url);
+  if (!url) return null;
+  if (isDurableStoredAvatarUrl(url) || isUsableAvatarUrl(url)) return url;
+  return null;
 }
 
 /** Fill gaps from quotation line snapshot without overriding enriched unified fields. */
@@ -38,7 +84,7 @@ export function mergeQuotationItemIntoProfileSource(
       formatCreatorDisplayName(item.creator_name) ||
       formatCreatorDisplayName(item.handle) ||
       "Creator",
-    avatarUrl: source.avatarUrl ?? item.profile_image_url ?? null,
+    avatarUrl: resolveQuotationDisplayAvatarUrl(source, item),
     handle: source.handle?.trim() || item.handle?.trim() || null,
     profile_url: profileUrl,
     countryCode: source.countryCode ?? resolveItemCountryCode(item) ?? null,
@@ -48,7 +94,21 @@ export function mergeQuotationItemIntoProfileSource(
 
 export function buildQuotationCreatorProfileSource(item: QuotationItemRow) {
   if (item.creator_profile_source) {
-    return mergeQuotationItemIntoProfileSource(item.creator_profile_source, item);
+    const enriched = item.creator_profile_source;
+    const avatarUrl = resolveQuotationAvatarFromItem(item) ?? enriched.avatarUrl ?? null;
+    return {
+      ...enriched,
+      displayName:
+        enriched.displayName?.trim() ||
+        formatCreatorDisplayName(item.creator_name) ||
+        formatCreatorDisplayName(item.handle) ||
+        "Creator",
+      avatarUrl,
+      handle: enriched.handle?.trim() || item.handle?.trim() || null,
+      profile_url:
+        enriched.profile_url?.trim() || resolveItemProfileUrl(item) || null,
+      countryCode: enriched.countryCode ?? resolveItemCountryCode(item) ?? null,
+    };
   }
 
   const profileUrl = resolveItemProfileUrl(item);
@@ -73,7 +133,7 @@ export function buildQuotationCreatorProfileSource(item: QuotationItemRow) {
     item.creator_name ?? item.handle ?? "Creator",
     platformAccount,
     {
-      avatarUrl: item.profile_image_url,
+      avatarUrl: quotationItemSnapshotAvatar(item) ?? item.profile_image_url,
     }
   );
 
@@ -87,23 +147,22 @@ export function resolveQuotationCreatorProfileSource(
 ): CreatorProfileSource {
   const base = buildQuotationCreatorProfileSource(item);
   if (linkedPlatforms.length <= 1) {
-    return mergeQuotationItemIntoProfileSource(
-      {
-        ...base,
-        platform: base.platform ?? linkedPlatforms[0] ?? item.platform ?? null,
-        linkedPlatforms: linkedPlatforms.length ? linkedPlatforms : base.linkedPlatforms,
-      },
-      item
-    );
+    return {
+      ...base,
+      platform: base.platform ?? linkedPlatforms[0] ?? item.platform ?? null,
+      linkedPlatforms: linkedPlatforms.length ? linkedPlatforms : base.linkedPlatforms,
+    };
   }
-  return mergeQuotationItemIntoProfileSource(
-    { ...base, platform: null, linkedPlatforms },
-    item
-  );
+  return {
+    ...base,
+    platform: null,
+    linkedPlatforms,
+  };
 }
 
 /** Browser-ready proxied avatar src for quotation rows. */
 export function quotationItemAvatarDisplayUrl(item: QuotationItemRow): string | null {
   const profileUrl = resolveItemProfileUrl(item);
-  return creatorAvatarBrowserDisplayUrl(item.profile_image_url, profileUrl);
+  const avatarUrl = resolveQuotationAvatarFromItem(item);
+  return creatorAvatarBrowserDisplayUrl(avatarUrl, profileUrl);
 }

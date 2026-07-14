@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 
-import { generateMediaPlan, enrichMediaPlanFromSlate, enrichMediaPlanCampaignContext, wantsPaidAmplification, type MediaPlanData } from "./media-plan";
+import { generateMediaPlan, enrichMediaPlanFromSlate, enrichMediaPlanCampaignContext, wantsPaidAmplification, resolveCalendarWeekCount, type MediaPlanData } from "./media-plan";
 import { resolveSlate } from "../output-inputs";
 import { buildCampaignObjectFixture } from "../output-test-fixture";
 
@@ -32,8 +32,13 @@ test("media plan has one week per campaign week, each with 7 days", () => {
   assert.ok(data.weeks.every((w) => w.days.length === 7));
 });
 
-test("quotation calendar shows all ad types on each creator card", () => {
-  const obj = withQuotationCreators(buildCampaignObjectFixture({ facts: { durationWeeks: 2 } }));
+test("quotation calendar groups all quoted ad types on the creator's assigned day", () => {
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 2 },
+      creators: [{ id: "cr_star", name: "Nour Star", tier: "Celebrity" }],
+    })
+  );
   const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
   const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
   if (reasoning[0]) {
@@ -46,7 +51,7 @@ test("quotation calendar shows all ad types on each creator card", () => {
     .flatMap((w) => w.days)
     .filter((d) => d.creator === "Nour Star");
 
-  assert.ok(nourDays.length >= 1);
+  assert.equal(nourDays.length, 1);
   assert.deepEqual(nourDays[0]!.serviceTypes, [
     "1× IG Reel",
     "1× IG Set of stories",
@@ -54,7 +59,136 @@ test("quotation calendar shows all ad types on each creator card", () => {
   ]);
   assert.ok(data.serviceTypes.includes("1× IG Reel"));
   assert.ok(data.serviceTypes.includes("1× Mirrored IG"));
-  assert.ok((data.postingSlotCount ?? 0) >= 3);
+  assert.equal(data.postingSlotCount, 3);
+});
+
+test("quotation calendar keeps brief duration and packs deliverables across days", () => {
+  const creators = Array.from({ length: 32 }, (_, index) => ({
+    id: `cr_${index + 1}`,
+    name: `Creator ${index + 1}`,
+    tier: "Macro",
+  }));
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 4 },
+      creators,
+    })
+  );
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  for (const entry of creatorsData.recommendations?.selectedReasoning ?? []) {
+    entry.serviceTypes = ["1× IG Reel"];
+    entry.serviceLabel = "1× IG Reel";
+    entry.quotedRevenue = 5_000;
+    entry.quotedCurrency = "EGP";
+    entry.platform = "Instagram";
+  }
+
+  assert.equal(
+    resolveCalendarWeekCount({ durationWeeks: 4, postingSlotCount: 32, quotationCalendar: true }),
+    4
+  );
+
+  const data = planData(generateMediaPlan(obj));
+  const scheduledDeliverables = data.weeks
+    .flatMap((week) => week.days)
+    .reduce((total, day) => {
+      const primary = day.creator ? 1 : 0;
+      const additional = day.additionalDeliverables?.length ?? 0;
+      return total + primary + additional;
+    }, 0);
+
+  assert.equal(data.durationWeeks, 4);
+  assert.equal(data.weeks.length, 4);
+  assert.equal(data.postingSlotCount, 32);
+  assert.equal(scheduledDeliverables, 32);
+  assert.equal(data.unscheduledDeliverableCount, undefined);
+});
+
+test("many quoted lines keep one creator per day while platform allocation counts all lines", () => {
+  const creators = Array.from({ length: 32 }, (_, index) => ({
+    id: `cr_${index + 1}`,
+    name: `Creator ${index + 1}`,
+    tier: "Macro",
+  }));
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 4 },
+      creators,
+    })
+  );
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  for (const entry of creatorsData.recommendations?.selectedReasoning ?? []) {
+    entry.serviceTypes = ["1× IG Reel", "1× Mirrored IG", "1× TT Video"];
+    entry.serviceLabel = entry.serviceTypes.join(" · ");
+    entry.quotedRevenue = 5_000;
+    entry.quotedCurrency = "EGP";
+    entry.platform = "Instagram";
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  const scheduledCreators = data.weeks
+    .flatMap((week) => week.days)
+    .reduce(
+      (total, day) =>
+        total + (day.creator ? 1 : 0) + (day.additionalDeliverables?.length ?? 0),
+      0
+    );
+  const creatorAppearances = new Set(
+    data.weeks.flatMap((week) =>
+      week.days.flatMap((day) => [
+        ...(day.creator ? [day.creator] : []),
+        ...(day.additionalDeliverables?.map((entry) => entry.creator) ?? []),
+      ])
+    )
+  );
+
+  assert.equal(data.weeks.length, 4);
+  assert.equal(data.postingSlotCount, 96);
+  assert.equal(scheduledCreators, 32);
+  assert.equal(creatorAppearances.size, 32);
+});
+
+test("platform allocation totals match quoted posting slots, not calendar capacity", () => {
+  const obj = withQuotationCreators(buildCampaignObjectFixture({ facts: { durationWeeks: 4 } }));
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
+  for (const entry of reasoning) {
+    entry.serviceTypes = ["1× IG Reel"];
+    entry.serviceLabel = "1× IG Reel";
+    entry.quotedRevenue = 10_000;
+    entry.quotedCurrency = "EGP";
+    entry.platform = entry.platform ?? "Instagram";
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  const allocationTotal = Object.values(data.platformAllocation).reduce((sum, count) => sum + count, 0);
+
+  assert.equal(data.postingSlotCount, reasoning.length);
+  assert.equal(allocationTotal, data.postingSlotCount);
+
+  const allocationSection = generateMediaPlan(obj).sections.find((s) => s.heading === "Platform Allocation");
+  assert.ok(allocationSection?.items?.some((item) => item.includes("quoted deliverables")));
+});
+
+test("multi-platform quotation lines split platform allocation by service type", () => {
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 2 },
+      creators: [{ id: "cr_star", name: "Nour Star", tier: "Celebrity" }],
+    })
+  );
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
+  if (reasoning[0]) {
+    reasoning[0].platform = "TikTok";
+    reasoning[0].serviceTypes = ["1× TT Video", "1× Mirrored IG"];
+    reasoning[0].serviceLabel = reasoning[0].serviceTypes.join(" · ");
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  assert.equal(data.platformAllocation.TikTok, 1);
+  assert.equal(data.platformAllocation.Instagram, 1);
+  assert.equal(data.postingSlotCount, 2);
 });
 
 test("quotation campaigns exclude paid amplification milestones", () => {
@@ -165,15 +299,51 @@ test("media plan embeds campaign context from quotation commercials meta", () =>
   obj.meta.quotationCommercials = {
     syncedAt: new Date().toISOString(),
     creators: [],
+    clientName: "Dolphin Foods LLC",
     brandName: "Dolphin Tuna",
     groupName: "Food Group",
     agencyOrDirect: "agency",
     agencyName: "Media Agency Egypt",
   };
   const data = planData(generateMediaPlan(obj));
+  assert.equal(data.campaignContext?.clientName, "Dolphin Foods LLC");
   assert.equal(data.campaignContext?.brandName, "Dolphin Tuna");
   assert.equal(data.campaignContext?.groupName, "Food Group");
   assert.equal(data.campaignContext?.agencyName, "Media Agency Egypt");
+});
+
+test("media plan includes campaign cost with VAT exclusion disclaimer", () => {
+  const obj = buildCampaignObjectFixture({
+    facts: { budget: { amount: 2_500_000, currency: "EGP" } },
+  });
+  const content = generateMediaPlan(obj);
+  const data = planData(content);
+
+  assert.deepEqual(data.campaignContext?.campaignCost, { amount: 2_500_000, currency: "EGP" });
+
+  const costSection = content.sections.find((section) => section.heading === "Campaign Cost");
+  assert.ok(costSection?.items?.some((item) => item.includes("2,500,000 EGP")));
+  assert.ok(costSection?.items?.some((item) => item.includes("Price excludes VAT")));
+});
+
+test("campaign cost falls back to summed quoted creator revenue", () => {
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { budget: undefined },
+      creators: [
+        { id: "cr_a", name: "Creator A", tier: "Macro" },
+        { id: "cr_b", name: "Creator B", tier: "Macro" },
+      ],
+    })
+  );
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  for (const entry of creatorsData.recommendations?.selectedReasoning ?? []) {
+    entry.quotedRevenue = 50_000;
+    entry.quotedCurrency = "EGP";
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  assert.deepEqual(data.campaignContext?.campaignCost, { amount: 100_000, currency: "EGP" });
 });
 
 test("enrichMediaPlanCampaignContext fills group and agency from live quotation commercials", () => {
@@ -236,6 +406,54 @@ test("resolveMediaPlanCampaignContext reads group from quotation commercials wit
   assert.equal(context?.brandName, "Dolphin Tuna");
   assert.equal(context?.groupName, "Food Group");
   assert.equal(context?.agencyName, "Media Agency Egypt");
+});
+
+test("deadlines consolidate multiple deliverables into one row per creator", () => {
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 2 },
+      creators: [{ id: "cr_star", name: "Nour Star", tier: "Celebrity" }],
+    })
+  );
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
+  if (reasoning[0]) {
+    reasoning[0].serviceTypes = ["1× IG Reel", "1× IG Set of stories", "1× Mirrored IG"];
+    reasoning[0].serviceLabel = reasoning[0].serviceTypes.join(" · ");
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  const nourDeadlines = data.deadlines.filter((deadline) => deadline.creator === "Nour Star");
+
+  assert.equal(nourDeadlines.length, 1);
+  assert.deepEqual(nourDeadlines[0]!.serviceTypes, [
+    "1× IG Reel",
+    "1× IG Set of stories",
+    "1× Mirrored IG",
+  ]);
+});
+
+test("quotation deadlines use one row per scheduled creator", () => {
+  const creators = Array.from({ length: 32 }, (_, index) => ({
+    id: `cr_${index + 1}`,
+    name: `Creator ${index + 1}`,
+    tier: "Macro",
+  }));
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 4 },
+      creators,
+    })
+  );
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  for (const entry of creatorsData.recommendations?.selectedReasoning ?? []) {
+    entry.serviceTypes = ["1× IG Reel", "1× Mirrored IG", "1× TT Video"];
+    entry.serviceLabel = entry.serviceTypes.join(" · ");
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  assert.equal(data.deadlines.length, 32);
+  assert.ok(data.deadlines.every((deadline) => (deadline.serviceTypes?.length ?? 0) === 3));
 });
 
 test("deadlines carry creator ids for avatar enrichment", () => {
