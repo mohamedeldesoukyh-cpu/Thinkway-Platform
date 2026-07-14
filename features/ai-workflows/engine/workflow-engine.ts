@@ -50,6 +50,8 @@ import { hasValidatedIntelligence } from "@/features/campaign-intelligence-profi
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import { writeStrategyDocumentFromBrief } from "@/features/campaign-director/services/strategy-document";
+import { mergeMissingCampaignFacts } from "@/features/campaign-director/facts/merge-campaign-facts";
+import { formatGovernanceUserQuestions } from "@/features/campaign-governance/governance-repair";
 
 export type WorkflowEngineOptions = {
   orchestrator: AiOrchestrator;
@@ -323,6 +325,34 @@ export async function executeWorkflow(
     }
   }
 
+  // Governance resume: a paused create-campaign asked the user for missing
+  // business facts (budget, brand, objective…). The resume message carries the
+  // answer — fill ONLY the missing facts so all completed work is preserved.
+  if (
+    definition.id === "create-campaign" &&
+    options.initialState &&
+    state.data.campaignStrategyDocument &&
+    state.data.campaignFacts
+  ) {
+    const merged = mergeMissingCampaignFacts(
+      state.data.campaignFacts as CampaignFacts,
+      request.message
+    );
+    if (merged.filledFields.length > 0) {
+      state.data.campaignFacts = merged.facts;
+      if (!state.data.brandName && merged.facts.brandName) {
+        state.data.brandName = merged.facts.brandName;
+      }
+      if (merged.facts.budget) {
+        state.data.currency = merged.facts.budget.currency;
+        state.data.budgetTotal = merged.facts.budget.amount;
+      }
+      console.log(
+        `[governance-repair] resume filled missing facts: ${merged.filledFields.join(", ")}`
+      );
+    }
+  }
+
   let effectiveAiContext = aiContext;
   if (typeof state.data.campaignIntelligenceProfileId === "string") {
     effectiveAiContext = {
@@ -531,12 +561,23 @@ export async function executeWorkflow(
   }
 
   if (definition.id === "create-campaign" && state.status === "completed") {
-    enrichWorkflowStateWithDirectorPipeline(
+    const pipelineResult = enrichWorkflowStateWithDirectorPipeline(
       state,
       request.message,
       state.data.brandName as string | undefined,
       state.data.campaignFacts as CampaignFacts | undefined
     );
+
+    // Governance could not approve and needs business information the Director
+    // must not invent: pause with clear, specific questions instead of leaving
+    // Studio with silently discarded sections. missing_info pauses persist in
+    // the conversation snapshot, so the user's answer resumes this workflow.
+    const questions = pipelineResult.governanceRepair?.userQuestions ?? [];
+    if (!pipelineResult.approvalGate.approved && questions.length > 0) {
+      state.status = "paused";
+      state.pauseReason = "missing_info";
+      state.pauseMessage = formatGovernanceUserQuestions(questions);
+    }
   }
 
   const actionCards = collectActionCards(
@@ -615,10 +656,16 @@ export async function resumeWorkflow(
   }
 
   if (startTaskIndex >= definition.tasks.length) {
-    state.status = "completed";
-    const actionCards = collectActionCards(state);
-    const dashboard = formatWorkflowDashboard({ state, actionCards });
-    return buildResult(state, definition, dashboard.content, actionCards, dashboard.metadata);
+    // All tasks already completed — route through executeWorkflow with an
+    // empty task window so completion finalization still runs (create-campaign
+    // Director pipeline, governance self-repair, pause-for-missing-info).
+    // Returning early here would skip finalization and strand a governance
+    // pause that was waiting for the user's answer.
+    return executeWorkflow(definition, request, aiContext, {
+      ...options,
+      initialState: state,
+      startTaskIndex: definition.tasks.length,
+    });
   }
 
   let resolvedCampaignId =

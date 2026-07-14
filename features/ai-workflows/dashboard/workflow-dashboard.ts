@@ -60,7 +60,13 @@ export function formatWorkflowDashboard(input: DashboardFormatInput): WorkflowDa
     statusLabel: getStatusLabel(state.status, pauseReason),
   };
 
-  const clarificationQuestion = getBlockedTaskClarification(state, definition);
+  // A missing_info pause can also come from post-completion governance (no
+  // blocked task) — its questions must still reach the chat/Studio surface.
+  const clarificationQuestion =
+    getBlockedTaskClarification(state, definition) ??
+    (state.status === "paused" && state.pauseReason === "missing_info"
+      ? state.pauseMessage
+      : undefined);
 
   const recommendedNextAction =
     clarificationQuestion ??

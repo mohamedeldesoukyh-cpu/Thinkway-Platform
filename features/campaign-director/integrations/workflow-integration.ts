@@ -114,6 +114,9 @@ export function applyDirectorPipelineToCampaignObject(
     : undefined;
 
   if (!pipeline.approvalGate.approved || pipeline.approvedSections.length === 0) {
+    // Not approved: existing sections are preserved untouched (never discarded)
+    // and the repair audit + user questions travel on meta so the pause is
+    // explainable in Studio, never silent.
     return {
       ...campaignObject,
       meta: {
@@ -126,6 +129,7 @@ export function applyDirectorPipelineToCampaignObject(
           revisionRounds: pipeline.approvalGate.revisionRounds,
           reviewReport: pipeline.reviewReport,
           governance: governanceMeta,
+          governanceRepair: pipeline.governanceRepair,
         },
       },
     };
@@ -145,6 +149,7 @@ export function applyDirectorPipelineToCampaignObject(
         approvedAt: pipeline.approvalGate.approvedAt,
         reviewReport: pipeline.reviewReport,
         governance: governanceMeta,
+        governanceRepair: pipeline.governanceRepair,
         debateResult: pipeline.debateResult
           ? {
               winnerOptionId: pipeline.debateResult.meeting.winnerId,
