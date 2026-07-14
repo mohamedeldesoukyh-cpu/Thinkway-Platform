@@ -175,6 +175,48 @@ function createDiscoveryImportMock(initial?: {
         limit() {
           return builder;
         },
+        order() {
+          return builder;
+        },
+        // List/count queries are awaited directly (no maybeSingle/single) —
+        // e.g. the baseline-DNA populator's account/snapshot reads. Resolve
+        // known tables from state; everything else resolves empty.
+        then(
+          resolve: (value: { data: unknown[]; error: null; count: number }) => void,
+          reject?: (reason: unknown) => void
+        ) {
+          try {
+            let data: unknown[] = [];
+            if (table === "influencer_platform_accounts") {
+              data = accounts.filter(
+                (row) =>
+                  filters.influencer_id == null ||
+                  (row as { influencer_id?: unknown }).influencer_id === filters.influencer_id
+              );
+            }
+            resolve({ data, error: null, count: data.length });
+          } catch (error) {
+            reject?.(error);
+          }
+        },
+        // Baseline-DNA writes (creator_dna upsert) — accept and discard.
+        upsert() {
+          return {
+            select() {
+              return {
+                async single() {
+                  return { data: null, error: null };
+                },
+                async maybeSingle() {
+                  return { data: null, error: null };
+                },
+              };
+            },
+            then(resolve: (value: { data: null; error: null }) => void) {
+              resolve({ data: null, error: null });
+            },
+          };
+        },
         async maybeSingle() {
           if (table === "influencer_platform_accounts") {
             const match = accounts.find((row) => {

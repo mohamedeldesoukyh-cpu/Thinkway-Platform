@@ -50,8 +50,8 @@ test("platform filter falls back instead of returning an empty slate", () => {
 
 test("slate tier distribution tracks the strategy mix", () => {
   const pool = [
-    // 6 macro (1M+), 8 mid, 8 micro, 8 nano — ranked order
-    ...Array.from({ length: 6 }, (_, i) => creator(`macro-${i}`, "tiktok", 1_500_000)),
+    // 6 macro (500k–1M per TIER_FILTER_RANGES; 1M+ would be Mega), 8 mid, 8 micro, 8 nano
+    ...Array.from({ length: 6 }, (_, i) => creator(`macro-${i}`, "tiktok", 800_000)),
     ...Array.from({ length: 8 }, (_, i) => creator(`mid-${i}`, "tiktok", 200_000)),
     ...Array.from({ length: 8 }, (_, i) => creator(`micro-${i}`, "tiktok", 20_000)),
     ...Array.from({ length: 8 }, (_, i) => creator(`nano-${i}`, "tiktok", 5_000)),
