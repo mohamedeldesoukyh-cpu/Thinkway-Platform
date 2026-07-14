@@ -153,46 +153,50 @@ async function toPublicationDataUri(buffer: Buffer, contentType: string): Promis
 async function embedPublicationShot(
   shot: ShortlistDocPublicationShot
 ): Promise<ShortlistDocPublicationShot | null> {
-  const trimmed = shot.imageUrl.trim();
-  const postUrl = shot.postUrl?.trim() || null;
-  if (trimmed.startsWith("data:")) {
-    return {
-      ...shot,
-      imageUrl: await compressExportDataUri(trimmed, SHOWCASE_PUBLICATION_COMPRESS),
-      imageProxyUrl: null,
-    };
-  }
-
-  const needsProxy = publicationShotNeedsProxy(shot);
-
-  if (needsProxy || postUrl || trimmed) {
-    const preview = await fetchPublicationPreviewImage({
-      src: trimmed || null,
-      postUrl,
-    });
-    if (preview.ok) {
-      const buffer = Buffer.from(preview.buffer);
-      const contentType = preview.contentType || detectImageContentType(buffer);
+  try {
+    const trimmed = shot.imageUrl.trim();
+    const postUrl = shot.postUrl?.trim() || null;
+    if (trimmed.startsWith("data:")) {
       return {
         ...shot,
-        imageUrl: await toPublicationDataUri(buffer, contentType),
+        imageUrl: await compressExportDataUri(trimmed, SHOWCASE_PUBLICATION_COMPRESS),
         imageProxyUrl: null,
       };
     }
-  }
 
-  if (trimmed && !needsProxy) {
-    const embedded = await embedReportImageDataUri(trimmed);
-    if (embedded?.startsWith("data:")) {
-      return {
-        ...shot,
-        imageUrl: await compressExportDataUri(embedded, SHOWCASE_PUBLICATION_COMPRESS),
-        imageProxyUrl: null,
-      };
+    const needsProxy = publicationShotNeedsProxy(shot);
+
+    if (needsProxy || postUrl || trimmed) {
+      const preview = await fetchPublicationPreviewImage({
+        src: trimmed || null,
+        postUrl,
+      });
+      if (preview.ok) {
+        const buffer = Buffer.from(preview.buffer);
+        const contentType = preview.contentType || detectImageContentType(buffer);
+        return {
+          ...shot,
+          imageUrl: await toPublicationDataUri(buffer, contentType),
+          imageProxyUrl: null,
+        };
+      }
     }
-  }
 
-  return null;
+    if (trimmed && !needsProxy) {
+      const embedded = await embedReportImageDataUri(trimmed);
+      if (embedded?.startsWith("data:")) {
+        return {
+          ...shot,
+          imageUrl: await compressExportDataUri(embedded, SHOWCASE_PUBLICATION_COMPRESS),
+          imageProxyUrl: null,
+        };
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export async function loadShortlistCreatorPublicationShots(

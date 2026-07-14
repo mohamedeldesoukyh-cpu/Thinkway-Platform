@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
+import { cn } from "@/lib/utils";
 import type {
   CreatorsSectionData,
   SlateCreatorRecommendation,
@@ -187,6 +188,40 @@ function VendorAvatar({
 function isEmptyGlobalRationale(text: string | undefined): boolean {
   if (!text?.trim()) return true;
   return /no creators available/i.test(text);
+}
+
+function ShortlistSlateActions({
+  canAct,
+  onPickReplace,
+  onPickMerge,
+  centered = false,
+}: {
+  canAct: boolean;
+  onPickReplace: () => void;
+  onPickMerge: () => void;
+  centered?: boolean;
+}) {
+  if (!canAct) return null;
+  return (
+    <div className={cn("mt-3 flex flex-wrap items-center gap-2", centered && "justify-center")}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 rounded-md border border-[#0057FF]/40 bg-[#0057FF]/5 px-2.5 py-1.5 text-[11px] font-semibold text-[#0057FF] hover:bg-[#0057FF]/10"
+        onClick={onPickReplace}
+      >
+        <ListRestartIcon className="size-3.5" />
+        Import from shortlist
+      </button>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted/50"
+        onClick={onPickMerge}
+      >
+        <GitMergeIcon className="size-3.5" />
+        Merge shortlist
+      </button>
+    </div>
+  );
 }
 
 const REASON_CODE_LABELS: Record<
@@ -857,18 +892,44 @@ export function VendorRecommendationsSection({
   if (vendors.length === 0) {
     const proposalBlocked =
       creatorsData.slateProposalStatus?.status === "blocked" && !hasCommittedRecommendations;
+    const shortlistPickerDialog =
+      conversationId && messageId && shortlistPickerMode ? (
+        <ShortlistSlatePickerDialog
+          open={shortlistPickerMode != null}
+          onOpenChange={(open) => {
+            if (!open) setShortlistPickerMode(null);
+          }}
+          mode={shortlistPickerMode}
+          conversationId={conversationId}
+          messageId={messageId}
+          onApplied={({ linkedShortlistId: nextShortlistId, draft: nextDraft }) => {
+            if (nextShortlistId) setLinkedShortlistId(nextShortlistId);
+            if (nextDraft) publishDraft(nextDraft);
+          }}
+        />
+      ) : null;
+
     if (proposalBlocked) {
       return (
-        <div className="rounded-xl border border-amber-300/80 bg-amber-50/80 px-4 py-5 text-center dark:border-amber-800 dark:bg-amber-950/30">
-          <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-            {creatorsData.slateProposalStatus?.message}
-          </p>
-          {creatorsData.slateProposalStatus?.actionLabel ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Next step: {creatorsData.slateProposalStatus.actionLabel}
+        <>
+          <div className="rounded-xl border border-amber-300/80 bg-amber-50/80 px-4 py-5 text-center dark:border-amber-800 dark:bg-amber-950/30">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+              {creatorsData.slateProposalStatus?.message}
             </p>
-          ) : null}
-        </div>
+            {creatorsData.slateProposalStatus?.actionLabel ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Next step: {creatorsData.slateProposalStatus.actionLabel}
+              </p>
+            ) : null}
+            <ShortlistSlateActions
+              canAct={canAct}
+              centered
+              onPickReplace={() => setShortlistPickerMode("replace")}
+              onPickMerge={() => setShortlistPickerMode("merge")}
+            />
+          </div>
+          {shortlistPickerDialog}
+        </>
       );
     }
     if (shouldShowPendingPlaceholder(status, hasCommittedRecommendations)) {
@@ -876,12 +937,33 @@ export function VendorRecommendationsSection({
         return <SectionSkeleton variant="vendors" />;
       }
       return (
-        <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-5 text-center">
-          <p className="text-sm text-muted-foreground">Run discovery to generate recommendations</p>
-        </div>
+        <>
+          <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-5 text-center">
+            <p className="text-sm text-muted-foreground">
+              Run discovery to generate recommendations, or import a prepared shortlist.
+            </p>
+            <ShortlistSlateActions
+              canAct={canAct}
+              centered
+              onPickReplace={() => setShortlistPickerMode("replace")}
+              onPickMerge={() => setShortlistPickerMode("merge")}
+            />
+          </div>
+          {shortlistPickerDialog}
+        </>
       );
     }
-    return <SectionFallbackContent text={fallbackText} />;
+    return (
+      <>
+        <SectionFallbackContent text={fallbackText} />
+        <ShortlistSlateActions
+          canAct={canAct}
+          onPickReplace={() => setShortlistPickerMode("replace")}
+          onPickMerge={() => setShortlistPickerMode("merge")}
+        />
+        {shortlistPickerDialog}
+      </>
+    );
   }
 
   return (

@@ -103,13 +103,13 @@
     "validate:f1-one-workspace": "npx tsx scripts/validate-f1-one-workspace.mjs",
     "trace:discovery": "node scripts/run-ops-script.mjs scripts/trace-discovery.ts",
     "test:bullmq-connection": "npx tsx lib/redis/bullmq-connection.test.ts",
-"backfill:creator-intelligence": "node scripts/run-ops-script.mjs scripts/backfill-creator-intelligence.ts",
-"rollout:preflight": "node scripts/run-ops-script.mjs scripts/rollout-preflight.ts",
-"audit:creator-intelligence": "node scripts/run-ops-script.mjs scripts/audit-creator-intelligence-gaps.ts",
-"taxonomy:analyze": "node scripts/run-ops-script.mjs scripts/analyze-taxonomy-expansion.ts",
-"taxonomy:iterate": "npx tsx scripts/iterate-taxonomy-coverage.ts",
-"cleanup:creators": "node scripts/run-ops-script.mjs scripts/cleanup-creators.ts",
-"test:cleanup-classification": "npx tsx lib/creators/cleanup-classification.test.ts"
+    "backfill:creator-intelligence": "node scripts/run-ops-script.mjs scripts/backfill-creator-intelligence.ts",
+    "rollout:preflight": "node scripts/run-ops-script.mjs scripts/rollout-preflight.ts",
+    "audit:creator-intelligence": "node scripts/run-ops-script.mjs scripts/audit-creator-intelligence-gaps.ts",
+    "taxonomy:analyze": "node scripts/run-ops-script.mjs scripts/analyze-taxonomy-expansion.ts",
+    "taxonomy:iterate": "npx tsx scripts/iterate-taxonomy-coverage.ts",
+    "cleanup:creators": "node scripts/run-ops-script.mjs scripts/cleanup-creators.ts",
+    "test:cleanup-classification": "npx tsx lib/creators/cleanup-classification.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

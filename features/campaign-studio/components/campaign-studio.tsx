@@ -179,6 +179,7 @@ export function CampaignStudio({
     <div
       className={cn(
         isChatLayout ? STUDIO_CLASSES.shellChat : STUDIO_CLASSES.shell,
+        !isChatLayout && className?.includes("h-full") && "!h-full max-h-none",
         "min-w-0",
         className
       )}

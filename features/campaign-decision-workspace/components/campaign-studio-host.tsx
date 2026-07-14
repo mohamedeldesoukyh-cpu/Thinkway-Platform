@@ -58,7 +58,12 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
       ...studioInput
     } = props;
     return (
-      <div className={cn("space-y-2", className)}>
+      <div
+        className={cn(
+          layoutMode === "panel" ? "flex min-h-0 flex-1 flex-col" : "space-y-2",
+          className
+        )}
+      >
         {!decisionReady ? (
           <p className="text-right text-[10px] text-muted-foreground">
             Decision Mode unlocks when the studio workflow completes.
@@ -74,6 +79,7 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
           studioModeToggle={modeToggle}
           layoutMode={layoutMode}
           scrollContainer={scrollContainer}
+          className={layoutMode === "panel" ? "h-full min-h-0" : undefined}
         />
       </div>
     );

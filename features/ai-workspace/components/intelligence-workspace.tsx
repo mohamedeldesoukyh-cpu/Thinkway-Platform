@@ -5,6 +5,10 @@ import { useSearchParams } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
+import { isOperationalCampaignBrief } from "@/features/ai/routing/operational-detection";
+import { isCampaignWorkflow } from "@/features/campaign-studio/constants/workflow-ids";
+import type { CampaignStudioInput } from "@/features/campaign-studio/types/campaign-studio";
+
 import { createConversationAction } from "../actions/conversation-actions";
 import {
   createLoggedSetMessages,
@@ -191,7 +195,7 @@ export function IntelligenceWorkspace({
         logMessageStateEvent("loadConversation skipped (already loaded)", { id });
         return;
       }
-      if (isStreamingRef.current) {
+      if (isStreamingRef.current && !force) {
         logMessageStateEvent("loadConversation skipped (streaming)", { id });
         return;
       }
@@ -727,7 +731,40 @@ export function IntelligenceWorkspace({
     () => findLatestStudioMessage(messages),
     [messages]
   );
-  const campaignMode = Boolean(latestStudioMessage) && !showEmptyState;
+
+  const createCampaignStreamingInput = useMemo((): CampaignStudioInput | null => {
+    if (!isStreaming) return null;
+    if (workflowProgress?.workflowId && isCampaignWorkflow(workflowProgress.workflowId)) {
+      return {
+        workflowId: workflowProgress.workflowId,
+        workflowName: "Create Campaign",
+        workflowStatus: "running",
+        currentStep: workflowProgress.currentStep,
+        totalSteps: workflowProgress.totalSteps,
+        progressPercent: workflowProgress.progress,
+        taskId: workflowProgress.taskId,
+        taskTitle: workflowProgress.taskTitle,
+        taskStatus: workflowProgress.status,
+      };
+    }
+    const lastUser = [...messages].reverse().find((message) => message.role === "user");
+    if (!lastUser?.content.trim()) return null;
+    if (!isOperationalCampaignBrief(lastUser.content.trim())) return null;
+    return {
+      workflowId: "create-campaign",
+      workflowName: "Create Campaign",
+      workflowStatus: "running",
+      currentStep: 0,
+      totalSteps: 8,
+      progressPercent: 0,
+      taskTitle: "Preparing Campaign Studio",
+      taskStatus: "running",
+    };
+  }, [isStreaming, workflowProgress, messages]);
+
+  const isCreateCampaignStreaming = Boolean(createCampaignStreamingInput);
+  const campaignMode =
+    (Boolean(latestStudioMessage) || isCreateCampaignStreaming) && !showEmptyState;
 
   const handleStudioSendMessage = useCallback(
     (message: string) => void handleSend(message),
@@ -805,7 +842,7 @@ export function IntelligenceWorkspace({
     );
   };
 
-  if (campaignMode && latestStudioMessage) {
+  if (campaignMode && (latestStudioMessage || isCreateCampaignStreaming)) {
     // CAMPAIGN MODE — the Campaign Studio *is* the application. The AI-workspace
     // identity is gone: no branded topbar, no conversation sidebar, no lavender
     // AI surface. The Studio owns the page and its own header/navigation; the
@@ -816,7 +853,12 @@ export function IntelligenceWorkspace({
         className="ai-studio-enter relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
       >
         <CampaignStudioPanel
-          message={latestStudioMessage}
+          message={latestStudioMessage ?? undefined}
+          streamingInput={
+            isCreateCampaignStreaming && !latestStudioMessage
+              ? (createCampaignStreamingInput ?? undefined)
+              : undefined
+          }
           conversationId={conversationId}
           onCardUpdated={handleCardUpdated}
           onVendorDecisionsUpdated={handleVendorDecisionsUpdated}

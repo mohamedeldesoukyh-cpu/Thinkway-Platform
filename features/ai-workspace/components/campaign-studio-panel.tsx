@@ -10,6 +10,7 @@ import { GenerateQuotationLauncher } from "@/features/campaign-plan/components/g
 import { StudioOutputsView } from "@/features/campaign-outputs/components/studio-outputs-view";
 
 import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
+import type { CampaignStudioInput } from "@/features/campaign-studio/types/campaign-studio";
 
 import type { AiActionCard, AiMessage, ConversationListItem } from "../types";
 import { CampaignHistoryPanel } from "./campaign-history-panel";
@@ -28,7 +29,9 @@ const STUDIO_TABS: Array<{ id: StudioView; label: string; icon: typeof LayoutDas
 export { findLatestStudioMessage };
 
 type CampaignStudioPanelProps = {
-  message: AiMessage;
+  message?: AiMessage;
+  /** Live workflow input while the studio object is still being generated. */
+  streamingInput?: CampaignStudioInput;
   conversationId?: string;
   onCardUpdated?: (messageId: string, cardId: string, status: string) => void;
   onVendorDecisionsUpdated?: (
@@ -72,6 +75,7 @@ const FOCUSABLE_SECTIONS: Array<{ id: string; label: string }> = [
  */
 export function CampaignStudioPanel({
   message,
+  streamingInput,
   conversationId,
   onCardUpdated,
   onVendorDecisionsUpdated,
@@ -90,21 +94,48 @@ export function CampaignStudioPanel({
   onRefreshConversations,
 }: CampaignStudioPanelProps) {
   const display = useMemo(
-    () => toWorkflowDisplayMetadata(message.metadata),
-    [message.id, message.metadata]
+    () => (message ? toWorkflowDisplayMetadata(message.metadata) : null),
+    [message?.id, message?.metadata]
   );
   const [view, setView] = useState<StudioView>(initialView ?? "studio");
   const noopSendMessage = useCallback(() => {}, []);
   const sendMessage = onSendMessage ?? noopSendMessage;
 
-  if (!display.campaignObject) return null;
+  const hasCampaignObject = Boolean(display?.campaignObject);
+  if (!hasCampaignObject && !streamingInput) return null;
 
-  const campaignObjectId = display.campaignObject.id;
-  const changeLog = (display.campaignObject.meta.copilotChangeLog ?? []) as CopilotChangeLogEntry[];
+  const campaignObjectId = display?.campaignObject?.id;
+  const changeLog = (display?.campaignObject?.meta.copilotChangeLog ?? []) as CopilotChangeLogEntry[];
 
-  const progressPercent = display.totalSteps
+  const progressPercent = display?.totalSteps
     ? Math.round((display.completedTasks.length / display.totalSteps) * 100)
-    : 100;
+    : streamingInput?.progressPercent ?? 0;
+
+  const studioHostProps: CampaignStudioInput & {
+    conversationId?: string;
+    messageId?: string;
+  } = hasCampaignObject
+    ? {
+        workflowId: display!.workflowId,
+        workflowName: display!.workflowName,
+        workflowStatus: display!.status,
+        currentStep: display!.currentStep,
+        totalSteps: display!.totalSteps,
+        progressPercent,
+        campaignObject: display!.campaignObject,
+        summarySections: display!.summarySections,
+        clarificationQuestion: display!.clarificationQuestion,
+        completedTasks: display!.completedTasks,
+        pendingTasks: display!.pendingTasks,
+        inferredFields: message?.metadata.inferredFields as string[] | undefined,
+        actionCards: message?.metadata.actionCards as AiActionCard[] | undefined,
+        conversationId,
+        messageId: message?.id,
+      }
+    : {
+        ...streamingInput!,
+        conversationId,
+      };
 
   return (
     <div
@@ -120,17 +151,20 @@ export function CampaignStudioPanel({
           {STUDIO_TABS.map((tab) => {
             const active = view === tab.id;
             const Icon = tab.icon;
+            const disabled = !hasCampaignObject && tab.id !== "studio";
             return (
               <button
                 key={tab.id}
                 type="button"
+                disabled={disabled}
                 onClick={() => setView(tab.id)}
                 aria-pressed={active}
                 className={cn(
                   "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
                   active
                     ? "bg-[#1D9E75]/10 text-[#1D9E75]"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  disabled && "pointer-events-none opacity-40"
                 )}
               >
                 <Icon className="size-3.5" />
@@ -180,29 +214,30 @@ export function CampaignStudioPanel({
               </div>
             </div>
           ) : null}
-          <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+          <div
+            className={cn(
+              "min-h-0 flex-1 p-3 sm:p-4",
+              variant === "main" ? "flex flex-col overflow-hidden" : "overflow-y-auto"
+            )}
+          >
             <CampaignStudioHost
-              workflowId={display.workflowId}
-              workflowName={display.workflowName}
-              workflowStatus={display.status}
-              currentStep={display.currentStep}
-              totalSteps={display.totalSteps}
-              progressPercent={progressPercent}
-              campaignObject={display.campaignObject}
-              summarySections={display.summarySections}
-              clarificationQuestion={display.clarificationQuestion}
-              completedTasks={display.completedTasks}
-              pendingTasks={display.pendingTasks}
-              inferredFields={message.metadata.inferredFields as string[] | undefined}
-              actionCards={message.metadata.actionCards as AiActionCard[] | undefined}
-              conversationId={conversationId}
-              messageId={message.id}
-              onCardUpdated={(cardId, status) => onCardUpdated?.(message.id, cardId, status)}
-              onVendorDecisionsUpdated={(decisions) =>
-                onVendorDecisionsUpdated?.(message.id, decisions)
+              {...studioHostProps}
+              layoutMode="panel"
+              className={variant === "main" ? "flex min-h-0 flex-1 flex-col" : undefined}
+              onCardUpdated={
+                message
+                  ? (cardId, status) => onCardUpdated?.(message.id, cardId, status)
+                  : undefined
               }
-              onSlateUpdated={(campaignObject) =>
-                onSlateUpdated?.(message.id, campaignObject)
+              onVendorDecisionsUpdated={
+                message
+                  ? (decisions) => onVendorDecisionsUpdated?.(message.id, decisions)
+                  : undefined
+              }
+              onSlateUpdated={
+                message
+                  ? (campaignObject) => onSlateUpdated?.(message.id, campaignObject)
+                  : undefined
               }
             />
           </div>
@@ -216,17 +251,17 @@ export function CampaignStudioPanel({
             />
           ) : null}
         </>
-      ) : view === "outputs" ? (
+      ) : view === "outputs" && hasCampaignObject ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="shrink-0 border-b border-border/60 px-3 py-2">
             <div className="overflow-hidden rounded-lg border border-border bg-background divide-y divide-border md:grid md:grid-cols-2 md:divide-x md:divide-y-0">
               <GenerateCampaignLauncher
-                campaignObject={display.campaignObject}
+                campaignObject={display!.campaignObject!}
                 conversationId={conversationId}
                 variant="compact"
               />
               <GenerateQuotationLauncher
-                campaignObject={display.campaignObject}
+                campaignObject={display!.campaignObject!}
                 conversationId={conversationId}
                 variant="compact"
                 showLifecycleHint={false}
@@ -235,7 +270,7 @@ export function CampaignStudioPanel({
           </div>
           <div className="min-h-0 flex-1 overflow-hidden">
             <StudioOutputsView
-              campaignObject={display.campaignObject}
+              campaignObject={display!.campaignObject!}
               conversationId={conversationId}
               mode="outputs"
               onSendMessage={sendMessage}
@@ -243,15 +278,15 @@ export function CampaignStudioPanel({
             />
           </div>
         </div>
-      ) : (
+      ) : hasCampaignObject ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <StudioOutputsView
-            campaignObject={display.campaignObject}
+            campaignObject={display!.campaignObject!}
             mode="director"
             onSendMessage={sendMessage}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
