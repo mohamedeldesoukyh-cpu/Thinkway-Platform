@@ -3,12 +3,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { browseUnifiedCreatorsWithCoverageBackfill } from "@/lib/discovery/coverage-backfill-orchestrator";
 import { rerankCreatorsByCampaignFit } from "@/lib/discovery/campaign-fit-rerank";
 import { rankBrowseCreatorsForCampaign } from "@/lib/discovery/rank-browse-for-campaign";
+import { mergeAiCandidatePools } from "@/lib/discovery/ai-candidate-pool";
+import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { dedupeByCreatorId } from "@/lib/creators/dedupe-creators";
 import { searchTrace } from "@/lib/creators/search-trace";
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { filtersToRelaxedBrowseParams } from "@/features/discovery/components/creator-search/creator-search-types";
 
 import { getCampaignIntelligenceProfileById } from "../services/profile-repository";
 import {
   discoveryMappedFiltersToBrowseFilters,
+  discoveryMappedFiltersToCreatorFilters,
   mapCampaignIntelligenceToDiscoverySearch,
 } from "../services/discovery-search-mapping";
 import { hasValidatedIntelligence } from "../services/get-validated-intelligence";
@@ -56,10 +61,56 @@ export async function searchCreatorsFromProfileData(
 
   searchTrace("cip_search_filters", { profileId, browseFilters }, { path: "ai" });
 
+  // Strict pool: the brief's real filters in SQL — guarantees on-brief creators
+  // enter the pool and drives coverage evaluation / acquisition backfill.
   const result = await browseUnifiedCreatorsWithCoverageBackfill(
     supabase,
     browseFilters,
     "ai"
+  );
+
+  // Relaxed pool: platform-only SQL — the same dual-pool sourcing Discovery AI
+  // mode uses (creator-search-workspace). Brief signals are scored as soft
+  // criteria by the relevance ranker below instead of excluding creators in
+  // SQL. Without this pool, a brief whose strict AND-filters match nothing in
+  // the database yields an empty slate even though rankable creators exist.
+  let relaxedCreators: UnifiedCreatorResult[] = [];
+  try {
+    const relaxed = await browseUnifiedCreators(
+      supabase,
+      {
+        ...filtersToRelaxedBrowseParams(
+          discoveryMappedFiltersToCreatorFilters(mappedFilters),
+          1,
+          pageSize
+        ),
+        campaignIntelligenceProfileId: profileId,
+        skipCoverageBackfill: true,
+      },
+      "ai"
+    );
+    relaxedCreators = relaxed.creators;
+  } catch (error) {
+    searchTrace(
+      "cip_search_relaxed_pool_error",
+      {
+        profileId,
+        message: error instanceof Error ? error.message : String(error),
+      },
+      { path: "ai" }
+    );
+  }
+
+  const pool = mergeAiCandidatePools(result.creators, relaxedCreators);
+  searchTrace(
+    "cip_search_candidate_pool",
+    {
+      profileId,
+      strictCount: result.creators.length,
+      relaxedCount: relaxedCreators.length,
+      pooledCount: pool.length,
+    },
+    { path: "ai" }
   );
 
   const preferredPlatforms = [
@@ -68,7 +119,7 @@ export async function searchCreatorsFromProfileData(
   ];
 
   const rankedCreators = rankBrowseCreatorsForCampaign(
-    result.creators,
+    pool,
     profile,
     mappedFilters
   );
@@ -101,7 +152,7 @@ export async function searchCreatorsFromProfileData(
     "cip_search_relevance_ranked",
     {
       profileId,
-      browseCount: result.creators.length,
+      browseCount: pool.length,
       usedLlmRerank: rerankMeta.usedLlm,
       rerankError: rerankMeta.error ?? null,
       topScores: rerankedCreators.slice(0, 5).map((c) => ({
@@ -159,7 +210,9 @@ export async function searchCreatorsFromProfileData(
 
   return {
     creators: slateCreators,
-    total: result.total,
+    // Strict total can be 0 while the relaxed pool still yields a rankable
+    // slate — report the candidates actually available to the campaign.
+    total: Math.max(result.total, pool.length),
     backfill: result.backfill,
     slate: slate.meta,
   };
