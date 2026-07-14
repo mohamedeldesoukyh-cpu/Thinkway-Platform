@@ -439,6 +439,63 @@ async function testProjectionRowMapping(): Promise<void> {
   assert.ok(row.resolved_at);
 }
 
+// --- taxonomy expansion pipeline ---------------------------------------------------
+
+async function testTaxonomyExpansion(): Promise<void> {
+  const { normalizeSignalTerm, extractSignalTerms, proposeTaxonomyExpansions } = await import(
+    "./taxonomy-expansion"
+  );
+
+  // Noise gates: countries, platforms, generic words never become keywords.
+  assert.equal(normalizeSignalTerm("#Padel"), "padel");
+  assert.equal(normalizeSignalTerm("dubai"), null);
+  assert.equal(normalizeSignalTerm("instagram"), null);
+  assert.equal(normalizeSignalTerm("love"), null);
+  assert.equal(normalizeSignalTerm("ab"), null);
+
+  // Terms from every signal, unigrams + bigrams.
+  const terms = extractSignalTerms({
+    bio: "Padel coach and racket sports fan",
+    hashtags: ["#padel"],
+    mentions: [],
+    audience_interests: ["racket sports"],
+    ai_niche: null,
+    display_name: "Coach",
+    recent_publications: [],
+  });
+  assert.ok(terms.includes("padel"));
+  assert.ok(terms.includes("racket sports"));
+
+  const resolved = [
+    ...Array.from({ length: 5 }, () => ({ terms: ["padel"], categories: ["Sports"] })),
+    // ambiguous term: 3 Sports vs 3 Fitness → tie → rejected
+    ...Array.from({ length: 3 }, () => ({ terms: ["active"], categories: ["Sports"] })),
+    ...Array.from({ length: 3 }, () => ({ terms: ["active"], categories: ["Fitness"] })),
+  ];
+  const unresolved = [
+    { id: "u1", terms: ["padel"] },
+    { id: "u2", terms: ["padel"] },
+    { id: "u3", terms: ["padel", "crochet"] },
+    ...Array.from({ length: 16 }, (_, i) => ({ id: `c${i}`, terms: ["crochet"] })),
+  ];
+
+  const report = proposeTaxonomyExpansions(resolved, unresolved, new Set(["gym"]));
+  // padel: support 5, share 100%, recovery 3 → proposed as Sports.
+  const padel = report.proposals.find((p) => p.term === "padel");
+  assert.ok(padel, "padel should be proposed");
+  assert.equal(padel!.category, "Sports");
+  assert.equal(padel!.support, 5);
+  assert.equal(padel!.recovery, 3);
+  // ambiguous tie rejected.
+  assert.ok(!report.proposals.some((p) => p.term === "active"));
+  // unique recovered unresolved creators.
+  assert.equal(report.projectedRecovered, 3);
+  // crochet: 17 unresolved carriers, no resolved evidence → NEW-category cluster.
+  const crochet = report.newCategoryCandidates.find((c) => c.terms.includes("crochet"));
+  assert.ok(crochet, "crochet should be a new-category candidate");
+  assert.ok(crochet!.recovery >= 16);
+}
+
 async function run(): Promise<void> {
   testTaxonomy();
   testResolverIgnoresDiscoveryProvenance();
@@ -451,6 +508,7 @@ async function run(): Promise<void> {
   testMatchingDimensionsPhaseD();
   await testRankingConsumerOnMode();
   await testProjectionRowMapping();
+  await testTaxonomyExpansion();
   console.log("creator-intelligence.test.ts: PASS");
 }
 

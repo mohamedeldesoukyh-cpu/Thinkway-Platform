@@ -105,7 +105,8 @@
     "test:bullmq-connection": "npx tsx lib/redis/bullmq-connection.test.ts",
     "backfill:creator-intelligence": "node scripts/run-ops-script.mjs scripts/backfill-creator-intelligence.ts",
     "rollout:preflight": "node scripts/run-ops-script.mjs scripts/rollout-preflight.ts",
-    "audit:creator-intelligence": "node scripts/run-ops-script.mjs scripts/audit-creator-intelligence-gaps.ts"
+    "audit:creator-intelligence": "node scripts/run-ops-script.mjs scripts/audit-creator-intelligence-gaps.ts",
+    "taxonomy:analyze": "node scripts/run-ops-script.mjs scripts/analyze-taxonomy-expansion.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
