@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
 import { openCampaignProposalPreview } from "../../export/campaign-proposal-document";
+import { exportCampaignProposalPptx } from "../../export/campaign-proposal-pptx";
 import { useCreatorHydration } from "../../hooks/use-creator-hydration";
 import { ExecutiveCard } from "./shared/executive-card";
 import { SectionSkeleton } from "./shared/section-skeleton";
@@ -77,6 +78,19 @@ export function PresentationStatusSection({
     }
     openCampaignProposalPreview(campaignObject, exportVendors);
     toast.success("Client proposal opened — use Print → Save as PDF.");
+  }
+
+  async function handleExportPpt() {
+    if (!campaignObject) {
+      toast.error("Campaign data not ready for export.");
+      return;
+    }
+    try {
+      await exportCampaignProposalPptx(campaignObject, exportVendors);
+      toast.success("Client proposal downloaded as PowerPoint.");
+    } catch {
+      toast.error("PowerPoint export failed — please try again.");
+    }
   }
 
   if (isRunning && !presentation) {
@@ -170,7 +184,13 @@ export function PresentationStatusSection({
           <FileTextIcon className="size-3" />
           Export PDF
         </Button>
-        <Button type="button" size="xs" variant="secondary" className="h-7">
+        <Button
+          type="button"
+          size="xs"
+          variant="secondary"
+          className="h-7"
+          onClick={handleExportPpt}
+        >
           <PresentationIcon className="size-3" />
           Export PPT
         </Button>

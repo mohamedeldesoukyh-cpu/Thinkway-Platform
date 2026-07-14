@@ -8,7 +8,12 @@ import {
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
 import { DASHBOARD_SUMMARY_GRID } from "../../constants/studio-layout";
-import { resolveCampaignSummary } from "../../services/section-data-resolver";
+import {
+  resolveCampaignSummary,
+  resolveCreatorIds,
+} from "../../services/section-data-resolver";
+import { estimateSlateReach } from "../../services/campaign-render-model";
+import { useCreatorHydration } from "../../hooks/use-creator-hydration";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
@@ -23,6 +28,9 @@ export function CampaignSummarySection({
   fallbackText,
   status,
 }: CampaignSummarySectionProps) {
+  const { ids } = resolveCreatorIds(campaignObject);
+  const { vendors } = useCreatorHydration(ids);
+
   if (status === "running" && !campaignObject) {
     return <SectionSkeleton variant="cards" />;
   }
@@ -34,6 +42,11 @@ export function CampaignSummarySection({
     }
     return <SectionFallbackContent text={fallbackText} />;
   }
+
+  // Reach is modeled from the selected creator slate — the same computation
+  // the PDF/PowerPoint exports use — never from an industry template.
+  const slateReach = estimateSlateReach(vendors);
+  const estimatedReach = slateReach?.formattedRange ?? data.estimatedReach ?? "";
 
   const cards = [
     { label: "Client", value: data.client ?? data.brand ?? "", accent: "green" as const },
@@ -47,7 +60,7 @@ export function CampaignSummarySection({
     { label: "Campaign Type", value: data.campaignType ?? "", accent: "purple" as const },
     { label: "Platforms", value: data.platforms ?? "", accent: "neutral" as const },
     { label: "Creator Mix", value: data.creatorMix ?? "", accent: "green" as const },
-    { label: "Estimated Reach", value: data.estimatedReach ?? "", accent: "green" as const },
+    { label: "Estimated Reach", value: estimatedReach, accent: "green" as const },
   ].filter((c) => c.value.trim());
 
   return (

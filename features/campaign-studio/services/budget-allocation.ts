@@ -17,7 +17,7 @@ function fixPercentRounding(lines: Array<BudgetAllocationLine & { percent: numbe
   if (lines.length === 0) return lines;
 
   const rounded = lines.map((line) => ({ ...line, percent: roundPercent(line.percent) }));
-  let delta = 100 - rounded.reduce((sum, line) => sum + line.percent, 0);
+  const delta = 100 - rounded.reduce((sum, line) => sum + line.percent, 0);
   if (Math.abs(delta) < 0.01) return rounded;
 
   const adjustIndex = rounded.reduce(

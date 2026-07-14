@@ -1,7 +1,6 @@
 import {
   detectCurrencyFromSources,
   parseBudgetTotalFromText,
-  parseDurationFromText,
   stripMarkdown,
 } from "../components/sections/shared/format-utils";
 import type {
@@ -24,7 +23,6 @@ export type IndustryProfile = {
   campaignType: string;
   platforms: string[];
   creatorMixSummary: string;
-  estimatedReach: string;
   budgetWeights: Array<{ category: string; percent: number }>;
   cpmAssumption: string;
   cpeAssumption: string;
@@ -67,7 +65,6 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     campaignType: "Brand prestige & aspiration",
     platforms: ["Instagram", "YouTube"],
     creatorMixSummary: "Macro + Celebrity · editorial quality",
-    estimatedReach: "2.5M–4M qualified impressions",
     budgetWeights: [
       { category: "Creator fees", percent: 42 },
       { category: "Content production", percent: 20 },
@@ -84,7 +81,6 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     campaignType: "Destination awareness & consideration",
     platforms: ["Instagram", "TikTok", "YouTube"],
     creatorMixSummary: "Mid + Macro · travel storytellers",
-    estimatedReach: "5M–12M cross-platform views",
     budgetWeights: [
       { category: "Creator fees", percent: 42 },
       { category: "Content production", percent: 20 },
@@ -100,7 +96,6 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     campaignType: "Awareness & UGC trust-building",
     platforms: ["Instagram", "TikTok"],
     creatorMixSummary: "Micro + Mid · mom creators",
-    estimatedReach: "3M–6M parents reached",
     budgetWeights: [
       { category: "Creator fees", percent: 55 },
       { category: "Content production", percent: 15 },
@@ -116,7 +111,6 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     campaignType: "Product launch & conversion",
     platforms: ["Instagram", "TikTok", "YouTube"],
     creatorMixSummary: "Nano + Micro + Mid · fitness & lifestyle",
-    estimatedReach: "8M–15M campaign impressions",
     budgetWeights: [
       { category: "Creator fees", percent: 45 },
       { category: "Content production", percent: 15 },
@@ -133,7 +127,6 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     campaignType: "Trust & product adoption",
     platforms: ["Instagram", "LinkedIn", "YouTube"],
     creatorMixSummary: "Mid + Macro · finance educators",
-    estimatedReach: "1.5M–3M qualified reach",
     budgetWeights: [
       { category: "Creator fees", percent: 38 },
       { category: "Content production", percent: 25 },
@@ -149,7 +142,6 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     campaignType: "Integrated influencer campaign",
     platforms: ["Instagram", "TikTok"],
     creatorMixSummary: "Micro + Mid · category creators",
-    estimatedReach: "2M–5M estimated reach",
     budgetWeights: [
       { category: "Creator fees", percent: 52 },
       { category: "Content production", percent: 18 },
@@ -166,21 +158,18 @@ export function getIndustryProfile(
   industry: CampaignIndustry,
   contextText?: string
 ): IndustryProfile {
-  const base = INDUSTRY_PROFILES[industry];
-  const duration = contextText ? parseDurationFromText(contextText) : undefined;
-  const weeks = duration ? parseInt(duration, 10) : 6;
-
-  let reach = base.estimatedReach;
-  if (weeks >= 12) reach = reach.replace(/\d+M/g, (m) => `${parseInt(m) * 2}M`);
-  else if (weeks <= 4) reach = reach.replace(/(\d+)M/g, (_, n) => `${Math.max(1, Math.round(parseInt(n) * 0.6))}M`);
-
-  return { industry, ...base, estimatedReach: reach };
+  // contextText kept for signature compatibility — reach is no longer
+  // templated or duration-scaled here; it is modeled from the creator slate.
+  void contextText;
+  return { industry, ...INDUSTRY_PROFILES[industry] };
 }
 
 export function resolveClientFromBrief(text: string): string {
   const patterns = [
-    /\b(Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi)\b/i,
+    // Explicitly labeled client/brand wins over the known-brand list so a
+    // passing mention of another brand can never displace the actual client.
     /(?:client|brand)[:\s]+(.+?)(?:\n|$)/i,
+    /\b(Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi)\b/i,
     /launch\s+([A-Za-z][\w\s&-]+?)\s+(?:in|for|across)/i,
   ];
   for (const pattern of patterns) {
@@ -665,74 +654,16 @@ export function getGroundedKpis(
 ): GroundedKpi[] {
   const baseKpis = getIndustryKpis(industry, budgetText);
   const profile = INDUSTRY_PROFILES[industry];
-  const similarCampaigns: Record<CampaignIndustry, number> = {
-    luxury: 47,
-    tourism: 83,
-    baby: 124,
-    retail: 156,
-    finance: 38,
-    general: 62,
-  };
 
-  const kpiMeta: Record<
-    CampaignIndustry,
-    Array<{ reason: string; calculationSource: string; confidence: number }>
-  > = {
-    luxury: [
-      { reason: "Based on 47 similar luxury campaigns in MENA with HNW targeting", calculationSource: "47 historical campaigns", confidence: 88 },
-      { reason: "Instagram reach model from macro creator roster + paid boost", calculationSource: "Creator reach aggregation", confidence: 91 },
-      { reason: "YouTube luxury vertical completion benchmarks", calculationSource: "Industry benchmark", confidence: 85 },
-      { reason: "Share of voice analysis vs category competitors", calculationSource: "Competitive intelligence", confidence: 82 },
-      { reason: "EMV ratio from comparable luxury spend tiers", calculationSource: "Historical EMV data", confidence: 86 },
-      { reason: "HNW audience ER from verified luxury creator profiles", calculationSource: "Creator intelligence", confidence: 90 },
-    ],
-    tourism: [
-      { reason: "Destination consideration lift from 83 MENA tourism campaigns", calculationSource: "83 historical campaigns", confidence: 92 },
-      { reason: "TikTok travel vertical view projections from creator roster", calculationSource: "Creator reach aggregation", confidence: 89 },
-      { reason: "Travel content save rate benchmarks on Instagram", calculationSource: "Industry benchmark", confidence: 87 },
-      { reason: "Link click model from similar destination campaigns", calculationSource: "Historical conversion data", confidence: 84 },
-      { reason: "UGC volume target from micro creator activation rate", calculationSource: "Creator tier mix model", confidence: 88 },
-      { reason: "CPV efficiency from travel vertical paid benchmarks", calculationSource: "Industry benchmark", confidence: 91 },
-    ],
-    baby: [
-      { reason: "Parent audience reach from mom creator network demographics", calculationSource: "Creator intelligence", confidence: 93 },
-      { reason: "UGC volume from micro/nano mom creator activation rates", calculationSource: "Historical UGC data", confidence: 90 },
-      { reason: "Purchase intent lift from 124 baby FMCG campaigns", calculationSource: "124 historical campaigns", confidence: 88 },
-      { reason: "Trial coupon redemption model from similar budget tiers", calculationSource: "Historical conversion data", confidence: 85 },
-      { reason: "Mom community ER from verified parenting creator profiles", calculationSource: "Creator intelligence", confidence: 92 },
-      { reason: "Cost per UGC from budget ÷ target asset count", calculationSource: "Budget efficiency model", confidence: 87 },
-    ],
-    retail: [
-      { reason: "Launch awareness lift from 156 sportswear campaigns in MENA", calculationSource: "156 historical campaigns", confidence: 91 },
-      { reason: "Shoppable click projections from try-on creator content", calculationSource: "Creator conversion history", confidence: 88 },
-      { reason: "Conversion rate from creator link attribution data", calculationSource: "Historical conversion data", confidence: 86 },
-      { reason: "TikTok fit content view model from nano/micro roster", calculationSource: "Creator reach aggregation", confidence: 90 },
-      { reason: "ROAS from sportswear paid boost benchmarks", calculationSource: "Industry benchmark", confidence: 89 },
-      { reason: "Store visit uplift from launch-week activation data", calculationSource: "Historical offline data", confidence: 82 },
-    ],
-    finance: [
-      { reason: "Card intent lift from 38 banking campaigns in UAE/KSA", calculationSource: "38 historical campaigns", confidence: 87 },
-      { reason: "LinkedIn qualified reach from finance educator roster", calculationSource: "Creator reach aggregation", confidence: 90 },
-      { reason: "Lead generation model from similar budget tiers", calculationSource: "Historical conversion data", confidence: 85 },
-      { reason: "Trust score from verified finance creator audience ratings", calculationSource: "Creator intelligence", confidence: 92 },
-      { reason: "YouTube explainer completion from finance vertical benchmarks", calculationSource: "Industry benchmark", confidence: 88 },
-      { reason: "CPL from budget ÷ target lead count", calculationSource: "Budget efficiency model", confidence: 86 },
-    ],
-    general: [
-      { reason: "Reach model from creator roster aggregation", calculationSource: "Creator reach aggregation", confidence: 85 },
-      { reason: "Category ER benchmarks across platforms", calculationSource: "Industry benchmark", confidence: 82 },
-      { reason: "Deliverable count from content plan quantities", calculationSource: "Content plan model", confidence: 88 },
-      { reason: "Awareness lift from comparable campaigns", calculationSource: "62 historical campaigns", confidence: 80 },
-    ],
-  };
-
-  const meta = kpiMeta[industry];
-  return baseKpis.map((kpi, index) => ({
+  // Directional category benchmarks only — no fabricated historical-campaign
+  // counts or invented evidence. Campaign-specific KPIs (facts / approved
+  // reasoning) always take precedence over these in the resolver.
+  return baseKpis.map((kpi) => ({
     metric: kpi.metric,
     prediction: kpi.target,
-    confidence: meta[index]?.confidence ?? 80,
-    reason: meta[index]?.reason ?? `${profile.label} KPI target from industry benchmarks`,
-    calculationSource: meta[index]?.calculationSource ?? "Industry benchmark",
+    confidence: 75,
+    reason: `${profile.label} category benchmark — directional target pending campaign-specific validation`,
+    calculationSource: "Industry benchmark",
     platform: kpi.platform,
     benchmark: kpi.benchmark,
   }));
@@ -835,7 +766,7 @@ export function getIndustryBenchmarks(
     summary: `Competitive intelligence baseline for ${profile.label} — campaign-specific validation pending`,
     estCpm: profile.cpmAssumption,
     estCpc: profile.cpeAssumption,
-    estReach: profile.estimatedReach,
+    estReach: "Slate-dependent — see Estimated Reach (modeled from selected creators)",
     postingFrequency: `${profile.platforms.length >= 2 ? "3–5" : "2–4"} posts/week (category norm)`,
     creatorMixBenchmark: profile.creatorMixSummary,
     budgetEfficiency: total

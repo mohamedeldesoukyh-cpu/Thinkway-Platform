@@ -9,8 +9,13 @@ import {
   resolveGoLiveWeek,
   type CampaignDurationWeeks,
 } from "./timeline-duration";
-import { sanitizeTimelineText, stripMarkdown } from "../components/sections/shared/format-utils";
+import { stripMarkdown } from "../components/sections/shared/format-utils";
 import { creatorTierStrategyToMix } from "@/features/campaign-director/facts/facts-display-bridge";
+import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
+import {
+  filterCelebrityMixTiers,
+  stripCelebrityFromLabel,
+} from "./campaign-render-model";
 import type { TimelineMilestone } from "@/features/campaign-intelligence/types/section-schemas";
 import type {
   ExecutiveSummaryData,
@@ -78,267 +83,126 @@ function extractSection(text: string, header: RegExp): string | undefined {
   return undefined;
 }
 
-const CONCEPT_TEMPLATES: Record<
-  CampaignIndustry,
-  Array<Omit<CreativeConcept, "hashtags"> & { hashtagBase: string[] }>
-> = {
-  luxury: [
-    {
-      name: "Timeless Heritage",
-      bigIdea: "Craftsmanship passed through generations",
-      hook: "Every second tells a story of precision",
-      keyVisual: "Close-up dial reflections in golden hour light",
-      contentTheme: "Heritage storytelling & atelier moments",
-      cta: "Discover the collection",
-      sampleCaption: "Precision isn't inherited — it's earned, one movement at a time.",
-      hashtagBase: ["#TimelessCraft", "#LuxuryMoments", "#Precision"],
-    },
-    {
-      name: "Modern Icons",
-      bigIdea: "Leaders who define their own time",
-      hook: "Success isn't worn — it's lived",
-      keyVisual: "Portrait series with architectural backdrops",
-      contentTheme: "Aspirational lifestyle & achievement",
-      cta: "Explore the icon collection",
-      sampleCaption: "Some moments don't need an introduction. They arrive.",
-      hashtagBase: ["#ModernIcon", "#Leadership", "#Aspiration"],
-    },
-    {
-      name: "Exclusive Access",
-      bigIdea: "Behind the velvet rope experience",
-      hook: "See what few ever will",
-      keyVisual: "Private viewing & boutique experience",
-      contentTheme: "Exclusivity & VIP moments",
-      cta: "Book a private viewing",
-      sampleCaption: "Exclusivity isn't about access — it's about understanding.",
-      hashtagBase: ["#ExclusiveAccess", "#PrivateViewing", "#LuxuryLife"],
-    },
-  ],
-  tourism: [
-    {
-      name: "Ancient Wonders Reimagined",
-      bigIdea: "5,000 years of history through fresh eyes",
-      hook: "You've seen the photos — now feel the moment",
-      keyVisual: "Creator POV at pyramids during sunrise",
-      contentTheme: "Heritage sites & iconic landmarks",
-      cta: "Plan your journey",
-      sampleCaption: "Some places don't just exist in history — they live in your memory forever.",
-      hashtagBase: ["#VisitEgypt", "#AncientWonders", "#TravelEgypt"],
-    },
-    {
-      name: "Hidden Gems Trail",
-      bigIdea: "Beyond the guidebook experiences",
-      hook: "The Egypt locals want you to discover",
-      keyVisual: "Street food, Nile felucca, local markets",
-      contentTheme: "Authentic local experiences",
-      cta: "Explore hidden gems",
-      sampleCaption: "The best stories aren't in guidebooks — they're in alleyways and smiles.",
-      hashtagBase: ["#HiddenGems", "#LocalEgypt", "#AuthenticTravel"],
-    },
-    {
-      name: "Adventure Awaits",
-      bigIdea: "From desert to diving — one destination",
-      hook: "One country, infinite adventures",
-      keyVisual: "Split-screen desert safari & Red Sea diving",
-      contentTheme: "Adventure & outdoor activities",
-      cta: "Start your adventure",
-      sampleCaption: "Morning in the desert. Afternoon in paradise. Only in Egypt.",
-      hashtagBase: ["#EgyptAdventure", "#RedSea", "#DesertSafari"],
-    },
-  ],
-  baby: [
-    {
-      name: "Real Mom Moments",
-      bigIdea: "Authentic parenting, not perfection",
-      hook: "Because every mom deserves confidence",
-      keyVisual: "Candid morning routine with baby",
-      contentTheme: "Day-in-the-life UGC",
-      cta: "Try BabyJoy Premium",
-      sampleCaption: "Messy mornings, happy babies — that's the real win.",
-      hashtagBase: ["#RealMomMoments", "#BabyJoy", "#ParentingReal"],
-    },
-    {
-      name: "Comfort Tested",
-      bigIdea: "12-hour comfort challenge",
-      hook: "Can one diaper survive a full day?",
-      keyVisual: "Before/after comfort comparison",
-      contentTheme: "Product proof & trial content",
-      cta: "Get your trial pack",
-      sampleCaption: "We put BabyJoy to the ultimate test — and baby approved.",
-      hashtagBase: ["#ComfortTested", "#BabyJoyPremium", "#DiaperTest"],
-    },
-    {
-      name: "Mom Community",
-      bigIdea: "Tips, tricks, and shared wisdom",
-      hook: "Join 50K+ Egyptian moms",
-      keyVisual: "Group of moms sharing tips",
-      contentTheme: "Community & peer recommendations",
-      cta: "Join the community",
-      sampleCaption: "The best advice comes from moms who've been there.",
-      hashtagBase: ["#MomCommunity", "#ParentingTips", "#EgyptMoms"],
-    },
-  ],
-  retail: [
-    {
-      name: "Street to Stadium",
-      bigIdea: "From everyday style to peak performance",
-      hook: "Your city is your training ground",
-      keyVisual: "Urban running through Cairo streets",
-      contentTheme: "Performance meets lifestyle",
-      cta: "Shop the collection",
-      sampleCaption: "Every street is a runway. Every step is training.",
-      hashtagBase: ["#StreetToStadium", "#AdidasEgypt", "#ImpossibleIsNothing"],
-    },
-    {
-      name: "Fit Check Friday",
-      bigIdea: "Community-driven style validation",
-      hook: "Tag us in your best fit",
-      keyVisual: "Creator outfit breakdown carousel",
-      contentTheme: "Style & product showcase",
-      cta: "Shop the look",
-      sampleCaption: "Fit check: passed. Confidence: unlimited.",
-      hashtagBase: ["#FitCheck", "#AdidasStyle", "#OOTD"],
-    },
-    {
-      name: "Creator Collab Drop",
-      bigIdea: "Limited edition with local athletes",
-      hook: "Designed in Egypt, worn everywhere",
-      keyVisual: "Unboxing limited edition sneakers",
-      contentTheme: "Product launch & hype",
-      cta: "Get yours before they're gone",
-      sampleCaption: "Limited drop. Unlimited energy. Get yours now.",
-      hashtagBase: ["#CollabDrop", "#LimitedEdition", "#AdidasLaunch"],
-    },
-  ],
-  finance: [
-    {
-      name: "Smart Money Moves",
-      bigIdea: "Financial literacy for everyday life",
-      hook: "Your money should work as hard as you do",
-      keyVisual: "Clean infographic explainer series",
-      contentTheme: "Educational finance content",
-      cta: "Learn more about our products",
-      sampleCaption: "Smart money isn't about how much you earn — it's about how you manage it.",
-      hashtagBase: ["#SmartMoney", "#FinancialLiteracy", "#MoneyTips"],
-    },
-    {
-      name: "Life Milestones",
-      bigIdea: "Banking that grows with your journey",
-      hook: "From first job to first home",
-      keyVisual: "Life stage progression storytelling",
-      contentTheme: "Life event banking solutions",
-      cta: "Explore our products",
-      sampleCaption: "Every milestone deserves a partner who understands the journey.",
-      hashtagBase: ["#LifeMilestones", "#BankingForLife", "#FutureReady"],
-    },
-    {
-      name: "Trust Verified",
-      bigIdea: "Real customers, real experiences",
-      hook: "Hear it from people like you",
-      keyVisual: "Testimonial-style creator interviews",
-      contentTheme: "Trust & social proof",
-      cta: "Open your account today",
-      sampleCaption: "Trust isn't built in ads — it's built in experiences.",
-      hashtagBase: ["#TrustVerified", "#CustomerStories", "#BankWithConfidence"],
-    },
-  ],
-  general: [
-    {
-      name: "Brand Story",
-      bigIdea: "Authentic brand narrative",
-      hook: "Discover what makes us different",
-      keyVisual: "Brand hero visual with creator overlay",
-      contentTheme: "Brand awareness",
+/**
+ * Parse explicitly proposed creative concepts out of the campaign's own
+ * strategy narrative (a "Creative Concepts" heading followed by named
+ * bullets). Returns [] when the strategy proposes none.
+ */
+export function parseCreativeConceptsFromText(text: string): CreativeConcept[] {
+  if (!text.trim()) return [];
+  const lines = text.split("\n");
+  const headingIndex = lines.findIndex((line) =>
+    /^#{0,3}\s*creative concepts?\b/i.test(line.trim())
+  );
+  if (headingIndex < 0) return [];
+
+  const concepts: CreativeConcept[] = [];
+  for (let i = headingIndex + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    if (/^#{1,3}\s/.test(line) && !/creative concept/i.test(line)) break;
+    const bullet = line.match(/^(?:[-*\u2022]|\d+[.)])\s*(.+)$/);
+    if (!bullet?.[1]) continue;
+
+    const entry = stripMarkdown(bullet[1]);
+    const split = entry.split(/\s*(?:—|–|:)\s*/);
+    const name = split[0]?.trim();
+    const description = split.slice(1).join(" — ").trim() || name;
+    if (!name) continue;
+
+    concepts.push({
+      name,
+      bigIdea: description,
+      hook: description.split(/(?<=[.!?])\s+/)[0] ?? description,
+      keyVisual: description,
+      contentTheme: name,
       cta: "Learn more",
-      sampleCaption: "Every great brand has a story — this is ours.",
-      hashtagBase: ["#BrandStory", "#Authentic", "#Discover"],
-    },
-    {
-      name: "Community Voices",
-      bigIdea: "Real people, real experiences",
-      hook: "Join the conversation",
-      keyVisual: "User-generated content collage",
-      contentTheme: "Community engagement",
-      cta: "Share your story",
-      sampleCaption: "The best marketing is a community that believes.",
-      hashtagBase: ["#Community", "#RealVoices", "#UGC"],
-    },
-    {
-      name: "Product Spotlight",
-      bigIdea: "Feature-led content series",
-      hook: "See it in action",
-      keyVisual: "Product demo with lifestyle context",
-      contentTheme: "Product education",
-      cta: "Shop now",
-      sampleCaption: "Don't just tell them — show them why it matters.",
-      hashtagBase: ["#ProductSpotlight", "#Demo", "#MustHave"],
-    },
-  ],
-};
+      sampleCaption: description,
+      hashtags: [],
+    });
+  }
+  return concepts;
+}
 
-const CONCEPT_ENHANCEMENTS: Record<
-  CampaignIndustry,
-  Array<{ targetEmotion: string; contentStyle: string; creatorStyle: string; visualDirection: string }>
-> = {
-  luxury: [
-    { targetEmotion: "Awe & aspiration", contentStyle: "Cinematic slow-motion", creatorStyle: "Editorial photographer", visualDirection: "Golden hour, shallow depth of field" },
-    { targetEmotion: "Confidence & achievement", contentStyle: "Portrait documentary", creatorStyle: "Lifestyle macro creator", visualDirection: "Architectural backdrops, muted palette" },
-    { targetEmotion: "Exclusivity & privilege", contentStyle: "Behind-the-scenes access", creatorStyle: "Luxury insider creator", visualDirection: "Velvet textures, intimate framing" },
-  ],
-  tourism: [
-    { targetEmotion: "Wonder & discovery", contentStyle: "POV travel vlog", creatorStyle: "Destination storyteller", visualDirection: "Sunrise golden light at landmarks" },
-    { targetEmotion: "Authenticity & connection", contentStyle: "Street-level documentary", creatorStyle: "Local guide creator", visualDirection: "Vibrant markets, candid moments" },
-    { targetEmotion: "Adventure & thrill", contentStyle: "Action montage", creatorStyle: "Adventure sports creator", visualDirection: "Split-screen desert/ocean contrast" },
-  ],
-  baby: [
-    { targetEmotion: "Relief & confidence", contentStyle: "Day-in-the-life UGC", creatorStyle: "Relatable mom creator", visualDirection: "Warm home lighting, candid moments" },
-    { targetEmotion: "Trust & proof", contentStyle: "Product trial challenge", creatorStyle: "Review-focused mom creator", visualDirection: "Before/after split frames" },
-    { targetEmotion: "Community & belonging", contentStyle: "Tips & tricks carousel", creatorStyle: "Community mom leader", visualDirection: "Group settings, friendly tones" },
-  ],
-  retail: [
-    { targetEmotion: "Energy & motivation", contentStyle: "Urban running montage", creatorStyle: "Fitness lifestyle creator", visualDirection: "Dynamic motion, city backdrops" },
-    { targetEmotion: "Confidence & style", contentStyle: "Outfit breakdown carousel", creatorStyle: "Streetwear creator", visualDirection: "Clean mirror shots, bold colors" },
-    { targetEmotion: "Excitement & urgency", contentStyle: "Unboxing hype reel", creatorStyle: "Sneakerhead creator", visualDirection: "Fast cuts, product hero shots" },
-  ],
-  finance: [
-    { targetEmotion: "Empowerment & clarity", contentStyle: "Animated explainer", creatorStyle: "Finance educator", visualDirection: "Clean infographics, blue/green palette" },
-    { targetEmotion: "Security & progress", contentStyle: "Life stage storytelling", creatorStyle: "Professional lifestyle creator", visualDirection: "Warm progression montage" },
-    { targetEmotion: "Trust & credibility", contentStyle: "Testimonial interview", creatorStyle: "Verified customer creator", visualDirection: "Direct-to-camera, neutral backdrop" },
-  ],
-  general: [
-    { targetEmotion: "Curiosity & discovery", contentStyle: "Brand narrative reel", creatorStyle: "Category creator", visualDirection: "Brand colors, hero product focus" },
-    { targetEmotion: "Belonging & validation", contentStyle: "UGC collage", creatorStyle: "Community creator", visualDirection: "Multi-creator grid layout" },
-    { targetEmotion: "Desire & action", contentStyle: "Product demo", creatorStyle: "Demo specialist creator", visualDirection: "Lifestyle context, clear CTA overlay" },
-  ],
-};
+function brandHashtag(brand: string): string {
+  const compact = brand.replace(/[^\w]/g, "");
+  return compact ? `#${compact}` : "";
+}
 
+/**
+ * Creative concepts for THIS campaign. Precedence: concepts explicitly
+ * proposed in the strategy narrative, else concept directions composed from
+ * the campaign's own facts (brand, objective, audience, platforms, market).
+ * No industry demo templates — when the campaign context is unknown, no
+ * concepts are rendered.
+ */
 export function deriveCreativeConcepts(
   strategyText: string,
-  summaryText: string
+  summaryText: string,
+  facts?: CampaignFacts
 ): CreativeConcept[] {
-  const combined = [strategyText, summaryText].filter(Boolean).join("\n");
-  const industry = detectIndustryFromBrief(combined);
-  const templates = CONCEPT_TEMPLATES[industry];
-  const enhancements = CONCEPT_ENHANCEMENTS[industry];
-  const brand = extractSection(combined, /^#{0,3}\s*brand/i) ?? "";
-  const market = extractSection(combined, /^#{0,3}\s*market/i) ?? "MENA";
+  const parsed = parseCreativeConceptsFromText(strategyText);
+  if (parsed.length > 0) return parsed;
 
-  return templates.map((template, index) => ({
-    name: template.name,
-    bigIdea: template.bigIdea,
-    hook: template.hook,
-    keyVisual: template.keyVisual,
-    contentTheme: template.contentTheme,
-    cta: template.cta,
-    sampleCaption: brand
-      ? template.sampleCaption.replace("BabyJoy", brand).replace("Adidas", brand)
-      : template.sampleCaption,
-    hashtags: [...template.hashtagBase, `#${market.replace(/\s+/g, "")}`].slice(0, 5),
-    targetEmotion: enhancements[index]?.targetEmotion,
-    contentStyle: enhancements[index]?.contentStyle,
-    creatorStyle: enhancements[index]?.creatorStyle,
-    visualDirection: enhancements[index]?.visualDirection ?? template.keyVisual,
-  }));
+  const combined = [strategyText, summaryText].filter(Boolean).join("\n");
+  const brand =
+    facts?.brandName ??
+    facts?.clientName ??
+    extractSection(combined, /^#{0,3}\s*brand/i);
+  if (!brand?.trim()) return [];
+
+  const objective = facts?.objective ?? extractSection(combined, /objective/i) ?? "brand awareness";
+  const audience =
+    facts?.audience ?? extractSection(combined, /(?:target )?audience/i) ?? "the target audience";
+  const market = facts?.geography?.join(", ") ?? extractSection(combined, /^#{0,3}\s*market/i);
+  const platforms = facts?.platforms?.length ? facts.platforms : ["Instagram"];
+  const primaryPlatform = platforms[0];
+  const marketSuffix = market ? ` in ${market}` : "";
+  const tag = brandHashtag(brand);
+  const marketTag = market ? `#${market.split(/[,\s]+/)[0].replace(/[^\w]/g, "")}` : "";
+  const baseTags = [tag, marketTag].filter(Boolean);
+
+  return [
+    {
+      name: `${brand} Real Stories`,
+      bigIdea: `${objective} told through authentic creator experiences with ${brand}${marketSuffix}`,
+      hook: `The ${brand} story, told by the people who live it`,
+      keyVisual: `Creator-led ${primaryPlatform} storytelling featuring ${brand}`,
+      contentTheme: "Authentic creator storytelling",
+      cta: `Discover ${brand}`,
+      sampleCaption: `Real experiences. Real results. This is ${brand}.`,
+      hashtags: [...baseTags, "#CreatorStories"].slice(0, 5),
+      targetEmotion: "Trust & connection",
+      contentStyle: `${primaryPlatform}-native narrative`,
+      visualDirection: `Creator point-of-view featuring ${brand}`,
+    },
+    {
+      name: `${brand} Community Proof`,
+      bigIdea: `Peer validation at scale — ${audience} advocating for ${brand}`,
+      hook: `Hear it from ${audience}`,
+      keyVisual: `UGC series from ${audience}${marketSuffix}`,
+      contentTheme: "UGC & social proof",
+      cta: `Join the ${brand} community`,
+      sampleCaption: `Trusted by ${audience} — and counting.`,
+      hashtags: [...baseTags, "#Community"].slice(0, 5),
+      targetEmotion: "Belonging & validation",
+      contentStyle: "UGC collage",
+      visualDirection: "Multi-creator grid with candid moments",
+    },
+    {
+      name: `${brand} in Action`,
+      bigIdea: `Product-in-context content that turns ${objective.toLowerCase()} into consideration`,
+      hook: "See it in action",
+      keyVisual: `${primaryPlatform}-native demonstration with lifestyle context`,
+      contentTheme: "Product demonstration",
+      cta: "Learn more",
+      sampleCaption: `${brand}, put to the test.`,
+      hashtags: [...baseTags, "#InAction"].slice(0, 5),
+      targetEmotion: "Desire & action",
+      contentStyle: "Demonstration with clear CTA",
+      visualDirection: "Lifestyle context, product hero focus",
+    },
+  ];
 }
 
 const MIX_BY_INDUSTRY: Record<CampaignIndustry, CreatorMixTier[]> = {
@@ -389,13 +253,20 @@ const MIX_BY_INDUSTRY: Record<CampaignIndustry, CreatorMixTier[]> = {
 export function deriveCreatorMix(
   strategyText: string,
   summaryText: string,
-  tierStrategy?: Array<{ tier: string; allocationPercent: number; why: string }>
+  tierStrategy?: Array<{ tier: string; allocationPercent: number; why: string }>,
+  options?: { allowCelebrity?: boolean }
 ): CreatorMixTier[] {
+  const allowCelebrity =
+    options?.allowCelebrity ?? /celebrit/i.test([strategyText, summaryText].join("\n"));
+
   if (tierStrategy?.length) {
-    return creatorTierStrategyToMix(tierStrategy);
+    return filterCelebrityMixTiers(creatorTierStrategyToMix(tierStrategy), allowCelebrity);
   }
   const industry = detectIndustryFromBrief([strategyText, summaryText].join("\n"));
-  return MIX_BY_INDUSTRY[industry].filter((t) => t.percent > 0 || t.count > 0);
+  return filterCelebrityMixTiers(
+    MIX_BY_INDUSTRY[industry].filter((t) => t.percent > 0 || t.count > 0),
+    allowCelebrity
+  );
 }
 
 const CONTENT_DELIVERABLES: Record<
@@ -446,11 +317,12 @@ const CONTENT_DELIVERABLES: Record<
 
 export function deriveContentPlan(
   strategyText: string,
-  summaryText: string
+  summaryText: string,
+  durationWeeks?: CampaignDurationWeeks
 ): ContentPlanItem[] {
   const combined = [strategyText, summaryText].filter(Boolean).join("\n");
   const industry = detectIndustryFromBrief(combined);
-  const weeks = parseDurationWeeks(combined);
+  const weeks = durationWeeks ?? parseDurationWeeks(combined);
   const deliverables = CONTENT_DELIVERABLES[industry];
 
   return deliverables.map((item, index) => ({
@@ -466,102 +338,73 @@ export function deriveContentPlan(
 export function deriveWhyAiInsights(
   strategyText: string,
   summaryText: string,
-  budgetText?: string
+  budgetText?: string,
+  durationWeeks?: CampaignDurationWeeks
 ): WhyAiInsight[] {
   const combined = [strategyText, summaryText, budgetText].filter(Boolean).join("\n");
   const industry = detectIndustryFromBrief(combined);
   const profile = getIndustryProfile(industry, combined);
-  const weeks = parseDurationWeeks(combined);
+  const weeks = durationWeeks ?? parseDurationWeeks(combined);
+  const allowCelebrity = /celebrit/i.test(combined);
+  const mixSummary = stripCelebrityFromLabel(profile.creatorMixSummary, allowCelebrity);
 
-  const industryReasons: Record<CampaignIndustry, { rationale: string; evidence: string; source: import("./grounding-types").GroundingSource; confidence: number }> = {
-    luxury: {
-      rationale: "AI matched creators with premium aesthetics and high-net-worth audience overlap",
-      evidence: "47 luxury campaigns · avg fit score 87/100 · HNW audience match 72%",
-      source: "Creator",
-      confidence: 92,
-    },
-    tourism: {
-      rationale: "AI identified travel storytellers with proven destination content performance",
-      evidence: "83 tourism campaigns · avg destination ER 5.8% · save rate 8.2%",
-      source: "Historical",
-      confidence: 91,
-    },
-    baby: {
-      rationale: "AI filtered mom creators with authentic 0–3 year parenting content and high trust scores",
-      evidence: "124 baby campaigns · mom creator trust score 4.6/5 · UGC conversion +18%",
-      source: "Creator",
-      confidence: 94,
-    },
-    retail: {
-      rationale: "AI ranked creators by product category fit, engagement quality, and conversion history",
-      evidence: "156 retail launches · try-on content ROAS 3.2x · fit content CTR +40%",
-      source: "Historical",
-      confidence: 93,
-    },
-    finance: {
-      rationale: "AI selected compliance-safe finance educators with verified audience demographics",
-      evidence: "38 banking campaigns · compliance pass rate 100% · lead CPL -22% vs avg",
-      source: "Industry",
-      confidence: 90,
-    },
-    general: {
-      rationale: "AI analyzed creator profiles to find optimal category fit",
-      evidence: "62 comparable campaigns · avg fit score 78/100",
-      source: "AI",
-      confidence: 85,
-    },
+  const creatorRationaleByIndustry: Record<CampaignIndustry, string> = {
+    luxury: "AI matched creators with premium aesthetics and affluent audience overlap",
+    tourism: "AI identified travel storytellers with destination content focus",
+    baby: "AI filtered parenting creators with authentic 0–3 year content",
+    retail: "AI ranked creators by product category fit and engagement quality",
+    finance: "AI selected compliance-safe finance educators with verified audiences",
+    general: "AI analyzed creator profiles to find optimal category fit",
   };
-
-  const budgetEvidence = `${profile.label} campaigns typically allocate ${profile.budgetWeights[0].percent}% to creators — based on ${industry === "luxury" ? 47 : industry === "tourism" ? 83 : industry === "baby" ? 124 : industry === "retail" ? 156 : industry === "finance" ? 38 : 62} historical campaigns`;
 
   return [
     {
       category: "Creators",
       title: "Why these creators",
-      rationale: industryReasons[industry].rationale,
-      evidence: industryReasons[industry].evidence,
-      source: industryReasons[industry].source,
-      confidence: industryReasons[industry].confidence,
+      rationale: creatorRationaleByIndustry[industry],
+      evidence: "Ranked from Thinkway creator intelligence (fit, audience, engagement)",
+      source: "Creator" as const,
+      confidence: 85,
     },
     {
       category: "Budget",
       title: "Why this allocation",
       rationale: `${profile.budgetWeights[0].percent}% creator fees + ${profile.budgetWeights[2].percent}% paid amplification optimized for ${profile.campaignType.toLowerCase()}.`,
-      evidence: budgetEvidence,
-      source: "Historical" as const,
-      confidence: 88,
+      evidence: `${profile.label} category allocation convention`,
+      source: "Industry" as const,
+      confidence: 82,
     },
     {
       category: "Strategy",
       title: "Why this approach",
-      rationale: `${profile.campaignType} requires ${profile.platforms.join(" + ")} focus with ${profile.creatorMixSummary.toLowerCase()}.`,
-      evidence: `${profile.label} vertical best practices · ${profile.platforms.length} platform mix validated`,
+      rationale: `${profile.campaignType} requires ${profile.platforms.join(" + ")} focus with ${mixSummary.toLowerCase()}.`,
+      evidence: `${profile.label} category best practices`,
       source: "Industry" as const,
-      confidence: 91,
+      confidence: 84,
     },
     {
       category: "KPIs",
       title: "Why these targets",
-      rationale: `Industry benchmarks for ${profile.label} campaigns in MENA set realistic targets based on ${weeks}-week duration.`,
-      evidence: `Benchmark data from Thinkway historical database · ${weeks}-week phasing model`,
-      source: "Historical" as const,
-      confidence: 87,
+      rationale: `Targets aligned to the ${weeks}-week duration and ${profile.label} category benchmarks.`,
+      evidence: `Category benchmark ranges · ${weeks}-week phasing`,
+      source: "Industry" as const,
+      confidence: 80,
     },
     {
       category: "Timeline",
       title: "Why this schedule",
       rationale: `${weeks}-week phasing balances production quality, approval cycles, and go-live momentum.`,
-      evidence: `Avg approval cycle ${industry === "finance" ? "12" : industry === "luxury" ? "10" : "7"} days · production lead ${industry === "tourism" ? "14" : "10"} days`,
-      source: "Historical" as const,
-      confidence: 85,
+      evidence: `Production and approval phases scaled to the ${weeks}-week window`,
+      source: "Industry" as const,
+      confidence: 82,
     },
     {
       category: "Concepts",
       title: "Why these creative directions",
-      rationale: `Three distinct concept territories tested across ${profile.label} campaigns with highest engagement variance.`,
-      evidence: `Concept A/B testing data · emotional resonance scores from ${industry === "baby" ? 124 : 62}+ campaigns`,
+      rationale: "Concept directions composed from this campaign's brand, audience, and objective.",
+      evidence: "Campaign brief context",
       source: "AI" as const,
-      confidence: 86,
+      confidence: 80,
     },
   ];
 }
@@ -587,10 +430,10 @@ export function deriveExecutiveStrategyFields(
   const insightByIndustry: Record<CampaignIndustry, string> = {
     luxury: "Luxury buyers seek validation from peers, not ads — creator authenticity drives consideration",
     tourism: "Travel decisions are emotional and visual — destination content triggers planning behavior",
-    baby: "Moms trust other moms 3x more than brand messaging for product decisions",
-    retail: "Try-on and fit content reduces purchase hesitation by 40% in sportswear",
+    baby: "Parents trust peer recommendations over brand messaging for product decisions",
+    retail: "Try-on and fit content reduces purchase hesitation in apparel and sportswear",
     finance: "Financial decisions require repeated exposure to trusted educators before action",
-    general: "Creator recommendations drive 4x higher engagement than brand-owned content",
+    general: "Creator recommendations outperform brand-owned content on engagement",
   };
 
   const journeyByIndustry: Record<CampaignIndustry, string> = {
@@ -611,19 +454,16 @@ export function deriveExecutiveStrategyFields(
     general: "AI-optimized creator mix based on category performance data",
   };
 
-  const personas = extractSection(combined, /persona/i)
-    ? [extractSection(combined, /persona/i)!]
-    : industry === "baby"
-      ? ["First-time moms (25–35)", "Experienced mothers seeking premium"]
-      : industry === "luxury"
-        ? ["Affluent professionals (35–55)", "Aspirational achievers (28–40)"]
-        : industry === "tourism"
-          ? ["Adventure travelers (25–40)", "Cultural explorers (30–50)"]
-          : industry === "retail"
-            ? ["Active lifestyle (18–35)", "Streetwear enthusiasts (16–28)"]
-            : industry === "finance"
-              ? ["Young professionals (25–35)", "Established earners (35–50)"]
-              : ["Primary target segment", "Secondary consideration audience"];
+  const briefPersona = extractSection(combined, /persona/i);
+  const briefAudience =
+    extractSection(combined, /target audience/i) ??
+    extractSection(combined, /primary audience/i) ??
+    extractSection(combined, /audience/i);
+  const personas = briefPersona
+    ? [briefPersona]
+    : briefAudience
+      ? [briefAudience]
+      : [];
 
   return {
     businessChallenge: challengeByIndustry[industry],
@@ -649,7 +489,10 @@ export function deriveExecutiveStrategyFields(
     contentPillars: profile.platforms.map(
       (p) => `${p}: ${profile.campaignType.split("&")[0].trim()} content`
     ),
-    creatorStrategy: profile.creatorMixSummary,
+    creatorStrategy: stripCelebrityFromLabel(
+      profile.creatorMixSummary,
+      /celebrit/i.test(combined)
+    ),
     platformStrategy: `${profile.platforms.join(", ")} — weighted by ${profile.label} audience behavior`,
     customerJourney: journeyByIndustry[industry],
     successFactors: [
@@ -904,18 +747,19 @@ export function deriveGroundedStrategy(
   const industry = detectIndustryFromBrief(combined);
   const profile = getIndustryProfile(industry, combined);
   const fields = deriveExecutiveStrategyFields(strategyText, audienceText, summaryText);
-  const client = resolveClientFromBrief(combined);
+  const resolvedClient = resolveClientFromBrief(combined);
+  const client = /^brand client$/i.test(resolvedClient) ? undefined : resolvedClient;
 
   const sourceMap: Record<string, { source: GroundingSource; confidence: number; reason: string }> = {
-    businessChallenge: { source: "Industry", confidence: 91, reason: `${profile.label} vertical challenge pattern` },
-    campaignObjective: { source: "Client", confidence: 95, reason: `Extracted from ${client} brief` },
+    businessChallenge: { source: "Industry", confidence: 85, reason: `${profile.label} vertical challenge pattern` },
+    campaignObjective: { source: "Client", confidence: 95, reason: client ? `Extracted from ${client} brief` : "Extracted from campaign brief" },
     targetAudience: { source: "Client", confidence: 93, reason: "Brief-defined audience segment" },
-    consumerInsight: { source: "Industry", confidence: 88, reason: "Category consumer behavior research" },
+    consumerInsight: { source: "Industry", confidence: 82, reason: "Category consumer behavior pattern" },
     keyMessage: { source: "AI", confidence: 85, reason: "AI-generated from brand + category context" },
-    creatorStrategy: { source: "Historical", confidence: 90, reason: "Validated creator mix from similar campaigns" },
-    platformStrategy: { source: "Industry", confidence: 92, reason: "Platform behavior data for category" },
-    customerJourney: { source: "Industry", confidence: 87, reason: "Category purchase journey mapping" },
-    competitiveAdvantage: { source: "AI", confidence: 84, reason: "Differentiation analysis vs category" },
+    creatorStrategy: { source: "Industry", confidence: 84, reason: "Category creator-mix playbook" },
+    platformStrategy: { source: "Industry", confidence: 86, reason: "Platform behavior patterns for category" },
+    customerJourney: { source: "Industry", confidence: 84, reason: "Category purchase journey mapping" },
+    competitiveAdvantage: { source: "AI", confidence: 80, reason: "Differentiation analysis vs category" },
   };
 
   const keyMap: Record<string, keyof typeof fields> = {
@@ -942,7 +786,7 @@ export function deriveGroundedStrategy(
           source: meta.source,
           confidence: meta.confidence,
           reason: meta.reason,
-          evidence: `${profile.label} · ${client}`,
+          evidence: client ? `${profile.label} · ${client}` : profile.label,
         },
       };
     });
@@ -950,12 +794,13 @@ export function deriveGroundedStrategy(
 
 export function deriveSuccessProbability(
   strategyText: string,
-  summaryText: string
+  summaryText: string,
+  durationWeeks?: CampaignDurationWeeks
 ): SuccessProbabilityData {
   const combined = [strategyText, summaryText].filter(Boolean).join("\n");
   const industry = detectIndustryFromBrief(combined);
   const profile = getIndustryProfile(industry, combined);
-  const weeks = parseDurationWeeks(combined);
+  const weeks = durationWeeks ?? parseDurationWeeks(combined);
 
   const scores: Record<CampaignIndustry, number> = {
     luxury: 78,
@@ -1030,93 +875,124 @@ export function deriveSuccessProbability(
       source: "AI",
       confidence: 86,
       reason: `Objective Achievement Assessment — ${objectiveAssessments.length} objective(s) from brief`,
-      evidence: `${weeks}-week duration · ${profile.campaignType} · category model (verification pending without CampaignFacts)`,
+      evidence: `${weeks}-week duration · ${profile.campaignType} · category model`,
     },
   };
 }
 
 export function deriveOpportunities(
   strategyText: string,
-  summaryText: string
+  summaryText: string,
+  options?: { allowCelebrity?: boolean }
 ): OpportunityItem[] {
   const combined = [strategyText, summaryText].filter(Boolean).join("\n");
   const industry = detectIndustryFromBrief(combined);
+  const allowCelebrity = options?.allowCelebrity ?? /celebrit/i.test(combined);
 
   const byIndustry: Record<CampaignIndustry, OpportunityItem[]> = {
     luxury: [
-      { category: "Untapped Audiences", title: "Aspirational achievers (28–40)", description: "Secondary segment with 2.1M reach potential not in current brief targeting", impact: "high", source: "Creator" },
-      { category: "Missing Platforms", title: "LinkedIn executive reach", description: "HNW professionals active on LinkedIn — 0% current allocation", impact: "medium", source: "Industry" },
-      { category: "Creator Tiers", title: "Add 1 celebrity ambassador", description: "Celebrity tier at 15% drives 3x share of voice in luxury vertical", impact: "high", source: "Historical" },
-      { category: "Budget Optimization", title: "Shift 5% from contingency to production", description: "Premium asset quality drives +18% brand favorability lift", impact: "medium", source: "Historical" },
+      { category: "Untapped Audiences", title: "Aspirational achievers (28–40)", description: "Adjacent affluent segment outside current brief targeting", impact: "high", source: "Creator" },
+      { category: "Missing Platforms", title: "LinkedIn executive reach", description: "Affluent professionals active on LinkedIn — no current allocation", impact: "medium", source: "Industry" },
+      { category: "Creator Tiers", title: "Consider a brand-ambassador tier", description: "A high-profile ambassador can lift share of voice in the luxury vertical, subject to client approval", impact: "high", source: "Industry" },
+      { category: "Budget Optimization", title: "Shift contingency toward production", description: "Premium asset quality supports brand favorability in luxury positioning", impact: "medium", source: "Industry" },
       { category: "Competitor Gap", title: "Heritage storytelling underserved", description: "Competitors focus on product — craftsmanship narrative is open territory", impact: "high", source: "Industry" },
     ],
     tourism: [
-      { category: "Untapped Audiences", title: "Cultural explorers (30–50)", description: "Higher trip value segment — 40% longer stays, 2.3x booking value", impact: "high", source: "Creator" },
-      { category: "Missing Platforms", title: "Pinterest travel planning", description: "Pre-planning audience on Pinterest — strong save-to-book conversion", impact: "medium", source: "Industry" },
-      { category: "Creator Tiers", title: "Activate nano traveler UGC", description: "Nano tier at 10% adds 120+ authentic traveler posts at low cost", impact: "high", source: "Historical" },
-      { category: "Budget Optimization", title: "Increase paid amplification to 28%", description: "Geo-targeted boost drives +22% trip planning clicks in feeder markets", impact: "high", source: "Historical" },
-      { category: "Content Gap", title: "Red Sea adventure content", description: "Competitor destinations dominate diving content — Egypt Red Sea underindexed", impact: "high", source: "Industry" },
+      { category: "Untapped Audiences", title: "Cultural explorers (30–50)", description: "Higher trip-value segment with longer stays and stronger booking value", impact: "high", source: "Creator" },
+      { category: "Missing Platforms", title: "Pinterest travel planning", description: "Pre-planning audience on Pinterest with strong save-to-book behavior", impact: "medium", source: "Industry" },
+      { category: "Creator Tiers", title: "Activate nano traveler UGC", description: "Nano tier adds authentic traveler posts at low cost", impact: "high", source: "Industry" },
+      { category: "Budget Optimization", title: "Increase paid amplification", description: "Geo-targeted boost drives trip-planning clicks in feeder markets", impact: "high", source: "Industry" },
+      { category: "Content Gap", title: "Red Sea adventure content", description: "Diving and adventure content is underindexed vs competitor destinations", impact: "high", source: "Industry" },
     ],
     baby: [
-      { category: "Untapped Audiences", title: "Experienced mothers (2+ children)", description: "Premium diaper switchers — higher LTV, 34% of category volume", impact: "high", source: "Client" },
-      { category: "Missing Platforms", title: "Facebook mom groups", description: "Active parenting communities with high purchase intent signals", impact: "medium", source: "Industry" },
-      { category: "Creator Tiers", title: "Add pediatrician endorsement", description: "Medical authority layer increases trust score +15 pts", impact: "high", source: "Historical" },
-      { category: "Budget Optimization", title: "Increase nano UGC to 30%", description: "Volume UGC at lowest cost per asset — 80+ reviews achievable", impact: "medium", source: "Historical" },
-      { category: "Content Gap", title: "Night-time comfort content", description: "Competitors focus on daytime — overnight dryness is differentiation angle", impact: "high", source: "Industry" },
+      { category: "Untapped Audiences", title: "Experienced mothers (2+ children)", description: "Premium switchers with higher lifetime value in the category", impact: "high", source: "Client" },
+      { category: "Missing Platforms", title: "Facebook parenting groups", description: "Active parenting communities with high purchase-intent signals", impact: "medium", source: "Industry" },
+      { category: "Creator Tiers", title: "Add pediatrician endorsement", description: "Medical authority layer strengthens trust in the baby category", impact: "high", source: "Industry" },
+      { category: "Budget Optimization", title: "Increase nano UGC share", description: "Volume UGC at the lowest cost per asset expands authentic review coverage", impact: "medium", source: "Industry" },
+      { category: "Content Gap", title: "Night-time comfort content", description: "Competitors focus on daytime — overnight dryness is a differentiation angle", impact: "high", source: "Industry" },
     ],
     retail: [
-      { category: "Untapped Audiences", title: "Streetwear enthusiasts (16–28)", description: "Hype-driven segment with 3x social sharing rate on launch content", impact: "high", source: "Creator" },
-      { category: "Missing Platforms", title: "Snapchat AR try-on", description: "Virtual try-on filters drive +45% product page visits in sportswear", impact: "medium", source: "Industry" },
-      { category: "Creator Tiers", title: "Add 10 nano street style creators", description: "Volume UGC at 15% budget drives launch velocity and FOMO", impact: "high", source: "Historical" },
-      { category: "Budget Optimization", title: "Front-load 30% spend to week 1", description: "Counter competitor launches with concentrated hero content burst", impact: "high", source: "Historical" },
-      { category: "Competitor Gap", title: "Local athlete collab drop", description: "No competitor has Egypt-specific limited edition — first-mover advantage", impact: "high", source: "Industry" },
+      { category: "Untapped Audiences", title: "Streetwear enthusiasts (16–28)", description: "Hype-driven segment with strong social sharing on launch content", impact: "high", source: "Creator" },
+      { category: "Missing Platforms", title: "Snapchat AR try-on", description: "Virtual try-on filters drive product-page visits in apparel", impact: "medium", source: "Industry" },
+      { category: "Creator Tiers", title: "Add nano street-style creators", description: "Volume UGC drives launch velocity and organic momentum", impact: "high", source: "Industry" },
+      { category: "Budget Optimization", title: "Front-load launch-week spend", description: "Counter competitor launches with a concentrated hero content burst", impact: "high", source: "Industry" },
+      { category: "Competitor Gap", title: "Local collaboration drop", description: "A market-specific limited edition offers first-mover advantage", impact: "high", source: "Industry" },
     ],
     finance: [
-      { category: "Untapped Audiences", title: "Established earners (35–50)", description: "Premium card segment with 4x higher approval rate and LTV", impact: "high", source: "Client" },
-      { category: "Missing Platforms", title: "Podcast sponsorship integration", description: "Finance podcast listeners show 2.8x card application intent", impact: "medium", source: "Industry" },
-      { category: "Creator Tiers", title: "Add macro trust anchor", description: "Single macro finance educator drives 40% of total qualified leads", impact: "high", source: "Historical" },
-      { category: "Budget Optimization", title: "Shift 5% to LinkedIn paid", description: "LinkedIn CPL 35% lower than Instagram for finance products in UAE", impact: "high", source: "Historical" },
-      { category: "Content Gap", title: "Life milestone banking content", description: "Competitors focus on product features — life event storytelling underserved", impact: "medium", source: "Industry" },
+      { category: "Untapped Audiences", title: "Established earners (35–50)", description: "Premium product segment with stronger approval rates and lifetime value", impact: "high", source: "Client" },
+      { category: "Missing Platforms", title: "Podcast sponsorship integration", description: "Finance podcast listeners show strong product-consideration intent", impact: "medium", source: "Industry" },
+      { category: "Creator Tiers", title: "Add macro trust anchor", description: "A single macro finance educator can anchor qualified lead generation", impact: "high", source: "Industry" },
+      { category: "Budget Optimization", title: "Shift budget toward LinkedIn paid", description: "LinkedIn typically delivers efficient cost-per-lead for finance products", impact: "high", source: "Industry" },
+      { category: "Content Gap", title: "Life milestone banking content", description: "Competitors focus on product features — life-event storytelling is underserved", impact: "medium", source: "Industry" },
     ],
     general: [
-      { category: "Untapped Audiences", title: "Secondary demographic segment", description: "Brief analysis suggests 30% reach opportunity in adjacent audience", impact: "medium", source: "AI" },
+      { category: "Untapped Audiences", title: "Secondary demographic segment", description: "Brief analysis suggests reach opportunity in an adjacent audience", impact: "medium", source: "AI" },
       { category: "Missing Platforms", title: "YouTube long-form", description: "Category content performs well on YouTube — not in current plan", impact: "medium", source: "Industry" },
-      { category: "Creator Tiers", title: "Increase micro tier to 45%", description: "Micro creators deliver best engagement-to-cost ratio", impact: "medium", source: "Historical" },
-      { category: "Budget Optimization", title: "Rebalance paid amplification", description: "Industry benchmark suggests +3% to paid for reach efficiency", impact: "low", source: "Industry" },
+      { category: "Creator Tiers", title: "Increase micro tier share", description: "Micro creators deliver the strongest engagement-to-cost ratio", impact: "medium", source: "Industry" },
+      { category: "Budget Optimization", title: "Rebalance paid amplification", description: "Category norms suggest additional paid support for reach efficiency", impact: "low", source: "Industry" },
       { category: "Content Gap", title: "UGC volume opportunity", description: "Competitors underinvest in authentic UGC — differentiation available", impact: "medium", source: "Industry" },
     ],
   };
 
-  return byIndustry[industry];
+  return byIndustry[industry].filter(
+    (item) =>
+      allowCelebrity ||
+      !/celebrit/i.test(`${item.title} ${item.description}`)
+  );
 }
 
+/**
+ * Executive summary composed from THIS campaign's resolved facts (brand,
+ * objective, audience, platforms, duration, budget) — no industry demo
+ * narratives, no fabricated reach.
+ */
 export function deriveExecutiveSummary(
   strategyText: string,
   audienceText: string,
-  summaryText: string
+  summaryText: string,
+  context?: {
+    facts?: CampaignFacts;
+    durationWeeks?: CampaignDurationWeeks;
+    creatorMixLabel?: string;
+    allowCelebrity?: boolean;
+  }
 ): ExecutiveSummaryData {
   const combined = [strategyText, audienceText, summaryText].filter(Boolean).join("\n");
   const industry = detectIndustryFromBrief(combined);
   const profile = getIndustryProfile(industry, combined);
-  const client = resolveClientFromBrief(combined);
-  const weeks = parseDurationWeeks(combined);
+  const facts = context?.facts;
+  const weeks = context?.durationWeeks ?? parseDurationWeeks(combined);
+  const allowCelebrity = context?.allowCelebrity ?? /celebrit/i.test(combined);
   const fields = deriveExecutiveStrategyFields(strategyText, audienceText, summaryText);
 
-  const summaries: Record<CampaignIndustry, string> = {
-    luxury: `${client} requires a prestige-building campaign targeting affluent professionals through curated macro and celebrity creators on Instagram and YouTube. The ${weeks}-week plan prioritizes editorial-quality production and selective paid amplification to HNW audiences.`,
-    tourism: `${client} needs a destination awareness campaign leveraging travel storytellers across TikTok, Instagram, and YouTube. The ${weeks}-week strategy drives trip-planning intent through visual destination content and geo-targeted amplification in key feeder markets.`,
-    baby: `${client} launches with an authenticity-first UGC strategy activating mom creators on Instagram and TikTok. The ${weeks}-week plan builds purchase trust through peer validation at scale — 80+ authentic reviews targeted.`,
-    retail: `${client} product launch demands high-velocity creator activation across nano, micro, and mid tiers. The ${weeks}-week plan front-loads try-on and fit content to drive conversion during the competitive launch window.`,
-    finance: `${client} requires a trust-building campaign through verified finance educators on Instagram, LinkedIn, and YouTube. The ${weeks}-week plan prioritizes compliance-safe content and repeated exposure to drive card adoption.`,
-    general: `${client} campaign leverages creator-led storytelling across Instagram and TikTok. The ${weeks}-week integrated plan balances awareness, engagement, and conversion objectives.`,
-  };
+  const resolvedClient = resolveClientFromBrief(combined);
+  const clientLabel =
+    facts?.clientName ??
+    facts?.brandName ??
+    (/^brand client$/i.test(resolvedClient) ? "The brand" : resolvedClient);
+  const objective =
+    facts?.objective ??
+    (typeof fields.campaignObjective === "string" ? fields.campaignObjective : profile.campaignType);
+  const platforms = facts?.platforms?.length ? facts.platforms : profile.platforms;
+  const audience =
+    facts?.audience ??
+    (typeof fields.targetAudience === "string" ? fields.targetAudience : undefined);
+  const mixLabel =
+    context?.creatorMixLabel ??
+    stripCelebrityFromLabel(profile.creatorMixSummary, allowCelebrity);
+  const budgetSentence = facts?.budget?.amount
+    ? ` The plan is scoped to a ${facts.budget.amount.toLocaleString()} ${facts.budget.currency} budget.`
+    : "";
+  const audienceClause = audience ? `, targeting ${audience}` : "";
+
+  const summary = `${clientLabel} — ${objective}. A ${weeks}-week creator-led program across ${platforms.join(", ")}${audienceClause}.${budgetSentence}`;
 
   return {
-    summary: summaries[industry],
+    summary,
     keyDecisions: [
-      `Creator mix: ${profile.creatorMixSummary}`,
-      `Platform focus: ${profile.platforms.join(", ")}`,
-      `Campaign duration: ${weeks} weeks with go-live at week ${weeks - 1}`,
+      `Creator mix: ${mixLabel}`,
+      `Platform focus: ${platforms.join(", ")}`,
+      `Campaign duration: ${weeks} weeks with go-live at week ${resolveGoLiveWeek(weeks)}`,
       `Budget priority: ${profile.budgetWeights[0].percent}% creator fees, ${profile.budgetWeights[2].percent}% paid amplification`,
     ],
     recommendedActions: [
@@ -1127,18 +1003,16 @@ export function deriveExecutiveSummary(
     ],
     immediateNextSteps: [
       "Finalize and approve campaign brief",
-      "Launch AI vendor discovery with approved criteria",
+      "Confirm creator discovery criteria",
       "Schedule stakeholder kickoff and strategy review",
       "Confirm legal/compliance review process",
     ],
-    expectedBusinessOutcome: typeof fields.competitiveAdvantage === "string"
-      ? `${fields.competitiveAdvantage} — targeting ${profile.estimatedReach} over ${weeks} weeks`
-      : `${profile.campaignType} — ${profile.estimatedReach} over ${weeks} weeks`,
+    expectedBusinessOutcome: `${objective} over ${weeks} weeks — reach estimate modeled from the confirmed creator slate`,
     grounding: {
       source: "AI",
-      confidence: 91,
-      reason: "Synthesized from brief, industry intelligence, and historical campaign data",
-      evidence: `${client} · ${profile.label} · ${weeks} weeks · Thinkway campaign database`,
+      confidence: 88,
+      reason: "Synthesized from the campaign brief and category intelligence",
+      evidence: `${clientLabel} · ${weeks} weeks`,
     },
   };
 }

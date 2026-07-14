@@ -48,6 +48,11 @@ import {
 } from "@/features/campaign-studio/services/presentation-intelligence";
 import { resolveCampaignDurationWeeks } from "@/features/campaign-studio/services/timeline-duration";
 import {
+  filterCelebrityMixTiers,
+  sanitizeLegacyReachValue,
+  stripCelebrityFromLabel,
+} from "@/features/campaign-studio/services/campaign-render-model";
+import {
   deriveInfluencerBudgetAllocations,
   normalizeBudgetAllocationPercents,
 } from "@/features/campaign-studio/services/budget-allocation";
@@ -65,7 +70,6 @@ import type {
   SummarySectionData,
   TimelineSectionData,
   TimelineSectionExtras,
-  CreatorMixTier,
 } from "../types/section-schemas";
 import { isBudgetSectionData, isTimelineSectionData } from "../types/section-schemas";
 import { buildBudgetSectionData } from "./structured-section-builders";
@@ -256,18 +260,24 @@ export function buildSummarySectionData(
   audienceText: string,
   metaStatus?: string,
   budgetContent?: BudgetSectionData,
-  campaignFacts?: import("@/features/campaign-director/facts/campaign-facts-types").CampaignFacts
+  campaignFacts?: import("@/features/campaign-director/facts/campaign-facts-types").CampaignFacts,
+  options?: { preservedEstimatedReach?: string }
 ): SummarySectionData {
   const combined = [briefText, audienceText].filter(Boolean).join("\n");
   const industry = detectIndustryFromBrief(combined);
   const profile = getIndustryProfile(industry, combined);
+  const allowCelebrity = /celebrit/i.test(
+    [combined, campaignFacts?.rawBriefExcerpt, campaignFacts?.objective].filter(Boolean).join("\n")
+  );
 
   const data: SummarySectionData = {
     client: cleanText(resolveClientFromBrief(combined)),
     campaignType: profile.campaignType,
     platforms: profile.platforms.join(", "),
-    creatorMix: profile.creatorMixSummary,
-    estimatedReach: profile.estimatedReach,
+    creatorMix: stripCelebrityFromLabel(profile.creatorMixSummary, allowCelebrity),
+    // Reach is never templated — it is either the value promoted from a
+    // decision-workspace simulation or computed from the selected slate.
+    estimatedReach: sanitizeLegacyReachValue(options?.preservedEstimatedReach),
   };
 
   if (campaignFacts) {
@@ -313,16 +323,27 @@ export function buildStrategySectionData(
   summaryText: string,
   campaignFacts?: import("@/features/campaign-director/facts/campaign-facts-types").CampaignFacts
 ): StrategySectionData {
-  const creatorMix = campaignFacts
-    ? buildCreatorMixFromFacts(campaignFacts)
-    : deriveCreatorMix(strategyText, summaryText);
+  const allowCelebrity = /celebrit/i.test(
+    [strategyText, summaryText, campaignFacts?.rawBriefExcerpt, campaignFacts?.objective]
+      .filter(Boolean)
+      .join("\n")
+  );
+  const durationWeeks = campaignFacts
+    ? resolveFactsDurationWeeks(campaignFacts)
+    : resolveCampaignDurationWeeks(summaryText, strategyText);
+  const creatorMix = filterCelebrityMixTiers(
+    campaignFacts
+      ? buildCreatorMixFromFacts(campaignFacts)
+      : deriveCreatorMix(strategyText, summaryText, undefined, { allowCelebrity }),
+    allowCelebrity
+  );
 
   return {
     groundedFields: deriveGroundedStrategy(strategyText, audienceText, summaryText),
-    creativeConcepts: deriveCreativeConcepts(strategyText, summaryText),
+    creativeConcepts: deriveCreativeConcepts(strategyText, summaryText, campaignFacts),
     creatorMix,
-    opportunities: deriveOpportunities(strategyText, summaryText),
-    whyAiInsights: deriveWhyAiInsights(strategyText, summaryText),
+    opportunities: deriveOpportunities(strategyText, summaryText, { allowCelebrity }),
+    whyAiInsights: deriveWhyAiInsights(strategyText, summaryText, undefined, durationWeeks),
   };
 }
 
@@ -338,10 +359,13 @@ export function buildPerformanceSectionData(
   const factsKpis = campaignFacts ? buildGroundedKpisFromFacts(campaignFacts) : [];
   const groundedKpis =
     factsKpis.length > 0 ? factsKpis : getGroundedKpis(industry, combined);
+  const durationWeeks = campaignFacts
+    ? resolveFactsDurationWeeks(campaignFacts)
+    : resolveCampaignDurationWeeks(summaryText, strategyText);
 
   return {
     groundedKpis,
-    successProbability: deriveSuccessProbability(strategyText, summaryText),
+    successProbability: deriveSuccessProbability(strategyText, summaryText, durationWeeks),
     industryBenchmark: getIndustryBenchmarks(industry, combined),
   };
 }
@@ -396,7 +420,7 @@ export function buildTimelineSectionExtras(
 
   return {
     weekDetails: weeks,
-    contentPlan: deriveContentPlan(strategyText, summaryText),
+    contentPlan: deriveContentPlan(strategyText, summaryText, durationWeeks),
   };
 }
 
@@ -410,9 +434,22 @@ export function buildPresentationSectionExtras(
   const sectionsComplete = Object.values(campaignObject.sections).filter(
     (s) => s.status === "complete"
   ).length;
+  const campaignFacts = getCampaignFacts(campaignObject);
+  const durationWeeks = campaignFacts
+    ? resolveFactsDurationWeeks(campaignFacts)
+    : resolveCampaignDurationWeeks(summaryText, strategyText);
+  const allowCelebrity = /celebrit/i.test(
+    [strategyText, summaryText, campaignFacts?.rawBriefExcerpt, campaignFacts?.objective]
+      .filter(Boolean)
+      .join("\n")
+  );
 
   return {
-    executiveSummary: deriveExecutiveSummary(strategyText, audienceText, summaryText),
+    executiveSummary: deriveExecutiveSummary(strategyText, audienceText, summaryText, {
+      facts: campaignFacts,
+      durationWeeks,
+      allowCelebrity,
+    }),
     completion: {
       sectionsComplete,
       totalSections,
@@ -487,6 +524,9 @@ export function enrichCampaignObjectWithStudioData(
   }
 
   if (summaryText.trim() || audienceText.trim() || factsPresent) {
+    const existingSummaryCards = sections.summary.data?.summaryCards as
+      | SummarySectionData
+      | undefined;
     sections.summary = {
       ...sections.summary,
       data: {
@@ -496,7 +536,8 @@ export function enrichCampaignObjectWithStudioData(
           audienceText,
           campaignObject.meta.status,
           budgetContent,
-          campaignFacts
+          campaignFacts,
+          { preservedEstimatedReach: existingSummaryCards?.estimatedReach }
         ),
       },
     };
@@ -512,7 +553,15 @@ export function enrichCampaignObjectWithStudioData(
       hasApprovedCreatorMix(existingStrategyData) ? undefined : campaignFacts
     );
     const budgetText = budgetContent ? stringContent(sections.budget.content) : undefined;
-    const derivedWhyAi = deriveWhyAiInsights(strategyText, summaryText || contextText, budgetText);
+    const enrichDurationWeeks = campaignFacts
+      ? resolveFactsDurationWeeks(campaignFacts)
+      : resolveCampaignDurationWeeks(summaryText, strategyText);
+    const derivedWhyAi = deriveWhyAiInsights(
+      strategyText,
+      summaryText || contextText,
+      budgetText,
+      enrichDurationWeeks
+    );
 
     sections.strategy = {
       ...sections.strategy,
@@ -585,7 +634,9 @@ export function enrichCampaignObjectWithStudioData(
     const timelineExtras = hasApprovedActivationTimeline(existingTimelineData)
       ? {
           weekDetails: existingTimelineData.weekDetails,
-          contentPlan: existingTimelineData.contentPlan ?? deriveContentPlan(strategyText, summaryText),
+          contentPlan:
+            existingTimelineData.contentPlan ??
+            deriveContentPlan(strategyText, summaryText, durationWeeks),
           creatorActivationTimeline: existingTimelineData.creatorActivationTimeline,
         }
       : buildTimelineSectionExtras(timelineContent, strategyText, summaryText, {

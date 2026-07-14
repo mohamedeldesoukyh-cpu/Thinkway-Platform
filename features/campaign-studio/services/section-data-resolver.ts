@@ -33,7 +33,6 @@ import {
   type RiskAnalysisSectionData,
   type SuccessProbabilityData,
   type SummarySectionData,
-  type TimelineSectionData,
   type TimelineWeekDetail,
   type WhyAiInsight,
   type ExecutiveSummaryData,
@@ -68,9 +67,9 @@ import {
   parseBrandFromText,
   resolveCampaignCurrency,
   sanitizeTimelineText,
-  stripInternalSearchMetadata,
 } from "../components/sections/shared/format-utils";
 import {
+  applyFactsToSummaryDataOrLegacy,
   buildBudgetSectionDataFromFacts,
   buildCreatorMixFromFacts,
   dedupeCreatorMixTiers,
@@ -85,6 +84,12 @@ import {
 } from "@/features/campaign-director/facts/facts-display-bridge";
 import { parsePlatformFromRecommendationLine } from "./creator-platform-utils";
 import { estimateCreatorPostFee } from "./creator-fee-estimator";
+import {
+  filterCelebrityMixTiers,
+  resolveCelebrityAllowed,
+  sanitizeLegacyReachValue,
+  stripCelebrityFromLabel,
+} from "./campaign-render-model";
 
 function readCreatorsData(campaignObject?: CampaignObject): CreatorsSectionData {
   return (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
@@ -551,10 +556,69 @@ function readPresentationExtras(campaignObject?: CampaignObject) {
   return isPresentationSectionExtras(data) ? data : null;
 }
 
+/**
+ * Canonical campaign duration — the single authority used by every surface
+ * (Studio cards, timeline, content plan, presentation, PDF, PPTX).
+ * Precedence: CampaignFacts SSOT → approved activation timeline → structured
+ * timeline content → summary cards → text parse → default.
+ */
+export function resolveCampaignObjectDurationWeeks(
+  campaignObject?: CampaignObject
+): number {
+  const facts = getCampaignFacts(campaignObject);
+  if (facts?.durationWeeks) {
+    return resolveFactsDurationWeeks(facts);
+  }
+
+  const approvedTimeline = readTimelineExtras(campaignObject)?.creatorActivationTimeline;
+  if (approvedTimeline?.durationWeeks) {
+    return clampCampaignDurationWeeks(approvedTimeline.durationWeeks);
+  }
+
+  const timelineContent = campaignObject?.sections.timeline.content;
+  if (isTimelineSectionData(timelineContent) && timelineContent.durationWeeks) {
+    return clampCampaignDurationWeeks(timelineContent.durationWeeks);
+  }
+
+  const summaryCards = readSummaryCards(campaignObject);
+  if (summaryCards?.duration) {
+    const parsed = parseInt(summaryCards.duration, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return clampCampaignDurationWeeks(parsed);
+    }
+  }
+
+  const summaryText = campaignObject
+    ? readSectionString(campaignObject.sections.summary.content)
+    : "";
+  const strategyText = campaignObject
+    ? readSectionString(campaignObject.sections.strategy.content)
+    : "";
+  const timelineText =
+    campaignObject && typeof campaignObject.sections.timeline.content === "string"
+      ? campaignObject.sections.timeline.content
+      : "";
+  return resolveCampaignDurationWeeks(summaryText, strategyText, timelineText, facts);
+}
+
 export function resolveCampaignSummary(
   campaignObject?: CampaignObject
 ): CampaignSummaryData | null {
-  return readSummaryCards(campaignObject);
+  const cards = readSummaryCards(campaignObject);
+  if (!cards) return null;
+
+  const withFacts = applyFactsToSummaryDataOrLegacy(cards, campaignObject);
+  const durationWeeks = resolveCampaignObjectDurationWeeks(campaignObject);
+  const allowCelebrity = resolveCelebrityAllowed(campaignObject);
+
+  return {
+    ...withFacts,
+    duration: `${durationWeeks} weeks`,
+    creatorMix: withFacts.creatorMix
+      ? stripCelebrityFromLabel(withFacts.creatorMix, allowCelebrity)
+      : withFacts.creatorMix,
+    estimatedReach: sanitizeLegacyReachValue(withFacts.estimatedReach),
+  };
 }
 
 export function resolveExecutiveStrategy(
@@ -754,13 +818,14 @@ export function resolveTimelineData(
   const summaryText = readSectionString(campaignObject.sections.summary.content);
   const strategyText = readSectionString(campaignObject.sections.strategy.content);
   const timelineText = readSectionString(section.content);
-  const summaryCards = readSummaryCards(campaignObject);
   const timelineExtras = readTimelineExtras(campaignObject);
   const approvedTimeline = timelineExtras?.creatorActivationTimeline;
   const isComplete = isCampaignTimelineComplete(campaignObject);
 
   if (approvedTimeline?.activationWeeks?.length) {
-    const durationWeeks = approvedTimeline.durationWeeks;
+    const durationWeeks = facts?.durationWeeks
+      ? resolveFactsDurationWeeks(facts)
+      : approvedTimeline.durationWeeks;
     const weeks = activationTimelineToWeeks(approvedTimeline, isComplete);
     return {
       durationWeeks,
@@ -769,14 +834,7 @@ export function resolveTimelineData(
     };
   }
 
-  const durationFromFacts = facts ? resolveFactsDurationWeeks(facts) : undefined;
-  const durationFromSummaryCards = summaryCards?.duration
-    ? clampCampaignDurationWeeks(parseInt(summaryCards.duration, 10))
-    : undefined;
-  const durationWeeks =
-    durationFromFacts ??
-    durationFromSummaryCards ??
-    resolveCampaignDurationWeeks(summaryText, strategyText, timelineText, facts);
+  const durationWeeks = resolveCampaignObjectDurationWeeks(campaignObject);
   const industry = detectIndustryFromBrief([summaryText, strategyText].filter(Boolean).join("\n"));
   const goLiveWeek = resolveGoLiveWeek(durationWeeks);
   const milestones = isTimelineSectionData(section.content) ? section.content.milestones : [];
@@ -794,12 +852,7 @@ export function resolveTimelineData(
 
   const combined = [timelineText, strategyText, summaryText].filter(Boolean).join("\n");
   if (combined.trim()) {
-    const fallbackDuration = resolveCampaignDurationWeeks(
-      summaryText,
-      strategyText,
-      timelineText,
-      facts
-    );
+    const fallbackDuration = durationWeeks;
     const fallbackWeeks = buildTimelineWeeksForCampaign(
       fallbackDuration,
       detectIndustryFromBrief(combined),
@@ -900,14 +953,15 @@ export function resolveContentPlan(
 export function resolveCreatorMix(
   campaignObject: CampaignObject | undefined
 ): CreatorMixTier[] {
+  const allowCelebrity = resolveCelebrityAllowed(campaignObject);
   const strategyMix = readStrategyData(campaignObject)?.creatorMix;
   if (strategyMix?.length) {
-    return dedupeCreatorMixTiers(strategyMix);
+    return filterCelebrityMixTiers(dedupeCreatorMixTiers(strategyMix), allowCelebrity);
   }
 
   const facts = getCampaignFacts(campaignObject);
   if (facts) {
-    return buildCreatorMixFromFacts(facts);
+    return filterCelebrityMixTiers(buildCreatorMixFromFacts(facts), allowCelebrity);
   }
 
   return [];
@@ -963,7 +1017,6 @@ export function resolvePresentationData(
   const workflowStatus = campaignObject.meta.workflowStatus;
   const stored = isPresentationStatusSectionData(section.content) ? section.content : null;
 
-  const facts = getCampaignFacts(campaignObject);
   const brandName = getCampaignFactsOrLegacy(
     campaignObject,
     (f) => resolveFactsBrandName(f) ?? resolveFactsClientName(f),

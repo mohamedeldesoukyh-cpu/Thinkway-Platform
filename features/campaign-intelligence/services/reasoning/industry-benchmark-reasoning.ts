@@ -209,7 +209,7 @@ export function buildIndustryBenchmarkIntelligence(
     summary: `Competitive intelligence for ${ctx.brand} — ${ctx.objective}.${debateNote}`,
     estCpm: profile.cpmAssumption.includes("$") ? profile.cpmAssumption : VERIFICATION,
     estCpc: profile.cpeAssumption,
-    estReach: profile.estimatedReach.includes("Verification") ? VERIFICATION : profile.estimatedReach,
+    estReach: "Slate-dependent — see Estimated Reach (modeled from selected creators)",
     postingFrequency: `${Math.max(2, Math.ceil(ctx.durationWeeks / 2))} posts/week target (tier-weighted)`,
     creatorMixBenchmark: strategy.creatorTierStrategy
       .map((t) => `${t.tier} ${t.allocationPercent}%`)
