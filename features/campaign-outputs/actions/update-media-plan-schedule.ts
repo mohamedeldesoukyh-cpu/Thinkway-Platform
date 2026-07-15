@@ -56,7 +56,11 @@ export async function updateMediaPlanScheduleAction(
     .eq("id", conversationId)
     .maybeSingle();
 
-  const contextSnapshot = (conversationRow?.context_snapshot ?? {}) as Record<string, unknown>;
+  const row = conversationRow as {
+    context_snapshot?: Record<string, unknown> | null;
+  } | null;
+
+  const contextSnapshot = (row?.context_snapshot ?? {}) as Record<string, unknown>;
   const restored = await loadCampaignObjectForConversation(
     supabase,
     conversationId,
