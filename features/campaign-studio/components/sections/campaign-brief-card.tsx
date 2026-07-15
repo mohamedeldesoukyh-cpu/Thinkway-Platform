@@ -1,15 +1,16 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
-import { FileTextIcon, Loader2Icon } from "lucide-react";
-import { toast } from "sonner";
+import { useMemo, useState } from "react";
+import { FileTextIcon, PencilIcon, PlusIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { hasCampaignBriefText } from "@/features/campaign-outputs/brief-media-plan-schedule";
 
-import { applyCampaignBriefAction } from "../../actions/campaign-brief-actions";
+import { CampaignBriefDialog } from "./campaign-brief-dialog";
+
+const PREVIEW_MAX_CHARS = 160;
 
 type CampaignBriefCardProps = {
   campaignObject?: CampaignObject;
@@ -19,6 +20,23 @@ type CampaignBriefCardProps = {
   className?: string;
 };
 
+function resolveBriefText(campaignObject?: CampaignObject): string {
+  if (!campaignObject) return "";
+  const facts = getCampaignFacts(campaignObject);
+  return (
+    facts?.rawBriefExcerpt?.trim() ||
+    (typeof campaignObject.sections.summary?.content === "string"
+      ? campaignObject.sections.summary.content.trim()
+      : "")
+  );
+}
+
+function truncatePreview(text: string): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= PREVIEW_MAX_CHARS) return normalized;
+  return `${normalized.slice(0, PREVIEW_MAX_CHARS).trimEnd()}…`;
+}
+
 export function CampaignBriefCard({
   campaignObject,
   conversationId,
@@ -26,104 +44,73 @@ export function CampaignBriefCard({
   onBriefApplied,
   className,
 }: CampaignBriefCardProps) {
-  const facts = campaignObject ? getCampaignFacts(campaignObject) : undefined;
-  const existingBrief =
-    facts?.rawBriefExcerpt?.trim() ||
-    (typeof campaignObject?.sections.summary?.content === "string"
-      ? campaignObject.sections.summary.content.trim()
-      : "");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const [briefText, setBriefText] = useState(existingBrief);
-  const [pending, startTransition] = useTransition();
-
-  const canSave = Boolean(conversationId && messageId && briefText.trim().length >= 40);
+  const briefText = useMemo(() => resolveBriefText(campaignObject), [campaignObject]);
   const hasBrief = campaignObject ? hasCampaignBriefText(campaignObject) : false;
-
-  const saveBrief = useCallback(() => {
-    if (!canSave) return;
-    startTransition(async () => {
-      const result = await applyCampaignBriefAction({
-        conversationId: conversationId!,
-        messageId: messageId!,
-        briefText: briefText.trim(),
-      });
-      if (result.ok) {
-        toast.success(result.message);
-        if (result.campaignObject) onBriefApplied?.(result.campaignObject);
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }, [briefText, canSave, conversationId, messageId, onBriefApplied]);
-
-  const onFileChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const text = typeof reader.result === "string" ? reader.result.trim() : "";
-        if (text.length >= 40) {
-          setBriefText(text);
-        } else {
-          toast.error("That file looks too short — use a fuller campaign brief.");
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = "";
-    },
-    []
-  );
+  const preview = hasBrief ? truncatePreview(briefText) : null;
+  const canEdit = Boolean(conversationId && messageId);
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border/70 bg-muted/10 p-3",
-        className
-      )}
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <FileTextIcon className="size-3.5 text-[#1D9E75]" />
-          <p className="text-[11px] font-bold text-foreground">Campaign brief</p>
-        </div>
-        {hasBrief ? (
-          <span className="rounded-full bg-[#1D9E75]/10 px-2 py-0.5 text-[10px] font-semibold text-[#1D9E75]">
-            Active
-          </span>
-        ) : (
-          <span className="text-[10px] text-muted-foreground">Optional — drives scheduling strategy</span>
-        )}
-      </div>
-
-      <textarea
-        value={briefText}
-        onChange={(event) => setBriefText(event.target.value)}
-        rows={5}
-        placeholder="Paste or write the client brief — objective, audience, launch timing, peaks, deliverables…"
+    <>
+      <div
         className={cn(
-          "min-h-[7rem] w-full resize-y rounded-lg border border-border/70 bg-background px-3 py-2 text-[12px] leading-relaxed text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]/40"
+          "flex flex-col gap-3 rounded-xl border border-border bg-background p-4 shadow-sm transition-shadow hover:shadow-md",
+          className
         )}
-      />
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <FileTextIcon className="size-3.5 shrink-0 text-[#1D9E75]" />
+              <h3 className="truncate text-sm font-bold text-foreground">Campaign brief</h3>
+            </div>
+            <p className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-muted-foreground">
+              {preview ?? "No brief yet — add the client brief to refine scheduling and strategy."}
+            </p>
+          </div>
+          {hasBrief ? (
+            <span className="shrink-0 rounded-full bg-[#1D9E75]/10 px-2 py-0.5 text-[10px] font-semibold text-[#1D9E75]">
+              Active
+            </span>
+          ) : null}
+        </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border/70 px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
-          <input type="file" accept=".txt,.md,.doc,.docx" className="sr-only" onChange={onFileChange} />
-          Upload text file
-        </label>
-        <button
-          type="button"
-          disabled={!canSave || pending}
-          onClick={saveBrief}
-          className="inline-flex items-center gap-1 rounded-md bg-[#1D9E75] px-2.5 py-1 text-[10px] font-bold text-white transition-colors hover:bg-[#178a66] disabled:opacity-40"
-        >
-          {pending ? <Loader2Icon className="size-3 animate-spin" /> : null}
-          Save brief
-        </button>
-        <p className="text-[10px] text-muted-foreground">
-          Saving merges strategy into this campaign — creators on the slate are never cleared.
-        </p>
+        <div className="mt-auto pt-1">
+          <button
+            type="button"
+            disabled={!canEdit}
+            onClick={() => setDialogOpen(true)}
+            className={cn(
+              "inline-flex w-full items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto",
+              hasBrief
+                ? "border border-border text-foreground/80 hover:bg-muted/60"
+                : "bg-[#1D9E75] text-white hover:bg-[#178a66]"
+            )}
+          >
+            {hasBrief ? (
+              <>
+                <PencilIcon className="size-3.5" />
+                Edit brief
+              </>
+            ) : (
+              <>
+                <PlusIcon className="size-3.5" />
+                Add brief
+              </>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+
+      <CampaignBriefDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        initialBriefText={briefText}
+        conversationId={conversationId}
+        messageId={messageId}
+        onBriefApplied={onBriefApplied}
+      />
+    </>
   );
 }
