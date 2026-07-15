@@ -4,6 +4,12 @@ import {
   normalizeWeekWeights,
   type MediaPlanSlotAssignment,
 } from "./media-plan-schedule";
+import {
+  classifyDeliverableRole,
+  collapseMirrorsToActivations,
+  type DeliverableRole,
+  resolveUgcEarliestWeek,
+} from "./media-plan-deliverable-classification";
 
 const TIER_PRIORITY: Record<string, number> = {
   celebrity: 0,
@@ -27,6 +33,11 @@ export type SchedulableDeliverable = {
   /** Round index for week allocation — 0 = first post, 1 = second, etc. */
   creatorRound: number;
   tierRank: number;
+  role: DeliverableRole;
+  /** False for mirror lines bundled onto a primary activation. */
+  countsAsActivation: boolean;
+  /** Mirror deliverables scheduled on the same day as this activation. */
+  attachedMirrors: SchedulableDeliverable[];
 };
 
 export type ScheduledDeliverablePlacement = {
@@ -41,6 +52,8 @@ export type ScheduleDeliverablesInput = {
   durationWeeks: number;
   weekWeights?: number[];
   assignments?: MediaPlanSlotAssignment[];
+  briefText?: string;
+  campaignObjective?: string;
 };
 
 function normalizeCreatorId(id: string): string {
@@ -88,8 +101,35 @@ function serviceTypesForCreator(creator: SlateCreator, platform: string): string
   return [serviceTypeForCreator(creator, platform)];
 }
 
-/** Expand quotation lines into individual schedulable units (quantity-aware). */
-export function expandSchedulableDeliverables(
+function buildSchedulableUnit(
+  creator: SlateCreator,
+  basePlatform: string,
+  rawType: string,
+  baseLabel: string,
+  index: number,
+  quantity: number,
+  slotCounter: number
+): SchedulableDeliverable {
+  const rank = tierRank(creator.tier);
+  const unitLabel = `1× ${baseLabel}`;
+  const role = classifyDeliverableRole(unitLabel, creator, rank);
+  return {
+    slotId: `${creator.creatorId}:${slotCounter}`,
+    creator,
+    serviceType: unitLabel,
+    platform: platformForServiceType(rawType, basePlatform),
+    deliverableIndex: index + 1,
+    deliverableTotal: quantity,
+    creatorRound: index,
+    tierRank: rank,
+    role,
+    countsAsActivation: role !== "mirror",
+    attachedMirrors: [],
+  };
+}
+
+/** Expand quotation lines into raw units before mirror collapse. */
+export function expandRawSchedulableDeliverables(
   slate: SlateCreator[],
   platforms: string[]
 ): SchedulableDeliverable[] {
@@ -102,23 +142,28 @@ export function expandSchedulableDeliverables(
     for (const rawType of serviceTypesForCreator(creator, basePlatform)) {
       const { quantity, baseLabel } = parseServiceTypeQuantity(rawType);
       for (let index = 0; index < quantity; index += 1) {
-        const deliverableIndex = index + 1;
-        const unitLabel = `1× ${baseLabel}`;
-        deliverables.push({
-          slotId: `${creator.creatorId}:${slotCounter++}`,
-          creator,
-          serviceType: unitLabel,
-          platform: platformForServiceType(rawType, basePlatform),
-          deliverableIndex,
-          deliverableTotal: quantity,
-          creatorRound: index,
-          tierRank: tierRank(creator.tier),
-        });
+        deliverables.push(
+          buildSchedulableUnit(creator, basePlatform, rawType, baseLabel, index, quantity, slotCounter++)
+        );
       }
     }
   }
 
   return deliverables;
+}
+
+/** Expand quotation lines into schedulable activations (mirrors collapsed onto originals). */
+export function expandSchedulableDeliverables(
+  slate: SlateCreator[],
+  platforms: string[]
+): SchedulableDeliverable[] {
+  const raw = expandRawSchedulableDeliverables(slate, platforms);
+  return collapseMirrorsToActivations(raw).activations;
+}
+
+/** Activation count — mirrors excluded. */
+export function countSchedulableActivations(slate: SlateCreator[], platforms: string[]): number {
+  return expandSchedulableDeliverables(slate, platforms).length;
 }
 
 function sortCreatorsByTier(creators: SlateCreator[]): SlateCreator[] {
@@ -229,6 +274,13 @@ function scoreDayPlacement(
     score += (state.weekDayHeroCount.get(heroKey) ?? 0) * 35;
   }
 
+  if (deliverable.role === "ugc" && week <= 1) {
+    score += 500;
+  }
+  if (deliverable.role === "ugc" && (state.weekDayHeroCount.get(`${week}:${dayIndex}`) ?? 0) > 0) {
+    score += 250;
+  }
+
   if (dayIndex === 0 || dayIndex === 6) score += 3;
 
   return score;
@@ -305,18 +357,28 @@ function assignDeliverableAnyDay(
 function allocateDeliverablesToWeeks(
   ordered: SchedulableDeliverable[],
   durationWeeks: number,
-  weekWeights?: number[]
+  weekWeights?: number[],
+  schedulingContext?: { briefText?: string; campaignObjective?: string }
 ): Map<number, SchedulableDeliverable[]> {
   const weights =
-    weekWeights?.length ?
-      normalizeWeekWeights(weekWeights, durationWeeks)
-    : normalizeWeekWeights(
-        Array.from({ length: durationWeeks }, () => 100 / durationWeeks),
-        durationWeeks
-      );
+    weekWeights?.length
+      ? normalizeWeekWeights(weekWeights, durationWeeks)
+      : normalizeWeekWeights(
+          Array.from({ length: durationWeeks }, () => 100 / durationWeeks),
+          durationWeeks
+        );
 
-  const firstRound = ordered.filter((deliverable) => deliverable.creatorRound === 0);
-  const followUps = ordered.filter((deliverable) => deliverable.creatorRound > 0);
+  const ugcEarliestWeek = resolveUgcEarliestWeek(
+    durationWeeks,
+    schedulingContext?.briefText ?? "",
+    schedulingContext?.campaignObjective
+  );
+
+  const ugc = ordered.filter((deliverable) => deliverable.role === "ugc");
+  const nonUgc = ordered.filter((deliverable) => deliverable.role !== "ugc");
+
+  const firstRound = nonUgc.filter((deliverable) => deliverable.creatorRound === 0);
+  const followUps = nonUgc.filter((deliverable) => deliverable.creatorRound > 0);
 
   const firstTargets = allocateCountByWeights(firstRound.length, weights);
 
@@ -333,6 +395,14 @@ function allocateDeliverablesToWeeks(
     normalizeWeekWeights(followUpWeights, durationWeeks)
   );
 
+  const ugcEligibleWeights = weights.map((weight, index) =>
+    index + 1 >= ugcEarliestWeek ? weight : 0
+  );
+  const ugcTargets = allocateCountByWeights(
+    ugc.length,
+    normalizeWeekWeights(ugcEligibleWeights, durationWeeks)
+  );
+
   const byWeek = new Map<number, SchedulableDeliverable[]>();
   for (let week = 1; week <= durationWeeks; week += 1) {
     byWeek.set(week, []);
@@ -340,16 +410,20 @@ function allocateDeliverablesToWeeks(
 
   let firstCursor = 0;
   let followCursor = 0;
+  let ugcCursor = 0;
   for (let week = 1; week <= durationWeeks; week += 1) {
     const weekIndex = week - 1;
     const firstCount = firstTargets[weekIndex] ?? 0;
     const followCount = followTargets[weekIndex] ?? 0;
+    const ugcCount = ugcTargets[weekIndex] ?? 0;
     const weekSlots = [
       ...firstRound.slice(firstCursor, firstCursor + firstCount),
       ...followUps.slice(followCursor, followCursor + followCount),
+      ...ugc.slice(ugcCursor, ugcCursor + ugcCount),
     ];
     firstCursor += firstCount;
     followCursor += followCount;
+    ugcCursor += ugcCount;
     byWeek.set(week, weekSlots);
   }
 
@@ -410,7 +484,10 @@ export function scheduleDeliverables(input: ScheduleDeliverablesInput): Schedule
   if (!deliverables.length) return [];
 
   const ordered = orderDeliverablesForWeekAllocation(deliverables);
-  const byWeek = allocateDeliverablesToWeeks(ordered, durationWeeks, input.weekWeights);
+  const byWeek = allocateDeliverablesToWeeks(ordered, durationWeeks, input.weekWeights, {
+    briefText: input.briefText,
+    campaignObjective: input.campaignObjective,
+  });
   const uniqueCreators = new Set(deliverables.map((d) => normalizeCreatorId(d.creator.creatorId))).size;
   const minSpacing = resolveMinSpacingDays(totalDays, deliverables.length, uniqueCreators);
 
@@ -499,6 +576,8 @@ export function distributeDeliverablesToDays(
     weekWeights?: number[];
     assignments?: MediaPlanSlotAssignment[];
     platforms?: string[];
+    briefText?: string;
+    campaignObjective?: string;
   }
 ): DeliverableDayBucket[] {
   const durationWeeks = Math.max(1, options.durationWeeks);
@@ -508,6 +587,8 @@ export function distributeDeliverablesToDays(
     durationWeeks,
     weekWeights: options.weekWeights,
     assignments: options.assignments,
+    briefText: options.briefText,
+    campaignObjective: options.campaignObjective,
   });
 
   const buckets: DeliverableDayBucket[] = Array.from({ length: totalDays }, () => ({
@@ -531,6 +612,8 @@ export function countDeliverablesPerWeek(
     weekWeights?: number[];
     assignments?: MediaPlanSlotAssignment[];
     platforms?: string[];
+    briefText?: string;
+    campaignObjective?: string;
   }
 ): number[] {
   const deliverables = expandSchedulableDeliverables(slate, options?.platforms ?? ["Instagram"]);
@@ -539,6 +622,8 @@ export function countDeliverablesPerWeek(
     durationWeeks,
     weekWeights: options?.weekWeights,
     assignments: options?.assignments,
+    briefText: options?.briefText,
+    campaignObjective: options?.campaignObjective,
   });
 
   const counts = Array.from({ length: durationWeeks }, () => 0);
