@@ -9,10 +9,17 @@ import {
 import {
   countDeliverablesPerWeek,
   expandSchedulableDeliverables,
+  expandRawSchedulableDeliverables,
   orderDeliverablesForWeekAllocation,
   parseServiceTypeQuantity,
   scheduleDeliverables,
 } from "./media-plan-scheduler";
+import {
+  briefAllowsEarlyUgc,
+  isMirrorServiceType,
+  isUgcServiceType,
+  resolveUgcEarliestWeek,
+} from "./media-plan-deliverable-classification";
 import { generateMediaPlan, type MediaPlanData } from "./generators/media-plan";
 import { buildCampaignObjectFixture } from "./output-test-fixture";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
@@ -47,6 +54,86 @@ test("expandSchedulableDeliverables splits 2× TikTok into two units", () => {
   assert.equal(deliverables[1]!.serviceType, "1× TT Video");
   assert.equal(deliverables[0]!.deliverableIndex, 1);
   assert.equal(deliverables[1]!.deliverableIndex, 2);
+});
+
+test("mirror detection and collapse — 2× TT + 1× Mirrored IG = 2 activations", () => {
+  const slate = [creator("c1", "Coach A", ["2× TT Video", "1× Mirrored IG"])];
+  const raw = expandRawSchedulableDeliverables(slate, ["TikTok"]);
+  assert.equal(raw.length, 3);
+  assert.ok(isMirrorServiceType("1× Mirrored IG"));
+
+  const activations = expandSchedulableDeliverables(slate, ["TikTok"]);
+  assert.equal(activations.length, 2);
+  const hostWithMirror = activations.find((entry) => entry.attachedMirrors.length > 0);
+  assert.ok(hostWithMirror);
+  assert.equal(hostWithMirror!.attachedMirrors[0]!.serviceType, "1× Mirrored IG");
+
+  const placements = scheduleDeliverables({
+    deliverables: activations,
+    durationWeeks: 4,
+    weekWeights: [70, 10, 10, 10],
+  });
+  assert.equal(placements.length, 2);
+  const mirrorHostDay = placements.find((placement) => placement.deliverable.attachedMirrors.length > 0);
+  assert.ok(mirrorHostDay);
+  assert.equal(
+    mirrorHostDay!.deliverable.attachedMirrors[0]!.serviceType,
+    "1× Mirrored IG"
+  );
+});
+
+test("UGC creator scheduled in week 3-4 not week 1 on default 4-week launch", () => {
+  const slate = [
+    creator("hero", "Mega Hero", ["1× TT Video"], "Mega"),
+    creator("ugc", "Community UGC", ["1× UGC"], "Nano"),
+  ];
+  const deliverables = expandSchedulableDeliverables(slate, ["TikTok", "Instagram"]);
+  assert.ok(isUgcServiceType("1× UGC"));
+
+  const placements = scheduleDeliverables({
+    deliverables,
+    durationWeeks: 4,
+    weekWeights: [70, 10, 10, 10],
+    campaignObjective: "Drive awareness",
+  });
+
+  const ugcPlacement = placements.find((placement) => placement.deliverable.role === "ugc");
+  assert.ok(ugcPlacement);
+  assert.ok(ugcPlacement!.week >= 3, `UGC should land in W3+, got W${ugcPlacement!.week}`);
+});
+
+test("UGC allowed in week 1 when brief requests immediate UGC", () => {
+  const slate = [creator("ugc", "Community UGC", ["1× UGC"], "Nano")];
+  const deliverables = expandSchedulableDeliverables(slate, ["Instagram"]);
+  const brief = "We need immediate UGC from day 1 to seed the challenge feed.";
+
+  assert.ok(briefAllowsEarlyUgc(brief));
+  assert.equal(resolveUgcEarliestWeek(4, brief), 1);
+
+  const placements = scheduleDeliverables({
+    deliverables,
+    durationWeeks: 4,
+    weekWeights: [70, 10, 10, 10],
+    briefText: brief,
+  });
+
+  assert.equal(placements[0]!.week, 1);
+});
+
+test("70/10/10/10 weights apply to activations not mirror duplicates", () => {
+  const slate = [
+    creator("c1", "Coach A", ["2× TT Video", "1× Mirrored IG"]),
+    ...Array.from({ length: 6 }, (_, index) =>
+      creator(`c${index + 2}`, `Creator ${index + 2}`, ["1× TT Video"])
+    ),
+  ];
+  const deliverables = expandSchedulableDeliverables(slate, ["TikTok"]);
+  assert.equal(deliverables.length, 8);
+
+  const counts = countDeliverablesPerWeek(slate, 4, { weekWeights: [70, 10, 10, 10] });
+  assert.equal(counts.reduce((sum, count) => sum + count, 0), 8);
+  assert.ok(counts[0]! >= 5, `expected ~70% activations in week 1, got ${counts[0]}`);
+  assert.ok(counts[0]! > counts[1]! + counts[2]! + counts[3]!);
 });
 
 test("70/10/10/10 weights allocate ~70% of deliverables to week 1", () => {
@@ -116,7 +203,7 @@ test("countDeliverablesPerWeek honors 70/10/10/10 on a multi-creator slate", () 
   assert.equal(counts.reduce((sum, count) => sum + count, 0), 8);
 });
 
-test("media plan places each deliverable on its own day card for multi-type creator", () => {
+test("media plan groups mirror under primary creator card on same day", () => {
   const obj = buildCampaignObjectFixture({
     facts: { durationWeeks: 4 },
     creators: [{ id: "cr_star", name: "Nour Star", tier: "Celebrity" }],
@@ -132,28 +219,24 @@ test("media plan places each deliverable on its own day card for multi-type crea
   obj.meta.mediaPlanSchedule = { weekWeights: [70, 10, 10, 10] };
 
   const data = generateMediaPlan(obj).data as MediaPlanData;
-  const nourSlots = data.weeks.flatMap((week) =>
-    week.days.flatMap((day) => {
-      const slots: Array<{ week: number; day: string; serviceType?: string }> = [];
-      if (day.creator === "Nour Star") {
-        slots.push({ week: week.week, day: day.day, serviceType: day.serviceType });
-      }
-      for (const extra of day.additionalDeliverables ?? []) {
-        if (extra.creator === "Nour Star") {
-          slots.push({ week: week.week, day: day.day, serviceType: extra.serviceType });
-        }
-      }
-      return slots;
-    })
+  const nourDays = data.weeks.flatMap((week) =>
+    week.days.filter(
+      (day) =>
+        day.creator === "Nour Star" ||
+        day.additionalDeliverables?.some((entry) => entry.creator === "Nour Star" && !entry.isMirror)
+    )
   );
 
-  assert.equal(nourSlots.length, 3);
-  const uniqueDays = new Set(nourSlots.map((slot) => `${slot.week}-${slot.day}`));
-  assert.equal(uniqueDays.size, 3, "each deliverable should have its own calendar day");
-  assert.deepEqual(
-    nourSlots.map((slot) => slot.serviceType).sort(),
-    ["1× IG Reel", "1× IG Set of stories", "1× Mirrored IG"].sort()
+  assert.equal(nourDays.length, 2, "IG Reel+Mirror and Stories = 2 activation days");
+  assert.equal(data.postingSlotCount, 2);
+
+  const reelDay = nourDays.find((day) =>
+    (day.serviceTypes ?? []).some((type) => /IG Reel/i.test(type))
   );
+  assert.ok(reelDay);
+  const mirrorOnReelDay = reelDay!.additionalDeliverables?.find((entry) => entry.isMirror);
+  assert.ok(mirrorOnReelDay, "Mirrored IG should nest under the reel activation");
+  assert.match(mirrorOnReelDay!.serviceType ?? "", /Mirror/i);
 });
 
 test("2× TikTok creator schedules on different days with 70/10/10/10 weights", () => {
