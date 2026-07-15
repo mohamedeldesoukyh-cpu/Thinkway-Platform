@@ -96,10 +96,16 @@ function typesForDay(day: MediaPlanDay): string[] {
       ? [day.serviceType]
       : [];
   const additional =
-    day.additionalDeliverables?.map((entry) => entry.serviceType).filter((type): type is string =>
-      Boolean(type?.trim())
-    ) ?? [];
-  return [...new Set([...primary, ...additional])];
+    day.additionalDeliverables
+      ?.filter((entry) => !entry.isMirror)
+      .map((entry) => entry.serviceType)
+      .filter((type): type is string => Boolean(type?.trim())) ?? [];
+  const mirrors =
+    day.additionalDeliverables
+      ?.filter((entry) => entry.isMirror)
+      .map((entry) => entry.serviceType)
+      .filter((type): type is string => Boolean(type?.trim())) ?? [];
+  return [...new Set([...primary, ...mirrors, ...additional])];
 }
 
 function collectLegendTypes(data: MediaPlanData): string[] {
@@ -190,6 +196,12 @@ function renderDayColumn(
           : typesForDay(day);
     cards += renderCreatorCard(day.shortName ?? day.creator, day, primaryTypes, typeColorMap, fallback);
     for (const entry of day.additionalDeliverables ?? []) {
+      if (entry.isMirror) {
+        const mirrorType = entry.serviceType?.trim();
+        if (!mirrorType) continue;
+        cards += `<div class="mirror-chip">↔ ${escapeHtml(mirrorType)}</div>`;
+        continue;
+      }
       const entryTypes =
         entry.serviceTypes?.length
           ? entry.serviceTypes
@@ -1269,6 +1281,15 @@ export function buildMediaPlanStyles(): string {
       align-items: center;
       flex-wrap: wrap;
       gap: 4px;
+    }
+    .mirror-chip {
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px dashed var(--rule-light);
+      background: rgba(255,255,255,0.85);
+      font-size: 7px;
+      font-weight: 600;
+      color: var(--muted);
     }
     .ccard-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
     .cav {

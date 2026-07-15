@@ -66,6 +66,10 @@ type DraggableCreator = {
   dayIndex: number;
 };
 
+function formatMirrorChipLabel(serviceType: string): string {
+  return serviceType.includes("↔") ? serviceType : serviceType.replace(/\s*\(Mirror\)\s*$/i, " (Mirror)");
+}
+
 function typesForDay(day: MediaPlanDay): string[] {
   const primary = day.serviceTypes?.length
     ? day.serviceTypes
@@ -73,10 +77,16 @@ function typesForDay(day: MediaPlanDay): string[] {
       ? [day.serviceType]
       : [];
   const additional =
-    day.additionalDeliverables?.map((entry) => entry.serviceType).filter((type): type is string =>
-      Boolean(type?.trim())
-    ) ?? [];
-  return [...new Set([...primary, ...additional])];
+    day.additionalDeliverables
+      ?.filter((entry) => !entry.isMirror)
+      .map((entry) => entry.serviceType)
+      .filter((type): type is string => Boolean(type?.trim())) ?? [];
+  const mirrors =
+    day.additionalDeliverables
+      ?.filter((entry) => entry.isMirror)
+      .map((entry) => entry.serviceType)
+      .filter((type): type is string => Boolean(type?.trim())) ?? [];
+  return [...new Set([...primary, ...mirrors, ...additional])];
 }
 
 function collectLegendTypes(data: MediaPlanData): string[] {
@@ -428,9 +438,27 @@ const DayColumn = memo(function DayColumn({
         {day.creator ? (
           <>
             {renderCreatorEntry(day, `${weekNum}-${dayIndex}-primary`)}
-            {(day.additionalDeliverables ?? []).map((entry, index) =>
-              renderCreatorEntry(entry, `${weekNum}-${dayIndex}-extra-${index}`)
-            )}
+            {(day.additionalDeliverables ?? [])
+              .filter((entry) => entry.isMirror)
+              .map((entry, index) => {
+                const mirrorType = entry.serviceType?.trim();
+                if (!mirrorType) return null;
+                return (
+                  <div
+                    key={`${weekNum}-${dayIndex}-mirror-${index}`}
+                    className="rounded-md border border-dashed border-[#0B0F1A]/10 bg-white/80 px-1.5 py-1"
+                  >
+                    <span className="text-[8px] font-medium" style={{ color: MEDIA_PLAN_BRAND.muted }}>
+                      ↔ {formatMirrorChipLabel(mirrorType)}
+                    </span>
+                  </div>
+                );
+              })}
+            {(day.additionalDeliverables ?? [])
+              .filter((entry) => !entry.isMirror)
+              .map((entry, index) =>
+                renderCreatorEntry(entry, `${weekNum}-${dayIndex}-extra-${index}`)
+              )}
           </>
         ) : isMediaPlanOpenPublishingSlot(day) ? null : (
           <div className="flex min-h-[2.5rem] flex-wrap items-center gap-1 rounded-lg border border-[#0B0F1A]/6 bg-white p-1.5">
