@@ -879,7 +879,6 @@ function buildDayFromPlacements(
     dateLabel,
     type: "content",
     serviceTypes: allTypes,
-    serviceType: primaryDisplayType,
     label: `${shortName} — ${activationLabel(primary.serviceType, mirrors)}`,
     ...fields,
   };

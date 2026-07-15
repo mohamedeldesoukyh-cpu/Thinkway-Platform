@@ -12,6 +12,7 @@ import {
   buildQuotationItemOptionContext,
   normalizeOptionNumber,
   quotationCreatorDuplicateKey,
+  type QuotationItemOptionContext,
 } from "@/lib/quotations/quotation-creator-options";
 
 export type QuotationWorkspaceSortField =
@@ -112,7 +113,7 @@ function compareItems(
   b: QuotationItemRow,
   sort: QuotationWorkspaceSortState,
   ctx: QuotationWorkspaceSortContext,
-  optionById: Map<string, number>
+  optionById: Map<string, QuotationItemOptionContext>
 ): number {
   const { field, direction } = sort;
   let cmp = 0;
@@ -120,11 +121,11 @@ function compareItems(
   switch (field) {
     case "option": {
       const optA =
-        optionById.get(a.id) ??
+        optionById.get(a.id)?.optionNumber ??
         normalizeOptionNumber(a.option_number) ??
         Number.MAX_SAFE_INTEGER;
       const optB =
-        optionById.get(b.id) ??
+        optionById.get(b.id)?.optionNumber ??
         normalizeOptionNumber(b.option_number) ??
         Number.MAX_SAFE_INTEGER;
       cmp = compareNumbers(optA, optB, direction);

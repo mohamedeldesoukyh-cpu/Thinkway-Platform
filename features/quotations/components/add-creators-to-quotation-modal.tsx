@@ -132,8 +132,14 @@ export function AddCreatorsToQuotationModal({
     });
   }, [campaignId]);
 
+  type QuotationImportResult = {
+    ok: boolean;
+    message?: string;
+    data?: { itemIds?: string[]; added?: number };
+  };
+
   function runImport(
-    action: () => Promise<{ ok: boolean; message?: string; data?: { itemIds?: string[] } }>,
+    action: () => Promise<QuotationImportResult>,
     options?: { passItemIds?: boolean }
   ) {
     startTransition(async () => {

@@ -29,6 +29,7 @@ import type { LlmProvider } from "@/features/ai/types/llm";
 
 import { mergeBriefIntoCampaignObject } from "../merge-campaign-brief";
 import { reoptimizeCampaignAfterApply } from "../apply-draft-reoptimize";
+import { getStudioDraft, stageDraftChange, withStudioDraft } from "../studio-draft";
 import {
   applyAudienceChange,
   applyBudgetChange,

@@ -1,6 +1,6 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
-import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
+import type { CampaignFacts, CampaignFactsField } from "@/features/campaign-director/facts/campaign-facts-types";
 import {
   applyFactsToSummaryData,
   getCampaignFacts,
@@ -49,7 +49,7 @@ function mergeFactsFromBrief(
     rawBriefExcerpt: extracted.rawBriefExcerpt ?? existing?.rawBriefExcerpt,
   };
 
-  const mergeFields: Array<keyof CampaignFacts> = [
+  const mergeFields: CampaignFactsField[] = [
     "brandName",
     "clientName",
     "objective",

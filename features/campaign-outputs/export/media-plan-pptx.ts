@@ -752,7 +752,8 @@ function addDayCard(
         fontSize: 7,
         bold: true,
         color: INK,
-        truncate: true,
+        fit: "shrink",
+        wrap: false,
       });
       const typeText = entry.types.join(", ");
       const dotColor = typeColorMap.get(entry.types[0] ?? "") ?? dayTypeColor(day.type);
@@ -772,7 +773,8 @@ function addDayCard(
         fontFace: FONT,
         fontSize: 6.5,
         color: MUTED,
-        truncate: true,
+        fit: "shrink",
+        wrap: false,
       });
       cardY += 0.42;
     } else {
