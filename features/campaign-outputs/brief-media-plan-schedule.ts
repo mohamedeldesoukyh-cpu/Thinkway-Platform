@@ -1,9 +1,7 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
-import {
-  computeWeekWeights,
-  type ActivationApproach,
-} from "@/features/campaign-director/debate/activation-plan";
+import { computeWeekWeights } from "@/features/campaign-director/debate/activation-plan";
+import type { ActivationApproach } from "@/features/campaign-director/debate/debate-types";
 
 import { normalizeWeekWeights, parseWeekWeightIntent } from "./media-plan-schedule";
 
