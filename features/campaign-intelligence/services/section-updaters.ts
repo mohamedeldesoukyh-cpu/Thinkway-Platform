@@ -25,6 +25,7 @@ import {
 } from "./structured-section-builders";
 import { enrichCampaignObjectWithStudioData } from "./studio-section-data-builders";
 import { proposeInitialCreatorSlate } from "@/features/campaign-studio/services/propose-creator-slate";
+import { mergeBriefIntoCampaignObject } from "@/features/campaign-studio/services/merge-campaign-brief";
 import type { GroundedCreator } from "@/features/ai-workflows/formatters/creator-formatter";
 import {
   applyDirectorBudgetRules,
@@ -129,6 +130,29 @@ function extractTaskContent(
   }
 
   return "";
+}
+
+function extractBriefTextFromWorkflow(
+  stateData: Record<string, unknown>,
+  fallbackContent: string
+): string {
+  const brief = stateData.brief as
+    | {
+        content?: string;
+        text?: string;
+        sections?: Array<{ content?: string; body?: string }>;
+      }
+    | undefined;
+  if (brief?.content?.trim()) return brief.content.trim();
+  if (brief?.text?.trim()) return brief.text.trim();
+  if (brief?.sections?.length) {
+    const joined = brief.sections
+      .map((section) => section.content?.trim() || section.body?.trim() || "")
+      .filter(Boolean)
+      .join("\n\n");
+    if (joined.length >= 40) return joined;
+  }
+  return fallbackContent.trim();
 }
 
 /** Mark re-run proposal as in-flight without clearing committed recommendations. */
@@ -525,6 +549,16 @@ export function applyTaskResultToCampaignObject(
       ...updated,
       meta: { ...updated.meta, campaignFacts: campaignFactsFromState },
     };
+  }
+
+  if (result.taskId === "generate-brief" && isTerminal) {
+    const creatorsData = (updated.sections.creators.data ?? {}) as CreatorsSectionData;
+    const existingSlate = creatorsData.recommendations?.creatorIds ?? [];
+    const briefText = extractBriefTextFromWorkflow(stateData, content);
+    if (existingSlate.length > 0 && briefText.length >= 40) {
+      const merged = mergeBriefIntoCampaignObject(updated, briefText);
+      if (merged.change) updated = merged.campaignObject;
+    }
   }
 
   updated = syncSpecialistProgress(updated, {

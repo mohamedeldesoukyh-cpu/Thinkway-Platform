@@ -63,13 +63,14 @@ async function insertQuotationSeeds(
   quotationId: string,
   seeds: QuotationItemSeed[],
   startSort = 0
-): Promise<QuotationMutationResult<{ inserted: number }>> {
-  if (!seeds.length) return { ok: true, data: { inserted: 0 } };
+): Promise<QuotationMutationResult<{ inserted: number; itemIds: string[] }>> {
+  if (!seeds.length) return { ok: true, data: { inserted: 0, itemIds: [] } };
   const rows = await buildItemInsertRows(supabase, quotationId, seeds, startSort);
-  const { error } = await insertQuotationItems(supabase, rows);
+  const { data, error } = await insertQuotationItems(supabase, rows);
   if (error) return { ok: false, message: error.message };
   await recomputeQuotationTotals(supabase, quotationId);
-  return { ok: true, data: { inserted: rows.length } };
+  const itemIds = ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
+  return { ok: true, data: { inserted: rows.length, itemIds } };
 }
 
 export async function createBlankQuotation(
@@ -381,7 +382,7 @@ export async function addItemsToQuotation(
   supabase: SupabaseClient<Database>,
   quotationId: string,
   creators: QuotationItemSeed[]
-): Promise<QuotationMutationResult<{ added: number }>> {
+): Promise<QuotationMutationResult<{ added: number; itemIds: string[] }>> {
   if (!creators?.length) return { ok: false, message: "No creators provided." };
 
   const { data: maxRow } = await fetchMaxItemSortOrder(supabase, quotationId);
@@ -392,7 +393,10 @@ export async function addItemsToQuotation(
 
   return {
     ok: true,
-    data: { added: inserted.data?.inserted ?? 0 },
+    data: {
+      added: inserted.data?.inserted ?? 0,
+      itemIds: inserted.data?.itemIds ?? [],
+    },
     message: "Creators added.",
   };
 }
@@ -678,7 +682,7 @@ export async function addManualQuotationItem(
   supabase: SupabaseClient<Database>,
   quotationId: string,
   input?: { creator_name?: string }
-): Promise<QuotationMutationResult<{ added: number }>> {
+): Promise<QuotationMutationResult<{ added: number; itemIds: string[] }>> {
   return addItemsToQuotation(supabase, quotationId, [
     {
       creator_name: input?.creator_name?.trim() || "New creator",

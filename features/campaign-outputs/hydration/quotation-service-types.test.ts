@@ -56,14 +56,19 @@ test("quotation item with four type lines expands to four media plan slots", () 
 
   const { campaignObject } = hydrateCampaignObject(seed);
   const data = generateMediaPlan(campaignObject).data as MediaPlanData;
-  const coachDays = data.weeks
-    .flatMap((week) => week.days)
-    .filter((day) => day.creator?.includes("Coach Ghofran"));
+  const coachSlots = data.weeks.flatMap((week) =>
+    week.days.flatMap((day) => {
+      const slots: Array<{ serviceType?: string }> = [];
+      if (day.creator?.includes("Coach Ghofran")) {
+        slots.push({ serviceType: day.serviceType });
+      }
+      return slots;
+    })
+  );
 
-  assert.ok(coachDays.length >= 4);
-  const scheduledTypes = coachDays.flatMap((day) => day.serviceTypes ?? []);
+  assert.equal(coachSlots.length, 4);
   assert.deepEqual(
-    [...new Set(scheduledTypes)].sort(),
+    coachSlots.map((slot) => slot.serviceType).sort(),
     ["1× Mirrored FB", "1× Mirrored IG", "1× TT Video", "1× TikTok Story"].sort()
   );
   assert.equal(data.postingSlotCount, 4);

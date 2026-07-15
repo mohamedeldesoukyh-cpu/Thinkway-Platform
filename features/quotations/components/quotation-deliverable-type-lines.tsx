@@ -26,6 +26,8 @@ type Props = {
   allowedPlatforms: string[];
   onChange: (lines: QuotationDeliverableTypeLine[], options?: ChangeOptions) => void;
   disabled?: boolean;
+  /** Open the type picker on mount (e.g. after adding a manual row). */
+  defaultOpen?: boolean;
 };
 
 export function QuotationDeliverableTypeLinesEditor({
@@ -33,6 +35,7 @@ export function QuotationDeliverableTypeLinesEditor({
   allowedPlatforms,
   onChange,
   disabled,
+  defaultOpen,
 }: Props) {
   const displayLines = lines.length > 0 ? lines : [{ type: "", quantity: 1 }];
   const selectedTypes = selectedTypesFromTypeLines(displayLines);
@@ -84,6 +87,7 @@ export function QuotationDeliverableTypeLinesEditor({
           disabled={disabled}
           summaryLabel={summaryLabel}
           className="min-w-0 flex-1"
+          defaultOpen={defaultOpen}
         />
       </div>
       {showPerTypeQuantity

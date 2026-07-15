@@ -8,6 +8,7 @@ import {
   groupQuotationItemsByCreator,
   isSameQuotationCreator,
   nextQuotationOptionNumber,
+  quotationCreatorDuplicateKey,
   quotationOptionSelectValues,
   quotationOptionRowShadeClass,
 } from "./quotation-creator-options";
@@ -80,8 +81,8 @@ test("buildQuotationItemOptionContext sequences Option 1, 2, 3 in sort order", (
 
 test("buildQuotationItemOptionContext matches duplicate creator names", () => {
   const context = buildQuotationItemOptionContext([
-    item({ id: "a1", creator_name: "Jane", handle: "@jane", sort_order: 1 }),
-    item({ id: "a2", creator_name: "Jane", handle: "@jane", sort_order: 2 }),
+    item({ id: "a1", unified_id: "u-jane", creator_name: "Jane", handle: "@jane", sort_order: 1 }),
+    item({ id: "a2", unified_id: "u-jane", creator_name: "Jane", handle: "@jane", sort_order: 2 }),
   ]);
 
   assert.equal(context.get("a1")?.optionNumber, 1);
@@ -106,6 +107,13 @@ test("groupQuotationItemsByCreator nests options under each creator", () => {
 test("quotationOptionSelectValues includes blank choices and next slot", () => {
   const values = quotationOptionSelectValues(2, [1, 2]);
   assert.deepEqual(values, [1, 2, 3]);
+});
+
+test("manual quotation items with the same placeholder name stay distinct", () => {
+  const a = item({ id: "m1", creator_name: "New creator", sort_order: 1 });
+  const b = item({ id: "m2", creator_name: "New creator", sort_order: 2 });
+  assert.notEqual(quotationCreatorDuplicateKey(a), quotationCreatorDuplicateKey(b));
+  assert.equal(isSameQuotationCreator(a, b), false);
 });
 
 test("quotationOptionRowShadeClass cycles", () => {

@@ -22,6 +22,7 @@ type Props = {
   onRemoved: () => void;
   onLineChanged: () => void;
   onOpenCreator?: (item: QuotationItemRow) => void;
+  focusItemId?: string | null;
 };
 
 /** One influencer block: header row (avatar + name), then Option 1 / 2 / 3… lines. */
@@ -38,6 +39,7 @@ export function QuotationCreatorGroupRows({
   onRemoved,
   onLineChanged,
   onOpenCreator,
+  focusItemId,
 }: Props) {
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => a.sort_order - b.sort_order),
@@ -86,6 +88,7 @@ export function QuotationCreatorGroupRows({
             onOpenCreator={
               onOpenCreator ? () => onOpenCreator(item) : undefined
             }
+            autoOpenEditors={item.id === focusItemId}
           />
         );
       })}

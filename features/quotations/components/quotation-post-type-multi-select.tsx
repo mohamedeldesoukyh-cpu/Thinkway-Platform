@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ type Props = {
   summaryLabel?: string;
   className?: string;
   disabled?: boolean;
+  /** Open the type picker on mount (e.g. after adding a manual row). */
+  defaultOpen?: boolean;
 };
 
 export function QuotationPostTypeMultiSelect({
@@ -35,13 +38,20 @@ export function QuotationPostTypeMultiSelect({
   summaryLabel,
   className,
   disabled,
+  defaultOpen,
 }: Props) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
   const label =
     summaryLabel ?? deliverableTypesLabel({ type: value[0] ?? "", types: value });
   const hasSelection = value.length > 0;
 
+  useEffect(() => {
+    if (!defaultOpen) return;
+    setOpen(true);
+  }, [defaultOpen]);
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"

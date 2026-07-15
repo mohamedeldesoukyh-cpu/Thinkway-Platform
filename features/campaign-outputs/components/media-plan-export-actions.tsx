@@ -1,10 +1,10 @@
-import { DownloadIcon, FileCodeIcon, FileSpreadsheetIcon } from "lucide-react";
+import { DownloadIcon, FileCodeIcon, FileSpreadsheetIcon, PresentationIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 import type { CampaignOutputKind } from "../output-types";
 
-export type MediaPlanExportFormat = "html" | "pdf" | "excel";
+export type MediaPlanExportFormat = "html" | "pdf" | "excel" | "pptx";
 
 export function buildMediaPlanExportHref(
   campaignObjectId: string,
@@ -27,7 +27,7 @@ export function buildMediaPlanExportHref(
 const BUTTON_CLASS =
   "inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted/60 disabled:pointer-events-none disabled:opacity-40";
 
-/** PDF, Excel, and HTML export for the Media Plan preview panel. */
+/** PDF, PowerPoint, Excel, and HTML export for the Media Plan preview panel. */
 export function MediaPlanExportActions({
   campaignObjectId,
   conversationId,
@@ -56,6 +56,20 @@ export function MediaPlanExportActions({
       >
         <DownloadIcon className="size-3.5" aria-hidden />
         PDF
+      </a>
+      <a
+        href={buildMediaPlanExportHref(campaignObjectId, "pptx", exportOptions)}
+        className={cn(
+          BUTTON_CLASS,
+          "border-[#B7472A]/25 bg-gradient-to-br from-[#B7472A]/10 to-[#D2571F]/10 text-[#B7472A] hover:from-[#B7472A]/15 hover:to-[#D2571F]/15"
+        )}
+        aria-disabled={disabled}
+        tabIndex={disabled ? -1 : undefined}
+        onClick={disabled ? (event) => event.preventDefault() : undefined}
+        aria-label="Download media plan as PowerPoint"
+      >
+        <PresentationIcon className="size-3.5" aria-hidden />
+        PowerPoint
       </a>
       <a
         href={buildMediaPlanExportHref(campaignObjectId, "excel", exportOptions)}

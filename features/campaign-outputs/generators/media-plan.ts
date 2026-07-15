@@ -23,9 +23,17 @@ import {
 import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
 import { resolveSlate, type SlateCreator } from "../output-inputs";
 import { parseAggregatedServiceLabel, normalizeCreatorMatchKey } from "../hydration/quotation-service-types";
+import { resolveMediaPlanWeekWeights } from "../brief-media-plan-schedule";
+import { buildMediaPlanStrategySummary, type MediaPlanStrategySummary } from "../media-plan-strategy-summary";
+import { mediaPlanScheduleFromMeta } from "../media-plan-schedule";
+import {
+  distributeDeliverablesToDays,
+  expandSchedulableDeliverables,
+  type ScheduledDeliverablePlacement,
+} from "../media-plan-scheduler";
 import { formatMoney } from "./generator-utils";
 
-export const MEDIA_PLAN_GENERATOR_VERSION = "3.3.5";
+export const MEDIA_PLAN_GENERATOR_VERSION = "3.4.0";
 
 /** Shown beside campaign cost on media plan documents. */
 export const MEDIA_PLAN_COST_VAT_DISCLAIMER = "Price excludes VAT.";
@@ -198,6 +206,8 @@ export type MediaPlanData = {
   unscheduledDeliverableCount?: number;
   /** Unique quotation ad / service types scheduled in the calendar */
   serviceTypes: string[];
+  /** Client-facing strategy summary for document preview and exports. */
+  strategySummary?: MediaPlanStrategySummary;
   generatorVersion: string;
 };
 
@@ -570,19 +580,11 @@ type MediaPlanPostingSlot = {
 };
 
 function expandPostingSlots(slate: SlateCreator[], platforms: string[]): MediaPlanPostingSlot[] {
-  const fallbackPlatform = platforms[0] ?? "Instagram";
-  const slots: MediaPlanPostingSlot[] = [];
-  for (const creator of slate) {
-    const basePlatform = creator.platform ?? fallbackPlatform;
-    for (const serviceType of serviceTypesForCreator(creator, basePlatform)) {
-      slots.push({
-        creator,
-        serviceType,
-        platform: platformForServiceType(serviceType, basePlatform),
-      });
-    }
-  }
-  return slots;
+  return expandSchedulableDeliverables(slate, platforms).map((deliverable) => ({
+    creator: deliverable.creator,
+    serviceType: deliverable.serviceType,
+    platform: deliverable.platform,
+  }));
 }
 
 function platformsFromSlate(slate: SlateCreator[], fallback: string[]): string[] {
@@ -643,17 +645,27 @@ export function resolveCalendarWeekCount(input: {
   return input.durationWeeks;
 }
 
-/** Assign each creator to one calendar day — all their quoted ad types stay on that day. */
+/** True when a quotation calendar day has no creator content to render. */
+export function isMediaPlanOpenPublishingSlot(day: MediaPlanDay): boolean {
+  return (
+    !day.creator &&
+    !(day.additionalDeliverables?.length) &&
+    (day.label === "Open publishing slot" || !day.label?.trim())
+  );
+}
+
+/** @deprecated Use distributeDeliverablesToDays — kept for legacy tests. */
 export function distributeCreatorsAcrossDays(
   slate: SlateCreator[],
-  totalDays: number
+  totalDays: number,
+  options?: { durationWeeks?: number; weekWeights?: number[] }
 ): SlateCreator[][] {
-  const buckets: SlateCreator[][] = Array.from({ length: totalDays }, () => []);
-  if (totalDays <= 0) return buckets;
-  for (let index = 0; index < slate.length; index += 1) {
-    buckets[index % totalDays]!.push(slate[index]!);
-  }
-  return buckets;
+  const buckets = distributeDeliverablesToDays(slate, totalDays, {
+    durationWeeks: Math.max(1, options?.durationWeeks ?? Math.ceil(totalDays / 7)),
+    weekWeights: options?.weekWeights,
+    platforms: ["Instagram"],
+  });
+  return buckets.map((bucket) => bucket.placements.map((placement) => placement.deliverable.creator));
 }
 
 function countScheduledDeliverables(weeks: MediaPlanWeek[]): number {
@@ -726,13 +738,14 @@ function buildCreatorDayFromPostingSlot(
   };
 }
 
-function additionalDeliverableFromCreator(
-  creator: SlateCreator,
-  platforms: string[]
+function additionalDeliverableFromPlacement(
+  placement: ScheduledDeliverablePlacement
 ): MediaPlanAdditionalDeliverable {
-  const platform = creator.platform ?? platforms[0] ?? "Instagram";
-  const allTypes = serviceTypesForCreator(creator, platform);
-  const fields = creatorDayFields(creator, platform, allTypes[0]);
+  const fields = creatorDayFields(
+    placement.deliverable.creator,
+    placement.deliverable.platform,
+    placement.deliverable.serviceType
+  );
   return {
     creatorId: fields.creatorId,
     creator: fields.creator,
@@ -741,21 +754,20 @@ function additionalDeliverableFromCreator(
     avatarUrl: fields.avatarUrl,
     profileUrl: fields.profileUrl,
     serviceType: fields.serviceType,
-    serviceTypes: allTypes,
+    serviceTypes: [placement.deliverable.serviceType],
     platform: fields.platform,
   };
 }
 
-function buildDayFromCreators(
+function buildDayFromPlacements(
   day: (typeof DAYS)[number],
   dateLabel: string,
-  creators: SlateCreator[],
-  platforms: string[],
+  placements: ScheduledDeliverablePlacement[],
   week: number,
   dayIndex: number,
   deadlines: MediaPlanDeadline[]
 ): MediaPlanDay {
-  if (!creators.length) {
+  if (!placements.length) {
     return {
       day,
       dateLabel,
@@ -765,23 +777,27 @@ function buildDayFromCreators(
     };
   }
 
-  const [primary, ...additional] = creators;
-  const primaryPlatform = primary!.platform ?? platforms[0] ?? "Instagram";
-  const primaryDay = buildCreatorDay(day, dateLabel, "content", primary!, primaryPlatform);
+  const [primaryPlacement, ...additionalPlacements] = placements;
+  const primary = primaryPlacement!.deliverable;
+  const fields = creatorDayFields(primary.creator, primary.platform, primary.serviceType);
+  const shortName = fields.shortName ?? shortCreatorName(primary.creator.displayName);
 
-  for (const creator of creators) {
-    const platform = creator.platform ?? platforms[0] ?? "Instagram";
-    const types = serviceTypesForCreator(creator, platform);
-    const fields = creatorDayFields(creator, platform, types[0]);
+  for (const placement of placements) {
+    const deliverable = placement.deliverable;
+    const slotFields = creatorDayFields(
+      deliverable.creator,
+      deliverable.platform,
+      deliverable.serviceType
+    );
     deadlines.push({
-      creator: creator.displayName,
-      creatorId: fields.creatorId,
-      shortName: fields.shortName,
-      handle: fields.handle,
-      avatarUrl: fields.avatarUrl,
-      profileUrl: fields.profileUrl,
-      serviceTypes: types,
-      serviceType: types[0],
+      creator: deliverable.creator.displayName,
+      creatorId: slotFields.creatorId,
+      shortName: slotFields.shortName,
+      handle: slotFields.handle,
+      avatarUrl: slotFields.avatarUrl,
+      profileUrl: slotFields.profileUrl,
+      serviceTypes: [deliverable.serviceType],
+      serviceType: deliverable.serviceType,
       publishWeek: week,
       publishDay: day,
       productionStart: leadDate(week, dayIndex, PRODUCTION_LEAD_DAYS),
@@ -789,17 +805,21 @@ function buildDayFromCreators(
     });
   }
 
-  if (!additional.length) return primaryDay;
+  const primaryDay: MediaPlanDay = {
+    day,
+    dateLabel,
+    type: "content",
+    serviceTypes: [primary.serviceType],
+    label: `${shortName} — ${primary.serviceType}`,
+    ...fields,
+  };
+
+  if (!additionalPlacements.length) return primaryDay;
 
   return {
     ...primaryDay,
-    additionalDeliverables: additional.map((creator) =>
-      additionalDeliverableFromCreator(creator, platforms)
-    ),
-    label:
-      additional.length > 0
-        ? `${primaryDay.shortName ?? primaryDay.creator} +${additional.length} creator${additional.length === 1 ? "" : "s"}`
-        : primaryDay.label,
+    additionalDeliverables: additionalPlacements.map(additionalDeliverableFromPlacement),
+    label: `${shortName} +${additionalPlacements.length} creator${additionalPlacements.length === 1 ? "" : "s"}`,
   };
 }
 function tierRank(tier?: string): number {
@@ -849,9 +869,16 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
   });
   const waveCount = durationWeeks >= 6 ? 3 : durationWeeks >= 3 ? 2 : 1;
   const campaignStart = resolveCampaignStartAnchor(facts);
-  const quotationCreatorsByDay =
+  const schedule = mediaPlanScheduleFromMeta(campaignObject.meta);
+  const weekWeights = resolveMediaPlanWeekWeights(campaignObject, calendarWeekCount);
+  const deliverableBucketsByDay =
     quotationCalendar && slate.length > 0
-      ? distributeCreatorsAcrossDays(slate, calendarWeekCount * 7)
+      ? distributeDeliverablesToDays(slate, calendarWeekCount * 7, {
+          durationWeeks: calendarWeekCount,
+          weekWeights,
+          assignments: schedule?.assignments,
+          platforms,
+        })
       : null;
 
   const deadlines: MediaPlanDeadline[] = [];
@@ -866,10 +893,10 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
     const days: MediaPlanDay[] = DAYS.map((day, index) => {
       const dateLabel = formatShortCampaignDate(dateForSlot(campaignStart, week, index));
 
-      if (quotationCalendar && quotationCreatorsByDay) {
-        const dayCreators = quotationCreatorsByDay[absoluteDayIndex] ?? [];
+      if (quotationCalendar && deliverableBucketsByDay) {
+        const bucket = deliverableBucketsByDay[absoluteDayIndex] ?? { placements: [] };
         absoluteDayIndex += 1;
-        return buildDayFromCreators(day, dateLabel, dayCreators, platforms, week, index, deadlines);
+        return buildDayFromPlacements(day, dateLabel, bucket.placements, week, index, deadlines);
       }
 
       const schedulePostingSlot = (type: MediaPlanDayType = "content"): MediaPlanDay => {
@@ -954,11 +981,11 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
   }
 
   const platformAllocation = buildPlatformAllocationFromPostingSlots(postingSlots);
-  const scheduledCreators = countScheduledDeliverables(weeks);
-  const unscheduledDeliverableCount =
-    slate.length > scheduledCreators
-      ? slate.length - scheduledCreators
-      : undefined;
+  const scheduledDeliverables = countScheduledDeliverables(weeks);
+  const unscheduledDeliverableCount = computeUnscheduledDeliverableCount(
+    postingSlots.length,
+    scheduledDeliverables
+  );
 
   const waves: MediaPlanWave[] = Array.from({ length: waveCount }, (_, i) => {
     const wave = i + 1;
@@ -1027,9 +1054,9 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
     }
   }
 
-  const packedCreatorsPerDay =
-    quotationCalendar && slate.length > 0
-      ? Math.ceil(slate.length / (calendarWeekCount * 7))
+  const packedDeliverablesPerDay =
+    quotationCalendar && postingSlots.length > 0
+      ? Math.ceil(postingSlots.length / (calendarWeekCount * 7))
       : undefined;
 
   const data: MediaPlanData = {
@@ -1054,15 +1081,27 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
           .filter((label): label is string => Boolean(label?.trim()))
       ),
     ],
+    strategySummary: buildMediaPlanStrategySummary(campaignObject, {
+      platformAllocation,
+      serviceTypes: [
+        ...new Set(
+          weeks
+            .flatMap((w) =>
+              w.days.flatMap((d) => d.serviceTypes ?? (d.serviceType ? [d.serviceType] : []))
+            )
+            .filter((label): label is string => Boolean(label?.trim()))
+        ),
+      ],
+    }),
     generatorVersion: MEDIA_PLAN_GENERATOR_VERSION,
   };
 
   return {
     title: "Media Plan",
     summary: quotationCalendar
-      ? `${durationWeeks}-week quotation calendar — ${postingSlots.length} quoted ad slot${postingSlots.length === 1 ? "" : "s"} across ${slate.length} creator${slate.length === 1 ? "" : "s"}${
-          packedCreatorsPerDay && packedCreatorsPerDay > 1
-            ? ` (up to ${packedCreatorsPerDay} creators per day)`
+      ? `${durationWeeks}-week strategy-driven calendar — ${postingSlots.length} deliverable${postingSlots.length === 1 ? "" : "s"} across ${slate.length} creator${slate.length === 1 ? "" : "s"}${
+          packedDeliverablesPerDay && packedDeliverablesPerDay > 1
+            ? ` (up to ${packedDeliverablesPerDay} deliverables per day)`
             : ""
         }.`
       : `${durationWeeks}-week client-approval-ready publishing plan across ${slate.length} creator${slate.length === 1 ? "" : "s"} and ${platforms.length} platform${platforms.length === 1 ? "" : "s"}, organized into ${waveCount} wave${waveCount === 1 ? "" : "s"}.`,

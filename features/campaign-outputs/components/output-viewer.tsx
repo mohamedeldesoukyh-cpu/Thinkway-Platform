@@ -1,6 +1,9 @@
 import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
 import type { MediaPlanCampaignContext, MediaPlanData } from "../generators/media-plan";
-import { MediaPlanCalendar } from "./media-plan-calendar";
+import {
+  MediaPlanCalendar,
+  type MediaPlanCreatorMoveTarget,
+} from "./media-plan-calendar";
 import { MEDIA_PLAN_BRAND } from "./media-plan-brand";
 import { mergeMediaPlanContext } from "./media-plan-context-merge";
 import {
@@ -8,6 +11,7 @@ import {
   MediaPlanCampaignCostBadge,
   MediaPlanContextStrip,
   MediaPlanDeadlinesTable,
+  MediaPlanStrategySection,
   shouldSkipMediaPlanSection,
 } from "./media-plan-preview-sections";
 
@@ -74,9 +78,15 @@ function SectionBlock({ section }: { section: CampaignOutputContentSection }) {
 export function OutputViewer({
   content,
   mediaPlanContextOverride,
+  editableMediaPlan = false,
+  savingMediaPlanSchedule = false,
+  onMoveMediaPlanCreator,
 }: {
   content: CampaignOutputContent;
   mediaPlanContextOverride?: MediaPlanCampaignContext;
+  editableMediaPlan?: boolean;
+  savingMediaPlanSchedule?: boolean;
+  onMoveMediaPlanCreator?: (target: MediaPlanCreatorMoveTarget) => void;
 }) {
   const mediaPlan = isMediaPlanData(content.data) ? content.data : undefined;
   const hasDeadlines = Boolean(mediaPlan?.deadlines?.length);
@@ -104,7 +114,19 @@ export function OutputViewer({
         {mediaPlan ? <MediaPlanContextStrip context={mediaPlanContext} /> : null}
       </header>
 
-      {mediaPlan ? <MediaPlanCalendar data={mediaPlan} orientation="landscape" /> : null}
+      {mediaPlan ? (
+        <MediaPlanStrategySection summary={mediaPlan.strategySummary} />
+      ) : null}
+
+      {mediaPlan ? (
+        <MediaPlanCalendar
+          data={mediaPlan}
+          orientation="landscape"
+          editable={editableMediaPlan}
+          saving={savingMediaPlanSchedule}
+          onMoveCreator={onMoveMediaPlanCreator}
+        />
+      ) : null}
 
       {mediaPlan && hasDeadlines ? (
         <section className="space-y-2">

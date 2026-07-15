@@ -5,9 +5,12 @@ import type { QuotationDetail } from "@/lib/domains/commercial/quotation-detail-
 import { getQuotationDetail } from "@/lib/services/quotations/quotation-document-service";
 
 import {
+  buildQuotationCommercialsMeta,
   mergeQuotationCommercialsContext,
   type QuotationCommercialsContextPatch,
+  type QuotationCommercialsMeta,
 } from "./quotation-commercials-meta";
+import { seedFromQuotation } from "./seed-adapters";
 
 function contextFromQuotationDetail(
   detail: QuotationDetail,
@@ -42,9 +45,9 @@ function resolveQuotationId(
 }
 
 /**
- * Refresh `meta.quotationCommercials` identity fields from the live quotation
- * record — used on conversation load, preview, and export so Media Plan reflects
- * client/brand edits without a manual re-sync.
+ * Refresh `meta.quotationCommercials` from the live quotation — identity fields
+ * and creator commercial snapshot (manual rows, ad types, fees) so Media Plan
+ * stays current without a manual workspace re-sync.
  */
 export async function enrichCampaignObjectQuotationContext(
   supabase: SupabaseClient,
@@ -63,21 +66,26 @@ export async function enrichCampaignObjectQuotationContext(
   const detail = await getQuotationDetail(supabase, quotationId);
   if (!detail) return campaignObject;
 
-  const merged = mergeQuotationCommercialsContext(
-    existing,
-    contextFromQuotationDetail(detail, quotationId)
-  );
+  const contextPatch = contextFromQuotationDetail(detail, quotationId);
+  const seed = seedFromQuotation(detail);
+  const syncedAt = new Date().toISOString();
 
-  if (
-    merged.clientName === existing?.clientName &&
-    merged.brandName === existing?.brandName &&
-    merged.groupName === existing?.groupName &&
-    merged.agencyOrDirect === existing?.agencyOrDirect &&
-    merged.agencyName === existing?.agencyName &&
-    merged.quotationId === existing?.quotationId
-  ) {
-    return campaignObject;
-  }
+  const merged: QuotationCommercialsMeta =
+    seed.creators.length > 0
+      ? buildQuotationCommercialsMeta(seed.creators, { ...contextPatch, syncedAt })
+      : mergeQuotationCommercialsContext(existing, { ...contextPatch, syncedAt });
+
+  const creatorsChanged =
+    JSON.stringify(merged.creators) !== JSON.stringify(existing?.creators ?? []);
+  const contextChanged =
+    merged.clientName !== existing?.clientName ||
+    merged.brandName !== existing?.brandName ||
+    merged.groupName !== existing?.groupName ||
+    merged.agencyOrDirect !== existing?.agencyOrDirect ||
+    merged.agencyName !== existing?.agencyName ||
+    merged.quotationId !== existing?.quotationId;
+
+  if (!creatorsChanged && !contextChanged) return campaignObject;
 
   return {
     ...campaignObject,
@@ -85,5 +93,6 @@ export async function enrichCampaignObjectQuotationContext(
       ...campaignObject.meta,
       quotationCommercials: merged,
     },
+    updatedAt: syncedAt,
   };
 }

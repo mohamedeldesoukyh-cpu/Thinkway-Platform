@@ -91,6 +91,8 @@ export type CampaignObjectMeta = {
    * sync and used by Media Plan even when Copilot overwrites creators.data.
    */
   quotationCommercials?: import("@/features/campaign-outputs/hydration/quotation-commercials-meta").QuotationCommercialsMeta;
+  /** Media plan slot distribution — week weights and per-creator overrides (not start date). */
+  mediaPlanSchedule?: import("@/features/campaign-outputs/media-plan-schedule").MediaPlanScheduleMeta;
 };
 
 /** A single applied Campaign Copilot edit, for change history and the digest. */

@@ -39,6 +39,10 @@ import type { ImportCreatorOption } from "@/lib/domains/commercial/quotation-typ
 import { buildQuotationSeedFromCreator } from "@/features/quotations/shortlist-seeds";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
+export type QuotationCreatorsAddedResult = {
+  itemIds?: string[];
+};
+
 type ShortlistOption = { id: string; name: string; creator_count: number };
 type CampaignOption = { id: string; name: string; document_number: string | null };
 
@@ -46,7 +50,7 @@ type Props = {
   quotationId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdded: () => void;
+  onAdded: (result?: QuotationCreatorsAddedResult) => void;
   initialShortlists?: ShortlistOption[];
   initialCampaigns?: CampaignOption[];
 };
@@ -128,7 +132,10 @@ export function AddCreatorsToQuotationModal({
     });
   }, [campaignId]);
 
-  function runImport(action: () => Promise<{ ok: boolean; message?: string }>) {
+  function runImport(
+    action: () => Promise<{ ok: boolean; message?: string; data?: { itemIds?: string[] } }>,
+    options?: { passItemIds?: boolean }
+  ) {
     startTransition(async () => {
       const res = await action();
       if (!res.ok) {
@@ -137,7 +144,11 @@ export function AddCreatorsToQuotationModal({
       }
       toast.success(res.message ?? "Creators added.");
       onOpenChange(false);
-      onAdded();
+      onAdded(
+        options?.passItemIds && res.data?.itemIds?.length
+          ? { itemIds: res.data.itemIds }
+          : undefined
+      );
     });
   }
 
@@ -302,9 +313,12 @@ export function AddCreatorsToQuotationModal({
               />
             </div>
             <Button
-              disabled={pending}
+              disabled={pending || !manualName.trim()}
               onClick={() =>
-                runImport(() => addManualQuotationItem(quotationId, { creator_name: manualName }))
+                runImport(
+                  () => addManualQuotationItem(quotationId, { creator_name: manualName }),
+                  { passItemIds: true }
+                )
               }
             >
               Add manual row
@@ -331,7 +345,7 @@ export function AddCreatorsToQuotationButton({
   onOpenChange,
 }: {
   quotationId: string;
-  onAdded: () => void;
+  onAdded: (result?: QuotationCreatorsAddedResult) => void;
   triggerClassName?: string;
   label?: string;
   open?: boolean;

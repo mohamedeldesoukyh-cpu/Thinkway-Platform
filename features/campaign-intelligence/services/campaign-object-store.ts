@@ -117,7 +117,14 @@ export function getOrCreateCampaignObject(input: {
   inferredFields?: string[];
 }): CampaignObject {
   const existing = getOrLoadCampaignObject(input.conversationId, input.contextSnapshot);
-  if (existing && existing.workflowId === input.workflowId) {
+  if (existing) {
+    if (existing.workflowId === input.workflowId) return existing;
+    const creatorIds = (
+      existing.sections.creators?.data as { recommendations?: { creatorIds?: string[] } } | undefined
+    )?.recommendations?.creatorIds;
+    if (creatorIds?.length || existing.meta.quotationCommercials) {
+      return { ...existing, workflowId: input.workflowId };
+    }
     return existing;
   }
 

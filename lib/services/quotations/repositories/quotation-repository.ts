@@ -5,6 +5,7 @@ import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { formatQuotationTermsText } from "@/lib/commercial/quotation-default-terms";
 import { defaultValidityDateFromIssue } from "@/lib/commercial/quotation-validity";
 import { normalizeCommercialLine } from "@/lib/commercial/quotation-engine";
+import { DEFAULT_QUOTATION_LINE_COMMERCIAL_MODE } from "@/lib/domains/commercial/quotation-constants";
 import { buildQuotationOptionRenumberPlan, isSameQuotationCreator, nextQuotationOptionNumber, type QuotationCreatorRef } from "@/lib/quotations/quotation-creator-options";
 import type { CommercialInputMode, Database } from "@/types/database";
 
@@ -26,7 +27,8 @@ export async function buildItemInsertRows(
       rate = await resolveRateToEgp(supabase, currency);
       rateCache.set(currency, rate);
     }
-    const mode: CommercialInputMode = seed.commercial_input_mode ?? "cost_markup_pct";
+    const mode: CommercialInputMode =
+      seed.commercial_input_mode ?? DEFAULT_QUOTATION_LINE_COMMERCIAL_MODE;
     const line = normalizeCommercialLine({
       mode,
       cost: seed.cost,
@@ -77,7 +79,7 @@ export async function insertQuotationItems(
   supabase: SupabaseClient<Database>,
   rows: Record<string, unknown>[]
 ) {
-  return supabase.from("quotation_items").insert(rows as never);
+  return supabase.from("quotation_items").insert(rows as never).select("id");
 }
 
 export async function deleteQuotationItem(

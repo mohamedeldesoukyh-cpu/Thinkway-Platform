@@ -16,6 +16,7 @@ import type {
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
 import type { CampaignOutputInputKey } from "./output-types";
+import { resolveBriefTextForScheduling } from "./brief-media-plan-schedule";
 import { parseAggregatedServiceLabel } from "./hydration/quotation-service-types";
 import type { VendorSelectedReasoning } from "@/features/campaign-intelligence/types/section-schemas";
 import { quotationCommercialsFromMeta } from "./hydration/quotation-commercials-meta";
@@ -177,6 +178,8 @@ export function resolveInputValue(
 ): unknown {
   const facts = getCampaignFacts(campaignObject);
   switch (key) {
+    case "brief":
+      return resolveBriefTextForScheduling(campaignObject);
     case "objective":
       return facts?.objective ?? "";
     case "audience":
@@ -210,6 +213,7 @@ export function resolveInputValue(
       return {
         durationWeeks: facts?.durationWeeks ?? null,
         campaignStartDate: facts?.campaignStartDate ?? null,
+        weekWeights: campaignObject.meta.mediaPlanSchedule?.weekWeights ?? null,
       };
     case "kpis":
       return facts?.kpis ?? [];

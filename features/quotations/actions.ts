@@ -162,7 +162,7 @@ export async function addShortlistCreatorsToQuotation(input: {
 export async function addItemsToQuotation(
   quotationId: string,
   creators: QuotationItemSeed[]
-): Promise<ActionResult<{ added: number }>> {
+): Promise<ActionResult<{ added: number; itemIds: string[] }>> {
   const actor = await getActor();
   if (!actor.ok) return actor;
   const result = await addItemsToQuotationService(actor.supabase, quotationId, creators);
@@ -388,7 +388,7 @@ export async function listCampaignImportCreators(
 export async function addManualQuotationItem(
   quotationId: string,
   input?: { creator_name?: string }
-): Promise<ActionResult<{ added: number }>> {
+): Promise<ActionResult<{ added: number; itemIds: string[] }>> {
   const actor = await getActor();
   if (!actor.ok) return actor;
   const result = await addManualQuotationItemService(actor.supabase, quotationId, input);

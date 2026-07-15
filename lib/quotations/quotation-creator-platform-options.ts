@@ -3,11 +3,15 @@ import { getQuotationCreatorPlatformOptions } from "@/features/quotations/action
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import {
   bootstrapPlatformOptionsFromItem,
+  bootstrapManualCreatorPlatformOptions,
+  isManualQuotationCreator,
   mergeCreatorPlatformOptions,
 } from "@/lib/quotations/quotation-creator-platform-utils";
 
 export {
   bootstrapPlatformOptionsFromItem,
+  bootstrapManualCreatorPlatformOptions,
+  isManualQuotationCreator,
   mergeCreatorPlatformOptions,
 } from "@/lib/quotations/quotation-creator-platform-utils";
 
@@ -34,7 +38,11 @@ export async function loadCreatorPlatformOptions(
 ): Promise<QuotationCreatorPlatformOption[]> {
   const key = quotationCreatorPlatformCacheKey(item);
   const bootstrap = bootstrapPlatformOptionsFromItem(item);
-  if (!key) return bootstrap;
+  if (!key) {
+    return isManualQuotationCreator(item) && bootstrap.length === 0
+      ? bootstrapManualCreatorPlatformOptions()
+      : bootstrap;
+  }
 
   const cached = platformOptionsCache.get(key);
   if (cached?.length) return mergeCreatorPlatformOptions(bootstrap, cached);

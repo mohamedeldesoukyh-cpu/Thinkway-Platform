@@ -13,6 +13,7 @@ import {
 } from "@/lib/quotations/quotation-deliverable-types";
 import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
 import { groupQuotationItemsByCreator } from "@/lib/quotations/quotation-creator-options";
+import { isManualQuotationCreator } from "@/lib/quotations/quotation-creator-platform-utils";
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import type { ShortlistDetail } from "@/features/discovery/shortlists/types";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
@@ -73,8 +74,11 @@ function serviceLabelForItem(item: QuotationItemRow): string | undefined {
 function seedCreatorFromQuotationItem(item: QuotationItemRow): SeedCreator {
   const profile = buildQuotationCreatorProfileSource(item);
   const serviceTypes = serviceTypesForItem(item);
+  const manual = isManualQuotationCreator(item);
   return {
-    creatorId: item.unified_id ?? item.influencer_id ?? item.profile_id ?? item.id,
+    creatorId: manual
+      ? `manual:${item.id}`
+      : item.unified_id ?? item.influencer_id ?? item.profile_id ?? item.id,
     displayName:
       formatCreatorDisplayName(profile.displayName) ||
       formatCreatorDisplayName(item.creator_name) ||
@@ -95,32 +99,52 @@ function seedCreatorFromQuotationItem(item: QuotationItemRow): SeedCreator {
   };
 }
 
+function seedCreatorFromQuotationGroup(group: ReturnType<typeof groupQuotationItemsByCreator>[number]): SeedCreator {
+  const primaryItems = group.optionSets[0]?.items ?? [];
+  const sourceItems = primaryItems.length ? primaryItems : [];
+
+  const mergedTypes: string[] = [];
+  let base: SeedCreator | undefined;
+  let quotedRevenue = 0;
+
+  for (const item of sourceItems) {
+    mergedTypes.push(...serviceTypesForItem(item));
+    if (!base) base = seedCreatorFromQuotationItem(item);
+    if (item.revenue_egp > 0) quotedRevenue += item.revenue_egp;
+  }
+
+  const serviceTypes = [...new Set(mergedTypes)];
+  return {
+    ...base!,
+    serviceTypes: serviceTypes.length ? serviceTypes : undefined,
+    serviceLabel: serviceTypes.length ? serviceTypes.join(" · ") : undefined,
+    quotedRevenue: quotedRevenue > 0 ? quotedRevenue : base!.quotedRevenue,
+    quotedCurrency: quotedRevenue > 0 ? "EGP" : base!.quotedCurrency,
+  };
+}
+
+/** Profile-linked lines group by creator; each manual quotation line stays its own slate row. */
 function seedCreatorsFromQuotationItems(items: QuotationItemRow[]): SeedCreator[] {
   if (!items.length) return [];
 
-  return groupQuotationItemsByCreator(items).map((group) => {
-    const primaryItems = group.optionSets[0]?.items ?? [];
-    const sourceItems = primaryItems.length ? primaryItems : items.slice(0, 1);
+  const entries: Array<{ sortOrder: number; creator: SeedCreator }> = [];
 
-    const mergedTypes: string[] = [];
-    let base: SeedCreator | undefined;
-    let quotedRevenue = 0;
+  for (const item of items) {
+    if (!isManualQuotationCreator(item)) continue;
+    entries.push({ sortOrder: item.sort_order, creator: seedCreatorFromQuotationItem(item) });
+  }
 
-    for (const item of sourceItems) {
-      mergedTypes.push(...serviceTypesForItem(item));
-      if (!base) base = seedCreatorFromQuotationItem(item);
-      if (item.revenue_egp > 0) quotedRevenue += item.revenue_egp;
-    }
+  const profiledItems = items.filter((item) => !isManualQuotationCreator(item));
+  for (const group of groupQuotationItemsByCreator(profiledItems)) {
+    const sourceItems = group.optionSets[0]?.items ?? [];
+    if (!sourceItems.length) continue;
+    entries.push({
+      sortOrder: Math.min(...sourceItems.map((item) => item.sort_order)),
+      creator: seedCreatorFromQuotationGroup(group),
+    });
+  }
 
-    const serviceTypes = [...new Set(mergedTypes)];
-    return {
-      ...base!,
-      serviceTypes: serviceTypes.length ? serviceTypes : undefined,
-      serviceLabel: serviceTypes.length ? serviceTypes.join(" · ") : undefined,
-      quotedRevenue: quotedRevenue > 0 ? quotedRevenue : base!.quotedRevenue,
-      quotedCurrency: quotedRevenue > 0 ? "EGP" : base!.quotedCurrency,
-    };
-  });
+  return entries.sort((a, b) => a.sortOrder - b.sortOrder).map((entry) => entry.creator);
 }
 
 export function seedFromQuotation(quotation: QuotationDetail): CampaignSeed {

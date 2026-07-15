@@ -5,6 +5,7 @@ import { resolveOutputKind } from "@/features/campaign-outputs/copilot/output-co
 import type { StudioCopilotIntent } from "./studio-copilot-intents";
 import type { SectionAuthorTarget } from "./section-authoring-types";
 import { parseCampaignStartDateInput } from "./campaign-facts-mutations";
+import { parseWeekWeightIntent } from "@/features/campaign-outputs/media-plan-schedule";
 
 /** The Campaign Output kinds the Copilot can generate/regenerate/export. */
 const OUTPUT_KINDS: CampaignOutputKind[] = [
@@ -134,16 +135,66 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "update_timeline",
     description:
-      "Set campaign timeline: duration in weeks and/or start date. Use startDate for 'campaign starts 15/07/2026' (ISO YYYY-MM-DD or DD/MM/YYYY). Do not change duration unless the user asks.",
+      "Set campaign timeline duration in weeks and/or the campaign START DATE only when the user explicitly asks to change when the campaign begins. Do NOT use this for moving creators between weeks, redistributing posts across weeks, or weighting the schedule — use reschedule_media_plan instead.",
     parameters: {
       type: "object",
       properties: {
         durationWeeks: { type: "number", description: "Campaign duration in weeks (1-52)." },
         startDate: {
           type: "string",
-          description: "Campaign start date (YYYY-MM-DD or DD/MM/YYYY).",
+          description: "Campaign start date (YYYY-MM-DD or DD/MM/YYYY) — only when explicitly requested.",
         },
       },
+    },
+  },
+  {
+    name: "reschedule_media_plan",
+    description:
+      "Redistribute media plan publishing slots across weeks/days WITHOUT changing the campaign start date. Use for moving creators to another week/day, front-loading or back-loading weeks, or balancing posting weight across the calendar.",
+    parameters: {
+      type: "object",
+      properties: {
+        weekWeights: {
+          type: "array",
+          items: { type: "number" },
+          description:
+            "Optional week weight percentages (length = campaign weeks, sum ~100). Heavier values place more creators in that week.",
+        },
+        moveCreators: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              names: {
+                type: "array",
+                items: { type: "string" },
+                description: "Creator display names or handles to move.",
+              },
+              fromWeek: { type: "number", description: "Source week (1-based), when specified." },
+              toWeek: { type: "number", description: "Target week (1-based)." },
+              toDayIndex: {
+                type: "number",
+                description: "Target weekday index: 0=Monday … 6=Sunday.",
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    name: "update_brief",
+    description:
+      "Set or replace THE campaign brief (uploaded or written). Merges strategy fields and media-plan scheduling — never clears the creator slate. Use when the user provides brief text, asks to generate/write/update the campaign brief, or pastes a client brief.",
+    parameters: {
+      type: "object",
+      properties: {
+        briefText: {
+          type: "string",
+          description: "Full campaign brief text to store as the SSOT brief.",
+        },
+      },
+      required: ["briefText"],
     },
   },
   {
@@ -448,6 +499,18 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
     return { kind: "undo_last_change" };
   }
 
+  if (
+    /\b(generate|write|create|update|set|add|upload)\b[^.]{0,40}\b(campaign\s+)?brief\b/i.test(text) ||
+    (text.trim().length >= 120 && /\b(objective|target audience|deliverables|launch|go[-\s]?live)\b/i.test(text))
+  ) {
+    const briefBody = text
+      .replace(/^\s*(?:please\s+)?(?:generate|write|create|update|set)\s+(?:a\s+)?(?:campaign\s+)?brief\s*(?:for\s+(?:this\s+)?campaign)?\s*:?\s*/i, "")
+      .trim();
+    if (briefBody.length >= 40) {
+      return { kind: "update_brief", briefText: briefBody };
+    }
+  }
+
   if (/\bbudget\b/i.test(text)) {
     const budget = parseBudgetAmount(text);
     if (budget) {
@@ -458,6 +521,31 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
   if (/\b(duration|weeks?|timeline|length)\b/i.test(text)) {
     const weeks = parseWeeks(text);
     if (weeks) return { kind: "update_timeline", durationWeeks: weeks };
+  }
+
+  if (
+    /\b(move|shift|reschedule|relocate)\b/i.test(text) &&
+    /\b(creator|influencer|post|slot|publish)/i.test(text) &&
+    /\bweek\b/i.test(text)
+  ) {
+    const toWeek = text.match(/\bto\s+week\s+(\d+)\b/i)?.[1];
+    const fromWeek = text.match(/\bfrom\s+week\s+(\d+)\b/i)?.[1];
+    const names = extractNames(text);
+    return {
+      kind: "reschedule_media_plan",
+      moveCreators: [
+        {
+          names: names.length ? names : undefined,
+          fromWeek: fromWeek ? Number(fromWeek) : undefined,
+          toWeek: toWeek ? Number(toWeek) : undefined,
+        },
+      ],
+    };
+  }
+
+  const weekWeights = parseWeekWeightIntent(text, parseWeeks(text) ?? 4);
+  if (weekWeights) {
+    return { kind: "reschedule_media_plan", weekWeights };
   }
 
   if (/\b(start(?:ing)?|launch|go[-\s]?live|kick[-\s]?off)\b/i.test(text)) {
@@ -666,6 +754,47 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
             : typeof args.startDate === "number"
               ? String(args.startDate)
               : undefined,
+      };
+    case "reschedule_media_plan":
+      return {
+        kind: "reschedule_media_plan",
+        weekWeights: Array.isArray(args.weekWeights)
+          ? args.weekWeights
+              .map((weight) => Number(weight))
+              .filter((weight) => Number.isFinite(weight))
+          : undefined,
+        moveCreators: Array.isArray(args.moveCreators)
+          ? args.moveCreators
+              .filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === "object"))
+              .map((entry) => ({
+                names: Array.isArray(entry.names)
+                  ? entry.names.filter((name): name is string => typeof name === "string")
+                  : undefined,
+                fromWeek:
+                  typeof entry.fromWeek === "number"
+                    ? entry.fromWeek
+                    : entry.fromWeek != null
+                      ? Number(entry.fromWeek) || undefined
+                      : undefined,
+                toWeek:
+                  typeof entry.toWeek === "number"
+                    ? entry.toWeek
+                    : entry.toWeek != null
+                      ? Number(entry.toWeek) || undefined
+                      : undefined,
+                toDayIndex:
+                  typeof entry.toDayIndex === "number"
+                    ? entry.toDayIndex
+                    : entry.toDayIndex != null
+                      ? Number(entry.toDayIndex) || undefined
+                      : undefined,
+              }))
+          : undefined,
+      };
+    case "update_brief":
+      return {
+        kind: "update_brief",
+        briefText: typeof args.briefText === "string" ? args.briefText : "",
       };
     case "update_platforms":
       return {

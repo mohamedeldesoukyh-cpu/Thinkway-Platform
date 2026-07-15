@@ -159,6 +159,8 @@ type Props = {
   /** When set, price and trigger render on one line (price first, then Cost details). */
   priceLabel?: string;
   gpPctLabel?: string | null;
+  /** Open cost details on mount (e.g. after adding a manual row). */
+  defaultOpen?: boolean;
 };
 
 export function QuotationDeliverableCostDetails({
@@ -168,8 +170,10 @@ export function QuotationDeliverableCostDetails({
   onApply,
   priceLabel,
   gpPctLabel,
+  defaultOpen,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen ?? false);
+  const didAutoOpenRef = useRef(false);
   const [localDeliverable, setLocalDeliverable] = useState(deliverable);
   const localDeliverableRef = useRef(deliverable);
   const openSnapshotRef = useRef<string | null>(null);
@@ -185,6 +189,16 @@ export function QuotationDeliverableCostDetails({
       localDeliverableRef.current = deliverable;
     }
   }, [deliverable, open]);
+
+  useEffect(() => {
+    if (!defaultOpen || didAutoOpenRef.current) return;
+    didAutoOpenRef.current = true;
+    const normalized = withDeliverableCommercialPatch(deliverable, {}, fxRate);
+    setLocalDeliverable(normalized);
+    localDeliverableRef.current = normalized;
+    openSnapshotRef.current = deliverableSnapshot(normalized);
+    setOpen(true);
+  }, [defaultOpen, deliverable, fxRate]);
 
   const defaults = useMemo(() => deliverableCommercialDefaults(item), [item]);
 

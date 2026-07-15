@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -149,12 +150,24 @@ export function QuotationLinePlatformCell({
   platformSelectOptions,
   platform,
   onPlatformChange,
+  defaultOpen,
+  forceSelect,
 }: {
   loadingPlatforms: boolean;
   platformSelectOptions: QuotationCreatorPlatformOption[];
   platform: string | null;
   onPlatformChange: (platform: string) => void;
+  /** Open the platform picker on mount (e.g. after adding a manual row). */
+  defaultOpen?: boolean;
+  /** When true, always render a select even with a single platform option. */
+  forceSelect?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
+
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
+
   if (loadingPlatforms) {
     return (
       <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -163,9 +176,14 @@ export function QuotationLinePlatformCell({
     );
   }
 
-  if (platformSelectOptions.length > 1) {
+  if (platformSelectOptions.length > 1 || forceSelect) {
     return (
-      <Select value={platform ?? ""} onValueChange={onPlatformChange}>
+      <Select
+        open={open}
+        onOpenChange={setOpen}
+        value={platform ?? ""}
+        onValueChange={onPlatformChange}
+      >
         <SelectTrigger className="h-7 border-0 bg-transparent px-0 text-[11px] shadow-none">
           <SelectValue placeholder="Platform" />
         </SelectTrigger>

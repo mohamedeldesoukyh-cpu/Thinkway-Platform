@@ -25,10 +25,12 @@ export type StudioCopilotIntentKind =
   | "replace_creators"
   | "update_budget"
   | "update_timeline"
+  | "reschedule_media_plan"
   | "update_objectives"
   | "update_audience"
   | "update_platforms"
   | "update_market"
+  | "update_brief"
   | "update_strategy"
   | "update_deliverables"
   | "update_kpis"
@@ -99,10 +101,25 @@ export type UpdateTimelineIntent = {
   /** ISO date YYYY-MM-DD */
   startDate?: string;
 };
+export type RescheduleMediaPlanIntent = {
+  kind: "reschedule_media_plan";
+  weekWeights?: number[];
+  moveCreators?: Array<{
+    names?: string[];
+    fromWeek?: number;
+    toWeek?: number;
+    toDayIndex?: number;
+  }>;
+};
 export type UpdatePlatformsIntent = { kind: "update_platforms"; platforms: string[] };
 export type UpdateObjectivesIntent = { kind: "update_objectives"; objective: string };
 export type UpdateAudienceIntent = { kind: "update_audience"; audience: string };
 export type UpdateMarketIntent = { kind: "update_market"; geography: string[] };
+export type UpdateBriefIntent = {
+  kind: "update_brief";
+  /** Full brief body — pasted or summarized from the user's message. */
+  briefText: string;
+};
 
 export type AuthorSectionIntent = {
   kind: "author_section";
@@ -168,10 +185,12 @@ export type ExecutableStudioCopilotIntent =
   | ReplaceCreatorsIntent
   | UpdateBudgetIntent
   | UpdateTimelineIntent
+  | RescheduleMediaPlanIntent
   | UpdatePlatformsIntent
   | UpdateObjectivesIntent
   | UpdateAudienceIntent
   | UpdateMarketIntent
+  | UpdateBriefIntent
   | AuthorSectionIntent
   | RetoneProposalIntent
   | GenerateOutputIntent

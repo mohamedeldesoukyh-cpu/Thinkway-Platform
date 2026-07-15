@@ -36,6 +36,9 @@ export const COMMERCIAL_INPUT_MODE_LABELS: Record<CommercialInputMode, string> =
   cost_gp_value: "Cost + GP Value",
 };
 
+/** Default line-level commercial mode for new quotation items (matches DB column default). */
+export const DEFAULT_QUOTATION_LINE_COMMERCIAL_MODE: CommercialInputMode = "cost_gp_pct";
+
 /** Client-facing labels for quotation revenue (agency revenue = client cost). */
 export const QUOTATION_CLIENT_LABELS = {
   clientCost: "Client cost",

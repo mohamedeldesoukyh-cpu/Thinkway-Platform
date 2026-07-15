@@ -8,6 +8,7 @@
  *
  *   • creators change → Strategy, Media Plan, Timeline, Proposal, Budget Allocation
  *   • budget   change → Strategy, Budget Allocation, KPI Forecast, Proposal
+ *   • brief    change → Strategy, Media Plan, Proposal, Budget Allocation, and other brief-driven outputs
  *   • kpis     change → ONLY KPI Forecast and Proposal   (kpis is depended on by
  *                        exactly those two outputs — nothing else goes stale)
  *
@@ -90,7 +91,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "strategy",
     group: "strategy",
     estimatedGenerationMs: 4500,
-    inputKeys: ["objective", "audience", "market", "platforms", "creators", "budget", "timeline", "strategy"],
+    inputKeys: ["brief", "objective", "audience", "market", "platforms", "creators", "budget", "timeline", "strategy"],
     generate: generateFullStrategy,
     generatorVersion: STRATEGY_GENERATOR_VERSION,
   },
@@ -102,7 +103,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 5000,
-    inputKeys: ["creators", "platforms", "timeline", "deliverables_scope"],
+    inputKeys: ["brief", "creators", "platforms", "timeline", "deliverables_scope"],
     generate: generateMediaPlan,
     generatorVersion: MEDIA_PLAN_GENERATOR_VERSION,
   },
@@ -113,7 +114,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "presentation",
     group: "client",
     estimatedGenerationMs: 6000,
-    inputKeys: ["objective", "audience", "creators", "budget", "timeline", "kpis", "strategy"],
+    inputKeys: ["brief", "objective", "audience", "creators", "budget", "timeline", "kpis", "strategy"],
     generate: generateExecutiveProposal,
     generatorVersion: EXECUTIVE_PROPOSAL_GENERATOR_VERSION,
   },
@@ -135,7 +136,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "performance",
     group: "strategy",
     estimatedGenerationMs: 2500,
-    inputKeys: ["creators", "timeline", "market", "risks"],
+    inputKeys: ["brief", "creators", "timeline", "market", "risks"],
     generate: generateRiskPlan,
     generatorVersion: RISK_PLAN_GENERATOR_VERSION,
   },
@@ -146,7 +147,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 2500,
-    inputKeys: ["budget", "creators", "platforms"],
+    inputKeys: ["brief", "budget", "creators", "platforms"],
     generate: generateBudgetAllocation,
     generatorVersion: BUDGET_ALLOCATION_GENERATOR_VERSION,
   },
@@ -157,7 +158,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "planning",
     group: "strategy",
     estimatedGenerationMs: 3000,
-    inputKeys: ["creators", "platforms", "budget"],
+    inputKeys: ["brief", "creators", "platforms", "budget"],
     generate: generateAmplificationPlan,
     generatorVersion: AMPLIFICATION_PLAN_GENERATOR_VERSION,
   },
@@ -168,7 +169,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 4000,
-    inputKeys: ["creators", "platforms", "timeline"],
+    inputKeys: ["brief", "creators", "platforms", "timeline"],
     generate: generateContentCalendar,
     generatorVersion: CONTENT_CALENDAR_GENERATOR_VERSION,
   },
@@ -179,7 +180,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 3000,
-    inputKeys: ["creators", "timeline", "platforms"],
+    inputKeys: ["brief", "creators", "timeline", "platforms"],
   },
   {
     kind: "creator_activation",
@@ -188,7 +189,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "operations",
     group: "planning",
     estimatedGenerationMs: 3500,
-    inputKeys: ["creators", "objective", "platforms"],
+    inputKeys: ["brief", "objective", "creators", "platforms"],
     generate: generateCreatorActivation,
     generatorVersion: CREATOR_ACTIVATION_GENERATOR_VERSION,
   },
@@ -199,7 +200,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "operations",
     group: "internal",
     estimatedGenerationMs: 5000,
-    inputKeys: ["objective", "creators", "platforms", "timeline"],
+    inputKeys: ["brief", "objective", "creators", "platforms", "timeline"],
   },
   {
     kind: "executive_summary",
@@ -208,7 +209,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "strategy",
     group: "strategy",
     estimatedGenerationMs: 2500,
-    inputKeys: ["objective", "audience", "creators", "budget"],
+    inputKeys: ["brief", "objective", "audience", "creators", "budget"],
   },
   {
     kind: "creative_concepts",
@@ -217,7 +218,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "creative",
     group: "strategy",
     estimatedGenerationMs: 3500,
-    inputKeys: ["objective", "audience", "creative_concepts"],
+    inputKeys: ["brief", "objective", "audience", "creative_concepts"],
   },
   {
     kind: "client_presentation",
@@ -226,7 +227,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "presentation",
     group: "client",
     estimatedGenerationMs: 6000,
-    inputKeys: ["objective", "creators", "budget", "timeline", "strategy"],
+    inputKeys: ["brief", "objective", "creators", "budget", "timeline", "strategy"],
   },
   {
     kind: "campaign_brief",
@@ -235,7 +236,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "operations",
     group: "internal",
     estimatedGenerationMs: 2500,
-    inputKeys: ["objective", "audience", "market", "platforms", "budget", "timeline"],
+    inputKeys: ["brief", "objective", "audience", "market", "platforms", "budget", "timeline"],
   },
   {
     kind: "statement_of_work",
@@ -244,7 +245,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "operations",
     group: "internal",
     estimatedGenerationMs: 3000,
-    inputKeys: ["deliverables_scope", "creators", "budget", "timeline"],
+    inputKeys: ["brief", "deliverables_scope", "creators", "budget", "timeline"],
   },
   {
     kind: "internal_operations",
@@ -253,7 +254,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "operations",
     group: "internal",
     estimatedGenerationMs: 3500,
-    inputKeys: ["creators", "timeline", "platforms", "deliverables_scope"],
+    inputKeys: ["brief", "creators", "timeline", "platforms", "deliverables_scope"],
     generate: generateInternalOperations,
     generatorVersion: INTERNAL_OPERATIONS_GENERATOR_VERSION,
   },
@@ -276,6 +277,7 @@ export function outputsDependingOn(inputKey: CampaignOutputInputKey): CampaignOu
 
 /** Human labels for input keys — shown as an output's "Source Data" / "Dependencies". */
 export const INPUT_KEY_LABELS: Record<CampaignOutputInputKey, string> = {
+  brief: "Campaign brief",
   objective: "Objective",
   audience: "Audience",
   market: "Market",

@@ -1,5 +1,7 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
+import { isManualQuotationCreator } from "./quotation-creator-platform-utils";
+
 export type QuotationCreatorRef = Pick<
   QuotationItemRow,
   "id" | "unified_id" | "influencer_id" | "profile_id" | "creator_name" | "handle"
@@ -26,6 +28,7 @@ export function quotationCreatorDuplicateKey(
   if (item.unified_id) return `u:${item.unified_id}`;
   if (item.influencer_id) return `i:${item.influencer_id}`;
   if (item.profile_id) return `p:${item.profile_id}`;
+  if (isManualQuotationCreator(item)) return `m:${item.id}`;
   const name = item.creator_name?.trim().toLowerCase() ?? "";
   const handle = item.handle?.trim().toLowerCase().replace(/^@/, "") ?? "";
   if (name || handle) return `n:${name}|${handle}`;

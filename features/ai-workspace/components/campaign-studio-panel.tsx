@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { CampaignStudioHost } from "@/features/campaign-decision-workspace/components/campaign-studio-host";
 import { GenerateCampaignLauncher } from "@/features/campaign-plan/components/generate-campaign-launcher";
 import { GenerateQuotationLauncher } from "@/features/campaign-plan/components/generate-quotation-launcher";
+import { CampaignBriefCard } from "@/features/campaign-studio/components/sections/campaign-brief-card";
+import { hasCampaignBriefText } from "@/features/campaign-outputs/brief-media-plan-schedule";
 import { StudioOutputsView } from "@/features/campaign-outputs/components/studio-outputs-view";
 
 import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
@@ -290,7 +292,44 @@ export function CampaignStudioPanel({
         </div>
       ) : view === "outputs" && hasCampaignObject ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="shrink-0 border-b border-border/60 px-3 py-2">
+          <div className="shrink-0 space-y-2 border-b border-border/60 px-3 py-2">
+            {!hasCampaignBriefText(display!.campaignObject!) ? (
+              <div className="space-y-2 rounded-lg border border-[#1D9E75]/25 bg-[#1D9E75]/5 p-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold text-foreground">
+                    Add the client brief to refine scheduling and strategy
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setView("studio")}
+                    className="text-[10px] font-bold text-[#1D9E75] underline-offset-2 hover:underline"
+                  >
+                    Open in Studio → The Brief
+                  </button>
+                </div>
+                <CampaignBriefCard
+                  campaignObject={display!.campaignObject!}
+                  conversationId={conversationId}
+                  messageId={message?.id}
+                  onBriefApplied={
+                    message
+                      ? (campaignObject) => onSlateUpdated?.(message.id, campaignObject)
+                      : undefined
+                  }
+                />
+              </div>
+            ) : (
+              <CampaignBriefCard
+                campaignObject={display!.campaignObject!}
+                conversationId={conversationId}
+                messageId={message?.id}
+                onBriefApplied={
+                  message
+                    ? (campaignObject) => onSlateUpdated?.(message.id, campaignObject)
+                    : undefined
+                }
+              />
+            )}
             <div className="overflow-hidden rounded-lg border border-border bg-background divide-y divide-border md:grid md:grid-cols-2 md:divide-x md:divide-y-0">
               <GenerateCampaignLauncher
                 campaignObject={display!.campaignObject!}

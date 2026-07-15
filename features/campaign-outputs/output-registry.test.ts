@@ -26,7 +26,13 @@ test("backward compat: no meta.campaignOutputs lists everything as not_generated
 test("views expose source data, dependencies, and generator version", () => {
   const obj = buildCampaignObjectFixture();
   const media = listCampaignOutputs(obj).find((v) => v.kind === "media_plan")!;
-  assert.deepEqual(media.sourceData, ["Creators", "Platforms", "Timeline", "Deliverables scope"]);
+  assert.deepEqual(media.sourceData, [
+    "Campaign brief",
+    "Creators",
+    "Platforms",
+    "Timeline",
+    "Deliverables scope",
+  ]);
   assert.deepEqual(media.dependencies, media.sourceData);
   assert.equal(media.generatorVersion, MEDIA_PLAN_GENERATOR_VERSION);
 });

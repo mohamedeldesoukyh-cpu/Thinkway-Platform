@@ -33,6 +33,7 @@ export type StudioOutputsViewProps = {
 function buildDisplayContentKey(campaignObject: CampaignObject): string {
   const outputsState = campaignObject.meta.campaignOutputs ?? {};
   const commercials = campaignObject.meta.quotationCommercials;
+  const schedule = campaignObject.meta.mediaPlanSchedule;
   const inputCache = new CampaignInputCache(campaignObject);
   const commercialsKey = commercials
     ? [
@@ -45,13 +46,19 @@ function buildDisplayContentKey(campaignObject: CampaignObject): string {
         commercials.agencyName ?? "",
       ].join(":")
     : "";
+  const scheduleKey = schedule
+    ? `${(schedule.weekWeights ?? []).join(",")}:${(schedule.assignments ?? [])
+        .map((entry) => `${entry.creatorId}@${entry.week}-${entry.dayIndex}`)
+        .join("|")}`
+    : "";
+  const briefKey = inputCache.inputFingerprint("brief");
   const creatorsKey = inputCache.inputFingerprint("creators");
   const budgetKey = inputCache.inputFingerprint("budget");
   const outputKeys = Object.entries(outputsState)
     .map(([kind, record]) => `${kind}:${record?.version ?? 0}:${record?.status ?? "none"}`)
     .sort()
     .join("|");
-  return `${campaignObject.updatedAt}:${commercialsKey}:${creatorsKey}:${budgetKey}:${outputKeys}`;
+  return `${campaignObject.updatedAt}:${commercialsKey}:${scheduleKey}:${briefKey}:${creatorsKey}:${budgetKey}:${outputKeys}`;
 }
 
 /**
@@ -67,26 +74,31 @@ export function StudioOutputsView({
   onSendMessage,
   isCopilotStreaming = false,
 }: StudioOutputsViewProps) {
-  const campaignObjectRef = useRef(campaignObject);
-  campaignObjectRef.current = campaignObject;
+  const [localCampaignObject, setLocalCampaignObject] = useState<CampaignObject | null>(null);
+  const effectiveCampaignObject = localCampaignObject ?? campaignObject;
+
+  useEffect(() => {
+    setLocalCampaignObject(null);
+  }, [campaignObject.id, campaignObject.updatedAt]);
 
   const displayContentKey = useMemo(
-    () => buildDisplayContentKey(campaignObject),
+    () => buildDisplayContentKey(effectiveCampaignObject),
     [
-      campaignObject.id,
-      campaignObject.updatedAt,
-      campaignObject.meta.campaignOutputs,
-      campaignObject.meta.quotationCommercials,
+      effectiveCampaignObject.id,
+      effectiveCampaignObject.updatedAt,
+      effectiveCampaignObject.meta.campaignOutputs,
+      effectiveCampaignObject.meta.quotationCommercials,
+      effectiveCampaignObject.meta.mediaPlanSchedule,
     ]
   );
 
   const outputs = useMemo(
-    () => listCampaignOutputs(campaignObjectRef.current),
+    () => listCampaignOutputs(effectiveCampaignObject),
     [displayContentKey]
   );
 
   const getContent = useCallback((kind: CampaignOutputKind) => {
-    return getOutputContentForDisplay(campaignObjectRef.current, kind);
+    return getOutputContentForDisplay(effectiveCampaignObject, kind);
   }, [displayContentKey]);
 
   const [pendingKind, setPendingKind] = useState<CampaignOutputKind | null>(null);
@@ -112,7 +124,7 @@ export function StudioOutputsView({
   const generatingKind = pendingKind;
 
   const directorReview = useMemo(
-    () => reviewCampaign(campaignObjectRef.current),
+    () => reviewCampaign(effectiveCampaignObject),
     [displayContentKey]
   );
 
@@ -146,12 +158,13 @@ export function StudioOutputsView({
   return (
     <OutputsCenter
       className="h-full min-h-0"
-      campaignObject={campaignObject}
+      campaignObject={effectiveCampaignObject}
       outputs={outputs}
       generatingKind={generatingKind}
       getContent={getContent}
-      campaignObjectId={campaignObject.id}
+      campaignObjectId={effectiveCampaignObject.id}
       conversationId={conversationId}
+      onCampaignObjectUpdated={setLocalCampaignObject}
       actions={actions}
     />
   );

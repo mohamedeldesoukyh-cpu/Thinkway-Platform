@@ -66,7 +66,14 @@ export function SectionRenderer({
 
   switch (section.id) {
     case "campaign-summary":
-      return <CampaignSummarySection {...common} />;
+      return (
+        <CampaignSummarySection
+          {...common}
+          conversationId={conversationId}
+          messageId={messageId}
+          onBriefApplied={onSlateUpdated}
+        />
+      );
     case "executive-strategy":
       return <ExecutiveStrategySection {...common} />;
     case "creator-discovery":

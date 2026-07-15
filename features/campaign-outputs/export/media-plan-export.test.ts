@@ -5,11 +5,42 @@ import { generateMediaPlan } from "@/features/campaign-outputs/generators/media-
 import { buildMediaPlanHtml } from "@/features/campaign-outputs/export/media-plan-html";
 import { embedMediaPlanContentAvatars } from "@/features/campaign-outputs/export/media-plan-export-avatars";
 import { MEDIA_PLAN_PDF_OPTIONS } from "@/features/campaign-outputs/export/media-plan-pdf";
+import { buildMediaPlanPptxBuffer, MEDIA_PLAN_PPTX_PAGE } from "@/features/campaign-outputs/export/media-plan-pptx";
 import { MEDIA_PLAN_PAGE } from "@/features/campaign-outputs/export/media-plan-page";
 import { buildMediaPlanExportHref } from "@/features/campaign-outputs/components/media-plan-export-actions";
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { renderThinkwayReportLogoHtml } from "@/lib/reports/document/thinkway-report-logo";
+
+test("buildMediaPlanExportHref includes pptx format", () => {
+  const href = buildMediaPlanExportHref("obj-123", "pptx");
+  assert.ok(href.includes("format=pptx"));
+});
+
+test("buildMediaPlanPptxBuffer produces a valid PPTX archive", async () => {
+  const content = generateMediaPlan(buildCampaignObjectFixture());
+  const buffer = await buildMediaPlanPptxBuffer(content);
+  assert.ok(buffer.length > 5_000, "PPTX buffer should be non-trivial");
+  assert.equal(buffer[0], 0x50);
+  assert.equal(buffer[1], 0x4b);
+});
+
+test("MEDIA_PLAN_PPTX_PAGE matches landscape media plan dimensions", () => {
+  assert.equal(MEDIA_PLAN_PPTX_PAGE.width, 13.333);
+  assert.equal(MEDIA_PLAN_PPTX_PAGE.height, 8.125);
+  assert.equal(MEDIA_PLAN_PPTX_PAGE.widthIn, MEDIA_PLAN_PAGE.widthIn);
+  assert.equal(MEDIA_PLAN_PPTX_PAGE.heightIn, MEDIA_PLAN_PAGE.heightIn);
+});
+
+test("buildMediaPlanPptxBuffer embeds creator avatars from data URI", async () => {
+  const content = generateMediaPlan(buildCampaignObjectFixture());
+  const tinyPng =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  content.data.weeks[0]!.days[0]!.avatarUrl = tinyPng;
+
+  const buffer = await buildMediaPlanPptxBuffer(content);
+  assert.ok(buffer.length > 5_000);
+});
 
 test("buildMediaPlanExportHref includes kind, format, and conversation", () => {
   const href = buildMediaPlanExportHref("obj-123", "pdf", {

@@ -8,6 +8,8 @@ import {
 import type { QuotationItemRow } from "@/features/quotations/types";
 import {
   bootstrapPlatformOptionsFromItem,
+  bootstrapManualCreatorPlatformOptions,
+  isManualQuotationCreator,
   getCachedCreatorPlatformOptions,
   loadCreatorPlatformOptions,
   mergeCreatorPlatformOptions,
@@ -140,7 +142,19 @@ export function useQuotationLineFields(
           },
         ]
       : [];
-    return mergeCreatorPlatformOptions(platformOptions, fromLinked, fromLinePlatform);
+    const manualFallback =
+      isManualQuotationCreator(item) &&
+      fromLinked.length === 0 &&
+      fromLinePlatform.length === 0 &&
+      platformOptions.length === 0
+        ? bootstrapManualCreatorPlatformOptions()
+        : [];
+    return mergeCreatorPlatformOptions(
+      manualFallback,
+      platformOptions,
+      fromLinked,
+      fromLinePlatform
+    );
   }, [
     platformOptions,
     item.platform,
@@ -148,6 +162,9 @@ export function useQuotationLineFields(
     item.followers,
     item.engagement_rate,
     item.creator_profile_source,
+    item.influencer_id,
+    item.profile_id,
+    item.unified_id,
   ]);
 
   useEffect(() => {

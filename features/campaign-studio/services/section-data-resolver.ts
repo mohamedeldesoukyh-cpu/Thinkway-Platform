@@ -71,6 +71,7 @@ import {
   stripInternalSearchMetadata,
 } from "../components/sections/shared/format-utils";
 import {
+  applyFactsToSummaryData,
   buildBudgetSectionDataFromFacts,
   buildCreatorMixFromFacts,
   dedupeCreatorMixTiers,
@@ -554,7 +555,16 @@ function readPresentationExtras(campaignObject?: CampaignObject) {
 export function resolveCampaignSummary(
   campaignObject?: CampaignObject
 ): CampaignSummaryData | null {
-  return readSummaryCards(campaignObject);
+  const cards = readSummaryCards(campaignObject);
+  if (cards) return cards;
+
+  const facts = getCampaignFacts(campaignObject);
+  if (!facts) return null;
+
+  const derived = applyFactsToSummaryData({}, facts);
+  return Object.values(derived).some((value) => Boolean(String(value ?? "").trim()))
+    ? derived
+    : null;
 }
 
 export function resolveExecutiveStrategy(

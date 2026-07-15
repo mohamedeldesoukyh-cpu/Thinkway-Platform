@@ -2,6 +2,30 @@ import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { QuotationCreatorPlatformOption } from "@/features/quotations/actions";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
+/** Platforms offered when a manual creator has no linked profile accounts. */
+export const QUOTATION_MANUAL_CREATOR_PLATFORMS = [
+  "instagram",
+  "tiktok",
+  "youtube",
+  "snapchat",
+  "facebook",
+] as const;
+
+export function isManualQuotationCreator(
+  item: Pick<QuotationItemRow, "influencer_id" | "profile_id" | "unified_id">
+): boolean {
+  return !item.influencer_id && !item.profile_id && !item.unified_id;
+}
+
+export function bootstrapManualCreatorPlatformOptions(): QuotationCreatorPlatformOption[] {
+  return QUOTATION_MANUAL_CREATOR_PLATFORMS.map((platform) => ({
+    platform,
+    handle: "",
+    followers: null,
+    engagement_rate: null,
+  }));
+}
+
 export function mergeCreatorPlatformOptions(
   ...sources: QuotationCreatorPlatformOption[][]
 ): QuotationCreatorPlatformOption[] {

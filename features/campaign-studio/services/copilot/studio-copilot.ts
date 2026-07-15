@@ -19,13 +19,15 @@ import {
   runPreviewOutput,
 } from "@/features/campaign-outputs/copilot/output-copilot";
 import { runReviewCampaign } from "@/features/campaign-outputs/director/director-copilot";
+import { generateCampaignOutput } from "@/features/campaign-outputs/output-registry";
+import { applyMediaPlanScheduleChange } from "@/features/campaign-outputs/media-plan-schedule";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { isCampaignPlanLockedForEdits, APPROVED_PLAN_EDIT_BLOCKED_MESSAGE } from "@/lib/domains/commercial/campaign-plan-approval";
 import { getDefaultLlmProvider } from "@/features/ai/llm";
 import type { LlmProvider } from "@/features/ai/types/llm";
 
-import { getStudioDraft, stageDraftChange, withStudioDraft } from "../studio-draft";
+import { mergeBriefIntoCampaignObject } from "../merge-campaign-brief";
 import { reoptimizeCampaignAfterApply } from "../apply-draft-reoptimize";
 import {
   applyAudienceChange,
@@ -89,6 +91,9 @@ You do not edit campaign data directly. You choose exactly ONE tool that best ma
 
 Rules:
 - To remove creators, call remove_creators (use tier for a whole follower tier, names for specific creators).
+- To set or update the campaign brief (client brief, pasted text), call update_brief — this merges strategy and scheduling and never clears the creator slate.
+- To move creators between weeks/days or weight publishing across weeks, call reschedule_media_plan — do NOT change campaignStartDate unless the user explicitly asks to change when the campaign starts.
+- To change only the campaign start date or total duration, call update_timeline.
 - To generate a Campaign Output (Media Plan, Full Campaign Strategy, Executive Proposal, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, …), call generate_output. To rebuild one after changes, call regenerate_output. To export one, call export_output. Generate ONLY the output the user asked for — never regenerate unrelated outputs.
 - To undo, call undo_last_change.
 - To answer a question about the campaign, call answer_question.
@@ -207,6 +212,8 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
           startDate: intent.startDate,
         })
       );
+    case "reschedule_media_plan":
+      return rescheduleMediaPlan(input, digest, intent);
     case "update_platforms":
       return applyFactsEdit(input, digest, "update_platforms", (obj) =>
         applyPlatformsChange(obj, { platforms: intent.platforms })
@@ -223,6 +230,8 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       return applyFactsEdit(input, digest, "update_market", (obj) =>
         applyGeographyChange(obj, { geography: intent.geography })
       );
+    case "update_brief":
+      return applyBriefUpdate(input, digest, intent);
     case "author_section":
       return authorSectionEdit(input, digest, intent, provider);
     case "retone_proposal":
@@ -489,6 +498,60 @@ async function replaceCreators(
  * a version, and summarize. Budget/duration/mix/waves re-derive from facts at
  * read time, so the studio and exports update automatically.
  */
+async function applyBriefUpdate(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  intent: Extract<StudioCopilotIntent, { kind: "update_brief" }>
+): Promise<StudioCopilotResult> {
+  const result = mergeBriefIntoCampaignObject(input.campaignObject, intent.briefText);
+  if (!result.change) {
+    return {
+      campaignObject: input.campaignObject,
+      reply:
+        "I couldn't save that brief — paste at least a few sentences (objective, audience, timing, deliverables). The creator slate was not changed.",
+      changed: false,
+      intentKind: "update_brief",
+    };
+  }
+
+  const { campaignObject: next, effect: staleEffect } = applyOutputStaleness(
+    result.campaignObject,
+    input.campaignObject
+  );
+
+  const effects = [
+    "the brief is now the strategy source for scheduling and outputs",
+    `${digest.slate.length} creator${digest.slate.length === 1 ? "" : "s"} on the slate unchanged`,
+  ];
+  if (staleEffect) effects.push(staleEffect);
+
+  const summary = buildChangeSummary({
+    action: toAction(result.change),
+    effects,
+  });
+
+  const logged = appendChangeLog(next, {
+    summary: result.change,
+    intent: "update_brief",
+    overallScoreAfter: digest.overallScore,
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(
+    input.supabase,
+    input.conversationId,
+    input.userId,
+    logged
+  );
+
+  return {
+    campaignObject: persisted,
+    reply: renderChangeSummary(summary),
+    changed: true,
+    intentKind: "update_brief",
+    outputNavigate: "media_plan",
+  };
+}
+
 async function applyFactsEdit(
   input: RunInput,
   digest: CampaignContextDigest,
@@ -542,6 +605,58 @@ async function applyFactsEdit(
     reply: renderChangeSummary(summary),
     changed: true,
     intentKind,
+  };
+}
+
+async function rescheduleMediaPlan(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  intent: Extract<StudioCopilotIntent, { kind: "reschedule_media_plan" }>
+): Promise<StudioCopilotResult> {
+  const result = applyMediaPlanScheduleChange(input.campaignObject, {
+    weekWeights: intent.weekWeights,
+    moveCreators: intent.moveCreators,
+  });
+
+  if (!result.change) {
+    return {
+      campaignObject: input.campaignObject,
+      reply:
+        "I couldn't reschedule the media plan — name the creators and target week (for example \"move Nour to week 3\" or \"weight the first 2 weeks heavier\"). The campaign start date was not changed.",
+      changed: false,
+      intentKind: "reschedule_media_plan",
+    };
+  }
+
+  let next = result.campaignObject;
+  try {
+    ({ campaignObject: next } = generateCampaignOutput(next, "media_plan", {
+      origin: "copilot",
+    }));
+  } catch {
+    /* keep schedule meta even if regeneration fails */
+  }
+
+  const logged = appendChangeLog(next, {
+    summary: result.change,
+    intent: "reschedule_media_plan",
+    overallScoreAfter: digest.overallScore,
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(
+    input.supabase,
+    input.conversationId,
+    input.userId,
+    logged
+  );
+
+  return {
+    campaignObject: persisted,
+    reply: `${result.change} The Media Plan calendar was regenerated — the campaign start date is unchanged.`,
+    changed: true,
+    intentKind: "reschedule_media_plan",
+    outputNavigate: "media_plan",
+    outputPreview: "media_plan",
   };
 }
 

@@ -1,6 +1,9 @@
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
+import { cn } from "@/lib/utils";
 
 import type { MediaPlanCampaignContext, MediaPlanDeadline, MediaPlanData } from "../generators/media-plan";
+import type { MediaPlanStrategySummary } from "../media-plan-strategy-summary";
+import { buildMediaPlanStrategyBlocks, type MediaPlanStrategyBlock } from "../media-plan-strategy-blocks";
 import { MEDIA_PLAN_COST_VAT_DISCLAIMER } from "../generators/media-plan";
 import { formatMoney } from "../generators/generator-utils";
 import { MEDIA_PLAN_BRAND } from "./media-plan-brand";
@@ -107,6 +110,183 @@ export function MediaPlanContextStrip({
         </div>
       ))}
     </dl>
+  );
+}
+
+export function MediaPlanStrategySection({
+  summary,
+  variant = "document",
+}: {
+  summary?: MediaPlanStrategySummary;
+  variant?: "document" | "cover";
+}) {
+  if (!summary?.hasContent) {
+    return (
+      <section
+        className={cn(
+          "rounded-xl border border-dashed px-4 py-3",
+          variant === "cover" ? "border-white/25 bg-white/5" : "border-[#0B0F1A]/12 bg-white"
+        )}
+      >
+        <p
+          className="text-[10px] font-extrabold uppercase tracking-[0.08em]"
+          style={{ color: variant === "cover" ? "rgba(255,255,255,0.75)" : MEDIA_PLAN_BRAND.electricBlue }}
+        >
+          Campaign Strategy
+        </p>
+        <p
+          className="mt-1 text-[12px] leading-relaxed"
+          style={{ color: variant === "cover" ? "rgba(255,255,255,0.65)" : MEDIA_PLAN_BRAND.muted }}
+        >
+          Strategy summary will appear here once the campaign brief or strategy section is complete.
+        </p>
+      </section>
+    );
+  }
+
+  const blocks = buildMediaPlanStrategyBlocks(summary);
+
+  const confidenceClass = (level?: string) => {
+    if (level === "high") return "text-[#1D9E75]";
+    if (level === "medium") return "text-amber-600";
+    if (level === "low") return "text-red-600";
+    return "";
+  };
+
+  const renderBlockContent = (block: MediaPlanStrategyBlock) => {
+    if (block.kind === "weekly-grid" && block.weeklyObjectives?.length) {
+      return (
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {block.weeklyObjectives.map((week) => (
+            <div key={week.week} className="rounded-lg border border-[#0B0F1A]/8 bg-white p-2">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                <span style={{ color: MEDIA_PLAN_BRAND.electricBlue }}>W{week.week}</span>
+                <span style={{ color: MEDIA_PLAN_BRAND.deepNavy }}>{week.phase}</span>
+                <span className="ml-auto" style={{ color: MEDIA_PLAN_BRAND.ink }}>{week.weight}%</span>
+              </div>
+              <ul className="mt-1 list-disc pl-3 text-[10px] leading-snug" style={{ color: MEDIA_PLAN_BRAND.muted }}>
+                {week.goals.map((goal) => (
+                  <li key={goal}>{goal}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (block.kind === "creative-list" && block.creativeItems?.length) {
+      return (
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {block.creativeItems.map((entry) => (
+            <div
+              key={entry.format}
+              className="rounded-lg border border-[#0B0F1A]/8 border-t-2 bg-white p-2"
+              style={{ borderTopColor: MEDIA_PLAN_BRAND.electricBlue }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[11px] font-bold" style={{ color: MEDIA_PLAN_BRAND.deepNavy }}>
+                  {entry.format}
+                </p>
+                {entry.confidence ? (
+                  <span className={`text-[9px] font-extrabold uppercase ${confidenceClass(entry.confidence)}`}>
+                    {entry.confidence}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-0.5 text-[10px] leading-snug" style={{ color: MEDIA_PLAN_BRAND.muted }}>
+                {entry.reason}
+              </p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (block.kind === "tier-chips" && block.tierChips?.length) {
+      return (
+        <>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {block.tierChips.map((chip) => (
+              <span
+                key={chip.tier}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold text-white"
+                style={{ backgroundColor: MEDIA_PLAN_BRAND.deepNavy }}
+              >
+                <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px]">{chip.count}</span>
+                {chip.tier}
+              </span>
+            ))}
+          </div>
+          <p
+            className="mt-2 whitespace-pre-wrap text-[12px] leading-relaxed"
+            style={{ color: variant === "cover" ? "rgba(255,255,255,0.92)" : MEDIA_PLAN_BRAND.ink }}
+          >
+            {block.body}
+          </p>
+        </>
+      );
+    }
+
+    return (
+      <p
+        className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed"
+        style={{ color: variant === "cover" ? "rgba(255,255,255,0.92)" : MEDIA_PLAN_BRAND.ink }}
+      >
+        {block.body}
+      </p>
+    );
+  };
+
+  return (
+    <section
+      className={cn(
+        "space-y-3 rounded-xl border px-4 py-4",
+        variant === "cover"
+          ? "border-white/20 bg-white/10 backdrop-blur-sm"
+          : "border-[#0B0F1A]/8 bg-white shadow-sm"
+      )}
+    >
+      <h3
+        className="text-[10px] font-extrabold uppercase tracking-[0.08em]"
+        style={{ color: variant === "cover" ? "rgba(255,255,255,0.85)" : MEDIA_PLAN_BRAND.electricBlue }}
+      >
+        Campaign Strategy
+      </h3>
+      <div className="space-y-3">
+        {blocks.map((block) => (
+          <div
+            key={block.label}
+            className="rounded-lg border border-[#0B0F1A]/6 bg-[#FAFBFF] p-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p
+                className="text-[10px] font-bold uppercase tracking-wide"
+                style={{ color: variant === "cover" ? "rgba(255,255,255,0.7)" : MEDIA_PLAN_BRAND.deepNavy }}
+              >
+                {block.label}
+              </p>
+              {block.confidence ? (
+                <div className="text-right">
+                  <p className={`text-[9px] font-extrabold uppercase ${confidenceClass(block.confidence.level)}`}>
+                    {block.confidence.level}
+                  </p>
+                  <p className="text-[8px]" style={{ color: MEDIA_PLAN_BRAND.muted }}>
+                    {block.confidence.reason}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+            {block.limitations ? (
+              <p className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
+                {block.limitations}
+              </p>
+            ) : null}
+            {renderBlockContent(block)}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

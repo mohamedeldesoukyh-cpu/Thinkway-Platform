@@ -33,11 +33,13 @@ export type QuotationCommercialsMeta = {
 export function quotationCommercialCreatorKey(
   creator: Pick<SeedCreator, "creatorId" | "handle" | "displayName">
 ): string {
+  const creatorId = creator.creatorId.trim().toLowerCase();
+  if (creatorId.startsWith("manual:")) return creatorId;
   const handle = creator.handle?.replace(/^@/, "").trim().toLowerCase();
   if (handle) return `h:${handle}`;
   const name = normalizeCreatorMatchKey(creator.displayName);
   if (name) return `n:${name}`;
-  return `i:${creator.creatorId.trim().toLowerCase()}`;
+  return `i:${creatorId}`;
 }
 
 export type QuotationCommercialsContextPatch = {

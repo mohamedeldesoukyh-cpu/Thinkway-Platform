@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { computeQuotationTotals } from "@/lib/commercial/quotation-engine";
 import { stripQuotationVersionSuffix } from "@/lib/commercial-sync/rules";
+import { DEFAULT_QUOTATION_LINE_COMMERCIAL_MODE } from "@/lib/domains/commercial/quotation-constants";
 
 import type { QuotationItemSeed } from "@/lib/domains/commercial/quotation-types";
 
@@ -22,6 +23,8 @@ async function main() {
     cost_currency: "EGP",
   };
   assert.equal(seed.cost_currency, "EGP");
+  assert.equal(DEFAULT_QUOTATION_LINE_COMMERCIAL_MODE, "cost_gp_pct");
+  assert.equal(seed.commercial_input_mode ?? DEFAULT_QUOTATION_LINE_COMMERCIAL_MODE, "cost_gp_pct");
 
   console.log("quotation-service-layer.test.ts: all assertions passed");
 }

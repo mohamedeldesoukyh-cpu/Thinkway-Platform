@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GripVerticalIcon, LayersIcon, XIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignOutputContent, CampaignOutputGroup, CampaignOutputKind } from "../output-types";
 import type { OutputView } from "../output-registry";
 import { OUTPUT_GROUPS } from "../output-catalog";
+import { getOutputContentForDisplay } from "../output-registry";
 import { OutputCard, type OutputCardActions } from "./output-card";
 import { OutputViewer } from "./output-viewer";
 import { OutputDocumentPreview } from "./output-document-preview";
@@ -18,6 +19,8 @@ import { useDraggablePanel } from "../hooks/use-draggable-panel";
 import { resolveMediaPlanCampaignContext } from "../generators/media-plan";
 import type { MediaPlanCampaignContext } from "../generators/media-plan";
 import { resolveMediaPlanContextForPreview } from "../actions/resolve-media-plan-context";
+import { updateMediaPlanScheduleAction } from "../actions/update-media-plan-schedule";
+import type { MediaPlanCreatorMoveTarget } from "./media-plan-calendar";
 
 export type OutputsCenterProps = {
   /** Live campaign object — used for instant Media Plan context without a server roundtrip. */
@@ -31,6 +34,8 @@ export type OutputsCenterProps = {
   /** Required for Media Plan file export from the preview panel. */
   campaignObjectId?: string;
   conversationId?: string;
+  /** Called after a manual media plan schedule save so the studio can refresh. */
+  onCampaignObjectUpdated?: (campaignObject: CampaignObject) => void;
   actions?: OutputCardActions;
   className?: string;
 };
@@ -54,10 +59,20 @@ export function OutputsCenter({
   getContent,
   campaignObjectId,
   conversationId,
+  onCampaignObjectUpdated,
   actions,
   className,
 }: OutputsCenterProps) {
   const [panel, setPanel] = useState<PanelState | null>(null);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [localCampaignObject, setLocalCampaignObject] = useState<CampaignObject | null>(null);
+
+  const effectiveCampaignObject = localCampaignObject ?? campaignObject;
+
+  useEffect(() => {
+    setLocalCampaignObject(null);
+  }, [campaignObject?.id, campaignObject?.updatedAt]);
 
   const grouped = useMemo(() => {
     const order = OUTPUT_GROUPS.map((g) => g.group);
@@ -79,19 +94,22 @@ export function OutputsCenter({
 
   const panelContent = useMemo(() => {
     if (!panel || !getContent) return undefined;
+    if (panel.kind === "media_plan" && effectiveCampaignObject) {
+      return getOutputContentForDisplay(effectiveCampaignObject, "media_plan");
+    }
     return getContent(panel.kind);
-  }, [panel?.kind, panel?.mode, getContent]);
+  }, [panel?.kind, panel?.mode, getContent, effectiveCampaignObject]);
 
   const isMediaPlanPanel = panel?.kind === "media_plan";
 
   const liveMediaPlanContextFallback = useMemo<MediaPlanCampaignContext | undefined>(() => {
-    if (!campaignObject) return undefined;
-    return resolveMediaPlanCampaignContext(campaignObject);
+    if (!effectiveCampaignObject) return undefined;
+    return resolveMediaPlanCampaignContext(effectiveCampaignObject);
   }, [
-    campaignObject?.id,
-    campaignObject?.updatedAt,
-    campaignObject?.meta.quotationCommercials,
-    campaignObject?.meta.campaignFacts,
+    effectiveCampaignObject?.id,
+    effectiveCampaignObject?.updatedAt,
+    effectiveCampaignObject?.meta.quotationCommercials,
+    effectiveCampaignObject?.meta.campaignFacts,
   ]);
 
   const [liveMediaPlanContext, setLiveMediaPlanContext] = useState<
@@ -142,6 +160,39 @@ export function OutputsCenter({
 
   const isFloatingPreview = panel?.mode === "preview" || isMediaPlanPanel;
   const { offset, dragHandleProps } = useDraggablePanel(Boolean(panel && isFloatingPreview));
+
+  const handleMoveMediaPlanCreator = useCallback(
+    async (target: MediaPlanCreatorMoveTarget) => {
+      if (!campaignObjectId || !conversationId) {
+        setScheduleError("Connect this workspace to save schedule changes.");
+        return;
+      }
+
+      setScheduleSaving(true);
+      setScheduleError(null);
+
+      const result = await updateMediaPlanScheduleAction({
+        campaignObjectId,
+        conversationId,
+        move: {
+          creatorId: target.creatorId,
+          toWeek: target.toWeek,
+          toDayIndex: target.toDayIndex,
+        },
+      });
+
+      setScheduleSaving(false);
+
+      if (!result.ok) {
+        setScheduleError(result.message);
+        return;
+      }
+
+      setLocalCampaignObject(result.campaignObject);
+      onCampaignObjectUpdated?.(result.campaignObject);
+    },
+    [campaignObjectId, conversationId, onCampaignObjectUpdated]
+  );
 
   useEffect(() => {
     if (!panel) return;
@@ -238,7 +289,22 @@ export function OutputsCenter({
             </div>
             <div className="max-h-[calc(100vh-6rem)] overflow-y-auto">
               {panelContent ? (
-                panel.mode === "preview" ? (
+                isMediaPlanPanel ? (
+                  <div className="p-5">
+                    {scheduleError ? (
+                      <p className="mb-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12px] text-destructive">
+                        {scheduleError}
+                      </p>
+                    ) : null}
+                    <OutputViewer
+                      content={panelContent}
+                      mediaPlanContextOverride={liveMediaPlanContext}
+                      editableMediaPlan={Boolean(campaignObjectId && conversationId)}
+                      savingMediaPlanSchedule={scheduleSaving}
+                      onMoveMediaPlanCreator={handleMoveMediaPlanCreator}
+                    />
+                  </div>
+                ) : panel.mode === "preview" ? (
                   <OutputDocumentPreview
                     content={panelContent}
                     mediaPlanContextOverride={liveMediaPlanContext}

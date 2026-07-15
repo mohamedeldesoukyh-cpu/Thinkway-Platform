@@ -6,6 +6,8 @@ import type { CreatorsSectionData } from "@/features/campaign-intelligence/types
 import { generateMediaPlan, enrichMediaPlanFromSlate, enrichMediaPlanCampaignContext, wantsPaidAmplification, resolveCalendarWeekCount, type MediaPlanData } from "./media-plan";
 import { resolveSlate } from "../output-inputs";
 import { buildCampaignObjectFixture } from "../output-test-fixture";
+import { hydrateCampaignObject } from "../hydration/hydrate";
+import { seedFromQuotation } from "../hydration/seed-adapters";
 
 function planData(content: ReturnType<typeof generateMediaPlan>): MediaPlanData {
   return content.data as unknown as MediaPlanData;
@@ -32,10 +34,10 @@ test("media plan has one week per campaign week, each with 7 days", () => {
   assert.ok(data.weeks.every((w) => w.days.length === 7));
 });
 
-test("quotation calendar groups all quoted ad types on the creator's assigned day", () => {
+test("quotation calendar schedules each deliverable on separate days", () => {
   const obj = withQuotationCreators(
     buildCampaignObjectFixture({
-      facts: { durationWeeks: 2 },
+      facts: { durationWeeks: 4 },
       creators: [{ id: "cr_star", name: "Nour Star", tier: "Celebrity" }],
     })
   );
@@ -45,18 +47,18 @@ test("quotation calendar groups all quoted ad types on the creator's assigned da
     reasoning[0].serviceTypes = ["1× IG Reel", "1× IG Set of stories", "1× Mirrored IG"];
     reasoning[0].serviceLabel = reasoning[0].serviceTypes.join(" · ");
   }
+  obj.meta.mediaPlanSchedule = { weekWeights: [70, 10, 10, 10] };
 
   const data = planData(generateMediaPlan(obj));
   const nourDays = data.weeks
     .flatMap((w) => w.days)
     .filter((d) => d.creator === "Nour Star");
 
-  assert.equal(nourDays.length, 1);
-  assert.deepEqual(nourDays[0]!.serviceTypes, [
-    "1× IG Reel",
-    "1× IG Set of stories",
-    "1× Mirrored IG",
-  ]);
+  assert.equal(nourDays.length, 3);
+  assert.deepEqual(
+    nourDays.map((day) => day.serviceType).sort(),
+    ["1× IG Reel", "1× IG Set of stories", "1× Mirrored IG"].sort()
+  );
   assert.ok(data.serviceTypes.includes("1× IG Reel"));
   assert.ok(data.serviceTypes.includes("1× Mirrored IG"));
   assert.equal(data.postingSlotCount, 3);
@@ -104,7 +106,7 @@ test("quotation calendar keeps brief duration and packs deliverables across days
   assert.equal(data.unscheduledDeliverableCount, undefined);
 });
 
-test("many quoted lines keep one creator per day while platform allocation counts all lines", () => {
+test("many quoted lines schedule each deliverable separately across the calendar", () => {
   const creators = Array.from({ length: 32 }, (_, index) => ({
     id: `cr_${index + 1}`,
     name: `Creator ${index + 1}`,
@@ -126,26 +128,17 @@ test("many quoted lines keep one creator per day while platform allocation count
   }
 
   const data = planData(generateMediaPlan(obj));
-  const scheduledCreators = data.weeks
+  const scheduledDeliverables = data.weeks
     .flatMap((week) => week.days)
-    .reduce(
-      (total, day) =>
-        total + (day.creator ? 1 : 0) + (day.additionalDeliverables?.length ?? 0),
-      0
-    );
-  const creatorAppearances = new Set(
-    data.weeks.flatMap((week) =>
-      week.days.flatMap((day) => [
-        ...(day.creator ? [day.creator] : []),
-        ...(day.additionalDeliverables?.map((entry) => entry.creator) ?? []),
-      ])
-    )
-  );
+    .reduce((total, day) => {
+      const primary = day.creator ? 1 : 0;
+      const additional = day.additionalDeliverables?.length ?? 0;
+      return total + primary + additional;
+    }, 0);
 
   assert.equal(data.weeks.length, 4);
   assert.equal(data.postingSlotCount, 96);
-  assert.equal(scheduledCreators, 32);
-  assert.equal(creatorAppearances.size, 32);
+  assert.equal(scheduledDeliverables, 96);
 });
 
 test("platform allocation totals match quoted posting slots, not calendar capacity", () => {
@@ -408,7 +401,7 @@ test("resolveMediaPlanCampaignContext reads group from quotation commercials wit
   assert.equal(context?.agencyName, "Media Agency Egypt");
 });
 
-test("deadlines consolidate multiple deliverables into one row per creator", () => {
+test("deadlines consolidate only when multiple deliverables share the same publish day", () => {
   const obj = withQuotationCreators(
     buildCampaignObjectFixture({
       facts: { durationWeeks: 2 },
@@ -418,22 +411,18 @@ test("deadlines consolidate multiple deliverables into one row per creator", () 
   const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
   const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
   if (reasoning[0]) {
-    reasoning[0].serviceTypes = ["1× IG Reel", "1× IG Set of stories", "1× Mirrored IG"];
-    reasoning[0].serviceLabel = reasoning[0].serviceTypes.join(" · ");
+    reasoning[0].serviceTypes = ["1× IG Reel"];
+    reasoning[0].serviceLabel = "1× IG Reel";
   }
 
   const data = planData(generateMediaPlan(obj));
   const nourDeadlines = data.deadlines.filter((deadline) => deadline.creator === "Nour Star");
 
   assert.equal(nourDeadlines.length, 1);
-  assert.deepEqual(nourDeadlines[0]!.serviceTypes, [
-    "1× IG Reel",
-    "1× IG Set of stories",
-    "1× Mirrored IG",
-  ]);
+  assert.deepEqual(nourDeadlines[0]!.serviceTypes, ["1× IG Reel"]);
 });
 
-test("quotation deadlines use one row per scheduled creator", () => {
+test("quotation deadlines use one row per deliverable publish slot", () => {
   const creators = Array.from({ length: 32 }, (_, index) => ({
     id: `cr_${index + 1}`,
     name: `Creator ${index + 1}`,
@@ -452,12 +441,143 @@ test("quotation deadlines use one row per scheduled creator", () => {
   }
 
   const data = planData(generateMediaPlan(obj));
-  assert.equal(data.deadlines.length, 32);
-  assert.ok(data.deadlines.every((deadline) => (deadline.serviceTypes?.length ?? 0) === 3));
+  assert.equal(data.deadlines.length, 96);
+  assert.ok(data.deadlines.every((deadline) => (deadline.serviceTypes?.length ?? 0) === 1));
 });
 
-test("deadlines carry creator ids for avatar enrichment", () => {
-  const data = planData(generateMediaPlan(buildCampaignObjectFixture()));
-  assert.ok(data.deadlines.length >= 1);
-  assert.ok(data.deadlines.every((d) => d.creatorId && d.shortName));
+test("manual quotation lines each become separate seed creators", () => {
+  const quotation = {
+    id: "q1",
+    name: "TBH plan",
+    currency: "EGP",
+    total_revenue_egp: 50_000,
+    items: [
+      {
+        id: "manual-1",
+        creator_name: "Instagram TBH",
+        platform: "instagram",
+        revenue_egp: 10_000,
+        deliverables: [{ platform: "instagram", type_lines: [{ type: "ig_reel", quantity: 1 }] }],
+      },
+      {
+        id: "manual-2",
+        creator_name: "UGC TBH",
+        platform: "instagram",
+        revenue_egp: 10_000,
+        deliverables: [{ platform: "instagram", type_lines: [{ type: "ig_post", quantity: 1 }] }],
+      },
+      {
+        id: "manual-3",
+        creator_name: "TikTok TBH",
+        platform: "tiktok",
+        revenue_egp: 10_000,
+        deliverables: [{ platform: "tiktok", type_lines: [{ type: "tiktok_video", quantity: 1 }] }],
+      },
+    ],
+  } as unknown as import("@/lib/domains/commercial/quotation-detail-types").QuotationDetail;
+
+  const seed = seedFromQuotation(quotation);
+  assert.equal(seed.creators.length, 3);
+  assert.ok(seed.creators.every((creator) => creator.creatorId.startsWith("manual:")));
+
+  const { campaignObject } = hydrateCampaignObject(seed);
+  const slate = resolveSlate(campaignObject);
+  assert.equal(slate.length, 3);
+
+  const data = generateMediaPlan(campaignObject).data as MediaPlanData;
+  assert.equal(data.creatorCount, 3);
+  const scheduledNames = new Set(
+    data.weeks.flatMap((week) =>
+      week.days.flatMap((day) => [
+        ...(day.creator ? [day.creator] : []),
+        ...(day.additionalDeliverables?.map((entry) => entry.creator) ?? []),
+      ])
+    )
+  );
+  assert.ok(scheduledNames.has("Instagram TBH"));
+  assert.ok(scheduledNames.has("UGC TBH"));
+  assert.ok(scheduledNames.has("TikTok TBH"));
 });
+
+test("quotation calendar omits empty open publishing slot cards", () => {
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 4 },
+      creators: Array.from({ length: 5 }, (_, index) => ({
+        id: `cr_${index + 1}`,
+        name: `Creator ${index + 1}`,
+        tier: "Macro",
+      })),
+    })
+  );
+  const data = planData(generateMediaPlan(obj));
+  const openSlots = data.weeks
+    .flatMap((week) => week.days)
+    .filter((day) => day.label === "Open publishing slot");
+  assert.ok(openSlots.length > 0);
+  for (const day of openSlots) {
+    assert.equal(day.creator, undefined);
+  }
+});
+
+test("week weights concentrate deliverables in early weeks", () => {
+  const creators = Array.from({ length: 8 }, (_, index) => ({
+    id: `cr_${index + 1}`,
+    name: `Creator ${index + 1}`,
+    tier: "Macro",
+  }));
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 4 },
+      creators,
+    })
+  );
+  obj.meta.mediaPlanSchedule = { weekWeights: [40, 40, 10, 10] };
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  for (const entry of creatorsData.recommendations?.selectedReasoning ?? []) {
+    entry.serviceTypes = ["1× IG Reel"];
+    entry.serviceLabel = "1× IG Reel";
+    entry.quotedRevenue = 5_000;
+    entry.quotedCurrency = "EGP";
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  const weekCounts = data.weeks.map(
+    (week) =>
+      week.days.filter((day) => day.creator || (day.additionalDeliverables?.length ?? 0) > 0).length
+  );
+  assert.ok((weekCounts[0] ?? 0) + (weekCounts[1] ?? 0) >= (weekCounts[2] ?? 0) + (weekCounts[3] ?? 0));
+});
+
+test("launch brief auto front-loads quotation calendar without explicit weekWeights meta", () => {
+  const creators = Array.from({ length: 8 }, (_, index) => ({
+    id: `cr_${index + 1}`,
+    name: `Creator ${index + 1}`,
+    tier: "Macro",
+  }));
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: {
+        durationWeeks: 4,
+        rawBriefExcerpt:
+          "Summer launch — front-load Week 1 go-live with hero creators, sustain through weeks 2-4 for BabyJoy in Egypt.",
+      },
+      creators,
+    })
+  );
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  for (const entry of creatorsData.recommendations?.selectedReasoning ?? []) {
+    entry.serviceTypes = ["1× IG Reel"];
+    entry.serviceLabel = "1× IG Reel";
+    entry.quotedRevenue = 5_000;
+    entry.quotedCurrency = "EGP";
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  const weekCounts = data.weeks.map(
+    (week) =>
+      week.days.filter((day) => day.creator || (day.additionalDeliverables?.length ?? 0) > 0).length
+  );
+  assert.ok((weekCounts[0] ?? 0) >= (weekCounts[3] ?? 0));
+});
+

@@ -10,6 +10,7 @@ import { buildMediaPlanExcel } from "@/features/campaign-outputs/export/media-pl
 import { buildMediaPlanHtml } from "@/features/campaign-outputs/export/media-plan-html";
 import { resolveMediaPlanCampaignContext } from "@/features/campaign-outputs/generators/media-plan";
 import { MEDIA_PLAN_PDF_OPTIONS } from "@/features/campaign-outputs/export/media-plan-pdf";
+import { buildMediaPlanPptxBuffer } from "@/features/campaign-outputs/export/media-plan-pptx";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { mediaPlanExportBaseName } from "@/features/campaign-outputs/export/media-plan-export-utils";
 import {
@@ -21,6 +22,7 @@ import { getOutputDefinition } from "@/features/campaign-outputs/output-catalog"
 import {
   createHtmlDocumentResponse,
   createPdfFromHtmlResponse,
+  createPptxDocumentResponse,
   createXlsxDocumentResponse,
 } from "@/lib/reports/document/report-document-response";
 import { requirePermission } from "@/lib/auth/permissions-server";
@@ -39,8 +41,8 @@ function resolveExportKind(raw: string | null): CampaignOutputKind | null {
   return null;
 }
 
-function resolveExportFormat(raw: string | null): "html" | "pdf" | "excel" | null {
-  if (raw === "html" || raw === "pdf" || raw === "excel") return raw;
+function resolveExportFormat(raw: string | null): "html" | "pdf" | "excel" | "pptx" | null {
+  if (raw === "html" || raw === "pdf" || raw === "excel" || raw === "pptx") return raw;
   return null;
 }
 
@@ -116,13 +118,20 @@ export async function GET(request: Request, context: RouteContext) {
       return createXlsxDocumentResponse(buffer, baseName, download);
     }
 
+    const contextOverride = resolveMediaPlanCampaignContext(campaignObject);
+
+    if (format === "pptx") {
+      const exportContent = await embedMediaPlanContentAvatars(content);
+      const buffer = await buildMediaPlanPptxBuffer(exportContent, { contextOverride });
+      return createPptxDocumentResponse(buffer, baseName, download);
+    }
+
     let exportContent = content;
     if (format === "pdf") {
       exportContent = await embedMediaPlanContentAvatars(content);
     }
 
     const logoSrcs = format === "pdf" ? resolveThinkwayReportLogoSrcsForExport() : undefined;
-    const contextOverride = resolveMediaPlanCampaignContext(campaignObject);
     const html = buildMediaPlanHtml(exportContent, {
       logoSrcs,
       contextOverride,

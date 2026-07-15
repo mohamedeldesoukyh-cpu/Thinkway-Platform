@@ -43,6 +43,7 @@ export type CampaignOutputKind =
  * outputs can share one input.
  */
 export type CampaignOutputInputKey =
+  | "brief"
   | "objective"
   | "audience"
   | "market"

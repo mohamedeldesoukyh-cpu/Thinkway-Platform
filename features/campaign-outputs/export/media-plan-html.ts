@@ -13,6 +13,7 @@ import type {
 import {
   MEDIA_PLAN_COST_VAT_DISCLAIMER,
   formatMediaPlanPreparedForLabel,
+  isMediaPlanOpenPublishingSlot,
 } from "../generators/media-plan";
 import { formatMoney } from "../generators/generator-utils";
 import {
@@ -20,7 +21,8 @@ import {
   formatWeekRangeLabel,
   parseCampaignStartDate,
 } from "../media-plan-week-range";
-import { MEDIA_PLAN_AD_TYPE_COLORS, MEDIA_PLAN_BRAND, MEDIA_PLAN_DAY_TYPE_COLORS } from "../components/media-plan-brand";
+import { buildMediaPlanStrategyBlocks, type MediaPlanStrategyBlock } from "../media-plan-strategy-blocks";
+import { MEDIA_PLAN_BRAND, MEDIA_PLAN_AD_TYPE_COLORS, MEDIA_PLAN_DAY_TYPE_COLORS } from "../components/media-plan-brand";
 import { mergeMediaPlanContext } from "../components/media-plan-context-merge";
 import { isMediaPlanContent } from "./media-plan-content";
 import { MEDIA_PLAN_PAGE } from "./media-plan-page";
@@ -206,7 +208,7 @@ function renderDayColumn(
     const types = typesForDay(day);
     if (types.length) {
       cards = `<div class="ccard ccard--ops">${renderChips(types, typeColorMap, fallback)}</div>`;
-    } else {
+    } else if (!isMediaPlanOpenPublishingSlot(day)) {
       cards = `<div class="ccard ccard--ops"><span class="muted">${escapeHtml(day.label)}</span></div>`;
     }
   }
@@ -302,6 +304,147 @@ function renderCoverLegend(data: MediaPlanData): string {
     <div class="lt">Ad Types</div>
     <div class="legend-grid">${items}</div>
   </div>`;
+}
+
+function confidenceBadgeHtml(confidence?: MediaPlanStrategyBlock["confidence"]): string {
+  if (!confidence) return "";
+  const level = confidence.level;
+  return `<span class="confidence-badge confidence-badge--${escapeHtml(level)}" title="${escapeHtml(confidence.reason)}">
+    <span class="confidence-badge-label">Confidence</span>
+    <span class="confidence-badge-level">${escapeHtml(level.charAt(0).toUpperCase() + level.slice(1))}</span>
+    <span class="confidence-badge-reason">${escapeHtml(confidence.reason)}</span>
+  </span>`;
+}
+
+function tierChipsHtml(chips?: MediaPlanStrategyBlock["tierChips"]): string {
+  if (!chips?.length) return "";
+  return `<div class="tier-chips">${chips
+    .map(
+      (chip) =>
+        `<span class="tier-chip"><span class="tier-chip-count">${chip.count}</span>${escapeHtml(chip.tier)}</span>`
+    )
+    .join("")}</div>`;
+}
+
+function platformBarsHtml(bars?: MediaPlanStrategyBlock["platformBars"]): string {
+  if (!bars?.length) return "";
+  return `<div class="strategy-platform-bars">${bars
+    .map((entry, index) => {
+      const color = PLATFORM_BAR_COLORS[index % PLATFORM_BAR_COLORS.length]!;
+      return `<div class="pbar-row">
+        <div class="pbar-label"><span>${escapeHtml(entry.platform)}</span><span class="pbar-pct">${entry.percentage}%</span></div>
+        <div class="pbar-track"><div class="pbar-fill" style="width:${entry.percentage}%;background:${color}"></div></div>
+      </div>`;
+    })
+    .join("")}</div>`;
+}
+
+function weeklyObjectivesGridHtml(objectives?: MediaPlanStrategyBlock["weeklyObjectives"]): string {
+  if (!objectives?.length) return "";
+  return `<div class="week-obj-grid">${objectives
+    .map(
+      (week) =>
+        `<div class="week-obj-card">
+          <div class="week-obj-head">
+            <span class="week-obj-num">W${week.week}</span>
+            <span class="week-obj-phase">${escapeHtml(week.phase)}</span>
+            <span class="week-obj-weight">${week.weight}%</span>
+          </div>
+          <ul class="week-obj-goals">${week.goals
+            .map((goal) => `<li>${escapeHtml(goal)}</li>`)
+            .join("")}</ul>
+        </div>`
+    )
+    .join("")}</div>`;
+}
+
+function creativeItemsHtml(items?: MediaPlanStrategyBlock["creativeItems"]): string {
+  if (!items?.length) return "";
+  return `<div class="creative-rec-grid">${items
+    .map((entry) => {
+      const conf = entry.confidence
+        ? `<span class="creative-rec-conf creative-rec-conf--${escapeHtml(entry.confidence)}">${escapeHtml(entry.confidence)}</span>`
+        : "";
+      return `<div class="creative-rec-card">
+        <div class="creative-rec-top">
+          <p class="creative-rec-format">${escapeHtml(entry.format)}</p>
+          ${conf}
+        </div>
+        <p class="creative-rec-reason">${escapeHtml(entry.reason)}</p>
+      </div>`;
+    })
+    .join("")}</div>`;
+}
+
+function evidenceStripHtml(evidence?: string[]): string {
+  if (!evidence?.length) return "";
+  return `<div class="strategy-evidence">${evidence
+    .map((item) => `<span class="strategy-evidence-chip">${escapeHtml(item)}</span>`)
+    .join("")}</div>`;
+}
+
+function renderStrategyBlock(block: MediaPlanStrategyBlock): string {
+  const badge = confidenceBadgeHtml(block.confidence);
+  const limitations = block.limitations
+    ? `<p class="strategy-limitations">${escapeHtml(block.limitations)}</p>`
+    : "";
+  const evidence = evidenceStripHtml(block.evidence);
+
+  let content = "";
+  switch (block.kind) {
+    case "weekly-grid":
+      content = weeklyObjectivesGridHtml(block.weeklyObjectives);
+      break;
+    case "creative-list":
+      content =
+        creativeItemsHtml(block.creativeItems) ||
+        `<p class="strategy-body">${escapeHtml(block.body).replace(/\n/g, "<br />")}</p>`;
+      break;
+    case "platform-bars":
+      content = `${platformBarsHtml(block.platformBars)}<p class="strategy-body strategy-body--compact">${escapeHtml(block.body).replace(/\n/g, "<br />")}</p>`;
+      break;
+    case "tier-chips":
+      content = `${tierChipsHtml(block.tierChips)}<p class="strategy-body strategy-body--compact">${escapeHtml(block.body).replace(/\n/g, "<br />")}</p>`;
+      break;
+    default:
+      content = `<p class="strategy-body">${escapeHtml(block.body).replace(/\n/g, "<br />")}</p>`;
+  }
+
+  return `<div class="strategy-block strategy-block--${escapeHtml(block.kind)}">
+    <div class="strategy-block-head">
+      <p class="strategy-label">${escapeHtml(block.label)}</p>
+      ${badge}
+    </div>
+    ${evidence}
+    ${content}
+    ${limitations}
+  </div>`;
+}
+
+function renderStrategySection(
+  data: MediaPlanData,
+  options?: BuildMediaPlanHtmlOptions
+): string {
+  const summary = data.strategySummary;
+  if (!summary) return "";
+
+  if (!summary.hasContent) {
+    return `${PAGE_BREAK}<section class="mp-section mp-section--strategy">
+      ${renderSectionHeader("Campaign Strategy", "Media Plan", options)}
+      <div class="strategy-card strategy-card--placeholder">
+        <p class="strategy-placeholder">Strategy summary will appear here once the campaign brief or strategy section is complete.</p>
+      </div>
+    </section>`;
+  }
+
+  const blocks = buildMediaPlanStrategyBlocks(summary);
+
+  const blocksHtml = blocks.map((block) => renderStrategyBlock(block)).join("");
+
+  return `${PAGE_BREAK}<section class="mp-section mp-section--strategy">
+    ${renderSectionHeader("Campaign Strategy", "Media Plan", options)}
+    <div class="strategy-deck">${blocksHtml}</div>
+  </section>`;
 }
 
 function renderCoverHeader(
@@ -757,6 +900,251 @@ export function buildMediaPlanStyles(): string {
       color: var(--ink);
       letter-spacing: -0.02em;
     }
+
+    /* Strategy — presentation deck */
+    .strategy-deck {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .strategy-block {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--rule-light);
+      background: linear-gradient(160deg, #fff 0%, #fafbff 100%);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .strategy-block--executive,
+    .strategy-block--weekly-grid,
+    .strategy-block--creative-list {
+      grid-column: 1 / -1;
+    }
+    .strategy-block-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .strategy-card {
+      padding: 18px 20px;
+      border-radius: 16px;
+      border: 1px solid var(--rule-light);
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .strategy-card--placeholder {
+      background: #fafbff;
+    }
+    .strategy-placeholder {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+    .strategy-label {
+      margin: 0;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--navy);
+    }
+    .strategy-body {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--ink);
+    }
+    .strategy-body--compact {
+      margin-top: 10px;
+      font-size: 11.5px;
+      color: #374151;
+    }
+    .strategy-limitations {
+      margin: 10px 0 0;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.2);
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: #92400e;
+    }
+    .confidence-badge {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--rule-light);
+      background: #fff;
+      flex-shrink: 0;
+      max-width: 11rem;
+    }
+    .confidence-badge-label {
+      font-size: 7.5px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .confidence-badge-level {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+    .confidence-badge--high .confidence-badge-level { color: #1D9E75; }
+    .confidence-badge--medium .confidence-badge-level { color: #D97706; }
+    .confidence-badge--low .confidence-badge-level { color: #DC2626; }
+    .confidence-badge-reason {
+      font-size: 8px;
+      line-height: 1.3;
+      color: var(--muted);
+      text-align: right;
+    }
+    .strategy-evidence {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .strategy-evidence-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0,87,255,0.06);
+      border: 1px solid rgba(0,87,255,0.12);
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--blue);
+    }
+    .tier-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .tier-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--navy);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+    .tier-chip-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      font-size: 9px;
+      font-weight: 800;
+    }
+    .strategy-platform-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .week-obj-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .week-obj-card {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--rule-light);
+      background: #fff;
+    }
+    .week-obj-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+    .week-obj-num {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--blue);
+    }
+    .week-obj-phase {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--navy);
+    }
+    .week-obj-weight {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+    .week-obj-goals {
+      margin: 0;
+      padding: 0 0 0 14px;
+      font-size: 9.5px;
+      line-height: 1.4;
+      color: #374151;
+    }
+    .week-obj-goals li { margin-bottom: 2px; }
+    .creative-rec-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .creative-rec-card {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--rule-light);
+      background: #fff;
+      border-top: 3px solid var(--blue);
+    }
+    .creative-rec-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .creative-rec-format {
+      margin: 0;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.25;
+    }
+    .creative-rec-reason {
+      margin: 0;
+      font-size: 9.5px;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+    .creative-rec-conf {
+      font-size: 8px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .creative-rec-conf--high { background: rgba(29,158,117,0.12); color: #1D9E75; }
+    .creative-rec-conf--medium { background: rgba(217,119,6,0.12); color: #D97706; }
+    .creative-rec-conf--low { background: rgba(220,38,38,0.1); color: #DC2626; }
 
     /* Calendar */
     .calendar-shell {
@@ -1222,6 +1610,7 @@ function buildMediaPlanBody(
   );
 
   const cover = renderCoverHeader(content, data, context, options);
+  const strategy = renderStrategySection(data, options);
   const calendar = renderCalendarSection(content, data, typeColorMap, legendTypes, options);
   const operations = renderOperationsSection(content, data, options);
   const deadlines = renderDeadlinesSection(content, data, options);
@@ -1233,6 +1622,7 @@ function buildMediaPlanBody(
 
   return `<article class="mp-doc">
     <div class="mp-page mp-page--cover">${cover}</div>
+    ${strategy}
     ${calendar}
     ${operations}
     ${deadlines}

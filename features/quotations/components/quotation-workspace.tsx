@@ -54,6 +54,7 @@ import {
   QUOTATION_CLIENT_LABELS,
 } from "@/features/quotations/constants";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
+import type { QuotationCreatorsAddedResult } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import { useQuotationWorkspaceShortcuts } from "@/features/quotations/components/use-quotation-workspace-shortcuts";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { QuotationTermsAccordion } from "@/features/quotations/components/quotation-terms-accordion";
@@ -229,6 +230,7 @@ function QuotationWorkspaceContent({
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [exportTemplate, setExportTemplate] = useState<QuotationTemplateVariant>("detailed");
   const [addCreatorsOpen, setAddCreatorsOpen] = useState(false);
+  const [focusNewItemId, setFocusNewItemId] = useState<string | null>(null);
   const [tableSort, setTableSort] = useState<QuotationWorkspaceSortState | null>(null);
   const [bulkPending, startBulkTransition] = useTransition();
   const creatorSearchRef = useRef<HTMLInputElement>(null);
@@ -324,6 +326,31 @@ function QuotationWorkspaceContent({
   const refreshQuotationLines = useCallback(() => {
     router.refresh();
   }, [router]);
+
+  const handleCreatorsAdded = useCallback(
+    (result?: QuotationCreatorsAddedResult) => {
+      const nextId = result?.itemIds?.[0];
+      if (nextId) setFocusNewItemId(nextId);
+      router.refresh();
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    if (!focusNewItemId) return;
+    if (!detail.items.some((item) => item.id === focusNewItemId)) return;
+
+    const frame = requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-quotation-item-id="${focusNewItemId}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    const timeout = window.setTimeout(() => setFocusNewItemId(null), 8000);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [focusNewItemId, detail.items]);
 
   const { openCreatorFromItem, detailSheet } = useQuotationCreatorDetailSheet({
     onCreatorPlatformsChanged: refreshQuotationLines,
@@ -514,7 +541,7 @@ function QuotationWorkspaceContent({
         {detail.items.length === 0 ? (
           <EmptyState
             quotationId={detail.id}
-            onAdded={() => router.refresh()}
+            onAdded={handleCreatorsAdded}
             addCreatorsOpen={addCreatorsOpen}
             onAddCreatorsOpenChange={setAddCreatorsOpen}
           />
@@ -526,7 +553,7 @@ function QuotationWorkspaceContent({
             actions={
               <AddCreatorsToQuotationButton
                 quotationId={detail.id}
-                onAdded={() => router.refresh()}
+                onAdded={handleCreatorsAdded}
                 label="+ Add creator"
                 open={addCreatorsOpen}
                 onOpenChange={setAddCreatorsOpen}
@@ -653,6 +680,7 @@ function QuotationWorkspaceContent({
                       onRemoved={() => router.refresh()}
                       onLineChanged={refreshQuotationLines}
                       onOpenCreator={openCreatorFromItem}
+                      focusItemId={focusNewItemId}
                     />
                   ))}
                 </TableBody>
@@ -675,7 +703,7 @@ function QuotationWorkspaceContent({
             <div className="thinkway-campaign-section-footer justify-start">
               <AddCreatorsToQuotationButton
                 quotationId={detail.id}
-                onAdded={() => router.refresh()}
+                onAdded={handleCreatorsAdded}
                 triggerClassName="thinkway-campaign-btn-add"
                 label="+ Add creator"
                 open={addCreatorsOpen}
@@ -709,7 +737,7 @@ function EmptyState({
   onAddCreatorsOpenChange,
 }: {
   quotationId: string;
-  onAdded: () => void;
+  onAdded: (result?: QuotationCreatorsAddedResult) => void;
   addCreatorsOpen: boolean;
   onAddCreatorsOpenChange: (open: boolean) => void;
 }) {

@@ -7,6 +7,7 @@ import type { CampaignOutputInputKey } from "./output-types";
 
 /** "Creator slate changed", "Budget changed", … — the reason for a single input. */
 export const INPUT_CHANGE_PHRASES: Record<CampaignOutputInputKey, string> = {
+  brief: "Campaign brief changed",
   creators: "Creator slate changed",
   budget: "Budget changed",
   timeline: "Timeline changed",

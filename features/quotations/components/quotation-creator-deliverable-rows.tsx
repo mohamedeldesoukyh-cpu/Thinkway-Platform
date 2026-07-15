@@ -38,6 +38,7 @@ import { QuotationCreatorOptionSelect } from "@/features/quotations/components/q
 import { QuotationDeliverableTypeLinesEditor } from "@/features/quotations/components/quotation-deliverable-type-lines";
 import { QuotationDeliverableCostDetails } from "@/features/quotations/components/quotation-deliverable-cost-details";
 import { QuotationDeliverablePlatformIcons } from "@/features/quotations/components/quotation-deliverable-platform-icons";
+import { QuotationLinePlatformCell } from "@/features/quotations/components/quotation-line-scope-cell";
 import {
   fromDeliverableDrafts,
   useQuotationLineFields,
@@ -59,6 +60,7 @@ import {
 } from "@/lib/quotations/quotation-deliverable-commercial";
 import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import { cn } from "@/lib/utils";
+import { isManualQuotationCreator } from "@/lib/quotations/quotation-creator-platform-options";
 
 function SaveIndicator({ status }: { status: AutosaveStatus }) {
   if (status === "pending") return <span className="text-[10px] text-warning">Unsaved</span>;
@@ -87,6 +89,8 @@ type Props = {
   onRemoved: () => void;
   onLineChanged: () => void;
   onOpenCreator?: () => void;
+  /** When true, open platform/type/cost selectors for immediate configuration. */
+  autoOpenEditors?: boolean;
 };
 
 function resolveDeliverableDisplayPlatforms(
@@ -127,6 +131,7 @@ export function QuotationCreatorDeliverableRows({
   onRemoved,
   onLineChanged,
   onOpenCreator,
+  autoOpenEditors = false,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const manualSave = useQuotationManualSave();
@@ -182,6 +187,8 @@ export function QuotationCreatorDeliverableRows({
         : allowedCreatorPlatforms;
     return resolveQuotationCreatorProfileSource(item, linked);
   }, [item, allowedCreatorPlatforms]);
+
+  const isManualCreator = useMemo(() => isManualQuotationCreator(item), [item]);
 
   const displayRows = useMemo((): DeliverableDraft[] => {
     return lineFields.deliverableDrafts.map((d) => {
@@ -320,7 +327,11 @@ export function QuotationCreatorDeliverableRows({
         );
 
         return (
-          <TableRow key={`${item.id}-${deliverable.key}`} className={rowClass}>
+          <TableRow
+            key={`${item.id}-${deliverable.key}`}
+            className={rowClass}
+            data-quotation-item-id={isFirst ? item.id : undefined}
+          >
             {isFirst ? (
               <TableCell rowSpan={rowSpan} className="px-2 align-middle">
                 <Checkbox
@@ -400,11 +411,22 @@ export function QuotationCreatorDeliverableRows({
 
             <TableCell className="w-[4.5rem] align-top text-center">
               <div className="flex justify-center pt-0.5">
-                <QuotationDeliverablePlatformIcons
-                  allPlatforms={typeLinesIncludeAllPlatforms(deliverable)}
-                  platforms={displayPlatforms}
-                  loading={lineFields.loadingPlatforms && displayPlatforms.length === 0}
-                />
+                {isManualCreator && lineFields.platformSelectOptions.length > 0 ? (
+                  <QuotationLinePlatformCell
+                    loadingPlatforms={lineFields.loadingPlatforms}
+                    platformSelectOptions={lineFields.platformSelectOptions}
+                    platform={deliverable.platform ?? item.platform}
+                    onPlatformChange={lineFields.handlePlatformChange}
+                    defaultOpen={autoOpenEditors && isFirst}
+                    forceSelect
+                  />
+                ) : (
+                  <QuotationDeliverablePlatformIcons
+                    allPlatforms={typeLinesIncludeAllPlatforms(deliverable)}
+                    platforms={displayPlatforms}
+                    loading={lineFields.loadingPlatforms && displayPlatforms.length === 0}
+                  />
+                )}
               </div>
             </TableCell>
 
@@ -416,6 +438,7 @@ export function QuotationCreatorDeliverableRows({
                   onChange={(lines, options) =>
                     handleTypeLinesChange(deliverable.key, lines, options)
                   }
+                  defaultOpen={autoOpenEditors && isFirst}
                 />
                 {canRemoveRow ? (
                   <Button
@@ -446,6 +469,7 @@ export function QuotationCreatorDeliverableRows({
                   draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
                 )}
                 onApply={(next) => applyDeliverable(deliverable.key, next)}
+                defaultOpen={autoOpenEditors && isFirst}
               />
             </TableCell>
 
