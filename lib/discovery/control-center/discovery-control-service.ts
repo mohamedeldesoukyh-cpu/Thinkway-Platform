@@ -9,7 +9,28 @@ import {
 const CACHE_TTL_MS = 30_000;
 
 let cachedSettings: DiscoveryControlSettings | null = null;
+let cachedProvenance: DiscoveryControlCostProtectionProvenance | null = null;
 let cacheLoadedAt = 0;
+
+export type ApifyBudgetCapSource = "database" | "env" | "unset";
+
+export type DiscoveryControlCostProtectionProvenance = {
+  loadedFrom: "database" | "cache" | "env_defaults";
+  maxRequestsPerDay: {
+    databaseRaw: number | null;
+    envRaw: string | null;
+    envParsed: number;
+    effective: number;
+    source: ApifyBudgetCapSource;
+  };
+  maxCreditsPerDay: {
+    databaseRaw: number | null;
+    envRaw: string | null;
+    envParsed: number;
+    effective: number;
+    source: ApifyBudgetCapSource;
+  };
+};
 
 function envNumber(name: string, fallback: number): number {
   const raw = process.env[name]?.trim();
@@ -18,8 +39,37 @@ function envNumber(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function envRaw(name: string): string | null {
+  const raw = process.env[name];
+  return raw === undefined ? null : raw;
+}
+
 function clampThreshold(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function parseOptionalNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Positive DB/UI value wins. Non-positive or missing DB value falls through to env.
+ * This matters because discovery_control_settings was seeded with 0/0 — previously
+ * `0 ?? env` kept 0 and ignored DISCOVERY_APIFY_MAX_* env vars.
+ */
+export function resolveCostProtectionCap(
+  databaseRaw: number | null,
+  envParsed: number
+): { effective: number; source: ApifyBudgetCapSource } {
+  if (databaseRaw != null && databaseRaw > 0) {
+    return { effective: databaseRaw, source: "database" };
+  }
+  if (envParsed > 0) {
+    return { effective: envParsed, source: "env" };
+  }
+  return { effective: 0, source: "unset" };
 }
 
 export function getDefaultDiscoveryControlSettings(): DiscoveryControlSettings {
@@ -45,48 +95,90 @@ export function getDefaultDiscoveryControlSettings(): DiscoveryControlSettings {
   };
 }
 
-function mergeWithDefaults(
-  partial: Partial<DiscoveryControlSettings> | null | undefined
-): DiscoveryControlSettings {
-  const defaults = getDefaultDiscoveryControlSettings();
-  if (!partial || typeof partial !== "object") return defaults;
+function buildCostProtectionProvenance(
+  loadedFrom: DiscoveryControlCostProtectionProvenance["loadedFrom"],
+  databaseCostProtection?: {
+    maxRequestsPerDay?: unknown;
+    maxCreditsPerDay?: unknown;
+  } | null
+): DiscoveryControlCostProtectionProvenance {
+  const envRequestsParsed = envNumber("DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY", 0);
+  const envCreditsParsed = envNumber("DISCOVERY_APIFY_MAX_CREDITS_PER_DAY", 0);
+  const dbRequests = parseOptionalNumber(databaseCostProtection?.maxRequestsPerDay);
+  const dbCredits = parseOptionalNumber(databaseCostProtection?.maxCreditsPerDay);
+  const requests = resolveCostProtectionCap(dbRequests, envRequestsParsed);
+  const credits = resolveCostProtectionCap(dbCredits, envCreditsParsed);
 
   return {
-    discoverySource: partial.discoverySource ?? defaults.discoverySource,
-    searchPriority: partial.searchPriority ?? defaults.searchPriority,
-    coverageThreshold: clampThreshold(
-      partial.coverageThreshold ?? defaults.coverageThreshold
-    ),
-    automaticEnrichment: partial.automaticEnrichment ?? defaults.automaticEnrichment,
-    dnaPolicy: {
-      generateAfterImport:
-        partial.dnaPolicy?.generateAfterImport ?? defaults.dnaPolicy.generateAfterImport,
-      updateAfterEnrichment:
-        partial.dnaPolicy?.updateAfterEnrichment ?? defaults.dnaPolicy.updateAfterEnrichment,
-      calculateCompleteness:
-        partial.dnaPolicy?.calculateCompleteness ?? defaults.dnaPolicy.calculateCompleteness,
+    loadedFrom,
+    maxRequestsPerDay: {
+      databaseRaw: dbRequests,
+      envRaw: envRaw("DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY"),
+      envParsed: envRequestsParsed,
+      effective: requests.effective,
+      source: requests.source,
     },
-    dataFreshnessDays:
-      partial.dataFreshnessDays === 7 ||
-      partial.dataFreshnessDays === 30 ||
-      partial.dataFreshnessDays === 90
-        ? partial.dataFreshnessDays
-        : partial.dataFreshnessDays === null
-          ? null
-          : defaults.dataFreshnessDays,
-    costProtection: {
-      maxRequestsPerDay: Math.max(
-        0,
-        partial.costProtection?.maxRequestsPerDay ?? defaults.costProtection.maxRequestsPerDay
-      ),
-      maxCreditsPerDay: Math.max(
-        0,
-        partial.costProtection?.maxCreditsPerDay ?? defaults.costProtection.maxCreditsPerDay
-      ),
-      confirmBeforeExceed:
-        partial.costProtection?.confirmBeforeExceed ??
-        defaults.costProtection.confirmBeforeExceed,
+    maxCreditsPerDay: {
+      databaseRaw: dbCredits,
+      envRaw: envRaw("DISCOVERY_APIFY_MAX_CREDITS_PER_DAY"),
+      envParsed: envCreditsParsed,
+      effective: credits.effective,
+      source: credits.source,
     },
+  };
+}
+
+export function mergeWithDefaults(
+  partial: Partial<DiscoveryControlSettings> | null | undefined
+): {
+  settings: DiscoveryControlSettings;
+  provenance: DiscoveryControlCostProtectionProvenance;
+} {
+  const defaults = getDefaultDiscoveryControlSettings();
+  if (!partial || typeof partial !== "object") {
+    return {
+      settings: defaults,
+      provenance: buildCostProtectionProvenance("env_defaults", null),
+    };
+  }
+
+  const provenance = buildCostProtectionProvenance("database", partial.costProtection);
+
+  return {
+    settings: {
+      discoverySource: partial.discoverySource ?? defaults.discoverySource,
+      searchPriority: partial.searchPriority ?? defaults.searchPriority,
+      coverageThreshold: clampThreshold(
+        partial.coverageThreshold ?? defaults.coverageThreshold
+      ),
+      automaticEnrichment: partial.automaticEnrichment ?? defaults.automaticEnrichment,
+      dnaPolicy: {
+        generateAfterImport:
+          partial.dnaPolicy?.generateAfterImport ?? defaults.dnaPolicy.generateAfterImport,
+        updateAfterEnrichment:
+          partial.dnaPolicy?.updateAfterEnrichment ??
+          defaults.dnaPolicy.updateAfterEnrichment,
+        calculateCompleteness:
+          partial.dnaPolicy?.calculateCompleteness ??
+          defaults.dnaPolicy.calculateCompleteness,
+      },
+      dataFreshnessDays:
+        partial.dataFreshnessDays === 7 ||
+        partial.dataFreshnessDays === 30 ||
+        partial.dataFreshnessDays === 90
+          ? partial.dataFreshnessDays
+          : partial.dataFreshnessDays === null
+            ? null
+            : defaults.dataFreshnessDays,
+      costProtection: {
+        maxRequestsPerDay: provenance.maxRequestsPerDay.effective,
+        maxCreditsPerDay: provenance.maxCreditsPerDay.effective,
+        confirmBeforeExceed:
+          partial.costProtection?.confirmBeforeExceed ??
+          defaults.costProtection.confirmBeforeExceed,
+      },
+    },
+    provenance,
   };
 }
 
@@ -94,21 +186,44 @@ export function getCachedDiscoveryControlSettings(): DiscoveryControlSettings {
   return cachedSettings ?? getDefaultDiscoveryControlSettings();
 }
 
+export function getCachedDiscoveryControlCostProtectionProvenance(): DiscoveryControlCostProtectionProvenance | null {
+  return cachedProvenance;
+}
+
 export function invalidateDiscoveryControlSettingsCache(): void {
   cachedSettings = null;
+  cachedProvenance = null;
   cacheLoadedAt = 0;
 }
 
 export async function getDiscoveryControlSettings(
   supabase?: SupabaseClient
 ): Promise<DiscoveryControlSettings> {
+  const loaded = await loadDiscoveryControlSettings(supabase);
+  return loaded.settings;
+}
+
+export async function loadDiscoveryControlSettings(
+  supabase?: SupabaseClient
+): Promise<{
+  settings: DiscoveryControlSettings;
+  provenance: DiscoveryControlCostProtectionProvenance;
+}> {
   if (!supabase) {
-    return getCachedDiscoveryControlSettings();
+    const provenance =
+      cachedProvenance ?? buildCostProtectionProvenance("env_defaults", null);
+    return {
+      settings: getCachedDiscoveryControlSettings(),
+      provenance,
+    };
   }
 
   const now = Date.now();
-  if (cachedSettings && now - cacheLoadedAt < CACHE_TTL_MS) {
-    return cachedSettings;
+  if (cachedSettings && cachedProvenance && now - cacheLoadedAt < CACHE_TTL_MS) {
+    return {
+      settings: cachedSettings,
+      provenance: { ...cachedProvenance, loadedFrom: "cache" },
+    };
   }
 
   try {
@@ -119,17 +234,26 @@ export async function getDiscoveryControlSettings(
       .maybeSingle();
 
     if (!error && data?.settings) {
-      cachedSettings = mergeWithDefaults(
+      const merged = mergeWithDefaults(
         data.settings as Partial<DiscoveryControlSettings>
       );
+      cachedSettings = merged.settings;
+      cachedProvenance = merged.provenance;
       cacheLoadedAt = now;
-      return cachedSettings;
+      return merged;
     }
   } catch {
     // Table may not be migrated yet — fall back to defaults.
   }
 
-  return getCachedDiscoveryControlSettings();
+  const fallback = {
+    settings: getDefaultDiscoveryControlSettings(),
+    provenance: buildCostProtectionProvenance("env_defaults", null),
+  };
+  cachedSettings = fallback.settings;
+  cachedProvenance = fallback.provenance;
+  cacheLoadedAt = now;
+  return fallback;
 }
 
 export async function updateDiscoveryControlSettings(
@@ -137,7 +261,7 @@ export async function updateDiscoveryControlSettings(
   settings: DiscoveryControlSettings,
   updatedBy: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const normalized = mergeWithDefaults(settings);
+  const normalized = mergeWithDefaults(settings).settings;
 
   const { error } = await supabase.from("discovery_control_settings").upsert(
     {
@@ -153,7 +277,9 @@ export async function updateDiscoveryControlSettings(
     return { ok: false, error: error.message };
   }
 
-  cachedSettings = normalized;
+  const loaded = mergeWithDefaults(normalized);
+  cachedSettings = loaded.settings;
+  cachedProvenance = loaded.provenance;
   cacheLoadedAt = Date.now();
   return { ok: true };
 }

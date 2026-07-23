@@ -4,7 +4,7 @@ import {
   areApifyBudgetCapsConfigured,
   resolveApifyBudgetCaps,
 } from "@/lib/discovery/control-center/apify-budget";
-import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
+import { loadDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
 import { getThinkwayEnvironment } from "@/lib/observability/environment";
 import { DISCOVERY_WORKER_QUEUES } from "@/lib/observability/discovery-queues";
 import { readWorkerHeartbeat } from "@/lib/observability/worker-heartbeat";
@@ -54,6 +54,24 @@ export type ApifyReadiness = {
   budgetConfigured: boolean;
   /** When false, live Refresh cannot call Apify actors (fail-closed). */
   liveAcquisitionAllowed: boolean;
+  /** Where each effective cap came from (database row vs env). */
+  sources: {
+    loadedFrom: string;
+    maxRequestsPerDay: {
+      source: string;
+      databaseRaw: number | null;
+      envRaw: string | null;
+      envParsed: number;
+      effective: number;
+    };
+    maxCreditsPerDay: {
+      source: string;
+      databaseRaw: number | null;
+      envRaw: string | null;
+      envParsed: number;
+      effective: number;
+    };
+  };
 };
 
 export type ReadinessReport = {
@@ -200,8 +218,8 @@ export async function buildReadinessReport(
     error: workerHeartbeat.error,
   };
 
-  const controlSettings = await getDiscoveryControlSettings(supabase);
-  const apifyCaps = resolveApifyBudgetCaps(controlSettings.costProtection);
+  const loaded = await loadDiscoveryControlSettings(supabase);
+  const apifyCaps = resolveApifyBudgetCaps(loaded.settings.costProtection);
   const budgetConfigured = areApifyBudgetCapsConfigured(apifyCaps);
   const tokenConfigured = Boolean(getMetricsCollectorEnv().apifyToken);
   const apify: ApifyReadiness = {
@@ -210,6 +228,23 @@ export async function buildReadinessReport(
     maxCreditsPerDay: apifyCaps.maxCreditsPerDay,
     budgetConfigured,
     liveAcquisitionAllowed: budgetConfigured && tokenConfigured,
+    sources: {
+      loadedFrom: loaded.provenance.loadedFrom,
+      maxRequestsPerDay: {
+        source: loaded.provenance.maxRequestsPerDay.source,
+        databaseRaw: loaded.provenance.maxRequestsPerDay.databaseRaw,
+        envRaw: loaded.provenance.maxRequestsPerDay.envRaw,
+        envParsed: loaded.provenance.maxRequestsPerDay.envParsed,
+        effective: loaded.provenance.maxRequestsPerDay.effective,
+      },
+      maxCreditsPerDay: {
+        source: loaded.provenance.maxCreditsPerDay.source,
+        databaseRaw: loaded.provenance.maxCreditsPerDay.databaseRaw,
+        envRaw: loaded.provenance.maxCreditsPerDay.envRaw,
+        envParsed: loaded.provenance.maxCreditsPerDay.envParsed,
+        effective: loaded.provenance.maxCreditsPerDay.effective,
+      },
+    },
   };
 
   return {

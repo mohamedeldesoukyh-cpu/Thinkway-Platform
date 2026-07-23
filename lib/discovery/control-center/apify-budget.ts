@@ -11,7 +11,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   getCachedDiscoveryControlSettings,
-  getDiscoveryControlSettings,
+  loadDiscoveryControlSettings,
+  type DiscoveryControlCostProtectionProvenance,
 } from "./discovery-control-service";
 import type { DiscoveryControlSettings, DiscoveryCostProtection } from "./discovery-control-types";
 
@@ -142,6 +143,34 @@ export function evaluateApifyBudgetConfiguration(
   };
 }
 
+function logApifyBudgetDecisionInputs(
+  source: string,
+  settings: DiscoveryControlSettings,
+  provenance: DiscoveryControlCostProtectionProvenance | null,
+  caps: ApifyBudgetCaps,
+  meta?: ApifyBudgetRejectMeta
+): void {
+  console.log(
+    "[apify-budget] before_decision",
+    JSON.stringify({
+      source,
+      // Exact sources for each cap (database row vs DISCOVERY_APIFY_MAX_* env).
+      provenance: provenance
+        ? {
+            loadedFrom: provenance.loadedFrom,
+            maxRequestsPerDay: provenance.maxRequestsPerDay,
+            maxCreditsPerDay: provenance.maxCreditsPerDay,
+          }
+        : null,
+      mergedCostProtection: settings.costProtection,
+      resolvedCaps: caps,
+      // normalizeApifyBudgetCap turns 0 → null; null fails closed.
+      willFailClosed: !areApifyBudgetCapsConfigured(caps),
+      ...(meta ?? {}),
+    })
+  );
+}
+
 /**
  * Full fail-closed budget gate: configured caps + current daily usage.
  * Logs every rejection with structured JSON.
@@ -155,15 +184,33 @@ export async function assertApifyAcquisitionBudget(
   }
 ): Promise<ApifyBudgetDecision> {
   const source = options?.source ?? "apify_acquisition";
-  const settings =
-    options?.settings ??
-    (supabase
-      ? await getDiscoveryControlSettings(supabase)
-      : getCachedDiscoveryControlSettings());
+  let settings = options?.settings;
+  let provenance: DiscoveryControlCostProtectionProvenance | null = null;
+
+  if (!settings) {
+    const loaded = await loadDiscoveryControlSettings(supabase ?? undefined);
+    settings = loaded.settings;
+    provenance = loaded.provenance;
+  }
+
+  const caps = resolveApifyBudgetCaps(settings.costProtection);
+  logApifyBudgetDecisionInputs(source, settings, provenance, caps, options?.meta);
 
   const configured = evaluateApifyBudgetConfiguration(settings);
   if (!configured.allowed) {
-    logApifyBudgetRejection(source, configured, options?.meta);
+    logApifyBudgetRejection(source, configured, {
+      ...(options?.meta ?? {}),
+      requestsSource: provenance?.maxRequestsPerDay.source ?? null,
+      creditsSource: provenance?.maxCreditsPerDay.source ?? null,
+      databaseRequestsRaw: provenance?.maxRequestsPerDay.databaseRaw ?? null,
+      databaseCreditsRaw: provenance?.maxCreditsPerDay.databaseRaw ?? null,
+      envRequestsRaw: provenance?.maxRequestsPerDay.envRaw ?? null,
+      envCreditsRaw: provenance?.maxCreditsPerDay.envRaw ?? null,
+      envRequestsParsed: provenance?.maxRequestsPerDay.envParsed ?? null,
+      envCreditsParsed: provenance?.maxCreditsPerDay.envParsed ?? null,
+      effectiveRequests: provenance?.maxRequestsPerDay.effective ?? settings.costProtection.maxRequestsPerDay,
+      effectiveCredits: provenance?.maxCreditsPerDay.effective ?? settings.costProtection.maxCreditsPerDay,
+    });
     return configured;
   }
 
