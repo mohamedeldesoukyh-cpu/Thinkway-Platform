@@ -64,11 +64,37 @@ export default async function QuotationDetailPage({ params }: PageProps) {
     });
   }
 
-  const [detail, formOptions, promoteOptions] = await Promise.all([
-    getQuotationDetail(quotationId),
-    getCachedQuotationFormOptions(),
-    getCachedPromoteWizardOptions(),
-  ]);
+  let detail: Awaited<ReturnType<typeof getQuotationDetail>>;
+  let formOptions: Awaited<ReturnType<typeof getCachedQuotationFormOptions>>;
+  let promoteOptions: Awaited<ReturnType<typeof getCachedPromoteWizardOptions>>;
+
+  try {
+    [detail, formOptions, promoteOptions] = await Promise.all([
+      getQuotationDetail(quotationId),
+      getCachedQuotationFormOptions().catch((error) => {
+        console.error("[quotations/detail] form options failed", error);
+        return { clients: [], brands: [], campaigns: [] };
+      }),
+      getCachedPromoteWizardOptions().catch((error) => {
+        console.error("[quotations/detail] promote options failed", error);
+        return {
+          groups: [],
+          clients: [],
+          brands: [],
+          categories: [],
+          subcategories: [],
+          owners: [],
+        };
+      }),
+    ]);
+  } catch (error) {
+    console.error("[quotations/detail] page load failed", {
+      quotationId,
+      routeKey,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 
   if (!detail) notFound();
 

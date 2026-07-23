@@ -47,12 +47,21 @@ function resolveQuotationSeedPlatformAccount(creator: UnifiedCreatorResult) {
   );
 }
 
-/** Line-level platform snapshot — null when creator has multiple linked accounts. */
+/**
+ * Line-level platform snapshot.
+ * Prefer the default metrics account when the creator has multiple linked platforms
+ * (null platforms break quotation workspace editors that call canonicalPlatformKey).
+ */
 export function resolveQuotationSeedPlatform(creator: UnifiedCreatorResult): string | null {
-  const linked = sortPlatformsStable(creator.platforms).map((account) =>
-    canonicalPlatformKey(account.platform)
-  );
-  return linked.length === 1 ? linked[0]! : null;
+  const metricsAccount = resolveQuotationSeedPlatformAccount(creator);
+  if (metricsAccount?.platform) {
+    const key = canonicalPlatformKey(metricsAccount.platform);
+    if (key) return key;
+  }
+  const linked = sortPlatformsStable(creator.platforms)
+    .map((account) => canonicalPlatformKey(account.platform))
+    .filter(Boolean);
+  return linked[0] ?? null;
 }
 
 export function buildQuotationSeedFromCreator(

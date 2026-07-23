@@ -400,17 +400,39 @@ export async function getQuotationDetail(
   ]);
 
   if (itemsResult.error) throw new Error(itemsResult.error.message);
-  if (revisionsResult.error) throw new Error(revisionsResult.error.message);
-  if (clientResult.error) throw new Error(clientResult.error.message);
-  if (brandResult.error) throw new Error(brandResult.error.message);
-  if (campaignResult.error) throw new Error(campaignResult.error.message);
-  if (shortlistResult.error) throw new Error(shortlistResult.error.message);
-  if (ownerResult.error) throw new Error(ownerResult.error.message);
+  // Related-entity lookups must not take down the quotation workspace after
+  // shortlist → quotation create (client/brand often null; shortlist optional).
+  if (revisionsResult.error) {
+    console.warn("[quotation-detail] revisions lookup failed", revisionsResult.error.message);
+  }
+  if (clientResult.error) {
+    console.warn("[quotation-detail] client lookup failed", clientResult.error.message);
+  }
+  if (brandResult.error) {
+    console.warn("[quotation-detail] brand lookup failed", brandResult.error.message);
+  }
+  if (campaignResult.error) {
+    console.warn("[quotation-detail] campaign lookup failed", campaignResult.error.message);
+  }
+  if (shortlistResult.error) {
+    console.warn("[quotation-detail] shortlist lookup failed", shortlistResult.error.message);
+  }
+  if (ownerResult.error) {
+    console.warn("[quotation-detail] owner lookup failed", ownerResult.error.message);
+  }
 
-  const items = await enrichQuotationItemsForWorkspace(
-    supabase,
-    ((itemsResult.data as Record<string, unknown>[]) ?? []).map(mapItem)
+  const mappedItems = ((itemsResult.data as Record<string, unknown>[]) ?? []).map(
+    mapItem
   );
+  let items = mappedItems;
+  try {
+    items = await enrichQuotationItemsForWorkspace(supabase, mappedItems);
+  } catch (error) {
+    console.warn(
+      "[quotation-detail] workspace enrich failed; rendering bare line data",
+      error instanceof Error ? error.message : error
+    );
+  }
 
   const revisions = ((revisionsResult.data as Record<string, unknown>[]) ?? [])
     .map(mapRevision)

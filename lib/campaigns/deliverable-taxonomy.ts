@@ -56,7 +56,10 @@ export const PLATFORM_DELIVERABLE_CODES: Record<string, string[]> = Object.fromE
  * Delegates to {@link resolveDiscoveryPlatform} so aliases + casing stay in one place.
  * Unrecognized values fall back to trimmed lowercase (never invent a SocialPlatform).
  */
-export function canonicalPlatformKey(platform: string): string {
+export function canonicalPlatformKey(
+  platform: string | null | undefined
+): string {
+  if (platform == null) return "";
   const resolved = resolveDiscoveryPlatform(platform);
   if (resolved) return resolved;
   return platform.trim().toLowerCase();

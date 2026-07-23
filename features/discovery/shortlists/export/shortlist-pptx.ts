@@ -606,10 +606,8 @@ async function addCreatorSlide(
     ["Engagement", group.engagementRate],
     ["Tier", group.tier],
     ["Market", group.country],
-    ["Match", group.matchScore],
-    ["Brand safety", group.brandSafety],
   ];
-  const metricW = TW_CONTENT_W / 6 - 0.08;
+  const metricW = TW_CONTENT_W / 4 - 0.08;
   const metricY = pitch ? 3.55 : 2.15;
   metrics.forEach(([label, value], metricIndex) => {
     const x = TW_MARGIN_X + metricIndex * (metricW + TW_GAP_SM);

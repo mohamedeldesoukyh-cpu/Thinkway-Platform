@@ -133,6 +133,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.equal(resolveQuotationTemplate("lump-sum"), "lump-sum");
   assert.equal(resolveQuotationTemplate("showcase"), "showcase");
   assert.equal(resolveQuotationTemplate("showcase-lump-sum"), "showcase-lump-sum");
+  assert.equal(resolveQuotationTemplate("pitch"), "pitch");
+  assert.equal(resolveQuotationTemplate("pitch-lump-sum"), "pitch-lump-sum");
   assert.equal(resolveQuotationTemplate("unknown"), "detailed");
 }
 

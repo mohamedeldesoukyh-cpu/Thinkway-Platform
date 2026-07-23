@@ -79,10 +79,18 @@ export function quotationItemsExportMetricsReady(items: QuotationItemRow[]): boo
 }
 
 export function quotationItemsFullyEnrichedForExport(items: QuotationItemRow[]): boolean {
+  const viewsReady = items.every((item) => {
+    const hasCreatorRef = Boolean(
+      item.influencer_id || item.profile_id || item.unified_id || item.handle?.trim()
+    );
+    if (!hasCreatorRef) return true;
+    return (item as QuotationExportItem).avg_views !== undefined;
+  });
   return (
     quotationItemsAvatarEnriched(items) &&
     quotationItemsCategoriesEnriched(items) &&
-    quotationItemsExportMetricsReady(items)
+    quotationItemsExportMetricsReady(items) &&
+    viewsReady
   );
 }
 

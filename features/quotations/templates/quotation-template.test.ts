@@ -220,6 +220,36 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 }
 
 {
+  const pitchDoc = buildQuotationDocument(mockDetail(), { template: "pitch" });
+  const pitchPayload = buildQuotationTemplatePayload(pitchDoc);
+  assert.equal(pitchPayload.flags.pitchCreators, true);
+  assert.equal(pitchPayload.flags.includeAcceptance, false);
+  assert.equal(pitchPayload.flags.includeTerms, false);
+  assert.equal(pitchPayload.showcaseCreators[0]?.views, "—");
+  const pitchHtml = buildQuotationTemplateHtml(pitchDoc);
+  assert.ok(pitchHtml.includes("Pitch Presentation"));
+  assert.ok(pitchHtml.includes("showcase-metrics-table"));
+  assert.ok(pitchHtml.includes(">Views<"));
+  assert.ok(!pitchHtml.includes("Acceptance"));
+}
+
+{
+  const pitchLumpDoc = buildQuotationDocument(mockDetail(), {
+    template: "pitch-lump-sum",
+  });
+  const pitchLumpPayload = buildQuotationTemplatePayload(pitchLumpDoc);
+  assert.equal(pitchLumpPayload.flags.pitchCreators, true);
+  assert.equal(pitchLumpPayload.flags.showCommercialSummary, true);
+  assert.equal(pitchLumpPayload.flags.pricing, "lump_sum");
+  assert.equal(pitchLumpPayload.flags.showFees, false);
+  assert.equal(pitchLumpPayload.flags.includeAcceptance, false);
+  const pitchLumpHtml = buildQuotationTemplateHtml(pitchLumpDoc);
+  assert.ok(pitchLumpHtml.includes("Client Quotation · Lump Sum"));
+  assert.ok(pitchLumpHtml.includes("commercial-page"));
+  assert.ok(!pitchLumpHtml.includes("Acceptance"));
+}
+
+{
   assert.equal(sampleFixture.quotation.number, "QT-2026-0012");
   assert.equal(sampleFixture.flags.itemizedPricing, true);
   assert.equal(sampleFixture.commercial.sectionNo, "02");

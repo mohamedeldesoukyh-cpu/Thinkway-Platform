@@ -54,6 +54,10 @@ function quotationTemplateLabel(
       return "Showcase";
     case "showcase-lump-sum":
       return "Showcase Lump Sum";
+    case "pitch":
+      return "Pitch presentation";
+    case "pitch-lump-sum":
+      return "Pitch Lump Sum";
     default:
       return "Detailed";
   }

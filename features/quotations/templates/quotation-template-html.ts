@@ -241,7 +241,10 @@ function renderShowcaseCreatorPages(
           const feeCell = payload.flags.showFees
             ? `<td class="r">${esc(row.grossFee ?? "—")}</td>`
             : "";
-          return `<tr><td class="name">${esc(row.option)}</td><td>${esc(row.service)}</td><td>${esc(row.platform)}</td><td>${esc(row.type)}</td>${feeCell}</tr>`;
+          const platformCell = row.platformIcons.length
+            ? `<td class="platform-cell">${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platform)}</span></td>`
+            : `<td class="platform-cell">${esc(row.platform)}</td>`;
+          return `<tr><td class="name">${esc(row.option)}</td><td>${esc(row.service)}</td>${platformCell}<td>${esc(row.type)}</td>${feeCell}</tr>`;
         })
         .join("");
 
@@ -256,22 +259,41 @@ function renderShowcaseCreatorPages(
         ? `page showcase-creator-page showcase-creator-slide showcase-slide avoid-break${pitchPageClass}`
         : `page showcase-creator-page${pitchPageClass}`;
 
+      const creatorPlatformIcons = renderQuotationPlatformIconsHtml(creator.platformIcons);
+      const metricsTable = pitch
+        ? `<div class="fees showcase-metrics-table">
+      <table class="data-table">
+        <thead><tr><th class="r">Followers</th><th class="r">Engagement</th><th class="r">Views</th><th>Tier</th><th>Categories</th><th>Platforms</th></tr></thead>
+        <tbody><tr>
+          <td class="r">${esc(creator.followers)}</td>
+          <td class="r">${esc(creator.engagement)}</td>
+          <td class="r">${esc(creator.views)}</td>
+          <td><span class="pill">${esc(creator.tier)}</span></td>
+          <td class="categories-cell">${esc(creator.categories)}</td>
+          <td class="platform-cell">${creatorPlatformIcons || esc(creator.platforms)}</td>
+        </tr></tbody>
+      </table>
+    </div>`
+        : `<div class="sc-stats showcase-kpi-row">
+      <div class="sc-stat showcase-kpi"><p class="l">Followers</p><p class="v">${esc(creator.followers)}</p></div>
+      <div class="sc-stat showcase-kpi"><p class="l">Engagement</p><p class="v">${esc(creator.engagement)}</p></div>
+      <div class="sc-stat showcase-kpi"><p class="l">Views</p><p class="v">${esc(creator.views)}</p></div>
+      <div class="sc-stat showcase-kpi"><p class="l">Tier</p><p class="v">${esc(creator.tier)}</p></div>
+      <div class="sc-stat showcase-kpi"><p class="l">Categories</p><p class="v" style="font-size:13px;">${esc(creator.categories)}</p></div>
+    </div>`;
+
       return `<section class="${pageClass}"${forPdf ? showcasePdfSlideStyle(slideScale) : ""}>
   <div class="pad showcase-creator-sheet">
     <div class="sec-row"><span class="sec-badge">${esc(creator.sectionNo)}</span><span class="lbl">Creator ${creator.index} of ${esc(payload.totals.creatorCount)}</span></div>
     <div class="sc-top">
-      ${profileLinkStart}${avatarHtml}<div>
-        <p class="sc-name showcase-name">${esc(creator.name)}</p>
-        <p class="sc-handle showcase-handle">${esc(creator.handle)}</p>
-      </div>${profileLinkEnd}
+      ${profileLinkStart}${avatarHtml}${profileLinkEnd}
+      <div class="sc-identity">
+        ${profileLinkStart}<p class="sc-name showcase-name">${esc(creator.name)}</p>
+        <p class="sc-handle showcase-handle">${esc(creator.handle)}</p>${profileLinkEnd}
+        ${pitch ? metricsTable : ""}
+      </div>
     </div>
-    <div class="sc-stats showcase-kpi-row">
-      <div class="sc-stat showcase-kpi"><p class="l">Followers</p><p class="v">${esc(creator.followers)}</p></div>
-      <div class="sc-stat showcase-kpi"><p class="l">Engagement</p><p class="v">${esc(creator.engagement)}</p></div>
-      <div class="sc-stat showcase-kpi"><p class="l">Tier</p><p class="v">${esc(creator.tier)}</p></div>
-      <div class="sc-stat showcase-kpi"><p class="l">Categories</p><p class="v" style="font-size:13px;">${esc(creator.categories)}</p></div>
-      <div class="sc-stat showcase-kpi"><p class="l">Platforms</p><p class="v" style="font-size:13px;">${esc(creator.platforms)}</p></div>
-    </div>
+    ${pitch ? "" : metricsTable}
     <p class="sc-sub showcase-pubs-title">Recent publications</p>
     ${pubsHtml}
     <p class="sc-sub showcase-deliverables-title">Proposed deliverables</p>
@@ -290,10 +312,12 @@ function renderShowcaseCreatorPages(
 
 function renderRosterPage(payload: QuotationTemplatePayload): string {
   const rows = payload.roster.rows
-    .map(
-      (row) =>
-        `<tr><td class="name">${esc(row.handle)}</td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td><span class="pill">${esc(row.tier)}</span></td><td class="categories-cell">${esc(row.categories)}</td><td>${esc(row.platforms)}</td></tr>`
-    )
+    .map((row) => {
+      const platformCell = row.platformIcons.length
+        ? `${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platforms)}</span>`
+        : esc(row.platforms);
+      return `<tr><td class="name">${esc(row.handle)}</td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td class="r">${esc(row.views)}</td><td><span class="pill">${esc(row.tier)}</span></td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
+    })
     .join("");
 
   return `<section class="page roster-page">
@@ -301,8 +325,8 @@ function renderRosterPage(payload: QuotationTemplatePayload): string {
     <div class="sec-row"><span class="sec-badge">${esc(payload.roster.sectionNo)}</span><span class="lbl">Creator roster (${esc(payload.totals.creatorCount)})</span></div>
     <h2 class="sec-title">At a glance</h2>
     <div class="fees">
-      <table>
-        <thead><tr><th>Creator</th><th class="r">Followers</th><th class="r">ER</th><th>Tier</th><th>Categories</th><th>Platforms</th></tr></thead>
+      <table class="data-table">
+        <thead><tr><th>Creator</th><th class="r">Followers</th><th class="r">ER</th><th class="r">Views</th><th>Tier</th><th>Categories</th><th>Platforms</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>

@@ -61,6 +61,17 @@ function resolveTemplateFlags(template: QuotationTemplateVariant): QuotationTemp
         includeTerms: false,
         includeAcceptance: false,
       };
+    case "pitch-lump-sum":
+      return {
+        showcaseCreators: true,
+        pitchCreators: true,
+        showCommercialSummary: true,
+        pricing: "lump_sum",
+        itemizedPricing: false,
+        showFees: false,
+        includeTerms: false,
+        includeAcceptance: false,
+      };
     case "showcase-lump-sum":
       return {
         showcaseCreators: true,
@@ -101,14 +112,19 @@ function formatPitchQuotationTitle(name: string): string {
 }
 
 function coverKicker(template: QuotationTemplateVariant): string {
-  if (template === "lump-sum") return "Client Quotation · Lump Sum";
+  if (template === "lump-sum" || template === "pitch-lump-sum") {
+    return "Client Quotation · Lump Sum";
+  }
   if (isPitchTemplate(template)) return "Client Quotation · Pitch Presentation";
   if (isShowcaseTemplate(template)) return "Client Quotation · Showcase";
   return "Client Quotation";
 }
 
 function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["stat3"] {
-  if (doc.template === "showcase" || doc.template === "pitch") {
+  if (
+    (isShowcaseTemplate(doc.template) || isPitchTemplate(doc.template)) &&
+    !isLumpSumPricingTemplate(doc.template)
+  ) {
     return {
       label: "Est. Engagement",
       value: doc.summary.estimatedEngagement,
@@ -287,9 +303,17 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
       profileUrl: group.profileUrl,
       followers: group.followers,
       engagement: group.engagementRate,
+      views: group.views,
       tier: group.rows[0]?.tier ?? "—",
       categories: group.categories.length ? group.categories.join(", ") : "—",
       platforms: platforms.size ? [...platforms].join(", ") : "—",
+      platformIcons: allPlatforms
+        ? []
+        : [
+            ...new Set(
+              group.rows.flatMap((row) => (row.allPlatforms ? [] : row.platformIcons))
+            ),
+          ],
       publications: (group.publicationShots ?? [])
         .map((shot) => shot.imageUrl)
         .filter(Boolean),
@@ -304,6 +328,7 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
             ? `Collap package · ${row.serviceDescription}`
             : row.serviceDescription,
           platform: platformLabelFromRow(row),
+          platformIcons: row.allPlatforms ? [] : row.platformIcons,
           type: row.type,
           ...(flags.showFees ? { grossFee: grossFeeAmount(row) } : {}),
         })),
@@ -329,9 +354,17 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
           : group.creator,
       followers: group.followers,
       er: group.engagementRate,
+      views: group.views,
       tier: group.rows[0]?.tier ?? "—",
       categories: group.categories.length ? group.categories.join(", ") : "—",
       platforms: allPlatforms ? "All platforms" : platforms.size ? [...platforms].join(", ") : "—",
+      platformIcons: allPlatforms
+        ? []
+        : [
+            ...new Set(
+              group.rows.flatMap((row) => (row.allPlatforms ? [] : row.platformIcons))
+            ),
+          ],
     };
   });
 

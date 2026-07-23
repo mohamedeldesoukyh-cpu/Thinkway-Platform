@@ -265,6 +265,29 @@ function resolveLineEngagementRate(
   );
 }
 
+function resolveLineAvgViews(
+  item: QuotationItemRow,
+  creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>
+): number | null {
+  const existing = (item as QuotationItemRow & { avg_views?: number | null }).avg_views;
+  if (isPositiveNumericMetric(existing)) return existing;
+
+  const platformAccount = resolveLinePlatformAccount(item, creator);
+  if (isPositiveNumericMetric(platformAccount?.avg_views)) {
+    return platformAccount.avg_views;
+  }
+
+  let best: number | null = null;
+  for (const account of creator.platforms) {
+    if (!isPositiveNumericMetric(account.avg_views)) continue;
+    if (best == null || account.avg_views > best) best = account.avg_views;
+  }
+  if (best != null) return best;
+
+  const metric = creator.metrics?.avg_views?.value;
+  return isPositiveNumericMetric(metric) ? metric : null;
+}
+
 function resolveLineCreatorCategories(
   item: QuotationItemRow,
   creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>
@@ -291,6 +314,7 @@ function resolveLineAvatarFields(
   platform: string | null;
   followers: number | null;
   engagement_rate: number | null;
+  avg_views: number | null;
   country_code: string | null;
   creator_profile_source: CreatorProfileSource;
   creator_categories: string[];
@@ -310,6 +334,7 @@ function resolveLineAvatarFields(
     platform: resolvedPlatform,
     followers: resolveLineFollowers(item, creator),
     engagement_rate: resolveLineEngagementRate(item, creator),
+    avg_views: resolveLineAvgViews(item, creator),
     country_code:
       creatorProfileSource.countryCode ??
       normalizeCountryCode(item.country_code) ??
@@ -648,6 +673,7 @@ export async function enrichQuotationItemsWithCreatorAvatars(
         profile_url:
           dnaProfileSource?.profile_url ??
           fallbackAvatarFields(item).profile_url,
+        avg_views: (item as QuotationItemRow & { avg_views?: number | null }).avg_views ?? null,
         creator_profile_source: dnaProfileSource,
         creator_categories: resolveQuotationCreatorDisplayCategories({
           itemCategories: item.creator_categories,

@@ -203,8 +203,6 @@ function renderShowcaseCreatorPages(
     <div class="pubs showcase-pubs-grid">${pubsHtml}</div>
     <p class="sc-sub">Shortlist context</p>
     <div class="sl-context-grid">
-      <div class="sl-context-card"><p class="l">Match score</p><p class="v">${esc(creator.matchScore)}</p></div>
-      <div class="sl-context-card"><p class="l">Brand safety</p><p class="v">${esc(creator.brandSafety)}</p></div>
       <div class="sl-context-card"><p class="l">Review status</p><p class="v">${esc(creator.status)}</p></div>
       <div class="sl-context-card"><p class="l">Notes</p><p class="v">${esc(creator.notes)}</p></div>
     </div>
@@ -256,7 +254,6 @@ function renderRosterPage(
           <td class="r">${esc(row.er)}</td>
           <td><span class="pill">${esc(row.tier ?? "—")}</span></td>
           <td class="categories-cell">${esc(row.categories ?? "—")}</td>
-          <td class="r">${esc(row.matchScore ?? "—")}</td>
         </tr>`;
       }
 
@@ -275,7 +272,7 @@ function renderRosterPage(
   if (payload.flags.includeInternalFields) {
     tableHead = `<tr><th class="num">#</th><th>Creator</th><th>Platform</th><th class="r">Followers</th><th class="r">ER</th><th>Country</th><th>Interests</th><th>Brand safety</th><th>Status</th><th>Notes</th><th class="r">Match</th></tr>`;
   } else if (payload.flags.showcaseCreators) {
-    tableHead = `<tr><th>Creator</th><th class="r">Followers</th><th class="r">ER</th><th>Tier</th><th>Categories</th><th class="r">Match</th></tr>`;
+    tableHead = `<tr><th>Creator</th><th class="r">Followers</th><th class="r">ER</th><th>Tier</th><th>Categories</th></tr>`;
   } else {
     tableHead = `<tr><th class="num">#</th><th>Creator</th><th>Platform</th><th class="r">Followers</th><th class="r">ER</th><th>Country</th></tr>`;
   }

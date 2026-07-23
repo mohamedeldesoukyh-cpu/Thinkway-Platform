@@ -3,7 +3,8 @@ export type QuotationTemplateVariant =
   | "lump-sum"
   | "showcase"
   | "showcase-lump-sum"
-  | "pitch";
+  | "pitch"
+  | "pitch-lump-sum";
 
 export function resolveQuotationTemplate(
   raw: string | null | undefined
@@ -12,6 +13,7 @@ export function resolveQuotationTemplate(
   if (raw === "showcase") return "showcase";
   if (raw === "showcase-lump-sum") return "showcase-lump-sum";
   if (raw === "pitch") return "pitch";
+  if (raw === "pitch-lump-sum") return "pitch-lump-sum";
   return "detailed";
 }
 
@@ -22,12 +24,13 @@ export function isCreatorDeckTemplate(
   return (
     template === "showcase" ||
     template === "showcase-lump-sum" ||
-    template === "pitch"
+    template === "pitch" ||
+    template === "pitch-lump-sum"
   );
 }
 
 export function isPitchTemplate(template: QuotationTemplateVariant): boolean {
-  return template === "pitch";
+  return template === "pitch" || template === "pitch-lump-sum";
 }
 
 /** Showcase creator-deck layouts (with or without lump-sum pricing). */
@@ -41,7 +44,11 @@ export function isShowcaseTemplate(
 export function isLumpSumPricingTemplate(
   template: QuotationTemplateVariant
 ): boolean {
-  return template === "lump-sum" || template === "showcase-lump-sum";
+  return (
+    template === "lump-sum" ||
+    template === "showcase-lump-sum" ||
+    template === "pitch-lump-sum"
+  );
 }
 
 export const QUOTATION_TEMPLATE_OPTIONS: Array<{
@@ -50,6 +57,11 @@ export const QUOTATION_TEMPLATE_OPTIONS: Array<{
   hint: string;
 }> = [
   { id: "pitch", label: "Pitch presentation", hint: "Large avatars · deck" },
+  {
+    id: "pitch-lump-sum",
+    label: "Pitch Lump Sum",
+    hint: "Pitch deck · total",
+  },
   { id: "detailed", label: "Detailed", hint: "Line items" },
   { id: "lump-sum", label: "Lump sum", hint: "Summary" },
   { id: "showcase", label: "Showcase", hint: "Creator deck" },

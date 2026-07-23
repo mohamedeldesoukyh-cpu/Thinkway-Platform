@@ -66,6 +66,7 @@ import {
 {
   assert.equal(resolveQuotationTemplate("showcase"), "showcase");
   assert.equal(resolveQuotationTemplate("pitch"), "pitch");
+  assert.equal(resolveQuotationTemplate("pitch-lump-sum"), "pitch-lump-sum");
   assert.equal(resolveQuotationTemplate("showcase-lump-sum"), "showcase-lump-sum");
   assert.equal(
     resolveQuotationTemplate(new URLSearchParams("template=showcase").get("template")),

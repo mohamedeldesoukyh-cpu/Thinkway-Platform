@@ -16,6 +16,10 @@ import {
   configureThinkwayPptxLayout,
 } from "@/lib/export/thinkway-deck-pptx";
 import {
+  getReportPlatformIconDataUri,
+  getReportPlatformIconTitle,
+} from "@/lib/performance/report/report-platform-icons";
+import {
   detectImageContentType,
   fetchImageBuffer,
 } from "@/lib/performance/screenshot-capture/storage";
@@ -72,9 +76,69 @@ const SHOWCASE_PUB_LIMIT = 4;
 const MIX_FEED_COLS = 6;
 const MIX_FEED_THUMB_SIZE = 0.74;
 const CREATOR_DELIVERABLES_PER_SLIDE = 7;
+const PITCH_DELIVERABLES_PER_SLIDE = 5;
+const PITCH_AVATAR_SIZE = 1.55;
+const PITCH_PUB_THUMB_SIZE = 0.88;
 /** Matches reference deck pagination (11 fee rows before totals spill). */
 const COMMERCIAL_ROWS_PER_SLIDE = 11;
 const FOOTER_LEFT = "Thinkway · hello@thinkwaymedia.com";
+
+function platformIconsLabel(platforms: string[]): string {
+  if (!platforms.length) return "—";
+  return platforms.map((platform) => getReportPlatformIconTitle(platform)).join(", ");
+}
+
+function addPlatformIconBadges(
+  slide: Slide,
+  platforms: string[],
+  x: number,
+  y: number,
+  maxIcons = 4
+): number {
+  const unique = [...new Set(platforms.map((p) => p.trim()).filter(Boolean))].slice(0, maxIcons);
+  const size = 0.18;
+  const gap = 0.04;
+  unique.forEach((platform, index) => {
+    const iconX = x + index * (size + gap);
+    const dataUri = getReportPlatformIconDataUri(platform);
+    if (dataUri?.startsWith("data:")) {
+      const payload = dataUri.slice("data:".length);
+      const marker = ";base64,";
+      const markerIndex = payload.indexOf(marker);
+      if (markerIndex >= 0) {
+        slide.addImage({
+          data: `${payload.slice(0, markerIndex)};base64,${payload.slice(markerIndex + marker.length)}`,
+          x: iconX,
+          y,
+          w: size,
+          h: size,
+        });
+        return;
+      }
+    }
+    slide.addShape("ellipse", {
+      x: iconX,
+      y,
+      w: size,
+      h: size,
+      fill: { color: SOFT_BLUE },
+      line: { type: "none" },
+    });
+    slide.addText(getReportPlatformIconTitle(platform).slice(0, 2).toUpperCase(), {
+      x: iconX,
+      y,
+      w: size,
+      h: size,
+      fontFace: FONT_UI,
+      fontSize: 6,
+      bold: true,
+      color: BLUE,
+      align: "center",
+      valign: "middle",
+    });
+  });
+  return unique.length * (size + gap);
+}
 
 type PptxGen = InstanceType<typeof import("pptxgenjs").default>;
 type Slide = ReturnType<PptxGen["addSlide"]>;
@@ -904,20 +968,24 @@ function addCreatorDeliverablesTable(
     : ["Option", "Service description", "Platform", "Type"];
 
   const tableFontSize = creatorTableFontSize(deliverables.length);
+  const colW = showFees ? [1.1, 4.5, 2.0, 1.9, 2.43] : [1.2, 5.3, 2.4, 2.93];
   const tableRows: Array<Array<{ text: string; options?: Record<string, unknown> }>> = [
     header.map((cell) => ({
       text: cell,
       options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } },
     })),
     ...deliverables.map((row) => {
-      const cells = [row.option, row.service, row.platform, row.type];
+      const platformText = row.platformIcons.length
+        ? `     ${platformIconsLabel(row.platformIcons)}`
+        : row.platform;
+      const cells = [row.option, row.service, platformText, row.type];
       if (showFees) cells.push(row.grossFee ?? "-");
       return cells.map((cell) => ({
         text: cell,
         options: {
           fontSize: tableFontSize,
           color: TITLE_INK,
-          valign: "top",
+          valign: "middle",
         },
       }));
     }),
@@ -928,14 +996,79 @@ function addCreatorDeliverablesTable(
     x: MARGIN_X,
     y,
     w: CONTENT_W,
-    colW: showFees ? [1.1, 4.8, 1.7, 1.9, 2.43] : [1.2, 5.6, 2.2, 2.93],
+    colW,
     border: { type: "solid", color: LAVENDER, pt: 1 },
     fontFace: FONT_BODY,
     autoPage: false,
     rowH,
   });
 
-  return y + 0.26 + deliverables.length * rowH + 0.28;
+  const platformColX = MARGIN_X + colW[0]! + colW[1]! + 0.08;
+  const headerH = 0.26;
+  deliverables.forEach((row, index) => {
+    if (!row.platformIcons.length) return;
+    addPlatformIconBadges(
+      slide,
+      row.platformIcons,
+      platformColX,
+      y + headerH + index * rowH + Math.max((rowH - 0.18) / 2, 0.04)
+    );
+  });
+
+  return y + headerH + deliverables.length * rowH + 0.2;
+}
+
+function addPitchCreatorMetricsTable(
+  slide: Slide,
+  creator: ReturnType<typeof buildQuotationTemplatePayload>["showcaseCreators"][number],
+  x: number,
+  y: number,
+  w: number
+): number {
+  const rowH = 0.3;
+  const colW = [w * 0.16, w * 0.16, w * 0.14, w * 0.14, w * 0.22, w * 0.18];
+  slide.addTable(
+    [
+      [
+        { text: "Followers", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
+        { text: "Engagement", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
+        { text: "Views", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
+        { text: "Tier", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
+        { text: "Categories", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
+        { text: "Platforms", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
+      ],
+      [
+        { text: creator.followers, options: { fontSize: 10, bold: true, color: TITLE_INK } },
+        { text: creator.engagement, options: { fontSize: 10, bold: true, color: TITLE_INK } },
+        { text: creator.views, options: { fontSize: 10, bold: true, color: TITLE_INK } },
+        { text: creator.tier, options: { fontSize: 10, color: TITLE_INK } },
+        { text: creator.categories, options: { fontSize: 9, color: TITLE_INK } },
+        {
+          text: creator.platformIcons.length
+            ? `     ${platformIconsLabel(creator.platformIcons)}`
+            : creator.platforms,
+          options: { fontSize: 9, color: TITLE_INK },
+        },
+      ],
+    ],
+    {
+      x,
+      y,
+      w,
+      colW,
+      border: { type: "solid", color: LAVENDER, pt: 1 },
+      fontFace: FONT_BODY,
+      autoPage: false,
+      rowH,
+    }
+  );
+
+  if (creator.platformIcons.length) {
+    const platformsColX = x + colW.slice(0, 5).reduce((sum, value) => sum + value, 0) + 0.06;
+    addPlatformIconBadges(slide, creator.platformIcons, platformsColX, y + rowH + 0.06);
+  }
+
+  return y + rowH * 2 + 0.12;
 }
 
 async function addCreatorSlide(
@@ -949,15 +1082,20 @@ async function addCreatorSlide(
   const group = doc.creatorGroups[index];
   if (!creator || !group) return;
 
+  const pitch = isPitchTemplate(doc.template);
   const showFees = payload.flags.showFees;
+  const perSlide = pitch ? PITCH_DELIVERABLES_PER_SLIDE : CREATOR_DELIVERABLES_PER_SLIDE;
   const deliverableChunks: (typeof creator.deliverables)[] = [];
-  for (let offset = 0; offset < creator.deliverables.length; offset += CREATOR_DELIVERABLES_PER_SLIDE) {
-    deliverableChunks.push(creator.deliverables.slice(offset, offset + CREATOR_DELIVERABLES_PER_SLIDE));
+  for (let offset = 0; offset < creator.deliverables.length; offset += perSlide) {
+    deliverableChunks.push(creator.deliverables.slice(offset, offset + perSlide));
   }
   if (!deliverableChunks.length) deliverableChunks.push([]);
 
-  const pubThumbSize =
-    creator.deliverables.length > 5 ? Math.min(PUB_THUMB_SIZE, 1.1) : PUB_THUMB_SIZE;
+  const pubThumbSize = pitch
+    ? PITCH_PUB_THUMB_SIZE
+    : creator.deliverables.length > 5
+      ? Math.min(PUB_THUMB_SIZE, 1.1)
+      : PUB_THUMB_SIZE;
 
   for (let chunkIndex = 0; chunkIndex < deliverableChunks.length; chunkIndex++) {
     const deliverables = deliverableChunks[chunkIndex]!;
@@ -982,100 +1120,113 @@ async function addCreatorSlide(
       }
     );
 
-    let pubsY = 1.9;
+    let contentY = 1.9;
     if (!continued) {
-      const pitch = isPitchTemplate(doc.template);
-      const avatarSize = pitch ? 2.2 : 0.64;
+      const avatarSize = pitch ? PITCH_AVATAR_SIZE : 0.64;
+      const avatarY = 1.3;
 
       await addThinkwayCreatorAvatar(slide, {
         avatarUrl: group.avatarUrl,
         initials: creator.initials,
         x: MARGIN_X,
-        y: pitch ? 1.28 : 1.35,
+        y: avatarY,
         size: avatarSize,
         pitch,
       });
 
-      const nameX = MARGIN_X + avatarSize + (pitch ? 0.32 : 0.14);
+      const nameX = MARGIN_X + avatarSize + (pitch ? 0.28 : 0.14);
+      const identityW = CONTENT_W - avatarSize - (pitch ? 0.28 : 0.14);
       slide.addText(creator.name, {
         x: nameX,
-        y: pitch ? 1.35 : 1.35,
-        w: 8,
-        h: 0.36,
+        y: avatarY,
+        w: identityW,
+        h: 0.34,
         fontFace: FONT_UI,
-        fontSize: pitch ? 24 : 22,
+        fontSize: pitch ? 22 : 22,
         bold: true,
         color: TITLE_INK,
       });
       slide.addText(creator.handle, {
         x: nameX,
-        y: pitch ? 1.78 : 1.72,
-        w: 8,
+        y: avatarY + 0.34,
+        w: identityW,
         h: 0.18,
         fontFace: FONT_BODY,
-        fontSize: pitch ? 12 : 11,
+        fontSize: pitch ? 11 : 11,
         color: MUTED,
       });
 
-      const metrics = [
-        ["Followers", creator.followers],
-        ["Engagement", creator.engagement],
-        ["Tier", creator.tier],
-        ["Categories", creator.categories],
-        ["Platforms", creator.platforms],
-      ];
-      const metricW = CONTENT_W / 5 - 0.08;
-      const metricY = pitch ? 3.55 : 2.15;
-      metrics.forEach(([label, value], metricIndex) => {
-        const x = MARGIN_X + metricIndex * (metricW + GAP_SM);
-        slide.addShape("roundRect", {
-          x,
-          y: metricY,
-          w: metricW,
-          h: 0.64,
-          fill: { color: LAVENDER },
-          line: { color: LAV_LINE, width: 1 },
-          rectRadius: 0.08,
+      if (pitch) {
+        contentY = addPitchCreatorMetricsTable(
+          slide,
+          creator,
+          nameX,
+          avatarY + 0.58,
+          identityW
+        );
+        contentY = Math.max(contentY, avatarY + avatarSize + GAP_MD);
+      } else {
+        const metrics = [
+          ["Followers", creator.followers],
+          ["Engagement", creator.engagement],
+          ["Views", creator.views],
+          ["Tier", creator.tier],
+          ["Categories", creator.categories],
+        ];
+        const metricW = CONTENT_W / 5 - 0.08;
+        const metricY = 2.15;
+        metrics.forEach(([label, value], metricIndex) => {
+          const x = MARGIN_X + metricIndex * (metricW + GAP_SM);
+          slide.addShape("roundRect", {
+            x,
+            y: metricY,
+            w: metricW,
+            h: 0.64,
+            fill: { color: LAVENDER },
+            line: { color: LAV_LINE, width: 1 },
+            rectRadius: 0.08,
+          });
+          slide.addText(label.toUpperCase(), {
+            x: x + 0.08,
+            y: metricY + 0.08,
+            w: metricW - 0.16,
+            h: 0.14,
+            fontFace: FONT_UI,
+            fontSize: 8,
+            color: MUTED,
+            charSpacing: 0.8,
+          });
+          slide.addText(value, {
+            x: x + 0.08,
+            y: metricY + 0.26,
+            w: metricW - 0.16,
+            h: 0.3,
+            fontFace: FONT_BODY,
+            fontSize: 11,
+            bold: true,
+            color: TITLE_INK,
+          });
         });
-        slide.addText(label.toUpperCase(), {
-          x: x + 0.08,
-          y: metricY + 0.08,
-          w: metricW - 0.16,
-          h: 0.14,
-          fontFace: FONT_UI,
-          fontSize: 8,
-          color: MUTED,
-          charSpacing: 0.8,
-        });
-        slide.addText(value, {
-          x: x + 0.08,
-          y: metricY + 0.26,
-          w: metricW - 0.16,
-          h: 0.3,
-          fontFace: FONT_BODY,
-          fontSize: 11,
-          bold: true,
-          color: TITLE_INK,
-        });
-      });
+        contentY = metricY + 0.74;
+      }
 
-      pubsY = await addPublicationThumbs(
+      contentY = await addPublicationThumbs(
         slide,
-        group.publicationShots.slice(0, SHOWCASE_PUB_LIMIT),
-        pitch ? 4.78 : 2.95,
+        group.publicationShots.slice(0, pitch ? 4 : SHOWCASE_PUB_LIMIT),
+        contentY,
         "Recent publications",
         PUB_COLS,
         pubThumbSize
       );
     } else {
-      pubsY = 1.55;
+      contentY = 1.55;
     }
 
     slide.addText(
       (continued ? "Proposed deliverables (continued)" : "Proposed deliverables").toUpperCase(),
       {
         x: MARGIN_X,
-        y: pubsY,
+        y: contentY,
         w: CONTENT_W,
         h: 0.18,
         fontFace: FONT_UI,
@@ -1086,7 +1237,7 @@ async function addCreatorSlide(
       }
     );
 
-    addCreatorDeliverablesTable(slide, deliverables, showFees, pubsY + 0.2);
+    addCreatorDeliverablesTable(slide, deliverables, showFees, contentY + 0.2);
 
     addSlideFooter(
       slide,
@@ -1398,11 +1549,15 @@ function addRosterSlide(
     "At a glance"
   );
 
+  const colW = [2.1, 1.3, 1.0, 1.2, 1.1, 2.7, 2.93];
+  const rowH = 0.3;
+  const tableY = cursorY + 0.1;
   const rows: Array<Array<{ text: string; options?: Record<string, unknown> }>> = [
     [
       { text: "Creator", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "Followers", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "ER", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
+      { text: "Views", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "Tier", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "Categories", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "Platforms", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
@@ -1411,21 +1566,38 @@ function addRosterSlide(
       { text: row.handle, options: { fontSize: 9, bold: true, color: TITLE_INK } },
       { text: row.followers, options: { fontSize: 9, color: TITLE_INK } },
       { text: row.er, options: { fontSize: 9, color: TITLE_INK } },
+      { text: row.views, options: { fontSize: 9, color: TITLE_INK } },
       { text: row.tier, options: { fontSize: 9, color: TITLE_INK } },
       { text: row.categories, options: { fontSize: 9, color: TITLE_INK } },
-      { text: row.platforms, options: { fontSize: 9, color: TITLE_INK } },
+      {
+        text: row.platformIcons.length
+          ? `     ${platformIconsLabel(row.platformIcons)}`
+          : row.platforms,
+        options: { fontSize: 9, color: TITLE_INK },
+      },
     ]),
   ];
 
   slide.addTable(rows, {
     x: MARGIN_X,
-    y: cursorY + 0.1,
+    y: tableY,
     w: CONTENT_W,
-    colW: [2.3, 1.5, 1.1, 1.2, 3.2, 2.83],
+    colW,
     border: { type: "solid", color: HAIR, pt: 0.75 },
     fontFace: FONT_BODY,
     autoPage: false,
-    rowH: 0.28,
+    rowH,
+  });
+
+  const platformColX = MARGIN_X + colW.slice(0, 6).reduce((sum, value) => sum + value, 0) + 0.06;
+  payload.roster.rows.forEach((row, index) => {
+    if (!row.platformIcons.length) return;
+    addPlatformIconBadges(
+      slide,
+      row.platformIcons,
+      platformColX,
+      tableY + rowH + index * rowH + 0.06
+    );
   });
 
   addSlideFooter(slide, `${doc.serial} · Roster`, pageNo);

@@ -24,6 +24,8 @@ export type QuotationExportItem = QuotationItemRow & {
   profile_image_url?: string | null;
   profile_url?: string | null;
   option_number?: number | null;
+  /** Average views from platform account enrichment (export-only). */
+  avg_views?: number | null;
 };
 
 type DeliverableJson = QuotationDeliverable &
@@ -48,6 +50,8 @@ const POST_TYPE_LABELS: Record<string, string> = {
   ugc: "UGC",
   cross_posting: "Cross-Posting",
   all_platforms: "All Platforms",
+  visit: "Visit",
+  event_coverage: "Event Coverage",
 };
 
 function postTypeLabel(code: string): string {
@@ -372,6 +376,23 @@ export function resolveExportGroupFollowers(items: QuotationExportItem[]): numbe
     const followers = resolveExportItemFollowers(item);
     if (followers == null) continue;
     if (best == null || followers > best) best = followers;
+  }
+  return best;
+}
+
+function resolveExportItemAvgViews(item: QuotationExportItem): number | null {
+  const value = item.avg_views;
+  if (value == null || !Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
+/** Highest average views across creator options. */
+export function resolveExportGroupAvgViews(items: QuotationExportItem[]): number | null {
+  let best: number | null = null;
+  for (const item of items) {
+    const views = resolveExportItemAvgViews(item);
+    if (views == null) continue;
+    if (best == null || views > best) best = views;
   }
   return best;
 }

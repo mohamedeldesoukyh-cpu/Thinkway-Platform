@@ -436,8 +436,6 @@ function renderShowcaseCreatorKpis(group: ShortlistDocCreatorGroup): string {
 function renderShowcaseContextCards(group: ShortlistDocCreatorGroup): string {
   return `<div class="showcase-context-title">Shortlist context</div>
   <div class="showcase-context-grid">
-    <div class="showcase-context-card avoid-break"><label>Match score</label><strong>${escapeHtml(group.matchScore)}</strong></div>
-    <div class="showcase-context-card avoid-break"><label>Brand safety</label><strong>${escapeHtml(group.brandSafety)}</strong></div>
     <div class="showcase-context-card avoid-break"><label>Review status</label><strong>${escapeHtml(group.status)}</strong></div>
     <div class="showcase-context-card avoid-break"><label>Notes</label><strong>${escapeHtml(group.notes)}</strong></div>
   </div>`;
@@ -569,7 +567,6 @@ function renderShowcaseRosterSection(doc: ShortlistDocument): string {
         <td class="num">${escapeHtml(group.engagementRate)}</td>
         <td>${renderTierBadge(group.tier)}</td>
         <td>${escapeHtml(group.categories.join(", ") || "—")}</td>
-        <td>${escapeHtml(group.matchScore)}</td>
       </tr>`
     )
     .join("");
@@ -586,7 +583,6 @@ function renderShowcaseRosterSection(doc: ShortlistDocument): string {
               <th class="num">ER</th>
               <th>Tier</th>
               <th>Categories</th>
-              <th class="num">Match</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>

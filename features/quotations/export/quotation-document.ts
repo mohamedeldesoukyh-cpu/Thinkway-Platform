@@ -46,6 +46,7 @@ import {
   optionNumberLabel,
   quotationCreatorDuplicateKey,
   resolveExportCreatorProfile,
+  resolveExportGroupAvgViews,
   resolveExportGroupEngagementRate,
   resolveExportGroupFollowers,
   resolveExportGroupPlatform,
@@ -91,6 +92,7 @@ export type QuotationDocCreatorGroup = {
   linkedPlatforms: string[];
   followers: string;
   engagementRate: string;
+  views: string;
   country: string;
   categories: string[];
   isVerified: boolean;
@@ -651,6 +653,9 @@ function buildCreatorGroup(
   const headerItem = group.items[0]!;
   const profile = resolveExportCreatorProfile(headerItem);
   const profileSource = buildQuotationCreatorProfileSource(headerItem);
+  const groupFollowers = resolveExportGroupFollowers(group.items);
+  const groupEr = resolveExportGroupEngagementRate(group.items, groupFollowers);
+  const groupViews = resolveExportGroupAvgViews(group.items);
 
   return {
     creatorKey: group.creatorKey,
@@ -665,11 +670,9 @@ function buildCreatorGroup(
     ),
     platform: profile.platform,
     linkedPlatforms: profile.linkedPlatforms,
-    followers: headerItem.followers != null ? num(headerItem.followers) : "—",
-    engagementRate:
-      headerItem.engagement_rate != null
-        ? `${num(headerItem.engagement_rate, 2)}%`
-        : "—",
+    followers: groupFollowers != null ? num(groupFollowers) : "—",
+    engagementRate: groupEr != null ? `${num(groupEr, 2)}%` : "—",
+    views: groupViews != null ? num(groupViews) : "—",
     country: headerItem.country_code ?? "—",
     categories: mergeCreatorGroupCategories(group.items),
     isVerified: Boolean(profileSource.isVerified),
@@ -887,7 +890,7 @@ export function buildQuotationDocument(
     { label: "Creators", value: String(uniqueCreatorCount) },
     { label: "Audience Size", value: num(rosterForecast.audienceSize) },
     { label: "Est. Engagement", value: avgEr },
-    ...(template === "showcase" || template === "pitch"
+    ...(isCreatorDeckTemplate(template) && !isLumpSumPricingTemplate(template)
       ? []
       : isLumpSumPricingTemplate(template)
         ? [

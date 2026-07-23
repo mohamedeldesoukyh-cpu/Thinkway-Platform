@@ -9,9 +9,12 @@ export type { QuotationDeliverableTypeLine };
 export const QUOTATION_POST_TYPES = [
   { value: "video", label: "Video" },
   { value: "stories", label: "Stories" },
+  /** Platform-agnostic — available under any creator platform. */
+  { value: "visit", label: "Visit" },
+  /** Platform-agnostic — available under any creator platform. */
+  { value: "event_coverage", label: "Event Coverage" },
   { value: "instagram_post", label: "IG Post" },
   { value: "instagram_story", label: "IG Story" },
-  { value: "visit", label: "Visit" },
   { value: "ig_story_set", label: "IG Set of stories" },
   { value: "instagram_reel", label: "IG Reel" },
   { value: "tiktok_video", label: "TT Video" },
@@ -36,7 +39,6 @@ export const QUOTATION_POST_TYPES = [
   { value: "mirrored_tt", label: "Mirrored TT" },
   { value: "mirrored_fb", label: "Mirrored FB" },
   { value: "mirrored_yt", label: "Mirrored YT" },
-  { value: "event_coverage", label: "Event Coverage" },
   { value: "instagram_live", label: "IG Live" },
   { value: "ig_collab_post", label: "IG Collab Post" },
   { value: "usage_right", label: "Usage Right" },
@@ -268,6 +270,8 @@ export function normalizeDeliverableTypes(
 
 /** Platform key required by a post type, or null when platform-agnostic. */
 export function postTypePlatformKey(type: string): string | null {
+  // Explicit any-platform types (Visit / Event Coverage stay selectable on every platform).
+  if (type === "visit" || type === "event_coverage") return null;
   if (type === "mirrored_ig") return "instagram";
   if (type === "mirrored_tt") return "tiktok";
   if (type === "mirrored_fb") return "facebook";

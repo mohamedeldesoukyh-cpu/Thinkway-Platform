@@ -94,14 +94,17 @@ export type QuotationTemplatePayload = {
     profileUrl?: string | null;
     followers: string;
     engagement: string;
+    views: string;
     tier: string;
     categories: string;
     platforms: string;
+    platformIcons: string[];
     publications: string[];
     deliverables: Array<{
       option: string;
       service: string;
       platform: string;
+      platformIcons: string[];
       type: string;
       grossFee?: string;
     }>;
@@ -112,9 +115,11 @@ export type QuotationTemplatePayload = {
       handle: string;
       followers: string;
       er: string;
+      views: string;
       tier: string;
       categories: string;
       platforms: string;
+      platformIcons: string[];
     }>;
   };
   terms: {
