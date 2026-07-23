@@ -718,16 +718,20 @@ function buildCreatorGroup(
       .find((url) => Boolean(url)) ||
     null;
   const avatarUrl = platformAvatar || profile.avatarUrl;
+  const profileUrl =
+    profile.profileUrl ||
+    platformMetrics.find((row) => row.profileUrl?.trim())?.profileUrl?.trim() ||
+    null;
 
   return {
     creatorKey: group.creatorKey,
     creator: profile.creator,
     handle: profile.handle,
-    profileUrl: profile.profileUrl,
+    profileUrl,
     avatarUrl,
     avatarProxyUrl: resolveExportAvatarProxyUrl(
       headerItem,
-      profile.profileUrl,
+      profileUrl,
       avatarUrl
     ),
     platform: profile.platform,

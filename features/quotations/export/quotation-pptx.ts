@@ -96,9 +96,31 @@ function platformIconsLabel(platforms: string[]): string {
   return platforms.map((platform) => getReportPlatformIconTitle(platform)).join(", ");
 }
 
-function profileHyperlink(url: string | null | undefined): { url: string } | undefined {
-  if (!url || !/^https?:\/\//i.test(url)) return undefined;
-  return { url };
+function profileHyperlink(
+  url: string | null | undefined,
+  tooltip = "Open creator profile"
+): { url: string; tooltip: string } | undefined {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  let href = trimmed;
+  if (!/^https?:\/\//i.test(href)) {
+    if (/^\/\//.test(href)) href = `https:${href}`;
+    else if (/^[\w.-]+\.[a-z]{2,}([/?#]|$)/i.test(href)) href = `https://${href}`;
+    else return undefined;
+  }
+  return { url: href, tooltip };
+}
+
+/** Prefer explicit profile URL, then any platform metric URL. */
+function resolveCreatorProfileHref(
+  primary: string | null | undefined,
+  fallbacks: Array<string | null | undefined> = []
+): ReturnType<typeof profileHyperlink> {
+  for (const candidate of [primary, ...fallbacks]) {
+    const link = profileHyperlink(candidate);
+    if (link) return link;
+  }
+  return undefined;
 }
 
 function addPlatformIconBadges(
@@ -1270,7 +1292,10 @@ async function addCreatorSlide(
     : creator.deliverables.length > 5
       ? Math.min(PUB_THUMB_SIZE, 1.1)
       : PUB_THUMB_SIZE;
-  const profileLink = profileHyperlink(creator.profileUrl ?? group.profileUrl);
+  const profileLink = resolveCreatorProfileHref(creator.profileUrl ?? group.profileUrl, [
+    ...creator.platformMetrics.map((row) => row.profileUrl),
+    ...group.platformMetrics.map((row) => row.profileUrl),
+  ]);
 
   for (let chunkIndex = 0; chunkIndex < deliverableChunks.length; chunkIndex++) {
     const deliverables = deliverableChunks[chunkIndex]!;
@@ -1307,32 +1332,50 @@ async function addCreatorSlide(
         y: avatarY,
         size: avatarSize,
         pitch,
-        profileHref: creator.profileUrl ?? group.profileUrl,
+        profileHref: profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
       });
 
       const nameX = MARGIN_X + avatarSize + (pitch ? 0.28 : 0.14);
       const identityW = CONTENT_W - avatarSize - (pitch ? 0.28 : 0.14);
-      slide.addText(creator.name, {
-        x: nameX,
-        y: avatarY,
-        w: identityW,
-        h: 0.34,
-        fontFace: FONT_UI,
-        fontSize: pitch ? 22 : 22,
-        bold: true,
-        color: TITLE_INK,
-        hyperlink: profileLink,
-      });
-      slide.addText(creator.handle, {
-        x: nameX,
-        y: avatarY + 0.34,
-        w: identityW * 0.55,
-        h: 0.18,
-        fontFace: FONT_BODY,
-        fontSize: pitch ? 11 : 11,
-        color: MUTED,
-        hyperlink: profileLink,
-      });
+      slide.addText(
+        [
+          {
+            text: creator.name,
+            options: {
+              bold: true,
+              color: TITLE_INK,
+              fontFace: FONT_UI,
+              fontSize: pitch ? 22 : 22,
+              ...(profileLink ? { hyperlink: profileLink } : {}),
+            },
+          },
+        ],
+        {
+          x: nameX,
+          y: avatarY,
+          w: identityW,
+          h: 0.34,
+        }
+      );
+      slide.addText(
+        [
+          {
+            text: creator.handle,
+            options: {
+              color: MUTED,
+              fontFace: FONT_BODY,
+              fontSize: pitch ? 11 : 11,
+              ...(profileLink ? { hyperlink: profileLink } : {}),
+            },
+          },
+        ],
+        {
+          x: nameX,
+          y: avatarY + 0.34,
+          w: identityW * 0.55,
+          h: 0.18,
+        }
+      );
 
       // Pitch/RFQ: platform icons live in the metrics Platforms column only
       // (plain 0.18" logos — no under-avatar chrome).
@@ -1759,30 +1802,33 @@ async function addRosterSlide(
       { text: "Category", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "Platforms", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
     ],
-    ...payload.roster.rows.map((row) => [
-      {
-        text: row.handle,
-        options: {
-          fontSize: 9,
-          bold: true,
-          color: TITLE_INK,
-          // top, right, bottom, left — room for avatar
-          margin: [0.04, 0.04, 0.04, 0.34] as [number, number, number, number],
-          ...(profileHyperlink(row.profileUrl) ? { hyperlink: profileHyperlink(row.profileUrl) } : {}),
+    ...payload.roster.rows.map((row) => {
+      const handleLink = resolveCreatorProfileHref(row.profileUrl);
+      return [
+        {
+          text: row.handle,
+          options: {
+            fontSize: 9,
+            bold: true,
+            color: TITLE_INK,
+            // top, right, bottom, left — room for avatar
+            margin: [0.04, 0.04, 0.04, 0.34] as [number, number, number, number],
+            ...(handleLink ? { hyperlink: handleLink } : {}),
+          },
         },
-      },
-      { text: row.followers, options: { fontSize: 9, color: TITLE_INK } },
-      { text: row.er, options: { fontSize: 9, color: TITLE_INK } },
-      { text: row.views, options: { fontSize: 9, color: TITLE_INK } },
-      { text: row.tier, options: { fontSize: 9, color: TITLE_INK } },
-      { text: row.categories, options: { fontSize: 9, color: TITLE_INK } },
-      {
-        text: row.platformIcons.length
-          ? `     ${platformIconsLabel(row.platformIcons)}`
-          : row.platforms,
-        options: { fontSize: 9, color: TITLE_INK },
-      },
-    ]),
+        { text: row.followers, options: { fontSize: 9, color: TITLE_INK } },
+        { text: row.er, options: { fontSize: 9, color: TITLE_INK } },
+        { text: row.views, options: { fontSize: 9, color: TITLE_INK } },
+        { text: row.tier, options: { fontSize: 9, color: TITLE_INK } },
+        { text: row.categories, options: { fontSize: 9, color: TITLE_INK } },
+        {
+          text: row.platformIcons.length
+            ? `     ${platformIconsLabel(row.platformIcons)}`
+            : row.platforms,
+          options: { fontSize: 9, color: TITLE_INK },
+        },
+      ];
+    }),
   ];
 
   slide.addTable(rows, {
@@ -1803,6 +1849,7 @@ async function addRosterSlide(
     const avatarX = MARGIN_X + 0.08;
     const avatarY = rowTop + (rowH - avatarSize) / 2;
 
+    const rosterLink = resolveCreatorProfileHref(row.profileUrl);
     await addThinkwayCreatorAvatar(slide, {
       avatarUrl: row.avatarUrl ?? null,
       initials: row.initials,
@@ -1810,7 +1857,7 @@ async function addRosterSlide(
       y: avatarY,
       size: avatarSize,
       pitch: false,
-      profileHref: row.profileUrl,
+      profileHref: rosterLink?.url ?? row.profileUrl,
     });
 
     if (row.platformIcons.length) {
@@ -1820,7 +1867,7 @@ async function addRosterSlide(
         platformColX,
         rowTop + (rowH - 0.18) / 2,
         5,
-        row.profileUrl
+        rosterLink?.url ?? row.profileUrl
       );
     }
   }

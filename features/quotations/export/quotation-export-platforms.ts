@@ -13,6 +13,7 @@ import {
   resolveCreatorFromRefLookup,
   resolveUnifiedCreatorsByRefs,
 } from "@/lib/creators/unified-browse";
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 import type { Database } from "@/types/database";
 
@@ -21,6 +22,20 @@ import type {
   QuotationExportItem,
   QuotationExportPlatformAccount,
 } from "./quotation-export-utils";
+
+function resolveAccountProfileUrl(input: {
+  platform: string;
+  handle: string | null | undefined;
+  profile_url: string | null | undefined;
+}): string | null {
+  return (
+    resolveCreatorProfileUrl({
+      platform: input.platform,
+      handle: input.handle,
+      profile_url: input.profile_url,
+    }) ?? null
+  );
+}
 
 export type { QuotationExportPlatformAccount };
 export {
@@ -93,7 +108,11 @@ export async function attachExportPlatformAccounts(
           followers: account.follower_count ?? null,
           engagement_rate,
           avg_views: account.avg_views ?? null,
-          profile_url: account.profile_url ?? null,
+          profile_url: resolveAccountProfileUrl({
+            platform,
+            handle: account.handle,
+            profile_url: account.profile_url,
+          }),
           avatar_url,
         };
       }
@@ -109,7 +128,11 @@ export async function attachExportPlatformAccounts(
           followers: item.followers,
           engagement_rate: item.engagement_rate,
           avg_views: item.avg_views ?? null,
-          profile_url: item.profile_url ?? null,
+          profile_url: resolveAccountProfileUrl({
+            platform,
+            handle: item.handle,
+            profile_url: item.profile_url,
+          }),
           avatar_url:
             item.profile_image_url?.trim() && isUsableAvatarUrl(item.profile_image_url)
               ? item.profile_image_url.trim()
@@ -140,6 +163,16 @@ export async function attachExportPlatformAccounts(
       avg_views: primaryAccount.avg_views ?? item.avg_views ?? null,
       // Prefer live platform CDN avatar over stale Thinkway-stored snapshots.
       profile_image_url: platformAvatar ?? item.profile_image_url ?? null,
+      // Ensure creator avatar/name hyperlinks always have a resolvable profile URL.
+      profile_url:
+        primaryAccount.profile_url ??
+        resolveAccountProfileUrl({
+          platform: primaryPlatform ?? primaryAccount.platform,
+          handle: primaryAccount.handle ?? item.handle,
+          profile_url: item.profile_url,
+        }) ??
+        item.profile_url ??
+        null,
       export_platforms,
       creator_profile_source: item.creator_profile_source
         ? {
@@ -151,9 +184,12 @@ export async function attachExportPlatformAccounts(
             avatarUrl: platformAvatar ?? item.creator_profile_source.avatarUrl,
             profile_url:
               primaryAccount.profile_url ??
-              item.creator_profile_source.profile_url ??
-              item.profile_url ??
-              null,
+              resolveAccountProfileUrl({
+                platform: primaryPlatform ?? primaryAccount.platform,
+                handle: primaryAccount.handle ?? item.handle,
+                profile_url:
+                  item.creator_profile_source.profile_url ?? item.profile_url,
+              }),
           }
         : item.creator_profile_source,
     };

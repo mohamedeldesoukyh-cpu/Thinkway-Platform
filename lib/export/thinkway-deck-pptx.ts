@@ -398,8 +398,12 @@ export async function addThinkwayCreatorAvatar(
   const { avatarUrl, initials, x, y, size, pitch = true, profileHref } = input;
   // Higher resolution for pitch hero portraits — platform CDN photos look sharp.
   const cropMax = pitch ? 720 : 320;
-  const hyperlink =
-    profileHref && /^https?:\/\//i.test(profileHref) ? { url: profileHref } : undefined;
+  const href = profileHref?.trim() && /^https?:\/\//i.test(profileHref.trim())
+    ? profileHref.trim()
+    : null;
+  const hyperlink = href
+    ? { url: href, tooltip: "Open creator profile" }
+    : undefined;
 
   // RFQ pitch: frameless circular avatar (no lavender/white ring).
 
@@ -420,30 +424,43 @@ export async function addThinkwayCreatorAvatar(
       rounding: true,
       hyperlink,
     });
-    return;
+  } else {
+    slide.addShape(pitch ? "ellipse" : "roundRect", {
+      x,
+      y,
+      w: size,
+      h: size,
+      fill: { color: pitch ? TW_LAVENDER : TW_GREEN },
+      line: { type: "none" },
+      rectRadius: pitch ? undefined : 0.12,
+      hyperlink,
+    });
+    slide.addText(initials, {
+      x,
+      y: pitch ? y + size * 0.32 : y + size * 0.14,
+      w: size,
+      h: pitch ? size * 0.36 : 0.36,
+      fontFace: TW_FONT_UI,
+      fontSize: pitch ? Math.round(size * 15) : 15,
+      bold: true,
+      color: pitch ? TW_BLUE : TW_WHITE,
+      align: "center",
+      hyperlink,
+    });
   }
 
-  slide.addShape(pitch ? "ellipse" : "roundRect", {
-    x,
-    y,
-    w: size,
-    h: size,
-    fill: { color: pitch ? TW_LAVENDER : TW_GREEN },
-    line: { type: "none" },
-    rectRadius: pitch ? undefined : 0.12,
-  });
-  slide.addText(initials, {
-    x,
-    y: pitch ? y + size * 0.32 : y + size * 0.14,
-    w: size,
-    h: pitch ? size * 0.36 : 0.36,
-    fontFace: TW_FONT_UI,
-    fontSize: pitch ? Math.round(size * 15) : 15,
-    bold: true,
-    color: pitch ? TW_BLUE : TW_WHITE,
-    align: "center",
-    hyperlink,
-  });
+  // Transparent hit-target on top — rounded images sometimes drop image hyperlinks in PPT.
+  if (hyperlink) {
+    slide.addShape("ellipse", {
+      x,
+      y,
+      w: size,
+      h: size,
+      fill: { color: TW_WHITE, transparency: 100 },
+      line: { type: "none" },
+      hyperlink,
+    });
+  }
 }
 
 export function configureThinkwayPptxLayout(pptx: ThinkwayPptxGen): void {

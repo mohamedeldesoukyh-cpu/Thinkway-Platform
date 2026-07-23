@@ -442,11 +442,27 @@ export function resolveExportGroupEngagementRate(
 
 export function resolveExportCreatorProfile(item: QuotationExportItem) {
   const source = buildQuotationCreatorProfileSource(item);
+  const platformAccountUrl = (item.export_platforms ?? [])
+    .map((account) =>
+      resolveCreatorProfileUrl({
+        platform: account.platform,
+        handle: account.handle,
+        profile_url: account.profile_url,
+      })
+    )
+    .find((url): url is string => Boolean(url?.trim()));
   const profileUrl =
     resolveCreatorProfileUrl(source) ??
-    item.profile_url ??
+    item.profile_url?.trim() ??
+    platformAccountUrl ??
     (item.platform && item.handle
       ? resolveCreatorProfileUrl({ platform: item.platform, handle: item.handle })
+      : null) ??
+    (item.handle
+      ? resolveCreatorProfileUrl({
+          platform: item.export_platforms?.[0]?.platform ?? "instagram",
+          handle: item.handle,
+        })
       : null);
 
   return {

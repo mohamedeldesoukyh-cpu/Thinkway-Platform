@@ -4,6 +4,7 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { unionQuotationCreatorGroupPlatforms } from "@/lib/quotations/quotation-creator-platform-utils";
 
 import type {
@@ -94,7 +95,14 @@ export function buildExportPlatformMetricRows(
         account?.engagement_rate ?? lineMatch?.engagement_rate ?? null
       ),
       views: formatViewsLabel(account?.avg_views ?? lineMatch?.avg_views ?? null),
-      profileUrl: account?.profile_url ?? lineMatch?.profile_url ?? null,
+      profileUrl:
+        account?.profile_url ??
+        lineMatch?.profile_url ??
+        resolveCreatorProfileUrl({
+          platform,
+          handle: account?.handle ?? lineMatch?.handle ?? items[0]?.handle,
+          profile_url: account?.profile_url ?? lineMatch?.profile_url,
+        }),
       avatarUrl: account?.avatar_url ?? null,
     };
   });
