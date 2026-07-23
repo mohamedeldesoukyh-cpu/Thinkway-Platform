@@ -2835,6 +2835,7 @@ export type Database = {
           processing_completed_at: string | null;
           error_message: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -2859,6 +2860,7 @@ export type Database = {
           processing_completed_at?: string | null;
           error_message?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["creator_import_files"]["Insert"]>;
         Relationships: [];

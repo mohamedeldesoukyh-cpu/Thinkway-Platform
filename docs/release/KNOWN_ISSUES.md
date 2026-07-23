@@ -35,6 +35,7 @@
 ### KI-005: Discovery worker schema drift
 - **Symptom:** Worker logs `stuck-status recovery failed column creator_import_files.updated_at does not exist`.
 - **Impact:** Stuck import recovery disabled; worker otherwise operational.
+- **Fix:** Migration `20260723130000_creator_import_files_updated_at.sql` adds `updated_at` + `set_updated_at` trigger. Apply with `npx supabase db push` (or your usual migrate path), then restart discovery-worker.
 
 ---
 

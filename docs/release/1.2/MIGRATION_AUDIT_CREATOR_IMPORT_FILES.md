@@ -165,7 +165,7 @@ The stuck-recovery module mirrors `lib/creator-enrichment/recover-stuck-enrichme
 
 A new migration is required. Suggested filename:
 
-`20260713000000_creator_import_files_updated_at.sql` (or next available timestamp)
+`20260723130000_creator_import_files_updated_at.sql` (**added** — apply with `npx supabase db push`)
 
 ```sql
 ALTER TABLE public.creator_import_files
