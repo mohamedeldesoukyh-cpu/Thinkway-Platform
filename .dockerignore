@@ -1,0 +1,27 @@
+# Keep the discovery-worker image small and deterministic.
+.git
+.github
+.vercel
+.next
+out
+build
+coverage
+node_modules
+**/node_modules
+services/discovery-worker/node_modules
+services/discovery-worker/dist
+.env
+.env.*
+!**/.env.example
+**/*.log
+.tmp
+.tmp-compile
+performance/reports
+agent-transcripts
+**/.DS_Store
+**/*.pem
+**/tsconfig.tsbuildinfo
+docs
+*.md
+!services/discovery-worker/README.md
+!docs/infrastructure/WORKER_OPERATIONS.md

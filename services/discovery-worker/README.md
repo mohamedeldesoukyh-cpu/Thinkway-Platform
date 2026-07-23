@@ -33,7 +33,13 @@ npm run discovery:worker:dev
 
 Production start (`npm run discovery:worker`) runs TypeScript via `tsx` (no `dist/` build).
 
-**Railway:** use the repo-root `railway.toml` (Dockerfile builder). Do not use Nixpacks/Railpack against root `package.json` alone — worker deps such as `playwright` will be missing. Service root directory must be `/` (monorepo root).
+**Railway (canonical):**
+1. Root Directory = `/`
+2. Builder = Dockerfile (repo-root `Dockerfile` via `railway.toml`)
+3. Set vars from `.env.example` — at minimum `NEXT_PUBLIC_SUPABASE_URL` (or `SUPABASE_URL`), `SUPABASE_SERVICE_ROLE_KEY`, managed `REDIS_URL`
+4. Start command = `npm run discovery:worker`
+
+Do not use Nixpacks/Railpack against root `package.json` alone.
 
 ## Enrichment stages
 

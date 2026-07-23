@@ -30,8 +30,28 @@ Manual check: `redis-cli GET thinkway:worker:discovery:heartbeat`
 
 ## Required environment
 
-- `REDIS_URL` — BullMQ + heartbeat
-- `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` — job DB access
+Set on the **Railway worker service** (Vercel does not inject these into the worker):
+
+| Variable | Notes |
+|----------|--------|
+| `SUPABASE_URL` **or** `NEXT_PUBLIC_SUPABASE_URL` | Either works |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role JWT |
+| `REDIS_URL` | Managed Redis (`rediss://…`). **Not** `localhost` |
+
+Recommended Safe Mode (match Vercel Production):
+
+- `DISABLE_AUTOMATIC_ENRICHMENT_AND_ACQUISITION=true`
+- `DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY=0`
+- `DISCOVERY_APIFY_MAX_CREDITS_PER_DAY=0`
+
+Template: `services/discovery-worker/.env.example`
+
+### Railway deploy (canonical)
+
+1. Root Directory: `/`
+2. Builder: Dockerfile (`railway.toml` → root `Dockerfile`)
+3. Start: `npm run discovery:worker` (already set in `railway.toml`)
+4. Copy variables from `.env.example` into the Railway service
 
 See `services/discovery-worker/src/config.ts` for optional keys.
 

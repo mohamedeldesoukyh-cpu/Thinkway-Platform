@@ -10,7 +10,7 @@ services:
   discovery-worker:
     build:
       context: .
-      dockerfile: services/discovery-worker/Dockerfile
+      dockerfile: Dockerfile
     env_file:
       - ./services/discovery-worker/.env
     environment:

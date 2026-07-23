@@ -1,9 +1,10 @@
 # Discovery worker on Railway (Next.js app deploys via Vercel).
-# Build context must be the monorepo root (service Root Directory = `/`).
+# Service Root Directory must be `/` (monorepo root) so Docker context includes `@/*`.
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "services/discovery-worker/Dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "npm run discovery:worker"
 restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
