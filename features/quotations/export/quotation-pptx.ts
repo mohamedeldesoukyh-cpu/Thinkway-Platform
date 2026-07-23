@@ -15,6 +15,7 @@ import {
   addThinkwayCreatorAvatar,
   configureThinkwayPptxLayout,
 } from "@/lib/export/thinkway-deck-pptx";
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import {
   getReportPlatformIconDataUri,
   getReportPlatformIconTitle,
@@ -83,10 +84,9 @@ const PITCH_AVATAR_SIZE = 1.67;
 const PITCH_PUB_THUMB_SIZE = 1.62;
 const PITCH_PUB_GAP = 0.22;
 const PITCH_PUB_COLS = 3;
-/** Closing slide — deep teal, distinct from bright-blue cover. */
-const CLOSING_BG = "0A2E24";
-const CLOSING_ACCENT = "1D9E75";
-const CLOSING_MUTED = "9BC4B4";
+/** Closing slide accents — match RFQ_5 slide 14 (navy glow bg + blue accents). */
+const CLOSING_ACCENT = "3D8BFF";
+const CLOSING_MUTED = "BFD2FF";
 /** Matches reference deck pagination (11 fee rows before totals spill). */
 const COMMERCIAL_ROWS_PER_SLIDE = 11;
 const FOOTER_LEFT = "Thinkway · hello@thinkwaymedia.com";
@@ -123,6 +123,10 @@ function resolveCreatorProfileHref(
   return undefined;
 }
 
+/**
+ * Platform logos — frameless circular icons.
+ * `overlap: true` stacks them like shortlist CreatorLinkedPlatformIcons (~40% cross).
+ */
 function addPlatformIconBadges(
   slide: Slide,
   platforms: string[],
@@ -130,14 +134,16 @@ function addPlatformIconBadges(
   y: number,
   maxIcons = 4,
   profileHref?: string | null,
-  iconSize = 0.18
+  iconSize = 0.18,
+  options?: { overlap?: boolean }
 ): number {
   const unique = [...new Set(platforms.map((p) => p.trim()).filter(Boolean))].slice(0, maxIcons);
   const size = iconSize;
-  const gap = 0.04;
+  // Shortlist inline: size-4 + -ml-2 ≈ 50% overlap; use ~40% so logos stay readable in PPT.
+  const step = options?.overlap ? size * 0.6 : size + 0.04;
   const hyperlink = profileHyperlink(profileHref);
   unique.forEach((platform, index) => {
-    const iconX = x + index * (size + gap);
+    const iconX = x + index * step;
     const dataUri = getReportPlatformIconDataUri(platform);
     if (dataUri?.startsWith("data:")) {
       const payload = dataUri.slice("data:".length);
@@ -150,11 +156,13 @@ function addPlatformIconBadges(
           y,
           w: size,
           h: size,
+          rounding: true,
           hyperlink,
         });
         return;
       }
     }
+    // Fallback letter mark only — no ring/chrome behind real icons.
     slide.addShape("ellipse", {
       x: iconX,
       y,
@@ -162,6 +170,7 @@ function addPlatformIconBadges(
       h: size,
       fill: { color: SOFT_BLUE },
       line: { type: "none" },
+      hyperlink,
     });
     slide.addText(getReportPlatformIconTitle(platform).slice(0, 2).toUpperCase(), {
       x: iconX,
@@ -177,7 +186,7 @@ function addPlatformIconBadges(
       hyperlink,
     });
   });
-  return unique.length * (size + gap);
+  return unique.length > 0 ? size + (unique.length - 1) * step : 0;
 }
 
 type PptxGen = InstanceType<typeof import("pptxgenjs").default>;
@@ -908,7 +917,9 @@ function addCreatorMixSlides(
             platformsColX,
             tableY + 0.26 + index * rowH + 0.03,
             4,
-            creator.profileUrl
+            creator.profileUrl,
+            0.2,
+            { overlap: true }
           );
         });
       }
@@ -1292,9 +1303,19 @@ async function addCreatorSlide(
     : creator.deliverables.length > 5
       ? Math.min(PUB_THUMB_SIZE, 1.1)
       : PUB_THUMB_SIZE;
+  const handleForUrl = creator.handle.replace(/^@/, "").trim();
+  const synthesizedProfileUrl =
+    handleForUrl && handleForUrl !== "—"
+      ? resolveCreatorProfileUrl({
+          platform: creator.platformIcons[0] ?? "instagram",
+          handle: handleForUrl,
+          profile_url: creator.profileUrl ?? group.profileUrl,
+        })
+      : null;
   const profileLink = resolveCreatorProfileHref(creator.profileUrl ?? group.profileUrl, [
     ...creator.platformMetrics.map((row) => row.profileUrl),
     ...group.platformMetrics.map((row) => row.profileUrl),
+    synthesizedProfileUrl,
   ]);
 
   for (let chunkIndex = 0; chunkIndex < deliverableChunks.length; chunkIndex++) {
@@ -1377,17 +1398,18 @@ async function addCreatorSlide(
         }
       );
 
-      // Pitch/RFQ: platform icons live in the metrics Platforms column only
-      // (plain 0.18" logos — no under-avatar chrome).
-      if (!pitch && creator.platformIcons.length) {
+      // Shortlist-style overlapping platform logos near creator identity (frameless).
+      // Metrics table still shows a plain per-row icon in the Platforms column.
+      if (creator.platformIcons.length) {
         addPlatformIconBadges(
           slide,
           creator.platformIcons,
           nameX + identityW * 0.55,
           avatarY + 0.34,
           6,
-          creator.profileUrl ?? group.profileUrl,
-          0.18
+          profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
+          pitch ? 0.22 : 0.18,
+          { overlap: true }
         );
       }
 
@@ -1865,9 +1887,11 @@ async function addRosterSlide(
         slide,
         row.platformIcons,
         platformColX,
-        rowTop + (rowH - 0.18) / 2,
+        rowTop + (rowH - 0.2) / 2,
         5,
-        rosterLink?.url ?? row.profileUrl
+        rosterLink?.url ?? row.profileUrl,
+        0.2,
+        { overlap: true }
       );
     }
   }
@@ -2298,16 +2322,13 @@ function addClosingSlide(
   const payload = buildQuotationTemplatePayload(doc);
   const slide = pptx.addSlide();
   const pitchClosing = isPitchTemplate(doc.template);
-  if (pitchClosing) {
-    // Distinct from bright-blue cover: deep teal brand close.
-    slide.background = { color: CLOSING_BG };
-  } else {
-    applyClosingBackground(slide);
-  }
+  // RFQ_5 slide 14: navy glow image background (same asset as quotation close).
+  applyClosingBackground(slide);
   addBrandLockup(slide, "light", 0.55, 0.5);
   nextSlideNo(counter);
 
   if (pitchClosing) {
+    // RFQ accent bar under brand lockup (3D8BFF).
     slide.addShape("roundRect", {
       x: MARGIN_X,
       y: 2.15,
