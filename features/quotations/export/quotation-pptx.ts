@@ -568,8 +568,9 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
     },
     {
       label: payload.cover.stat3.label,
-      value: payload.cover.stat3.valueShort,
-      sub: payload.cover.stat3.value,
+      // Full total cost as the hero figure (not abbreviated …K).
+      value: payload.cover.stat3.value,
+      sub: payload.cover.stat3.valueShort,
     },
   ];
   stats.forEach((stat, index) => {
@@ -1161,6 +1162,7 @@ function addPitchCreatorMetricsTable(
             engagement: creator.engagement,
             views: creator.views,
             profileUrl: creator.profileUrl ?? null,
+            avatarUrl: creator.avatarUrl ?? null,
           },
         ];
 

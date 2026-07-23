@@ -97,6 +97,7 @@ export type QuotationDocPlatformMetric = {
   engagement: string;
   views: string;
   profileUrl: string | null;
+  avatarUrl: string | null;
 };
 
 export type QuotationDocCreatorGroup = {
@@ -708,17 +709,26 @@ function buildCreatorGroup(
   const groupViews = resolveExportGroupAvgViews(group.items);
   const platformIcons = resolveExportGroupAllPlatforms(group.items);
   const platformMetrics = buildExportPlatformMetricRows(group.items);
+  // Prefer live platform CDN avatar (same source Discovery uses for platform photos).
+  const platformAvatar =
+    platformMetrics.find((row) => row.avatarUrl?.trim())?.avatarUrl?.trim() ||
+    group.items
+      .flatMap((item) => item.export_platforms ?? [])
+      .map((account) => account.avatar_url?.trim())
+      .find((url) => Boolean(url)) ||
+    null;
+  const avatarUrl = platformAvatar || profile.avatarUrl;
 
   return {
     creatorKey: group.creatorKey,
     creator: profile.creator,
     handle: profile.handle,
     profileUrl: profile.profileUrl,
-    avatarUrl: profile.avatarUrl,
+    avatarUrl,
     avatarProxyUrl: resolveExportAvatarProxyUrl(
       headerItem,
       profile.profileUrl,
-      profile.avatarUrl
+      avatarUrl
     ),
     platform: profile.platform,
     linkedPlatforms:

@@ -119,8 +119,8 @@ export const SHOWCASE_AVATAR_COMPRESS: CompressExportImageOptions = {
 
 /** Higher-res avatars for pitch presentation decks (large hero portraits). */
 export const PITCH_AVATAR_COMPRESS: CompressExportImageOptions = {
-  maxEdge: 480,
-  quality: 78,
+  maxEdge: 720,
+  quality: 88,
 };
 
 export const SHOWCASE_PUBLICATION_COMPRESS: CompressExportImageOptions = {

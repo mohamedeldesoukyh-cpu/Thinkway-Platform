@@ -223,11 +223,11 @@ export function addThinkwaySlideFooter(
 }
 
 export async function thinkwayImageBufferForPptx(
-  src: string | null | undefined
+  src: string | null | undefined,
+  profileUrl?: string | null
 ): Promise<Buffer | null> {
   const trimmed = src?.trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith("data:")) {
+  if (trimmed?.startsWith("data:")) {
     const payload = trimmed.slice("data:".length);
     const base64Marker = ";base64,";
     const markerIndex = payload.indexOf(base64Marker);
@@ -238,6 +238,27 @@ export async function thinkwayImageBufferForPptx(
       return null;
     }
   }
+
+  // Prefer creator-avatar proxy path so Instagram/TikTok CDN avatars resolve
+  // the same way Discovery / shortlist do (direct CDN fetch often fails in PPTX).
+  if (trimmed || profileUrl?.trim()) {
+    try {
+      const { fetchCreatorAvatarImage } = await import(
+        "@/lib/creators/creator-avatar-proxy"
+      );
+      const result = await fetchCreatorAvatarImage({
+        src: trimmed || null,
+        profileUrl: profileUrl?.trim() || null,
+      });
+      if (result.ok && result.buffer?.length) {
+        return Buffer.from(result.buffer);
+      }
+    } catch {
+      // Fall through to direct fetch.
+    }
+  }
+
+  if (!trimmed) return null;
   return fetchImageBuffer(trimmed);
 }
 
@@ -245,9 +266,10 @@ export async function thinkwayImageDataForPptxCoverCrop(
   src: string | null | undefined,
   aspectW: number,
   aspectH: number,
-  maxEdge = 720
+  maxEdge = 720,
+  profileUrl?: string | null
 ): Promise<string | null> {
-  const buffer = await thinkwayImageBufferForPptx(src);
+  const buffer = await thinkwayImageBufferForPptx(src, profileUrl);
   if (!buffer?.length) return null;
 
   const cropped = await cropExportImageBufferCover(buffer, {
@@ -374,7 +396,8 @@ export async function addThinkwayCreatorAvatar(
   }
 ): Promise<void> {
   const { avatarUrl, initials, x, y, size, pitch = true, profileHref } = input;
-  const cropMax = pitch ? 512 : 256;
+  // Higher resolution for pitch hero portraits — platform CDN photos look sharp.
+  const cropMax = pitch ? 720 : 320;
   const hyperlink =
     profileHref && /^https?:\/\//i.test(profileHref) ? { url: profileHref } : undefined;
 
@@ -389,7 +412,13 @@ export async function addThinkwayCreatorAvatar(
     });
   }
 
-  const avatarData = await thinkwayImageDataForPptxCoverCrop(avatarUrl, 1, 1, cropMax);
+  const avatarData = await thinkwayImageDataForPptxCoverCrop(
+    avatarUrl,
+    1,
+    1,
+    cropMax,
+    profileHref
+  );
   if (avatarData) {
     slide.addImage({
       data: avatarData,

@@ -134,13 +134,14 @@ function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["
   const label = isLumpSumPricingTemplate(doc.template)
     ? QUOTATION_CLIENT_LABELS.totalCost
     : QUOTATION_CLIENT_LABELS.clientInvestment;
-  const value = isLumpSumPricingTemplate(doc.template)
+  const raw = isLumpSumPricingTemplate(doc.template)
     ? doc.summary.grandTotal
     : doc.summary.totalClientCost;
-  const formatted = formatQuotationMoneyDisplay(value);
+  const formatted = formatQuotationMoneyDisplay(raw);
+  // Cover primary = full total (e.g. AED 268,333.34); short is the subtitle.
   return {
     label,
-    value,
+    value: formatted.full,
     valueShort: formatted.short,
   };
 }

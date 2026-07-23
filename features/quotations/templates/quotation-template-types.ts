@@ -109,6 +109,7 @@ export type QuotationTemplatePayload = {
       engagement: string;
       views: string;
       profileUrl: string | null;
+      avatarUrl: string | null;
     }>;
     publications: string[];
     deliverables: Array<{

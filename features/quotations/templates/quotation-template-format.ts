@@ -28,13 +28,34 @@ export function parseQuotationMoneyString(value: string): {
   const trimmed = value.trim();
   const dual = trimmed.match(/^([\d,.\s]+)\s+(\w+)\s+\/\s+([\d,.\s]+)\s+(\w+)$/);
   if (dual) {
-    const amount = Number(dual[3].replace(/,/g, ""));
-    return Number.isFinite(amount) ? { amount, currency: dual[4] } : null;
+    const amount = Number(dual[3]!.replace(/,/g, ""));
+    return Number.isFinite(amount) ? { amount, currency: dual[4]! } : null;
   }
-  const single = trimmed.match(/^([\d,.\s]+)\s+(\w+)$/);
-  if (single) {
-    const amount = Number(single[1].replace(/,/g, ""));
-    return Number.isFinite(amount) ? { amount, currency: single[2] } : null;
+  // "268,333.34 AED"
+  const amountFirst = trimmed.match(/^([\d,.\s]+)\s+([A-Za-z]{3})$/);
+  if (amountFirst) {
+    const amount = Number(amountFirst[1]!.replace(/,/g, ""));
+    return Number.isFinite(amount)
+      ? { amount, currency: amountFirst[2]!.toUpperCase() }
+      : null;
+  }
+  // "AED 268,333.34"
+  const codeFirst = trimmed.match(/^([A-Za-z]{3})\s+([\d,.]+)$/);
+  if (codeFirst) {
+    const amount = Number(codeFirst[2]!.replace(/,/g, ""));
+    return Number.isFinite(amount)
+      ? { amount, currency: codeFirst[1]!.toUpperCase() }
+      : null;
+  }
+  // "E£542,857.16" / "$1,234.00"
+  const symbolFirst = trimmed.match(/^(E£|\$|€|£|¥)([\d,.]+)$/);
+  if (symbolFirst) {
+    const amount = Number(symbolFirst[2]!.replace(/,/g, ""));
+    if (!Number.isFinite(amount)) return null;
+    const sym = symbolFirst[1]!;
+    const currency =
+      sym === "$" ? "USD" : sym === "€" ? "EUR" : sym === "¥" ? "JPY" : "EGP";
+    return { amount, currency };
   }
   return null;
 }
@@ -54,14 +75,16 @@ export function formatQuotationCurrencySymbolFirst(
   return `${symbol}${formatted}`;
 }
 
-/** Abbreviated currency for cover stats (E£3.50M). */
+/** Abbreviated currency for cover stats (E£3.50M / AED 268.33K). */
 export function formatQuotationCurrencyShort(amount: number, currency = "EGP"): string {
-  const symbol = currencySymbol(currency).trim();
+  const rawSymbol = currencySymbol(currency);
+  // Letter codes (AED, SAR) keep a space; glyph symbols (E£, $) stay glued.
+  const prefix = rawSymbol.endsWith(" ") ? `${rawSymbol.trim()} ` : rawSymbol.trim();
   if (amount >= 1_000_000) {
-    return `${symbol}${(amount / 1_000_000).toFixed(2)}M`;
+    return `${prefix}${(amount / 1_000_000).toFixed(2)}M`;
   }
   if (amount >= 1_000) {
-    return `${symbol}${(amount / 1_000).toFixed(2)}K`;
+    return `${prefix}${(amount / 1_000).toFixed(2)}K`;
   }
   return formatQuotationCurrencySymbolFirst(amount, currency);
 }

@@ -18,6 +18,7 @@ export type QuotationExportPlatformMetricRow = {
   engagement: string;
   views: string;
   profileUrl: string | null;
+  avatarUrl: string | null;
 };
 
 function formatFollowersLabel(value: number | null | undefined): string {
@@ -94,6 +95,7 @@ export function buildExportPlatformMetricRows(
       ),
       views: formatViewsLabel(account?.avg_views ?? lineMatch?.avg_views ?? null),
       profileUrl: account?.profile_url ?? lineMatch?.profile_url ?? null,
+      avatarUrl: account?.avatar_url ?? null,
     };
   });
 }

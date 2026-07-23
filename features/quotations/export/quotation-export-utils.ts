@@ -27,6 +27,8 @@ export type QuotationExportPlatformAccount = {
   engagement_rate: number | null;
   avg_views: number | null;
   profile_url: string | null;
+  /** Live platform CDN avatar (Instagram/TikTok profile picture). */
+  avatar_url: string | null;
 };
 
 export type QuotationExportItem = QuotationItemRow & {

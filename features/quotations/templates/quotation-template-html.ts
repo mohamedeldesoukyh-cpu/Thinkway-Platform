@@ -152,7 +152,7 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
     </div>
     <div class="statrow">
       <div class="stat"><p class="sl">Campaign Creators</p><p class="sv">${esc(camp.creatorCount)}</p><p class="su">${esc(camp.tierSummary)}</p></div>
-      <div class="stat"><p class="sl">${esc(c.stat3.label)}</p><p class="sv">${esc(c.stat3.valueShort)}</p><p class="su">${esc(c.stat3.value)}</p></div>
+      <div class="stat"><p class="sl">${esc(c.stat3.label)}</p><p class="sv">${esc(c.stat3.value)}</p><p class="su">${esc(c.stat3.valueShort)}</p></div>
     </div>
   </div>
   <div class="foot" style="border-top-color:rgba(205,216,245,.18); color:#7f8bb0;">
