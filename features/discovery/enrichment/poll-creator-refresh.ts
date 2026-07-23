@@ -28,7 +28,10 @@ function isActiveSyncStatus(status: CreatorMetricsSyncStatus): boolean {
 export type CreatorRefreshPollCallbacks = {
   onUpdated: (creator: UnifiedCreatorResult) => void;
   onStatusChange?: (status: CreatorMetricsSyncStatus) => void;
-  onComplete?: (status: CreatorMetricsSyncStatus) => void;
+  onComplete?: (
+    status: CreatorMetricsSyncStatus,
+    creator?: UnifiedCreatorResult | null
+  ) => void;
 };
 
 export type CreatorBatchRefreshPollCallbacks = {
@@ -89,11 +92,12 @@ export async function pollCreatorAfterRefresh(
         syncStatus: status,
         attempt: attempt + 1,
       });
-      callbacks.onComplete?.(status);
-      if (status === "completed") {
-        const creator = await getUnifiedCreatorAfterRefreshAction(input.unifiedId);
+      let creator: UnifiedCreatorResult | null = null;
+      if (status === "completed" || status === "failed") {
+        creator = await getUnifiedCreatorAfterRefreshAction(input.unifiedId);
         if (creator) callbacks.onUpdated(creator);
       }
+      callbacks.onComplete?.(status, creator);
       return status;
     }
     // "pending" or unknown non-active statuses should not spin forever.

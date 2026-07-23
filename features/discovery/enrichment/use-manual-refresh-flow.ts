@@ -116,36 +116,49 @@ export function useManualRefreshFlow(options: UseManualRefreshFlowOptions = {}) 
                 notifyUpdated?.(creator);
                 notifyStatus?.(resolveCreatorEnrichmentStatus(creator.enrichment_status));
               },
-              onComplete: (syncStatus) => {
+              onComplete: (syncStatus, creator) => {
                 logManualRefreshTrace("ui_poll_complete", {
                   influencerId: request.influencerId,
                   syncStatus,
+                  enrichmentStatus: creator?.enrichment_status ?? null,
+                  enrichmentSource: creator?.enrichment_source ?? null,
                 });
                 const next = syncStatusToEnrichmentStatus(syncStatus);
                 notifyStatus?.(next);
                 if (syncStatus === "completed") {
-                  // DIAGNOSTIC: toast text uses request intent (refreshSource), not
-                  // proof that Apify ran. Poll only sees DB syncStatus=completed
-                  // (enriched|partial|skipped all map to completed).
+                  const liveFromApify =
+                    result.refreshSource === "live_apify" &&
+                    creator?.enrichment_source === "apify" &&
+                    (creator.enrichment_status === "enriched" ||
+                      creator.enrichment_status === "partial");
+                  const toastText = liveFromApify
+                    ? "Creator refreshed live from Apify"
+                    : result.refreshSource === "live_apify"
+                      ? "Refresh finished without new Apify data"
+                      : "Creator metrics updated";
                   logManualRefreshTrace("ui_success_toast", {
                     influencerId: request.influencerId,
-                    toast:
-                      result.refreshSource === "live_apify"
-                        ? "Creator refreshed live from Apify"
-                        : "Creator metrics updated",
+                    toast: toastText,
                     refreshSourceIntent: result.refreshSource ?? null,
+                    enrichmentStatus: creator?.enrichment_status ?? null,
+                    enrichmentSource: creator?.enrichment_source ?? null,
                     syncStatus,
-                    note: "Toast does not verify Apify actor execution; skipped/partial also map to completed",
+                    liveFromApify,
                   });
-                  toast.success(
-                    result.refreshSource === "live_apify"
-                      ? "Creator refreshed live from Apify"
-                      : "Creator metrics updated"
-                  );
+                  if (liveFromApify) {
+                    toast.success(toastText);
+                  } else if (result.refreshSource === "live_apify") {
+                    toast.message(toastText, {
+                      description:
+                        "Check Apify daily budgets (DISCOVERY_APIFY_MAX_*) on Vercel and Railway, then try again.",
+                    });
+                  } else {
+                    toast.success(toastText);
+                  }
                 } else if (syncStatus === "failed") {
-                  toast.error("Creator refresh stopped", {
+                  toast.error("Creator refresh failed", {
                     description:
-                      "No completion from the enrichment worker. Confirm discovery-worker is running, then try Refresh Metrics once.",
+                      "Apify did not complete this refresh. Confirm discovery-worker is running and Apify daily budgets are set above 0.",
                   });
                 }
               },

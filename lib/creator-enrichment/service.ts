@@ -567,9 +567,11 @@ export async function runCreatorEnrichment(
           `[avatar] preserving uploaded avatar after failed enrichment influencer=${payload.influencerId} platform=${platformKey} username=${username ?? "unknown"}`
         );
       }
+      // Always surface block reasons (budget/token/actor). available=false used to
+      // drop the error and soft-succeed as "partial", which made live Refresh look OK.
+      errors.push(`${platformKey}: ${fetched.reason}`);
       if (fetched.available) {
         anyApifyAvailable = true;
-        errors.push(`${platformKey}: ${fetched.reason}`);
       }
       continue;
     }
@@ -919,6 +921,18 @@ export async function runCreatorEnrichment(
         ? "partial"
         : "skipped";
 
+  // Live Apify refresh must not report success when no actor ran and fetches failed
+  // (daily budget 0, missing token, etc.). Soft "partial/skipped" hid the real block.
+  if (
+    !preferCachedSnapshot &&
+    !apifyActorCompleted &&
+    !cachedMetricsReused &&
+    !anySuccess &&
+    errors.length > 0
+  ) {
+    finalStatus = "failed";
+  }
+
   const influencerCategoriesChanged =
     JSON.stringify(rollupInfluencerCategories) !==
     JSON.stringify(creatorRow.categories ?? []);
@@ -1061,6 +1075,17 @@ export async function runCreatorEnrichment(
   });
 
   if (!anyApifyAvailable && !anySuccess) {
+    if (!preferCachedSnapshot) {
+      return {
+        ok: false,
+        status: "failed",
+        message:
+          errors.length > 0
+            ? errors.join("; ")
+            : "Apify acquisition blocked; no enrichment performed.",
+        fieldsUpdated: allFieldsUpdated,
+      };
+    }
     if (hasBaselinePreview) {
       return {
         ok: true,
@@ -1075,7 +1100,10 @@ export async function runCreatorEnrichment(
     return {
       ok: false,
       status: "failed",
-      message: "Apify is not configured; no enrichment performed.",
+      message:
+        errors.length > 0
+          ? errors.join("; ")
+          : "Apify is not configured; no enrichment performed.",
       fieldsUpdated: [],
     };
   }

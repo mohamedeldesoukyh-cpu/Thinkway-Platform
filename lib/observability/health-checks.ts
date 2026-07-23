@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  areApifyBudgetCapsConfigured,
+  resolveApifyBudgetCaps,
+} from "@/lib/discovery/control-center/apify-budget";
+import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
 import { getThinkwayEnvironment } from "@/lib/observability/environment";
 import { DISCOVERY_WORKER_QUEUES } from "@/lib/observability/discovery-queues";
 import { readWorkerHeartbeat } from "@/lib/observability/worker-heartbeat";
@@ -10,6 +15,7 @@ import {
   type QueueStats,
   type RedisHealth,
 } from "@/lib/performance/campaign-performance-queues";
+import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
 import { PUBLICATION_MEDIA_BUCKET } from "@/lib/performance/screenshot-capture/config";
 import { getBuildInfo } from "@/lib/deploy/build-info";
 
@@ -41,6 +47,15 @@ export type WorkerHealth = {
   error?: string;
 };
 
+export type ApifyReadiness = {
+  tokenConfigured: boolean;
+  maxRequestsPerDay: number | null;
+  maxCreditsPerDay: number | null;
+  budgetConfigured: boolean;
+  /** When false, live Refresh cannot call Apify actors (fail-closed). */
+  liveAcquisitionAllowed: boolean;
+};
+
 export type ReadinessReport = {
   status: HealthStatus;
   environment: string;
@@ -49,6 +64,7 @@ export type ReadinessReport = {
   redis: RedisHealth;
   storage: StorageHealth;
   worker: WorkerHealth;
+  apify: ApifyReadiness;
   queues: {
     configured: boolean;
     stats: QueueStats[];
@@ -184,6 +200,18 @@ export async function buildReadinessReport(
     error: workerHeartbeat.error,
   };
 
+  const controlSettings = await getDiscoveryControlSettings(supabase);
+  const apifyCaps = resolveApifyBudgetCaps(controlSettings.costProtection);
+  const budgetConfigured = areApifyBudgetCapsConfigured(apifyCaps);
+  const tokenConfigured = Boolean(getMetricsCollectorEnv().apifyToken);
+  const apify: ApifyReadiness = {
+    tokenConfigured,
+    maxRequestsPerDay: apifyCaps.maxRequestsPerDay,
+    maxCreditsPerDay: apifyCaps.maxCreditsPerDay,
+    budgetConfigured,
+    liveAcquisitionAllowed: budgetConfigured && tokenConfigured,
+  };
+
   return {
     status,
     environment: getThinkwayEnvironment(),
@@ -192,6 +220,7 @@ export async function buildReadinessReport(
     redis,
     storage,
     worker,
+    apify,
     queues: {
       configured: redisConfigured,
       stats: queueStats,
