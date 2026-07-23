@@ -401,7 +401,13 @@
 
 .quotation-editor-rd4 .metric--currency {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.quotation-editor-rd4 .metric--currency .l {
+  margin-bottom: 2px;
 }
 
 .quotation-editor-rd4 .metric + .metric {

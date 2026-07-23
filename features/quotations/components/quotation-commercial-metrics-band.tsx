@@ -100,7 +100,8 @@ export function QuotationCommercialMetricsBand({
     <div className="metricsband" aria-label="Quotation commercial metrics">
       <div className="metric metric--currency">
         <CommercialCurrencySelect
-          label="Currency"
+          label="CCY"
+          layout="metric"
           value={displayCurrency}
           onChange={onDisplayCurrencyChange ?? (() => undefined)}
           disabled={currencyDisabled || !onDisplayCurrencyChange}

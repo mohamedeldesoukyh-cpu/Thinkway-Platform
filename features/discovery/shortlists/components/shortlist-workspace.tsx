@@ -733,7 +733,7 @@ export function ShortlistWorkspace({
 
             <div className="flex shrink-0 items-center border-l border-border/60 pl-5">
               <CommercialCurrencySelect
-                label="Currency"
+                label="CCY"
                 value={displayCurrency}
                 onChange={handleCurrencyChange}
                 disabled={!canEditDetails || isPending}

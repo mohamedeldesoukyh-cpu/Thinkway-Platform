@@ -114,6 +114,17 @@ export function toDeliverableDrafts(deliverables: QuotationDeliverable[]): Deliv
   });
 }
 
+function deliverableHasCommercialAmount(d: {
+  cost?: number | null;
+  revenue?: number | null;
+  free_for_client?: boolean | null;
+}): boolean {
+  if (d.free_for_client === true) return true;
+  if (d.cost != null && Number.isFinite(d.cost) && d.cost > 0) return true;
+  if (d.revenue != null && Number.isFinite(d.revenue) && d.revenue > 0) return true;
+  return false;
+}
+
 export function fromDeliverableDrafts(drafts: DeliverableDraft[]): QuotationDeliverable[] {
   return drafts
     .map(({ key: _key, ...rest }) => {
@@ -140,6 +151,8 @@ export function fromDeliverableDrafts(drafts: DeliverableDraft[]): QuotationDeli
       (d) =>
         d.type.trim() ||
         (d.types?.length ?? 0) > 0 ||
-        (d.type_lines?.length ?? 0) > 0
+        (d.type_lines?.length ?? 0) > 0 ||
+        // Keep cost/revenue rows even before a type is selected so header totals stay live.
+        deliverableHasCommercialAmount(d)
     );
 }

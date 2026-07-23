@@ -77,4 +77,25 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
   assert.ok(totals.totalRevenueEgp > 0, "pending deliverable revenue should feed live totals");
 }
 
+{
+  const item = mockItem();
+  const liveDraft = {
+    ...draftFromQuotationItem(item),
+    mode: "cost_revenue" as const,
+    cost: 40000,
+    revenue: 45500,
+    gpValue: 5500,
+    gpPct: 12.09,
+  };
+  // Empty pending rollup must not wipe the live draft amounts.
+  const draft = resolveLiveTotalsDraft(item, liveDraft, {
+    deliverables: [],
+    cost: 0,
+    revenue: 0,
+  });
+  const totals = computeLiveQuotationTotals([draft]);
+  assert.equal(totals.totalCostEgp, 40000);
+  assert.equal(totals.totalRevenueEgp, 45500);
+}
+
 console.log("quotation-pending-live-totals.test.ts passed");
