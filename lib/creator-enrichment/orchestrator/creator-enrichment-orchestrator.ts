@@ -20,6 +20,7 @@ import {
   type ExecutionPlan,
 } from "@/lib/creator-enrichment/execution";
 import { buildGovernanceContextForRequest } from "@/lib/creator-enrichment/governance";
+import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
 import type {
   CreatorEnrichmentJobPayload,
   CreatorEnrichmentResult,
@@ -389,6 +390,17 @@ export class CreatorEnrichmentOrchestrator {
         skipped: true,
         planId: plan.planId,
         optimizationSummary: plan.optimizationSummary,
+      });
+      logManualRefreshTrace("freshness_decision", {
+        influencerId: request.creatorId,
+        stage: "decision_engine_execute",
+        skip: true,
+        decision: decision.decision,
+        reason: decision.reason,
+        decidingRuleId: decision.decidingRuleId,
+        force: request.payload.force ?? false,
+        apifyCalled: false,
+        note: "Decision Engine short-circuit — runCreatorEnrichment not invoked",
       });
       return result;
     }

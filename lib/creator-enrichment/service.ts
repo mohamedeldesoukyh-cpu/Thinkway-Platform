@@ -50,6 +50,7 @@ import {
   isCreatorEnrichmentWorkerEnabled,
   type EnrichmentScope,
 } from "./enabled";
+import { logManualRefreshTrace } from "./manual-refresh-trace";
 import { decideEnrichment, computeNextRefreshAt } from "./policy";
 import { shouldIncludeApifyProfilePosts } from "./apify-fetch-policy";
 import { resolveApifyAvatarPersistOptions } from "./enrichment-avatar-policy";
@@ -276,12 +277,31 @@ export async function runCreatorEnrichment(
   };
 
   const scope = payload.scope ?? "all";
+  logManualRefreshTrace("refresh_requested", {
+    influencerId: payload.influencerId,
+    trigger: payload.trigger,
+    scope,
+    force: Boolean(payload.force),
+    dataSource: payload.dataSource ?? "live_apify",
+    jobId: options?.jobId ?? null,
+    attempt,
+    lastEnrichedAt: creatorRow.last_enriched_at,
+  });
+
   const gate = canEnqueueCreatorEnrichment({ trigger: payload.trigger, scope });
   if (!gate.allowed) {
     const skippedReason = gate.reason ?? creatorEnrichmentDisabledMessage();
     const restoredStatus: CreatorEnrichmentResult["status"] = creatorRow.last_enriched_at
       ? "enriched"
       : "never";
+
+    logManualRefreshTrace("freshness_decision", {
+      influencerId: payload.influencerId,
+      stage: "enqueue_gate",
+      skip: true,
+      reason: skippedReason,
+      force: Boolean(payload.force),
+    });
 
     await supabase
       .from("influencers")
@@ -325,6 +345,14 @@ export async function runCreatorEnrichment(
       lastEnrichedAt: creatorRow.last_enriched_at,
       force: payload.force,
     });
+    logManualRefreshTrace("freshness_decision", {
+      influencerId: payload.influencerId,
+      stage: "runCreatorEnrichment_policy",
+      skip: decision.skip,
+      reason: decision.skip ? decision.reason : "stale_or_forced",
+      force: Boolean(payload.force),
+      lastEnrichedAt: creatorRow.last_enriched_at,
+    });
     if (decision.skip) {
       const restoredStatus: CreatorEnrichmentResult["status"] = creatorRow.last_enriched_at
         ? "enriched"
@@ -340,6 +368,13 @@ export async function runCreatorEnrichment(
         fallbackReason: decision.reason,
         force: Boolean(payload.force),
         restoredStatus,
+      });
+      logManualRefreshTrace("enrichment_outcome", {
+        influencerId: payload.influencerId,
+        status: "skipped",
+        apifyCalled: false,
+        reason: decision.reason,
+        note: "Freshness skip sets enrichment_status restored; UI maps skipped→completed",
       });
       await writeEnrichmentRun(supabase, {
         influencerId: payload.influencerId,
@@ -426,6 +461,10 @@ export async function runCreatorEnrichment(
     forceInterestReplace,
   });
 
+  let apifyActorStarted = false;
+  let apifyActorCompleted = false;
+  let cachedMetricsReused = false;
+
   for (const account of accounts) {
     if (payload.platformAccountId && account.id !== payload.platformAccountId) {
       continue;
@@ -445,8 +484,26 @@ export async function runCreatorEnrichment(
           ? "Missing profile URL or username."
           : "Unsupported platform for Apify enrichment.",
       });
+      logManualRefreshTrace("provider_selected", {
+        influencerId: payload.influencerId,
+        platform: account.platform,
+        selected: false,
+        reason: !profileUrl
+          ? "missing_profile_url"
+          : "unsupported_platform",
+      });
       continue;
     }
+
+    const iplForce = preferCachedSnapshot ? false : Boolean(payload.force);
+    logManualRefreshTrace("provider_selected", {
+      influencerId: payload.influencerId,
+      platform: platformKey,
+      selected: true,
+      provider: preferCachedSnapshot ? "ipl_cache_preferred" : "apify_via_ipl",
+      force: iplForce,
+      preferCachedSnapshot,
+    });
 
     logCreatorEnrichment("Fetching Apify profile", {
       influencerId: payload.influencerId,
@@ -462,7 +519,7 @@ export async function runCreatorEnrichment(
       platform: platformKey,
       username,
       profileUrl,
-      force: preferCachedSnapshot ? false : Boolean(payload.force),
+      force: iplForce,
       followerCount: account.follower_count,
       deferDnaBridge: true,
       includePosts: shouldIncludeApifyProfilePosts(scope),
@@ -493,6 +550,14 @@ export async function runCreatorEnrichment(
         fallbackReason: fetched.reason,
         iplProviderRunId: fetched.providerRunId,
       });
+      logManualRefreshTrace("enrichment_outcome", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        fetchOk: false,
+        reason: fetched.reason,
+        available: fetched.available,
+        cacheHit: false,
+      });
       const avatarSource = normalizeAvatarSource(account.avatar_source);
       if (
         avatarSource === "uploaded" &&
@@ -510,11 +575,31 @@ export async function runCreatorEnrichment(
     }
 
     if (fetched.cacheHit) {
+      cachedMetricsReused = true;
       logCreatorEnrichment("IPL cache hit", {
         influencerId: payload.influencerId,
         platform: platformKey,
         snapshotId: fetched.snapshotId,
         providerRunId: fetched.providerRunId,
+      });
+      logManualRefreshTrace("cached_metrics_reused", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        snapshotId: fetched.snapshotId,
+        providerRunId: fetched.providerRunId,
+        source: fetched.source,
+        force: iplForce,
+      });
+    } else if (fetched.ok) {
+      apifyActorStarted = true;
+      apifyActorCompleted = true;
+      logManualRefreshTrace("apify_actor_completed", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        snapshotId: fetched.snapshotId,
+        providerRunId: fetched.providerRunId,
+        apifyRunId: fetched.data.apifyRunId ?? null,
+        source: fetched.source,
       });
     }
 
@@ -882,6 +967,23 @@ export async function runCreatorEnrichment(
   if (finalStatus === "enriched" && !identityReady) {
     finalStatus = "awaiting_profile_details";
   }
+
+  logManualRefreshTrace("enrichment_outcome", {
+    influencerId: payload.influencerId,
+    finalStatus,
+    force: Boolean(payload.force),
+    dataSource: preferCachedSnapshot ? "cached_snapshot" : "live_apify",
+    apifyActorStarted,
+    apifyActorCompleted,
+    cachedMetricsReused,
+    anyApifyAvailable,
+    anySuccess,
+    effectiveSuccess,
+    lastApifyRunId,
+    fieldsUpdatedCount: allFieldsUpdated.length,
+    errorCount: errors.length,
+    note: "UI maps enriched|partial|skipped → syncStatus completed; toast uses request dataSource intent",
+  });
 
   const nextMetadata = {
     ...(creatorRow.metadata ?? {}),

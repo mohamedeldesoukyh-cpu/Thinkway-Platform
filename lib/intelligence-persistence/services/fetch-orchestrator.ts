@@ -12,6 +12,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchApifyProfileRaw } from "@/lib/creator-enrichment/apify-profile";
+import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 
 import { getProviderAdapter } from "../adapters";
@@ -73,6 +74,14 @@ export async function fetchProfileWithIpl(
     });
 
     if (cached) {
+      logManualRefreshTrace("cached_metrics_reused", {
+        influencerId: context.influencerId,
+        platformAccountId: context.platformAccountId,
+        platform: platformKey,
+        snapshotId: cached.id,
+        force: Boolean(context.force),
+        stage: "ipl_cache_first",
+      });
       const cacheRunId = await createProviderRun(supabase, {
         provider,
         influencerId: context.influencerId,
@@ -116,6 +125,14 @@ export async function fetchProfileWithIpl(
   }
 
   // ---- External provider fetch ---------------------------------------------
+  logManualRefreshTrace("provider_selected", {
+    influencerId: context.influencerId,
+    platform: platformKey,
+    provider: "apify",
+    force: Boolean(context.force),
+    stage: "ipl_external_fetch",
+  });
+
   const providerRunId = await createProviderRun(supabase, {
     provider,
     influencerId: context.influencerId,
@@ -135,6 +152,14 @@ export async function fetchProfileWithIpl(
   });
 
   if (!rawResult.ok) {
+    logManualRefreshTrace("apify_actor_blocked", {
+      influencerId: context.influencerId,
+      platform: platformKey,
+      reason: rawResult.reason,
+      available: rawResult.available,
+      apifyRunId: rawResult.apifyRunId ?? null,
+      durationMs: rawResult.durationMs,
+    });
     if (providerRunId) {
       await completeProviderRun(supabase, {
         runId: providerRunId,

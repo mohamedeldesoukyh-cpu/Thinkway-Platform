@@ -42,6 +42,7 @@ import {
 import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
 
 import { isCreatorEnrichmentWorkerEnabled } from "./enabled";
+import { logManualRefreshTrace } from "./manual-refresh-trace";
 import type { ApifyProfileData, RecentPublication } from "./types";
 
 async function resolveBudgetSupabase() {
@@ -244,6 +245,13 @@ async function launchApifyActor(input: {
       reason: gate.reason,
       gateKey: gate.key,
     });
+    logManualRefreshTrace("apify_actor_blocked", {
+      label: input.label,
+      actorId: input.actorId,
+      platform: input.platformKey,
+      reason: gate.reason,
+      stage: "cooldown_gate",
+    });
     return { runId: null, rows: [], error: gate.reason };
   }
 
@@ -252,6 +260,11 @@ async function launchApifyActor(input: {
     actorId: input.actorId,
     platform: input.platformKey,
     actorInput: input.body,
+  });
+  logManualRefreshTrace("apify_actor_started", {
+    label: input.label,
+    actorId: input.actorId,
+    platform: input.platformKey,
   });
 
   const waitSeconds = Math.max(1, Math.ceil(input.timeoutMs / 1000));
@@ -275,6 +288,13 @@ async function launchApifyActor(input: {
   const runId = str(payload.data?.id);
   logApifyEnrichment("Actor run finished", {
     label: input.label,
+    apifyRunId: runId,
+    status: payload.data?.status ?? null,
+  });
+  logManualRefreshTrace("apify_actor_completed", {
+    label: input.label,
+    actorId: input.actorId,
+    platform: input.platformKey,
     apifyRunId: runId,
     status: payload.data?.status ?? null,
   });
@@ -612,6 +632,13 @@ export async function fetchApifyProfileRaw(input: {
     },
   });
   if (!budget.allowed) {
+    logManualRefreshTrace("apify_actor_blocked", {
+      platform: input.platform,
+      username: input.username,
+      reason: budget.reason,
+      code: budget.code,
+      stage: "apify_budget",
+    });
     return {
       ok: false,
       available: false,
@@ -625,6 +652,11 @@ export async function fetchApifyProfileRaw(input: {
   const handle = normalizeHandle(input.username, input.profileUrl);
 
   if (!env.apifyToken) {
+    logManualRefreshTrace("apify_actor_blocked", {
+      platform: platformKey,
+      reason: "APIFY_TOKEN not configured.",
+      stage: "token",
+    });
     return {
       ok: false,
       available: false,
@@ -635,6 +667,11 @@ export async function fetchApifyProfileRaw(input: {
 
   const actorId = apifyProfileActorIdForPlatform(platformKey, env);
   if (!actorId) {
+    logManualRefreshTrace("apify_actor_blocked", {
+      platform: platformKey,
+      reason: "Apify actor id not configured.",
+      stage: "actor_id",
+    });
     return {
       ok: false,
       available: false,

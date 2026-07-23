@@ -11,6 +11,7 @@ export type ManualRefreshTraceStep =
   | "ui_poll_start"
   | "ui_poll_status"
   | "ui_poll_complete"
+  | "ui_success_toast"
   | "action_enter"
   | "action_exit"
   | "impl_enter"
@@ -23,7 +24,15 @@ export type ManualRefreshTraceStep =
   | "worker_receive"
   | "worker_complete"
   | "worker_skip"
-  | "worker_fail";
+  | "worker_fail"
+  | "refresh_requested"
+  | "freshness_decision"
+  | "provider_selected"
+  | "apify_actor_started"
+  | "apify_actor_completed"
+  | "apify_actor_blocked"
+  | "cached_metrics_reused"
+  | "enrichment_outcome";
 
 function redisHostFromEnv(): string | null {
   const raw = process.env.REDIS_URL?.trim();

@@ -124,6 +124,19 @@ export function useManualRefreshFlow(options: UseManualRefreshFlowOptions = {}) 
                 const next = syncStatusToEnrichmentStatus(syncStatus);
                 notifyStatus?.(next);
                 if (syncStatus === "completed") {
+                  // DIAGNOSTIC: toast text uses request intent (refreshSource), not
+                  // proof that Apify ran. Poll only sees DB syncStatus=completed
+                  // (enriched|partial|skipped all map to completed).
+                  logManualRefreshTrace("ui_success_toast", {
+                    influencerId: request.influencerId,
+                    toast:
+                      result.refreshSource === "live_apify"
+                        ? "Creator refreshed live from Apify"
+                        : "Creator metrics updated",
+                    refreshSourceIntent: result.refreshSource ?? null,
+                    syncStatus,
+                    note: "Toast does not verify Apify actor execution; skipped/partial also map to completed",
+                  });
                   toast.success(
                     result.refreshSource === "live_apify"
                       ? "Creator refreshed live from Apify"
