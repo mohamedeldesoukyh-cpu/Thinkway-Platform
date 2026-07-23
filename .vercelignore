@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.next
+node_modules
+.git
+*.log
+coverage
+.tmp
+.turbo
+agent-transcripts
