@@ -94,6 +94,7 @@ export type QuotationTemplatePayload = {
     name: string;
     handle: string;
     avatarSrc?: string | null;
+    avatarUrl?: string | null;
     profileUrl?: string | null;
     followers: string;
     engagement: string;
@@ -102,6 +103,13 @@ export type QuotationTemplatePayload = {
     categories: string;
     platforms: string;
     platformIcons: string[];
+    platformMetrics: Array<{
+      platform: string;
+      followers: string;
+      engagement: string;
+      views: string;
+      profileUrl: string | null;
+    }>;
     publications: string[];
     deliverables: Array<{
       option: string;
@@ -116,6 +124,9 @@ export type QuotationTemplatePayload = {
     sectionNo: string;
     rows: Array<{
       handle: string;
+      avatarUrl?: string | null;
+      profileUrl?: string | null;
+      initials: string;
       followers: string;
       er: string;
       views: string;

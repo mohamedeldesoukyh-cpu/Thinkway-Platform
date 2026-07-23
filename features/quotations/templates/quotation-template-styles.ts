@@ -264,6 +264,9 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .creator-name-cell{display:flex; align-items:center; gap:10px;}
   .fee-avatar{width:28px; height:28px; border-radius:8px; object-fit:cover; flex:none; display:block; background:var(--lav);}
   .fee-avatar--initials{display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--tw-green); background:#E8F5F0;}
+  .roster-creator{display:flex; align-items:center; gap:10px;}
+  .roster-avatar{width:22px; height:22px; border-radius:999px; object-fit:cover; flex:none; display:block; background:var(--lav);}
+  .roster-avatar--fallback{display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:var(--blue); background:var(--lav);}
   .totals{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px;}
   .tot{border-radius:14px; padding:16px 22px; border:1px solid var(--hair); background:#fff;}
   .tot.final{background:var(--blue); border-color:var(--blue);}

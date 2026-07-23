@@ -246,7 +246,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.equal(pitchLumpPayload.flags.showFees, false);
   assert.equal(pitchLumpPayload.flags.includeAcceptance, false);
   const pitchLumpHtml = buildQuotationTemplateHtml(pitchLumpDoc);
-  assert.ok(pitchLumpHtml.includes("Client Quotation · Lump Sum"));
+  assert.ok(pitchLumpHtml.includes("Client RFQ Response · Lump-Sum"));
   assert.ok(pitchLumpHtml.includes("commercial-page"));
   assert.ok(!pitchLumpHtml.includes("Acceptance"));
 }

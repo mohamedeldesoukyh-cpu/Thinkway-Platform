@@ -20,12 +20,23 @@ import {
 } from "@/lib/quotations/quotation-deliverable-types";
 import type { QuotationItemRow } from "@/features/quotations/types";
 
+export type QuotationExportPlatformAccount = {
+  platform: string;
+  handle: string | null;
+  followers: number | null;
+  engagement_rate: number | null;
+  avg_views: number | null;
+  profile_url: string | null;
+};
+
 export type QuotationExportItem = QuotationItemRow & {
   profile_image_url?: string | null;
   profile_url?: string | null;
   option_number?: number | null;
   /** Average views from platform account enrichment (export-only). */
   avg_views?: number | null;
+  /** All linked platform accounts with metrics (export-only). */
+  export_platforms?: QuotationExportPlatformAccount[];
 };
 
 type DeliverableJson = QuotationDeliverable &
@@ -245,17 +256,25 @@ export function exportItemPlatformIcons(item: QuotationExportItem): {
     }
     const types = deliverableTypeValues(deliverable);
     platformsFromSelectedPostTypes(types, allowed).forEach((platform) =>
-      platformIcons.add(platform)
+      platformIcons.add(canonicalPlatformKey(platform))
     );
     deliverable.platform
       ?.split(",")
       .map((value) => value.trim())
       .filter(Boolean)
-      .forEach((platform) => platformIcons.add(platform));
+      .forEach((platform) => platformIcons.add(canonicalPlatformKey(platform)));
+  }
+
+  // Include every linked / enriched social account — not only the deliverable platform.
+  for (const platform of item.creator_profile_source?.linkedPlatforms ?? []) {
+    platformIcons.add(canonicalPlatformKey(platform));
+  }
+  for (const account of item.export_platforms ?? []) {
+    platformIcons.add(canonicalPlatformKey(account.platform));
   }
 
   if (!platformIcons.size && item.platform) {
-    platformIcons.add(item.platform);
+    platformIcons.add(canonicalPlatformKey(item.platform));
   }
 
   return { platformIcons: [...platformIcons], allPlatforms };

@@ -1150,8 +1150,46 @@ function addPitchCreatorMetricsTable(
   y: number,
   w: number
 ): number {
-  const rowH = 0.3;
-  const colW = [w * 0.16, w * 0.16, w * 0.14, w * 0.14, w * 0.22, w * 0.18];
+  // RFQ reference: one metrics row per linked platform; Tier and Category stay split columns.
+  const metricRows =
+    creator.platformMetrics.length > 0
+      ? creator.platformMetrics
+      : [
+          {
+            platform: creator.platformIcons[0] ?? "instagram",
+            followers: creator.followers,
+            engagement: creator.engagement,
+            views: creator.views,
+            profileUrl: creator.profileUrl ?? null,
+          },
+        ];
+
+  const rowH = 0.28;
+  const colW = [w * 0.16, w * 0.15, w * 0.14, w * 0.12, w * 0.23, w * 0.2];
+  const bodyRows = metricRows.map((row, index) => [
+    {
+      text: row.followers,
+      options: { fontSize: 10, bold: index === 0, color: TITLE_INK },
+    },
+    {
+      text: row.engagement,
+      options: { fontSize: 10, bold: index === 0, color: TITLE_INK },
+    },
+    { text: row.views, options: { fontSize: 10, color: TITLE_INK } },
+    {
+      text: index === 0 ? creator.tier : "",
+      options: { fontSize: 10, color: TITLE_INK },
+    },
+    {
+      text: index === 0 ? creator.categories : "",
+      options: { fontSize: 9, color: TITLE_INK },
+    },
+    {
+      text: `     ${getReportPlatformIconTitle(row.platform)}`,
+      options: { fontSize: 9, color: TITLE_INK },
+    },
+  ]);
+
   slide.addTable(
     [
       [
@@ -1159,22 +1197,10 @@ function addPitchCreatorMetricsTable(
         { text: "Engagement", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Views", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Tier", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
-        { text: "Categories", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
+        { text: "Category", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Platforms", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
       ],
-      [
-        { text: creator.followers, options: { fontSize: 10, bold: true, color: TITLE_INK } },
-        { text: creator.engagement, options: { fontSize: 10, bold: true, color: TITLE_INK } },
-        { text: creator.views, options: { fontSize: 10, bold: true, color: TITLE_INK } },
-        { text: creator.tier, options: { fontSize: 10, color: TITLE_INK } },
-        { text: creator.categories, options: { fontSize: 9, color: TITLE_INK } },
-        {
-          text: creator.platformIcons.length
-            ? `     ${platformIconsLabel(creator.platformIcons)}`
-            : creator.platforms,
-          options: { fontSize: 9, color: TITLE_INK },
-        },
-      ],
+      ...bodyRows,
     ],
     {
       x,
@@ -1188,19 +1214,19 @@ function addPitchCreatorMetricsTable(
     }
   );
 
-  if (creator.platformIcons.length) {
-    const platformsColX = x + colW.slice(0, 5).reduce((sum, value) => sum + value, 0) + 0.06;
+  const platformsColX = x + colW.slice(0, 5).reduce((sum, value) => sum + value, 0) + 0.06;
+  metricRows.forEach((row, index) => {
     addPlatformIconBadges(
       slide,
-      creator.platformIcons,
+      [row.platform],
       platformsColX,
-      y + rowH + 0.06,
-      4,
-      creator.profileUrl
+      y + rowH * (index + 1) + 0.05,
+      1,
+      row.profileUrl ?? creator.profileUrl
     );
-  }
+  });
 
-  return y + rowH * 2 + 0.12;
+  return y + rowH * (metricRows.length + 1) + 0.12;
 }
 
 async function addCreatorSlide(
@@ -1701,11 +1727,11 @@ async function addCollabSlides(
   }
 }
 
-function addRosterSlide(
+async function addRosterSlide(
   pptx: PptxGen,
   doc: QuotationDocument,
   counter: SlideCounter
-): void {
+): Promise<void> {
   const payload = buildQuotationTemplatePayload(doc);
   const slide = pptx.addSlide();
   applyContentBackground(slide);
@@ -1717,21 +1743,33 @@ function addRosterSlide(
     "At a glance"
   );
 
-  const colW = [2.1, 1.3, 1.0, 1.2, 1.1, 2.7, 2.93];
-  const rowH = 0.3;
+  // Leave left inset in Creator column for circular avatar overlays (RFQ reference).
+  const avatarSize = 0.22;
+  const colW = [2.35, 1.25, 1.0, 1.2, 1.05, 2.45, 2.83];
+  const rowH = 0.34;
   const tableY = cursorY + 0.1;
   const rows: Array<Array<{ text: string; options?: Record<string, unknown> }>> = [
     [
       { text: "Creator", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "Followers", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
-      { text: "ER", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
-      { text: "Views", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
+      { text: "Eng %", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
+      { text: "Avg views", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "Tier", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
-      { text: "Categories", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
+      { text: "Category", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       { text: "Platforms", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
     ],
     ...payload.roster.rows.map((row) => [
-      { text: row.handle, options: { fontSize: 9, bold: true, color: TITLE_INK } },
+      {
+        text: row.handle,
+        options: {
+          fontSize: 9,
+          bold: true,
+          color: TITLE_INK,
+          // top, right, bottom, left — room for avatar
+          margin: [0.04, 0.04, 0.04, 0.34] as [number, number, number, number],
+          ...(profileHyperlink(row.profileUrl) ? { hyperlink: profileHyperlink(row.profileUrl) } : {}),
+        },
+      },
       { text: row.followers, options: { fontSize: 9, color: TITLE_INK } },
       { text: row.er, options: { fontSize: 9, color: TITLE_INK } },
       { text: row.views, options: { fontSize: 9, color: TITLE_INK } },
@@ -1758,14 +1796,77 @@ function addRosterSlide(
   });
 
   const platformColX = MARGIN_X + colW.slice(0, 6).reduce((sum, value) => sum + value, 0) + 0.06;
-  payload.roster.rows.forEach((row, index) => {
-    if (!row.platformIcons.length) return;
-    addPlatformIconBadges(
-      slide,
-      row.platformIcons,
-      platformColX,
-      tableY + rowH + index * rowH + 0.06
-    );
+  for (let index = 0; index < payload.roster.rows.length; index++) {
+    const row = payload.roster.rows[index]!;
+    const rowTop = tableY + rowH * (index + 1);
+    const avatarX = MARGIN_X + 0.08;
+    const avatarY = rowTop + (rowH - avatarSize) / 2;
+
+    await addThinkwayCreatorAvatar(slide, {
+      avatarUrl: row.avatarUrl ?? null,
+      initials: row.initials,
+      x: avatarX,
+      y: avatarY,
+      size: avatarSize,
+      pitch: false,
+      profileHref: row.profileUrl,
+    });
+
+    if (row.platformIcons.length) {
+      addPlatformIconBadges(
+        slide,
+        row.platformIcons,
+        platformColX,
+        rowTop + (rowH - 0.18) / 2,
+        5,
+        row.profileUrl
+      );
+    }
+  }
+
+  // Bottom KPI strip — matches RFQ At a glance footer cards.
+  const kpiY = Math.min(
+    tableY + rowH * (payload.roster.rows.length + 1) + 0.28,
+    CONTENT_BOTTOM - 0.9
+  );
+  const kpis = [
+    ["CREATORS", payload.totals.creatorCount],
+    ["TOTAL REACH", payload.totals.followers],
+    ["AVG ENGAGEMENT", payload.totals.avgER],
+    ["CREATOR TIERS", String(payload.tiers.length)],
+  ] as const;
+  const kpiW = (CONTENT_W - 0.36) / 4;
+  kpis.forEach(([label, value], index) => {
+    const x = MARGIN_X + index * (kpiW + 0.12);
+    slide.addShape("roundRect", {
+      x,
+      y: kpiY,
+      w: kpiW,
+      h: 0.72,
+      fill: { color: WHITE },
+      line: { color: HAIR, width: 1 },
+      rectRadius: 0.1,
+    });
+    slide.addText(label, {
+      x: x + 0.14,
+      y: kpiY + 0.1,
+      w: kpiW - 0.28,
+      h: 0.18,
+      fontFace: FONT_UI,
+      fontSize: 9,
+      color: MUTED_SOFT,
+      charSpacing: 0.8,
+    });
+    slide.addText(value, {
+      x: x + 0.14,
+      y: kpiY + 0.32,
+      w: kpiW - 0.28,
+      h: 0.28,
+      fontFace: FONT_UI,
+      fontSize: 18,
+      bold: true,
+      color: TITLE_INK,
+    });
   });
 
   addSlideFooter(slide, `${doc.serial} · Roster`, pageNo);
@@ -1787,7 +1888,8 @@ function pptxCommercialFeeLine(
 function addCommercialTotalsBlock(
   slide: Slide,
   payload: ReturnType<typeof buildQuotationTemplatePayload>,
-  y: number
+  y: number,
+  currency = "EGP"
 ): void {
   const totals = [
     ["Client cost", payload.commercial.subtotalValue, false],
@@ -1830,7 +1932,7 @@ function addCommercialTotalsBlock(
     });
   });
 
-  slide.addText("All amounts in EGP, inclusive of 14% VAT where applicable.", {
+  slide.addText(`All amounts in ${currency}, inclusive of VAT where applicable.`, {
     x: MARGIN_X,
     y: y + 0.85,
     w: 11,
@@ -1935,7 +2037,7 @@ function addCommercialSlides(
 
     if (isLastChunk) {
       const totalsY = Math.min(cursorY + tableHeight + 0.2, 5.65);
-      addCommercialTotalsBlock(slide, payload, totalsY);
+      addCommercialTotalsBlock(slide, payload, totalsY, doc.currency);
     }
 
     addSlideFooter(
@@ -2247,7 +2349,7 @@ async function buildShowcasePptx(pptx: PptxGen, doc: QuotationDocument): Promise
   }
 
   if (doc.creatorGroups.length > 0) {
-    addRosterSlide(pptx, doc, counter);
+    await addRosterSlide(pptx, doc, counter);
   }
 
   const payload = buildQuotationTemplatePayload(doc);

@@ -692,8 +692,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(showcaseHtml.includes("Categories</p>"));
   assert.ok(showcaseHtml.includes("Beauty, Lifestyle"));
   assert.ok(
-    showcaseHtml.includes("<th>Categories</th>"),
-    "Showcase creator roster includes Categories column"
+    showcaseHtml.includes("<th>Category</th>"),
+    "Showcase creator roster includes Category column (split from Tier)"
   );
   assert.ok(
     showcaseHtml.includes('class="categories-cell"'),
@@ -704,8 +704,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     buildQuotationDocument(detail, { template: "showcase-lump-sum" })
   );
   assert.ok(
-    showcaseLumpHtml.includes('<th>Categories</th>'),
-    "Showcase lump sum creator roster includes Categories column"
+    showcaseLumpHtml.includes("<th>Category</th>"),
+    "Showcase lump sum creator roster includes Category column (split from Tier)"
   );
   assert.ok(showcaseLumpHtml.includes("Beauty"));
   assert.ok(showcaseLumpHtml.includes("Lifestyle"));
@@ -1104,7 +1104,15 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const row = doc.summary.fullTierBreakdown.sections
     .flatMap((section) => section.creators)
     .find((entry) => entry.handle === "hgabr");
-  assert.equal(row?.platform, "Instagram", "Multi-platform creators prefer Instagram in tier export");
+  assert.equal(
+    row?.platform,
+    "Instagram, TikTok",
+    "Multi-platform creators list all linked platforms in tier export"
+  );
+  assert.ok(
+    row?.platformIcons.includes("instagram") && row?.platformIcons.includes("tiktok"),
+    "Tier export carries platform icons for every linked network"
+  );
   assert.notEqual(row?.estimatedReach, "—", "Est. reach resolves when followers exist without line platform");
 }
 

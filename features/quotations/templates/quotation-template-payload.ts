@@ -113,10 +113,9 @@ function formatPitchQuotationTitle(name: string): string {
 }
 
 function coverKicker(template: QuotationTemplateVariant): string {
-  if (template === "lump-sum" || template === "pitch-lump-sum") {
-    return "Client Quotation · Lump Sum";
-  }
-  if (isPitchTemplate(template)) return "Client Quotation";
+  if (template === "pitch-lump-sum") return "Client RFQ Response · Lump-Sum";
+  if (template === "lump-sum") return "Client Quotation · Lump Sum";
+  if (isPitchTemplate(template)) return "Client RFQ Response";
   if (isShowcaseTemplate(template)) return "Client Quotation · Showcase";
   return "Client Quotation";
 }
@@ -274,21 +273,16 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
   );
 
   const showcaseCreators = doc.creatorGroups.map((group, index) => {
-    const platforms = new Set<string>();
-    let allPlatforms = false;
-    for (const row of group.rows) {
-      if (row.allPlatforms) {
-        allPlatforms = true;
-        break;
-      }
-      row.platformIcons.forEach((platform) => platforms.add(getReportPlatformIconTitle(platform)));
-    }
-    if (allPlatforms) {
-      platforms.clear();
-      platforms.add("All platforms");
-    } else if (!platforms.size && group.platform) {
-      platforms.add(group.platform);
-    }
+    const platformIcons =
+      group.platformIcons.length > 0
+        ? group.platformIcons
+        : [
+            ...new Set(
+              group.rows.flatMap((row) => (row.allPlatforms ? [] : row.platformIcons))
+            ),
+          ];
+    const platforms = platformIcons.map((platform) => getReportPlatformIconTitle(platform));
+    if (!platforms.length && group.platform) platforms.push(group.platform);
 
     return {
       sectionNo: String(index + 2).padStart(2, "0"),
@@ -302,19 +296,15 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
             : `@${group.handle}`
           : group.creator,
       profileUrl: group.profileUrl,
+      avatarUrl: group.avatarUrl,
       followers: group.followers,
       engagement: group.engagementRate,
       views: group.views,
       tier: group.rows[0]?.tier ?? "—",
       categories: group.categories.length ? group.categories.join(", ") : "—",
-      platforms: platforms.size ? [...platforms].join(", ") : "—",
-      platformIcons: allPlatforms
-        ? []
-        : [
-            ...new Set(
-              group.rows.flatMap((row) => (row.allPlatforms ? [] : row.platformIcons))
-            ),
-          ],
+      platforms: platforms.length ? platforms.join(", ") : "—",
+      platformIcons,
+      platformMetrics: group.platformMetrics,
       publications: (group.publicationShots ?? [])
         .map((shot) => shot.imageUrl)
         .filter(Boolean),
@@ -337,15 +327,15 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
   });
 
   const rosterRows = doc.creatorGroups.map((group) => {
-    const platforms = new Set<string>();
-    let allPlatforms = false;
-    for (const row of group.rows) {
-      if (row.allPlatforms) {
-        allPlatforms = true;
-        break;
-      }
-      row.platformIcons.forEach((platform) => platforms.add(getReportPlatformIconTitle(platform)));
-    }
+    const platformIcons =
+      group.platformIcons.length > 0
+        ? group.platformIcons
+        : [
+            ...new Set(
+              group.rows.flatMap((row) => (row.allPlatforms ? [] : row.platformIcons))
+            ),
+          ];
+    const platforms = platformIcons.map((platform) => getReportPlatformIconTitle(platform));
     return {
       handle:
         group.handle !== "—"
@@ -353,19 +343,16 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
             ? group.handle
             : `@${group.handle}`
           : group.creator,
+      avatarUrl: group.avatarUrl,
+      profileUrl: group.profileUrl,
+      initials: showcaseInitialsFromHandle(group.handle || group.creator),
       followers: group.followers,
       er: group.engagementRate,
       views: group.views,
       tier: group.rows[0]?.tier ?? "—",
       categories: group.categories.length ? group.categories.join(", ") : "—",
-      platforms: allPlatforms ? "All platforms" : platforms.size ? [...platforms].join(", ") : "—",
-      platformIcons: allPlatforms
-        ? []
-        : [
-            ...new Set(
-              group.rows.flatMap((row) => (row.allPlatforms ? [] : row.platformIcons))
-            ),
-          ],
+      platforms: platforms.length ? platforms.join(", ") : "—",
+      platformIcons,
     };
   });
 
@@ -386,11 +373,14 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
     },
     cover: {
       kicker: coverKicker(doc.template),
-      subtitle:
-        doc.preparedForLine.replace(
-          /^Prepared exclusively for /i,
-          "Influencer marketing proposal prepared exclusively for "
-        ) + ".",
+      subtitle: isPitchTemplate(doc.template)
+        ? doc.clientName && doc.clientName !== "—"
+          ? `Influencer marketing proposal prepared in response to ${doc.clientName}'s Request for Quotation.`
+          : "Influencer marketing proposal prepared in response to the client's Request for Quotation."
+        : doc.preparedForLine.replace(
+            /^Prepared exclusively for /i,
+            "Influencer marketing proposal prepared exclusively for "
+          ) + ".",
       stat3: coverStat3(doc),
     },
     campaign: {

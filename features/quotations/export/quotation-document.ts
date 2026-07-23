@@ -41,6 +41,10 @@ import {
   resolveQuotationCreatorMainCategories,
 } from "@/lib/quotations/quotation-creator-categories";
 import {
+  buildExportPlatformMetricRows,
+  resolveExportGroupAllPlatforms,
+} from "./quotation-export-platform-metrics";
+import {
   countUniqueQuotationCreators,
   exportItemPlatformIcons,
   exportItemServiceDescription,
@@ -87,6 +91,14 @@ export type QuotationDocPublicationShot = {
   imageProxyUrl?: string | null;
 };
 
+export type QuotationDocPlatformMetric = {
+  platform: string;
+  followers: string;
+  engagement: string;
+  views: string;
+  profileUrl: string | null;
+};
+
 export type QuotationDocCreatorGroup = {
   creatorKey: string;
   creator: string;
@@ -96,6 +108,10 @@ export type QuotationDocCreatorGroup = {
   avatarProxyUrl: string | null;
   platform: string | null;
   linkedPlatforms: string[];
+  /** All linked platforms for mix/roster icons (not deliverable-only). */
+  platformIcons: string[];
+  /** Per-platform followers / ER / views for pitch creator slides. */
+  platformMetrics: QuotationDocPlatformMetric[];
   followers: string;
   engagementRate: string;
   views: string;
@@ -413,14 +429,20 @@ function buildQuotationFullTierBreakdown(input: {
         ? displayCategories.join(", ")
         : formatQuotationMainCategoryLabels(mainCategories)
       : formatQuotationMainCategoryLabels(mainCategories);
-    const platformFields = exportItemPlatformIcons(headerItem);
+    const platformIcons = resolveExportGroupAllPlatforms(group.items);
     const profile = resolveExportCreatorProfile(headerItem);
 
     return {
       tier,
       handle: exportHandleLabel(headerItem.handle),
-      platform: exportPlatformLabel(platform),
-      platformIcons: platformFields.platformIcons,
+      platform:
+        platformIcons.length > 1
+          ? platformIcons
+              .map((value) => exportPlatformLabel(value))
+              .filter((value) => value !== "—")
+              .join(", ")
+          : exportPlatformLabel(platform),
+      platformIcons,
       followers,
       followersLabel:
         followers != null ? formatCreatorCount(followers) : "—",
@@ -684,6 +706,8 @@ function buildCreatorGroup(
   const groupFollowers = resolveExportGroupFollowers(group.items);
   const groupEr = resolveExportGroupEngagementRate(group.items, groupFollowers);
   const groupViews = resolveExportGroupAvgViews(group.items);
+  const platformIcons = resolveExportGroupAllPlatforms(group.items);
+  const platformMetrics = buildExportPlatformMetricRows(group.items);
 
   return {
     creatorKey: group.creatorKey,
@@ -697,7 +721,10 @@ function buildCreatorGroup(
       profile.avatarUrl
     ),
     platform: profile.platform,
-    linkedPlatforms: profile.linkedPlatforms,
+    linkedPlatforms:
+      platformIcons.length > 0 ? platformIcons : profile.linkedPlatforms,
+    platformIcons,
+    platformMetrics,
     followers: groupFollowers != null ? num(groupFollowers) : "—",
     engagementRate: groupEr != null ? `${num(groupEr, 2)}%` : "—",
     views: groupViews != null ? num(groupViews) : "—",

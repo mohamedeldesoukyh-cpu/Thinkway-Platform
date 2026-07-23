@@ -264,18 +264,33 @@ function renderShowcaseCreatorPages(
         : `page showcase-creator-page${pitchPageClass}`;
 
       const creatorPlatformIcons = renderQuotationPlatformIconsHtml(creator.platformIcons);
-      const metricsTable = pitch
-        ? `<div class="fees showcase-metrics-table">
-      <table class="data-table">
-        <thead><tr><th class="r">Followers</th><th class="r">Engagement</th><th class="r">Views</th><th>Tier</th><th>Categories</th><th>Platforms</th></tr></thead>
-        <tbody><tr>
+      const pitchMetricRows =
+        creator.platformMetrics.length > 0
+          ? creator.platformMetrics
+              .map(
+                (row, index) => `<tr>
+          <td class="r">${esc(row.followers)}</td>
+          <td class="r">${esc(row.engagement)}</td>
+          <td class="r">${esc(row.views)}</td>
+          <td>${index === 0 ? `<span class="pill">${esc(creator.tier)}</span>` : ""}</td>
+          <td class="categories-cell">${index === 0 ? esc(creator.categories) : ""}</td>
+          <td class="platform-cell">${renderQuotationPlatformIconsHtml([row.platform]) || esc(row.platform)}</td>
+        </tr>`
+              )
+              .join("")
+          : `<tr>
           <td class="r">${esc(creator.followers)}</td>
           <td class="r">${esc(creator.engagement)}</td>
           <td class="r">${esc(creator.views)}</td>
           <td><span class="pill">${esc(creator.tier)}</span></td>
           <td class="categories-cell">${esc(creator.categories)}</td>
           <td class="platform-cell">${creatorPlatformIcons || esc(creator.platforms)}</td>
-        </tr></tbody>
+        </tr>`;
+      const metricsTable = pitch
+        ? `<div class="fees showcase-metrics-table">
+      <table class="data-table">
+        <thead><tr><th class="r">Followers</th><th class="r">Engagement</th><th class="r">Views</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
+        <tbody>${pitchMetricRows}</tbody>
       </table>
     </div>`
         : `<div class="sc-stats showcase-kpi-row">
@@ -320,7 +335,10 @@ function renderRosterPage(payload: QuotationTemplatePayload): string {
       const platformCell = row.platformIcons.length
         ? `${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platforms)}</span>`
         : esc(row.platforms);
-      return `<tr><td class="name">${esc(row.handle)}</td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td class="r">${esc(row.views)}</td><td><span class="pill">${esc(row.tier)}</span></td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
+      const avatar = row.avatarUrl
+        ? `<img class="roster-avatar" src="${esc(row.avatarUrl)}" alt="" width="22" height="22" />`
+        : `<span class="roster-avatar roster-avatar--fallback">${esc(row.initials)}</span>`;
+      return `<tr><td class="name roster-creator">${avatar}<span>${esc(row.handle)}</span></td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td class="r">${esc(row.views)}</td><td><span class="pill">${esc(row.tier)}</span></td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
     })
     .join("");
 
@@ -330,7 +348,7 @@ function renderRosterPage(payload: QuotationTemplatePayload): string {
     <h2 class="sec-title">At a glance</h2>
     <div class="fees">
       <table class="data-table">
-        <thead><tr><th>Creator</th><th class="r">Followers</th><th class="r">ER</th><th class="r">Views</th><th>Tier</th><th>Categories</th><th>Platforms</th></tr></thead>
+        <thead><tr><th>Creator</th><th class="r">Followers</th><th class="r">Eng %</th><th class="r">Avg views</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>

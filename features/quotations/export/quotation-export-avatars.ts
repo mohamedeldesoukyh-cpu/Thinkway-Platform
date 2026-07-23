@@ -111,14 +111,23 @@ export async function enrichQuotationDetailForExport(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   detail: QuotationDetail
 ): Promise<QuotationDetail & { items: QuotationExportItem[] }> {
+  const { attachExportPlatformAccounts } = await import(
+    "./quotation-export-platforms"
+  );
+
+  let items: QuotationExportItem[];
   if (quotationItemsFullyEnrichedForExport(detail.items)) {
-    return { ...detail, items: detail.items as QuotationExportItem[] };
+    items = detail.items as QuotationExportItem[];
+  } else {
+    items = (await enrichQuotationItemsWithCreatorAvatars(
+      supabase,
+      detail.items
+    )) as QuotationExportItem[];
   }
 
-  const items = (await enrichQuotationItemsWithCreatorAvatars(
-    supabase,
-    detail.items
-  )) as QuotationExportItem[];
+  // Always attach multi-platform account metrics so mix/roster/creator slides
+  // show Instagram + TikTok + … not only the deliverable line platform.
+  items = await attachExportPlatformAccounts(supabase, items);
 
   return { ...detail, items };
 }
