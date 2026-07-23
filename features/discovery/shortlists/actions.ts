@@ -14,6 +14,7 @@ import type {
 } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
 import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
@@ -252,6 +253,7 @@ export type UpdateShortlistInput = {
   visibility?: ShortlistVisibilityV2;
   clientId?: string | null;
   brandId?: string | null;
+  currency?: string;
 };
 
 export async function updateShortlistDetails(
@@ -279,6 +281,13 @@ export async function updateShortlistDetails(
   if (input.description !== undefined) patch.description = input.description?.trim() || null;
   if (input.visibility !== undefined) {
     patch.visibility = input.visibility === "client_shared" ? "team" : input.visibility;
+  }
+  if (input.currency !== undefined) {
+    const code = input.currency.trim().toUpperCase();
+    if (!isCommercialCurrency(code)) {
+      return { ok: false, message: "Unsupported currency." };
+    }
+    patch.currency = code;
   }
 
   const commercialChanging =
@@ -340,9 +349,25 @@ export async function updateShortlistDetails(
       newClientId: (patch.client_id as string | null) ?? null,
       newBrandId: (patch.brand_id as string | null) ?? null,
     });
-    if (syncedQuotations > 0) {
-      revalidatePath("/discovery/quotations");
+  }
+
+  if (typeof patch.currency === "string") {
+    const { data: linked } = await actor.supabase
+      .from("quotations")
+      .select("id")
+      .eq("shortlist_id", input.shortlistId)
+      .eq("is_archived", false);
+    for (const q of (linked ?? []) as Array<{ id: string }>) {
+      const { error: currencyError } = await actor.supabase
+        .from("quotations")
+        .update({ currency: patch.currency } as never)
+        .eq("id", q.id);
+      if (!currencyError) syncedQuotations += 1;
     }
+  }
+
+  if (syncedQuotations > 0) {
+    revalidatePath("/discovery/quotations");
   }
 
   revalidateShortlist(input.shortlistId);
@@ -353,7 +378,7 @@ export async function updateShortlistDetails(
       ok: true,
       message: `${baseMessage} ${syncedQuotations} linked quotation${
         syncedQuotations === 1 ? "" : "s"
-      } synced to the new commercial link.`,
+      } updated.`,
     };
   }
   return { ok: true, message: baseMessage };

@@ -2342,6 +2342,8 @@ export type Database = {
           client_shared_by: string | null;
           campaign_header_id: string | null;
           quotation_id: string | null;
+          /** Display / commercial currency — migration `20260723120000_shortlist_display_currency`. */
+          currency: string;
           metadata: Record<string, unknown>;
           created_at: string;
           updated_at: string;
@@ -2370,6 +2372,7 @@ export type Database = {
           client_shared_by?: string | null;
           campaign_header_id?: string | null;
           quotation_id?: string | null;
+          currency?: string;
           metadata?: Record<string, unknown>;
         };
         Update: Partial<Database["public"]["Tables"]["discovery_shortlists"]["Insert"]>;

@@ -15,6 +15,7 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
     description: "Top picks for Q3",
     status: "approved",
     visibility: "team",
+    currency: "EGP",
     owner_id: "user-1",
     owner_name: "Alex Manager",
     created_by: "user-1",

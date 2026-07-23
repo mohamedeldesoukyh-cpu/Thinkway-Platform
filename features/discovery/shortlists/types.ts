@@ -99,6 +99,8 @@ export type ShortlistDetail = {
   description: string | null;
   status: ShortlistStatus;
   visibility: ShortlistVisibilityV2;
+  /** Commercial display currency (propagates to quotation header). */
+  currency: string;
   owner_id: string;
   owner_name: string | null;
   created_by: string | null;

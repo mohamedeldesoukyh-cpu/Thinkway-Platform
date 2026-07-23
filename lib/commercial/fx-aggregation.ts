@@ -54,6 +54,19 @@ export function toEgp(amount: number | null | undefined, fxRateToEgp: number | n
   return round2(safe(amount) * effective);
 }
 
+/** Convert an EGP amount into a display currency using that currency's rate → EGP. */
+export function fromEgp(
+  amountEgp: number | null | undefined,
+  displayCurrency: string,
+  fxRateToEgp: number | null | undefined
+): number {
+  const code = (displayCurrency || REPORTING_CURRENCY).toUpperCase();
+  if (code === REPORTING_CURRENCY) return round2(safe(amountEgp));
+  const rate = safe(fxRateToEgp);
+  const effective = rate > 0 ? rate : 1;
+  return round2(safe(amountEgp) / effective);
+}
+
 /** Display helper: "500 USD / 25,000 EGP" style dual-currency string. */
 export function formatDualCurrency(input: {
   amount: number;

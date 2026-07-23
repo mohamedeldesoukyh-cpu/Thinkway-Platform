@@ -69,6 +69,8 @@ import {
 import {
   duplicateQuotationItems,
   removeQuotationItem,
+  resolveCommercialRateToEgp,
+  updateQuotationHeader,
   updateQuotationItemCommercials,
 } from "@/features/quotations/actions";
 import {
@@ -82,6 +84,7 @@ import {
   type CalculationModePreference,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
+import { resolveLiveTotalsDraft } from "@/features/quotations/quotation-pending-live-totals";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import {
   buildQuotationItemOptionContext,
@@ -229,6 +232,14 @@ function QuotationWorkspaceContent({
   const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [displayCurrency, setDisplayCurrency] = useState(
+    () => (detail.currency || "EGP").toUpperCase()
+  );
+  const [displayFxRateToEgp, setDisplayFxRateToEgp] = useState(1);
+  const [currencyPending, startCurrencyTransition] = useTransition();
   const [globalCalcMode, setGlobalCalcMode] = useState<CalculationModePreference>("markup");
   const [creatorSearch, setCreatorSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
@@ -239,6 +250,21 @@ function QuotationWorkspaceContent({
   const [bulkPending, startBulkTransition] = useTransition();
   const confirmDelete = useConfirmDelete();
   const creatorSearchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setDisplayCurrency((detail.currency || "EGP").toUpperCase());
+  }, [detail.currency]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void resolveCommercialRateToEgp(displayCurrency).then((res) => {
+      if (cancelled || !res.ok || !res.data) return;
+      setDisplayFxRateToEgp(res.data.rate);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [displayCurrency]);
 
   useEffect(() => {
     setDrafts((prev) => {
@@ -255,38 +281,36 @@ function QuotationWorkspaceContent({
       const next = new Set([...prev].filter((id) => detail.items.some((i) => i.id === id)));
       return next;
     });
+    setOptimisticRemovedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(
+        [...prev].filter((id) => detail.items.some((item) => item.id === id))
+      );
+      return next.size === prev.size ? prev : next;
+    });
   }, [detail.items]);
+
+  const visibleItems = useMemo(
+    () => detail.items.filter((item) => !optimisticRemovedIds.has(item.id)),
+    [detail.items, optimisticRemovedIds]
+  );
 
   const draftList = useMemo(
     () =>
-      detail.items
+      visibleItems
         .map((item) => resolveQuotationRowDraft(item, drafts[item.id]))
         .filter(Boolean),
-    [detail.items, drafts]
-  );
-
-  const totalsDraftList = useMemo(
-    () =>
-      detail.items
-        .filter((item) => shouldIncludeItemInLiveTotals(item, detail.items))
-        .map((item) => resolveQuotationRowDraft(item, drafts[item.id]))
-        .filter(Boolean),
-    [detail.items, drafts]
-  );
-
-  const totals = useMemo(
-    () => resolveQuotationHeaderCommercialTotals(computeLiveQuotationTotals(totalsDraftList)),
-    [totalsDraftList]
+    [visibleItems, drafts]
   );
 
   const platformOptions = useMemo(() => {
-    const set = new Set(detail.items.map((i) => i.platform).filter(Boolean) as string[]);
+    const set = new Set(visibleItems.map((i) => i.platform).filter(Boolean) as string[]);
     return [...set].sort();
-  }, [detail.items]);
+  }, [visibleItems]);
 
   const filteredItems = useMemo(() => {
     const q = creatorSearch.trim().toLowerCase();
-    return detail.items.filter((item) => {
+    return visibleItems.filter((item) => {
       if (platformFilter !== "all" && item.platform !== platformFilter) return false;
       if (!q) return true;
       const hay = [item.creator_name, item.handle, item.platform]
@@ -295,15 +319,34 @@ function QuotationWorkspaceContent({
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [detail.items, creatorSearch, platformFilter]);
+  }, [visibleItems, creatorSearch, platformFilter]);
 
   const pendingItemIds = useMemo(() => {
     const pending = new Set<string>();
-    for (const item of detail.items) {
+    for (const item of visibleItems) {
       if (manualSave.isLinePending(item.id)) pending.add(item.id);
     }
     return pending;
-  }, [detail.items, manualSave]);
+  }, [visibleItems, manualSave]);
+
+  const totalsDraftList = useMemo(
+    () =>
+      visibleItems
+        .filter((item) => shouldIncludeItemInLiveTotals(item, visibleItems))
+        .map((item) =>
+          resolveLiveTotalsDraft(
+            item,
+            drafts[item.id],
+            manualSave.getLinePendingPayload(item.id)
+          )
+        ),
+    [visibleItems, drafts, pendingItemIds, manualSave]
+  );
+
+  const totals = useMemo(
+    () => resolveQuotationHeaderCommercialTotals(computeLiveQuotationTotals(totalsDraftList)),
+    [totalsDraftList]
+  );
 
   const sortedFilteredItems = useMemo(
     () =>
@@ -315,8 +358,8 @@ function QuotationWorkspaceContent({
   );
 
   const optionContextByItemId = useMemo(
-    () => buildQuotationItemOptionContext(detail.items),
-    [detail.items]
+    () => buildQuotationItemOptionContext(visibleItems),
+    [visibleItems]
   );
 
   const displayGroups = useMemo(
@@ -325,8 +368,31 @@ function QuotationWorkspaceContent({
   );
 
   const uniqueCreatorCount = useMemo(
-    () => countUniqueQuotationCreators(detail.items),
-    [detail.items]
+    () => countUniqueQuotationCreators(visibleItems),
+    [visibleItems]
+  );
+
+  const handleDisplayCurrencyChange = useCallback(
+    (currency: string) => {
+      const next = currency.toUpperCase();
+      setDisplayCurrency(next);
+      startCurrencyTransition(async () => {
+        const [rateRes, saveRes] = await Promise.all([
+          resolveCommercialRateToEgp(next),
+          updateQuotationHeader({ id: detail.id, currency: next }),
+        ]);
+        if (rateRes.ok && rateRes.data) {
+          setDisplayFxRateToEgp(rateRes.data.rate);
+        }
+        if (!saveRes.ok) {
+          toast.error(saveRes.message ?? "Failed to update currency.");
+          setDisplayCurrency((detail.currency || "EGP").toUpperCase());
+          return;
+        }
+        router.refresh();
+      });
+    },
+    [detail.id, detail.currency, router]
   );
 
   const allVisibleSelected =
@@ -477,19 +543,31 @@ function QuotationWorkspaceContent({
     );
     if (!ok) return;
 
+    const removingIds = [...selectedIds];
+    setOptimisticRemovedIds((prev) => {
+      const next = new Set(prev);
+      removingIds.forEach((id) => next.add(id));
+      return next;
+    });
+    setSelectedIds(new Set());
+
     startBulkTransition(async () => {
-      for (const id of selectedIds) {
+      for (const id of removingIds) {
         const res = await removeQuotationItem({
           item_id: id,
           quotation_id: detail.id,
         });
         if (!res.ok) {
           toast.error(res.message);
+          setOptimisticRemovedIds((prev) => {
+            const next = new Set(prev);
+            removingIds.forEach((removedId) => next.delete(removedId));
+            return next;
+          });
           return;
         }
       }
       toast.success("Selected creators removed.");
-      setSelectedIds(new Set());
       router.refresh();
     });
   }, [confirmDelete, detail.id, selectedIds, router]);
@@ -564,6 +642,12 @@ function QuotationWorkspaceContent({
           creatorCount={uniqueCreatorCount}
           version={detail.version}
           validDaysRemaining={detail.valid_days_remaining}
+          displayCurrency={displayCurrency}
+          displayFxRateToEgp={displayFxRateToEgp}
+          onDisplayCurrencyChange={
+            detail.canManage ? handleDisplayCurrencyChange : undefined
+          }
+          currencyDisabled={currencyPending || !detail.canManage}
         />
         <QuotationLifecyclePills
           detail={detail}
@@ -587,7 +671,7 @@ function QuotationWorkspaceContent({
             disabled={!detail.canManage}
           />
         </div>
-        {detail.items.length === 0 ? (
+        {visibleItems.length === 0 ? (
           <EmptyState
             quotationId={detail.id}
             canManage={detail.canManage}
@@ -603,7 +687,7 @@ function QuotationWorkspaceContent({
                 <h2>
                   Creators{" "}
                   <span>
-                    · {uniqueCreatorCount} · {detail.items.length} lines
+                    · {uniqueCreatorCount} · {visibleItems.length} lines
                   </span>
                 </h2>
                 <p>

@@ -389,7 +389,7 @@
 /* —— Metrics —— */
 .quotation-editor-rd4 .metricsband {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   border-bottom: 1px solid var(--line);
   background: var(--white);
 }
@@ -397,6 +397,11 @@
 .quotation-editor-rd4 .metric {
   padding: 14px 18px;
   min-width: 0;
+}
+
+.quotation-editor-rd4 .metric--currency {
+  display: flex;
+  align-items: center;
 }
 
 .quotation-editor-rd4 .metric + .metric {

@@ -1,6 +1,8 @@
 "use client";
 
+import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
+import { fromEgp } from "@/lib/commercial/fx-aggregation";
 import { cn } from "@/lib/utils";
 
 type MetricDef = {
@@ -11,13 +13,18 @@ type MetricDef = {
   compact?: boolean;
 };
 
-function egpParts(n: number): { value: string; unit: string } {
+function moneyParts(
+  amountEgp: number,
+  displayCurrency: string,
+  fxRateToEgp: number
+): { value: string; unit: string } {
+  const amount = fromEgp(amountEgp, displayCurrency, fxRateToEgp);
   return {
     value: new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(Number.isFinite(n) ? n : 0),
-    unit: "EGP",
+    }).format(Number.isFinite(amount) ? amount : 0),
+    unit: (displayCurrency || "EGP").toUpperCase(),
   };
 }
 
@@ -52,6 +59,10 @@ type Props = {
   creatorCount: number;
   version: string;
   validDaysRemaining: number | null;
+  displayCurrency: string;
+  displayFxRateToEgp: number;
+  onDisplayCurrencyChange?: (currency: string) => void;
+  currencyDisabled?: boolean;
 };
 
 export function QuotationCommercialMetricsBand({
@@ -64,6 +75,10 @@ export function QuotationCommercialMetricsBand({
   creatorCount,
   version,
   validDaysRemaining,
+  displayCurrency,
+  displayFxRateToEgp,
+  onDisplayCurrencyChange,
+  currencyDisabled,
 }: Props) {
   const gpTone: MetricDef["tone"] =
     totalGpValueEgp < 0 ? "red" : totalGpPct < gpTargetPct ? "amber" : "green";
@@ -77,12 +92,20 @@ export function QuotationCommercialMetricsBand({
           ? "amber"
           : "blue";
 
-  const base = egpParts(totalCostEgp);
-  const client = egpParts(totalRevenueEgp);
-  const gp = egpParts(totalGpValueEgp);
+  const base = moneyParts(totalCostEgp, displayCurrency, displayFxRateToEgp);
+  const client = moneyParts(totalRevenueEgp, displayCurrency, displayFxRateToEgp);
+  const gp = moneyParts(totalGpValueEgp, displayCurrency, displayFxRateToEgp);
 
   return (
     <div className="metricsband" aria-label="Quotation commercial metrics">
+      <div className="metric metric--currency">
+        <CommercialCurrencySelect
+          label="Currency"
+          value={displayCurrency}
+          onChange={onDisplayCurrencyChange ?? (() => undefined)}
+          disabled={currencyDisabled || !onDisplayCurrencyChange}
+        />
+      </div>
       <MetricItem label="Base cost" value={base.value} unit={base.unit} />
       <MetricItem
         label={QUOTATION_CLIENT_LABELS.totalClientCost}

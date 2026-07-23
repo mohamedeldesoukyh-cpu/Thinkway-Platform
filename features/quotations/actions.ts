@@ -12,6 +12,8 @@ import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { CommercialInputMode, Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
+import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { computeQuotationTotals } from "./quotation-engine";
 import {
   addItemsToQuotation as addItemsToQuotationService,
@@ -240,12 +242,27 @@ export async function updateQuotationHeader(input: {
   change_summary?: string | null;
   status?: Database["public"]["Tables"]["quotations"]["Row"]["status"];
   shared_with_client?: boolean;
+  currency?: string;
 }): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor.ok) return actor;
   const result = await updateQuotationHeaderService(actor.supabase, actor.userId, input);
   if (result.ok) revalidate(input.id);
   return result;
+}
+
+/** Resolve currency → EGP rate from md_exchange_rates for live header display. */
+export async function resolveCommercialRateToEgp(
+  currency: string
+): Promise<ActionResult<{ rate: number; currency: string }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const code = currency.trim().toUpperCase();
+  if (!isCommercialCurrency(code)) {
+    return { ok: false, message: "Unsupported currency." };
+  }
+  const rate = await resolveRateToEgp(actor.supabase, code);
+  return { ok: true, data: { rate, currency: code } };
 }
 
 export async function returnQuotationItemToShortlist(input: {

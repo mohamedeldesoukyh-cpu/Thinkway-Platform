@@ -5,6 +5,7 @@ import {
   buildSeedsFromShortlistItems,
   type ShortlistItemForSeed,
 } from "@/lib/commercial-sync/shortlist-seeds";
+import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
 import type { Database } from "@/types/database";
 
 import { recomputeQuotationTotals } from "./quotation-commercial-service";
@@ -244,6 +245,7 @@ export async function createQuotationFromShortlist(
     client_id: string | null;
     brand_id: string | null;
     campaign_header_id: string | null;
+    currency?: string | null;
   };
 
   const { data, error } = await loadShortlistItemsForSeeds(
@@ -258,6 +260,7 @@ export async function createQuotationFromShortlist(
   }
 
   const seeds = await buildSeedsFromShortlistItems(supabase, items);
+  const displayCurrency = (sl.currency || "EGP").toUpperCase();
 
   const created = await insertQuotationHeader(supabase, userId, {
     name: `Quotation — ${sl.name}`,
@@ -265,6 +268,7 @@ export async function createQuotationFromShortlist(
     client_id: sl.client_id,
     brand_id: sl.brand_id,
     campaign_header_id: sl.campaign_header_id,
+    currency: displayCurrency,
   });
   if (!created.ok) return created;
 
@@ -436,6 +440,7 @@ export async function updateQuotationHeader(
     change_summary?: string | null;
     status?: Database["public"]["Tables"]["quotations"]["Row"]["status"];
     shared_with_client?: boolean;
+    currency?: string;
   }
 ): Promise<QuotationMutationResult> {
   const patch: Record<string, unknown> = {};
@@ -443,6 +448,13 @@ export async function updateQuotationHeader(
     const name = input.name.trim();
     if (!name) return { ok: false, message: "Name cannot be empty." };
     patch.name = name;
+  }
+  if (input.currency !== undefined) {
+    const code = input.currency.trim().toUpperCase();
+    if (!isCommercialCurrency(code)) {
+      return { ok: false, message: "Unsupported currency." };
+    }
+    patch.currency = code;
   }
   for (const key of [
     "notes",

@@ -547,7 +547,7 @@ export async function fetchShortlistHeader(
 ) {
   return supabase
     .from("discovery_shortlists")
-    .select("id, name, client_id, brand_id, campaign_header_id")
+    .select("id, name, client_id, brand_id, campaign_header_id, currency")
     .eq("id", shortlistId)
     .maybeSingle();
 }

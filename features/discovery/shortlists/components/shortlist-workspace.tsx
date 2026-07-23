@@ -76,12 +76,14 @@ import {
   toggleItemSelection,
   toggleSelectAll,
 } from "../bulk-selection-policy";
+import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
 import {
   approveShortlist,
   archiveShortlist,
   cancelShortlist,
   rejectShortlist,
   reopenShortlist,
+  updateShortlistDetails,
 } from "../actions";
 import { canEditCreators, canMoveToCampaign, isMovementLocked } from "../transitions";
 import type {
@@ -158,6 +160,9 @@ export function ShortlistWorkspace({
     setCreator: setDetailCreator,
   } = useCreatorDetailSheetState();
   const [exportTemplate, setExportTemplate] = useState<ShortlistTemplateVariant>("showcase");
+  const [displayCurrency, setDisplayCurrency] = useState(
+    () => (detail.currency || "EGP").toUpperCase()
+  );
   const [enrichmentOverrides, setEnrichmentOverrides] = useState<
     Map<string, CreatorEnrichmentStatus>
   >(() => new Map());
@@ -171,6 +176,31 @@ export function ShortlistWorkspace({
   } | null>(null);
 
   const refreshingMetrics = refreshProgress != null && refreshProgress.completed < refreshProgress.total;
+
+  useEffect(() => {
+    setDisplayCurrency((detail.currency || "EGP").toUpperCase());
+  }, [detail.currency]);
+
+  const handleCurrencyChange = useCallback(
+    (currency: string) => {
+      const next = currency.toUpperCase();
+      setDisplayCurrency(next);
+      startTransition(async () => {
+        const result = await updateShortlistDetails({
+          shortlistId: detail.id,
+          currency: next,
+        });
+        if (!result.ok) {
+          toast.error(result.message);
+          setDisplayCurrency((detail.currency || "EGP").toUpperCase());
+          return;
+        }
+        toast.success(result.message ?? "Currency updated.");
+        router.refresh();
+      });
+    },
+    [detail.id, detail.currency, router]
+  );
 
   const editable = canEditCreators(detail.status) && !detail.is_archived;
   const canEditDetails = detail.canManage && !detail.is_archived && !isMovementLocked(detail.status);
@@ -700,6 +730,15 @@ export function ShortlistWorkspace({
                 ) : null}
               </div>
             ) : null}
+
+            <div className="flex shrink-0 items-center border-l border-border/60 pl-5">
+              <CommercialCurrencySelect
+                label="Currency"
+                value={displayCurrency}
+                onChange={handleCurrencyChange}
+                disabled={!canEditDetails || isPending}
+              />
+            </div>
           </div>
 
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
