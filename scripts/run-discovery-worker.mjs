@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
  * Starts discovery-worker with Node system CA (Windows TLS / Supabase + Apify fetch).
+ * Production entry is TypeScript via tsx (worker imports monorepo `@/*` sources).
+ * The production image / deploy must already install worker deps (including tsx).
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";

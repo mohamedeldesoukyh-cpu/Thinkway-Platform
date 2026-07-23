@@ -25,12 +25,13 @@ Independent Node.js microservice for public-signal influencer discovery.
 # Redis
 docker compose -f docker-compose.discovery.yml up -d
 
-# Worker
-cd services/discovery-worker
-cp .env.example .env
-npm install
-npm run dev
+# Worker (from repo root)
+cp services/discovery-worker/.env.example services/discovery-worker/.env
+cd services/discovery-worker && npm install && cd ../..
+npm run discovery:worker:dev
 ```
+
+Production start (`npm run discovery:worker`) runs TypeScript via `tsx` (no `dist/` build). Worker package install must include production deps (`tsx` is a dependency).
 
 ## Enrichment stages
 

@@ -55,6 +55,7 @@ Handles `SIGINT` / `SIGTERM`: closes workers, browser pool, exits.
 
 | Symptom | Check |
 |---------|-------|
+| `Cannot find module …/dist/index.js` | Stale start command. Production uses `tsx src/index.ts` via `npm run discovery:worker`. Rebuild the worker image from repo root (`services/discovery-worker/Dockerfile`) so prod deps (including `tsx`) are baked in. Do **not** expect a `tsc` `dist/` emit — worker imports monorepo `@/*`. |
 | `worker.alive: false` | Process running, Redis reachable, heartbeat key |
 | Backlog growing | `/api/admin/queues` failed/waiting counts |
 | Enrichment off | `DISABLE_CREATOR_ENRICHMENT`, enrichment flags |
