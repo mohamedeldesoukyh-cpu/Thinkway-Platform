@@ -59,3 +59,5 @@ response.html
 services/discovery-worker/*.log
 
 .tmp-compile/
+
+.vercel
