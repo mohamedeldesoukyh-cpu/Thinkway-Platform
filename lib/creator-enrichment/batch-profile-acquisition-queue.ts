@@ -7,27 +7,29 @@ import { Queue } from "bullmq";
 import { CAMPAIGN_PERFORMANCE_JOB_OPTIONS } from "@/lib/performance/campaign-performance-queue-options";
 
 import type { BatchProfileAcquisitionJobData } from "./batch-profile-acquisition-types";
+import {
+  createCreatorEnrichmentQueueConnection,
+  getCreatorEnrichmentRedisUrl,
+  isCreatorEnrichmentRedisConfigured,
+} from "./queue-connection";
 
 export const BATCH_PROFILE_ACQUISITION_QUEUE = "batch-profile-acquisition" as const;
 
-function getConnection(): { url: string } | null {
-  const url = process.env.REDIS_URL?.trim();
-  return url ? { url } : null;
-}
-
 export function isBatchProfileAcquisitionQueueAvailable(): boolean {
-  return Boolean(getConnection());
+  return isCreatorEnrichmentRedisConfigured();
 }
 
 export async function enqueueBatchProfileAcquisitionJob(
   payload: BatchProfileAcquisitionJobData
 ): Promise<{ queued: boolean; reason?: string }> {
-  const connection = getConnection();
-  if (!connection) {
+  const redisUrl = getCreatorEnrichmentRedisUrl();
+  if (!redisUrl) {
     return { queued: false, reason: "REDIS_URL not configured" };
   }
 
-  const queue = new Queue(BATCH_PROFILE_ACQUISITION_QUEUE, { connection });
+  const queue = new Queue(BATCH_PROFILE_ACQUISITION_QUEUE, {
+    connection: createCreatorEnrichmentQueueConnection(redisUrl),
+  });
   try {
     await queue.add("batch-profile-acquisition", payload, {
       ...CAMPAIGN_PERFORMANCE_JOB_OPTIONS,

@@ -10,6 +10,10 @@ import {
   CREATOR_ENRICHMENT_QUEUE,
 } from "./constants";
 import { CREATOR_IMPORT_QUEUES } from "@/lib/discovery-import/queue";
+import {
+  createCreatorEnrichmentQueueConnection,
+  getCreatorEnrichmentRedisUrl,
+} from "./queue-connection";
 
 export type QueueDrainResult = {
   name: string;
@@ -25,12 +29,10 @@ const DISCOVERY_ENRICHMENT_QUEUES = [
   CREATOR_IMPORT_QUEUES.enrich,
 ] as const;
 
-function getRedisUrl(): string | null {
-  return process.env.REDIS_URL?.trim() || null;
-}
-
-async function drainQueue(name: string, url: string): Promise<QueueDrainResult> {
-  const queue = new Queue(name, { connection: { url } });
+async function drainQueue(name: string, redisUrl: string): Promise<QueueDrainResult> {
+  const queue = new Queue(name, {
+    connection: createCreatorEnrichmentQueueConnection(redisUrl),
+  });
   let removed = 0;
 
   try {
@@ -67,8 +69,8 @@ async function drainQueue(name: string, url: string): Promise<QueueDrainResult> 
 
 /** Drain all Discovery enrichment/import queues. Returns per-queue removal counts. */
 export async function clearDiscoveryEnrichmentQueues(): Promise<QueueDrainResult[]> {
-  const url = getRedisUrl();
-  if (!url) {
+  const redisUrl = getCreatorEnrichmentRedisUrl();
+  if (!redisUrl) {
     return DISCOVERY_ENRICHMENT_QUEUES.map((name) => ({
       name,
       removed: 0,
@@ -76,5 +78,7 @@ export async function clearDiscoveryEnrichmentQueues(): Promise<QueueDrainResult
     }));
   }
 
-  return Promise.all(DISCOVERY_ENRICHMENT_QUEUES.map((name) => drainQueue(name, url)));
+  return Promise.all(
+    DISCOVERY_ENRICHMENT_QUEUES.map((name) => drainQueue(name, redisUrl))
+  );
 }

@@ -17,14 +17,14 @@ import {
   CREATOR_ENRICHMENT_REMOVE_ON_FAIL,
 } from "./constants";
 import { canEnqueueCreatorEnrichment } from "./enabled";
+import { logManualRefreshTrace } from "./manual-refresh-trace";
 import { bullmqPriority } from "./policy";
 import type { CreatorEnrichmentEnqueueOptions } from "@/lib/creator-enrichment/enrichment-feature";
 import type { CreatorEnrichmentJobPayload, EnqueueResult } from "./types";
-
-function getConnection(): { url: string } | null {
-  const url = process.env.REDIS_URL;
-  return url ? { url } : null;
-}
+import {
+  createCreatorEnrichmentQueueConnection,
+  getCreatorEnrichmentRedisUrl,
+} from "./queue-connection";
 
 /**
  * Stable job IDs — never include Date.now().
@@ -64,22 +64,50 @@ export async function enqueueCreatorEnrichmentImpl(
     return { queued: false, reason: gate.reason };
   }
 
-  const connection = getConnection();
-  if (!connection) {
+  const redisUrl = getCreatorEnrichmentRedisUrl();
+  if (!redisUrl) {
+    logManualRefreshTrace("queue_add_result", {
+      influencerId: payload.influencerId,
+      queued: false,
+      reason: "REDIS_URL not configured",
+    });
     return { queued: false, reason: "REDIS_URL not configured" };
   }
 
+  const jobId = creatorEnrichmentJobId(payload);
+  const connection = createCreatorEnrichmentQueueConnection(redisUrl);
+  logManualRefreshTrace("queue_add_start", {
+    influencerId: payload.influencerId,
+    trigger: payload.trigger,
+    scope: payload.scope ?? "all",
+    force: Boolean(payload.force),
+    stableJobId: jobId,
+    queueName: CREATOR_ENRICHMENT_QUEUE,
+    producerConnectionShape: "createBullMqQueueConnection",
+    ioredisIgnoresUrlKey: false,
+    connectionHost: (connection as { host?: string }).host ?? null,
+    connectionPort: (connection as { port?: number }).port ?? null,
+  });
+
   let queue: Queue<CreatorEnrichmentJobPayload> | null = null;
+  const enqueueStartedAt = Date.now();
   try {
     queue = new Queue<CreatorEnrichmentJobPayload>(CREATOR_ENRICHMENT_QUEUE, {
       connection,
     });
 
-    const jobId = creatorEnrichmentJobId(payload);
     const existing = await queue.getJob(jobId);
     if (existing) {
       const state = await existing.getState();
       if (INFLIGHT_STATES.has(state)) {
+        logManualRefreshTrace("queue_add_result", {
+          influencerId: payload.influencerId,
+          queued: true,
+          jobId: existing.id,
+          reuseExisting: true,
+          state,
+          durationMs: Date.now() - enqueueStartedAt,
+        });
         return { queued: true, jobId: existing.id };
       }
       // Completed / failed / unknown — free the slot so a new refresh can run.
@@ -98,13 +126,33 @@ export async function enqueueCreatorEnrichmentImpl(
       removeOnComplete: CREATOR_ENRICHMENT_REMOVE_ON_COMPLETE,
       removeOnFail: CREATOR_ENRICHMENT_REMOVE_ON_FAIL,
     });
+    logManualRefreshTrace("queue_add_result", {
+      influencerId: payload.influencerId,
+      queued: true,
+      jobId: job.id,
+      reuseExisting: false,
+      durationMs: Date.now() - enqueueStartedAt,
+    });
     return { queued: true, jobId: job.id };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to enqueue enrichment job";
     // BullMQ duplicate jobId race — treat as already queued.
     if (/already exists|JobId/i.test(message)) {
+      logManualRefreshTrace("queue_add_result", {
+        influencerId: payload.influencerId,
+        queued: true,
+        jobId: creatorEnrichmentJobId(payload),
+        duplicateRace: true,
+        durationMs: Date.now() - enqueueStartedAt,
+      });
       return { queued: true, jobId: creatorEnrichmentJobId(payload) };
     }
+    logManualRefreshTrace("queue_add_result", {
+      influencerId: payload.influencerId,
+      queued: false,
+      reason: message,
+      durationMs: Date.now() - enqueueStartedAt,
+    });
     return { queued: false, reason: message };
   } finally {
     if (queue) {

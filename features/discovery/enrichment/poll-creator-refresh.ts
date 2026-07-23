@@ -1,3 +1,4 @@
+import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CreatorMetricsSyncStatus } from "@/lib/services/creators/creator-enrichment-service";
 
@@ -58,9 +59,20 @@ export async function pollCreatorAfterRefresh(
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
     await sleep(POLL_INTERVAL_MS);
     const status = await getCreatorEnrichmentStatusAction(input.influencerId);
+    logManualRefreshTrace("ui_poll_status", {
+      influencerId: input.influencerId,
+      unifiedId: input.unifiedId,
+      attempt: attempt + 1,
+      syncStatus: status,
+    });
     if (status === "pending") {
       pendingStreak += 1;
       if (pendingStreak >= MAX_PENDING_STREAK) {
+        logManualRefreshTrace("ui_poll_complete", {
+          influencerId: input.influencerId,
+          syncStatus: "failed",
+          reason: "pending_streak",
+        });
         callbacks.onComplete?.("failed");
         return "timeout";
       }
@@ -72,6 +84,11 @@ export async function pollCreatorAfterRefresh(
       callbacks.onStatusChange?.(status);
     }
     if (isTerminalSyncStatus(status)) {
+      logManualRefreshTrace("ui_poll_complete", {
+        influencerId: input.influencerId,
+        syncStatus: status,
+        attempt: attempt + 1,
+      });
       callbacks.onComplete?.(status);
       if (status === "completed") {
         const creator = await getUnifiedCreatorAfterRefreshAction(input.unifiedId);
@@ -81,11 +98,21 @@ export async function pollCreatorAfterRefresh(
     }
     // "pending" or unknown non-active statuses should not spin forever.
     if (!isActiveSyncStatus(status) && status !== "pending") {
+      logManualRefreshTrace("ui_poll_complete", {
+        influencerId: input.influencerId,
+        syncStatus: status,
+        reason: "non_active",
+      });
       callbacks.onComplete?.(status === "failed" ? "failed" : "completed");
       return status;
     }
   }
 
+  logManualRefreshTrace("ui_poll_complete", {
+    influencerId: input.influencerId,
+    syncStatus: "failed",
+    reason: "max_attempts",
+  });
   callbacks.onComplete?.("failed");
   return "timeout";
 }

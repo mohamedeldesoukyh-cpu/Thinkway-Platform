@@ -1,17 +1,15 @@
 import { Queue } from "bullmq";
 
+import { CREATOR_ENRICHMENT_QUEUE } from "./constants";
 import {
-  CREATOR_ENRICHMENT_QUEUE,
-} from "./constants";
+  createCreatorEnrichmentQueueConnection,
+  getCreatorEnrichmentRedisUrl,
+  isCreatorEnrichmentRedisConfigured,
+} from "./queue-connection";
 import type { CreatorEnrichmentJobPayload } from "./types";
 
-function getConnection(): { url: string } | null {
-  const url = process.env.REDIS_URL;
-  return url ? { url } : null;
-}
-
 export function isCreatorEnrichmentQueueAvailable(): boolean {
-  return Boolean(process.env.REDIS_URL);
+  return isCreatorEnrichmentRedisConfigured();
 }
 
 export type CreatorEnrichmentQueueStats = {
@@ -21,14 +19,19 @@ export type CreatorEnrichmentQueueStats = {
 };
 
 let sharedQueue: Queue<CreatorEnrichmentJobPayload> | null = null;
+let sharedQueueRedisUrl: string | null = null;
 
 function getSharedQueue(): Queue<CreatorEnrichmentJobPayload> | null {
-  const connection = getConnection();
-  if (!connection) return null;
-  if (!sharedQueue) {
+  const redisUrl = getCreatorEnrichmentRedisUrl();
+  if (!redisUrl) return null;
+  if (!sharedQueue || sharedQueueRedisUrl !== redisUrl) {
+    if (sharedQueue) {
+      void sharedQueue.close().catch(() => {});
+    }
     sharedQueue = new Queue<CreatorEnrichmentJobPayload>(CREATOR_ENRICHMENT_QUEUE, {
-      connection,
+      connection: createCreatorEnrichmentQueueConnection(redisUrl),
     });
+    sharedQueueRedisUrl = redisUrl;
   }
   return sharedQueue;
 }

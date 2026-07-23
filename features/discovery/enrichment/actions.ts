@@ -9,6 +9,7 @@ import {
   type ManualRefreshCacheAssessment,
 } from "@/lib/creator-enrichment/manual-refresh-cache-assessment";
 import type { ManualRefreshDataSource } from "@/lib/creator-enrichment/manual-refresh-policy";
+import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import {
   getCreatorMetricsSyncStatus,
@@ -83,6 +84,16 @@ async function refreshCreatorWithScope(
     feature: options?.feature,
   };
 
+  logManualRefreshTrace("action_enter", {
+    influencerId: influencerId.trim(),
+    scope,
+    dataSource,
+    force: refreshOptions.force,
+    platformAccountId: options?.platformAccountId ?? null,
+    feature: options?.feature ?? null,
+  });
+
+  const startedAt = Date.now();
   const result = options?.platformAccountId
     ? await refreshCreatorPlatformMetrics(
         supabase,
@@ -91,6 +102,17 @@ async function refreshCreatorWithScope(
         refreshOptions
       )
     : await refreshCreatorMetrics(supabase, influencerId.trim(), refreshOptions);
+
+  logManualRefreshTrace("action_exit", {
+    influencerId: result.influencerId ?? influencerId.trim(),
+    ok: result.ok,
+    queued: result.queued,
+    syncStatus: result.syncStatus,
+    message: result.message,
+    jobId: result.jobId ?? null,
+    refreshSource: result.refreshSource ?? dataSource,
+    durationMs: Date.now() - startedAt,
+  });
 
   return {
     ok: result.ok,
@@ -196,7 +218,16 @@ export async function refreshCreatorsBatchAction(
     return { ok: false, queued: false, message: auth.error };
   }
 
+  logManualRefreshTrace("action_enter", {
+    path: "refreshCreatorsBatchAction",
+    count: unifiedIds.length,
+    scope,
+    force: false,
+    isBulk: true,
+  });
+
   // Batch refresh must not force — Decision Engine + freshness admit each creator.
+  const startedAt = Date.now();
   const batch = await refreshCreatorMetricsBatchByUnifiedIds(supabase, unifiedIds, {
     force: false,
     trigger: "manual",
@@ -207,6 +238,17 @@ export async function refreshCreatorsBatchAction(
     scope,
     isBulk: true,
     feature: "batch_refresh",
+  });
+
+  logManualRefreshTrace("action_exit", {
+    path: "refreshCreatorsBatchAction",
+    ok: batch.ok,
+    queued: batch.queued,
+    failed: batch.failed,
+    total: batch.total,
+    acquisitionMode: batch.acquisitionMode ?? "per_creator",
+    batchJobId: batch.batchJobId ?? null,
+    durationMs: Date.now() - startedAt,
   });
 
   return {

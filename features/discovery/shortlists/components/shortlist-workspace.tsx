@@ -355,6 +355,16 @@ export function ShortlistWorkspace({
     }));
     const unifiedIds = targets.map((target) => target.unifiedId);
 
+    console.log(
+      `[manual-refresh-trace] ${JSON.stringify({
+        event: "manual_refresh_trace",
+        step: "ui_click",
+        path: "shortlist_refresh_metrics",
+        count: targets.length,
+        ts: new Date().toISOString(),
+      })}`
+    );
+
     setRefreshProgress({ total: targets.length, completed: 0, failed: 0 });
     setEnrichmentOverrides((prev) => {
       const next = new Map(prev);

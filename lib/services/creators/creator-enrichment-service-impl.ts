@@ -21,6 +21,7 @@ import {
   isCreatorEnrichmentQueueAvailable,
 } from "@/lib/creator-enrichment/queue-operations";
 import { enqueueCreatorEnrichmentImpl } from "@/lib/creator-enrichment/queue-impl";
+import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
 import { resolveAggregatedCreatorEnrichmentStatus } from "@/lib/creator-enrichment/status-resolution";
 import { runCreatorEnrichment } from "@/lib/creator-enrichment/service";
 import {
@@ -240,6 +241,14 @@ export async function refreshCreatorMetricsImpl(
   options: RefreshCreatorMetricsOptions = {}
 ): Promise<RefreshCreatorMetricsResult> {
   console.log(`[refresh] requested creatorId=${creatorId.trim()}`);
+  logManualRefreshTrace("impl_enter", {
+    creatorId: creatorId.trim(),
+    force: Boolean(options.force),
+    trigger: options.trigger ?? "manual",
+    scope: options.scope ?? "all",
+    mode: options.mode ?? "queue",
+    dataSource: options.dataSource ?? "live_apify",
+  });
 
   const resolved = await resolveCreatorInfluencerId(supabase, {
     influencerId: creatorId,
@@ -271,6 +280,13 @@ export async function refreshCreatorMetricsImpl(
     { trigger: payload.trigger, scope },
     { isBulk: options.isBulk ?? false }
   );
+  logManualRefreshTrace("impl_gate", {
+    influencerId: influencerId.trim(),
+    allowed: gate.allowed,
+    reason: gate.reason ?? null,
+    trigger: payload.trigger,
+    scope,
+  });
   if (!gate.allowed) {
     const message = gate.reason ?? creatorEnrichmentDisabledMessage();
     console.log(
@@ -278,6 +294,13 @@ export async function refreshCreatorMetricsImpl(
     );
     const syncStatus = await getCreatorMetricsSyncStatus(supabase, influencerId);
     const isManual = payload.trigger === "manual";
+    logManualRefreshTrace("impl_exit", {
+      influencerId,
+      ok: !isManual,
+      queued: false,
+      message,
+      syncStatus,
+    });
     return {
       ok: !isManual,
       influencerId,
@@ -382,10 +405,28 @@ export async function refreshCreatorMetricsImpl(
   }
 
   // Internal adapter chain — enqueue stays inside the refresh impl (no nested orchestrator envelope).
+  logManualRefreshTrace("impl_enqueue_start", {
+    influencerId,
+    trigger: payload.trigger,
+    scope: payload.scope ?? "all",
+    force: Boolean(payload.force),
+  });
   const enqueueResult = await enqueueCreatorEnrichmentImpl(payload, {
     isBulk: options.isBulk ?? false,
   });
+  logManualRefreshTrace("impl_enqueue_result", {
+    influencerId,
+    queued: enqueueResult.queued,
+    jobId: enqueueResult.jobId ?? null,
+    reason: enqueueResult.reason ?? null,
+  });
   if (!enqueueResult.queued) {
+    logManualRefreshTrace("impl_exit", {
+      influencerId,
+      ok: false,
+      queued: false,
+      message: enqueueResult.reason ?? "Could not queue enrichment.",
+    });
     return {
       ok: false,
       influencerId,
@@ -415,6 +456,15 @@ export async function refreshCreatorMetricsImpl(
     jobId: enqueueResult.jobId ?? null,
     requestedBy: payload.requestedBy,
     startedAt: now,
+  });
+
+  logManualRefreshTrace("impl_exit", {
+    influencerId,
+    ok: true,
+    queued: true,
+    jobId: enqueueResult.jobId ?? null,
+    syncStatus: "queued",
+    dbStatusWritten: "queued",
   });
 
   return {

@@ -11,6 +11,8 @@ import {
   creatorEnrichmentDisabledMessage,
   isCreatorEnrichmentWorkerEnabled,
 } from "@/lib/creator-enrichment/enabled.js";
+import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace.js";
+import { createCreatorEnrichmentQueueConnection } from "@/lib/creator-enrichment/queue-connection.js";
 import type { CreatorEnrichmentJobPayload } from "@/lib/creator-enrichment/types.js";
 
 import { getRedisConnection } from "../queues/connection.js";
@@ -33,7 +35,7 @@ let dlqQueue: Queue<CreatorEnrichmentJobPayload> | null = null;
 function getDlqQueue(): Queue<CreatorEnrichmentJobPayload> {
   if (!dlqQueue) {
     dlqQueue = new Queue<CreatorEnrichmentJobPayload>(CREATOR_ENRICHMENT_DLQ, {
-      connection: { url: config.redisUrl },
+      connection: createCreatorEnrichmentQueueConnection(config.redisUrl),
     });
   }
   return dlqQueue;
@@ -43,12 +45,26 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
   const worker = new Worker<CreatorEnrichmentJobPayload>(
     QUEUES.creatorEnrichment,
     async (job: Job<CreatorEnrichmentJobPayload>) => {
+      logManualRefreshTrace("worker_receive", {
+        jobId: job.id ?? null,
+        influencerId: job.data.influencerId,
+        trigger: job.data.trigger ?? "manual",
+        scope: job.data.scope ?? "all",
+        force: Boolean(job.data.force),
+        attempt: job.attemptsMade + 1,
+      });
+
       if (!isCreatorEnrichmentWorkerEnabled()) {
         const message = creatorEnrichmentDisabledMessage();
         console.log(
           `[creator-enrichment] skipped ${job.id} — enrichment globally disabled`,
           JSON.stringify({ influencerId: job.data.influencerId })
         );
+        logManualRefreshTrace("worker_skip", {
+          jobId: job.id ?? null,
+          influencerId: job.data.influencerId,
+          reason: message,
+        });
         return {
           ok: true,
           status: "skipped",
@@ -68,6 +84,11 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
           `[creator-enrichment] skipped ${job.id} — ${gate.reason}`,
           JSON.stringify({ influencerId: job.data.influencerId, trigger })
         );
+        logManualRefreshTrace("worker_skip", {
+          jobId: job.id ?? null,
+          influencerId: job.data.influencerId,
+          reason: gate.reason ?? null,
+        });
         return {
           ok: true,
           status: "skipped",
@@ -86,11 +107,29 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
           trigger,
         })
       );
-      const result = await executeCreatorMetricsRefresh(supabase, job.data, {
-        attempt: job.attemptsMade + 1,
-        jobId: job.id ?? null,
-      });
-      return result;
+      const startedAt = Date.now();
+      try {
+        const result = await executeCreatorMetricsRefresh(supabase, job.data, {
+          attempt: job.attemptsMade + 1,
+          jobId: job.id ?? null,
+        });
+        logManualRefreshTrace("worker_complete", {
+          jobId: job.id ?? null,
+          influencerId: job.data.influencerId,
+          status: result.status,
+          ok: result.ok,
+          durationMs: Date.now() - startedAt,
+        });
+        return result;
+      } catch (error) {
+        logManualRefreshTrace("worker_fail", {
+          jobId: job.id ?? null,
+          influencerId: job.data.influencerId,
+          message: error instanceof Error ? error.message : "worker failed",
+          durationMs: Date.now() - startedAt,
+        });
+        throw error;
+      }
     },
     {
       connection: getRedisConnection(),
