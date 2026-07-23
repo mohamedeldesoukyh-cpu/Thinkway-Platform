@@ -401,16 +401,7 @@ export async function addThinkwayCreatorAvatar(
   const hyperlink =
     profileHref && /^https?:\/\//i.test(profileHref) ? { url: profileHref } : undefined;
 
-  if (pitch) {
-    slide.addShape("ellipse", {
-      x: x - 0.06,
-      y: y - 0.06,
-      w: size + 0.12,
-      h: size + 0.12,
-      fill: { color: TW_LAVENDER },
-      line: { color: TW_BLUE, width: 2 },
-    });
-  }
+  // RFQ pitch: frameless circular avatar (no lavender/white ring).
 
   const avatarData = await thinkwayImageDataForPptxCoverCrop(
     avatarUrl,

@@ -77,9 +77,11 @@ const MIX_FEED_COLS = 6;
 const MIX_FEED_THUMB_SIZE = 0.74;
 const CREATOR_DELIVERABLES_PER_SLIDE = 7;
 const PITCH_DELIVERABLES_PER_SLIDE = 5;
-const PITCH_AVATAR_SIZE = 1.55;
-const PITCH_PUB_THUMB_SIZE = 1.42;
-const PITCH_PUB_GAP = 0.28;
+/** Match RFQ_5 creator hero avatar (frameless circle). */
+const PITCH_AVATAR_SIZE = 1.67;
+/** Match RFQ_5 publication thumbs (rounded image, no white card). */
+const PITCH_PUB_THUMB_SIZE = 1.62;
+const PITCH_PUB_GAP = 0.22;
 const PITCH_PUB_COLS = 3;
 /** Closing slide — deep teal, distinct from bright-blue cover. */
 const CLOSING_BG = "0A2E24";
@@ -522,7 +524,9 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
       : [["Quotation No.", payload.quotation.number] as [string, string]]),
     ["Client", payload.quotation.client],
     ["Brand", payload.quotation.brand],
-    ["Prepared By", payload.quotation.preparedBy],
+    ...(isPitchTemplate(doc.template)
+      ? []
+      : [["Prepared By", payload.quotation.preparedBy] as [string, string]]),
     ["Issue Date", payload.quotation.issueDate],
     ["Valid Until", payload.quotation.validUntil],
     ["Version", payload.quotation.version],
@@ -1001,7 +1005,14 @@ async function addPublicationThumbs(
   title: string,
   columns = PUB_COLS,
   thumbSize = PUB_THUMB_SIZE,
-  options?: { centered?: boolean; gap?: number; cardStyle?: boolean }
+  options?: {
+    centered?: boolean;
+    gap?: number;
+    /** White padded card (legacy). Prefer `frameless` for RFQ pitch. */
+    cardStyle?: boolean;
+    /** Image-only rounded thumbs — no behind card / fill frame (RFQ_5). */
+    frameless?: boolean;
+  }
 ): Promise<number> {
   slide.addText(title.toUpperCase(), {
     x: MARGIN_X,
@@ -1033,13 +1044,14 @@ async function addPublicationThumbs(
   }
 
   const gap = options?.gap ?? PUB_GAP;
-  const pad = options?.cardStyle ? 0.08 : 0;
+  const pad = options?.cardStyle && !options?.frameless ? 0.08 : 0;
   const cardSize = thumbSize + pad * 2;
   const rowW = visible.length * cardSize + (visible.length - 1) * gap;
   const startX = options?.centered
     ? MARGIN_X + Math.max(0, (CONTENT_W - rowW) / 2)
     : MARGIN_X;
   const thumbY = y + 0.22;
+  const rounded = Boolean(options?.cardStyle || options?.frameless);
 
   for (let index = 0; index < visible.length; index++) {
     const shot = visible[index]!;
@@ -1047,18 +1059,20 @@ async function addPublicationThumbs(
     const x = cardX + pad;
     const imgY = thumbY + pad;
 
-    if (options?.cardStyle) {
-      slide.addShape("roundRect", {
-        x: cardX,
-        y: thumbY,
-        w: cardSize,
-        h: cardSize,
-        fill: { color: WHITE },
-        line: { color: LAV_LINE, width: 1.25 },
-        rectRadius: 0.1,
-      });
-    } else {
-      addPublicationThumbFrame(slide, x, imgY, thumbSize);
+    if (!options?.frameless) {
+      if (options?.cardStyle) {
+        slide.addShape("roundRect", {
+          x: cardX,
+          y: thumbY,
+          w: cardSize,
+          h: cardSize,
+          fill: { color: WHITE },
+          line: { color: LAV_LINE, width: 1.25 },
+          rectRadius: 0.1,
+        });
+      } else {
+        addPublicationThumbFrame(slide, x, imgY, thumbSize);
+      }
     }
 
     const imageData = await imageDataForPptxCoverCrop(shot.imageUrl, 1, 1, 640);
@@ -1069,7 +1083,7 @@ async function addPublicationThumbs(
         y: imgY,
         w: thumbSize,
         h: thumbSize,
-        ...(options?.cardStyle ? { rounding: true } : {}),
+        ...(rounded ? { rounding: true } : {}),
         ...(shot.postUrl && /^https?:\/\//i.test(shot.postUrl)
           ? { hyperlink: { url: shot.postUrl } }
           : {}),
@@ -1320,29 +1334,18 @@ async function addCreatorSlide(
         hyperlink: profileLink,
       });
 
-      if (creator.platformIcons.length) {
-        if (pitch) {
-          // Platform logos under avatar (clickable → profile).
-          addPlatformIconBadges(
-            slide,
-            creator.platformIcons,
-            MARGIN_X + Math.max(0, (avatarSize - creator.platformIcons.length * 0.26) / 2),
-            avatarY + avatarSize + 0.1,
-            6,
-            creator.profileUrl ?? group.profileUrl,
-            0.22
-          );
-        } else {
-          addPlatformIconBadges(
-            slide,
-            creator.platformIcons,
-            nameX + identityW * 0.55,
-            avatarY + 0.34,
-            6,
-            creator.profileUrl ?? group.profileUrl,
-            0.18
-          );
-        }
+      // Pitch/RFQ: platform icons live in the metrics Platforms column only
+      // (plain 0.18" logos — no under-avatar chrome).
+      if (!pitch && creator.platformIcons.length) {
+        addPlatformIconBadges(
+          slide,
+          creator.platformIcons,
+          nameX + identityW * 0.55,
+          avatarY + 0.34,
+          6,
+          creator.profileUrl ?? group.profileUrl,
+          0.18
+        );
       }
 
       if (pitch) {
@@ -1353,11 +1356,7 @@ async function addCreatorSlide(
           avatarY + 0.58,
           identityW
         );
-        const avatarBlockBottom =
-          avatarY +
-          avatarSize +
-          (creator.platformIcons.length ? 0.38 : GAP_MD);
-        contentY = Math.max(contentY, avatarBlockBottom);
+        contentY = Math.max(contentY, avatarY + avatarSize + GAP_MD);
       } else {
         const metrics = [
           ["Followers", creator.followers],
@@ -1411,7 +1410,7 @@ async function addCreatorSlide(
         pitch ? PITCH_PUB_COLS : PUB_COLS,
         pubThumbSize,
         pitch
-          ? { centered: true, gap: PITCH_PUB_GAP, cardStyle: true }
+          ? { centered: true, gap: PITCH_PUB_GAP, frameless: true }
           : undefined
       );
     } else {

@@ -144,7 +144,11 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
       }
       <div class="m"><p class="l">Client</p><p class="v">${esc(q.client)}</p></div>
       <div class="m"><p class="l">Brand</p><p class="v">${esc(q.brand)}</p></div>
-      <div class="m"><p class="l">Prepared By</p><p class="v">${esc(q.preparedBy)}</p></div>
+      ${
+        payload.flags.pitchCreators
+          ? ""
+          : `<div class="m"><p class="l">Prepared By</p><p class="v">${esc(q.preparedBy)}</p></div>`
+      }
       <div class="m"><p class="l">Issue Date</p><p class="v mono">${esc(q.issueDate)}</p></div>
       <div class="m"><p class="l">Valid Until</p><p class="v mono">${esc(q.validUntil)}</p></div>
       <div class="m"><p class="l">Version</p><p class="v mono">${esc(q.version)}</p></div>
