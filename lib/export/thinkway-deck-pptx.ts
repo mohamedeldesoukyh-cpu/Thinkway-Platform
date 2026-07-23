@@ -250,7 +250,7 @@ export async function thinkwayImageBufferForPptx(
         src: trimmed || null,
         profileUrl: profileUrl?.trim() || null,
       });
-      if (result.ok && result.buffer?.length) {
+      if (result.ok && result.buffer.byteLength > 0) {
         return Buffer.from(result.buffer);
       }
     } catch {
