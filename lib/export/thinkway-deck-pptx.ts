@@ -369,10 +369,14 @@ export async function addThinkwayCreatorAvatar(
     y: number;
     size: number;
     pitch?: boolean;
+    /** Click-through to creator profile (Instagram/TikTok/etc.). */
+    profileHref?: string | null;
   }
 ): Promise<void> {
-  const { avatarUrl, initials, x, y, size, pitch = true } = input;
+  const { avatarUrl, initials, x, y, size, pitch = true, profileHref } = input;
   const cropMax = pitch ? 512 : 256;
+  const hyperlink =
+    profileHref && /^https?:\/\//i.test(profileHref) ? { url: profileHref } : undefined;
 
   if (pitch) {
     slide.addShape("ellipse", {
@@ -394,6 +398,7 @@ export async function addThinkwayCreatorAvatar(
       w: size,
       h: size,
       rounding: true,
+      hyperlink,
     });
     return;
   }
@@ -417,6 +422,7 @@ export async function addThinkwayCreatorAvatar(
     bold: true,
     color: pitch ? TW_BLUE : TW_WHITE,
     align: "center",
+    hyperlink,
   });
 }
 

@@ -227,10 +227,12 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.equal(pitchPayload.flags.includeTerms, false);
   assert.equal(pitchPayload.showcaseCreators[0]?.views, "—");
   const pitchHtml = buildQuotationTemplateHtml(pitchDoc);
-  assert.ok(pitchHtml.includes("Pitch Presentation"));
+  assert.ok(!pitchHtml.includes("Pitch Presentation"));
+  assert.ok(!pitchHtml.includes("Quotation No."));
   assert.ok(pitchHtml.includes("showcase-metrics-table"));
   assert.ok(pitchHtml.includes(">Views<"));
   assert.ok(!pitchHtml.includes("Acceptance"));
+  assert.equal(pitchPayload.quotation.title.includes("Pitch Presentation"), false);
 }
 
 {

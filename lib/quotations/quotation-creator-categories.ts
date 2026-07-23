@@ -78,6 +78,13 @@ const SUBCATEGORY_MAIN_ALIASES: Readonly<Record<string, QuotationMainCreatorCate
   "entertainment": "Entertainment",
   "camera & photography": "Lifestyle",
   "luxury lifestyle": "Lifestyle",
+  "off road": "Automotive",
+  offroad: "Automotive",
+  "off-road": "Automotive",
+  automotive: "Automotive",
+  motorsport: "Automotive",
+  motorsports: "Automotive",
+  "4x4": "Automotive",
   "health & wellness": "Health & Wellness",
   "wellness": "Health & Wellness",
   nutritionist: "Health & Wellness",
@@ -423,7 +430,7 @@ export function resolveQuotationCreatorDisplayCategories(input: {
     normalizedQuotationCategoryLabels(input.itemCategories)
   );
   if (fromItem.length > 0 && storedCategoriesMapToMain(fromItem)) {
-    return fromItem.slice(0, 3);
+    return fromItem.slice(0, 5);
   }
 
   if (!input.creator) {
@@ -439,7 +446,7 @@ export function resolveQuotationCreatorDisplayCategories(input: {
     );
     if (merged.length > 0) {
       const withMains = resolveMainCategoriesForCreatorLabels(merged);
-      if (withMains.length > 0) return merged.slice(0, 3);
+      if (withMains.length > 0) return merged.slice(0, 5);
     }
 
     const fallback = inferNearestMainCategoryFallback(input);
@@ -448,7 +455,7 @@ export function resolveQuotationCreatorDisplayCategories(input: {
 
   const stored = translateQuotationCategoryLabels(creatorStoredCategoriesForDisplay(input.creator));
   if (stored.length > 0 && storedCategoriesMapToMain(stored)) {
-    return stored.slice(0, 3);
+    return stored.slice(0, 5);
   }
 
   const linePlatform = input.linePlatform
@@ -480,14 +487,14 @@ export function resolveQuotationCreatorDisplayCategories(input: {
   );
   if (merged.length > 0) {
     const withMains = resolveMainCategoriesForCreatorLabels(merged);
-    if (withMains.length > 0) return merged.slice(0, 3);
+    if (withMains.length > 0) return merged.slice(0, 5);
   }
 
   const directMain = extraTerms
     .map((term) => mapSubcategoryLabelToMainCategories(term))
     .flat();
   const uniqueDirect = [...new Set(directMain)];
-  if (uniqueDirect.length > 0) return uniqueDirect.slice(0, 3);
+  if (uniqueDirect.length > 0) return uniqueDirect.slice(0, 5);
 
   const fallback = inferNearestMainCategoryFallback(input);
   return fallback ? [fallback] : [];
@@ -612,4 +619,39 @@ export function buildQuotationMainCategoryBreakdown(input: {
       sharePct: input.formatSharePct(count, input.totalCreators),
     }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+/**
+ * Display-tag breakdown for pitch decks — keeps specialty labels (e.g. Off Road)
+ * instead of rolling everything into broad mains like Lifestyle.
+ */
+export function buildQuotationDisplayCategoryBreakdown(input: {
+  creatorGroups: Array<{ categories: string[] }>;
+  totalCreators: number;
+  formatSharePct: (count: number, total: number) => string;
+  maxLabels?: number;
+}): QuotationCategoryBreakdownRow[] {
+  const counts = new Map<string, number>();
+
+  for (const group of input.creatorGroups) {
+    const labels = normalizedQuotationCategoryLabels(group.categories);
+    if (labels.length === 0) {
+      counts.set("Uncategorized", (counts.get("Uncategorized") ?? 0) + 1);
+      continue;
+    }
+    for (const label of labels) {
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+  }
+
+  const rows = [...counts.entries()]
+    .map(([label, count]) => ({
+      label,
+      count,
+      sharePct: input.formatSharePct(count, input.totalCreators),
+    }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+
+  const max = input.maxLabels ?? 8;
+  return rows.slice(0, max);
 }

@@ -104,18 +104,19 @@ function formatShowcaseQuotationTitle(name: string): string {
   return `${prefix}${name}`;
 }
 
+/** Pitch cover title = campaign / quotation name only (no "Pitch Presentation" prefix). */
 function formatPitchQuotationTitle(name: string): string {
-  const prefix = "Pitch Presentation — ";
-  const rewritten = name.replace(/^Quotation\s+[—–-]\s*/i, prefix);
-  if (rewritten !== name) return rewritten;
-  return `${prefix}${name}`;
+  return name
+    .replace(/^Pitch Presentation\s*[—–-]\s*/i, "")
+    .replace(/^Quotation\s*[—–-]\s*/i, "")
+    .trim() || name;
 }
 
 function coverKicker(template: QuotationTemplateVariant): string {
   if (template === "lump-sum" || template === "pitch-lump-sum") {
     return "Client Quotation · Lump Sum";
   }
-  if (isPitchTemplate(template)) return "Client Quotation · Pitch Presentation";
+  if (isPitchTemplate(template)) return "Client Quotation";
   if (isShowcaseTemplate(template)) return "Client Quotation · Showcase";
   return "Client Quotation";
 }
@@ -412,9 +413,12 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
       creators: section.creators.map((creator) => ({
         handle: creator.handle,
         platform: creator.platform,
+        platformIcons: creator.platformIcons,
         followers: creator.followers,
+        views: creator.views,
         category: creator.category,
         er: creator.engagementRate,
+        profileUrl: creator.profileUrl,
       })),
     })),
     totals: {

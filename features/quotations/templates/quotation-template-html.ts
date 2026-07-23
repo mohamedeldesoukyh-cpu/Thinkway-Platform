@@ -137,7 +137,11 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
     <div class="accentbar"></div>
     <p class="sub">${esc(c.subtitle)}</p>
     <div class="metagrid">
-      <div class="m"><p class="l">Quotation No.</p><p class="v mono">${esc(q.number)}</p></div>
+      ${
+        payload.flags.pitchCreators
+          ? ""
+          : `<div class="m"><p class="l">Quotation No.</p><p class="v mono">${esc(q.number)}</p></div>`
+      }
       <div class="m"><p class="l">Client</p><p class="v">${esc(q.client)}</p></div>
       <div class="m"><p class="l">Brand</p><p class="v">${esc(q.brand)}</p></div>
       <div class="m"><p class="l">Prepared By</p><p class="v">${esc(q.preparedBy)}</p></div>

@@ -20,6 +20,8 @@ import {
   queryShortlistItemsWithCollapseFallback,
 } from "@/lib/discovery/shortlist-item-collapse-select";
 
+import { readShortlistDisplayCurrency } from "@/lib/discovery/shortlist-currency";
+
 import { SHORTLIST_PERMISSIONS } from "./constants";
 import type {
   ShortlistBrandOption,
@@ -36,8 +38,9 @@ import type {
 
 type Supabase = SupabaseClient<Database>;
 
+/** Prefer metadata over a dedicated currency column so prod works before migration. */
 const SHORTLIST_SELECT =
-  "id, serial_number, name, description, status, visibility, currency, owner_id, created_by, client_id, brand_id, approved_by, approved_at, submitted_at, cancelled_at, cancellation_reason, is_archived, created_at, updated_at";
+  "id, serial_number, name, description, status, visibility, metadata, owner_id, created_by, client_id, brand_id, approved_by, approved_at, submitted_at, cancelled_at, cancellation_reason, is_archived, created_at, updated_at";
 
 async function nameMap(
   supabase: Supabase,
@@ -524,6 +527,7 @@ export async function getShortlistDetail(
     status: ShortlistListRow["status"];
     visibility: ShortlistListRow["visibility"];
     currency?: string | null;
+    metadata?: unknown;
     owner_id: string;
     client_id: string | null;
     brand_id: string | null;
@@ -585,7 +589,7 @@ export async function getShortlistDetail(
     description: row.description,
     status: row.status,
     visibility: row.visibility,
-    currency: (row.currency || "EGP").toUpperCase(),
+    currency: readShortlistDisplayCurrency(row),
     owner_id: row.owner_id,
     owner_name: names.get(row.owner_id) ?? null,
     created_by: row.created_by,

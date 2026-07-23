@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
 import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
+import { shortlistMetadataWithCurrency } from "@/lib/discovery/shortlist-currency";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
 import {
@@ -93,7 +94,7 @@ async function loadShortlistRow(supabase: Supabase, id: string) {
   const { data, error } = await supabase
     .from("discovery_shortlists")
     .select(
-      "id, name, status, visibility, owner_id, created_by, approved_by, is_archived, client_id, brand_id"
+      "id, name, status, visibility, owner_id, created_by, approved_by, is_archived, client_id, brand_id, metadata"
     )
     .eq("id", id)
     .maybeSingle();
@@ -110,6 +111,7 @@ async function loadShortlistRow(supabase: Supabase, id: string) {
         is_archived: boolean;
         client_id: string | null;
         brand_id: string | null;
+        metadata: Record<string, unknown> | null;
       }
     | null;
 }
@@ -282,12 +284,15 @@ export async function updateShortlistDetails(
   if (input.visibility !== undefined) {
     patch.visibility = input.visibility === "client_shared" ? "team" : input.visibility;
   }
+  let nextDisplayCurrency: string | null = null;
   if (input.currency !== undefined) {
     const code = input.currency.trim().toUpperCase();
     if (!isCommercialCurrency(code)) {
       return { ok: false, message: "Unsupported currency." };
     }
-    patch.currency = code;
+    nextDisplayCurrency = code;
+    // Store in metadata so prod works before the dedicated currency column exists.
+    patch.metadata = shortlistMetadataWithCurrency(row.metadata, code);
   }
 
   const commercialChanging =
@@ -351,7 +356,7 @@ export async function updateShortlistDetails(
     });
   }
 
-  if (typeof patch.currency === "string") {
+  if (nextDisplayCurrency) {
     const { data: linked } = await actor.supabase
       .from("quotations")
       .select("id")
@@ -360,7 +365,7 @@ export async function updateShortlistDetails(
     for (const q of (linked ?? []) as Array<{ id: string }>) {
       const { error: currencyError } = await actor.supabase
         .from("quotations")
-        .update({ currency: patch.currency } as never)
+        .update({ currency: nextDisplayCurrency } as never)
         .eq("id", q.id);
       if (!currencyError) syncedQuotations += 1;
     }

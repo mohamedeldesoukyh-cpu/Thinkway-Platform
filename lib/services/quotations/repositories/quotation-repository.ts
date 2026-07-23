@@ -545,9 +545,10 @@ export async function fetchShortlistHeader(
   supabase: SupabaseClient<Database>,
   shortlistId: string
 ) {
+  // Prefer metadata over a dedicated currency column (may be missing pre-migration).
   return supabase
     .from("discovery_shortlists")
-    .select("id, name, client_id, brand_id, campaign_header_id, currency")
+    .select("id, name, client_id, brand_id, campaign_header_id, metadata")
     .eq("id", shortlistId)
     .maybeSingle();
 }

@@ -19,6 +19,7 @@ import {
 } from "@/features/quotations/export/quotation-template";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { getQuotationDetail } from "@/features/quotations/queries";
+import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -65,9 +66,11 @@ export async function GET(request: Request, context: RouteContext) {
       isCreatorDeckTemplate(template) && format !== "excel"
         ? await loadQuotationCreatorPublicationShots(supabase, enriched.items)
         : undefined;
+    const displayFxRateToEgp = await resolveRateToEgp(supabase, enriched.currency || "EGP");
     let doc = buildQuotationDocument(enriched, {
       template,
       publicationShotsByCreatorKey,
+      displayFxRateToEgp,
     });
     if (format !== "excel") {
       doc = await embedQuotationDocumentAvatars(doc);

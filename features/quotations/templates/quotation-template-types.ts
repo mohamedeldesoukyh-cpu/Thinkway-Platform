@@ -49,6 +49,9 @@ export type QuotationTemplatePayload = {
     creators: Array<{
       handle: string;
       platform: string;
+      platformIcons: string[];
+      views: string;
+      profileUrl: string | null;
       followers: string;
       category: string;
       er: string;

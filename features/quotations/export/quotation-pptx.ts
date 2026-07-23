@@ -78,7 +78,13 @@ const MIX_FEED_THUMB_SIZE = 0.74;
 const CREATOR_DELIVERABLES_PER_SLIDE = 7;
 const PITCH_DELIVERABLES_PER_SLIDE = 5;
 const PITCH_AVATAR_SIZE = 1.55;
-const PITCH_PUB_THUMB_SIZE = 0.88;
+const PITCH_PUB_THUMB_SIZE = 1.42;
+const PITCH_PUB_GAP = 0.28;
+const PITCH_PUB_COLS = 3;
+/** Closing slide — deep teal, distinct from bright-blue cover. */
+const CLOSING_BG = "0A2E24";
+const CLOSING_ACCENT = "1D9E75";
+const CLOSING_MUTED = "9BC4B4";
 /** Matches reference deck pagination (11 fee rows before totals spill). */
 const COMMERCIAL_ROWS_PER_SLIDE = 11;
 const FOOTER_LEFT = "Thinkway · hello@thinkwaymedia.com";
@@ -88,16 +94,24 @@ function platformIconsLabel(platforms: string[]): string {
   return platforms.map((platform) => getReportPlatformIconTitle(platform)).join(", ");
 }
 
+function profileHyperlink(url: string | null | undefined): { url: string } | undefined {
+  if (!url || !/^https?:\/\//i.test(url)) return undefined;
+  return { url };
+}
+
 function addPlatformIconBadges(
   slide: Slide,
   platforms: string[],
   x: number,
   y: number,
-  maxIcons = 4
+  maxIcons = 4,
+  profileHref?: string | null,
+  iconSize = 0.18
 ): number {
   const unique = [...new Set(platforms.map((p) => p.trim()).filter(Boolean))].slice(0, maxIcons);
-  const size = 0.18;
+  const size = iconSize;
   const gap = 0.04;
+  const hyperlink = profileHyperlink(profileHref);
   unique.forEach((platform, index) => {
     const iconX = x + index * (size + gap);
     const dataUri = getReportPlatformIconDataUri(platform);
@@ -112,6 +126,7 @@ function addPlatformIconBadges(
           y,
           w: size,
           h: size,
+          hyperlink,
         });
         return;
       }
@@ -135,6 +150,7 @@ function addPlatformIconBadges(
       color: BLUE,
       align: "center",
       valign: "middle",
+      hyperlink,
     });
   });
   return unique.length * (size + gap);
@@ -501,7 +517,9 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
   });
 
   const metaCells = [
-    ["Quotation No.", payload.quotation.number],
+    ...(isPitchTemplate(doc.template)
+      ? []
+      : [["Quotation No.", payload.quotation.number] as [string, string]]),
     ["Client", payload.quotation.client],
     ["Brand", payload.quotation.brand],
     ["Prepared By", payload.quotation.preparedBy],
@@ -645,9 +663,13 @@ function addCreatorMixSlides(
     );
 
     if (!continued) {
-      const categoryCards = payload.categories.slice(0, 4);
-      const catW = 2.92;
-      const gap = 0.17;
+      const maxCats = isPitchTemplate(doc.template) ? 6 : 4;
+      const categoryCards = payload.categories.slice(0, maxCats);
+      const gap = 0.14;
+      const catW =
+        categoryCards.length > 0
+          ? (CONTENT_W - gap * (categoryCards.length - 1)) / categoryCards.length
+          : 2.92;
       categoryCards.forEach((cat, index) => {
         const x = MARGIN_X + index * (catW + gap);
         slide.addShape("roundRect", {
@@ -660,33 +682,33 @@ function addCreatorMixSlides(
           rectRadius: 0.1,
         });
         slide.addText(cat.name.toUpperCase(), {
-          x: x + 0.2,
+          x: x + 0.12,
           y: 2.14,
-          w: 2.52,
+          w: catW - 0.24,
           h: 0.2,
           fontFace: FONT_UI,
-          fontSize: 10,
+          fontSize: categoryCards.length > 4 ? 8 : 10,
           bold: true,
           color: MUTED_SOFT,
           charSpacing: 1,
         });
         slide.addText(cat.count, {
-          x: x + 0.18,
+          x: x + 0.12,
           y: 2.34,
-          w: 1.2,
+          w: catW - 0.24,
           h: 0.42,
           fontFace: FONT_UI,
-          fontSize: 28,
+          fontSize: categoryCards.length > 4 ? 22 : 28,
           bold: true,
           color: BLUE,
         });
         slide.addText(`${cat.countLabel} · ${cat.share}`, {
-          x: x + 0.2,
+          x: x + 0.12,
           y: 2.78,
-          w: 2.52,
+          w: catW - 0.24,
           h: 0.2,
           fontFace: FONT_BODY,
-          fontSize: 11,
+          fontSize: categoryCards.length > 4 ? 9 : 11,
           color: MUTED,
         });
       });
@@ -748,40 +770,98 @@ function addCreatorMixSlides(
         }
       );
 
+      const pitchMix = isPitchTemplate(doc.template);
+      const colW = pitchMix
+        ? [2.2, 1.7, 1.5, 1.4, 3.6, 1.73]
+        : [2.6, 2.0, 1.8, 3.9, 1.83];
       const rows: Array<Array<{ text: string; options?: Record<string, unknown> }>> = [
-        [
-          { text: "Handle", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-          { text: "Platform", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-          {
-            text: "Followers",
-            options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
-          },
-          { text: "Category", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-          {
-            text: "ER %",
-            options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
-          },
-        ],
-        ...creators.map((creator) => [
-          { text: creator.handle, options: { fontSize: 10, bold: true, color: TITLE_INK } },
-          { text: creator.platform, options: { fontSize: 10, color: TITLE_INK } },
-          {
-            text: creator.followers,
-            options: { fontSize: 10, color: TITLE_INK, align: "right" },
-          },
-          { text: creator.category, options: { fontSize: 10, color: TITLE_INK } },
-          {
-            text: creator.er,
-            options: { fontSize: 10, color: TITLE_INK, align: "right" },
-          },
-        ]),
+        pitchMix
+          ? [
+              { text: "Handle", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+              { text: "Platforms", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+              {
+                text: "Followers",
+                options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
+              },
+              {
+                text: "Views",
+                options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
+              },
+              { text: "Category", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+              {
+                text: "ER %",
+                options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
+              },
+            ]
+          : [
+              { text: "Handle", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+              { text: "Platform", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+              {
+                text: "Followers",
+                options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
+              },
+              { text: "Category", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+              {
+                text: "ER %",
+                options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
+              },
+            ],
+        ...creators.map((creator) => {
+          const handleLink = profileHyperlink(creator.profileUrl);
+          if (pitchMix) {
+            return [
+              {
+                text: creator.handle,
+                options: {
+                  fontSize: 10,
+                  bold: true,
+                  color: TITLE_INK,
+                  ...(handleLink ? { hyperlink: handleLink } : {}),
+                },
+              },
+              {
+                text: creator.platformIcons.length
+                  ? `     ${platformIconsLabel(creator.platformIcons)}`
+                  : creator.platform,
+                options: { fontSize: 10, color: TITLE_INK },
+              },
+              {
+                text: creator.followers,
+                options: { fontSize: 10, color: TITLE_INK, align: "right" },
+              },
+              {
+                text: creator.views,
+                options: { fontSize: 10, color: TITLE_INK, align: "right" },
+              },
+              { text: creator.category, options: { fontSize: 9, color: TITLE_INK } },
+              {
+                text: creator.er,
+                options: { fontSize: 10, color: TITLE_INK, align: "right" },
+              },
+            ];
+          }
+          return [
+            { text: creator.handle, options: { fontSize: 10, bold: true, color: TITLE_INK } },
+            { text: creator.platform, options: { fontSize: 10, color: TITLE_INK } },
+            {
+              text: creator.followers,
+              options: { fontSize: 10, color: TITLE_INK, align: "right" },
+            },
+            { text: creator.category, options: { fontSize: 10, color: TITLE_INK } },
+            {
+              text: creator.er,
+              options: { fontSize: 10, color: TITLE_INK, align: "right" },
+            },
+          ];
+        }),
       ];
 
+      const tableY = cursorY + 0.34;
       slide.addTable(rows, {
         x: MARGIN_X,
-        y: cursorY + 0.34,
+        y: tableY,
         w: 12.13,
-        colW: [2.6, 2.0, 1.8, 3.9, 1.83],
+        colW,
         border: { type: "solid", pt: 0.5, color: ROW_HAIR },
         fontFace: FONT_BODY,
         autoPage: false,
@@ -790,6 +870,22 @@ function addCreatorMixSlides(
         align: "left",
         valign: "middle",
       });
+
+      if (pitchMix) {
+        const platformsColX = MARGIN_X + colW[0]! + 0.08;
+        creators.forEach((creator, index) => {
+          if (!creator.platformIcons.length) return;
+          addPlatformIconBadges(
+            slide,
+            creator.platformIcons,
+            platformsColX,
+            tableY + 0.26 + index * rowH + 0.03,
+            4,
+            creator.profileUrl
+          );
+        });
+      }
+
       cursorY += 0.34 + tableH + 0.28;
     }
 
@@ -903,7 +999,8 @@ async function addPublicationThumbs(
   y: number,
   title: string,
   columns = PUB_COLS,
-  thumbSize = PUB_THUMB_SIZE
+  thumbSize = PUB_THUMB_SIZE,
+  options?: { centered?: boolean; gap?: number; cardStyle?: boolean }
 ): Promise<number> {
   slide.addText(title.toUpperCase(), {
     x: MARGIN_X,
@@ -915,6 +1012,7 @@ async function addPublicationThumbs(
     bold: true,
     color: BLUE,
     charSpacing: 1.2,
+    align: options?.centered ? "center" : "left",
   });
 
   const visible = shots.slice(0, columns);
@@ -928,33 +1026,60 @@ async function addPublicationThumbs(
       fontSize: 10,
       color: MUTED,
       italic: true,
+      align: options?.centered ? "center" : "left",
     });
     return y + 0.52;
   }
 
-  const thumbY = y + 0.2;
+  const gap = options?.gap ?? PUB_GAP;
+  const pad = options?.cardStyle ? 0.08 : 0;
+  const cardSize = thumbSize + pad * 2;
+  const rowW = visible.length * cardSize + (visible.length - 1) * gap;
+  const startX = options?.centered
+    ? MARGIN_X + Math.max(0, (CONTENT_W - rowW) / 2)
+    : MARGIN_X;
+  const thumbY = y + 0.22;
 
   for (let index = 0; index < visible.length; index++) {
     const shot = visible[index]!;
-    const x = MARGIN_X + index * (thumbSize + PUB_GAP);
-    addPublicationThumbFrame(slide, x, thumbY, thumbSize);
+    const cardX = startX + index * (cardSize + gap);
+    const x = cardX + pad;
+    const imgY = thumbY + pad;
+
+    if (options?.cardStyle) {
+      slide.addShape("roundRect", {
+        x: cardX,
+        y: thumbY,
+        w: cardSize,
+        h: cardSize,
+        fill: { color: WHITE },
+        line: { color: LAV_LINE, width: 1.25 },
+        rectRadius: 0.1,
+      });
+    } else {
+      addPublicationThumbFrame(slide, x, imgY, thumbSize);
+    }
 
     const imageData = await imageDataForPptxCoverCrop(shot.imageUrl, 1, 1, 640);
     if (imageData) {
       slide.addImage({
         data: imageData,
         x,
-        y: thumbY,
+        y: imgY,
         w: thumbSize,
         h: thumbSize,
+        ...(options?.cardStyle ? { rounding: true } : {}),
+        ...(shot.postUrl && /^https?:\/\//i.test(shot.postUrl)
+          ? { hyperlink: { url: shot.postUrl } }
+          : {}),
       });
       if (shot.isVideo) {
-        addPublicationVideoBadge(slide, x, thumbY, thumbSize);
+        addPublicationVideoBadge(slide, x, imgY, thumbSize);
       }
     }
   }
 
-  return thumbY + thumbSize + GAP_MD;
+  return thumbY + cardSize + GAP_MD;
 }
 
 function addCreatorDeliverablesTable(
@@ -1065,7 +1190,14 @@ function addPitchCreatorMetricsTable(
 
   if (creator.platformIcons.length) {
     const platformsColX = x + colW.slice(0, 5).reduce((sum, value) => sum + value, 0) + 0.06;
-    addPlatformIconBadges(slide, creator.platformIcons, platformsColX, y + rowH + 0.06);
+    addPlatformIconBadges(
+      slide,
+      creator.platformIcons,
+      platformsColX,
+      y + rowH + 0.06,
+      4,
+      creator.profileUrl
+    );
   }
 
   return y + rowH * 2 + 0.12;
@@ -1096,6 +1228,7 @@ async function addCreatorSlide(
     : creator.deliverables.length > 5
       ? Math.min(PUB_THUMB_SIZE, 1.1)
       : PUB_THUMB_SIZE;
+  const profileLink = profileHyperlink(creator.profileUrl ?? group.profileUrl);
 
   for (let chunkIndex = 0; chunkIndex < deliverableChunks.length; chunkIndex++) {
     const deliverables = deliverableChunks[chunkIndex]!;
@@ -1132,6 +1265,7 @@ async function addCreatorSlide(
         y: avatarY,
         size: avatarSize,
         pitch,
+        profileHref: creator.profileUrl ?? group.profileUrl,
       });
 
       const nameX = MARGIN_X + avatarSize + (pitch ? 0.28 : 0.14);
@@ -1145,16 +1279,43 @@ async function addCreatorSlide(
         fontSize: pitch ? 22 : 22,
         bold: true,
         color: TITLE_INK,
+        hyperlink: profileLink,
       });
       slide.addText(creator.handle, {
         x: nameX,
         y: avatarY + 0.34,
-        w: identityW,
+        w: identityW * 0.55,
         h: 0.18,
         fontFace: FONT_BODY,
         fontSize: pitch ? 11 : 11,
         color: MUTED,
+        hyperlink: profileLink,
       });
+
+      if (creator.platformIcons.length) {
+        if (pitch) {
+          // Platform logos under avatar (clickable → profile).
+          addPlatformIconBadges(
+            slide,
+            creator.platformIcons,
+            MARGIN_X + Math.max(0, (avatarSize - creator.platformIcons.length * 0.26) / 2),
+            avatarY + avatarSize + 0.1,
+            6,
+            creator.profileUrl ?? group.profileUrl,
+            0.22
+          );
+        } else {
+          addPlatformIconBadges(
+            slide,
+            creator.platformIcons,
+            nameX + identityW * 0.55,
+            avatarY + 0.34,
+            6,
+            creator.profileUrl ?? group.profileUrl,
+            0.18
+          );
+        }
+      }
 
       if (pitch) {
         contentY = addPitchCreatorMetricsTable(
@@ -1164,7 +1325,11 @@ async function addCreatorSlide(
           avatarY + 0.58,
           identityW
         );
-        contentY = Math.max(contentY, avatarY + avatarSize + GAP_MD);
+        const avatarBlockBottom =
+          avatarY +
+          avatarSize +
+          (creator.platformIcons.length ? 0.38 : GAP_MD);
+        contentY = Math.max(contentY, avatarBlockBottom);
       } else {
         const metrics = [
           ["Followers", creator.followers],
@@ -1212,11 +1377,14 @@ async function addCreatorSlide(
 
       contentY = await addPublicationThumbs(
         slide,
-        group.publicationShots.slice(0, pitch ? 4 : SHOWCASE_PUB_LIMIT),
+        group.publicationShots.slice(0, pitch ? PITCH_PUB_COLS : SHOWCASE_PUB_LIMIT),
         contentY,
         "Recent publications",
-        PUB_COLS,
-        pubThumbSize
+        pitch ? PITCH_PUB_COLS : PUB_COLS,
+        pubThumbSize,
+        pitch
+          ? { centered: true, gap: PITCH_PUB_GAP, cardStyle: true }
+          : undefined
       );
     } else {
       contentY = 1.55;
@@ -1979,62 +2147,78 @@ function addClosingSlide(
 ): void {
   const payload = buildQuotationTemplatePayload(doc);
   const slide = pptx.addSlide();
-  applyClosingBackground(slide);
+  const pitchClosing = isPitchTemplate(doc.template);
+  if (pitchClosing) {
+    // Distinct from bright-blue cover: deep teal brand close.
+    slide.background = { color: CLOSING_BG };
+  } else {
+    applyClosingBackground(slide);
+  }
   addBrandLockup(slide, "light", 0.55, 0.5);
   nextSlideNo(counter);
 
-  slide.addText("Let's build something\nworth watching.", {
-    x: 0.57,
-    y: 2.5,
-    w: 10.5,
-    h: 1.7,
-    fontFace: FONT_UI,
-    fontSize: 40,
-    bold: true,
-    color: WHITE,
-    valign: "top",
-  });
+  if (pitchClosing) {
+    slide.addShape("roundRect", {
+      x: MARGIN_X,
+      y: 2.15,
+      w: 1.35,
+      h: 0.1,
+      fill: { color: CLOSING_ACCENT },
+      line: { type: "none" },
+      rectRadius: 0.05,
+    });
+  }
 
-  // Reference: "Wavemaker × NBK Bank summer campaign" from title after colon.
+  slide.addText(
+    pitchClosing
+      ? "Ready when you are."
+      : "Let's build something\nworth watching.",
+    {
+      x: 0.57,
+      y: pitchClosing ? 2.45 : 2.5,
+      w: 10.5,
+      h: pitchClosing ? 1.1 : 1.7,
+      fontFace: FONT_UI,
+      fontSize: pitchClosing ? 44 : 40,
+      bold: true,
+      color: WHITE,
+      valign: "top",
+    }
+  );
+
   const titleTheme = payload.quotation.title.split(":").slice(1).join(":").trim();
   const themeWord = titleTheme.split(/\s+/)[0]?.toLowerCase();
   const campaignPhrase = themeWord
     ? `${payload.quotation.client} × ${payload.quotation.brand} ${themeWord} campaign`
     : `${payload.quotation.client} × ${payload.quotation.brand} campaign`;
-  const thankYou = `Thank you for reviewing this quotation. We're ready to bring the ${campaignPhrase} to life.`;
+  const thankYou = pitchClosing
+    ? `Thank you for reviewing this pitch. We're ready to bring ${campaignPhrase} to life with the right creators.`
+    : `Thank you for reviewing this quotation. We're ready to bring the ${campaignPhrase} to life.`;
   slide.addText(thankYou, {
     x: MARGIN_X,
-    y: 4.25,
+    y: pitchClosing ? 3.85 : 4.25,
     w: 9.5,
-    h: 0.5,
+    h: 0.6,
     fontFace: FONT_UI,
     fontSize: 13,
-    color: COVER_KICKER,
+    color: pitchClosing ? CLOSING_MUTED : COVER_KICKER,
   });
 
   slide.addText(
     [
-      { text: "EMAIL    ", options: { color: "7F93C4", bold: true } },
-      { text: "hello@thinkwaymedia.com", options: { color: "7F93C4" } },
+      {
+        text: "EMAIL    ",
+        options: { color: pitchClosing ? CLOSING_ACCENT : "7F93C4", bold: true },
+      },
+      {
+        text: "hello@thinkwaymedia.com",
+        options: { color: pitchClosing ? CLOSING_MUTED : "7F93C4" },
+      },
     ],
     {
       x: MARGIN_X,
-      y: 5.15,
-      w: 5,
-      h: 0.3,
-      fontFace: FONT_UI,
-      fontSize: 12,
-    }
-  );
-  slide.addText(
-    [
-      { text: "LOCATION    ", options: { color: "7F93C4", bold: true } },
-      { text: "Sheikh Zayed, Giza", options: { color: "7F93C4" } },
-    ],
-    {
-      x: 5.6,
-      y: 5.15,
-      w: 5,
+      y: pitchClosing ? 5.0 : 5.15,
+      w: 7,
       h: 0.3,
       fontFace: FONT_UI,
       fontSize: 12,
@@ -2048,7 +2232,7 @@ function addClosingSlide(
     h: 0.3,
     fontFace: FONT_UI,
     fontSize: 11,
-    color: "7F93C4",
+    color: pitchClosing ? CLOSING_MUTED : "7F93C4",
   });
 }
 

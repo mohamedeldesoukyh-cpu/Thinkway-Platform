@@ -6,6 +6,7 @@ import {
   type ShortlistItemForSeed,
 } from "@/lib/commercial-sync/shortlist-seeds";
 import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
+import { readShortlistDisplayCurrency } from "@/lib/discovery/shortlist-currency";
 import type { Database } from "@/types/database";
 
 import { recomputeQuotationTotals } from "./quotation-commercial-service";
@@ -246,6 +247,7 @@ export async function createQuotationFromShortlist(
     brand_id: string | null;
     campaign_header_id: string | null;
     currency?: string | null;
+    metadata?: unknown;
   };
 
   const { data, error } = await loadShortlistItemsForSeeds(
@@ -260,7 +262,7 @@ export async function createQuotationFromShortlist(
   }
 
   const seeds = await buildSeedsFromShortlistItems(supabase, items);
-  const displayCurrency = (sl.currency || "EGP").toUpperCase();
+  const displayCurrency = readShortlistDisplayCurrency(sl);
 
   const created = await insertQuotationHeader(supabase, userId, {
     name: `Quotation — ${sl.name}`,
