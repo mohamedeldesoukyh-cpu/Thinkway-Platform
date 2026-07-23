@@ -130,28 +130,21 @@ function resolveLocalChromeExecutable(): string | undefined {
 }
 
 async function launchLocalBrowser() {
-  try {
-    const puppeteer = await import("puppeteer");
-    return await puppeteer.default.launch({
-      headless: true,
-      args: LOCAL_LAUNCH_ARGS,
-    });
-  } catch (bundledError) {
-    console.warn("[vendor-io-pdf] Bundled Chromium launch failed", bundledError);
-  }
-
   const executablePath = resolveLocalChromeExecutable();
+
   if (!executablePath) {
     throw new Error(
       "No local Chrome or Edge installation found. Install Google Chrome or set CHROME_PATH."
     );
   }
 
-  const puppeteerCore = await import("puppeteer-core");
-  return puppeteerCore.default.launch({
+  const puppeteer = await import("puppeteer-core");
+
+  return puppeteer.default.launch({
     executablePath,
     headless: true,
     args: LOCAL_LAUNCH_ARGS,
+    defaultViewport: PDF_VIEWPORT,
   });
 }
 
